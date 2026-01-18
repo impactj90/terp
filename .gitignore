@@ -1,0 +1,95 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+
+# Go build artifacts
+*.o
+*.a
+*.test
+*.out
+*.prof
+coverage.out
+coverage.html
+
+# Go workspace (optional - uncomment if you don't want to commit)
+# go.work
+# go.work.sum
+
+# Dependency directories
+vendor/
+
+# Next.js
+apps/web/.next/
+apps/web/out/
+apps/web/node_modules/
+node_modules/
+
+# Next.js build output
+.vercel
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+!.env.example
+
+# IDE and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+
+# Docker
+docker/data/
+docker/volumes/
+
+# Logs
+*.log
+logs/
+
+# Debug
+debug
+*.debug
+
+# Test artifacts
+.coverage/
+htmlcov/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Generated OpenAPI bundle (regenerate with make swagger-bundle)
+# Uncomment if you prefer to regenerate rather than commit
+# api/openapi.bundled.yaml
+
+# Air (Go hot reload)
+tmp/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
