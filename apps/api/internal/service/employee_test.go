@@ -465,7 +465,7 @@ func TestEmployeeService_Deactivate_PreservesExitDate(t *testing.T) {
 	require.NoError(t, err)
 
 	// Set exit date first
-	exitDate := time.Date(2024, 12, 31, 0, 0, 0, 0, time.UTC)
+	exitDate := input.EntryDate.AddDate(1, 0, 0) // 1 year after entry
 	updateInput := service.UpdateEmployeeInput{
 		ExitDate: &exitDate,
 	}
