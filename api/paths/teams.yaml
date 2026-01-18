@@ -1,0 +1,265 @@
+# Team endpoints
+/teams:
+  get:
+    tags:
+      - Teams
+    summary: List teams
+    description: |
+      Returns teams for collaborative work groups. Teams can span departments
+      and have leaders/members with different roles. Use for shift planning
+      and group reporting.
+    operationId: listTeams
+    parameters:
+      - name: department_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by department
+      - name: is_active
+        in: query
+        type: boolean
+        description: Filter by active status
+      - name: limit
+        in: query
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+      - name: cursor
+        in: query
+        type: string
+    responses:
+      200:
+        description: List of teams
+        schema:
+          $ref: '../schemas/teams.yaml#/TeamList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Teams
+    summary: Create team
+    operationId: createTeam
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/teams.yaml#/CreateTeamRequest'
+    responses:
+      201:
+        description: Team created
+        schema:
+          $ref: '../schemas/teams.yaml#/Team'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/teams/{id}:
+  get:
+    tags:
+      - Teams
+    summary: Get team by ID
+    operationId: getTeam
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: include_members
+        in: query
+        type: boolean
+        description: Include team members in response
+    responses:
+      200:
+        description: Team details
+        schema:
+          $ref: '../schemas/teams.yaml#/Team'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  put:
+    tags:
+      - Teams
+    summary: Update team
+    operationId: updateTeam
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/teams.yaml#/UpdateTeamRequest'
+    responses:
+      200:
+        description: Team updated
+        schema:
+          $ref: '../schemas/teams.yaml#/Team'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Teams
+    summary: Delete team
+    operationId: deleteTeam
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Team deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/teams/{id}/members:
+  get:
+    tags:
+      - Teams
+    summary: List team members
+    operationId: listTeamMembers
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: List of team members
+        schema:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '../schemas/teams.yaml#/TeamMember'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  post:
+    tags:
+      - Teams
+    summary: Add member to team
+    operationId: addTeamMember
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/teams.yaml#/AddTeamMemberRequest'
+    responses:
+      201:
+        description: Member added
+        schema:
+          $ref: '../schemas/teams.yaml#/TeamMember'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+      409:
+        description: Member already in team
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/teams/{id}/members/{employee_id}:
+  put:
+    tags:
+      - Teams
+    summary: Update team member role
+    operationId: updateTeamMember
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: employee_id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/teams.yaml#/UpdateTeamMemberRequest'
+    responses:
+      200:
+        description: Member role updated
+        schema:
+          $ref: '../schemas/teams.yaml#/TeamMember'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Teams
+    summary: Remove member from team
+    operationId: removeTeamMember
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: employee_id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Member removed
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/employees/{employee_id}/teams:
+  get:
+    tags:
+      - Teams
+    summary: Get teams for employee
+    operationId: getEmployeeTeams
+    parameters:
+      - name: employee_id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: List of teams the employee belongs to
+        schema:
+          $ref: '../schemas/teams.yaml#/TeamList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

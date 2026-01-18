@@ -1,0 +1,190 @@
+# Payroll Export endpoints
+/payroll-exports:
+  get:
+    tags:
+      - Payroll
+    summary: List payroll exports
+    description: |
+      Returns payroll export files for integration with HR/payroll systems.
+      Exports are generated asynchronously after month closing. Download in
+      various formats (CSV, Excel, XML) for import into external systems.
+    operationId: listPayrollExports
+    parameters:
+      - name: year
+        in: query
+        type: integer
+        description: Filter by year
+      - name: month
+        in: query
+        type: integer
+        minimum: 1
+        maximum: 12
+        description: Filter by month
+      - name: status
+        in: query
+        type: string
+        enum:
+          - pending
+          - generating
+          - completed
+          - failed
+        description: Filter by status
+      - name: limit
+        in: query
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+      - name: cursor
+        in: query
+        type: string
+    responses:
+      200:
+        description: List of payroll exports
+        schema:
+          $ref: '../schemas/payroll-exports.yaml#/PayrollExportList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Payroll
+    summary: Generate payroll export
+    description: Starts payroll export generation (async)
+    operationId: generatePayrollExport
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/payroll-exports.yaml#/GeneratePayrollExportRequest'
+    responses:
+      202:
+        description: Export generation started
+        schema:
+          $ref: '../schemas/payroll-exports.yaml#/PayrollExport'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Month not closed for all employees
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/payroll-exports/{id}:
+  get:
+    tags:
+      - Payroll
+    summary: Get payroll export by ID
+    operationId: getPayrollExport
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Payroll export details
+        schema:
+          $ref: '../schemas/payroll-exports.yaml#/PayrollExport'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Payroll
+    summary: Delete payroll export
+    operationId: deletePayrollExport
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Payroll export deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/payroll-exports/{id}/download:
+  get:
+    tags:
+      - Payroll
+    summary: Download payroll export file
+    operationId: downloadPayrollExport
+    produces:
+      - application/octet-stream
+      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      - text/csv
+      - application/xml
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Payroll export file
+        schema:
+          type: file
+        headers:
+          Content-Disposition:
+            type: string
+            description: Attachment filename
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+      409:
+        description: Export not ready (still generating)
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/payroll-exports/{id}/preview:
+  get:
+    tags:
+      - Payroll
+    summary: Preview payroll export data
+    description: Returns the export data as JSON for preview
+    operationId: previewPayrollExport
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Payroll export preview data
+        schema:
+          type: object
+          properties:
+            lines:
+              type: array
+              items:
+                $ref: '../schemas/payroll-exports.yaml#/PayrollExportLine'
+            summary:
+              type: object
+              properties:
+                employee_count:
+                  type: integer
+                total_hours:
+                  type: number
+                  format: decimal
+                total_overtime:
+                  type: number
+                  format: decimal
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+      409:
+        description: Export not ready
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'

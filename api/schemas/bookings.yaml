@@ -1,0 +1,199 @@
+# Booking-related schemas
+Booking:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - employee_id
+    - booking_date
+    - booking_type_id
+    - original_time
+    - edited_time
+    - source
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    employee_id:
+      type: string
+      format: uuid
+    booking_date:
+      type: string
+      format: date
+      example: "2024-01-15"
+    booking_type_id:
+      type: string
+      format: uuid
+    # Time values (minutes from midnight)
+    original_time:
+      type: integer
+      description: Original booking time (minutes from midnight)
+      example: 480
+    edited_time:
+      type: integer
+      description: Edited/corrected time (minutes from midnight)
+      example: 480
+    calculated_time:
+      type: integer
+      description: Time after tolerance/rounding (minutes from midnight)
+      x-nullable: true
+    time_string:
+      type: string
+      description: Formatted time as HH:MM (read-only)
+      example: "08:00"
+      readOnly: true
+    # Pairing
+    pair_id:
+      type: string
+      format: uuid
+      x-nullable: true
+      description: ID of paired booking (in/out pair)
+    # Metadata
+    source:
+      type: string
+      enum:
+        - web
+        - terminal
+        - api
+        - import
+        - correction
+      example: "web"
+    terminal_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    notes:
+      type: string
+      x-nullable: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+    created_by:
+      type: string
+      format: uuid
+      x-nullable: true
+    updated_by:
+      type: string
+      format: uuid
+      x-nullable: true
+    # Expanded relations
+    employee:
+      allOf:
+        - $ref: './employees.yaml#/EmployeeSummary'
+      x-nullable: true
+    booking_type:
+      allOf:
+        - $ref: './booking-types.yaml#/BookingTypeSummary'
+      x-nullable: true
+
+BookingSummary:
+  type: object
+  required:
+    - id
+    - booking_date
+    - edited_time
+  properties:
+    id:
+      type: string
+      format: uuid
+    booking_date:
+      type: string
+      format: date
+    edited_time:
+      type: integer
+    time_string:
+      type: string
+    booking_type:
+      $ref: './booking-types.yaml#/BookingTypeSummary'
+
+CreateBookingRequest:
+  type: object
+  required:
+    - employee_id
+    - booking_date
+    - booking_type_id
+    - time
+  properties:
+    employee_id:
+      type: string
+      format: uuid
+    booking_date:
+      type: string
+      format: date
+      description: Date in YYYY-MM-DD format
+    booking_type_id:
+      type: string
+      format: uuid
+    time:
+      type: string
+      description: Time in HH:MM format
+      example: "08:00"
+    notes:
+      type: string
+
+UpdateBookingRequest:
+  type: object
+  properties:
+    time:
+      type: string
+      description: Time in HH:MM format
+      example: "08:15"
+    notes:
+      type: string
+
+BookingList:
+  type: object
+  required:
+    - data
+    - total
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/Booking'
+    total:
+      type: integer
+      example: 50
+
+# Day view for an employee
+DayView:
+  type: object
+  required:
+    - employee_id
+    - date
+    - bookings
+  properties:
+    employee_id:
+      type: string
+      format: uuid
+    date:
+      type: string
+      format: date
+    bookings:
+      type: array
+      items:
+        $ref: '#/Booking'
+    daily_value:
+      allOf:
+        - $ref: './daily-values.yaml#/DailyValue'
+      x-nullable: true
+    day_plan:
+      allOf:
+        - $ref: './day-plans.yaml#/DayPlanSummary'
+      x-nullable: true
+    is_holiday:
+      type: boolean
+    holiday:
+      allOf:
+        - $ref: './holidays.yaml#/Holiday'
+      x-nullable: true
+    errors:
+      type: array
+      items:
+        $ref: './daily-values.yaml#/DailyError'

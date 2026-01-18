@@ -1,0 +1,127 @@
+# Tenant endpoints
+/tenants:
+  get:
+    tags:
+      - Tenants
+    summary: List tenants
+    description: |
+      Returns all tenants (organizations/companies) in the system. Each tenant
+      has isolated data. Use for tenant selection screens or admin dashboards.
+      Filter by active status to show only enabled tenants.
+    operationId: listTenants
+    parameters:
+      - name: active
+        in: query
+        type: boolean
+        description: Filter by active status
+    responses:
+      200:
+        description: List of tenants
+        schema:
+          type: array
+          items:
+            $ref: '../schemas/tenants.yaml#/Tenant'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Tenants
+    summary: Create tenant
+    description: |
+      Creates a new tenant (organization). Each tenant gets isolated data storage.
+      The slug must be unique and URL-friendly (used in URLs and API headers).
+      Requires admin privileges.
+    operationId: createTenant
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/tenants.yaml#/CreateTenantRequest'
+    responses:
+      201:
+        description: Created tenant
+        schema:
+          $ref: '../schemas/tenants.yaml#/Tenant'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/tenants/{id}:
+  get:
+    tags:
+      - Tenants
+    summary: Get tenant by ID
+    description: |
+      Retrieves tenant details including name, slug, settings, and status.
+      Use to display tenant info or populate settings forms.
+    operationId: getTenant
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Tenant details
+        schema:
+          $ref: '../schemas/tenants.yaml#/Tenant'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Tenants
+    summary: Update tenant
+    description: |
+      Updates tenant properties like name, settings, or active status.
+      Deactivating a tenant prevents users from accessing it. Supports
+      partial updates - only include fields to change.
+    operationId: updateTenant
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/tenants.yaml#/UpdateTenantRequest'
+    responses:
+      200:
+        description: Updated tenant
+        schema:
+          $ref: '../schemas/tenants.yaml#/Tenant'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Tenants
+    summary: Delete tenant
+    description: |
+      Permanently deletes a tenant and ALL its data. This action cannot be
+      undone. Consider deactivating instead to preserve data. Requires
+      admin privileges.
+    operationId: deleteTenant
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Tenant deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

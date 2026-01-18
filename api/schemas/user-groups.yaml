@@ -1,0 +1,145 @@
+# User Group-related schemas
+UserGroup:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - name
+    - code
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    name:
+      type: string
+      example: "Administrators"
+    code:
+      type: string
+      example: "ADMIN"
+    description:
+      type: string
+      x-nullable: true
+    is_system:
+      type: boolean
+      description: System groups cannot be deleted
+      example: false
+    is_active:
+      type: boolean
+      example: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+    permissions:
+      type: array
+      items:
+        $ref: '#/Permission'
+
+UserGroupSummary:
+  type: object
+  required:
+    - id
+    - name
+    - code
+  properties:
+    id:
+      type: string
+      format: uuid
+    name:
+      type: string
+    code:
+      type: string
+
+Permission:
+  type: object
+  required:
+    - id
+    - resource
+    - action
+  properties:
+    id:
+      type: string
+      format: uuid
+    resource:
+      type: string
+      example: "employees"
+    action:
+      type: string
+      enum:
+        - create
+        - read
+        - update
+        - delete
+        - manage
+      example: "read"
+    description:
+      type: string
+      x-nullable: true
+
+CreateUserGroupRequest:
+  type: object
+  required:
+    - name
+    - code
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    code:
+      type: string
+      minLength: 1
+      maxLength: 50
+    description:
+      type: string
+    permission_ids:
+      type: array
+      items:
+        type: string
+        format: uuid
+
+UpdateUserGroupRequest:
+  type: object
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    code:
+      type: string
+      minLength: 1
+      maxLength: 50
+    description:
+      type: string
+    permission_ids:
+      type: array
+      items:
+        type: string
+        format: uuid
+    is_active:
+      type: boolean
+
+UserGroupList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/UserGroup'
+
+PermissionList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/Permission'

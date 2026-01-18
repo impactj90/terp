@@ -1,0 +1,249 @@
+# Payroll Export-related schemas
+PayrollExport:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - year
+    - month
+    - status
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    year:
+      type: integer
+      example: 2024
+    month:
+      type: integer
+      minimum: 1
+      maximum: 12
+      example: 1
+    status:
+      type: string
+      enum:
+        - pending
+        - generating
+        - completed
+        - failed
+      example: "completed"
+    export_type:
+      type: string
+      enum:
+        - standard
+        - datev
+        - sage
+        - custom
+      example: "standard"
+    # Filters
+    parameters:
+      type: object
+      description: Export parameters
+      properties:
+        employee_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        department_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        include_accounts:
+          type: array
+          items:
+            type: string
+            format: uuid
+    # Output
+    format:
+      type: string
+      enum:
+        - csv
+        - xlsx
+        - xml
+        - json
+      example: "csv"
+    file_url:
+      type: string
+      format: uri
+      x-nullable: true
+    file_size:
+      type: integer
+      x-nullable: true
+    row_count:
+      type: integer
+      x-nullable: true
+    # Summary
+    employee_count:
+      type: integer
+      example: 50
+    total_hours:
+      type: number
+      format: decimal
+      example: 8400.5
+    total_overtime:
+      type: number
+      format: decimal
+      example: 250.0
+    # Timestamps
+    requested_at:
+      type: string
+      format: date-time
+    started_at:
+      type: string
+      format: date-time
+      x-nullable: true
+    completed_at:
+      type: string
+      format: date-time
+      x-nullable: true
+    error_message:
+      type: string
+      x-nullable: true
+    created_by:
+      type: string
+      format: uuid
+      x-nullable: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+PayrollExportSummary:
+  type: object
+  required:
+    - id
+    - year
+    - month
+    - status
+  properties:
+    id:
+      type: string
+      format: uuid
+    year:
+      type: integer
+    month:
+      type: integer
+    status:
+      type: string
+    export_type:
+      type: string
+    requested_at:
+      type: string
+      format: date-time
+    completed_at:
+      type: string
+      format: date-time
+
+PayrollExportLine:
+  type: object
+  required:
+    - employee_id
+    - personnel_number
+  properties:
+    employee_id:
+      type: string
+      format: uuid
+    personnel_number:
+      type: string
+    first_name:
+      type: string
+    last_name:
+      type: string
+    department_code:
+      type: string
+    cost_center_code:
+      type: string
+    # Time values (hours, not minutes, for payroll)
+    target_hours:
+      type: number
+      format: decimal
+    worked_hours:
+      type: number
+      format: decimal
+    overtime_hours:
+      type: number
+      format: decimal
+    # Account values
+    account_values:
+      type: object
+      description: Account code -> hours
+      additionalProperties:
+        type: number
+        format: decimal
+    # Absence days
+    vacation_days:
+      type: number
+      format: decimal
+    sick_days:
+      type: number
+      format: decimal
+    other_absence_days:
+      type: number
+      format: decimal
+
+GeneratePayrollExportRequest:
+  type: object
+  required:
+    - year
+    - month
+    - format
+  properties:
+    year:
+      type: integer
+    month:
+      type: integer
+      minimum: 1
+      maximum: 12
+    export_type:
+      type: string
+      enum:
+        - standard
+        - datev
+        - sage
+        - custom
+      default: "standard"
+    format:
+      type: string
+      enum:
+        - csv
+        - xlsx
+        - xml
+        - json
+    parameters:
+      type: object
+      properties:
+        employee_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        department_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        include_accounts:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+PayrollExportList:
+  type: object
+  required:
+    - data
+    - meta
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/PayrollExport'
+    meta:
+      $ref: './common.yaml#/PaginationMeta'

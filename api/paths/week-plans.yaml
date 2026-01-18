@@ -1,0 +1,114 @@
+# Week Plan endpoints
+/week-plans:
+  get:
+    tags:
+      - Week Plans
+    summary: List week plans
+    description: |
+      Returns week plans that combine day plans for a full week. Week plans are
+      assigned to employees to define their regular schedule. Each day can have
+      a different day plan or be marked as off.
+    operationId: listWeekPlans
+    parameters:
+      - name: active
+        in: query
+        type: boolean
+        description: Filter by active status
+    responses:
+      200:
+        description: List of week plans
+        schema:
+          $ref: '../schemas/week-plans.yaml#/WeekPlanList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Week Plans
+    summary: Create week plan
+    operationId: createWeekPlan
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/week-plans.yaml#/CreateWeekPlanRequest'
+    responses:
+      201:
+        description: Created week plan
+        schema:
+          $ref: '../schemas/week-plans.yaml#/WeekPlan'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/week-plans/{id}:
+  get:
+    tags:
+      - Week Plans
+    summary: Get week plan by ID
+    operationId: getWeekPlan
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Week plan details
+        schema:
+          $ref: '../schemas/week-plans.yaml#/WeekPlan'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  put:
+    tags:
+      - Week Plans
+    summary: Update week plan
+    operationId: updateWeekPlan
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/week-plans.yaml#/UpdateWeekPlanRequest'
+    responses:
+      200:
+        description: Updated week plan
+        schema:
+          $ref: '../schemas/week-plans.yaml#/WeekPlan'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Week Plans
+    summary: Delete week plan
+    operationId: deleteWeekPlan
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Week plan deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

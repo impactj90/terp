@@ -1,0 +1,482 @@
+# Day Plan-related schemas
+DayPlan:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - code
+    - name
+    - plan_type
+    - regular_hours
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    code:
+      type: string
+      example: "PLAN-001"
+    name:
+      type: string
+      example: "Standard Day"
+    description:
+      type: string
+      x-nullable: true
+    plan_type:
+      type: string
+      enum:
+        - fixed
+        - flextime
+      example: "fixed"
+    # Time windows (minutes from midnight)
+    come_from:
+      type: integer
+      description: Earliest allowed arrival (minutes from midnight)
+      x-nullable: true
+      example: 420
+    come_to:
+      type: integer
+      description: Latest allowed arrival (minutes from midnight)
+      x-nullable: true
+      example: 540
+    go_from:
+      type: integer
+      description: Earliest allowed departure (minutes from midnight)
+      x-nullable: true
+      example: 960
+    go_to:
+      type: integer
+      description: Latest allowed departure (minutes from midnight)
+      x-nullable: true
+      example: 1080
+    core_start:
+      type: integer
+      description: Core time start (minutes from midnight)
+      x-nullable: true
+      example: 540
+    core_end:
+      type: integer
+      description: Core time end (minutes from midnight)
+      x-nullable: true
+      example: 960
+    # Target hours
+    regular_hours:
+      type: integer
+      description: Target working hours in minutes
+      example: 480
+    # Tolerance settings
+    tolerance_come_plus:
+      type: integer
+      description: Tolerance for late arrival (minutes)
+      example: 0
+    tolerance_come_minus:
+      type: integer
+      description: Tolerance for early arrival (minutes)
+      example: 0
+    tolerance_go_plus:
+      type: integer
+      description: Tolerance for late departure (minutes)
+      example: 0
+    tolerance_go_minus:
+      type: integer
+      description: Tolerance for early departure (minutes)
+      example: 0
+    # Rounding settings
+    rounding_come_type:
+      type: string
+      enum:
+        - none
+        - up
+        - down
+        - nearest
+      x-nullable: true
+    rounding_come_interval:
+      type: integer
+      description: Rounding interval in minutes
+      x-nullable: true
+    rounding_go_type:
+      type: string
+      enum:
+        - none
+        - up
+        - down
+        - nearest
+      x-nullable: true
+    rounding_go_interval:
+      type: integer
+      description: Rounding interval in minutes
+      x-nullable: true
+    # Caps
+    min_work_time:
+      type: integer
+      description: Minimum work time in minutes
+      x-nullable: true
+    max_net_work_time:
+      type: integer
+      description: Maximum net work time in minutes
+      x-nullable: true
+    is_active:
+      type: boolean
+      example: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+    # Relations
+    breaks:
+      type: array
+      items:
+        $ref: '#/DayPlanBreak'
+    bonuses:
+      type: array
+      items:
+        $ref: '#/DayPlanBonus'
+
+DayPlanSummary:
+  type: object
+  required:
+    - id
+    - code
+    - name
+    - plan_type
+  properties:
+    id:
+      type: string
+      format: uuid
+    code:
+      type: string
+    name:
+      type: string
+    plan_type:
+      type: string
+
+DayPlanBreak:
+  type: object
+  required:
+    - id
+    - day_plan_id
+    - break_type
+    - duration
+  properties:
+    id:
+      type: string
+      format: uuid
+    day_plan_id:
+      type: string
+      format: uuid
+    break_type:
+      type: string
+      enum:
+        - fixed
+        - variable
+        - minimum
+      example: "fixed"
+    start_time:
+      type: integer
+      description: Break start (minutes from midnight)
+      x-nullable: true
+    end_time:
+      type: integer
+      description: Break end (minutes from midnight)
+      x-nullable: true
+    duration:
+      type: integer
+      description: Break duration in minutes
+      example: 30
+    after_work_minutes:
+      type: integer
+      description: Auto-deduct break after this much work time
+      x-nullable: true
+    auto_deduct:
+      type: boolean
+      description: Automatically deduct break
+      example: true
+    is_paid:
+      type: boolean
+      description: Is this break paid
+      example: false
+    sort_order:
+      type: integer
+      example: 0
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+DayPlanBonus:
+  type: object
+  required:
+    - id
+    - day_plan_id
+    - account_id
+    - time_from
+    - time_to
+    - calculation_type
+    - value_minutes
+  properties:
+    id:
+      type: string
+      format: uuid
+    day_plan_id:
+      type: string
+      format: uuid
+    account_id:
+      type: string
+      format: uuid
+    time_from:
+      type: integer
+      description: Bonus time range start (minutes from midnight)
+      example: 1200
+    time_to:
+      type: integer
+      description: Bonus time range end (minutes from midnight)
+      example: 1380
+    calculation_type:
+      type: string
+      enum:
+        - fixed
+        - per_minute
+        - percentage
+      example: "per_minute"
+    value_minutes:
+      type: integer
+      description: Bonus value in minutes
+      example: 15
+    min_work_minutes:
+      type: integer
+      description: Minimum work required for bonus
+      x-nullable: true
+    applies_on_holiday:
+      type: boolean
+      example: false
+    sort_order:
+      type: integer
+      example: 0
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+    # Relations
+    account:
+      allOf:
+        - $ref: './accounts.yaml#/Account'
+      x-nullable: true
+
+CreateDayPlanRequest:
+  type: object
+  required:
+    - code
+    - name
+    - plan_type
+    - regular_hours
+  properties:
+    code:
+      type: string
+      minLength: 1
+      maxLength: 20
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    description:
+      type: string
+    plan_type:
+      type: string
+      enum:
+        - fixed
+        - flextime
+    come_from:
+      type: integer
+    come_to:
+      type: integer
+    go_from:
+      type: integer
+    go_to:
+      type: integer
+    core_start:
+      type: integer
+    core_end:
+      type: integer
+    regular_hours:
+      type: integer
+    tolerance_come_plus:
+      type: integer
+    tolerance_come_minus:
+      type: integer
+    tolerance_go_plus:
+      type: integer
+    tolerance_go_minus:
+      type: integer
+    rounding_come_type:
+      type: string
+      enum:
+        - none
+        - up
+        - down
+        - nearest
+    rounding_come_interval:
+      type: integer
+    rounding_go_type:
+      type: string
+      enum:
+        - none
+        - up
+        - down
+        - nearest
+    rounding_go_interval:
+      type: integer
+    min_work_time:
+      type: integer
+    max_net_work_time:
+      type: integer
+
+UpdateDayPlanRequest:
+  type: object
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    description:
+      type: string
+    plan_type:
+      type: string
+      enum:
+        - fixed
+        - flextime
+    come_from:
+      type: integer
+    come_to:
+      type: integer
+    go_from:
+      type: integer
+    go_to:
+      type: integer
+    core_start:
+      type: integer
+    core_end:
+      type: integer
+    regular_hours:
+      type: integer
+    tolerance_come_plus:
+      type: integer
+    tolerance_come_minus:
+      type: integer
+    tolerance_go_plus:
+      type: integer
+    tolerance_go_minus:
+      type: integer
+    rounding_come_type:
+      type: string
+      enum:
+        - none
+        - up
+        - down
+        - nearest
+    rounding_come_interval:
+      type: integer
+    rounding_go_type:
+      type: string
+      enum:
+        - none
+        - up
+        - down
+        - nearest
+    rounding_go_interval:
+      type: integer
+    min_work_time:
+      type: integer
+    max_net_work_time:
+      type: integer
+    is_active:
+      type: boolean
+
+CopyDayPlanRequest:
+  type: object
+  required:
+    - new_code
+    - new_name
+  properties:
+    new_code:
+      type: string
+      minLength: 1
+      maxLength: 20
+    new_name:
+      type: string
+      minLength: 1
+      maxLength: 255
+
+CreateDayPlanBreakRequest:
+  type: object
+  required:
+    - break_type
+    - duration
+  properties:
+    break_type:
+      type: string
+      enum:
+        - fixed
+        - variable
+        - minimum
+    start_time:
+      type: integer
+    end_time:
+      type: integer
+    duration:
+      type: integer
+    after_work_minutes:
+      type: integer
+    auto_deduct:
+      type: boolean
+      default: true
+    is_paid:
+      type: boolean
+      default: false
+
+CreateDayPlanBonusRequest:
+  type: object
+  required:
+    - account_id
+    - time_from
+    - time_to
+    - calculation_type
+    - value_minutes
+  properties:
+    account_id:
+      type: string
+      format: uuid
+    time_from:
+      type: integer
+    time_to:
+      type: integer
+    calculation_type:
+      type: string
+      enum:
+        - fixed
+        - per_minute
+        - percentage
+    value_minutes:
+      type: integer
+    min_work_minutes:
+      type: integer
+    applies_on_holiday:
+      type: boolean
+      default: false
+
+DayPlanList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/DayPlan'

@@ -1,0 +1,148 @@
+# Report endpoints
+/reports:
+  get:
+    tags:
+      - Reports
+    summary: List reports
+    description: |
+      Returns generated reports and their status. Reports are generated
+      asynchronously and can be downloaded once complete. Filter by type
+      or status to find specific reports.
+    operationId: listReports
+    parameters:
+      - name: report_type
+        in: query
+        type: string
+        enum:
+          - daily_overview
+          - weekly_overview
+          - monthly_overview
+          - employee_timesheet
+          - department_summary
+          - absence_report
+          - vacation_report
+          - overtime_report
+          - account_balances
+          - custom
+        description: Filter by report type
+      - name: status
+        in: query
+        type: string
+        enum:
+          - pending
+          - generating
+          - completed
+          - failed
+        description: Filter by status
+      - name: limit
+        in: query
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+      - name: cursor
+        in: query
+        type: string
+    responses:
+      200:
+        description: List of reports
+        schema:
+          $ref: '../schemas/reports.yaml#/ReportList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Reports
+    summary: Generate report
+    description: Starts report generation (async)
+    operationId: generateReport
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/reports.yaml#/GenerateReportRequest'
+    responses:
+      202:
+        description: Report generation started
+        schema:
+          $ref: '../schemas/reports.yaml#/Report'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/reports/{id}:
+  get:
+    tags:
+      - Reports
+    summary: Get report by ID
+    operationId: getReport
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Report details
+        schema:
+          $ref: '../schemas/reports.yaml#/Report'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Reports
+    summary: Delete report
+    operationId: deleteReport
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Report deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/reports/{id}/download:
+  get:
+    tags:
+      - Reports
+    summary: Download report file
+    operationId: downloadReport
+    produces:
+      - application/octet-stream
+      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      - text/csv
+      - application/pdf
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Report file
+        schema:
+          type: file
+        headers:
+          Content-Disposition:
+            type: string
+            description: Attachment filename
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+      409:
+        description: Report not ready (still generating)
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'

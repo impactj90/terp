@@ -1,0 +1,160 @@
+# Absence Type-related schemas
+AbsenceType:
+  type: object
+  required:
+    - id
+    - code
+    - name
+    - category
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+      x-nullable: true
+      description: Null for system absence types
+    code:
+      type: string
+      example: "VAC"
+    name:
+      type: string
+      example: "Vacation"
+    description:
+      type: string
+      x-nullable: true
+    category:
+      type: string
+      enum:
+        - vacation
+        - sick
+        - personal
+        - unpaid
+        - holiday
+        - other
+      example: "vacation"
+    is_paid:
+      type: boolean
+      example: true
+    affects_vacation_balance:
+      type: boolean
+      description: Whether this absence type deducts from vacation balance
+      example: true
+    requires_approval:
+      type: boolean
+      example: true
+    color:
+      type: string
+      description: Hex color for UI display
+      example: "#4CAF50"
+    is_system:
+      type: boolean
+      description: System types cannot be deleted
+      example: false
+    is_active:
+      type: boolean
+      example: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+AbsenceTypeSummary:
+  type: object
+  required:
+    - id
+    - code
+    - name
+    - category
+  properties:
+    id:
+      type: string
+      format: uuid
+    code:
+      type: string
+    name:
+      type: string
+    category:
+      type: string
+    color:
+      type: string
+
+CreateAbsenceTypeRequest:
+  type: object
+  required:
+    - code
+    - name
+    - category
+  properties:
+    code:
+      type: string
+      minLength: 1
+      maxLength: 20
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    description:
+      type: string
+    category:
+      type: string
+      enum:
+        - vacation
+        - sick
+        - personal
+        - unpaid
+        - holiday
+        - other
+    is_paid:
+      type: boolean
+      default: true
+    affects_vacation_balance:
+      type: boolean
+      default: false
+    requires_approval:
+      type: boolean
+      default: true
+    color:
+      type: string
+
+UpdateAbsenceTypeRequest:
+  type: object
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    description:
+      type: string
+    category:
+      type: string
+      enum:
+        - vacation
+        - sick
+        - personal
+        - unpaid
+        - holiday
+        - other
+    is_paid:
+      type: boolean
+    affects_vacation_balance:
+      type: boolean
+    requires_approval:
+      type: boolean
+    color:
+      type: string
+    is_active:
+      type: boolean
+
+AbsenceTypeList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/AbsenceType'

@@ -1,0 +1,158 @@
+# User Group endpoints
+/user-groups:
+  get:
+    tags:
+      - User Groups
+    summary: List user groups
+    description: |
+      Returns all user groups for the current tenant. User groups define roles
+      and permissions for access control. Use this to populate role selection
+      dropdowns or display available roles in admin interfaces.
+    operationId: listUserGroups
+    parameters:
+      - name: active
+        in: query
+        type: boolean
+        description: Filter by active status
+    responses:
+      200:
+        description: List of user groups
+        schema:
+          $ref: '../schemas/user-groups.yaml#/UserGroupList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - User Groups
+    summary: Create user group
+    description: |
+      Creates a new user group (role) for the tenant. Groups are used for
+      role-based access control - assign users to groups instead of managing
+      permissions individually. Group names must be unique within a tenant.
+    operationId: createUserGroup
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/user-groups.yaml#/CreateUserGroupRequest'
+    responses:
+      201:
+        description: Created user group
+        schema:
+          $ref: '../schemas/user-groups.yaml#/UserGroup'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/user-groups/{id}:
+  get:
+    tags:
+      - User Groups
+    summary: Get user group by ID
+    description: |
+      Retrieves a single user group with its full details including permissions.
+      Use this to display group details in an edit form or to check a group's
+      permissions before assignment.
+    operationId: getUserGroup
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: User group details
+        schema:
+          $ref: '../schemas/user-groups.yaml#/UserGroup'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - User Groups
+    summary: Update user group
+    description: |
+      Updates an existing user group's name, description, or permissions.
+      Changes apply immediately to all users in the group. System groups
+      (is_system=true) cannot be modified and will return 403 Forbidden.
+    operationId: updateUserGroup
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/user-groups.yaml#/UpdateUserGroupRequest'
+    responses:
+      200:
+        description: Updated user group
+        schema:
+          $ref: '../schemas/user-groups.yaml#/UserGroup'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      403:
+        description: Cannot modify system groups
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - User Groups
+    summary: Delete user group
+    description: |
+      Permanently deletes a user group. Users in this group will lose the
+      associated permissions. System groups (is_system=true) cannot be deleted
+      and will return 403 Forbidden. Consider deactivating instead of deleting
+      if you need to preserve audit history.
+    operationId: deleteUserGroup
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: User group deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      403:
+        description: Cannot delete system groups
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/permissions:
+  get:
+    tags:
+      - User Groups
+    summary: List all permissions
+    description: |
+      Returns all available permissions in the system. Use this to populate
+      a permission picker when creating or editing user groups. Permissions
+      are defined by resource (e.g., "employees") and action (e.g., "read",
+      "write", "delete", "manage").
+    operationId: listPermissions
+    responses:
+      200:
+        description: List of permissions
+        schema:
+          $ref: '../schemas/user-groups.yaml#/PermissionList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'

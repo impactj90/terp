@@ -1,0 +1,117 @@
+# Monthly Evaluation schemas
+MonthlyEvaluation:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    name:
+      type: string
+    description:
+      type: string
+    flextime_cap_positive:
+      type: integer
+      description: Maximum positive flextime in minutes
+    flextime_cap_negative:
+      type: integer
+      description: Maximum negative flextime in minutes
+    overtime_threshold:
+      type: integer
+      description: Overtime threshold in minutes
+    max_carryover_vacation:
+      type: number
+      format: decimal
+      description: Maximum vacation days that can be carried over
+    is_default:
+      type: boolean
+    is_active:
+      type: boolean
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+  required:
+    - id
+    - tenant_id
+    - name
+    - is_default
+    - is_active
+
+MonthlyEvaluationList:
+  type: object
+  properties:
+    items:
+      type: array
+      items:
+        $ref: '#/MonthlyEvaluation'
+    next_cursor:
+      type: string
+  required:
+    - items
+
+CreateMonthlyEvaluationRequest:
+  type: object
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 100
+    description:
+      type: string
+    flextime_cap_positive:
+      type: integer
+      minimum: 0
+      description: Maximum positive flextime in minutes
+    flextime_cap_negative:
+      type: integer
+      minimum: 0
+      description: Maximum negative flextime in minutes
+    overtime_threshold:
+      type: integer
+      minimum: 0
+      description: Overtime threshold in minutes
+    max_carryover_vacation:
+      type: number
+      format: decimal
+      minimum: 0
+      description: Maximum vacation days that can be carried over
+    is_default:
+      type: boolean
+      default: false
+    is_active:
+      type: boolean
+      default: true
+  required:
+    - name
+
+UpdateMonthlyEvaluationRequest:
+  type: object
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 100
+    description:
+      type: string
+    flextime_cap_positive:
+      type: integer
+      minimum: 0
+    flextime_cap_negative:
+      type: integer
+      minimum: 0
+    overtime_threshold:
+      type: integer
+      minimum: 0
+    max_carryover_vacation:
+      type: number
+      format: decimal
+      minimum: 0
+    is_default:
+      type: boolean
+    is_active:
+      type: boolean

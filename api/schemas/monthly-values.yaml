@@ -1,0 +1,217 @@
+# Monthly Value-related schemas
+MonthlyValue:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - employee_id
+    - year
+    - month
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    employee_id:
+      type: string
+      format: uuid
+    year:
+      type: integer
+      example: 2024
+    month:
+      type: integer
+      minimum: 1
+      maximum: 12
+      example: 1
+    status:
+      type: string
+      enum:
+        - open
+        - calculated
+        - closed
+        - exported
+      example: "calculated"
+    # Time values (all in minutes)
+    target_minutes:
+      type: integer
+      description: Total target work time for month
+      example: 10080
+    gross_minutes:
+      type: integer
+      description: Total gross work time
+      example: 10500
+    break_minutes:
+      type: integer
+      description: Total break time
+      example: 600
+    net_minutes:
+      type: integer
+      description: Total net work time
+      example: 9900
+    overtime_minutes:
+      type: integer
+      description: Total overtime
+      example: 420
+    undertime_minutes:
+      type: integer
+      description: Total undertime
+      example: 0
+    balance_minutes:
+      type: integer
+      description: Balance (overtime - undertime)
+      example: 420
+    # Work days
+    working_days:
+      type: integer
+      description: Number of working days in month
+      example: 21
+    worked_days:
+      type: integer
+      description: Number of days actually worked
+      example: 20
+    absence_days:
+      type: number
+      format: decimal
+      description: Number of absence days
+      example: 1.0
+    holiday_days:
+      type: integer
+      description: Number of holidays
+      example: 0
+    # Account balances (JSON object)
+    account_balances:
+      type: object
+      description: Balances per account (account_id -> minutes)
+      additionalProperties:
+        type: integer
+    # Timestamps
+    calculated_at:
+      type: string
+      format: date-time
+      x-nullable: true
+    closed_at:
+      type: string
+      format: date-time
+      x-nullable: true
+    closed_by:
+      type: string
+      format: uuid
+      x-nullable: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+    # Expanded relations
+    employee:
+      allOf:
+        - $ref: './employees.yaml#/EmployeeSummary'
+      x-nullable: true
+
+MonthlyValueSummary:
+  type: object
+  required:
+    - year
+    - month
+    - status
+    - net_minutes
+    - balance_minutes
+  properties:
+    year:
+      type: integer
+    month:
+      type: integer
+    status:
+      type: string
+    net_minutes:
+      type: integer
+    balance_minutes:
+      type: integer
+
+MonthlyEvaluation:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - employee_id
+    - year
+    - month
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    employee_id:
+      type: string
+      format: uuid
+    year:
+      type: integer
+    month:
+      type: integer
+    # Running totals
+    cumulative_balance_minutes:
+      type: integer
+      description: Running balance from year start
+      example: 1200
+    cumulative_overtime_minutes:
+      type: integer
+      example: 1500
+    cumulative_undertime_minutes:
+      type: integer
+      example: 300
+    # Vacation tracking
+    vacation_used_ytd:
+      type: number
+      format: decimal
+      description: Vacation days used year-to-date
+      example: 10.5
+    vacation_remaining:
+      type: number
+      format: decimal
+      example: 19.5
+    # Sick days
+    sick_days_ytd:
+      type: number
+      format: decimal
+      example: 2.0
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+CloseMonthRequest:
+  type: object
+  properties:
+    recalculate:
+      type: boolean
+      description: Recalculate all daily values before closing
+      default: true
+    notes:
+      type: string
+
+ReopenMonthRequest:
+  type: object
+  required:
+    - reason
+  properties:
+    reason:
+      type: string
+      minLength: 10
+      description: Reason for reopening
+
+MonthlyValueList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/MonthlyValue'

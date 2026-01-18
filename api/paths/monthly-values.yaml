@@ -1,0 +1,238 @@
+# Monthly Value endpoints
+/monthly-values:
+  get:
+    tags:
+      - Monthly Values
+    summary: List monthly values
+    description: |
+      Returns monthly aggregates of daily values per employee. Monthly values
+      track total hours, overtime, account balances, and payroll data. Use for
+      month-end closing and payroll export preparation.
+    operationId: listMonthlyValues
+    parameters:
+      - name: employee_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by employee
+      - name: year
+        in: query
+        type: integer
+        description: Filter by year
+      - name: month
+        in: query
+        type: integer
+        minimum: 1
+        maximum: 12
+        description: Filter by month
+      - name: status
+        in: query
+        type: string
+        enum:
+          - open
+          - calculated
+          - closed
+          - exported
+        description: Filter by status
+      - name: department_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by department
+    responses:
+      200:
+        description: List of monthly values
+        schema:
+          $ref: '../schemas/monthly-values.yaml#/MonthlyValueList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/monthly-values/{id}:
+  get:
+    tags:
+      - Monthly Values
+    summary: Get monthly value by ID
+    operationId: getMonthlyValue
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Monthly value details
+        schema:
+          $ref: '../schemas/monthly-values.yaml#/MonthlyValue'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/monthly-values/{id}/close:
+  post:
+    tags:
+      - Monthly Values
+    summary: Close month
+    description: Closes the month for the employee, preventing further modifications
+    operationId: closeMonth
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        schema:
+          $ref: '../schemas/monthly-values.yaml#/CloseMonthRequest'
+    responses:
+      200:
+        description: Month closed
+        schema:
+          $ref: '../schemas/monthly-values.yaml#/MonthlyValue'
+      400:
+        description: Cannot close (has errors or already closed)
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/monthly-values/{id}/reopen:
+  post:
+    tags:
+      - Monthly Values
+    summary: Reopen month
+    description: Reopens a closed month for corrections
+    operationId: reopenMonth
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/monthly-values.yaml#/ReopenMonthRequest'
+    responses:
+      200:
+        description: Month reopened
+        schema:
+          $ref: '../schemas/monthly-values.yaml#/MonthlyValue'
+      400:
+        description: Cannot reopen (not closed or already exported)
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/monthly-values/close-batch:
+  post:
+    tags:
+      - Monthly Values
+    summary: Close month for multiple employees
+    description: Batch close month for specified employees or all employees
+    operationId: closeMonthBatch
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - year
+            - month
+          properties:
+            year:
+              type: integer
+            month:
+              type: integer
+              minimum: 1
+              maximum: 12
+            employee_ids:
+              type: array
+              items:
+                type: string
+                format: uuid
+              description: Optional list of employee IDs (all if not specified)
+            department_id:
+              type: string
+              format: uuid
+              description: Close for all employees in department
+            recalculate:
+              type: boolean
+              default: true
+    responses:
+      200:
+        description: Batch close result
+        schema:
+          type: object
+          properties:
+            closed_count:
+              type: integer
+            skipped_count:
+              type: integer
+            error_count:
+              type: integer
+            errors:
+              type: array
+              items:
+                type: object
+                properties:
+                  employee_id:
+                    type: string
+                    format: uuid
+                  reason:
+                    type: string
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/monthly-values/recalculate:
+  post:
+    tags:
+      - Monthly Values
+    summary: Recalculate monthly values
+    description: Trigger recalculation for a month
+    operationId: recalculateMonthlyValues
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - year
+            - month
+          properties:
+            year:
+              type: integer
+            month:
+              type: integer
+              minimum: 1
+              maximum: 12
+            employee_id:
+              type: string
+              format: uuid
+              description: Optional employee ID (all employees if not specified)
+    responses:
+      202:
+        description: Recalculation started
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+            affected_employees:
+              type: integer
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'

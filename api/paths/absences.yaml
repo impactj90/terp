@@ -1,0 +1,175 @@
+# Absence endpoints
+/absences:
+  get:
+    tags:
+      - Absences
+    summary: List absences
+    description: |
+      Returns employee absences (vacation, sick leave, etc.). Absences go
+      through an approval workflow. Filter by employee, type, date range,
+      or status for leave management.
+    operationId: listAbsences
+    parameters:
+      - name: employee_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by employee
+      - name: absence_type_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by absence type
+      - name: from
+        in: query
+        type: string
+        format: date
+        description: Start date filter
+      - name: to
+        in: query
+        type: string
+        format: date
+        description: End date filter
+      - name: status
+        in: query
+        type: string
+        enum:
+          - pending
+          - approved
+          - rejected
+          - cancelled
+        description: Filter by status
+    responses:
+      200:
+        description: List of absences
+        schema:
+          $ref: '../schemas/absences.yaml#/AbsenceList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/absences/{id}:
+  get:
+    tags:
+      - Absences
+    summary: Get absence by ID
+    operationId: getAbsence
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Absence details
+        schema:
+          $ref: '../schemas/absences.yaml#/Absence'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Absences
+    summary: Update absence
+    operationId: updateAbsence
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/absences.yaml#/UpdateAbsenceRequest'
+    responses:
+      200:
+        description: Updated absence
+        schema:
+          $ref: '../schemas/absences.yaml#/Absence'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Absences
+    summary: Delete absence
+    operationId: deleteAbsence
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Absence deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/absences/{id}/approve:
+  post:
+    tags:
+      - Absences
+    summary: Approve absence
+    operationId: approveAbsence
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Approved absence
+        schema:
+          $ref: '../schemas/absences.yaml#/Absence'
+      400:
+        description: Cannot approve (not pending)
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/absences/{id}/reject:
+  post:
+    tags:
+      - Absences
+    summary: Reject absence
+    operationId: rejectAbsence
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        schema:
+          type: object
+          properties:
+            reason:
+              type: string
+              description: Rejection reason
+    responses:
+      200:
+        description: Rejected absence
+        schema:
+          $ref: '../schemas/absences.yaml#/Absence'
+      400:
+        description: Cannot reject (not pending)
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

@@ -1,0 +1,199 @@
+# Report-related schemas
+Report:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - report_type
+    - status
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    report_type:
+      type: string
+      enum:
+        - daily_overview
+        - weekly_overview
+        - monthly_overview
+        - employee_timesheet
+        - department_summary
+        - absence_report
+        - vacation_report
+        - overtime_report
+        - account_balances
+        - custom
+      example: "monthly_overview"
+    name:
+      type: string
+      example: "January 2024 Overview"
+    description:
+      type: string
+      x-nullable: true
+    status:
+      type: string
+      enum:
+        - pending
+        - generating
+        - completed
+        - failed
+      example: "completed"
+    # Filters/parameters
+    parameters:
+      type: object
+      description: Report parameters (dates, employees, departments, etc.)
+      properties:
+        from_date:
+          type: string
+          format: date
+        to_date:
+          type: string
+          format: date
+        employee_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        department_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+    # Output
+    format:
+      type: string
+      enum:
+        - json
+        - csv
+        - xlsx
+        - pdf
+      example: "xlsx"
+    file_url:
+      type: string
+      format: uri
+      x-nullable: true
+      description: URL to download generated report
+    file_size:
+      type: integer
+      x-nullable: true
+      description: File size in bytes
+    row_count:
+      type: integer
+      x-nullable: true
+      description: Number of rows in report
+    # Timestamps
+    requested_at:
+      type: string
+      format: date-time
+    started_at:
+      type: string
+      format: date-time
+      x-nullable: true
+    completed_at:
+      type: string
+      format: date-time
+      x-nullable: true
+    error_message:
+      type: string
+      x-nullable: true
+    created_by:
+      type: string
+      format: uuid
+      x-nullable: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+ReportSummary:
+  type: object
+  required:
+    - id
+    - report_type
+    - status
+    - requested_at
+  properties:
+    id:
+      type: string
+      format: uuid
+    report_type:
+      type: string
+    name:
+      type: string
+    status:
+      type: string
+    format:
+      type: string
+    requested_at:
+      type: string
+      format: date-time
+    completed_at:
+      type: string
+      format: date-time
+
+GenerateReportRequest:
+  type: object
+  required:
+    - report_type
+    - format
+  properties:
+    report_type:
+      type: string
+      enum:
+        - daily_overview
+        - weekly_overview
+        - monthly_overview
+        - employee_timesheet
+        - department_summary
+        - absence_report
+        - vacation_report
+        - overtime_report
+        - account_balances
+        - custom
+    name:
+      type: string
+      maxLength: 255
+    format:
+      type: string
+      enum:
+        - json
+        - csv
+        - xlsx
+        - pdf
+    parameters:
+      type: object
+      properties:
+        from_date:
+          type: string
+          format: date
+        to_date:
+          type: string
+          format: date
+        employee_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        department_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+ReportList:
+  type: object
+  required:
+    - data
+    - meta
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/Report'
+    meta:
+      $ref: './common.yaml#/PaginationMeta'

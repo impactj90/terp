@@ -1,0 +1,119 @@
+# Location-related schemas
+Location:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - name
+    - code
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    name:
+      type: string
+      example: "Main Office"
+    code:
+      type: string
+      example: "HQ"
+    description:
+      type: string
+      x-nullable: true
+    address:
+      type: string
+      x-nullable: true
+    city:
+      type: string
+      x-nullable: true
+    country:
+      type: string
+      x-nullable: true
+    timezone:
+      type: string
+      example: "Europe/Berlin"
+    is_active:
+      type: boolean
+      example: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+LocationSummary:
+  type: object
+  required:
+    - id
+    - name
+    - code
+  properties:
+    id:
+      type: string
+      format: uuid
+    name:
+      type: string
+    code:
+      type: string
+
+CreateLocationRequest:
+  type: object
+  required:
+    - name
+    - code
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    code:
+      type: string
+      minLength: 1
+      maxLength: 20
+    description:
+      type: string
+    address:
+      type: string
+    city:
+      type: string
+    country:
+      type: string
+    timezone:
+      type: string
+
+UpdateLocationRequest:
+  type: object
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    code:
+      type: string
+      minLength: 1
+      maxLength: 20
+    description:
+      type: string
+    address:
+      type: string
+    city:
+      type: string
+    country:
+      type: string
+    timezone:
+      type: string
+    is_active:
+      type: boolean
+
+LocationList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/Location'

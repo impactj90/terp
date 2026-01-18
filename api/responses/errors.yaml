@@ -1,0 +1,25 @@
+# Error response definitions
+BadRequest:
+  description: Invalid request
+  schema:
+    $ref: '../schemas/common.yaml#/ProblemDetails'
+
+Unauthorized:
+  description: Missing or invalid authentication
+  schema:
+    $ref: '../schemas/common.yaml#/ProblemDetails'
+
+Forbidden:
+  description: Insufficient permissions
+  schema:
+    $ref: '../schemas/common.yaml#/ProblemDetails'
+
+NotFound:
+  description: Resource not found
+  schema:
+    $ref: '../schemas/common.yaml#/ProblemDetails'
+
+InternalError:
+  description: Internal server error
+  schema:
+    $ref: '../schemas/common.yaml#/ProblemDetails'

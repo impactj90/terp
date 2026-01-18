@@ -1,0 +1,192 @@
+# Daily Value-related schemas
+DailyValue:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - employee_id
+    - value_date
+    - status
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    employee_id:
+      type: string
+      format: uuid
+    value_date:
+      type: string
+      format: date
+      example: "2024-01-15"
+    day_plan_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    status:
+      type: string
+      enum:
+        - pending
+        - calculated
+        - error
+        - approved
+      example: "calculated"
+    # Time values (all in minutes)
+    target_minutes:
+      type: integer
+      description: Target work time in minutes
+      example: 480
+    gross_minutes:
+      type: integer
+      description: Gross work time in minutes
+      example: 540
+    break_minutes:
+      type: integer
+      description: Break time in minutes
+      example: 30
+    net_minutes:
+      type: integer
+      description: Net work time in minutes
+      example: 510
+    overtime_minutes:
+      type: integer
+      description: Overtime in minutes
+      example: 30
+    undertime_minutes:
+      type: integer
+      description: Undertime in minutes
+      example: 0
+    balance_minutes:
+      type: integer
+      description: Balance (overtime - undertime)
+      example: 30
+    # Flags
+    is_holiday:
+      type: boolean
+      example: false
+    is_weekend:
+      type: boolean
+      example: false
+    is_absence:
+      type: boolean
+      example: false
+    absence_type_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    has_errors:
+      type: boolean
+      example: false
+    is_locked:
+      type: boolean
+      description: Locked after month closing
+      example: false
+    calculated_at:
+      type: string
+      format: date-time
+      x-nullable: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+    # Expanded relations
+    employee:
+      allOf:
+        - $ref: './employees.yaml#/EmployeeSummary'
+      x-nullable: true
+    day_plan:
+      allOf:
+        - $ref: './day-plans.yaml#/DayPlanSummary'
+      x-nullable: true
+    absence_type:
+      allOf:
+        - $ref: './absence-types.yaml#/AbsenceTypeSummary'
+      x-nullable: true
+    errors:
+      type: array
+      items:
+        $ref: '#/DailyError'
+
+DailyValueSummary:
+  type: object
+  required:
+    - id
+    - value_date
+    - status
+    - net_minutes
+    - balance_minutes
+  properties:
+    id:
+      type: string
+      format: uuid
+    value_date:
+      type: string
+      format: date
+    status:
+      type: string
+    net_minutes:
+      type: integer
+    balance_minutes:
+      type: integer
+    has_errors:
+      type: boolean
+
+DailyError:
+  type: object
+  required:
+    - id
+    - daily_value_id
+    - error_type
+    - message
+  properties:
+    id:
+      type: string
+      format: uuid
+    daily_value_id:
+      type: string
+      format: uuid
+    error_type:
+      type: string
+      enum:
+        - missing_booking
+        - unpaired_booking
+        - overlapping_bookings
+        - core_time_violation
+        - exceeds_max_hours
+        - below_min_hours
+        - break_violation
+        - invalid_sequence
+      example: "missing_booking"
+    message:
+      type: string
+      example: "Missing clock-out booking"
+    severity:
+      type: string
+      enum:
+        - warning
+        - error
+      example: "error"
+    booking_id:
+      type: string
+      format: uuid
+      x-nullable: true
+      description: Related booking if applicable
+    created_at:
+      type: string
+      format: date-time
+
+DailyValueList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/DailyValue'
+    meta:
+      $ref: './common.yaml#/PaginationMeta'

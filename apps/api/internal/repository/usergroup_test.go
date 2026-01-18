@@ -1,0 +1,249 @@
+package repository_test
+
+import (
+	"context"
+	"testing"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"gorm.io/datatypes"
+
+	"github.com/tolga/terp/internal/model"
+	"github.com/tolga/terp/internal/repository"
+	"github.com/tolga/terp/internal/testutil"
+)
+
+// createTestTenantForUserGroup creates a tenant for use in user group tests.
+func createTestTenantForUserGroup(t *testing.T, db *repository.DB) *model.Tenant {
+	t.Helper()
+	tenantRepo := repository.NewTenantRepository(db)
+	tenant := &model.Tenant{
+		Name: "Test Tenant " + uuid.New().String()[:8],
+		Slug: "test-" + uuid.New().String()[:8],
+	}
+	require.NoError(t, tenantRepo.Create(context.Background(), tenant))
+	return tenant
+}
+
+func TestUserGroupRepository_Create(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewUserGroupRepository(db)
+	ctx := context.Background()
+
+	tenant := createTestTenantForUserGroup(t, db)
+	ug := &model.UserGroup{
+		TenantID:    tenant.ID,
+		Name:        "Administrators",
+		Description: "Admin group",
+		IsAdmin:     true,
+		Permissions: datatypes.JSON([]byte(`["read","write"]`)),
+	}
+
+	err := repo.Create(ctx, ug)
+	require.NoError(t, err)
+	assert.NotEqual(t, uuid.Nil, ug.ID)
+}
+
+func TestUserGroupRepository_Create_WithDefaults(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewUserGroupRepository(db)
+	ctx := context.Background()
+
+	tenant := createTestTenantForUserGroup(t, db)
+	ug := &model.UserGroup{
+		TenantID: tenant.ID,
+		Name:     "Users",
+	}
+
+	err := repo.Create(ctx, ug)
+	require.NoError(t, err)
+	assert.False(t, ug.IsAdmin)
+	assert.False(t, ug.IsSystem)
+}
+
+func TestUserGroupRepository_GetByID(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewUserGroupRepository(db)
+	ctx := context.Background()
+
+	tenant := createTestTenantForUserGroup(t, db)
+	ug := &model.UserGroup{
+		TenantID: tenant.ID,
+		Name:     "Administrators",
+		IsAdmin:  true,
+	}
+	require.NoError(t, repo.Create(ctx, ug))
+
+	found, err := repo.GetByID(ctx, ug.ID)
+	require.NoError(t, err)
+	assert.Equal(t, ug.ID, found.ID)
+	assert.Equal(t, ug.Name, found.Name)
+	assert.True(t, found.IsAdmin)
+}
+
+func TestUserGroupRepository_GetByID_NotFound(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewUserGroupRepository(db)
+	ctx := context.Background()
+
+	_, err := repo.GetByID(ctx, uuid.New())
+	assert.ErrorIs(t, err, repository.ErrUserGroupNotFound)
+}
+
+func TestUserGroupRepository_GetByName(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewUserGroupRepository(db)
+	ctx := context.Background()
+
+	tenant := createTestTenantForUserGroup(t, db)
+	ug := &model.UserGroup{
+		TenantID: tenant.ID,
+		Name:     "Administrators",
+		IsAdmin:  true,
+	}
+	require.NoError(t, repo.Create(ctx, ug))
+
+	found, err := repo.GetByName(ctx, tenant.ID, "Administrators")
+	require.NoError(t, err)
+	require.NotNil(t, found)
+	assert.Equal(t, ug.ID, found.ID)
+}
+
+func TestUserGroupRepository_GetByName_NotFound(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewUserGroupRepository(db)
+	ctx := context.Background()
+
+	tenant := createTestTenantForUserGroup(t, db)
+
+	found, err := repo.GetByName(ctx, tenant.ID, "NonExistent")
+	require.NoError(t, err)
+	assert.Nil(t, found)
+}
+
+func TestUserGroupRepository_GetByName_DifferentTenant(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewUserGroupRepository(db)
+	ctx := context.Background()
+
+	tenant1 := createTestTenantForUserGroup(t, db)
+	tenant2 := createTestTenantForUserGroup(t, db)
+
+	ug := &model.UserGroup{
+		TenantID: tenant1.ID,
+		Name:     "Administrators",
+		IsAdmin:  true,
+	}
+	require.NoError(t, repo.Create(ctx, ug))
+
+	// Should not find in different tenant
+	found, err := repo.GetByName(ctx, tenant2.ID, "Administrators")
+	require.NoError(t, err)
+	assert.Nil(t, found)
+}
+
+func TestUserGroupRepository_Update(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewUserGroupRepository(db)
+	ctx := context.Background()
+
+	tenant := createTestTenantForUserGroup(t, db)
+	ug := &model.UserGroup{
+		TenantID: tenant.ID,
+		Name:     "Original Name",
+		IsAdmin:  false,
+	}
+	require.NoError(t, repo.Create(ctx, ug))
+
+	ug.Name = "Updated Name"
+	ug.IsAdmin = true
+	ug.Description = "Updated description"
+	err := repo.Update(ctx, ug)
+	require.NoError(t, err)
+
+	found, err := repo.GetByID(ctx, ug.ID)
+	require.NoError(t, err)
+	assert.Equal(t, "Updated Name", found.Name)
+	assert.True(t, found.IsAdmin)
+	assert.Equal(t, "Updated description", found.Description)
+}
+
+func TestUserGroupRepository_Delete(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewUserGroupRepository(db)
+	ctx := context.Background()
+
+	tenant := createTestTenantForUserGroup(t, db)
+	ug := &model.UserGroup{
+		TenantID: tenant.ID,
+		Name:     "To Delete",
+	}
+	require.NoError(t, repo.Create(ctx, ug))
+
+	err := repo.Delete(ctx, ug.ID)
+	require.NoError(t, err)
+
+	_, err = repo.GetByID(ctx, ug.ID)
+	assert.ErrorIs(t, err, repository.ErrUserGroupNotFound)
+}
+
+func TestUserGroupRepository_Delete_NotFound(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewUserGroupRepository(db)
+	ctx := context.Background()
+
+	err := repo.Delete(ctx, uuid.New())
+	assert.ErrorIs(t, err, repository.ErrUserGroupNotFound)
+}
+
+func TestUserGroupRepository_List(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewUserGroupRepository(db)
+	ctx := context.Background()
+
+	tenant := createTestTenantForUserGroup(t, db)
+	require.NoError(t, repo.Create(ctx, &model.UserGroup{TenantID: tenant.ID, Name: "Admins", IsAdmin: true}))
+	require.NoError(t, repo.Create(ctx, &model.UserGroup{TenantID: tenant.ID, Name: "Users", IsAdmin: false}))
+
+	groups, err := repo.List(ctx, tenant.ID)
+	require.NoError(t, err)
+	assert.Len(t, groups, 2)
+	// Should be ordered by name
+	assert.Equal(t, "Admins", groups[0].Name)
+	assert.Equal(t, "Users", groups[1].Name)
+}
+
+func TestUserGroupRepository_List_Empty(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewUserGroupRepository(db)
+	ctx := context.Background()
+
+	tenant := createTestTenantForUserGroup(t, db)
+
+	groups, err := repo.List(ctx, tenant.ID)
+	require.NoError(t, err)
+	assert.Empty(t, groups)
+}
+
+func TestUserGroupRepository_List_TenantIsolation(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewUserGroupRepository(db)
+	ctx := context.Background()
+
+	tenant1 := createTestTenantForUserGroup(t, db)
+	tenant2 := createTestTenantForUserGroup(t, db)
+
+	require.NoError(t, repo.Create(ctx, &model.UserGroup{TenantID: tenant1.ID, Name: "Tenant1 Group"}))
+	require.NoError(t, repo.Create(ctx, &model.UserGroup{TenantID: tenant2.ID, Name: "Tenant2 Group"}))
+
+	groups1, err := repo.List(ctx, tenant1.ID)
+	require.NoError(t, err)
+	assert.Len(t, groups1, 1)
+	assert.Equal(t, "Tenant1 Group", groups1[0].Name)
+
+	groups2, err := repo.List(ctx, tenant2.ID)
+	require.NoError(t, err)
+	assert.Len(t, groups2, 1)
+	assert.Equal(t, "Tenant2 Group", groups2[0].Name)
+}

@@ -1,0 +1,264 @@
+# Day Plan endpoints
+/day-plans:
+  get:
+    tags:
+      - Day Plans
+    summary: List day plans
+    description: |
+      Returns day plans defining work hours for a single day. Day plans specify
+      start/end times, breaks, and bonuses. They're combined into week plans for
+      employee assignment. Filter by fixed vs flextime type.
+    operationId: listDayPlans
+    parameters:
+      - name: active
+        in: query
+        type: boolean
+        description: Filter by active status
+      - name: plan_type
+        in: query
+        type: string
+        enum:
+          - fixed
+          - flextime
+        description: Filter by plan type
+    responses:
+      200:
+        description: List of day plans
+        schema:
+          $ref: '../schemas/day-plans.yaml#/DayPlanList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Day Plans
+    summary: Create day plan
+    operationId: createDayPlan
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/day-plans.yaml#/CreateDayPlanRequest'
+    responses:
+      201:
+        description: Created day plan
+        schema:
+          $ref: '../schemas/day-plans.yaml#/DayPlan'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/day-plans/{id}:
+  get:
+    tags:
+      - Day Plans
+    summary: Get day plan by ID
+    description: Returns day plan with breaks and bonuses
+    operationId: getDayPlan
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Day plan details
+        schema:
+          $ref: '../schemas/day-plans.yaml#/DayPlan'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  put:
+    tags:
+      - Day Plans
+    summary: Update day plan
+    operationId: updateDayPlan
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/day-plans.yaml#/UpdateDayPlanRequest'
+    responses:
+      200:
+        description: Updated day plan
+        schema:
+          $ref: '../schemas/day-plans.yaml#/DayPlan'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Day Plans
+    summary: Delete day plan
+    operationId: deleteDayPlan
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Day plan deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/day-plans/{id}/copy:
+  post:
+    tags:
+      - Day Plans
+    summary: Copy day plan
+    description: Creates a copy of the day plan with new code and name
+    operationId: copyDayPlan
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/day-plans.yaml#/CopyDayPlanRequest'
+    responses:
+      201:
+        description: Copied day plan
+        schema:
+          $ref: '../schemas/day-plans.yaml#/DayPlan'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+      409:
+        description: New code already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/day-plans/{id}/breaks:
+  post:
+    tags:
+      - Day Plans
+    summary: Add break to day plan
+    operationId: createDayPlanBreak
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/day-plans.yaml#/CreateDayPlanBreakRequest'
+    responses:
+      201:
+        description: Created break
+        schema:
+          $ref: '../schemas/day-plans.yaml#/DayPlanBreak'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/day-plans/{id}/breaks/{breakId}:
+  delete:
+    tags:
+      - Day Plans
+    summary: Delete break from day plan
+    operationId: deleteDayPlanBreak
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: breakId
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Break deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/day-plans/{id}/bonuses:
+  post:
+    tags:
+      - Day Plans
+    summary: Add bonus to day plan
+    operationId: createDayPlanBonus
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/day-plans.yaml#/CreateDayPlanBonusRequest'
+    responses:
+      201:
+        description: Created bonus
+        schema:
+          $ref: '../schemas/day-plans.yaml#/DayPlanBonus'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/day-plans/{id}/bonuses/{bonusId}:
+  delete:
+    tags:
+      - Day Plans
+    summary: Delete bonus from day plan
+    operationId: deleteDayPlanBonus
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: bonusId
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Bonus deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

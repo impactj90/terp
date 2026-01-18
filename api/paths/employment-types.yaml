@@ -1,0 +1,124 @@
+# Employment Type endpoints
+/employment-types:
+  get:
+    tags:
+      - Employment Types
+    summary: List employment types
+    description: |
+      Returns employment types (e.g., full-time, part-time, contractor).
+      Each type defines default weekly hours and affects time calculations.
+      Use for employee setup dropdowns.
+    operationId: listEmploymentTypes
+    parameters:
+      - name: active
+        in: query
+        type: boolean
+        description: Filter by active status
+    responses:
+      200:
+        description: List of employment types
+        schema:
+          $ref: '../schemas/employment-types.yaml#/EmploymentTypeList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Employment Types
+    summary: Create employment type
+    description: |
+      Creates a new employment type with default weekly hours. The code
+      must be unique within the tenant.
+    operationId: createEmploymentType
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/employment-types.yaml#/CreateEmploymentTypeRequest'
+    responses:
+      201:
+        description: Created employment type
+        schema:
+          $ref: '../schemas/employment-types.yaml#/EmploymentType'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/employment-types/{id}:
+  get:
+    tags:
+      - Employment Types
+    summary: Get employment type by ID
+    description: Retrieves employment type details for viewing or editing.
+    operationId: getEmploymentType
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Employment type details
+        schema:
+          $ref: '../schemas/employment-types.yaml#/EmploymentType'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Employment Types
+    summary: Update employment type
+    description: |
+      Updates employment type properties like name, weekly hours, or active
+      status. Changes don't retroactively affect existing employees.
+    operationId: updateEmploymentType
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/employment-types.yaml#/UpdateEmploymentTypeRequest'
+    responses:
+      200:
+        description: Updated employment type
+        schema:
+          $ref: '../schemas/employment-types.yaml#/EmploymentType'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Employment Types
+    summary: Delete employment type
+    description: |
+      Permanently removes an employment type. May fail if employees are
+      assigned. Consider deactivating instead.
+    operationId: deleteEmploymentType
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Employment type deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

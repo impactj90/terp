@@ -1,0 +1,113 @@
+# Audit Log-related schemas
+AuditLog:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - action
+    - entity_type
+    - entity_id
+    - performed_at
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    user_id:
+      type: string
+      format: uuid
+      x-nullable: true
+      description: User who performed the action (null for system actions)
+    action:
+      type: string
+      enum:
+        - create
+        - update
+        - delete
+        - approve
+        - reject
+        - close
+        - reopen
+        - export
+        - import
+        - login
+        - logout
+      example: "update"
+    entity_type:
+      type: string
+      description: Type of entity affected
+      example: "booking"
+    entity_id:
+      type: string
+      format: uuid
+      description: ID of the affected entity
+    entity_name:
+      type: string
+      x-nullable: true
+      description: Human-readable name of entity
+      example: "Booking #12345"
+    changes:
+      type: object
+      x-nullable: true
+      description: JSON object with changed fields (before/after)
+      example:
+        edited_time:
+          before: 480
+          after: 510
+    metadata:
+      type: object
+      x-nullable: true
+      description: Additional context
+    ip_address:
+      type: string
+      x-nullable: true
+      example: "192.168.1.1"
+    user_agent:
+      type: string
+      x-nullable: true
+    performed_at:
+      type: string
+      format: date-time
+    # Expanded relations
+    user:
+      allOf:
+        - $ref: './users.yaml#/UserSummary'
+      x-nullable: true
+
+AuditLogSummary:
+  type: object
+  required:
+    - id
+    - action
+    - entity_type
+    - performed_at
+  properties:
+    id:
+      type: string
+      format: uuid
+    action:
+      type: string
+    entity_type:
+      type: string
+    entity_name:
+      type: string
+    performed_at:
+      type: string
+      format: date-time
+    user:
+      $ref: './users.yaml#/UserSummary'
+
+AuditLogList:
+  type: object
+  required:
+    - data
+    - meta
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/AuditLog'
+    meta:
+      $ref: './common.yaml#/PaginationMeta'

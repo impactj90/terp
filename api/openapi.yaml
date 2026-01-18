@@ -1,0 +1,709 @@
+swagger: "2.0"
+info:
+  title: Terp API
+  description: |
+    RESTful API for the Terp application - Time & Resource Planning.
+
+    ## Authentication
+    All endpoints except `/health` and `/auth/*` require a valid JWT token in the Authorization header:
+    ```
+    Authorization: Bearer <token>
+    ```
+
+    ## Pagination
+    List endpoints support cursor-based pagination:
+    - `limit`: Number of items to return (default: 20, max: 100)
+    - `cursor`: Cursor for next page (returned in response)
+
+    ## Error Responses
+    All errors follow RFC 7807 Problem Details format.
+
+    ## File Structure
+    This spec is organized into:
+    - `paths/` - API endpoint definitions by domain
+    - `schemas/` - Data models by domain
+    - `responses/` - Reusable response definitions
+  version: "1.0.0"
+  contact:
+    name: API Support
+  license:
+    name: Proprietary
+
+host: localhost:8080
+basePath: /api/v1
+schemes:
+  - http
+  - https
+
+consumes:
+  - application/json
+produces:
+  - application/json
+
+tags:
+  - name: Health
+    description: Health check endpoints
+  - name: Auth
+    description: Authentication endpoints
+  - name: Users
+    description: User management
+  - name: Tenants
+    description: Tenant management
+  - name: Employees
+    description: Employee management
+  - name: Departments
+    description: Department management
+  - name: Locations
+    description: Location management
+  - name: Cost Centers
+    description: Cost center management
+  - name: Employment Types
+    description: Employment type management
+  - name: User Groups
+    description: User group and permission management
+  - name: Day Plans
+    description: Day plan configuration
+  - name: Week Plans
+    description: Week plan configuration
+  - name: Tariffs
+    description: Tariff configuration
+  - name: Booking Types
+    description: Booking type management
+  - name: Bookings
+    description: Time bookings (clock in/out)
+  - name: Daily Values
+    description: Daily calculated values
+  - name: Holidays
+    description: Holiday management
+  - name: Absence Types
+    description: Absence type management
+  - name: Absences
+    description: Absence management
+  - name: Vacation
+    description: Vacation balance management
+  - name: Monthly Values
+    description: Monthly aggregated values
+  - name: Corrections
+    description: Time corrections
+  - name: Accounts
+    description: Time account management
+  - name: Audit Logs
+    description: Audit log viewing
+  - name: Reports
+    description: Report generation
+  - name: Payroll
+    description: Payroll export
+  - name: Teams
+    description: Team management
+  - name: Employee Day Plans
+    description: Employee day plan assignments
+  - name: Monthly Evaluations
+    description: Monthly evaluation configuration
+
+securityDefinitions:
+  BearerAuth:
+    type: apiKey
+    name: Authorization
+    in: header
+    description: JWT token. Format "Bearer <token>"
+
+security:
+  - BearerAuth: []
+
+paths:
+  # Health
+  /health:
+    $ref: 'paths/health.yaml#/~1health'
+
+  # Auth
+  /auth/login:
+    $ref: 'paths/auth.yaml#/~1auth~1login'
+  /auth/refresh:
+    $ref: 'paths/auth.yaml#/~1auth~1refresh'
+  /auth/logout:
+    $ref: 'paths/auth.yaml#/~1auth~1logout'
+  /auth/me:
+    $ref: 'paths/auth.yaml#/~1auth~1me'
+  /auth/dev/login:
+    $ref: 'paths/auth.yaml#/~1auth~1dev~1login'
+  /auth/dev/users:
+    $ref: 'paths/auth.yaml#/~1auth~1dev~1users'
+
+  # Users
+  /users:
+    $ref: 'paths/users.yaml#/~1users'
+  /users/{id}:
+    $ref: 'paths/users.yaml#/~1users~1{id}'
+
+  # Tenants
+  /tenants:
+    $ref: 'paths/tenants.yaml#/~1tenants'
+  /tenants/{id}:
+    $ref: 'paths/tenants.yaml#/~1tenants~1{id}'
+
+  # Employees
+  /employees:
+    $ref: 'paths/employees.yaml#/~1employees'
+  /employees/search:
+    $ref: 'paths/employees.yaml#/~1employees~1search'
+  /employees/{id}:
+    $ref: 'paths/employees.yaml#/~1employees~1{id}'
+  /employees/{id}/contacts:
+    $ref: 'paths/employees.yaml#/~1employees~1{id}~1contacts'
+  /employees/{id}/contacts/{contactId}:
+    $ref: 'paths/employees.yaml#/~1employees~1{id}~1contacts~1{contactId}'
+  /employees/{id}/cards:
+    $ref: 'paths/employees.yaml#/~1employees~1{id}~1cards'
+  /employees/{id}/cards/{cardId}:
+    $ref: 'paths/employees.yaml#/~1employees~1{id}~1cards~1{cardId}'
+  /employees/{id}/day/{date}:
+    $ref: 'paths/employees.yaml#/~1employees~1{id}~1day~1{date}'
+  /employees/{id}/day/{date}/calculate:
+    $ref: 'paths/employees.yaml#/~1employees~1{id}~1day~1{date}~1calculate'
+  /employees/{id}/absences:
+    $ref: 'paths/employees.yaml#/~1employees~1{id}~1absences'
+  /employees/{id}/vacation-balance:
+    $ref: 'paths/employees.yaml#/~1employees~1{id}~1vacation-balance'
+
+  # Departments
+  /departments:
+    $ref: 'paths/departments.yaml#/~1departments'
+  /departments/{id}:
+    $ref: 'paths/departments.yaml#/~1departments~1{id}'
+
+  # Locations
+  /locations:
+    $ref: 'paths/locations.yaml#/~1locations'
+  /locations/{id}:
+    $ref: 'paths/locations.yaml#/~1locations~1{id}'
+
+  # Cost Centers
+  /cost-centers:
+    $ref: 'paths/cost-centers.yaml#/~1cost-centers'
+  /cost-centers/{id}:
+    $ref: 'paths/cost-centers.yaml#/~1cost-centers~1{id}'
+
+  # Employment Types
+  /employment-types:
+    $ref: 'paths/employment-types.yaml#/~1employment-types'
+  /employment-types/{id}:
+    $ref: 'paths/employment-types.yaml#/~1employment-types~1{id}'
+
+  # User Groups
+  /user-groups:
+    $ref: 'paths/user-groups.yaml#/~1user-groups'
+  /user-groups/{id}:
+    $ref: 'paths/user-groups.yaml#/~1user-groups~1{id}'
+  /permissions:
+    $ref: 'paths/user-groups.yaml#/~1permissions'
+
+  # Day Plans
+  /day-plans:
+    $ref: 'paths/day-plans.yaml#/~1day-plans'
+  /day-plans/{id}:
+    $ref: 'paths/day-plans.yaml#/~1day-plans~1{id}'
+  /day-plans/{id}/copy:
+    $ref: 'paths/day-plans.yaml#/~1day-plans~1{id}~1copy'
+  /day-plans/{id}/breaks:
+    $ref: 'paths/day-plans.yaml#/~1day-plans~1{id}~1breaks'
+  /day-plans/{id}/breaks/{breakId}:
+    $ref: 'paths/day-plans.yaml#/~1day-plans~1{id}~1breaks~1{breakId}'
+  /day-plans/{id}/bonuses:
+    $ref: 'paths/day-plans.yaml#/~1day-plans~1{id}~1bonuses'
+  /day-plans/{id}/bonuses/{bonusId}:
+    $ref: 'paths/day-plans.yaml#/~1day-plans~1{id}~1bonuses~1{bonusId}'
+
+  # Week Plans
+  /week-plans:
+    $ref: 'paths/week-plans.yaml#/~1week-plans'
+  /week-plans/{id}:
+    $ref: 'paths/week-plans.yaml#/~1week-plans~1{id}'
+
+  # Tariffs
+  /tariffs:
+    $ref: 'paths/tariffs.yaml#/~1tariffs'
+  /tariffs/{id}:
+    $ref: 'paths/tariffs.yaml#/~1tariffs~1{id}'
+  /tariffs/{id}/breaks:
+    $ref: 'paths/tariffs.yaml#/~1tariffs~1{id}~1breaks'
+  /tariffs/{id}/breaks/{breakId}:
+    $ref: 'paths/tariffs.yaml#/~1tariffs~1{id}~1breaks~1{breakId}'
+
+  # Booking Types
+  /booking-types:
+    $ref: 'paths/booking-types.yaml#/~1booking-types'
+  /booking-types/{id}:
+    $ref: 'paths/booking-types.yaml#/~1booking-types~1{id}'
+
+  # Bookings
+  /bookings:
+    $ref: 'paths/bookings.yaml#/~1bookings'
+  /bookings/{id}:
+    $ref: 'paths/bookings.yaml#/~1bookings~1{id}'
+
+  # Daily Values
+  /daily-values:
+    $ref: 'paths/daily-values.yaml#/~1daily-values'
+  /daily-values/{id}:
+    $ref: 'paths/daily-values.yaml#/~1daily-values~1{id}'
+  /daily-values/{id}/approve:
+    $ref: 'paths/daily-values.yaml#/~1daily-values~1{id}~1approve'
+  /daily-values/recalculate:
+    $ref: 'paths/daily-values.yaml#/~1daily-values~1recalculate'
+
+  # Holidays
+  /holidays:
+    $ref: 'paths/holidays.yaml#/~1holidays'
+  /holidays/{id}:
+    $ref: 'paths/holidays.yaml#/~1holidays~1{id}'
+
+  # Absence Types
+  /absence-types:
+    $ref: 'paths/absence-types.yaml#/~1absence-types'
+  /absence-types/{id}:
+    $ref: 'paths/absence-types.yaml#/~1absence-types~1{id}'
+
+  # Absences
+  /absences:
+    $ref: 'paths/absences.yaml#/~1absences'
+  /absences/{id}:
+    $ref: 'paths/absences.yaml#/~1absences~1{id}'
+  /absences/{id}/approve:
+    $ref: 'paths/absences.yaml#/~1absences~1{id}~1approve'
+  /absences/{id}/reject:
+    $ref: 'paths/absences.yaml#/~1absences~1{id}~1reject'
+
+  # Vacation Balances
+  /vacation-balances:
+    $ref: 'paths/vacation-balances.yaml#/~1vacation-balances'
+  /vacation-balances/{id}:
+    $ref: 'paths/vacation-balances.yaml#/~1vacation-balances~1{id}'
+  /vacation-balances/initialize:
+    $ref: 'paths/vacation-balances.yaml#/~1vacation-balances~1initialize'
+
+  # Monthly Values
+  /monthly-values:
+    $ref: 'paths/monthly-values.yaml#/~1monthly-values'
+  /monthly-values/{id}:
+    $ref: 'paths/monthly-values.yaml#/~1monthly-values~1{id}'
+  /monthly-values/{id}/close:
+    $ref: 'paths/monthly-values.yaml#/~1monthly-values~1{id}~1close'
+  /monthly-values/{id}/reopen:
+    $ref: 'paths/monthly-values.yaml#/~1monthly-values~1{id}~1reopen'
+  /monthly-values/close-batch:
+    $ref: 'paths/monthly-values.yaml#/~1monthly-values~1close-batch'
+  /monthly-values/recalculate:
+    $ref: 'paths/monthly-values.yaml#/~1monthly-values~1recalculate'
+
+  # Corrections
+  /corrections:
+    $ref: 'paths/corrections.yaml#/~1corrections'
+  /corrections/{id}:
+    $ref: 'paths/corrections.yaml#/~1corrections~1{id}'
+  /corrections/{id}/approve:
+    $ref: 'paths/corrections.yaml#/~1corrections~1{id}~1approve'
+  /corrections/{id}/reject:
+    $ref: 'paths/corrections.yaml#/~1corrections~1{id}~1reject'
+
+  # Accounts
+  /accounts:
+    $ref: 'paths/accounts.yaml#/~1accounts'
+  /accounts/{id}:
+    $ref: 'paths/accounts.yaml#/~1accounts~1{id}'
+  /account-values:
+    $ref: 'paths/accounts.yaml#/~1account-values'
+
+  # Audit Logs
+  /audit-logs:
+    $ref: 'paths/audit-logs.yaml#/~1audit-logs'
+  /audit-logs/{id}:
+    $ref: 'paths/audit-logs.yaml#/~1audit-logs~1{id}'
+
+  # Reports
+  /reports:
+    $ref: 'paths/reports.yaml#/~1reports'
+  /reports/{id}:
+    $ref: 'paths/reports.yaml#/~1reports~1{id}'
+  /reports/{id}/download:
+    $ref: 'paths/reports.yaml#/~1reports~1{id}~1download'
+
+  # Payroll Exports
+  /payroll-exports:
+    $ref: 'paths/payroll-exports.yaml#/~1payroll-exports'
+  /payroll-exports/{id}:
+    $ref: 'paths/payroll-exports.yaml#/~1payroll-exports~1{id}'
+  /payroll-exports/{id}/download:
+    $ref: 'paths/payroll-exports.yaml#/~1payroll-exports~1{id}~1download'
+  /payroll-exports/{id}/preview:
+    $ref: 'paths/payroll-exports.yaml#/~1payroll-exports~1{id}~1preview'
+
+  # Teams
+  /teams:
+    $ref: 'paths/teams.yaml#/~1teams'
+  /teams/{id}:
+    $ref: 'paths/teams.yaml#/~1teams~1{id}'
+  /teams/{id}/members:
+    $ref: 'paths/teams.yaml#/~1teams~1{id}~1members'
+  /teams/{id}/members/{employee_id}:
+    $ref: 'paths/teams.yaml#/~1teams~1{id}~1members~1{employee_id}'
+  /employees/{employee_id}/teams:
+    $ref: 'paths/teams.yaml#/~1employees~1{employee_id}~1teams'
+
+  # Employee Day Plans
+  /employee-day-plans:
+    $ref: 'paths/employee-day-plans.yaml#/~1employee-day-plans'
+  /employee-day-plans/bulk:
+    $ref: 'paths/employee-day-plans.yaml#/~1employee-day-plans~1bulk'
+  /employee-day-plans/delete-range:
+    $ref: 'paths/employee-day-plans.yaml#/~1employee-day-plans~1delete-range'
+  /employee-day-plans/{id}:
+    $ref: 'paths/employee-day-plans.yaml#/~1employee-day-plans~1{id}'
+  /employees/{employee_id}/day-plans:
+    $ref: 'paths/employee-day-plans.yaml#/~1employees~1{employee_id}~1day-plans'
+  /employees/{employee_id}/day-plans/{date}:
+    $ref: 'paths/employee-day-plans.yaml#/~1employees~1{employee_id}~1day-plans~1{date}'
+
+  # Monthly Evaluations
+  /monthly-evaluations:
+    $ref: 'paths/monthly-evaluations.yaml#/~1monthly-evaluations'
+  /monthly-evaluations/default:
+    $ref: 'paths/monthly-evaluations.yaml#/~1monthly-evaluations~1default'
+  /monthly-evaluations/{id}:
+    $ref: 'paths/monthly-evaluations.yaml#/~1monthly-evaluations~1{id}'
+  /monthly-evaluations/{id}/set-default:
+    $ref: 'paths/monthly-evaluations.yaml#/~1monthly-evaluations~1{id}~1set-default'
+
+definitions:
+  # Common
+  UUID:
+    $ref: 'schemas/common.yaml#/UUID'
+  Timestamp:
+    $ref: 'schemas/common.yaml#/Timestamp'
+  ProblemDetails:
+    $ref: 'schemas/common.yaml#/ProblemDetails'
+  PaginationMeta:
+    $ref: 'schemas/common.yaml#/PaginationMeta'
+
+  # Users
+  User:
+    $ref: 'schemas/users.yaml#/User'
+  UserSummary:
+    $ref: 'schemas/users.yaml#/UserSummary'
+  UpdateUserRequest:
+    $ref: 'schemas/users.yaml#/UpdateUserRequest'
+  UserList:
+    $ref: 'schemas/users.yaml#/UserList'
+
+  # Tenants
+  Tenant:
+    $ref: 'schemas/tenants.yaml#/Tenant'
+  CreateTenantRequest:
+    $ref: 'schemas/tenants.yaml#/CreateTenantRequest'
+  UpdateTenantRequest:
+    $ref: 'schemas/tenants.yaml#/UpdateTenantRequest'
+  TenantList:
+    $ref: 'schemas/tenants.yaml#/TenantList'
+
+  # Holidays
+  Holiday:
+    $ref: 'schemas/holidays.yaml#/Holiday'
+  CreateHolidayRequest:
+    $ref: 'schemas/holidays.yaml#/CreateHolidayRequest'
+  UpdateHolidayRequest:
+    $ref: 'schemas/holidays.yaml#/UpdateHolidayRequest'
+  HolidayList:
+    $ref: 'schemas/holidays.yaml#/HolidayList'
+
+  # Employees
+  Employee:
+    $ref: 'schemas/employees.yaml#/Employee'
+  EmployeeSummary:
+    $ref: 'schemas/employees.yaml#/EmployeeSummary'
+  CreateEmployeeRequest:
+    $ref: 'schemas/employees.yaml#/CreateEmployeeRequest'
+  UpdateEmployeeRequest:
+    $ref: 'schemas/employees.yaml#/UpdateEmployeeRequest'
+  CreateEmployeeContactRequest:
+    $ref: 'schemas/employees.yaml#/CreateEmployeeContactRequest'
+  CreateEmployeeCardRequest:
+    $ref: 'schemas/employees.yaml#/CreateEmployeeCardRequest'
+  EmployeeList:
+    $ref: 'schemas/employees.yaml#/EmployeeList'
+
+  # Departments
+  Department:
+    $ref: 'schemas/departments.yaml#/Department'
+  CreateDepartmentRequest:
+    $ref: 'schemas/departments.yaml#/CreateDepartmentRequest'
+  UpdateDepartmentRequest:
+    $ref: 'schemas/departments.yaml#/UpdateDepartmentRequest'
+  DepartmentList:
+    $ref: 'schemas/departments.yaml#/DepartmentList'
+
+  # Day Plans
+  DayPlan:
+    $ref: 'schemas/day-plans.yaml#/DayPlan'
+  DayPlanSummary:
+    $ref: 'schemas/day-plans.yaml#/DayPlanSummary'
+  DayPlanBreak:
+    $ref: 'schemas/day-plans.yaml#/DayPlanBreak'
+  DayPlanBonus:
+    $ref: 'schemas/day-plans.yaml#/DayPlanBonus'
+  CreateDayPlanRequest:
+    $ref: 'schemas/day-plans.yaml#/CreateDayPlanRequest'
+  UpdateDayPlanRequest:
+    $ref: 'schemas/day-plans.yaml#/UpdateDayPlanRequest'
+  CopyDayPlanRequest:
+    $ref: 'schemas/day-plans.yaml#/CopyDayPlanRequest'
+  CreateDayPlanBreakRequest:
+    $ref: 'schemas/day-plans.yaml#/CreateDayPlanBreakRequest'
+  CreateDayPlanBonusRequest:
+    $ref: 'schemas/day-plans.yaml#/CreateDayPlanBonusRequest'
+  DayPlanList:
+    $ref: 'schemas/day-plans.yaml#/DayPlanList'
+
+  # Accounts
+  Account:
+    $ref: 'schemas/accounts.yaml#/Account'
+  AccountSummary:
+    $ref: 'schemas/accounts.yaml#/AccountSummary'
+  AccountValue:
+    $ref: 'schemas/accounts.yaml#/AccountValue'
+  CreateAccountRequest:
+    $ref: 'schemas/accounts.yaml#/CreateAccountRequest'
+  UpdateAccountRequest:
+    $ref: 'schemas/accounts.yaml#/UpdateAccountRequest'
+  AccountList:
+    $ref: 'schemas/accounts.yaml#/AccountList'
+  AccountValueList:
+    $ref: 'schemas/accounts.yaml#/AccountValueList'
+
+  # Cost Centers
+  CostCenter:
+    $ref: 'schemas/cost-centers.yaml#/CostCenter'
+  CostCenterSummary:
+    $ref: 'schemas/cost-centers.yaml#/CostCenterSummary'
+  CreateCostCenterRequest:
+    $ref: 'schemas/cost-centers.yaml#/CreateCostCenterRequest'
+  UpdateCostCenterRequest:
+    $ref: 'schemas/cost-centers.yaml#/UpdateCostCenterRequest'
+  CostCenterList:
+    $ref: 'schemas/cost-centers.yaml#/CostCenterList'
+
+  # Employment Types
+  EmploymentType:
+    $ref: 'schemas/employment-types.yaml#/EmploymentType'
+  EmploymentTypeSummary:
+    $ref: 'schemas/employment-types.yaml#/EmploymentTypeSummary'
+  CreateEmploymentTypeRequest:
+    $ref: 'schemas/employment-types.yaml#/CreateEmploymentTypeRequest'
+  UpdateEmploymentTypeRequest:
+    $ref: 'schemas/employment-types.yaml#/UpdateEmploymentTypeRequest'
+  EmploymentTypeList:
+    $ref: 'schemas/employment-types.yaml#/EmploymentTypeList'
+
+  # Week Plans
+  WeekPlan:
+    $ref: 'schemas/week-plans.yaml#/WeekPlan'
+  WeekPlanSummary:
+    $ref: 'schemas/week-plans.yaml#/WeekPlanSummary'
+  CreateWeekPlanRequest:
+    $ref: 'schemas/week-plans.yaml#/CreateWeekPlanRequest'
+  UpdateWeekPlanRequest:
+    $ref: 'schemas/week-plans.yaml#/UpdateWeekPlanRequest'
+  WeekPlanList:
+    $ref: 'schemas/week-plans.yaml#/WeekPlanList'
+
+  # Locations
+  Location:
+    $ref: 'schemas/locations.yaml#/Location'
+  LocationSummary:
+    $ref: 'schemas/locations.yaml#/LocationSummary'
+  CreateLocationRequest:
+    $ref: 'schemas/locations.yaml#/CreateLocationRequest'
+  UpdateLocationRequest:
+    $ref: 'schemas/locations.yaml#/UpdateLocationRequest'
+  LocationList:
+    $ref: 'schemas/locations.yaml#/LocationList'
+
+  # Tariffs
+  Tariff:
+    $ref: 'schemas/tariffs.yaml#/Tariff'
+  TariffBreak:
+    $ref: 'schemas/tariffs.yaml#/TariffBreak'
+  CreateTariffRequest:
+    $ref: 'schemas/tariffs.yaml#/CreateTariffRequest'
+  UpdateTariffRequest:
+    $ref: 'schemas/tariffs.yaml#/UpdateTariffRequest'
+  TariffList:
+    $ref: 'schemas/tariffs.yaml#/TariffList'
+
+  # Booking Types
+  BookingType:
+    $ref: 'schemas/booking-types.yaml#/BookingType'
+  BookingTypeSummary:
+    $ref: 'schemas/booking-types.yaml#/BookingTypeSummary'
+  CreateBookingTypeRequest:
+    $ref: 'schemas/booking-types.yaml#/CreateBookingTypeRequest'
+  UpdateBookingTypeRequest:
+    $ref: 'schemas/booking-types.yaml#/UpdateBookingTypeRequest'
+  BookingTypeList:
+    $ref: 'schemas/booking-types.yaml#/BookingTypeList'
+
+  # Absence Types
+  AbsenceType:
+    $ref: 'schemas/absence-types.yaml#/AbsenceType'
+  AbsenceTypeSummary:
+    $ref: 'schemas/absence-types.yaml#/AbsenceTypeSummary'
+  CreateAbsenceTypeRequest:
+    $ref: 'schemas/absence-types.yaml#/CreateAbsenceTypeRequest'
+  UpdateAbsenceTypeRequest:
+    $ref: 'schemas/absence-types.yaml#/UpdateAbsenceTypeRequest'
+  AbsenceTypeList:
+    $ref: 'schemas/absence-types.yaml#/AbsenceTypeList'
+
+  # Vacation Balances
+  VacationBalance:
+    $ref: 'schemas/vacation-balances.yaml#/VacationBalance'
+  CreateVacationBalanceRequest:
+    $ref: 'schemas/vacation-balances.yaml#/CreateVacationBalanceRequest'
+  UpdateVacationBalanceRequest:
+    $ref: 'schemas/vacation-balances.yaml#/UpdateVacationBalanceRequest'
+  VacationBalanceList:
+    $ref: 'schemas/vacation-balances.yaml#/VacationBalanceList'
+
+  # Audit Logs
+  AuditLog:
+    $ref: 'schemas/audit-logs.yaml#/AuditLog'
+  AuditLogList:
+    $ref: 'schemas/audit-logs.yaml#/AuditLogList'
+
+  # User Groups
+  UserGroup:
+    $ref: 'schemas/user-groups.yaml#/UserGroup'
+  UserGroupSummary:
+    $ref: 'schemas/user-groups.yaml#/UserGroupSummary'
+  Permission:
+    $ref: 'schemas/user-groups.yaml#/Permission'
+  CreateUserGroupRequest:
+    $ref: 'schemas/user-groups.yaml#/CreateUserGroupRequest'
+  UpdateUserGroupRequest:
+    $ref: 'schemas/user-groups.yaml#/UpdateUserGroupRequest'
+  UserGroupList:
+    $ref: 'schemas/user-groups.yaml#/UserGroupList'
+
+  # Department Summary
+  DepartmentSummary:
+    $ref: 'schemas/departments.yaml#/DepartmentSummary'
+
+  # Daily Values extras
+  DailyValueSummary:
+    $ref: 'schemas/daily-values.yaml#/DailyValueSummary'
+  DailyError:
+    $ref: 'schemas/daily-values.yaml#/DailyError'
+
+  # Bookings
+  Booking:
+    $ref: 'schemas/bookings.yaml#/Booking'
+  CreateBookingRequest:
+    $ref: 'schemas/bookings.yaml#/CreateBookingRequest'
+  UpdateBookingRequest:
+    $ref: 'schemas/bookings.yaml#/UpdateBookingRequest'
+  BookingList:
+    $ref: 'schemas/bookings.yaml#/BookingList'
+  DayView:
+    $ref: 'schemas/bookings.yaml#/DayView'
+
+  # Daily Values
+  DailyValue:
+    $ref: 'schemas/daily-values.yaml#/DailyValue'
+  DailyValueList:
+    $ref: 'schemas/daily-values.yaml#/DailyValueList'
+
+  # Absences
+  Absence:
+    $ref: 'schemas/absences.yaml#/Absence'
+  CreateAbsenceRangeRequest:
+    $ref: 'schemas/absences.yaml#/CreateAbsenceRangeRequest'
+  AbsenceList:
+    $ref: 'schemas/absences.yaml#/AbsenceList'
+
+  # Monthly Values
+  MonthlyValue:
+    $ref: 'schemas/monthly-values.yaml#/MonthlyValue'
+  MonthlyValueList:
+    $ref: 'schemas/monthly-values.yaml#/MonthlyValueList'
+
+  # Corrections
+  Correction:
+    $ref: 'schemas/corrections.yaml#/Correction'
+  CreateCorrectionRequest:
+    $ref: 'schemas/corrections.yaml#/CreateCorrectionRequest'
+  CorrectionList:
+    $ref: 'schemas/corrections.yaml#/CorrectionList'
+
+  # Reports
+  Report:
+    $ref: 'schemas/reports.yaml#/Report'
+  GenerateReportRequest:
+    $ref: 'schemas/reports.yaml#/GenerateReportRequest'
+  ReportList:
+    $ref: 'schemas/reports.yaml#/ReportList'
+
+  # Payroll Exports
+  PayrollExport:
+    $ref: 'schemas/payroll-exports.yaml#/PayrollExport'
+  GeneratePayrollExportRequest:
+    $ref: 'schemas/payroll-exports.yaml#/GeneratePayrollExportRequest'
+  PayrollExportList:
+    $ref: 'schemas/payroll-exports.yaml#/PayrollExportList'
+
+  # Teams
+  Team:
+    $ref: 'schemas/teams.yaml#/Team'
+  TeamMember:
+    $ref: 'schemas/teams.yaml#/TeamMember'
+  TeamMemberRole:
+    $ref: 'schemas/teams.yaml#/TeamMemberRole'
+  CreateTeamRequest:
+    $ref: 'schemas/teams.yaml#/CreateTeamRequest'
+  UpdateTeamRequest:
+    $ref: 'schemas/teams.yaml#/UpdateTeamRequest'
+  AddTeamMemberRequest:
+    $ref: 'schemas/teams.yaml#/AddTeamMemberRequest'
+  UpdateTeamMemberRequest:
+    $ref: 'schemas/teams.yaml#/UpdateTeamMemberRequest'
+  TeamList:
+    $ref: 'schemas/teams.yaml#/TeamList'
+
+  # Employee Day Plans
+  EmployeeDayPlan:
+    $ref: 'schemas/employee-day-plans.yaml#/EmployeeDayPlan'
+  CreateEmployeeDayPlanRequest:
+    $ref: 'schemas/employee-day-plans.yaml#/CreateEmployeeDayPlanRequest'
+  UpdateEmployeeDayPlanRequest:
+    $ref: 'schemas/employee-day-plans.yaml#/UpdateEmployeeDayPlanRequest'
+  EmployeeDayPlanList:
+    $ref: 'schemas/employee-day-plans.yaml#/EmployeeDayPlanList'
+
+  # Monthly Evaluations
+  MonthlyEvaluation:
+    $ref: 'schemas/monthly-evaluations.yaml#/MonthlyEvaluation'
+  CreateMonthlyEvaluationRequest:
+    $ref: 'schemas/monthly-evaluations.yaml#/CreateMonthlyEvaluationRequest'
+  UpdateMonthlyEvaluationRequest:
+    $ref: 'schemas/monthly-evaluations.yaml#/UpdateMonthlyEvaluationRequest'
+  MonthlyEvaluationList:
+    $ref: 'schemas/monthly-evaluations.yaml#/MonthlyEvaluationList'
+
+responses:
+  BadRequest:
+    $ref: 'responses/errors.yaml#/BadRequest'
+  Unauthorized:
+    $ref: 'responses/errors.yaml#/Unauthorized'
+  Forbidden:
+    $ref: 'responses/errors.yaml#/Forbidden'
+  NotFound:
+    $ref: 'responses/errors.yaml#/NotFound'
+  InternalError:
+    $ref: 'responses/errors.yaml#/InternalError'

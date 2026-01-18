@@ -1,0 +1,23 @@
+# Health check endpoint
+/health:
+  get:
+    tags:
+      - Health
+    summary: Health check
+    description: |
+      Returns service health status and version. Use for load balancer health
+      checks and monitoring. No authentication required.
+    operationId: getHealth
+    security: []
+    responses:
+      200:
+        description: Service healthy
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: "healthy"
+            version:
+              type: string
+              example: "1.0.0"

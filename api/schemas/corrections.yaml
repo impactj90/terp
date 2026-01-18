@@ -1,0 +1,160 @@
+# Correction-related schemas
+Correction:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - employee_id
+    - correction_date
+    - correction_type
+    - value_minutes
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    employee_id:
+      type: string
+      format: uuid
+    correction_date:
+      type: string
+      format: date
+      example: "2024-01-15"
+    correction_type:
+      type: string
+      enum:
+        - time_adjustment
+        - balance_adjustment
+        - vacation_adjustment
+        - account_adjustment
+      example: "time_adjustment"
+    account_id:
+      type: string
+      format: uuid
+      x-nullable: true
+      description: Target account for account_adjustment type
+    value_minutes:
+      type: integer
+      description: Correction value in minutes (positive or negative)
+      example: 60
+    reason:
+      type: string
+      description: Reason for correction
+      example: "Forgot to clock out"
+    status:
+      type: string
+      enum:
+        - pending
+        - approved
+        - rejected
+      example: "approved"
+    approved_by:
+      type: string
+      format: uuid
+      x-nullable: true
+    approved_at:
+      type: string
+      format: date-time
+      x-nullable: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+    created_by:
+      type: string
+      format: uuid
+      x-nullable: true
+    # Expanded relations
+    employee:
+      allOf:
+        - $ref: './employees.yaml#/EmployeeSummary'
+      x-nullable: true
+    account:
+      allOf:
+        - $ref: './accounts.yaml#/AccountSummary'
+      x-nullable: true
+
+CorrectionSummary:
+  type: object
+  required:
+    - id
+    - correction_date
+    - correction_type
+    - value_minutes
+    - status
+  properties:
+    id:
+      type: string
+      format: uuid
+    correction_date:
+      type: string
+      format: date
+    correction_type:
+      type: string
+    value_minutes:
+      type: integer
+    status:
+      type: string
+
+CreateCorrectionRequest:
+  type: object
+  required:
+    - employee_id
+    - correction_date
+    - correction_type
+    - value_minutes
+    - reason
+  properties:
+    employee_id:
+      type: string
+      format: uuid
+    correction_date:
+      type: string
+      format: date
+    correction_type:
+      type: string
+      enum:
+        - time_adjustment
+        - balance_adjustment
+        - vacation_adjustment
+        - account_adjustment
+    account_id:
+      type: string
+      format: uuid
+      description: Required for account_adjustment type
+    value_minutes:
+      type: integer
+    reason:
+      type: string
+      minLength: 5
+      maxLength: 500
+
+UpdateCorrectionRequest:
+  type: object
+  properties:
+    value_minutes:
+      type: integer
+    reason:
+      type: string
+      minLength: 5
+      maxLength: 500
+    status:
+      type: string
+      enum:
+        - pending
+        - approved
+        - rejected
+
+CorrectionList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/Correction'

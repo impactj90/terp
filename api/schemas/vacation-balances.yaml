@@ -1,0 +1,169 @@
+# Vacation Balance-related schemas
+VacationBalance:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - employee_id
+    - year
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    employee_id:
+      type: string
+      format: uuid
+    year:
+      type: integer
+      example: 2024
+    # Entitlement
+    base_entitlement:
+      type: number
+      format: decimal
+      description: Annual vacation entitlement in days
+      example: 30.00
+    additional_entitlement:
+      type: number
+      format: decimal
+      description: Additional entitlement (bonus, seniority)
+      example: 0.00
+    carryover_from_previous:
+      type: number
+      format: decimal
+      description: Days carried over from previous year
+      example: 5.00
+    manual_adjustment:
+      type: number
+      format: decimal
+      description: Manual adjustments
+      example: 0.00
+    # Usage
+    used_days:
+      type: number
+      format: decimal
+      description: Days already used
+      example: 10.00
+    planned_days:
+      type: number
+      format: decimal
+      description: Days planned/approved but not yet taken
+      example: 5.00
+    # Calculated
+    total_entitlement:
+      type: number
+      format: decimal
+      description: Total available days (calculated)
+      example: 35.00
+    remaining_days:
+      type: number
+      format: decimal
+      description: Remaining days (total - used - planned)
+      example: 20.00
+    # Carryover to next year
+    carryover_to_next:
+      type: number
+      format: decimal
+      description: Days that will carry over to next year
+      x-nullable: true
+    carryover_expires_at:
+      type: string
+      format: date
+      description: Date when carryover days expire
+      x-nullable: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+    # Expanded relations
+    employee:
+      allOf:
+        - $ref: './employees.yaml#/EmployeeSummary'
+      x-nullable: true
+
+VacationBalanceSummary:
+  type: object
+  required:
+    - year
+    - total_entitlement
+    - used_days
+    - remaining_days
+  properties:
+    year:
+      type: integer
+    total_entitlement:
+      type: number
+      format: decimal
+    used_days:
+      type: number
+      format: decimal
+    planned_days:
+      type: number
+      format: decimal
+    remaining_days:
+      type: number
+      format: decimal
+
+CreateVacationBalanceRequest:
+  type: object
+  required:
+    - employee_id
+    - year
+    - base_entitlement
+  properties:
+    employee_id:
+      type: string
+      format: uuid
+    year:
+      type: integer
+    base_entitlement:
+      type: number
+      format: decimal
+    additional_entitlement:
+      type: number
+      format: decimal
+    carryover_from_previous:
+      type: number
+      format: decimal
+    manual_adjustment:
+      type: number
+      format: decimal
+    carryover_expires_at:
+      type: string
+      format: date
+
+UpdateVacationBalanceRequest:
+  type: object
+  properties:
+    base_entitlement:
+      type: number
+      format: decimal
+    additional_entitlement:
+      type: number
+      format: decimal
+    carryover_from_previous:
+      type: number
+      format: decimal
+    manual_adjustment:
+      type: number
+      format: decimal
+    carryover_to_next:
+      type: number
+      format: decimal
+    carryover_expires_at:
+      type: string
+      format: date
+
+VacationBalanceList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/VacationBalance'

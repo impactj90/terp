@@ -1,0 +1,198 @@
+# Correction endpoints
+/corrections:
+  get:
+    tags:
+      - Corrections
+    summary: List corrections
+    description: |
+      Returns manual corrections to time records or account balances. Corrections
+      go through an approval workflow. Use when automatic calculations need
+      adjustment (forgotten clock-in, balance carryover, etc.).
+    operationId: listCorrections
+    parameters:
+      - name: employee_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by employee
+      - name: from
+        in: query
+        type: string
+        format: date
+        description: Start date filter
+      - name: to
+        in: query
+        type: string
+        format: date
+        description: End date filter
+      - name: correction_type
+        in: query
+        type: string
+        enum:
+          - time_adjustment
+          - balance_adjustment
+          - vacation_adjustment
+          - account_adjustment
+        description: Filter by correction type
+      - name: status
+        in: query
+        type: string
+        enum:
+          - pending
+          - approved
+          - rejected
+        description: Filter by status
+    responses:
+      200:
+        description: List of corrections
+        schema:
+          $ref: '../schemas/corrections.yaml#/CorrectionList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Corrections
+    summary: Create correction
+    operationId: createCorrection
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/corrections.yaml#/CreateCorrectionRequest'
+    responses:
+      201:
+        description: Created correction
+        schema:
+          $ref: '../schemas/corrections.yaml#/Correction'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      403:
+        description: Month is closed
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/corrections/{id}:
+  get:
+    tags:
+      - Corrections
+    summary: Get correction by ID
+    operationId: getCorrection
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Correction details
+        schema:
+          $ref: '../schemas/corrections.yaml#/Correction'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Corrections
+    summary: Update correction
+    operationId: updateCorrection
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/corrections.yaml#/UpdateCorrectionRequest'
+    responses:
+      200:
+        description: Updated correction
+        schema:
+          $ref: '../schemas/corrections.yaml#/Correction'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Corrections
+    summary: Delete correction
+    operationId: deleteCorrection
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Correction deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      403:
+        description: Cannot delete approved corrections
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/corrections/{id}/approve:
+  post:
+    tags:
+      - Corrections
+    summary: Approve correction
+    operationId: approveCorrection
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Approved correction
+        schema:
+          $ref: '../schemas/corrections.yaml#/Correction'
+      400:
+        description: Cannot approve (not pending)
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/corrections/{id}/reject:
+  post:
+    tags:
+      - Corrections
+    summary: Reject correction
+    operationId: rejectCorrection
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Rejected correction
+        schema:
+          $ref: '../schemas/corrections.yaml#/Correction'
+      400:
+        description: Cannot reject (not pending)
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

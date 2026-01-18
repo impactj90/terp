@@ -1,0 +1,129 @@
+# Booking Type endpoints
+/booking-types:
+  get:
+    tags:
+      - Booking Types
+    summary: List booking types
+    description: |
+      Returns booking types defining clock-in/out behavior. Types specify
+      direction (in/out), terminal display, and time calculation rules.
+      System types include standard clock-in/out and break.
+    operationId: listBookingTypes
+    parameters:
+      - name: active
+        in: query
+        type: boolean
+        description: Filter by active status
+      - name: direction
+        in: query
+        type: string
+        enum:
+          - in
+          - out
+        description: Filter by direction
+    responses:
+      200:
+        description: List of booking types
+        schema:
+          $ref: '../schemas/booking-types.yaml#/BookingTypeList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Booking Types
+    summary: Create booking type
+    operationId: createBookingType
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/booking-types.yaml#/CreateBookingTypeRequest'
+    responses:
+      201:
+        description: Created booking type
+        schema:
+          $ref: '../schemas/booking-types.yaml#/BookingType'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/booking-types/{id}:
+  get:
+    tags:
+      - Booking Types
+    summary: Get booking type by ID
+    operationId: getBookingType
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Booking type details
+        schema:
+          $ref: '../schemas/booking-types.yaml#/BookingType'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Booking Types
+    summary: Update booking type
+    operationId: updateBookingType
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/booking-types.yaml#/UpdateBookingTypeRequest'
+    responses:
+      200:
+        description: Updated booking type
+        schema:
+          $ref: '../schemas/booking-types.yaml#/BookingType'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      403:
+        description: Cannot modify system booking types
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Booking Types
+    summary: Delete booking type
+    operationId: deleteBookingType
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Booking type deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      403:
+        description: Cannot delete system booking types
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

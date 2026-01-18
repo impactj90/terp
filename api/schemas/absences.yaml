@@ -1,0 +1,145 @@
+# Absence-related schemas
+Absence:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - employee_id
+    - absence_type_id
+    - absence_date
+    - duration
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    employee_id:
+      type: string
+      format: uuid
+    absence_type_id:
+      type: string
+      format: uuid
+    absence_date:
+      type: string
+      format: date
+      example: "2024-01-15"
+    duration:
+      type: number
+      format: decimal
+      description: "1.0 for full day, 0.5 for half day"
+      example: 1.0
+    status:
+      type: string
+      enum:
+        - pending
+        - approved
+        - rejected
+        - cancelled
+      example: "approved"
+    notes:
+      type: string
+      x-nullable: true
+    approved_by:
+      type: string
+      format: uuid
+      x-nullable: true
+    approved_at:
+      type: string
+      format: date-time
+      x-nullable: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+    created_by:
+      type: string
+      format: uuid
+      x-nullable: true
+    # Expanded relations
+    employee:
+      allOf:
+        - $ref: './employees.yaml#/EmployeeSummary'
+      x-nullable: true
+    absence_type:
+      allOf:
+        - $ref: './absence-types.yaml#/AbsenceTypeSummary'
+      x-nullable: true
+
+AbsenceSummary:
+  type: object
+  required:
+    - id
+    - absence_date
+    - duration
+    - status
+  properties:
+    id:
+      type: string
+      format: uuid
+    absence_date:
+      type: string
+      format: date
+    duration:
+      type: number
+      format: decimal
+    status:
+      type: string
+    absence_type:
+      $ref: './absence-types.yaml#/AbsenceTypeSummary'
+
+CreateAbsenceRangeRequest:
+  type: object
+  required:
+    - absence_type_id
+    - from
+    - to
+    - duration
+  properties:
+    absence_type_id:
+      type: string
+      format: uuid
+    from:
+      type: string
+      format: date
+      description: Start date in YYYY-MM-DD format
+    to:
+      type: string
+      format: date
+      description: End date in YYYY-MM-DD format
+    duration:
+      type: number
+      format: decimal
+      description: "1.0 for full day, 0.5 for half day (applies to all days in range)"
+      example: 1.0
+    notes:
+      type: string
+
+UpdateAbsenceRequest:
+  type: object
+  properties:
+    duration:
+      type: number
+      format: decimal
+    notes:
+      type: string
+    status:
+      type: string
+      enum:
+        - pending
+        - approved
+        - rejected
+        - cancelled
+
+AbsenceList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/Absence'

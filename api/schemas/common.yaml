@@ -1,0 +1,73 @@
+# Common schemas used across the API
+UUID:
+  type: string
+  format: uuid
+  example: "550e8400-e29b-41d4-a716-446655440000"
+
+Timestamp:
+  type: string
+  format: date-time
+  example: "2024-01-15T10:30:00Z"
+
+# Error response (RFC 7807)
+ProblemDetails:
+  type: object
+  required:
+    - type
+    - title
+    - status
+  properties:
+    type:
+      type: string
+      format: uri
+      description: URI identifying the problem type
+      example: "https://api.example.com/problems/validation-error"
+    title:
+      type: string
+      description: Short human-readable summary
+      example: "Validation Error"
+    status:
+      type: integer
+      description: HTTP status code
+      example: 400
+    detail:
+      type: string
+      description: Human-readable explanation
+      example: "The 'content' field is required"
+    instance:
+      type: string
+      format: uri
+      description: URI identifying the specific occurrence
+    errors:
+      type: array
+      description: Field-level validation errors
+      items:
+        type: object
+        properties:
+          field:
+            type: string
+            example: "content"
+          message:
+            type: string
+            example: "Field is required"
+
+# Pagination
+PaginationMeta:
+  type: object
+  properties:
+    total:
+      type: integer
+      description: Total number of items
+      example: 150
+    limit:
+      type: integer
+      description: Items per page
+      example: 20
+    has_more:
+      type: boolean
+      description: Whether more items exist
+      example: true
+    next_cursor:
+      type: string
+      description: Cursor for next page
+      example: "eyJpZCI6IjEyMzQ1Njc4OTAifQ=="

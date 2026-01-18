@@ -1,0 +1,122 @@
+# Department-related schemas
+Department:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - name
+    - code
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    name:
+      type: string
+      example: "Engineering"
+    code:
+      type: string
+      example: "ENG"
+    description:
+      type: string
+      x-nullable: true
+    parent_id:
+      type: string
+      format: uuid
+      x-nullable: true
+      description: Parent department for hierarchical structure
+    manager_id:
+      type: string
+      format: uuid
+      x-nullable: true
+      description: Employee who manages this department
+    is_active:
+      type: boolean
+      example: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+    # Expanded relations
+    parent:
+      allOf:
+        - $ref: '#/DepartmentSummary'
+      x-nullable: true
+    children:
+      type: array
+      items:
+        $ref: '#/DepartmentSummary'
+
+DepartmentSummary:
+  type: object
+  required:
+    - id
+    - name
+    - code
+  properties:
+    id:
+      type: string
+      format: uuid
+    name:
+      type: string
+    code:
+      type: string
+
+CreateDepartmentRequest:
+  type: object
+  required:
+    - name
+    - code
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    code:
+      type: string
+      minLength: 1
+      maxLength: 20
+    description:
+      type: string
+    parent_id:
+      type: string
+      format: uuid
+    manager_id:
+      type: string
+      format: uuid
+
+UpdateDepartmentRequest:
+  type: object
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    code:
+      type: string
+      minLength: 1
+      maxLength: 20
+    description:
+      type: string
+    parent_id:
+      type: string
+      format: uuid
+    manager_id:
+      type: string
+      format: uuid
+    is_active:
+      type: boolean
+
+DepartmentList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/Department'

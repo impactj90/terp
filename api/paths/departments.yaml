@@ -1,0 +1,119 @@
+# Department endpoints
+/departments:
+  get:
+    tags:
+      - Departments
+    summary: List departments
+    description: |
+      Returns organizational departments. Departments can be hierarchical
+      (parent/child). Use for org charts, filtering employees, or assigning
+      department-specific holidays.
+    operationId: listDepartments
+    parameters:
+      - name: active
+        in: query
+        type: boolean
+        description: Filter by active status
+      - name: parent_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by parent department
+    responses:
+      200:
+        description: List of departments
+        schema:
+          $ref: '../schemas/departments.yaml#/DepartmentList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Departments
+    summary: Create department
+    operationId: createDepartment
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/departments.yaml#/CreateDepartmentRequest'
+    responses:
+      201:
+        description: Created department
+        schema:
+          $ref: '../schemas/departments.yaml#/Department'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/departments/{id}:
+  get:
+    tags:
+      - Departments
+    summary: Get department by ID
+    operationId: getDepartment
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Department details
+        schema:
+          $ref: '../schemas/departments.yaml#/Department'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Departments
+    summary: Update department
+    operationId: updateDepartment
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/departments.yaml#/UpdateDepartmentRequest'
+    responses:
+      200:
+        description: Updated department
+        schema:
+          $ref: '../schemas/departments.yaml#/Department'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Departments
+    summary: Delete department
+    operationId: deleteDepartment
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Department deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

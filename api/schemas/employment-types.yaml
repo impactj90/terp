@@ -1,0 +1,101 @@
+# Employment Type-related schemas
+EmploymentType:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - name
+    - code
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    name:
+      type: string
+      example: "Full-time"
+    code:
+      type: string
+      example: "FT"
+    description:
+      type: string
+      x-nullable: true
+    default_weekly_hours:
+      type: number
+      format: decimal
+      example: 40.00
+    is_active:
+      type: boolean
+      example: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+EmploymentTypeSummary:
+  type: object
+  required:
+    - id
+    - name
+    - code
+  properties:
+    id:
+      type: string
+      format: uuid
+    name:
+      type: string
+    code:
+      type: string
+
+CreateEmploymentTypeRequest:
+  type: object
+  required:
+    - name
+    - code
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    code:
+      type: string
+      minLength: 1
+      maxLength: 20
+    description:
+      type: string
+    default_weekly_hours:
+      type: number
+      format: decimal
+
+UpdateEmploymentTypeRequest:
+  type: object
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    code:
+      type: string
+      minLength: 1
+      maxLength: 20
+    description:
+      type: string
+    default_weekly_hours:
+      type: number
+      format: decimal
+    is_active:
+      type: boolean
+
+EmploymentTypeList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/EmploymentType'

@@ -1,0 +1,70 @@
+# Tenant-related schemas
+Tenant:
+  type: object
+  required:
+    - id
+    - name
+    - slug
+    - is_active
+    - created_at
+  properties:
+    id:
+      type: string
+      format: uuid
+    name:
+      type: string
+      example: "Acme Corp"
+    slug:
+      type: string
+      example: "acme-corp"
+    settings:
+      type: object
+      additionalProperties: true
+      example: {}
+    is_active:
+      type: boolean
+      example: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+CreateTenantRequest:
+  type: object
+  required:
+    - name
+    - slug
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+      example: "Acme Corp"
+    slug:
+      type: string
+      minLength: 3
+      maxLength: 100
+      pattern: "^[a-z0-9-]+$"
+      example: "acme-corp"
+
+UpdateTenantRequest:
+  type: object
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    is_active:
+      type: boolean
+
+TenantList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/Tenant'

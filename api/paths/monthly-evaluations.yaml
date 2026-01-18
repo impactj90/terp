@@ -1,0 +1,163 @@
+# Monthly Evaluation endpoints
+/monthly-evaluations:
+  get:
+    tags:
+      - Monthly Evaluations
+    summary: List monthly evaluations
+    description: |
+      Returns evaluation templates for monthly time reports. Templates define
+      which accounts, columns, and calculations appear in monthly summaries.
+      Set a default template for tenant-wide use.
+    operationId: listMonthlyEvaluations
+    parameters:
+      - name: is_active
+        in: query
+        type: boolean
+        description: Filter by active status
+      - name: limit
+        in: query
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+      - name: cursor
+        in: query
+        type: string
+    responses:
+      200:
+        description: List of monthly evaluations
+        schema:
+          $ref: '../schemas/monthly-evaluations.yaml#/MonthlyEvaluationList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Monthly Evaluations
+    summary: Create monthly evaluation
+    operationId: createMonthlyEvaluation
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/monthly-evaluations.yaml#/CreateMonthlyEvaluationRequest'
+    responses:
+      201:
+        description: Monthly evaluation created
+        schema:
+          $ref: '../schemas/monthly-evaluations.yaml#/MonthlyEvaluation'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/monthly-evaluations/default:
+  get:
+    tags:
+      - Monthly Evaluations
+    summary: Get default monthly evaluation
+    operationId: getDefaultMonthlyEvaluation
+    responses:
+      200:
+        description: Default monthly evaluation
+        schema:
+          $ref: '../schemas/monthly-evaluations.yaml#/MonthlyEvaluation'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        description: No default evaluation configured
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/monthly-evaluations/{id}:
+  get:
+    tags:
+      - Monthly Evaluations
+    summary: Get monthly evaluation by ID
+    operationId: getMonthlyEvaluation
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Monthly evaluation details
+        schema:
+          $ref: '../schemas/monthly-evaluations.yaml#/MonthlyEvaluation'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  put:
+    tags:
+      - Monthly Evaluations
+    summary: Update monthly evaluation
+    operationId: updateMonthlyEvaluation
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/monthly-evaluations.yaml#/UpdateMonthlyEvaluationRequest'
+    responses:
+      200:
+        description: Monthly evaluation updated
+        schema:
+          $ref: '../schemas/monthly-evaluations.yaml#/MonthlyEvaluation'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Monthly Evaluations
+    summary: Delete monthly evaluation
+    operationId: deleteMonthlyEvaluation
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Monthly evaluation deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+      409:
+        description: Cannot delete default evaluation
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/monthly-evaluations/{id}/set-default:
+  post:
+    tags:
+      - Monthly Evaluations
+    summary: Set monthly evaluation as default
+    operationId: setDefaultMonthlyEvaluation
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Monthly evaluation set as default
+        schema:
+          $ref: '../schemas/monthly-evaluations.yaml#/MonthlyEvaluation'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

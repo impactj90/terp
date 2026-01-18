@@ -1,0 +1,78 @@
+# User-related schemas
+User:
+  type: object
+  required:
+    - id
+    - email
+    - display_name
+    - role
+    - created_at
+  properties:
+    id:
+      type: string
+      format: uuid
+    email:
+      type: string
+      format: email
+      example: "user@example.com"
+    display_name:
+      type: string
+      example: "John Doe"
+    avatar_url:
+      type: string
+      format: uri
+      x-nullable: true
+      example: "https://storage.example.com/avatars/abc123.jpg"
+    role:
+      type: string
+      enum:
+        - user
+        - admin
+      example: "user"
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+UserSummary:
+  type: object
+  required:
+    - id
+    - display_name
+  properties:
+    id:
+      type: string
+      format: uuid
+    display_name:
+      type: string
+      example: "John Doe"
+    avatar_url:
+      type: string
+      format: uri
+      x-nullable: true
+
+UpdateUserRequest:
+  type: object
+  properties:
+    display_name:
+      type: string
+      minLength: 2
+      maxLength: 255
+    avatar_url:
+      type: string
+      format: uri
+
+UserList:
+  type: object
+  required:
+    - data
+    - meta
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/User'
+    meta:
+      $ref: './common.yaml#/PaginationMeta'

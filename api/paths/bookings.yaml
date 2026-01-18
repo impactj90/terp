@@ -1,0 +1,144 @@
+# Booking endpoints
+/bookings:
+  get:
+    tags:
+      - Bookings
+    summary: List bookings
+    description: |
+      Returns time bookings (clock-in/out events). Bookings are paired to
+      calculate worked hours. Filter by employee and date range for
+      timesheet views or payroll processing.
+    operationId: listBookings
+    parameters:
+      - name: employee_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by employee
+      - name: from
+        in: query
+        type: string
+        format: date
+        description: Start date filter (YYYY-MM-DD)
+      - name: to
+        in: query
+        type: string
+        format: date
+        description: End date filter (YYYY-MM-DD)
+      - name: limit
+        in: query
+        type: integer
+        default: 50
+        minimum: 1
+        maximum: 100
+      - name: page
+        in: query
+        type: integer
+        default: 1
+        minimum: 1
+    responses:
+      200:
+        description: List of bookings
+        schema:
+          $ref: '../schemas/bookings.yaml#/BookingList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Bookings
+    summary: Create booking
+    operationId: createBooking
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/bookings.yaml#/CreateBookingRequest'
+    responses:
+      201:
+        description: Created booking
+        schema:
+          $ref: '../schemas/bookings.yaml#/Booking'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      403:
+        description: Month is closed
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/bookings/{id}:
+  get:
+    tags:
+      - Bookings
+    summary: Get booking by ID
+    operationId: getBooking
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Booking details
+        schema:
+          $ref: '../schemas/bookings.yaml#/Booking'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  put:
+    tags:
+      - Bookings
+    summary: Update booking
+    operationId: updateBooking
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/bookings.yaml#/UpdateBookingRequest'
+    responses:
+      200:
+        description: Updated booking
+        schema:
+          $ref: '../schemas/bookings.yaml#/Booking'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      403:
+        description: Month is closed
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Bookings
+    summary: Delete booking
+    operationId: deleteBooking
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Booking deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      403:
+        description: Month is closed
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

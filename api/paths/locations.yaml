@@ -1,0 +1,113 @@
+# Location endpoints
+/locations:
+  get:
+    tags:
+      - Locations
+    summary: List locations
+    description: |
+      Returns work locations (offices, sites, remote). Locations can have
+      time zones and are used for employee assignments and terminal placement.
+    operationId: listLocations
+    parameters:
+      - name: active
+        in: query
+        type: boolean
+        description: Filter by active status
+    responses:
+      200:
+        description: List of locations
+        schema:
+          $ref: '../schemas/locations.yaml#/LocationList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Locations
+    summary: Create location
+    operationId: createLocation
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/locations.yaml#/CreateLocationRequest'
+    responses:
+      201:
+        description: Created location
+        schema:
+          $ref: '../schemas/locations.yaml#/Location'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/locations/{id}:
+  get:
+    tags:
+      - Locations
+    summary: Get location by ID
+    operationId: getLocation
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Location details
+        schema:
+          $ref: '../schemas/locations.yaml#/Location'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Locations
+    summary: Update location
+    operationId: updateLocation
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/locations.yaml#/UpdateLocationRequest'
+    responses:
+      200:
+        description: Updated location
+        schema:
+          $ref: '../schemas/locations.yaml#/Location'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Locations
+    summary: Delete location
+    operationId: deleteLocation
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Location deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

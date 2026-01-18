@@ -1,0 +1,124 @@
+# Cost Center endpoints
+/cost-centers:
+  get:
+    tags:
+      - Cost Centers
+    summary: List cost centers
+    description: |
+      Returns all cost centers for the tenant. Cost centers are used to
+      allocate employee time and costs to different budgets or projects.
+      Use for dropdown selections in employee forms or time booking.
+    operationId: listCostCenters
+    parameters:
+      - name: active
+        in: query
+        type: boolean
+        description: Filter by active status
+    responses:
+      200:
+        description: List of cost centers
+        schema:
+          $ref: '../schemas/cost-centers.yaml#/CostCenterList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Cost Centers
+    summary: Create cost center
+    description: |
+      Creates a new cost center with a unique code. The code is used for
+      integration with accounting/ERP systems.
+    operationId: createCostCenter
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/cost-centers.yaml#/CreateCostCenterRequest'
+    responses:
+      201:
+        description: Created cost center
+        schema:
+          $ref: '../schemas/cost-centers.yaml#/CostCenter'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/cost-centers/{id}:
+  get:
+    tags:
+      - Cost Centers
+    summary: Get cost center by ID
+    description: Retrieves cost center details for viewing or editing.
+    operationId: getCostCenter
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Cost center details
+        schema:
+          $ref: '../schemas/cost-centers.yaml#/CostCenter'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Cost Centers
+    summary: Update cost center
+    description: |
+      Updates cost center properties. Deactivate instead of deleting to
+      preserve historical data while hiding from new assignments.
+    operationId: updateCostCenter
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/cost-centers.yaml#/UpdateCostCenterRequest'
+    responses:
+      200:
+        description: Updated cost center
+        schema:
+          $ref: '../schemas/cost-centers.yaml#/CostCenter'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Cost Centers
+    summary: Delete cost center
+    description: |
+      Permanently removes a cost center. May fail if employees are still
+      assigned. Consider deactivating instead.
+    operationId: deleteCostCenter
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Cost center deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

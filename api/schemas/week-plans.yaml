@@ -1,0 +1,187 @@
+# Week Plan-related schemas
+WeekPlan:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - code
+    - name
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    code:
+      type: string
+      example: "WEEK-001"
+    name:
+      type: string
+      example: "Standard Week"
+    description:
+      type: string
+      x-nullable: true
+    # Day plan assignments (can be null for off days)
+    monday_day_plan_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    tuesday_day_plan_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    wednesday_day_plan_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    thursday_day_plan_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    friday_day_plan_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    saturday_day_plan_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    sunday_day_plan_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    is_active:
+      type: boolean
+      example: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+    # Expanded relations
+    monday_day_plan:
+      allOf:
+        - $ref: './day-plans.yaml#/DayPlanSummary'
+      x-nullable: true
+    tuesday_day_plan:
+      allOf:
+        - $ref: './day-plans.yaml#/DayPlanSummary'
+      x-nullable: true
+    wednesday_day_plan:
+      allOf:
+        - $ref: './day-plans.yaml#/DayPlanSummary'
+      x-nullable: true
+    thursday_day_plan:
+      allOf:
+        - $ref: './day-plans.yaml#/DayPlanSummary'
+      x-nullable: true
+    friday_day_plan:
+      allOf:
+        - $ref: './day-plans.yaml#/DayPlanSummary'
+      x-nullable: true
+    saturday_day_plan:
+      allOf:
+        - $ref: './day-plans.yaml#/DayPlanSummary'
+      x-nullable: true
+    sunday_day_plan:
+      allOf:
+        - $ref: './day-plans.yaml#/DayPlanSummary'
+      x-nullable: true
+
+WeekPlanSummary:
+  type: object
+  required:
+    - id
+    - code
+    - name
+  properties:
+    id:
+      type: string
+      format: uuid
+    code:
+      type: string
+    name:
+      type: string
+
+CreateWeekPlanRequest:
+  type: object
+  required:
+    - code
+    - name
+  properties:
+    code:
+      type: string
+      minLength: 1
+      maxLength: 20
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    description:
+      type: string
+    monday_day_plan_id:
+      type: string
+      format: uuid
+    tuesday_day_plan_id:
+      type: string
+      format: uuid
+    wednesday_day_plan_id:
+      type: string
+      format: uuid
+    thursday_day_plan_id:
+      type: string
+      format: uuid
+    friday_day_plan_id:
+      type: string
+      format: uuid
+    saturday_day_plan_id:
+      type: string
+      format: uuid
+    sunday_day_plan_id:
+      type: string
+      format: uuid
+
+UpdateWeekPlanRequest:
+  type: object
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    description:
+      type: string
+    monday_day_plan_id:
+      type: string
+      format: uuid
+    tuesday_day_plan_id:
+      type: string
+      format: uuid
+    wednesday_day_plan_id:
+      type: string
+      format: uuid
+    thursday_day_plan_id:
+      type: string
+      format: uuid
+    friday_day_plan_id:
+      type: string
+      format: uuid
+    saturday_day_plan_id:
+      type: string
+      format: uuid
+    sunday_day_plan_id:
+      type: string
+      format: uuid
+    is_active:
+      type: boolean
+
+WeekPlanList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/WeekPlan'

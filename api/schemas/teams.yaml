@@ -1,0 +1,140 @@
+# Team schemas
+TeamMemberRole:
+  type: string
+  enum:
+    - member
+    - lead
+    - deputy
+
+Team:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    department_id:
+      type: string
+      format: uuid
+    name:
+      type: string
+    description:
+      type: string
+    leader_employee_id:
+      type: string
+      format: uuid
+    is_active:
+      type: boolean
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+    department:
+      $ref: 'departments.yaml#/Department'
+    leader:
+      $ref: 'employees.yaml#/Employee'
+    members:
+      type: array
+      items:
+        $ref: '#/TeamMember'
+  required:
+    - id
+    - tenant_id
+    - name
+    - is_active
+
+TeamMember:
+  type: object
+  properties:
+    team_id:
+      type: string
+      format: uuid
+    employee_id:
+      type: string
+      format: uuid
+    joined_at:
+      type: string
+      format: date-time
+    role:
+      $ref: '#/TeamMemberRole'
+    employee:
+      $ref: 'employees.yaml#/Employee'
+  required:
+    - team_id
+    - employee_id
+    - joined_at
+    - role
+
+TeamList:
+  type: object
+  properties:
+    items:
+      type: array
+      items:
+        $ref: '#/Team'
+    next_cursor:
+      type: string
+  required:
+    - items
+
+CreateTeamRequest:
+  type: object
+  properties:
+    department_id:
+      type: string
+      format: uuid
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    description:
+      type: string
+    leader_employee_id:
+      type: string
+      format: uuid
+    is_active:
+      type: boolean
+      default: true
+  required:
+    - name
+
+UpdateTeamRequest:
+  type: object
+  properties:
+    department_id:
+      type: string
+      format: uuid
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    description:
+      type: string
+    leader_employee_id:
+      type: string
+      format: uuid
+    is_active:
+      type: boolean
+
+AddTeamMemberRequest:
+  type: object
+  properties:
+    employee_id:
+      type: string
+      format: uuid
+    role:
+      $ref: '#/TeamMemberRole'
+  required:
+    - employee_id
+
+UpdateTeamMemberRequest:
+  type: object
+  properties:
+    role:
+      $ref: '#/TeamMemberRole'
+  required:
+    - role

@@ -1,0 +1,95 @@
+# Holiday-related schemas
+Holiday:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - holiday_date
+    - name
+    - is_half_day
+    - applies_to_all
+    - created_at
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    holiday_date:
+      type: string
+      format: date
+      example: "2024-01-01"
+    name:
+      type: string
+      example: "New Year's Day"
+    is_half_day:
+      type: boolean
+      example: false
+    applies_to_all:
+      type: boolean
+      example: true
+    department_id:
+      type: string
+      format: uuid
+      description: Optional department restriction
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+CreateHolidayRequest:
+  type: object
+  required:
+    - holiday_date
+    - name
+  properties:
+    holiday_date:
+      type: string
+      format: date
+      example: "2024-01-01"
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+      example: "New Year's Day"
+    is_half_day:
+      type: boolean
+      default: false
+    applies_to_all:
+      type: boolean
+      default: true
+    department_id:
+      type: string
+      format: uuid
+      description: Optional department restriction
+
+UpdateHolidayRequest:
+  type: object
+  properties:
+    holiday_date:
+      type: string
+      format: date
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    is_half_day:
+      type: boolean
+    applies_to_all:
+      type: boolean
+    department_id:
+      type: string
+      format: uuid
+
+HolidayList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/Holiday'

@@ -1,0 +1,91 @@
+# Cost Center-related schemas
+CostCenter:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - name
+    - code
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    name:
+      type: string
+      example: "Development"
+    code:
+      type: string
+      example: "DEV-001"
+    description:
+      type: string
+      x-nullable: true
+    is_active:
+      type: boolean
+      example: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+CostCenterSummary:
+  type: object
+  required:
+    - id
+    - name
+    - code
+  properties:
+    id:
+      type: string
+      format: uuid
+    name:
+      type: string
+    code:
+      type: string
+
+CreateCostCenterRequest:
+  type: object
+  required:
+    - name
+    - code
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    code:
+      type: string
+      minLength: 1
+      maxLength: 50
+    description:
+      type: string
+
+UpdateCostCenterRequest:
+  type: object
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    code:
+      type: string
+      minLength: 1
+      maxLength: 50
+    description:
+      type: string
+    is_active:
+      type: boolean
+
+CostCenterList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/CostCenter'

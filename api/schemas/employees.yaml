@@ -1,0 +1,361 @@
+# Employee-related schemas
+Employee:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - personnel_number
+    - first_name
+    - last_name
+    - entry_date
+    - is_active
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    personnel_number:
+      type: string
+      example: "E001"
+    first_name:
+      type: string
+      example: "John"
+    last_name:
+      type: string
+      example: "Doe"
+    email:
+      type: string
+      format: email
+      x-nullable: true
+    phone:
+      type: string
+      x-nullable: true
+    entry_date:
+      type: string
+      format: date
+      example: "2024-01-15"
+    exit_date:
+      type: string
+      format: date
+      x-nullable: true
+    department_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    cost_center_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    employment_type_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    weekly_hours:
+      type: number
+      format: decimal
+      example: 40.00
+    vacation_days_per_year:
+      type: number
+      format: decimal
+      example: 30.00
+    is_active:
+      type: boolean
+      example: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+    # Expanded relations
+    department:
+      allOf:
+        - $ref: './departments.yaml#/Department'
+      x-nullable: true
+    cost_center:
+      allOf:
+        - $ref: './cost-centers.yaml#/CostCenter'
+      x-nullable: true
+    employment_type:
+      allOf:
+        - $ref: './employment-types.yaml#/EmploymentType'
+      x-nullable: true
+    contacts:
+      type: array
+      items:
+        $ref: '#/EmployeeContact'
+    cards:
+      type: array
+      items:
+        $ref: '#/EmployeeCard'
+
+EmployeeSummary:
+  type: object
+  required:
+    - id
+    - personnel_number
+    - first_name
+    - last_name
+  properties:
+    id:
+      type: string
+      format: uuid
+    personnel_number:
+      type: string
+    first_name:
+      type: string
+    last_name:
+      type: string
+    department_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    is_active:
+      type: boolean
+
+EmployeeContact:
+  type: object
+  required:
+    - id
+    - employee_id
+    - contact_type
+    - value
+  properties:
+    id:
+      type: string
+      format: uuid
+    employee_id:
+      type: string
+      format: uuid
+    contact_type:
+      type: string
+      enum:
+        - email
+        - phone
+        - mobile
+        - emergency
+      example: "email"
+    value:
+      type: string
+      example: "john.doe@example.com"
+    label:
+      type: string
+      x-nullable: true
+      example: "Work"
+    is_primary:
+      type: boolean
+      example: false
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+EmployeeCard:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - employee_id
+    - card_number
+    - valid_from
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    employee_id:
+      type: string
+      format: uuid
+    card_number:
+      type: string
+      example: "CARD001"
+    card_type:
+      type: string
+      enum:
+        - rfid
+        - barcode
+        - pin
+      default: "rfid"
+    valid_from:
+      type: string
+      format: date
+    valid_to:
+      type: string
+      format: date
+      x-nullable: true
+    is_active:
+      type: boolean
+      example: true
+    deactivated_at:
+      type: string
+      format: date-time
+      x-nullable: true
+    deactivation_reason:
+      type: string
+      x-nullable: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+CreateEmployeeRequest:
+  type: object
+  required:
+    - personnel_number
+    - pin
+    - first_name
+    - last_name
+    - entry_date
+  properties:
+    personnel_number:
+      type: string
+      minLength: 1
+      maxLength: 50
+    pin:
+      type: string
+      minLength: 4
+      maxLength: 20
+    first_name:
+      type: string
+      minLength: 1
+      maxLength: 100
+    last_name:
+      type: string
+      minLength: 1
+      maxLength: 100
+    email:
+      type: string
+      format: email
+    phone:
+      type: string
+    entry_date:
+      type: string
+      format: date
+    department_id:
+      type: string
+      format: uuid
+    cost_center_id:
+      type: string
+      format: uuid
+    employment_type_id:
+      type: string
+      format: uuid
+    weekly_hours:
+      type: number
+      format: decimal
+    vacation_days_per_year:
+      type: number
+      format: decimal
+
+UpdateEmployeeRequest:
+  type: object
+  properties:
+    first_name:
+      type: string
+      minLength: 1
+      maxLength: 100
+    last_name:
+      type: string
+      minLength: 1
+      maxLength: 100
+    email:
+      type: string
+      format: email
+    phone:
+      type: string
+    exit_date:
+      type: string
+      format: date
+    department_id:
+      type: string
+      format: uuid
+    cost_center_id:
+      type: string
+      format: uuid
+    employment_type_id:
+      type: string
+      format: uuid
+    weekly_hours:
+      type: number
+      format: decimal
+    vacation_days_per_year:
+      type: number
+      format: decimal
+
+CreateEmployeeContactRequest:
+  type: object
+  required:
+    - contact_type
+    - value
+  properties:
+    contact_type:
+      type: string
+      enum:
+        - email
+        - phone
+        - mobile
+        - emergency
+    value:
+      type: string
+      minLength: 1
+      maxLength: 255
+    label:
+      type: string
+      maxLength: 100
+    is_primary:
+      type: boolean
+      default: false
+
+CreateEmployeeCardRequest:
+  type: object
+  required:
+    - card_number
+    - valid_from
+  properties:
+    card_number:
+      type: string
+      minLength: 1
+      maxLength: 100
+    card_type:
+      type: string
+      enum:
+        - rfid
+        - barcode
+        - pin
+      default: "rfid"
+    valid_from:
+      type: string
+      format: date
+    valid_to:
+      type: string
+      format: date
+
+EmployeeList:
+  type: object
+  required:
+    - data
+    - total
+    - page
+    - limit
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/Employee'
+    total:
+      type: integer
+      example: 150
+    page:
+      type: integer
+      example: 1
+    limit:
+      type: integer
+      example: 20

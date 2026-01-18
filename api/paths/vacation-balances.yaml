@@ -1,0 +1,143 @@
+# Vacation Balance endpoints
+/vacation-balances:
+  get:
+    tags:
+      - Vacation
+    summary: List vacation balances
+    description: |
+      Returns vacation entitlements and usage per employee per year. Tracks
+      total days, used days, remaining balance, and carryover. Use for leave
+      planning and balance reports.
+    operationId: listVacationBalances
+    parameters:
+      - name: employee_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by employee
+      - name: year
+        in: query
+        type: integer
+        description: Filter by year
+      - name: department_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by department
+    responses:
+      200:
+        description: List of vacation balances
+        schema:
+          $ref: '../schemas/vacation-balances.yaml#/VacationBalanceList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Vacation
+    summary: Create vacation balance
+    operationId: createVacationBalance
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/vacation-balances.yaml#/CreateVacationBalanceRequest'
+    responses:
+      201:
+        description: Created vacation balance
+        schema:
+          $ref: '../schemas/vacation-balances.yaml#/VacationBalance'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Balance for employee/year already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/vacation-balances/{id}:
+  get:
+    tags:
+      - Vacation
+    summary: Get vacation balance by ID
+    operationId: getVacationBalance
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Vacation balance details
+        schema:
+          $ref: '../schemas/vacation-balances.yaml#/VacationBalance'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Vacation
+    summary: Update vacation balance
+    operationId: updateVacationBalance
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/vacation-balances.yaml#/UpdateVacationBalanceRequest'
+    responses:
+      200:
+        description: Updated vacation balance
+        schema:
+          $ref: '../schemas/vacation-balances.yaml#/VacationBalance'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/vacation-balances/initialize:
+  post:
+    tags:
+      - Vacation
+    summary: Initialize vacation balances for year
+    description: Creates vacation balances for all active employees for a year
+    operationId: initializeVacationBalances
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - year
+          properties:
+            year:
+              type: integer
+            carryover:
+              type: boolean
+              description: Whether to carry over from previous year
+              default: true
+    responses:
+      201:
+        description: Vacation balances initialized
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+            created_count:
+              type: integer
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'

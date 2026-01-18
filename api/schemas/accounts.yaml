@@ -1,0 +1,206 @@
+# Account-related schemas
+Account:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - code
+    - name
+    - account_type
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+      x-nullable: true
+      description: Null for system accounts
+    code:
+      type: string
+      example: "OT"
+    name:
+      type: string
+      example: "Overtime"
+    description:
+      type: string
+      x-nullable: true
+    account_type:
+      type: string
+      enum:
+        - time
+        - bonus
+        - deduction
+        - vacation
+        - sick
+      example: "time"
+    is_system:
+      type: boolean
+      description: System accounts cannot be deleted
+      example: false
+    is_payroll_relevant:
+      type: boolean
+      description: Include in payroll export
+      example: true
+    payroll_code:
+      type: string
+      x-nullable: true
+      description: Code for payroll system export
+    sort_order:
+      type: integer
+      example: 0
+    is_active:
+      type: boolean
+      example: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+AccountSummary:
+  type: object
+  required:
+    - id
+    - code
+    - name
+    - account_type
+  properties:
+    id:
+      type: string
+      format: uuid
+    code:
+      type: string
+    name:
+      type: string
+    account_type:
+      type: string
+
+AccountValue:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - employee_id
+    - account_id
+    - value_date
+    - value_minutes
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    employee_id:
+      type: string
+      format: uuid
+    account_id:
+      type: string
+      format: uuid
+    value_date:
+      type: string
+      format: date
+    value_minutes:
+      type: integer
+      example: 60
+    source:
+      type: string
+      enum:
+        - calculated
+        - manual
+        - correction
+        - import
+      example: "calculated"
+    source_id:
+      type: string
+      format: uuid
+      x-nullable: true
+      description: ID of source record (daily_value, correction, etc.)
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+    # Expanded relations
+    account:
+      allOf:
+        - $ref: '#/AccountSummary'
+      x-nullable: true
+    employee:
+      allOf:
+        - $ref: './employees.yaml#/EmployeeSummary'
+      x-nullable: true
+
+CreateAccountRequest:
+  type: object
+  required:
+    - code
+    - name
+    - account_type
+  properties:
+    code:
+      type: string
+      minLength: 1
+      maxLength: 20
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    description:
+      type: string
+    account_type:
+      type: string
+      enum:
+        - time
+        - bonus
+        - deduction
+        - vacation
+        - sick
+    is_payroll_relevant:
+      type: boolean
+      default: false
+    payroll_code:
+      type: string
+    sort_order:
+      type: integer
+
+UpdateAccountRequest:
+  type: object
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    description:
+      type: string
+    is_payroll_relevant:
+      type: boolean
+    payroll_code:
+      type: string
+    sort_order:
+      type: integer
+    is_active:
+      type: boolean
+
+AccountList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/Account'
+
+AccountValueList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/AccountValue'

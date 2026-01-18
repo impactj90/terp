@@ -1,0 +1,169 @@
+# Tariff endpoints
+/tariffs:
+  get:
+    tags:
+      - Tariffs
+    summary: List tariffs
+    description: |
+      Returns tariffs (pay rates) for time calculations. Tariffs define hourly
+      rates, overtime multipliers, and break deduction rules. Assign tariffs
+      to employees or employment types.
+    operationId: listTariffs
+    parameters:
+      - name: active
+        in: query
+        type: boolean
+        description: Filter by active status
+    responses:
+      200:
+        description: List of tariffs
+        schema:
+          $ref: '../schemas/tariffs.yaml#/TariffList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Tariffs
+    summary: Create tariff
+    operationId: createTariff
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/tariffs.yaml#/CreateTariffRequest'
+    responses:
+      201:
+        description: Created tariff
+        schema:
+          $ref: '../schemas/tariffs.yaml#/Tariff'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/tariffs/{id}:
+  get:
+    tags:
+      - Tariffs
+    summary: Get tariff by ID
+    description: Returns tariff with breaks
+    operationId: getTariff
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Tariff details
+        schema:
+          $ref: '../schemas/tariffs.yaml#/Tariff'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  put:
+    tags:
+      - Tariffs
+    summary: Update tariff
+    operationId: updateTariff
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/tariffs.yaml#/UpdateTariffRequest'
+    responses:
+      200:
+        description: Updated tariff
+        schema:
+          $ref: '../schemas/tariffs.yaml#/Tariff'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Tariffs
+    summary: Delete tariff
+    operationId: deleteTariff
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Tariff deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/tariffs/{id}/breaks:
+  post:
+    tags:
+      - Tariffs
+    summary: Add break to tariff
+    operationId: createTariffBreak
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/tariffs.yaml#/CreateTariffBreakRequest'
+    responses:
+      201:
+        description: Created break
+        schema:
+          $ref: '../schemas/tariffs.yaml#/TariffBreak'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/tariffs/{id}/breaks/{breakId}:
+  delete:
+    tags:
+      - Tariffs
+    summary: Delete break from tariff
+    operationId: deleteTariffBreak
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: breakId
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Break deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

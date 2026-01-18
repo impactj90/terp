@@ -1,0 +1,133 @@
+# Holiday endpoints
+/holidays:
+  get:
+    tags:
+      - Holidays
+    summary: List holidays
+    description: |
+      Returns public holidays for the tenant. Holidays affect time calculations -
+      employees may have reduced hours or days off. Filter by year or date range
+      for calendar views or payroll processing.
+    operationId: listHolidays
+    parameters:
+      - name: year
+        in: query
+        type: integer
+        description: Filter by year (e.g., 2024)
+      - name: from
+        in: query
+        type: string
+        format: date
+        description: Start date for range filter (inclusive)
+      - name: to
+        in: query
+        type: string
+        format: date
+        description: End date for range filter (inclusive)
+    responses:
+      200:
+        description: List of holidays
+        schema:
+          type: array
+          items:
+            $ref: '../schemas/holidays.yaml#/Holiday'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Holidays
+    summary: Create holiday
+    description: |
+      Creates a new holiday. Supports full-day and half-day holidays.
+      Optionally restrict to specific departments. Duplicate dates for
+      the same tenant are not allowed.
+    operationId: createHoliday
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/holidays.yaml#/CreateHolidayRequest'
+    responses:
+      201:
+        description: Created holiday
+        schema:
+          $ref: '../schemas/holidays.yaml#/Holiday'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/holidays/{id}:
+  get:
+    tags:
+      - Holidays
+    summary: Get holiday by ID
+    description: Retrieves a single holiday's details for viewing or editing.
+    operationId: getHoliday
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Holiday details
+        schema:
+          $ref: '../schemas/holidays.yaml#/Holiday'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Holidays
+    summary: Update holiday
+    description: |
+      Updates a holiday's name, date, or half-day status. Changes may trigger
+      recalculation of affected employees' time records.
+    operationId: updateHoliday
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/holidays.yaml#/UpdateHolidayRequest'
+    responses:
+      200:
+        description: Updated holiday
+        schema:
+          $ref: '../schemas/holidays.yaml#/Holiday'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Holidays
+    summary: Delete holiday
+    description: |
+      Removes a holiday from the calendar. Time records for affected dates
+      may need recalculation.
+    operationId: deleteHoliday
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Holiday deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

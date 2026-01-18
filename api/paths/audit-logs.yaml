@@ -1,0 +1,94 @@
+# Audit Log endpoints
+/audit-logs:
+  get:
+    tags:
+      - Audit Logs
+    summary: List audit logs
+    description: |
+      Returns audit trail of all changes in the system. Every create, update,
+      delete, and approval action is logged with user, timestamp, and details.
+      Required for compliance and debugging. Admin access only.
+    operationId: listAuditLogs
+    parameters:
+      - name: user_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by user
+      - name: entity_type
+        in: query
+        type: string
+        description: Filter by entity type (e.g., booking, employee)
+      - name: entity_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by entity ID
+      - name: action
+        in: query
+        type: string
+        enum:
+          - create
+          - update
+          - delete
+          - approve
+          - reject
+          - close
+          - reopen
+          - export
+          - import
+          - login
+          - logout
+        description: Filter by action
+      - name: from
+        in: query
+        type: string
+        format: date-time
+        description: Start datetime filter
+      - name: to
+        in: query
+        type: string
+        format: date-time
+        description: End datetime filter
+      - name: limit
+        in: query
+        type: integer
+        default: 50
+        minimum: 1
+        maximum: 100
+      - name: cursor
+        in: query
+        type: string
+    responses:
+      200:
+        description: List of audit logs
+        schema:
+          $ref: '../schemas/audit-logs.yaml#/AuditLogList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      403:
+        $ref: '../responses/errors.yaml#/Forbidden'
+
+/audit-logs/{id}:
+  get:
+    tags:
+      - Audit Logs
+    summary: Get audit log by ID
+    operationId: getAuditLog
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Audit log details
+        schema:
+          $ref: '../schemas/audit-logs.yaml#/AuditLog'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      403:
+        $ref: '../responses/errors.yaml#/Forbidden'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

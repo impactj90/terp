@@ -1,0 +1,285 @@
+# Employee Day Plan endpoints
+/employee-day-plans:
+  get:
+    tags:
+      - Employee Day Plans
+    summary: List employee day plans
+    description: |
+      Returns daily work schedules assigned to employees. These override the
+      default week plan for specific dates. Use for shift changes, temporary
+      schedules, or individual adjustments.
+    operationId: listEmployeeDayPlans
+    parameters:
+      - name: employee_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by employee
+      - name: from
+        in: query
+        type: string
+        format: date
+        description: Start date filter
+      - name: to
+        in: query
+        type: string
+        format: date
+        description: End date filter
+      - name: source
+        in: query
+        type: string
+        enum:
+          - tariff
+          - manual
+          - holiday
+        description: Filter by source
+      - name: limit
+        in: query
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+      - name: cursor
+        in: query
+        type: string
+    responses:
+      200:
+        description: List of employee day plans
+        schema:
+          $ref: '../schemas/employee-day-plans.yaml#/EmployeeDayPlanList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Employee Day Plans
+    summary: Create employee day plan
+    operationId: createEmployeeDayPlan
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/employee-day-plans.yaml#/CreateEmployeeDayPlanRequest'
+    responses:
+      201:
+        description: Employee day plan created
+        schema:
+          $ref: '../schemas/employee-day-plans.yaml#/EmployeeDayPlan'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Day plan already exists for this employee and date
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/employee-day-plans/bulk:
+  post:
+    tags:
+      - Employee Day Plans
+    summary: Bulk create/upsert employee day plans
+    operationId: bulkCreateEmployeeDayPlans
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/employee-day-plans.yaml#/BulkCreateEmployeeDayPlanRequest'
+    responses:
+      200:
+        description: Employee day plans created/updated
+        schema:
+          type: object
+          properties:
+            created:
+              type: integer
+            updated:
+              type: integer
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/employee-day-plans/delete-range:
+  post:
+    tags:
+      - Employee Day Plans
+    summary: Delete employee day plans in date range
+    operationId: deleteEmployeeDayPlanRange
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/employee-day-plans.yaml#/DeleteRangeRequest'
+    responses:
+      200:
+        description: Employee day plans deleted
+        schema:
+          type: object
+          properties:
+            deleted:
+              type: integer
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/employee-day-plans/{id}:
+  get:
+    tags:
+      - Employee Day Plans
+    summary: Get employee day plan by ID
+    operationId: getEmployeeDayPlan
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Employee day plan details
+        schema:
+          $ref: '../schemas/employee-day-plans.yaml#/EmployeeDayPlan'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  put:
+    tags:
+      - Employee Day Plans
+    summary: Update employee day plan
+    operationId: updateEmployeeDayPlan
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/employee-day-plans.yaml#/UpdateEmployeeDayPlanRequest'
+    responses:
+      200:
+        description: Employee day plan updated
+        schema:
+          $ref: '../schemas/employee-day-plans.yaml#/EmployeeDayPlan'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Employee Day Plans
+    summary: Delete employee day plan
+    operationId: deleteEmployeeDayPlan
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Employee day plan deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/employees/{employee_id}/day-plans:
+  get:
+    tags:
+      - Employee Day Plans
+    summary: Get day plans for employee in date range
+    operationId: getEmployeeDayPlansForEmployee
+    parameters:
+      - name: employee_id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: from
+        in: query
+        required: true
+        type: string
+        format: date
+        description: Start date
+      - name: to
+        in: query
+        required: true
+        type: string
+        format: date
+        description: End date
+    responses:
+      200:
+        description: Employee day plans for the date range
+        schema:
+          $ref: '../schemas/employee-day-plans.yaml#/EmployeeDayPlanList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/employees/{employee_id}/day-plans/{date}:
+  get:
+    tags:
+      - Employee Day Plans
+    summary: Get day plan for employee on specific date
+    operationId: getEmployeeDayPlanForDate
+    parameters:
+      - name: employee_id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: date
+        in: path
+        required: true
+        type: string
+        format: date
+    responses:
+      200:
+        description: Employee day plan for the date
+        schema:
+          $ref: '../schemas/employee-day-plans.yaml#/EmployeeDayPlan'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  put:
+    tags:
+      - Employee Day Plans
+    summary: Upsert day plan for employee on specific date
+    operationId: upsertEmployeeDayPlanForDate
+    parameters:
+      - name: employee_id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: date
+        in: path
+        required: true
+        type: string
+        format: date
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/employee-day-plans.yaml#/UpdateEmployeeDayPlanRequest'
+    responses:
+      200:
+        description: Employee day plan created/updated
+        schema:
+          $ref: '../schemas/employee-day-plans.yaml#/EmployeeDayPlan'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'

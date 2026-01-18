@@ -1,0 +1,480 @@
+# Employee endpoints
+/employees:
+  get:
+    tags:
+      - Employees
+    summary: List employees
+    description: |
+      Returns a paginated list of employees. Employees are the core entity -
+      they clock in/out and have time records. Filter by department, active
+      status, or search by name/personnel number/email.
+    operationId: listEmployees
+    parameters:
+      - name: limit
+        in: query
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+      - name: page
+        in: query
+        type: integer
+        default: 1
+        minimum: 1
+      - name: q
+        in: query
+        type: string
+        description: Search by name, personnel number, or email
+      - name: department_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by department
+      - name: active
+        in: query
+        type: boolean
+        description: Filter by active status
+    responses:
+      200:
+        description: List of employees
+        schema:
+          $ref: '../schemas/employees.yaml#/EmployeeList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Employees
+    summary: Create employee
+    description: |
+      Creates a new employee record. Personnel number and PIN must be unique
+      within the tenant. Optionally link to a user account for self-service.
+    operationId: createEmployee
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/employees.yaml#/CreateEmployeeRequest'
+    responses:
+      201:
+        description: Created employee
+        schema:
+          $ref: '../schemas/employees.yaml#/Employee'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Personnel number or PIN already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/employees/search:
+  get:
+    tags:
+      - Employees
+    summary: Quick search employees
+    description: |
+      Fast typeahead search for employee selection. Returns minimal data
+      (ID, name, personnel number) for autocomplete dropdowns.
+    operationId: searchEmployees
+    parameters:
+      - name: q
+        in: query
+        required: true
+        type: string
+        description: Search query
+    responses:
+      200:
+        description: Search results
+        schema:
+          type: array
+          items:
+            $ref: '../schemas/employees.yaml#/EmployeeSummary'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/employees/{id}:
+  get:
+    tags:
+      - Employees
+    summary: Get employee by ID
+    description: |
+      Returns full employee details including personal info, employment data,
+      department, cost center, and work schedule assignments.
+    operationId: getEmployee
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Employee details
+        schema:
+          $ref: '../schemas/employees.yaml#/Employee'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  put:
+    tags:
+      - Employees
+    summary: Update employee
+    description: |
+      Updates employee information. Some changes (like department or schedule)
+      may trigger recalculation of time records.
+    operationId: updateEmployee
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/employees.yaml#/UpdateEmployeeRequest'
+    responses:
+      200:
+        description: Updated employee
+        schema:
+          $ref: '../schemas/employees.yaml#/Employee'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Employees
+    summary: Deactivate employee
+    description: Soft deletes (deactivates) the employee
+    operationId: deleteEmployee
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Employee deactivated
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/employees/{id}/contacts:
+  get:
+    tags:
+      - Employees
+    summary: List employee contacts
+    description: Returns emergency contacts and other contact persons for an employee.
+    operationId: listEmployeeContacts
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: List of contacts
+        schema:
+          type: array
+          items:
+            $ref: '../schemas/employees.yaml#/EmployeeContact'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  post:
+    tags:
+      - Employees
+    summary: Add employee contact
+    description: Adds an emergency or other contact person for the employee.
+    operationId: createEmployeeContact
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/employees.yaml#/CreateEmployeeContactRequest'
+    responses:
+      201:
+        description: Created contact
+        schema:
+          $ref: '../schemas/employees.yaml#/EmployeeContact'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/employees/{id}/contacts/{contactId}:
+  delete:
+    tags:
+      - Employees
+    summary: Delete employee contact
+    operationId: deleteEmployeeContact
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: contactId
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Contact deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/employees/{id}/cards:
+  get:
+    tags:
+      - Employees
+    summary: List employee cards
+    description: |
+      Returns access/time cards assigned to the employee. Cards are used
+      for terminal clock-in/out.
+    operationId: listEmployeeCards
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: List of cards
+        schema:
+          type: array
+          items:
+            $ref: '../schemas/employees.yaml#/EmployeeCard'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  post:
+    tags:
+      - Employees
+    summary: Add employee card
+    operationId: createEmployeeCard
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/employees.yaml#/CreateEmployeeCardRequest'
+    responses:
+      201:
+        description: Created card
+        schema:
+          $ref: '../schemas/employees.yaml#/EmployeeCard'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/employees/{id}/cards/{cardId}:
+  delete:
+    tags:
+      - Employees
+    summary: Deactivate employee card
+    operationId: deactivateEmployeeCard
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: cardId
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Card deactivated
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/employees/{id}/day/{date}:
+  get:
+    tags:
+      - Employees
+      - Bookings
+    summary: Get employee day view
+    description: Returns complete day information including bookings, daily value, and errors
+    operationId: getEmployeeDayView
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: date
+        in: path
+        required: true
+        type: string
+        format: date
+        description: Date in YYYY-MM-DD format
+    responses:
+      200:
+        description: Day view
+        schema:
+          $ref: '../schemas/bookings.yaml#/DayView'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/employees/{id}/day/{date}/calculate:
+  post:
+    tags:
+      - Employees
+      - Bookings
+    summary: Recalculate day
+    description: Manually trigger recalculation of daily values for the specified day
+    operationId: calculateEmployeeDay
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: date
+        in: path
+        required: true
+        type: string
+        format: date
+    responses:
+      200:
+        description: Calculated daily value
+        schema:
+          $ref: '../schemas/daily-values.yaml#/DailyValue'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/employees/{id}/absences:
+  get:
+    tags:
+      - Employees
+      - Absences
+    summary: List employee absences
+    operationId: listEmployeeAbsences
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: from
+        in: query
+        type: string
+        format: date
+        description: Start date filter
+      - name: to
+        in: query
+        type: string
+        format: date
+        description: End date filter
+    responses:
+      200:
+        description: List of absences
+        schema:
+          $ref: '../schemas/absences.yaml#/AbsenceList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  post:
+    tags:
+      - Employees
+      - Absences
+    summary: Create absence range
+    description: Create absences for a date range
+    operationId: createEmployeeAbsenceRange
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/absences.yaml#/CreateAbsenceRangeRequest'
+    responses:
+      201:
+        description: Created absences
+        schema:
+          $ref: '../schemas/absences.yaml#/AbsenceList'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/employees/{id}/vacation-balance:
+  get:
+    tags:
+      - Employees
+      - Vacation
+    summary: Get employee vacation balance
+    operationId: getEmployeeVacationBalance
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: year
+        in: query
+        type: integer
+        description: Year (defaults to current year)
+    responses:
+      200:
+        description: Vacation balance
+        schema:
+          $ref: '../schemas/vacation-balances.yaml#/VacationBalance'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

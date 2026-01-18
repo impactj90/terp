@@ -1,0 +1,149 @@
+# Daily Value endpoints
+/daily-values:
+  get:
+    tags:
+      - Daily Values
+    summary: List daily values
+    description: |
+      Returns calculated daily values (worked hours, overtime, etc.) per employee
+      per day. Daily values are computed from bookings and absences. Filter by
+      employee, date range, or error status for timesheet review.
+    operationId: listDailyValues
+    parameters:
+      - name: employee_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by employee
+      - name: from
+        in: query
+        type: string
+        format: date
+        description: Start date filter (YYYY-MM-DD)
+      - name: to
+        in: query
+        type: string
+        format: date
+        description: End date filter (YYYY-MM-DD)
+      - name: status
+        in: query
+        type: string
+        enum:
+          - pending
+          - calculated
+          - error
+          - approved
+        description: Filter by status
+      - name: has_errors
+        in: query
+        type: boolean
+        description: Filter by error status
+      - name: limit
+        in: query
+        type: integer
+        default: 50
+        minimum: 1
+        maximum: 100
+      - name: cursor
+        in: query
+        type: string
+    responses:
+      200:
+        description: List of daily values
+        schema:
+          $ref: '../schemas/daily-values.yaml#/DailyValueList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/daily-values/{id}:
+  get:
+    tags:
+      - Daily Values
+    summary: Get daily value by ID
+    operationId: getDailyValue
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Daily value details
+        schema:
+          $ref: '../schemas/daily-values.yaml#/DailyValue'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/daily-values/{id}/approve:
+  post:
+    tags:
+      - Daily Values
+    summary: Approve daily value
+    description: Marks the daily value as approved
+    operationId: approveDailyValue
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Approved daily value
+        schema:
+          $ref: '../schemas/daily-values.yaml#/DailyValue'
+      400:
+        description: Cannot approve (has errors)
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/daily-values/recalculate:
+  post:
+    tags:
+      - Daily Values
+    summary: Recalculate daily values
+    description: Trigger recalculation for a date range
+    operationId: recalculateDailyValues
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - from
+            - to
+          properties:
+            employee_id:
+              type: string
+              format: uuid
+              description: Optional employee ID (all employees if not specified)
+            from:
+              type: string
+              format: date
+            to:
+              type: string
+              format: date
+    responses:
+      202:
+        description: Recalculation started
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "Recalculation started"
+            affected_days:
+              type: integer
+              example: 31
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'

@@ -1,0 +1,171 @@
+# Account endpoints
+/accounts:
+  get:
+    tags:
+      - Accounts
+    summary: List accounts
+    description: |
+      Returns time accounts (overtime, vacation, flextime, etc.). Accounts
+      track balances that accumulate over time. System accounts are built-in
+      and cannot be deleted. Filter by type or payroll relevance.
+    operationId: listAccounts
+    parameters:
+      - name: active
+        in: query
+        type: boolean
+        description: Filter by active status
+      - name: account_type
+        in: query
+        type: string
+        enum:
+          - time
+          - bonus
+          - deduction
+          - vacation
+          - sick
+        description: Filter by account type
+      - name: payroll_relevant
+        in: query
+        type: boolean
+        description: Filter by payroll relevance
+    responses:
+      200:
+        description: List of accounts
+        schema:
+          $ref: '../schemas/accounts.yaml#/AccountList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Accounts
+    summary: Create account
+    operationId: createAccount
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/accounts.yaml#/CreateAccountRequest'
+    responses:
+      201:
+        description: Created account
+        schema:
+          $ref: '../schemas/accounts.yaml#/Account'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/accounts/{id}:
+  get:
+    tags:
+      - Accounts
+    summary: Get account by ID
+    operationId: getAccount
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Account details
+        schema:
+          $ref: '../schemas/accounts.yaml#/Account'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Accounts
+    summary: Update account
+    operationId: updateAccount
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/accounts.yaml#/UpdateAccountRequest'
+    responses:
+      200:
+        description: Updated account
+        schema:
+          $ref: '../schemas/accounts.yaml#/Account'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      403:
+        description: Cannot modify system accounts
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Accounts
+    summary: Delete account
+    operationId: deleteAccount
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Account deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      403:
+        description: Cannot delete system accounts
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/account-values:
+  get:
+    tags:
+      - Accounts
+    summary: List account values
+    operationId: listAccountValues
+    parameters:
+      - name: employee_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by employee
+      - name: account_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by account
+      - name: from
+        in: query
+        type: string
+        format: date
+        description: Start date filter
+      - name: to
+        in: query
+        type: string
+        format: date
+        description: End date filter
+    responses:
+      200:
+        description: List of account values
+        schema:
+          $ref: '../schemas/accounts.yaml#/AccountValueList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'

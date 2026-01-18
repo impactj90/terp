@@ -1,0 +1,133 @@
+# Absence Type endpoints
+/absence-types:
+  get:
+    tags:
+      - Absence Types
+    summary: List absence types
+    description: |
+      Returns absence types (vacation, sick, personal, etc.). Each type defines
+      how time is deducted, whether approval is required, and which account
+      is affected. System types are built-in.
+    operationId: listAbsenceTypes
+    parameters:
+      - name: active
+        in: query
+        type: boolean
+        description: Filter by active status
+      - name: category
+        in: query
+        type: string
+        enum:
+          - vacation
+          - sick
+          - personal
+          - unpaid
+          - holiday
+          - other
+        description: Filter by category
+    responses:
+      200:
+        description: List of absence types
+        schema:
+          $ref: '../schemas/absence-types.yaml#/AbsenceTypeList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Absence Types
+    summary: Create absence type
+    operationId: createAbsenceType
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/absence-types.yaml#/CreateAbsenceTypeRequest'
+    responses:
+      201:
+        description: Created absence type
+        schema:
+          $ref: '../schemas/absence-types.yaml#/AbsenceType'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/absence-types/{id}:
+  get:
+    tags:
+      - Absence Types
+    summary: Get absence type by ID
+    operationId: getAbsenceType
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Absence type details
+        schema:
+          $ref: '../schemas/absence-types.yaml#/AbsenceType'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Absence Types
+    summary: Update absence type
+    operationId: updateAbsenceType
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/absence-types.yaml#/UpdateAbsenceTypeRequest'
+    responses:
+      200:
+        description: Updated absence type
+        schema:
+          $ref: '../schemas/absence-types.yaml#/AbsenceType'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      403:
+        description: Cannot modify system absence types
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Absence Types
+    summary: Delete absence type
+    operationId: deleteAbsenceType
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Absence type deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      403:
+        description: Cannot delete system absence types
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

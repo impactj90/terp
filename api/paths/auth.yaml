@@ -1,0 +1,151 @@
+# Authentication endpoints
+/auth/login:
+  post:
+    tags:
+      - Auth
+    summary: Login with credentials
+    description: |
+      Authenticate with email/password and receive a JWT token.
+      In development mode, use dev/login instead for easier testing.
+    operationId: authLogin
+    security: []
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - email
+            - password
+          properties:
+            email:
+              type: string
+              format: email
+            password:
+              type: string
+              format: password
+    responses:
+      200:
+        description: Login successful
+        schema:
+          type: object
+          properties:
+            token:
+              type: string
+              description: JWT token
+            user:
+              $ref: '../schemas/users.yaml#/User'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      500:
+        $ref: '../responses/errors.yaml#/InternalError'
+
+/auth/refresh:
+  post:
+    tags:
+      - Auth
+    summary: Refresh token
+    description: Exchange a valid JWT for a new one
+    operationId: authRefresh
+    responses:
+      200:
+        description: Token refreshed
+        schema:
+          type: object
+          properties:
+            token:
+              type: string
+              description: New JWT token
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/auth/logout:
+  post:
+    tags:
+      - Auth
+    summary: Logout
+    description: Clears session/JWT cookie
+    operationId: authLogout
+    responses:
+      204:
+        description: Logged out successfully
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/auth/me:
+  get:
+    tags:
+      - Auth
+    summary: Get current user
+    description: Returns the authenticated user's profile
+    operationId: getCurrentUser
+    responses:
+      200:
+        description: Current user profile
+        schema:
+          $ref: '../schemas/users.yaml#/User'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/auth/dev/login:
+  get:
+    tags:
+      - Auth
+    summary: Dev mode login
+    description: |
+      Development-only endpoint for testing authentication.
+      Returns a JWT token for a test user with the specified role.
+      Only available when ENV=development.
+    operationId: devLogin
+    security: []
+    parameters:
+      - name: role
+        in: query
+        required: false
+        type: string
+        enum:
+          - admin
+          - user
+        default: user
+        description: Role of the test user to authenticate as
+    responses:
+      200:
+        description: Login successful
+        schema:
+          type: object
+          properties:
+            token:
+              type: string
+              description: JWT token
+            user:
+              $ref: '../schemas/users.yaml#/User'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      403:
+        $ref: '../responses/errors.yaml#/Forbidden'
+
+/auth/dev/users:
+  get:
+    tags:
+      - Auth
+    summary: List dev users
+    description: |
+      Development-only endpoint that lists available test users.
+      Only available when ENV=development.
+    operationId: devUsers
+    security: []
+    responses:
+      200:
+        description: List of dev users
+        schema:
+          type: object
+          properties:
+            dev_mode:
+              type: boolean
+            users:
+              type: array
+              items:
+                $ref: '../schemas/users.yaml#/User'
+      403:
+        $ref: '../responses/errors.yaml#/Forbidden'
