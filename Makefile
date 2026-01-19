@@ -37,11 +37,11 @@ build: ## Build production images
 
 ## test: Run all tests
 test: ## Run Go tests
-	cd apps/api && go test -v -race -cover ./...
+	cd apps/api && go test -p 1 -v -race -cover ./...
 
 ## test-coverage: Run tests with coverage report
 test-coverage: ## Run tests with HTML coverage report
-	cd apps/api && go test -coverprofile=coverage.out ./...
+	cd apps/api && go test -p 1 -coverprofile=coverage.out ./...
 	cd apps/api && go tool cover -html=coverage.out -o coverage.html
 
 ## lint: Run all linters
