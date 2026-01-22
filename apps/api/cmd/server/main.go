@@ -95,6 +95,14 @@ func main() {
 	tariffService := service.NewTariffService(tariffRepo, weekPlanRepo)
 	bookingTypeService := service.NewBookingTypeService(bookingTypeRepo)
 
+	// Initialize calculation services
+	bookingRepo := repository.NewBookingRepository(db)
+	empDayPlanRepo := repository.NewEmployeeDayPlanRepository(db)
+	dailyValueRepo := repository.NewDailyValueRepository(db)
+	dailyCalcService := service.NewDailyCalcService(bookingRepo, empDayPlanRepo, dailyValueRepo, holidayRepo)
+	recalcService := service.NewRecalcService(dailyCalcService, employeeRepo)
+	_ = recalcService // Silence unused warning until handlers use it
+
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(
 		authConfig,
