@@ -1,13 +1,10 @@
 package model
 
 import (
-	"errors"
-	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/tolga/terp/internal/timeutil"
 )
 
 type BookingSource string
@@ -57,9 +54,7 @@ func (Booking) TableName() string {
 
 // TimeString returns the edited time as HH:MM string
 func (b *Booking) TimeString() string {
-	hours := b.EditedTime / 60
-	minutes := b.EditedTime % 60
-	return fmt.Sprintf("%02d:%02d", hours, minutes)
+	return timeutil.MinutesToString(b.EditedTime)
 }
 
 // EffectiveTime returns calculated_time if set, else edited_time
@@ -77,42 +72,23 @@ func (b *Booking) IsEdited() bool {
 
 // MinutesToTime converts minutes from midnight to time.Time on booking date
 func (b *Booking) MinutesToTime(minutes int) time.Time {
-	return time.Date(
-		b.BookingDate.Year(),
-		b.BookingDate.Month(),
-		b.BookingDate.Day(),
-		minutes/60,
-		minutes%60,
-		0, 0,
-		b.BookingDate.Location(),
-	)
+	return timeutil.MinutesToTime(b.BookingDate, minutes)
 }
 
 // TimeToMinutes converts a time to minutes from midnight
+// Deprecated: Use timeutil.TimeToMinutes instead
 func TimeToMinutes(t time.Time) int {
-	return t.Hour()*60 + t.Minute()
+	return timeutil.TimeToMinutes(t)
 }
 
 // MinutesToString formats minutes as HH:MM
+// Deprecated: Use timeutil.MinutesToString instead
 func MinutesToString(minutes int) string {
-	h := minutes / 60
-	m := minutes % 60
-	return fmt.Sprintf("%02d:%02d", h, m)
+	return timeutil.MinutesToString(minutes)
 }
 
 // ParseTimeString parses HH:MM to minutes from midnight
+// Deprecated: Use timeutil.ParseTimeString instead
 func ParseTimeString(s string) (int, error) {
-	parts := strings.Split(s, ":")
-	if len(parts) != 2 {
-		return 0, errors.New("invalid time format")
-	}
-	h, err := strconv.Atoi(parts[0])
-	if err != nil {
-		return 0, err
-	}
-	m, err := strconv.Atoi(parts[1])
-	if err != nil {
-		return 0, err
-	}
-	return h*60 + m, nil
+	return timeutil.ParseTimeString(s)
 }
