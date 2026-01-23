@@ -200,3 +200,20 @@ func RegisterBookingTypeRoutes(r chi.Router, h *BookingTypeHandler) {
 		r.Delete("/{id}", h.Delete)
 	})
 }
+
+// RegisterBookingRoutes registers booking routes.
+func RegisterBookingRoutes(r chi.Router, h *BookingHandler) {
+	r.Route("/bookings", func(r chi.Router) {
+		r.Get("/", h.List)
+		r.Post("/", h.Create)
+		r.Get("/{id}", h.GetByID)
+		r.Put("/{id}", h.Update)
+		r.Delete("/{id}", h.Delete)
+	})
+
+	// Day view routes (nested under employees)
+	r.Route("/employees/{id}/day/{date}", func(r chi.Router) {
+		r.Get("/", h.GetDayView)
+		r.Post("/calculate", h.Calculate)
+	})
+}

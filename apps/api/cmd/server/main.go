@@ -101,7 +101,9 @@ func main() {
 	dailyValueRepo := repository.NewDailyValueRepository(db)
 	dailyCalcService := service.NewDailyCalcService(bookingRepo, empDayPlanRepo, dailyValueRepo, holidayRepo)
 	recalcService := service.NewRecalcService(dailyCalcService, employeeRepo)
-	_ = recalcService // Silence unused warning until handlers use it
+
+	// Initialize BookingService
+	bookingService := service.NewBookingService(bookingRepo, bookingTypeRepo, recalcService, nil)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(
@@ -123,6 +125,16 @@ func main() {
 	weekPlanHandler := handler.NewWeekPlanHandler(weekPlanService)
 	tariffHandler := handler.NewTariffHandler(tariffService)
 	bookingTypeHandler := handler.NewBookingTypeHandler(bookingTypeService)
+
+	// Initialize BookingHandler
+	bookingHandler := handler.NewBookingHandler(
+		bookingService,
+		dailyCalcService,
+		bookingRepo,
+		dailyValueRepo,
+		empDayPlanRepo,
+		holidayRepo,
+	)
 
 	// Initialize tenant middleware
 	tenantMiddleware := middleware.NewTenantMiddleware(tenantService)
@@ -176,6 +188,7 @@ func main() {
 				handler.RegisterWeekPlanRoutes(r, weekPlanHandler)
 				handler.RegisterTariffRoutes(r, tariffHandler)
 				handler.RegisterBookingTypeRoutes(r, bookingTypeHandler)
+				handler.RegisterBookingRoutes(r, bookingHandler)
 			})
 		})
 
