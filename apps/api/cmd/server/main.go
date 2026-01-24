@@ -105,6 +105,12 @@ func main() {
 	// Initialize BookingService
 	bookingService := service.NewBookingService(bookingRepo, bookingTypeRepo, recalcService, nil)
 
+	// Initialize AbsenceService
+	absenceDayRepo := repository.NewAbsenceDayRepository(db)
+	absenceTypeRepo := repository.NewAbsenceTypeRepository(db)
+	absenceService := service.NewAbsenceService(absenceDayRepo, absenceTypeRepo, holidayRepo, empDayPlanRepo, recalcService)
+	_ = absenceService // TODO: Wire to AbsenceHandler (separate ticket)
+
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(
 		authConfig,

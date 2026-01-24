@@ -88,6 +88,21 @@ func (r *AbsenceDayRepository) GetByEmployeeDateRange(ctx context.Context, emplo
 	return days, nil
 }
 
+// ListByEmployee retrieves all absence days for an employee, ordered by date descending.
+func (r *AbsenceDayRepository) ListByEmployee(ctx context.Context, employeeID uuid.UUID) ([]model.AbsenceDay, error) {
+	var days []model.AbsenceDay
+	err := r.db.GORM.WithContext(ctx).
+		Preload("AbsenceType").
+		Where("employee_id = ?", employeeID).
+		Order("absence_date DESC").
+		Find(&days).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to list absence days for employee: %w", err)
+	}
+	return days, nil
+}
+
 // Update updates an absence day.
 func (r *AbsenceDayRepository) Update(ctx context.Context, ad *model.AbsenceDay) error {
 	return r.db.GORM.WithContext(ctx).Save(ad).Error
