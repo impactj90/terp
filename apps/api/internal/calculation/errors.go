@@ -34,6 +34,12 @@ const (
 	WarnCodeNoBreakRecorded  = "NO_BREAK_RECORDED"  // No break bookings but break required
 	WarnCodeShortBreak       = "SHORT_BREAK"        // Recorded break shorter than required
 	WarnCodeAutoBreakApplied = "AUTO_BREAK_APPLIED" // Break auto-deducted
+
+	// Monthly calculation warnings
+	WarnCodeMonthlyCap     = "MONTHLY_CAP_REACHED" // FlextimeCredited capped at monthly max
+	WarnCodeFlextimeCapped = "FLEXTIME_CAPPED"     // FlextimeEnd hit positive/negative cap
+	WarnCodeBelowThreshold = "BELOW_THRESHOLD"     // Overtime below threshold, forfeited
+	WarnCodeNoCarryover    = "NO_CARRYOVER"        // Credit type resets to zero
 )
 
 // IsError returns true if the code represents an error (vs warning).
