@@ -13,6 +13,7 @@ import (
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/shopspring/decimal"
 
 	"github.com/tolga/terp/internal/auth"
 	"github.com/tolga/terp/internal/config"
@@ -110,6 +111,11 @@ func main() {
 	absenceTypeRepo := repository.NewAbsenceTypeRepository(db)
 	absenceService := service.NewAbsenceService(absenceDayRepo, absenceTypeRepo, holidayRepo, empDayPlanRepo, recalcService)
 	absenceHandler := handler.NewAbsenceHandler(absenceService)
+
+	// Initialize VacationService
+	vacationBalanceRepo := repository.NewVacationBalanceRepository(db)
+	vacationService := service.NewVacationService(vacationBalanceRepo, absenceDayRepo, absenceTypeRepo, employeeRepo, decimal.Zero)
+	_ = vacationService // TODO: Wire to VacationHandler (separate ticket)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(
