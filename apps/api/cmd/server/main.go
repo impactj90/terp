@@ -115,7 +115,7 @@ func main() {
 	// Initialize VacationService
 	vacationBalanceRepo := repository.NewVacationBalanceRepository(db)
 	vacationService := service.NewVacationService(vacationBalanceRepo, absenceDayRepo, absenceTypeRepo, employeeRepo, decimal.Zero)
-	_ = vacationService // TODO: Wire to VacationHandler (separate ticket)
+	vacationHandler := handler.NewVacationHandler(vacationService)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(
@@ -202,6 +202,7 @@ func main() {
 				handler.RegisterBookingTypeRoutes(r, bookingTypeHandler)
 				handler.RegisterBookingRoutes(r, bookingHandler)
 				handler.RegisterAbsenceRoutes(r, absenceHandler)
+				handler.RegisterVacationRoutes(r, vacationHandler)
 			})
 		})
 

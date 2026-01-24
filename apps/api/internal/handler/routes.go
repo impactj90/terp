@@ -230,3 +230,8 @@ func RegisterAbsenceRoutes(r chi.Router, h *AbsenceHandler) {
 	// Absence CRUD
 	r.Delete("/absences/{id}", h.Delete)
 }
+
+// RegisterVacationRoutes registers vacation routes.
+func RegisterVacationRoutes(r chi.Router, h *VacationHandler) {
+	r.Get("/employees/{id}/vacation-balance", h.GetBalance)
+}
