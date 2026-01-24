@@ -85,6 +85,14 @@ func (m *mockAbsenceTypeRepositoryForService) GetByID(ctx context.Context, id uu
 	return args.Get(0).(*model.AbsenceType), args.Error(1)
 }
 
+func (m *mockAbsenceTypeRepositoryForService) List(ctx context.Context, tenantID uuid.UUID, includeSystem bool) ([]model.AbsenceType, error) {
+	args := m.Called(ctx, tenantID, includeSystem)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]model.AbsenceType), args.Error(1)
+}
+
 type mockHolidayRepositoryForAbsence struct {
 	mock.Mock
 }

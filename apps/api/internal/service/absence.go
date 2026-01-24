@@ -36,6 +36,7 @@ type absenceDayRepositoryForService interface {
 // absenceTypeRepositoryForService defines the interface for absence type validation.
 type absenceTypeRepositoryForService interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*model.AbsenceType, error)
+	List(ctx context.Context, tenantID uuid.UUID, includeSystem bool) ([]model.AbsenceType, error)
 }
 
 // holidayRepositoryForAbsence defines the interface for holiday lookups.
@@ -98,6 +99,11 @@ type CreateAbsenceRangeInput struct {
 type CreateAbsenceRangeResult struct {
 	CreatedDays  []model.AbsenceDay
 	SkippedDates []time.Time // Dates skipped (weekends, holidays, off-days, existing absences)
+}
+
+// ListTypes retrieves all absence types for a tenant, including system types.
+func (s *AbsenceService) ListTypes(ctx context.Context, tenantID uuid.UUID) ([]model.AbsenceType, error) {
+	return s.absenceTypeRepo.List(ctx, tenantID, true)
 }
 
 // GetByID retrieves an absence day by ID.

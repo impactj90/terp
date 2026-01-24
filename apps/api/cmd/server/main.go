@@ -109,7 +109,7 @@ func main() {
 	absenceDayRepo := repository.NewAbsenceDayRepository(db)
 	absenceTypeRepo := repository.NewAbsenceTypeRepository(db)
 	absenceService := service.NewAbsenceService(absenceDayRepo, absenceTypeRepo, holidayRepo, empDayPlanRepo, recalcService)
-	_ = absenceService // TODO: Wire to AbsenceHandler (separate ticket)
+	absenceHandler := handler.NewAbsenceHandler(absenceService)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(
@@ -195,6 +195,7 @@ func main() {
 				handler.RegisterTariffRoutes(r, tariffHandler)
 				handler.RegisterBookingTypeRoutes(r, bookingTypeHandler)
 				handler.RegisterBookingRoutes(r, bookingHandler)
+				handler.RegisterAbsenceRoutes(r, absenceHandler)
 			})
 		})
 
