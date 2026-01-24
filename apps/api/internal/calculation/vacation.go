@@ -61,8 +61,8 @@ type VacationCalcOutput struct {
 	ProRatedEntitlement decimal.Decimal
 	PartTimeAdjustment  decimal.Decimal
 
-	AgeBonus       decimal.Decimal
-	TenureBonus    decimal.Decimal
+	AgeBonus        decimal.Decimal
+	TenureBonus     decimal.Decimal
 	DisabilityBonus decimal.Decimal
 
 	TotalEntitlement decimal.Decimal

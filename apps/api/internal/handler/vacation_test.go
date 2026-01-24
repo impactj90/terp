@@ -120,8 +120,8 @@ func TestVacationHandler_GetBalance_Success(t *testing.T) {
 	assert.Equal(t, float64(5), result["carryover_from_previous"])
 	assert.Equal(t, float64(2), result["manual_adjustment"])
 	assert.Equal(t, float64(10), result["used_days"])
-	assert.Equal(t, float64(37), result["total_entitlement"])  // 30 + 5 + 2
-	assert.Equal(t, float64(27), result["remaining_days"])     // 37 - 10
+	assert.Equal(t, float64(37), result["total_entitlement"]) // 30 + 5 + 2
+	assert.Equal(t, float64(27), result["remaining_days"])    // 37 - 10
 }
 
 func TestVacationHandler_GetBalance_DefaultYear(t *testing.T) {

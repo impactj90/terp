@@ -156,7 +156,7 @@ func TestVacationService_InitializeYear_FullYear(t *testing.T) {
 		ID:                  employeeID,
 		TenantID:            tenantID,
 		EntryDate:           time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), // Employed since 2020
-		WeeklyHours:         decimal.NewFromInt(40),                        // Full-time
+		WeeklyHours:         decimal.NewFromInt(40),                      // Full-time
 		VacationDaysPerYear: decimal.NewFromInt(30),
 	}
 

@@ -18,10 +18,6 @@ func dateOf(year int, month time.Month, day int) time.Time {
 	return time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
 }
 
-func timePtr(t time.Time) *time.Time {
-	return &t
-}
-
 func TestCalculateVacation_BasicFullYear(t *testing.T) {
 	input := calculation.VacationCalcInput{
 		BirthDate:           dateOf(1990, time.January, 1),

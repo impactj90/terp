@@ -488,7 +488,7 @@ func TestAbsenceService_CreateRange_SkipsOffDays(t *testing.T) {
 	somePlanID := uuid.New()
 	empDayPlanRepo.On("GetForEmployeeDateRange", ctx, employeeID, from, to).Return([]model.EmployeeDayPlan{
 		{PlanDate: time.Date(2026, 1, 26, 0, 0, 0, 0, time.UTC), DayPlanID: &somePlanID}, // Mon: work
-		{PlanDate: time.Date(2026, 1, 27, 0, 0, 0, 0, time.UTC), DayPlanID: nil},          // Tue: off (explicit)
+		{PlanDate: time.Date(2026, 1, 27, 0, 0, 0, 0, time.UTC), DayPlanID: nil},         // Tue: off (explicit)
 		{PlanDate: time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC), DayPlanID: &somePlanID}, // Wed: work
 		// Thu (Jan 29): no plan record at all = off day
 		{PlanDate: time.Date(2026, 1, 30, 0, 0, 0, 0, time.UTC), DayPlanID: &somePlanID}, // Fri: work
