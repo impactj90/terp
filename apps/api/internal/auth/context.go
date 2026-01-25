@@ -16,10 +16,10 @@ const (
 
 // User represents the authenticated user in context.
 type User struct {
-	ID          uuid.UUID
-	Email       string
-	DisplayName string
-	Role        string
+	ID          uuid.UUID `json:"id"`
+	Email       string    `json:"email"`
+	DisplayName string    `json:"display_name"`
+	Role        string    `json:"role"`
 }
 
 // ContextWithUser adds the user to context.

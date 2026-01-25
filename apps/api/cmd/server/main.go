@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/shopspring/decimal"
@@ -162,6 +163,16 @@ func main() {
 
 	// Create router
 	r := chi.NewRouter()
+
+	// CORS middleware - must be first
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{cfg.FrontendURL, "http://localhost:3000", "http://localhost:3001"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Tenant-ID", "X-Request-ID"},
+		ExposedHeaders:   []string{"Link", "X-Request-ID"},
+		AllowCredentials: true,
+		MaxAge:           300, // Maximum value not ignored by any major browser
+	}))
 
 	// Global middleware
 	r.Use(chimiddleware.RequestID)

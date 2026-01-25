@@ -6,10 +6,10 @@ import (
 
 // DevUser represents a predefined development user.
 type DevUser struct {
-	ID          uuid.UUID
-	Email       string
-	DisplayName string
-	Role        string
+	ID          uuid.UUID `json:"id"`
+	Email       string    `json:"email"`
+	DisplayName string    `json:"display_name"`
+	Role        string    `json:"role"`
 }
 
 // DevUsers contains predefined users for development mode.
