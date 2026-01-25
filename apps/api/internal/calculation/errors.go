@@ -24,6 +24,9 @@ const (
 	// Data errors
 	ErrCodeInvalidTime     = "INVALID_TIME"      // Time value out of range
 	ErrCodeDuplicateInTime = "DUPLICATE_IN_TIME" // Multiple arrivals at same time
+
+	// Shift detection errors
+	ErrCodeNoMatchingShift = "NO_MATCHING_SHIFT" // No day plan matched the booking times
 )
 
 // Warning codes for non-critical issues.
@@ -49,7 +52,8 @@ func IsError(code string) bool {
 		ErrCodeEarlyCome, ErrCodeLateCome, ErrCodeEarlyGo, ErrCodeLateGo,
 		ErrCodeMissedCoreStart, ErrCodeMissedCoreEnd,
 		ErrCodeBelowMinWorkTime, ErrCodeNoBookings,
-		ErrCodeInvalidTime, ErrCodeDuplicateInTime:
+		ErrCodeInvalidTime, ErrCodeDuplicateInTime,
+		ErrCodeNoMatchingShift:
 		return true
 	default:
 		return false
