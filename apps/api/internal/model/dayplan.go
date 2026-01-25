@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 type PlanType string
@@ -20,6 +21,29 @@ const (
 	RoundingUp      RoundingType = "up"
 	RoundingDown    RoundingType = "down"
 	RoundingNearest RoundingType = "nearest"
+)
+
+// NoBookingBehavior defines how to handle days without bookings.
+// ZMI: Tage ohne Buchungen
+type NoBookingBehavior string
+
+const (
+	NoBookingError            NoBookingBehavior = "error"
+	NoBookingDeductTarget     NoBookingBehavior = "deduct_target"
+	NoBookingVocationalSchool NoBookingBehavior = "vocational_school"
+	NoBookingAdoptTarget      NoBookingBehavior = "adopt_target"
+	NoBookingTargetWithOrder  NoBookingBehavior = "target_with_order"
+)
+
+// DayChangeBehavior defines how to handle cross-midnight shifts.
+// ZMI: Tageswechsel
+type DayChangeBehavior string
+
+const (
+	DayChangeNone         DayChangeBehavior = "none"
+	DayChangeAtArrival    DayChangeBehavior = "at_arrival"
+	DayChangeAtDeparture  DayChangeBehavior = "at_departure"
+	DayChangeAutoComplete DayChangeBehavior = "auto_complete"
 )
 
 type DayPlan struct {
@@ -40,6 +64,10 @@ type DayPlan struct {
 
 	// Target hours
 	RegularHours int `gorm:"type:int;not null;default:480" json:"regular_hours"`
+	// ZMI: Regelarbeitszeit 2 - alternative target for absence days
+	RegularHours2 *int `gorm:"column:regular_hours_2;type:int" json:"regular_hours_2,omitempty"`
+	// ZMI: Aus Personalstamm holen - get target from employee master
+	FromEmployeeMaster bool `gorm:"default:false" json:"from_employee_master"`
 
 	// Tolerance settings
 	ToleranceComePlus  int `gorm:"type:int;default:0" json:"tolerance_come_plus"`
@@ -57,6 +85,42 @@ type DayPlan struct {
 	MinWorkTime    *int `gorm:"type:int" json:"min_work_time,omitempty"`
 	MaxNetWorkTime *int `gorm:"type:int" json:"max_net_work_time,omitempty"`
 
+	// ZMI: Variable Arbeitszeit - enables tolerance_come_minus for FAZ plans
+	VariableWorkTime bool `gorm:"default:false" json:"variable_work_time"`
+
+	// ZMI: Rounding extras
+	RoundAllBookings     bool `gorm:"default:false" json:"round_all_bookings"`
+	RoundingComeAddValue *int `gorm:"type:int" json:"rounding_come_add_value,omitempty"`
+	RoundingGoAddValue   *int `gorm:"type:int" json:"rounding_go_add_value,omitempty"`
+
+	// ZMI: Zeitgutschrift an Feiertagen - holiday time credits (minutes)
+	HolidayCreditCat1 *int `gorm:"type:int" json:"holiday_credit_cat1,omitempty"`
+	HolidayCreditCat2 *int `gorm:"type:int" json:"holiday_credit_cat2,omitempty"`
+	HolidayCreditCat3 *int `gorm:"type:int" json:"holiday_credit_cat3,omitempty"`
+
+	// ZMI: Urlaubsbewertung - vacation deduction value (1.0 = one day)
+	VacationDeduction decimal.Decimal `gorm:"type:decimal(5,2);default:1.00" json:"vacation_deduction"`
+
+	// ZMI: Tage ohne Buchungen - no-booking behavior
+	NoBookingBehavior NoBookingBehavior `gorm:"type:varchar(30);default:'error'" json:"no_booking_behavior"`
+
+	// ZMI: Tageswechsel - day change behavior
+	DayChangeBehavior DayChangeBehavior `gorm:"type:varchar(30);default:'none'" json:"day_change_behavior"`
+
+	// ZMI: Schichterkennung - shift detection windows (minutes from midnight)
+	ShiftDetectArriveFrom *int `gorm:"type:int" json:"shift_detect_arrive_from,omitempty"`
+	ShiftDetectArriveTo   *int `gorm:"type:int" json:"shift_detect_arrive_to,omitempty"`
+	ShiftDetectDepartFrom *int `gorm:"type:int" json:"shift_detect_depart_from,omitempty"`
+	ShiftDetectDepartTo   *int `gorm:"type:int" json:"shift_detect_depart_to,omitempty"`
+
+	// ZMI: Alternative day plans for shift detection (up to 6)
+	ShiftAltPlan1 *uuid.UUID `gorm:"column:shift_alt_plan_1;type:uuid" json:"shift_alt_plan_1,omitempty"`
+	ShiftAltPlan2 *uuid.UUID `gorm:"column:shift_alt_plan_2;type:uuid" json:"shift_alt_plan_2,omitempty"`
+	ShiftAltPlan3 *uuid.UUID `gorm:"column:shift_alt_plan_3;type:uuid" json:"shift_alt_plan_3,omitempty"`
+	ShiftAltPlan4 *uuid.UUID `gorm:"column:shift_alt_plan_4;type:uuid" json:"shift_alt_plan_4,omitempty"`
+	ShiftAltPlan5 *uuid.UUID `gorm:"column:shift_alt_plan_5;type:uuid" json:"shift_alt_plan_5,omitempty"`
+	ShiftAltPlan6 *uuid.UUID `gorm:"column:shift_alt_plan_6;type:uuid" json:"shift_alt_plan_6,omitempty"`
+
 	IsActive  bool      `json:"is_active"`
 	CreatedAt time.Time `gorm:"default:now()" json:"created_at"`
 	UpdatedAt time.Time `gorm:"default:now()" json:"updated_at"`
@@ -68,6 +132,71 @@ type DayPlan struct {
 
 func (DayPlan) TableName() string {
 	return "day_plans"
+}
+
+// GetEffectiveRegularHours returns the target minutes for a day.
+// Priority: employee master > absence day alternative > standard regular hours.
+func (dp *DayPlan) GetEffectiveRegularHours(isAbsenceDay bool, employeeTargetMinutes *int) int {
+	// If configured to get from employee master and value is available, use it
+	if dp.FromEmployeeMaster && employeeTargetMinutes != nil {
+		return *employeeTargetMinutes
+	}
+	// If absence day and alternative target is configured, use it
+	if isAbsenceDay && dp.RegularHours2 != nil {
+		return *dp.RegularHours2
+	}
+	return dp.RegularHours
+}
+
+// GetHolidayCredit returns the holiday time credit in minutes for the given category.
+// Categories: 1 = full holiday, 2 = half holiday, 3 = custom.
+// Returns 0 if the category is not configured.
+func (dp *DayPlan) GetHolidayCredit(category int) int {
+	switch category {
+	case 1:
+		if dp.HolidayCreditCat1 != nil {
+			return *dp.HolidayCreditCat1
+		}
+	case 2:
+		if dp.HolidayCreditCat2 != nil {
+			return *dp.HolidayCreditCat2
+		}
+	case 3:
+		if dp.HolidayCreditCat3 != nil {
+			return *dp.HolidayCreditCat3
+		}
+	}
+	return 0
+}
+
+// HasShiftDetection returns true if shift detection windows are configured.
+func (dp *DayPlan) HasShiftDetection() bool {
+	return dp.ShiftDetectArriveFrom != nil || dp.ShiftDetectArriveTo != nil ||
+		dp.ShiftDetectDepartFrom != nil || dp.ShiftDetectDepartTo != nil
+}
+
+// GetAlternativePlanIDs returns all configured alternative day plan IDs for shift detection.
+func (dp *DayPlan) GetAlternativePlanIDs() []uuid.UUID {
+	ids := make([]uuid.UUID, 0, 6)
+	if dp.ShiftAltPlan1 != nil {
+		ids = append(ids, *dp.ShiftAltPlan1)
+	}
+	if dp.ShiftAltPlan2 != nil {
+		ids = append(ids, *dp.ShiftAltPlan2)
+	}
+	if dp.ShiftAltPlan3 != nil {
+		ids = append(ids, *dp.ShiftAltPlan3)
+	}
+	if dp.ShiftAltPlan4 != nil {
+		ids = append(ids, *dp.ShiftAltPlan4)
+	}
+	if dp.ShiftAltPlan5 != nil {
+		ids = append(ids, *dp.ShiftAltPlan5)
+	}
+	if dp.ShiftAltPlan6 != nil {
+		ids = append(ids, *dp.ShiftAltPlan6)
+	}
+	return ids
 }
 
 type BreakType string
@@ -88,9 +217,11 @@ type DayPlanBreak struct {
 	AfterWorkMinutes *int      `gorm:"type:int" json:"after_work_minutes,omitempty"`
 	AutoDeduct       bool      `gorm:"default:true" json:"auto_deduct"`
 	IsPaid           bool      `gorm:"default:false" json:"is_paid"`
-	SortOrder        int       `gorm:"default:0" json:"sort_order"`
-	CreatedAt        time.Time `gorm:"default:now()" json:"created_at"`
-	UpdatedAt        time.Time `gorm:"default:now()" json:"updated_at"`
+	// ZMI: Minuten Differenz - proportional deduction when near threshold
+	MinutesDifference bool      `gorm:"default:false" json:"minutes_difference"`
+	SortOrder         int       `gorm:"default:0" json:"sort_order"`
+	CreatedAt         time.Time `gorm:"default:now()" json:"created_at"`
+	UpdatedAt         time.Time `gorm:"default:now()" json:"updated_at"`
 }
 
 func (DayPlanBreak) TableName() string {
