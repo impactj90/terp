@@ -1,39 +1,77 @@
 # Terp Web Frontend
 
-Next.js frontend for Terp (placeholder).
+Next.js 16 frontend for Terp time tracking system.
 
-## Setup
+## Tech Stack
 
-When ready to implement the frontend:
-
-```bash
-# Create Next.js app
-npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir
-
-# Install additional dependencies
-npm install @tanstack/react-query
-npm install -D openapi-typescript
-```
+- **Framework**: Next.js 16 with App Router
+- **Language**: TypeScript (strict mode)
+- **Styling**: Tailwind CSS v4 (CSS-first configuration)
+- **Components**: Shadcn/ui
+- **Font**: Inter via next/font
 
 ## Development
 
 ```bash
-npm run dev
+# Install dependencies
+pnpm install
+
+# Start development server (with Turbopack)
+pnpm run dev
+
+# Type check
+pnpm run typecheck
+
+# Lint
+pnpm run lint
+
+# Format
+pnpm run format
 ```
 
-## Type Generation
+## Environment Variables
 
-Generate TypeScript types from the API:
+Copy `.env.example` to `.env.local` and configure:
 
 ```bash
-npm run generate:types
+cp .env.example .env.local
 ```
 
-## Tech Stack (Planned)
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `API_URL` | Backend API URL (server-side) | `http://localhost:8080/api/v1` |
+| `NEXT_PUBLIC_API_URL` | Backend API URL (client-side) | `http://localhost:8080/api/v1` |
+| `NEXT_PUBLIC_APP_NAME` | Application name | `Terp` |
 
-- Next.js 16+ with App Router
-- TypeScript
-- Tailwind CSS v4
-- Shadcn/ui components
-- React Query for data fetching
-- openapi-typescript for API types
+## Project Structure
+
+```
+src/
+  app/              # Next.js App Router pages
+  components/
+    ui/             # Shadcn/ui components
+    layout/         # Layout components
+    forms/          # Form components
+  hooks/            # Custom React hooks
+  lib/              # Utility functions
+  types/            # TypeScript type definitions
+  config/           # Configuration modules
+```
+
+## Adding Shadcn Components
+
+```bash
+pnpm dlx shadcn@latest add [component-name]
+```
+
+Example:
+```bash
+pnpm dlx shadcn@latest add card dialog input
+```
+
+## Building for Production
+
+```bash
+pnpm run build
+pnpm run start
+```
