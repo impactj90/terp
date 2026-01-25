@@ -1,7 +1,7 @@
-.PHONY: dev dev-down dev-logs dev-ps build test test-coverage lint fmt tidy migrate-up migrate-down migrate-create migrate-status swagger-bundle generate clean install-tools help
+.PHONY: dev dev-down dev-logs dev-ps build test test-coverage lint fmt tidy migrate-up migrate-down migrate-create migrate-status swagger-bundle generate generate-web generate-all clean install-tools help
 
 # Variables
-DOCKER_COMPOSE = docker compose -f docker/docker-compose.yml
+DOCKER_COMPOSE = docker compose -p terp -f docker/docker-compose.yml
 MIGRATE = migrate
 LOCAL_DB = postgres://dev:dev@localhost:5432/terp?sslmode=disable
 
@@ -90,6 +90,18 @@ generate: swagger-bundle ## Generate Go server models from OpenAPI
 	mkdir -p apps/api/gen/models
 	swagger generate model -f api/openapi.bundled.yaml -t apps/api/gen --model-package=models
 	@echo "Done! Models generated in apps/api/gen/models/"
+
+## generate-web: Generate TypeScript API types for frontend
+generate-web: swagger-bundle ## Generate TypeScript types for frontend from OpenAPI
+	@echo "Converting Swagger 2.0 to OpenAPI 3.0..."
+	@which swagger2openapi > /dev/null 2>&1 || (echo "Installing swagger2openapi..." && npm install -g swagger2openapi)
+	swagger2openapi api/openapi.bundled.yaml -o api/openapi.bundled.v3.yaml
+	@echo "Generating TypeScript API types..."
+	cd apps/web && pnpm run generate:api
+	@echo "Done! Types generated in apps/web/src/lib/api/types.ts"
+
+## generate-all: Generate all code from OpenAPI spec
+generate-all: generate generate-web ## Generate Go models and TypeScript types
 
 ## clean: Clean build artifacts
 clean: ## Remove build artifacts and temp files
