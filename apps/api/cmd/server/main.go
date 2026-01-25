@@ -120,7 +120,7 @@ func main() {
 	// Initialize MonthlyEvalService
 	monthlyValueRepo := repository.NewMonthlyValueRepository(db)
 	monthlyEvalService := service.NewMonthlyEvalService(monthlyValueRepo, dailyValueRepo, absenceDayRepo, employeeRepo)
-	_ = monthlyEvalService // TODO: Wire to MonthlyEvalHandler (separate ticket)
+	monthlyEvalHandler := handler.NewMonthlyEvalHandler(monthlyEvalService)
 
 	// Initialize MonthlyCalcService
 	monthlyCalcService := service.NewMonthlyCalcService(monthlyEvalService, monthlyValueRepo)
@@ -212,6 +212,7 @@ func main() {
 				handler.RegisterBookingRoutes(r, bookingHandler)
 				handler.RegisterAbsenceRoutes(r, absenceHandler)
 				handler.RegisterVacationRoutes(r, vacationHandler)
+				handler.RegisterMonthlyEvalRoutes(r, monthlyEvalHandler)
 			})
 		})
 

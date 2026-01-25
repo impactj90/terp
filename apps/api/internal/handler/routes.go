@@ -235,3 +235,16 @@ func RegisterAbsenceRoutes(r chi.Router, h *AbsenceHandler) {
 func RegisterVacationRoutes(r chi.Router, h *VacationHandler) {
 	r.Get("/employees/{id}/vacation-balance", h.GetBalance)
 }
+
+// RegisterMonthlyEvalRoutes registers monthly evaluation routes.
+func RegisterMonthlyEvalRoutes(r chi.Router, h *MonthlyEvalHandler) {
+	r.Route("/employees/{id}/months", func(r chi.Router) {
+		r.Get("/{year}", h.GetYearOverview)
+		r.Route("/{year}/{month}", func(r chi.Router) {
+			r.Get("/", h.GetMonthSummary)
+			r.Post("/close", h.CloseMonth)
+			r.Post("/reopen", h.ReopenMonth)
+			r.Post("/recalculate", h.Recalculate)
+		})
+	})
+}
