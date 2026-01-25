@@ -117,6 +117,11 @@ func main() {
 	vacationService := service.NewVacationService(vacationBalanceRepo, absenceDayRepo, absenceTypeRepo, employeeRepo, decimal.Zero)
 	vacationHandler := handler.NewVacationHandler(vacationService)
 
+	// Initialize MonthlyEvalService
+	monthlyValueRepo := repository.NewMonthlyValueRepository(db)
+	monthlyEvalService := service.NewMonthlyEvalService(monthlyValueRepo, dailyValueRepo, absenceDayRepo, employeeRepo)
+	_ = monthlyEvalService // TODO: Wire to MonthlyEvalHandler (separate ticket)
+
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(
 		authConfig,
