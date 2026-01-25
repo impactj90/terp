@@ -2,62 +2,218 @@
 
 /* Theme configuration using CSS-first approach */
 @theme {
-  /* Colors - using HSL for Shadcn/ui compatibility */
-  --color-background: hsl(0 0% 100%);
-  --color-foreground: hsl(0 0% 3.9%);
-  --color-card: hsl(0 0% 100%);
-  --color-card-foreground: hsl(0 0% 3.9%);
-  --color-popover: hsl(0 0% 100%);
-  --color-popover-foreground: hsl(0 0% 3.9%);
-  --color-primary: hsl(0 0% 9%);
-  --color-primary-foreground: hsl(0 0% 98%);
-  --color-secondary: hsl(0 0% 96.1%);
-  --color-secondary-foreground: hsl(0 0% 9%);
-  --color-muted: hsl(0 0% 96.1%);
-  --color-muted-foreground: hsl(0 0% 45.1%);
-  --color-accent: hsl(0 0% 96.1%);
-  --color-accent-foreground: hsl(0 0% 9%);
-  --color-destructive: hsl(0 84.2% 60.2%);
-  --color-destructive-foreground: hsl(0 0% 98%);
-  --color-border: hsl(0 0% 89.8%);
-  --color-input: hsl(0 0% 89.8%);
-  --color-ring: hsl(0 0% 3.9%);
+  /* ==========================================================================
+     LAYOUT DIMENSIONS
+     ========================================================================== */
+  --sidebar-width: 240px;
+  --sidebar-collapsed-width: 64px;
+  --header-height: 64px;
+  --content-max-width: 1280px;
+  --bottom-nav-height: 64px;
 
-  /* Border radius */
+  /* ==========================================================================
+     COLOR SYSTEM
+     ========================================================================== */
+
+  /* Primary - Blue (#3B82F6) */
+  --color-primary: hsl(217 91% 60%);
+  --color-primary-foreground: hsl(0 0% 100%);
+  --color-primary-hover: hsl(217 91% 55%);
+  --color-primary-active: hsl(217 91% 50%);
+
+  /* Secondary - Slate 100 */
+  --color-secondary: hsl(210 40% 96%);
+  --color-secondary-foreground: hsl(222 47% 11%);
+  --color-secondary-hover: hsl(210 40% 92%);
+
+  /* Semantic Colors */
+  --color-success: hsl(142 71% 45%);              /* Green #22C55E */
+  --color-success-foreground: hsl(0 0% 100%);
+  --color-warning: hsl(38 92% 50%);               /* Amber #F59E0B */
+  --color-warning-foreground: hsl(0 0% 0%);
+  --color-error: hsl(0 84% 60%);                  /* Red #EF4444 */
+  --color-error-foreground: hsl(0 0% 100%);
+  --color-info: hsl(199 89% 48%);                 /* Sky #0EA5E9 */
+  --color-info-foreground: hsl(0 0% 100%);
+
+  /* Neutral - Slate Scale */
+  --color-background: hsl(0 0% 100%);             /* White */
+  --color-foreground: hsl(222 47% 11%);           /* Slate 900 */
+  --color-card: hsl(0 0% 100%);
+  --color-card-foreground: hsl(222 47% 11%);
+  --color-popover: hsl(0 0% 100%);
+  --color-popover-foreground: hsl(222 47% 11%);
+  --color-muted: hsl(210 40% 96%);                /* Slate 100 */
+  --color-muted-foreground: hsl(215 16% 47%);     /* Slate 500 */
+  --color-accent: hsl(210 40% 96%);               /* Slate 100 */
+  --color-accent-foreground: hsl(222 47% 11%);    /* Slate 900 */
+  --color-destructive: hsl(0 84% 60%);            /* Same as error */
+  --color-destructive-foreground: hsl(0 0% 100%);
+
+  /* Borders and Inputs */
+  --color-border: hsl(214 32% 91%);               /* Slate 200 */
+  --color-input: hsl(214 32% 91%);                /* Slate 200 */
+  --color-ring: hsl(217 91% 60%);                 /* Primary blue for focus */
+
+  /* ==========================================================================
+     BORDER RADIUS
+     ========================================================================== */
   --radius-lg: 0.5rem;
   --radius-md: calc(var(--radius-lg) - 2px);
   --radius-sm: calc(var(--radius-lg) - 4px);
+  --radius-full: 9999px;
 
-  /* Font family - system font stack */
-  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* ==========================================================================
+     FONT FAMILY
+     ========================================================================== */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* ==========================================================================
+     TYPOGRAPHY SCALE
+     ========================================================================== */
+  --font-size-xs: 0.75rem;      /* 12px */
+  --font-size-sm: 0.875rem;     /* 14px */
+  --font-size-base: 1rem;       /* 16px */
+  --font-size-lg: 1.125rem;     /* 18px */
+  --font-size-xl: 1.25rem;      /* 20px */
+  --font-size-2xl: 1.5rem;      /* 24px */
+  --font-size-3xl: 1.875rem;    /* 30px */
+
+  --line-height-xs: 1rem;       /* 16px */
+  --line-height-sm: 1.25rem;    /* 20px */
+  --line-height-base: 1.5rem;   /* 24px */
+  --line-height-lg: 1.75rem;    /* 28px */
+  --line-height-xl: 1.75rem;    /* 28px */
+  --line-height-2xl: 2rem;      /* 32px */
+  --line-height-3xl: 2.25rem;   /* 36px */
+
+  /* ==========================================================================
+     SHADOWS
+     ========================================================================== */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+  /* ==========================================================================
+     ANIMATION
+     ========================================================================== */
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Dark mode theme */
+/* ==========================================================================
+   DARK MODE THEME
+   ========================================================================== */
+
+/* Class-based dark mode (for manual toggle) */
+.dark {
+  /* Primary */
+  --color-primary: hsl(217 91% 65%);
+  --color-primary-foreground: hsl(222 47% 11%);
+  --color-primary-hover: hsl(217 91% 70%);
+  --color-primary-active: hsl(217 91% 60%);
+
+  /* Secondary */
+  --color-secondary: hsl(217 33% 17%);
+  --color-secondary-foreground: hsl(210 40% 98%);
+  --color-secondary-hover: hsl(217 33% 22%);
+
+  /* Semantic Colors - Adjusted for dark mode visibility */
+  --color-success: hsl(142 71% 45%);
+  --color-success-foreground: hsl(0 0% 100%);
+  --color-warning: hsl(38 92% 50%);
+  --color-warning-foreground: hsl(0 0% 0%);
+  --color-error: hsl(0 62% 50%);
+  --color-error-foreground: hsl(0 0% 100%);
+  --color-info: hsl(199 89% 48%);
+  --color-info-foreground: hsl(0 0% 100%);
+
+  /* Neutral - Slate Scale (Dark) */
+  --color-background: hsl(222 47% 11%);           /* Slate 900 */
+  --color-foreground: hsl(210 40% 98%);           /* Slate 50 */
+  --color-card: hsl(217 33% 17%);                 /* Slate 800 */
+  --color-card-foreground: hsl(210 40% 98%);
+  --color-popover: hsl(217 33% 17%);
+  --color-popover-foreground: hsl(210 40% 98%);
+  --color-muted: hsl(217 33% 17%);                /* Slate 800 */
+  --color-muted-foreground: hsl(215 20% 65%);     /* Slate 400 */
+  --color-accent: hsl(217 33% 17%);
+  --color-accent-foreground: hsl(210 40% 98%);
+  --color-destructive: hsl(0 62% 50%);
+  --color-destructive-foreground: hsl(0 0% 100%);
+
+  /* Borders and Inputs */
+  --color-border: hsl(217 33% 25%);               /* Slate 700 */
+  --color-input: hsl(217 33% 25%);
+  --color-ring: hsl(217 91% 65%);
+
+  /* Shadows - More subtle in dark mode */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.4);
+}
+
+/* System preference fallback when no .dark class is present */
 @media (prefers-color-scheme: dark) {
-  @theme {
-    --color-background: hsl(0 0% 3.9%);
-    --color-foreground: hsl(0 0% 98%);
-    --color-card: hsl(0 0% 3.9%);
-    --color-card-foreground: hsl(0 0% 98%);
-    --color-popover: hsl(0 0% 3.9%);
-    --color-popover-foreground: hsl(0 0% 98%);
-    --color-primary: hsl(0 0% 98%);
-    --color-primary-foreground: hsl(0 0% 9%);
-    --color-secondary: hsl(0 0% 14.9%);
-    --color-secondary-foreground: hsl(0 0% 98%);
-    --color-muted: hsl(0 0% 14.9%);
-    --color-muted-foreground: hsl(0 0% 63.9%);
-    --color-accent: hsl(0 0% 14.9%);
-    --color-accent-foreground: hsl(0 0% 98%);
-    --color-destructive: hsl(0 62.8% 30.6%);
-    --color-destructive-foreground: hsl(0 0% 98%);
-    --color-border: hsl(0 0% 14.9%);
-    --color-input: hsl(0 0% 14.9%);
-    --color-ring: hsl(0 0% 83.1%);
+  :root:not(.light) {
+    /* Primary */
+    --color-primary: hsl(217 91% 65%);
+    --color-primary-foreground: hsl(222 47% 11%);
+    --color-primary-hover: hsl(217 91% 70%);
+    --color-primary-active: hsl(217 91% 60%);
+
+    /* Secondary */
+    --color-secondary: hsl(217 33% 17%);
+    --color-secondary-foreground: hsl(210 40% 98%);
+    --color-secondary-hover: hsl(217 33% 22%);
+
+    /* Semantic Colors */
+    --color-success: hsl(142 71% 45%);
+    --color-success-foreground: hsl(0 0% 100%);
+    --color-warning: hsl(38 92% 50%);
+    --color-warning-foreground: hsl(0 0% 0%);
+    --color-error: hsl(0 62% 50%);
+    --color-error-foreground: hsl(0 0% 100%);
+    --color-info: hsl(199 89% 48%);
+    --color-info-foreground: hsl(0 0% 100%);
+
+    /* Neutral */
+    --color-background: hsl(222 47% 11%);
+    --color-foreground: hsl(210 40% 98%);
+    --color-card: hsl(217 33% 17%);
+    --color-card-foreground: hsl(210 40% 98%);
+    --color-popover: hsl(217 33% 17%);
+    --color-popover-foreground: hsl(210 40% 98%);
+    --color-muted: hsl(217 33% 17%);
+    --color-muted-foreground: hsl(215 20% 65%);
+    --color-accent: hsl(217 33% 17%);
+    --color-accent-foreground: hsl(210 40% 98%);
+    --color-destructive: hsl(0 62% 50%);
+    --color-destructive-foreground: hsl(0 0% 100%);
+
+    /* Borders */
+    --color-border: hsl(217 33% 25%);
+    --color-input: hsl(217 33% 25%);
+    --color-ring: hsl(217 91% 65%);
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.4);
   }
 }
 
-/* Base styles */
+/* ==========================================================================
+   BASE STYLES
+   ========================================================================== */
 @layer base {
   * {
     @apply border-border;
@@ -65,8 +221,6 @@
 
   body {
     @apply bg-background text-foreground;
-    font-feature-settings:
-      'rlig' 1,
-      'calt' 1;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
   }
 }
