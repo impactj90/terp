@@ -122,6 +122,10 @@ func main() {
 	monthlyEvalService := service.NewMonthlyEvalService(monthlyValueRepo, dailyValueRepo, absenceDayRepo, employeeRepo)
 	_ = monthlyEvalService // TODO: Wire to MonthlyEvalHandler (separate ticket)
 
+	// Initialize MonthlyCalcService
+	monthlyCalcService := service.NewMonthlyCalcService(monthlyEvalService, monthlyValueRepo)
+	_ = monthlyCalcService // TODO: Wire to handlers (separate ticket for monthly endpoints)
+
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(
 		authConfig,
