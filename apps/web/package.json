@@ -3,20 +3,25 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev --turbopack -p 3001",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 3001",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "generate:api": "openapi-typescript ../../api/openapi.bundled.v3.yaml -o src/lib/api/types.ts && node scripts/fix-api-types.mjs",
+    "check": "pnpm run typecheck && pnpm run lint"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",
+    "@tanstack/react-query": "^5.90.20",
+    "@tanstack/react-query-devtools": "^5.91.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "next": "^16.1.0",
+    "openapi-fetch": "^0.15.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "tailwind-merge": "^2.6.0"
@@ -33,6 +38,7 @@
     "@typescript-eslint/parser": "^8.0.0",
     "eslint": "^9.0.0",
     "eslint-config-next": "^16.0.0",
+    "openapi-typescript": "^7.10.1",
     "postcss": "^8.5.0",
     "prettier": "^3.4.0",
     "tailwindcss": "^4.0.0",
