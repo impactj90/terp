@@ -78,13 +78,49 @@ func (c *Calculator) Calculate(input CalculationInput) CalculationResult {
 	result.Warnings = append(result.Warnings, breakResult.Warnings...)
 
 	// Step 8: Calculate net time
-	netTime, netWarnings := CalculateNetTime(
-		result.GrossTime,
-		result.BreakTime,
-		input.DayPlan.MaxNetWorkTime,
-	)
-	result.NetTime = netTime
-	result.Warnings = append(result.Warnings, netWarnings...)
+	// First calculate uncapped net time for capping tracking
+	uncappedNet := result.GrossTime - result.BreakTime
+	if uncappedNet < 0 {
+		uncappedNet = 0
+	}
+
+	// Apply max net time cap
+	result.NetTime, _ = ApplyCapping(uncappedNet, input.DayPlan.MaxNetWorkTime)
+	if result.NetTime != uncappedNet {
+		result.Warnings = append(result.Warnings, WarnCodeMaxTimeReached)
+	}
+
+	// Step 8a: Calculate and aggregate capping
+	cappingItems := make([]*CappedTime, 0)
+
+	// Early arrival capping
+	if result.FirstCome != nil {
+		earlyArrivalCap := CalculateEarlyArrivalCapping(
+			*result.FirstCome,
+			input.DayPlan.ComeFrom,
+			input.DayPlan.Tolerance.ComeMinus,
+			input.DayPlan.VariableWorkTime,
+		)
+		cappingItems = append(cappingItems, earlyArrivalCap)
+	}
+
+	// Late departure capping
+	if result.LastGo != nil {
+		lateDepatureCap := CalculateLateDepatureCapping(
+			*result.LastGo,
+			input.DayPlan.GoTo,
+			input.DayPlan.Tolerance.GoPlus,
+		)
+		cappingItems = append(cappingItems, lateDepatureCap)
+	}
+
+	// Max net time capping
+	maxNetCap := CalculateMaxNetTimeCapping(uncappedNet, input.DayPlan.MaxNetWorkTime)
+	cappingItems = append(cappingItems, maxNetCap)
+
+	// Aggregate
+	result.Capping = AggregateCapping(cappingItems...)
+	result.CappedTime = result.Capping.TotalCapped
 
 	// Step 9: Validate minimum work time
 	if input.DayPlan.MinWorkTime != nil && result.NetTime < *input.DayPlan.MinWorkTime {

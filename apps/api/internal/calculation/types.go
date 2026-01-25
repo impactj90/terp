@@ -103,6 +103,10 @@ type DayPlanInput struct {
 	Breaks         []BreakConfig
 	MinWorkTime    *int // Minimum work duration
 	MaxNetWorkTime *int // Maximum credited work time
+
+	// VariableWorkTime enables tolerance_come_minus for evaluation window capping
+	// ZMI: variable Arbeitszeit
+	VariableWorkTime bool
 }
 
 // CalculationInput contains all data needed for a day's calculation.
@@ -143,6 +147,10 @@ type CalculationResult struct {
 	Pairs          []BookingPair
 	UnpairedInIDs  []uuid.UUID
 	UnpairedOutIDs []uuid.UUID
+
+	// Capping results
+	CappedTime int           // Total minutes capped from all sources
+	Capping    CappingResult // Detailed capping breakdown
 
 	// Status
 	HasError   bool
