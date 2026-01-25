@@ -17,10 +17,12 @@ const (
 type RoundingType string
 
 const (
-	RoundingNone    RoundingType = "none"
-	RoundingUp      RoundingType = "up"
-	RoundingDown    RoundingType = "down"
-	RoundingNearest RoundingType = "nearest"
+	RoundingNone     RoundingType = "none"
+	RoundingUp       RoundingType = "up"
+	RoundingDown     RoundingType = "down"
+	RoundingNearest  RoundingType = "nearest"
+	RoundingAdd      RoundingType = "add"
+	RoundingSubtract RoundingType = "subtract"
 )
 
 // NoBookingBehavior defines how to handle days without bookings.

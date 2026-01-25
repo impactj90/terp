@@ -63,16 +63,19 @@ type BreakConfig struct {
 type RoundingType string
 
 const (
-	RoundingNone    RoundingType = "none"
-	RoundingUp      RoundingType = "up"
-	RoundingDown    RoundingType = "down"
-	RoundingNearest RoundingType = "nearest"
+	RoundingNone     RoundingType = "none"
+	RoundingUp       RoundingType = "up"
+	RoundingDown     RoundingType = "down"
+	RoundingNearest  RoundingType = "nearest"
+	RoundingAdd      RoundingType = "add"
+	RoundingSubtract RoundingType = "subtract"
 )
 
 // RoundingConfig defines rounding rules.
 type RoundingConfig struct {
 	Type     RoundingType
-	Interval int // Rounding interval in minutes (e.g., 5, 15)
+	Interval int // Rounding interval in minutes for up/down/nearest modes
+	AddValue int // Fixed value to add/subtract for add/subtract modes
 }
 
 // ToleranceConfig defines tolerance/grace period rules.

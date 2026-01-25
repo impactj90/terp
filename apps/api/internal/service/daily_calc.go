@@ -375,19 +375,37 @@ func (s *DailyCalcService) buildCalcInput(
 		}
 
 		// Rounding - come
-		if dp.RoundingComeType != nil && dp.RoundingComeInterval != nil {
-			input.DayPlan.RoundingCome = &calculation.RoundingConfig{
-				Type:     calculation.RoundingType(*dp.RoundingComeType),
-				Interval: *dp.RoundingComeInterval,
+		if dp.RoundingComeType != nil {
+			roundingType := calculation.RoundingType(*dp.RoundingComeType)
+			config := &calculation.RoundingConfig{
+				Type: roundingType,
 			}
+			// For interval-based rounding, use interval
+			if dp.RoundingComeInterval != nil {
+				config.Interval = *dp.RoundingComeInterval
+			}
+			// For add/subtract rounding, use add value
+			if dp.RoundingComeAddValue != nil {
+				config.AddValue = *dp.RoundingComeAddValue
+			}
+			input.DayPlan.RoundingCome = config
 		}
 
 		// Rounding - go
-		if dp.RoundingGoType != nil && dp.RoundingGoInterval != nil {
-			input.DayPlan.RoundingGo = &calculation.RoundingConfig{
-				Type:     calculation.RoundingType(*dp.RoundingGoType),
-				Interval: *dp.RoundingGoInterval,
+		if dp.RoundingGoType != nil {
+			roundingType := calculation.RoundingType(*dp.RoundingGoType)
+			config := &calculation.RoundingConfig{
+				Type: roundingType,
 			}
+			// For interval-based rounding, use interval
+			if dp.RoundingGoInterval != nil {
+				config.Interval = *dp.RoundingGoInterval
+			}
+			// For add/subtract rounding, use add value
+			if dp.RoundingGoAddValue != nil {
+				config.AddValue = *dp.RoundingGoAddValue
+			}
+			input.DayPlan.RoundingGo = config
 		}
 
 		// Breaks
