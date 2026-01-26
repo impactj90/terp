@@ -66,6 +66,13 @@ DayPlan:
       type: integer
       description: Target working hours in minutes
       example: 480
+    regular_hours_2:
+      type: integer
+      description: Alternative target hours for absence days (minutes)
+      x-nullable: true
+    from_employee_master:
+      type: boolean
+      description: Get target hours from employee master data
     # Tolerance settings
     tolerance_come_plus:
       type: integer
@@ -83,6 +90,9 @@ DayPlan:
       type: integer
       description: Tolerance for early departure (minutes)
       example: 0
+    variable_work_time:
+      type: boolean
+      description: Enable tolerance_come_minus for fixed working time plans
     # Rounding settings
     rounding_come_type:
       type: string
@@ -91,10 +101,16 @@ DayPlan:
         - up
         - down
         - nearest
+        - add
+        - subtract
       x-nullable: true
     rounding_come_interval:
       type: integer
       description: Rounding interval in minutes
+      x-nullable: true
+    rounding_come_add_value:
+      type: integer
+      description: Value to add/subtract for arrival (minutes)
       x-nullable: true
     rounding_go_type:
       type: string
@@ -103,11 +119,20 @@ DayPlan:
         - up
         - down
         - nearest
+        - add
+        - subtract
       x-nullable: true
     rounding_go_interval:
       type: integer
       description: Rounding interval in minutes
       x-nullable: true
+    rounding_go_add_value:
+      type: integer
+      description: Value to add/subtract for departure (minutes)
+      x-nullable: true
+    round_all_bookings:
+      type: boolean
+      description: Round all bookings vs first arrival/last departure only
     # Caps
     min_work_time:
       type: integer
@@ -116,6 +141,84 @@ DayPlan:
     max_net_work_time:
       type: integer
       description: Maximum net work time in minutes
+      x-nullable: true
+    # Holiday credits (minutes)
+    holiday_credit_cat1:
+      type: integer
+      description: Full holiday time credit (minutes)
+      x-nullable: true
+    holiday_credit_cat2:
+      type: integer
+      description: Half holiday time credit (minutes)
+      x-nullable: true
+    holiday_credit_cat3:
+      type: integer
+      description: Custom category holiday credit (minutes)
+      x-nullable: true
+    # Vacation deduction
+    vacation_deduction:
+      type: number
+      format: float
+      description: Vacation days deducted per day (default 1.0)
+    # Special behaviors
+    no_booking_behavior:
+      type: string
+      enum:
+        - error
+        - deduct_target
+        - vocational_school
+        - adopt_target
+        - target_with_order
+      description: Behavior when no bookings recorded
+    day_change_behavior:
+      type: string
+      enum:
+        - none
+        - at_arrival
+        - at_departure
+        - auto_complete
+      description: How to handle cross-midnight shifts
+    # Shift detection windows (minutes from midnight)
+    shift_detect_arrive_from:
+      type: integer
+      description: Shift detection arrival window start (minutes)
+      x-nullable: true
+    shift_detect_arrive_to:
+      type: integer
+      description: Shift detection arrival window end (minutes)
+      x-nullable: true
+    shift_detect_depart_from:
+      type: integer
+      description: Shift detection departure window start (minutes)
+      x-nullable: true
+    shift_detect_depart_to:
+      type: integer
+      description: Shift detection departure window end (minutes)
+      x-nullable: true
+    # Alternative day plans for shift detection
+    shift_alt_plan_1:
+      type: string
+      format: uuid
+      x-nullable: true
+    shift_alt_plan_2:
+      type: string
+      format: uuid
+      x-nullable: true
+    shift_alt_plan_3:
+      type: string
+      format: uuid
+      x-nullable: true
+    shift_alt_plan_4:
+      type: string
+      format: uuid
+      x-nullable: true
+    shift_alt_plan_5:
+      type: string
+      format: uuid
+      x-nullable: true
+    shift_alt_plan_6:
+      type: string
+      format: uuid
       x-nullable: true
     is_active:
       type: boolean
@@ -199,6 +302,9 @@ DayPlanBreak:
       type: boolean
       description: Is this break paid
       example: false
+    minutes_difference:
+      type: boolean
+      description: Proportional deduction when near threshold (for minimum breaks)
     sort_order:
       type: integer
       example: 0
@@ -307,6 +413,10 @@ CreateDayPlanRequest:
       type: integer
     regular_hours:
       type: integer
+    regular_hours_2:
+      type: integer
+    from_employee_master:
+      type: boolean
     tolerance_come_plus:
       type: integer
     tolerance_come_minus:
@@ -315,6 +425,8 @@ CreateDayPlanRequest:
       type: integer
     tolerance_go_minus:
       type: integer
+    variable_work_time:
+      type: boolean
     rounding_come_type:
       type: string
       enum:
@@ -322,7 +434,11 @@ CreateDayPlanRequest:
         - up
         - down
         - nearest
+        - add
+        - subtract
     rounding_come_interval:
+      type: integer
+    rounding_come_add_value:
       type: integer
     rounding_go_type:
       type: string
@@ -331,12 +447,70 @@ CreateDayPlanRequest:
         - up
         - down
         - nearest
+        - add
+        - subtract
     rounding_go_interval:
       type: integer
+    rounding_go_add_value:
+      type: integer
+    round_all_bookings:
+      type: boolean
     min_work_time:
       type: integer
     max_net_work_time:
       type: integer
+    holiday_credit_cat1:
+      type: integer
+    holiday_credit_cat2:
+      type: integer
+    holiday_credit_cat3:
+      type: integer
+    vacation_deduction:
+      type: number
+      format: float
+    no_booking_behavior:
+      type: string
+      enum:
+        - error
+        - deduct_target
+        - vocational_school
+        - adopt_target
+        - target_with_order
+    day_change_behavior:
+      type: string
+      enum:
+        - none
+        - at_arrival
+        - at_departure
+        - auto_complete
+    shift_detect_arrive_from:
+      type: integer
+    shift_detect_arrive_to:
+      type: integer
+    shift_detect_depart_from:
+      type: integer
+    shift_detect_depart_to:
+      type: integer
+    shift_alt_plan_1:
+      type: string
+      format: uuid
+    shift_alt_plan_2:
+      type: string
+      format: uuid
+    shift_alt_plan_3:
+      type: string
+      format: uuid
+    shift_alt_plan_4:
+      type: string
+      format: uuid
+    shift_alt_plan_5:
+      type: string
+      format: uuid
+    shift_alt_plan_6:
+      type: string
+      format: uuid
+    is_active:
+      type: boolean
 
 UpdateDayPlanRequest:
   type: object
@@ -366,6 +540,10 @@ UpdateDayPlanRequest:
       type: integer
     regular_hours:
       type: integer
+    regular_hours_2:
+      type: integer
+    from_employee_master:
+      type: boolean
     tolerance_come_plus:
       type: integer
     tolerance_come_minus:
@@ -374,6 +552,8 @@ UpdateDayPlanRequest:
       type: integer
     tolerance_go_minus:
       type: integer
+    variable_work_time:
+      type: boolean
     rounding_come_type:
       type: string
       enum:
@@ -381,7 +561,11 @@ UpdateDayPlanRequest:
         - up
         - down
         - nearest
+        - add
+        - subtract
     rounding_come_interval:
+      type: integer
+    rounding_come_add_value:
       type: integer
     rounding_go_type:
       type: string
@@ -390,12 +574,68 @@ UpdateDayPlanRequest:
         - up
         - down
         - nearest
+        - add
+        - subtract
     rounding_go_interval:
       type: integer
+    rounding_go_add_value:
+      type: integer
+    round_all_bookings:
+      type: boolean
     min_work_time:
       type: integer
     max_net_work_time:
       type: integer
+    holiday_credit_cat1:
+      type: integer
+    holiday_credit_cat2:
+      type: integer
+    holiday_credit_cat3:
+      type: integer
+    vacation_deduction:
+      type: number
+      format: float
+    no_booking_behavior:
+      type: string
+      enum:
+        - error
+        - deduct_target
+        - vocational_school
+        - adopt_target
+        - target_with_order
+    day_change_behavior:
+      type: string
+      enum:
+        - none
+        - at_arrival
+        - at_departure
+        - auto_complete
+    shift_detect_arrive_from:
+      type: integer
+    shift_detect_arrive_to:
+      type: integer
+    shift_detect_depart_from:
+      type: integer
+    shift_detect_depart_to:
+      type: integer
+    shift_alt_plan_1:
+      type: string
+      format: uuid
+    shift_alt_plan_2:
+      type: string
+      format: uuid
+    shift_alt_plan_3:
+      type: string
+      format: uuid
+    shift_alt_plan_4:
+      type: string
+      format: uuid
+    shift_alt_plan_5:
+      type: string
+      format: uuid
+    shift_alt_plan_6:
+      type: string
+      format: uuid
     is_active:
       type: boolean
 
@@ -438,6 +678,9 @@ CreateDayPlanBreakRequest:
       type: boolean
       default: true
     is_paid:
+      type: boolean
+      default: false
+    minutes_difference:
       type: boolean
       default: false
 
