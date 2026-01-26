@@ -76,9 +76,11 @@ const CREDIT_TYPE_LABELS: Record<string, string> = {
   no_carryover: 'No Carryover (Reset to 0)',
 }
 
-function formatHours(value: number | null | undefined): string {
+function formatHours(value: number | string | null | undefined): string {
   if (value == null) return '-'
-  return `${value.toFixed(2)} h`
+  const num = typeof value === 'string' ? parseFloat(value) : value
+  if (isNaN(num)) return '-'
+  return `${num.toFixed(2)} h`
 }
 
 export function TariffDetailSheet({
@@ -487,7 +489,13 @@ export function TariffDetailSheet({
             </div>
           </>
         ) : (
-          <div className="text-center py-8 text-muted-foreground">Tariff not found</div>
+          <>
+            <SheetHeader>
+              <SheetTitle>Tariff Details</SheetTitle>
+              <SheetDescription>Unable to load tariff</SheetDescription>
+            </SheetHeader>
+            <div className="text-center py-8 text-muted-foreground">Tariff not found</div>
+          </>
         )}
       </SheetContent>
     </Sheet>
@@ -527,10 +535,12 @@ function DetailSheetSkeleton() {
   return (
     <>
       <SheetHeader>
-        <Skeleton className="h-6 w-48" />
-        <Skeleton className="h-4 w-32 mt-1" />
+        <SheetTitle>Loading...</SheetTitle>
+        <SheetDescription>Loading tariff details</SheetDescription>
       </SheetHeader>
       <div className="space-y-6 mt-6">
+        <Skeleton className="h-6 w-48" />
+        <Skeleton className="h-4 w-32" />
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i}>
             <Skeleton className="h-5 w-32 mb-3" />

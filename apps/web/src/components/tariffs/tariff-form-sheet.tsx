@@ -322,8 +322,8 @@ export function TariffFormSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
-          <ScrollArea className="flex-1 -mx-6 px-6">
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
+          <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
             <Tabs defaultValue="basic" className="w-full py-4">
               <TabsList className="mb-4">
                 <TabsTrigger value="basic">Basic</TabsTrigger>
