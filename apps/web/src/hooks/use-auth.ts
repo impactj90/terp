@@ -1,5 +1,5 @@
 import { useApiQuery, useApiMutation } from '@/hooks'
-import { api, authStorage } from '@/lib/api/client'
+import { api, authStorage, tenantIdStorage } from '@/lib/api/client'
 import type { components } from '@/lib/api/types'
 
 export type User = components['schemas']['User']
@@ -43,6 +43,7 @@ export function useLogin() {
 /**
  * Hook to login with dev user (development only).
  * Uses GET endpoint so we handle it differently.
+ * Also auto-sets the dev tenant.
  *
  * @example
  * ```tsx
@@ -62,6 +63,18 @@ export function useDevLogin() {
 
     if (data && 'token' in data && typeof data.token === 'string') {
       authStorage.setToken(data.token)
+    }
+
+    // Auto-set the dev tenant if returned
+    if (
+      data &&
+      'tenant' in data &&
+      data.tenant &&
+      typeof data.tenant === 'object' &&
+      'id' in data.tenant &&
+      typeof data.tenant.id === 'string'
+    ) {
+      tenantIdStorage.setTenantId(data.tenant.id)
     }
 
     return data
