@@ -10,6 +10,7 @@ import {
   Settings,
   FileText,
   CalendarOff,
+  Palmtree,
   UserCog,
   Shield,
 } from 'lucide-react'
@@ -76,6 +77,12 @@ export const navConfig: NavSection[] = [
         href: '/absences',
         icon: CalendarOff,
         description: 'Request and view absences',
+      },
+      {
+        title: 'Vacation',
+        href: '/vacation',
+        icon: Palmtree,
+        description: 'View vacation balance and history',
       },
     ],
   },
