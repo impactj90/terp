@@ -1,4 +1,4 @@
-.PHONY: dev dev-down dev-logs dev-ps build test test-coverage lint fmt tidy migrate-up migrate-down migrate-create migrate-status swagger-bundle generate generate-web generate-all clean install-tools help
+.PHONY: dev dev-down dev-clean dev-logs dev-ps build test test-coverage lint fmt tidy migrate-up migrate-down migrate-create migrate-status swagger-bundle generate generate-web generate-all clean install-tools help
 
 # Variables
 DOCKER_COMPOSE = docker compose -p terp -f docker/docker-compose.yml
@@ -16,12 +16,24 @@ help:
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  $(CYAN)%-15s$(RESET) %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 ## dev: Start development environment
-dev: ## Start all services with Docker Compose
+dev: ## Start all services with Docker Compose and run migrations
 	$(DOCKER_COMPOSE) up --build -d
+	@echo "Waiting for database to be ready..."
+	@sleep 3
+	@echo "Running migrations..."
+	@$(MIGRATE) -path db/migrations -database "$(LOCAL_DB)" up || true
+	@echo "Development environment ready!"
 
 ## dev-down: Stop development environment
-dev-down: ## Stop all services
-	$(DOCKER_COMPOSE) down
+dev-down: ## Stop all services and remove volumes
+	$(DOCKER_COMPOSE) down -v --remove-orphans
+	@docker rm -f terp-postgres terp-api terp-web 2>/dev/null || true
+
+## dev-clean: Force remove all containers and volumes
+dev-clean: ## Force clean all terp containers and volumes
+	$(DOCKER_COMPOSE) down -v --remove-orphans 2>/dev/null || true
+	docker rm -f terp-postgres terp-api terp-web 2>/dev/null || true
+	docker volume rm terp_postgres_data terp_web_node_modules 2>/dev/null || true
 
 ## dev-logs: Show logs from all services
 dev-logs: ## Follow logs from all services
