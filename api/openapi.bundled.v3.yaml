@@ -5792,6 +5792,11 @@ components:
             - user
             - admin
           example: user
+        employee_id:
+          type: string
+          format: uuid
+          description: ID of the linked employee record, if any
+          nullable: true
         created_at:
           type: string
           format: date-time

@@ -2239,6 +2239,11 @@ export interface components {
              * @enum {string}
              */
             role: "user" | "admin";
+            /**
+             * Format: uuid
+             * @description ID of the linked employee record, if any
+             */
+            employee_id?: string | null;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */

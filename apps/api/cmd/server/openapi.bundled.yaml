@@ -5058,6 +5058,11 @@ definitions:
           - user
           - admin
         example: user
+      employee_id:
+        type: string
+        format: uuid
+        x-nullable: true
+        description: 'ID of the linked employee record, if any'
       created_at:
         type: string
         format: date-time
