@@ -1,6 +1,8 @@
 'use client'
 
 import { ProtectedRoute } from '@/components/auth/protected-route'
+import { TenantGuard } from '@/components/auth/tenant-guard'
+import { TenantProvider } from '@/providers/tenant-provider'
 import { AppLayout, LoadingSkeleton } from '@/components/layout'
 
 export default function DashboardLayout({
@@ -10,7 +12,11 @@ export default function DashboardLayout({
 }) {
   return (
     <ProtectedRoute loadingFallback={<LoadingSkeleton />}>
-      <AppLayout>{children}</AppLayout>
+      <TenantProvider>
+        <TenantGuard loadingFallback={<LoadingSkeleton />}>
+          <AppLayout>{children}</AppLayout>
+        </TenantGuard>
+      </TenantProvider>
     </ProtectedRoute>
   )
 }

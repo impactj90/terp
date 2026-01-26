@@ -304,3 +304,8 @@ func (r *EmployeeRepository) ListCards(ctx context.Context, employeeID uuid.UUID
 	}
 	return cards, nil
 }
+
+// Upsert creates or updates an employee by ID.
+func (r *EmployeeRepository) Upsert(ctx context.Context, emp *model.Employee) error {
+	return r.db.GORM.WithContext(ctx).Save(emp).Error
+}

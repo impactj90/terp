@@ -25,6 +25,7 @@ type tenantRepository interface {
 	Update(ctx context.Context, tenant *model.Tenant) error
 	List(ctx context.Context, activeOnly bool) ([]model.Tenant, error)
 	Delete(ctx context.Context, id uuid.UUID) error
+	Upsert(ctx context.Context, tenant *model.Tenant) error
 }
 
 type TenantService struct {
@@ -93,4 +94,15 @@ func (s *TenantService) List(ctx context.Context, activeOnly bool) ([]model.Tena
 // Delete deletes a tenant by ID.
 func (s *TenantService) Delete(ctx context.Context, id uuid.UUID) error {
 	return s.tenantRepo.Delete(ctx, id)
+}
+
+// UpsertDevTenant ensures a dev tenant exists in the database.
+func (s *TenantService) UpsertDevTenant(ctx context.Context, id uuid.UUID, name, slug string) error {
+	tenant := &model.Tenant{
+		ID:       id,
+		Name:     name,
+		Slug:     slug,
+		IsActive: true,
+	}
+	return s.tenantRepo.Upsert(ctx, tenant)
 }

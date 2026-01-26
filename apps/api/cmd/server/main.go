@@ -132,6 +132,9 @@ func main() {
 		authConfig,
 		jwtManager,
 		userService,
+		tenantService,
+		employeeService,
+		bookingTypeService,
 	)
 	userHandler := handler.NewUserHandler(userService)
 	tenantHandler := handler.NewTenantHandler(tenantService)

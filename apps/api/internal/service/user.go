@@ -131,3 +131,14 @@ func (s *UserService) Create(ctx context.Context, email, displayName string, rol
 
 	return user, nil
 }
+
+// LinkUserToEmployee links a user to an employee record.
+func (s *UserService) LinkUserToEmployee(ctx context.Context, userID, employeeID uuid.UUID) error {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return ErrUserNotFound
+	}
+
+	user.EmployeeID = &employeeID
+	return s.userRepo.Update(ctx, user)
+}

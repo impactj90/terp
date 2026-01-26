@@ -1,10 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { Building2, Check, ChevronsUpDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useApiQuery } from '@/hooks'
-import { tenantIdStorage } from '@/lib/api/client'
+import { useTenant } from '@/providers/tenant-provider'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -15,9 +13,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { components } from '@/lib/api/types'
-
-type Tenant = components['schemas']['Tenant']
 
 interface TenantSelectorProps {
   className?: string
@@ -28,28 +23,7 @@ interface TenantSelectorProps {
  * Allows users to switch between organizations.
  */
 export function TenantSelector({ className }: TenantSelectorProps) {
-  const [currentTenantId, setCurrentTenantId] = useState<string | null>(null)
-
-  // Load current tenant from storage on mount
-  useEffect(() => {
-    const stored = tenantIdStorage.getTenantId()
-    setCurrentTenantId(stored)
-  }, [])
-
-  // Fetch list of tenants
-  const { data: tenantsData, isLoading } = useApiQuery('/tenants', {
-    enabled: true,
-  })
-
-  const tenants = tenantsData ?? []
-  const currentTenant = tenants.find((t) => t.id === currentTenantId)
-
-  const handleSelectTenant = (tenant: Tenant) => {
-    tenantIdStorage.setTenantId(tenant.id)
-    setCurrentTenantId(tenant.id)
-    // Reload the page to refresh all data with new tenant context
-    window.location.reload()
-  }
+  const { tenant, tenantId, tenants, isLoading, selectTenant } = useTenant()
 
   if (isLoading) {
     return <Skeleton className="h-9 w-[180px]" />
@@ -57,11 +31,6 @@ export function TenantSelector({ className }: TenantSelectorProps) {
 
   // Don't show selector if only one tenant
   if (tenants.length <= 1) {
-    const onlyTenant = tenants[0]
-    if (onlyTenant && !currentTenantId) {
-      // Auto-select the only tenant
-      handleSelectTenant(onlyTenant)
-    }
     return null
   }
 
@@ -77,7 +46,7 @@ export function TenantSelector({ className }: TenantSelectorProps) {
           <div className="flex items-center gap-2 truncate">
             <Building2 className="h-4 w-4 shrink-0" aria-hidden="true" />
             <span className="truncate">
-              {currentTenant?.name ?? 'Select org...'}
+              {tenant?.name ?? 'Select org...'}
             </span>
           </div>
           <ChevronsUpDown
@@ -89,17 +58,17 @@ export function TenantSelector({ className }: TenantSelectorProps) {
       <DropdownMenuContent align="start" className="w-[200px]">
         <DropdownMenuLabel>Organizations</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {tenants.map((tenant) => (
+        {tenants.map((t) => (
           <DropdownMenuItem
-            key={tenant.id}
-            onClick={() => handleSelectTenant(tenant)}
+            key={t.id}
+            onClick={() => selectTenant(t)}
             className="flex items-center justify-between"
           >
             <div className="flex items-center gap-2 truncate">
               <Building2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-              <span className="truncate">{tenant.name}</span>
+              <span className="truncate">{t.name}</span>
             </div>
-            {tenant.id === currentTenantId && (
+            {t.id === tenantId && (
               <Check className="h-4 w-4 shrink-0" aria-hidden="true" />
             )}
           </DropdownMenuItem>

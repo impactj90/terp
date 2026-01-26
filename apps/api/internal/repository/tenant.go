@@ -90,3 +90,8 @@ func (r *TenantRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	}
 	return nil
 }
+
+// Upsert creates or updates a tenant.
+func (r *TenantRepository) Upsert(ctx context.Context, tenant *model.Tenant) error {
+	return r.db.GORM.WithContext(ctx).Save(tenant).Error
+}

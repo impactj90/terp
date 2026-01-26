@@ -33,6 +33,7 @@ type bookingTypeRepository interface {
 	ListActive(ctx context.Context, tenantID uuid.UUID) ([]model.BookingType, error)
 	ListByDirection(ctx context.Context, tenantID uuid.UUID, direction model.BookingDirection) ([]model.BookingType, error)
 	GetSystemTypes(ctx context.Context) ([]model.BookingType, error)
+	Upsert(ctx context.Context, bt *model.BookingType) error
 }
 
 type BookingTypeService struct {
@@ -195,4 +196,9 @@ func (s *BookingTypeService) List(ctx context.Context, tenantID uuid.UUID, filte
 // GetSystemTypes retrieves all system booking types.
 func (s *BookingTypeService) GetSystemTypes(ctx context.Context) ([]model.BookingType, error) {
 	return s.repo.GetSystemTypes(ctx)
+}
+
+// UpsertDevBookingType ensures a dev booking type exists in the database as a system type.
+func (s *BookingTypeService) UpsertDevBookingType(ctx context.Context, bt *model.BookingType) error {
+	return s.repo.Upsert(ctx, bt)
 }

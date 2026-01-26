@@ -152,3 +152,8 @@ func (r *BookingTypeRepository) GetSystemTypes(ctx context.Context) ([]model.Boo
 	}
 	return types, nil
 }
+
+// Upsert creates or updates a booking type.
+func (r *BookingTypeRepository) Upsert(ctx context.Context, bt *model.BookingType) error {
+	return r.db.GORM.WithContext(ctx).Save(bt).Error
+}

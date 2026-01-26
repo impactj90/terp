@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/shopspring/decimal"
+
 	"github.com/tolga/terp/internal/auth"
 	"github.com/tolga/terp/internal/model"
 	"github.com/tolga/terp/internal/service"
@@ -12,9 +14,12 @@ import (
 
 // AuthHandler handles authentication endpoints.
 type AuthHandler struct {
-	jwtManager  *auth.JWTManager
-	authConfig  *auth.Config
-	userService *service.UserService
+	jwtManager         *auth.JWTManager
+	authConfig         *auth.Config
+	userService        *service.UserService
+	tenantService      *service.TenantService
+	employeeService    *service.EmployeeService
+	bookingTypeService *service.BookingTypeService
 }
 
 // NewAuthHandler creates a new auth handler instance.
@@ -22,11 +27,17 @@ func NewAuthHandler(
 	config *auth.Config,
 	jwtManager *auth.JWTManager,
 	userService *service.UserService,
+	tenantService *service.TenantService,
+	employeeService *service.EmployeeService,
+	bookingTypeService *service.BookingTypeService,
 ) *AuthHandler {
 	return &AuthHandler{
-		jwtManager:  jwtManager,
-		authConfig:  config,
-		userService: userService,
+		jwtManager:         jwtManager,
+		authConfig:         config,
+		userService:        userService,
+		tenantService:      tenantService,
+		employeeService:    employeeService,
+		bookingTypeService: bookingTypeService,
 	}
 }
 
@@ -53,10 +64,65 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Ensure dev tenant exists in database
+	devTenant := auth.GetDevTenant()
+	if err := h.tenantService.UpsertDevTenant(r.Context(), devTenant.ID, devTenant.Name, devTenant.Slug); err != nil {
+		respondError(w, http.StatusInternalServerError, "failed to sync dev tenant to database")
+		return
+	}
+
 	// Ensure dev user exists in database
 	if err := h.userService.UpsertDevUser(r.Context(), devUser.ID, devUser.Email, devUser.DisplayName, model.UserRole(devUser.Role)); err != nil {
 		respondError(w, http.StatusInternalServerError, "failed to sync dev user to database")
 		return
+	}
+
+	// Create all dev employees (idempotent)
+	for _, devEmp := range auth.GetDevEmployees() {
+		emp := &model.Employee{
+			TenantID:            devTenant.ID,
+			PersonnelNumber:     devEmp.PersonnelNumber,
+			PIN:                 devEmp.PIN,
+			FirstName:           devEmp.FirstName,
+			LastName:            devEmp.LastName,
+			Email:               devEmp.Email,
+			EntryDate:           devEmp.EntryDate,
+			WeeklyHours:         decimal.NewFromFloat(devEmp.WeeklyHours),
+			VacationDaysPerYear: decimal.NewFromFloat(devEmp.VacationDays),
+			IsActive:            true,
+		}
+		emp.ID = devEmp.ID
+		if err := h.employeeService.UpsertDevEmployee(r.Context(), emp); err != nil {
+			respondError(w, http.StatusInternalServerError, "failed to sync dev employees to database")
+			return
+		}
+	}
+
+	// Link user to their employee record if mapped
+	if empID, ok := auth.GetDevEmployeeForUser(devUser.ID); ok {
+		if err := h.userService.LinkUserToEmployee(r.Context(), devUser.ID, empID); err != nil {
+			respondError(w, http.StatusInternalServerError, "failed to link user to employee")
+			return
+		}
+	}
+
+	// Create all dev booking types (system-level, idempotent)
+	for _, devBT := range auth.GetDevBookingTypes() {
+		desc := devBT.Description
+		bt := &model.BookingType{
+			ID:          devBT.ID,
+			TenantID:    nil, // System-level
+			Code:        devBT.Code,
+			Name:        devBT.Name,
+			Description: &desc,
+			Direction:   model.BookingDirection(devBT.Direction),
+			IsSystem:    true,
+			IsActive:    devBT.IsActive,
+		}
+		if err := h.bookingTypeService.UpsertDevBookingType(r.Context(), bt); err != nil {
+			respondError(w, http.StatusInternalServerError, "failed to sync dev booking types to database")
+			return
+		}
 	}
 
 	token, err := h.jwtManager.Generate(devUser.ID, devUser.Email, devUser.DisplayName, devUser.Role)
@@ -76,8 +142,9 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 	})
 
 	respondJSON(w, http.StatusOK, map[string]any{
-		"token": token,
-		"user":  devUser,
+		"token":  token,
+		"user":   devUser,
+		"tenant": devTenant,
 	})
 }
 
@@ -153,9 +220,19 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 // Me returns the current authenticated user.
 // GET /auth/me
 func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
-	user, ok := auth.UserFromContext(r.Context())
+	ctxUser, ok := auth.UserFromContext(r.Context())
 	if !ok {
 		respondError(w, http.StatusUnauthorized, "not authenticated")
+		return
+	}
+
+	// Fetch full user from database to include employee_id
+	user, err := h.userService.GetByID(r.Context(), ctxUser.ID)
+	if err != nil {
+		// Fall back to context user if DB lookup fails
+		respondJSON(w, http.StatusOK, map[string]any{
+			"user": ctxUser,
+		})
 		return
 	}
 

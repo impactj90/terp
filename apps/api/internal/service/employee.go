@@ -52,6 +52,7 @@ type employeeRepository interface {
 	GetCardByNumber(ctx context.Context, tenantID uuid.UUID, cardNumber string) (*model.EmployeeCard, error)
 	UpdateCard(ctx context.Context, card *model.EmployeeCard) error
 	ListCards(ctx context.Context, employeeID uuid.UUID) ([]model.EmployeeCard, error)
+	Upsert(ctx context.Context, emp *model.Employee) error
 }
 
 type EmployeeService struct {
@@ -419,4 +420,9 @@ func (s *EmployeeService) ListCards(ctx context.Context, employeeID uuid.UUID) (
 	}
 
 	return s.employeeRepo.ListCards(ctx, employeeID)
+}
+
+// UpsertDevEmployee creates or updates a dev employee.
+func (s *EmployeeService) UpsertDevEmployee(ctx context.Context, emp *model.Employee) error {
+	return s.employeeRepo.Upsert(ctx, emp)
 }
