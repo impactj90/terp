@@ -203,7 +203,7 @@ export function DayPlanDetailSheet({
                 {dayPlan.breaks && dayPlan.breaks.length > 0 && (
                   <Section title="Breaks" icon={Clock}>
                     <div className="space-y-3">
-                      {dayPlan.breaks.map((brk, idx) => (
+                      {dayPlan.breaks.map((brk) => (
                         <div key={brk.id} className="border rounded-lg p-3 text-sm">
                           <div className="flex items-center justify-between mb-2">
                             <Badge variant="outline">{BREAK_TYPE_LABELS[brk.break_type]}</Badge>
