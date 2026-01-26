@@ -61,3 +61,4 @@ config/    → Environment config loading
 
 - When creating handlers always make sure that they match the openapi spec before implementing them.
 - Always you the generated models from the `gen/models` folder when dealing with request and response payloads instead of creating new structs.
+- If you have any open questions about implementing/researching a new feature from a ticket,

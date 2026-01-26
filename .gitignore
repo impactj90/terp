@@ -93,3 +93,6 @@ tmp/
 *.db
 *.sqlite
 *.sqlite3
+
+*storybook.log
+storybook-static
