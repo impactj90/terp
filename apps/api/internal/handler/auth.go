@@ -21,6 +21,7 @@ type AuthHandler struct {
 	employeeService    *service.EmployeeService
 	bookingTypeService *service.BookingTypeService
 	absenceService     *service.AbsenceService
+	holidayService     *service.HolidayService
 }
 
 // NewAuthHandler creates a new auth handler instance.
@@ -32,6 +33,7 @@ func NewAuthHandler(
 	employeeService *service.EmployeeService,
 	bookingTypeService *service.BookingTypeService,
 	absenceService *service.AbsenceService,
+	holidayService *service.HolidayService,
 ) *AuthHandler {
 	return &AuthHandler{
 		jwtManager:         jwtManager,
@@ -41,6 +43,7 @@ func NewAuthHandler(
 		employeeService:    employeeService,
 		bookingTypeService: bookingTypeService,
 		absenceService:     absenceService,
+		holidayService:     holidayService,
 	}
 }
 
@@ -147,6 +150,22 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := h.absenceService.UpsertDevAbsenceType(r.Context(), at); err != nil {
 			respondError(w, http.StatusInternalServerError, "failed to sync dev absence types to database")
+			return
+		}
+	}
+
+	// Create all dev holidays (tenant-level, idempotent)
+	for _, devH := range auth.GetDevHolidays() {
+		holiday := &model.Holiday{
+			ID:           devH.ID,
+			TenantID:     devTenant.ID,
+			HolidayDate:  devH.HolidayDate,
+			Name:         devH.Name,
+			IsHalfDay:    devH.IsHalfDay,
+			AppliesToAll: devH.AppliesToAll,
+		}
+		if err := h.holidayService.UpsertDevHoliday(r.Context(), holiday); err != nil {
+			respondError(w, http.StatusInternalServerError, "failed to sync dev holidays to database")
 			return
 		}
 	}

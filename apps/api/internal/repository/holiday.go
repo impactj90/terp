@@ -111,3 +111,12 @@ func (r *HolidayRepository) ListByYear(ctx context.Context, tenantID uuid.UUID, 
 	}
 	return holidays, nil
 }
+
+// Upsert creates or updates a holiday by ID.
+// Used for dev mode seeding of holidays.
+func (r *HolidayRepository) Upsert(ctx context.Context, holiday *model.Holiday) error {
+	return r.db.GORM.WithContext(ctx).
+		Where("id = ?", holiday.ID).
+		Assign(holiday).
+		FirstOrCreate(holiday).Error
+}

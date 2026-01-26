@@ -27,6 +27,7 @@ type holidayRepository interface {
 	GetByDate(ctx context.Context, tenantID uuid.UUID, date time.Time) (*model.Holiday, error)
 	GetByDateRange(ctx context.Context, tenantID uuid.UUID, from, to time.Time) ([]model.Holiday, error)
 	ListByYear(ctx context.Context, tenantID uuid.UUID, year int) ([]model.Holiday, error)
+	Upsert(ctx context.Context, holiday *model.Holiday) error
 }
 
 type HolidayService struct {
@@ -157,4 +158,9 @@ func (s *HolidayService) ListByDateRange(ctx context.Context, tenantID uuid.UUID
 // GetByDate retrieves a holiday for a specific date.
 func (s *HolidayService) GetByDate(ctx context.Context, tenantID uuid.UUID, date time.Time) (*model.Holiday, error) {
 	return s.holidayRepo.GetByDate(ctx, tenantID, date)
+}
+
+// UpsertDevHoliday ensures a dev holiday exists in the database.
+func (s *HolidayService) UpsertDevHoliday(ctx context.Context, holiday *model.Holiday) error {
+	return s.holidayRepo.Upsert(ctx, holiday)
 }
