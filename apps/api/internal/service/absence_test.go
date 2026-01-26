@@ -93,6 +93,11 @@ func (m *mockAbsenceTypeRepositoryForService) List(ctx context.Context, tenantID
 	return args.Get(0).([]model.AbsenceType), args.Error(1)
 }
 
+func (m *mockAbsenceTypeRepositoryForService) Upsert(ctx context.Context, at *model.AbsenceType) error {
+	args := m.Called(ctx, at)
+	return args.Error(0)
+}
+
 type mockHolidayRepositoryForAbsence struct {
 	mock.Mock
 }

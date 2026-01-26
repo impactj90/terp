@@ -20,6 +20,7 @@ type AuthHandler struct {
 	tenantService      *service.TenantService
 	employeeService    *service.EmployeeService
 	bookingTypeService *service.BookingTypeService
+	absenceService     *service.AbsenceService
 }
 
 // NewAuthHandler creates a new auth handler instance.
@@ -30,6 +31,7 @@ func NewAuthHandler(
 	tenantService *service.TenantService,
 	employeeService *service.EmployeeService,
 	bookingTypeService *service.BookingTypeService,
+	absenceService *service.AbsenceService,
 ) *AuthHandler {
 	return &AuthHandler{
 		jwtManager:         jwtManager,
@@ -38,6 +40,7 @@ func NewAuthHandler(
 		tenantService:      tenantService,
 		employeeService:    employeeService,
 		bookingTypeService: bookingTypeService,
+		absenceService:     absenceService,
 	}
 }
 
@@ -121,6 +124,29 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := h.bookingTypeService.UpsertDevBookingType(r.Context(), bt); err != nil {
 			respondError(w, http.StatusInternalServerError, "failed to sync dev booking types to database")
+			return
+		}
+	}
+
+	// Create all dev absence types (system-level, idempotent)
+	for _, devAT := range auth.GetDevAbsenceTypes() {
+		desc := devAT.Description
+		at := &model.AbsenceType{
+			ID:              devAT.ID,
+			TenantID:        nil, // System-level
+			Code:            devAT.Code,
+			Name:            devAT.Name,
+			Description:     &desc,
+			Category:        model.AbsenceCategory(devAT.Category),
+			Portion:         model.AbsencePortion(devAT.Portion),
+			DeductsVacation: devAT.DeductsVacation,
+			Color:           devAT.Color,
+			SortOrder:       devAT.SortOrder,
+			IsSystem:        true,
+			IsActive:        true,
+		}
+		if err := h.absenceService.UpsertDevAbsenceType(r.Context(), at); err != nil {
+			respondError(w, http.StatusInternalServerError, "failed to sync dev absence types to database")
 			return
 		}
 	}
@@ -230,15 +256,12 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	user, err := h.userService.GetByID(r.Context(), ctxUser.ID)
 	if err != nil {
 		// Fall back to context user if DB lookup fails
-		respondJSON(w, http.StatusOK, map[string]any{
-			"user": ctxUser,
-		})
+		respondJSON(w, http.StatusOK, ctxUser)
 		return
 	}
 
-	respondJSON(w, http.StatusOK, map[string]any{
-		"user": user,
-	})
+	// Return User directly (not wrapped) per OpenAPI spec
+	respondJSON(w, http.StatusOK, user)
 }
 
 // Logout clears the authentication cookie.

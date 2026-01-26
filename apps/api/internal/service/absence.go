@@ -37,6 +37,7 @@ type absenceDayRepositoryForService interface {
 type absenceTypeRepositoryForService interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*model.AbsenceType, error)
 	List(ctx context.Context, tenantID uuid.UUID, includeSystem bool) ([]model.AbsenceType, error)
+	Upsert(ctx context.Context, at *model.AbsenceType) error
 }
 
 // holidayRepositoryForAbsence defines the interface for holiday lookups.
@@ -334,4 +335,9 @@ func (s *AbsenceService) shouldSkipDate(
 // normalizeDate strips time components, keeping only the date at midnight UTC.
 func normalizeDate(d time.Time) time.Time {
 	return time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, time.UTC)
+}
+
+// UpsertDevAbsenceType ensures a dev absence type exists in the database as a system type.
+func (s *AbsenceService) UpsertDevAbsenceType(ctx context.Context, at *model.AbsenceType) error {
+	return s.absenceTypeRepo.Upsert(ctx, at)
 }
