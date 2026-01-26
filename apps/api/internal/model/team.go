@@ -22,6 +22,7 @@ type Team struct {
 	Description      string     `gorm:"type:text" json:"description,omitempty"`
 	LeaderEmployeeID *uuid.UUID `gorm:"type:uuid" json:"leader_employee_id,omitempty"`
 	IsActive         bool       `gorm:"default:true" json:"is_active"`
+	MemberCount      int        `gorm:"-" json:"member_count"` // Computed field, not stored
 	CreatedAt        time.Time  `gorm:"default:now()" json:"created_at"`
 	UpdatedAt        time.Time  `gorm:"default:now()" json:"updated_at"`
 

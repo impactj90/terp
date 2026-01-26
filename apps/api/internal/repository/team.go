@@ -85,12 +85,17 @@ func (r *TeamRepository) Delete(ctx context.Context, id uuid.UUID) error {
 func (r *TeamRepository) List(ctx context.Context, tenantID uuid.UUID) ([]model.Team, error) {
 	var teams []model.Team
 	err := r.db.GORM.WithContext(ctx).
+		Preload("Department").
+		Preload("Leader").
 		Where("tenant_id = ?", tenantID).
 		Order("name ASC").
 		Find(&teams).Error
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to list teams: %w", err)
+	}
+	if err := r.populateMemberCounts(ctx, teams); err != nil {
+		return nil, err
 	}
 	return teams, nil
 }
@@ -99,12 +104,17 @@ func (r *TeamRepository) List(ctx context.Context, tenantID uuid.UUID) ([]model.
 func (r *TeamRepository) ListActive(ctx context.Context, tenantID uuid.UUID) ([]model.Team, error) {
 	var teams []model.Team
 	err := r.db.GORM.WithContext(ctx).
+		Preload("Department").
+		Preload("Leader").
 		Where("tenant_id = ? AND is_active = ?", tenantID, true).
 		Order("name ASC").
 		Find(&teams).Error
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to list active teams: %w", err)
+	}
+	if err := r.populateMemberCounts(ctx, teams); err != nil {
+		return nil, err
 	}
 	return teams, nil
 }
@@ -113,6 +123,8 @@ func (r *TeamRepository) ListActive(ctx context.Context, tenantID uuid.UUID) ([]
 func (r *TeamRepository) ListByDepartment(ctx context.Context, departmentID uuid.UUID) ([]model.Team, error) {
 	var teams []model.Team
 	err := r.db.GORM.WithContext(ctx).
+		Preload("Department").
+		Preload("Leader").
 		Where("department_id = ?", departmentID).
 		Order("name ASC").
 		Find(&teams).Error
@@ -120,14 +132,63 @@ func (r *TeamRepository) ListByDepartment(ctx context.Context, departmentID uuid
 	if err != nil {
 		return nil, fmt.Errorf("failed to list teams by department: %w", err)
 	}
+	if err := r.populateMemberCounts(ctx, teams); err != nil {
+		return nil, err
+	}
 	return teams, nil
+}
+
+// populateMemberCounts fills in the MemberCount field for a slice of teams.
+func (r *TeamRepository) populateMemberCounts(ctx context.Context, teams []model.Team) error {
+	if len(teams) == 0 {
+		return nil
+	}
+
+	// Collect team IDs
+	teamIDs := make([]uuid.UUID, len(teams))
+	for i, t := range teams {
+		teamIDs[i] = t.ID
+	}
+
+	// Query member counts
+	type countResult struct {
+		TeamID uuid.UUID
+		Count  int
+	}
+	var counts []countResult
+	err := r.db.GORM.WithContext(ctx).
+		Model(&model.TeamMember{}).
+		Select("team_id, COUNT(*) as count").
+		Where("team_id IN ?", teamIDs).
+		Group("team_id").
+		Scan(&counts).Error
+	if err != nil {
+		return fmt.Errorf("failed to get member counts: %w", err)
+	}
+
+	// Build lookup map
+	countMap := make(map[uuid.UUID]int, len(counts))
+	for _, c := range counts {
+		countMap[c.TeamID] = c.Count
+	}
+
+	// Populate teams
+	for i := range teams {
+		teams[i].MemberCount = countMap[teams[i].ID]
+	}
+
+	return nil
 }
 
 // GetWithMembers retrieves a team with its members preloaded.
 func (r *TeamRepository) GetWithMembers(ctx context.Context, id uuid.UUID) (*model.Team, error) {
 	var team model.Team
 	err := r.db.GORM.WithContext(ctx).
+		Preload("Department").
+		Preload("Leader").
 		Preload("Members").
+		Preload("Members.Employee").
+		Preload("Members.Employee.Department").
 		First(&team, "id = ?", id).Error
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {

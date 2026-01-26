@@ -5,6 +5,7 @@ import {
   Calendar,
   CalendarDays,
   Users,
+  UsersRound,
   Building2,
   Briefcase,
   Settings,
@@ -96,6 +97,13 @@ export const navConfig: NavSection[] = [
         icon: Users,
         roles: ['admin'],
         description: 'Manage employee records',
+      },
+      {
+        title: 'Teams',
+        href: '/admin/teams',
+        icon: UsersRound,
+        roles: ['admin'],
+        description: 'Manage teams and members',
       },
       {
         title: 'Departments',

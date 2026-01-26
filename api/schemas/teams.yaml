@@ -27,6 +27,9 @@ Team:
       format: uuid
     is_active:
       type: boolean
+    member_count:
+      type: integer
+      description: Number of members in the team
     created_at:
       type: string
       format: date-time

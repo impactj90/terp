@@ -1120,6 +1120,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ProblemDetails"
+  /departments/tree:
+    get:
+      tags:
+        - Departments
+      summary: Get department tree
+      description: |
+        Returns all departments as a hierarchical tree structure.
+        Each node contains the department and its children recursively.
+      operationId: getDepartmentTree
+      responses:
+        "200":
+          description: Department tree structure
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DepartmentNode"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   "/departments/{id}":
     get:
       tags:
@@ -6395,6 +6415,18 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DepartmentSummary"
+    DepartmentNode:
+      type: object
+      description: A node in the department hierarchy tree
+      required:
+        - department
+      properties:
+        department:
+          $ref: "#/components/schemas/Department"
+        children:
+          type: array
+          items:
+            $ref: "#/components/schemas/DepartmentNode"
     CreateDepartmentRequest:
       type: object
       required:
@@ -6512,6 +6544,13 @@ components:
           type: integer
           description: Target working hours in minutes
           example: 480
+        regular_hours_2:
+          type: integer
+          description: Alternative target hours for absence days (minutes)
+          nullable: true
+        from_employee_master:
+          type: boolean
+          description: Get target hours from employee master data
         tolerance_come_plus:
           type: integer
           description: Tolerance for late arrival (minutes)
@@ -6528,6 +6567,9 @@ components:
           type: integer
           description: Tolerance for early departure (minutes)
           example: 0
+        variable_work_time:
+          type: boolean
+          description: Enable tolerance_come_minus for fixed working time plans
         rounding_come_type:
           type: string
           enum:
@@ -6535,10 +6577,16 @@ components:
             - up
             - down
             - nearest
+            - add
+            - subtract
           nullable: true
         rounding_come_interval:
           type: integer
           description: Rounding interval in minutes
+          nullable: true
+        rounding_come_add_value:
+          type: integer
+          description: Value to add/subtract for arrival (minutes)
           nullable: true
         rounding_go_type:
           type: string
@@ -6547,11 +6595,20 @@ components:
             - up
             - down
             - nearest
+            - add
+            - subtract
           nullable: true
         rounding_go_interval:
           type: integer
           description: Rounding interval in minutes
           nullable: true
+        rounding_go_add_value:
+          type: integer
+          description: Value to add/subtract for departure (minutes)
+          nullable: true
+        round_all_bookings:
+          type: boolean
+          description: Round all bookings vs first arrival/last departure only
         min_work_time:
           type: integer
           description: Minimum work time in minutes
@@ -6559,6 +6616,79 @@ components:
         max_net_work_time:
           type: integer
           description: Maximum net work time in minutes
+          nullable: true
+        holiday_credit_cat1:
+          type: integer
+          description: Full holiday time credit (minutes)
+          nullable: true
+        holiday_credit_cat2:
+          type: integer
+          description: Half holiday time credit (minutes)
+          nullable: true
+        holiday_credit_cat3:
+          type: integer
+          description: Custom category holiday credit (minutes)
+          nullable: true
+        vacation_deduction:
+          type: number
+          format: float
+          description: Vacation days deducted per day (default 1.0)
+        no_booking_behavior:
+          type: string
+          enum:
+            - error
+            - deduct_target
+            - vocational_school
+            - adopt_target
+            - target_with_order
+          description: Behavior when no bookings recorded
+        day_change_behavior:
+          type: string
+          enum:
+            - none
+            - at_arrival
+            - at_departure
+            - auto_complete
+          description: How to handle cross-midnight shifts
+        shift_detect_arrive_from:
+          type: integer
+          description: Shift detection arrival window start (minutes)
+          nullable: true
+        shift_detect_arrive_to:
+          type: integer
+          description: Shift detection arrival window end (minutes)
+          nullable: true
+        shift_detect_depart_from:
+          type: integer
+          description: Shift detection departure window start (minutes)
+          nullable: true
+        shift_detect_depart_to:
+          type: integer
+          description: Shift detection departure window end (minutes)
+          nullable: true
+        shift_alt_plan_1:
+          type: string
+          format: uuid
+          nullable: true
+        shift_alt_plan_2:
+          type: string
+          format: uuid
+          nullable: true
+        shift_alt_plan_3:
+          type: string
+          format: uuid
+          nullable: true
+        shift_alt_plan_4:
+          type: string
+          format: uuid
+          nullable: true
+        shift_alt_plan_5:
+          type: string
+          format: uuid
+          nullable: true
+        shift_alt_plan_6:
+          type: string
+          format: uuid
           nullable: true
         is_active:
           type: boolean
@@ -6639,6 +6769,9 @@ components:
           type: boolean
           description: Is this break paid
           example: false
+        minutes_difference:
+          type: boolean
+          description: Proportional deduction when near threshold (for minimum breaks)
         sort_order:
           type: integer
           example: 0
@@ -6744,6 +6877,10 @@ components:
           type: integer
         regular_hours:
           type: integer
+        regular_hours_2:
+          type: integer
+        from_employee_master:
+          type: boolean
         tolerance_come_plus:
           type: integer
         tolerance_come_minus:
@@ -6752,6 +6889,8 @@ components:
           type: integer
         tolerance_go_minus:
           type: integer
+        variable_work_time:
+          type: boolean
         rounding_come_type:
           type: string
           enum:
@@ -6759,7 +6898,11 @@ components:
             - up
             - down
             - nearest
+            - add
+            - subtract
         rounding_come_interval:
+          type: integer
+        rounding_come_add_value:
           type: integer
         rounding_go_type:
           type: string
@@ -6768,12 +6911,70 @@ components:
             - up
             - down
             - nearest
+            - add
+            - subtract
         rounding_go_interval:
           type: integer
+        rounding_go_add_value:
+          type: integer
+        round_all_bookings:
+          type: boolean
         min_work_time:
           type: integer
         max_net_work_time:
           type: integer
+        holiday_credit_cat1:
+          type: integer
+        holiday_credit_cat2:
+          type: integer
+        holiday_credit_cat3:
+          type: integer
+        vacation_deduction:
+          type: number
+          format: float
+        no_booking_behavior:
+          type: string
+          enum:
+            - error
+            - deduct_target
+            - vocational_school
+            - adopt_target
+            - target_with_order
+        day_change_behavior:
+          type: string
+          enum:
+            - none
+            - at_arrival
+            - at_departure
+            - auto_complete
+        shift_detect_arrive_from:
+          type: integer
+        shift_detect_arrive_to:
+          type: integer
+        shift_detect_depart_from:
+          type: integer
+        shift_detect_depart_to:
+          type: integer
+        shift_alt_plan_1:
+          type: string
+          format: uuid
+        shift_alt_plan_2:
+          type: string
+          format: uuid
+        shift_alt_plan_3:
+          type: string
+          format: uuid
+        shift_alt_plan_4:
+          type: string
+          format: uuid
+        shift_alt_plan_5:
+          type: string
+          format: uuid
+        shift_alt_plan_6:
+          type: string
+          format: uuid
+        is_active:
+          type: boolean
     UpdateDayPlanRequest:
       type: object
       properties:
@@ -6802,6 +7003,10 @@ components:
           type: integer
         regular_hours:
           type: integer
+        regular_hours_2:
+          type: integer
+        from_employee_master:
+          type: boolean
         tolerance_come_plus:
           type: integer
         tolerance_come_minus:
@@ -6810,6 +7015,8 @@ components:
           type: integer
         tolerance_go_minus:
           type: integer
+        variable_work_time:
+          type: boolean
         rounding_come_type:
           type: string
           enum:
@@ -6817,7 +7024,11 @@ components:
             - up
             - down
             - nearest
+            - add
+            - subtract
         rounding_come_interval:
+          type: integer
+        rounding_come_add_value:
           type: integer
         rounding_go_type:
           type: string
@@ -6826,12 +7037,68 @@ components:
             - up
             - down
             - nearest
+            - add
+            - subtract
         rounding_go_interval:
           type: integer
+        rounding_go_add_value:
+          type: integer
+        round_all_bookings:
+          type: boolean
         min_work_time:
           type: integer
         max_net_work_time:
           type: integer
+        holiday_credit_cat1:
+          type: integer
+        holiday_credit_cat2:
+          type: integer
+        holiday_credit_cat3:
+          type: integer
+        vacation_deduction:
+          type: number
+          format: float
+        no_booking_behavior:
+          type: string
+          enum:
+            - error
+            - deduct_target
+            - vocational_school
+            - adopt_target
+            - target_with_order
+        day_change_behavior:
+          type: string
+          enum:
+            - none
+            - at_arrival
+            - at_departure
+            - auto_complete
+        shift_detect_arrive_from:
+          type: integer
+        shift_detect_arrive_to:
+          type: integer
+        shift_detect_depart_from:
+          type: integer
+        shift_detect_depart_to:
+          type: integer
+        shift_alt_plan_1:
+          type: string
+          format: uuid
+        shift_alt_plan_2:
+          type: string
+          format: uuid
+        shift_alt_plan_3:
+          type: string
+          format: uuid
+        shift_alt_plan_4:
+          type: string
+          format: uuid
+        shift_alt_plan_5:
+          type: string
+          format: uuid
+        shift_alt_plan_6:
+          type: string
+          format: uuid
         is_active:
           type: boolean
     CopyDayPlanRequest:
@@ -6872,6 +7139,9 @@ components:
           type: boolean
           default: true
         is_paid:
+          type: boolean
+          default: false
+        minutes_difference:
           type: boolean
           default: false
     CreateDayPlanBonusRequest:
@@ -9410,6 +9680,9 @@ components:
           format: uuid
         is_active:
           type: boolean
+        member_count:
+          type: integer
+          description: Number of members in the team
         created_at:
           type: string
           format: date-time

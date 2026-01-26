@@ -518,6 +518,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/departments/tree": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get department tree
+         * @description Returns all departments as a hierarchical tree structure.
+         *     Each node contains the department and its children recursively.
+         */
+        get: operations["getDepartmentTree"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/departments/{id}": {
         parameters: {
             query?: never;
@@ -2557,6 +2578,11 @@ export interface components {
             parent?: components["schemas"]["DepartmentSummary"] | null;
             children?: components["schemas"]["DepartmentSummary"][];
         };
+        /** @description A node in the department hierarchy tree */
+        DepartmentNode: {
+            department: components["schemas"]["Department"];
+            children?: components["schemas"]["DepartmentNode"][];
+        };
         CreateDepartmentRequest: {
             name: string;
             code: string;
@@ -2629,6 +2655,10 @@ export interface components {
              * @example 480
              */
             regular_hours: number;
+            /** @description Alternative target hours for absence days (minutes) */
+            regular_hours_2?: number | null;
+            /** @description Get target hours from employee master data */
+            from_employee_master?: boolean;
             /**
              * @description Tolerance for late arrival (minutes)
              * @example 0
@@ -2649,18 +2679,67 @@ export interface components {
              * @example 0
              */
             tolerance_go_minus?: number;
+            /** @description Enable tolerance_come_minus for fixed working time plans */
+            variable_work_time?: boolean;
             /** @enum {string|null} */
-            rounding_come_type?: "none" | "up" | "down" | "nearest" | null;
+            rounding_come_type?: "none" | "up" | "down" | "nearest" | "add" | "subtract" | null;
             /** @description Rounding interval in minutes */
             rounding_come_interval?: number | null;
+            /** @description Value to add/subtract for arrival (minutes) */
+            rounding_come_add_value?: number | null;
             /** @enum {string|null} */
-            rounding_go_type?: "none" | "up" | "down" | "nearest" | null;
+            rounding_go_type?: "none" | "up" | "down" | "nearest" | "add" | "subtract" | null;
             /** @description Rounding interval in minutes */
             rounding_go_interval?: number | null;
+            /** @description Value to add/subtract for departure (minutes) */
+            rounding_go_add_value?: number | null;
+            /** @description Round all bookings vs first arrival/last departure only */
+            round_all_bookings?: boolean;
             /** @description Minimum work time in minutes */
             min_work_time?: number | null;
             /** @description Maximum net work time in minutes */
             max_net_work_time?: number | null;
+            /** @description Full holiday time credit (minutes) */
+            holiday_credit_cat1?: number | null;
+            /** @description Half holiday time credit (minutes) */
+            holiday_credit_cat2?: number | null;
+            /** @description Custom category holiday credit (minutes) */
+            holiday_credit_cat3?: number | null;
+            /**
+             * Format: float
+             * @description Vacation days deducted per day (default 1.0)
+             */
+            vacation_deduction?: number;
+            /**
+             * @description Behavior when no bookings recorded
+             * @enum {string}
+             */
+            no_booking_behavior?: "error" | "deduct_target" | "vocational_school" | "adopt_target" | "target_with_order";
+            /**
+             * @description How to handle cross-midnight shifts
+             * @enum {string}
+             */
+            day_change_behavior?: "none" | "at_arrival" | "at_departure" | "auto_complete";
+            /** @description Shift detection arrival window start (minutes) */
+            shift_detect_arrive_from?: number | null;
+            /** @description Shift detection arrival window end (minutes) */
+            shift_detect_arrive_to?: number | null;
+            /** @description Shift detection departure window start (minutes) */
+            shift_detect_depart_from?: number | null;
+            /** @description Shift detection departure window end (minutes) */
+            shift_detect_depart_to?: number | null;
+            /** Format: uuid */
+            shift_alt_plan_1?: string | null;
+            /** Format: uuid */
+            shift_alt_plan_2?: string | null;
+            /** Format: uuid */
+            shift_alt_plan_3?: string | null;
+            /** Format: uuid */
+            shift_alt_plan_4?: string | null;
+            /** Format: uuid */
+            shift_alt_plan_5?: string | null;
+            /** Format: uuid */
+            shift_alt_plan_6?: string | null;
             /** @example true */
             is_active?: boolean;
             /** Format: date-time */
@@ -2708,6 +2787,8 @@ export interface components {
              * @example false
              */
             is_paid?: boolean;
+            /** @description Proportional deduction when near threshold (for minimum breaks) */
+            minutes_difference?: boolean;
             /** @example 0 */
             sort_order?: number;
             /** Format: date-time */
@@ -2767,18 +2848,50 @@ export interface components {
             core_start?: number;
             core_end?: number;
             regular_hours: number;
+            regular_hours_2?: number;
+            from_employee_master?: boolean;
             tolerance_come_plus?: number;
             tolerance_come_minus?: number;
             tolerance_go_plus?: number;
             tolerance_go_minus?: number;
+            variable_work_time?: boolean;
             /** @enum {string} */
-            rounding_come_type?: "none" | "up" | "down" | "nearest";
+            rounding_come_type?: "none" | "up" | "down" | "nearest" | "add" | "subtract";
             rounding_come_interval?: number;
+            rounding_come_add_value?: number;
             /** @enum {string} */
-            rounding_go_type?: "none" | "up" | "down" | "nearest";
+            rounding_go_type?: "none" | "up" | "down" | "nearest" | "add" | "subtract";
             rounding_go_interval?: number;
+            rounding_go_add_value?: number;
+            round_all_bookings?: boolean;
             min_work_time?: number;
             max_net_work_time?: number;
+            holiday_credit_cat1?: number;
+            holiday_credit_cat2?: number;
+            holiday_credit_cat3?: number;
+            /** Format: float */
+            vacation_deduction?: number;
+            /** @enum {string} */
+            no_booking_behavior?: "error" | "deduct_target" | "vocational_school" | "adopt_target" | "target_with_order";
+            /** @enum {string} */
+            day_change_behavior?: "none" | "at_arrival" | "at_departure" | "auto_complete";
+            shift_detect_arrive_from?: number;
+            shift_detect_arrive_to?: number;
+            shift_detect_depart_from?: number;
+            shift_detect_depart_to?: number;
+            /** Format: uuid */
+            shift_alt_plan_1?: string;
+            /** Format: uuid */
+            shift_alt_plan_2?: string;
+            /** Format: uuid */
+            shift_alt_plan_3?: string;
+            /** Format: uuid */
+            shift_alt_plan_4?: string;
+            /** Format: uuid */
+            shift_alt_plan_5?: string;
+            /** Format: uuid */
+            shift_alt_plan_6?: string;
+            is_active?: boolean;
         };
         UpdateDayPlanRequest: {
             name?: string;
@@ -2792,18 +2905,49 @@ export interface components {
             core_start?: number;
             core_end?: number;
             regular_hours?: number;
+            regular_hours_2?: number;
+            from_employee_master?: boolean;
             tolerance_come_plus?: number;
             tolerance_come_minus?: number;
             tolerance_go_plus?: number;
             tolerance_go_minus?: number;
+            variable_work_time?: boolean;
             /** @enum {string} */
-            rounding_come_type?: "none" | "up" | "down" | "nearest";
+            rounding_come_type?: "none" | "up" | "down" | "nearest" | "add" | "subtract";
             rounding_come_interval?: number;
+            rounding_come_add_value?: number;
             /** @enum {string} */
-            rounding_go_type?: "none" | "up" | "down" | "nearest";
+            rounding_go_type?: "none" | "up" | "down" | "nearest" | "add" | "subtract";
             rounding_go_interval?: number;
+            rounding_go_add_value?: number;
+            round_all_bookings?: boolean;
             min_work_time?: number;
             max_net_work_time?: number;
+            holiday_credit_cat1?: number;
+            holiday_credit_cat2?: number;
+            holiday_credit_cat3?: number;
+            /** Format: float */
+            vacation_deduction?: number;
+            /** @enum {string} */
+            no_booking_behavior?: "error" | "deduct_target" | "vocational_school" | "adopt_target" | "target_with_order";
+            /** @enum {string} */
+            day_change_behavior?: "none" | "at_arrival" | "at_departure" | "auto_complete";
+            shift_detect_arrive_from?: number;
+            shift_detect_arrive_to?: number;
+            shift_detect_depart_from?: number;
+            shift_detect_depart_to?: number;
+            /** Format: uuid */
+            shift_alt_plan_1?: string;
+            /** Format: uuid */
+            shift_alt_plan_2?: string;
+            /** Format: uuid */
+            shift_alt_plan_3?: string;
+            /** Format: uuid */
+            shift_alt_plan_4?: string;
+            /** Format: uuid */
+            shift_alt_plan_5?: string;
+            /** Format: uuid */
+            shift_alt_plan_6?: string;
             is_active?: boolean;
         };
         CopyDayPlanRequest: {
@@ -2821,6 +2965,8 @@ export interface components {
             auto_deduct: boolean;
             /** @default false */
             is_paid: boolean;
+            /** @default false */
+            minutes_difference: boolean;
         };
         CreateDayPlanBonusRequest: {
             /** Format: uuid */
@@ -4194,6 +4340,8 @@ export interface components {
             /** Format: uuid */
             leader_employee_id?: string;
             is_active: boolean;
+            /** @description Number of members in the team */
+            member_count?: number;
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */
@@ -5312,6 +5460,27 @@ export interface operations {
                     "application/json": components["schemas"]["ProblemDetails"];
                 };
             };
+        };
+    };
+    getDepartmentTree: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Department tree structure */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepartmentNode"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
         };
     };
     getDepartment: {
