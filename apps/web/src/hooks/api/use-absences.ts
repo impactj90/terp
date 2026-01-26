@@ -158,3 +158,30 @@ export function useRejectAbsence() {
     ],
   })
 }
+
+/**
+ * Hook to create a new absence type.
+ */
+export function useCreateAbsenceType() {
+  return useApiMutation('/absence-types', 'post', {
+    invalidateKeys: [['/absence-types']],
+  })
+}
+
+/**
+ * Hook to update an absence type.
+ */
+export function useUpdateAbsenceType() {
+  return useApiMutation('/absence-types/{id}', 'patch', {
+    invalidateKeys: [['/absence-types']],
+  })
+}
+
+/**
+ * Hook to delete an absence type.
+ */
+export function useDeleteAbsenceType() {
+  return useApiMutation('/absence-types/{id}', 'delete', {
+    invalidateKeys: [['/absence-types']],
+  })
+}

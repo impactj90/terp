@@ -220,8 +220,14 @@ func RegisterBookingRoutes(r chi.Router, h *BookingHandler) {
 
 // RegisterAbsenceRoutes registers absence routes.
 func RegisterAbsenceRoutes(r chi.Router, h *AbsenceHandler) {
-	// Absence types
-	r.Get("/absence-types", h.ListTypes)
+	// Absence types CRUD
+	r.Route("/absence-types", func(r chi.Router) {
+		r.Get("/", h.ListTypes)
+		r.Post("/", h.CreateType)
+		r.Get("/{id}", h.GetType)
+		r.Patch("/{id}", h.UpdateType)
+		r.Delete("/{id}", h.DeleteType)
+	})
 
 	// Employee absences (nested under employees)
 	r.Get("/employees/{id}/absences", h.ListByEmployee)

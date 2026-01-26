@@ -85,12 +85,35 @@ func (m *mockAbsenceTypeRepositoryForService) GetByID(ctx context.Context, id uu
 	return args.Get(0).(*model.AbsenceType), args.Error(1)
 }
 
+func (m *mockAbsenceTypeRepositoryForService) GetByCode(ctx context.Context, tenantID uuid.UUID, code string) (*model.AbsenceType, error) {
+	args := m.Called(ctx, tenantID, code)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.AbsenceType), args.Error(1)
+}
+
 func (m *mockAbsenceTypeRepositoryForService) List(ctx context.Context, tenantID uuid.UUID, includeSystem bool) ([]model.AbsenceType, error) {
 	args := m.Called(ctx, tenantID, includeSystem)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).([]model.AbsenceType), args.Error(1)
+}
+
+func (m *mockAbsenceTypeRepositoryForService) Create(ctx context.Context, at *model.AbsenceType) error {
+	args := m.Called(ctx, at)
+	return args.Error(0)
+}
+
+func (m *mockAbsenceTypeRepositoryForService) Update(ctx context.Context, at *model.AbsenceType) error {
+	args := m.Called(ctx, at)
+	return args.Error(0)
+}
+
+func (m *mockAbsenceTypeRepositoryForService) Delete(ctx context.Context, id uuid.UUID) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
 }
 
 func (m *mockAbsenceTypeRepositoryForService) Upsert(ctx context.Context, at *model.AbsenceType) error {

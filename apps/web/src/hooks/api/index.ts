@@ -75,6 +75,9 @@ export {
   useDeleteAbsence,
   useApproveAbsence,
   useRejectAbsence,
+  useCreateAbsenceType,
+  useUpdateAbsenceType,
+  useDeleteAbsenceType,
 } from './use-absences'
 
 // Holidays

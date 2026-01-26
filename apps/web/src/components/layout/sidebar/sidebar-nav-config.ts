@@ -150,6 +150,13 @@ export const navConfig: NavSection[] = [
         roles: ['admin'],
         description: 'Manage public holidays',
       },
+      {
+        title: 'Absence Types',
+        href: '/admin/absence-types',
+        icon: CalendarOff,
+        roles: ['admin'],
+        description: 'Manage absence type configurations',
+      },
     ],
   },
   {

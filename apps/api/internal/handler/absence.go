@@ -317,3 +317,217 @@ func mapAbsenceCategory(c model.AbsenceCategory) string {
 		return "other"
 	}
 }
+
+// mapAPICategory maps API category string to internal absence category.
+func mapAPICategory(apiCategory string) model.AbsenceCategory {
+	switch apiCategory {
+	case "vacation":
+		return model.AbsenceCategoryVacation
+	case "sick":
+		return model.AbsenceCategoryIllness
+	case "personal":
+		return model.AbsenceCategorySpecial
+	case "unpaid":
+		return model.AbsenceCategoryUnpaid
+	default:
+		return model.AbsenceCategorySpecial
+	}
+}
+
+// GetType handles GET /absence-types/{id}
+func (h *AbsenceHandler) GetType(w http.ResponseWriter, r *http.Request) {
+	tenantID, ok := middleware.TenantFromContext(r.Context())
+	if !ok {
+		respondError(w, http.StatusUnauthorized, "Tenant required")
+		return
+	}
+
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid absence type ID")
+		return
+	}
+
+	at, err := h.absenceService.GetTypeByID(r.Context(), tenantID, id)
+	if err != nil {
+		switch err {
+		case service.ErrAbsenceTypeNotFound:
+			respondError(w, http.StatusNotFound, "Absence type not found")
+		default:
+			respondError(w, http.StatusInternalServerError, "Failed to get absence type")
+		}
+		return
+	}
+
+	respondJSON(w, http.StatusOK, h.absenceTypeToResponse(at))
+}
+
+// CreateType handles POST /absence-types
+func (h *AbsenceHandler) CreateType(w http.ResponseWriter, r *http.Request) {
+	tenantID, ok := middleware.TenantFromContext(r.Context())
+	if !ok {
+		respondError(w, http.StatusUnauthorized, "Tenant required")
+		return
+	}
+
+	var req models.CreateAbsenceTypeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if err := req.Validate(nil); err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Map request to model
+	at := &model.AbsenceType{
+		TenantID:         &tenantID,
+		Code:             *req.Code,
+		Name:             *req.Name,
+		Description:      &req.Description,
+		Category:         mapAPICategory(*req.Category),
+		Color:            req.Color,
+		IsActive:         true,
+		RequiresApproval: true, // default
+	}
+
+	// Optional fields
+	if req.AffectsVacationBalance != nil {
+		at.DeductsVacation = *req.AffectsVacationBalance
+	}
+	if req.RequiresApproval != nil {
+		at.RequiresApproval = *req.RequiresApproval
+	}
+	if req.IsPaid != nil && *req.IsPaid {
+		at.Portion = model.AbsencePortionFull
+	}
+	if at.Color == "" {
+		at.Color = "#808080"
+	}
+
+	created, err := h.absenceService.CreateType(r.Context(), at)
+	if err != nil {
+		switch err {
+		case service.ErrAbsenceCodeExists:
+			respondError(w, http.StatusConflict, "Absence type code already exists")
+		default:
+			respondError(w, http.StatusInternalServerError, "Failed to create absence type")
+		}
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, h.absenceTypeToResponse(created))
+}
+
+// UpdateType handles PATCH /absence-types/{id}
+func (h *AbsenceHandler) UpdateType(w http.ResponseWriter, r *http.Request) {
+	tenantID, ok := middleware.TenantFromContext(r.Context())
+	if !ok {
+		respondError(w, http.StatusUnauthorized, "Tenant required")
+		return
+	}
+
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid absence type ID")
+		return
+	}
+
+	var req models.UpdateAbsenceTypeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if err := req.Validate(nil); err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Get existing to merge with updates
+	existing, err := h.absenceService.GetTypeByID(r.Context(), tenantID, id)
+	if err != nil {
+		switch err {
+		case service.ErrAbsenceTypeNotFound:
+			respondError(w, http.StatusNotFound, "Absence type not found")
+		default:
+			respondError(w, http.StatusInternalServerError, "Failed to get absence type")
+		}
+		return
+	}
+
+	// Apply updates
+	if req.Name != "" {
+		existing.Name = req.Name
+	}
+	if req.Description != "" {
+		existing.Description = &req.Description
+	}
+	if req.Category != "" {
+		existing.Category = mapAPICategory(req.Category)
+	}
+	if req.Color != "" {
+		existing.Color = req.Color
+	}
+	existing.DeductsVacation = req.AffectsVacationBalance
+	existing.RequiresApproval = req.RequiresApproval
+	existing.IsActive = req.IsActive
+	if req.IsPaid {
+		existing.Portion = model.AbsencePortionFull
+	} else {
+		existing.Portion = model.AbsencePortionNone
+	}
+
+	// Ensure tenant ID is set for update
+	existing.TenantID = &tenantID
+
+	updated, err := h.absenceService.UpdateType(r.Context(), existing)
+	if err != nil {
+		switch err {
+		case service.ErrAbsenceTypeNotFound:
+			respondError(w, http.StatusNotFound, "Absence type not found")
+		case service.ErrCannotModifySystem:
+			respondError(w, http.StatusForbidden, "Cannot modify system absence type")
+		default:
+			respondError(w, http.StatusInternalServerError, "Failed to update absence type")
+		}
+		return
+	}
+
+	respondJSON(w, http.StatusOK, h.absenceTypeToResponse(updated))
+}
+
+// DeleteType handles DELETE /absence-types/{id}
+func (h *AbsenceHandler) DeleteType(w http.ResponseWriter, r *http.Request) {
+	tenantID, ok := middleware.TenantFromContext(r.Context())
+	if !ok {
+		respondError(w, http.StatusUnauthorized, "Tenant required")
+		return
+	}
+
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid absence type ID")
+		return
+	}
+
+	err = h.absenceService.DeleteType(r.Context(), tenantID, id)
+	if err != nil {
+		switch err {
+		case service.ErrAbsenceTypeNotFound:
+			respondError(w, http.StatusNotFound, "Absence type not found")
+		case service.ErrCannotModifySystem:
+			respondError(w, http.StatusForbidden, "Cannot delete system absence type")
+		default:
+			respondError(w, http.StatusInternalServerError, "Failed to delete absence type")
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}

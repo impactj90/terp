@@ -19,6 +19,9 @@ var (
 	ErrAbsenceAlreadyExists = errors.New("absence already exists on date")
 	ErrInvalidAbsenceDates  = errors.New("from date must be before or equal to to date")
 	ErrNoAbsenceDaysCreated = errors.New("no valid absence days in range (all dates skipped)")
+	ErrAbsenceTypeNotFound  = errors.New("absence type not found")
+	ErrCannotModifySystem   = errors.New("cannot modify system absence type")
+	ErrAbsenceCodeExists    = errors.New("absence type code already exists")
 )
 
 // absenceDayRepositoryForService defines the interface for absence day data access.
@@ -36,7 +39,11 @@ type absenceDayRepositoryForService interface {
 // absenceTypeRepositoryForService defines the interface for absence type validation.
 type absenceTypeRepositoryForService interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*model.AbsenceType, error)
+	GetByCode(ctx context.Context, tenantID uuid.UUID, code string) (*model.AbsenceType, error)
 	List(ctx context.Context, tenantID uuid.UUID, includeSystem bool) ([]model.AbsenceType, error)
+	Create(ctx context.Context, at *model.AbsenceType) error
+	Update(ctx context.Context, at *model.AbsenceType) error
+	Delete(ctx context.Context, id uuid.UUID) error
 	Upsert(ctx context.Context, at *model.AbsenceType) error
 }
 
@@ -340,4 +347,84 @@ func normalizeDate(d time.Time) time.Time {
 // UpsertDevAbsenceType ensures a dev absence type exists in the database as a system type.
 func (s *AbsenceService) UpsertDevAbsenceType(ctx context.Context, at *model.AbsenceType) error {
 	return s.absenceTypeRepo.Upsert(ctx, at)
+}
+
+// GetTypeByID retrieves an absence type by ID.
+func (s *AbsenceService) GetTypeByID(ctx context.Context, tenantID, id uuid.UUID) (*model.AbsenceType, error) {
+	at, err := s.absenceTypeRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, ErrAbsenceTypeNotFound
+	}
+	// Verify access: type must be a system type (nil tenant) or belong to this tenant
+	if at.TenantID != nil && *at.TenantID != tenantID {
+		return nil, ErrAbsenceTypeNotFound
+	}
+	return at, nil
+}
+
+// CreateType creates a new tenant-specific absence type.
+func (s *AbsenceService) CreateType(ctx context.Context, at *model.AbsenceType) (*model.AbsenceType, error) {
+	// Check if code already exists for this tenant
+	existing, err := s.absenceTypeRepo.GetByCode(ctx, *at.TenantID, at.Code)
+	if err == nil && existing != nil {
+		// Code exists - check if it's a tenant-specific override or duplicate
+		if existing.TenantID != nil && *existing.TenantID == *at.TenantID {
+			return nil, ErrAbsenceCodeExists
+		}
+	}
+
+	// Force tenant-specific, not system
+	at.IsSystem = false
+
+	if err := s.absenceTypeRepo.Create(ctx, at); err != nil {
+		return nil, err
+	}
+	return at, nil
+}
+
+// UpdateType updates an existing absence type (cannot update system types).
+func (s *AbsenceService) UpdateType(ctx context.Context, at *model.AbsenceType) (*model.AbsenceType, error) {
+	existing, err := s.absenceTypeRepo.GetByID(ctx, at.ID)
+	if err != nil {
+		return nil, ErrAbsenceTypeNotFound
+	}
+
+	// Cannot modify system types
+	if existing.IsSystem {
+		return nil, ErrCannotModifySystem
+	}
+
+	// Verify ownership
+	if existing.TenantID == nil || *existing.TenantID != *at.TenantID {
+		return nil, ErrAbsenceTypeNotFound
+	}
+
+	// Preserve immutable fields
+	at.IsSystem = existing.IsSystem
+	at.CreatedAt = existing.CreatedAt
+
+	if err := s.absenceTypeRepo.Update(ctx, at); err != nil {
+		return nil, err
+	}
+	return at, nil
+}
+
+// DeleteType deletes an absence type (cannot delete system types).
+func (s *AbsenceService) DeleteType(ctx context.Context, tenantID, id uuid.UUID) error {
+	existing, err := s.absenceTypeRepo.GetByID(ctx, id)
+	if err != nil {
+		return ErrAbsenceTypeNotFound
+	}
+
+	// Cannot delete system types
+	if existing.IsSystem {
+		return ErrCannotModifySystem
+	}
+
+	// Verify ownership
+	if existing.TenantID == nil || *existing.TenantID != tenantID {
+		return ErrAbsenceTypeNotFound
+	}
+
+	return s.absenceTypeRepo.Delete(ctx, id)
 }
