@@ -78,7 +78,13 @@ export {
 } from './use-absences'
 
 // Holidays
-export { useHolidays, useHoliday } from './use-holidays'
+export {
+  useHolidays,
+  useHoliday,
+  useCreateHoliday,
+  useUpdateHoliday,
+  useDeleteHoliday,
+} from './use-holidays'
 
 // Departments
 export {
@@ -125,3 +131,23 @@ export {
 
 // Accounts
 export { useAccounts, useAccount } from './use-accounts'
+
+// Week Plans
+export {
+  useWeekPlans,
+  useWeekPlan,
+  useCreateWeekPlan,
+  useUpdateWeekPlan,
+  useDeleteWeekPlan,
+} from './use-week-plans'
+
+// Tariffs
+export {
+  useTariffs,
+  useTariff,
+  useCreateTariff,
+  useUpdateTariff,
+  useDeleteTariff,
+  useCreateTariffBreak,
+  useDeleteTariffBreak,
+} from './use-tariffs'

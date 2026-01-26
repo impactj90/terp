@@ -4,6 +4,8 @@ import {
   Clock,
   Calendar,
   CalendarDays,
+  CalendarRange,
+  CalendarHeart,
   Users,
   UsersRound,
   Building2,
@@ -14,6 +16,7 @@ import {
   Palmtree,
   UserCog,
   Shield,
+  ScrollText,
 } from 'lucide-react'
 import type { UserRole } from '@/hooks/use-has-role'
 
@@ -124,7 +127,28 @@ export const navConfig: NavSection[] = [
         href: '/admin/day-plans',
         icon: CalendarDays,
         roles: ['admin'],
-        description: 'Configure work schedules',
+        description: 'Configure daily work schedules',
+      },
+      {
+        title: 'Week Plans',
+        href: '/admin/week-plans',
+        icon: CalendarRange,
+        roles: ['admin'],
+        description: 'Configure weekly work schedules',
+      },
+      {
+        title: 'Tariffs',
+        href: '/admin/tariffs',
+        icon: ScrollText,
+        roles: ['admin'],
+        description: 'Manage employment contract terms',
+      },
+      {
+        title: 'Holidays',
+        href: '/admin/holidays',
+        icon: CalendarHeart,
+        roles: ['admin'],
+        description: 'Manage public holidays',
       },
     ],
   },
