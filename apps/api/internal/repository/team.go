@@ -282,3 +282,19 @@ func (r *TeamRepository) GetMembers(ctx context.Context, teamID uuid.UUID) ([]mo
 	}
 	return members, nil
 }
+
+// Upsert creates or updates a team by ID.
+func (r *TeamRepository) Upsert(ctx context.Context, team *model.Team) error {
+	return r.db.GORM.WithContext(ctx).
+		Where("id = ?", team.ID).
+		Assign(team).
+		FirstOrCreate(team).Error
+}
+
+// UpsertMember creates or updates a team member.
+func (r *TeamRepository) UpsertMember(ctx context.Context, member *model.TeamMember) error {
+	return r.db.GORM.WithContext(ctx).
+		Where("team_id = ? AND employee_id = ?", member.TeamID, member.EmployeeID).
+		Assign(member).
+		FirstOrCreate(member).Error
+}

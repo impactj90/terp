@@ -36,6 +36,8 @@ type teamRepository interface {
 	UpdateMemberRole(ctx context.Context, teamID, employeeID uuid.UUID, role model.TeamMemberRole) error
 	GetMemberTeams(ctx context.Context, employeeID uuid.UUID) ([]model.Team, error)
 	GetMembers(ctx context.Context, teamID uuid.UUID) ([]model.TeamMember, error)
+	Upsert(ctx context.Context, team *model.Team) error
+	UpsertMember(ctx context.Context, member *model.TeamMember) error
 }
 
 type TeamService struct {
@@ -275,4 +277,14 @@ func (s *TeamService) GetMembers(ctx context.Context, teamID uuid.UUID) ([]model
 	}
 
 	return s.teamRepo.GetMembers(ctx, teamID)
+}
+
+// UpsertDevTeam creates or updates a team for dev mode seeding.
+func (s *TeamService) UpsertDevTeam(ctx context.Context, team *model.Team) error {
+	return s.teamRepo.Upsert(ctx, team)
+}
+
+// UpsertDevTeamMember creates or updates a team member for dev mode seeding.
+func (s *TeamService) UpsertDevTeamMember(ctx context.Context, member *model.TeamMember) error {
+	return s.teamRepo.UpsertMember(ctx, member)
 }

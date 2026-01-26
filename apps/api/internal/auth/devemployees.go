@@ -19,13 +19,22 @@ type DevEmployee struct {
 	VacationDays    float64   `json:"vacation_days"`
 }
 
+// Employee UUIDs for reference by departments, teams, and other seed data.
+var (
+	DevEmployeeAdminID  = uuid.MustParse("00000000-0000-0000-0000-000000000011")
+	DevEmployeeUserID   = uuid.MustParse("00000000-0000-0000-0000-000000000012")
+	DevEmployeeMariaID  = uuid.MustParse("00000000-0000-0000-0000-000000000013")
+	DevEmployeeThomasID = uuid.MustParse("00000000-0000-0000-0000-000000000014")
+	DevEmployeeAnnaID   = uuid.MustParse("00000000-0000-0000-0000-000000000015")
+)
+
 // DevEmployees contains predefined employees for development mode.
 // Using deterministic UUIDs for consistency across restarts.
 // The first two employees are linked to dev users (admin and user).
 var DevEmployees = []DevEmployee{
 	{
 		// Linked to admin user (00000000-0000-0000-0000-000000000001)
-		ID:              uuid.MustParse("00000000-0000-0000-0000-000000000011"),
+		ID:              DevEmployeeAdminID,
 		PersonnelNumber: "EMP001",
 		PIN:             "1001",
 		FirstName:       "Admin",
@@ -37,7 +46,7 @@ var DevEmployees = []DevEmployee{
 	},
 	{
 		// Linked to regular user (00000000-0000-0000-0000-000000000002)
-		ID:              uuid.MustParse("00000000-0000-0000-0000-000000000012"),
+		ID:              DevEmployeeUserID,
 		PersonnelNumber: "EMP002",
 		PIN:             "1002",
 		FirstName:       "Regular",
@@ -49,7 +58,7 @@ var DevEmployees = []DevEmployee{
 	},
 	{
 		// Additional test employee - part time
-		ID:              uuid.MustParse("00000000-0000-0000-0000-000000000013"),
+		ID:              DevEmployeeMariaID,
 		PersonnelNumber: "EMP003",
 		PIN:             "1003",
 		FirstName:       "Maria",
@@ -61,7 +70,7 @@ var DevEmployees = []DevEmployee{
 	},
 	{
 		// Additional test employee - recent hire
-		ID:              uuid.MustParse("00000000-0000-0000-0000-000000000014"),
+		ID:              DevEmployeeThomasID,
 		PersonnelNumber: "EMP004",
 		PIN:             "1004",
 		FirstName:       "Thomas",
@@ -73,7 +82,7 @@ var DevEmployees = []DevEmployee{
 	},
 	{
 		// Additional test employee - senior
-		ID:              uuid.MustParse("00000000-0000-0000-0000-000000000015"),
+		ID:              DevEmployeeAnnaID,
 		PersonnelNumber: "EMP005",
 		PIN:             "1005",
 		FirstName:       "Anna",
@@ -87,8 +96,8 @@ var DevEmployees = []DevEmployee{
 
 // DevUserEmployeeMap maps dev user IDs to their corresponding employee IDs.
 var DevUserEmployeeMap = map[uuid.UUID]uuid.UUID{
-	uuid.MustParse("00000000-0000-0000-0000-000000000001"): uuid.MustParse("00000000-0000-0000-0000-000000000011"), // admin
-	uuid.MustParse("00000000-0000-0000-0000-000000000002"): uuid.MustParse("00000000-0000-0000-0000-000000000012"), // user
+	uuid.MustParse("00000000-0000-0000-0000-000000000001"): DevEmployeeAdminID, // admin
+	uuid.MustParse("00000000-0000-0000-0000-000000000002"): DevEmployeeUserID,  // user
 }
 
 // GetDevEmployees returns all predefined dev employees.

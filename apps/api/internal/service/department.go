@@ -31,6 +31,7 @@ type departmentRepository interface {
 	ListActive(ctx context.Context, tenantID uuid.UUID) ([]model.Department, error)
 	GetChildren(ctx context.Context, departmentID uuid.UUID) ([]model.Department, error)
 	GetHierarchy(ctx context.Context, tenantID uuid.UUID) ([]model.Department, error)
+	Upsert(ctx context.Context, dept *model.Department) error
 }
 
 type DepartmentService struct {
@@ -299,4 +300,9 @@ func buildTree(depts []model.Department) []DepartmentNode {
 	}
 
 	return roots
+}
+
+// UpsertDevDepartment creates or updates a department for dev mode seeding.
+func (s *DepartmentService) UpsertDevDepartment(ctx context.Context, dept *model.Department) error {
+	return s.departmentRepo.Upsert(ctx, dept)
 }

@@ -140,6 +140,8 @@ func main() {
 		dayPlanService,
 		weekPlanService,
 		tariffService,
+		departmentService,
+		teamService,
 	)
 	userHandler := handler.NewUserHandler(userService)
 	tenantHandler := handler.NewTenantHandler(tenantService)

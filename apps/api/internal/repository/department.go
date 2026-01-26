@@ -166,3 +166,11 @@ func (r *DepartmentRepository) GetHierarchy(ctx context.Context, tenantID uuid.U
 	}
 	return departments, nil
 }
+
+// Upsert creates or updates a department by ID.
+func (r *DepartmentRepository) Upsert(ctx context.Context, dept *model.Department) error {
+	return r.db.GORM.WithContext(ctx).
+		Where("id = ?", dept.ID).
+		Assign(dept).
+		FirstOrCreate(dept).Error
+}

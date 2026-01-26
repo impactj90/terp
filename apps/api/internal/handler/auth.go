@@ -25,6 +25,8 @@ type AuthHandler struct {
 	dayPlanService     *service.DayPlanService
 	weekPlanService    *service.WeekPlanService
 	tariffService      *service.TariffService
+	departmentService  *service.DepartmentService
+	teamService        *service.TeamService
 }
 
 // NewAuthHandler creates a new auth handler instance.
@@ -40,6 +42,8 @@ func NewAuthHandler(
 	dayPlanService *service.DayPlanService,
 	weekPlanService *service.WeekPlanService,
 	tariffService *service.TariffService,
+	departmentService *service.DepartmentService,
+	teamService *service.TeamService,
 ) *AuthHandler {
 	return &AuthHandler{
 		jwtManager:         jwtManager,
@@ -53,6 +57,8 @@ func NewAuthHandler(
 		dayPlanService:     dayPlanService,
 		weekPlanService:    weekPlanService,
 		tariffService:      tariffService,
+		departmentService:  departmentService,
+		teamService:        teamService,
 	}
 }
 
@@ -252,6 +258,57 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := h.tariffService.UpsertDevTariff(r.Context(), tariff); err != nil {
 			respondError(w, http.StatusInternalServerError, "failed to sync dev tariffs to database")
+			return
+		}
+	}
+
+	// Create all dev departments (tenant-level, idempotent)
+	// Departments must be created before teams since teams reference departments
+	for _, devDept := range auth.GetDevDepartments() {
+		desc := devDept.Description
+		dept := &model.Department{
+			ID:                devDept.ID,
+			TenantID:          devTenant.ID,
+			Code:              devDept.Code,
+			Name:              devDept.Name,
+			Description:       desc,
+			ParentID:          devDept.ParentID,
+			ManagerEmployeeID: devDept.ManagerEmployeeID,
+			IsActive:          true,
+		}
+		if err := h.departmentService.UpsertDevDepartment(r.Context(), dept); err != nil {
+			respondError(w, http.StatusInternalServerError, "failed to sync dev departments to database")
+			return
+		}
+	}
+
+	// Create all dev teams (tenant-level, idempotent)
+	for _, devTeam := range auth.GetDevTeams() {
+		desc := devTeam.Description
+		team := &model.Team{
+			ID:               devTeam.ID,
+			TenantID:         devTenant.ID,
+			Name:             devTeam.Name,
+			Description:      desc,
+			DepartmentID:     devTeam.DepartmentID,
+			LeaderEmployeeID: devTeam.LeaderEmployeeID,
+			IsActive:         true,
+		}
+		if err := h.teamService.UpsertDevTeam(r.Context(), team); err != nil {
+			respondError(w, http.StatusInternalServerError, "failed to sync dev teams to database")
+			return
+		}
+	}
+
+	// Create all dev team members (idempotent)
+	for _, devMember := range auth.GetDevTeamMembers() {
+		member := &model.TeamMember{
+			TeamID:     devMember.TeamID,
+			EmployeeID: devMember.EmployeeID,
+			Role:       model.TeamMemberRole(devMember.Role),
+		}
+		if err := h.teamService.UpsertDevTeamMember(r.Context(), member); err != nil {
+			respondError(w, http.StatusInternalServerError, "failed to sync dev team members to database")
 			return
 		}
 	}
