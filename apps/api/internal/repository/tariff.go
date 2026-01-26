@@ -103,6 +103,7 @@ func (r *TariffRepository) Delete(ctx context.Context, id uuid.UUID) error {
 func (r *TariffRepository) List(ctx context.Context, tenantID uuid.UUID) ([]model.Tariff, error) {
 	var tariffs []model.Tariff
 	err := r.db.GORM.WithContext(ctx).
+		Preload("WeekPlan").
 		Preload("Breaks", func(db *gorm.DB) *gorm.DB {
 			return db.Order("sort_order ASC")
 		}).
@@ -120,6 +121,7 @@ func (r *TariffRepository) List(ctx context.Context, tenantID uuid.UUID) ([]mode
 func (r *TariffRepository) ListActive(ctx context.Context, tenantID uuid.UUID) ([]model.Tariff, error) {
 	var tariffs []model.Tariff
 	err := r.db.GORM.WithContext(ctx).
+		Preload("WeekPlan").
 		Preload("Breaks", func(db *gorm.DB) *gorm.DB {
 			return db.Order("sort_order ASC")
 		}).
