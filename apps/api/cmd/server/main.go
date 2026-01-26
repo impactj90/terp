@@ -94,7 +94,7 @@ func main() {
 	employeeService := service.NewEmployeeService(employeeRepo)
 	dayPlanService := service.NewDayPlanService(dayPlanRepo)
 	weekPlanService := service.NewWeekPlanService(weekPlanRepo, dayPlanRepo)
-	tariffService := service.NewTariffService(tariffRepo, weekPlanRepo)
+	tariffService := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	bookingTypeService := service.NewBookingTypeService(bookingTypeRepo)
 
 	// Initialize calculation services
@@ -139,6 +139,7 @@ func main() {
 		holidayService,
 		dayPlanService,
 		weekPlanService,
+		tariffService,
 	)
 	userHandler := handler.NewUserHandler(userService)
 	tenantHandler := handler.NewTenantHandler(tenantService)

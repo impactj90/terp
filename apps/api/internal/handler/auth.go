@@ -24,6 +24,7 @@ type AuthHandler struct {
 	holidayService     *service.HolidayService
 	dayPlanService     *service.DayPlanService
 	weekPlanService    *service.WeekPlanService
+	tariffService      *service.TariffService
 }
 
 // NewAuthHandler creates a new auth handler instance.
@@ -38,6 +39,7 @@ func NewAuthHandler(
 	holidayService *service.HolidayService,
 	dayPlanService *service.DayPlanService,
 	weekPlanService *service.WeekPlanService,
+	tariffService *service.TariffService,
 ) *AuthHandler {
 	return &AuthHandler{
 		jwtManager:         jwtManager,
@@ -50,6 +52,7 @@ func NewAuthHandler(
 		holidayService:     holidayService,
 		dayPlanService:     dayPlanService,
 		weekPlanService:    weekPlanService,
+		tariffService:      tariffService,
 	}
 }
 
@@ -219,6 +222,36 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := h.weekPlanService.UpsertDevWeekPlan(r.Context(), weekPlan); err != nil {
 			respondError(w, http.StatusInternalServerError, "failed to sync dev week plans to database")
+			return
+		}
+	}
+
+	// Create all dev tariffs (tenant-level, idempotent)
+	for _, devT := range auth.GetDevTariffs() {
+		desc := devT.Description
+		tariff := &model.Tariff{
+			ID:                  devT.ID,
+			TenantID:            devTenant.ID,
+			Code:                devT.Code,
+			Name:                devT.Name,
+			Description:         &desc,
+			WeekPlanID:          devT.WeekPlanID,
+			IsActive:            devT.IsActive,
+			AnnualVacationDays:  devT.AnnualVacationDays,
+			WorkDaysPerWeek:     devT.WorkDaysPerWeek,
+			VacationBasis:       model.VacationBasis(devT.VacationBasis),
+			DailyTargetHours:    devT.DailyTargetHours,
+			WeeklyTargetHours:   devT.WeeklyTargetHours,
+			MonthlyTargetHours:  devT.MonthlyTargetHours,
+			MaxFlextimePerMonth: devT.MaxFlextimePerMonth,
+			UpperLimitAnnual:    devT.UpperLimitAnnual,
+			LowerLimitAnnual:    devT.LowerLimitAnnual,
+			FlextimeThreshold:   devT.FlextimeThreshold,
+			CreditType:          model.CreditType(devT.CreditType),
+			RhythmType:          model.RhythmType(devT.RhythmType),
+		}
+		if err := h.tariffService.UpsertDevTariff(r.Context(), tariff); err != nil {
+			respondError(w, http.StatusInternalServerError, "failed to sync dev tariffs to database")
 			return
 		}
 	}
