@@ -168,6 +168,8 @@ paths:
   # Departments
   /departments:
     $ref: 'paths/departments.yaml#/~1departments'
+  /departments/tree:
+    $ref: 'paths/departments.yaml#/~1departments~1tree'
   /departments/{id}:
     $ref: 'paths/departments.yaml#/~1departments~1{id}'
 
@@ -433,6 +435,8 @@ definitions:
   # Departments
   Department:
     $ref: 'schemas/departments.yaml#/Department'
+  DepartmentNode:
+    $ref: 'schemas/departments.yaml#/DepartmentNode'
   CreateDepartmentRequest:
     $ref: 'schemas/departments.yaml#/CreateDepartmentRequest'
   UpdateDepartmentRequest:

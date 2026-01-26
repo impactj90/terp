@@ -120,3 +120,16 @@ DepartmentList:
       type: array
       items:
         $ref: '#/Department'
+
+DepartmentNode:
+  type: object
+  description: A node in the department hierarchy tree
+  required:
+    - department
+  properties:
+    department:
+      $ref: '#/Department'
+    children:
+      type: array
+      items:
+        $ref: '#/DepartmentNode'

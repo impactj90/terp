@@ -51,6 +51,25 @@
         schema:
           $ref: '../schemas/common.yaml#/ProblemDetails'
 
+/departments/tree:
+  get:
+    tags:
+      - Departments
+    summary: Get department tree
+    description: |
+      Returns all departments as a hierarchical tree structure.
+      Each node contains the department and its children recursively.
+    operationId: getDepartmentTree
+    responses:
+      200:
+        description: Department tree structure
+        schema:
+          type: array
+          items:
+            $ref: '../schemas/departments.yaml#/DepartmentNode'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
 /departments/{id}:
   get:
     tags:
