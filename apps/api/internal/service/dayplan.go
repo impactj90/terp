@@ -29,6 +29,7 @@ type dayPlanRepository interface {
 	GetByCode(ctx context.Context, tenantID uuid.UUID, code string) (*model.DayPlan, error)
 	GetWithDetails(ctx context.Context, id uuid.UUID) (*model.DayPlan, error)
 	Update(ctx context.Context, plan *model.DayPlan) error
+	Upsert(ctx context.Context, plan *model.DayPlan) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	List(ctx context.Context, tenantID uuid.UUID) ([]model.DayPlan, error)
 	ListActive(ctx context.Context, tenantID uuid.UUID) ([]model.DayPlan, error)
@@ -613,4 +614,9 @@ func (s *DayPlanService) DeleteBonus(ctx context.Context, bonusID uuid.UUID) err
 		return ErrDayPlanBonusNotFound
 	}
 	return s.dayPlanRepo.DeleteBonus(ctx, bonusID)
+}
+
+// UpsertDevDayPlan creates or updates a day plan for dev seeding (idempotent).
+func (s *DayPlanService) UpsertDevDayPlan(ctx context.Context, plan *model.DayPlan) error {
+	return s.dayPlanRepo.Upsert(ctx, plan)
 }

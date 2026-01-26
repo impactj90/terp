@@ -93,6 +93,14 @@ func (r *DayPlanRepository) Update(ctx context.Context, plan *model.DayPlan) err
 	return r.db.GORM.WithContext(ctx).Save(plan).Error
 }
 
+// Upsert creates or updates a day plan by ID.
+func (r *DayPlanRepository) Upsert(ctx context.Context, plan *model.DayPlan) error {
+	return r.db.GORM.WithContext(ctx).
+		Where("id = ?", plan.ID).
+		Assign(plan).
+		FirstOrCreate(plan).Error
+}
+
 // Delete deletes a day plan by ID (breaks and bonuses cascade-delete).
 func (r *DayPlanRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	result := r.db.GORM.WithContext(ctx).Delete(&model.DayPlan{}, "id = ?", id)

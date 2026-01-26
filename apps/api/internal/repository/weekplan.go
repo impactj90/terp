@@ -89,6 +89,14 @@ func (r *WeekPlanRepository) Update(ctx context.Context, plan *model.WeekPlan) e
 	return r.db.GORM.WithContext(ctx).Save(plan).Error
 }
 
+// Upsert creates or updates a week plan by ID.
+func (r *WeekPlanRepository) Upsert(ctx context.Context, plan *model.WeekPlan) error {
+	return r.db.GORM.WithContext(ctx).
+		Where("id = ?", plan.ID).
+		Assign(plan).
+		FirstOrCreate(plan).Error
+}
+
 // Delete deletes a week plan by ID.
 func (r *WeekPlanRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	result := r.db.GORM.WithContext(ctx).Delete(&model.WeekPlan{}, "id = ?", id)
@@ -101,10 +109,17 @@ func (r *WeekPlanRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-// List retrieves all week plans for a tenant.
+// List retrieves all week plans for a tenant with day plan details.
 func (r *WeekPlanRepository) List(ctx context.Context, tenantID uuid.UUID) ([]model.WeekPlan, error) {
 	var plans []model.WeekPlan
 	err := r.db.GORM.WithContext(ctx).
+		Preload("MondayDayPlan").
+		Preload("TuesdayDayPlan").
+		Preload("WednesdayDayPlan").
+		Preload("ThursdayDayPlan").
+		Preload("FridayDayPlan").
+		Preload("SaturdayDayPlan").
+		Preload("SundayDayPlan").
 		Where("tenant_id = ?", tenantID).
 		Order("code ASC").
 		Find(&plans).Error
@@ -115,10 +130,17 @@ func (r *WeekPlanRepository) List(ctx context.Context, tenantID uuid.UUID) ([]mo
 	return plans, nil
 }
 
-// ListActive retrieves all active week plans for a tenant.
+// ListActive retrieves all active week plans for a tenant with day plan details.
 func (r *WeekPlanRepository) ListActive(ctx context.Context, tenantID uuid.UUID) ([]model.WeekPlan, error) {
 	var plans []model.WeekPlan
 	err := r.db.GORM.WithContext(ctx).
+		Preload("MondayDayPlan").
+		Preload("TuesdayDayPlan").
+		Preload("WednesdayDayPlan").
+		Preload("ThursdayDayPlan").
+		Preload("FridayDayPlan").
+		Preload("SaturdayDayPlan").
+		Preload("SundayDayPlan").
 		Where("tenant_id = ? AND is_active = ?", tenantID, true).
 		Order("code ASC").
 		Find(&plans).Error

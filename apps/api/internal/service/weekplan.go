@@ -25,6 +25,7 @@ type weekPlanRepository interface {
 	GetByCode(ctx context.Context, tenantID uuid.UUID, code string) (*model.WeekPlan, error)
 	GetWithDayPlans(ctx context.Context, id uuid.UUID) (*model.WeekPlan, error)
 	Update(ctx context.Context, plan *model.WeekPlan) error
+	Upsert(ctx context.Context, plan *model.WeekPlan) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	List(ctx context.Context, tenantID uuid.UUID) ([]model.WeekPlan, error)
 	ListActive(ctx context.Context, tenantID uuid.UUID) ([]model.WeekPlan, error)
@@ -231,4 +232,9 @@ func (s *WeekPlanService) List(ctx context.Context, tenantID uuid.UUID) ([]model
 // ListActive retrieves all active week plans for a tenant.
 func (s *WeekPlanService) ListActive(ctx context.Context, tenantID uuid.UUID) ([]model.WeekPlan, error) {
 	return s.weekPlanRepo.ListActive(ctx, tenantID)
+}
+
+// UpsertDevWeekPlan creates or updates a week plan for dev seeding (idempotent).
+func (s *WeekPlanService) UpsertDevWeekPlan(ctx context.Context, plan *model.WeekPlan) error {
+	return s.weekPlanRepo.Upsert(ctx, plan)
 }

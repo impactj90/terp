@@ -137,6 +137,8 @@ func main() {
 		bookingTypeService,
 		absenceService,
 		holidayService,
+		dayPlanService,
+		weekPlanService,
 	)
 	userHandler := handler.NewUserHandler(userService)
 	tenantHandler := handler.NewTenantHandler(tenantService)

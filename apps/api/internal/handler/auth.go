@@ -22,6 +22,8 @@ type AuthHandler struct {
 	bookingTypeService *service.BookingTypeService
 	absenceService     *service.AbsenceService
 	holidayService     *service.HolidayService
+	dayPlanService     *service.DayPlanService
+	weekPlanService    *service.WeekPlanService
 }
 
 // NewAuthHandler creates a new auth handler instance.
@@ -34,6 +36,8 @@ func NewAuthHandler(
 	bookingTypeService *service.BookingTypeService,
 	absenceService *service.AbsenceService,
 	holidayService *service.HolidayService,
+	dayPlanService *service.DayPlanService,
+	weekPlanService *service.WeekPlanService,
 ) *AuthHandler {
 	return &AuthHandler{
 		jwtManager:         jwtManager,
@@ -44,6 +48,8 @@ func NewAuthHandler(
 		bookingTypeService: bookingTypeService,
 		absenceService:     absenceService,
 		holidayService:     holidayService,
+		dayPlanService:     dayPlanService,
+		weekPlanService:    weekPlanService,
 	}
 }
 
@@ -166,6 +172,53 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := h.holidayService.UpsertDevHoliday(r.Context(), holiday); err != nil {
 			respondError(w, http.StatusInternalServerError, "failed to sync dev holidays to database")
+			return
+		}
+	}
+
+	// Create all dev day plans (tenant-level, idempotent)
+	for _, devDP := range auth.GetDevDayPlans() {
+		desc := devDP.Description
+		dayPlan := &model.DayPlan{
+			ID:           devDP.ID,
+			TenantID:     devTenant.ID,
+			Code:         devDP.Code,
+			Name:         devDP.Name,
+			Description:  &desc,
+			PlanType:     model.PlanType(devDP.PlanType),
+			ComeFrom:     devDP.ComeFrom,
+			ComeTo:       devDP.ComeTo,
+			GoFrom:       devDP.GoFrom,
+			GoTo:         devDP.GoTo,
+			RegularHours: devDP.RegularHours,
+			IsActive:     devDP.IsActive,
+		}
+		if err := h.dayPlanService.UpsertDevDayPlan(r.Context(), dayPlan); err != nil {
+			respondError(w, http.StatusInternalServerError, "failed to sync dev day plans to database")
+			return
+		}
+	}
+
+	// Create all dev week plans (tenant-level, idempotent)
+	for _, devWP := range auth.GetDevWeekPlans() {
+		desc := devWP.Description
+		weekPlan := &model.WeekPlan{
+			ID:                devWP.ID,
+			TenantID:          devTenant.ID,
+			Code:              devWP.Code,
+			Name:              devWP.Name,
+			Description:       &desc,
+			MondayDayPlanID:   &devWP.Monday,
+			TuesdayDayPlanID:  &devWP.Tuesday,
+			WednesdayDayPlanID: &devWP.Wednesday,
+			ThursdayDayPlanID: &devWP.Thursday,
+			FridayDayPlanID:   &devWP.Friday,
+			SaturdayDayPlanID: &devWP.Saturday,
+			SundayDayPlanID:   &devWP.Sunday,
+			IsActive:          devWP.IsActive,
+		}
+		if err := h.weekPlanService.UpsertDevWeekPlan(r.Context(), weekPlan); err != nil {
+			respondError(w, http.StatusInternalServerError, "failed to sync dev week plans to database")
 			return
 		}
 	}
