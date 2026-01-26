@@ -2401,6 +2401,8 @@ export interface components {
             cost_center_id?: string | null;
             /** Format: uuid */
             employment_type_id?: string | null;
+            /** Format: uuid */
+            tariff_id?: string | null;
             /**
              * Format: decimal
              * @example 40
@@ -2420,6 +2422,12 @@ export interface components {
             department?: components["schemas"]["Department"] | null;
             cost_center?: components["schemas"]["CostCenter"] | null;
             employment_type?: components["schemas"]["EmploymentType"] | null;
+            tariff?: {
+                /** Format: uuid */
+                id: string;
+                code: string;
+                name: string;
+            } | null;
             contacts?: {
                 /** Format: uuid */
                 id: string;
@@ -2478,6 +2486,8 @@ export interface components {
             last_name: string;
             /** Format: uuid */
             department_id?: string | null;
+            /** Format: uuid */
+            tariff_id?: string | null;
             is_active?: boolean;
         };
         CreateEmployeeRequest: {
@@ -2496,6 +2506,8 @@ export interface components {
             cost_center_id?: string;
             /** Format: uuid */
             employment_type_id?: string;
+            /** Format: uuid */
+            tariff_id?: string;
             /** Format: decimal */
             weekly_hours?: number;
             /** Format: decimal */
@@ -2515,6 +2527,8 @@ export interface components {
             cost_center_id?: string;
             /** Format: uuid */
             employment_type_id?: string;
+            /** Format: uuid */
+            tariff_id?: string;
             /** Format: decimal */
             weekly_hours?: number;
             /** Format: decimal */
@@ -3320,12 +3334,132 @@ export interface components {
             valid_to?: string | null;
             /** @example true */
             is_active?: boolean;
+            /**
+             * Format: double
+             * @description ZMI: Jahresurlaub - Base annual vacation days
+             * @example 30
+             */
+            annual_vacation_days?: number | null;
+            /**
+             * @description ZMI: AT pro Woche - Work days per week for vacation pro-rating
+             * @example 5
+             */
+            work_days_per_week?: number | null;
+            /**
+             * @description ZMI: Urlaubsberechnung Basis - Vacation year calculation basis
+             * @example calendar_year
+             * @enum {string}
+             */
+            vacation_basis?: "calendar_year" | "entry_date";
+            /**
+             * Format: double
+             * @description ZMI: Tagessollstunden - Daily target hours
+             * @example 8
+             */
+            daily_target_hours?: number | null;
+            /**
+             * Format: double
+             * @description ZMI: Wochensollstunden - Weekly target hours
+             * @example 40
+             */
+            weekly_target_hours?: number | null;
+            /**
+             * Format: double
+             * @description ZMI: Monatssollstunden - Monthly target hours
+             * @example 173.33
+             */
+            monthly_target_hours?: number | null;
+            /**
+             * Format: double
+             * @description ZMI: Jahressollstunden - Annual target hours
+             * @example 2080
+             */
+            annual_target_hours?: number | null;
+            /**
+             * @description ZMI: Max Gleitzeit im Monat - Max monthly flextime credit in minutes
+             * @example 600
+             */
+            max_flextime_per_month?: number | null;
+            /**
+             * @description ZMI: Obergrenze Jahreszeitkonto - Annual flextime cap in minutes
+             * @example 2400
+             */
+            upper_limit_annual?: number | null;
+            /**
+             * @description ZMI: Untergrenze Jahreszeitkonto - Annual flextime floor in minutes (can be negative)
+             * @example -600
+             */
+            lower_limit_annual?: number | null;
+            /**
+             * @description ZMI: Gleitzeitschwelle - Overtime threshold in minutes
+             * @example 60
+             */
+            flextime_threshold?: number | null;
+            /**
+             * @description ZMI: Art der Gutschrift - How flextime is credited at month end
+             * @example no_evaluation
+             * @enum {string}
+             */
+            credit_type?: "no_evaluation" | "complete" | "after_threshold" | "no_carryover";
+            /**
+             * @description ZMI: Zeitplan-Modell - Time plan rhythm type
+             * @example weekly
+             * @enum {string}
+             */
+            rhythm_type?: "weekly" | "rolling_weekly" | "x_days";
+            /**
+             * @description ZMI: Tage im Zyklus - For x_days rhythm, number of days in cycle
+             * @example 14
+             */
+            cycle_days?: number | null;
+            /**
+             * Format: date
+             * @description ZMI: Rhythmus-Startdatum - Start date for rhythm calculation
+             */
+            rhythm_start_date?: string | null;
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */
             updated_at?: string;
             week_plan?: components["schemas"]["WeekPlanSummary"] | null;
             breaks?: components["schemas"]["TariffBreak"][];
+            /** @description Ordered week plans for rolling_weekly rhythm */
+            tariff_week_plans?: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                tariff_id: string;
+                /** Format: uuid */
+                week_plan_id: string;
+                /**
+                 * @description Position in rotation (1-based)
+                 * @example 1
+                 */
+                sequence_order: number;
+                /** Format: date-time */
+                created_at?: string;
+                week_plan?: components["schemas"]["WeekPlanSummary"] | null;
+            }[];
+            /** @description Day plans for x_days rhythm */
+            tariff_day_plans?: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                tariff_id: string;
+                /**
+                 * @description Position in cycle (1-based)
+                 * @example 1
+                 */
+                day_position: number;
+                /**
+                 * Format: uuid
+                 * @description NULL = off day
+                 */
+                day_plan_id?: string | null;
+                /** Format: date-time */
+                created_at?: string;
+                day_plan?: components["schemas"]["DayPlanSummary"] | null;
+            }[];
         };
         TariffBreak: {
             /** Format: uuid */
@@ -3366,6 +3500,49 @@ export interface components {
             valid_from?: string;
             /** Format: date */
             valid_to?: string;
+            /**
+             * @description Time plan rhythm type (default: weekly)
+             * @enum {string}
+             */
+            rhythm_type?: "weekly" | "rolling_weekly" | "x_days";
+            /** @description For x_days rhythm: number of days in cycle */
+            cycle_days?: number;
+            /**
+             * Format: date
+             * @description Start date for rhythm calculation
+             */
+            rhythm_start_date?: string;
+            /** @description For rolling_weekly: ordered list of week plan IDs */
+            week_plan_ids?: string[];
+            /** @description For x_days: day plans per position in cycle */
+            day_plans?: {
+                /** @description Position in cycle (1-based) */
+                day_position: number;
+                /**
+                 * Format: uuid
+                 * @description Day plan ID, null for off day
+                 */
+                day_plan_id?: string | null;
+            }[];
+            /** Format: double */
+            annual_vacation_days?: number;
+            work_days_per_week?: number;
+            /** @enum {string} */
+            vacation_basis?: "calendar_year" | "entry_date";
+            /** Format: double */
+            daily_target_hours?: number;
+            /** Format: double */
+            weekly_target_hours?: number;
+            /** Format: double */
+            monthly_target_hours?: number;
+            /** Format: double */
+            annual_target_hours?: number;
+            max_flextime_per_month?: number;
+            upper_limit_annual?: number;
+            lower_limit_annual?: number;
+            flextime_threshold?: number;
+            /** @enum {string} */
+            credit_type?: "no_evaluation" | "complete" | "after_threshold" | "no_carryover";
         };
         UpdateTariffRequest: {
             name?: string;
@@ -3377,6 +3554,44 @@ export interface components {
             /** Format: date */
             valid_to?: string;
             is_active?: boolean;
+            /**
+             * @description Time plan rhythm type
+             * @enum {string}
+             */
+            rhythm_type?: "weekly" | "rolling_weekly" | "x_days";
+            /** @description For x_days rhythm: number of days in cycle */
+            cycle_days?: number | null;
+            /**
+             * Format: date
+             * @description Start date for rhythm calculation
+             */
+            rhythm_start_date?: string | null;
+            /** @description For rolling_weekly: ordered list of week plan IDs */
+            week_plan_ids?: string[];
+            /** @description For x_days: day plans per position in cycle */
+            day_plans?: {
+                day_position: number;
+                day_plan_id?: string | null;
+            }[];
+            /** Format: double */
+            annual_vacation_days?: number | null;
+            work_days_per_week?: number | null;
+            /** @enum {string} */
+            vacation_basis?: "calendar_year" | "entry_date";
+            /** Format: double */
+            daily_target_hours?: number | null;
+            /** Format: double */
+            weekly_target_hours?: number | null;
+            /** Format: double */
+            monthly_target_hours?: number | null;
+            /** Format: double */
+            annual_target_hours?: number | null;
+            max_flextime_per_month?: number | null;
+            upper_limit_annual?: number | null;
+            lower_limit_annual?: number | null;
+            flextime_threshold?: number | null;
+            /** @enum {string} */
+            credit_type?: "no_evaluation" | "complete" | "after_threshold" | "no_carryover";
         };
         TariffList: {
             data: components["schemas"]["Tariff"][];

@@ -1,7 +1,20 @@
 'use client'
 
 import * as React from 'react'
-import { Edit, Trash2, Copy, Clock, Calendar, Settings, Plus, Loader2 } from 'lucide-react'
+import {
+  Edit,
+  Trash2,
+  Copy,
+  Clock,
+  Calendar,
+  Settings,
+  Plus,
+  Loader2,
+  Palmtree,
+  Target,
+  Timer,
+  Repeat,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -43,6 +56,29 @@ const BREAK_TYPE_LABELS: Record<string, string> = {
   fixed: 'Fixed',
   variable: 'Variable',
   minimum: 'Minimum',
+}
+
+const RHYTHM_TYPE_LABELS: Record<string, string> = {
+  weekly: 'Weekly (Single Plan)',
+  rolling_weekly: 'Rolling Weekly',
+  x_days: 'X-Days Cycle',
+}
+
+const VACATION_BASIS_LABELS: Record<string, string> = {
+  calendar_year: 'Calendar Year (Jan 1 - Dec 31)',
+  entry_date: 'Entry Date (Anniversary)',
+}
+
+const CREDIT_TYPE_LABELS: Record<string, string> = {
+  no_evaluation: 'No Evaluation (1:1 Transfer)',
+  complete: 'Complete Carryover (with Limits)',
+  after_threshold: 'After Threshold',
+  no_carryover: 'No Carryover (Reset to 0)',
+}
+
+function formatHours(value: number | null | undefined): string {
+  if (value == null) return '-'
+  return `${value.toFixed(2)} h`
 }
 
 export function TariffDetailSheet({
@@ -139,20 +175,86 @@ export function TariffDetailSheet({
                   )}
                 </Section>
 
-                {/* Week Plan */}
-                <Section title="Week Plan" icon={Calendar}>
+                {/* Schedule / Rhythm */}
+                <Section title="Schedule" icon={Repeat}>
                   <DetailRow
-                    label="Assigned Plan"
-                    value={
-                      tariff.week_plan ? (
-                        <span>
-                          <span className="font-mono">{tariff.week_plan.code}</span> - {tariff.week_plan.name}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">None</span>
-                      )
-                    }
+                    label="Rhythm Type"
+                    value={RHYTHM_TYPE_LABELS[tariff.rhythm_type ?? 'weekly'] ?? 'Weekly'}
                   />
+
+                  {/* Weekly: Show single week plan */}
+                  {(tariff.rhythm_type === 'weekly' || !tariff.rhythm_type) && (
+                    <DetailRow
+                      label="Week Plan"
+                      value={
+                        tariff.week_plan ? (
+                          <span>
+                            <span className="font-mono">{tariff.week_plan.code}</span> -{' '}
+                            {tariff.week_plan.name}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">None</span>
+                        )
+                      }
+                    />
+                  )}
+
+                  {/* Rolling Weekly: Show week plan list */}
+                  {tariff.rhythm_type === 'rolling_weekly' &&
+                    tariff.tariff_week_plans &&
+                    tariff.tariff_week_plans.length > 0 && (
+                      <div className="space-y-2 mt-2">
+                        <span className="text-sm text-muted-foreground">Week Plans (in order):</span>
+                        <div className="space-y-1 ml-2">
+                          {tariff.tariff_week_plans.map((twp, idx) => (
+                            <div key={twp.id} className="text-sm">
+                              <span className="font-medium">Week {idx + 1}:</span>{' '}
+                              <span className="font-mono">{twp.week_plan?.code}</span> -{' '}
+                              {twp.week_plan?.name}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                  {/* X-Days: Show cycle info and day plans */}
+                  {tariff.rhythm_type === 'x_days' && (
+                    <>
+                      <DetailRow
+                        label="Cycle Length"
+                        value={tariff.cycle_days ? `${tariff.cycle_days} days` : '-'}
+                      />
+                      {tariff.tariff_day_plans && tariff.tariff_day_plans.length > 0 && (
+                        <div className="space-y-2 mt-2">
+                          <span className="text-sm text-muted-foreground">Day Plans:</span>
+                          <div className="grid grid-cols-2 gap-1 ml-2 text-sm">
+                            {tariff.tariff_day_plans.map((tdp) => (
+                              <div key={tdp.id}>
+                                <span className="font-medium">Day {tdp.day_position}:</span>{' '}
+                                {tdp.day_plan ? (
+                                  <span>{tdp.day_plan.code}</span>
+                                ) : (
+                                  <span className="text-muted-foreground">Off</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Rhythm Start Date */}
+                  {tariff.rhythm_type && tariff.rhythm_type !== 'weekly' && (
+                    <DetailRow
+                      label="Rhythm Start Date"
+                      value={
+                        tariff.rhythm_start_date
+                          ? formatDate(parseISODate(tariff.rhythm_start_date))
+                          : 'Not set'
+                      }
+                    />
+                  )}
                 </Section>
 
                 {/* Validity Period */}
@@ -164,6 +266,70 @@ export function TariffDetailSheet({
                   <DetailRow
                     label="Valid To"
                     value={tariff.valid_to ? formatDate(parseISODate(tariff.valid_to)) : 'Not set'}
+                  />
+                </Section>
+
+                {/* Vacation Settings */}
+                <Section title="Vacation" icon={Palmtree}>
+                  <DetailRow
+                    label="Annual Vacation Days"
+                    value={tariff.annual_vacation_days != null ? `${tariff.annual_vacation_days} days` : '-'}
+                  />
+                  <DetailRow
+                    label="Work Days per Week"
+                    value={tariff.work_days_per_week != null ? `${tariff.work_days_per_week} days` : '-'}
+                  />
+                  <DetailRow
+                    label="Vacation Year Basis"
+                    value={VACATION_BASIS_LABELS[tariff.vacation_basis ?? 'calendar_year']}
+                  />
+                </Section>
+
+                {/* Target Hours */}
+                <Section title="Target Hours" icon={Target}>
+                  <DetailRow label="Daily" value={formatHours(tariff.daily_target_hours)} />
+                  <DetailRow label="Weekly" value={formatHours(tariff.weekly_target_hours)} />
+                  <DetailRow label="Monthly" value={formatHours(tariff.monthly_target_hours)} />
+                  <DetailRow label="Annual" value={formatHours(tariff.annual_target_hours)} />
+                </Section>
+
+                {/* Flextime / Monthly Evaluation */}
+                <Section title="Flextime" icon={Timer}>
+                  <DetailRow
+                    label="Credit Type"
+                    value={CREDIT_TYPE_LABELS[tariff.credit_type ?? 'no_evaluation']}
+                  />
+                  <DetailRow
+                    label="Max Flextime/Month"
+                    value={
+                      tariff.max_flextime_per_month != null
+                        ? formatDuration(tariff.max_flextime_per_month)
+                        : '-'
+                    }
+                  />
+                  <DetailRow
+                    label="Flextime Threshold"
+                    value={
+                      tariff.flextime_threshold != null
+                        ? formatDuration(tariff.flextime_threshold)
+                        : '-'
+                    }
+                  />
+                  <DetailRow
+                    label="Upper Limit (Annual)"
+                    value={
+                      tariff.upper_limit_annual != null
+                        ? formatDuration(tariff.upper_limit_annual)
+                        : '-'
+                    }
+                  />
+                  <DetailRow
+                    label="Lower Limit (Annual)"
+                    value={
+                      tariff.lower_limit_annual != null
+                        ? formatDuration(tariff.lower_limit_annual)
+                        : '-'
+                    }
                   />
                 </Section>
 
