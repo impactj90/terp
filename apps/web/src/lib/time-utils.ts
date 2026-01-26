@@ -210,10 +210,14 @@ export function formatElapsedTime(ms: number): string {
 
 /**
  * Parse ISO date string to Date object (date part only, ignoring time).
+ * Handles both date-only format ("2026-01-25") and full ISO datetime ("2026-01-25T00:00:00Z").
  * @example parseISODate("2026-01-25") => Date(2026, 0, 25)
+ * @example parseISODate("2026-01-25T00:00:00Z") => Date(2026, 0, 25)
  */
 export function parseISODate(dateString: string): Date {
-  const parts = dateString.split('-').map(Number)
+  // Extract just the date part (before any 'T')
+  const datePart = dateString.split('T')[0] ?? dateString
+  const parts = datePart.split('-').map(Number)
   const year = parts[0] ?? 1970
   const month = parts[1] ?? 1
   const day = parts[2] ?? 1
