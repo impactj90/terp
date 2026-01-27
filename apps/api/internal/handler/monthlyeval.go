@@ -10,6 +10,7 @@ import (
 
 	"github.com/tolga/terp/internal/auth"
 	"github.com/tolga/terp/internal/middleware"
+	"github.com/tolga/terp/internal/model"
 	"github.com/tolga/terp/internal/service"
 )
 
@@ -221,6 +222,55 @@ func (h *MonthlyEvalHandler) ReopenMonth(w http.ResponseWriter, r *http.Request)
 	respondJSON(w, http.StatusOK, h.summaryToResponse(summary))
 }
 
+// GetDailyBreakdown handles GET /employees/{id}/months/{year}/{month}/days
+func (h *MonthlyEvalHandler) GetDailyBreakdown(w http.ResponseWriter, r *http.Request) {
+	tenantID, ok := middleware.TenantFromContext(r.Context())
+	if !ok {
+		respondError(w, http.StatusUnauthorized, "Tenant required")
+		return
+	}
+	_ = tenantID // used for auth context
+
+	// Parse employee ID
+	employeeIDStr := chi.URLParam(r, "id")
+	employeeID, err := uuid.Parse(employeeIDStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid employee ID")
+		return
+	}
+
+	// Parse year
+	yearStr := chi.URLParam(r, "year")
+	year, err := strconv.Atoi(yearStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid year")
+		return
+	}
+
+	// Parse month
+	monthStr := chi.URLParam(r, "month")
+	month, err := strconv.Atoi(monthStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid month")
+		return
+	}
+
+	dailyValues, err := h.monthlyEvalService.GetDailyBreakdown(r.Context(), employeeID, year, month)
+	if err != nil {
+		h.handleServiceError(w, err, "get daily breakdown")
+		return
+	}
+
+	response := make([]map[string]interface{}, 0, len(dailyValues))
+	for _, dv := range dailyValues {
+		response = append(response, h.dailyValueToResponse(&dv))
+	}
+
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"data": response,
+	})
+}
+
 // Recalculate handles POST /employees/{id}/months/{year}/{month}/recalculate
 func (h *MonthlyEvalHandler) Recalculate(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := middleware.TenantFromContext(r.Context())
@@ -288,6 +338,32 @@ func (h *MonthlyEvalHandler) handleServiceError(w http.ResponseWriter, err error
 	default:
 		respondError(w, http.StatusInternalServerError, "Failed to "+operation)
 	}
+}
+
+// dailyValueToResponse converts model.DailyValue to API response map.
+func (h *MonthlyEvalHandler) dailyValueToResponse(dv *model.DailyValue) map[string]interface{} {
+	response := map[string]interface{}{
+		"id":            dv.ID.String(),
+		"employee_id":   dv.EmployeeID.String(),
+		"value_date":    dv.ValueDate.Format("2006-01-02"),
+		"gross_time":    dv.GrossTime,
+		"net_time":      dv.NetTime,
+		"target_time":   dv.TargetTime,
+		"overtime":      dv.Overtime,
+		"undertime":     dv.Undertime,
+		"break_time":    dv.BreakTime,
+		"has_error":     dv.HasError,
+		"error_codes":   dv.ErrorCodes,
+		"warnings":      dv.Warnings,
+		"booking_count": dv.BookingCount,
+	}
+	if dv.FirstCome != nil {
+		response["first_come"] = *dv.FirstCome
+	}
+	if dv.LastGo != nil {
+		response["last_go"] = *dv.LastGo
+	}
+	return response
 }
 
 // summaryToResponse converts service.MonthSummary to API response map.
