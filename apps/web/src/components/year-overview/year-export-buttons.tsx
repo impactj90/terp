@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
 import { Download, FileText, FileSpreadsheet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -10,22 +11,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { formatMinutes } from '@/lib/time-utils'
-
-// Month names for display
-const MONTH_NAMES = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-]
 
 interface MonthlyValueData {
   id: string
@@ -80,22 +65,32 @@ export function YearExportButtons({
   employeeName,
   monthlyValues,
 }: YearExportButtonsProps) {
+  const t = useTranslations('yearOverview')
+  const locale = useLocale()
   const [isExporting, setIsExporting] = useState(false)
+
+  const monthNames = useMemo(() => {
+    const formatter = new Intl.DateTimeFormat(locale, { month: 'long' })
+    return Array.from({ length: 12 }, (_, i) => {
+      const date = new Date(2024, i, 1)
+      return formatter.format(date)
+    })
+  }, [locale])
 
   const monthDataMap = new Map(monthlyValues.map((mv) => [mv.month, mv]))
 
   const generateCSV = () => {
     const headers = [
-      'Month',
-      'Working Days',
-      'Worked Days',
-      'Target Hours',
-      'Worked Hours',
-      'Balance',
-      'Status',
+      t('month'),
+      t('csvWorkingDays'),
+      t('csvWorkedDays'),
+      t('csvTargetHours'),
+      t('csvWorkedHours'),
+      t('balance'),
+      t('status'),
     ]
 
-    const rows = MONTH_NAMES.map((monthName, index) => {
+    const rows = monthNames.map((monthName, index) => {
       const mv = monthDataMap.get(index + 1)
       return [
         monthName,
@@ -104,7 +99,7 @@ export function YearExportButtons({
         formatMinutes(mv?.target_minutes ?? 0),
         formatMinutes(mv?.net_minutes ?? 0),
         formatMinutes(mv?.balance_minutes ?? 0),
-        mv?.status ?? 'No data',
+        mv?.status ?? t('noData'),
       ].join(',')
     })
 
@@ -112,7 +107,7 @@ export function YearExportButtons({
     const totals = calculateTotals(monthlyValues)
     rows.push(
       [
-        'TOTAL',
+        t('total'),
         totals.workingDays,
         totals.workedDays,
         formatMinutes(totals.targetMinutes),
@@ -123,7 +118,7 @@ export function YearExportButtons({
     )
 
     const csv = [headers.join(','), ...rows].join('\n')
-    downloadFile(csv, `year-overview-${year}.csv`, 'text/csv')
+    downloadFile(csv, `${t('yearOverviewExport')}-${year}.csv`, 'text/csv')
   }
 
   const generatePDF = () => {
@@ -133,7 +128,7 @@ export function YearExportButtons({
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Year Overview ${year}</title>
+        <title>${t('title')} ${year}</title>
         <style>
           body { font-family: Arial, sans-serif; padding: 20px; }
           h1 { font-size: 18px; margin-bottom: 5px; }
@@ -154,22 +149,22 @@ export function YearExportButtons({
         </style>
       </head>
       <body>
-        <h1>Year Overview: ${year}</h1>
-        ${employeeName ? `<div class="subtitle">Employee: ${employeeName}</div>` : ''}
+        <h1>${t('title')}: ${year}</h1>
+        ${employeeName ? `<div class="subtitle">${t('employee')}: ${employeeName}</div>` : ''}
         <table>
           <thead>
             <tr>
-              <th>Month</th>
-              <th>Working Days</th>
-              <th>Worked Days</th>
-              <th>Target</th>
-              <th>Worked</th>
-              <th>Balance</th>
-              <th>Status</th>
+              <th>${t('month')}</th>
+              <th>${t('csvWorkingDays')}</th>
+              <th>${t('csvWorkedDays')}</th>
+              <th>${t('target')}</th>
+              <th>${t('worked')}</th>
+              <th>${t('balance')}</th>
+              <th>${t('status')}</th>
             </tr>
           </thead>
           <tbody>
-            ${MONTH_NAMES.map((monthName, index) => {
+            ${monthNames.map((monthName, index) => {
               const mv = monthDataMap.get(index + 1)
               const balance = mv?.balance_minutes ?? 0
               const balanceClass = balance > 0 ? 'positive' : balance < 0 ? 'negative' : ''
@@ -183,14 +178,14 @@ export function YearExportButtons({
                   <td>${mv ? formatMinutes(mv.target_minutes ?? 0) : '-'}</td>
                   <td>${mv ? formatMinutes(mv.net_minutes ?? 0) : '-'}</td>
                   <td class="${balanceClass}">${mv ? formatMinutes(balance) : '-'}</td>
-                  <td class="${statusClass}">${mv?.status ?? 'No data'}</td>
+                  <td class="${statusClass}">${mv?.status ?? t('noData')}</td>
                 </tr>
               `
             }).join('')}
           </tbody>
           <tfoot>
             <tr class="footer-row">
-              <td>Total</td>
+              <td>${t('total')}</td>
               <td>${totals.workingDays}</td>
               <td>${totals.workedDays}</td>
               <td>${formatMinutes(totals.targetMinutes)}</td>
@@ -201,7 +196,7 @@ export function YearExportButtons({
           </tfoot>
         </table>
         <div class="footer">
-          Generated: ${new Date().toLocaleString('de-DE')}
+          ${t('generated')}: ${new Date().toLocaleString(locale)}
         </div>
       </body>
       </html>
@@ -238,17 +233,17 @@ export function YearExportButtons({
           disabled={isExporting || monthlyValues.length === 0}
         >
           <Download className="h-4 w-4 mr-2" />
-          Export
+          {t('exportLabel')}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => handleExport('csv')}>
           <FileSpreadsheet className="h-4 w-4 mr-2" />
-          Export as CSV
+          {t('exportCsv')}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => handleExport('pdf')}>
           <FileText className="h-4 w-4 mr-2" />
-          Print / PDF
+          {t('printPdf')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

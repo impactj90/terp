@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import { useTranslations } from 'next-intl'
 import { Calendar, AlertCircle, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -26,6 +27,8 @@ export function HoursThisWeekCard({
   employeeId,
   className,
 }: HoursThisWeekCardProps) {
+  const t = useTranslations('dashboard')
+  const tc = useTranslations('common')
   const weekStart = formatDate(getWeekStart())
   const weekEnd = formatDate(getWeekEnd())
 
@@ -72,12 +75,12 @@ export function HoursThisWeekCard({
       <div className={cn('rounded-lg border bg-card p-6', className)}>
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-muted-foreground">
-            Hours This Week
+            {t('hoursThisWeek')}
           </span>
           <AlertCircle className="h-4 w-4 text-destructive" aria-hidden="true" />
         </div>
         <div className="mt-2">
-          <p className="text-sm text-destructive">Failed to load</p>
+          <p className="text-sm text-destructive">{tc('failedToLoad')}</p>
         </div>
         <Button
           variant="ghost"
@@ -86,7 +89,7 @@ export function HoursThisWeekCard({
           className="mt-2 h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
         >
           <RefreshCw className="mr-1 h-3 w-3" />
-          Retry
+          {tc('retry')}
         </Button>
       </div>
     )
@@ -100,7 +103,7 @@ export function HoursThisWeekCard({
     <div className={cn('rounded-lg border bg-card p-6', className)}>
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-muted-foreground">
-          Hours This Week
+          {t('hoursThisWeek')}
         </span>
         <Calendar className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
       </div>
@@ -111,8 +114,8 @@ export function HoursThisWeekCard({
       </div>
       <p className="mt-1 text-xs text-muted-foreground">
         {stats.remaining > 0
-          ? `${formatDuration(stats.remaining)} remaining`
-          : 'Target reached'}
+          ? t('remaining', { duration: formatDuration(stats.remaining) })
+          : t('targetReached')}
       </p>
 
       {/* Simple progress bar */}
@@ -131,9 +134,9 @@ export function HoursThisWeekCard({
           />
         </div>
         <div className="mt-1 flex justify-between text-xs text-muted-foreground">
-          <span>{stats.daysWorked} days</span>
+          <span>{t('daysCount', { count: stats.daysWorked })}</span>
           <span>
-            {formatMinutes(stats.totalTarget)} target
+            {formatMinutes(stats.totalTarget)} {t('target')}
           </span>
         </div>
       </div>

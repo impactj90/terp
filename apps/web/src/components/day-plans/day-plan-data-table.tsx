@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { useTranslations } from 'next-intl'
 import { MoreHorizontal, Eye, Edit, Trash2, Copy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -42,6 +43,8 @@ export function DayPlanDataTable({
   onDelete,
   onCopy,
 }: DayPlanDataTableProps) {
+  const t = useTranslations('adminDayPlans')
+
   if (isLoading) {
     return <DayPlanDataTableSkeleton />
   }
@@ -50,15 +53,15 @@ export function DayPlanDataTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-24">Code</TableHead>
-          <TableHead>Name</TableHead>
-          <TableHead className="w-24">Type</TableHead>
-          <TableHead className="w-32">Time Window</TableHead>
-          <TableHead className="w-24">Target</TableHead>
-          <TableHead className="w-20">Breaks</TableHead>
-          <TableHead className="w-20">Status</TableHead>
+          <TableHead className="w-24">{t('columnCode')}</TableHead>
+          <TableHead>{t('columnName')}</TableHead>
+          <TableHead className="w-24">{t('columnType')}</TableHead>
+          <TableHead className="w-32">{t('columnTimeWindow')}</TableHead>
+          <TableHead className="w-24">{t('columnTarget')}</TableHead>
+          <TableHead className="w-20">{t('columnBreaks')}</TableHead>
+          <TableHead className="w-20">{t('columnStatus')}</TableHead>
           <TableHead className="w-16">
-            <span className="sr-only">Actions</span>
+            <span className="sr-only">{t('srActions')}</span>
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -73,7 +76,7 @@ export function DayPlanDataTable({
             <TableCell className="font-medium">{dayPlan.name}</TableCell>
             <TableCell>
               <Badge variant={dayPlan.plan_type === 'fixed' ? 'secondary' : 'outline'}>
-                {dayPlan.plan_type === 'fixed' ? 'Fixed' : 'Flextime'}
+                {dayPlan.plan_type === 'fixed' ? t('typeFixed') : t('typeFlextime')}
               </Badge>
             </TableCell>
             <TableCell className="text-sm text-muted-foreground">
@@ -85,7 +88,7 @@ export function DayPlanDataTable({
             <TableCell>{dayPlan.breaks?.length ?? 0}</TableCell>
             <TableCell>
               <Badge variant={dayPlan.is_active ? 'default' : 'secondary'}>
-                {dayPlan.is_active ? 'Active' : 'Inactive'}
+                {dayPlan.is_active ? t('statusActive') : t('statusInactive')}
               </Badge>
             </TableCell>
             <TableCell onClick={(e) => e.stopPropagation()}>
@@ -93,21 +96,21 @@ export function DayPlanDataTable({
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                     <MoreHorizontal className="h-4 w-4" />
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{t('srActions')}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => onView(dayPlan)}>
                     <Eye className="mr-2 h-4 w-4" />
-                    View Details
+                    {t('actionViewDetails')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onEdit(dayPlan)}>
                     <Edit className="mr-2 h-4 w-4" />
-                    Edit
+                    {t('actionEdit')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onCopy(dayPlan)}>
                     <Copy className="mr-2 h-4 w-4" />
-                    Copy
+                    {t('actionCopy')}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -115,7 +118,7 @@ export function DayPlanDataTable({
                     onClick={() => onDelete(dayPlan)}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
+                    {t('actionDelete')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

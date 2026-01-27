@@ -2,6 +2,7 @@
 
 import { useEffect, type ReactNode } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { useAuth } from '@/providers/auth-provider'
 
 interface ProtectedRouteProps {
@@ -40,6 +41,7 @@ export function ProtectedRoute({
   loadingFallback,
 }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading } = useAuth()
+  const t = useTranslations('auth')
   const router = useRouter()
   const pathname = usePathname()
 
@@ -62,7 +64,7 @@ export function ProtectedRoute({
   if (isLoading) {
     return loadingFallback ?? (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="text-muted-foreground">Loading...</div>
+        <div className="text-muted-foreground">{t('loading')}</div>
       </div>
     )
   }
@@ -72,7 +74,7 @@ export function ProtectedRoute({
   if (!isAuthenticated) {
     return loadingFallback ?? (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="text-muted-foreground">Redirecting to login...</div>
+        <div className="text-muted-foreground">{t('redirectingToLogin')}</div>
       </div>
     )
   }

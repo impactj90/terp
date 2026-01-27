@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Lock, Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -34,6 +35,9 @@ export function CloseMonthSheet({
   month,
   monthLabel,
 }: CloseMonthSheetProps) {
+  const t = useTranslations('monthlyEvaluation')
+  const tc = useTranslations('common')
+
   const [recalculate, setRecalculate] = useState(true)
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -61,7 +65,7 @@ export function CloseMonthSheet({
       handleClose()
     } catch (err) {
       const apiError = err as { detail?: string; message?: string }
-      setError(apiError.detail ?? apiError.message ?? 'Failed to close month')
+      setError(apiError.detail ?? apiError.message ?? t('failedToClose'))
     }
   }
 
@@ -71,10 +75,10 @@ export function CloseMonthSheet({
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Lock className="h-5 w-5" />
-            Close Month
+            {t('closeMonth')}
           </SheetTitle>
           <SheetDescription>
-            Close {monthLabel} for final evaluation. This will lock all time entries for this period.
+            {t('closeDescription', { month: monthLabel })}
           </SheetDescription>
         </SheetHeader>
 
@@ -93,19 +97,19 @@ export function CloseMonthSheet({
             />
             <div className="space-y-1">
               <Label htmlFor="recalculate" className="cursor-pointer">
-                Recalculate before closing
+                {t('recalculateBeforeClosing')}
               </Label>
               <p className="text-sm text-muted-foreground">
-                Ensures all values are up-to-date before finalizing. Recommended.
+                {t('recalculateDescription')}
               </p>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes (optional)</Label>
+            <Label htmlFor="notes">{t('notesOptional')}</Label>
             <Textarea
               id="notes"
-              placeholder="Add any notes about this closing..."
+              placeholder={t('closingNotesPlaceholder')}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
@@ -113,15 +117,15 @@ export function CloseMonthSheet({
           </div>
 
           <div className="rounded-lg bg-muted p-4 space-y-2">
-            <h4 className="font-medium text-sm">What happens when you close:</h4>
+            <h4 className="font-medium text-sm">{t('whatHappens')}</h4>
             <ul className="text-sm text-muted-foreground space-y-1">
               <li className="flex items-center gap-2">
                 <RefreshCw className="h-3 w-3" />
-                {recalculate ? 'All values will be recalculated' : 'Values will not be recalculated'}
+                {recalculate ? t('willRecalculate') : t('willNotRecalculate')}
               </li>
-              <li>Time entries for this month will be locked</li>
-              <li>Monthly totals will be finalized</li>
-              <li>An admin can reopen if needed</li>
+              <li>{t('entriesLocked')}</li>
+              <li>{t('totalsFinalized')}</li>
+              <li>{t('adminCanReopen')}</li>
             </ul>
           </div>
         </div>
@@ -133,7 +137,7 @@ export function CloseMonthSheet({
             disabled={closeMutation.isPending}
             className="flex-1"
           >
-            Cancel
+            {tc('cancel')}
           </Button>
           <Button
             onClick={handleSubmit}
@@ -141,7 +145,7 @@ export function CloseMonthSheet({
             className="flex-1"
           >
             {closeMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Close Month
+            {t('closeMonth')}
           </Button>
         </SheetFooter>
       </SheetContent>

@@ -25,6 +25,15 @@ const (
 	HalfDayPeriodAfternoon HalfDayPeriod = "afternoon"
 )
 
+// AbsenceListOptions defines filters for listing absence days across all employees.
+type AbsenceListOptions struct {
+	EmployeeID    *uuid.UUID
+	AbsenceTypeID *uuid.UUID
+	Status        *AbsenceStatus
+	From          *time.Time
+	To            *time.Time
+}
+
 // AbsenceDay represents an employee absence record for a specific date.
 type AbsenceDay struct {
 	ID         uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`

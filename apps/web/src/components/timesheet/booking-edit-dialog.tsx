@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -58,6 +59,8 @@ export function BookingEditDialog({
   onOpenChange,
   onSuccess,
 }: BookingEditDialogProps) {
+  const t = useTranslations('timesheet')
+  const tc = useTranslations('common')
   const [editedTime, setEditedTime] = useState('')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -83,7 +86,7 @@ export function BookingEditDialog({
       // Validate time format
       const timeRegex = /^([0-1]?[0-9]|2[0-3]):([0-5][0-9])$/
       if (!timeRegex.test(editedTime)) {
-        setError('Invalid time format. Use HH:MM (e.g., 08:30)')
+        setError(t('invalidTimeFormat'))
         return
       }
 
@@ -100,7 +103,7 @@ export function BookingEditDialog({
       onOpenChange(false)
       onSuccess?.()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update booking')
+      setError(err instanceof Error ? err.message : t('failedToUpdate'))
     }
   }
 
@@ -110,9 +113,9 @@ export function BookingEditDialog({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent>
         <SheetHeader>
-          <SheetTitle>Edit Booking</SheetTitle>
+          <SheetTitle>{t('editBooking')}</SheetTitle>
           <SheetDescription>
-            {booking.booking_type?.name ?? 'Booking'} on {booking.booking_date}
+            {t('bookingOnDate', { type: booking.booking_type?.name ?? 'Booking', date: booking.booking_date })}
           </SheetDescription>
         </SheetHeader>
 
@@ -125,19 +128,19 @@ export function BookingEditDialog({
           )}
 
           <div className="space-y-2">
-            <Label>Original Time</Label>
+            <Label>{t('originalTime')}</Label>
             <Input
               value={minutesToTimeString(booking.original_time)}
               disabled
               className="font-mono"
             />
             <p className="text-xs text-muted-foreground">
-              Original time from terminal (cannot be changed)
+              {t('originalTimeHelp')}
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="editedTime">Edited Time</Label>
+            <Label htmlFor="editedTime">{t('editedTime')}</Label>
             <Input
               id="editedTime"
               value={editedTime}
@@ -146,31 +149,31 @@ export function BookingEditDialog({
               className="font-mono"
             />
             <p className="text-xs text-muted-foreground">
-              Time after manual corrections (HH:MM format)
+              {t('editedTimeHelp')}
             </p>
           </div>
 
           {booking.calculated_time !== undefined && booking.calculated_time !== null && (
             <div className="space-y-2">
-              <Label>Calculated Time</Label>
+              <Label>{t('calculatedTime')}</Label>
               <Input
                 value={minutesToTimeString(booking.calculated_time)}
                 disabled
                 className="font-mono"
               />
               <p className="text-xs text-muted-foreground">
-                Time after tolerance and rounding rules applied
+                {t('calculatedTimeHelp')}
               </p>
             </div>
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
+            <Label htmlFor="notes">{t('notes')}</Label>
             <Input
               id="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Optional notes..."
+              placeholder={t('optionalNotes')}
             />
           </div>
 
@@ -180,10 +183,10 @@ export function BookingEditDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              Cancel
+              {tc('cancel')}
             </Button>
             <Button type="submit" disabled={updateBooking.isPending}>
-              {updateBooking.isPending ? 'Saving...' : 'Save Changes'}
+              {updateBooking.isPending ? tc('saving') : tc('saveChanges')}
             </Button>
           </SheetFooter>
         </form>

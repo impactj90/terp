@@ -2,6 +2,7 @@
 
 import { type ReactNode } from 'react'
 import { Building2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { useTenant } from '@/providers/tenant-provider'
 import { Button } from '@/components/ui/button'
 import {
@@ -23,6 +24,7 @@ interface TenantGuardProps {
  * Shows a tenant selector if multiple tenants are available.
  */
 export function TenantGuard({ children, loadingFallback }: TenantGuardProps) {
+  const t = useTranslations('auth')
   const { hasTenant, isLoading, tenants, selectTenant } = useTenant()
 
   // Show loading state while fetching tenants
@@ -30,7 +32,7 @@ export function TenantGuard({ children, loadingFallback }: TenantGuardProps) {
     return (
       loadingFallback ?? (
         <div className="flex min-h-screen items-center justify-center">
-          <div className="text-muted-foreground">Loading...</div>
+          <div className="text-muted-foreground">{t('loading')}</div>
         </div>
       )
     )
@@ -45,10 +47,9 @@ export function TenantGuard({ children, loadingFallback }: TenantGuardProps) {
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
               <Building2 className="h-6 w-6" />
             </div>
-            <CardTitle>No Organization Found</CardTitle>
+            <CardTitle>{t('noOrganizationFound')}</CardTitle>
             <CardDescription>
-              You don&apos;t have access to any organizations. Please contact
-              your administrator.
+              {t('noOrganizationAccess')}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -69,9 +70,9 @@ export function TenantGuard({ children, loadingFallback }: TenantGuardProps) {
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Building2 className="h-6 w-6" />
           </div>
-          <CardTitle>Select Organization</CardTitle>
+          <CardTitle>{t('selectOrganization')}</CardTitle>
           <CardDescription>
-            Choose the organization you want to work with.
+            {t('selectOrganizationDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">

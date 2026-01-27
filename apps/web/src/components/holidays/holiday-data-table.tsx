@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { format } from 'date-fns'
+import { useTranslations } from 'next-intl'
 import { MoreHorizontal, Eye, Edit, Trash2, CalendarDays, Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -40,6 +41,8 @@ export function HolidayDataTable({
   onEdit,
   onDelete,
 }: HolidayDataTableProps) {
+  const t = useTranslations('adminHolidays')
+
   if (isLoading) {
     return <HolidayDataTableSkeleton />
   }
@@ -56,12 +59,12 @@ export function HolidayDataTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-32">Date</TableHead>
-          <TableHead>Name</TableHead>
-          <TableHead className="w-24">Type</TableHead>
-          <TableHead className="w-32">Applies To</TableHead>
+          <TableHead className="w-32">{t('columnDate')}</TableHead>
+          <TableHead>{t('columnName')}</TableHead>
+          <TableHead className="w-24">{t('columnType')}</TableHead>
+          <TableHead className="w-32">{t('columnScope')}</TableHead>
           <TableHead className="w-16">
-            <span className="sr-only">Actions</span>
+            <span className="sr-only">{t('actions')}</span>
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -85,16 +88,16 @@ export function HolidayDataTable({
             </TableCell>
             <TableCell>
               <Badge variant={holiday.is_half_day ? 'secondary' : 'default'}>
-                {holiday.is_half_day ? 'Half Day' : 'Full Day'}
+                {holiday.is_half_day ? t('halfDay') : t('fullDay')}
               </Badge>
             </TableCell>
             <TableCell>
               {holiday.applies_to_all ? (
-                <span className="text-muted-foreground">All</span>
+                <span className="text-muted-foreground">{t('scopeAll')}</span>
               ) : (
                 <div className="flex items-center gap-1">
                   <Building2 className="h-3 w-3" />
-                  <span className="text-sm">Department</span>
+                  <span className="text-sm">{t('scopeDepartment')}</span>
                 </div>
               )}
             </TableCell>
@@ -103,17 +106,17 @@ export function HolidayDataTable({
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon-sm">
                     <MoreHorizontal className="h-4 w-4" />
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{t('actions')}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => onView(holiday)}>
                     <Eye className="mr-2 h-4 w-4" />
-                    View Details
+                    {t('viewDetails')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onEdit(holiday)}>
                     <Edit className="mr-2 h-4 w-4" />
-                    Edit
+                    {t('edit')}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -121,7 +124,7 @@ export function HolidayDataTable({
                     onClick={() => onDelete(holiday)}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
+                    {t('delete')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

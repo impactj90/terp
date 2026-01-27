@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { useTranslations } from 'next-intl'
 import { MoreHorizontal, Eye, Edit, Trash2, Copy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -42,6 +43,8 @@ export function TariffDataTable({
   onDelete,
   onCopy,
 }: TariffDataTableProps) {
+  const t = useTranslations('adminTariffs')
+
   if (isLoading) {
     return <TariffDataTableSkeleton />
   }
@@ -50,15 +53,15 @@ export function TariffDataTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-24">Code</TableHead>
-          <TableHead>Name</TableHead>
-          <TableHead className="w-40">Week Plan</TableHead>
-          <TableHead className="w-28">Valid From</TableHead>
-          <TableHead className="w-28">Valid To</TableHead>
-          <TableHead className="w-20">Breaks</TableHead>
-          <TableHead className="w-20">Status</TableHead>
+          <TableHead className="w-24">{t('columnCode')}</TableHead>
+          <TableHead>{t('columnName')}</TableHead>
+          <TableHead className="w-40">{t('columnWeekPlan')}</TableHead>
+          <TableHead className="w-28">{t('columnValidFrom')}</TableHead>
+          <TableHead className="w-28">{t('columnValidTo')}</TableHead>
+          <TableHead className="w-20">{t('columnBreaks')}</TableHead>
+          <TableHead className="w-20">{t('columnStatus')}</TableHead>
           <TableHead className="w-16">
-            <span className="sr-only">Actions</span>
+            <span className="sr-only">{t('columnActions')}</span>
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -87,7 +90,7 @@ export function TariffDataTable({
             <TableCell>{tariff.breaks?.length ?? 0}</TableCell>
             <TableCell>
               <Badge variant={tariff.is_active ? 'default' : 'secondary'}>
-                {tariff.is_active ? 'Active' : 'Inactive'}
+                {tariff.is_active ? t('statusActive') : t('statusInactive')}
               </Badge>
             </TableCell>
             <TableCell onClick={(e) => e.stopPropagation()}>
@@ -95,21 +98,21 @@ export function TariffDataTable({
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                     <MoreHorizontal className="h-4 w-4" />
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{t('columnActions')}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => onView(tariff)}>
                     <Eye className="mr-2 h-4 w-4" />
-                    View Details
+                    {t('actionViewDetails')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onEdit(tariff)}>
                     <Edit className="mr-2 h-4 w-4" />
-                    Edit
+                    {t('actionEdit')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onCopy(tariff)}>
                     <Copy className="mr-2 h-4 w-4" />
-                    Copy
+                    {t('actionCopy')}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -117,7 +120,7 @@ export function TariffDataTable({
                     onClick={() => onDelete(tariff)}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
+                    {t('actionDelete')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

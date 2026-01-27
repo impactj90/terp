@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { Loader2, Search, UserPlus, X, UserMinus } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -50,6 +51,7 @@ export function MemberManagementSheet({
   open,
   onOpenChange,
 }: MemberManagementSheetProps) {
+  const t = useTranslations('adminTeams')
   const [search, setSearch] = React.useState('')
   const [error, setError] = React.useState<string | null>(null)
 
@@ -101,7 +103,7 @@ export function MemberManagementSheet({
       })
     } catch (err) {
       const apiError = err as { detail?: string; message?: string }
-      setError(apiError.detail ?? apiError.message ?? 'Failed to add member')
+      setError(apiError.detail ?? apiError.message ?? t('addMemberError'))
     }
   }
 
@@ -116,7 +118,7 @@ export function MemberManagementSheet({
       })
     } catch (err) {
       const apiError = err as { detail?: string; message?: string }
-      setError(apiError.detail ?? apiError.message ?? 'Failed to update role')
+      setError(apiError.detail ?? apiError.message ?? t('updateRoleError'))
     }
   }
 
@@ -130,7 +132,7 @@ export function MemberManagementSheet({
       })
     } catch (err) {
       const apiError = err as { detail?: string; message?: string }
-      setError(apiError.detail ?? apiError.message ?? 'Failed to remove member')
+      setError(apiError.detail ?? apiError.message ?? t('removeMemberError'))
     }
   }
 
@@ -141,9 +143,9 @@ export function MemberManagementSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-lg flex flex-col">
         <SheetHeader>
-          <SheetTitle>Manage Team Members</SheetTitle>
+          <SheetTitle>{t('manageMembersTitle')}</SheetTitle>
           <SheetDescription>
-            {team ? `Add or remove members from ${team.name}` : 'Manage team members'}
+            {team ? t('manageMembersDescription', { name: team.name }) : t('manageMembersDescriptionDefault')}
           </SheetDescription>
         </SheetHeader>
 
@@ -158,12 +160,12 @@ export function MemberManagementSheet({
           {/* Current Members Section */}
           <div className="mb-4">
             <h3 className="text-sm font-medium mb-2">
-              Current Members ({members.length})
+              {t('currentMembers', { count: members.length })}
             </h3>
             <ScrollArea className="h-[200px] border rounded-md">
               {members.length === 0 ? (
                 <div className="p-4 text-center text-muted-foreground text-sm">
-                  No members yet
+                  {t('noMembersYet')}
                 </div>
               ) : (
                 <div className="p-2 space-y-2">
@@ -183,7 +185,7 @@ export function MemberManagementSheet({
 
           {/* Add Members Section */}
           <div className="flex-1 min-h-0 flex flex-col">
-            <h3 className="text-sm font-medium mb-2">Add Members</h3>
+            <h3 className="text-sm font-medium mb-2">{t('addMembersSection')}</h3>
 
             {/* Search */}
             <div className="relative mb-2">
@@ -191,7 +193,7 @@ export function MemberManagementSheet({
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search employees..."
+                placeholder={t('searchEmployees')}
                 className="pl-9"
               />
               {search && (
@@ -211,11 +213,11 @@ export function MemberManagementSheet({
               {isLoading ? (
                 <div className="p-4 text-center text-muted-foreground text-sm">
                   <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
-                  Loading employees...
+                  {t('loadingEmployees')}
                 </div>
               ) : availableEmployees.length === 0 ? (
                 <div className="p-4 text-center text-muted-foreground text-sm">
-                  {search ? 'No employees match your search' : 'All employees are already members'}
+                  {search ? t('noEmployeesMatch') : t('allEmployeesMembers')}
                 </div>
               ) : (
                 <div className="p-2 space-y-1">
@@ -245,7 +247,7 @@ export function MemberManagementSheet({
                         disabled={isMutating}
                       >
                         <UserPlus className="h-4 w-4 mr-1" />
-                        Add
+                        {t('add')}
                       </Button>
                     </div>
                   ))}
@@ -267,6 +269,8 @@ interface MemberRowProps {
 }
 
 function MemberRow({ member, onRoleChange, onRemove, disabled }: MemberRowProps) {
+  const t = useTranslations('adminTeams')
+
   return (
     <div className="flex items-center justify-between p-2 rounded-md bg-muted/50">
       <div className="flex items-center gap-3">
@@ -278,7 +282,7 @@ function MemberRow({ member, onRoleChange, onRemove, disabled }: MemberRowProps)
           <p className="text-sm font-medium">
             {member.employee
               ? `${member.employee.first_name} ${member.employee.last_name}`
-              : 'Unknown'}
+              : t('unknown')}
           </p>
         </div>
       </div>
@@ -292,9 +296,9 @@ function MemberRow({ member, onRoleChange, onRemove, disabled }: MemberRowProps)
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="member">Member</SelectItem>
-            <SelectItem value="lead">Lead</SelectItem>
-            <SelectItem value="deputy">Deputy</SelectItem>
+            <SelectItem value="member">{t('roleMember')}</SelectItem>
+            <SelectItem value="lead">{t('roleLead')}</SelectItem>
+            <SelectItem value="deputy">{t('roleDeputy')}</SelectItem>
           </SelectContent>
         </Select>
         <Button

@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations, useLocale } from 'next-intl'
 import { CalendarDays, Sun, Umbrella } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
@@ -25,6 +26,8 @@ export function DayView({
   onAddBooking,
   onEditBooking,
 }: DayViewProps) {
+  const t = useTranslations('timesheet')
+  const locale = useLocale()
   const dateString = formatDate(date)
   const today = isToday(date)
   const weekend = isWeekend(date)
@@ -81,21 +84,21 @@ export function DayView({
             </h2>
             <div className="flex items-center gap-2">
               {today && (
-                <Badge variant="default" className="text-xs">Today</Badge>
+                <Badge variant="default" className="text-xs">{t('today')}</Badge>
               )}
               {weekend && (
-                <Badge variant="secondary" className="text-xs">Weekend</Badge>
+                <Badge variant="secondary" className="text-xs">{t('weekend')}</Badge>
               )}
               {dailyValue?.is_holiday && (
                 <Badge variant="secondary" className="text-xs">
                   <Sun className="h-3 w-3 mr-1" />
-                  Holiday
+                  {t('holiday')}
                 </Badge>
               )}
               {dailyValue?.is_absence && (
                 <Badge variant="outline" className="text-xs">
                   <Umbrella className="h-3 w-3 mr-1" />
-                  {dailyValue.absence_type?.name ?? 'Absence'}
+                  {dailyValue.absence_type?.name ?? t('absence')}
                 </Badge>
               )}
               <ErrorBadge errors={dailyValue?.errors as never} />
@@ -108,7 +111,7 @@ export function DayView({
           <div className="text-sm text-muted-foreground text-right">
             <div>{dailyValue.day_plan.name}</div>
             <div className="text-xs">
-              Target: {Math.floor((dailyValue.target_minutes ?? 0) / 60)}:{((dailyValue.target_minutes ?? 0) % 60).toString().padStart(2, '0')}
+              {t('targetLabel')} {Math.floor((dailyValue.target_minutes ?? 0) / 60)}:{((dailyValue.target_minutes ?? 0) % 60).toString().padStart(2, '0')}
             </div>
           </div>
         )}
@@ -116,7 +119,7 @@ export function DayView({
 
       {/* Bookings list */}
       <div>
-        <h3 className="text-sm font-medium mb-3">Bookings</h3>
+        <h3 className="text-sm font-medium mb-3">{t('bookings')}</h3>
         <BookingList
           bookings={transformedBookings}
           isLoading={isLoading}
@@ -129,7 +132,7 @@ export function DayView({
       {/* Daily summary */}
       {dailyValue && (
         <div className="pt-4 border-t">
-          <h3 className="text-sm font-medium mb-3">Daily Summary</h3>
+          <h3 className="text-sm font-medium mb-3">{t('dailySummary')}</h3>
           <DailySummary
             targetMinutes={dailyValue.target_minutes}
             grossMinutes={dailyValue.gross_minutes}
@@ -151,13 +154,13 @@ export function DayView({
       {/* Status indicators */}
       {dailyValue && (
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <span>Status: {dailyValue.status}</span>
+          <span>{t('statusLabel')}: {dailyValue.status}</span>
           {dailyValue.is_locked && (
-            <Badge variant="outline" className="text-xs">Locked</Badge>
+            <Badge variant="outline" className="text-xs">{t('locked')}</Badge>
           )}
           {dailyValue.calculated_at && (
             <span>
-              Calculated: {new Date(dailyValue.calculated_at).toLocaleString('de-DE')}
+              {t('calculated')} {new Date(dailyValue.calculated_at).toLocaleString(locale)}
             </span>
           )}
         </div>

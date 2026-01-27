@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -51,6 +52,7 @@ export function WeekView({
   employeeId,
   onDayClick,
 }: WeekViewProps) {
+  const t = useTranslations('timesheet')
   const dates = useMemo(() => getWeekDates(startDate), [startDate])
 
   // Fetch daily values for the week
@@ -100,13 +102,13 @@ export function WeekView({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[120px]">Day</TableHead>
-            <TableHead className="text-right">Target</TableHead>
-            <TableHead className="text-right">Gross</TableHead>
-            <TableHead className="text-right">Breaks</TableHead>
-            <TableHead className="text-right">Net</TableHead>
-            <TableHead className="text-right">Balance</TableHead>
-            <TableHead className="w-[60px]">Status</TableHead>
+            <TableHead className="w-[120px]">{t('dayHeader')}</TableHead>
+            <TableHead className="text-right">{t('target')}</TableHead>
+            <TableHead className="text-right">{t('gross')}</TableHead>
+            <TableHead className="text-right">{t('breaks')}</TableHead>
+            <TableHead className="text-right">{t('net')}</TableHead>
+            <TableHead className="text-right">{t('balance')}</TableHead>
+            <TableHead className="w-[60px]">{t('statusHeader')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -199,7 +201,7 @@ export function WeekView({
         </TableBody>
         <TableFooter>
           <TableRow>
-            <TableCell className="font-medium">Week Total</TableCell>
+            <TableCell className="font-medium">{t('weekTotal')}</TableCell>
             <TableCell className="text-right font-medium">
               <TimeDisplay value={weekTotals.target} format="duration" />
             </TableCell>

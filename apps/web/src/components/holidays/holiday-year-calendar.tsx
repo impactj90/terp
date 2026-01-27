@@ -1,6 +1,8 @@
 'use client'
 
 import * as React from 'react'
+import { useTranslations } from 'next-intl'
+import { useLocale } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { parseISODate, isWeekend, isToday } from '@/lib/time-utils'
 import type { components } from '@/lib/api/types'
@@ -14,13 +16,6 @@ interface HolidayYearCalendarProps {
   onDateClick?: (date: Date) => void
   className?: string
 }
-
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December'
-]
-
-const WEEK_DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
 function getMonthGrid(year: number, month: number): (Date | null)[][] {
   const firstDay = new Date(year, month, 1)
@@ -53,6 +48,19 @@ function getMonthGrid(year: number, month: number): (Date | null)[][] {
   return grid
 }
 
+function getLocaleWeekDays(locale: string): string[] {
+  // Generate narrow weekday names starting from Monday
+  // 2024-01-01 is a Monday
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(2024, 0, 1 + i)
+    return new Intl.DateTimeFormat(locale, { weekday: 'narrow' }).format(d)
+  })
+}
+
+function getLocaleMonthName(locale: string, year: number, month: number): string {
+  return new Intl.DateTimeFormat(locale, { month: 'long' }).format(new Date(year, month, 1))
+}
+
 function MonthMiniCalendar({
   year,
   month,
@@ -66,7 +74,10 @@ function MonthMiniCalendar({
   onHolidayClick?: (holiday: Holiday) => void
   onDateClick?: (date: Date) => void
 }) {
+  const locale = useLocale()
   const grid = React.useMemo(() => getMonthGrid(year, month), [year, month])
+  const weekDays = React.useMemo(() => getLocaleWeekDays(locale), [locale])
+  const monthName = React.useMemo(() => getLocaleMonthName(locale, year, month), [locale, year, month])
 
   const holidayMap = React.useMemo(() => {
     const map = new Map<string, Holiday>()
@@ -96,11 +107,11 @@ function MonthMiniCalendar({
 
   return (
     <div className="space-y-1">
-      <h3 className="text-sm font-medium text-center">{MONTH_NAMES[month]}</h3>
+      <h3 className="text-sm font-medium text-center">{monthName}</h3>
 
       {/* Week day headers */}
       <div className="grid grid-cols-7 gap-px">
-        {WEEK_DAYS.map((day, i) => (
+        {weekDays.map((day, i) => (
           <div
             key={i}
             className={cn(
@@ -161,6 +172,8 @@ export function HolidayYearCalendar({
   onDateClick,
   className,
 }: HolidayYearCalendarProps) {
+  const t = useTranslations('adminHolidays')
+
   return (
     <div className={cn('space-y-4', className)}>
       {/* Year grid - 4 columns x 3 rows */}
@@ -182,15 +195,15 @@ export function HolidayYearCalendar({
       <div className="flex flex-wrap gap-4 text-sm justify-center">
         <div className="flex items-center gap-2">
           <span className="h-4 w-4 rounded-sm bg-red-500" />
-          <span className="text-muted-foreground">Full Day Holiday</span>
+          <span className="text-muted-foreground">{t('legendFullDay')}</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="h-4 w-4 rounded-sm bg-red-200 dark:bg-red-900/50" />
-          <span className="text-muted-foreground">Half Day Holiday</span>
+          <span className="text-muted-foreground">{t('legendHalfDay')}</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="h-4 w-4 rounded-sm bg-muted/50" />
-          <span className="text-muted-foreground">Weekend</span>
+          <span className="text-muted-foreground">{t('legendWeekend')}</span>
         </div>
       </div>
     </div>

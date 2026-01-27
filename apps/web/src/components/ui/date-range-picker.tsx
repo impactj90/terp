@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { CalendarIcon, X } from 'lucide-react'
+import { useLocale, useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -32,7 +33,7 @@ interface DateRangePickerProps {
   className?: string
 }
 
-function formatDateRange(range: DateRange): string {
+function formatDateRange(range: DateRange, locale: string): string {
   if (!range.from) return ''
 
   const formatOptions: Intl.DateTimeFormatOptions = {
@@ -40,13 +41,13 @@ function formatDateRange(range: DateRange): string {
     day: 'numeric',
   }
 
-  const fromStr = range.from.toLocaleDateString('en-US', formatOptions)
+  const fromStr = range.from.toLocaleDateString(locale, formatOptions)
 
   if (!range.to) {
     return fromStr
   }
 
-  const toStr = range.to.toLocaleDateString('en-US', {
+  const toStr = range.to.toLocaleDateString(locale, {
     ...formatOptions,
     year: 'numeric',
   })
@@ -56,7 +57,7 @@ function formatDateRange(range: DateRange): string {
     return `${fromStr} - ${toStr}`
   }
 
-  const fromStrWithYear = range.from.toLocaleDateString('en-US', {
+  const fromStrWithYear = range.from.toLocaleDateString(locale, {
     ...formatOptions,
     year: 'numeric',
   })
@@ -66,7 +67,7 @@ function formatDateRange(range: DateRange): string {
 export function DateRangePicker({
   value,
   onChange,
-  placeholder = 'Select dates...',
+  placeholder,
   disabled = false,
   holidays = [],
   absences = [],
@@ -74,8 +75,12 @@ export function DateRangePicker({
   maxDate,
   className,
 }: DateRangePickerProps) {
+  const locale = useLocale()
+  const t = useTranslations('common')
   const [open, setOpen] = React.useState(false)
   const [month, setMonth] = React.useState(() => value?.from ?? new Date())
+
+  const effectivePlaceholder = placeholder ?? t('selectDateRange')
 
   // Update month when value changes externally
   React.useEffect(() => {
@@ -114,7 +119,7 @@ export function DateRangePicker({
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {hasValue ? formatDateRange(value!) : placeholder}
+          {hasValue ? formatDateRange(value!, locale) : effectivePlaceholder}
           {hasValue && (
             <span
               role="button"
@@ -129,7 +134,7 @@ export function DateRangePicker({
               className="ml-auto rounded-sm opacity-70 hover:opacity-100 focus:outline-none focus:ring-1 focus:ring-ring"
             >
               <X className="h-4 w-4" />
-              <span className="sr-only">Clear</span>
+              <span className="sr-only">{t('clear')}</span>
             </span>
           )}
         </Button>
@@ -148,7 +153,7 @@ export function DateRangePicker({
         />
         {value?.from && !value?.to && (
           <p className="px-3 pb-3 text-xs text-muted-foreground">
-            Click another date to complete the range
+            {t('clickToCompleteRange')}
           </p>
         )}
       </PopoverContent>

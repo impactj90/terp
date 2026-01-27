@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Calendar } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -48,6 +49,8 @@ export function TransactionHistory({
   year,
   className,
 }: TransactionHistoryProps) {
+  const t = useTranslations('vacation')
+  const tc = useTranslations('common')
   const from = year + '-01-01'
   const to = year + '-12-31'
 
@@ -79,12 +82,12 @@ export function TransactionHistory({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
-            Vacation History
+            {t('historyTitle')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-destructive">
-            Failed to load vacation history
+            {t('failedToLoadHistory')}
           </p>
         </CardContent>
       </Card>
@@ -96,23 +99,23 @@ export function TransactionHistory({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Calendar className="h-5 w-5" />
-          Vacation History {year}
+          {t('historyTitleYear', { year })}
         </CardTitle>
       </CardHeader>
       <CardContent>
         {sortedAbsences.length === 0 ? (
           <p className="py-6 text-center text-muted-foreground">
-            No vacation records for {year}
+            {t('noRecords', { year })}
           </p>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead className="text-right">Duration</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Notes</TableHead>
+                <TableHead>{t('date')}</TableHead>
+                <TableHead>{t('type')}</TableHead>
+                <TableHead className="text-right">{t('durationHeader')}</TableHead>
+                <TableHead>{t('status')}</TableHead>
+                <TableHead>{tc('notes')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -128,10 +131,10 @@ export function TransactionHistory({
                   </TableCell>
                   <TableCell className="text-right">
                     {absence.duration === 1
-                      ? '1 day'
+                      ? t('oneDay')
                       : absence.duration === 0.5
-                        ? 'Half day'
-                        : absence.duration + ' days'}
+                        ? t('halfDay')
+                        : t('countDays', { count: absence.duration })}
                   </TableCell>
                   <TableCell>
                     <StatusBadge status={absence.status ?? 'pending'} />

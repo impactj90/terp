@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { format } from 'date-fns'
+import { useTranslations } from 'next-intl'
 import { Edit, Trash2, CalendarDays, Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -49,6 +50,7 @@ export function HolidayDetailSheet({
   onEdit,
   onDelete,
 }: HolidayDetailSheetProps) {
+  const t = useTranslations('adminHolidays')
   const { data: holiday, isLoading } = useHoliday(holidayId || '', open && !!holidayId)
 
   // Fetch department details if holiday is department-specific
@@ -71,8 +73,8 @@ export function HolidayDetailSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-lg flex flex-col">
         <SheetHeader>
-          <SheetTitle>Holiday Details</SheetTitle>
-          <SheetDescription>View holiday information</SheetDescription>
+          <SheetTitle>{t('holidayDetails')}</SheetTitle>
+          <SheetDescription>{t('viewHolidayInfo')}</SheetDescription>
         </SheetHeader>
 
         {isLoading ? (
@@ -98,21 +100,21 @@ export function HolidayDetailSheet({
                   </p>
                 </div>
                 <Badge variant={holiday.is_half_day ? 'secondary' : 'default'}>
-                  {holiday.is_half_day ? 'Half Day' : 'Full Day'}
+                  {holiday.is_half_day ? t('halfDay') : t('fullDay')}
                 </Badge>
               </div>
 
               {/* Details */}
               <div className="space-y-2">
-                <h4 className="text-sm font-medium text-muted-foreground">Details</h4>
+                <h4 className="text-sm font-medium text-muted-foreground">{t('detailsSection')}</h4>
                 <div className="rounded-lg border p-4">
-                  <DetailRow label="Date" value={formatDateDisplay(holiday.holiday_date)} />
-                  <DetailRow label="Name" value={holiday.name} />
+                  <DetailRow label={t('fieldDate')} value={formatDateDisplay(holiday.holiday_date)} />
+                  <DetailRow label={t('fieldName')} value={holiday.name} />
                   <DetailRow
-                    label="Type"
+                    label={t('fieldType')}
                     value={
                       <Badge variant={holiday.is_half_day ? 'secondary' : 'default'}>
-                        {holiday.is_half_day ? 'Half Day' : 'Full Day'}
+                        {holiday.is_half_day ? t('halfDay') : t('fullDay')}
                       </Badge>
                     }
                   />
@@ -121,33 +123,33 @@ export function HolidayDetailSheet({
 
               {/* Scope */}
               <div className="space-y-2">
-                <h4 className="text-sm font-medium text-muted-foreground">Scope</h4>
+                <h4 className="text-sm font-medium text-muted-foreground">{t('scopeSection')}</h4>
                 <div className="rounded-lg border p-4">
                   <DetailRow
-                    label="Applies To"
+                    label={t('labelAppliesTo')}
                     value={
                       holiday.applies_to_all ? (
-                        'All Employees'
+                        t('allEmployees')
                       ) : (
                         <div className="flex items-center gap-1">
                           <Building2 className="h-3 w-3" />
-                          <span>{department?.name || 'Specific Department'}</span>
+                          <span>{department?.name || t('specificDepartment')}</span>
                         </div>
                       )
                     }
                   />
                   {!holiday.applies_to_all && department && (
-                    <DetailRow label="Department" value={`${department.name} (${department.code})`} />
+                    <DetailRow label={t('fieldDepartment')} value={`${department.name} (${department.code})`} />
                   )}
                 </div>
               </div>
 
               {/* Timestamps */}
               <div className="space-y-2">
-                <h4 className="text-sm font-medium text-muted-foreground">Timestamps</h4>
+                <h4 className="text-sm font-medium text-muted-foreground">{t('timestampsSection')}</h4>
                 <div className="rounded-lg border p-4">
-                  <DetailRow label="Created" value={formatDateTime(holiday.created_at)} />
-                  <DetailRow label="Last Updated" value={formatDateTime(holiday.updated_at)} />
+                  <DetailRow label={t('labelCreated')} value={formatDateTime(holiday.created_at)} />
+                  <DetailRow label={t('labelLastUpdated')} value={formatDateTime(holiday.updated_at)} />
                 </div>
               </div>
             </div>
@@ -156,17 +158,17 @@ export function HolidayDetailSheet({
 
         <SheetFooter className="flex-row gap-2 border-t pt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
-            Close
+            {t('close')}
           </Button>
           {holiday && (
             <>
               <Button variant="outline" onClick={() => onEdit(holiday)}>
                 <Edit className="mr-2 h-4 w-4" />
-                Edit
+                {t('edit')}
               </Button>
               <Button variant="destructive" onClick={() => onDelete(holiday)}>
                 <Trash2 className="mr-2 h-4 w-4" />
-                Delete
+                {t('delete')}
               </Button>
             </>
           )}

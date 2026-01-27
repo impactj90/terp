@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl'
 import { Clock, ArrowRight, Edit } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -35,6 +36,7 @@ export function BookingPair({
   onEdit,
   className,
 }: BookingPairProps) {
+  const t = useTranslations('timesheet')
   const hasInBooking = !!inBooking
   const hasOutBooking = !!outBooking
   const isPaired = hasInBooking && hasOutBooking
@@ -71,7 +73,7 @@ export function BookingPair({
             )}
           </div>
         ) : (
-          <span className="text-sm text-yellow-600 italic">Missing IN booking</span>
+          <span className="text-sm text-yellow-600 italic">{t('missingInBooking')}</span>
         )}
       </div>
 
@@ -97,7 +99,7 @@ export function BookingPair({
             )}
           </div>
         ) : (
-          <span className="text-sm text-yellow-600 italic">Missing OUT booking</span>
+          <span className="text-sm text-yellow-600 italic">{t('missingOutBooking')}</span>
         )}
       </div>
 
@@ -116,7 +118,7 @@ export function BookingPair({
               variant="ghost"
               size="icon-xs"
               onClick={() => onEdit?.(inBooking)}
-              aria-label="Edit IN booking"
+              aria-label={t('editInBooking')}
             >
               <Edit className="h-3 w-3" />
             </Button>
@@ -126,7 +128,7 @@ export function BookingPair({
               variant="ghost"
               size="icon-xs"
               onClick={() => onEdit?.(outBooking)}
-              aria-label="Edit OUT booking"
+              aria-label={t('editOutBooking')}
             >
               <Edit className="h-3 w-3" />
             </Button>

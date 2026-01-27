@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { useTranslations } from 'next-intl'
 import { MoreHorizontal, Eye, Edit, Trash2, Copy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -83,6 +84,8 @@ export function WeekPlanDataTable({
   onDelete,
   onCopy,
 }: WeekPlanDataTableProps) {
+  const t = useTranslations('adminWeekPlans')
+
   if (isLoading) {
     return <WeekPlanDataTableSkeleton />
   }
@@ -91,19 +94,19 @@ export function WeekPlanDataTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-24">Code</TableHead>
-          <TableHead>Name</TableHead>
-          <TableHead className="w-16 text-center">Mon</TableHead>
-          <TableHead className="w-16 text-center">Tue</TableHead>
-          <TableHead className="w-16 text-center">Wed</TableHead>
-          <TableHead className="w-16 text-center">Thu</TableHead>
-          <TableHead className="w-16 text-center">Fri</TableHead>
-          <TableHead className="w-16 text-center text-muted-foreground">Sat</TableHead>
-          <TableHead className="w-16 text-center text-muted-foreground">Sun</TableHead>
-          <TableHead className="w-20 text-center">Days</TableHead>
-          <TableHead className="w-20">Status</TableHead>
+          <TableHead className="w-24">{t('columnCode')}</TableHead>
+          <TableHead>{t('columnName')}</TableHead>
+          <TableHead className="w-16 text-center">{t('mon')}</TableHead>
+          <TableHead className="w-16 text-center">{t('tue')}</TableHead>
+          <TableHead className="w-16 text-center">{t('wed')}</TableHead>
+          <TableHead className="w-16 text-center">{t('thu')}</TableHead>
+          <TableHead className="w-16 text-center">{t('fri')}</TableHead>
+          <TableHead className="w-16 text-center text-muted-foreground">{t('sat')}</TableHead>
+          <TableHead className="w-16 text-center text-muted-foreground">{t('sun')}</TableHead>
+          <TableHead className="w-20 text-center">{t('columnDays')}</TableHead>
+          <TableHead className="w-20">{t('columnStatus')}</TableHead>
           <TableHead className="w-16">
-            <span className="sr-only">Actions</span>
+            <span className="sr-only">{t('srActions')}</span>
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -142,7 +145,7 @@ export function WeekPlanDataTable({
             </TableCell>
             <TableCell>
               <Badge variant={weekPlan.is_active ? 'default' : 'secondary'}>
-                {weekPlan.is_active ? 'Active' : 'Inactive'}
+                {weekPlan.is_active ? t('statusActive') : t('statusInactive')}
               </Badge>
             </TableCell>
             <TableCell onClick={(e) => e.stopPropagation()}>
@@ -150,21 +153,21 @@ export function WeekPlanDataTable({
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                     <MoreHorizontal className="h-4 w-4" />
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{t('srActions')}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => onView(weekPlan)}>
                     <Eye className="mr-2 h-4 w-4" />
-                    View Details
+                    {t('actionViewDetails')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onEdit(weekPlan)}>
                     <Edit className="mr-2 h-4 w-4" />
-                    Edit
+                    {t('actionEdit')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onCopy(weekPlan)}>
                     <Copy className="mr-2 h-4 w-4" />
-                    Copy
+                    {t('actionCopy')}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -172,7 +175,7 @@ export function WeekPlanDataTable({
                     onClick={() => onDelete(weekPlan)}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
+                    {t('actionDelete')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

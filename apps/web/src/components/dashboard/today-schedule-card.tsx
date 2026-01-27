@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Clock, AlertCircle, RefreshCw, Sun, Moon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -20,6 +21,8 @@ export function TodayScheduleCard({
   employeeId,
   className,
 }: TodayScheduleCardProps) {
+  const t = useTranslations('dashboard')
+  const tc = useTranslations('common')
   const today = getToday()
 
   const {
@@ -38,12 +41,12 @@ export function TodayScheduleCard({
       <div className={cn('rounded-lg border bg-card p-6', className)}>
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-muted-foreground">
-            Today&apos;s Schedule
+            {t('todaysSchedule')}
           </span>
           <AlertCircle className="h-4 w-4 text-destructive" aria-hidden="true" />
         </div>
         <div className="mt-2">
-          <p className="text-sm text-destructive">Failed to load</p>
+          <p className="text-sm text-destructive">{tc('failedToLoad')}</p>
         </div>
         <Button
           variant="ghost"
@@ -52,7 +55,7 @@ export function TodayScheduleCard({
           className="mt-2 h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
         >
           <RefreshCw className="mr-1 h-3 w-3" />
-          Retry
+          {tc('retry')}
         </Button>
       </div>
     )
@@ -88,28 +91,28 @@ export function TodayScheduleCard({
   // Format status badge
   const getStatusBadge = () => {
     if (isHoliday) {
-      return <Badge variant="secondary">Holiday</Badge>
+      return <Badge variant="secondary">{t('holiday')}</Badge>
     }
     if (isWeekend) {
-      return <Badge variant="secondary">Weekend</Badge>
+      return <Badge variant="secondary">{t('weekend')}</Badge>
     }
     if (isAbsence) {
-      return <Badge variant="secondary">Absence</Badge>
+      return <Badge variant="secondary">{t('absence')}</Badge>
     }
     if (isClockedIn) {
-      return <Badge className="bg-green-500 text-white hover:bg-green-500">Clocked In</Badge>
+      return <Badge className="bg-green-500 text-white hover:bg-green-500">{t('clockedIn')}</Badge>
     }
     if (bookings.length > 0) {
-      return <Badge variant="outline">Completed</Badge>
+      return <Badge variant="outline">{t('completed')}</Badge>
     }
-    return <Badge variant="outline">Not Started</Badge>
+    return <Badge variant="outline">{t('notStarted')}</Badge>
   }
 
   return (
     <div className={cn('rounded-lg border bg-card p-6', className)}>
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-muted-foreground">
-          Today&apos;s Schedule
+          {t('todaysSchedule')}
         </span>
         <Clock className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
       </div>
@@ -118,7 +121,7 @@ export function TodayScheduleCard({
       <div className="mt-2 flex items-center justify-between">
         {getStatusBadge()}
         <span className="text-sm text-muted-foreground">
-          {formatMinutes(targetMinutes)} target
+          {formatMinutes(targetMinutes)} {t('target')}
         </span>
       </div>
 
@@ -128,7 +131,7 @@ export function TodayScheduleCard({
           {firstIn && (
             <div className="flex items-center gap-2 text-sm">
               <Sun className="h-3.5 w-3.5 text-amber-500" />
-              <span className="text-muted-foreground">In:</span>
+              <span className="text-muted-foreground">{t('inLabel')}</span>
               <span className="font-medium">
                 {firstIn.time_string ?? formatTime(firstIn.edited_time)}
               </span>
@@ -137,7 +140,7 @@ export function TodayScheduleCard({
           {lastOut && !isClockedIn && (
             <div className="flex items-center gap-2 text-sm">
               <Moon className="h-3.5 w-3.5 text-blue-500" />
-              <span className="text-muted-foreground">Out:</span>
+              <span className="text-muted-foreground">{t('outLabel')}</span>
               <span className="font-medium">
                 {lastOut.time_string ?? formatTime(lastOut.edited_time)}
               </span>
@@ -145,15 +148,15 @@ export function TodayScheduleCard({
           )}
           {netMinutes > 0 && (
             <div className="mt-2 text-sm text-muted-foreground">
-              Worked: <span className="font-medium text-foreground">{formatMinutes(netMinutes)}</span>
+              {t('worked')} <span className="font-medium text-foreground">{formatMinutes(netMinutes)}</span>
             </div>
           )}
         </div>
       ) : (
         <p className="mt-3 text-sm text-muted-foreground">
           {isHoliday || isWeekend || isAbsence
-            ? 'No work scheduled'
-            : 'No bookings yet'}
+            ? t('noWorkScheduled')
+            : t('noBookingsYet')}
         </p>
       )}
 
@@ -161,7 +164,7 @@ export function TodayScheduleCard({
       {dailyValue?.has_errors && (
         <div className="mt-2 flex items-center gap-1 text-xs text-amber-600 dark:text-amber-500">
           <AlertCircle className="h-3 w-3" />
-          <span>Needs attention</span>
+          <span>{t('needsAttention')}</span>
         </div>
       )}
     </div>

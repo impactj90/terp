@@ -1,7 +1,7 @@
 'use client'
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
+import { Link, usePathname } from '@/i18n/navigation'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -23,7 +23,9 @@ interface SidebarNavItemProps {
 export function SidebarNavItem({ item }: SidebarNavItemProps) {
   const pathname = usePathname()
   const { isCollapsed } = useSidebar()
+  const t = useTranslations('nav')
 
+  const title = t(item.titleKey as Parameters<typeof t>[0])
   const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
   const Icon = item.icon
 
@@ -40,12 +42,12 @@ export function SidebarNavItem({ item }: SidebarNavItemProps) {
         isCollapsed && 'justify-center px-2'
       )}
       aria-current={isActive ? 'page' : undefined}
-      aria-label={isCollapsed ? item.title : undefined}
+      aria-label={isCollapsed ? title : undefined}
     >
       <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
       {!isCollapsed && (
         <>
-          <span className="truncate">{item.title}</span>
+          <span className="truncate">{title}</span>
           {item.badge !== undefined && item.badge > 0 && (
             <Badge
               variant="secondary"
@@ -72,7 +74,7 @@ export function SidebarNavItem({ item }: SidebarNavItemProps) {
           <div className="relative">{content}</div>
         </TooltipTrigger>
         <TooltipContent side="right" className="flex items-center gap-2">
-          {item.title}
+          {title}
           {item.badge !== undefined && item.badge > 0 && (
             <Badge variant="secondary" className="h-5 px-1.5 text-xs">
               {item.badge}

@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { useTranslations } from 'next-intl'
 import { Edit, Trash2, Copy, CalendarDays } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -30,13 +31,13 @@ interface WeekPlanDetailSheetProps {
 }
 
 const DAYS = [
-  { key: 'monday', label: 'Monday', short: 'Mon', planKey: 'monday_day_plan' as const, weekend: false },
-  { key: 'tuesday', label: 'Tuesday', short: 'Tue', planKey: 'tuesday_day_plan' as const, weekend: false },
-  { key: 'wednesday', label: 'Wednesday', short: 'Wed', planKey: 'wednesday_day_plan' as const, weekend: false },
-  { key: 'thursday', label: 'Thursday', short: 'Thu', planKey: 'thursday_day_plan' as const, weekend: false },
-  { key: 'friday', label: 'Friday', short: 'Fri', planKey: 'friday_day_plan' as const, weekend: false },
-  { key: 'saturday', label: 'Saturday', short: 'Sat', planKey: 'saturday_day_plan' as const, weekend: true },
-  { key: 'sunday', label: 'Sunday', short: 'Sun', planKey: 'sunday_day_plan' as const, weekend: true },
+  { key: 'monday', labelKey: 'monday' as const, shortKey: 'mon' as const, planKey: 'monday_day_plan' as const, weekend: false },
+  { key: 'tuesday', labelKey: 'tuesday' as const, shortKey: 'tue' as const, planKey: 'tuesday_day_plan' as const, weekend: false },
+  { key: 'wednesday', labelKey: 'wednesday' as const, shortKey: 'wed' as const, planKey: 'wednesday_day_plan' as const, weekend: false },
+  { key: 'thursday', labelKey: 'thursday' as const, shortKey: 'thu' as const, planKey: 'thursday_day_plan' as const, weekend: false },
+  { key: 'friday', labelKey: 'friday' as const, shortKey: 'fri' as const, planKey: 'friday_day_plan' as const, weekend: false },
+  { key: 'saturday', labelKey: 'saturday' as const, shortKey: 'sat' as const, planKey: 'saturday_day_plan' as const, weekend: true },
+  { key: 'sunday', labelKey: 'sunday' as const, shortKey: 'sun' as const, planKey: 'sunday_day_plan' as const, weekend: true },
 ]
 
 function countWorkDays(weekPlan: WeekPlan): number {
@@ -60,6 +61,7 @@ export function WeekPlanDetailSheet({
   onDelete,
   onCopy,
 }: WeekPlanDetailSheetProps) {
+  const t = useTranslations('adminWeekPlans')
   const { data: weekPlan, isLoading } = useWeekPlan(weekPlanId ?? '', open && !!weekPlanId)
 
   return (
@@ -75,7 +77,7 @@ export function WeekPlanDetailSheet({
                   <SheetTitle className="flex items-center gap-2">
                     {weekPlan.name}
                     <Badge variant={weekPlan.is_active ? 'default' : 'secondary'}>
-                      {weekPlan.is_active ? 'Active' : 'Inactive'}
+                      {weekPlan.is_active ? t('statusActive') : t('statusInactive')}
                     </Badge>
                   </SheetTitle>
                   <SheetDescription className="mt-1">
@@ -88,17 +90,17 @@ export function WeekPlanDetailSheet({
             <ScrollArea className="flex-1 -mx-6 px-6 mt-4">
               <div className="space-y-6">
                 {/* Visual Week Grid */}
-                <Section title="Week Schedule" icon={CalendarDays}>
+                <Section title={t('sectionWeekSchedule')} icon={CalendarDays}>
                   <WeekGrid weekPlan={weekPlan} />
                 </Section>
 
                 {/* Summary */}
                 <div className="border rounded-lg p-4 bg-muted/30">
-                  <h4 className="text-sm font-medium mb-3">Summary</h4>
+                  <h4 className="text-sm font-medium mb-3">{t('sectionSummary')}</h4>
                   <div className="space-y-2">
-                    <DetailRow label="Work Days" value={`${countWorkDays(weekPlan)}/7`} />
+                    <DetailRow label={t('labelWorkDays')} value={`${countWorkDays(weekPlan)}/7`} />
                     {weekPlan.description && (
-                      <DetailRow label="Description" value={weekPlan.description} />
+                      <DetailRow label={t('fieldDescription')} value={weekPlan.description} />
                     )}
                   </div>
                 </div>
@@ -108,11 +110,11 @@ export function WeekPlanDetailSheet({
             <div className="flex gap-2 mt-4 border-t pt-4">
               <Button variant="outline" className="flex-1" onClick={() => onEdit(weekPlan)}>
                 <Edit className="mr-2 h-4 w-4" />
-                Edit
+                {t('actionEdit')}
               </Button>
               <Button variant="outline" onClick={() => onCopy(weekPlan)}>
                 <Copy className="mr-2 h-4 w-4" />
-                Copy
+                {t('actionCopy')}
               </Button>
               <Button
                 variant="outline"
@@ -124,7 +126,7 @@ export function WeekPlanDetailSheet({
             </div>
           </>
         ) : (
-          <div className="text-center py-8 text-muted-foreground">Week plan not found</div>
+          <div className="text-center py-8 text-muted-foreground">{t('notFound')}</div>
         )}
       </SheetContent>
     </Sheet>
@@ -132,6 +134,8 @@ export function WeekPlanDetailSheet({
 }
 
 function WeekGrid({ weekPlan }: { weekPlan: WeekPlan }) {
+  const t = useTranslations('adminWeekPlans')
+
   return (
     <div className="grid grid-cols-7 gap-2">
       {DAYS.map((day) => {
@@ -149,6 +153,8 @@ function DayCard({
   day: (typeof DAYS)[0]
   dayPlan: DayPlanSummary | null | undefined
 }) {
+  const t = useTranslations('adminWeekPlans')
+
   return (
     <div
       className={cn(
@@ -157,7 +163,7 @@ function DayCard({
         !dayPlan && 'opacity-60'
       )}
     >
-      <div className="text-xs font-medium text-muted-foreground mb-2">{day.short}</div>
+      <div className="text-xs font-medium text-muted-foreground mb-2">{t(day.shortKey as Parameters<typeof t>[0])}</div>
       {dayPlan ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-1">
           <Badge variant="outline" className="text-xs">
@@ -170,12 +176,12 @@ function DayCard({
             {dayPlan.name}
           </div>
           <div className="text-xs text-muted-foreground">
-            {dayPlan.plan_type === 'fixed' ? 'Fixed' : 'Flex'}
+            {dayPlan.plan_type === 'fixed' ? t('typeFixed') : t('typeFlex')}
           </div>
         </div>
       ) : (
         <div className="flex-1 flex items-center justify-center">
-          <span className="text-xs text-muted-foreground">Off</span>
+          <span className="text-xs text-muted-foreground">{t('off')}</span>
         </div>
       )}
     </div>

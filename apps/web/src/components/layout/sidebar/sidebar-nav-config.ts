@@ -6,6 +6,7 @@ import {
   CalendarDays,
   CalendarRange,
   CalendarHeart,
+  ClipboardCheck,
   Users,
   UsersRound,
   Building2,
@@ -17,6 +18,7 @@ import {
   UserCog,
   Shield,
   ScrollText,
+  Wallet,
 } from 'lucide-react'
 import type { UserRole } from '@/hooks/use-has-role'
 
@@ -24,8 +26,8 @@ import type { UserRole } from '@/hooks/use-has-role'
  * Navigation item configuration
  */
 export interface NavItem {
-  /** Display title */
-  title: string
+  /** Translation key in 'nav' namespace */
+  titleKey: string
   /** Navigation href */
   href: string
   /** Lucide icon component */
@@ -34,16 +36,14 @@ export interface NavItem {
   roles?: UserRole[]
   /** Optional badge count */
   badge?: number
-  /** Optional description for accessibility */
-  description?: string
 }
 
 /**
  * Navigation section configuration
  */
 export interface NavSection {
-  /** Section title (shown when expanded) */
-  title: string
+  /** Translation key in 'nav' namespace */
+  titleKey: string
   /** Required roles to see this section (if undefined, all roles can see) */
   roles?: UserRole[]
   /** Navigation items in this section */
@@ -56,152 +56,149 @@ export interface NavSection {
  */
 export const navConfig: NavSection[] = [
   {
-    title: 'Main',
+    titleKey: 'main',
     items: [
       {
-        title: 'Dashboard',
+        titleKey: 'dashboard',
         href: '/dashboard',
         icon: LayoutDashboard,
-        description: 'Overview and quick stats',
       },
       {
-        title: 'Time Clock',
+        titleKey: 'teamOverview',
+        href: '/team-overview',
+        icon: UsersRound,
+      },
+      {
+        titleKey: 'timeClock',
         href: '/time-clock',
         icon: Clock,
-        description: 'Clock in and out',
       },
       {
-        title: 'Timesheet',
+        titleKey: 'timesheet',
         href: '/timesheet',
         icon: Calendar,
-        description: 'View and edit time entries',
       },
       {
-        title: 'Absences',
+        titleKey: 'absences',
         href: '/absences',
         icon: CalendarOff,
-        description: 'Request and view absences',
       },
       {
-        title: 'Vacation',
+        titleKey: 'vacation',
         href: '/vacation',
         icon: Palmtree,
-        description: 'View vacation balance and history',
       },
       {
-        title: 'Monthly Evaluation',
+        titleKey: 'monthlyEvaluation',
         href: '/monthly-evaluation',
         icon: FileText,
-        description: 'Monthly time evaluation and closing',
       },
       {
-        title: 'Year Overview',
+        titleKey: 'yearOverview',
         href: '/year-overview',
         icon: CalendarRange,
-        description: 'View year summary with monthly metrics',
       },
     ],
   },
   {
-    title: 'Management',
+    titleKey: 'management',
     roles: ['admin'],
     items: [
       {
-        title: 'Employees',
+        titleKey: 'approvals',
+        href: '/admin/approvals',
+        icon: ClipboardCheck,
+        roles: ['admin'],
+      },
+      {
+        titleKey: 'employees',
         href: '/admin/employees',
         icon: Users,
         roles: ['admin'],
-        description: 'Manage employee records',
       },
       {
-        title: 'Teams',
+        titleKey: 'teams',
         href: '/admin/teams',
         icon: UsersRound,
         roles: ['admin'],
-        description: 'Manage teams and members',
       },
       {
-        title: 'Departments',
+        titleKey: 'departments',
         href: '/admin/departments',
         icon: Building2,
         roles: ['admin'],
-        description: 'Manage departments',
       },
       {
-        title: 'Employment Types',
+        titleKey: 'employmentTypes',
         href: '/admin/employment-types',
         icon: Briefcase,
         roles: ['admin'],
-        description: 'Configure employment types',
       },
       {
-        title: 'Day Plans',
+        titleKey: 'dayPlans',
         href: '/admin/day-plans',
         icon: CalendarDays,
         roles: ['admin'],
-        description: 'Configure daily work schedules',
       },
       {
-        title: 'Week Plans',
+        titleKey: 'weekPlans',
         href: '/admin/week-plans',
         icon: CalendarRange,
         roles: ['admin'],
-        description: 'Configure weekly work schedules',
       },
       {
-        title: 'Tariffs',
+        titleKey: 'tariffs',
         href: '/admin/tariffs',
         icon: ScrollText,
         roles: ['admin'],
-        description: 'Manage employment contract terms',
       },
       {
-        title: 'Holidays',
+        titleKey: 'holidays',
         href: '/admin/holidays',
         icon: CalendarHeart,
         roles: ['admin'],
-        description: 'Manage public holidays',
       },
       {
-        title: 'Absence Types',
+        titleKey: 'absenceTypes',
         href: '/admin/absence-types',
         icon: CalendarOff,
         roles: ['admin'],
-        description: 'Manage absence type configurations',
+      },
+      {
+        titleKey: 'accounts',
+        href: '/admin/accounts',
+        icon: Wallet,
+        roles: ['admin'],
       },
     ],
   },
   {
-    title: 'Administration',
+    titleKey: 'administration',
     roles: ['admin'],
     items: [
       {
-        title: 'Users',
+        titleKey: 'users',
         href: '/admin/users',
         icon: UserCog,
         roles: ['admin'],
-        description: 'Manage user accounts',
       },
       {
-        title: 'Reports',
+        titleKey: 'reports',
         href: '/admin/reports',
         icon: FileText,
         roles: ['admin'],
-        description: 'View and export reports',
       },
       {
-        title: 'Settings',
+        titleKey: 'settings',
         href: '/admin/settings',
         icon: Settings,
         roles: ['admin'],
-        description: 'System settings',
       },
       {
-        title: 'Tenants',
+        titleKey: 'tenants',
         href: '/admin/tenants',
         icon: Shield,
         roles: ['admin'],
-        description: 'Manage organizations',
       },
     ],
   },
@@ -213,22 +210,22 @@ export const navConfig: NavSection[] = [
  */
 export const mobileNavItems: NavItem[] = [
   {
-    title: 'Dashboard',
+    titleKey: 'dashboard',
     href: '/dashboard',
     icon: LayoutDashboard,
   },
   {
-    title: 'Time',
+    titleKey: 'time',
     href: '/time-clock',
     icon: Clock,
   },
   {
-    title: 'Timesheet',
+    titleKey: 'timesheet',
     href: '/timesheet',
     icon: Calendar,
   },
   {
-    title: 'Absences',
+    titleKey: 'absences',
     href: '/absences',
     icon: CalendarOff,
   },

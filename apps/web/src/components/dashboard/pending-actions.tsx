@@ -1,7 +1,8 @@
 'use client'
 
 import { useMemo } from 'react'
-import Link from 'next/link'
+import { useTranslations } from 'next-intl'
+import { Link } from '@/i18n/navigation'
 import {
   AlertTriangle,
   CheckCircle,
@@ -31,6 +32,9 @@ interface PendingItem {
  * Dashboard section showing pending items that need attention.
  */
 export function PendingActions({ employeeId, className }: PendingActionsProps) {
+  const t = useTranslations('dashboard')
+  const tc = useTranslations('common')
+
   // Fetch recent daily values (last 14 days) to check for errors
   const twoWeeksAgo = new Date()
   twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
@@ -70,7 +74,7 @@ export function PendingActions({ employeeId, className }: PendingActionsProps) {
           id: dv.id,
           date: dv.value_date,
           type: dv.status === 'error' ? 'error' : 'warning',
-          message: dv.status === 'error' ? 'Calculation error' : 'Pending review',
+          message: dv.status === 'error' ? t('calculationError') : t('pendingReview'),
         })
       }
     }
@@ -79,7 +83,7 @@ export function PendingActions({ employeeId, className }: PendingActionsProps) {
     return items.sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     ).slice(0, 5) // Limit to 5 items
-  }, [data])
+  }, [data, t])
 
   if (isLoading || !employeeId) {
     return <PendingActionsSkeleton className={className} />
@@ -89,12 +93,12 @@ export function PendingActions({ employeeId, className }: PendingActionsProps) {
     return (
       <div className={cn('rounded-lg border', className)}>
         <div className="border-b px-6 py-4">
-          <h2 className="text-lg font-semibold">Pending Actions</h2>
+          <h2 className="text-lg font-semibold">{t('pendingActions')}</h2>
         </div>
         <div className="p-6">
           <div className="flex items-center gap-2 text-destructive">
             <AlertCircle className="h-4 w-4" />
-            <p className="text-sm">Failed to load pending actions</p>
+            <p className="text-sm">{t('failedToLoadPending')}</p>
           </div>
           <Button
             variant="ghost"
@@ -103,7 +107,7 @@ export function PendingActions({ employeeId, className }: PendingActionsProps) {
             className="mt-2 h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
           >
             <RefreshCw className="mr-1 h-3 w-3" />
-            Retry
+            {tc('retry')}
           </Button>
         </div>
       </div>
@@ -113,7 +117,7 @@ export function PendingActions({ employeeId, className }: PendingActionsProps) {
   return (
     <div className={cn('rounded-lg border', className)}>
       <div className="border-b px-6 py-4">
-        <h2 className="text-lg font-semibold">Pending Actions</h2>
+        <h2 className="text-lg font-semibold">{t('pendingActions')}</h2>
       </div>
 
       {pendingItems.length === 0 ? (
@@ -122,9 +126,9 @@ export function PendingActions({ employeeId, className }: PendingActionsProps) {
             <div className="rounded-full bg-green-100 p-3 dark:bg-green-900/30">
               <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-500" />
             </div>
-            <p className="mt-3 text-sm font-medium">All caught up!</p>
+            <p className="mt-3 text-sm font-medium">{t('allCaughtUp')}</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              No pending items require your attention
+              {t('noPendingItems')}
             </p>
           </div>
         </div>
@@ -163,7 +167,7 @@ export function PendingActions({ employeeId, className }: PendingActionsProps) {
             href="/corrections"
             className="text-sm text-primary hover:underline"
           >
-            View all corrections
+            {t('viewAllCorrections')}
           </Link>
         </div>
       )}

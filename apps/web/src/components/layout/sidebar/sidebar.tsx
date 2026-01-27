@@ -1,6 +1,7 @@
 'use client'
 
-import Link from 'next/link'
+import { useTranslations } from 'next-intl'
+import { Link } from '@/i18n/navigation'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -23,6 +24,7 @@ interface SidebarProps {
  */
 export function Sidebar({ className }: SidebarProps) {
   const { isCollapsed, toggle } = useSidebar()
+  const t = useTranslations('sidebar')
 
   return (
     <TooltipProvider>
@@ -73,7 +75,7 @@ export function Sidebar({ className }: SidebarProps) {
                   'w-full justify-start gap-2',
                   isCollapsed && 'justify-center px-2'
                 )}
-                aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                aria-label={isCollapsed ? t('expand') : t('collapse')}
                 aria-expanded={!isCollapsed}
               >
                 {isCollapsed ? (
@@ -81,13 +83,13 @@ export function Sidebar({ className }: SidebarProps) {
                 ) : (
                   <>
                     <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-                    <span>Collapse</span>
+                    <span>{t('collapse')}</span>
                   </>
                 )}
               </Button>
             </TooltipTrigger>
             {isCollapsed && (
-              <TooltipContent side="right">Expand sidebar</TooltipContent>
+              <TooltipContent side="right">{t('expand')}</TooltipContent>
             )}
           </Tooltip>
         </div>

@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"github.com/tolga/terp/internal/model"
 )
@@ -66,6 +67,16 @@ func (r *AccountRepository) GetByCode(ctx context.Context, tenantID *uuid.UUID, 
 		return nil, fmt.Errorf("failed to get account by code: %w", err)
 	}
 	return &account, nil
+}
+
+// Upsert creates or updates an account based on tenant_id + code.
+func (r *AccountRepository) Upsert(ctx context.Context, account *model.Account) error {
+	return r.db.GORM.WithContext(ctx).
+		Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "tenant_id"}, {Name: "code"}},
+			DoUpdates: clause.AssignmentColumns([]string{"name", "account_type", "unit", "is_active", "updated_at"}),
+		}).
+		Create(account).Error
 }
 
 // Update updates an account.

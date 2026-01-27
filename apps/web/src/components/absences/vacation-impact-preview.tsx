@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { AlertTriangle, Info } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { isSameDay, isWeekend } from '@/lib/time-utils'
@@ -60,6 +61,8 @@ export function VacationImpactPreview({
   isLoading = false,
   className,
 }: VacationImpactPreviewProps) {
+  const t = useTranslations('absences')
+
   // Calculate the actual deduction
   const affectsBalance = absenceType?.affects_vacation_balance !== false
   const deduction = affectsBalance
@@ -98,8 +101,7 @@ export function VacationImpactPreview({
       <Alert variant="default" className={className}>
         <Info className="h-4 w-4" />
         <AlertDescription>
-          <strong>{absenceType.name}</strong> does not affect your vacation
-          balance.
+          <strong>{absenceType.name}</strong> {t('doesNotAffectBalance')}
         </AlertDescription>
       </Alert>
     )
@@ -107,23 +109,23 @@ export function VacationImpactPreview({
 
   return (
     <div className={cn('space-y-4', className)}>
-      <h4 className="text-sm font-medium">Vacation Balance Impact</h4>
+      <h4 className="text-sm font-medium">{t('balanceImpact')}</h4>
 
       {/* Balance breakdown */}
       <div className="space-y-2 text-sm">
         <div className="flex justify-between">
-          <span className="text-muted-foreground">Current balance</span>
-          <span className="font-medium">{currentBalance} days</span>
+          <span className="text-muted-foreground">{t('currentBalance')}</span>
+          <span className="font-medium">{t('countDays', { count: currentBalance })}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-muted-foreground">Requested</span>
+          <span className="text-muted-foreground">{t('requested')}</span>
           <span className="font-medium text-destructive">
-            - {isHalfDay ? '0.5' : requestedDays} day{requestedDays !== 1 && !isHalfDay ? 's' : ''}
+            - {t('countDays', { count: isHalfDay ? 0.5 : requestedDays })}
           </span>
         </div>
         <div className="border-t my-2" />
         <div className="flex justify-between">
-          <span className="text-muted-foreground">After request</span>
+          <span className="text-muted-foreground">{t('afterRequest')}</span>
           <span
             className={cn(
               'font-medium',
@@ -131,7 +133,7 @@ export function VacationImpactPreview({
               isLowBalance && 'text-yellow-600 dark:text-yellow-500'
             )}
           >
-            {projectedBalance} days
+            {t('countDays', { count: projectedBalance })}
           </span>
         </div>
       </div>
@@ -159,7 +161,7 @@ export function VacationImpactPreview({
           />
         </div>
         <p className="text-xs text-muted-foreground">
-          {projectedBalance} / {totalEntitlement} days remaining
+          {t('daysRemainingProgress', { remaining: projectedBalance, total: totalEntitlement })}
         </p>
       </div>
 
@@ -168,8 +170,7 @@ export function VacationImpactPreview({
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            This request would result in a negative vacation balance. Please
-            contact your manager if you need additional time off.
+            {t('negativeBalanceWarning')}
           </AlertDescription>
         </Alert>
       )}
@@ -178,8 +179,7 @@ export function VacationImpactPreview({
         <Alert>
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            Your vacation balance is getting low. You will have {projectedBalance}{' '}
-            day{projectedBalance !== 1 ? 's' : ''} remaining after this request.
+            {t('lowBalanceWarning', { count: projectedBalance })}
           </AlertDescription>
         </Alert>
       )}

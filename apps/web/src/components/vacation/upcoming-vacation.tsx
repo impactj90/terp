@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { CalendarCheck, ArrowRight } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -19,6 +20,8 @@ export function UpcomingVacation({
   employeeId,
   className,
 }: UpcomingVacationProps) {
+  const t = useTranslations('vacation')
+  const tc = useTranslations('common')
   const today = new Date()
   const from = formatDate(today)
   // Look ahead 6 months
@@ -71,11 +74,11 @@ export function UpcomingVacation({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CalendarCheck className="h-5 w-5" />
-            Upcoming Vacation
+            {t('upcomingTitle')}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-destructive">Failed to load</p>
+          <p className="text-sm text-destructive">{tc('failedToLoad')}</p>
         </CardContent>
       </Card>
     )
@@ -86,13 +89,13 @@ export function UpcomingVacation({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CalendarCheck className="h-5 w-5" />
-          Upcoming Vacation
+          {t('upcomingTitle')}
         </CardTitle>
       </CardHeader>
       <CardContent>
         {groupedVacations.length === 0 ? (
           <p className="py-4 text-center text-muted-foreground">
-            No upcoming vacation scheduled
+            {t('noUpcoming')}
           </p>
         ) : (
           <div className="space-y-3">
@@ -114,11 +117,13 @@ export function UpcomingVacation({
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">
-                    {group.totalDays} {group.totalDays === 1 ? 'day' : 'days'}
+                    {group.totalDays === 1
+                      ? t('oneDay')
+                      : t('countDays', { count: group.totalDays })}
                   </span>
                   {group.hasPending && (
                     <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                      Pending
+                      {t('pending')}
                     </Badge>
                   )}
                 </div>

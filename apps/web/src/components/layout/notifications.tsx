@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Bell } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -57,6 +58,8 @@ interface NotificationsProps {
  * Shows badge with unread count and notification list.
  */
 export function Notifications({ count }: NotificationsProps) {
+  const t = useTranslations('header')
+
   // In a real implementation, this would come from an API hook
   const notifications = placeholderNotifications
   const unreadCount =
@@ -69,7 +72,7 @@ export function Notifications({ count }: NotificationsProps) {
           variant="ghost"
           size="icon"
           className="relative"
-          aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
+          aria-label={`${t('notifications')}${unreadCount > 0 ? ` (${unreadCount})` : ''}`}
         >
           <Bell className="h-5 w-5" aria-hidden="true" />
           {unreadCount > 0 && (
@@ -84,14 +87,14 @@ export function Notifications({ count }: NotificationsProps) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
         <DropdownMenuLabel className="flex items-center justify-between">
-          <span>Notifications</span>
+          <span>{t('notifications')}</span>
           {unreadCount > 0 && (
             <Button
               variant="ghost"
               size="sm"
               className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
             >
-              Mark all as read
+              {t('markAllAsRead')}
             </Button>
           )}
         </DropdownMenuLabel>
@@ -99,7 +102,7 @@ export function Notifications({ count }: NotificationsProps) {
         <ScrollArea className="h-[300px]">
           {notifications.length === 0 ? (
             <div className="p-4 text-center text-sm text-muted-foreground">
-              No notifications
+              {t('noNotifications')}
             </div>
           ) : (
             notifications.map((notification) => (
@@ -129,7 +132,7 @@ export function Notifications({ count }: NotificationsProps) {
         </ScrollArea>
         <DropdownMenuSeparator />
         <DropdownMenuItem className="justify-center text-sm font-medium">
-          View all notifications
+          {t('viewAllNotifications')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

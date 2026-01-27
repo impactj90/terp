@@ -1,6 +1,8 @@
 'use client'
 
+import { useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations, useLocale } from 'next-intl'
 import {
   Table,
   TableBody,
@@ -14,22 +16,6 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TimeDisplay } from '@/components/timesheet'
 import { cn } from '@/lib/utils'
-
-// Month names for display
-const MONTH_NAMES = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-]
 
 interface MonthlyValueData {
   id: string
@@ -50,21 +36,21 @@ interface YearOverviewTableProps {
   onMonthClick?: (month: number) => void
 }
 
-function getStatusBadge(status?: string | null) {
+function getStatusBadge(status: string | null | undefined, t: (key: string) => string) {
   const statusConfig = {
-    open: { label: 'Open', variant: 'outline' as const, className: '' },
+    open: { labelKey: 'statusOpen', variant: 'outline' as const, className: '' },
     calculated: {
-      label: 'Calculated',
+      labelKey: 'statusCalculated',
       variant: 'secondary' as const,
       className: '',
     },
     closed: {
-      label: 'Closed',
+      labelKey: 'statusClosed',
       variant: 'default' as const,
       className: 'bg-green-600 hover:bg-green-700',
     },
     exported: {
-      label: 'Exported',
+      labelKey: 'statusExported',
       variant: 'default' as const,
       className: 'bg-blue-600 hover:bg-blue-700',
     },
@@ -73,7 +59,7 @@ function getStatusBadge(status?: string | null) {
     statusConfig[status as keyof typeof statusConfig] || statusConfig.open
   return (
     <Badge variant={config.variant} className={config.className}>
-      {config.label}
+      {t(config.labelKey)}
     </Badge>
   )
 }
@@ -85,6 +71,16 @@ export function YearOverviewTable({
   onMonthClick,
 }: YearOverviewTableProps) {
   const router = useRouter()
+  const t = useTranslations('yearOverview')
+  const locale = useLocale()
+
+  const monthNames = useMemo(() => {
+    const formatter = new Intl.DateTimeFormat(locale, { month: 'long' })
+    return Array.from({ length: 12 }, (_, i) => {
+      const date = new Date(2024, i, 1)
+      return formatter.format(date)
+    })
+  }, [locale])
 
   // Create a map for quick lookup
   const monthDataMap = new Map(
@@ -125,16 +121,16 @@ export function YearOverviewTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Month</TableHead>
-          <TableHead className="text-right">Work Days</TableHead>
-          <TableHead className="text-right">Target</TableHead>
-          <TableHead className="text-right">Worked</TableHead>
-          <TableHead className="text-right">Balance</TableHead>
-          <TableHead className="text-right">Status</TableHead>
+          <TableHead>{t('month')}</TableHead>
+          <TableHead className="text-right">{t('workDays')}</TableHead>
+          <TableHead className="text-right">{t('target')}</TableHead>
+          <TableHead className="text-right">{t('worked')}</TableHead>
+          <TableHead className="text-right">{t('balance')}</TableHead>
+          <TableHead className="text-right">{t('status')}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {MONTH_NAMES.map((monthName, index) => {
+        {monthNames.map((monthName, index) => {
           const month = index + 1
           const data = monthDataMap.get(month)
           const hasData = !!data
@@ -193,10 +189,10 @@ export function YearOverviewTable({
               </TableCell>
               <TableCell className="text-right">
                 {hasData ? (
-                  getStatusBadge(data.status)
+                  getStatusBadge(data.status, t as unknown as (key: string) => string)
                 ) : (
                   <Badge variant="outline" className="text-muted-foreground">
-                    No data
+                    {t('noData')}
                   </Badge>
                 )}
               </TableCell>
@@ -206,7 +202,7 @@ export function YearOverviewTable({
       </TableBody>
       <TableFooter>
         <TableRow className="font-medium">
-          <TableCell>Total</TableCell>
+          <TableCell>{t('total')}</TableCell>
           <TableCell className="text-right">
             {totals.workedDays}{' '}
             <span className="text-muted-foreground">/ {totals.workingDays}</span>
@@ -228,21 +224,23 @@ export function YearOverviewTable({
 }
 
 function YearOverviewTableSkeleton() {
+  const t = useTranslations('yearOverview')
+
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Month</TableHead>
-          <TableHead className="text-right">Work Days</TableHead>
-          <TableHead className="text-right">Target</TableHead>
-          <TableHead className="text-right">Worked</TableHead>
-          <TableHead className="text-right">Balance</TableHead>
-          <TableHead className="text-right">Status</TableHead>
+          <TableHead>{t('month')}</TableHead>
+          <TableHead className="text-right">{t('workDays')}</TableHead>
+          <TableHead className="text-right">{t('target')}</TableHead>
+          <TableHead className="text-right">{t('worked')}</TableHead>
+          <TableHead className="text-right">{t('balance')}</TableHead>
+          <TableHead className="text-right">{t('status')}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {MONTH_NAMES.map((monthName) => (
-          <TableRow key={monthName}>
+        {Array.from({ length: 12 }, (_, i) => (
+          <TableRow key={i}>
             <TableCell>
               <Skeleton className="h-4 w-20" />
             </TableCell>

@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label'
 import { Alert } from '@/components/ui/alert'
 import { useUpdateEmployee } from '@/hooks/api'
 import { Pencil, X, Check, AlertCircle, CheckCircle } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import type { components } from '@/lib/api/types'
 
 type Employee = components['schemas']['Employee']
@@ -40,6 +41,9 @@ interface FormErrors {
  * Personal information card with editable fields.
  */
 export function PersonalInfoCard({ employee }: PersonalInfoCardProps) {
+  const t = useTranslations('profile')
+  const tc = useTranslations('common')
+
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState<FormData>({
     first_name: '',
@@ -51,6 +55,7 @@ export function PersonalInfoCard({ employee }: PersonalInfoCardProps) {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   const updateEmployee = useUpdateEmployee()
+  const failedToSaveMsg = t('failedToSave')
 
   // Initialize form data when employee changes
   useEffect(() => {
@@ -75,19 +80,19 @@ export function PersonalInfoCard({ employee }: PersonalInfoCardProps) {
     const newErrors: FormErrors = {}
 
     if (!formData.first_name.trim()) {
-      newErrors.first_name = 'First name is required'
+      newErrors.first_name = t('firstNameRequired')
     } else if (formData.first_name.length > 100) {
-      newErrors.first_name = 'First name must be less than 100 characters'
+      newErrors.first_name = t('firstNameMaxLength')
     }
 
     if (!formData.last_name.trim()) {
-      newErrors.last_name = 'Last name is required'
+      newErrors.last_name = t('lastNameRequired')
     } else if (formData.last_name.length > 100) {
-      newErrors.last_name = 'Last name must be less than 100 characters'
+      newErrors.last_name = t('lastNameMaxLength')
     }
 
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Invalid email format'
+      newErrors.email = t('invalidEmail')
     }
 
     setErrors(newErrors)
@@ -119,17 +124,17 @@ export function PersonalInfoCard({ employee }: PersonalInfoCardProps) {
         },
       })
       setIsEditing(false)
-      setSuccessMessage('Personal information updated successfully')
+      setSuccessMessage(t('personalInfoUpdated'))
     } catch {
-      setErrors({ first_name: 'Failed to save changes. Please try again.' })
+      setErrors({ first_name: failedToSaveMsg })
     }
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Personal Information</CardTitle>
-        <CardDescription>Your basic personal details</CardDescription>
+        <CardTitle>{t('personalInformation')}</CardTitle>
+        <CardDescription>{t('personalDetails')}</CardDescription>
         <CardAction>
           {isEditing ? (
             <div className="flex gap-2">
@@ -140,7 +145,7 @@ export function PersonalInfoCard({ employee }: PersonalInfoCardProps) {
                 disabled={updateEmployee.isPending}
               >
                 <X className="mr-1 h-4 w-4" />
-                Cancel
+                {tc('cancel')}
               </Button>
               <Button
                 size="sm"
@@ -148,13 +153,13 @@ export function PersonalInfoCard({ employee }: PersonalInfoCardProps) {
                 disabled={updateEmployee.isPending}
               >
                 <Check className="mr-1 h-4 w-4" />
-                {updateEmployee.isPending ? 'Saving...' : 'Save'}
+                {updateEmployee.isPending ? tc('saving') : tc('save')}
               </Button>
             </div>
           ) : (
             <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
               <Pencil className="mr-1 h-4 w-4" />
-              Edit
+              {tc('edit')}
             </Button>
           )}
         </CardAction>
@@ -168,7 +173,7 @@ export function PersonalInfoCard({ employee }: PersonalInfoCardProps) {
           </Alert>
         )}
 
-        {errors.first_name && errors.first_name.includes('Failed') && (
+        {errors.first_name && errors.first_name === failedToSaveMsg && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
             <span className="ml-2">{errors.first_name}</span>
@@ -178,7 +183,7 @@ export function PersonalInfoCard({ employee }: PersonalInfoCardProps) {
         <div className="grid gap-4 sm:grid-cols-2">
           {/* First Name */}
           <div className="space-y-2">
-            <Label htmlFor="firstName">First Name</Label>
+            <Label htmlFor="firstName">{t('firstName')}</Label>
             {isEditing ? (
               <>
                 <Input
@@ -187,9 +192,9 @@ export function PersonalInfoCard({ employee }: PersonalInfoCardProps) {
                   onChange={(e) =>
                     setFormData((prev) => ({ ...prev, first_name: e.target.value }))
                   }
-                  className={errors.first_name && !errors.first_name.includes('Failed') ? 'border-destructive' : ''}
+                  className={errors.first_name && errors.first_name !== failedToSaveMsg ? 'border-destructive' : ''}
                 />
-                {errors.first_name && !errors.first_name.includes('Failed') && (
+                {errors.first_name && errors.first_name !== failedToSaveMsg && (
                   <p className="text-xs text-destructive">{errors.first_name}</p>
                 )}
               </>
@@ -200,7 +205,7 @@ export function PersonalInfoCard({ employee }: PersonalInfoCardProps) {
 
           {/* Last Name */}
           <div className="space-y-2">
-            <Label htmlFor="lastName">Last Name</Label>
+            <Label htmlFor="lastName">{t('lastName')}</Label>
             {isEditing ? (
               <>
                 <Input
@@ -222,7 +227,7 @@ export function PersonalInfoCard({ employee }: PersonalInfoCardProps) {
 
           {/* Email */}
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t('emailLabel')}</Label>
             {isEditing ? (
               <>
                 <Input
@@ -233,7 +238,7 @@ export function PersonalInfoCard({ employee }: PersonalInfoCardProps) {
                     setFormData((prev) => ({ ...prev, email: e.target.value }))
                   }
                   className={errors.email ? 'border-destructive' : ''}
-                  placeholder="email@example.com"
+                  placeholder={t('emailPlaceholder')}
                 />
                 {errors.email && (
                   <p className="text-xs text-destructive">{errors.email}</p>
@@ -241,14 +246,14 @@ export function PersonalInfoCard({ employee }: PersonalInfoCardProps) {
               </>
             ) : (
               <p className="text-sm font-medium">
-                {employee.email || <span className="text-muted-foreground">Not set</span>}
+                {employee.email || <span className="text-muted-foreground">{t('notSet')}</span>}
               </p>
             )}
           </div>
 
           {/* Phone */}
           <div className="space-y-2">
-            <Label htmlFor="phone">Phone</Label>
+            <Label htmlFor="phone">{t('phone')}</Label>
             {isEditing ? (
               <Input
                 id="phone"
@@ -257,11 +262,11 @@ export function PersonalInfoCard({ employee }: PersonalInfoCardProps) {
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, phone: e.target.value }))
                 }
-                placeholder="+1 234 567 8900"
+                placeholder={t('phonePlaceholder')}
               />
             ) : (
               <p className="text-sm font-medium">
-                {employee.phone || <span className="text-muted-foreground">Not set</span>}
+                {employee.phone || <span className="text-muted-foreground">{t('notSet')}</span>}
               </p>
             )}
           </div>

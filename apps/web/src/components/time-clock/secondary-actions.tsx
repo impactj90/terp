@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Coffee, Briefcase } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { ClockStatus } from './clock-status-badge'
@@ -17,6 +18,8 @@ export function SecondaryActions({
   onAction,
   isLoading,
 }: SecondaryActionsProps) {
+  const t = useTranslations('timeClock')
+
   // Only show secondary actions when clocked in
   if (status !== 'clocked_in') {
     return null
@@ -31,7 +34,7 @@ export function SecondaryActions({
         disabled={isLoading}
       >
         <Coffee className="mr-2 h-4 w-4" />
-        Start Break
+        {t('startBreak')}
       </Button>
       <Button
         variant="outline"
@@ -40,7 +43,7 @@ export function SecondaryActions({
         disabled={isLoading}
       >
         <Briefcase className="mr-2 h-4 w-4" />
-        Start Errand
+        {t('startErrand')}
       </Button>
     </div>
   )

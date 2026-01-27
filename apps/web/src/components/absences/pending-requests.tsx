@@ -2,6 +2,8 @@
 
 import * as React from 'react'
 import { Calendar, Loader2, Trash2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
+import { useLocale } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -29,15 +31,15 @@ interface PendingRequestsProps {
   className?: string
 }
 
-const STATUS_COLORS: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
-  pending: { variant: 'secondary', label: 'Pending' },
-  approved: { variant: 'default', label: 'Approved' },
-  rejected: { variant: 'destructive', label: 'Rejected' },
+const STATUS_COLORS: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; labelKey: string }> = {
+  pending: { variant: 'secondary', labelKey: 'statusPending' },
+  approved: { variant: 'default', labelKey: 'statusApproved' },
+  rejected: { variant: 'destructive', labelKey: 'statusRejected' },
 }
 
-function formatAbsenceDate(absence: Absence): string {
+function formatAbsenceDate(absence: Absence, locale: string): string {
   const date = parseISODate(absence.absence_date)
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString(locale, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -51,6 +53,10 @@ export function PendingRequests({
 }: PendingRequestsProps) {
   const [deleteId, setDeleteId] = React.useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = React.useState(false)
+
+  const t = useTranslations('absences')
+  const tc = useTranslations('common')
+  const locale = useLocale()
 
   // Fetch absences for current year and next year
   const currentYear = new Date().getFullYear()
@@ -128,9 +134,9 @@ export function PendingRequests({
     return (
       <div className={cn('text-center py-8', className)}>
         <Calendar className="mx-auto h-12 w-12 mb-4 text-muted-foreground opacity-50" />
-        <p className="text-muted-foreground">No absence requests</p>
+        <p className="text-muted-foreground">{t('noRequests')}</p>
         <p className="text-sm text-muted-foreground">
-          Click &quot;Request Absence&quot; to get started
+          {t('clickRequestToStart')}
         </p>
       </div>
     )
@@ -141,32 +147,35 @@ export function PendingRequests({
       {/* Pending */}
       {groupedAbsences.pending.length > 0 && (
         <AbsenceGroup
-          title="Pending"
+          title={t('statusPending')}
           count={groupedAbsences.pending.length}
           absences={groupedAbsences.pending}
           onSelect={onSelect}
           onDelete={handleDeleteClick}
           canDelete
+          locale={locale}
         />
       )}
 
       {/* Approved (upcoming) */}
       {groupedAbsences.approved.length > 0 && (
         <AbsenceGroup
-          title="Approved"
+          title={t('statusApproved')}
           count={groupedAbsences.approved.length}
           absences={groupedAbsences.approved}
           onSelect={onSelect}
+          locale={locale}
         />
       )}
 
       {/* Rejected (recent) */}
       {groupedAbsences.rejected.length > 0 && (
         <AbsenceGroup
-          title="Rejected"
+          title={t('statusRejected')}
           count={groupedAbsences.rejected.length}
           absences={groupedAbsences.rejected}
           onSelect={onSelect}
+          locale={locale}
         />
       )}
 
@@ -174,10 +183,9 @@ export function PendingRequests({
       <Sheet open={confirmOpen} onOpenChange={setConfirmOpen}>
         <SheetContent side="bottom" className="sm:max-w-md mx-auto">
           <SheetHeader>
-            <SheetTitle>Delete Absence Request</SheetTitle>
+            <SheetTitle>{t('deleteRequest')}</SheetTitle>
             <SheetDescription>
-              Are you sure you want to delete this absence request? This action
-              cannot be undone.
+              {t('deleteConfirmation')}
             </SheetDescription>
           </SheetHeader>
           <SheetFooter className="flex-row gap-2 mt-4">
@@ -187,7 +195,7 @@ export function PendingRequests({
               disabled={deleteMutation.isPending}
               className="flex-1"
             >
-              Cancel
+              {tc('cancel')}
             </Button>
             <Button
               variant="destructive"
@@ -198,7 +206,7 @@ export function PendingRequests({
               {deleteMutation.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Delete
+              {tc('delete')}
             </Button>
           </SheetFooter>
         </SheetContent>
@@ -214,6 +222,7 @@ interface AbsenceGroupProps {
   onSelect?: (absence: Absence) => void
   onDelete?: (id: string) => void
   canDelete?: boolean
+  locale: string
 }
 
 function AbsenceGroup({
@@ -223,6 +232,7 @@ function AbsenceGroup({
   onSelect,
   onDelete,
   canDelete,
+  locale,
 }: AbsenceGroupProps) {
   return (
     <div>
@@ -236,6 +246,7 @@ function AbsenceGroup({
             absence={absence}
             onClick={() => onSelect?.(absence)}
             onDelete={canDelete ? () => onDelete?.(absence.id) : undefined}
+            locale={locale}
           />
         ))}
       </div>
@@ -247,11 +258,14 @@ interface AbsenceCardProps {
   absence: Absence
   onClick?: () => void
   onDelete?: () => void
+  locale: string
 }
 
-function AbsenceCard({ absence, onClick, onDelete }: AbsenceCardProps) {
+function AbsenceCard({ absence, onClick, onDelete, locale }: AbsenceCardProps) {
+  const t = useTranslations('absences')
+  const tc = useTranslations('common')
   const status = absence.status ?? 'pending'
-  const statusConfig = STATUS_COLORS[status] ?? { variant: 'secondary' as const, label: status }
+  const statusConfig = STATUS_COLORS[status] ?? { variant: 'secondary' as const, labelKey: status }
 
   return (
     <div
@@ -272,14 +286,14 @@ function AbsenceCard({ absence, onClick, onDelete }: AbsenceCardProps) {
               />
             )}
             <span className="font-medium truncate">
-              {absence.absence_type?.name ?? 'Unknown type'}
+              {absence.absence_type?.name ?? t('unknownType')}
             </span>
           </div>
 
           {/* Date */}
           <p className="text-sm text-muted-foreground">
-            {formatAbsenceDate(absence)}
-            {absence.duration === 0.5 && ' (half day)'}
+            {formatAbsenceDate(absence, locale)}
+            {absence.duration === 0.5 && ` (${t('halfDayLabel')})`}
           </p>
 
           {/* Notes */}
@@ -292,7 +306,9 @@ function AbsenceCard({ absence, onClick, onDelete }: AbsenceCardProps) {
 
         {/* Status and actions */}
         <div className="flex items-start gap-2">
-          <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
+          <Badge variant={statusConfig.variant}>
+            {t(statusConfig.labelKey as Parameters<typeof t>[0])}
+          </Badge>
           {onDelete && (
             <Button
               variant="ghost"
@@ -304,7 +320,7 @@ function AbsenceCard({ absence, onClick, onDelete }: AbsenceCardProps) {
               }}
             >
               <Trash2 className="h-4 w-4 text-muted-foreground" />
-              <span className="sr-only">Delete</span>
+              <span className="sr-only">{tc('delete')}</span>
             </Button>
           )}
         </div>

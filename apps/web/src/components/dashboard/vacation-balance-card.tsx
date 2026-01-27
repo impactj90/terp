@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Palmtree, AlertCircle, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -18,6 +19,8 @@ export function VacationBalanceCard({
   employeeId,
   className,
 }: VacationBalanceCardProps) {
+  const t = useTranslations('dashboard')
+  const tc = useTranslations('common')
   const currentYear = new Date().getFullYear()
 
   const {
@@ -36,12 +39,12 @@ export function VacationBalanceCard({
       <div className={cn('rounded-lg border bg-card p-6', className)}>
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-muted-foreground">
-            Vacation Days
+            {t('vacationDays')}
           </span>
           <AlertCircle className="h-4 w-4 text-destructive" aria-hidden="true" />
         </div>
         <div className="mt-2">
-          <p className="text-sm text-destructive">Failed to load</p>
+          <p className="text-sm text-destructive">{tc('failedToLoad')}</p>
         </div>
         <Button
           variant="ghost"
@@ -50,7 +53,7 @@ export function VacationBalanceCard({
           className="mt-2 h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
         >
           <RefreshCw className="mr-1 h-3 w-3" />
-          Retry
+          {tc('retry')}
         </Button>
       </div>
     )
@@ -62,7 +65,7 @@ export function VacationBalanceCard({
       <div className={cn('rounded-lg border bg-card p-6', className)}>
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-muted-foreground">
-            Vacation Days
+            {t('vacationDays')}
           </span>
           <Palmtree className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
         </div>
@@ -70,7 +73,7 @@ export function VacationBalanceCard({
           <span className="text-2xl font-bold">--</span>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          No vacation data available
+          {t('noVacationData')}
         </p>
       </div>
     )
@@ -93,7 +96,7 @@ export function VacationBalanceCard({
     <div className={cn('rounded-lg border bg-card p-6', className)}>
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-muted-foreground">
-          Vacation Days
+          {t('vacationDays')}
         </span>
         <Palmtree className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
       </div>
@@ -104,7 +107,9 @@ export function VacationBalanceCard({
         </span>
       </div>
       <p className="mt-1 text-xs text-muted-foreground">
-        {remainingDays === 1 ? 'day' : 'days'} remaining
+        {remainingDays === 1
+          ? t('dayRemaining', { count: remainingDays })
+          : t('daysRemaining', { count: remainingDays })}
       </p>
 
       {/* Stacked progress bar */}
@@ -124,9 +129,9 @@ export function VacationBalanceCard({
           </div>
         </div>
         <div className="mt-1 flex justify-between text-xs text-muted-foreground">
-          <span>{usedDays} used</span>
+          <span>{t('used', { count: usedDays })}</span>
           {plannedDays > 0 && (
-            <span>{plannedDays} planned</span>
+            <span>{t('planned', { count: plannedDays })}</span>
           )}
         </div>
       </div>

@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { TimeDisplay } from './time-display'
 
@@ -23,12 +24,13 @@ export function DailySummary({
   layout = 'horizontal',
   className,
 }: DailySummaryProps) {
+  const t = useTranslations('timesheet')
   const items = [
-    { label: 'Target', value: targetMinutes, format: 'duration' as const },
-    { label: 'Gross', value: grossMinutes, format: 'duration' as const },
-    { label: 'Breaks', value: breakMinutes, format: 'duration' as const },
-    { label: 'Net', value: netMinutes, format: 'duration' as const },
-    { label: 'Balance', value: balanceMinutes, format: 'balance' as const },
+    { label: t('target'), value: targetMinutes, format: 'duration' as const },
+    { label: t('gross'), value: grossMinutes, format: 'duration' as const },
+    { label: t('breaks'), value: breakMinutes, format: 'duration' as const },
+    { label: t('net'), value: netMinutes, format: 'duration' as const },
+    { label: t('balance'), value: balanceMinutes, format: 'balance' as const },
   ]
 
   if (layout === 'compact') {

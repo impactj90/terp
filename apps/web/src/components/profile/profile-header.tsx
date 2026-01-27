@@ -9,6 +9,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { Camera } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import type { User } from '@/hooks/use-auth'
 import type { components } from '@/lib/api/types'
 
@@ -23,9 +24,11 @@ interface ProfileHeaderProps {
  * Profile header showing avatar, name, role, and basic info.
  */
 export function ProfileHeader({ user, employee }: ProfileHeaderProps) {
+  const t = useTranslations('profile')
+
   const firstName = employee.first_name || ''
   const lastName = employee.last_name || ''
-  const fullName = `${firstName} ${lastName}`.trim() || 'Unknown'
+  const fullName = `${firstName} ${lastName}`.trim() || t('unknown')
   const initials = `${firstName.charAt(0) || '?'}${lastName.charAt(0) || '?'}`
 
   return (
@@ -47,11 +50,11 @@ export function ProfileHeader({ user, employee }: ProfileHeaderProps) {
               disabled
             >
               <Camera className="h-4 w-4" />
-              <span className="sr-only">Upload avatar</span>
+              <span className="sr-only">{t('uploadAvatar')}</span>
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Coming soon</p>
+            <p>{t('comingSoon')}</p>
           </TooltipContent>
         </Tooltip>
       </div>
@@ -61,7 +64,7 @@ export function ProfileHeader({ user, employee }: ProfileHeaderProps) {
         <div className="flex items-center gap-3">
           <h2 className="text-2xl font-bold">{fullName}</h2>
           <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-            {user.role === 'admin' ? 'Administrator' : 'Employee'}
+            {user.role === 'admin' ? t('administrator') : t('employee')}
           </Badge>
         </div>
 

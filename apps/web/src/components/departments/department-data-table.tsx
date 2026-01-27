@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { MoreHorizontal, Eye, Edit, Building2, Trash2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -39,6 +40,8 @@ export function DepartmentDataTable({
   onEdit,
   onDelete,
 }: DepartmentDataTableProps) {
+  const t = useTranslations('adminDepartments')
+
   if (isLoading) {
     return <DepartmentDataTableSkeleton />
   }
@@ -51,12 +54,12 @@ export function DepartmentDataTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-24">Code</TableHead>
-          <TableHead>Name</TableHead>
-          <TableHead>Parent</TableHead>
-          <TableHead className="w-24">Status</TableHead>
+          <TableHead className="w-24">{t('columnCode')}</TableHead>
+          <TableHead>{t('columnName')}</TableHead>
+          <TableHead>{t('columnParent')}</TableHead>
+          <TableHead className="w-24">{t('columnStatus')}</TableHead>
           <TableHead className="w-16">
-            <span className="sr-only">Actions</span>
+            <span className="sr-only">{t('columnActions')}</span>
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -81,7 +84,7 @@ export function DepartmentDataTable({
             </TableCell>
             <TableCell>
               <Badge variant={department.is_active ? 'default' : 'secondary'}>
-                {department.is_active ? 'Active' : 'Inactive'}
+                {department.is_active ? t('statusActive') : t('statusInactive')}
               </Badge>
             </TableCell>
             <TableCell onClick={(e) => e.stopPropagation()}>
@@ -89,17 +92,17 @@ export function DepartmentDataTable({
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon-sm">
                     <MoreHorizontal className="h-4 w-4" />
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{t('columnActions')}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => onView(department)}>
                     <Eye className="mr-2 h-4 w-4" />
-                    View Details
+                    {t('viewDetails')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onEdit(department)}>
                     <Edit className="mr-2 h-4 w-4" />
-                    Edit
+                    {t('edit')}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -107,7 +110,7 @@ export function DepartmentDataTable({
                     onClick={() => onDelete(department)}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
+                    {t('delete')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

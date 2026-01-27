@@ -146,23 +146,29 @@ export function getGreeting(): string {
 
 /**
  * Format a date relative to today.
- * @example formatRelativeDate(today) => "Today"
- * @example formatRelativeDate(yesterday) => "Yesterday"
- * @example formatRelativeDate(someDate) => "Jan 25, 2026"
+ * @param date - Date or ISO string to format
+ * @param options - Optional locale and translated labels for today/yesterday
+ * @example formatRelativeDate(today) => "Heute" (de) / "Today" (en)
+ * @example formatRelativeDate(yesterday) => "Gestern" (de) / "Yesterday" (en)
+ * @example formatRelativeDate(someDate) => "25. Jan. 2026" (de) / "Jan 25, 2026" (en)
  */
-export function formatRelativeDate(date: Date | string): string {
+export function formatRelativeDate(
+  date: Date | string,
+  options?: { locale?: string; todayLabel?: string; yesterdayLabel?: string }
+): string {
   const d = typeof date === 'string' ? new Date(date) : date
   const today = new Date()
   const yesterday = new Date(today)
   yesterday.setDate(yesterday.getDate() - 1)
+  const locale = options?.locale ?? 'de'
 
   if (formatDate(d) === formatDate(today)) {
-    return 'Today'
+    return options?.todayLabel ?? 'Today'
   }
   if (formatDate(d) === formatDate(yesterday)) {
-    return 'Yesterday'
+    return options?.yesterdayLabel ?? 'Yesterday'
   }
-  return d.toLocaleDateString('en-US', {
+  return d.toLocaleDateString(locale, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -272,22 +278,25 @@ export function getMonthDates(date: Date): Date[] {
 
 /**
  * Format date for display with different formats.
+ * @param date - The date to format
+ * @param format - 'short' (DD.MM), 'long' (weekday, day month year), 'weekday' (short weekday)
+ * @param locale - BCP 47 locale string (defaults to 'de')
  */
-export function formatDisplayDate(date: Date, format: 'short' | 'long' | 'weekday' = 'short'): string {
+export function formatDisplayDate(date: Date, format: 'short' | 'long' | 'weekday' = 'short', locale: string = 'de'): string {
   switch (format) {
     case 'short':
-      return date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })
+      return date.toLocaleDateString(locale, { day: '2-digit', month: '2-digit' })
     case 'long':
-      return date.toLocaleDateString('de-DE', {
+      return date.toLocaleDateString(locale, {
         weekday: 'long',
         day: 'numeric',
         month: 'long',
         year: 'numeric'
       })
     case 'weekday':
-      return date.toLocaleDateString('de-DE', { weekday: 'short' })
+      return date.toLocaleDateString(locale, { weekday: 'short' })
     default:
-      return date.toLocaleDateString('de-DE')
+      return date.toLocaleDateString(locale)
   }
 }
 

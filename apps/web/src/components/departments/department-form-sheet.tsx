@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { Loader2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -57,22 +58,6 @@ const INITIAL_STATE: FormState = {
   isActive: true,
 }
 
-function validateForm(form: FormState): string[] {
-  const errors: string[] = []
-
-  if (!form.name.trim()) {
-    errors.push('Name is required')
-  }
-
-  if (!form.code.trim()) {
-    errors.push('Code is required')
-  } else if (form.code.length > 20) {
-    errors.push('Code must be 20 characters or less')
-  }
-
-  return errors
-}
-
 export function DepartmentFormSheet({
   open,
   onOpenChange,
@@ -80,6 +65,7 @@ export function DepartmentFormSheet({
   parentId,
   onSuccess,
 }: DepartmentFormSheetProps) {
+  const t = useTranslations('adminDepartments')
   const isEdit = !!department
   const [form, setForm] = React.useState<FormState>(INITIAL_STATE)
   const [error, setError] = React.useState<string | null>(null)
@@ -101,6 +87,22 @@ export function DepartmentFormSheet({
     // Simple filter: exclude self (backend will catch circular references)
     return departments.filter((d) => d.id !== department?.id)
   }, [departments, department, isEdit])
+
+  function validateForm(formData: FormState): string[] {
+    const errors: string[] = []
+
+    if (!formData.name.trim()) {
+      errors.push(t('validationNameRequired'))
+    }
+
+    if (!formData.code.trim()) {
+      errors.push(t('validationCodeRequired'))
+    } else if (formData.code.length > 20) {
+      errors.push(t('validationCodeMaxLength'))
+    }
+
+    return errors
+  }
 
   // Reset form when opening/closing or department changes
   React.useEffect(() => {
@@ -159,7 +161,7 @@ export function DepartmentFormSheet({
     } catch (err) {
       const apiError = err as { detail?: string; message?: string }
       setError(
-        apiError.detail ?? apiError.message ?? `Failed to ${isEdit ? 'update' : 'create'} department`
+        apiError.detail ?? apiError.message ?? t(isEdit ? 'updateError' : 'createError')
       )
     }
   }
@@ -174,11 +176,11 @@ export function DepartmentFormSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-lg flex flex-col">
         <SheetHeader>
-          <SheetTitle>{isEdit ? 'Edit Department' : 'New Department'}</SheetTitle>
+          <SheetTitle>{isEdit ? t('editTitle') : t('newTitle')}</SheetTitle>
           <SheetDescription>
             {isEdit
-              ? 'Update department information and hierarchy.'
-              : 'Create a new department in your organization.'}
+              ? t('editDescription')
+              : t('newDescription')}
           </SheetDescription>
         </SheetHeader>
 
@@ -186,21 +188,21 @@ export function DepartmentFormSheet({
           <div className="space-y-6 py-4">
             {/* Basic Information */}
             <div className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Basic Information</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">{t('sectionBasicInformation')}</h3>
 
               <div className="space-y-2">
-                <Label htmlFor="name">Name *</Label>
+                <Label htmlFor="name">{t('fieldName')} *</Label>
                 <Input
                   id="name"
                   value={form.name}
                   onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
                   disabled={isSubmitting}
-                  placeholder="Engineering"
+                  placeholder={t('fieldNamePlaceholder')}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="code">Code *</Label>
+                <Label htmlFor="code">{t('fieldCode')} *</Label>
                 <Input
                   id="code"
                   value={form.code}
@@ -208,22 +210,22 @@ export function DepartmentFormSheet({
                     setForm((prev) => ({ ...prev, code: e.target.value.toUpperCase() }))
                   }
                   disabled={isSubmitting}
-                  placeholder="ENG"
+                  placeholder={t('fieldCodePlaceholder')}
                   maxLength={20}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Short unique identifier (max 20 characters)
+                  {t('fieldCodeHint')}
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
+                <Label htmlFor="description">{t('fieldDescription')}</Label>
                 <Textarea
                   id="description"
                   value={form.description}
                   onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
                   disabled={isSubmitting}
-                  placeholder="Department description..."
+                  placeholder={t('fieldDescriptionPlaceholder')}
                   rows={3}
                 />
               </div>
@@ -231,10 +233,10 @@ export function DepartmentFormSheet({
 
             {/* Hierarchy */}
             <div className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Hierarchy</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">{t('sectionHierarchy')}</h3>
 
               <div className="space-y-2">
-                <Label>Parent Department</Label>
+                <Label>{t('fieldParentDepartment')}</Label>
                 <Select
                   value={form.parentId || '__none__'}
                   onValueChange={(value) =>
@@ -243,10 +245,10 @@ export function DepartmentFormSheet({
                   disabled={isSubmitting || loadingDepartments}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select parent department" />
+                    <SelectValue placeholder={t('selectParentPlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">No Parent (Root Level)</SelectItem>
+                    <SelectItem value="__none__">{t('noParentRootLevel')}</SelectItem>
                     {availableParents.map((dept) => (
                       <SelectItem key={dept.id} value={dept.id}>
                         {dept.name} ({dept.code})
@@ -260,13 +262,13 @@ export function DepartmentFormSheet({
             {/* Status (only for edit) */}
             {isEdit && (
               <div className="space-y-4">
-                <h3 className="text-sm font-medium text-muted-foreground">Status</h3>
+                <h3 className="text-sm font-medium text-muted-foreground">{t('sectionStatus')}</h3>
 
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label htmlFor="isActive">Active</Label>
+                    <Label htmlFor="isActive">{t('statusActive')}</Label>
                     <p className="text-xs text-muted-foreground">
-                      Inactive departments are hidden from selection lists
+                      {t('inactiveDepartmentsHint')}
                     </p>
                   </div>
                   <Switch
@@ -292,11 +294,11 @@ export function DepartmentFormSheet({
 
         <SheetFooter className="flex-row gap-2 border-t pt-4">
           <Button variant="outline" onClick={handleClose} disabled={isSubmitting} className="flex-1">
-            Cancel
+            {t('cancel')}
           </Button>
           <Button onClick={handleSubmit} disabled={isSubmitting} className="flex-1">
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isSubmitting ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Department'}
+            {isSubmitting ? t('saving') : isEdit ? t('saveChanges') : t('createDepartment')}
           </Button>
         </SheetFooter>
       </SheetContent>

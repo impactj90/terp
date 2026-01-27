@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select'
 import { useCreateEmployeeContact } from '@/hooks/api'
 import { AlertCircle } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 type ContactType = 'email' | 'phone' | 'mobile' | 'emergency'
 
@@ -39,11 +40,11 @@ interface FormData {
   is_primary: boolean
 }
 
-const contactTypeLabels: Record<ContactType, string> = {
-  email: 'Email',
-  phone: 'Phone',
-  mobile: 'Mobile',
-  emergency: 'Emergency',
+const contactTypeLabelKeys: Record<ContactType, string> = {
+  email: 'contactTypeEmail',
+  phone: 'contactTypePhone',
+  mobile: 'contactTypeMobile',
+  emergency: 'contactTypeEmergency',
 }
 
 /**
@@ -55,6 +56,9 @@ export function ContactFormDialog({
   onOpenChange,
   onSuccess,
 }: ContactFormDialogProps) {
+  const t = useTranslations('profile')
+  const tc = useTranslations('common')
+
   const [formData, setFormData] = useState<FormData>({
     contact_type: 'emergency',
     value: '',
@@ -84,17 +88,17 @@ export function ContactFormDialog({
 
     // Validate
     if (!formData.value.trim()) {
-      setError('Contact value is required')
+      setError(t('contactValueRequired'))
       return
     }
 
     if (formData.value.length > 255) {
-      setError('Contact value must be less than 255 characters')
+      setError(t('contactValueMaxLength'))
       return
     }
 
     if (formData.label && formData.label.length > 100) {
-      setError('Label must be less than 100 characters')
+      setError(t('labelMaxLength'))
       return
     }
 
@@ -111,7 +115,7 @@ export function ContactFormDialog({
       onOpenChange(false)
       onSuccess?.()
     } catch {
-      setError('Failed to create contact. Please try again.')
+      setError(t('failedToCreateContact'))
     }
   }
 
@@ -119,9 +123,9 @@ export function ContactFormDialog({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent>
         <SheetHeader>
-          <SheetTitle>Add Contact</SheetTitle>
+          <SheetTitle>{t('addContact')}</SheetTitle>
           <SheetDescription>
-            Add a new contact for this employee.
+            {t('addContactDescription')}
           </SheetDescription>
         </SheetHeader>
 
@@ -134,7 +138,7 @@ export function ContactFormDialog({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="contactType">Contact Type</Label>
+            <Label htmlFor="contactType">{t('contactType')}</Label>
             <Select
               value={formData.contact_type}
               onValueChange={(value: ContactType) =>
@@ -142,12 +146,12 @@ export function ContactFormDialog({
               }
             >
               <SelectTrigger id="contactType">
-                <SelectValue placeholder="Select type" />
+                <SelectValue placeholder={t('selectType')} />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(contactTypeLabels).map(([value, label]) => (
+                {Object.entries(contactTypeLabelKeys).map(([value, labelKey]) => (
                   <SelectItem key={value} value={value}>
-                    {label}
+                    {t(labelKey as Parameters<typeof t>[0])}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -155,7 +159,7 @@ export function ContactFormDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="contactValue">Value</Label>
+            <Label htmlFor="contactValue">{t('value')}</Label>
             <Input
               id="contactValue"
               value={formData.value}
@@ -164,24 +168,24 @@ export function ContactFormDialog({
               }
               placeholder={
                 formData.contact_type === 'email'
-                  ? 'email@example.com'
-                  : '+1 234 567 8900'
+                  ? t('emailPlaceholder')
+                  : t('phonePlaceholder')
               }
             />
             <p className="text-xs text-muted-foreground">
-              Enter the contact value (email, phone number, etc.)
+              {t('valuePlaceholder')}
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="contactLabel">Label (Optional)</Label>
+            <Label htmlFor="contactLabel">{t('labelOptional')}</Label>
             <Input
               id="contactLabel"
               value={formData.label}
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, label: e.target.value }))
               }
-              placeholder="e.g., Work, Personal, Spouse"
+              placeholder={t('labelPlaceholder')}
             />
           </div>
 
@@ -196,7 +200,7 @@ export function ContactFormDialog({
               className="h-4 w-4 rounded border-gray-300"
             />
             <Label htmlFor="isPrimary" className="text-sm font-normal">
-              Set as primary contact
+              {t('setPrimaryContact')}
             </Label>
           </div>
 
@@ -206,10 +210,10 @@ export function ContactFormDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              Cancel
+              {tc('cancel')}
             </Button>
             <Button type="submit" disabled={createContact.isPending}>
-              {createContact.isPending ? 'Adding...' : 'Add Contact'}
+              {createContact.isPending ? t('adding') : t('addContact')}
             </Button>
           </SheetFooter>
         </form>

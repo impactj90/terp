@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useLocale } from 'next-intl'
 import { cn } from '@/lib/utils'
 
 interface CurrentTimeProps {
@@ -8,6 +9,7 @@ interface CurrentTimeProps {
 }
 
 export function CurrentTime({ className }: CurrentTimeProps) {
+  const locale = useLocale()
   const [time, setTime] = useState<Date | null>(null)
 
   useEffect(() => {
@@ -29,13 +31,13 @@ export function CurrentTime({ className }: CurrentTimeProps) {
     )
   }
 
-  const timeStr = time.toLocaleTimeString('en-US', {
+  const timeStr = time.toLocaleTimeString(locale, {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
   })
 
-  const dateStr = time.toLocaleDateString('en-US', {
+  const dateStr = time.toLocaleDateString(locale, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',

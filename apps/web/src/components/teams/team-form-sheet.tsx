@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { Loader2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -61,20 +62,6 @@ const INITIAL_STATE: FormState = {
   isActive: true,
 }
 
-function validateForm(form: FormState): string[] {
-  const errors: string[] = []
-
-  if (!form.name.trim()) {
-    errors.push('Team name is required')
-  }
-
-  if (form.name.length > 255) {
-    errors.push('Team name must be 255 characters or less')
-  }
-
-  return errors
-}
-
 /**
  * Sheet form for creating or editing a team.
  */
@@ -84,6 +71,7 @@ export function TeamFormSheet({
   team,
   onSuccess,
 }: TeamFormSheetProps) {
+  const t = useTranslations('adminTeams')
   const isEdit = !!team
   const [form, setForm] = React.useState<FormState>(INITIAL_STATE)
   const [error, setError] = React.useState<string | null>(null)
@@ -102,6 +90,20 @@ export function TeamFormSheet({
 
   const departments = departmentsData?.data ?? []
   const employees = employeesData?.data ?? []
+
+  function validateForm(formData: FormState): string[] {
+    const errors: string[] = []
+
+    if (!formData.name.trim()) {
+      errors.push(t('validationNameRequired'))
+    }
+
+    if (formData.name.length > 255) {
+      errors.push(t('validationNameMaxLength'))
+    }
+
+    return errors
+  }
 
   // Reset form when opening/closing or team changes
   React.useEffect(() => {
@@ -157,7 +159,7 @@ export function TeamFormSheet({
       onSuccess?.()
     } catch (err) {
       const apiError = err as { detail?: string; message?: string }
-      setError(apiError.detail ?? apiError.message ?? `Failed to ${isEdit ? 'update' : 'create'} team`)
+      setError(apiError.detail ?? apiError.message ?? t(isEdit ? 'updateError' : 'createError'))
     }
   }
 
@@ -172,11 +174,11 @@ export function TeamFormSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-lg flex flex-col">
         <SheetHeader>
-          <SheetTitle>{isEdit ? 'Edit Team' : 'New Team'}</SheetTitle>
+          <SheetTitle>{isEdit ? t('editTitle') : t('newTitle')}</SheetTitle>
           <SheetDescription>
             {isEdit
-              ? 'Update team information and settings.'
-              : 'Create a new team for organizing employees.'}
+              ? t('editDescription')
+              : t('newDescription')}
           </SheetDescription>
         </SheetHeader>
 
@@ -184,27 +186,27 @@ export function TeamFormSheet({
           <div className="space-y-6 py-4">
             {/* Team Information */}
             <div className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Team Information</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">{t('sectionTeamInformation')}</h3>
 
               <div className="space-y-2">
-                <Label htmlFor="name">Name *</Label>
+                <Label htmlFor="name">{t('fieldName')} *</Label>
                 <Input
                   id="name"
                   value={form.name}
                   onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
                   disabled={isSubmitting}
-                  placeholder="e.g., Frontend Team"
+                  placeholder={t('fieldNamePlaceholder')}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
+                <Label htmlFor="description">{t('fieldDescription')}</Label>
                 <Textarea
                   id="description"
                   value={form.description}
                   onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
                   disabled={isSubmitting}
-                  placeholder="Brief description of the team's purpose..."
+                  placeholder={t('fieldDescriptionPlaceholder')}
                   rows={3}
                 />
               </div>
@@ -212,10 +214,10 @@ export function TeamFormSheet({
 
             {/* Organization */}
             <div className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Organization</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">{t('sectionOrganization')}</h3>
 
               <div className="space-y-2">
-                <Label>Department</Label>
+                <Label>{t('fieldDepartment')}</Label>
                 <Select
                   value={form.departmentId || '__none__'}
                   onValueChange={(value) => setForm((prev) => ({
@@ -225,10 +227,10 @@ export function TeamFormSheet({
                   disabled={isSubmitting || isLoadingReferenceData}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select department" />
+                    <SelectValue placeholder={t('selectDepartmentPlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">None</SelectItem>
+                    <SelectItem value="__none__">{t('selectNone')}</SelectItem>
                     {departments.map((dept) => (
                       <SelectItem key={dept.id} value={dept.id}>
                         {dept.name}
@@ -239,7 +241,7 @@ export function TeamFormSheet({
               </div>
 
               <div className="space-y-2">
-                <Label>Team Leader</Label>
+                <Label>{t('fieldTeamLeader')}</Label>
                 <Select
                   value={form.leaderEmployeeId || '__none__'}
                   onValueChange={(value) => setForm((prev) => ({
@@ -249,10 +251,10 @@ export function TeamFormSheet({
                   disabled={isSubmitting || isLoadingReferenceData}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select team leader" />
+                    <SelectValue placeholder={t('selectTeamLeaderPlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">None</SelectItem>
+                    <SelectItem value="__none__">{t('selectNone')}</SelectItem>
                     {employees.map((emp) => (
                       <SelectItem key={emp.id} value={emp.id}>
                         {emp.first_name} {emp.last_name}
@@ -265,13 +267,13 @@ export function TeamFormSheet({
 
             {/* Status */}
             <div className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Status</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">{t('sectionStatus')}</h3>
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label htmlFor="isActive">Active</Label>
+                  <Label htmlFor="isActive">{t('statusActive')}</Label>
                   <p className="text-sm text-muted-foreground">
-                    Inactive teams are hidden from most views
+                    {t('inactiveTeamsHint')}
                   </p>
                 </div>
                 <Switch
@@ -299,7 +301,7 @@ export function TeamFormSheet({
             disabled={isSubmitting}
             className="flex-1"
           >
-            Cancel
+            {t('cancel')}
           </Button>
           <Button
             onClick={handleSubmit}
@@ -307,7 +309,7 @@ export function TeamFormSheet({
             className="flex-1"
           >
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isSubmitting ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Team'}
+            {isSubmitting ? t('saving') : isEdit ? t('saveChanges') : t('createTeam')}
           </Button>
         </SheetFooter>
       </SheetContent>

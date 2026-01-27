@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { TrendingUp, AlertCircle, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -19,6 +20,8 @@ export function FlextimeBalanceCard({
   employeeId,
   className,
 }: FlextimeBalanceCardProps) {
+  const t = useTranslations('dashboard')
+  const tc = useTranslations('common')
   const now = new Date()
   const currentYear = now.getFullYear()
   const currentMonth = now.getMonth() + 1
@@ -44,12 +47,12 @@ export function FlextimeBalanceCard({
       <div className={cn('rounded-lg border bg-card p-6', className)}>
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-muted-foreground">
-            Flextime Balance
+            {t('flextimeBalance')}
           </span>
           <AlertCircle className="h-4 w-4 text-destructive" aria-hidden="true" />
         </div>
         <div className="mt-2">
-          <p className="text-sm text-destructive">Failed to load</p>
+          <p className="text-sm text-destructive">{tc('failedToLoad')}</p>
         </div>
         <Button
           variant="ghost"
@@ -58,7 +61,7 @@ export function FlextimeBalanceCard({
           className="mt-2 h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
         >
           <RefreshCw className="mr-1 h-3 w-3" />
-          Retry
+          {tc('retry')}
         </Button>
       </div>
     )
@@ -72,7 +75,7 @@ export function FlextimeBalanceCard({
       <div className={cn('rounded-lg border bg-card p-6', className)}>
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-muted-foreground">
-            Flextime Balance
+            {t('flextimeBalance')}
           </span>
           <TrendingUp className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
         </div>
@@ -80,7 +83,7 @@ export function FlextimeBalanceCard({
           <span className="text-2xl font-bold">--</span>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          No data for this month
+          {t('noDataForMonth')}
         </p>
       </div>
     )
@@ -98,7 +101,7 @@ export function FlextimeBalanceCard({
     <div className={cn('rounded-lg border bg-card p-6', className)}>
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-muted-foreground">
-          Flextime Balance
+          {t('flextimeBalance')}
         </span>
         <TrendingUp className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
       </div>
@@ -115,7 +118,7 @@ export function FlextimeBalanceCard({
         </span>
       </div>
       <p className="mt-1 text-xs text-muted-foreground">
-        {formatMinutes(netMinutes)} of {formatMinutes(targetMinutes)} target
+        {t('ofTarget', { net: formatMinutes(netMinutes), target: formatMinutes(targetMinutes) })}
       </p>
 
       {/* Balance indicator bar */}
@@ -139,8 +142,8 @@ export function FlextimeBalanceCard({
           )}
         </div>
         <div className="mt-1 flex justify-between text-xs text-muted-foreground">
-          <span>Under</span>
-          <span>Over</span>
+          <span>{t('under')}</span>
+          <span>{t('over')}</span>
         </div>
       </div>
     </div>

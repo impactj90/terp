@@ -1,7 +1,7 @@
 'use client'
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
+import { Link, usePathname } from '@/i18n/navigation'
 import { useMemo } from 'react'
 import { Home } from 'lucide-react'
 import {
@@ -14,51 +14,36 @@ import {
 } from '@/components/ui/breadcrumb'
 
 /**
- * Route to label mapping for breadcrumbs.
- * Add new routes here to provide human-readable labels.
+ * Route segment to translation key mapping for breadcrumbs.
  */
-const routeLabels: Record<string, string> = {
-  dashboard: 'Dashboard',
-  'time-clock': 'Time Clock',
-  timesheet: 'Timesheet',
-  absences: 'Absences',
-  profile: 'Profile',
-  settings: 'Settings',
-  admin: 'Administration',
-  employees: 'Employees',
-  departments: 'Departments',
-  'employment-types': 'Employment Types',
-  'day-plans': 'Day Plans',
-  users: 'Users',
-  reports: 'Reports',
-  tenants: 'Tenants',
-  new: 'New',
-  edit: 'Edit',
-}
-
-/**
- * Get human-readable label for a route segment.
- */
-function getRouteLabel(segment: string): string {
-  // Check if we have a defined label
-  if (routeLabels[segment]) {
-    return routeLabels[segment]
-  }
-
-  // Check if it looks like a UUID (for dynamic routes)
-  if (
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-      segment
-    )
-  ) {
-    return 'Details'
-  }
-
-  // Capitalize and format the segment
-  return segment
-    .split('-')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ')
+const segmentToKey: Record<string, string> = {
+  dashboard: 'dashboard',
+  'time-clock': 'timeClock',
+  timesheet: 'timesheet',
+  absences: 'absences',
+  profile: 'profile',
+  settings: 'settings',
+  admin: 'admin',
+  employees: 'employees',
+  departments: 'departments',
+  'employment-types': 'employmentTypes',
+  'day-plans': 'dayPlans',
+  'week-plans': 'weekPlans',
+  users: 'users',
+  reports: 'reports',
+  tenants: 'tenants',
+  new: 'new',
+  edit: 'edit',
+  teams: 'teams',
+  tariffs: 'tariffs',
+  holidays: 'holidays',
+  'absence-types': 'absenceTypes',
+  accounts: 'accounts',
+  approvals: 'approvals',
+  vacation: 'vacation',
+  'monthly-evaluation': 'monthlyEvaluation',
+  'year-overview': 'yearOverview',
+  'team-overview': 'teamOverview',
 }
 
 interface BreadcrumbNavItem {
@@ -69,10 +54,6 @@ interface BreadcrumbNavItem {
 }
 
 interface BreadcrumbsProps {
-  /** Optional custom home label */
-  homeLabel?: string
-  /** Optional custom home href */
-  homeHref?: string
   /** Whether to show home icon */
   showHomeIcon?: boolean
   /** Maximum number of items to show (truncates middle) */
@@ -84,12 +65,13 @@ interface BreadcrumbsProps {
  * Generates breadcrumbs from the current pathname.
  */
 export function Breadcrumbs({
-  homeLabel = 'Home',
-  homeHref = '/dashboard',
   showHomeIcon = true,
   maxItems = 4,
 }: BreadcrumbsProps) {
   const pathname = usePathname()
+  const t = useTranslations('breadcrumbs')
+
+  const homeHref = '/dashboard'
 
   const items = useMemo((): BreadcrumbNavItem[] => {
     // Split pathname into segments and filter empty strings
@@ -102,7 +84,23 @@ export function Breadcrumbs({
     // Build breadcrumb items with cumulative paths
     const breadcrumbItems: BreadcrumbNavItem[] = segments.map((segment, index) => {
       const href = '/' + segments.slice(0, index + 1).join('/')
-      const label = getRouteLabel(segment)
+
+      // Look up translation key, or format segment as fallback
+      const key = segmentToKey[segment]
+      let label: string
+      if (key) {
+        label = t(key as Parameters<typeof t>[0])
+      } else if (
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(segment)
+      ) {
+        label = t('details')
+      } else {
+        label = segment
+          .split('-')
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ')
+      }
+
       const isLast = index === segments.length - 1
 
       return {
@@ -126,7 +124,7 @@ export function Breadcrumbs({
     }
 
     return breadcrumbItems
-  }, [pathname, maxItems])
+  }, [pathname, maxItems, t])
 
   // Don't render if on home page or no items
   if (items.length === 0 || pathname === homeHref) {
@@ -142,12 +140,12 @@ export function Breadcrumbs({
             <Link
               href={homeHref}
               className="flex items-center gap-1.5"
-              aria-label={homeLabel}
+              aria-label={t('home')}
             >
               {showHomeIcon && (
                 <Home className="h-4 w-4" aria-hidden="true" />
               )}
-              <span className="sr-only md:not-sr-only">{homeLabel}</span>
+              <span className="sr-only md:not-sr-only">{t('home')}</span>
             </Link>
           </BreadcrumbLink>
         </BreadcrumbItem>

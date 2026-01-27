@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { Edit, Trash2, Users, UserPlus, Building2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -72,6 +73,8 @@ export function TeamDetailSheet({
   onDelete,
   onManageMembers,
 }: TeamDetailSheetProps) {
+  const t = useTranslations('adminTeams')
+
   // Fetch team details with members
   const { data: team, isLoading, isFetching } = useTeam(teamId ?? '', open && !!teamId)
 
@@ -121,14 +124,14 @@ export function TeamDetailSheet({
             <ScrollArea className="flex-1 -mx-4 px-4">
               <div className="py-4 space-y-1">
                 {/* Organization */}
-                <SectionHeader>Organization</SectionHeader>
+                <SectionHeader>{t('sectionOrganization')}</SectionHeader>
                 <DetailRow
-                  label="Department"
+                  label={t('fieldDepartment')}
                   value={team.department?.name}
                   icon={<Building2 className="h-4 w-4" />}
                 />
                 <DetailRow
-                  label="Team Leader"
+                  label={t('fieldTeamLeader')}
                   value={
                     team.leader
                       ? `${team.leader.first_name} ${team.leader.last_name}`
@@ -139,7 +142,7 @@ export function TeamDetailSheet({
                 {/* Team Members */}
                 <SectionHeader>
                   <div className="flex items-center justify-between">
-                    <span>Team Members ({team.members?.length ?? 0})</span>
+                    <span>{t('sectionMembers', { count: team.members?.length ?? 0 })}</span>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -147,7 +150,7 @@ export function TeamDetailSheet({
                       className="h-7 px-2"
                     >
                       <UserPlus className="h-3.5 w-3.5 mr-1" />
-                      Manage
+                      {t('manage')}
                     </Button>
                   </div>
                 </SectionHeader>
@@ -168,10 +171,10 @@ export function TeamDetailSheet({
                             <p className="text-sm font-medium">
                               {member.employee
                                 ? `${member.employee.first_name} ${member.employee.last_name}`
-                                : 'Unknown Employee'}
+                                : t('unknownEmployee')}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {member.employee?.department?.name || 'No department'}
+                              {member.employee?.department?.name || t('noDepartment')}
                             </p>
                           </div>
                         </div>
@@ -182,14 +185,14 @@ export function TeamDetailSheet({
                 ) : (
                   <div className="text-center py-6 text-muted-foreground">
                     <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No members yet</p>
+                    <p className="text-sm">{t('noMembersYet')}</p>
                     <Button
                       variant="link"
                       size="sm"
                       onClick={handleManageMembers}
                       className="mt-1"
                     >
-                      Add members
+                      {t('addMembers')}
                     </Button>
                   </div>
                 )}
@@ -199,11 +202,11 @@ export function TeamDetailSheet({
             <SheetFooter className="flex-row gap-2 border-t pt-4">
               <Button variant="outline" onClick={handleManageMembers} className="flex-1">
                 <Users className="mr-2 h-4 w-4" />
-                Manage Members
+                {t('manageMembers')}
               </Button>
               <Button variant="outline" onClick={handleEdit} className="flex-1">
                 <Edit className="mr-2 h-4 w-4" />
-                Edit
+                {t('edit')}
               </Button>
               <Button variant="ghost" size="icon" onClick={handleDelete}>
                 <Trash2 className="h-4 w-4 text-destructive" />
@@ -213,12 +216,12 @@ export function TeamDetailSheet({
         ) : (
           <>
             <SheetHeader>
-              <SheetTitle>Team Details</SheetTitle>
-              <SheetDescription>Team information</SheetDescription>
+              <SheetTitle>{t('detailTitle')}</SheetTitle>
+              <SheetDescription>{t('detailDescription')}</SheetDescription>
             </SheetHeader>
             <div className="flex flex-col items-center justify-center flex-1 text-center py-12">
               <Users className="h-12 w-12 text-muted-foreground opacity-50" />
-              <p className="mt-4 text-muted-foreground">Team not found</p>
+              <p className="mt-4 text-muted-foreground">{t('teamNotFound')}</p>
             </div>
           </>
         )}

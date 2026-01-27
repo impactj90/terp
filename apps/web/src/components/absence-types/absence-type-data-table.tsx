@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { useTranslations } from 'next-intl'
 import {
   MoreHorizontal,
   Eye,
@@ -47,16 +48,17 @@ interface AbsenceTypeDataTableProps {
   onDelete: (type: AbsenceType) => void
 }
 
-const categoryLabels: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
-  vacation: { label: 'Vacation', variant: 'default' },
-  sick: { label: 'Sick', variant: 'destructive' },
-  personal: { label: 'Personal', variant: 'secondary' },
-  unpaid: { label: 'Unpaid', variant: 'outline' },
-  holiday: { label: 'Holiday', variant: 'default' },
-  other: { label: 'Other', variant: 'outline' },
+const categoryConfig: Record<string, { labelKey: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
+  vacation: { labelKey: 'categoryVacation', variant: 'default' },
+  sick: { labelKey: 'categorySick', variant: 'destructive' },
+  personal: { labelKey: 'categoryPersonal', variant: 'secondary' },
+  unpaid: { labelKey: 'categoryUnpaid', variant: 'outline' },
+  holiday: { labelKey: 'categoryHoliday', variant: 'default' },
+  other: { labelKey: 'categoryOther', variant: 'outline' },
 }
 
 function BooleanIndicator({ value, label }: { value: boolean | undefined; label: string }) {
+  const t = useTranslations('adminAbsenceTypes')
   return (
     <TooltipProvider>
       <Tooltip>
@@ -70,7 +72,7 @@ function BooleanIndicator({ value, label }: { value: boolean | undefined; label:
           </span>
         </TooltipTrigger>
         <TooltipContent>
-          <p>{label}: {value ? 'Yes' : 'No'}</p>
+          <p>{label}: {value ? t('yes') : t('no')}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -84,6 +86,8 @@ export function AbsenceTypeDataTable({
   onEdit,
   onDelete,
 }: AbsenceTypeDataTableProps) {
+  const t = useTranslations('adminAbsenceTypes')
+
   if (isLoading) {
     return <AbsenceTypeDataTableSkeleton />
   }
@@ -97,22 +101,22 @@ export function AbsenceTypeDataTable({
       <TableHeader>
         <TableRow>
           <TableHead className="w-12" />
-          <TableHead className="w-20">Code</TableHead>
-          <TableHead>Name</TableHead>
-          <TableHead className="w-24">Category</TableHead>
-          <TableHead className="w-20 text-center">Paid</TableHead>
-          <TableHead className="w-20 text-center">Vacation</TableHead>
-          <TableHead className="w-20 text-center">Approval</TableHead>
-          <TableHead className="w-24">Status</TableHead>
+          <TableHead className="w-20">{t('columnCode')}</TableHead>
+          <TableHead>{t('columnName')}</TableHead>
+          <TableHead className="w-24">{t('columnCategory')}</TableHead>
+          <TableHead className="w-20 text-center">{t('columnPaid')}</TableHead>
+          <TableHead className="w-20 text-center">{t('columnVacation')}</TableHead>
+          <TableHead className="w-20 text-center">{t('columnApproval')}</TableHead>
+          <TableHead className="w-24">{t('columnStatus')}</TableHead>
           <TableHead className="w-16">
-            <span className="sr-only">Actions</span>
+            <span className="sr-only">{t('actions')}</span>
           </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {absenceTypes.map((type) => {
           const categoryKey = type.category || 'other'
-          const category = categoryLabels[categoryKey] ?? { label: 'Other', variant: 'outline' as const }
+          const category = categoryConfig[categoryKey] ?? { labelKey: 'categoryOther', variant: 'outline' as const }
 
           return (
             <TableRow
@@ -139,33 +143,33 @@ export function AbsenceTypeDataTable({
                 </div>
               </TableCell>
               <TableCell>
-                <Badge variant={category.variant}>{category.label}</Badge>
+                <Badge variant={category.variant}>{t(category.labelKey as Parameters<typeof t>[0])}</Badge>
               </TableCell>
               <TableCell className="text-center">
-                <BooleanIndicator value={type.is_paid} label="Paid" />
+                <BooleanIndicator value={type.is_paid} label={t('fieldPaid')} />
               </TableCell>
               <TableCell className="text-center">
-                <BooleanIndicator value={type.affects_vacation_balance} label="Deducts Vacation" />
+                <BooleanIndicator value={type.affects_vacation_balance} label={t('fieldAffectsVacation')} />
               </TableCell>
               <TableCell className="text-center">
-                <BooleanIndicator value={type.requires_approval} label="Requires Approval" />
+                <BooleanIndicator value={type.requires_approval} label={t('fieldRequiresApproval')} />
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-1">
                   {type.is_system && (
                     <Badge variant="outline" className="text-xs">
                       <Lock className="mr-1 h-3 w-3" />
-                      System
+                      {t('statusSystem')}
                     </Badge>
                   )}
                   {!type.is_active && (
                     <Badge variant="secondary" className="text-xs">
-                      Inactive
+                      {t('statusInactive')}
                     </Badge>
                   )}
                   {type.is_active && !type.is_system && (
                     <Badge variant="default" className="text-xs">
-                      Active
+                      {t('statusActive')}
                     </Badge>
                   )}
                 </div>
@@ -175,13 +179,13 @@ export function AbsenceTypeDataTable({
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon-sm">
                       <MoreHorizontal className="h-4 w-4" />
-                      <span className="sr-only">Actions</span>
+                      <span className="sr-only">{t('actions')}</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => onView(type)}>
                       <Eye className="mr-2 h-4 w-4" />
-                      View Details
+                      {t('viewDetails')}
                     </DropdownMenuItem>
                     {type.is_system ? (
                       <TooltipProvider>
@@ -189,18 +193,18 @@ export function AbsenceTypeDataTable({
                           <TooltipTrigger asChild>
                             <DropdownMenuItem disabled>
                               <Edit className="mr-2 h-4 w-4" />
-                              Edit
+                              {t('edit')}
                             </DropdownMenuItem>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>System types cannot be modified</p>
+                            <p>{t('systemCannotModify')}</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
                     ) : (
                       <DropdownMenuItem onClick={() => onEdit(type)}>
                         <Edit className="mr-2 h-4 w-4" />
-                        Edit
+                        {t('edit')}
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuSeparator />
@@ -210,11 +214,11 @@ export function AbsenceTypeDataTable({
                           <TooltipTrigger asChild>
                             <DropdownMenuItem disabled>
                               <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
+                              {t('delete')}
                             </DropdownMenuItem>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>System types cannot be deleted</p>
+                            <p>{t('systemCannotDelete')}</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -224,7 +228,7 @@ export function AbsenceTypeDataTable({
                         onClick={() => onDelete(type)}
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
+                        {t('delete')}
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuContent>

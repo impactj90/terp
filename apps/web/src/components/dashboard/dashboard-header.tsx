@@ -1,6 +1,7 @@
 'use client'
 
-import { getGreeting } from '@/lib/time-utils'
+import { useTranslations } from 'next-intl'
+import { useLocale } from 'next-intl'
 
 interface User {
   id: string
@@ -17,8 +18,20 @@ interface DashboardHeaderProps {
  * Dashboard page header with greeting and current date.
  */
 export function DashboardHeader({ user }: DashboardHeaderProps) {
-  const greeting = getGreeting()
-  const today = new Date().toLocaleDateString('en-US', {
+  const t = useTranslations('time')
+  const locale = useLocale()
+
+  const hour = new Date().getHours()
+  let greeting: string
+  if (hour < 12) {
+    greeting = t('greeting.morning')
+  } else if (hour < 18) {
+    greeting = t('greeting.afternoon')
+  } else {
+    greeting = t('greeting.evening')
+  }
+
+  const today = new Date().toLocaleDateString(locale, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',

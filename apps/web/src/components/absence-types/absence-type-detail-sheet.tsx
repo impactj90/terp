@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { format } from 'date-fns'
+import { useTranslations } from 'next-intl'
 import { Edit, Trash2, CalendarOff, Check, X, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -62,13 +63,13 @@ function BooleanBadge({ value, trueLabel, falseLabel }: { value: boolean | undef
   )
 }
 
-const categoryLabels: Record<string, string> = {
-  vacation: 'Vacation',
-  sick: 'Sick Leave',
-  personal: 'Personal Leave',
-  unpaid: 'Unpaid Leave',
-  holiday: 'Holiday',
-  other: 'Other',
+const categoryLabelKeys: Record<string, string> = {
+  vacation: 'categoryVacation',
+  sick: 'categorySick',
+  personal: 'categoryPersonal',
+  unpaid: 'categoryUnpaid',
+  holiday: 'categoryHoliday',
+  other: 'categoryOther',
 }
 
 export function AbsenceTypeDetailSheet({
@@ -78,6 +79,7 @@ export function AbsenceTypeDetailSheet({
   onEdit,
   onDelete,
 }: AbsenceTypeDetailSheetProps) {
+  const t = useTranslations('adminAbsenceTypes')
   const { data: absenceType, isLoading } = useAbsenceType(absenceTypeId || '', open && !!absenceTypeId)
 
   const formatDateTime = (date: string | undefined | null) => {
@@ -91,8 +93,8 @@ export function AbsenceTypeDetailSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-lg flex flex-col">
         <SheetHeader>
-          <SheetTitle>Absence Type Details</SheetTitle>
-          <SheetDescription>View absence type configuration</SheetDescription>
+          <SheetTitle>{t('absenceTypeDetails')}</SheetTitle>
+          <SheetDescription>{t('viewAbsenceTypeInfo')}</SheetDescription>
         </SheetHeader>
 
         {isLoading ? (
@@ -121,7 +123,7 @@ export function AbsenceTypeDetailSheet({
                     {isSystem && (
                       <Badge variant="outline" className="text-xs">
                         <Lock className="mr-1 h-3 w-3" />
-                        System
+                        {t('statusSystem')}
                       </Badge>
                     )}
                   </div>
@@ -130,27 +132,27 @@ export function AbsenceTypeDetailSheet({
                   </p>
                 </div>
                 <Badge variant={absenceType.is_active ? 'default' : 'secondary'}>
-                  {absenceType.is_active ? 'Active' : 'Inactive'}
+                  {absenceType.is_active ? t('statusActive') : t('statusInactive')}
                 </Badge>
               </div>
 
               {/* Description */}
               {absenceType.description && (
                 <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-muted-foreground">Description</h4>
+                  <h4 className="text-sm font-medium text-muted-foreground">{t('fieldDescription')}</h4>
                   <p className="text-sm">{absenceType.description}</p>
                 </div>
               )}
 
               {/* Details */}
               <div className="space-y-2">
-                <h4 className="text-sm font-medium text-muted-foreground">Details</h4>
+                <h4 className="text-sm font-medium text-muted-foreground">{t('detailsSection')}</h4>
                 <div className="rounded-lg border p-4">
-                  <DetailRow label="Code" value={<span className="font-mono">{absenceType.code}</span>} />
-                  <DetailRow label="Name" value={absenceType.name} />
-                  <DetailRow label="Category" value={categoryLabels[absenceType.category || 'other']} />
+                  <DetailRow label={t('fieldCode')} value={<span className="font-mono">{absenceType.code}</span>} />
+                  <DetailRow label={t('fieldName')} value={absenceType.name} />
+                  <DetailRow label={t('fieldCategory')} value={t(categoryLabelKeys[absenceType.category || 'other'] as Parameters<typeof t>[0])} />
                   <DetailRow
-                    label="Color"
+                    label={t('fieldColor')}
                     value={
                       <div className="flex items-center gap-2">
                         <div
@@ -166,29 +168,29 @@ export function AbsenceTypeDetailSheet({
 
               {/* Behavior */}
               <div className="space-y-2">
-                <h4 className="text-sm font-medium text-muted-foreground">Behavior</h4>
+                <h4 className="text-sm font-medium text-muted-foreground">{t('sectionBehavior')}</h4>
                 <div className="rounded-lg border p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Paid Absence</span>
-                    <BooleanBadge value={absenceType.is_paid} trueLabel="Paid" falseLabel="Unpaid" />
+                    <span className="text-sm text-muted-foreground">{t('fieldPaid')}</span>
+                    <BooleanBadge value={absenceType.is_paid} trueLabel={t('paidLabel')} falseLabel={t('unpaidLabel')} />
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Deducts Vacation</span>
-                    <BooleanBadge value={absenceType.affects_vacation_balance} trueLabel="Yes" falseLabel="No" />
+                    <span className="text-sm text-muted-foreground">{t('fieldAffectsVacation')}</span>
+                    <BooleanBadge value={absenceType.affects_vacation_balance} trueLabel={t('yes')} falseLabel={t('no')} />
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Requires Approval</span>
-                    <BooleanBadge value={absenceType.requires_approval} trueLabel="Required" falseLabel="Not Required" />
+                    <span className="text-sm text-muted-foreground">{t('fieldRequiresApproval')}</span>
+                    <BooleanBadge value={absenceType.requires_approval} trueLabel={t('requiredLabel')} falseLabel={t('notRequiredLabel')} />
                   </div>
                 </div>
               </div>
 
               {/* Timestamps */}
               <div className="space-y-2">
-                <h4 className="text-sm font-medium text-muted-foreground">Timestamps</h4>
+                <h4 className="text-sm font-medium text-muted-foreground">{t('timestampsSection')}</h4>
                 <div className="rounded-lg border p-4">
-                  <DetailRow label="Created" value={formatDateTime(absenceType.created_at)} />
-                  <DetailRow label="Last Updated" value={formatDateTime(absenceType.updated_at)} />
+                  <DetailRow label={t('labelCreated')} value={formatDateTime(absenceType.created_at)} />
+                  <DetailRow label={t('labelLastUpdated')} value={formatDateTime(absenceType.updated_at)} />
                 </div>
               </div>
             </div>
@@ -197,7 +199,7 @@ export function AbsenceTypeDetailSheet({
 
         <SheetFooter className="flex-row gap-2 border-t pt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
-            Close
+            {t('close')}
           </Button>
           {absenceType && (
             <>
@@ -207,18 +209,18 @@ export function AbsenceTypeDetailSheet({
                     <TooltipTrigger asChild>
                       <Button variant="outline" disabled>
                         <Edit className="mr-2 h-4 w-4" />
-                        Edit
+                        {t('edit')}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>System types cannot be modified</p>
+                      <p>{t('systemCannotModify')}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               ) : (
                 <Button variant="outline" onClick={() => onEdit(absenceType)}>
                   <Edit className="mr-2 h-4 w-4" />
-                  Edit
+                  {t('edit')}
                 </Button>
               )}
               {isSystem ? (
@@ -227,18 +229,18 @@ export function AbsenceTypeDetailSheet({
                     <TooltipTrigger asChild>
                       <Button variant="destructive" disabled>
                         <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
+                        {t('delete')}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>System types cannot be deleted</p>
+                      <p>{t('systemCannotDelete')}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               ) : (
                 <Button variant="destructive" onClick={() => onDelete(absenceType)}>
                   <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
+                  {t('delete')}
                 </Button>
               )}
             </>

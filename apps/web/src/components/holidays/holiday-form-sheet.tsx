@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { format } from 'date-fns'
+import { useTranslations } from 'next-intl'
 import { Loader2, CalendarIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -65,24 +66,6 @@ const INITIAL_STATE: FormState = {
   departmentId: '',
 }
 
-function validateForm(form: FormState): string[] {
-  const errors: string[] = []
-
-  if (!form.holidayDate) {
-    errors.push('Date is required')
-  }
-
-  if (!form.name.trim()) {
-    errors.push('Name is required')
-  }
-
-  if (!form.appliesToAll && !form.departmentId) {
-    errors.push('Department is required when not applying to all')
-  }
-
-  return errors
-}
-
 export function HolidayFormSheet({
   open,
   onOpenChange,
@@ -90,6 +73,7 @@ export function HolidayFormSheet({
   defaultDate,
   onSuccess,
 }: HolidayFormSheetProps) {
+  const t = useTranslations('adminHolidays')
   const isEdit = !!holiday
   const [form, setForm] = React.useState<FormState>(INITIAL_STATE)
   const [error, setError] = React.useState<string | null>(null)
@@ -137,7 +121,11 @@ export function HolidayFormSheet({
   const handleSubmit = async () => {
     setError(null)
 
-    const errors = validateForm(form)
+    const errors: string[] = []
+    if (!form.holidayDate) errors.push(t('validationDateRequired'))
+    if (!form.name.trim()) errors.push(t('validationNameRequired'))
+    if (!form.appliesToAll && !form.departmentId) errors.push(t('validationDepartmentRequired'))
+
     if (errors.length > 0) {
       setError(errors.join('. '))
       return
@@ -171,7 +159,7 @@ export function HolidayFormSheet({
     } catch (err) {
       const apiError = err as { detail?: string; message?: string }
       setError(
-        apiError.detail ?? apiError.message ?? `Failed to ${isEdit ? 'update' : 'create'} holiday`
+        apiError.detail ?? apiError.message ?? (isEdit ? t('failedUpdate') : t('failedCreate'))
       )
     }
   }
@@ -186,11 +174,11 @@ export function HolidayFormSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-lg flex flex-col">
         <SheetHeader>
-          <SheetTitle>{isEdit ? 'Edit Holiday' : 'New Holiday'}</SheetTitle>
+          <SheetTitle>{isEdit ? t('editHoliday') : t('newHoliday')}</SheetTitle>
           <SheetDescription>
             {isEdit
-              ? 'Update holiday information.'
-              : 'Create a new public holiday.'}
+              ? t('editDescription')
+              : t('createDescription')}
           </SheetDescription>
         </SheetHeader>
 
@@ -198,10 +186,10 @@ export function HolidayFormSheet({
           <div className="space-y-6 py-4">
             {/* Date Selection */}
             <div className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Date</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">{t('sectionDate')}</h3>
 
               <div className="space-y-2">
-                <Label>Holiday Date *</Label>
+                <Label>{t('fieldDate')} *</Label>
                 <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                   <PopoverTrigger asChild>
                     <Button
@@ -216,7 +204,7 @@ export function HolidayFormSheet({
                       {form.holidayDate ? (
                         format(form.holidayDate, 'EEEE, MMMM d, yyyy')
                       ) : (
-                        'Select date'
+                        t('selectDate')
                       )}
                     </Button>
                   </PopoverTrigger>
@@ -240,24 +228,24 @@ export function HolidayFormSheet({
 
             {/* Basic Information */}
             <div className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Information</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">{t('sectionInformation')}</h3>
 
               <div className="space-y-2">
-                <Label htmlFor="name">Name *</Label>
+                <Label htmlFor="name">{t('fieldName')} *</Label>
                 <Input
                   id="name"
                   value={form.name}
                   onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
                   disabled={isSubmitting}
-                  placeholder="Christmas Day"
+                  placeholder={t('namePlaceholder')}
                 />
               </div>
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label htmlFor="isHalfDay">Half Day</Label>
+                  <Label htmlFor="isHalfDay">{t('halfDayLabel')}</Label>
                   <p className="text-xs text-muted-foreground">
-                    Half days credit 50% of regular working time
+                    {t('halfDayDescription')}
                   </p>
                 </div>
                 <Switch
@@ -273,13 +261,13 @@ export function HolidayFormSheet({
 
             {/* Scope */}
             <div className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Scope</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">{t('sectionScope')}</h3>
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label htmlFor="appliesToAll">Applies to All Employees</Label>
+                  <Label htmlFor="appliesToAll">{t('appliesToAllLabel')}</Label>
                   <p className="text-xs text-muted-foreground">
-                    Uncheck to assign to a specific department
+                    {t('appliesToAllDescription')}
                   </p>
                 </div>
                 <Switch
@@ -298,7 +286,7 @@ export function HolidayFormSheet({
 
               {!form.appliesToAll && (
                 <div className="space-y-2">
-                  <Label>Department *</Label>
+                  <Label>{t('fieldDepartment')} *</Label>
                   <Select
                     value={form.departmentId || '__none__'}
                     onValueChange={(value) =>
@@ -310,10 +298,10 @@ export function HolidayFormSheet({
                     disabled={isSubmitting || loadingDepartments}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select department" />
+                      <SelectValue placeholder={t('selectDepartment')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__none__">Select a department</SelectItem>
+                      <SelectItem value="__none__">{t('selectDepartmentOption')}</SelectItem>
                       {departments.map((dept) => (
                         <SelectItem key={dept.id} value={dept.id}>
                           {dept.name} ({dept.code})
@@ -336,11 +324,11 @@ export function HolidayFormSheet({
 
         <SheetFooter className="flex-row gap-2 border-t pt-4">
           <Button variant="outline" onClick={handleClose} disabled={isSubmitting} className="flex-1">
-            Cancel
+            {t('cancel')}
           </Button>
           <Button onClick={handleSubmit} disabled={isSubmitting} className="flex-1">
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isSubmitting ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Holiday'}
+            {isSubmitting ? t('saving') : isEdit ? t('saveChanges') : t('createHolidayButton')}
           </Button>
         </SheetFooter>
       </SheetContent>

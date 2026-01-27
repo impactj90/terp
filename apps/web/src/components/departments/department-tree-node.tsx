@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { ChevronRight, ChevronDown, Building2, MoreHorizontal, Edit, Trash2, Eye } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -38,6 +39,7 @@ export function DepartmentTreeNode({
   onDelete,
   onAddChild,
 }: DepartmentTreeNodeProps) {
+  const t = useTranslations('adminDepartments')
   const { department, children = [] } = node
   const hasChildren = children.length > 0
   const isExpanded = expandedIds.has(department.id)
@@ -87,13 +89,13 @@ export function DepartmentTreeNode({
 
         {/* Status badge */}
         <Badge variant={department.is_active ? 'default' : 'secondary'} className="shrink-0">
-          {department.is_active ? 'Active' : 'Inactive'}
+          {department.is_active ? t('statusActive') : t('statusInactive')}
         </Badge>
 
         {/* Children count */}
         {hasChildren && (
           <span className="text-xs text-muted-foreground shrink-0">
-            {children.length} {children.length === 1 ? 'child' : 'children'}
+            {children.length === 1 ? t('childCount', { count: children.length }) : t('childrenCount', { count: children.length })}
           </span>
         )}
 
@@ -111,15 +113,15 @@ export function DepartmentTreeNode({
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => onView(department)}>
               <Eye className="mr-2 h-4 w-4" />
-              View Details
+              {t('viewDetails')}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onEdit(department)}>
               <Edit className="mr-2 h-4 w-4" />
-              Edit
+              {t('edit')}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onAddChild(department.id)}>
               <Building2 className="mr-2 h-4 w-4" />
-              Add Child Department
+              {t('addChildDepartment')}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -128,7 +130,7 @@ export function DepartmentTreeNode({
               disabled={hasChildren}
             >
               <Trash2 className="mr-2 h-4 w-4" />
-              Delete
+              {t('delete')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

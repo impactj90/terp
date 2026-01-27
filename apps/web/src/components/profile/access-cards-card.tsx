@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useEmployeeCards } from '@/hooks/api'
 import { CreditCard, Barcode, KeyRound, CreditCardIcon } from 'lucide-react'
+import { useTranslations, useLocale } from 'next-intl'
 import type { components } from '@/lib/api/types'
 
 type EmployeeCard = NonNullable<components['schemas']['Employee']['cards']>[number]
@@ -22,11 +23,11 @@ interface AccessCardsCardProps {
 /**
  * Format a date string to a readable format.
  */
-function formatDate(dateStr: string | null | undefined): string {
+function formatDate(dateStr: string | null | undefined, locale: string): string {
   if (!dateStr) return ''
   try {
     const date = new Date(dateStr)
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(locale, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -38,17 +39,20 @@ function formatDate(dateStr: string | null | undefined): string {
 
 const cardTypeConfig: Record<
   string,
-  { icon: typeof CreditCard; label: string; variant: 'default' | 'secondary' | 'outline' }
+  { icon: typeof CreditCard; labelKey: string; variant: 'default' | 'secondary' | 'outline' }
 > = {
-  rfid: { icon: CreditCard, label: 'RFID', variant: 'default' },
-  barcode: { icon: Barcode, label: 'Barcode', variant: 'secondary' },
-  pin: { icon: KeyRound, label: 'PIN', variant: 'outline' },
+  rfid: { icon: CreditCard, labelKey: 'cardTypeRfid', variant: 'default' },
+  barcode: { icon: Barcode, labelKey: 'cardTypeBarcode', variant: 'secondary' },
+  pin: { icon: KeyRound, labelKey: 'cardTypePin', variant: 'outline' },
 }
 
 /**
  * Access card list item.
  */
 function AccessCardItem({ card }: { card: EmployeeCard }) {
+  const t = useTranslations('profile')
+  const locale = useLocale()
+
   const config = cardTypeConfig[card.card_type] || cardTypeConfig.rfid
   const Icon = config?.icon || CreditCard
   const isActive = card.is_active !== false && !card.deactivated_at
@@ -66,18 +70,18 @@ function AccessCardItem({ card }: { card: EmployeeCard }) {
           <div className="flex items-center gap-2">
             <span className="font-mono text-sm font-medium">{card.card_number}</span>
             <Badge variant={config?.variant || 'secondary'} className="text-xs">
-              {config?.label || 'Unknown'}
+              {t(config?.labelKey as Parameters<typeof t>[0]) || t('unknown')}
             </Badge>
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>Valid from {formatDate(card.valid_from)}</span>
+            <span>{t('validFrom')} {formatDate(card.valid_from, locale)}</span>
             {card.valid_to && (
               <>
-                <span>to</span>
-                <span>{formatDate(card.valid_to)}</span>
+                <span>{t('to')}</span>
+                <span>{formatDate(card.valid_to, locale)}</span>
               </>
             )}
-            {!card.valid_to && <span className="text-muted-foreground">(No expiry)</span>}
+            {!card.valid_to && <span className="text-muted-foreground">{t('noExpiry')}</span>}
           </div>
         </div>
       </div>
@@ -86,7 +90,7 @@ function AccessCardItem({ card }: { card: EmployeeCard }) {
         variant={effectiveActive ? 'default' : 'secondary'}
         className={effectiveActive ? 'bg-green-500 hover:bg-green-500' : ''}
       >
-        {isExpired ? 'Expired' : effectiveActive ? 'Active' : 'Inactive'}
+        {isExpired ? t('cardExpired') : effectiveActive ? t('cardActive') : t('cardInactive')}
       </Badge>
     </div>
   )
@@ -96,14 +100,15 @@ function AccessCardItem({ card }: { card: EmployeeCard }) {
  * Access cards card showing read-only list of employee access cards.
  */
 export function AccessCardsCard({ employeeId }: AccessCardsCardProps) {
+  const t = useTranslations('profile')
   const { data: cards, isLoading } = useEmployeeCards(employeeId)
 
   if (isLoading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Access Cards</CardTitle>
-          <CardDescription>Your assigned access cards (read-only)</CardDescription>
+          <CardTitle>{t('accessCards')}</CardTitle>
+          <CardDescription>{t('accessCardsSubtitle')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -127,8 +132,8 @@ export function AccessCardsCard({ employeeId }: AccessCardsCardProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Access Cards</CardTitle>
-        <CardDescription>Your assigned access cards (read-only)</CardDescription>
+        <CardTitle>{t('accessCards')}</CardTitle>
+        <CardDescription>{t('accessCardsSubtitle')}</CardDescription>
       </CardHeader>
 
       <CardContent>
@@ -138,10 +143,10 @@ export function AccessCardsCard({ employeeId }: AccessCardsCardProps) {
               <CreditCardIcon className="h-6 w-6 text-muted-foreground" />
             </div>
             <p className="mt-3 text-sm text-muted-foreground">
-              No access cards assigned
+              {t('noAccessCards')}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Contact your administrator to request an access card.
+              {t('contactAdminForCard')}
             </p>
           </div>
         ) : (

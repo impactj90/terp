@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { useTranslations } from 'next-intl'
 import { format } from 'date-fns'
 import { MoreHorizontal, Eye, Edit, Clock, UserX } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -58,6 +59,7 @@ export function EmployeeDataTable({
   onDelete,
   onViewTimesheet,
 }: EmployeeDataTableProps) {
+  const t = useTranslations('adminEmployees')
   // Handle select all toggle
   const allSelected = employees.length > 0 && employees.every((e) => selectedIds.has(e.id))
   const someSelected = employees.some((e) => selectedIds.has(e.id)) && !allSelected
@@ -107,17 +109,17 @@ export function EmployeeDataTable({
             <Checkbox
               checked={allSelected ? true : someSelected ? 'indeterminate' : false}
               onCheckedChange={handleSelectAll}
-              aria-label="Select all"
+              aria-label={t('selectAll')}
             />
           </TableHead>
-          <TableHead className="w-28">Personnel #</TableHead>
-          <TableHead>Name</TableHead>
-          <TableHead>Email</TableHead>
-          <TableHead>Department</TableHead>
-          <TableHead className="w-24">Status</TableHead>
-          <TableHead className="w-28">Entry Date</TableHead>
+          <TableHead className="w-28">{t('columnPersonnelNumber')}</TableHead>
+          <TableHead>{t('columnName')}</TableHead>
+          <TableHead>{t('columnEmail')}</TableHead>
+          <TableHead>{t('columnDepartment')}</TableHead>
+          <TableHead className="w-24">{t('columnStatus')}</TableHead>
+          <TableHead className="w-28">{t('columnEntryDate')}</TableHead>
           <TableHead className="w-16">
-            <span className="sr-only">Actions</span>
+            <span className="sr-only">{t('columnActions')}</span>
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -133,7 +135,7 @@ export function EmployeeDataTable({
               <Checkbox
                 checked={selectedIds.has(employee.id)}
                 onCheckedChange={() => handleSelectOne(employee.id)}
-                aria-label={`Select ${employee.first_name} ${employee.last_name}`}
+                aria-label={t('selectEmployee', { first: employee.first_name, last: employee.last_name })}
               />
             </TableCell>
             <TableCell className="font-mono text-sm">
@@ -166,21 +168,21 @@ export function EmployeeDataTable({
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon-sm">
                     <MoreHorizontal className="h-4 w-4" />
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{t('columnActions')}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => onView(employee)}>
                     <Eye className="mr-2 h-4 w-4" />
-                    View Details
+                    {t('viewDetails')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onEdit(employee)}>
                     <Edit className="mr-2 h-4 w-4" />
-                    Edit
+                    {t('edit')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onViewTimesheet(employee)}>
                     <Clock className="mr-2 h-4 w-4" />
-                    View Timesheet
+                    {t('viewTimesheet')}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -188,7 +190,7 @@ export function EmployeeDataTable({
                     onClick={() => onDelete(employee)}
                   >
                     <UserX className="mr-2 h-4 w-4" />
-                    Deactivate
+                    {t('deactivate')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

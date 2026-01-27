@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { MoreHorizontal, Eye, Edit, Users, Trash2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -57,6 +58,8 @@ export function TeamDataTable({
   onDelete,
   onManageMembers,
 }: TeamDataTableProps) {
+  const t = useTranslations('adminTeams')
+
   // Handle select all toggle
   const allSelected = teams.length > 0 && teams.every((t) => selectedIds.has(t.id))
   const someSelected = teams.some((t) => selectedIds.has(t.id)) && !allSelected
@@ -99,16 +102,16 @@ export function TeamDataTable({
             <Checkbox
               checked={allSelected ? true : someSelected ? 'indeterminate' : false}
               onCheckedChange={handleSelectAll}
-              aria-label="Select all"
+              aria-label={t('selectAll')}
             />
           </TableHead>
-          <TableHead>Name</TableHead>
-          <TableHead>Department</TableHead>
-          <TableHead>Leader</TableHead>
-          <TableHead className="w-24">Members</TableHead>
-          <TableHead className="w-24">Status</TableHead>
+          <TableHead>{t('columnName')}</TableHead>
+          <TableHead>{t('columnDepartment')}</TableHead>
+          <TableHead>{t('columnLeader')}</TableHead>
+          <TableHead className="w-24">{t('columnMembers')}</TableHead>
+          <TableHead className="w-24">{t('columnStatus')}</TableHead>
           <TableHead className="w-16">
-            <span className="sr-only">Actions</span>
+            <span className="sr-only">{t('columnActions')}</span>
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -124,7 +127,7 @@ export function TeamDataTable({
               <Checkbox
                 checked={selectedIds.has(team.id)}
                 onCheckedChange={() => handleSelectOne(team.id)}
-                aria-label={`Select ${team.name}`}
+                aria-label={t('selectTeam', { name: team.name })}
               />
             </TableCell>
             <TableCell>
@@ -169,21 +172,21 @@ export function TeamDataTable({
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon-sm">
                     <MoreHorizontal className="h-4 w-4" />
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{t('columnActions')}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => onView(team)}>
                     <Eye className="mr-2 h-4 w-4" />
-                    View Details
+                    {t('viewDetails')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onEdit(team)}>
                     <Edit className="mr-2 h-4 w-4" />
-                    Edit
+                    {t('edit')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onManageMembers(team)}>
                     <Users className="mr-2 h-4 w-4" />
-                    Manage Members
+                    {t('manageMembers')}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -191,7 +194,7 @@ export function TeamDataTable({
                     onClick={() => onDelete(team)}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
+                    {t('delete')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

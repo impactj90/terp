@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Clock, Construction } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 interface TimePlanCardProps {
   employeeId: string
@@ -19,16 +20,18 @@ interface TimePlanCardProps {
  * Will show assigned time plans and schedules when the API is ready.
  */
 export function TimePlanCard({ employeeId: _employeeId }: TimePlanCardProps) {
+  const t = useTranslations('profile')
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          Time Plan
+          {t('timePlan')}
           <Badge variant="secondary" className="text-xs">
-            Coming Soon
+            {t('comingSoon')}
           </Badge>
         </CardTitle>
-        <CardDescription>Your assigned work schedule</CardDescription>
+        <CardDescription>{t('workSchedule')}</CardDescription>
       </CardHeader>
 
       <CardContent>
@@ -41,12 +44,12 @@ export function TimePlanCard({ employeeId: _employeeId }: TimePlanCardProps) {
               <Construction className="h-3 w-3 text-amber-600 dark:text-amber-400" />
             </div>
           </div>
-          <p className="mt-3 text-sm font-medium">Time Plan Feature</p>
+          <p className="mt-3 text-sm font-medium">{t('timePlanFeature')}</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            This feature is currently under development.
+            {t('timePlanDevelopment')}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            You will be able to view your assigned time plans and work schedules here.
+            {t('timePlanFuture')}
           </p>
         </div>
       </CardContent>

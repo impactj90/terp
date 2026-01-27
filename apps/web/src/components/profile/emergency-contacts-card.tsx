@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Alert } from '@/components/ui/alert'
 import { useEmployeeContacts, useDeleteEmployeeContact } from '@/hooks/api'
 import { Plus, Users, AlertCircle, CheckCircle } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { ContactFormDialog } from './contact-form-dialog'
 import { ContactListItem } from './contact-list-item'
 
@@ -25,6 +26,8 @@ interface EmergencyContactsCardProps {
  * Emergency contacts card with CRUD functionality.
  */
 export function EmergencyContactsCard({ employeeId }: EmergencyContactsCardProps) {
+  const t = useTranslations('profile')
+
   const [dialogOpen, setDialogOpen] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
@@ -58,17 +61,17 @@ export function EmergencyContactsCard({ employeeId }: EmergencyContactsCardProps
       await deleteContact.mutateAsync({
         path: { id: employeeId, contactId },
       })
-      setSuccessMessage('Contact deleted successfully')
+      setSuccessMessage(t('contactDeleted'))
       refetch()
     } catch {
-      setErrorMessage('Failed to delete contact. Please try again.')
+      setErrorMessage(t('failedToDeleteContact'))
     } finally {
       setDeletingId(null)
     }
   }
 
   const handleContactCreated = () => {
-    setSuccessMessage('Contact added successfully')
+    setSuccessMessage(t('contactAdded'))
     refetch()
   }
 
@@ -76,8 +79,8 @@ export function EmergencyContactsCard({ employeeId }: EmergencyContactsCardProps
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Contacts</CardTitle>
-          <CardDescription>Your emergency and other contacts</CardDescription>
+          <CardTitle>{t('contacts')}</CardTitle>
+          <CardDescription>{t('contactsSubtitle')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -102,12 +105,12 @@ export function EmergencyContactsCard({ employeeId }: EmergencyContactsCardProps
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Contacts</CardTitle>
-          <CardDescription>Your emergency and other contacts</CardDescription>
+          <CardTitle>{t('contacts')}</CardTitle>
+          <CardDescription>{t('contactsSubtitle')}</CardDescription>
           <CardAction>
             <Button size="sm" variant="outline" onClick={() => setDialogOpen(true)}>
               <Plus className="mr-1 h-4 w-4" />
-              Add
+              {t('add')}
             </Button>
           </CardAction>
         </CardHeader>
@@ -133,7 +136,7 @@ export function EmergencyContactsCard({ employeeId }: EmergencyContactsCardProps
                 <Users className="h-6 w-6 text-muted-foreground" />
               </div>
               <p className="mt-3 text-sm text-muted-foreground">
-                No contacts added yet
+                {t('noContactsYet')}
               </p>
               <Button
                 variant="outline"
@@ -142,7 +145,7 @@ export function EmergencyContactsCard({ employeeId }: EmergencyContactsCardProps
                 onClick={() => setDialogOpen(true)}
               >
                 <Plus className="mr-1 h-4 w-4" />
-                Add Contact
+                {t('addContact')}
               </Button>
             </div>
           ) : (

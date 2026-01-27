@@ -1,6 +1,7 @@
 'use client'
 
-import Link from 'next/link'
+import { useTranslations } from 'next-intl'
+import { Link } from '@/i18n/navigation'
 import { User, Settings, LogOut } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -20,6 +21,7 @@ import { Button } from '@/components/ui/button'
  */
 export function UserMenu() {
   const { user, isAuthenticated, logout } = useAuth()
+  const t = useTranslations('userMenu')
 
   // Get initials from display name for avatar fallback
   const getInitials = (name: string | undefined | null) => {
@@ -40,7 +42,7 @@ export function UserMenu() {
   if (!isAuthenticated || !user) {
     return (
       <Button variant="ghost" size="sm" asChild>
-        <Link href="/login">Sign In</Link>
+        <Link href="/login">{t('signIn')}</Link>
       </Button>
     )
   }
@@ -51,7 +53,7 @@ export function UserMenu() {
         <Button
           variant="ghost"
           className="relative h-9 w-9 rounded-full"
-          aria-label="Open user menu"
+          aria-label={t('openUserMenu')}
         >
           <Avatar className="h-9 w-9">
             <AvatarImage
@@ -77,13 +79,13 @@ export function UserMenu() {
         <DropdownMenuItem asChild>
           <Link href="/profile" className="flex items-center">
             <User className="mr-2 h-4 w-4" aria-hidden="true" />
-            <span>Profile</span>
+            <span>{t('profile')}</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/settings" className="flex items-center">
             <Settings className="mr-2 h-4 w-4" aria-hidden="true" />
-            <span>Settings</span>
+            <span>{t('settings')}</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
@@ -92,7 +94,7 @@ export function UserMenu() {
           className="text-destructive focus:text-destructive"
         >
           <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
-          <span>Log out</span>
+          <span>{t('signOut')}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

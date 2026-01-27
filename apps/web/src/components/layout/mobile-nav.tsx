@@ -1,7 +1,7 @@
 'use client'
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
+import { Link, usePathname } from '@/i18n/navigation'
 import { MoreHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { mobileNavItems } from './sidebar'
@@ -18,6 +18,8 @@ interface MobileNavProps {
  */
 export function MobileNav({ className, onMoreClick }: MobileNavProps) {
   const pathname = usePathname()
+  const t = useTranslations('nav')
+  const tCommon = useTranslations('common')
 
   return (
     <nav
@@ -44,7 +46,7 @@ export function MobileNav({ className, onMoreClick }: MobileNavProps) {
             aria-current={isActive ? 'page' : undefined}
           >
             <Icon className="h-5 w-5" aria-hidden="true" />
-            <span className="truncate">{item.title}</span>
+            <span className="truncate">{t(item.titleKey as Parameters<typeof t>[0])}</span>
           </Link>
         )
       })}
@@ -57,10 +59,10 @@ export function MobileNav({ className, onMoreClick }: MobileNavProps) {
           'flex flex-1 flex-col items-center justify-center gap-1 py-2 text-xs font-medium text-muted-foreground transition-colors',
           'hover:text-primary'
         )}
-        aria-label="More navigation options"
+        aria-label={tCommon('more')}
       >
         <MoreHorizontal className="h-5 w-5" aria-hidden="true" />
-        <span>More</span>
+        <span>{tCommon('more')}</span>
       </button>
     </nav>
   )

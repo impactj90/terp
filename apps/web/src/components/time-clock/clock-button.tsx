@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { LogIn, LogOut, Coffee, Briefcase } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -25,32 +26,32 @@ const actionConfig: Record<
   ClockStatus,
   {
     action: BookingAction
-    label: string
+    labelKey: string
     icon: typeof LogIn
     variant: 'default' | 'destructive'
   }
 > = {
   clocked_out: {
     action: 'clock_in',
-    label: 'Clock In',
+    labelKey: 'clockIn',
     icon: LogIn,
     variant: 'default',
   },
   clocked_in: {
     action: 'clock_out',
-    label: 'Clock Out',
+    labelKey: 'clockOut',
     icon: LogOut,
     variant: 'destructive',
   },
   on_break: {
     action: 'end_break',
-    label: 'End Break',
+    labelKey: 'endBreak',
     icon: Coffee,
     variant: 'default',
   },
   on_errand: {
     action: 'end_errand',
-    label: 'End Errand',
+    labelKey: 'endErrand',
     icon: Briefcase,
     variant: 'default',
   },
@@ -63,8 +64,11 @@ export function ClockButton({
   disabled,
   className,
 }: ClockButtonProps) {
+  const t = useTranslations('timeClock')
+  const tc = useTranslations('common')
   const config = actionConfig[status]
   const Icon = config.icon
+  const label = t(config.labelKey as Parameters<typeof t>[0])
 
   return (
     <Button
@@ -72,7 +76,7 @@ export function ClockButton({
       variant={config.variant}
       onClick={() => onAction(config.action)}
       disabled={disabled || isLoading}
-      aria-label={`${config.label}. Current status: ${status.replace(/_/g, ' ')}`}
+      aria-label={`${label}. ${t('currentStatus', { status: status.replace(/_/g, ' ') })}`}
       aria-busy={isLoading}
       className={cn(
         'h-32 w-32 rounded-full text-lg font-semibold shadow-lg',
@@ -85,7 +89,7 @@ export function ClockButton({
     >
       <div className="flex flex-col items-center gap-2">
         <Icon className="h-8 w-8" />
-        <span>{isLoading ? 'Loading...' : config.label}</span>
+        <span>{isLoading ? tc('loading') : label}</span>
       </div>
     </Button>
   )

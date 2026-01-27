@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { AlertCircle, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -35,6 +36,8 @@ export function StatsCard({
   onRetry,
   className,
 }: StatsCardProps) {
+  const t = useTranslations('common')
+
   if (isLoading) {
     return <StatsCardSkeleton className={className} />
   }
@@ -49,7 +52,7 @@ export function StatsCard({
           <AlertCircle className="h-4 w-4 text-destructive" aria-hidden="true" />
         </div>
         <div className="mt-2">
-          <p className="text-sm text-destructive">Failed to load</p>
+          <p className="text-sm text-destructive">{t('failedToLoad')}</p>
         </div>
         {onRetry && (
           <Button
@@ -59,7 +62,7 @@ export function StatsCard({
             className="mt-2 h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
           >
             <RefreshCw className="mr-1 h-3 w-3" />
-            Retry
+            {t('retry')}
           </Button>
         )}
       </div>

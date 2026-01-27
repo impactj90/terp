@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import { Clock, Edit, Mail, Phone, User, UserX } from 'lucide-react'
@@ -70,6 +71,7 @@ export function EmployeeDetailSheet({
   onEdit,
   onDelete,
 }: EmployeeDetailSheetProps) {
+  const t = useTranslations('adminEmployees')
   const router = useRouter()
 
   // Fetch employee details
@@ -138,26 +140,26 @@ export function EmployeeDetailSheet({
             <ScrollArea className="flex-1 -mx-4 px-4">
               <div className="py-4 space-y-1">
                 {/* Contact Information */}
-                <SectionHeader>Contact Information</SectionHeader>
+                <SectionHeader>{t('sectionContact')}</SectionHeader>
                 <DetailRow
-                  label="Email"
+                  label={t('labelEmail')}
                   value={employee.email}
                   icon={<Mail className="h-4 w-4" />}
                 />
                 <DetailRow
-                  label="Phone"
+                  label={t('labelPhone')}
                   value={employee.phone}
                   icon={<Phone className="h-4 w-4" />}
                 />
 
                 {/* Employment Details */}
-                <SectionHeader>Employment Details</SectionHeader>
+                <SectionHeader>{t('sectionEmployment')}</SectionHeader>
                 <DetailRow
-                  label="Department"
+                  label={t('labelDepartment')}
                   value={employee.department?.name}
                 />
                 <DetailRow
-                  label="Cost Center"
+                  label={t('labelCostCenter')}
                   value={
                     employee.cost_center
                       ? `${employee.cost_center.name} (${employee.cost_center.code})`
@@ -165,27 +167,27 @@ export function EmployeeDetailSheet({
                   }
                 />
                 <DetailRow
-                  label="Employment Type"
+                  label={t('labelEmploymentType')}
                   value={employee.employment_type?.name}
                 />
-                <DetailRow label="Entry Date" value={formatDate(employee.entry_date)} />
-                <DetailRow label="Exit Date" value={formatDate(employee.exit_date)} />
+                <DetailRow label={t('labelEntryDate')} value={formatDate(employee.entry_date)} />
+                <DetailRow label={t('labelExitDate')} value={formatDate(employee.exit_date)} />
 
                 {/* Contract Details */}
-                <SectionHeader>Contract Details</SectionHeader>
+                <SectionHeader>{t('sectionContract')}</SectionHeader>
                 <DetailRow
-                  label="Weekly Hours"
-                  value={employee.weekly_hours ? `${employee.weekly_hours} hours` : undefined}
+                  label={t('labelWeeklyHours')}
+                  value={employee.weekly_hours ? t('weeklyHoursValue', { hours: employee.weekly_hours }) : undefined}
                 />
                 <DetailRow
-                  label="Vacation Days/Year"
-                  value={employee.vacation_days_per_year ? `${employee.vacation_days_per_year} days` : undefined}
+                  label={t('labelVacationDays')}
+                  value={employee.vacation_days_per_year ? t('vacationDaysValue', { days: employee.vacation_days_per_year }) : undefined}
                 />
 
                 {/* Access Cards */}
                 {employee.cards && employee.cards.length > 0 && (
                   <>
-                    <SectionHeader>Access Cards</SectionHeader>
+                    <SectionHeader>{t('sectionAccessCards')}</SectionHeader>
                     <div className="space-y-2">
                       {employee.cards.map((card) => (
                         <div
@@ -205,7 +207,7 @@ export function EmployeeDetailSheet({
                                 : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
                             }`}
                           >
-                            {card.is_active ? 'Active' : 'Inactive'}
+                            {card.is_active ? t('statusActive') : t('statusInactive')}
                           </span>
                         </div>
                       ))}
@@ -216,7 +218,7 @@ export function EmployeeDetailSheet({
                 {/* Emergency Contacts */}
                 {employee.contacts && employee.contacts.length > 0 && (
                   <>
-                    <SectionHeader>Contacts</SectionHeader>
+                    <SectionHeader>{t('sectionContacts')}</SectionHeader>
                     <div className="space-y-2">
                       {employee.contacts.map((contact) => (
                         <div
@@ -231,7 +233,7 @@ export function EmployeeDetailSheet({
                           </div>
                           {contact.is_primary && (
                             <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                              Primary
+                              {t('primary')}
                             </span>
                           )}
                         </div>
@@ -245,11 +247,11 @@ export function EmployeeDetailSheet({
             <SheetFooter className="flex-row gap-2 border-t pt-4">
               <Button variant="outline" onClick={handleViewTimesheet} className="flex-1">
                 <Clock className="mr-2 h-4 w-4" />
-                View Timesheet
+                {t('viewTimesheet')}
               </Button>
               <Button variant="outline" onClick={handleEdit} className="flex-1">
                 <Edit className="mr-2 h-4 w-4" />
-                Edit
+                {t('edit')}
               </Button>
               <Button variant="ghost" size="icon" onClick={handleDelete}>
                 <UserX className="h-4 w-4 text-destructive" />
@@ -259,12 +261,12 @@ export function EmployeeDetailSheet({
         ) : (
           <>
             <SheetHeader>
-              <SheetTitle>Employee Details</SheetTitle>
-              <SheetDescription>Employee information</SheetDescription>
+              <SheetTitle>{t('employeeDetails')}</SheetTitle>
+              <SheetDescription>{t('employeeInformation')}</SheetDescription>
             </SheetHeader>
             <div className="flex flex-col items-center justify-center flex-1 text-center py-12">
               <User className="h-12 w-12 text-muted-foreground opacity-50" />
-              <p className="mt-4 text-muted-foreground">Employee not found</p>
+              <p className="mt-4 text-muted-foreground">{t('employeeNotFound')}</p>
             </div>
           </>
         )}
@@ -274,13 +276,14 @@ export function EmployeeDetailSheet({
 }
 
 function EmployeeDetailSkeleton() {
+  const t = useTranslations('adminEmployees')
   return (
     <>
       <SheetHeader>
         <div className="flex items-center gap-4">
           <Skeleton className="h-12 w-12 rounded-full" />
           <div className="flex-1">
-            <SheetTitle className="sr-only">Loading employee details</SheetTitle>
+            <SheetTitle className="sr-only">{t('loadingEmployeeDetails')}</SheetTitle>
             <Skeleton className="h-5 w-40 mb-2" />
             <Skeleton className="h-4 w-24" />
           </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import { useTranslations } from 'next-intl'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { type UserRole } from '@/hooks/use-has-role'
@@ -58,6 +59,7 @@ function filterNavSection(
 export function SidebarNav({ sections = navConfig }: SidebarNavProps) {
   const { user, isAuthenticated } = useAuth()
   const { isCollapsed } = useSidebar()
+  const t = useTranslations('nav')
 
   // Get user role for filtering
   const userRole = isAuthenticated && user ? user.role : null
@@ -73,7 +75,7 @@ export function SidebarNav({ sections = navConfig }: SidebarNavProps) {
     <ScrollArea className="flex-1 px-3">
       <nav className="flex flex-col gap-1 py-2" aria-label="Main navigation">
         {visibleSections.map((section, index) => (
-          <div key={section.title} role="group" aria-labelledby={`nav-section-${index}`}>
+          <div key={section.titleKey} role="group" aria-labelledby={`nav-section-${index}`}>
             {/* Section title - hidden when collapsed */}
             {!isCollapsed && (
               <>
@@ -82,7 +84,7 @@ export function SidebarNav({ sections = navConfig }: SidebarNavProps) {
                   id={`nav-section-${index}`}
                   className="mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
                 >
-                  {section.title}
+                  {t(section.titleKey as Parameters<typeof t>[0])}
                 </h3>
               </>
             )}

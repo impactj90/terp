@@ -27,6 +27,7 @@ vendor/
 apps/web/.next/
 apps/web/out/
 apps/web/node_modules/
+apps/web/.pnpm-store/
 node_modules/
 
 # Next.js build output
@@ -81,6 +82,7 @@ tmp/
 temp/
 *.tmp
 *.temp
+apps/web/tsconfig.tsbuildinfo
 
 # Generated OpenAPI bundle (regenerate with make swagger-bundle)
 # Uncomment if you prefer to regenerate rather than commit

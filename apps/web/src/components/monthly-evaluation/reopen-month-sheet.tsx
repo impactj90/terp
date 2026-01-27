@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Unlock, Loader2, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -33,6 +34,9 @@ export function ReopenMonthSheet({
   month,
   monthLabel,
 }: ReopenMonthSheetProps) {
+  const t = useTranslations('monthlyEvaluation')
+  const tc = useTranslations('common')
+
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
 
@@ -48,7 +52,7 @@ export function ReopenMonthSheet({
     if (!employeeId) return
 
     if (reason.trim().length < 10) {
-      setError('Please provide a reason with at least 10 characters')
+      setError(t('reasonTooShort'))
       return
     }
 
@@ -63,7 +67,7 @@ export function ReopenMonthSheet({
       handleClose()
     } catch (err) {
       const apiError = err as { detail?: string; message?: string }
-      setError(apiError.detail ?? apiError.message ?? 'Failed to reopen month')
+      setError(apiError.detail ?? apiError.message ?? t('failedToReopen'))
     }
   }
 
@@ -75,10 +79,10 @@ export function ReopenMonthSheet({
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Unlock className="h-5 w-5" />
-            Reopen Month
+            {t('reopenMonth')}
           </SheetTitle>
           <SheetDescription>
-            Reopen {monthLabel} to allow editing of time entries. A reason is required.
+            {t('reopenDescription', { month: monthLabel })}
           </SheetDescription>
         </SheetHeader>
 
@@ -92,25 +96,24 @@ export function ReopenMonthSheet({
           <Alert>
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              Reopening a closed month will unlock all time entries. Any changes will require
-              recalculation before closing again.
+              {t('reopenWarning')}
             </AlertDescription>
           </Alert>
 
           <div className="space-y-2">
             <Label htmlFor="reason">
-              Reason for reopening <span className="text-destructive">*</span>
+              {t('reasonLabel')} <span className="text-destructive">*</span>
             </Label>
             <Textarea
               id="reason"
-              placeholder="Explain why this month needs to be reopened..."
+              placeholder={t('reasonPlaceholder')}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               rows={4}
               className={!isValid && reason.length > 0 ? 'border-destructive' : ''}
             />
             <p className="text-xs text-muted-foreground">
-              Minimum 10 characters. {reason.length}/10
+              {t('minCharacters', { count: reason.length })}
             </p>
           </div>
         </div>
@@ -122,7 +125,7 @@ export function ReopenMonthSheet({
             disabled={reopenMutation.isPending}
             className="flex-1"
           >
-            Cancel
+            {tc('cancel')}
           </Button>
           <Button
             variant="destructive"
@@ -131,7 +134,7 @@ export function ReopenMonthSheet({
             className="flex-1"
           >
             {reopenMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Reopen Month
+            {t('reopenMonth')}
           </Button>
         </SheetFooter>
       </SheetContent>

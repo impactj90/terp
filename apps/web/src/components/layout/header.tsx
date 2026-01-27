@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Menu, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -7,6 +8,7 @@ import { UserMenu } from './user-menu'
 import { Notifications } from './notifications'
 import { TenantSelector } from './tenant-selector'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { LocaleSwitcher } from './locale-switcher'
 
 interface HeaderProps {
   className?: string
@@ -19,6 +21,8 @@ interface HeaderProps {
  * Contains mobile menu trigger, search, tenant selector, notifications, and user menu.
  */
 export function Header({ className, onMobileMenuClick }: HeaderProps) {
+  const t = useTranslations('header')
+
   return (
     <header
       className={cn(
@@ -32,7 +36,7 @@ export function Header({ className, onMobileMenuClick }: HeaderProps) {
         size="icon"
         className="lg:hidden"
         onClick={onMobileMenuClick}
-        aria-label="Open menu"
+        aria-label={t('openMenu')}
       >
         <Menu className="h-5 w-5" aria-hidden="true" />
       </Button>
@@ -46,9 +50,9 @@ export function Header({ className, onMobileMenuClick }: HeaderProps) {
           />
           <input
             type="search"
-            placeholder="Search..."
+            placeholder={t('search')}
             className="h-9 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            aria-label="Search"
+            aria-label={t('search')}
           />
         </div>
       </div>
@@ -62,6 +66,9 @@ export function Header({ className, onMobileMenuClick }: HeaderProps) {
         <div className="hidden md:block">
           <TenantSelector />
         </div>
+
+        {/* Language switcher */}
+        <LocaleSwitcher />
 
         {/* Theme toggle */}
         <ThemeToggle />

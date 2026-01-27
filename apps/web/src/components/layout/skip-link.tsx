@@ -1,12 +1,11 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 
 interface SkipLinkProps {
   /** Target element ID to focus (default: 'main-content') */
   targetId?: string
-  /** Link text */
-  children?: React.ReactNode
   className?: string
 }
 
@@ -16,9 +15,9 @@ interface SkipLinkProps {
  */
 export function SkipLink({
   targetId = 'main-content',
-  children = 'Skip to main content',
   className,
 }: SkipLinkProps) {
+  const t = useTranslations('common')
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()
     const target = document.getElementById(targetId)
@@ -42,7 +41,7 @@ export function SkipLink({
         className
       )}
     >
-      {children}
+      {t('skipToContent')}
     </a>
   )
 }

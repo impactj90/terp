@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Palmtree, AlertCircle, RefreshCw, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -33,6 +34,7 @@ function BreakdownRow({
   tooltip,
   highlight = false,
 }: BreakdownRowProps) {
+  const t = useTranslations('vacation')
   const displayValue = prefix
     ? prefix + String(Math.abs(value))
     : value.toString()
@@ -63,7 +65,7 @@ function BreakdownRow({
         highlight ? 'text-foreground' : 'text-muted-foreground',
         value < 0 && 'text-destructive'
       )}>
-        {displayValue} days
+        {t('valueDays', { value: displayValue })}
       </span>
     </div>
   )
@@ -74,6 +76,8 @@ export function BalanceBreakdown({
   year,
   className,
 }: BalanceBreakdownProps) {
+  const t = useTranslations('vacation')
+  const tc = useTranslations('common')
   const { data, isLoading, error, refetch } = useEmployeeVacationBalance(
     employeeId,
     year,
@@ -90,16 +94,16 @@ export function BalanceBreakdown({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Palmtree className="h-5 w-5" />
-            Vacation Balance
+            {t('vacationBalance')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center gap-3 py-6 text-center">
             <AlertCircle className="h-8 w-8 text-destructive" />
-            <p className="text-sm text-destructive">Failed to load balance</p>
+            <p className="text-sm text-destructive">{t('failedToLoadBalance')}</p>
             <Button variant="outline" size="sm" onClick={() => refetch()}>
               <RefreshCw className="mr-2 h-4 w-4" />
-              Retry
+              {tc('retry')}
             </Button>
           </div>
         </CardContent>
@@ -113,12 +117,12 @@ export function BalanceBreakdown({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Palmtree className="h-5 w-5" />
-            Vacation Balance
+            {t('vacationBalance')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="py-6 text-center text-muted-foreground">
-            No vacation data for {year}
+            {t('noVacationData', { year })}
           </p>
         </CardContent>
       </Card>
@@ -143,14 +147,14 @@ export function BalanceBreakdown({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Palmtree className="h-5 w-5" />
-          Vacation Balance {year}
+          {t('vacationBalanceYear', { year })}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Large remaining days display */}
         <div className="text-center">
           <div className="text-4xl font-bold">{remainingDays}</div>
-          <div className="text-sm text-muted-foreground">days available</div>
+          <div className="text-sm text-muted-foreground">{t('daysAvailable')}</div>
         </div>
 
         {/* Progress bar */}
@@ -170,17 +174,17 @@ export function BalanceBreakdown({
           <div className="mt-2 flex justify-between text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <span className="h-2 w-2 rounded-full bg-green-500" />
-              {usedDays} used
+              {t('used', { count: usedDays })}
             </span>
             {plannedDays > 0 && (
               <span className="flex items-center gap-1">
                 <span className="h-2 w-2 rounded-full bg-yellow-500" />
-                {plannedDays} planned
+                {t('planned', { count: plannedDays })}
               </span>
             )}
             <span className="flex items-center gap-1">
               <span className="h-2 w-2 rounded-full bg-muted" />
-              {remainingDays} available
+              {t('available', { count: remainingDays })}
             </span>
           </div>
         </div>
@@ -188,53 +192,53 @@ export function BalanceBreakdown({
         {/* Breakdown */}
         <div className="divide-y">
           <BreakdownRow
-            label="Base Entitlement"
+            label={t('baseEntitlement')}
             value={baseEntitlement}
-            tooltip="Annual vacation entitlement based on contract"
+            tooltip={t('baseEntitlementTooltip')}
           />
           {additionalEntitlement > 0 && (
             <BreakdownRow
-              label="Additional Days"
+              label={t('additionalDays')}
               value={additionalEntitlement}
               prefix="+"
-              tooltip="Bonus days for age, tenure, or disability"
+              tooltip={t('additionalDaysTooltip')}
             />
           )}
           {carryover > 0 && (
             <BreakdownRow
-              label="Carryover"
+              label={t('carryover')}
               value={carryover}
               prefix="+"
-              tooltip="Unused days from previous year"
+              tooltip={t('carryoverTooltip')}
             />
           )}
           {adjustment !== 0 && (
             <BreakdownRow
-              label="Adjustments"
+              label={t('adjustments')}
               value={adjustment}
               prefix={adjustment > 0 ? '+' : '-'}
-              tooltip="Manual adjustments by administrator"
+              tooltip={t('adjustmentsTooltip')}
             />
           )}
           <BreakdownRow
-            label="Total Entitlement"
+            label={t('totalEntitlement')}
             value={totalEntitlement}
             highlight
           />
           <BreakdownRow
-            label="Used"
+            label={t('usedLabel')}
             value={-usedDays}
             prefix="-"
           />
           {plannedDays > 0 && (
             <BreakdownRow
-              label="Planned"
+              label={t('plannedLabel')}
               value={-plannedDays}
               prefix="-"
             />
           )}
           <BreakdownRow
-            label="Available"
+            label={t('availableLabel')}
             value={remainingDays}
             highlight
           />

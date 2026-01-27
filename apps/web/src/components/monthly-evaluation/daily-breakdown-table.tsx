@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -39,6 +40,7 @@ export function DailyBreakdownTable({
   month,
   employeeId,
 }: DailyBreakdownTableProps) {
+  const t = useTranslations('monthlyEvaluation')
   const router = useRouter()
 
   // Get all dates in the month
@@ -98,16 +100,16 @@ export function DailyBreakdownTable({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium">Daily Breakdown</h3>
+        <h3 className="text-lg font-medium">{t('dailyBreakdown')}</h3>
         <div className="flex items-center gap-2">
           {totals.errorCount > 0 && (
             <Badge variant="destructive">
-              {totals.errorCount} day{totals.errorCount !== 1 ? 's' : ''} with errors
+              {totals.errorCount === 1 ? t('dayWithErrors', { count: totals.errorCount }) : t('daysWithErrors', { count: totals.errorCount })}
             </Badge>
           )}
           {totals.warningCount > 0 && (
             <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-              {totals.warningCount} day{totals.warningCount !== 1 ? 's' : ''} with warnings
+              {totals.warningCount === 1 ? t('dayWithWarnings', { count: totals.warningCount }) : t('daysWithWarnings', { count: totals.warningCount })}
             </Badge>
           )}
         </div>
@@ -117,13 +119,13 @@ export function DailyBreakdownTable({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[140px]">Date</TableHead>
-              <TableHead className="text-right">Target</TableHead>
-              <TableHead className="text-right">Gross</TableHead>
-              <TableHead className="text-right">Breaks</TableHead>
-              <TableHead className="text-right">Net</TableHead>
-              <TableHead className="text-right">Balance</TableHead>
-              <TableHead className="w-[80px] text-center">Status</TableHead>
+              <TableHead className="w-[140px]">{t('date')}</TableHead>
+              <TableHead className="text-right">{t('target')}</TableHead>
+              <TableHead className="text-right">{t('gross')}</TableHead>
+              <TableHead className="text-right">{t('breaks')}</TableHead>
+              <TableHead className="text-right">{t('net')}</TableHead>
+              <TableHead className="text-right">{t('balance')}</TableHead>
+              <TableHead className="w-[80px] text-center">{t('status')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -189,14 +191,14 @@ export function DailyBreakdownTable({
                   <TableCell className="text-center">
                     {hasErrors && dailyValue?.error_codes && dailyValue.error_codes.length > 0 ? (
                       <Badge variant="destructive" className="text-xs">
-                        {dailyValue.error_codes.length} {dailyValue.error_codes.length === 1 ? 'error' : 'errors'}
+                        {dailyValue.error_codes.length} {dailyValue.error_codes.length === 1 ? t('error') : t('errors')}
                       </Badge>
                     ) : hasWarnings && dailyValue?.warnings ? (
                       <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-                        {dailyValue.warnings.length} {dailyValue.warnings.length === 1 ? 'warning' : 'warnings'}
+                        {dailyValue.warnings.length} {dailyValue.warnings.length === 1 ? t('warning') : t('warnings')}
                       </Badge>
                     ) : dailyValue ? (
-                      <Badge variant="outline" className="text-xs">OK</Badge>
+                      <Badge variant="outline" className="text-xs">{t('ok')}</Badge>
                     ) : null}
                   </TableCell>
                 </TableRow>
@@ -205,7 +207,7 @@ export function DailyBreakdownTable({
           </TableBody>
           <TableFooter>
             <TableRow>
-              <TableCell className="font-semibold">Month Total</TableCell>
+              <TableCell className="font-semibold">{t('monthTotal')}</TableCell>
               <TableCell className="text-right font-semibold">
                 <TimeDisplay value={totals.target} format="duration" />
               </TableCell>

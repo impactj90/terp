@@ -48,7 +48,7 @@ func (h *AccountHandler) List(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusInternalServerError, "Failed to list accounts")
 		return
 	}
-	respondJSON(w, http.StatusOK, accounts)
+	respondJSON(w, http.StatusOK, map[string]any{"data": accounts})
 }
 
 func (h *AccountHandler) Get(w http.ResponseWriter, r *http.Request) {

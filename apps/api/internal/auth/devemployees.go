@@ -94,6 +94,17 @@ var DevEmployees = []DevEmployee{
 	},
 }
 
+// DevEmployeeTariffMap maps each dev employee to their tariff ID.
+// Admin (40h) → TAR-40H, User (40h) → TAR-FLEX, Maria (20h) → TAR-20H,
+// Thomas (40h) → TAR-40H, Anna (35h) → TAR-38H (closest match).
+var DevEmployeeTariffMap = map[uuid.UUID]uuid.UUID{
+	DevEmployeeAdminID:  uuid.MustParse("00000000-0000-0000-0000-000000000701"), // TAR-40H
+	DevEmployeeUserID:   uuid.MustParse("00000000-0000-0000-0000-000000000703"), // TAR-FLEX
+	DevEmployeeMariaID:  uuid.MustParse("00000000-0000-0000-0000-000000000704"), // TAR-20H
+	DevEmployeeThomasID: uuid.MustParse("00000000-0000-0000-0000-000000000701"), // TAR-40H
+	DevEmployeeAnnaID:   uuid.MustParse("00000000-0000-0000-0000-000000000702"), // TAR-38H
+}
+
 // DevUserEmployeeMap maps dev user IDs to their corresponding employee IDs.
 var DevUserEmployeeMap = map[uuid.UUID]uuid.UUID{
 	uuid.MustParse("00000000-0000-0000-0000-000000000001"): DevEmployeeAdminID, // admin

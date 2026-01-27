@@ -1,6 +1,7 @@
 'use client'
 
-import Link from 'next/link'
+import { useTranslations } from 'next-intl'
+import { Link } from '@/i18n/navigation'
 import {
   LogIn,
   LogOut,
@@ -33,6 +34,9 @@ export function RecentActivity({
   limit = 5,
   className,
 }: RecentActivityProps) {
+  const t = useTranslations('dashboard')
+  const tc = useTranslations('common')
+
   // Fetch recent bookings (last 7 days)
   const weekAgo = new Date()
   weekAgo.setDate(weekAgo.getDate() - 7)
@@ -69,12 +73,12 @@ export function RecentActivity({
     return (
       <div className={cn('rounded-lg border', className)}>
         <div className="border-b px-6 py-4">
-          <h2 className="text-lg font-semibold">Recent Activity</h2>
+          <h2 className="text-lg font-semibold">{t('recentActivity')}</h2>
         </div>
         <div className="p-6">
           <div className="flex items-center gap-2 text-destructive">
             <AlertCircle className="h-4 w-4" />
-            <p className="text-sm">Failed to load activity</p>
+            <p className="text-sm">{t('failedToLoadActivity')}</p>
           </div>
           <Button
             variant="ghost"
@@ -83,7 +87,7 @@ export function RecentActivity({
             className="mt-2 h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
           >
             <RefreshCw className="mr-1 h-3 w-3" />
-            Retry
+            {tc('retry')}
           </Button>
         </div>
       </div>
@@ -93,7 +97,7 @@ export function RecentActivity({
   return (
     <div className={cn('rounded-lg border', className)}>
       <div className="border-b px-6 py-4">
-        <h2 className="text-lg font-semibold">Recent Activity</h2>
+        <h2 className="text-lg font-semibold">{t('recentActivity')}</h2>
       </div>
 
       {recentBookings.length === 0 ? (
@@ -102,9 +106,9 @@ export function RecentActivity({
             <div className="rounded-full bg-muted p-3">
               <Activity className="h-6 w-6 text-muted-foreground" />
             </div>
-            <p className="mt-3 text-sm font-medium">No recent activity</p>
+            <p className="mt-3 text-sm font-medium">{t('noRecentActivity')}</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Your bookings will appear here
+              {t('bookingsWillAppear')}
             </p>
           </div>
         </div>
@@ -122,7 +126,7 @@ export function RecentActivity({
             href="/timesheet"
             className="text-sm text-primary hover:underline"
           >
-            View all activity
+            {t('viewAllActivity')}
           </Link>
         </div>
       )}
@@ -131,6 +135,7 @@ export function RecentActivity({
 }
 
 function ActivityItem({ booking }: { booking: Booking }) {
+  const t = useTranslations('dashboard')
   const direction = booking.booking_type?.direction
   const bookingTypeName = booking.booking_type?.name ?? ''
 
@@ -153,12 +158,12 @@ function ActivityItem({ booking }: { booking: Booking }) {
   const getDescription = () => {
     const name = bookingTypeName.toLowerCase()
     if (name.includes('break') || name.includes('pause')) {
-      return direction === 'in' ? 'Break started' : 'Break ended'
+      return direction === 'in' ? t('breakStarted') : t('breakEnded')
     }
     if (name.includes('errand') || name.includes('dienst')) {
-      return direction === 'in' ? 'Errand started' : 'Errand ended'
+      return direction === 'in' ? t('errandStarted') : t('errandEnded')
     }
-    return direction === 'in' ? 'Clocked in' : 'Clocked out'
+    return direction === 'in' ? t('clockedInActivity') : t('clockedOutActivity')
   }
 
   const dateStr = formatRelativeDate(booking.booking_date)
@@ -175,7 +180,7 @@ function ActivityItem({ booking }: { booking: Booking }) {
         <div className="flex items-center gap-2">
           <p className="text-sm font-medium">{getDescription()}</p>
           {wasEdited && (
-            <span className="text-xs text-muted-foreground">(edited)</span>
+            <span className="text-xs text-muted-foreground">{t('edited')}</span>
           )}
         </div>
         <p className="text-xs text-muted-foreground">

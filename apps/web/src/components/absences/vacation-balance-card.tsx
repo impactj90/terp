@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { useTranslations } from 'next-intl'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useEmployeeVacationBalance } from '@/hooks/api'
@@ -23,11 +24,13 @@ export function VacationBalanceCard({
     !!employeeId
   )
 
+  const t = useTranslations('absences')
+
   if (isLoading) {
     return (
       <Card className={className}>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">Vacation Balance</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('vacationBalance')}</CardTitle>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-8 w-24 mb-2" />
@@ -42,11 +45,11 @@ export function VacationBalanceCard({
     return (
       <Card className={className}>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">Vacation Balance</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('vacationBalance')}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            No vacation balance configured
+            {t('noBalanceConfigured')}
           </p>
         </CardContent>
       </Card>
@@ -60,13 +63,13 @@ export function VacationBalanceCard({
   return (
     <Card className={className}>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium">Vacation Balance</CardTitle>
+        <CardTitle className="text-sm font-medium">{t('vacationBalance')}</CardTitle>
       </CardHeader>
       <CardContent>
         {/* Main number */}
         <div className="flex items-baseline gap-1 mb-2">
           <span className="text-3xl font-bold">{remaining}</span>
-          <span className="text-muted-foreground">/ {total} days</span>
+          <span className="text-muted-foreground">/ {t('ofTotalDays', { total })}</span>
         </div>
 
         {/* Progress bar */}
@@ -80,13 +83,13 @@ export function VacationBalanceCard({
         {/* Details */}
         <div className="text-xs text-muted-foreground space-y-0.5">
           {balance.used_days !== undefined && balance.used_days > 0 && (
-            <p>{balance.used_days} day{balance.used_days !== 1 ? 's' : ''} used</p>
+            <p>{balance.used_days} {balance.used_days !== 1 ? t('daysUsed') : t('dayUsed')}</p>
           )}
           {balance.planned_days !== undefined && balance.planned_days > 0 && (
-            <p>{balance.planned_days} day{balance.planned_days !== 1 ? 's' : ''} planned</p>
+            <p>{balance.planned_days} {balance.planned_days !== 1 ? t('daysPlanned') : t('dayPlanned')}</p>
           )}
           {balance.carryover_from_previous !== undefined && balance.carryover_from_previous > 0 && (
-            <p>{balance.carryover_from_previous} day{balance.carryover_from_previous !== 1 ? 's' : ''} carried over</p>
+            <p>{balance.carryover_from_previous} {balance.carryover_from_previous !== 1 ? t('daysCarriedOver') : t('dayCarriedOver')}</p>
           )}
         </div>
       </CardContent>

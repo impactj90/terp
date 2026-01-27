@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import { useTranslations } from 'next-intl'
 import { Clock, TrendingUp, Target, Palmtree } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -33,6 +34,9 @@ export function YearSummaryCards({
   vacationEntitlement,
   isLoading,
 }: YearSummaryCardsProps) {
+  const t = useTranslations('yearOverview')
+  const tCommon = useTranslations('common')
+
   // Aggregate values across all months
   const totals = useMemo(() => {
     return monthlyValues.reduce(
@@ -79,7 +83,7 @@ export function YearSummaryCards({
           <Card key={i}>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground text-center py-4">
-                No data available
+                {tCommon('noDataAvailable')}
               </p>
             </CardContent>
           </Card>
@@ -93,13 +97,13 @@ export function YearSummaryCards({
       {/* Time Summary Card */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Time</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('totalTime')}</CardTitle>
           <Clock className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Target</span>
+              <span className="text-sm text-muted-foreground">{t('target')}</span>
               <TimeDisplay
                 value={totals.targetMinutes}
                 format="duration"
@@ -107,7 +111,7 @@ export function YearSummaryCards({
               />
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Worked</span>
+              <span className="text-sm text-muted-foreground">{t('worked')}</span>
               <TimeDisplay
                 value={totals.netMinutes}
                 format="duration"
@@ -115,7 +119,7 @@ export function YearSummaryCards({
               />
             </div>
             <div className="flex justify-between items-center pt-2 border-t">
-              <span className="text-sm font-medium">Year Balance</span>
+              <span className="text-sm font-medium">{t('yearBalance')}</span>
               <TimeDisplay
                 value={totals.netMinutes - totals.targetMinutes}
                 format="balance"
@@ -129,7 +133,7 @@ export function YearSummaryCards({
       {/* Flextime Balance Card */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Flextime Balance</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('flextimeBalance')}</CardTitle>
           <TrendingUp className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
@@ -144,7 +148,7 @@ export function YearSummaryCards({
               )}
             />
             <p className="text-xs text-muted-foreground mt-1">
-              {currentFlextime >= 0 ? 'Credit' : 'Deficit'}
+              {currentFlextime >= 0 ? t('credit') : t('deficit')}
             </p>
           </div>
           {/* Balance indicator bar */}
@@ -166,7 +170,7 @@ export function YearSummaryCards({
       {/* Working Days Card */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Working Days</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('workingDays')}</CardTitle>
           <Target className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
@@ -177,7 +181,7 @@ export function YearSummaryCards({
                 / {totals.workingDays}
               </span>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">days worked</p>
+            <p className="text-xs text-muted-foreground mt-1">{t('daysWorked')}</p>
           </div>
           {/* Progress bar */}
           <div className="mt-3 h-2 bg-muted rounded-full overflow-hidden">
@@ -198,7 +202,7 @@ export function YearSummaryCards({
       {/* Vacation Summary Card */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Vacation</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('vacationCard')}</CardTitle>
           <Palmtree className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
@@ -213,7 +217,7 @@ export function YearSummaryCards({
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">days used</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('daysUsed')}</p>
               </div>
               {/* Progress bar */}
               {vacationEntitlement && (
@@ -234,7 +238,7 @@ export function YearSummaryCards({
             <div className="text-center py-2">
               <div className="text-3xl font-bold">{totals.absenceDays}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                total absence days
+                {t('totalAbsenceDays')}
               </p>
             </div>
           )}

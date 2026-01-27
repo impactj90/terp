@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { useTranslations } from 'next-intl'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -128,6 +129,7 @@ export function DayPlanFormSheet({
   dayPlan,
   onSuccess,
 }: DayPlanFormSheetProps) {
+  const t = useTranslations('adminDayPlans')
   const isEdit = !!dayPlan
   const [form, setForm] = React.useState<FormState>(INITIAL_STATE)
   const [error, setError] = React.useState<string | null>(null)
@@ -285,7 +287,7 @@ export function DayPlanFormSheet({
       }
       onSuccess?.()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
+      setError(err instanceof Error ? err.message : t('errorOccurred'))
     }
   }
 
@@ -295,9 +297,9 @@ export function DayPlanFormSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-2xl overflow-hidden flex flex-col">
         <SheetHeader>
-          <SheetTitle>{isEdit ? 'Edit Day Plan' : 'Create Day Plan'}</SheetTitle>
+          <SheetTitle>{isEdit ? t('titleEdit') : t('titleCreate')}</SheetTitle>
           <SheetDescription>
-            {isEdit ? 'Update day plan settings' : 'Configure a new day plan template'}
+            {isEdit ? t('descriptionEdit') : t('descriptionCreate')}
           </SheetDescription>
         </SheetHeader>
 
@@ -305,29 +307,29 @@ export function DayPlanFormSheet({
           <ScrollArea className="flex-1 -mx-6 px-6">
             <Tabs defaultValue="basic" className="w-full">
               <TabsList className="mb-4">
-                <TabsTrigger value="basic">Basic</TabsTrigger>
-                <TabsTrigger value="time">Time Windows</TabsTrigger>
-                <TabsTrigger value="tolerance">Tolerance</TabsTrigger>
-                <TabsTrigger value="rounding">Rounding</TabsTrigger>
-                <TabsTrigger value="special">Special</TabsTrigger>
+                <TabsTrigger value="basic">{t('tabBasic')}</TabsTrigger>
+                <TabsTrigger value="time">{t('tabTimeWindows')}</TabsTrigger>
+                <TabsTrigger value="tolerance">{t('tabTolerance')}</TabsTrigger>
+                <TabsTrigger value="rounding">{t('tabRounding')}</TabsTrigger>
+                <TabsTrigger value="special">{t('tabSpecial')}</TabsTrigger>
               </TabsList>
 
               {/* Basic Tab */}
               <TabsContent value="basic" className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="code">Code *</Label>
+                    <Label htmlFor="code">{t('fieldCode')} *</Label>
                     <Input
                       id="code"
                       value={form.code}
                       onChange={(e) => setForm({ ...form, code: e.target.value })}
                       disabled={isEdit}
-                      placeholder="e.g., STD-1"
+                      placeholder={t('placeholderCode')}
                       maxLength={20}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="planType">Plan Type *</Label>
+                    <Label htmlFor="planType">{t('fieldPlanType')} *</Label>
                     <Select
                       value={form.planType}
                       onValueChange={(v) => setForm({ ...form, planType: v as 'fixed' | 'flextime' })}
@@ -336,36 +338,36 @@ export function DayPlanFormSheet({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="fixed">Fixed Working Time</SelectItem>
-                        <SelectItem value="flextime">Flextime</SelectItem>
+                        <SelectItem value="fixed">{t('typeFixedWorking')}</SelectItem>
+                        <SelectItem value="flextime">{t('typeFlextime')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="name">Name *</Label>
+                  <Label htmlFor="name">{t('fieldName')} *</Label>
                   <Input
                     id="name"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    placeholder="e.g., Standard 8-Hour Day"
+                    placeholder={t('placeholderName')}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
+                  <Label htmlFor="description">{t('fieldDescription')}</Label>
                   <Input
                     id="description"
                     value={form.description}
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
-                    placeholder="Optional description"
+                    placeholder={t('placeholderDescription')}
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="regularHours">Target Hours *</Label>
+                    <Label htmlFor="regularHours">{t('fieldTargetHours')} *</Label>
                     <DurationInput
                       id="regularHours"
                       value={form.regularHours}
@@ -373,10 +375,10 @@ export function DayPlanFormSheet({
                       format="hhmm"
                       className="w-full"
                     />
-                    <p className="text-xs text-muted-foreground">Daily target (e.g., 8:00)</p>
+                    <p className="text-xs text-muted-foreground">{t('targetHoursHelp')}</p>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="regularHours2">Absence Day Hours</Label>
+                    <Label htmlFor="regularHours2">{t('fieldAbsenceDayHours')}</Label>
                     <DurationInput
                       id="regularHours2"
                       value={form.regularHours2}
@@ -384,7 +386,7 @@ export function DayPlanFormSheet({
                       format="hhmm"
                       className="w-full"
                     />
-                    <p className="text-xs text-muted-foreground">Alternative target for absence days</p>
+                    <p className="text-xs text-muted-foreground">{t('absenceDayHoursHelp')}</p>
                   </div>
                 </div>
 
@@ -395,7 +397,7 @@ export function DayPlanFormSheet({
                     onCheckedChange={(c) => setForm({ ...form, fromEmployeeMaster: !!c })}
                   />
                   <Label htmlFor="fromEmployeeMaster" className="font-normal">
-                    Get target hours from employee master
+                    {t('fieldFromEmployeeMaster')}
                   </Label>
                 </div>
 
@@ -405,7 +407,7 @@ export function DayPlanFormSheet({
                     checked={form.isActive}
                     onCheckedChange={(c) => setForm({ ...form, isActive: !!c })}
                   />
-                  <Label htmlFor="isActive" className="font-normal">Active</Label>
+                  <Label htmlFor="isActive" className="font-normal">{t('fieldActive')}</Label>
                 </div>
               </TabsContent>
 
@@ -413,7 +415,7 @@ export function DayPlanFormSheet({
               <TabsContent value="time" className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="comeFrom">Arrive From</Label>
+                    <Label htmlFor="comeFrom">{t('fieldArriveFrom')}</Label>
                     <TimeInput
                       id="comeFrom"
                       value={form.comeFrom}
@@ -423,7 +425,7 @@ export function DayPlanFormSheet({
                   </div>
                   {form.planType === 'flextime' && (
                     <div className="space-y-2">
-                      <Label htmlFor="comeTo">Arrive Until</Label>
+                      <Label htmlFor="comeTo">{t('fieldArriveUntil')}</Label>
                       <TimeInput
                         id="comeTo"
                         value={form.comeTo}
@@ -437,7 +439,7 @@ export function DayPlanFormSheet({
                 <div className="grid grid-cols-2 gap-4">
                   {form.planType === 'flextime' && (
                     <div className="space-y-2">
-                      <Label htmlFor="goFrom">Leave From</Label>
+                      <Label htmlFor="goFrom">{t('fieldLeaveFrom')}</Label>
                       <TimeInput
                         id="goFrom"
                         value={form.goFrom}
@@ -447,7 +449,7 @@ export function DayPlanFormSheet({
                     </div>
                   )}
                   <div className="space-y-2">
-                    <Label htmlFor="goTo">Leave Until</Label>
+                    <Label htmlFor="goTo">{t('fieldLeaveUntil')}</Label>
                     <TimeInput
                       id="goTo"
                       value={form.goTo}
@@ -460,10 +462,10 @@ export function DayPlanFormSheet({
                 {form.planType === 'flextime' && (
                   <>
                     <div className="border-t pt-4">
-                      <h4 className="text-sm font-medium mb-3">Core Time</h4>
+                      <h4 className="text-sm font-medium mb-3">{t('sectionCoreTime')}</h4>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="coreStart">Core Start</Label>
+                          <Label htmlFor="coreStart">{t('fieldCoreStart')}</Label>
                           <TimeInput
                             id="coreStart"
                             value={form.coreStart}
@@ -472,7 +474,7 @@ export function DayPlanFormSheet({
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="coreEnd">Core End</Label>
+                          <Label htmlFor="coreEnd">{t('fieldCoreEnd')}</Label>
                           <TimeInput
                             id="coreEnd"
                             value={form.coreEnd}
@@ -486,10 +488,10 @@ export function DayPlanFormSheet({
                 )}
 
                 <div className="border-t pt-4">
-                  <h4 className="text-sm font-medium mb-3">Work Time Limits</h4>
+                  <h4 className="text-sm font-medium mb-3">{t('sectionWorkTimeLimits')}</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="minWorkTime">Minimum Work Time</Label>
+                      <Label htmlFor="minWorkTime">{t('fieldMinWorkTime')}</Label>
                       <DurationInput
                         id="minWorkTime"
                         value={form.minWorkTime}
@@ -499,7 +501,7 @@ export function DayPlanFormSheet({
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="maxNetWorkTime">Maximum Net Work Time</Label>
+                      <Label htmlFor="maxNetWorkTime">{t('fieldMaxNetWorkTime')}</Label>
                       <DurationInput
                         id="maxNetWorkTime"
                         value={form.maxNetWorkTime}
@@ -515,29 +517,29 @@ export function DayPlanFormSheet({
               {/* Tolerance Tab */}
               <TabsContent value="tolerance" className="space-y-4">
                 <p className="text-sm text-muted-foreground mb-4">
-                  Configure tolerance windows for early/late arrivals and departures.
+                  {t('toleranceDescription')}
                 </p>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="toleranceComeMinus">Arrive Early (minus)</Label>
+                    <Label htmlFor="toleranceComeMinus">{t('fieldArriveEarly')}</Label>
                     <DurationInput
                       id="toleranceComeMinus"
                       value={form.toleranceComeMinus}
                       onChange={(v) => setForm({ ...form, toleranceComeMinus: v ?? 0 })}
                       format="minutes"
-                      placeholder="Minutes"
+                      placeholder={t('placeholderMinutes')}
                       className="w-full"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="toleranceComePlus">Arrive Late (plus)</Label>
+                    <Label htmlFor="toleranceComePlus">{t('fieldArriveLate')}</Label>
                     <DurationInput
                       id="toleranceComePlus"
                       value={form.toleranceComePlus}
                       onChange={(v) => setForm({ ...form, toleranceComePlus: v ?? 0 })}
                       format="minutes"
-                      placeholder="Minutes"
+                      placeholder={t('placeholderMinutes')}
                       className="w-full"
                     />
                   </div>
@@ -545,24 +547,24 @@ export function DayPlanFormSheet({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="toleranceGoMinus">Leave Early (minus)</Label>
+                    <Label htmlFor="toleranceGoMinus">{t('fieldLeaveEarly')}</Label>
                     <DurationInput
                       id="toleranceGoMinus"
                       value={form.toleranceGoMinus}
                       onChange={(v) => setForm({ ...form, toleranceGoMinus: v ?? 0 })}
                       format="minutes"
-                      placeholder="Minutes"
+                      placeholder={t('placeholderMinutes')}
                       className="w-full"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="toleranceGoPlus">Leave Late (plus)</Label>
+                    <Label htmlFor="toleranceGoPlus">{t('fieldLeaveLate')}</Label>
                     <DurationInput
                       id="toleranceGoPlus"
                       value={form.toleranceGoPlus}
                       onChange={(v) => setForm({ ...form, toleranceGoPlus: v ?? 0 })}
                       format="minutes"
-                      placeholder="Minutes"
+                      placeholder={t('placeholderMinutes')}
                       className="w-full"
                     />
                   </div>
@@ -576,7 +578,7 @@ export function DayPlanFormSheet({
                       onCheckedChange={(c) => setForm({ ...form, variableWorkTime: !!c })}
                     />
                     <Label htmlFor="variableWorkTime" className="font-normal">
-                      Variable working time (enables early arrival tolerance)
+                      {t('fieldVariableWorkTime')}
                     </Label>
                   </div>
                 )}
@@ -585,14 +587,14 @@ export function DayPlanFormSheet({
               {/* Rounding Tab */}
               <TabsContent value="rounding" className="space-y-4">
                 <p className="text-sm text-muted-foreground mb-4">
-                  Configure how booking times are rounded.
+                  {t('roundingDescription')}
                 </p>
 
                 <div className="border rounded-lg p-4 space-y-4">
-                  <h4 className="text-sm font-medium">Arrival Rounding</h4>
+                  <h4 className="text-sm font-medium">{t('sectionArrivalRounding')}</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="roundingComeType">Rounding Type</Label>
+                      <Label htmlFor="roundingComeType">{t('fieldRoundingType')}</Label>
                       <Select
                         value={form.roundingComeType}
                         onValueChange={(v) => setForm({ ...form, roundingComeType: v })}
@@ -601,12 +603,12 @@ export function DayPlanFormSheet({
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
-                          <SelectItem value="up">Round Up</SelectItem>
-                          <SelectItem value="down">Round Down</SelectItem>
-                          <SelectItem value="nearest">Nearest</SelectItem>
-                          <SelectItem value="add">Add Value</SelectItem>
-                          <SelectItem value="subtract">Subtract Value</SelectItem>
+                          <SelectItem value="none">{t('roundingNone')}</SelectItem>
+                          <SelectItem value="up">{t('roundingUp')}</SelectItem>
+                          <SelectItem value="down">{t('roundingDown')}</SelectItem>
+                          <SelectItem value="nearest">{t('roundingNearest')}</SelectItem>
+                          <SelectItem value="add">{t('roundingAdd')}</SelectItem>
+                          <SelectItem value="subtract">{t('roundingSubtract')}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -615,7 +617,7 @@ export function DayPlanFormSheet({
                         form.roundingComeType === 'down' ||
                         form.roundingComeType === 'nearest') && (
                         <>
-                          <Label htmlFor="roundingComeInterval">Interval (minutes)</Label>
+                          <Label htmlFor="roundingComeInterval">{t('fieldIntervalMinutes')}</Label>
                           <DurationInput
                             id="roundingComeInterval"
                             value={form.roundingComeInterval}
@@ -627,7 +629,7 @@ export function DayPlanFormSheet({
                       )}
                       {(form.roundingComeType === 'add' || form.roundingComeType === 'subtract') && (
                         <>
-                          <Label htmlFor="roundingComeAddValue">Value (minutes)</Label>
+                          <Label htmlFor="roundingComeAddValue">{t('fieldValueMinutes')}</Label>
                           <DurationInput
                             id="roundingComeAddValue"
                             value={form.roundingComeAddValue}
@@ -642,10 +644,10 @@ export function DayPlanFormSheet({
                 </div>
 
                 <div className="border rounded-lg p-4 space-y-4">
-                  <h4 className="text-sm font-medium">Departure Rounding</h4>
+                  <h4 className="text-sm font-medium">{t('sectionDepartureRounding')}</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="roundingGoType">Rounding Type</Label>
+                      <Label htmlFor="roundingGoType">{t('fieldRoundingType')}</Label>
                       <Select
                         value={form.roundingGoType}
                         onValueChange={(v) => setForm({ ...form, roundingGoType: v })}
@@ -654,12 +656,12 @@ export function DayPlanFormSheet({
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
-                          <SelectItem value="up">Round Up</SelectItem>
-                          <SelectItem value="down">Round Down</SelectItem>
-                          <SelectItem value="nearest">Nearest</SelectItem>
-                          <SelectItem value="add">Add Value</SelectItem>
-                          <SelectItem value="subtract">Subtract Value</SelectItem>
+                          <SelectItem value="none">{t('roundingNone')}</SelectItem>
+                          <SelectItem value="up">{t('roundingUp')}</SelectItem>
+                          <SelectItem value="down">{t('roundingDown')}</SelectItem>
+                          <SelectItem value="nearest">{t('roundingNearest')}</SelectItem>
+                          <SelectItem value="add">{t('roundingAdd')}</SelectItem>
+                          <SelectItem value="subtract">{t('roundingSubtract')}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -668,7 +670,7 @@ export function DayPlanFormSheet({
                         form.roundingGoType === 'down' ||
                         form.roundingGoType === 'nearest') && (
                         <>
-                          <Label htmlFor="roundingGoInterval">Interval (minutes)</Label>
+                          <Label htmlFor="roundingGoInterval">{t('fieldIntervalMinutes')}</Label>
                           <DurationInput
                             id="roundingGoInterval"
                             value={form.roundingGoInterval}
@@ -680,7 +682,7 @@ export function DayPlanFormSheet({
                       )}
                       {(form.roundingGoType === 'add' || form.roundingGoType === 'subtract') && (
                         <>
-                          <Label htmlFor="roundingGoAddValue">Value (minutes)</Label>
+                          <Label htmlFor="roundingGoAddValue">{t('fieldValueMinutes')}</Label>
                           <DurationInput
                             id="roundingGoAddValue"
                             value={form.roundingGoAddValue}
@@ -701,7 +703,7 @@ export function DayPlanFormSheet({
                     onCheckedChange={(c) => setForm({ ...form, roundAllBookings: !!c })}
                   />
                   <Label htmlFor="roundAllBookings" className="font-normal">
-                    Round all bookings (not just first arrival and last departure)
+                    {t('fieldRoundAllBookings')}
                   </Label>
                 </div>
               </TabsContent>
@@ -709,10 +711,10 @@ export function DayPlanFormSheet({
               {/* Special Tab */}
               <TabsContent value="special" className="space-y-4">
                 <div className="border rounded-lg p-4 space-y-4">
-                  <h4 className="text-sm font-medium">Holiday Credits</h4>
+                  <h4 className="text-sm font-medium">{t('sectionHolidayCredits')}</h4>
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="holidayCreditCat1">Full Holiday</Label>
+                      <Label htmlFor="holidayCreditCat1">{t('fieldFullHoliday')}</Label>
                       <DurationInput
                         id="holidayCreditCat1"
                         value={form.holidayCreditCat1}
@@ -722,7 +724,7 @@ export function DayPlanFormSheet({
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="holidayCreditCat2">Half Holiday</Label>
+                      <Label htmlFor="holidayCreditCat2">{t('fieldHalfHoliday')}</Label>
                       <DurationInput
                         id="holidayCreditCat2"
                         value={form.holidayCreditCat2}
@@ -732,7 +734,7 @@ export function DayPlanFormSheet({
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="holidayCreditCat3">Category 3</Label>
+                      <Label htmlFor="holidayCreditCat3">{t('fieldCategory3')}</Label>
                       <DurationInput
                         id="holidayCreditCat3"
                         value={form.holidayCreditCat3}
@@ -745,7 +747,7 @@ export function DayPlanFormSheet({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="vacationDeduction">Vacation Deduction</Label>
+                  <Label htmlFor="vacationDeduction">{t('fieldVacationDeduction')}</Label>
                   <Input
                     id="vacationDeduction"
                     type="number"
@@ -757,11 +759,11 @@ export function DayPlanFormSheet({
                     }
                     className="w-32"
                   />
-                  <p className="text-xs text-muted-foreground">Days deducted per vacation day (usually 1)</p>
+                  <p className="text-xs text-muted-foreground">{t('vacationDeductionHelp')}</p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="noBookingBehavior">No Booking Behavior</Label>
+                  <Label htmlFor="noBookingBehavior">{t('fieldNoBookingBehavior')}</Label>
                   <Select
                     value={form.noBookingBehavior}
                     onValueChange={(v) => setForm({ ...form, noBookingBehavior: v })}
@@ -770,18 +772,18 @@ export function DayPlanFormSheet({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="error">Show Error</SelectItem>
-                      <SelectItem value="deduct_target">Deduct Target Hours</SelectItem>
-                      <SelectItem value="adopt_target">Credit Target Hours</SelectItem>
-                      <SelectItem value="vocational_school">Vocational School Day</SelectItem>
-                      <SelectItem value="target_with_order">Target with Default Order</SelectItem>
+                      <SelectItem value="error">{t('noBookingError')}</SelectItem>
+                      <SelectItem value="deduct_target">{t('noBookingDeductTarget')}</SelectItem>
+                      <SelectItem value="adopt_target">{t('noBookingAdoptTarget')}</SelectItem>
+                      <SelectItem value="vocational_school">{t('noBookingVocationalSchool')}</SelectItem>
+                      <SelectItem value="target_with_order">{t('noBookingTargetWithOrder')}</SelectItem>
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">What happens when no bookings are recorded</p>
+                  <p className="text-xs text-muted-foreground">{t('noBookingBehaviorHelp')}</p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="dayChangeBehavior">Day Change Behavior</Label>
+                  <Label htmlFor="dayChangeBehavior">{t('fieldDayChangeBehavior')}</Label>
                   <Select
                     value={form.dayChangeBehavior}
                     onValueChange={(v) => setForm({ ...form, dayChangeBehavior: v })}
@@ -790,13 +792,13 @@ export function DayPlanFormSheet({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">No Day Change</SelectItem>
-                      <SelectItem value="at_arrival">Evaluate at Arrival</SelectItem>
-                      <SelectItem value="at_departure">Evaluate at Departure</SelectItem>
-                      <SelectItem value="auto_complete">Auto-Complete at Midnight</SelectItem>
+                      <SelectItem value="none">{t('dayChangeNone')}</SelectItem>
+                      <SelectItem value="at_arrival">{t('dayChangeAtArrival')}</SelectItem>
+                      <SelectItem value="at_departure">{t('dayChangeAtDeparture')}</SelectItem>
+                      <SelectItem value="auto_complete">{t('dayChangeAutoComplete')}</SelectItem>
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">How to handle cross-midnight shifts</p>
+                  <p className="text-xs text-muted-foreground">{t('dayChangeBehaviorHelp')}</p>
                 </div>
               </TabsContent>
             </Tabs>
@@ -815,11 +817,11 @@ export function DayPlanFormSheet({
               onClick={() => onOpenChange(false)}
               disabled={isPending}
             >
-              Cancel
+              {t('buttonCancel')}
             </Button>
             <Button type="submit" disabled={isPending}>
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEdit ? 'Save Changes' : 'Create Day Plan'}
+              {isEdit ? t('buttonSaveChanges') : t('buttonCreateDayPlan')}
             </Button>
           </SheetFooter>
         </form>

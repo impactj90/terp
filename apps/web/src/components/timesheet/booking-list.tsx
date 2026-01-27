@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -34,6 +35,8 @@ export function BookingList({
   onDelete,
   onAdd,
 }: BookingListProps) {
+  const t = useTranslations('timesheet')
+
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -50,11 +53,11 @@ export function BookingList({
   if (pairs.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-muted-foreground mb-4">No bookings for this day</p>
+        <p className="text-muted-foreground mb-4">{t('noBookingsForDay')}</p>
         {isEditable && onAdd && (
           <Button variant="outline" onClick={onAdd}>
             <Plus className="h-4 w-4 mr-2" />
-            Add Booking
+            {t('addBooking')}
           </Button>
         )}
       </div>
@@ -77,7 +80,7 @@ export function BookingList({
       {isEditable && onAdd && (
         <Button variant="outline" className="w-full" onClick={onAdd}>
           <Plus className="h-4 w-4 mr-2" />
-          Add Booking
+          {t('addBooking')}
         </Button>
       )}
     </div>

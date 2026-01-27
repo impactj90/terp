@@ -227,9 +227,12 @@ func TestAccountHandler_List_Success(t *testing.T) {
 	h.List(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
-	var result []model.Account
-	err := json.Unmarshal(rr.Body.Bytes(), &result)
+	var response struct {
+		Data []model.Account `json:"data"`
+	}
+	err := json.Unmarshal(rr.Body.Bytes(), &response)
 	require.NoError(t, err)
+	result := response.Data
 	assert.Len(t, result, 2)
 }
 
@@ -266,9 +269,12 @@ func TestAccountHandler_List_ActiveOnly(t *testing.T) {
 	h.List(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
-	var result []model.Account
-	err = json.Unmarshal(rr.Body.Bytes(), &result)
+	var response struct {
+		Data []model.Account `json:"data"`
+	}
+	err = json.Unmarshal(rr.Body.Bytes(), &response)
 	require.NoError(t, err)
+	result := response.Data
 	assert.Len(t, result, 1)
 	assert.Equal(t, "ACTIVE", result[0].Code)
 }
@@ -306,9 +312,12 @@ func TestAccountHandler_List_IncludeSystem(t *testing.T) {
 	h.List(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
-	var result []model.Account
-	err = json.Unmarshal(rr.Body.Bytes(), &result)
+	var response struct {
+		Data []model.Account `json:"data"`
+	}
+	err = json.Unmarshal(rr.Body.Bytes(), &response)
 	require.NoError(t, err)
+	result := response.Data
 	assert.GreaterOrEqual(t, len(result), 2)
 }
 

@@ -132,6 +132,47 @@ func (r *AbsenceDayRepository) DeleteRange(ctx context.Context, employeeID uuid.
 	return nil
 }
 
+// ListAll returns absence days matching optional filters for a tenant.
+// Preloads Employee and AbsenceType relations for display purposes.
+func (r *AbsenceDayRepository) ListAll(ctx context.Context, tenantID uuid.UUID, opts model.AbsenceListOptions) ([]model.AbsenceDay, error) {
+	var days []model.AbsenceDay
+	q := r.db.GORM.WithContext(ctx).
+		Preload("Employee").
+		Preload("AbsenceType").
+		Where("tenant_id = ?", tenantID)
+
+	if opts.EmployeeID != nil {
+		q = q.Where("employee_id = ?", *opts.EmployeeID)
+	}
+	if opts.AbsenceTypeID != nil {
+		q = q.Where("absence_type_id = ?", *opts.AbsenceTypeID)
+	}
+	if opts.Status != nil {
+		q = q.Where("status = ?", *opts.Status)
+	}
+	if opts.From != nil {
+		q = q.Where("absence_date >= ?", *opts.From)
+	}
+	if opts.To != nil {
+		q = q.Where("absence_date <= ?", *opts.To)
+	}
+
+	err := q.Order("absence_date ASC").Find(&days).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to list absence days: %w", err)
+	}
+	return days, nil
+}
+
+// Upsert creates or updates an absence day by primary key.
+// Uses Save() which does INSERT ON CONFLICT (id) DO UPDATE.
+// We use Save() rather than ON CONFLICT (employee_id, absence_date) because
+// the unique index on absence_days is conditional (WHERE status != 'cancelled'),
+// which GORM's clause.OnConflict doesn't support.
+func (r *AbsenceDayRepository) Upsert(ctx context.Context, ad *model.AbsenceDay) error {
+	return r.db.GORM.WithContext(ctx).Save(ad).Error
+}
+
 // CountByTypeInRange sums the duration of approved absences for an employee
 // of a specific type within a date range. Returns decimal (e.g. 1.5 for full + half day).
 // Only counts status = 'approved'.

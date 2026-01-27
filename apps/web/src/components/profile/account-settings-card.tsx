@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import { Alert } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
 import { useUpdateUser } from '@/hooks/api'
+import { useTranslations } from 'next-intl'
 import {
   Pencil,
   X,
@@ -35,12 +36,16 @@ interface AccountSettingsCardProps {
  * Account settings card with display name editing and placeholders.
  */
 export function AccountSettingsCard({ user }: AccountSettingsCardProps) {
+  const t = useTranslations('profile')
+  const tc = useTranslations('common')
+
   const [isEditing, setIsEditing] = useState(false)
   const [displayName, setDisplayName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   const updateUser = useUpdateUser()
+  const failedToSaveMsg = t('failedToSave')
 
   // Initialize form data when user changes
   useEffect(() => {
@@ -66,12 +71,12 @@ export function AccountSettingsCard({ user }: AccountSettingsCardProps) {
     setError(null)
 
     if (!displayName.trim()) {
-      setError('Display name is required')
+      setError(t('displayNameRequired'))
       return
     }
 
     if (displayName.length > 100) {
-      setError('Display name must be less than 100 characters')
+      setError(t('displayNameMaxLength'))
       return
     }
 
@@ -81,17 +86,17 @@ export function AccountSettingsCard({ user }: AccountSettingsCardProps) {
         body: { display_name: displayName.trim() },
       })
       setIsEditing(false)
-      setSuccessMessage('Display name updated successfully')
+      setSuccessMessage(t('displayNameUpdated'))
     } catch {
-      setError('Failed to save changes. Please try again.')
+      setError(failedToSaveMsg)
     }
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Account Settings</CardTitle>
-        <CardDescription>Manage your account preferences</CardDescription>
+        <CardTitle>{t('accountSettings')}</CardTitle>
+        <CardDescription>{t('accountSettingsSubtitle')}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-6">
@@ -104,7 +109,7 @@ export function AccountSettingsCard({ user }: AccountSettingsCardProps) {
         )}
 
         {/* Error message */}
-        {error && error.includes('Failed') && (
+        {error && error === failedToSaveMsg && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <span className="ml-2">{error}</span>
@@ -113,19 +118,19 @@ export function AccountSettingsCard({ user }: AccountSettingsCardProps) {
 
         {/* Email (read-only) */}
         <div className="space-y-2">
-          <Label className="text-muted-foreground">Email</Label>
+          <Label className="text-muted-foreground">{t('emailLabel')}</Label>
           <p className="text-sm font-medium">{user.email}</p>
           <p className="text-xs text-muted-foreground">
-            Your email address cannot be changed.
+            {t('emailCannotChange')}
           </p>
         </div>
 
         {/* Role (read-only) */}
         <div className="space-y-2">
-          <Label className="text-muted-foreground">Role</Label>
+          <Label className="text-muted-foreground">{t('role')}</Label>
           <div>
             <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-              {user.role === 'admin' ? 'Administrator' : 'User'}
+              {user.role === 'admin' ? t('administrator') : t('userRole')}
             </Badge>
           </div>
         </div>
@@ -135,7 +140,7 @@ export function AccountSettingsCard({ user }: AccountSettingsCardProps) {
         {/* Display Name (editable) */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="displayName">Display Name</Label>
+            <Label htmlFor="displayName">{t('displayName')}</Label>
             {isEditing ? (
               <div className="flex gap-2">
                 <Button
@@ -145,7 +150,7 @@ export function AccountSettingsCard({ user }: AccountSettingsCardProps) {
                   disabled={updateUser.isPending}
                 >
                   <X className="mr-1 h-3 w-3" />
-                  Cancel
+                  {tc('cancel')}
                 </Button>
                 <Button
                   size="sm"
@@ -153,7 +158,7 @@ export function AccountSettingsCard({ user }: AccountSettingsCardProps) {
                   disabled={updateUser.isPending}
                 >
                   <Check className="mr-1 h-3 w-3" />
-                  {updateUser.isPending ? 'Saving...' : 'Save'}
+                  {updateUser.isPending ? tc('saving') : tc('save')}
                 </Button>
               </div>
             ) : (
@@ -163,7 +168,7 @@ export function AccountSettingsCard({ user }: AccountSettingsCardProps) {
                 onClick={() => setIsEditing(true)}
               >
                 <Pencil className="mr-1 h-3 w-3" />
-                Edit
+                {tc('edit')}
               </Button>
             )}
           </div>
@@ -173,14 +178,14 @@ export function AccountSettingsCard({ user }: AccountSettingsCardProps) {
                 id="displayName"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className={error && !error.includes('Failed') ? 'border-destructive' : ''}
+                className={error && error !== failedToSaveMsg ? 'border-destructive' : ''}
               />
-              {error && !error.includes('Failed') && (
+              {error && error !== failedToSaveMsg && (
                 <p className="text-xs text-destructive">{error}</p>
               )}
             </>
           ) : (
-            <p className="text-sm font-medium">{user.display_name || 'Not set'}</p>
+            <p className="text-sm font-medium">{user.display_name || t('notSet')}</p>
           )}
         </div>
 
@@ -191,15 +196,15 @@ export function AccountSettingsCard({ user }: AccountSettingsCardProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Lock className="h-4 w-4 text-muted-foreground" />
-              <Label>Password</Label>
+              <Label>{t('passwordLabel')}</Label>
             </div>
             <Badge variant="secondary" className="text-xs">
               <Construction className="mr-1 h-3 w-3" />
-              Coming Soon
+              {t('comingSoon')}
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground">
-            Password change functionality will be available in a future update.
+            {t('passwordComingSoon')}
           </p>
         </div>
 
@@ -208,15 +213,15 @@ export function AccountSettingsCard({ user }: AccountSettingsCardProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Bell className="h-4 w-4 text-muted-foreground" />
-              <Label>Notifications</Label>
+              <Label>{t('notifications')}</Label>
             </div>
             <Badge variant="secondary" className="text-xs">
               <Construction className="mr-1 h-3 w-3" />
-              Coming Soon
+              {t('comingSoon')}
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground">
-            Notification preferences will be available in a future update.
+            {t('notificationsComingSoon')}
           </p>
         </div>
       </CardContent>

@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { useTranslations } from 'next-intl'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -26,6 +27,7 @@ interface CopyTariffDialogProps {
 }
 
 export function CopyTariffDialog({ tariff, open, onOpenChange }: CopyTariffDialogProps) {
+  const t = useTranslations('adminTariffs')
   const [newCode, setNewCode] = React.useState('')
   const [newName, setNewName] = React.useState('')
   const [error, setError] = React.useState<string | null>(null)
@@ -38,8 +40,8 @@ export function CopyTariffDialog({ tariff, open, onOpenChange }: CopyTariffDialo
   // Initialize fields when dialog opens
   React.useEffect(() => {
     if (open && tariff) {
-      setNewCode(`${tariff.code}-COPY`)
-      setNewName(`${tariff.name} (Copy)`)
+      setNewCode(t('defaultCopyCode', { code: tariff.code }))
+      setNewName(t('defaultCopyName', { name: tariff.name }))
       setError(null)
     }
   }, [open, tariff])
@@ -51,11 +53,11 @@ export function CopyTariffDialog({ tariff, open, onOpenChange }: CopyTariffDialo
     if (!tariff || !fullTariff) return
 
     if (!newCode.trim()) {
-      setError('Code is required')
+      setError(t('errorCodeRequired'))
       return
     }
     if (!newName.trim()) {
-      setError('Name is required')
+      setError(t('errorNameRequired'))
       return
     }
 
@@ -76,7 +78,7 @@ export function CopyTariffDialog({ tariff, open, onOpenChange }: CopyTariffDialo
       onOpenChange(false)
     } catch (err) {
       const apiError = err as { detail?: string; message?: string }
-      setError(apiError.detail ?? apiError.message ?? 'Failed to copy tariff')
+      setError(apiError.detail ?? apiError.message ?? t('errorCopyFailed'))
     }
   }
 
@@ -84,33 +86,32 @@ export function CopyTariffDialog({ tariff, open, onOpenChange }: CopyTariffDialo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Copy Tariff</DialogTitle>
+          <DialogTitle>{t('copyTitle')}</DialogTitle>
           <DialogDescription>
-            Create a copy of &ldquo;{tariff?.name}&rdquo; with a new code and name.
-            Break rules will need to be added separately.
+            {t('copyDescription', { name: tariff?.name ?? '' })}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="newCode">New Code *</Label>
+              <Label htmlFor="newCode">{t('newCode')} *</Label>
               <Input
                 id="newCode"
                 value={newCode}
                 onChange={(e) => setNewCode(e.target.value)}
-                placeholder="e.g., TARIFF-002"
+                placeholder={t('newCodePlaceholder')}
                 maxLength={20}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="newName">New Name *</Label>
+              <Label htmlFor="newName">{t('newName')} *</Label>
               <Input
                 id="newName"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                placeholder="e.g., Standard Tariff (Copy)"
+                placeholder={t('newNamePlaceholder')}
               />
             </div>
 
@@ -128,11 +129,11 @@ export function CopyTariffDialog({ tariff, open, onOpenChange }: CopyTariffDialo
               onClick={() => onOpenChange(false)}
               disabled={createMutation.isPending}
             >
-              Cancel
+              {t('cancel')}
             </Button>
             <Button type="submit" disabled={createMutation.isPending}>
               {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Copy
+              {t('copyButton')}
             </Button>
           </DialogFooter>
         </form>

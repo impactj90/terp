@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { useTranslations } from 'next-intl'
 import { Loader2, CalendarIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -143,6 +144,7 @@ export function TariffFormSheet({
   tariff,
   onSuccess,
 }: TariffFormSheetProps) {
+  const t = useTranslations('adminTariffs')
   const isEdit = !!tariff
   const [form, setForm] = React.useState<FormState>(INITIAL_STATE)
   const [error, setError] = React.useState<string | null>(null)
@@ -301,7 +303,7 @@ export function TariffFormSheet({
       onSuccess?.()
     } catch (err) {
       const apiError = err as { detail?: string; message?: string }
-      setError(apiError.detail ?? apiError.message ?? `Failed to ${isEdit ? 'update' : 'create'} tariff`)
+      setError(apiError.detail ?? apiError.message ?? t(isEdit ? 'errorUpdateFailed' : 'errorCreateFailed'))
     }
   }
 
@@ -314,11 +316,9 @@ export function TariffFormSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-2xl flex flex-col">
         <SheetHeader>
-          <SheetTitle>{isEdit ? 'Edit Tariff' : 'Create Tariff'}</SheetTitle>
+          <SheetTitle>{isEdit ? t('editTitle') : t('createTitle')}</SheetTitle>
           <SheetDescription>
-            {isEdit
-              ? 'Update tariff settings and configuration.'
-              : 'Create a new tariff for employee contracts.'}
+            {isEdit ? t('editDescription') : t('createDescription')}
           </SheetDescription>
         </SheetHeader>
 
@@ -326,47 +326,47 @@ export function TariffFormSheet({
           <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
             <Tabs defaultValue="basic" className="w-full py-4">
               <TabsList className="mb-4">
-                <TabsTrigger value="basic">Basic</TabsTrigger>
-                <TabsTrigger value="schedule">Schedule</TabsTrigger>
-                <TabsTrigger value="vacation">Vacation</TabsTrigger>
-                <TabsTrigger value="hours">Target Hours</TabsTrigger>
-                <TabsTrigger value="flextime">Flextime</TabsTrigger>
+                <TabsTrigger value="basic">{t('tabBasic')}</TabsTrigger>
+                <TabsTrigger value="schedule">{t('tabSchedule')}</TabsTrigger>
+                <TabsTrigger value="vacation">{t('tabVacation')}</TabsTrigger>
+                <TabsTrigger value="hours">{t('tabTargetHours')}</TabsTrigger>
+                <TabsTrigger value="flextime">{t('tabFlextime')}</TabsTrigger>
               </TabsList>
 
               {/* Basic Tab */}
               <TabsContent value="basic" className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="code">Code *</Label>
+                    <Label htmlFor="code">{t('fieldCode')} *</Label>
                     <Input
                       id="code"
                       value={form.code}
                       onChange={(e) => setForm({ ...form, code: e.target.value })}
                       disabled={isEdit || isPending}
-                      placeholder="e.g., TARIFF-001"
+                      placeholder={t('fieldCodePlaceholder')}
                       maxLength={20}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="name">Name *</Label>
+                    <Label htmlFor="name">{t('fieldName')} *</Label>
                     <Input
                       id="name"
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
                       disabled={isPending}
-                      placeholder="e.g., Standard Full-Time"
+                      placeholder={t('fieldNamePlaceholder')}
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
+                  <Label htmlFor="description">{t('fieldDescription')}</Label>
                   <Textarea
                     id="description"
                     value={form.description}
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
                     disabled={isPending}
-                    placeholder="Optional description..."
+                    placeholder={t('fieldDescriptionPlaceholder')}
                     rows={3}
                   />
                 </div>
@@ -374,9 +374,9 @@ export function TariffFormSheet({
                 {isEdit && (
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label htmlFor="isActive">Active</Label>
+                      <Label htmlFor="isActive">{t('statusActive')}</Label>
                       <p className="text-sm text-muted-foreground">
-                        Inactive tariffs cannot be assigned to employees
+                        {t('inactiveHelpText')}
                       </p>
                     </div>
                     <Switch
@@ -393,7 +393,7 @@ export function TariffFormSheet({
               <TabsContent value="schedule" className="space-y-4">
                 {/* Rhythm Type Selector */}
                 <div className="space-y-2">
-                  <Label>Rhythm Type</Label>
+                  <Label>{t('fieldRhythmType')}</Label>
                   <Select
                     value={form.rhythmType}
                     onValueChange={(v) =>
@@ -412,22 +412,22 @@ export function TariffFormSheet({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="weekly">Weekly (Single Plan)</SelectItem>
-                      <SelectItem value="rolling_weekly">Rolling Weekly (Multiple Plans)</SelectItem>
-                      <SelectItem value="x_days">X-Days Cycle</SelectItem>
+                      <SelectItem value="weekly">{t('rhythmWeekly')}</SelectItem>
+                      <SelectItem value="rolling_weekly">{t('rhythmRollingWeekly')}</SelectItem>
+                      <SelectItem value="x_days">{t('rhythmXDays')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    {form.rhythmType === 'weekly' && 'Same week plan every week'}
-                    {form.rhythmType === 'rolling_weekly' && 'Week plans rotate in sequence'}
-                    {form.rhythmType === 'x_days' && 'Custom day cycle (not tied to weekdays)'}
+                    {form.rhythmType === 'weekly' && t('rhythmWeeklyHelp')}
+                    {form.rhythmType === 'rolling_weekly' && t('rhythmRollingWeeklyHelp')}
+                    {form.rhythmType === 'x_days' && t('rhythmXDaysHelp')}
                   </p>
                 </div>
 
                 {/* Weekly: Single Week Plan */}
                 {form.rhythmType === 'weekly' && (
                   <div className="space-y-2">
-                    <Label>Week Plan</Label>
+                    <Label>{t('fieldWeekPlan')}</Label>
                     <Select
                       value={form.weekPlanId || '__none__'}
                       onValueChange={(value) =>
@@ -436,10 +436,10 @@ export function TariffFormSheet({
                       disabled={isPending || loadingWeekPlans}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select week plan" />
+                        <SelectValue placeholder={t('selectWeekPlan')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="__none__">None</SelectItem>
+                        <SelectItem value="__none__">{t('none')}</SelectItem>
                         {weekPlans.map((wp) => (
                           <SelectItem key={wp.id} value={wp.id}>
                             {wp.code} - {wp.name}
@@ -475,7 +475,7 @@ export function TariffFormSheet({
                 {/* Rhythm Start Date */}
                 {form.rhythmType !== 'weekly' && (
                   <div className="space-y-2">
-                    <Label>Rhythm Start Date</Label>
+                    <Label>{t('fieldRhythmStartDate')}</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
@@ -489,7 +489,7 @@ export function TariffFormSheet({
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {form.rhythmStartDate
                             ? format(form.rhythmStartDate, 'PPP')
-                            : 'Pick a date'}
+                            : t('pickDate')}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
@@ -505,17 +505,17 @@ export function TariffFormSheet({
                       </PopoverContent>
                     </Popover>
                     <p className="text-xs text-muted-foreground">
-                      When the rhythm cycle begins for calculation
+                      {t('rhythmStartDateHelp')}
                     </p>
                   </div>
                 )}
 
                 {/* Validity Period */}
                 <div className="border-t pt-4 mt-4">
-                  <h4 className="text-sm font-medium mb-3">Validity Period</h4>
+                  <h4 className="text-sm font-medium mb-3">{t('sectionValidityPeriod')}</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Valid From</Label>
+                      <Label>{t('columnValidFrom')}</Label>
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button
@@ -527,7 +527,7 @@ export function TariffFormSheet({
                             disabled={isPending}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {form.validFrom ? format(form.validFrom, 'PPP') : 'Pick a date'}
+                            {form.validFrom ? format(form.validFrom, 'PPP') : t('pickDate')}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
@@ -545,7 +545,7 @@ export function TariffFormSheet({
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Valid To</Label>
+                      <Label>{t('columnValidTo')}</Label>
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button
@@ -557,7 +557,7 @@ export function TariffFormSheet({
                             disabled={isPending}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {form.validTo ? format(form.validTo, 'PPP') : 'Pick a date'}
+                            {form.validTo ? format(form.validTo, 'PPP') : t('pickDate')}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
@@ -575,7 +575,7 @@ export function TariffFormSheet({
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
-                    Leave empty for no time restriction
+                    {t('validityPeriodHelp')}
                   </p>
                 </div>
               </TabsContent>
@@ -583,12 +583,12 @@ export function TariffFormSheet({
               {/* Vacation Tab */}
               <TabsContent value="vacation" className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Configure vacation entitlement and calculation settings.
+                  {t('vacationTabDescription')}
                 </p>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="annualVacationDays">Annual Vacation Days</Label>
+                    <Label htmlFor="annualVacationDays">{t('fieldAnnualVacationDays')}</Label>
                     <Input
                       id="annualVacationDays"
                       type="number"
@@ -603,13 +603,13 @@ export function TariffFormSheet({
                         })
                       }
                       disabled={isPending}
-                      placeholder="e.g., 30"
+                      placeholder={t('annualVacationDaysPlaceholder')}
                     />
-                    <p className="text-xs text-muted-foreground">Base vacation days per year</p>
+                    <p className="text-xs text-muted-foreground">{t('annualVacationDaysHelp')}</p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="workDaysPerWeek">Work Days per Week</Label>
+                    <Label htmlFor="workDaysPerWeek">{t('fieldWorkDaysPerWeek')}</Label>
                     <Select
                       value={form.workDaysPerWeek?.toString() ?? '5'}
                       onValueChange={(v) => setForm({ ...form, workDaysPerWeek: parseInt(v) })}
@@ -621,17 +621,17 @@ export function TariffFormSheet({
                       <SelectContent>
                         {[1, 2, 3, 4, 5, 6, 7].map((d) => (
                           <SelectItem key={d} value={d.toString()}>
-                            {d} day{d > 1 ? 's' : ''}
+                            {t('daysCount', { count: d })}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-muted-foreground">For vacation pro-rating</p>
+                    <p className="text-xs text-muted-foreground">{t('workDaysPerWeekHelp')}</p>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Vacation Year Basis</Label>
+                  <Label>{t('fieldVacationYearBasis')}</Label>
                   <Select
                     value={form.vacationBasis}
                     onValueChange={(v) =>
@@ -643,12 +643,12 @@ export function TariffFormSheet({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="calendar_year">Calendar Year (Jan 1 - Dec 31)</SelectItem>
-                      <SelectItem value="entry_date">Entry Date (Anniversary)</SelectItem>
+                      <SelectItem value="calendar_year">{t('vacationBasisCalendarYear')}</SelectItem>
+                      <SelectItem value="entry_date">{t('vacationBasisEntryDate')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    When the vacation year starts for this tariff
+                    {t('vacationYearBasisHelp')}
                   </p>
                 </div>
               </TabsContent>
@@ -656,12 +656,12 @@ export function TariffFormSheet({
               {/* Target Hours Tab */}
               <TabsContent value="hours" className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Define target working hours. These can be used for reference and macros.
+                  {t('targetHoursTabDescription')}
                 </p>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="dailyTargetHours">Daily Target (hours)</Label>
+                    <Label htmlFor="dailyTargetHours">{t('fieldDailyTarget')}</Label>
                     <Input
                       id="dailyTargetHours"
                       type="number"
@@ -676,13 +676,13 @@ export function TariffFormSheet({
                         })
                       }
                       disabled={isPending}
-                      placeholder="e.g., 8.0"
+                      placeholder={t('dailyTargetPlaceholder')}
                     />
-                    <p className="text-xs text-muted-foreground">Hours per day</p>
+                    <p className="text-xs text-muted-foreground">{t('hoursPerDay')}</p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="weeklyTargetHours">Weekly Target (hours)</Label>
+                    <Label htmlFor="weeklyTargetHours">{t('fieldWeeklyTarget')}</Label>
                     <Input
                       id="weeklyTargetHours"
                       type="number"
@@ -697,15 +697,15 @@ export function TariffFormSheet({
                         })
                       }
                       disabled={isPending}
-                      placeholder="e.g., 40.0"
+                      placeholder={t('weeklyTargetPlaceholder')}
                     />
-                    <p className="text-xs text-muted-foreground">Hours per week</p>
+                    <p className="text-xs text-muted-foreground">{t('hoursPerWeek')}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="monthlyTargetHours">Monthly Target (hours)</Label>
+                    <Label htmlFor="monthlyTargetHours">{t('fieldMonthlyTarget')}</Label>
                     <Input
                       id="monthlyTargetHours"
                       type="number"
@@ -719,13 +719,13 @@ export function TariffFormSheet({
                         })
                       }
                       disabled={isPending}
-                      placeholder="e.g., 173.33"
+                      placeholder={t('monthlyTargetPlaceholder')}
                     />
-                    <p className="text-xs text-muted-foreground">Hours per month</p>
+                    <p className="text-xs text-muted-foreground">{t('hoursPerMonth')}</p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="annualTargetHours">Annual Target (hours)</Label>
+                    <Label htmlFor="annualTargetHours">{t('fieldAnnualTarget')}</Label>
                     <Input
                       id="annualTargetHours"
                       type="number"
@@ -739,9 +739,9 @@ export function TariffFormSheet({
                         })
                       }
                       disabled={isPending}
-                      placeholder="e.g., 2080"
+                      placeholder={t('annualTargetPlaceholder')}
                     />
-                    <p className="text-xs text-muted-foreground">Hours per year</p>
+                    <p className="text-xs text-muted-foreground">{t('hoursPerYear')}</p>
                   </div>
                 </div>
               </TabsContent>
@@ -749,11 +749,11 @@ export function TariffFormSheet({
               {/* Flextime Tab */}
               <TabsContent value="flextime" className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Configure monthly evaluation and flextime account limits.
+                  {t('flextimeTabDescription')}
                 </p>
 
                 <div className="space-y-2">
-                  <Label>Credit Type</Label>
+                  <Label>{t('fieldCreditType')}</Label>
                   <Select
                     value={form.creditType}
                     onValueChange={(v) =>
@@ -765,23 +765,23 @@ export function TariffFormSheet({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="no_evaluation">No Evaluation (1:1 Transfer)</SelectItem>
-                      <SelectItem value="complete">Complete Carryover (with Limits)</SelectItem>
-                      <SelectItem value="after_threshold">After Threshold</SelectItem>
-                      <SelectItem value="no_carryover">No Carryover (Reset to 0)</SelectItem>
+                      <SelectItem value="no_evaluation">{t('creditNoEvaluation')}</SelectItem>
+                      <SelectItem value="complete">{t('creditComplete')}</SelectItem>
+                      <SelectItem value="after_threshold">{t('creditAfterThreshold')}</SelectItem>
+                      <SelectItem value="no_carryover">{t('creditNoCarryover')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    How flextime is credited at month end
+                    {t('creditTypeHelp')}
                   </p>
                 </div>
 
                 <div className="border rounded-lg p-4 space-y-4">
-                  <h4 className="text-sm font-medium">Account Limits</h4>
+                  <h4 className="text-sm font-medium">{t('sectionAccountLimits')}</h4>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="maxFlextimePerMonth">Max Flextime per Month</Label>
+                      <Label htmlFor="maxFlextimePerMonth">{t('fieldMaxFlextimePerMonth')}</Label>
                       <DurationInput
                         id="maxFlextimePerMonth"
                         value={form.maxFlextimePerMonth}
@@ -789,11 +789,11 @@ export function TariffFormSheet({
                         format="hhmm"
                         className="w-full"
                       />
-                      <p className="text-xs text-muted-foreground">Maximum monthly credit</p>
+                      <p className="text-xs text-muted-foreground">{t('maxFlextimeHelp')}</p>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="flextimeThreshold">Flextime Threshold</Label>
+                      <Label htmlFor="flextimeThreshold">{t('fieldFlextimeThreshold')}</Label>
                       <DurationInput
                         id="flextimeThreshold"
                         value={form.flextimeThreshold}
@@ -801,13 +801,13 @@ export function TariffFormSheet({
                         format="hhmm"
                         className="w-full"
                       />
-                      <p className="text-xs text-muted-foreground">Minimum overtime to qualify</p>
+                      <p className="text-xs text-muted-foreground">{t('flextimeThresholdHelp')}</p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="upperLimitAnnual">Upper Limit (Annual)</Label>
+                      <Label htmlFor="upperLimitAnnual">{t('fieldUpperLimitAnnual')}</Label>
                       <DurationInput
                         id="upperLimitAnnual"
                         value={form.upperLimitAnnual}
@@ -815,11 +815,11 @@ export function TariffFormSheet({
                         format="hhmm"
                         className="w-full"
                       />
-                      <p className="text-xs text-muted-foreground">Annual flextime cap</p>
+                      <p className="text-xs text-muted-foreground">{t('upperLimitHelp')}</p>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="lowerLimitAnnual">Lower Limit (Annual)</Label>
+                      <Label htmlFor="lowerLimitAnnual">{t('fieldLowerLimitAnnual')}</Label>
                       <DurationInput
                         id="lowerLimitAnnual"
                         value={form.lowerLimitAnnual}
@@ -828,7 +828,7 @@ export function TariffFormSheet({
                         className="w-full"
                       />
                       <p className="text-xs text-muted-foreground">
-                        Annual flextime floor (can be negative)
+                        {t('lowerLimitHelp')}
                       </p>
                     </div>
                   </div>
@@ -852,11 +852,11 @@ export function TariffFormSheet({
               disabled={isPending}
               className="flex-1"
             >
-              Cancel
+              {t('cancel')}
             </Button>
             <Button type="submit" disabled={isPending} className="flex-1">
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEdit ? 'Save Changes' : 'Create Tariff'}
+              {isEdit ? t('saveChanges') : t('createTariffButton')}
             </Button>
           </SheetFooter>
         </form>

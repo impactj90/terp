@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useLocale, useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -45,7 +46,14 @@ interface CalendarProps {
   className?: string
 }
 
-const WEEK_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+function getLocalizedWeekdays(locale: string): string[] {
+  const formatter = new Intl.DateTimeFormat(locale, { weekday: 'short' })
+  // Generate weekday names starting from Monday (2026-01-05 is a Monday)
+  return Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(2026, 0, 5 + i)
+    return formatter.format(date)
+  })
+}
 
 function getCalendarGrid(year: number, month: number): (Date | null)[][] {
   const firstDayOfMonth = new Date(year, month, 1)
@@ -106,6 +114,8 @@ export function Calendar({
   disabledDates,
   className,
 }: CalendarProps) {
+  const locale = useLocale()
+  const t = useTranslations('calendar')
   const year = month.getFullYear()
   const monthIndex = month.getMonth()
   const calendarGrid = React.useMemo(
@@ -113,7 +123,9 @@ export function Calendar({
     [year, monthIndex]
   )
 
-  const monthLabel = month.toLocaleDateString('en-US', {
+  const weekDays = React.useMemo(() => getLocalizedWeekdays(locale), [locale])
+
+  const monthLabel = month.toLocaleDateString(locale, {
     month: 'long',
     year: 'numeric',
   })
@@ -188,7 +200,7 @@ export function Calendar({
           onClick={handlePrevMonth}
         >
           <ChevronLeft className="h-4 w-4" />
-          <span className="sr-only">Previous month</span>
+          <span className="sr-only">{t('previousMonth')}</span>
         </Button>
         <h2 className="text-sm font-semibold">{monthLabel}</h2>
         <Button
@@ -198,13 +210,13 @@ export function Calendar({
           onClick={handleNextMonth}
         >
           <ChevronRight className="h-4 w-4" />
-          <span className="sr-only">Next month</span>
+          <span className="sr-only">{t('nextMonth')}</span>
         </Button>
       </div>
 
       {/* Week day headers */}
       <div className="grid grid-cols-7 gap-1 mb-1">
-        {WEEK_DAYS.map((day, index) => (
+        {weekDays.map((day, index) => (
           <div
             key={day}
             className={cn(

@@ -96,6 +96,18 @@ func (m *mockEmployeeRepoForMonthlyEval) GetByID(ctx context.Context, id uuid.UU
 	return args.Get(0).(*model.Employee), args.Error(1)
 }
 
+type mockTariffRepoForMonthlyEval struct {
+	mock.Mock
+}
+
+func (m *mockTariffRepoForMonthlyEval) GetByID(ctx context.Context, id uuid.UUID) (*model.Tariff, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.Tariff), args.Error(1)
+}
+
 // --- Test helper ---
 
 func newTestMonthlyEvalService() (
@@ -104,21 +116,23 @@ func newTestMonthlyEvalService() (
 	*mockDailyValueRepoForMonthlyEval,
 	*mockAbsenceDayRepoForMonthlyEval,
 	*mockEmployeeRepoForMonthlyEval,
+	*mockTariffRepoForMonthlyEval,
 ) {
 	monthlyValueRepo := new(mockMonthlyValueRepoForMonthlyEval)
 	dailyValueRepo := new(mockDailyValueRepoForMonthlyEval)
 	absenceDayRepo := new(mockAbsenceDayRepoForMonthlyEval)
 	employeeRepo := new(mockEmployeeRepoForMonthlyEval)
+	tariffRepo := new(mockTariffRepoForMonthlyEval)
 
-	svc := NewMonthlyEvalService(monthlyValueRepo, dailyValueRepo, absenceDayRepo, employeeRepo)
-	return svc, monthlyValueRepo, dailyValueRepo, absenceDayRepo, employeeRepo
+	svc := NewMonthlyEvalService(monthlyValueRepo, dailyValueRepo, absenceDayRepo, employeeRepo, tariffRepo)
+	return svc, monthlyValueRepo, dailyValueRepo, absenceDayRepo, employeeRepo, tariffRepo
 }
 
 // --- GetMonthSummary Tests ---
 
 func TestMonthlyEvalService_GetMonthSummary_Success(t *testing.T) {
 	ctx := context.Background()
-	svc, monthlyValueRepo, _, _, _ := newTestMonthlyEvalService()
+	svc, monthlyValueRepo, _, _, _, _ := newTestMonthlyEvalService()
 
 	employeeID := uuid.New()
 	year, month := 2026, 1
@@ -145,7 +159,7 @@ func TestMonthlyEvalService_GetMonthSummary_Success(t *testing.T) {
 
 func TestMonthlyEvalService_GetMonthSummary_NotFound(t *testing.T) {
 	ctx := context.Background()
-	svc, monthlyValueRepo, _, _, _ := newTestMonthlyEvalService()
+	svc, monthlyValueRepo, _, _, _, _ := newTestMonthlyEvalService()
 
 	employeeID := uuid.New()
 	monthlyValueRepo.On("GetByEmployeeMonth", ctx, employeeID, 2026, 1).Return(nil, nil)
@@ -157,7 +171,7 @@ func TestMonthlyEvalService_GetMonthSummary_NotFound(t *testing.T) {
 
 func TestMonthlyEvalService_GetMonthSummary_InvalidYear(t *testing.T) {
 	ctx := context.Background()
-	svc, _, _, _, _ := newTestMonthlyEvalService()
+	svc, _, _, _, _, _ := newTestMonthlyEvalService()
 
 	_, err := svc.GetMonthSummary(ctx, uuid.New(), 1800, 1)
 	assert.ErrorIs(t, err, ErrInvalidYearMonth)
@@ -168,7 +182,7 @@ func TestMonthlyEvalService_GetMonthSummary_InvalidYear(t *testing.T) {
 
 func TestMonthlyEvalService_GetMonthSummary_InvalidMonth(t *testing.T) {
 	ctx := context.Background()
-	svc, _, _, _, _ := newTestMonthlyEvalService()
+	svc, _, _, _, _, _ := newTestMonthlyEvalService()
 
 	_, err := svc.GetMonthSummary(ctx, uuid.New(), 2026, 0)
 	assert.ErrorIs(t, err, ErrInvalidMonth)
@@ -181,7 +195,7 @@ func TestMonthlyEvalService_GetMonthSummary_InvalidMonth(t *testing.T) {
 
 func TestMonthlyEvalService_RecalculateMonth_Success(t *testing.T) {
 	ctx := context.Background()
-	svc, monthlyValueRepo, dailyValueRepo, absenceDayRepo, employeeRepo := newTestMonthlyEvalService()
+	svc, monthlyValueRepo, dailyValueRepo, absenceDayRepo, employeeRepo, _ := newTestMonthlyEvalService()
 
 	tenantID := uuid.New()
 	employeeID := uuid.New()
@@ -234,7 +248,7 @@ func TestMonthlyEvalService_RecalculateMonth_Success(t *testing.T) {
 
 func TestMonthlyEvalService_RecalculateMonth_MonthClosed(t *testing.T) {
 	ctx := context.Background()
-	svc, monthlyValueRepo, _, _, employeeRepo := newTestMonthlyEvalService()
+	svc, monthlyValueRepo, _, _, employeeRepo, _ := newTestMonthlyEvalService()
 
 	employeeID := uuid.New()
 	employee := &model.Employee{ID: employeeID, TenantID: uuid.New()}
@@ -256,7 +270,7 @@ func TestMonthlyEvalService_RecalculateMonth_MonthClosed(t *testing.T) {
 
 func TestMonthlyEvalService_RecalculateMonth_WithPreviousCarryover(t *testing.T) {
 	ctx := context.Background()
-	svc, monthlyValueRepo, dailyValueRepo, absenceDayRepo, employeeRepo := newTestMonthlyEvalService()
+	svc, monthlyValueRepo, dailyValueRepo, absenceDayRepo, employeeRepo, _ := newTestMonthlyEvalService()
 
 	tenantID := uuid.New()
 	employeeID := uuid.New()
@@ -301,7 +315,7 @@ func TestMonthlyEvalService_RecalculateMonth_WithPreviousCarryover(t *testing.T)
 
 func TestMonthlyEvalService_RecalculateMonth_EmployeeNotFound(t *testing.T) {
 	ctx := context.Background()
-	svc, _, _, _, employeeRepo := newTestMonthlyEvalService()
+	svc, _, _, _, employeeRepo, _ := newTestMonthlyEvalService()
 
 	employeeID := uuid.New()
 	employeeRepo.On("GetByID", ctx, employeeID).Return(nil, errors.New("not found"))
@@ -313,7 +327,7 @@ func TestMonthlyEvalService_RecalculateMonth_EmployeeNotFound(t *testing.T) {
 
 func TestMonthlyEvalService_RecalculateMonth_InvalidMonth(t *testing.T) {
 	ctx := context.Background()
-	svc, _, _, _, _ := newTestMonthlyEvalService()
+	svc, _, _, _, _, _ := newTestMonthlyEvalService()
 
 	err := svc.RecalculateMonth(ctx, uuid.New(), 2026, 0)
 	assert.ErrorIs(t, err, ErrInvalidMonth)
@@ -326,7 +340,7 @@ func TestMonthlyEvalService_RecalculateMonth_InvalidMonth(t *testing.T) {
 
 func TestMonthlyEvalService_CloseMonth_Success(t *testing.T) {
 	ctx := context.Background()
-	svc, monthlyValueRepo, _, _, _ := newTestMonthlyEvalService()
+	svc, monthlyValueRepo, _, _, _, _ := newTestMonthlyEvalService()
 
 	employeeID := uuid.New()
 	closedBy := uuid.New()
@@ -349,7 +363,7 @@ func TestMonthlyEvalService_CloseMonth_Success(t *testing.T) {
 
 func TestMonthlyEvalService_CloseMonth_AlreadyClosed(t *testing.T) {
 	ctx := context.Background()
-	svc, monthlyValueRepo, _, _, _ := newTestMonthlyEvalService()
+	svc, monthlyValueRepo, _, _, _, _ := newTestMonthlyEvalService()
 
 	employeeID := uuid.New()
 
@@ -366,7 +380,7 @@ func TestMonthlyEvalService_CloseMonth_AlreadyClosed(t *testing.T) {
 
 func TestMonthlyEvalService_CloseMonth_NotFound(t *testing.T) {
 	ctx := context.Background()
-	svc, monthlyValueRepo, _, _, _ := newTestMonthlyEvalService()
+	svc, monthlyValueRepo, _, _, _, _ := newTestMonthlyEvalService()
 
 	employeeID := uuid.New()
 	monthlyValueRepo.On("GetByEmployeeMonth", ctx, employeeID, 2026, 1).Return(nil, nil)
@@ -378,7 +392,7 @@ func TestMonthlyEvalService_CloseMonth_NotFound(t *testing.T) {
 
 func TestMonthlyEvalService_CloseMonth_InvalidMonth(t *testing.T) {
 	ctx := context.Background()
-	svc, _, _, _, _ := newTestMonthlyEvalService()
+	svc, _, _, _, _, _ := newTestMonthlyEvalService()
 
 	err := svc.CloseMonth(ctx, uuid.New(), 2026, 13, uuid.New())
 	assert.ErrorIs(t, err, ErrInvalidMonth)
@@ -388,7 +402,7 @@ func TestMonthlyEvalService_CloseMonth_InvalidMonth(t *testing.T) {
 
 func TestMonthlyEvalService_ReopenMonth_Success(t *testing.T) {
 	ctx := context.Background()
-	svc, monthlyValueRepo, _, _, _ := newTestMonthlyEvalService()
+	svc, monthlyValueRepo, _, _, _, _ := newTestMonthlyEvalService()
 
 	employeeID := uuid.New()
 	reopenedBy := uuid.New()
@@ -411,7 +425,7 @@ func TestMonthlyEvalService_ReopenMonth_Success(t *testing.T) {
 
 func TestMonthlyEvalService_ReopenMonth_NotClosed(t *testing.T) {
 	ctx := context.Background()
-	svc, monthlyValueRepo, _, _, _ := newTestMonthlyEvalService()
+	svc, monthlyValueRepo, _, _, _, _ := newTestMonthlyEvalService()
 
 	employeeID := uuid.New()
 
@@ -428,7 +442,7 @@ func TestMonthlyEvalService_ReopenMonth_NotClosed(t *testing.T) {
 
 func TestMonthlyEvalService_ReopenMonth_NotFound(t *testing.T) {
 	ctx := context.Background()
-	svc, monthlyValueRepo, _, _, _ := newTestMonthlyEvalService()
+	svc, monthlyValueRepo, _, _, _, _ := newTestMonthlyEvalService()
 
 	employeeID := uuid.New()
 	monthlyValueRepo.On("GetByEmployeeMonth", ctx, employeeID, 2026, 1).Return(nil, nil)
@@ -442,7 +456,7 @@ func TestMonthlyEvalService_ReopenMonth_NotFound(t *testing.T) {
 
 func TestMonthlyEvalService_GetYearOverview_Success(t *testing.T) {
 	ctx := context.Background()
-	svc, monthlyValueRepo, _, _, _ := newTestMonthlyEvalService()
+	svc, monthlyValueRepo, _, _, _, _ := newTestMonthlyEvalService()
 
 	employeeID := uuid.New()
 	year := 2026
@@ -466,7 +480,7 @@ func TestMonthlyEvalService_GetYearOverview_Success(t *testing.T) {
 
 func TestMonthlyEvalService_GetYearOverview_Empty(t *testing.T) {
 	ctx := context.Background()
-	svc, monthlyValueRepo, _, _, _ := newTestMonthlyEvalService()
+	svc, monthlyValueRepo, _, _, _, _ := newTestMonthlyEvalService()
 
 	employeeID := uuid.New()
 	monthlyValueRepo.On("ListByEmployeeYear", ctx, employeeID, 2026).Return([]model.MonthlyValue{}, nil)
@@ -479,7 +493,7 @@ func TestMonthlyEvalService_GetYearOverview_Empty(t *testing.T) {
 
 func TestMonthlyEvalService_GetYearOverview_InvalidYear(t *testing.T) {
 	ctx := context.Background()
-	svc, _, _, _, _ := newTestMonthlyEvalService()
+	svc, _, _, _, _, _ := newTestMonthlyEvalService()
 
 	_, err := svc.GetYearOverview(ctx, uuid.New(), 1800)
 	assert.ErrorIs(t, err, ErrInvalidYearMonth)
@@ -561,4 +575,206 @@ func TestBuildAbsenceSummary(t *testing.T) {
 	assert.True(t, result.VacationDays.Equal(decimal.NewFromFloat(1.5)))
 	assert.Equal(t, 2, result.SickDays) // 1 full day + 0.5 day (ceil to 1)
 	assert.Equal(t, 1, result.OtherAbsenceDays)
+}
+
+// --- Tariff Evaluation Rules Tests ---
+
+// setupRecalculateWithTariff is a test helper that sets up RecalculateMonth with a tariff-assigned employee.
+// Returns the mocks for assertion. The employee has the given tariff assigned, and daily values
+// produce the specified overtime minutes (single work day: target=480, net=480+overtime).
+func setupRecalculateWithTariff(
+	t *testing.T,
+	tariff *model.Tariff,
+	previousCarryover int,
+	overtimeMinutes int,
+) (*MonthlyEvalService, *mockMonthlyValueRepoForMonthlyEval, *model.MonthlyValue) {
+	t.Helper()
+	ctx := context.Background()
+	svc, monthlyValueRepo, dailyValueRepo, absenceDayRepo, employeeRepo, tariffRepo := newTestMonthlyEvalService()
+
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	tariffID := tariff.ID
+	year, month := 2026, 1
+
+	employee := &model.Employee{ID: employeeID, TenantID: tenantID, TariffID: &tariffID}
+	employeeRepo.On("GetByID", ctx, employeeID).Return(employee, nil)
+
+	// Not closed
+	monthlyValueRepo.On("GetByEmployeeMonth", ctx, employeeID, year, month).Return(nil, nil)
+
+	// Previous month carryover
+	if previousCarryover != 0 {
+		monthlyValueRepo.On("GetPreviousMonth", ctx, employeeID, year, month).Return(
+			&model.MonthlyValue{FlextimeEnd: previousCarryover}, nil,
+		)
+	} else {
+		monthlyValueRepo.On("GetPreviousMonth", ctx, employeeID, year, month).Return(nil, nil)
+	}
+
+	from := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 1, 31, 0, 0, 0, 0, time.UTC)
+
+	netTime := 480 + overtimeMinutes
+	overtime := 0
+	undertime := 0
+	if overtimeMinutes > 0 {
+		overtime = overtimeMinutes
+	} else if overtimeMinutes < 0 {
+		undertime = -overtimeMinutes
+		netTime = 480 + overtimeMinutes
+	}
+
+	dailyValues := []model.DailyValue{
+		{
+			EmployeeID: employeeID,
+			ValueDate:  time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC),
+			GrossTime:  netTime + 30,
+			NetTime:    netTime,
+			TargetTime: 480,
+			Overtime:   overtime,
+			Undertime:  undertime,
+			BreakTime:  30,
+		},
+	}
+	dailyValueRepo.On("GetByEmployeeDateRange", ctx, employeeID, from, to).Return(dailyValues, nil)
+	absenceDayRepo.On("GetByEmployeeDateRange", ctx, employeeID, from, to).Return([]model.AbsenceDay{}, nil)
+
+	// Tariff repo returns the tariff
+	tariffRepo.On("GetByID", ctx, tariffID).Return(tariff, nil)
+
+	// Capture the upserted monthly value
+	var captured *model.MonthlyValue
+	monthlyValueRepo.On("Upsert", ctx, mock.MatchedBy(func(mv *model.MonthlyValue) bool {
+		captured = mv
+		return true
+	})).Return(nil)
+
+	err := svc.RecalculateMonth(ctx, employeeID, year, month)
+	require.NoError(t, err)
+
+	monthlyValueRepo.AssertExpectations(t)
+	tariffRepo.AssertExpectations(t)
+
+	return svc, monthlyValueRepo, captured
+}
+
+func TestMonthlyEvalService_RecalculateMonth_CompleteCarryoverCapped(t *testing.T) {
+	tariff := &model.Tariff{
+		ID:                  uuid.New(),
+		CreditType:          model.CreditTypeComplete,
+		MaxFlextimePerMonth: intPtr(120), // Cap at 2 hours
+	}
+
+	// Employee works 3 hours overtime, but cap is 2 hours
+	_, _, captured := setupRecalculateWithTariff(t, tariff, 0, 180)
+
+	assert.Equal(t, 0, captured.FlextimeStart)
+	assert.Equal(t, 180, captured.FlextimeChange)       // Raw overtime
+	assert.Equal(t, 120, captured.FlextimeEnd)           // Capped at 120
+	assert.Equal(t, 120, captured.FlextimeCarryover)     // Carryover = FlextimeEnd
+}
+
+func TestMonthlyEvalService_RecalculateMonth_AfterThreshold(t *testing.T) {
+	tariff := &model.Tariff{
+		ID:                uuid.New(),
+		CreditType:        model.CreditTypeAfterThreshold,
+		FlextimeThreshold: intPtr(60), // Only credit overtime above 60 minutes
+	}
+
+	// Employee works 90 minutes overtime; only 30 should be credited
+	_, _, captured := setupRecalculateWithTariff(t, tariff, 0, 90)
+
+	assert.Equal(t, 0, captured.FlextimeStart)
+	assert.Equal(t, 90, captured.FlextimeChange)
+	assert.Equal(t, 30, captured.FlextimeEnd) // 90 - 60 threshold = 30 credited
+}
+
+func TestMonthlyEvalService_RecalculateMonth_NoCarryover(t *testing.T) {
+	tariff := &model.Tariff{
+		ID:         uuid.New(),
+		CreditType: model.CreditTypeNoCarryover,
+	}
+
+	// Employee has 60 min previous carryover and 30 min overtime — should reset to 0
+	_, _, captured := setupRecalculateWithTariff(t, tariff, 60, 30)
+
+	assert.Equal(t, 60, captured.FlextimeStart)
+	assert.Equal(t, 30, captured.FlextimeChange)
+	assert.Equal(t, 0, captured.FlextimeEnd)       // Reset to 0
+	assert.Equal(t, 0, captured.FlextimeCarryover)  // Carryover = 0
+}
+
+func TestMonthlyEvalService_RecalculateMonth_TariffNotFound(t *testing.T) {
+	ctx := context.Background()
+	svc, monthlyValueRepo, dailyValueRepo, absenceDayRepo, employeeRepo, tariffRepo := newTestMonthlyEvalService()
+
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	tariffID := uuid.New()
+	year, month := 2026, 1
+
+	employee := &model.Employee{ID: employeeID, TenantID: tenantID, TariffID: &tariffID}
+	employeeRepo.On("GetByID", ctx, employeeID).Return(employee, nil)
+
+	monthlyValueRepo.On("GetByEmployeeMonth", ctx, employeeID, year, month).Return(nil, nil)
+	monthlyValueRepo.On("GetPreviousMonth", ctx, employeeID, year, month).Return(nil, nil)
+
+	from := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 1, 31, 0, 0, 0, 0, time.UTC)
+
+	dailyValues := []model.DailyValue{
+		{
+			EmployeeID: employeeID,
+			ValueDate:  time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC),
+			GrossTime:  570, NetTime: 540, TargetTime: 480, Overtime: 60, BreakTime: 30,
+		},
+	}
+	dailyValueRepo.On("GetByEmployeeDateRange", ctx, employeeID, from, to).Return(dailyValues, nil)
+	absenceDayRepo.On("GetByEmployeeDateRange", ctx, employeeID, from, to).Return([]model.AbsenceDay{}, nil)
+
+	// Tariff repo returns error (tariff deleted)
+	tariffRepo.On("GetByID", ctx, tariffID).Return(nil, errors.New("not found"))
+
+	// Should still succeed with nil rules (no evaluation = direct transfer)
+	monthlyValueRepo.On("Upsert", ctx, mock.MatchedBy(func(mv *model.MonthlyValue) bool {
+		// Direct transfer: flextime = overtime (60)
+		return mv.FlextimeEnd == 60 && mv.FlextimeChange == 60
+	})).Return(nil)
+
+	err := svc.RecalculateMonth(ctx, employeeID, year, month)
+
+	require.NoError(t, err)
+	monthlyValueRepo.AssertExpectations(t)
+	tariffRepo.AssertExpectations(t)
+}
+
+func TestBuildEvaluationRules_NoEvaluation(t *testing.T) {
+	tariff := &model.Tariff{CreditType: model.CreditTypeNoEvaluation}
+	result := buildEvaluationRules(tariff)
+	assert.Nil(t, result, "no_evaluation should return nil rules")
+}
+
+func TestBuildEvaluationRules_CompleteCarryover(t *testing.T) {
+	tariff := &model.Tariff{
+		CreditType:          model.CreditTypeComplete,
+		MaxFlextimePerMonth: intPtr(120),
+		UpperLimitAnnual:    intPtr(600),
+		LowerLimitAnnual:    intPtr(300),
+		FlextimeThreshold:   intPtr(30),
+	}
+	result := buildEvaluationRules(tariff)
+	require.NotNil(t, result)
+	assert.Equal(t, "complete_carryover", string(result.CreditType))
+	assert.Equal(t, 120, *result.MaxFlextimePerMonth)
+	assert.Equal(t, 600, *result.FlextimeCapPositive)
+	assert.Equal(t, 300, *result.FlextimeCapNegative)
+	assert.Equal(t, 30, *result.FlextimeThreshold)
+}
+
+func TestBuildEvaluationRules_EmptyCreditType(t *testing.T) {
+	// Empty string defaults to no_evaluation via GetCreditType()
+	tariff := &model.Tariff{CreditType: ""}
+	result := buildEvaluationRules(tariff)
+	assert.Nil(t, result, "empty credit type defaults to no_evaluation = nil rules")
 }

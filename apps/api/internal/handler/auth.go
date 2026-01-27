@@ -29,6 +29,26 @@ type monthlyValueRepoForAuth interface {
 	Upsert(ctx context.Context, mv *model.MonthlyValue) error
 }
 
+// empDayPlanRepoForAuth defines the interface for employee day plan data access in auth handler.
+type empDayPlanRepoForAuth interface {
+	BulkCreate(ctx context.Context, plans []model.EmployeeDayPlan) error
+}
+
+// absenceDayRepoForAuth defines the interface for absence day data access in auth handler.
+type absenceDayRepoForAuth interface {
+	Upsert(ctx context.Context, ad *model.AbsenceDay) error
+}
+
+// vacationBalanceRepoForAuth defines the interface for vacation balance data access in auth handler.
+type vacationBalanceRepoForAuth interface {
+	Upsert(ctx context.Context, balance *model.VacationBalance) error
+}
+
+// accountRepoForAuth defines the interface for account data access in auth handler.
+type accountRepoForAuth interface {
+	Upsert(ctx context.Context, account *model.Account) error
+}
+
 // AuthHandler handles authentication endpoints.
 type AuthHandler struct {
 	jwtManager         *auth.JWTManager
@@ -44,9 +64,13 @@ type AuthHandler struct {
 	tariffService      *service.TariffService
 	departmentService  *service.DepartmentService
 	teamService        *service.TeamService
-	bookingRepo        bookingRepoForAuth
-	dailyValueRepo     dailyValueRepoForAuth
-	monthlyValueRepo   monthlyValueRepoForAuth
+	bookingRepo         bookingRepoForAuth
+	dailyValueRepo      dailyValueRepoForAuth
+	monthlyValueRepo    monthlyValueRepoForAuth
+	empDayPlanRepo      empDayPlanRepoForAuth
+	absenceDayRepo      absenceDayRepoForAuth
+	vacationBalanceRepo vacationBalanceRepoForAuth
+	accountRepo         accountRepoForAuth
 }
 
 // NewAuthHandler creates a new auth handler instance.
@@ -67,6 +91,10 @@ func NewAuthHandler(
 	bookingRepo bookingRepoForAuth,
 	dailyValueRepo dailyValueRepoForAuth,
 	monthlyValueRepo monthlyValueRepoForAuth,
+	empDayPlanRepo empDayPlanRepoForAuth,
+	absenceDayRepo absenceDayRepoForAuth,
+	vacationBalanceRepo vacationBalanceRepoForAuth,
+	accountRepo accountRepoForAuth,
 ) *AuthHandler {
 	return &AuthHandler{
 		jwtManager:         jwtManager,
@@ -82,9 +110,13 @@ func NewAuthHandler(
 		tariffService:      tariffService,
 		departmentService:  departmentService,
 		teamService:        teamService,
-		bookingRepo:        bookingRepo,
-		dailyValueRepo:     dailyValueRepo,
-		monthlyValueRepo:   monthlyValueRepo,
+		bookingRepo:         bookingRepo,
+		dailyValueRepo:      dailyValueRepo,
+		monthlyValueRepo:    monthlyValueRepo,
+		empDayPlanRepo:      empDayPlanRepo,
+		absenceDayRepo:      absenceDayRepo,
+		vacationBalanceRepo: vacationBalanceRepo,
+		accountRepo:         accountRepo,
 	}
 }
 
@@ -124,35 +156,6 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create all dev employees (idempotent)
-	for _, devEmp := range auth.GetDevEmployees() {
-		emp := &model.Employee{
-			TenantID:            devTenant.ID,
-			PersonnelNumber:     devEmp.PersonnelNumber,
-			PIN:                 devEmp.PIN,
-			FirstName:           devEmp.FirstName,
-			LastName:            devEmp.LastName,
-			Email:               devEmp.Email,
-			EntryDate:           devEmp.EntryDate,
-			WeeklyHours:         decimal.NewFromFloat(devEmp.WeeklyHours),
-			VacationDaysPerYear: decimal.NewFromFloat(devEmp.VacationDays),
-			IsActive:            true,
-		}
-		emp.ID = devEmp.ID
-		if err := h.employeeService.UpsertDevEmployee(r.Context(), emp); err != nil {
-			respondError(w, http.StatusInternalServerError, "failed to sync dev employees to database")
-			return
-		}
-	}
-
-	// Link user to their employee record if mapped
-	if empID, ok := auth.GetDevEmployeeForUser(devUser.ID); ok {
-		if err := h.userService.LinkUserToEmployee(r.Context(), devUser.ID, empID); err != nil {
-			respondError(w, http.StatusInternalServerError, "failed to link user to employee")
-			return
-		}
-	}
-
 	// Create all dev booking types (system-level, idempotent)
 	for _, devBT := range auth.GetDevBookingTypes() {
 		desc := devBT.Description
@@ -172,8 +175,28 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// NOTE: Absence types are seeded by migration 000025_create_absence_types.up.sql
-	// No need to seed them again in dev mode
+	// Create all dev absence types (tenant-level, idempotent)
+	for _, devAT := range auth.GetDevAbsenceTypes() {
+		desc := devAT.Description
+		at := &model.AbsenceType{
+			ID:              devAT.ID,
+			TenantID:        &devTenant.ID,
+			Code:            devAT.Code,
+			Name:            devAT.Name,
+			Description:     &desc,
+			Category:        model.AbsenceCategory(devAT.Category),
+			Portion:         model.AbsencePortion(devAT.Portion),
+			DeductsVacation: devAT.DeductsVacation,
+			Color:           devAT.Color,
+			SortOrder:       devAT.SortOrder,
+			IsSystem:        false,
+			IsActive:        true,
+		}
+		if err := h.absenceService.UpsertDevAbsenceType(r.Context(), at); err != nil {
+			respondError(w, http.StatusInternalServerError, "failed to sync dev absence types to database")
+			return
+		}
+	}
 
 	// Create all dev holidays (tenant-level, idempotent)
 	for _, devH := range auth.GetDevHolidays() {
@@ -268,6 +291,58 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Create all dev employees (idempotent, with tariff assignment)
+	for _, devEmp := range auth.GetDevEmployees() {
+		emp := &model.Employee{
+			TenantID:            devTenant.ID,
+			PersonnelNumber:     devEmp.PersonnelNumber,
+			PIN:                 devEmp.PIN,
+			FirstName:           devEmp.FirstName,
+			LastName:            devEmp.LastName,
+			Email:               devEmp.Email,
+			EntryDate:           devEmp.EntryDate,
+			WeeklyHours:         decimal.NewFromFloat(devEmp.WeeklyHours),
+			VacationDaysPerYear: decimal.NewFromFloat(devEmp.VacationDays),
+			IsActive:            true,
+		}
+		emp.ID = devEmp.ID
+		if tariffID, ok := auth.DevEmployeeTariffMap[devEmp.ID]; ok {
+			emp.TariffID = &tariffID
+		}
+		if err := h.employeeService.UpsertDevEmployee(r.Context(), emp); err != nil {
+			respondError(w, http.StatusInternalServerError, "failed to sync dev employees to database")
+			return
+		}
+	}
+
+	// Link user to their employee record if mapped
+	if empID, ok := auth.GetDevEmployeeForUser(devUser.ID); ok {
+		if err := h.userService.LinkUserToEmployee(r.Context(), devUser.ID, empID); err != nil {
+			respondError(w, http.StatusInternalServerError, "failed to link user to employee")
+			return
+		}
+	}
+
+	// Create all dev employee day plans (idempotent via BulkCreate with ON CONFLICT)
+	devDayPlans := auth.GetDevEmployeeDayPlans()
+	if len(devDayPlans) > 0 {
+		plans := make([]model.EmployeeDayPlan, 0, len(devDayPlans))
+		for _, devEDP := range devDayPlans {
+			plans = append(plans, model.EmployeeDayPlan{
+				ID:         devEDP.ID,
+				TenantID:   devTenant.ID,
+				EmployeeID: devEDP.EmployeeID,
+				PlanDate:   devEDP.PlanDate,
+				DayPlanID:  devEDP.DayPlanID,
+				Source:     model.EmployeeDayPlanSource(devEDP.Source),
+			})
+		}
+		if err := h.empDayPlanRepo.BulkCreate(r.Context(), plans); err != nil {
+			respondError(w, http.StatusInternalServerError, "failed to sync dev employee day plans to database")
+			return
+		}
+	}
+
 	// Create all dev departments (tenant-level, idempotent)
 	// Departments must be created before teams since teams reference departments
 	for _, devDept := range auth.GetDevDepartments() {
@@ -315,6 +390,24 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := h.teamService.UpsertDevTeamMember(r.Context(), member); err != nil {
 			respondError(w, http.StatusInternalServerError, "failed to sync dev team members to database")
+			return
+		}
+	}
+
+	// Create all dev accounts (tenant-level, idempotent)
+	for _, devAcct := range auth.GetDevAccounts() {
+		acct := &model.Account{
+			ID:          devAcct.ID,
+			TenantID:    &devTenant.ID,
+			Code:        devAcct.Code,
+			Name:        devAcct.Name,
+			AccountType: model.AccountType(devAcct.AccountType),
+			Unit:        model.AccountUnit(devAcct.Unit),
+			IsSystem:    false,
+			IsActive:    true,
+		}
+		if err := h.accountRepo.Upsert(r.Context(), acct); err != nil {
+			respondError(w, http.StatusInternalServerError, "failed to sync dev accounts to database")
 			return
 		}
 	}
@@ -393,6 +486,47 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := h.monthlyValueRepo.Upsert(r.Context(), mv); err != nil {
 			respondError(w, http.StatusInternalServerError, "failed to sync dev monthly values to database")
+			return
+		}
+	}
+
+	// Create all dev absence days (idempotent)
+	for _, devAD := range auth.GetDevAbsenceDays() {
+		ad := &model.AbsenceDay{
+			ID:              devAD.ID,
+			TenantID:        devTenant.ID,
+			EmployeeID:      devAD.EmployeeID,
+			AbsenceDate:     devAD.AbsenceDate,
+			AbsenceTypeID:   devAD.AbsenceTypeID,
+			Duration:        decimal.NewFromFloat(devAD.Duration),
+			HalfDayPeriod:   (*model.HalfDayPeriod)(devAD.HalfDayPeriod),
+			Status:          model.AbsenceStatus(devAD.Status),
+			ApprovedBy:      devAD.ApprovedBy,
+			ApprovedAt:      devAD.ApprovedAt,
+			RejectionReason: devAD.RejectionReason,
+			Notes:           devAD.Notes,
+			CreatedBy:       devAD.CreatedBy,
+		}
+		if err := h.absenceDayRepo.Upsert(r.Context(), ad); err != nil {
+			respondError(w, http.StatusInternalServerError, "failed to sync dev absence days to database")
+			return
+		}
+	}
+
+	// Create all dev vacation balances (idempotent)
+	for _, devVB := range auth.GetDevVacationBalances() {
+		vb := &model.VacationBalance{
+			ID:          devVB.ID,
+			TenantID:    devTenant.ID,
+			EmployeeID:  devVB.EmployeeID,
+			Year:        devVB.Year,
+			Entitlement: decimal.NewFromFloat(devVB.Entitlement),
+			Carryover:   decimal.NewFromFloat(devVB.Carryover),
+			Adjustments: decimal.NewFromFloat(devVB.Adjustments),
+			Taken:       decimal.NewFromFloat(devVB.Taken),
+		}
+		if err := h.vacationBalanceRepo.Upsert(r.Context(), vb); err != nil {
+			respondError(w, http.StatusInternalServerError, "failed to sync dev vacation balances to database")
 			return
 		}
 	}

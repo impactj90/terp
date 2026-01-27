@@ -32,7 +32,7 @@ const (
 
 	// CreditTypeComplete - Full transfer with limits applied
 	// ZMI: Gleitzeitübertrag komplett
-	CreditTypeComplete CreditType = "complete"
+	CreditTypeComplete CreditType = "complete_carryover"
 
 	// CreditTypeAfterThreshold - Only credit above threshold
 	// ZMI: Gleitzeitübertrag nach Schwelle

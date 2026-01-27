@@ -233,8 +233,11 @@ func RegisterAbsenceRoutes(r chi.Router, h *AbsenceHandler) {
 	r.Get("/employees/{id}/absences", h.ListByEmployee)
 	r.Post("/employees/{id}/absences", h.CreateRange)
 
-	// Absence CRUD
+	// Absence list and CRUD
+	r.Get("/absences", h.ListAll)
 	r.Delete("/absences/{id}", h.Delete)
+	r.Post("/absences/{id}/approve", h.Approve)
+	r.Post("/absences/{id}/reject", h.Reject)
 }
 
 // RegisterVacationRoutes registers vacation routes.

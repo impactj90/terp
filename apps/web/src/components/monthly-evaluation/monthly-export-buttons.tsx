@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
 import { Download, FileText, FileSpreadsheet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -32,11 +33,14 @@ export function MonthlyExportButtons({
   month,
   employeeName,
 }: MonthlyExportButtonsProps) {
+  const t = useTranslations('monthlyEvaluation')
+  const locale = useLocale()
+
   const [isExporting, setIsExporting] = useState(false)
 
   const monthDates = getMonthDates(new Date(year, month - 1, 1))
   const monthLabel = new Date(year, month - 1, 1)
-    .toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
+    .toLocaleDateString(locale, { month: 'long', year: 'numeric' })
 
   // Create lookup map
   const dailyValuesByDate = new Map<string, DailyValue>()
@@ -51,12 +55,12 @@ export function MonthlyExportButtons({
   }
 
   const generateCSV = () => {
-    const headers = ['Date', 'Day', 'Target', 'Gross', 'Breaks', 'Net', 'Balance', 'Errors']
+    const headers = [t('date'), t('day'), t('target'), t('gross'), t('breaks'), t('net'), t('balance'), t('errors')]
 
     const rows = monthDates.map((date) => {
       const dateString = formatDate(date)
       const dv = dailyValuesByDate.get(dateString)
-      const dayName = date.toLocaleDateString('en-US', { weekday: 'short' })
+      const dayName = date.toLocaleDateString(locale, { weekday: 'short' })
 
       return [
         formatDisplayDate(date, 'short'),
@@ -74,14 +78,14 @@ export function MonthlyExportButtons({
     if (monthlyValue) {
       const totalBalance = monthlyValue.total_overtime - monthlyValue.total_undertime
       rows.push('')
-      rows.push('Summary')
-      rows.push(`Total Target,${formatMinutes(monthlyValue.total_target_time)}`)
-      rows.push(`Total Net,${formatMinutes(monthlyValue.total_net_time)}`)
-      rows.push(`Balance,${formatMinutes(totalBalance)}`)
-      rows.push(`Work Days,${monthlyValue.work_days}`)
-      rows.push(`Vacation,${monthlyValue.vacation_taken}`)
-      rows.push(`Sick Days,${monthlyValue.sick_days}`)
-      rows.push(`Status,${monthlyValue.is_closed ? 'closed' : 'open'}`)
+      rows.push(t('csvSummary'))
+      rows.push(`${t('csvTotalTarget')},${formatMinutes(monthlyValue.total_target_time)}`)
+      rows.push(`${t('csvTotalNet')},${formatMinutes(monthlyValue.total_net_time)}`)
+      rows.push(`${t('balance')},${formatMinutes(totalBalance)}`)
+      rows.push(`${t('csvWorkDays')},${monthlyValue.work_days}`)
+      rows.push(`${t('csvVacation')},${monthlyValue.vacation_taken}`)
+      rows.push(`${t('csvSickDays')},${monthlyValue.sick_days}`)
+      rows.push(`${t('status')},${monthlyValue.is_closed ? t('closed') : t('open')}`)
     }
 
     const csv = [headers.join(','), ...rows].join('\n')
@@ -99,7 +103,7 @@ export function MonthlyExportButtons({
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Monthly Evaluation - ${monthLabel}</title>
+        <title>${t('monthlyEvaluationExport')} - ${monthLabel}</title>
         <style>
           body { font-family: Arial, sans-serif; padding: 20px; font-size: 12px; }
           h1 { font-size: 18px; margin-bottom: 5px; }
@@ -120,27 +124,27 @@ export function MonthlyExportButtons({
         </style>
       </head>
       <body>
-        <h1>Monthly Evaluation: ${monthLabel}</h1>
-        ${employeeName ? `<div class="subtitle">Employee: ${employeeName}</div>` : ''}
+        <h1>${t('monthlyEvaluationExport')}: ${monthLabel}</h1>
+        ${employeeName ? `<div class="subtitle">${t('employee')}: ${employeeName}</div>` : ''}
 
         ${monthlyValue ? `
         <div class="summary">
           <div class="summary-grid">
             <div class="summary-item">
-              <div class="summary-label">Target Time</div>
+              <div class="summary-label">${t('targetTime')}</div>
               <div class="summary-value">${formatMinutes(monthlyValue.total_target_time)}</div>
             </div>
             <div class="summary-item">
-              <div class="summary-label">Net Time</div>
+              <div class="summary-label">${t('netTime')}</div>
               <div class="summary-value">${formatMinutes(monthlyValue.total_net_time)}</div>
             </div>
             <div class="summary-item">
-              <div class="summary-label">Balance</div>
+              <div class="summary-label">${t('balance')}</div>
               <div class="summary-value">${formatMinutes(totalBalance)}</div>
             </div>
             <div class="summary-item">
-              <div class="summary-label">Status</div>
-              <div class="summary-value">${monthlyValue.is_closed ? 'Closed' : 'Open'}</div>
+              <div class="summary-label">${t('status')}</div>
+              <div class="summary-value">${monthlyValue.is_closed ? t('closed') : t('open')}</div>
             </div>
           </div>
         </div>
@@ -149,21 +153,21 @@ export function MonthlyExportButtons({
         <table>
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Day</th>
-              <th>Target</th>
-              <th>Gross</th>
-              <th>Breaks</th>
-              <th>Net</th>
-              <th>Balance</th>
-              <th>Status</th>
+              <th>${t('date')}</th>
+              <th>${t('day')}</th>
+              <th>${t('target')}</th>
+              <th>${t('gross')}</th>
+              <th>${t('breaks')}</th>
+              <th>${t('net')}</th>
+              <th>${t('balance')}</th>
+              <th>${t('status')}</th>
             </tr>
           </thead>
           <tbody>
             ${monthDates.map((date) => {
               const dateString = formatDate(date)
               const dv = dailyValuesByDate.get(dateString)
-              const dayName = date.toLocaleDateString('en-US', { weekday: 'short' })
+              const dayName = date.toLocaleDateString(locale, { weekday: 'short' })
               const isWeekend = date.getDay() === 0 || date.getDay() === 6
               const hasError = dv?.has_error
 
@@ -176,7 +180,7 @@ export function MonthlyExportButtons({
                   <td>${formatMinutes(dv?.break_time ?? 0)}</td>
                   <td>${formatMinutes(dv?.net_time ?? 0)}</td>
                   <td>${formatMinutes(getBalance(dv))}</td>
-                  <td style="text-align: left">${hasError ? 'Error' : dv ? 'OK' : ''}</td>
+                  <td style="text-align: left">${hasError ? t('error') : dv ? t('ok') : ''}</td>
                 </tr>
               `
             }).join('')}
@@ -184,7 +188,7 @@ export function MonthlyExportButtons({
         </table>
 
         <div class="footer">
-          Generated: ${new Date().toLocaleString('de-DE')}
+          ${t('generated')}: ${new Date().toLocaleString(locale)}
         </div>
       </body>
       </html>
@@ -228,17 +232,17 @@ export function MonthlyExportButtons({
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" disabled={isExporting || dailyValues.length === 0}>
           <Download className="h-4 w-4 mr-2" />
-          Export
+          {t('exportLabel')}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => handleExport('csv')}>
           <FileSpreadsheet className="h-4 w-4 mr-2" />
-          Export as CSV
+          {t('exportCsv')}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => handleExport('pdf')}>
           <FileText className="h-4 w-4 mr-2" />
-          Print / PDF
+          {t('printPdf')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

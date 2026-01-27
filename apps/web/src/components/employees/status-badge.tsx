@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { useTranslations } from 'next-intl'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
@@ -27,12 +28,13 @@ interface StatusBadgeProps {
  * ```
  */
 export function StatusBadge({ isActive, exitDate, className }: StatusBadgeProps) {
+  const t = useTranslations('adminEmployees')
   const hasExited = exitDate ? new Date(exitDate) < new Date() : false
 
   if (hasExited) {
     return (
       <Badge variant="destructive" className={cn(className)}>
-        Exited
+        {t('statusExited')}
       </Badge>
     )
   }
@@ -40,14 +42,14 @@ export function StatusBadge({ isActive, exitDate, className }: StatusBadgeProps)
   if (!isActive) {
     return (
       <Badge variant="secondary" className={cn(className)}>
-        Inactive
+        {t('statusInactive')}
       </Badge>
     )
   }
 
   return (
     <Badge variant="default" className={cn('bg-green-600 hover:bg-green-600/90', className)}>
-      Active
+      {t('statusActive')}
     </Badge>
   )
 }

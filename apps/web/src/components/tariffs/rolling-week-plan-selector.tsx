@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { useTranslations } from 'next-intl'
 import { GripVertical, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -28,6 +29,7 @@ export function RollingWeekPlanSelector({
   onChange,
   disabled,
 }: RollingWeekPlanSelectorProps) {
+  const t = useTranslations('adminTariffs')
   const availablePlans = weekPlans.filter((wp) => !selectedIds.includes(wp.id))
 
   const handleAdd = (id: string) => {
@@ -51,10 +53,10 @@ export function RollingWeekPlanSelector({
 
   return (
     <div className="space-y-3">
-      <Label>Week Plans (in rotation order)</Label>
+      <Label>{t('weekPlansRotationOrder')}</Label>
 
       {selectedIds.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No week plans selected</p>
+        <p className="text-sm text-muted-foreground">{t('noWeekPlansSelected')}</p>
       ) : (
         <div className="space-y-2">
           {selectedIds.map((id, index) => {
@@ -65,7 +67,7 @@ export function RollingWeekPlanSelector({
                 className="flex items-center gap-2 p-2 border rounded-lg bg-muted/50"
               >
                 <GripVertical className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium text-sm">Week {index + 1}:</span>
+                <span className="font-medium text-sm">{t('weekNumber', { number: index + 1 })}:</span>
                 <span className="flex-1 text-sm">
                   {plan?.code} - {plan?.name}
                 </span>
@@ -77,7 +79,7 @@ export function RollingWeekPlanSelector({
                   onClick={() => handleMove(index, 'up')}
                   disabled={disabled || index === 0}
                 >
-                  <span className="sr-only">Move up</span>
+                  <span className="sr-only">{t('moveUp')}</span>
                   &uarr;
                 </Button>
                 <Button
@@ -88,7 +90,7 @@ export function RollingWeekPlanSelector({
                   onClick={() => handleMove(index, 'down')}
                   disabled={disabled || index === selectedIds.length - 1}
                 >
-                  <span className="sr-only">Move down</span>
+                  <span className="sr-only">{t('moveDown')}</span>
                   &darr;
                 </Button>
                 <Button
@@ -100,7 +102,7 @@ export function RollingWeekPlanSelector({
                   disabled={disabled}
                 >
                   <X className="h-4 w-4" />
-                  <span className="sr-only">Remove</span>
+                  <span className="sr-only">{t('removeWeek')}</span>
                 </Button>
               </div>
             )
@@ -112,7 +114,7 @@ export function RollingWeekPlanSelector({
         <div className="flex gap-2">
           <Select onValueChange={handleAdd} disabled={disabled} value="">
             <SelectTrigger className="flex-1">
-              <SelectValue placeholder="Add week plan to rotation..." />
+              <SelectValue placeholder={t('addWeekPlanPlaceholder')} />
             </SelectTrigger>
             <SelectContent>
               {availablePlans.map((wp) => (
@@ -126,7 +128,7 @@ export function RollingWeekPlanSelector({
       )}
 
       <p className="text-xs text-muted-foreground">
-        Week plans rotate in sequence. Week 1 uses the first plan, Week 2 the second, etc.
+        {t('weekPlansRotationHelp')}
       </p>
     </div>
   )

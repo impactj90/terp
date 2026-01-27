@@ -1,26 +1,12 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TrendingUp } from 'lucide-react'
 import { formatBalance } from '@/lib/time-utils'
 import { cn } from '@/lib/utils'
-
-const MONTH_SHORT = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-]
 
 interface FlextimeDataPoint {
   month: number
@@ -39,7 +25,18 @@ export function FlextimeChart({
   isLoading,
   className,
 }: FlextimeChartProps) {
+  const t = useTranslations('yearOverview')
+  const tCommon = useTranslations('common')
+  const locale = useLocale()
   const [hoveredMonth, setHoveredMonth] = useState<number | null>(null)
+
+  const monthShort = useMemo(() => {
+    const formatter = new Intl.DateTimeFormat(locale, { month: 'short' })
+    return Array.from({ length: 12 }, (_, i) => {
+      const date = new Date(2024, i, 1)
+      return formatter.format(date)
+    })
+  }, [locale])
 
   // Calculate max absolute value for scaling
   const maxValue = useMemo(() => {
@@ -52,7 +49,7 @@ export function FlextimeChart({
       <Card className={className}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">
-            Flextime Progression
+            {t('flextimeProgression')}
           </CardTitle>
           <TrendingUp className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
@@ -69,24 +66,24 @@ export function FlextimeChart({
     <Card className={className}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">
-          Flextime Progression
+          {t('flextimeProgression')}
         </CardTitle>
         <TrendingUp className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
         {!hasAnyData ? (
           <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">
-            No data available
+            {tCommon('noDataAvailable')}
           </div>
         ) : (
           <div className="relative">
             {/* Tooltip */}
             {hoveredMonth !== null && (
               <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground px-2 py-1 rounded text-sm shadow-md border z-10 whitespace-nowrap">
-                {MONTH_SHORT[hoveredMonth - 1]}:{' '}
+                {monthShort[hoveredMonth - 1]}:{' '}
                 {data[hoveredMonth - 1]?.hasData
                   ? formatBalance(data[hoveredMonth - 1]?.balance ?? 0)
-                  : 'No data'}
+                  : t('noData')}
               </div>
             )}
 
@@ -137,7 +134,7 @@ export function FlextimeChart({
                         : 'text-muted-foreground/40'
                     )}
                   >
-                    {MONTH_SHORT[index]}
+                    {monthShort[index]}
                   </span>
                 </div>
               ))}

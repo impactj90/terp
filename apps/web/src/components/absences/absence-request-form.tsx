@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { Loader2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -68,20 +69,20 @@ function validateForm(form: FormState): string[] {
   const errors: string[] = []
 
   if (!form.absenceTypeId) {
-    errors.push('Please select an absence type')
+    errors.push('validationSelectType')
   }
 
   if (!form.dateRange.from) {
-    errors.push('Please select a start date')
+    errors.push('validationSelectStartDate')
   }
 
   if (!form.dateRange.to) {
-    errors.push('Please select an end date')
+    errors.push('validationSelectEndDate')
   }
 
   if (form.dateRange.from && form.dateRange.to) {
     if (form.dateRange.from > form.dateRange.to) {
-      errors.push('End date must be after start date')
+      errors.push('validationEndDateAfterStart')
     }
   }
 
@@ -106,6 +107,9 @@ export function AbsenceRequestForm({
 }: AbsenceRequestFormProps) {
   const [form, setForm] = React.useState<FormState>(INITIAL_STATE)
   const [error, setError] = React.useState<string | null>(null)
+
+  const t = useTranslations('absences')
+  const tc = useTranslations('common')
 
   // Reset form when opening with initial dates
   React.useEffect(() => {
@@ -177,17 +181,17 @@ export function AbsenceRequestForm({
 
     const errors = validateForm(form)
     if (errors.length > 0) {
-      setError(errors.join('. '))
+      setError(errors.map((key) => t(key as Parameters<typeof t>[0])).join('. '))
       return
     }
 
     if (overlappingAbsence) {
-      setError('Selected dates overlap with an existing absence')
+      setError(t('validationDatesOverlap'))
       return
     }
 
     if (!employeeId) {
-      setError('Employee not found')
+      setError(t('employeeNotFound'))
       return
     }
 
@@ -207,7 +211,7 @@ export function AbsenceRequestForm({
       onSuccess?.()
     } catch (err) {
       const apiError = err as { detail?: string; message?: string }
-      setError(apiError.detail ?? apiError.message ?? 'Failed to create absence request')
+      setError(apiError.detail ?? apiError.message ?? t('failedToCreate'))
     }
   }
 
@@ -221,10 +225,9 @@ export function AbsenceRequestForm({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-lg flex flex-col overflow-hidden">
         <SheetHeader className="flex-shrink-0">
-          <SheetTitle>Request Absence</SheetTitle>
+          <SheetTitle>{t('requestAbsence')}</SheetTitle>
           <SheetDescription>
-            Submit a request for time off. Your manager will be notified for
-            approval.
+            {t('requestDescription')}
           </SheetDescription>
         </SheetHeader>
 
@@ -232,7 +235,7 @@ export function AbsenceRequestForm({
           <div className="space-y-6 py-4">
             {/* Absence Type */}
             <div className="space-y-3">
-              <Label className="text-base">Absence Type</Label>
+              <Label className="text-base">{t('absenceType')}</Label>
               <AbsenceTypeSelector
                 value={form.absenceTypeId}
                 onChange={(typeId) =>
@@ -246,7 +249,7 @@ export function AbsenceRequestForm({
 
             {/* Date Range */}
             <div className="space-y-3">
-              <Label className="text-base">Dates</Label>
+              <Label className="text-base">{t('dates')}</Label>
               <DateRangePicker
                 value={form.dateRange}
                 onChange={(range) =>
@@ -267,18 +270,17 @@ export function AbsenceRequestForm({
                   parseISODate(a.absence_date)
                 )}
                 disabled={isSubmitting}
-                placeholder="Select date range..."
+                placeholder={tc('selectDateRange')}
               />
               {requestedDays > 0 && (
                 <p className="text-sm text-muted-foreground">
-                  {requestedDays} working day{requestedDays !== 1 ? 's' : ''}{' '}
-                  selected
+                  {t('workingDaysSelected', { count: requestedDays })}
                 </p>
               )}
               {overlappingAbsence && (
                 <Alert variant="destructive">
                   <AlertDescription>
-                    Selected dates overlap with an existing absence.
+                    {t('datesOverlap')}
                   </AlertDescription>
                 </Alert>
               )}
@@ -287,7 +289,7 @@ export function AbsenceRequestForm({
             {/* Duration (Full/Half day) */}
             {canSelectHalfDay && (
               <div className="space-y-3">
-                <Label className="text-base">Duration</Label>
+                <Label className="text-base">{t('duration')}</Label>
                 <RadioGroup
                   value={form.duration}
                   onValueChange={(value) =>
@@ -302,13 +304,13 @@ export function AbsenceRequestForm({
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="1" id="full-day" />
                     <Label htmlFor="full-day" className="font-normal">
-                      Full day
+                      {t('fullDay')}
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="0.5" id="half-day" />
                     <Label htmlFor="half-day" className="font-normal">
-                      Half day
+                      {t('halfDay')}
                     </Label>
                   </div>
                 </RadioGroup>
@@ -318,7 +320,7 @@ export function AbsenceRequestForm({
             {/* Half day portion */}
             {canSelectHalfDay && form.duration === '0.5' && (
               <div className="space-y-3">
-                <Label className="text-base">Which half?</Label>
+                <Label className="text-base">{t('whichHalf')}</Label>
                 <RadioGroup
                   value={form.halfDayPortion}
                   onValueChange={(value) =>
@@ -333,13 +335,13 @@ export function AbsenceRequestForm({
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="morning" id="morning" />
                     <Label htmlFor="morning" className="font-normal">
-                      Morning
+                      {t('morning')}
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="afternoon" id="afternoon" />
                     <Label htmlFor="afternoon" className="font-normal">
-                      Afternoon
+                      {t('afternoon')}
                     </Label>
                   </div>
                 </RadioGroup>
@@ -361,11 +363,11 @@ export function AbsenceRequestForm({
             {/* Notes */}
             <div className="space-y-3">
               <Label htmlFor="notes" className="text-base">
-                Notes <span className="text-muted-foreground font-normal">(optional)</span>
+                {t('notesLabel')} <span className="text-muted-foreground font-normal">({t('optional')})</span>
               </Label>
               <Textarea
                 id="notes"
-                placeholder="Add any additional information..."
+                placeholder={t('notesPlaceholder')}
                 value={form.notes}
                 onChange={(e) =>
                   setForm((prev) => ({ ...prev, notes: e.target.value }))
@@ -391,7 +393,7 @@ export function AbsenceRequestForm({
             disabled={isSubmitting}
             className="flex-1"
           >
-            Cancel
+            {tc('cancel')}
           </Button>
           <Button
             onClick={handleSubmit}
@@ -399,7 +401,7 @@ export function AbsenceRequestForm({
             className="flex-1"
           >
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isSubmitting ? 'Submitting...' : 'Submit Request'}
+            {isSubmitting ? tc('submitting') : t('submitRequest')}
           </Button>
         </SheetFooter>
       </SheetContent>

@@ -1,6 +1,7 @@
 'use client'
 
-import Link from 'next/link'
+import { useTranslations } from 'next-intl'
+import { Link } from '@/i18n/navigation'
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -28,12 +29,14 @@ export function MobileSidebarSheet({
   open,
   onOpenChange,
 }: MobileSidebarSheetProps) {
+  const t = useTranslations('sidebar')
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="left"
         className="flex w-[280px] flex-col p-0"
-        aria-label="Navigation menu"
+        aria-label={t('navigationMenu')}
       >
         <SheetHeader className="flex h-[var(--header-height)] flex-row items-center justify-between border-b px-4">
           <SheetTitle asChild>
@@ -50,7 +53,7 @@ export function MobileSidebarSheet({
             </Link>
           </SheetTitle>
           <SheetClose asChild>
-            <Button variant="ghost" size="icon" aria-label="Close menu">
+            <Button variant="ghost" size="icon" aria-label={t('closeMenu')}>
               <X className="h-5 w-5" aria-hidden="true" />
             </Button>
           </SheetClose>
@@ -69,7 +72,7 @@ export function MobileSidebarSheet({
         {/* Footer with app info */}
         <div className="border-t px-4 py-3">
           <p className="text-xs text-muted-foreground">
-            Terp Time Tracking
+            {t('appName')}
           </p>
         </div>
       </SheetContent>

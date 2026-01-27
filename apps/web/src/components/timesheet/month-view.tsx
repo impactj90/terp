@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -43,6 +44,9 @@ export function MonthView({
   employeeId,
   onDayClick,
 }: MonthViewProps) {
+  const t = useTranslations('timesheet')
+  const tc = useTranslations('common')
+  const locale = useLocale()
   const referenceDate = useMemo(() => new Date(year, month - 1, 1), [year, month])
   const { start, end } = useMemo(() => getMonthRange(referenceDate), [referenceDate])
   const dates = useMemo(() => getMonthDates(referenceDate), [referenceDate])
@@ -105,7 +109,16 @@ export function MonthView({
   }, [year, month, dates])
 
   const isLoading = isLoadingDailyValues || isLoadingMonthlyValues
-  const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+  // Generate localized abbreviated weekday names (Mon-Sun starting from Monday)
+  const weekDays = useMemo(() => {
+    const formatter = new Intl.DateTimeFormat(locale, { weekday: 'short' })
+    // 2024-01-01 was a Monday
+    return Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(2024, 0, 1 + i)
+      return formatter.format(date)
+    })
+  }, [locale])
 
   return (
     <div className="space-y-6">
@@ -199,7 +212,7 @@ export function MonthView({
                       ) : weekend ? (
                         <span className="text-xs text-muted-foreground">-</span>
                       ) : (
-                        <span className="text-xs text-muted-foreground">No data</span>
+                        <span className="text-xs text-muted-foreground">{tc('noData')}</span>
                       )}
                     </button>
                   )
@@ -213,7 +226,7 @@ export function MonthView({
       {/* Monthly summary */}
       {monthlyValue && (
         <div className="pt-4 border-t">
-          <h3 className="text-sm font-medium mb-3">Monthly Summary</h3>
+          <h3 className="text-sm font-medium mb-3">{t('monthlySummary')}</h3>
           <DailySummary
             targetMinutes={monthlyValue.target_minutes}
             grossMinutes={monthlyValue.gross_minutes}
@@ -223,11 +236,11 @@ export function MonthView({
             layout="horizontal"
           />
           <div className="flex items-center gap-6 mt-3 text-sm text-muted-foreground">
-            <span>Working days: {monthlyValue.working_days}</span>
-            <span>Worked days: {monthlyValue.worked_days}</span>
-            <span>Absence days: {monthlyValue.absence_days}</span>
-            <span>Holiday days: {monthlyValue.holiday_days}</span>
-            <span>Status: {monthlyValue.status}</span>
+            <span>{t('workingDays', { count: monthlyValue.working_days ?? 0 })}</span>
+            <span>{t('workedDays', { count: monthlyValue.worked_days ?? 0 })}</span>
+            <span>{t('absenceDays', { count: monthlyValue.absence_days ?? 0 })}</span>
+            <span>{t('holidayDays', { count: monthlyValue.holiday_days ?? 0 })}</span>
+            <span>{t('statusLabel')}: {monthlyValue.status}</span>
           </div>
         </div>
       )}

@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { useTranslations } from 'next-intl'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -26,6 +27,7 @@ interface CopyWeekPlanDialogProps {
 }
 
 export function CopyWeekPlanDialog({ weekPlan, open, onOpenChange }: CopyWeekPlanDialogProps) {
+  const t = useTranslations('adminWeekPlans')
   const [newCode, setNewCode] = React.useState('')
   const [newName, setNewName] = React.useState('')
   const [error, setError] = React.useState<string | null>(null)
@@ -48,11 +50,11 @@ export function CopyWeekPlanDialog({ weekPlan, open, onOpenChange }: CopyWeekPla
     if (!weekPlan) return
 
     if (!newCode.trim()) {
-      setError('Code is required')
+      setError(t('validationCodeRequired'))
       return
     }
     if (!newName.trim()) {
-      setError('Name is required')
+      setError(t('validationNameRequired'))
       return
     }
 
@@ -73,7 +75,7 @@ export function CopyWeekPlanDialog({ weekPlan, open, onOpenChange }: CopyWeekPla
       })
       onOpenChange(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to copy week plan')
+      setError(err instanceof Error ? err.message : t('errorCopyFailed'))
     }
   }
 
@@ -81,33 +83,32 @@ export function CopyWeekPlanDialog({ weekPlan, open, onOpenChange }: CopyWeekPla
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Copy Week Plan</DialogTitle>
+          <DialogTitle>{t('copyTitle')}</DialogTitle>
           <DialogDescription>
-            Create a copy of &ldquo;{weekPlan?.name}&rdquo; with a new code and name.
-            All day plan assignments will be copied.
+            {t('copyDescription', { name: weekPlan?.name ?? '' })}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="newCode">New Code *</Label>
+              <Label htmlFor="newCode">{t('newCode')} *</Label>
               <Input
                 id="newCode"
                 value={newCode}
                 onChange={(e) => setNewCode(e.target.value)}
-                placeholder="e.g., WEEK-STD-2"
+                placeholder={t('placeholderCopyCode')}
                 maxLength={20}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="newName">New Name *</Label>
+              <Label htmlFor="newName">{t('newName')} *</Label>
               <Input
                 id="newName"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                placeholder="e.g., Standard Week (Copy)"
+                placeholder={t('placeholderCopyName')}
               />
             </div>
 
@@ -125,11 +126,11 @@ export function CopyWeekPlanDialog({ weekPlan, open, onOpenChange }: CopyWeekPla
               onClick={() => onOpenChange(false)}
               disabled={createMutation.isPending}
             >
-              Cancel
+              {t('buttonCancel')}
             </Button>
             <Button type="submit" disabled={createMutation.isPending}>
               {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Copy
+              {t('copyButton')}
             </Button>
           </DialogFooter>
         </form>

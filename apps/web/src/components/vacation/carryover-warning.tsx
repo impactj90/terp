@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+import { useLocale } from 'next-intl'
 import { AlertTriangle, Clock } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
@@ -18,6 +20,9 @@ export function CarryoverWarning({
   expiresAt,
   className,
 }: CarryoverWarningProps) {
+  const t = useTranslations('vacation')
+  const locale = useLocale()
+
   if (!carryoverDays || carryoverDays <= 0 || !expiresAt) {
     return null
   }
@@ -34,16 +39,11 @@ export function CarryoverWarning({
   }
 
   const isUrgent = daysUntilExpiry <= 30
-  const formattedDate = expirationDate.toLocaleDateString('en-US', {
+  const formattedDate = expirationDate.toLocaleDateString(locale, {
     month: 'long',
     day: 'numeric',
     year: 'numeric',
   })
-
-  const dayLabel = carryoverDays === 1 ? 'day' : 'days'
-  const expiresLabel = carryoverDays === 1 ? 'expires' : 'expire'
-  const itLabel = carryoverDays === 1 ? 'it' : 'them'
-  const willLabel = carryoverDays === 1 ? 'it' : 'they'
 
   return (
     <Alert
@@ -56,16 +56,18 @@ export function CarryoverWarning({
         <Clock className="h-4 w-4" />
       )}
       <AlertTitle>
-        {isUrgent ? 'Carryover Expiring Soon' : 'Carryover Expiration Notice'}
+        {isUrgent ? t('expiringTitle') : t('expirationNotice')}
       </AlertTitle>
       <AlertDescription>
-        You have {carryoverDays} carryover {dayLabel} that {expiresLabel} on {formattedDate}
+        {t('carryoverExpiresMessage', { count: carryoverDays, date: formattedDate })}
+        {' '}
         {daysUntilExpiry > 0 ? (
-          <> ({daysUntilExpiry} {daysUntilExpiry === 1 ? 'day' : 'days'} remaining)</>
+          <>({daysUntilExpiry === 1 ? t('dayRemaining') : t('daysRemaining', { count: daysUntilExpiry })})</>
         ) : (
-          <> (today!)</>
+          <>({t('expirestoday')})</>
         )}
-        . Use {itLabel} or {willLabel} will be forfeited.
+        {' '}
+        {t('useOrForfeit')}
       </AlertDescription>
     </Alert>
   )

@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { useTranslations } from 'next-intl'
 import { format } from 'date-fns'
 import { CalendarIcon, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -85,34 +86,34 @@ const INITIAL_STATE: FormState = {
 }
 
 function validateForm(form: FormState, isEdit: boolean): string[] {
-  const errors: string[] = []
+  const errorKeys: string[] = []
 
   if (!isEdit) {
     if (!form.personnelNumber.trim()) {
-      errors.push('Personnel number is required')
+      errorKeys.push('validationPersonnelNumberRequired')
     }
     if (!form.pin.trim()) {
-      errors.push('PIN is required')
+      errorKeys.push('validationPinRequired')
     }
   }
 
   if (!form.firstName.trim()) {
-    errors.push('First name is required')
+    errorKeys.push('validationFirstNameRequired')
   }
 
   if (!form.lastName.trim()) {
-    errors.push('Last name is required')
+    errorKeys.push('validationLastNameRequired')
   }
 
   if (!isEdit && !form.entryDate) {
-    errors.push('Entry date is required')
+    errorKeys.push('validationEntryDateRequired')
   }
 
   if (form.email && !form.email.includes('@')) {
-    errors.push('Invalid email address')
+    errorKeys.push('validationInvalidEmail')
   }
 
-  return errors
+  return errorKeys
 }
 
 function formatDateForApi(date: Date | undefined): string | undefined {
@@ -129,6 +130,7 @@ export function EmployeeFormSheet({
   employee,
   onSuccess,
 }: EmployeeFormSheetProps) {
+  const t = useTranslations('adminEmployees')
   const isEdit = !!employee
   const [form, setForm] = React.useState<FormState>(INITIAL_STATE)
   const [error, setError] = React.useState<string | null>(null)
@@ -186,9 +188,9 @@ export function EmployeeFormSheet({
   const handleSubmit = async () => {
     setError(null)
 
-    const errors = validateForm(form, isEdit)
-    if (errors.length > 0) {
-      setError(errors.join('. '))
+    const errorKeys = validateForm(form, isEdit)
+    if (errorKeys.length > 0) {
+      setError(errorKeys.map((key) => t(key as Parameters<typeof t>[0])).join('. '))
       return
     }
 
@@ -231,7 +233,7 @@ export function EmployeeFormSheet({
       onSuccess?.()
     } catch (err) {
       const apiError = err as { detail?: string; message?: string }
-      setError(apiError.detail ?? apiError.message ?? `Failed to ${isEdit ? 'update' : 'create'} employee`)
+      setError(apiError.detail ?? apiError.message ?? (isEdit ? t('updateError') : t('createError')))
     }
   }
 
@@ -246,11 +248,11 @@ export function EmployeeFormSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-lg flex flex-col">
         <SheetHeader>
-          <SheetTitle>{isEdit ? 'Edit Employee' : 'New Employee'}</SheetTitle>
+          <SheetTitle>{isEdit ? t('editEmployee') : t('newEmployee')}</SheetTitle>
           <SheetDescription>
             {isEdit
-              ? 'Update employee information. Some fields cannot be changed.'
-              : 'Create a new employee record with their personal and employment details.'}
+              ? t('editEmployeeDescription')
+              : t('newEmployeeDescription')}
           </SheetDescription>
         </SheetHeader>
 
@@ -258,85 +260,85 @@ export function EmployeeFormSheet({
           <div className="space-y-6 py-4">
             {/* Personal Information */}
             <div className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Personal Information</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">{t('sectionPersonal')}</h3>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name *</Label>
+                  <Label htmlFor="firstName">{t('fieldFirstName')}</Label>
                   <Input
                     id="firstName"
                     value={form.firstName}
                     onChange={(e) => setForm((prev) => ({ ...prev, firstName: e.target.value }))}
                     disabled={isSubmitting}
-                    placeholder="John"
+                    placeholder={t('placeholderFirstName')}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name *</Label>
+                  <Label htmlFor="lastName">{t('fieldLastName')}</Label>
                   <Input
                     id="lastName"
                     value={form.lastName}
                     onChange={(e) => setForm((prev) => ({ ...prev, lastName: e.target.value }))}
                     disabled={isSubmitting}
-                    placeholder="Doe"
+                    placeholder={t('placeholderLastName')}
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t('fieldEmail')}</Label>
                 <Input
                   id="email"
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
                   disabled={isSubmitting}
-                  placeholder="john.doe@company.com"
+                  placeholder={t('placeholderEmail')}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
+                <Label htmlFor="phone">{t('fieldPhone')}</Label>
                 <Input
                   id="phone"
                   type="tel"
                   value={form.phone}
                   onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
                   disabled={isSubmitting}
-                  placeholder="+49 123 456789"
+                  placeholder={t('placeholderPhone')}
                 />
               </div>
             </div>
 
             {/* Employment Details */}
             <div className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Employment Details</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">{t('sectionEmployment')}</h3>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="personnelNumber">Personnel Number *</Label>
+                  <Label htmlFor="personnelNumber">{t('fieldPersonnelNumber')}</Label>
                   <Input
                     id="personnelNumber"
                     value={form.personnelNumber}
                     onChange={(e) => setForm((prev) => ({ ...prev, personnelNumber: e.target.value }))}
                     disabled={isEdit || isSubmitting}
-                    placeholder="E001"
+                    placeholder={t('placeholderPersonnelNumber')}
                   />
                   {isEdit && (
-                    <p className="text-xs text-muted-foreground">Cannot be changed</p>
+                    <p className="text-xs text-muted-foreground">{t('cannotBeChanged')}</p>
                   )}
                 </div>
 
                 {!isEdit && (
                   <div className="space-y-2">
-                    <Label htmlFor="pin">PIN *</Label>
+                    <Label htmlFor="pin">{t('fieldPin')}</Label>
                     <Input
                       id="pin"
                       type="password"
                       value={form.pin}
                       onChange={(e) => setForm((prev) => ({ ...prev, pin: e.target.value }))}
                       disabled={isSubmitting}
-                      placeholder="Enter PIN"
+                      placeholder={t('placeholderPin')}
                     />
                   </div>
                 )}
@@ -344,7 +346,7 @@ export function EmployeeFormSheet({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Entry Date *</Label>
+                  <Label>{t('fieldEntryDate')}</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
@@ -356,7 +358,7 @@ export function EmployeeFormSheet({
                         disabled={isEdit || isSubmitting}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {form.entryDate ? format(form.entryDate, 'dd.MM.yyyy') : 'Select date'}
+                        {form.entryDate ? format(form.entryDate, 'dd.MM.yyyy') : t('selectDate')}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -374,13 +376,13 @@ export function EmployeeFormSheet({
                     </PopoverContent>
                   </Popover>
                   {isEdit && (
-                    <p className="text-xs text-muted-foreground">Cannot be changed</p>
+                    <p className="text-xs text-muted-foreground">{t('cannotBeChanged')}</p>
                   )}
                 </div>
 
                 {isEdit && (
                   <div className="space-y-2">
-                    <Label>Exit Date</Label>
+                    <Label>{t('fieldExitDate')}</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
@@ -392,7 +394,7 @@ export function EmployeeFormSheet({
                           disabled={isSubmitting}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {form.exitDate ? format(form.exitDate, 'dd.MM.yyyy') : 'Select date'}
+                          {form.exitDate ? format(form.exitDate, 'dd.MM.yyyy') : t('selectDate')}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
@@ -414,17 +416,17 @@ export function EmployeeFormSheet({
               </div>
 
               <div className="space-y-2">
-                <Label>Department</Label>
+                <Label>{t('fieldDepartment')}</Label>
                 <Select
                   value={form.departmentId || '__none__'}
                   onValueChange={(value) => setForm((prev) => ({ ...prev, departmentId: value === '__none__' ? '' : value }))}
                   disabled={isSubmitting || isLoadingReferenceData}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select department" />
+                    <SelectValue placeholder={t('selectDepartment')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">None</SelectItem>
+                    <SelectItem value="__none__">{t('none')}</SelectItem>
                     {departments.map((dept) => (
                       <SelectItem key={dept.id} value={dept.id}>
                         {dept.name}
@@ -435,17 +437,17 @@ export function EmployeeFormSheet({
               </div>
 
               <div className="space-y-2">
-                <Label>Cost Center</Label>
+                <Label>{t('fieldCostCenter')}</Label>
                 <Select
                   value={form.costCenterId || '__none__'}
                   onValueChange={(value) => setForm((prev) => ({ ...prev, costCenterId: value === '__none__' ? '' : value }))}
                   disabled={isSubmitting || isLoadingReferenceData}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select cost center" />
+                    <SelectValue placeholder={t('selectCostCenter')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">None</SelectItem>
+                    <SelectItem value="__none__">{t('none')}</SelectItem>
                     {costCenters.map((cc) => (
                       <SelectItem key={cc.id} value={cc.id}>
                         {cc.name} ({cc.code})
@@ -456,17 +458,17 @@ export function EmployeeFormSheet({
               </div>
 
               <div className="space-y-2">
-                <Label>Employment Type</Label>
+                <Label>{t('fieldEmploymentType')}</Label>
                 <Select
                   value={form.employmentTypeId || '__none__'}
                   onValueChange={(value) => setForm((prev) => ({ ...prev, employmentTypeId: value === '__none__' ? '' : value }))}
                   disabled={isSubmitting || isLoadingReferenceData}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select employment type" />
+                    <SelectValue placeholder={t('selectEmploymentType')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">None</SelectItem>
+                    <SelectItem value="__none__">{t('none')}</SelectItem>
                     {employmentTypes.map((et) => (
                       <SelectItem key={et.id} value={et.id}>
                         {et.name}
@@ -479,11 +481,11 @@ export function EmployeeFormSheet({
 
             {/* Contract Details */}
             <div className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Contract Details</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">{t('sectionContract')}</h3>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="weeklyHours">Weekly Hours</Label>
+                  <Label htmlFor="weeklyHours">{t('fieldWeeklyHours')}</Label>
                   <Input
                     id="weeklyHours"
                     type="number"
@@ -498,7 +500,7 @@ export function EmployeeFormSheet({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="vacationDays">Vacation Days/Year</Label>
+                  <Label htmlFor="vacationDays">{t('fieldVacationDays')}</Label>
                   <Input
                     id="vacationDays"
                     type="number"
@@ -530,7 +532,7 @@ export function EmployeeFormSheet({
             disabled={isSubmitting}
             className="flex-1"
           >
-            Cancel
+            {t('cancel')}
           </Button>
           <Button
             onClick={handleSubmit}
@@ -538,7 +540,7 @@ export function EmployeeFormSheet({
             className="flex-1"
           >
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isSubmitting ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Employee'}
+            {isSubmitting ? t('saving') : isEdit ? t('saveChanges') : t('createEmployee')}
           </Button>
         </SheetFooter>
       </SheetContent>

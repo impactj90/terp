@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { useTranslations } from 'next-intl'
 import {
   Edit,
   Trash2,
@@ -52,29 +53,29 @@ interface TariffDetailSheetProps {
   onCopy: (tariff: Tariff) => void
 }
 
-const BREAK_TYPE_LABELS: Record<string, string> = {
-  fixed: 'Fixed',
-  variable: 'Variable',
-  minimum: 'Minimum',
-}
+const BREAK_TYPE_LABEL_KEYS = {
+  fixed: 'breakFixed',
+  variable: 'breakVariable',
+  minimum: 'breakMinimum',
+} as const
 
-const RHYTHM_TYPE_LABELS: Record<string, string> = {
-  weekly: 'Weekly (Single Plan)',
-  rolling_weekly: 'Rolling Weekly',
-  x_days: 'X-Days Cycle',
-}
+const RHYTHM_TYPE_LABEL_KEYS = {
+  weekly: 'rhythmWeekly',
+  rolling_weekly: 'rhythmRollingWeekly',
+  x_days: 'rhythmXDays',
+} as const
 
-const VACATION_BASIS_LABELS: Record<string, string> = {
-  calendar_year: 'Calendar Year (Jan 1 - Dec 31)',
-  entry_date: 'Entry Date (Anniversary)',
-}
+const VACATION_BASIS_LABEL_KEYS = {
+  calendar_year: 'vacationBasisCalendarYear',
+  entry_date: 'vacationBasisEntryDate',
+} as const
 
-const CREDIT_TYPE_LABELS: Record<string, string> = {
-  no_evaluation: 'No Evaluation (1:1 Transfer)',
-  complete: 'Complete Carryover (with Limits)',
-  after_threshold: 'After Threshold',
-  no_carryover: 'No Carryover (Reset to 0)',
-}
+const CREDIT_TYPE_LABEL_KEYS = {
+  no_evaluation: 'creditNoEvaluation',
+  complete: 'creditComplete',
+  after_threshold: 'creditAfterThreshold',
+  no_carryover: 'creditNoCarryover',
+} as const
 
 function formatHours(value: number | string | null | undefined): string {
   if (value == null) return '-'
@@ -91,6 +92,7 @@ export function TariffDetailSheet({
   onDelete,
   onCopy,
 }: TariffDetailSheetProps) {
+  const t = useTranslations('adminTariffs')
   const { data: tariff, isLoading, refetch } = useTariff(tariffId ?? '', open && !!tariffId)
 
   // Break management state
@@ -158,7 +160,7 @@ export function TariffDetailSheet({
                   <SheetTitle className="flex items-center gap-2">
                     {tariff.name}
                     <Badge variant={tariff.is_active ? 'default' : 'secondary'}>
-                      {tariff.is_active ? 'Active' : 'Inactive'}
+                      {tariff.is_active ? t('statusActive') : t('statusInactive')}
                     </Badge>
                   </SheetTitle>
                   <SheetDescription className="mt-1">
@@ -171,23 +173,23 @@ export function TariffDetailSheet({
             <ScrollArea className="flex-1 -mx-6 px-6 mt-4">
               <div className="space-y-6">
                 {/* Basic Information */}
-                <Section title="Basic Information" icon={Settings}>
+                <Section title={t('sectionBasicInformation')} icon={Settings}>
                   {tariff.description && (
-                    <DetailRow label="Description" value={tariff.description} />
+                    <DetailRow label={t('fieldDescription')} value={tariff.description} />
                   )}
                 </Section>
 
                 {/* Schedule / Rhythm */}
-                <Section title="Schedule" icon={Repeat}>
+                <Section title={t('tabSchedule')} icon={Repeat}>
                   <DetailRow
-                    label="Rhythm Type"
-                    value={RHYTHM_TYPE_LABELS[tariff.rhythm_type ?? 'weekly'] ?? 'Weekly'}
+                    label={t('fieldRhythmType')}
+                    value={t((RHYTHM_TYPE_LABEL_KEYS[tariff.rhythm_type as keyof typeof RHYTHM_TYPE_LABEL_KEYS] ?? 'rhythmWeekly') as Parameters<typeof t>[0])}
                   />
 
                   {/* Weekly: Show single week plan */}
                   {(tariff.rhythm_type === 'weekly' || !tariff.rhythm_type) && (
                     <DetailRow
-                      label="Week Plan"
+                      label={t('fieldWeekPlan')}
                       value={
                         tariff.week_plan ? (
                           <span>
@@ -195,7 +197,7 @@ export function TariffDetailSheet({
                             {tariff.week_plan.name}
                           </span>
                         ) : (
-                          <span className="text-muted-foreground">None</span>
+                          <span className="text-muted-foreground">{t('none')}</span>
                         )
                       }
                     />
@@ -206,11 +208,11 @@ export function TariffDetailSheet({
                     tariff.tariff_week_plans &&
                     tariff.tariff_week_plans.length > 0 && (
                       <div className="space-y-2 mt-2">
-                        <span className="text-sm text-muted-foreground">Week Plans (in order):</span>
+                        <span className="text-sm text-muted-foreground">{t('weekPlansInOrder')}:</span>
                         <div className="space-y-1 ml-2">
                           {tariff.tariff_week_plans.map((twp, idx) => (
                             <div key={twp.id} className="text-sm">
-                              <span className="font-medium">Week {idx + 1}:</span>{' '}
+                              <span className="font-medium">{t('weekNumber', { number: idx + 1 })}:</span>{' '}
                               <span className="font-mono">{twp.week_plan?.code}</span> -{' '}
                               {twp.week_plan?.name}
                             </div>
@@ -223,20 +225,20 @@ export function TariffDetailSheet({
                   {tariff.rhythm_type === 'x_days' && (
                     <>
                       <DetailRow
-                        label="Cycle Length"
-                        value={tariff.cycle_days ? `${tariff.cycle_days} days` : '-'}
+                        label={t('detailCycleLength')}
+                        value={tariff.cycle_days ? t('daysValue', { count: tariff.cycle_days }) : '-'}
                       />
                       {tariff.tariff_day_plans && tariff.tariff_day_plans.length > 0 && (
                         <div className="space-y-2 mt-2">
-                          <span className="text-sm text-muted-foreground">Day Plans:</span>
+                          <span className="text-sm text-muted-foreground">{t('dayPlanAssignments')}:</span>
                           <div className="grid grid-cols-2 gap-1 ml-2 text-sm">
                             {tariff.tariff_day_plans.map((tdp) => (
                               <div key={tdp.id}>
-                                <span className="font-medium">Day {tdp.day_position}:</span>{' '}
+                                <span className="font-medium">{t('dayNumber', { number: tdp.day_position })}:</span>{' '}
                                 {tdp.day_plan ? (
                                   <span>{tdp.day_plan.code}</span>
                                 ) : (
-                                  <span className="text-muted-foreground">Off</span>
+                                  <span className="text-muted-foreground">{t('off')}</span>
                                 )}
                               </div>
                             ))}
@@ -249,60 +251,60 @@ export function TariffDetailSheet({
                   {/* Rhythm Start Date */}
                   {tariff.rhythm_type && tariff.rhythm_type !== 'weekly' && (
                     <DetailRow
-                      label="Rhythm Start Date"
+                      label={t('fieldRhythmStartDate')}
                       value={
                         tariff.rhythm_start_date
                           ? formatDate(parseISODate(tariff.rhythm_start_date))
-                          : 'Not set'
+                          : t('notSet')
                       }
                     />
                   )}
                 </Section>
 
                 {/* Validity Period */}
-                <Section title="Validity Period" icon={Calendar}>
+                <Section title={t('sectionValidityPeriod')} icon={Calendar}>
                   <DetailRow
-                    label="Valid From"
-                    value={tariff.valid_from ? formatDate(parseISODate(tariff.valid_from)) : 'Not set'}
+                    label={t('columnValidFrom')}
+                    value={tariff.valid_from ? formatDate(parseISODate(tariff.valid_from)) : t('notSet')}
                   />
                   <DetailRow
-                    label="Valid To"
-                    value={tariff.valid_to ? formatDate(parseISODate(tariff.valid_to)) : 'Not set'}
+                    label={t('columnValidTo')}
+                    value={tariff.valid_to ? formatDate(parseISODate(tariff.valid_to)) : t('notSet')}
                   />
                 </Section>
 
                 {/* Vacation Settings */}
-                <Section title="Vacation" icon={Palmtree}>
+                <Section title={t('tabVacation')} icon={Palmtree}>
                   <DetailRow
-                    label="Annual Vacation Days"
-                    value={tariff.annual_vacation_days != null ? `${tariff.annual_vacation_days} days` : '-'}
+                    label={t('fieldAnnualVacationDays')}
+                    value={tariff.annual_vacation_days != null ? t('daysValue', { count: tariff.annual_vacation_days }) : '-'}
                   />
                   <DetailRow
-                    label="Work Days per Week"
-                    value={tariff.work_days_per_week != null ? `${tariff.work_days_per_week} days` : '-'}
+                    label={t('fieldWorkDaysPerWeek')}
+                    value={tariff.work_days_per_week != null ? t('daysValue', { count: tariff.work_days_per_week }) : '-'}
                   />
                   <DetailRow
-                    label="Vacation Year Basis"
-                    value={VACATION_BASIS_LABELS[tariff.vacation_basis ?? 'calendar_year']}
+                    label={t('fieldVacationYearBasis')}
+                    value={t((VACATION_BASIS_LABEL_KEYS[tariff.vacation_basis as keyof typeof VACATION_BASIS_LABEL_KEYS] ?? 'vacationBasisCalendarYear') as Parameters<typeof t>[0])}
                   />
                 </Section>
 
                 {/* Target Hours */}
-                <Section title="Target Hours" icon={Target}>
-                  <DetailRow label="Daily" value={formatHours(tariff.daily_target_hours)} />
-                  <DetailRow label="Weekly" value={formatHours(tariff.weekly_target_hours)} />
-                  <DetailRow label="Monthly" value={formatHours(tariff.monthly_target_hours)} />
-                  <DetailRow label="Annual" value={formatHours(tariff.annual_target_hours)} />
+                <Section title={t('tabTargetHours')} icon={Target}>
+                  <DetailRow label={t('detailDaily')} value={formatHours(tariff.daily_target_hours)} />
+                  <DetailRow label={t('detailWeekly')} value={formatHours(tariff.weekly_target_hours)} />
+                  <DetailRow label={t('detailMonthly')} value={formatHours(tariff.monthly_target_hours)} />
+                  <DetailRow label={t('detailAnnual')} value={formatHours(tariff.annual_target_hours)} />
                 </Section>
 
                 {/* Flextime / Monthly Evaluation */}
-                <Section title="Flextime" icon={Timer}>
+                <Section title={t('tabFlextime')} icon={Timer}>
                   <DetailRow
-                    label="Credit Type"
-                    value={CREDIT_TYPE_LABELS[tariff.credit_type ?? 'no_evaluation']}
+                    label={t('fieldCreditType')}
+                    value={t((CREDIT_TYPE_LABEL_KEYS[tariff.credit_type as keyof typeof CREDIT_TYPE_LABEL_KEYS] ?? 'creditNoEvaluation') as Parameters<typeof t>[0])}
                   />
                   <DetailRow
-                    label="Max Flextime/Month"
+                    label={t('fieldMaxFlextimePerMonth')}
                     value={
                       tariff.max_flextime_per_month != null
                         ? formatDuration(tariff.max_flextime_per_month)
@@ -310,7 +312,7 @@ export function TariffDetailSheet({
                     }
                   />
                   <DetailRow
-                    label="Flextime Threshold"
+                    label={t('fieldFlextimeThreshold')}
                     value={
                       tariff.flextime_threshold != null
                         ? formatDuration(tariff.flextime_threshold)
@@ -318,7 +320,7 @@ export function TariffDetailSheet({
                     }
                   />
                   <DetailRow
-                    label="Upper Limit (Annual)"
+                    label={t('fieldUpperLimitAnnual')}
                     value={
                       tariff.upper_limit_annual != null
                         ? formatDuration(tariff.upper_limit_annual)
@@ -326,7 +328,7 @@ export function TariffDetailSheet({
                     }
                   />
                   <DetailRow
-                    label="Lower Limit (Annual)"
+                    label={t('fieldLowerLimitAnnual')}
                     value={
                       tariff.lower_limit_annual != null
                         ? formatDuration(tariff.lower_limit_annual)
@@ -336,13 +338,13 @@ export function TariffDetailSheet({
                 </Section>
 
                 {/* Breaks Section */}
-                <Section title="Break Deductions" icon={Clock}>
+                <Section title={t('sectionBreakDeductions')} icon={Clock}>
                   {tariff.breaks && tariff.breaks.length > 0 ? (
                     <div className="space-y-3">
                       {tariff.breaks.map((brk) => (
                         <div key={brk.id} className="border rounded-lg p-3 text-sm">
                           <div className="flex items-center justify-between mb-2">
-                            <Badge variant="outline">{BREAK_TYPE_LABELS[brk.break_type]}</Badge>
+                            <Badge variant="outline">{t((BREAK_TYPE_LABEL_KEYS[brk.break_type as keyof typeof BREAK_TYPE_LABEL_KEYS] ?? 'breakMinimum') as Parameters<typeof t>[0])}</Badge>
                             <div className="flex items-center gap-2">
                               <span className="font-medium">{formatDuration(brk.duration)}</span>
                               <Button
@@ -358,27 +360,27 @@ export function TariffDetailSheet({
                           </div>
                           {brk.break_type === 'minimum' && brk.after_work_minutes != null && (
                             <div className="text-muted-foreground">
-                              After {formatDuration(brk.after_work_minutes)} work
+                              {t('afterWorkTime', { duration: formatDuration(brk.after_work_minutes) })}
                             </div>
                           )}
                           <div className="flex gap-3 text-xs text-muted-foreground mt-1">
-                            {brk.is_paid && <span>Paid break</span>}
+                            {brk.is_paid && <span>{t('paidBreak')}</span>}
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">No breaks configured</p>
+                    <p className="text-sm text-muted-foreground">{t('noBreaksConfigured')}</p>
                   )}
 
                   {/* Add Break Form */}
                   {showAddBreak ? (
                     <div className="border rounded-lg p-4 space-y-4 mt-4">
-                      <h4 className="text-sm font-medium">Add Break</h4>
+                      <h4 className="text-sm font-medium">{t('addBreak')}</h4>
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label>Break Type</Label>
+                          <Label>{t('fieldBreakType')}</Label>
                           <Select
                             value={newBreak.breakType}
                             onValueChange={(v) =>
@@ -389,15 +391,15 @@ export function TariffDetailSheet({
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="fixed">Fixed</SelectItem>
-                              <SelectItem value="variable">Variable</SelectItem>
-                              <SelectItem value="minimum">Minimum</SelectItem>
+                              <SelectItem value="fixed">{t('breakFixed')}</SelectItem>
+                              <SelectItem value="variable">{t('breakVariable')}</SelectItem>
+                              <SelectItem value="minimum">{t('breakMinimum')}</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
 
                         <div className="space-y-2">
-                          <Label>Duration</Label>
+                          <Label>{t('fieldDuration')}</Label>
                           <DurationInput
                             value={newBreak.duration}
                             onChange={(v) => setNewBreak({ ...newBreak, duration: v ?? 0 })}
@@ -409,7 +411,7 @@ export function TariffDetailSheet({
 
                       {newBreak.breakType === 'minimum' && (
                         <div className="space-y-2">
-                          <Label>After Work Time</Label>
+                          <Label>{t('fieldAfterWorkTime')}</Label>
                           <DurationInput
                             value={newBreak.afterWorkMinutes}
                             onChange={(v) => setNewBreak({ ...newBreak, afterWorkMinutes: v ?? 0 })}
@@ -417,15 +419,15 @@ export function TariffDetailSheet({
                             className="w-full"
                           />
                           <p className="text-xs text-muted-foreground">
-                            Break is deducted after this much work time
+                            {t('afterWorkTimeHelp')}
                           </p>
                         </div>
                       )}
 
                       <div className="flex items-center justify-between">
                         <div className="space-y-0.5">
-                          <Label>Paid Break</Label>
-                          <p className="text-xs text-muted-foreground">Break time counts as work time</p>
+                          <Label>{t('paidBreak')}</Label>
+                          <p className="text-xs text-muted-foreground">{t('paidBreakHelp')}</p>
                         </div>
                         <Switch
                           checked={newBreak.isPaid}
@@ -440,7 +442,7 @@ export function TariffDetailSheet({
                           onClick={() => setShowAddBreak(false)}
                           className="flex-1"
                         >
-                          Cancel
+                          {t('cancel')}
                         </Button>
                         <Button
                           size="sm"
@@ -451,7 +453,7 @@ export function TariffDetailSheet({
                           {createBreakMutation.isPending && (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           )}
-                          Add Break
+                          {t('addBreak')}
                         </Button>
                       </div>
                     </div>
@@ -463,7 +465,7 @@ export function TariffDetailSheet({
                       className="mt-4"
                     >
                       <Plus className="mr-2 h-4 w-4" />
-                      Add Break
+                      {t('addBreak')}
                     </Button>
                   )}
                 </Section>
@@ -473,11 +475,11 @@ export function TariffDetailSheet({
             <div className="flex gap-2 mt-4 border-t pt-4">
               <Button variant="outline" className="flex-1" onClick={() => onEdit(tariff)}>
                 <Edit className="mr-2 h-4 w-4" />
-                Edit
+                {t('actionEdit')}
               </Button>
               <Button variant="outline" onClick={() => onCopy(tariff)}>
                 <Copy className="mr-2 h-4 w-4" />
-                Copy
+                {t('actionCopy')}
               </Button>
               <Button
                 variant="outline"
@@ -491,10 +493,10 @@ export function TariffDetailSheet({
         ) : (
           <>
             <SheetHeader>
-              <SheetTitle>Tariff Details</SheetTitle>
-              <SheetDescription>Unable to load tariff</SheetDescription>
+              <SheetTitle>{t('detailTitle')}</SheetTitle>
+              <SheetDescription>{t('unableToLoadTariff')}</SheetDescription>
             </SheetHeader>
-            <div className="text-center py-8 text-muted-foreground">Tariff not found</div>
+            <div className="text-center py-8 text-muted-foreground">{t('tariffNotFound')}</div>
           </>
         )}
       </SheetContent>
@@ -532,11 +534,12 @@ function DetailRow({ label, value }: { label: string; value: string | React.Reac
 }
 
 function DetailSheetSkeleton() {
+  const t = useTranslations('adminTariffs')
   return (
     <>
       <SheetHeader>
-        <SheetTitle>Loading...</SheetTitle>
-        <SheetDescription>Loading tariff details</SheetDescription>
+        <SheetTitle>{t('loading')}</SheetTitle>
+        <SheetDescription>{t('loadingTariffDetails')}</SheetDescription>
       </SheetHeader>
       <div className="space-y-6 mt-6">
         <Skeleton className="h-6 w-48" />

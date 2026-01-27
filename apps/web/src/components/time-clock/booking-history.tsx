@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { LogIn, LogOut, Coffee, Briefcase } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -23,13 +24,13 @@ const bookingTypeIcons: Record<string, typeof LogIn> = {
   D2: Briefcase,
 }
 
-const bookingTypeLabels: Record<string, string> = {
-  A1: 'Clock In',
-  A2: 'Clock Out',
-  P1: 'Break Start',
-  P2: 'Break End',
-  D1: 'Errand Start',
-  D2: 'Errand End',
+const bookingTypeLabelKeys: Record<string, string> = {
+  A1: 'bookingClockIn',
+  A2: 'bookingClockOut',
+  P1: 'bookingBreakStart',
+  P2: 'bookingBreakEnd',
+  D1: 'bookingErrandStart',
+  D2: 'bookingErrandEnd',
 }
 
 export function BookingHistory({
@@ -37,6 +38,8 @@ export function BookingHistory({
   isLoading,
   className,
 }: BookingHistoryProps) {
+  const t = useTranslations('timeClock')
+
   if (isLoading) {
     return <BookingHistorySkeleton className={className} />
   }
@@ -51,13 +54,13 @@ export function BookingHistory({
     <Card className={className}>
       <CardHeader className="pb-2">
         <CardTitle className="text-base font-medium">
-          Today&apos;s Bookings
+          {t('todaysBookings')}
         </CardTitle>
       </CardHeader>
       <CardContent>
         {sortedBookings.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4 text-center">
-            No bookings today
+            {t('noBookingsToday')}
           </p>
         ) : (
           <div className="space-y-3">
@@ -76,9 +79,11 @@ interface BookingItemProps {
 }
 
 function BookingItem({ booking }: BookingItemProps) {
+  const t = useTranslations('timeClock')
   const code = booking.booking_type?.code ?? 'A1'
   const Icon = bookingTypeIcons[code] ?? LogIn
-  const label = booking.booking_type?.name ?? bookingTypeLabels[code] ?? 'Booking'
+  const labelKey = bookingTypeLabelKeys[code]
+  const label = booking.booking_type?.name ?? (labelKey ? t(labelKey as Parameters<typeof t>[0]) : 'Booking')
   const isInbound = booking.booking_type?.direction === 'in'
 
   return (

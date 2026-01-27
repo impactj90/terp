@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Clock, Coffee, Target, TrendingUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -26,6 +27,8 @@ export function TodayStats({
   isLoading,
   className,
 }: TodayStatsProps) {
+  const t = useTranslations('timeClock')
+
   if (isLoading) {
     return <TodayStatsSkeleton className={className} />
   }
@@ -36,28 +39,28 @@ export function TodayStats({
   return (
     <Card className={className}>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-medium">Today&apos;s Summary</CardTitle>
+        <CardTitle className="text-base font-medium">{t('todaysSummary')}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 gap-4">
           <StatItem
             icon={Clock}
-            label="Gross Time"
+            label={t('grossTime')}
             value={formatMinutes(grossMinutes)}
           />
           <StatItem
             icon={Coffee}
-            label="Break Time"
+            label={t('breakTime')}
             value={formatMinutes(breakMinutes)}
           />
           <StatItem
             icon={Target}
-            label="Target"
+            label={t('targetTime')}
             value={formatMinutes(targetMinutes)}
           />
           <StatItem
             icon={TrendingUp}
-            label="Balance"
+            label={t('balance')}
             value={`${balanceIsPositive ? '+' : ''}${formatMinutes(balance)}`}
             valueClassName={balanceIsPositive ? 'text-success' : 'text-destructive'}
           />

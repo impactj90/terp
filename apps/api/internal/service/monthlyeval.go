@@ -47,6 +47,11 @@ type employeeRepoForMonthlyEval interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*model.Employee, error)
 }
 
+// tariffRepoForMonthlyEval defines the interface for tariff data access.
+type tariffRepoForMonthlyEval interface {
+	GetByID(ctx context.Context, id uuid.UUID) (*model.Tariff, error)
+}
+
 // MonthSummary represents monthly aggregation results for an employee.
 type MonthSummary struct {
 	EmployeeID uuid.UUID
@@ -93,6 +98,7 @@ type MonthlyEvalService struct {
 	dailyValueRepo   dailyValueRepoForMonthlyEval
 	absenceDayRepo   absenceDayRepoForMonthlyEval
 	employeeRepo     employeeRepoForMonthlyEval
+	tariffRepo       tariffRepoForMonthlyEval
 }
 
 // NewMonthlyEvalService creates a new MonthlyEvalService instance.
@@ -101,12 +107,14 @@ func NewMonthlyEvalService(
 	dailyValueRepo dailyValueRepoForMonthlyEval,
 	absenceDayRepo absenceDayRepoForMonthlyEval,
 	employeeRepo employeeRepoForMonthlyEval,
+	tariffRepo tariffRepoForMonthlyEval,
 ) *MonthlyEvalService {
 	return &MonthlyEvalService{
 		monthlyValueRepo: monthlyValueRepo,
 		dailyValueRepo:   dailyValueRepo,
 		absenceDayRepo:   absenceDayRepo,
 		employeeRepo:     employeeRepo,
+		tariffRepo:       tariffRepo,
 	}
 }
 
@@ -223,8 +231,18 @@ func (s *MonthlyEvalService) RecalculateMonth(ctx context.Context, employeeID uu
 		return err
 	}
 
+	// Fetch employee's tariff for evaluation rules
+	var tariff *model.Tariff
+	if employee.TariffID != nil {
+		tariff, err = s.tariffRepo.GetByID(ctx, *employee.TariffID)
+		if err != nil {
+			// Log warning but don't fail — tariff might have been deleted
+			tariff = nil
+		}
+	}
+
 	// Build calculation input
-	calcInput := s.buildMonthlyCalcInput(dailyValues, absences, previousCarryover)
+	calcInput := s.buildMonthlyCalcInput(dailyValues, absences, previousCarryover, tariff)
 
 	// Run calculation
 	calcOutput := calculation.CalculateMonth(calcInput)
@@ -249,6 +267,7 @@ func (s *MonthlyEvalService) buildMonthlyCalcInput(
 	dailyValues []model.DailyValue,
 	absences []model.AbsenceDay,
 	previousCarryover int,
+	tariff *model.Tariff,
 ) calculation.MonthlyCalcInput {
 	// Convert daily values
 	dvInputs := make([]calculation.DailyValueInput, 0, len(dailyValues))
@@ -268,11 +287,36 @@ func (s *MonthlyEvalService) buildMonthlyCalcInput(
 	// Build absence summary
 	absenceSummary := s.buildAbsenceSummary(absences)
 
+	// Build evaluation rules from tariff
+	var evaluationRules *calculation.MonthlyEvaluationInput
+	if tariff != nil {
+		evaluationRules = buildEvaluationRules(tariff)
+	}
+
 	return calculation.MonthlyCalcInput{
 		DailyValues:       dvInputs,
 		PreviousCarryover: previousCarryover,
-		EvaluationRules:   nil, // No evaluation rules until tariff ZMI fields available
+		EvaluationRules:   evaluationRules,
 		AbsenceSummary:    absenceSummary,
+	}
+}
+
+// buildEvaluationRules converts tariff ZMI fields to calculation evaluation input.
+// Returns nil if the tariff uses no_evaluation (default), since nil means direct 1:1 transfer.
+func buildEvaluationRules(tariff *model.Tariff) *calculation.MonthlyEvaluationInput {
+	creditType := tariff.GetCreditType()
+
+	// no_evaluation = direct transfer, same as nil rules
+	if creditType == model.CreditTypeNoEvaluation {
+		return nil
+	}
+
+	return &calculation.MonthlyEvaluationInput{
+		CreditType:          calculation.CreditType(creditType),
+		FlextimeThreshold:   tariff.FlextimeThreshold,
+		MaxFlextimePerMonth: tariff.MaxFlextimePerMonth,
+		FlextimeCapPositive: tariff.UpperLimitAnnual,
+		FlextimeCapNegative: tariff.LowerLimitAnnual,
 	}
 }
 

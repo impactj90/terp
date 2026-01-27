@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { Check, Info } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -24,13 +25,13 @@ interface AbsenceTypeSelectorProps {
   className?: string
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  vacation: 'Vacation',
-  sick: 'Sick',
-  personal: 'Personal',
-  unpaid: 'Unpaid',
-  holiday: 'Holiday',
-  other: 'Other',
+const CATEGORY_LABEL_KEYS: Record<string, string> = {
+  vacation: 'categoryVacation',
+  sick: 'categorySick',
+  personal: 'categoryPersonal',
+  unpaid: 'categoryUnpaid',
+  holiday: 'categoryHoliday',
+  other: 'categoryOther',
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -54,6 +55,8 @@ export function AbsenceTypeSelector({
   disabled = false,
   className,
 }: AbsenceTypeSelectorProps) {
+  const t = useTranslations('absences')
+
   if (isLoading) {
     return (
       <div className={cn('grid gap-3 sm:grid-cols-2', className)}>
@@ -68,7 +71,7 @@ export function AbsenceTypeSelector({
     return (
       <div className="text-center py-8 text-muted-foreground">
         <Info className="mx-auto h-8 w-8 mb-2 opacity-50" />
-        <p>No absence types available</p>
+        <p>{t('noTypesAvailable')}</p>
       </div>
     )
   }
@@ -121,16 +124,16 @@ export function AbsenceTypeSelector({
             {/* Badges */}
             <div className="flex flex-wrap gap-1.5 mt-auto">
               <Badge variant="secondary" className="text-xs">
-                {CATEGORY_LABELS[type.category] ?? type.category}
+                {t((CATEGORY_LABEL_KEYS[type.category] ?? type.category) as Parameters<typeof t>[0])}
               </Badge>
               {type.affects_vacation_balance && (
                 <Badge variant="outline" className="text-xs">
-                  Affects balance
+                  {t('affectsBalance')}
                 </Badge>
               )}
               {type.requires_approval && (
                 <Badge variant="outline" className="text-xs">
-                  Requires approval
+                  {t('requiresApproval')}
                 </Badge>
               )}
             </div>

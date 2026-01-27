@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Trash2, Mail, Phone, Smartphone, UserCheck } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import type { components } from '@/lib/api/types'
 
 type EmployeeContact = NonNullable<components['schemas']['Employee']['contacts']>[number]
@@ -16,12 +17,12 @@ interface ContactListItemProps {
 
 const contactTypeConfig: Record<
   string,
-  { icon: typeof Mail; label: string; variant: 'default' | 'secondary' | 'outline' }
+  { icon: typeof Mail; labelKey: string; variant: 'default' | 'secondary' | 'outline' }
 > = {
-  email: { icon: Mail, label: 'Email', variant: 'secondary' },
-  phone: { icon: Phone, label: 'Phone', variant: 'secondary' },
-  mobile: { icon: Smartphone, label: 'Mobile', variant: 'secondary' },
-  emergency: { icon: UserCheck, label: 'Emergency', variant: 'default' },
+  email: { icon: Mail, labelKey: 'contactTypeEmail', variant: 'secondary' },
+  phone: { icon: Phone, labelKey: 'contactTypePhone', variant: 'secondary' },
+  mobile: { icon: Smartphone, labelKey: 'contactTypeMobile', variant: 'secondary' },
+  emergency: { icon: UserCheck, labelKey: 'contactTypeEmergency', variant: 'default' },
 }
 
 /**
@@ -32,6 +33,9 @@ export function ContactListItem({
   onDelete,
   isDeleting,
 }: ContactListItemProps) {
+  const t = useTranslations('profile')
+  const tc = useTranslations('common')
+
   const [showConfirm, setShowConfirm] = useState(false)
   const config = contactTypeConfig[contact.contact_type] || contactTypeConfig.phone
   const Icon = config?.icon || Phone
@@ -59,11 +63,11 @@ export function ContactListItem({
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">{contact.value}</span>
             <Badge variant={config?.variant || 'secondary'} className="text-xs">
-              {config?.label || 'Contact'}
+              {t(config?.labelKey as Parameters<typeof t>[0]) || t('contact')}
             </Badge>
             {contact.is_primary && (
               <Badge variant="outline" className="text-xs">
-                Primary
+                {t('primary')}
               </Badge>
             )}
           </div>
@@ -82,7 +86,7 @@ export function ContactListItem({
               onClick={handleCancelDelete}
               disabled={isDeleting}
             >
-              Cancel
+              {tc('cancel')}
             </Button>
             <Button
               size="sm"
@@ -90,7 +94,7 @@ export function ContactListItem({
               onClick={handleDeleteClick}
               disabled={isDeleting}
             >
-              {isDeleting ? 'Deleting...' : 'Confirm'}
+              {isDeleting ? t('deleting') : tc('confirm')}
             </Button>
           </>
         ) : (
@@ -102,7 +106,7 @@ export function ContactListItem({
             className="h-8 w-8 text-muted-foreground hover:text-destructive"
           >
             <Trash2 className="h-4 w-4" />
-            <span className="sr-only">Delete contact</span>
+            <span className="sr-only">{t('deleteContact')}</span>
           </Button>
         )}
       </div>

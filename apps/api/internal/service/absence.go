@@ -14,6 +14,7 @@ import (
 // Absence service errors.
 var (
 	ErrAbsenceNotFound      = errors.New("absence not found")
+	ErrAbsenceNotPending    = errors.New("absence is not in pending status")
 	ErrInvalidAbsenceType   = errors.New("invalid absence type")
 	ErrAbsenceTypeInactive  = errors.New("absence type is inactive")
 	ErrAbsenceAlreadyExists = errors.New("absence already exists on date")
@@ -32,6 +33,8 @@ type absenceDayRepositoryForService interface {
 	GetByEmployeeDate(ctx context.Context, employeeID uuid.UUID, date time.Time) (*model.AbsenceDay, error)
 	GetByEmployeeDateRange(ctx context.Context, employeeID uuid.UUID, from, to time.Time) ([]model.AbsenceDay, error)
 	ListByEmployee(ctx context.Context, employeeID uuid.UUID) ([]model.AbsenceDay, error)
+	ListAll(ctx context.Context, tenantID uuid.UUID, opts model.AbsenceListOptions) ([]model.AbsenceDay, error)
+	Update(ctx context.Context, ad *model.AbsenceDay) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	DeleteRange(ctx context.Context, employeeID uuid.UUID, from, to time.Time) error
 }
@@ -134,6 +137,67 @@ func (s *AbsenceService) GetByEmployeeDateRange(ctx context.Context, employeeID 
 		return nil, ErrInvalidAbsenceDates
 	}
 	return s.absenceDayRepo.GetByEmployeeDateRange(ctx, employeeID, from, to)
+}
+
+// ListAll returns filtered absences for a tenant, with Employee and AbsenceType preloaded.
+func (s *AbsenceService) ListAll(ctx context.Context, tenantID uuid.UUID, opts model.AbsenceListOptions) ([]model.AbsenceDay, error) {
+	return s.absenceDayRepo.ListAll(ctx, tenantID, opts)
+}
+
+// Approve transitions an absence from pending to approved.
+// Sets status=approved, approved_by, approved_at=now.
+// Triggers recalculation for the affected date.
+func (s *AbsenceService) Approve(ctx context.Context, id, approvedBy uuid.UUID) (*model.AbsenceDay, error) {
+	ad, err := s.absenceDayRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, ErrAbsenceNotFound
+	}
+
+	if ad.Status != model.AbsenceStatusPending {
+		return nil, ErrAbsenceNotPending
+	}
+
+	now := time.Now()
+	ad.Status = model.AbsenceStatusApproved
+	ad.ApprovedBy = &approvedBy
+	ad.ApprovedAt = &now
+
+	if err := s.absenceDayRepo.Update(ctx, ad); err != nil {
+		return nil, err
+	}
+
+	// Trigger recalculation for the affected date
+	_, _ = s.recalcSvc.TriggerRecalc(ctx, ad.TenantID, ad.EmployeeID, ad.AbsenceDate)
+
+	return ad, nil
+}
+
+// Reject transitions an absence from pending to rejected.
+// Sets status=rejected, rejection_reason=reason.
+// Triggers recalculation for the affected date.
+func (s *AbsenceService) Reject(ctx context.Context, id uuid.UUID, reason string) (*model.AbsenceDay, error) {
+	ad, err := s.absenceDayRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, ErrAbsenceNotFound
+	}
+
+	if ad.Status != model.AbsenceStatusPending {
+		return nil, ErrAbsenceNotPending
+	}
+
+	ad.Status = model.AbsenceStatusRejected
+	if reason != "" {
+		ad.RejectionReason = &reason
+	}
+
+	if err := s.absenceDayRepo.Update(ctx, ad); err != nil {
+		return nil, err
+	}
+
+	// Trigger recalculation for the affected date
+	_, _ = s.recalcSvc.TriggerRecalc(ctx, ad.TenantID, ad.EmployeeID, ad.AbsenceDate)
+
+	return ad, nil
 }
 
 // Delete deletes a single absence day by ID and triggers recalculation.

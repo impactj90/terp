@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import {
   Select,
   SelectContent,
@@ -25,6 +26,7 @@ export function YearSelector({
   range = 5,
   className,
 }: YearSelectorProps) {
+  const t = useTranslations('vacation')
   const currentYear = new Date().getFullYear()
 
   // Generate year options: current year +/- range
@@ -39,7 +41,7 @@ export function YearSelector({
       onValueChange={(v) => onChange(parseInt(v, 10))}
     >
       <SelectTrigger className={className}>
-        <SelectValue placeholder="Select year" />
+        <SelectValue placeholder={t('selectYear')} />
       </SelectTrigger>
       <SelectContent>
         {years.map((year) => (

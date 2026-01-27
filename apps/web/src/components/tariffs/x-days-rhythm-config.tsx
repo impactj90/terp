@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { useTranslations } from 'next-intl'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import {
@@ -37,6 +38,8 @@ export function XDaysRhythmConfig({
   onDayPlansChange,
   disabled,
 }: XDaysRhythmConfigProps) {
+  const t = useTranslations('adminTariffs')
+
   // When cycle days change, update the day plans array
   React.useEffect(() => {
     if (!cycleDays || cycleDays < 1) return
@@ -65,7 +68,7 @@ export function XDaysRhythmConfig({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="cycleDays">Cycle Length (Days)</Label>
+        <Label htmlFor="cycleDays">{t('cycleLengthDays')}</Label>
         <Input
           id="cycleDays"
           type="number"
@@ -74,22 +77,22 @@ export function XDaysRhythmConfig({
           value={cycleDays ?? ''}
           onChange={(e) => onCycleDaysChange(e.target.value ? parseInt(e.target.value) : null)}
           disabled={disabled}
-          placeholder="e.g., 14"
+          placeholder={t('cycleDaysPlaceholder')}
           className="w-32"
         />
         <p className="text-xs text-muted-foreground">
-          Number of days before the cycle repeats
+          {t('cycleDaysHelp')}
         </p>
       </div>
 
       {cycleDays && cycleDays > 0 && (
         <div className="space-y-2">
-          <Label>Day Plan Assignments</Label>
+          <Label>{t('dayPlanAssignments')}</Label>
           <ScrollArea className="h-64 border rounded-lg">
             <div className="p-2 space-y-1">
               {dayPlans.map((dp) => (
                 <div key={dp.dayPosition} className="flex items-center gap-2 py-1">
-                  <span className="w-16 text-sm font-medium">Day {dp.dayPosition}:</span>
+                  <span className="w-16 text-sm font-medium">{t('dayNumber', { number: dp.dayPosition })}:</span>
                   <Select
                     value={dp.dayPlanId ?? '__off__'}
                     onValueChange={(v) =>
@@ -101,7 +104,7 @@ export function XDaysRhythmConfig({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__off__">Off Day (No Plan)</SelectItem>
+                      <SelectItem value="__off__">{t('offDayNoPlan')}</SelectItem>
                       {availableDayPlans.map((plan) => (
                         <SelectItem key={plan.id} value={plan.id}>
                           {plan.code} - {plan.name}
@@ -114,7 +117,7 @@ export function XDaysRhythmConfig({
             </div>
           </ScrollArea>
           <p className="text-xs text-muted-foreground">
-            Assign a day plan to each position. Off days have no work requirement.
+            {t('dayPlanAssignmentsHelp')}
           </p>
         </div>
       )}

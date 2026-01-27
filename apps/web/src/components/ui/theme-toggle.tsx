@@ -1,11 +1,13 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Moon, Sun, Monitor } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useTheme } from '@/providers/theme-provider'
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme()
+  const t = useTranslations('common')
 
   const cycleTheme = () => {
     if (theme === 'light') setTheme('dark')
@@ -18,7 +20,7 @@ export function ThemeToggle() {
       variant="ghost"
       size="icon"
       onClick={cycleTheme}
-      aria-label={`Current theme: ${theme}. Click to change.`}
+      aria-label={t('switchTheme')}
     >
       {theme === 'light' && <Sun className="size-5" />}
       {theme === 'dark' && <Moon className="size-5" />}

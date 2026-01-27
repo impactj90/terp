@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DepartmentTreeNode } from './department-tree-node'
@@ -27,6 +28,7 @@ export function DepartmentTreeView({
   onDelete,
   onAddChild,
 }: DepartmentTreeViewProps) {
+  const t = useTranslations('adminDepartments')
   const [expandedIds, setExpandedIds] = React.useState<Set<string>>(new Set())
 
   // Auto-expand all on initial load
@@ -90,11 +92,11 @@ export function DepartmentTreeView({
       <div className="flex gap-2 px-2">
         <Button variant="ghost" size="sm" onClick={handleExpandAll}>
           <ChevronDown className="mr-1 h-4 w-4" />
-          Expand All
+          {t('expandAll')}
         </Button>
         <Button variant="ghost" size="sm" onClick={handleCollapseAll}>
           <ChevronRight className="mr-1 h-4 w-4" />
-          Collapse All
+          {t('collapseAll')}
         </Button>
       </div>
 

@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Clock, TrendingUp, CalendarOff, Target } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -16,6 +17,9 @@ export function MonthlySummaryCards({
   monthlyValue,
   isLoading,
 }: MonthlySummaryCardsProps) {
+  const t = useTranslations('monthlyEvaluation')
+  const tc = useTranslations('common')
+
   if (isLoading) {
     return <SummaryCardsSkeleton />
   }
@@ -27,7 +31,7 @@ export function MonthlySummaryCards({
           <Card key={i}>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground text-center py-4">
-                No data available
+                {tc('noDataAvailable')}
               </p>
             </CardContent>
           </Card>
@@ -56,21 +60,21 @@ export function MonthlySummaryCards({
       {/* Time Summary Card */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Time Summary</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('timeSummary')}</CardTitle>
           <Clock className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Target</span>
+              <span className="text-sm text-muted-foreground">{t('target')}</span>
               <TimeDisplay value={targetMinutes} format="duration" className="font-medium" />
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Worked</span>
+              <span className="text-sm text-muted-foreground">{t('worked')}</span>
               <TimeDisplay value={netMinutes} format="duration" className="font-medium" />
             </div>
             <div className="flex justify-between items-center pt-2 border-t">
-              <span className="text-sm font-medium">Balance</span>
+              <span className="text-sm font-medium">{t('balance')}</span>
               <TimeDisplay value={balanceMinutes} format="balance" className="text-lg font-bold" />
             </div>
           </div>
@@ -80,7 +84,7 @@ export function MonthlySummaryCards({
       {/* Flextime Balance Card */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Flextime Balance</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('flextimeBalance')}</CardTitle>
           <TrendingUp className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
@@ -95,7 +99,7 @@ export function MonthlySummaryCards({
               )}
             />
             <p className="text-xs text-muted-foreground mt-1">
-              {flextimeBalance >= 0 ? 'Credit' : 'Deficit'}
+              {flextimeBalance >= 0 ? t('credit') : t('deficit')}
             </p>
           </div>
           {/* Balance indicator bar */}
@@ -117,7 +121,7 @@ export function MonthlySummaryCards({
       {/* Working Days Card */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Working Days</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('workingDays')}</CardTitle>
           <Target className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
@@ -125,11 +129,11 @@ export function MonthlySummaryCards({
             <div className="text-3xl font-bold">
               {workDays}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">days worked this month</p>
+            <p className="text-xs text-muted-foreground mt-1">{t('daysWorkedThisMonth')}</p>
           </div>
           <div className="mt-3 space-y-1 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">With errors</span>
+              <span className="text-muted-foreground">{t('withErrors')}</span>
               <span className="font-medium text-destructive">{monthlyValue.days_with_errors ?? 0}</span>
             </div>
           </div>
@@ -139,25 +143,25 @@ export function MonthlySummaryCards({
       {/* Absences Card */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Absences</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('absences')}</CardTitle>
           <CalendarOff className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Vacation</span>
+              <span className="text-sm text-muted-foreground">{t('vacation')}</span>
               <span className="font-medium">{vacationDays}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Sick leave</span>
+              <span className="text-sm text-muted-foreground">{t('sickLeave')}</span>
               <span className="font-medium">{sickDays}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Other</span>
+              <span className="text-sm text-muted-foreground">{t('other')}</span>
               <span className="font-medium">{otherAbsenceDays}</span>
             </div>
             <div className="flex justify-between items-center pt-2 border-t">
-              <span className="text-sm font-medium">Total absences</span>
+              <span className="text-sm font-medium">{t('totalAbsences')}</span>
               <span className="text-lg font-bold">{totalAbsenceDays}</span>
             </div>
           </div>

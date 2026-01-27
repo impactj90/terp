@@ -3,6 +3,7 @@
 import * as React from 'react'
 import { format } from 'date-fns'
 import { Edit, Trash2, Building2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -49,6 +50,7 @@ export function DepartmentDetailSheet({
   onEdit,
   onDelete,
 }: DepartmentDetailSheetProps) {
+  const t = useTranslations('adminDepartments')
   const { data: department, isLoading } = useDepartment(departmentId || '', open && !!departmentId)
 
   const formatDate = (date: string | undefined | null) => {
@@ -60,8 +62,8 @@ export function DepartmentDetailSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-lg flex flex-col">
         <SheetHeader>
-          <SheetTitle>Department Details</SheetTitle>
-          <SheetDescription>View department information and hierarchy</SheetDescription>
+          <SheetTitle>{t('detailTitle')}</SheetTitle>
+          <SheetDescription>{t('detailDescription')}</SheetDescription>
         </SheetHeader>
 
         {isLoading ? (
@@ -85,34 +87,34 @@ export function DepartmentDetailSheet({
                   <p className="text-sm text-muted-foreground font-mono">{department.code}</p>
                 </div>
                 <Badge variant={department.is_active ? 'default' : 'secondary'}>
-                  {department.is_active ? 'Active' : 'Inactive'}
+                  {department.is_active ? t('statusActive') : t('statusInactive')}
                 </Badge>
               </div>
 
               {/* Basic Information */}
               <div className="space-y-2">
-                <h4 className="text-sm font-medium text-muted-foreground">Basic Information</h4>
+                <h4 className="text-sm font-medium text-muted-foreground">{t('sectionBasicInformation')}</h4>
                 <div className="rounded-lg border p-4">
-                  <DetailRow label="Name" value={department.name} />
-                  <DetailRow label="Code" value={department.code} />
-                  <DetailRow label="Description" value={department.description} />
+                  <DetailRow label={t('fieldName')} value={department.name} />
+                  <DetailRow label={t('fieldCode')} value={department.code} />
+                  <DetailRow label={t('fieldDescription')} value={department.description} />
                 </div>
               </div>
 
               {/* Hierarchy */}
               <div className="space-y-2">
-                <h4 className="text-sm font-medium text-muted-foreground">Hierarchy</h4>
+                <h4 className="text-sm font-medium text-muted-foreground">{t('sectionHierarchy')}</h4>
                 <div className="rounded-lg border p-4">
                   <DetailRow
-                    label="Parent Department"
-                    value={department.parent?.name || 'None (Root Level)'}
+                    label={t('fieldParentDepartment')}
+                    value={department.parent?.name || t('noneRootLevel')}
                   />
                   <DetailRow
-                    label="Child Departments"
+                    label={t('fieldChildDepartments')}
                     value={
                       department.children && department.children.length > 0
                         ? department.children.map((c) => c.name).join(', ')
-                        : 'None'
+                        : t('none')
                     }
                   />
                 </div>
@@ -120,10 +122,10 @@ export function DepartmentDetailSheet({
 
               {/* Timestamps */}
               <div className="space-y-2">
-                <h4 className="text-sm font-medium text-muted-foreground">Timestamps</h4>
+                <h4 className="text-sm font-medium text-muted-foreground">{t('sectionTimestamps')}</h4>
                 <div className="rounded-lg border p-4">
-                  <DetailRow label="Created" value={formatDate(department.created_at)} />
-                  <DetailRow label="Last Updated" value={formatDate(department.updated_at)} />
+                  <DetailRow label={t('fieldCreated')} value={formatDate(department.created_at)} />
+                  <DetailRow label={t('fieldLastUpdated')} value={formatDate(department.updated_at)} />
                 </div>
               </div>
             </div>
@@ -132,13 +134,13 @@ export function DepartmentDetailSheet({
 
         <SheetFooter className="flex-row gap-2 border-t pt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
-            Close
+            {t('close')}
           </Button>
           {department && (
             <>
               <Button variant="outline" onClick={() => onEdit(department)}>
                 <Edit className="mr-2 h-4 w-4" />
-                Edit
+                {t('edit')}
               </Button>
               <Button
                 variant="destructive"
@@ -146,7 +148,7 @@ export function DepartmentDetailSheet({
                 disabled={department.children && department.children.length > 0}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Delete
+                {t('delete')}
               </Button>
             </>
           )}

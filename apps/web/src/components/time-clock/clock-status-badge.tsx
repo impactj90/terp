@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
@@ -10,31 +11,32 @@ interface ClockStatusBadgeProps {
   className?: string
 }
 
-const statusConfig: Record<ClockStatus, { label: string; className: string }> = {
+const statusConfig: Record<ClockStatus, { labelKey: string; className: string }> = {
   clocked_in: {
-    label: 'Clocked In',
+    labelKey: 'statusClockedIn',
     className: 'bg-success text-success-foreground',
   },
   clocked_out: {
-    label: 'Not Clocked In',
+    labelKey: 'statusNotClockedIn',
     className: 'bg-muted text-muted-foreground',
   },
   on_break: {
-    label: 'On Break',
+    labelKey: 'statusOnBreak',
     className: 'bg-warning text-warning-foreground',
   },
   on_errand: {
-    label: 'On Errand',
+    labelKey: 'statusOnErrand',
     className: 'bg-info text-info-foreground',
   },
 }
 
 export function ClockStatusBadge({ status, className }: ClockStatusBadgeProps) {
+  const t = useTranslations('timeClock')
   const config = statusConfig[status]
 
   return (
     <Badge className={cn('text-sm px-3 py-1', config.className, className)}>
-      {config.label}
+      {t(config.labelKey as Parameters<typeof t>[0])}
     </Badge>
   )
 }

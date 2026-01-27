@@ -120,7 +120,7 @@ func main() {
 
 	// Initialize MonthlyEvalService
 	monthlyValueRepo := repository.NewMonthlyValueRepository(db)
-	monthlyEvalService := service.NewMonthlyEvalService(monthlyValueRepo, dailyValueRepo, absenceDayRepo, employeeRepo)
+	monthlyEvalService := service.NewMonthlyEvalService(monthlyValueRepo, dailyValueRepo, absenceDayRepo, employeeRepo, tariffRepo)
 	monthlyEvalHandler := handler.NewMonthlyEvalHandler(monthlyEvalService)
 
 	// Initialize MonthlyCalcService
@@ -145,6 +145,10 @@ func main() {
 		bookingRepo,
 		dailyValueRepo,
 		monthlyValueRepo,
+		empDayPlanRepo,
+		absenceDayRepo,
+		vacationBalanceRepo,
+		accountRepo,
 	)
 	userHandler := handler.NewUserHandler(userService)
 	tenantHandler := handler.NewTenantHandler(tenantService)

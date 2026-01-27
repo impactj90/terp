@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
 import { Download, FileText, FileSpreadsheet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -40,12 +41,14 @@ export function ExportButtons({
   employeeName,
   data,
 }: ExportButtonsProps) {
+  const t = useTranslations('timesheet')
+  const locale = useLocale()
   const [isExporting, setIsExporting] = useState(false)
 
   const generateCSV = () => {
     if (!data) return
 
-    const headers = ['Date', 'Target', 'Gross', 'Breaks', 'Net', 'Balance']
+    const headers = [t('date'), t('target'), t('gross'), t('breaks'), t('net'), t('balance')]
     const rows = data.dates.map((date) => {
       const dateString = formatDate(date)
       const dv = data.dailyValues.get(dateString)
@@ -84,17 +87,17 @@ export function ExportButtons({
         </style>
       </head>
       <body>
-        <h1>Timesheet: ${formatDisplayDate(periodStart, 'short')} - ${formatDisplayDate(periodEnd, 'short')}</h1>
-        ${employeeName ? `<p>Employee: ${employeeName}</p>` : ''}
+        <h1>${t('timesheetExport')} ${formatDisplayDate(periodStart, 'short')} - ${formatDisplayDate(periodEnd, 'short')}</h1>
+        ${employeeName ? `<p>${t('employee')} ${employeeName}</p>` : ''}
         <table>
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Target</th>
-              <th>Gross</th>
-              <th>Breaks</th>
-              <th>Net</th>
-              <th>Balance</th>
+              <th>${t('date')}</th>
+              <th>${t('target')}</th>
+              <th>${t('gross')}</th>
+              <th>${t('breaks')}</th>
+              <th>${t('net')}</th>
+              <th>${t('balance')}</th>
             </tr>
           </thead>
           <tbody>
@@ -115,7 +118,7 @@ export function ExportButtons({
           </tbody>
         </table>
         <div class="footer">
-          Generated: ${new Date().toLocaleString('de-DE')}
+          ${t('generated')} ${new Date().toLocaleString(locale)}
         </div>
       </body>
       </html>
@@ -165,17 +168,17 @@ export function ExportButtons({
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" disabled={isExporting || !data}>
           <Download className="h-4 w-4 mr-2" />
-          Export
+          {t('exportLabel')}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => handleExport('csv')}>
           <FileSpreadsheet className="h-4 w-4 mr-2" />
-          Export as CSV
+          {t('exportCsv')}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => handleExport('pdf')}>
           <FileText className="h-4 w-4 mr-2" />
-          Print / PDF
+          {t('printPdf')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

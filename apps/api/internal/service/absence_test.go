@@ -73,6 +73,19 @@ func (m *mockAbsenceDayRepositoryForService) DeleteRange(ctx context.Context, em
 	return args.Error(0)
 }
 
+func (m *mockAbsenceDayRepositoryForService) ListAll(ctx context.Context, tenantID uuid.UUID, opts model.AbsenceListOptions) ([]model.AbsenceDay, error) {
+	args := m.Called(ctx, tenantID, opts)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]model.AbsenceDay), args.Error(1)
+}
+
+func (m *mockAbsenceDayRepositoryForService) Update(ctx context.Context, ad *model.AbsenceDay) error {
+	args := m.Called(ctx, ad)
+	return args.Error(0)
+}
+
 type mockAbsenceTypeRepositoryForService struct {
 	mock.Mock
 }

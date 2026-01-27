@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { useTranslations } from 'next-intl'
 import { Loader2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -61,33 +62,11 @@ const INITIAL_STATE: FormState = {
 }
 
 const CATEGORY_OPTIONS = [
-  { value: 'vacation', label: 'Vacation' },
-  { value: 'sick', label: 'Sick Leave' },
-  { value: 'personal', label: 'Personal Leave' },
-  { value: 'unpaid', label: 'Unpaid Leave' },
-]
-
-function validateForm(form: FormState): string[] {
-  const errors: string[] = []
-
-  if (!form.code.trim()) {
-    errors.push('Code is required')
-  } else if (form.code.length > 20) {
-    errors.push('Code must be 20 characters or less')
-  }
-
-  if (!form.name.trim()) {
-    errors.push('Name is required')
-  } else if (form.name.length > 255) {
-    errors.push('Name must be 255 characters or less')
-  }
-
-  if (form.color && !/^#[0-9A-Fa-f]{6}$/.test(form.color)) {
-    errors.push('Color must be a valid hex color (e.g. #FF0000)')
-  }
-
-  return errors
-}
+  { value: 'vacation', labelKey: 'categoryVacation' },
+  { value: 'sick', labelKey: 'categorySick' },
+  { value: 'personal', labelKey: 'categoryPersonal' },
+  { value: 'unpaid', labelKey: 'categoryUnpaid' },
+] as const
 
 export function AbsenceTypeFormSheet({
   open,
@@ -95,6 +74,7 @@ export function AbsenceTypeFormSheet({
   absenceType,
   onSuccess,
 }: AbsenceTypeFormSheetProps) {
+  const t = useTranslations('adminAbsenceTypes')
   const isEdit = !!absenceType
   const isSystem = absenceType?.is_system ?? false
   const [form, setForm] = React.useState<FormState>(INITIAL_STATE)
@@ -129,7 +109,13 @@ export function AbsenceTypeFormSheet({
   const handleSubmit = async () => {
     setError(null)
 
-    const errors = validateForm(form)
+    const errors: string[] = []
+    if (!form.code.trim()) errors.push(t('validationCodeRequired'))
+    else if (form.code.length > 20) errors.push(t('validationCodeMaxLength'))
+    if (!form.name.trim()) errors.push(t('validationNameRequired'))
+    else if (form.name.length > 255) errors.push(t('validationNameMaxLength'))
+    if (form.color && !/^#[0-9A-Fa-f]{6}$/.test(form.color)) errors.push(t('validationColorFormat'))
+
     if (errors.length > 0) {
       setError(errors.join('. '))
       return
@@ -169,7 +155,7 @@ export function AbsenceTypeFormSheet({
     } catch (err) {
       const apiError = err as { detail?: string; message?: string }
       setError(
-        apiError.detail ?? apiError.message ?? `Failed to ${isEdit ? 'update' : 'create'} absence type`
+        apiError.detail ?? apiError.message ?? (isEdit ? t('failedUpdate') : t('failedCreate'))
       )
     }
   }
@@ -184,11 +170,11 @@ export function AbsenceTypeFormSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-lg flex flex-col">
         <SheetHeader>
-          <SheetTitle>{isEdit ? 'Edit Absence Type' : 'New Absence Type'}</SheetTitle>
+          <SheetTitle>{isEdit ? t('editAbsenceType') : t('newAbsenceType')}</SheetTitle>
           <SheetDescription>
             {isEdit
-              ? 'Update absence type configuration.'
-              : 'Create a new absence type for your organization.'}
+              ? t('editDescription')
+              : t('createDescription')}
           </SheetDescription>
         </SheetHeader>
 
@@ -199,33 +185,33 @@ export function AbsenceTypeFormSheet({
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  This is a system absence type. Some fields cannot be modified.
+                  {t('systemTypeWarning')}
                 </AlertDescription>
               </Alert>
             )}
 
             {/* Basic Information */}
             <div className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Basic Information</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">{t('sectionBasicInfo')}</h3>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="code">Code *</Label>
+                  <Label htmlFor="code">{t('fieldCode')} *</Label>
                   <Input
                     id="code"
                     value={form.code}
                     onChange={(e) => setForm((prev) => ({ ...prev, code: e.target.value.toUpperCase() }))}
                     disabled={isSubmitting || isSystem || isEdit}
-                    placeholder="VAC"
+                    placeholder={t('codePlaceholder')}
                     maxLength={20}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Short identifier (e.g., U=vacation, K=illness)
+                    {t('codeHint')}
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="color">Color</Label>
+                  <Label htmlFor="color">{t('fieldColor')}</Label>
                   <div className="flex gap-2">
                     <Input
                       id="color"
@@ -245,25 +231,25 @@ export function AbsenceTypeFormSheet({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="name">Name *</Label>
+                <Label htmlFor="name">{t('fieldName')} *</Label>
                 <Input
                   id="name"
                   value={form.name}
                   onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
                   disabled={isSubmitting}
-                  placeholder="Vacation"
+                  placeholder={t('namePlaceholder')}
                   maxLength={255}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
+                <Label htmlFor="description">{t('fieldDescription')}</Label>
                 <Textarea
                   id="description"
                   value={form.description}
                   onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
                   disabled={isSubmitting}
-                  placeholder="Optional description for this absence type"
+                  placeholder={t('descriptionPlaceholder')}
                   rows={3}
                 />
               </div>
@@ -271,22 +257,22 @@ export function AbsenceTypeFormSheet({
 
             {/* Category */}
             <div className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Category</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">{t('sectionCategory')}</h3>
 
               <div className="space-y-2">
-                <Label>Category *</Label>
+                <Label>{t('fieldCategory')} *</Label>
                 <Select
                   value={form.category}
                   onValueChange={(value) => setForm((prev) => ({ ...prev, category: value }))}
                   disabled={isSubmitting}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
+                    <SelectValue placeholder={t('selectCategory')} />
                   </SelectTrigger>
                   <SelectContent>
                     {CATEGORY_OPTIONS.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                        {t(option.labelKey as Parameters<typeof t>[0])}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -296,13 +282,13 @@ export function AbsenceTypeFormSheet({
 
             {/* Behavior */}
             <div className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Behavior</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">{t('sectionBehavior')}</h3>
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label htmlFor="isPaid">Paid Absence</Label>
+                  <Label htmlFor="isPaid">{t('fieldPaid')}</Label>
                   <p className="text-xs text-muted-foreground">
-                    Credits regular working time when absent
+                    {t('fieldPaidDescription')}
                   </p>
                 </div>
                 <Switch
@@ -317,9 +303,9 @@ export function AbsenceTypeFormSheet({
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label htmlFor="affectsVacationBalance">Deducts Vacation</Label>
+                  <Label htmlFor="affectsVacationBalance">{t('fieldAffectsVacation')}</Label>
                   <p className="text-xs text-muted-foreground">
-                    Deduct from employee vacation balance
+                    {t('fieldAffectsVacationDescription')}
                   </p>
                 </div>
                 <Switch
@@ -334,9 +320,9 @@ export function AbsenceTypeFormSheet({
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label htmlFor="requiresApproval">Requires Approval</Label>
+                  <Label htmlFor="requiresApproval">{t('fieldRequiresApproval')}</Label>
                   <p className="text-xs text-muted-foreground">
-                    Absence requests need manager approval
+                    {t('fieldRequiresApprovalDescription')}
                   </p>
                 </div>
                 <Switch
@@ -353,13 +339,13 @@ export function AbsenceTypeFormSheet({
             {/* Status (edit only) */}
             {isEdit && (
               <div className="space-y-4">
-                <h3 className="text-sm font-medium text-muted-foreground">Status</h3>
+                <h3 className="text-sm font-medium text-muted-foreground">{t('sectionStatus')}</h3>
 
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label htmlFor="isActive">Active</Label>
+                    <Label htmlFor="isActive">{t('fieldActive')}</Label>
                     <p className="text-xs text-muted-foreground">
-                      Inactive types cannot be used for new absences
+                      {t('fieldActiveDescription')}
                     </p>
                   </div>
                   <Switch
@@ -385,11 +371,11 @@ export function AbsenceTypeFormSheet({
 
         <SheetFooter className="flex-row gap-2 border-t pt-4">
           <Button variant="outline" onClick={handleClose} disabled={isSubmitting} className="flex-1">
-            Cancel
+            {t('cancel')}
           </Button>
           <Button onClick={handleSubmit} disabled={isSubmitting} className="flex-1">
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isSubmitting ? 'Saving...' : isEdit ? 'Save Changes' : 'Create'}
+            {isSubmitting ? t('saving') : isEdit ? t('saveChanges') : t('create')}
           </Button>
         </SheetFooter>
       </SheetContent>

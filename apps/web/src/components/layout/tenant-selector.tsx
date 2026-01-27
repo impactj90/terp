@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Building2, Check, ChevronsUpDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTenant } from '@/providers/tenant-provider'
@@ -23,6 +24,7 @@ interface TenantSelectorProps {
  * Allows users to switch between organizations.
  */
 export function TenantSelector({ className }: TenantSelectorProps) {
+  const t = useTranslations('header')
   const { tenant, tenantId, tenants, isLoading, selectTenant } = useTenant()
 
   if (isLoading) {
@@ -41,12 +43,12 @@ export function TenantSelector({ className }: TenantSelectorProps) {
           variant="outline"
           role="combobox"
           className={cn('w-[180px] justify-between', className)}
-          aria-label="Select organization"
+          aria-label={t('selectOrganization')}
         >
           <div className="flex items-center gap-2 truncate">
             <Building2 className="h-4 w-4 shrink-0" aria-hidden="true" />
             <span className="truncate">
-              {tenant?.name ?? 'Select org...'}
+              {tenant?.name ?? t('selectOrganization')}
             </span>
           </div>
           <ChevronsUpDown
@@ -56,19 +58,19 @@ export function TenantSelector({ className }: TenantSelectorProps) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-[200px]">
-        <DropdownMenuLabel>Organizations</DropdownMenuLabel>
+        <DropdownMenuLabel>{t('organizations')}</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {tenants.map((t) => (
+        {tenants.map((item) => (
           <DropdownMenuItem
-            key={t.id}
-            onClick={() => selectTenant(t)}
+            key={item.id}
+            onClick={() => selectTenant(item)}
             className="flex items-center justify-between"
           >
             <div className="flex items-center gap-2 truncate">
               <Building2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-              <span className="truncate">{t.name}</span>
+              <span className="truncate">{item.name}</span>
             </div>
-            {t.id === tenantId && (
+            {item.id === tenantId && (
               <Check className="h-4 w-4 shrink-0" aria-hidden="true" />
             )}
           </DropdownMenuItem>

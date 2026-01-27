@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { useTranslations } from 'next-intl'
 import { Calendar, type DateRange } from '@/components/ui/calendar'
 import { useHolidays, useEmployeeAbsences } from '@/hooks/api'
 import { formatDate, parseISODate, getMonthRange } from '@/lib/time-utils'
@@ -20,6 +21,8 @@ export function AbsenceCalendarView({
   className,
 }: AbsenceCalendarViewProps) {
   const [month, setMonth] = React.useState(() => new Date())
+
+  const t = useTranslations('absences')
 
   // Get date range for the displayed month (with some padding for calendar view)
   const { start, end } = React.useMemo(() => {
@@ -83,17 +86,17 @@ export function AbsenceCalendarView({
       <div className="flex flex-wrap gap-4 mt-4 text-sm">
         <div className="flex items-center gap-2">
           <span className="h-3 w-3 rounded-full bg-red-500" />
-          <span className="text-muted-foreground">Holiday</span>
+          <span className="text-muted-foreground">{t('legendHoliday')}</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="h-3 w-3 rounded-full bg-blue-500" />
-          <span className="text-muted-foreground">Your absence</span>
+          <span className="text-muted-foreground">{t('legendYourAbsence')}</span>
         </div>
       </div>
 
       {/* Hint */}
       <p className="text-xs text-muted-foreground mt-2">
-        Click any date to create a new absence request
+        {t('clickToCreateHint')}
       </p>
     </div>
   )

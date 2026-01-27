@@ -11,6 +11,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/tolga/terp/gen/models"
+	"github.com/tolga/terp/internal/auth"
 	"github.com/tolga/terp/internal/middleware"
 	"github.com/tolga/terp/internal/model"
 	"github.com/tolga/terp/internal/service"
@@ -217,6 +218,139 @@ func (h *AbsenceHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// ListAll handles GET /absences with optional query filters.
+func (h *AbsenceHandler) ListAll(w http.ResponseWriter, r *http.Request) {
+	tenantID, ok := middleware.TenantFromContext(r.Context())
+	if !ok {
+		respondError(w, http.StatusUnauthorized, "Tenant required")
+		return
+	}
+
+	var opts model.AbsenceListOptions
+
+	// Parse optional query filters
+	if empIDStr := r.URL.Query().Get("employee_id"); empIDStr != "" {
+		empID, err := uuid.Parse(empIDStr)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid employee_id")
+			return
+		}
+		opts.EmployeeID = &empID
+	}
+
+	if typeIDStr := r.URL.Query().Get("absence_type_id"); typeIDStr != "" {
+		typeID, err := uuid.Parse(typeIDStr)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid absence_type_id")
+			return
+		}
+		opts.AbsenceTypeID = &typeID
+	}
+
+	if statusStr := r.URL.Query().Get("status"); statusStr != "" {
+		status := model.AbsenceStatus(statusStr)
+		opts.Status = &status
+	}
+
+	if fromStr := r.URL.Query().Get("from"); fromStr != "" {
+		from, err := time.Parse("2006-01-02", fromStr)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid from date format, expected YYYY-MM-DD")
+			return
+		}
+		opts.From = &from
+	}
+
+	if toStr := r.URL.Query().Get("to"); toStr != "" {
+		to, err := time.Parse("2006-01-02", toStr)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid to date format, expected YYYY-MM-DD")
+			return
+		}
+		opts.To = &to
+	}
+
+	absences, err := h.absenceService.ListAll(r.Context(), tenantID, opts)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to list absences")
+		return
+	}
+
+	response := models.AbsenceList{
+		Data: make([]*models.Absence, 0, len(absences)),
+	}
+	for i := range absences {
+		response.Data = append(response.Data, h.absenceDayToResponse(&absences[i]))
+	}
+
+	respondJSON(w, http.StatusOK, response)
+}
+
+// Approve handles POST /absences/{id}/approve
+func (h *AbsenceHandler) Approve(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid absence ID")
+		return
+	}
+
+	// Get the authenticated user for approved_by
+	user, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		respondError(w, http.StatusUnauthorized, "Authentication required")
+		return
+	}
+
+	ad, svcErr := h.absenceService.Approve(r.Context(), id, user.ID)
+	if svcErr != nil {
+		switch svcErr {
+		case service.ErrAbsenceNotFound:
+			respondError(w, http.StatusNotFound, "Absence not found")
+		case service.ErrAbsenceNotPending:
+			respondError(w, http.StatusBadRequest, "Absence is not in pending status")
+		default:
+			respondError(w, http.StatusInternalServerError, "Failed to approve absence")
+		}
+		return
+	}
+
+	respondJSON(w, http.StatusOK, h.absenceDayToResponse(ad))
+}
+
+// Reject handles POST /absences/{id}/reject
+func (h *AbsenceHandler) Reject(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid absence ID")
+		return
+	}
+
+	// Parse optional rejection reason from body
+	var body struct {
+		Reason string `json:"reason"`
+	}
+	if r.Body != nil {
+		_ = json.NewDecoder(r.Body).Decode(&body)
+	}
+
+	ad, svcErr := h.absenceService.Reject(r.Context(), id, body.Reason)
+	if svcErr != nil {
+		switch svcErr {
+		case service.ErrAbsenceNotFound:
+			respondError(w, http.StatusNotFound, "Absence not found")
+		case service.ErrAbsenceNotPending:
+			respondError(w, http.StatusBadRequest, "Absence is not in pending status")
+		default:
+			respondError(w, http.StatusInternalServerError, "Failed to reject absence")
+		}
+		return
+	}
+
+	respondJSON(w, http.StatusOK, h.absenceDayToResponse(ad))
+}
+
 // absenceDayToResponse converts internal model to API response model.
 func (h *AbsenceHandler) absenceDayToResponse(ad *model.AbsenceDay) *models.Absence {
 	id := strfmt.UUID(ad.ID.String())
@@ -256,6 +390,24 @@ func (h *AbsenceHandler) absenceDayToResponse(ad *model.AbsenceDay) *models.Abse
 	if ad.ApprovedAt != nil {
 		approvedAt := strfmt.DateTime(*ad.ApprovedAt)
 		resp.ApprovedAt = &approvedAt
+	}
+
+	// Nested employee relation
+	if ad.Employee != nil {
+		empID := strfmt.UUID(ad.Employee.ID.String())
+		resp.Employee.ID = &empID
+		resp.Employee.FirstName = &ad.Employee.FirstName
+		resp.Employee.LastName = &ad.Employee.LastName
+		resp.Employee.PersonnelNumber = &ad.Employee.PersonnelNumber
+		resp.Employee.IsActive = ad.Employee.IsActive
+		if ad.Employee.DepartmentID != nil {
+			deptID := strfmt.UUID(ad.Employee.DepartmentID.String())
+			resp.Employee.DepartmentID = &deptID
+		}
+		if ad.Employee.TariffID != nil {
+			tariffID := strfmt.UUID(ad.Employee.TariffID.String())
+			resp.Employee.TariffID = &tariffID
+		}
 	}
 
 	// Nested absence type relation

@@ -1,8 +1,9 @@
-import { useApiQuery } from '@/hooks'
+import { useApiQuery, useApiMutation } from '@/hooks'
 
 interface UseAccountsOptions {
   accountType?: 'time' | 'bonus' | 'deduction' | 'vacation' | 'sick'
   active?: boolean
+  includeSystem?: boolean
   enabled?: boolean
 }
 
@@ -14,17 +15,20 @@ interface UseAccountsOptions {
  * const { data, isLoading } = useAccounts({
  *   accountType: 'bonus',
  *   active: true,
+ *   includeSystem: true,
  * })
  * ```
  */
 export function useAccounts(options: UseAccountsOptions = {}) {
-  const { accountType, active, enabled = true } = options
+  const { accountType, active, includeSystem, enabled = true } = options
 
   return useApiQuery('/accounts', {
     params: {
       account_type: accountType,
       active,
-    },
+      // Handler reads include_system param (not in OpenAPI spec but handler supports it)
+      ...(includeSystem !== undefined ? { include_system: includeSystem } : {}),
+    } as Record<string, unknown>,
     enabled,
   })
 }
@@ -41,5 +45,32 @@ export function useAccount(id: string, enabled = true) {
   return useApiQuery('/accounts/{id}', {
     path: { id },
     enabled: enabled && !!id,
+  })
+}
+
+/**
+ * Hook to create a new account.
+ */
+export function useCreateAccount() {
+  return useApiMutation('/accounts', 'post', {
+    invalidateKeys: [['/accounts']],
+  })
+}
+
+/**
+ * Hook to update an existing account.
+ */
+export function useUpdateAccount() {
+  return useApiMutation('/accounts/{id}', 'patch', {
+    invalidateKeys: [['/accounts']],
+  })
+}
+
+/**
+ * Hook to delete an account.
+ */
+export function useDeleteAccount() {
+  return useApiMutation('/accounts/{id}', 'delete', {
+    invalidateKeys: [['/accounts']],
   })
 }

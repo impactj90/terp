@@ -1,6 +1,7 @@
 'use client'
 
-import Link from 'next/link'
+import { useTranslations } from 'next-intl'
+import { Link } from '@/i18n/navigation'
 import { LogIn, LogOut, CalendarPlus, FileText, Clock, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -18,6 +19,7 @@ interface QuickActionsProps {
  * Quick action buttons for common employee operations.
  */
 export function QuickActions({ employeeId }: QuickActionsProps) {
+  const t = useTranslations('dashboard')
   const today = getToday()
   const createBooking = useCreateBooking()
 
@@ -104,7 +106,7 @@ export function QuickActions({ employeeId }: QuickActionsProps) {
             ) : (
               <LogOut className="h-4 w-4" />
             )}
-            Clock Out
+            {t('clockOut')}
           </Button>
         ) : (
           <Button
@@ -117,13 +119,13 @@ export function QuickActions({ employeeId }: QuickActionsProps) {
             ) : (
               <LogIn className="h-4 w-4" />
             )}
-            Clock In
+            {t('clockIn')}
           </Button>
         )
       ) : (
         <Button disabled className="gap-2">
           <Clock className="h-4 w-4" />
-          Clock In
+          {t('clockIn')}
         </Button>
       )}
 
@@ -131,7 +133,7 @@ export function QuickActions({ employeeId }: QuickActionsProps) {
       <Button variant="outline" asChild className="gap-2">
         <Link href="/absences/new">
           <CalendarPlus className="h-4 w-4" />
-          Request Time Off
+          {t('requestTimeOff')}
         </Link>
       </Button>
 
@@ -139,7 +141,7 @@ export function QuickActions({ employeeId }: QuickActionsProps) {
       <Button variant="outline" asChild className="gap-2">
         <Link href="/timesheet">
           <FileText className="h-4 w-4" />
-          View Timesheet
+          {t('viewTimesheet')}
         </Link>
       </Button>
     </div>

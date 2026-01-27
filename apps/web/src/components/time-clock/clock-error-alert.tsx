@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { AlertCircle, Lock, Wifi } from 'lucide-react'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -10,17 +11,19 @@ interface ClockErrorAlertProps {
 }
 
 export function ClockErrorAlert({ error, onRetry }: ClockErrorAlertProps) {
-  const { icon: Icon, title, message } = getErrorDetails(error)
+  const t = useTranslations('timeClock')
+  const tc = useTranslations('common')
+  const { icon: Icon, titleKey, messageKey } = getErrorDetails(error)
 
   return (
     <Alert variant="destructive">
       <Icon className="h-4 w-4" />
-      <AlertTitle>{title}</AlertTitle>
+      <AlertTitle>{t(titleKey as Parameters<typeof t>[0])}</AlertTitle>
       <AlertDescription className="flex flex-col gap-2">
-        <span>{message}</span>
+        <span>{t(messageKey as Parameters<typeof t>[0])}</span>
         {onRetry && (
           <Button variant="outline" size="sm" onClick={onRetry} className="w-fit">
-            Try Again
+            {tc('tryAgain')}
           </Button>
         )}
       </AlertDescription>
@@ -30,8 +33,8 @@ export function ClockErrorAlert({ error, onRetry }: ClockErrorAlertProps) {
 
 function getErrorDetails(error: unknown): {
   icon: typeof AlertCircle
-  title: string
-  message: string
+  titleKey: string
+  messageKey: string
 } {
   // Check for specific API error types
   if (error && typeof error === 'object') {
@@ -40,31 +43,31 @@ function getErrorDetails(error: unknown): {
     if (err.status === 403) {
       return {
         icon: Lock,
-        title: 'Month Closed',
-        message: 'This month has been closed. You cannot create new bookings.',
+        titleKey: 'monthClosed',
+        messageKey: 'monthClosedMessage',
       }
     }
 
     if (err.status === 400) {
       return {
         icon: AlertCircle,
-        title: 'Invalid Request',
-        message: err.message ?? 'The booking could not be created. Please try again.',
+        titleKey: 'invalidRequest',
+        messageKey: 'invalidRequestMessage',
       }
     }
 
     if (typeof window !== 'undefined' && !navigator.onLine) {
       return {
         icon: Wifi,
-        title: 'No Connection',
-        message: 'Please check your internet connection and try again.',
+        titleKey: 'noConnection',
+        messageKey: 'noConnectionMessage',
       }
     }
   }
 
   return {
     icon: AlertCircle,
-    title: 'Error',
-    message: 'Something went wrong. Please try again.',
+    titleKey: 'genericError',
+    messageKey: 'genericErrorMessage',
   }
 }
