@@ -2,8 +2,10 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/shopspring/decimal"
 
@@ -11,6 +13,21 @@ import (
 	"github.com/tolga/terp/internal/model"
 	"github.com/tolga/terp/internal/service"
 )
+
+// bookingRepoForAuth defines the interface for booking data access in auth handler.
+type bookingRepoForAuth interface {
+	Upsert(ctx context.Context, booking *model.Booking) error
+}
+
+// dailyValueRepoForAuth defines the interface for daily value data access in auth handler.
+type dailyValueRepoForAuth interface {
+	Upsert(ctx context.Context, dv *model.DailyValue) error
+}
+
+// monthlyValueRepoForAuth defines the interface for monthly value data access in auth handler.
+type monthlyValueRepoForAuth interface {
+	Upsert(ctx context.Context, mv *model.MonthlyValue) error
+}
 
 // AuthHandler handles authentication endpoints.
 type AuthHandler struct {
@@ -27,6 +44,9 @@ type AuthHandler struct {
 	tariffService      *service.TariffService
 	departmentService  *service.DepartmentService
 	teamService        *service.TeamService
+	bookingRepo        bookingRepoForAuth
+	dailyValueRepo     dailyValueRepoForAuth
+	monthlyValueRepo   monthlyValueRepoForAuth
 }
 
 // NewAuthHandler creates a new auth handler instance.
@@ -44,6 +64,9 @@ func NewAuthHandler(
 	tariffService *service.TariffService,
 	departmentService *service.DepartmentService,
 	teamService *service.TeamService,
+	bookingRepo bookingRepoForAuth,
+	dailyValueRepo dailyValueRepoForAuth,
+	monthlyValueRepo monthlyValueRepoForAuth,
 ) *AuthHandler {
 	return &AuthHandler{
 		jwtManager:         jwtManager,
@@ -59,6 +82,9 @@ func NewAuthHandler(
 		tariffService:      tariffService,
 		departmentService:  departmentService,
 		teamService:        teamService,
+		bookingRepo:        bookingRepo,
+		dailyValueRepo:     dailyValueRepo,
+		monthlyValueRepo:   monthlyValueRepo,
 	}
 }
 
@@ -146,28 +172,8 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Create all dev absence types (system-level, idempotent)
-	for _, devAT := range auth.GetDevAbsenceTypes() {
-		desc := devAT.Description
-		at := &model.AbsenceType{
-			ID:              devAT.ID,
-			TenantID:        nil, // System-level
-			Code:            devAT.Code,
-			Name:            devAT.Name,
-			Description:     &desc,
-			Category:        model.AbsenceCategory(devAT.Category),
-			Portion:         model.AbsencePortion(devAT.Portion),
-			DeductsVacation: devAT.DeductsVacation,
-			Color:           devAT.Color,
-			SortOrder:       devAT.SortOrder,
-			IsSystem:        true,
-			IsActive:        true,
-		}
-		if err := h.absenceService.UpsertDevAbsenceType(r.Context(), at); err != nil {
-			respondError(w, http.StatusInternalServerError, "failed to sync dev absence types to database")
-			return
-		}
-	}
+	// NOTE: Absence types are seeded by migration 000025_create_absence_types.up.sql
+	// No need to seed them again in dev mode
 
 	// Create all dev holidays (tenant-level, idempotent)
 	for _, devH := range auth.GetDevHolidays() {
@@ -309,6 +315,84 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := h.teamService.UpsertDevTeamMember(r.Context(), member); err != nil {
 			respondError(w, http.StatusInternalServerError, "failed to sync dev team members to database")
+			return
+		}
+	}
+
+	// Create all dev bookings (idempotent)
+	for _, devBooking := range auth.GetDevBookings() {
+		booking := &model.Booking{
+			ID:            devBooking.ID,
+			TenantID:      devTenant.ID,
+			EmployeeID:    devBooking.EmployeeID,
+			BookingTypeID: devBooking.BookingTypeID,
+			BookingDate:   devBooking.BookingDate,
+			OriginalTime:  devBooking.OriginalTime,
+			EditedTime:    devBooking.EditedTime,
+			Source:        model.BookingSource(devBooking.Source),
+			PairID:        devBooking.PairID,
+		}
+		if err := h.bookingRepo.Upsert(r.Context(), booking); err != nil {
+			respondError(w, http.StatusInternalServerError, "failed to sync dev bookings to database")
+			return
+		}
+	}
+
+	// Create all dev daily values (idempotent)
+	now := time.Now()
+	for _, devDV := range auth.GetDevDailyValues() {
+		dv := &model.DailyValue{
+			ID:                 devDV.ID,
+			TenantID:           devTenant.ID,
+			EmployeeID:         devDV.EmployeeID,
+			ValueDate:          devDV.ValueDate,
+			GrossTime:          devDV.GrossTime,
+			NetTime:            devDV.NetTime,
+			TargetTime:         devDV.TargetTime,
+			Overtime:           devDV.Overtime,
+			Undertime:          devDV.Undertime,
+			BreakTime:          devDV.BreakTime,
+			HasError:           devDV.HasError,
+			ErrorCodes:         devDV.ErrorCodes,
+			Warnings:           devDV.Warnings,
+			FirstCome:          devDV.FirstCome,
+			LastGo:             devDV.LastGo,
+			BookingCount:       devDV.BookingCount,
+			CalculatedAt:       &now,
+			CalculationVersion: 1,
+		}
+		if err := h.dailyValueRepo.Upsert(r.Context(), dv); err != nil {
+			respondError(w, http.StatusInternalServerError, "failed to sync dev daily values to database")
+			return
+		}
+	}
+
+	// Create all dev monthly values (idempotent)
+	for _, devMV := range auth.GetDevMonthlyValues() {
+		mv := &model.MonthlyValue{
+			ID:               devMV.ID,
+			TenantID:         devTenant.ID,
+			EmployeeID:       devMV.EmployeeID,
+			Year:             devMV.Year,
+			Month:            devMV.Month,
+			TotalGrossTime:   devMV.TotalGrossTime,
+			TotalNetTime:     devMV.TotalNetTime,
+			TotalTargetTime:  devMV.TotalTargetTime,
+			TotalOvertime:    devMV.TotalOvertime,
+			TotalUndertime:   devMV.TotalUndertime,
+			TotalBreakTime:   devMV.TotalBreakTime,
+			FlextimeStart:    devMV.FlextimeStart,
+			FlextimeChange:   devMV.FlextimeChange,
+			FlextimeEnd:      devMV.FlextimeEnd,
+			VacationTaken:    devMV.VacationTaken,
+			SickDays:         devMV.SickDays,
+			OtherAbsenceDays: devMV.OtherAbsenceDays,
+			WorkDays:         devMV.WorkDays,
+			DaysWithErrors:   devMV.DaysWithErrors,
+			IsClosed:         devMV.IsClosed,
+		}
+		if err := h.monthlyValueRepo.Upsert(r.Context(), mv); err != nil {
+			respondError(w, http.StatusInternalServerError, "failed to sync dev monthly values to database")
 			return
 		}
 	}
