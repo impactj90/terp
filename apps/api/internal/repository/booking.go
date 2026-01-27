@@ -139,7 +139,7 @@ func (r *BookingRepository) List(ctx context.Context, filter BookingFilter) ([]m
 		query = query.Offset(filter.Offset)
 	}
 
-	err := query.Order("booking_date DESC, edited_time DESC").Find(&bookings).Error
+	err := query.Preload("BookingType").Order("booking_date DESC, edited_time DESC").Find(&bookings).Error
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list bookings: %w", err)
 	}
@@ -268,4 +268,9 @@ func (r *BookingRepository) ClearCalculatedTime(ctx context.Context, bookingID u
 		return ErrBookingNotFound
 	}
 	return nil
+}
+
+// Upsert creates or updates a booking by ID.
+func (r *BookingRepository) Upsert(ctx context.Context, booking *model.Booking) error {
+	return r.db.GORM.WithContext(ctx).Save(booking).Error
 }
