@@ -27,6 +27,7 @@ export { useDailyValues, type DailyValue } from './use-daily-values'
 // Monthly Values
 export {
   useMonthlyValues,
+  useYearOverview,
   useCloseMonth,
   useReopenMonth,
   useRecalculateMonth,

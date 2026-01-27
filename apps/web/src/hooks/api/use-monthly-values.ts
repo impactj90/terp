@@ -133,6 +133,38 @@ interface CloseMonthParams {
   month: number
 }
 
+interface UseYearOverviewOptions {
+  employeeId?: string
+  year?: number
+  enabled?: boolean
+}
+
+interface YearOverviewApiResponse {
+  year: number
+  data: Omit<MonthSummary, 'id'>[]
+}
+
+/**
+ * Hook to fetch all monthly values for an employee for a given year.
+ * Uses the /employees/{id}/months/{year} endpoint (no month parameter).
+ *
+ * Returns { data: MonthSummary[] } with all months that have data.
+ */
+export function useYearOverview(options: UseYearOverviewOptions = {}) {
+  const { employeeId, year, enabled = true } = options
+
+  return useQuery<MonthlyValuesResponse>({
+    queryKey: ['employees', employeeId, 'months', year],
+    queryFn: async () => {
+      const response: YearOverviewApiResponse = await apiRequest(
+        `/employees/${employeeId}/months/${year}`
+      )
+      return { data: (response.data ?? []).map(addLegacyFields) }
+    },
+    enabled: enabled && !!employeeId && !!year,
+  })
+}
+
 /**
  * Hook to close a month for an employee.
  * Uses the /employees/{id}/months/{year}/{month}/close endpoint.
