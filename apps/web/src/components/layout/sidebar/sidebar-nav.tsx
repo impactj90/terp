@@ -72,7 +72,7 @@ export function SidebarNav({ sections = navConfig }: SidebarNavProps) {
   }, [sections, userRole])
 
   return (
-    <ScrollArea className="flex-1 px-3">
+    <ScrollArea className="flex-1 min-h-0 px-3">
       <nav className="flex flex-col gap-1 py-2" aria-label="Main navigation">
         {visibleSections.map((section, index) => (
           <div key={section.titleKey} role="group" aria-labelledby={`nav-section-${index}`}>

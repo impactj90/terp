@@ -65,7 +65,10 @@ export function MobileSidebarSheet({
         </div>
 
         {/* Navigation */}
-        <div className="flex-1 overflow-hidden" onClick={() => onOpenChange(false)}>
+        <div
+          className="flex min-h-0 flex-1 overflow-hidden"
+          onClick={() => onOpenChange(false)}
+        >
           <SidebarNav />
         </div>
 
