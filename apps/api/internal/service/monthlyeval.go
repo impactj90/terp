@@ -401,3 +401,14 @@ func (s *MonthlyEvalService) GetYearOverview(ctx context.Context, employeeID uui
 
 	return summaries, nil
 }
+
+// GetDailyBreakdown retrieves daily values for a specific month.
+// Returns the daily values for the given employee, year, and month.
+func (s *MonthlyEvalService) GetDailyBreakdown(ctx context.Context, employeeID uuid.UUID, year, month int) ([]model.DailyValue, error) {
+	if err := validateYearMonth(year, month); err != nil {
+		return nil, err
+	}
+
+	from, to := monthDateRange(year, month)
+	return s.dailyValueRepo.GetByEmployeeDateRange(ctx, employeeID, from, to)
+}

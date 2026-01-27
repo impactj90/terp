@@ -248,6 +248,7 @@ func RegisterMonthlyEvalRoutes(r chi.Router, h *MonthlyEvalHandler) {
 		r.Get("/{year}", h.GetYearOverview)
 		r.Route("/{year}/{month}", func(r chi.Router) {
 			r.Get("/", h.GetMonthSummary)
+			r.Get("/days", h.GetDailyBreakdown)
 			r.Post("/close", h.CloseMonth)
 			r.Post("/reopen", h.ReopenMonth)
 			r.Post("/recalculate", h.Recalculate)

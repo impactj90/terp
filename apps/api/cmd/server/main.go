@@ -142,6 +142,9 @@ func main() {
 		tariffService,
 		departmentService,
 		teamService,
+		bookingRepo,
+		dailyValueRepo,
+		monthlyValueRepo,
 	)
 	userHandler := handler.NewUserHandler(userService)
 	tenantHandler := handler.NewTenantHandler(tenantService)

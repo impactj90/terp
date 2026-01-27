@@ -109,8 +109,5 @@ func (r *AbsenceTypeRepository) ListByCategory(ctx context.Context, tenantID uui
 // Upsert creates or updates an absence type by ID.
 // Used for dev mode seeding of system absence types.
 func (r *AbsenceTypeRepository) Upsert(ctx context.Context, at *model.AbsenceType) error {
-	return r.db.GORM.WithContext(ctx).
-		Where("id = ?", at.ID).
-		Assign(at).
-		FirstOrCreate(at).Error
+	return r.db.GORM.WithContext(ctx).Save(at).Error
 }
