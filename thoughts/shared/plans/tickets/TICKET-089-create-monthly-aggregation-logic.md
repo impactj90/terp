@@ -1,13 +1,31 @@
 # TICKET-089: Create Monthly Aggregation Logic
 
 **Type**: Calculation
-**Effort**: M
-**Sprint**: 22 - Monthly Calculation
-**Dependencies**: TICKET-060
+**Effort**: L
+**Sprint**: 17 - Monthly Calculation
+**Dependencies**: TICKET-060, TICKET-098 (account value service)
+
+## Integration Notes
+
+> - **Account posting**: Aggregated values should be posted to accounts via TICKET-098 (Account Value Service)
+> - Flextime balance updates the employee's flextime account
+> - Capping rules from TICKET-126 may apply at month-end
 
 ## Description
 
-Implement monthly calculation aggregation logic.
+Implement monthly calculation aggregation logic with ZMI-compliant credit types and capping rules.
+
+## ZMI Reference
+
+> "Art der Gutschrift: 1=Keine Bewertung, 2=Kompletter Übertrag, 3=Nach einer Schwelle, 4=Kein Übertrag"
+> "Gleitzeitschwelle: Minuten, die erreicht sein müssen für Gutschrift"
+> "Untergrenze Jahreszeitkonto: Negativer Stand des Zeitkontos"
+
+Credit types explained:
+1. **Keine Bewertung** (No evaluation): Direct 1:1 transfer
+2. **Kompletter Übertrag** (Complete carryover): Transfer with positive/negative caps
+3. **Nach einer Schwelle** (After threshold): Only overtime above threshold credited
+4. **Kein Übertrag** (No carryover): Reset to zero each month
 
 ## Files to Create
 
@@ -23,29 +41,66 @@ import (
     "github.com/shopspring/decimal"
 )
 
+// CreditType represents how flextime/overtime is credited
+// ZMI: Art der Gutschrift
+type CreditType string
+
+const (
+    // CreditTypeNoEvaluation - Direct 1:1 transfer, no limits
+    // ZMI: Keine Bewertung
+    CreditTypeNoEvaluation CreditType = "no_evaluation"
+
+    // CreditTypeCompleteCarryover - Transfer with positive/negative caps
+    // ZMI: Kompletter Übertrag
+    CreditTypeCompleteCarryover CreditType = "complete_carryover"
+
+    // CreditTypeAfterThreshold - Only overtime above threshold credited
+    // ZMI: Nach einer Schwelle
+    CreditTypeAfterThreshold CreditType = "after_threshold"
+
+    // CreditTypeNoCarryover - Reset to zero each month
+    // ZMI: Kein Übertrag
+    CreditTypeNoCarryover CreditType = "no_carryover"
+)
+
 // MonthlyCalcInput contains all data needed to calculate a month
 type MonthlyCalcInput struct {
     DailyValues       []DailyValueInput
-    PreviousCarryover int // Flextime carryover from previous month
+    PreviousCarryover int // Flextime carryover from previous month (minutes)
     EvaluationRules   *MonthlyEvaluationInput
     AbsenceSummary    AbsenceSummaryInput
 }
 
 type DailyValueInput struct {
-    Date       string // For reference
-    GrossTime  int
-    NetTime    int
-    TargetTime int
-    Overtime   int
-    Undertime  int
-    BreakTime  int
+    Date       string // YYYY-MM-DD for reference
+    GrossTime  int    // Minutes
+    NetTime    int    // Minutes
+    TargetTime int    // Minutes
+    Overtime   int    // Minutes (positive)
+    Undertime  int    // Minutes (positive, to subtract)
+    BreakTime  int    // Minutes
     HasError   bool
 }
 
+// MonthlyEvaluationInput contains ZMI evaluation rules
 type MonthlyEvaluationInput struct {
+    // ZMI: Art der Gutschrift
+    CreditType CreditType
+
+    // ZMI: Gleitzeitschwelle - minutes threshold for CreditTypeAfterThreshold
+    FlextimeThreshold *int
+
+    // ZMI: Maximale Gleitzeit im Monat - monthly credit cap (minutes)
+    MaxFlextimePerMonth *int
+
+    // ZMI: Obergrenze Gleitzeit - positive cap for carryover (minutes)
     FlextimeCapPositive *int
+
+    // ZMI: Untergrenze Gleitzeit - negative cap for carryover (minutes, stored as positive)
     FlextimeCapNegative *int
-    OvertimeThreshold   *int
+
+    // ZMI: Untergrenze Jahreszeitkonto - annual floor (minutes)
+    AnnualFloorBalance *int
 }
 
 type AbsenceSummaryInput struct {
@@ -56,7 +111,7 @@ type AbsenceSummaryInput struct {
 
 // MonthlyCalcOutput contains calculated monthly results
 type MonthlyCalcOutput struct {
-    // Aggregated totals
+    // Aggregated totals (all in minutes)
     TotalGrossTime  int
     TotalNetTime    int
     TotalTargetTime int
@@ -64,11 +119,13 @@ type MonthlyCalcOutput struct {
     TotalUndertime  int
     TotalBreakTime  int
 
-    // Flextime
-    FlextimeStart    int
-    FlextimeChange   int
-    FlextimeEnd      int
-    FlextimeCarryover int
+    // Flextime calculation
+    FlextimeStart     int // Previous month carryover
+    FlextimeChange    int // This month's change
+    FlextimeRaw       int // Before caps: Start + Change
+    FlextimeCredited  int // Amount actually credited (after threshold)
+    FlextimeForfeited int // Amount forfeited (below threshold or caps)
+    FlextimeEnd       int // Final balance after caps
 
     // Summary
     WorkDays       int
@@ -78,6 +135,9 @@ type MonthlyCalcOutput struct {
     VacationTaken    decimal.Decimal
     SickDays         int
     OtherAbsenceDays int
+
+    // Warnings/info
+    Warnings []string
 }
 
 // CalculateMonth aggregates daily values into monthly totals
@@ -87,9 +147,10 @@ func CalculateMonth(input MonthlyCalcInput) MonthlyCalcOutput {
         VacationTaken:    input.AbsenceSummary.VacationDays,
         SickDays:         input.AbsenceSummary.SickDays,
         OtherAbsenceDays: input.AbsenceSummary.OtherAbsenceDays,
+        Warnings:         []string{},
     }
 
-    // Aggregate daily values
+    // Step 1: Aggregate daily values
     for _, dv := range input.DailyValues {
         output.TotalGrossTime += dv.GrossTime
         output.TotalNetTime += dv.NetTime
@@ -106,230 +167,351 @@ func CalculateMonth(input MonthlyCalcInput) MonthlyCalcOutput {
         }
     }
 
-    // Calculate flextime change
+    // Step 2: Calculate raw flextime change
     output.FlextimeChange = output.TotalOvertime - output.TotalUndertime
+    output.FlextimeRaw = output.FlextimeStart + output.FlextimeChange
 
-    // Calculate end balance
-    output.FlextimeEnd = output.FlextimeStart + output.FlextimeChange
-
-    // Apply caps if evaluation rules exist
+    // Step 3: Apply credit type rules
     if input.EvaluationRules != nil {
-        output.FlextimeCarryover = applyFlextimeCaps(
-            output.FlextimeEnd,
-            input.EvaluationRules.FlextimeCapPositive,
-            input.EvaluationRules.FlextimeCapNegative,
-        )
+        output = applyCreditType(output, *input.EvaluationRules)
     } else {
-        output.FlextimeCarryover = output.FlextimeEnd
+        // Default: no evaluation (direct transfer)
+        output.FlextimeCredited = output.FlextimeChange
+        output.FlextimeEnd = output.FlextimeRaw
     }
 
     return output
 }
 
-func applyFlextimeCaps(flextime int, capPositive, capNegative *int) int {
+// applyCreditType applies ZMI credit type rules
+func applyCreditType(output MonthlyCalcOutput, rules MonthlyEvaluationInput) MonthlyCalcOutput {
+    switch rules.CreditType {
+    case CreditTypeNoEvaluation:
+        // ZMI: Keine Bewertung - direct 1:1 transfer
+        output.FlextimeCredited = output.FlextimeChange
+        output.FlextimeEnd = output.FlextimeRaw
+
+    case CreditTypeCompleteCarryover:
+        // ZMI: Kompletter Übertrag - apply caps
+        output.FlextimeCredited = output.FlextimeChange
+
+        // Apply monthly cap if configured
+        if rules.MaxFlextimePerMonth != nil && output.FlextimeCredited > *rules.MaxFlextimePerMonth {
+            output.FlextimeForfeited = output.FlextimeCredited - *rules.MaxFlextimePerMonth
+            output.FlextimeCredited = *rules.MaxFlextimePerMonth
+            output.Warnings = append(output.Warnings, "MONTHLY_CAP_REACHED")
+        }
+
+        output.FlextimeEnd = output.FlextimeStart + output.FlextimeCredited
+
+        // Apply positive/negative caps
+        output.FlextimeEnd, output.FlextimeForfeited = applyFlextimeCaps(
+            output.FlextimeEnd,
+            rules.FlextimeCapPositive,
+            rules.FlextimeCapNegative,
+            output.FlextimeForfeited,
+        )
+
+        if output.FlextimeForfeited > 0 {
+            output.Warnings = append(output.Warnings, "FLEXTIME_CAPPED")
+        }
+
+    case CreditTypeAfterThreshold:
+        // ZMI: Nach einer Schwelle - only credit above threshold
+        threshold := 0
+        if rules.FlextimeThreshold != nil {
+            threshold = *rules.FlextimeThreshold
+        }
+
+        if output.FlextimeChange > threshold {
+            // Credit only the amount above threshold
+            output.FlextimeCredited = output.FlextimeChange - threshold
+            output.FlextimeForfeited = threshold
+        } else if output.FlextimeChange > 0 {
+            // Below threshold - entire positive amount forfeited
+            output.FlextimeCredited = 0
+            output.FlextimeForfeited = output.FlextimeChange
+            output.Warnings = append(output.Warnings, "BELOW_THRESHOLD")
+        } else {
+            // Negative (undertime) - still deducted
+            output.FlextimeCredited = output.FlextimeChange
+            output.FlextimeForfeited = 0
+        }
+
+        output.FlextimeEnd = output.FlextimeStart + output.FlextimeCredited
+
+        // Apply caps
+        output.FlextimeEnd, _ = applyFlextimeCaps(
+            output.FlextimeEnd,
+            rules.FlextimeCapPositive,
+            rules.FlextimeCapNegative,
+            0,
+        )
+
+    case CreditTypeNoCarryover:
+        // ZMI: Kein Übertrag - reset to zero
+        output.FlextimeCredited = 0
+        output.FlextimeForfeited = output.FlextimeChange
+        if output.FlextimeChange > 0 {
+            output.FlextimeForfeited = output.FlextimeChange
+        }
+        output.FlextimeEnd = 0
+        output.Warnings = append(output.Warnings, "NO_CARRYOVER")
+
+    default:
+        // Default: no evaluation
+        output.FlextimeCredited = output.FlextimeChange
+        output.FlextimeEnd = output.FlextimeRaw
+    }
+
+    return output
+}
+
+// applyFlextimeCaps applies positive and negative caps
+// Returns (capped value, additional forfeited amount)
+func applyFlextimeCaps(flextime int, capPositive, capNegative *int, existingForfeited int) (int, int) {
     result := flextime
+    forfeited := existingForfeited
+
     if capPositive != nil && result > *capPositive {
+        forfeited += result - *capPositive
         result = *capPositive
     }
     if capNegative != nil && result < -*capNegative {
+        // Note: capNegative is stored as positive value
         result = -*capNegative
     }
-    return result
+
+    return result, forfeited
+}
+
+// CalculateAnnualCarryover calculates year-end carryover with annual floor
+// ZMI: Untergrenze Jahreszeitkonto
+func CalculateAnnualCarryover(currentBalance, annualFloor *int) int {
+    if currentBalance == nil {
+        return 0
+    }
+    balance := *currentBalance
+
+    if annualFloor != nil && balance < -*annualFloor {
+        return -*annualFloor
+    }
+
+    return balance
 }
 ```
 
 ## Unit Tests
 
-**Test file**: `apps/api/internal/calculation/monthly_test.go`
-
-Table-driven tests for monthly aggregation using testify/assert:
+**File**: `apps/api/internal/calculation/monthly_test.go`
 
 ```go
-func TestCalculateMonth(t *testing.T) {
+package calculation
+
+import (
+    "testing"
+
+    "github.com/shopspring/decimal"
+    "github.com/stretchr/testify/assert"
+)
+
+func intPtr(i int) *int {
+    return &i
+}
+
+func TestCalculateMonth_CreditTypeNoEvaluation(t *testing.T) {
+    input := MonthlyCalcInput{
+        DailyValues: []DailyValueInput{
+            {NetTime: 540, TargetTime: 480, Overtime: 60},
+            {NetTime: 540, TargetTime: 480, Overtime: 60},
+        },
+        PreviousCarryover: 100,
+        EvaluationRules: &MonthlyEvaluationInput{
+            CreditType: CreditTypeNoEvaluation,
+        },
+    }
+
+    output := CalculateMonth(input)
+
+    assert.Equal(t, 100, output.FlextimeStart)
+    assert.Equal(t, 120, output.FlextimeChange)
+    assert.Equal(t, 120, output.FlextimeCredited)
+    assert.Equal(t, 220, output.FlextimeEnd)
+    assert.Equal(t, 0, output.FlextimeForfeited)
+}
+
+func TestCalculateMonth_CreditTypeCompleteCarryover_WithCaps(t *testing.T) {
+    input := MonthlyCalcInput{
+        DailyValues: []DailyValueInput{
+            {Overtime: 100},
+            {Overtime: 100},
+        },
+        PreviousCarryover: 50,
+        EvaluationRules: &MonthlyEvaluationInput{
+            CreditType:          CreditTypeCompleteCarryover,
+            FlextimeCapPositive: intPtr(200),
+        },
+    }
+
+    output := CalculateMonth(input)
+
+    assert.Equal(t, 50, output.FlextimeStart)
+    assert.Equal(t, 200, output.FlextimeChange)
+    assert.Equal(t, 200, output.FlextimeCredited)
+    assert.Equal(t, 200, output.FlextimeEnd) // Capped at 200
+    assert.Equal(t, 50, output.FlextimeForfeited)
+    assert.Contains(t, output.Warnings, "FLEXTIME_CAPPED")
+}
+
+func TestCalculateMonth_CreditTypeAfterThreshold(t *testing.T) {
     tests := []struct {
-        name                  string
-        input                 MonthlyCalcInput
-        expectedTotalNet      int
-        expectedTotalTarget   int
-        expectedFlextimeStart int
-        expectedFlextimeEnd   int
-        expectedCarryover     int
-        expectedWorkDays      int
+        name              string
+        overtime          int
+        threshold         int
+        expectedCredited  int
+        expectedForfeited int
+        expectWarning     bool
     }{
         {
-            name: "basic month - balanced",
-            input: MonthlyCalcInput{
-                DailyValues: []DailyValueInput{
-                    {NetTime: 480, TargetTime: 480, Overtime: 0, Undertime: 0},
-                    {NetTime: 510, TargetTime: 480, Overtime: 30, Undertime: 0},
-                    {NetTime: 450, TargetTime: 480, Overtime: 0, Undertime: 30},
-                },
-                PreviousCarryover: 60,
-            },
-            expectedTotalNet:      1440,
-            expectedTotalTarget:   1440,
-            expectedFlextimeStart: 60,
-            expectedFlextimeEnd:   60,
-            expectedCarryover:     60,
-            expectedWorkDays:      3,
+            name:              "above threshold",
+            overtime:          120,
+            threshold:         60,
+            expectedCredited:  60,  // 120 - 60
+            expectedForfeited: 60,
+            expectWarning:     false,
         },
         {
-            name: "with positive cap",
-            input: MonthlyCalcInput{
-                DailyValues: []DailyValueInput{
-                    {Overtime: 60, GrossTime: 540},
-                    {Overtime: 60, GrossTime: 540},
-                    {Overtime: 60, GrossTime: 540},
-                },
-                PreviousCarryover: 0,
-                EvaluationRules: &MonthlyEvaluationInput{
-                    FlextimeCapPositive: intPtr(120),
-                },
-            },
-            expectedFlextimeEnd: 180,
-            expectedCarryover:   120,
-            expectedWorkDays:    3,
+            name:              "at threshold",
+            overtime:          60,
+            threshold:         60,
+            expectedCredited:  0,
+            expectedForfeited: 60,
+            expectWarning:     true,
         },
         {
-            name: "with negative cap",
-            input: MonthlyCalcInput{
-                DailyValues: []DailyValueInput{
-                    {Undertime: 60, TargetTime: 480, NetTime: 420},
-                    {Undertime: 60, TargetTime: 480, NetTime: 420},
-                    {Undertime: 60, TargetTime: 480, NetTime: 420},
-                },
-                PreviousCarryover: 0,
-                EvaluationRules: &MonthlyEvaluationInput{
-                    FlextimeCapNegative: intPtr(120),
-                },
-            },
-            expectedFlextimeEnd: -180,
-            expectedCarryover:   -120,
-            expectedWorkDays:    3,
-        },
-        {
-            name: "empty month - no work days",
-            input: MonthlyCalcInput{
-                DailyValues:       []DailyValueInput{},
-                PreviousCarryover: 30,
-            },
-            expectedFlextimeStart: 30,
-            expectedFlextimeEnd:   30,
-            expectedCarryover:     30,
-            expectedWorkDays:      0,
-        },
-        {
-            name: "month with errors",
-            input: MonthlyCalcInput{
-                DailyValues: []DailyValueInput{
-                    {NetTime: 480, HasError: false},
-                    {NetTime: 0, HasError: true},
-                    {NetTime: 480, HasError: true},
-                },
-                PreviousCarryover: 0,
-            },
-            expectedTotalNet: 960,
-            expectedWorkDays: 2,
-        },
-        {
-            name: "carryover from previous month",
-            input: MonthlyCalcInput{
-                DailyValues: []DailyValueInput{
-                    {NetTime: 480, TargetTime: 480},
-                },
-                PreviousCarryover: 120,
-            },
-            expectedFlextimeStart: 120,
-            expectedFlextimeEnd:   120,
-            expectedCarryover:     120,
-        },
-        {
-            name: "overtime accumulated",
-            input: MonthlyCalcInput{
-                DailyValues: []DailyValueInput{
-                    {NetTime: 540, TargetTime: 480, Overtime: 60},
-                    {NetTime: 540, TargetTime: 480, Overtime: 60},
-                },
-                PreviousCarryover: 0,
-            },
-            expectedTotalNet:    1080,
-            expectedTotalTarget: 960,
-            expectedFlextimeEnd: 120,
-            expectedCarryover:   120,
-        },
-        {
-            name: "undertime accumulated",
-            input: MonthlyCalcInput{
-                DailyValues: []DailyValueInput{
-                    {NetTime: 420, TargetTime: 480, Undertime: 60},
-                    {NetTime: 420, TargetTime: 480, Undertime: 60},
-                },
-                PreviousCarryover: 0,
-            },
-            expectedTotalNet:    840,
-            expectedTotalTarget: 960,
-            expectedFlextimeEnd: -120,
-            expectedCarryover:   -120,
-        },
-        {
-            name: "both caps applied",
-            input: MonthlyCalcInput{
-                DailyValues: []DailyValueInput{
-                    {Overtime: 100},
-                },
-                PreviousCarryover: 50,
-                EvaluationRules: &MonthlyEvaluationInput{
-                    FlextimeCapPositive: intPtr(120),
-                    FlextimeCapNegative: intPtr(60),
-                },
-            },
-            expectedFlextimeEnd: 150,
-            expectedCarryover:   120,
+            name:              "below threshold",
+            overtime:          30,
+            threshold:         60,
+            expectedCredited:  0,
+            expectedForfeited: 30,
+            expectWarning:     true,
         },
     }
 
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
-            output := CalculateMonth(tt.input)
+            input := MonthlyCalcInput{
+                DailyValues: []DailyValueInput{
+                    {Overtime: tt.overtime},
+                },
+                PreviousCarryover: 0,
+                EvaluationRules: &MonthlyEvaluationInput{
+                    CreditType:        CreditTypeAfterThreshold,
+                    FlextimeThreshold: intPtr(tt.threshold),
+                },
+            }
 
-            if tt.expectedTotalNet > 0 {
-                assert.Equal(t, tt.expectedTotalNet, output.TotalNetTime)
+            output := CalculateMonth(input)
+
+            assert.Equal(t, tt.expectedCredited, output.FlextimeCredited)
+            assert.Equal(t, tt.expectedForfeited, output.FlextimeForfeited)
+            if tt.expectWarning {
+                assert.Contains(t, output.Warnings, "BELOW_THRESHOLD")
             }
-            if tt.expectedTotalTarget > 0 {
-                assert.Equal(t, tt.expectedTotalTarget, output.TotalTargetTime)
-            }
-            assert.Equal(t, tt.expectedFlextimeStart, output.FlextimeStart)
-            assert.Equal(t, tt.expectedFlextimeEnd, output.FlextimeEnd)
-            assert.Equal(t, tt.expectedCarryover, output.FlextimeCarryover)
-            assert.Equal(t, tt.expectedWorkDays, output.WorkDays)
         })
     }
 }
 
-func TestApplyFlextimeCaps(t *testing.T) {
-    tests := []struct {
-        name        string
-        flextime    int
-        capPositive *int
-        capNegative *int
-        want        int
-    }{
-        {"no caps", 100, nil, nil, 100},
-        {"under positive cap", 100, intPtr(150), nil, 100},
-        {"over positive cap", 200, intPtr(150), nil, 150},
-        {"above negative cap", -100, nil, intPtr(150), -100},
-        {"below negative cap", -200, nil, intPtr(150), -150},
-        {"both caps - positive limited", 200, intPtr(150), intPtr(100), 150},
-        {"both caps - negative limited", -200, intPtr(150), intPtr(100), -100},
-        {"zero flextime", 0, intPtr(150), intPtr(100), 0},
+func TestCalculateMonth_CreditTypeAfterThreshold_Undertime(t *testing.T) {
+    // Undertime should still be deducted even with threshold
+    input := MonthlyCalcInput{
+        DailyValues: []DailyValueInput{
+            {Undertime: 60},
+        },
+        PreviousCarryover: 100,
+        EvaluationRules: &MonthlyEvaluationInput{
+            CreditType:        CreditTypeAfterThreshold,
+            FlextimeThreshold: intPtr(30),
+        },
     }
 
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            result := applyFlextimeCaps(tt.flextime, tt.capPositive, tt.capNegative)
-            assert.Equal(t, tt.want, result)
-        })
+    output := CalculateMonth(input)
+
+    assert.Equal(t, -60, output.FlextimeCredited) // Undertime still deducted
+    assert.Equal(t, 40, output.FlextimeEnd)       // 100 - 60
+}
+
+func TestCalculateMonth_CreditTypeNoCarryover(t *testing.T) {
+    input := MonthlyCalcInput{
+        DailyValues: []DailyValueInput{
+            {Overtime: 120},
+        },
+        PreviousCarryover: 100,
+        EvaluationRules: &MonthlyEvaluationInput{
+            CreditType: CreditTypeNoCarryover,
+        },
     }
+
+    output := CalculateMonth(input)
+
+    assert.Equal(t, 100, output.FlextimeStart)
+    assert.Equal(t, 120, output.FlextimeChange)
+    assert.Equal(t, 0, output.FlextimeCredited)
+    assert.Equal(t, 0, output.FlextimeEnd) // Reset to zero
+    assert.Equal(t, 120, output.FlextimeForfeited)
+    assert.Contains(t, output.Warnings, "NO_CARRYOVER")
+}
+
+func TestCalculateMonth_MonthlyCap(t *testing.T) {
+    input := MonthlyCalcInput{
+        DailyValues: []DailyValueInput{
+            {Overtime: 200},
+        },
+        PreviousCarryover: 0,
+        EvaluationRules: &MonthlyEvaluationInput{
+            CreditType:          CreditTypeCompleteCarryover,
+            MaxFlextimePerMonth: intPtr(120),
+        },
+    }
+
+    output := CalculateMonth(input)
+
+    assert.Equal(t, 120, output.FlextimeCredited) // Capped at monthly max
+    assert.Equal(t, 80, output.FlextimeForfeited) // 200 - 120
+    assert.Contains(t, output.Warnings, "MONTHLY_CAP_REACHED")
+}
+
+func TestCalculateMonth_NegativeCap(t *testing.T) {
+    input := MonthlyCalcInput{
+        DailyValues: []DailyValueInput{
+            {Undertime: 200},
+        },
+        PreviousCarryover: 0,
+        EvaluationRules: &MonthlyEvaluationInput{
+            CreditType:          CreditTypeCompleteCarryover,
+            FlextimeCapNegative: intPtr(100), // -100 floor
+        },
+    }
+
+    output := CalculateMonth(input)
+
+    assert.Equal(t, -100, output.FlextimeEnd) // Capped at -100
+}
+
+func TestCalculateMonth_WorkDaysAndErrors(t *testing.T) {
+    input := MonthlyCalcInput{
+        DailyValues: []DailyValueInput{
+            {NetTime: 480, HasError: false},
+            {NetTime: 480, HasError: true},
+            {NetTime: 0, HasError: true}, // No work, has error
+            {NetTime: 480, HasError: false},
+        },
+    }
+
+    output := CalculateMonth(input)
+
+    assert.Equal(t, 3, output.WorkDays)       // 3 days with NetTime > 0
+    assert.Equal(t, 2, output.DaysWithErrors) // 2 days with errors
 }
 
 func TestCalculateMonth_AbsenceSummary(t *testing.T) {
@@ -348,24 +530,85 @@ func TestCalculateMonth_AbsenceSummary(t *testing.T) {
     assert.Equal(t, 2, output.SickDays)
     assert.Equal(t, 1, output.OtherAbsenceDays)
 }
+
+func TestCalculateAnnualCarryover(t *testing.T) {
+    tests := []struct {
+        name        string
+        balance     *int
+        floor       *int
+        expected    int
+    }{
+        {"nil balance", nil, intPtr(100), 0},
+        {"positive balance, no floor", intPtr(200), nil, 200},
+        {"positive balance, with floor", intPtr(200), intPtr(100), 200},
+        {"negative above floor", intPtr(-50), intPtr(100), -50},
+        {"negative below floor", intPtr(-150), intPtr(100), -100},
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            result := CalculateAnnualCarryover(tt.balance, tt.floor)
+            assert.Equal(t, tt.expected, result)
+        })
+    }
+}
+
+func TestApplyFlextimeCaps(t *testing.T) {
+    tests := []struct {
+        name              string
+        flextime          int
+        capPositive       *int
+        capNegative       *int
+        existingForfeited int
+        expectedResult    int
+        expectedForfeited int
+    }{
+        {"no caps", 100, nil, nil, 0, 100, 0},
+        {"under positive cap", 100, intPtr(150), nil, 0, 100, 0},
+        {"over positive cap", 200, intPtr(150), nil, 0, 150, 50},
+        {"above negative cap", -100, nil, intPtr(150), 0, -100, 0},
+        {"below negative cap", -200, nil, intPtr(100), 0, -100, 0},
+        {"both caps - positive", 200, intPtr(150), intPtr(100), 10, 150, 60},
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            result, forfeited := applyFlextimeCaps(
+                tt.flextime,
+                tt.capPositive,
+                tt.capNegative,
+                tt.existingForfeited,
+            )
+            assert.Equal(t, tt.expectedResult, result)
+            assert.Equal(t, tt.expectedForfeited, forfeited)
+        })
+    }
+}
 ```
 
-Edge cases covered:
-- Empty daily values (no work days)
-- Negative carryover from previous month
-- Zero flextime caps
-- Mix of overtime and undertime in same month
-- Days with errors (counting)
-- Absence summary passthrough
-- Both positive and negative caps applied
-- Boundary conditions for caps
+## ZMI Compliance
+
+| ZMI Feature | Implementation |
+|-------------|----------------|
+| Art der Gutschrift | `CreditType` enum with 4 types |
+| Keine Bewertung | `CreditTypeNoEvaluation` |
+| Kompletter Übertrag | `CreditTypeCompleteCarryover` |
+| Nach einer Schwelle | `CreditTypeAfterThreshold` |
+| Kein Übertrag | `CreditTypeNoCarryover` |
+| Gleitzeitschwelle | `FlextimeThreshold` field |
+| Maximale Gleitzeit im Monat | `MaxFlextimePerMonth` field |
+| Obergrenze Gleitzeit | `FlextimeCapPositive` field |
+| Untergrenze Gleitzeit | `FlextimeCapNegative` field |
+| Untergrenze Jahreszeitkonto | `AnnualFloorBalance` + `CalculateAnnualCarryover()` |
 
 ## Acceptance Criteria
 
-- [ ] `make test` passes
-- [ ] Unit tests for all aggregation functions
-- [ ] Tests cover edge cases and boundary values
-- [ ] Aggregates all daily values correctly
-- [ ] Calculates flextime change
-- [ ] Applies positive and negative caps
-- [ ] Counts work days and error days
+- [ ] All 4 ZMI credit types implemented correctly
+- [ ] Threshold logic: only overtime above threshold credited
+- [ ] Monthly cap: limits monthly credit
+- [ ] Positive/negative caps: limits carryover balance
+- [ ] Annual floor: `CalculateAnnualCarryover()` enforces floor
+- [ ] Forfeited time tracked and reported
+- [ ] Warnings generated for significant events
+- [ ] `make test` passes with comprehensive test coverage
+- [ ] Edge cases covered (zero values, nil configs, negative amounts)
