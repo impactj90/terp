@@ -1,12 +1,21 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
+import { useHasRole } from '@/hooks/use-has-role'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
-import { useDailyValues } from '@/hooks/api'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { useDailyValues, useEmployees } from '@/hooks/api'
 import {
   formatDate,
   getWeekRange,
@@ -27,14 +36,49 @@ type ViewMode = 'day' | 'week' | 'month'
 
 export default function TimesheetPage() {
   const { user } = useAuth()
+  const isAdmin = useHasRole(['admin'])
+  const searchParams = useSearchParams()
   const [viewMode, setViewMode] = useState<ViewMode>('day')
   const [currentDate, setCurrentDate] = useState(new Date())
   const [editingBooking, setEditingBooking] = useState<unknown | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 
-  // TODO: Get employeeId from user context or selector
-  // For now, we use user.id as a placeholder
-  const employeeId = user?.id
+  // For regular users, use their employee_id; for admin, allow selection
+  const userEmployeeId = user?.employee_id ?? undefined
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | undefined>(undefined)
+
+  // Fetch employees for admin selector
+  const { data: employeesData } = useEmployees({
+    enabled: isAdmin,
+    limit: 250,
+  })
+
+  // Read date, view, and employee from URL search params (e.g. from monthly evaluation navigation)
+  useEffect(() => {
+    const dateParam = searchParams.get('date')
+    const viewParam = searchParams.get('view')
+    const employeeParam = searchParams.get('employee')
+    if (dateParam) {
+      const parsed = new Date(dateParam + 'T00:00:00')
+      if (!isNaN(parsed.getTime())) {
+        setCurrentDate(parsed)
+      }
+    }
+    if (viewParam && (viewParam === 'day' || viewParam === 'week' || viewParam === 'month')) {
+      setViewMode(viewParam)
+    }
+    if (employeeParam) {
+      setSelectedEmployeeId(employeeParam)
+    }
+  }, [searchParams])
+
+  const effectiveEmployeeId = isAdmin ? selectedEmployeeId : userEmployeeId
+
+  // Get the selected employee name for display
+  const selectedEmployee = employeesData?.data?.find(emp => emp.id === selectedEmployeeId)
+  const employeeName = selectedEmployee
+    ? `${selectedEmployee.first_name} ${selectedEmployee.last_name}`
+    : user?.display_name
 
   // Calculate period dates based on view mode
   const periodDates = useMemo(() => {
@@ -50,10 +94,10 @@ export default function TimesheetPage() {
 
   // Fetch daily values for export
   const { data: dailyValuesData } = useDailyValues({
-    employeeId,
+    employeeId: effectiveEmployeeId,
     from: formatDate(periodDates.start),
     to: formatDate(periodDates.end),
-    enabled: !!employeeId && viewMode !== 'day',
+    enabled: !!effectiveEmployeeId && viewMode !== 'day',
   })
 
   // Prepare export data
@@ -152,7 +196,9 @@ export default function TimesheetPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Timesheet</h1>
           <p className="text-muted-foreground">
-            View and manage your time entries
+            {employeeName
+              ? `Time entries for ${employeeName}`
+              : 'View and manage time entries'}
           </p>
         </div>
 
@@ -161,22 +207,43 @@ export default function TimesheetPage() {
           viewMode={viewMode}
           periodStart={periodDates.start}
           periodEnd={periodDates.end}
-          employeeId={employeeId}
-          employeeName={user?.display_name}
+          employeeId={effectiveEmployeeId}
+          employeeName={employeeName}
           data={exportData}
         />
       </div>
 
       {/* Controls row */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        {/* View mode tabs */}
-        <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-          <TabsList>
-            <TabsTrigger value="day">Day</TabsTrigger>
-            <TabsTrigger value="week">Week</TabsTrigger>
-            <TabsTrigger value="month">Month</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex items-center gap-4">
+          {/* Employee selector (admin only) */}
+          {isAdmin && (
+            <Select
+              value={selectedEmployeeId ?? ''}
+              onValueChange={setSelectedEmployeeId}
+            >
+              <SelectTrigger className="w-[250px]">
+                <SelectValue placeholder="Select employee..." />
+              </SelectTrigger>
+              <SelectContent>
+                {employeesData?.data?.map((emp) => (
+                  <SelectItem key={emp.id} value={emp.id}>
+                    {emp.first_name} {emp.last_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {/* View mode tabs */}
+          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
+            <TabsList>
+              <TabsTrigger value="day">Day</TabsTrigger>
+              <TabsTrigger value="week">Week</TabsTrigger>
+              <TabsTrigger value="month">Month</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
 
         {/* Period navigation */}
         <div className="flex items-center gap-2">
@@ -203,7 +270,7 @@ export default function TimesheetPage() {
           {viewMode === 'day' && (
             <DayView
               date={currentDate}
-              employeeId={employeeId}
+              employeeId={effectiveEmployeeId}
               isEditable={true}
               onAddBooking={handleAddBooking}
               onEditBooking={handleEditBooking}
@@ -213,7 +280,7 @@ export default function TimesheetPage() {
             <WeekView
               startDate={periodDates.start}
               endDate={periodDates.end}
-              employeeId={employeeId}
+              employeeId={effectiveEmployeeId}
               onDayClick={handleDayClick}
             />
           )}
@@ -221,7 +288,7 @@ export default function TimesheetPage() {
             <MonthView
               year={currentDate.getFullYear()}
               month={currentDate.getMonth() + 1}
-              employeeId={employeeId}
+              employeeId={effectiveEmployeeId}
               onDayClick={handleDayClick}
             />
           )}

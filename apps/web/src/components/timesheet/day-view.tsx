@@ -46,7 +46,7 @@ export function DayView({
   })
 
   const bookings = bookingsData?.data ?? []
-  const dailyValue = dailyValuesData?.data?.[0]
+  const dailyValue = dailyValuesData?.data?.find(dv => dv.value_date === dateString) ?? null
 
   const isLoading = isLoadingBookings || isLoadingDailyValues
 
