@@ -100,6 +100,27 @@ type Employee struct {
 	// phone
 	Phone *string `json:"phone,omitempty"`
 
+	// tariff
+	Tariff struct {
+
+		// code
+		// Required: true
+		Code *string `json:"code"`
+
+		// id
+		// Required: true
+		// Format: uuid
+		ID *strfmt.UUID `json:"id"`
+
+		// name
+		// Required: true
+		Name *string `json:"name"`
+	} `json:"tariff,omitempty"`
+
+	// tariff id
+	// Format: uuid
+	TariffID *strfmt.UUID `json:"tariff_id,omitempty"`
+
 	// tenant id
 	// Required: true
 	// Format: uuid
@@ -187,6 +208,14 @@ func (m *Employee) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validatePersonnelNumber(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateTariff(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateTariffID(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -416,6 +445,42 @@ func (m *Employee) validateLastName(formats strfmt.Registry) error {
 func (m *Employee) validatePersonnelNumber(formats strfmt.Registry) error {
 
 	if err := validate.Required("personnel_number", "body", m.PersonnelNumber); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *Employee) validateTariff(formats strfmt.Registry) error {
+	if swag.IsZero(m.Tariff) { // not required
+		return nil
+	}
+
+	if err := validate.Required("tariff"+"."+"code", "body", m.Tariff.Code); err != nil {
+		return err
+	}
+
+	if err := validate.Required("tariff"+"."+"id", "body", m.Tariff.ID); err != nil {
+		return err
+	}
+
+	if err := validate.FormatOf("tariff"+"."+"id", "body", "uuid", m.Tariff.ID.String(), formats); err != nil {
+		return err
+	}
+
+	if err := validate.Required("tariff"+"."+"name", "body", m.Tariff.Name); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *Employee) validateTariffID(formats strfmt.Registry) error {
+	if swag.IsZero(m.TariffID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("tariff_id", "body", "uuid", m.TariffID.String(), formats); err != nil {
 		return err
 	}
 

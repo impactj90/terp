@@ -51,6 +51,9 @@ type Team struct {
 	// Format: uuid
 	LeaderEmployeeID strfmt.UUID `json:"leader_employee_id,omitempty"`
 
+	// Number of members in the team
+	MemberCount int64 `json:"member_count,omitempty"`
+
 	// members
 	Members []*TeamMember `json:"members"`
 

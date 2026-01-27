@@ -5335,6 +5335,10 @@ definitions:
         type: string
         format: uuid
         x-nullable: true
+      tariff_id:
+        type: string
+        format: uuid
+        x-nullable: true
       weekly_hours:
         type: number
         format: decimal
@@ -5363,6 +5367,22 @@ definitions:
       employment_type:
         allOf:
           - $ref: '#/definitions/EmploymentType'
+        x-nullable: true
+      tariff:
+        allOf:
+          - type: object
+            required:
+              - id
+              - code
+              - name
+            properties:
+              id:
+                type: string
+                format: uuid
+              code:
+                type: string
+              name:
+                type: string
         x-nullable: true
       contacts:
         type: array
@@ -5478,6 +5498,10 @@ definitions:
         type: string
         format: uuid
         x-nullable: true
+      tariff_id:
+        type: string
+        format: uuid
+        x-nullable: true
       is_active:
         type: boolean
   CreateEmployeeRequest:
@@ -5522,6 +5546,9 @@ definitions:
       employment_type_id:
         type: string
         format: uuid
+      tariff_id:
+        type: string
+        format: uuid
       weekly_hours:
         type: number
         format: decimal
@@ -5554,6 +5581,9 @@ definitions:
         type: string
         format: uuid
       employment_type_id:
+        type: string
+        format: uuid
+      tariff_id:
         type: string
         format: uuid
       weekly_hours:
@@ -7158,6 +7188,99 @@ definitions:
       is_active:
         type: boolean
         example: true
+      annual_vacation_days:
+        type: number
+        format: double
+        description: 'ZMI: Jahresurlaub - Base annual vacation days'
+        example: 30
+        x-nullable: true
+      work_days_per_week:
+        type: integer
+        minimum: 1
+        maximum: 7
+        description: 'ZMI: AT pro Woche - Work days per week for vacation pro-rating'
+        example: 5
+        x-nullable: true
+      vacation_basis:
+        type: string
+        enum:
+          - calendar_year
+          - entry_date
+        description: 'ZMI: Urlaubsberechnung Basis - Vacation year calculation basis'
+        example: calendar_year
+      daily_target_hours:
+        type: number
+        format: double
+        description: 'ZMI: Tagessollstunden - Daily target hours'
+        example: 8
+        x-nullable: true
+      weekly_target_hours:
+        type: number
+        format: double
+        description: 'ZMI: Wochensollstunden - Weekly target hours'
+        example: 40
+        x-nullable: true
+      monthly_target_hours:
+        type: number
+        format: double
+        description: 'ZMI: Monatssollstunden - Monthly target hours'
+        example: 173.33
+        x-nullable: true
+      annual_target_hours:
+        type: number
+        format: double
+        description: 'ZMI: Jahressollstunden - Annual target hours'
+        example: 2080
+        x-nullable: true
+      max_flextime_per_month:
+        type: integer
+        description: 'ZMI: Max Gleitzeit im Monat - Max monthly flextime credit in minutes'
+        example: 600
+        x-nullable: true
+      upper_limit_annual:
+        type: integer
+        description: 'ZMI: Obergrenze Jahreszeitkonto - Annual flextime cap in minutes'
+        example: 2400
+        x-nullable: true
+      lower_limit_annual:
+        type: integer
+        description: 'ZMI: Untergrenze Jahreszeitkonto - Annual flextime floor in minutes (can be negative)'
+        example: -600
+        x-nullable: true
+      flextime_threshold:
+        type: integer
+        description: 'ZMI: Gleitzeitschwelle - Overtime threshold in minutes'
+        example: 60
+        x-nullable: true
+      credit_type:
+        type: string
+        enum:
+          - no_evaluation
+          - complete
+          - after_threshold
+          - no_carryover
+        description: 'ZMI: Art der Gutschrift - How flextime is credited at month end'
+        example: no_evaluation
+      rhythm_type:
+        type: string
+        enum:
+          - weekly
+          - rolling_weekly
+          - x_days
+        description: 'ZMI: Zeitplan-Modell - Time plan rhythm type'
+        example: weekly
+      cycle_days:
+        type: integer
+        minimum: 1
+        maximum: 365
+        description: 'ZMI: Tage im Zyklus - For x_days rhythm, number of days in cycle'
+        example: 14
+        x-nullable: true
+      rhythm_start_date:
+        type: string
+        format: date
+        description: 'ZMI: Rhythmus-Startdatum - Start date for rhythm calculation'
+        x-nullable: true
       created_at:
         type: string
         format: date-time
@@ -7172,6 +7295,69 @@ definitions:
         type: array
         items:
           $ref: '#/definitions/TariffBreak'
+      tariff_week_plans:
+        type: array
+        description: Ordered week plans for rolling_weekly rhythm
+        items:
+          type: object
+          required:
+            - id
+            - tariff_id
+            - week_plan_id
+            - sequence_order
+          properties:
+            id:
+              type: string
+              format: uuid
+            tariff_id:
+              type: string
+              format: uuid
+            week_plan_id:
+              type: string
+              format: uuid
+            sequence_order:
+              type: integer
+              description: Position in rotation (1-based)
+              example: 1
+            created_at:
+              type: string
+              format: date-time
+            week_plan:
+              allOf:
+                - $ref: '#/definitions/WeekPlanSummary'
+              x-nullable: true
+      tariff_day_plans:
+        type: array
+        description: Day plans for x_days rhythm
+        items:
+          type: object
+          required:
+            - id
+            - tariff_id
+            - day_position
+          properties:
+            id:
+              type: string
+              format: uuid
+            tariff_id:
+              type: string
+              format: uuid
+            day_position:
+              type: integer
+              description: Position in cycle (1-based)
+              example: 1
+            day_plan_id:
+              type: string
+              format: uuid
+              x-nullable: true
+              description: NULL = off day
+            created_at:
+              type: string
+              format: date-time
+            day_plan:
+              allOf:
+                - $ref: '#/definitions/DayPlanSummary'
+              x-nullable: true
   TariffBreak:
     type: object
     required:
@@ -7238,6 +7424,84 @@ definitions:
       valid_to:
         type: string
         format: date
+      rhythm_type:
+        type: string
+        enum:
+          - weekly
+          - rolling_weekly
+          - x_days
+        description: 'Time plan rhythm type (default: weekly)'
+      cycle_days:
+        type: integer
+        minimum: 1
+        maximum: 365
+        description: 'For x_days rhythm: number of days in cycle'
+      rhythm_start_date:
+        type: string
+        format: date
+        description: Start date for rhythm calculation
+      week_plan_ids:
+        type: array
+        description: 'For rolling_weekly: ordered list of week plan IDs'
+        items:
+          type: string
+          format: uuid
+      day_plans:
+        type: array
+        description: 'For x_days: day plans per position in cycle'
+        items:
+          type: object
+          required:
+            - day_position
+          properties:
+            day_position:
+              type: integer
+              minimum: 1
+              description: Position in cycle (1-based)
+            day_plan_id:
+              type: string
+              format: uuid
+              x-nullable: true
+              description: 'Day plan ID, null for off day'
+      annual_vacation_days:
+        type: number
+        format: double
+      work_days_per_week:
+        type: integer
+        minimum: 1
+        maximum: 7
+      vacation_basis:
+        type: string
+        enum:
+          - calendar_year
+          - entry_date
+      daily_target_hours:
+        type: number
+        format: double
+      weekly_target_hours:
+        type: number
+        format: double
+      monthly_target_hours:
+        type: number
+        format: double
+      annual_target_hours:
+        type: number
+        format: double
+      max_flextime_per_month:
+        type: integer
+      upper_limit_annual:
+        type: integer
+      lower_limit_annual:
+        type: integer
+      flextime_threshold:
+        type: integer
+      credit_type:
+        type: string
+        enum:
+          - no_evaluation
+          - complete
+          - after_threshold
+          - no_carryover
   UpdateTariffRequest:
     type: object
     properties:
@@ -7258,6 +7522,84 @@ definitions:
         format: date
       is_active:
         type: boolean
+      rhythm_type:
+        type: string
+        enum:
+          - weekly
+          - rolling_weekly
+          - x_days
+        description: Time plan rhythm type
+      cycle_days:
+        type: integer
+        minimum: 1
+        maximum: 365
+        x-nullable: true
+        description: 'For x_days rhythm: number of days in cycle'
+      rhythm_start_date:
+        type: string
+        format: date
+        x-nullable: true
+        description: Start date for rhythm calculation
+      week_plan_ids:
+        type: array
+        description: 'For rolling_weekly: ordered list of week plan IDs'
+        items:
+          type: string
+          format: uuid
+      day_plans:
+        type: array
+        description: 'For x_days: day plans per position in cycle'
+        items:
+          $ref: '#/definitions/CreateTariffRequest/properties/day_plans/items'
+      annual_vacation_days:
+        type: number
+        format: double
+        x-nullable: true
+      work_days_per_week:
+        type: integer
+        minimum: 1
+        maximum: 7
+        x-nullable: true
+      vacation_basis:
+        type: string
+        enum:
+          - calendar_year
+          - entry_date
+      daily_target_hours:
+        type: number
+        format: double
+        x-nullable: true
+      weekly_target_hours:
+        type: number
+        format: double
+        x-nullable: true
+      monthly_target_hours:
+        type: number
+        format: double
+        x-nullable: true
+      annual_target_hours:
+        type: number
+        format: double
+        x-nullable: true
+      max_flextime_per_month:
+        type: integer
+        x-nullable: true
+      upper_limit_annual:
+        type: integer
+        x-nullable: true
+      lower_limit_annual:
+        type: integer
+        x-nullable: true
+      flextime_threshold:
+        type: integer
+        x-nullable: true
+      credit_type:
+        type: string
+        enum:
+          - no_evaluation
+          - complete
+          - after_threshold
+          - no_carryover
   TariffList:
     type: object
     required:

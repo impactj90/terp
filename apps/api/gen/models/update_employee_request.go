@@ -52,6 +52,10 @@ type UpdateEmployeeRequest struct {
 	// phone
 	Phone string `json:"phone,omitempty"`
 
+	// tariff id
+	// Format: uuid
+	TariffID strfmt.UUID `json:"tariff_id,omitempty"`
+
 	// vacation days per year
 	VacationDaysPerYear float64 `json:"vacation_days_per_year,omitempty"`
 
@@ -88,6 +92,10 @@ func (m *UpdateEmployeeRequest) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateLastName(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateTariffID(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -183,6 +191,18 @@ func (m *UpdateEmployeeRequest) validateLastName(formats strfmt.Registry) error 
 	}
 
 	if err := validate.MaxLength("last_name", "body", m.LastName, 100); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *UpdateEmployeeRequest) validateTariffID(formats strfmt.Registry) error {
+	if swag.IsZero(m.TariffID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("tariff_id", "body", "uuid", m.TariffID.String(), formats); err != nil {
 		return err
 	}
 

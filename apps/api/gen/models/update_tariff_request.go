@@ -7,6 +7,9 @@ package models
 
 import (
 	"context"
+	"encoding/json"
+	stderrors "errors"
+	"strconv"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -19,16 +22,64 @@ import (
 // swagger:model UpdateTariffRequest
 type UpdateTariffRequest struct {
 
+	// annual target hours
+	AnnualTargetHours *float64 `json:"annual_target_hours,omitempty"`
+
+	// annual vacation days
+	AnnualVacationDays *float64 `json:"annual_vacation_days,omitempty"`
+
+	// credit type
+	// Enum: ["no_evaluation","complete","after_threshold","no_carryover"]
+	CreditType string `json:"credit_type,omitempty"`
+
+	// For x_days rhythm: number of days in cycle
+	// Maximum: 365
+	// Minimum: 1
+	CycleDays *int64 `json:"cycle_days,omitempty"`
+
+	// daily target hours
+	DailyTargetHours *float64 `json:"daily_target_hours,omitempty"`
+
+	// For x_days: day plans per position in cycle
+	DayPlans []*CreateTariffRequestDayPlansItems `json:"day_plans"`
+
 	// description
 	Description string `json:"description,omitempty"`
 
+	// flextime threshold
+	FlextimeThreshold *int64 `json:"flextime_threshold,omitempty"`
+
 	// is active
 	IsActive bool `json:"is_active,omitempty"`
+
+	// lower limit annual
+	LowerLimitAnnual *int64 `json:"lower_limit_annual,omitempty"`
+
+	// max flextime per month
+	MaxFlextimePerMonth *int64 `json:"max_flextime_per_month,omitempty"`
+
+	// monthly target hours
+	MonthlyTargetHours *float64 `json:"monthly_target_hours,omitempty"`
 
 	// name
 	// Max Length: 255
 	// Min Length: 1
 	Name string `json:"name,omitempty"`
+
+	// Start date for rhythm calculation
+	// Format: date
+	RhythmStartDate *strfmt.Date `json:"rhythm_start_date,omitempty"`
+
+	// Time plan rhythm type
+	// Enum: ["weekly","rolling_weekly","x_days"]
+	RhythmType string `json:"rhythm_type,omitempty"`
+
+	// upper limit annual
+	UpperLimitAnnual *int64 `json:"upper_limit_annual,omitempty"`
+
+	// vacation basis
+	// Enum: ["calendar_year","entry_date"]
+	VacationBasis string `json:"vacation_basis,omitempty"`
 
 	// valid from
 	// Format: date
@@ -41,13 +92,48 @@ type UpdateTariffRequest struct {
 	// week plan id
 	// Format: uuid
 	WeekPlanID strfmt.UUID `json:"week_plan_id,omitempty"`
+
+	// For rolling_weekly: ordered list of week plan IDs
+	WeekPlanIds []strfmt.UUID `json:"week_plan_ids"`
+
+	// weekly target hours
+	WeeklyTargetHours *float64 `json:"weekly_target_hours,omitempty"`
+
+	// work days per week
+	// Maximum: 7
+	// Minimum: 1
+	WorkDaysPerWeek *int64 `json:"work_days_per_week,omitempty"`
 }
 
 // Validate validates this update tariff request
 func (m *UpdateTariffRequest) Validate(formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.validateCreditType(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateCycleDays(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateDayPlans(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateName(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateRhythmStartDate(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateRhythmType(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateVacationBasis(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -63,9 +149,111 @@ func (m *UpdateTariffRequest) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
+	if err := m.validateWeekPlanIds(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateWorkDaysPerWeek(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+var updateTariffRequestTypeCreditTypePropEnum []any
+
+func init() {
+	var res []string
+	if err := json.Unmarshal([]byte(`["no_evaluation","complete","after_threshold","no_carryover"]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		updateTariffRequestTypeCreditTypePropEnum = append(updateTariffRequestTypeCreditTypePropEnum, v)
+	}
+}
+
+const (
+
+	// UpdateTariffRequestCreditTypeNoEvaluation captures enum value "no_evaluation"
+	UpdateTariffRequestCreditTypeNoEvaluation string = "no_evaluation"
+
+	// UpdateTariffRequestCreditTypeComplete captures enum value "complete"
+	UpdateTariffRequestCreditTypeComplete string = "complete"
+
+	// UpdateTariffRequestCreditTypeAfterThreshold captures enum value "after_threshold"
+	UpdateTariffRequestCreditTypeAfterThreshold string = "after_threshold"
+
+	// UpdateTariffRequestCreditTypeNoCarryover captures enum value "no_carryover"
+	UpdateTariffRequestCreditTypeNoCarryover string = "no_carryover"
+)
+
+// prop value enum
+func (m *UpdateTariffRequest) validateCreditTypeEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, updateTariffRequestTypeCreditTypePropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *UpdateTariffRequest) validateCreditType(formats strfmt.Registry) error {
+	if swag.IsZero(m.CreditType) { // not required
+		return nil
+	}
+
+	// value enum
+	if err := m.validateCreditTypeEnum("credit_type", "body", m.CreditType); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *UpdateTariffRequest) validateCycleDays(formats strfmt.Registry) error {
+	if swag.IsZero(m.CycleDays) { // not required
+		return nil
+	}
+
+	if err := validate.MinimumInt("cycle_days", "body", *m.CycleDays, 1, false); err != nil {
+		return err
+	}
+
+	if err := validate.MaximumInt("cycle_days", "body", *m.CycleDays, 365, false); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *UpdateTariffRequest) validateDayPlans(formats strfmt.Registry) error {
+	if swag.IsZero(m.DayPlans) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.DayPlans); i++ {
+		if swag.IsZero(m.DayPlans[i]) { // not required
+			continue
+		}
+
+		if m.DayPlans[i] != nil {
+			if err := m.DayPlans[i].Validate(formats); err != nil {
+				ve := new(errors.Validation)
+				if stderrors.As(err, &ve) {
+					return ve.ValidateName("day_plans" + "." + strconv.Itoa(i))
+				}
+				ce := new(errors.CompositeError)
+				if stderrors.As(err, &ce) {
+					return ce.ValidateName("day_plans" + "." + strconv.Itoa(i))
+				}
+
+				return err
+			}
+		}
+
+	}
+
 	return nil
 }
 
@@ -79,6 +267,105 @@ func (m *UpdateTariffRequest) validateName(formats strfmt.Registry) error {
 	}
 
 	if err := validate.MaxLength("name", "body", m.Name, 255); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *UpdateTariffRequest) validateRhythmStartDate(formats strfmt.Registry) error {
+	if swag.IsZero(m.RhythmStartDate) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("rhythm_start_date", "body", "date", m.RhythmStartDate.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var updateTariffRequestTypeRhythmTypePropEnum []any
+
+func init() {
+	var res []string
+	if err := json.Unmarshal([]byte(`["weekly","rolling_weekly","x_days"]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		updateTariffRequestTypeRhythmTypePropEnum = append(updateTariffRequestTypeRhythmTypePropEnum, v)
+	}
+}
+
+const (
+
+	// UpdateTariffRequestRhythmTypeWeekly captures enum value "weekly"
+	UpdateTariffRequestRhythmTypeWeekly string = "weekly"
+
+	// UpdateTariffRequestRhythmTypeRollingWeekly captures enum value "rolling_weekly"
+	UpdateTariffRequestRhythmTypeRollingWeekly string = "rolling_weekly"
+
+	// UpdateTariffRequestRhythmTypeXDays captures enum value "x_days"
+	UpdateTariffRequestRhythmTypeXDays string = "x_days"
+)
+
+// prop value enum
+func (m *UpdateTariffRequest) validateRhythmTypeEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, updateTariffRequestTypeRhythmTypePropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *UpdateTariffRequest) validateRhythmType(formats strfmt.Registry) error {
+	if swag.IsZero(m.RhythmType) { // not required
+		return nil
+	}
+
+	// value enum
+	if err := m.validateRhythmTypeEnum("rhythm_type", "body", m.RhythmType); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var updateTariffRequestTypeVacationBasisPropEnum []any
+
+func init() {
+	var res []string
+	if err := json.Unmarshal([]byte(`["calendar_year","entry_date"]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		updateTariffRequestTypeVacationBasisPropEnum = append(updateTariffRequestTypeVacationBasisPropEnum, v)
+	}
+}
+
+const (
+
+	// UpdateTariffRequestVacationBasisCalendarYear captures enum value "calendar_year"
+	UpdateTariffRequestVacationBasisCalendarYear string = "calendar_year"
+
+	// UpdateTariffRequestVacationBasisEntryDate captures enum value "entry_date"
+	UpdateTariffRequestVacationBasisEntryDate string = "entry_date"
+)
+
+// prop value enum
+func (m *UpdateTariffRequest) validateVacationBasisEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, updateTariffRequestTypeVacationBasisPropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *UpdateTariffRequest) validateVacationBasis(formats strfmt.Registry) error {
+	if swag.IsZero(m.VacationBasis) { // not required
+		return nil
+	}
+
+	// value enum
+	if err := m.validateVacationBasisEnum("vacation_basis", "body", m.VacationBasis); err != nil {
 		return err
 	}
 
@@ -121,8 +408,78 @@ func (m *UpdateTariffRequest) validateWeekPlanID(formats strfmt.Registry) error 
 	return nil
 }
 
-// ContextValidate validates this update tariff request based on context it is used
+func (m *UpdateTariffRequest) validateWeekPlanIds(formats strfmt.Registry) error {
+	if swag.IsZero(m.WeekPlanIds) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.WeekPlanIds); i++ {
+
+		if err := validate.FormatOf("week_plan_ids"+"."+strconv.Itoa(i), "body", "uuid", m.WeekPlanIds[i].String(), formats); err != nil {
+			return err
+		}
+
+	}
+
+	return nil
+}
+
+func (m *UpdateTariffRequest) validateWorkDaysPerWeek(formats strfmt.Registry) error {
+	if swag.IsZero(m.WorkDaysPerWeek) { // not required
+		return nil
+	}
+
+	if err := validate.MinimumInt("work_days_per_week", "body", *m.WorkDaysPerWeek, 1, false); err != nil {
+		return err
+	}
+
+	if err := validate.MaximumInt("work_days_per_week", "body", *m.WorkDaysPerWeek, 7, false); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ContextValidate validate this update tariff request based on the context it is used
 func (m *UpdateTariffRequest) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.contextValidateDayPlans(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *UpdateTariffRequest) contextValidateDayPlans(ctx context.Context, formats strfmt.Registry) error {
+
+	for i := 0; i < len(m.DayPlans); i++ {
+
+		if m.DayPlans[i] != nil {
+
+			if swag.IsZero(m.DayPlans[i]) { // not required
+				return nil
+			}
+
+			if err := m.DayPlans[i].ContextValidate(ctx, formats); err != nil {
+				ve := new(errors.Validation)
+				if stderrors.As(err, &ve) {
+					return ve.ValidateName("day_plans" + "." + strconv.Itoa(i))
+				}
+				ce := new(errors.CompositeError)
+				if stderrors.As(err, &ce) {
+					return ce.ValidateName("day_plans" + "." + strconv.Itoa(i))
+				}
+
+				return err
+			}
+		}
+
+	}
+
 	return nil
 }
 

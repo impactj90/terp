@@ -7,6 +7,7 @@ package models
 
 import (
 	"context"
+	"encoding/json"
 	stderrors "errors"
 	"strconv"
 
@@ -21,6 +22,14 @@ import (
 // swagger:model Tariff
 type Tariff struct {
 
+	// ZMI: Jahressollstunden - Annual target hours
+	// Example: 2080
+	AnnualTargetHours *float64 `json:"annual_target_hours,omitempty"`
+
+	// ZMI: Jahresurlaub - Base annual vacation days
+	// Example: 30
+	AnnualVacationDays *float64 `json:"annual_vacation_days,omitempty"`
+
 	// breaks
 	Breaks []*TariffBreak `json:"breaks"`
 
@@ -33,8 +42,27 @@ type Tariff struct {
 	// Format: date-time
 	CreatedAt strfmt.DateTime `json:"created_at,omitempty"`
 
+	// ZMI: Art der Gutschrift - How flextime is credited at month end
+	// Example: no_evaluation
+	// Enum: ["no_evaluation","complete","after_threshold","no_carryover"]
+	CreditType string `json:"credit_type,omitempty"`
+
+	// ZMI: Tage im Zyklus - For x_days rhythm, number of days in cycle
+	// Example: 14
+	// Maximum: 365
+	// Minimum: 1
+	CycleDays *int64 `json:"cycle_days,omitempty"`
+
+	// ZMI: Tagessollstunden - Daily target hours
+	// Example: 8
+	DailyTargetHours *float64 `json:"daily_target_hours,omitempty"`
+
 	// description
 	Description *string `json:"description,omitempty"`
+
+	// ZMI: Gleitzeitschwelle - Overtime threshold in minutes
+	// Example: 60
+	FlextimeThreshold *int64 `json:"flextime_threshold,omitempty"`
 
 	// id
 	// Required: true
@@ -45,10 +73,37 @@ type Tariff struct {
 	// Example: true
 	IsActive bool `json:"is_active,omitempty"`
 
+	// ZMI: Untergrenze Jahreszeitkonto - Annual flextime floor in minutes (can be negative)
+	// Example: -600
+	LowerLimitAnnual *int64 `json:"lower_limit_annual,omitempty"`
+
+	// ZMI: Max Gleitzeit im Monat - Max monthly flextime credit in minutes
+	// Example: 600
+	MaxFlextimePerMonth *int64 `json:"max_flextime_per_month,omitempty"`
+
+	// ZMI: Monatssollstunden - Monthly target hours
+	// Example: 173.33
+	MonthlyTargetHours *float64 `json:"monthly_target_hours,omitempty"`
+
 	// name
 	// Example: Standard Tariff
 	// Required: true
 	Name *string `json:"name"`
+
+	// ZMI: Rhythmus-Startdatum - Start date for rhythm calculation
+	// Format: date
+	RhythmStartDate *strfmt.Date `json:"rhythm_start_date,omitempty"`
+
+	// ZMI: Zeitplan-Modell - Time plan rhythm type
+	// Example: weekly
+	// Enum: ["weekly","rolling_weekly","x_days"]
+	RhythmType string `json:"rhythm_type,omitempty"`
+
+	// Day plans for x_days rhythm
+	TariffDayPlans []*TariffTariffDayPlansItems0 `json:"tariff_day_plans"`
+
+	// Ordered week plans for rolling_weekly rhythm
+	TariffWeekPlans []*TariffTariffWeekPlansItems0 `json:"tariff_week_plans"`
 
 	// tenant id
 	// Required: true
@@ -58,6 +113,15 @@ type Tariff struct {
 	// updated at
 	// Format: date-time
 	UpdatedAt strfmt.DateTime `json:"updated_at,omitempty"`
+
+	// ZMI: Obergrenze Jahreszeitkonto - Annual flextime cap in minutes
+	// Example: 2400
+	UpperLimitAnnual *int64 `json:"upper_limit_annual,omitempty"`
+
+	// ZMI: Urlaubsberechnung Basis - Vacation year calculation basis
+	// Example: calendar_year
+	// Enum: ["calendar_year","entry_date"]
+	VacationBasis string `json:"vacation_basis,omitempty"`
 
 	// valid from
 	// Format: date
@@ -75,6 +139,16 @@ type Tariff struct {
 	// week plan id
 	// Format: uuid
 	WeekPlanID *strfmt.UUID `json:"week_plan_id,omitempty"`
+
+	// ZMI: Wochensollstunden - Weekly target hours
+	// Example: 40
+	WeeklyTargetHours *float64 `json:"weekly_target_hours,omitempty"`
+
+	// ZMI: AT pro Woche - Work days per week for vacation pro-rating
+	// Example: 5
+	// Maximum: 7
+	// Minimum: 1
+	WorkDaysPerWeek *int64 `json:"work_days_per_week,omitempty"`
 }
 
 // Validate validates this tariff
@@ -93,6 +167,14 @@ func (m *Tariff) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
+	if err := m.validateCreditType(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateCycleDays(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateID(formats); err != nil {
 		res = append(res, err)
 	}
@@ -101,11 +183,31 @@ func (m *Tariff) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
+	if err := m.validateRhythmStartDate(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateRhythmType(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateTariffDayPlans(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateTariffWeekPlans(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateTenantID(formats); err != nil {
 		res = append(res, err)
 	}
 
 	if err := m.validateUpdatedAt(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateVacationBasis(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -122,6 +224,10 @@ func (m *Tariff) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateWeekPlanID(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateWorkDaysPerWeek(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -182,6 +288,70 @@ func (m *Tariff) validateCreatedAt(formats strfmt.Registry) error {
 	return nil
 }
 
+var tariffTypeCreditTypePropEnum []any
+
+func init() {
+	var res []string
+	if err := json.Unmarshal([]byte(`["no_evaluation","complete","after_threshold","no_carryover"]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		tariffTypeCreditTypePropEnum = append(tariffTypeCreditTypePropEnum, v)
+	}
+}
+
+const (
+
+	// TariffCreditTypeNoEvaluation captures enum value "no_evaluation"
+	TariffCreditTypeNoEvaluation string = "no_evaluation"
+
+	// TariffCreditTypeComplete captures enum value "complete"
+	TariffCreditTypeComplete string = "complete"
+
+	// TariffCreditTypeAfterThreshold captures enum value "after_threshold"
+	TariffCreditTypeAfterThreshold string = "after_threshold"
+
+	// TariffCreditTypeNoCarryover captures enum value "no_carryover"
+	TariffCreditTypeNoCarryover string = "no_carryover"
+)
+
+// prop value enum
+func (m *Tariff) validateCreditTypeEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, tariffTypeCreditTypePropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *Tariff) validateCreditType(formats strfmt.Registry) error {
+	if swag.IsZero(m.CreditType) { // not required
+		return nil
+	}
+
+	// value enum
+	if err := m.validateCreditTypeEnum("credit_type", "body", m.CreditType); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *Tariff) validateCycleDays(formats strfmt.Registry) error {
+	if swag.IsZero(m.CycleDays) { // not required
+		return nil
+	}
+
+	if err := validate.MinimumInt("cycle_days", "body", *m.CycleDays, 1, false); err != nil {
+		return err
+	}
+
+	if err := validate.MaximumInt("cycle_days", "body", *m.CycleDays, 365, false); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (m *Tariff) validateID(formats strfmt.Registry) error {
 
 	if err := validate.Required("id", "body", m.ID); err != nil {
@@ -199,6 +369,123 @@ func (m *Tariff) validateName(formats strfmt.Registry) error {
 
 	if err := validate.Required("name", "body", m.Name); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (m *Tariff) validateRhythmStartDate(formats strfmt.Registry) error {
+	if swag.IsZero(m.RhythmStartDate) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("rhythm_start_date", "body", "date", m.RhythmStartDate.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var tariffTypeRhythmTypePropEnum []any
+
+func init() {
+	var res []string
+	if err := json.Unmarshal([]byte(`["weekly","rolling_weekly","x_days"]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		tariffTypeRhythmTypePropEnum = append(tariffTypeRhythmTypePropEnum, v)
+	}
+}
+
+const (
+
+	// TariffRhythmTypeWeekly captures enum value "weekly"
+	TariffRhythmTypeWeekly string = "weekly"
+
+	// TariffRhythmTypeRollingWeekly captures enum value "rolling_weekly"
+	TariffRhythmTypeRollingWeekly string = "rolling_weekly"
+
+	// TariffRhythmTypeXDays captures enum value "x_days"
+	TariffRhythmTypeXDays string = "x_days"
+)
+
+// prop value enum
+func (m *Tariff) validateRhythmTypeEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, tariffTypeRhythmTypePropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *Tariff) validateRhythmType(formats strfmt.Registry) error {
+	if swag.IsZero(m.RhythmType) { // not required
+		return nil
+	}
+
+	// value enum
+	if err := m.validateRhythmTypeEnum("rhythm_type", "body", m.RhythmType); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *Tariff) validateTariffDayPlans(formats strfmt.Registry) error {
+	if swag.IsZero(m.TariffDayPlans) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.TariffDayPlans); i++ {
+		if swag.IsZero(m.TariffDayPlans[i]) { // not required
+			continue
+		}
+
+		if m.TariffDayPlans[i] != nil {
+			if err := m.TariffDayPlans[i].Validate(formats); err != nil {
+				ve := new(errors.Validation)
+				if stderrors.As(err, &ve) {
+					return ve.ValidateName("tariff_day_plans" + "." + strconv.Itoa(i))
+				}
+				ce := new(errors.CompositeError)
+				if stderrors.As(err, &ce) {
+					return ce.ValidateName("tariff_day_plans" + "." + strconv.Itoa(i))
+				}
+
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
+func (m *Tariff) validateTariffWeekPlans(formats strfmt.Registry) error {
+	if swag.IsZero(m.TariffWeekPlans) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.TariffWeekPlans); i++ {
+		if swag.IsZero(m.TariffWeekPlans[i]) { // not required
+			continue
+		}
+
+		if m.TariffWeekPlans[i] != nil {
+			if err := m.TariffWeekPlans[i].Validate(formats); err != nil {
+				ve := new(errors.Validation)
+				if stderrors.As(err, &ve) {
+					return ve.ValidateName("tariff_week_plans" + "." + strconv.Itoa(i))
+				}
+				ce := new(errors.CompositeError)
+				if stderrors.As(err, &ce) {
+					return ce.ValidateName("tariff_week_plans" + "." + strconv.Itoa(i))
+				}
+
+				return err
+			}
+		}
+
 	}
 
 	return nil
@@ -223,6 +510,48 @@ func (m *Tariff) validateUpdatedAt(formats strfmt.Registry) error {
 	}
 
 	if err := validate.FormatOf("updated_at", "body", "date-time", m.UpdatedAt.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var tariffTypeVacationBasisPropEnum []any
+
+func init() {
+	var res []string
+	if err := json.Unmarshal([]byte(`["calendar_year","entry_date"]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		tariffTypeVacationBasisPropEnum = append(tariffTypeVacationBasisPropEnum, v)
+	}
+}
+
+const (
+
+	// TariffVacationBasisCalendarYear captures enum value "calendar_year"
+	TariffVacationBasisCalendarYear string = "calendar_year"
+
+	// TariffVacationBasisEntryDate captures enum value "entry_date"
+	TariffVacationBasisEntryDate string = "entry_date"
+)
+
+// prop value enum
+func (m *Tariff) validateVacationBasisEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, tariffTypeVacationBasisPropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *Tariff) validateVacationBasis(formats strfmt.Registry) error {
+	if swag.IsZero(m.VacationBasis) { // not required
+		return nil
+	}
+
+	// value enum
+	if err := m.validateVacationBasisEnum("vacation_basis", "body", m.VacationBasis); err != nil {
 		return err
 	}
 
@@ -273,11 +602,35 @@ func (m *Tariff) validateWeekPlanID(formats strfmt.Registry) error {
 	return nil
 }
 
+func (m *Tariff) validateWorkDaysPerWeek(formats strfmt.Registry) error {
+	if swag.IsZero(m.WorkDaysPerWeek) { // not required
+		return nil
+	}
+
+	if err := validate.MinimumInt("work_days_per_week", "body", *m.WorkDaysPerWeek, 1, false); err != nil {
+		return err
+	}
+
+	if err := validate.MaximumInt("work_days_per_week", "body", *m.WorkDaysPerWeek, 7, false); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // ContextValidate validate this tariff based on the context it is used
 func (m *Tariff) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.contextValidateBreaks(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.contextValidateTariffDayPlans(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.contextValidateTariffWeekPlans(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -320,6 +673,64 @@ func (m *Tariff) contextValidateBreaks(ctx context.Context, formats strfmt.Regis
 	return nil
 }
 
+func (m *Tariff) contextValidateTariffDayPlans(ctx context.Context, formats strfmt.Registry) error {
+
+	for i := 0; i < len(m.TariffDayPlans); i++ {
+
+		if m.TariffDayPlans[i] != nil {
+
+			if swag.IsZero(m.TariffDayPlans[i]) { // not required
+				return nil
+			}
+
+			if err := m.TariffDayPlans[i].ContextValidate(ctx, formats); err != nil {
+				ve := new(errors.Validation)
+				if stderrors.As(err, &ve) {
+					return ve.ValidateName("tariff_day_plans" + "." + strconv.Itoa(i))
+				}
+				ce := new(errors.CompositeError)
+				if stderrors.As(err, &ce) {
+					return ce.ValidateName("tariff_day_plans" + "." + strconv.Itoa(i))
+				}
+
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
+func (m *Tariff) contextValidateTariffWeekPlans(ctx context.Context, formats strfmt.Registry) error {
+
+	for i := 0; i < len(m.TariffWeekPlans); i++ {
+
+		if m.TariffWeekPlans[i] != nil {
+
+			if swag.IsZero(m.TariffWeekPlans[i]) { // not required
+				return nil
+			}
+
+			if err := m.TariffWeekPlans[i].ContextValidate(ctx, formats); err != nil {
+				ve := new(errors.Validation)
+				if stderrors.As(err, &ve) {
+					return ve.ValidateName("tariff_week_plans" + "." + strconv.Itoa(i))
+				}
+				ce := new(errors.CompositeError)
+				if stderrors.As(err, &ce) {
+					return ce.ValidateName("tariff_week_plans" + "." + strconv.Itoa(i))
+				}
+
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
 func (m *Tariff) contextValidateWeekPlan(ctx context.Context, formats strfmt.Registry) error {
 
 	return nil
@@ -336,6 +747,352 @@ func (m *Tariff) MarshalBinary() ([]byte, error) {
 // UnmarshalBinary interface implementation
 func (m *Tariff) UnmarshalBinary(b []byte) error {
 	var res Tariff
+	if err := swag.ReadJSON(b, &res); err != nil {
+		return err
+	}
+	*m = res
+	return nil
+}
+
+// TariffTariffDayPlansItems0 tariff tariff day plans items0
+//
+// swagger:model TariffTariffDayPlansItems0
+type TariffTariffDayPlansItems0 struct {
+
+	// created at
+	// Format: date-time
+	CreatedAt strfmt.DateTime `json:"created_at,omitempty"`
+
+	// day plan
+	DayPlan struct {
+		DayPlanSummary
+	} `json:"day_plan,omitempty"`
+
+	// NULL = off day
+	// Format: uuid
+	DayPlanID *strfmt.UUID `json:"day_plan_id,omitempty"`
+
+	// Position in cycle (1-based)
+	// Example: 1
+	// Required: true
+	DayPosition *int64 `json:"day_position"`
+
+	// id
+	// Required: true
+	// Format: uuid
+	ID *strfmt.UUID `json:"id"`
+
+	// tariff id
+	// Required: true
+	// Format: uuid
+	TariffID *strfmt.UUID `json:"tariff_id"`
+}
+
+// Validate validates this tariff tariff day plans items0
+func (m *TariffTariffDayPlansItems0) Validate(formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.validateCreatedAt(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateDayPlan(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateDayPlanID(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateDayPosition(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateID(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateTariffID(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *TariffTariffDayPlansItems0) validateCreatedAt(formats strfmt.Registry) error {
+	if swag.IsZero(m.CreatedAt) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("created_at", "body", "date-time", m.CreatedAt.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *TariffTariffDayPlansItems0) validateDayPlan(formats strfmt.Registry) error {
+	if swag.IsZero(m.DayPlan) { // not required
+		return nil
+	}
+
+	return nil
+}
+
+func (m *TariffTariffDayPlansItems0) validateDayPlanID(formats strfmt.Registry) error {
+	if swag.IsZero(m.DayPlanID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("day_plan_id", "body", "uuid", m.DayPlanID.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *TariffTariffDayPlansItems0) validateDayPosition(formats strfmt.Registry) error {
+
+	if err := validate.Required("day_position", "body", m.DayPosition); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *TariffTariffDayPlansItems0) validateID(formats strfmt.Registry) error {
+
+	if err := validate.Required("id", "body", m.ID); err != nil {
+		return err
+	}
+
+	if err := validate.FormatOf("id", "body", "uuid", m.ID.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *TariffTariffDayPlansItems0) validateTariffID(formats strfmt.Registry) error {
+
+	if err := validate.Required("tariff_id", "body", m.TariffID); err != nil {
+		return err
+	}
+
+	if err := validate.FormatOf("tariff_id", "body", "uuid", m.TariffID.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ContextValidate validate this tariff tariff day plans items0 based on the context it is used
+func (m *TariffTariffDayPlansItems0) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.contextValidateDayPlan(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *TariffTariffDayPlansItems0) contextValidateDayPlan(ctx context.Context, formats strfmt.Registry) error {
+
+	return nil
+}
+
+// MarshalBinary interface implementation
+func (m *TariffTariffDayPlansItems0) MarshalBinary() ([]byte, error) {
+	if m == nil {
+		return nil, nil
+	}
+	return swag.WriteJSON(m)
+}
+
+// UnmarshalBinary interface implementation
+func (m *TariffTariffDayPlansItems0) UnmarshalBinary(b []byte) error {
+	var res TariffTariffDayPlansItems0
+	if err := swag.ReadJSON(b, &res); err != nil {
+		return err
+	}
+	*m = res
+	return nil
+}
+
+// TariffTariffWeekPlansItems0 tariff tariff week plans items0
+//
+// swagger:model TariffTariffWeekPlansItems0
+type TariffTariffWeekPlansItems0 struct {
+
+	// created at
+	// Format: date-time
+	CreatedAt strfmt.DateTime `json:"created_at,omitempty"`
+
+	// id
+	// Required: true
+	// Format: uuid
+	ID *strfmt.UUID `json:"id"`
+
+	// Position in rotation (1-based)
+	// Example: 1
+	// Required: true
+	SequenceOrder *int64 `json:"sequence_order"`
+
+	// tariff id
+	// Required: true
+	// Format: uuid
+	TariffID *strfmt.UUID `json:"tariff_id"`
+
+	// week plan
+	WeekPlan struct {
+		WeekPlanSummary
+	} `json:"week_plan,omitempty"`
+
+	// week plan id
+	// Required: true
+	// Format: uuid
+	WeekPlanID *strfmt.UUID `json:"week_plan_id"`
+}
+
+// Validate validates this tariff tariff week plans items0
+func (m *TariffTariffWeekPlansItems0) Validate(formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.validateCreatedAt(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateID(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateSequenceOrder(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateTariffID(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateWeekPlan(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateWeekPlanID(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *TariffTariffWeekPlansItems0) validateCreatedAt(formats strfmt.Registry) error {
+	if swag.IsZero(m.CreatedAt) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("created_at", "body", "date-time", m.CreatedAt.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *TariffTariffWeekPlansItems0) validateID(formats strfmt.Registry) error {
+
+	if err := validate.Required("id", "body", m.ID); err != nil {
+		return err
+	}
+
+	if err := validate.FormatOf("id", "body", "uuid", m.ID.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *TariffTariffWeekPlansItems0) validateSequenceOrder(formats strfmt.Registry) error {
+
+	if err := validate.Required("sequence_order", "body", m.SequenceOrder); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *TariffTariffWeekPlansItems0) validateTariffID(formats strfmt.Registry) error {
+
+	if err := validate.Required("tariff_id", "body", m.TariffID); err != nil {
+		return err
+	}
+
+	if err := validate.FormatOf("tariff_id", "body", "uuid", m.TariffID.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *TariffTariffWeekPlansItems0) validateWeekPlan(formats strfmt.Registry) error {
+	if swag.IsZero(m.WeekPlan) { // not required
+		return nil
+	}
+
+	return nil
+}
+
+func (m *TariffTariffWeekPlansItems0) validateWeekPlanID(formats strfmt.Registry) error {
+
+	if err := validate.Required("week_plan_id", "body", m.WeekPlanID); err != nil {
+		return err
+	}
+
+	if err := validate.FormatOf("week_plan_id", "body", "uuid", m.WeekPlanID.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ContextValidate validate this tariff tariff week plans items0 based on the context it is used
+func (m *TariffTariffWeekPlansItems0) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.contextValidateWeekPlan(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *TariffTariffWeekPlansItems0) contextValidateWeekPlan(ctx context.Context, formats strfmt.Registry) error {
+
+	return nil
+}
+
+// MarshalBinary interface implementation
+func (m *TariffTariffWeekPlansItems0) MarshalBinary() ([]byte, error) {
+	if m == nil {
+		return nil, nil
+	}
+	return swag.WriteJSON(m)
+}
+
+// UnmarshalBinary interface implementation
+func (m *TariffTariffWeekPlansItems0) UnmarshalBinary(b []byte) error {
+	var res TariffTariffWeekPlansItems0
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}

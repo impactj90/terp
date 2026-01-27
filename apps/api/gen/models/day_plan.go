@@ -53,8 +53,15 @@ type DayPlan struct {
 	// Format: date-time
 	CreatedAt strfmt.DateTime `json:"created_at,omitempty"`
 
+	// How to handle cross-midnight shifts
+	// Enum: ["none","at_arrival","at_departure","auto_complete"]
+	DayChangeBehavior string `json:"day_change_behavior,omitempty"`
+
 	// description
 	Description *string `json:"description,omitempty"`
+
+	// Get target hours from employee master data
+	FromEmployeeMaster bool `json:"from_employee_master,omitempty"`
 
 	// Earliest allowed departure (minutes from midnight)
 	// Example: 960
@@ -63,6 +70,15 @@ type DayPlan struct {
 	// Latest allowed departure (minutes from midnight)
 	// Example: 1080
 	GoTo *int64 `json:"go_to,omitempty"`
+
+	// Full holiday time credit (minutes)
+	HolidayCreditCat1 *int64 `json:"holiday_credit_cat1,omitempty"`
+
+	// Half holiday time credit (minutes)
+	HolidayCreditCat2 *int64 `json:"holiday_credit_cat2,omitempty"`
+
+	// Custom category holiday credit (minutes)
+	HolidayCreditCat3 *int64 `json:"holiday_credit_cat3,omitempty"`
 
 	// id
 	// Required: true
@@ -84,6 +100,10 @@ type DayPlan struct {
 	// Required: true
 	Name *string `json:"name"`
 
+	// Behavior when no bookings recorded
+	// Enum: ["error","deduct_target","vocational_school","adopt_target","target_with_order"]
+	NoBookingBehavior string `json:"no_booking_behavior,omitempty"`
+
 	// plan type
 	// Example: fixed
 	// Required: true
@@ -95,19 +115,67 @@ type DayPlan struct {
 	// Required: true
 	RegularHours *int64 `json:"regular_hours"`
 
+	// Alternative target hours for absence days (minutes)
+	RegularHours2 *int64 `json:"regular_hours_2,omitempty"`
+
+	// Round all bookings vs first arrival/last departure only
+	RoundAllBookings bool `json:"round_all_bookings,omitempty"`
+
+	// Value to add/subtract for arrival (minutes)
+	RoundingComeAddValue *int64 `json:"rounding_come_add_value,omitempty"`
+
 	// Rounding interval in minutes
 	RoundingComeInterval *int64 `json:"rounding_come_interval,omitempty"`
 
 	// rounding come type
-	// Enum: ["none","up","down","nearest"]
+	// Enum: ["none","up","down","nearest","add","subtract"]
 	RoundingComeType *string `json:"rounding_come_type,omitempty"`
+
+	// Value to add/subtract for departure (minutes)
+	RoundingGoAddValue *int64 `json:"rounding_go_add_value,omitempty"`
 
 	// Rounding interval in minutes
 	RoundingGoInterval *int64 `json:"rounding_go_interval,omitempty"`
 
 	// rounding go type
-	// Enum: ["none","up","down","nearest"]
+	// Enum: ["none","up","down","nearest","add","subtract"]
 	RoundingGoType *string `json:"rounding_go_type,omitempty"`
+
+	// shift alt plan 1
+	// Format: uuid
+	ShiftAltPlan1 *strfmt.UUID `json:"shift_alt_plan_1,omitempty"`
+
+	// shift alt plan 2
+	// Format: uuid
+	ShiftAltPlan2 *strfmt.UUID `json:"shift_alt_plan_2,omitempty"`
+
+	// shift alt plan 3
+	// Format: uuid
+	ShiftAltPlan3 *strfmt.UUID `json:"shift_alt_plan_3,omitempty"`
+
+	// shift alt plan 4
+	// Format: uuid
+	ShiftAltPlan4 *strfmt.UUID `json:"shift_alt_plan_4,omitempty"`
+
+	// shift alt plan 5
+	// Format: uuid
+	ShiftAltPlan5 *strfmt.UUID `json:"shift_alt_plan_5,omitempty"`
+
+	// shift alt plan 6
+	// Format: uuid
+	ShiftAltPlan6 *strfmt.UUID `json:"shift_alt_plan_6,omitempty"`
+
+	// Shift detection arrival window start (minutes)
+	ShiftDetectArriveFrom *int64 `json:"shift_detect_arrive_from,omitempty"`
+
+	// Shift detection arrival window end (minutes)
+	ShiftDetectArriveTo *int64 `json:"shift_detect_arrive_to,omitempty"`
+
+	// Shift detection departure window start (minutes)
+	ShiftDetectDepartFrom *int64 `json:"shift_detect_depart_from,omitempty"`
+
+	// Shift detection departure window end (minutes)
+	ShiftDetectDepartTo *int64 `json:"shift_detect_depart_to,omitempty"`
 
 	// tenant id
 	// Required: true
@@ -133,6 +201,12 @@ type DayPlan struct {
 	// updated at
 	// Format: date-time
 	UpdatedAt strfmt.DateTime `json:"updated_at,omitempty"`
+
+	// Vacation days deducted per day (default 1.0)
+	VacationDeduction float32 `json:"vacation_deduction,omitempty"`
+
+	// Enable tolerance_come_minus for fixed working time plans
+	VariableWorkTime bool `json:"variable_work_time,omitempty"`
 }
 
 // Validate validates this day plan
@@ -155,11 +229,19 @@ func (m *DayPlan) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
+	if err := m.validateDayChangeBehavior(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateID(formats); err != nil {
 		res = append(res, err)
 	}
 
 	if err := m.validateName(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateNoBookingBehavior(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -176,6 +258,30 @@ func (m *DayPlan) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateRoundingGoType(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateShiftAltPlan1(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateShiftAltPlan2(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateShiftAltPlan3(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateShiftAltPlan4(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateShiftAltPlan5(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateShiftAltPlan6(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -274,6 +380,54 @@ func (m *DayPlan) validateCreatedAt(formats strfmt.Registry) error {
 	return nil
 }
 
+var dayPlanTypeDayChangeBehaviorPropEnum []any
+
+func init() {
+	var res []string
+	if err := json.Unmarshal([]byte(`["none","at_arrival","at_departure","auto_complete"]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		dayPlanTypeDayChangeBehaviorPropEnum = append(dayPlanTypeDayChangeBehaviorPropEnum, v)
+	}
+}
+
+const (
+
+	// DayPlanDayChangeBehaviorNone captures enum value "none"
+	DayPlanDayChangeBehaviorNone string = "none"
+
+	// DayPlanDayChangeBehaviorAtArrival captures enum value "at_arrival"
+	DayPlanDayChangeBehaviorAtArrival string = "at_arrival"
+
+	// DayPlanDayChangeBehaviorAtDeparture captures enum value "at_departure"
+	DayPlanDayChangeBehaviorAtDeparture string = "at_departure"
+
+	// DayPlanDayChangeBehaviorAutoComplete captures enum value "auto_complete"
+	DayPlanDayChangeBehaviorAutoComplete string = "auto_complete"
+)
+
+// prop value enum
+func (m *DayPlan) validateDayChangeBehaviorEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, dayPlanTypeDayChangeBehaviorPropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *DayPlan) validateDayChangeBehavior(formats strfmt.Registry) error {
+	if swag.IsZero(m.DayChangeBehavior) { // not required
+		return nil
+	}
+
+	// value enum
+	if err := m.validateDayChangeBehaviorEnum("day_change_behavior", "body", m.DayChangeBehavior); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (m *DayPlan) validateID(formats strfmt.Registry) error {
 
 	if err := validate.Required("id", "body", m.ID); err != nil {
@@ -290,6 +444,57 @@ func (m *DayPlan) validateID(formats strfmt.Registry) error {
 func (m *DayPlan) validateName(formats strfmt.Registry) error {
 
 	if err := validate.Required("name", "body", m.Name); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var dayPlanTypeNoBookingBehaviorPropEnum []any
+
+func init() {
+	var res []string
+	if err := json.Unmarshal([]byte(`["error","deduct_target","vocational_school","adopt_target","target_with_order"]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		dayPlanTypeNoBookingBehaviorPropEnum = append(dayPlanTypeNoBookingBehaviorPropEnum, v)
+	}
+}
+
+const (
+
+	// DayPlanNoBookingBehaviorError captures enum value "error"
+	DayPlanNoBookingBehaviorError string = "error"
+
+	// DayPlanNoBookingBehaviorDeductTarget captures enum value "deduct_target"
+	DayPlanNoBookingBehaviorDeductTarget string = "deduct_target"
+
+	// DayPlanNoBookingBehaviorVocationalSchool captures enum value "vocational_school"
+	DayPlanNoBookingBehaviorVocationalSchool string = "vocational_school"
+
+	// DayPlanNoBookingBehaviorAdoptTarget captures enum value "adopt_target"
+	DayPlanNoBookingBehaviorAdoptTarget string = "adopt_target"
+
+	// DayPlanNoBookingBehaviorTargetWithOrder captures enum value "target_with_order"
+	DayPlanNoBookingBehaviorTargetWithOrder string = "target_with_order"
+)
+
+// prop value enum
+func (m *DayPlan) validateNoBookingBehaviorEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, dayPlanTypeNoBookingBehaviorPropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *DayPlan) validateNoBookingBehavior(formats strfmt.Registry) error {
+	if swag.IsZero(m.NoBookingBehavior) { // not required
+		return nil
+	}
+
+	// value enum
+	if err := m.validateNoBookingBehaviorEnum("no_booking_behavior", "body", m.NoBookingBehavior); err != nil {
 		return err
 	}
 
@@ -352,7 +557,7 @@ var dayPlanTypeRoundingComeTypePropEnum []any
 
 func init() {
 	var res []string
-	if err := json.Unmarshal([]byte(`["none","up","down","nearest"]`), &res); err != nil {
+	if err := json.Unmarshal([]byte(`["none","up","down","nearest","add","subtract"]`), &res); err != nil {
 		panic(err)
 	}
 	for _, v := range res {
@@ -373,6 +578,12 @@ const (
 
 	// DayPlanRoundingComeTypeNearest captures enum value "nearest"
 	DayPlanRoundingComeTypeNearest string = "nearest"
+
+	// DayPlanRoundingComeTypeAdd captures enum value "add"
+	DayPlanRoundingComeTypeAdd string = "add"
+
+	// DayPlanRoundingComeTypeSubtract captures enum value "subtract"
+	DayPlanRoundingComeTypeSubtract string = "subtract"
 )
 
 // prop value enum
@@ -400,7 +611,7 @@ var dayPlanTypeRoundingGoTypePropEnum []any
 
 func init() {
 	var res []string
-	if err := json.Unmarshal([]byte(`["none","up","down","nearest"]`), &res); err != nil {
+	if err := json.Unmarshal([]byte(`["none","up","down","nearest","add","subtract"]`), &res); err != nil {
 		panic(err)
 	}
 	for _, v := range res {
@@ -421,6 +632,12 @@ const (
 
 	// DayPlanRoundingGoTypeNearest captures enum value "nearest"
 	DayPlanRoundingGoTypeNearest string = "nearest"
+
+	// DayPlanRoundingGoTypeAdd captures enum value "add"
+	DayPlanRoundingGoTypeAdd string = "add"
+
+	// DayPlanRoundingGoTypeSubtract captures enum value "subtract"
+	DayPlanRoundingGoTypeSubtract string = "subtract"
 )
 
 // prop value enum
@@ -438,6 +655,78 @@ func (m *DayPlan) validateRoundingGoType(formats strfmt.Registry) error {
 
 	// value enum
 	if err := m.validateRoundingGoTypeEnum("rounding_go_type", "body", *m.RoundingGoType); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *DayPlan) validateShiftAltPlan1(formats strfmt.Registry) error {
+	if swag.IsZero(m.ShiftAltPlan1) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("shift_alt_plan_1", "body", "uuid", m.ShiftAltPlan1.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *DayPlan) validateShiftAltPlan2(formats strfmt.Registry) error {
+	if swag.IsZero(m.ShiftAltPlan2) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("shift_alt_plan_2", "body", "uuid", m.ShiftAltPlan2.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *DayPlan) validateShiftAltPlan3(formats strfmt.Registry) error {
+	if swag.IsZero(m.ShiftAltPlan3) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("shift_alt_plan_3", "body", "uuid", m.ShiftAltPlan3.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *DayPlan) validateShiftAltPlan4(formats strfmt.Registry) error {
+	if swag.IsZero(m.ShiftAltPlan4) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("shift_alt_plan_4", "body", "uuid", m.ShiftAltPlan4.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *DayPlan) validateShiftAltPlan5(formats strfmt.Registry) error {
+	if swag.IsZero(m.ShiftAltPlan5) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("shift_alt_plan_5", "body", "uuid", m.ShiftAltPlan5.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *DayPlan) validateShiftAltPlan6(formats strfmt.Registry) error {
+	if swag.IsZero(m.ShiftAltPlan6) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("shift_alt_plan_6", "body", "uuid", m.ShiftAltPlan6.String(), formats); err != nil {
 		return err
 	}
 

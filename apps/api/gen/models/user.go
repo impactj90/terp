@@ -41,6 +41,10 @@ type User struct {
 	// Format: email
 	Email *strfmt.Email `json:"email"`
 
+	// ID of the linked employee record, if any
+	// Format: uuid
+	EmployeeID *strfmt.UUID `json:"employee_id,omitempty"`
+
 	// id
 	// Required: true
 	// Format: uuid
@@ -74,6 +78,10 @@ func (m *User) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateEmail(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateEmployeeID(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -136,6 +144,18 @@ func (m *User) validateEmail(formats strfmt.Registry) error {
 	}
 
 	if err := validate.FormatOf("email", "body", "email", m.Email.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *User) validateEmployeeID(formats strfmt.Registry) error {
+	if swag.IsZero(m.EmployeeID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("employee_id", "body", "uuid", m.EmployeeID.String(), formats); err != nil {
 		return err
 	}
 

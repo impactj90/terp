@@ -41,6 +41,9 @@ type CreateDayPlanBreakRequest struct {
 	// is paid
 	IsPaid *bool `json:"is_paid,omitempty"`
 
+	// minutes difference
+	MinutesDifference *bool `json:"minutes_difference,omitempty"`
+
 	// start time
 	StartTime int64 `json:"start_time,omitempty"`
 }

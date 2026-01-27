@@ -42,6 +42,10 @@ type EmployeeSummary struct {
 	// personnel number
 	// Required: true
 	PersonnelNumber *string `json:"personnel_number"`
+
+	// tariff id
+	// Format: uuid
+	TariffID *strfmt.UUID `json:"tariff_id,omitempty"`
 }
 
 // Validate validates this employee summary
@@ -65,6 +69,10 @@ func (m *EmployeeSummary) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validatePersonnelNumber(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateTariffID(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -120,6 +128,18 @@ func (m *EmployeeSummary) validateLastName(formats strfmt.Registry) error {
 func (m *EmployeeSummary) validatePersonnelNumber(formats strfmt.Registry) error {
 
 	if err := validate.Required("personnel_number", "body", m.PersonnelNumber); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *EmployeeSummary) validateTariffID(formats strfmt.Registry) error {
+	if swag.IsZero(m.TariffID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("tariff_id", "body", "uuid", m.TariffID.String(), formats); err != nil {
 		return err
 	}
 

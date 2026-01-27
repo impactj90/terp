@@ -59,6 +59,9 @@ type DayPlanBreak struct {
 	// Example: false
 	IsPaid bool `json:"is_paid,omitempty"`
 
+	// Proportional deduction when near threshold (for minimum breaks)
+	MinutesDifference bool `json:"minutes_difference,omitempty"`
+
 	// sort order
 	// Example: 0
 	SortOrder int64 `json:"sort_order,omitempty"`

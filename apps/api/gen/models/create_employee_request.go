@@ -67,6 +67,10 @@ type CreateEmployeeRequest struct {
 	// Min Length: 4
 	Pin *string `json:"pin"`
 
+	// tariff id
+	// Format: uuid
+	TariffID strfmt.UUID `json:"tariff_id,omitempty"`
+
 	// vacation days per year
 	VacationDaysPerYear float64 `json:"vacation_days_per_year,omitempty"`
 
@@ -111,6 +115,10 @@ func (m *CreateEmployeeRequest) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validatePin(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateTariffID(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -243,6 +251,18 @@ func (m *CreateEmployeeRequest) validatePin(formats strfmt.Registry) error {
 	}
 
 	if err := validate.MaxLength("pin", "body", *m.Pin, 20); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *CreateEmployeeRequest) validateTariffID(formats strfmt.Registry) error {
+	if swag.IsZero(m.TariffID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("tariff_id", "body", "uuid", m.TariffID.String(), formats); err != nil {
 		return err
 	}
 
