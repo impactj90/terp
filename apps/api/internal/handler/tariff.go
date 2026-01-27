@@ -7,9 +7,11 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 
 	"github.com/tolga/terp/gen/models"
 	"github.com/tolga/terp/internal/middleware"
+	"github.com/tolga/terp/internal/model"
 	"github.com/tolga/terp/internal/service"
 )
 
@@ -127,6 +129,89 @@ func (h *TariffHandler) Create(w http.ResponseWriter, r *http.Request) {
 		input.ValidTo = &t
 	}
 
+	// ZMI Vacation Fields
+	if req.AnnualVacationDays != 0 {
+		d := decimal.NewFromFloat(req.AnnualVacationDays)
+		input.AnnualVacationDays = &d
+	}
+	if req.WorkDaysPerWeek != 0 {
+		days := int(req.WorkDaysPerWeek)
+		input.WorkDaysPerWeek = &days
+	}
+	if req.VacationBasis != "" {
+		input.VacationBasis = model.VacationBasis(req.VacationBasis)
+	}
+
+	// ZMI Target Hours Fields
+	if req.DailyTargetHours != 0 {
+		d := decimal.NewFromFloat(req.DailyTargetHours)
+		input.DailyTargetHours = &d
+	}
+	if req.WeeklyTargetHours != 0 {
+		d := decimal.NewFromFloat(req.WeeklyTargetHours)
+		input.WeeklyTargetHours = &d
+	}
+	if req.MonthlyTargetHours != 0 {
+		d := decimal.NewFromFloat(req.MonthlyTargetHours)
+		input.MonthlyTargetHours = &d
+	}
+	if req.AnnualTargetHours != 0 {
+		d := decimal.NewFromFloat(req.AnnualTargetHours)
+		input.AnnualTargetHours = &d
+	}
+
+	// ZMI Flextime Fields
+	if req.MaxFlextimePerMonth != 0 {
+		val := int(req.MaxFlextimePerMonth)
+		input.MaxFlextimePerMonth = &val
+	}
+	if req.UpperLimitAnnual != 0 {
+		val := int(req.UpperLimitAnnual)
+		input.UpperLimitAnnual = &val
+	}
+	if req.LowerLimitAnnual != 0 {
+		val := int(req.LowerLimitAnnual)
+		input.LowerLimitAnnual = &val
+	}
+	if req.FlextimeThreshold != 0 {
+		val := int(req.FlextimeThreshold)
+		input.FlextimeThreshold = &val
+	}
+	if req.CreditType != "" {
+		input.CreditType = model.CreditType(req.CreditType)
+	}
+
+	// ZMI Rhythm Fields
+	if req.RhythmType != "" {
+		input.RhythmType = model.RhythmType(req.RhythmType)
+	}
+	if req.CycleDays != 0 {
+		cycleDays := int(req.CycleDays)
+		input.CycleDays = &cycleDays
+	}
+	if !time.Time(req.RhythmStartDate).IsZero() {
+		t := time.Time(req.RhythmStartDate)
+		input.RhythmStartDate = &t
+	}
+	if len(req.WeekPlanIds) > 0 {
+		input.WeekPlanIDs = make([]uuid.UUID, len(req.WeekPlanIds))
+		for i, wpID := range req.WeekPlanIds {
+			input.WeekPlanIDs[i] = uuid.MustParse(wpID.String())
+		}
+	}
+	if len(req.DayPlans) > 0 {
+		input.DayPlans = make([]service.TariffDayPlanInput, len(req.DayPlans))
+		for i, dp := range req.DayPlans {
+			input.DayPlans[i] = service.TariffDayPlanInput{
+				DayPosition: int(*dp.DayPosition),
+			}
+			if dp.DayPlanID != nil && *dp.DayPlanID != "" {
+				id := uuid.MustParse(dp.DayPlanID.String())
+				input.DayPlans[i].DayPlanID = &id
+			}
+		}
+	}
+
 	tariff, err := h.tariffService.Create(r.Context(), input)
 	if err != nil {
 		switch err {
@@ -138,6 +223,24 @@ func (h *TariffHandler) Create(w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusConflict, "A tariff with this code already exists")
 		case service.ErrInvalidWeekPlan:
 			respondError(w, http.StatusBadRequest, "Invalid week plan reference")
+		case service.ErrInvalidVacationBasis:
+			respondError(w, http.StatusBadRequest, "Invalid vacation basis")
+		case service.ErrInvalidCreditType:
+			respondError(w, http.StatusBadRequest, "Invalid credit type")
+		case service.ErrInvalidWorkDays:
+			respondError(w, http.StatusBadRequest, "Work days per week must be between 1 and 7")
+		case service.ErrInvalidRhythmType:
+			respondError(w, http.StatusBadRequest, "Invalid rhythm type")
+		case service.ErrInvalidCycleDays:
+			respondError(w, http.StatusBadRequest, "Cycle days must be between 1 and 365")
+		case service.ErrCycleDaysRequired:
+			respondError(w, http.StatusBadRequest, "cycle_days is required for x_days rhythm")
+		case service.ErrWeekPlansRequired:
+			respondError(w, http.StatusBadRequest, "week_plan_ids are required for rolling_weekly rhythm")
+		case service.ErrInvalidDayPlan:
+			respondError(w, http.StatusBadRequest, "Invalid day plan reference")
+		case service.ErrInvalidDayPosition:
+			respondError(w, http.StatusBadRequest, "Day position must be between 1 and cycle_days")
 		default:
 			respondError(w, http.StatusInternalServerError, "Failed to create tariff")
 		}
@@ -195,6 +298,92 @@ func (h *TariffHandler) Update(w http.ResponseWriter, r *http.Request) {
 	// IsActive needs special handling - we always pass it since it's a boolean
 	input.IsActive = &req.IsActive
 
+	// ZMI Vacation Fields
+	if req.AnnualVacationDays != nil {
+		d := decimal.NewFromFloat(*req.AnnualVacationDays)
+		input.AnnualVacationDays = &d
+	}
+	if req.WorkDaysPerWeek != nil {
+		days := int(*req.WorkDaysPerWeek)
+		input.WorkDaysPerWeek = &days
+	}
+	if req.VacationBasis != "" {
+		vb := model.VacationBasis(req.VacationBasis)
+		input.VacationBasis = &vb
+	}
+
+	// ZMI Target Hours Fields
+	if req.DailyTargetHours != nil {
+		d := decimal.NewFromFloat(*req.DailyTargetHours)
+		input.DailyTargetHours = &d
+	}
+	if req.WeeklyTargetHours != nil {
+		d := decimal.NewFromFloat(*req.WeeklyTargetHours)
+		input.WeeklyTargetHours = &d
+	}
+	if req.MonthlyTargetHours != nil {
+		d := decimal.NewFromFloat(*req.MonthlyTargetHours)
+		input.MonthlyTargetHours = &d
+	}
+	if req.AnnualTargetHours != nil {
+		d := decimal.NewFromFloat(*req.AnnualTargetHours)
+		input.AnnualTargetHours = &d
+	}
+
+	// ZMI Flextime Fields
+	if req.MaxFlextimePerMonth != nil {
+		val := int(*req.MaxFlextimePerMonth)
+		input.MaxFlextimePerMonth = &val
+	}
+	if req.UpperLimitAnnual != nil {
+		val := int(*req.UpperLimitAnnual)
+		input.UpperLimitAnnual = &val
+	}
+	if req.LowerLimitAnnual != nil {
+		val := int(*req.LowerLimitAnnual)
+		input.LowerLimitAnnual = &val
+	}
+	if req.FlextimeThreshold != nil {
+		val := int(*req.FlextimeThreshold)
+		input.FlextimeThreshold = &val
+	}
+	if req.CreditType != "" {
+		ct := model.CreditType(req.CreditType)
+		input.CreditType = &ct
+	}
+
+	// ZMI Rhythm Fields
+	if req.RhythmType != "" {
+		rt := model.RhythmType(req.RhythmType)
+		input.RhythmType = &rt
+	}
+	if req.CycleDays != nil {
+		cycleDays := int(*req.CycleDays)
+		input.CycleDays = &cycleDays
+	}
+	if req.RhythmStartDate != nil && !time.Time(*req.RhythmStartDate).IsZero() {
+		t := time.Time(*req.RhythmStartDate)
+		input.RhythmStartDate = &t
+	}
+	if len(req.WeekPlanIds) > 0 {
+		input.WeekPlanIDs = make([]uuid.UUID, len(req.WeekPlanIds))
+		for i, wpID := range req.WeekPlanIds {
+			input.WeekPlanIDs[i] = uuid.MustParse(wpID.String())
+		}
+	}
+	if len(req.DayPlans) > 0 {
+		input.DayPlans = make([]service.TariffDayPlanInput, len(req.DayPlans))
+		for i, dp := range req.DayPlans {
+			input.DayPlans[i] = service.TariffDayPlanInput{
+				DayPosition: int(*dp.DayPosition),
+			}
+			if dp.DayPlanID != nil && *dp.DayPlanID != "" {
+				id := uuid.MustParse(dp.DayPlanID.String())
+				input.DayPlans[i].DayPlanID = &id
+			}
+		}
+	}
+
 	tariff, err := h.tariffService.Update(r.Context(), id, tenantID, input)
 	if err != nil {
 		switch err {
@@ -204,6 +393,20 @@ func (h *TariffHandler) Update(w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusBadRequest, "Tariff name cannot be empty")
 		case service.ErrInvalidWeekPlan:
 			respondError(w, http.StatusBadRequest, "Invalid week plan reference")
+		case service.ErrInvalidVacationBasis:
+			respondError(w, http.StatusBadRequest, "Invalid vacation basis")
+		case service.ErrInvalidCreditType:
+			respondError(w, http.StatusBadRequest, "Invalid credit type")
+		case service.ErrInvalidWorkDays:
+			respondError(w, http.StatusBadRequest, "Work days per week must be between 1 and 7")
+		case service.ErrInvalidRhythmType:
+			respondError(w, http.StatusBadRequest, "Invalid rhythm type")
+		case service.ErrInvalidCycleDays:
+			respondError(w, http.StatusBadRequest, "Cycle days must be between 1 and 365")
+		case service.ErrInvalidDayPlan:
+			respondError(w, http.StatusBadRequest, "Invalid day plan reference")
+		case service.ErrInvalidDayPosition:
+			respondError(w, http.StatusBadRequest, "Day position must be between 1 and cycle_days")
 		default:
 			respondError(w, http.StatusInternalServerError, "Failed to update tariff")
 		}

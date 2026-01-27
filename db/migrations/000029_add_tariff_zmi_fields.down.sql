@@ -1,0 +1,16 @@
+ALTER TABLE tariffs
+    DROP CONSTRAINT IF EXISTS chk_vacation_basis,
+    DROP CONSTRAINT IF EXISTS chk_credit_type,
+    DROP CONSTRAINT IF EXISTS chk_work_days_per_week,
+    DROP COLUMN IF EXISTS annual_vacation_days,
+    DROP COLUMN IF EXISTS work_days_per_week,
+    DROP COLUMN IF EXISTS vacation_basis,
+    DROP COLUMN IF EXISTS daily_target_hours,
+    DROP COLUMN IF EXISTS weekly_target_hours,
+    DROP COLUMN IF EXISTS monthly_target_hours,
+    DROP COLUMN IF EXISTS annual_target_hours,
+    DROP COLUMN IF EXISTS max_flextime_per_month,
+    DROP COLUMN IF EXISTS upper_limit_annual,
+    DROP COLUMN IF EXISTS lower_limit_annual,
+    DROP COLUMN IF EXISTS flextime_threshold,
+    DROP COLUMN IF EXISTS credit_type;

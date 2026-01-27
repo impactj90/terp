@@ -22,6 +22,7 @@ type Employee struct {
 	DepartmentID        *uuid.UUID      `gorm:"type:uuid;index" json:"department_id,omitempty"`
 	CostCenterID        *uuid.UUID      `gorm:"type:uuid" json:"cost_center_id,omitempty"`
 	EmploymentTypeID    *uuid.UUID      `gorm:"type:uuid" json:"employment_type_id,omitempty"`
+	TariffID            *uuid.UUID      `gorm:"type:uuid;index" json:"tariff_id,omitempty"`
 	WeeklyHours         decimal.Decimal `gorm:"type:decimal(5,2);default:40.00" json:"weekly_hours"`
 	VacationDaysPerYear decimal.Decimal `gorm:"type:decimal(5,2);default:30.00" json:"vacation_days_per_year"`
 	IsActive            bool            `gorm:"default:true" json:"is_active"`
@@ -34,6 +35,7 @@ type Employee struct {
 	Department     *Department       `gorm:"foreignKey:DepartmentID" json:"department,omitempty"`
 	CostCenter     *CostCenter       `gorm:"foreignKey:CostCenterID" json:"cost_center,omitempty"`
 	EmploymentType *EmploymentType   `gorm:"foreignKey:EmploymentTypeID" json:"employment_type,omitempty"`
+	Tariff         *Tariff           `gorm:"foreignKey:TariffID" json:"tariff,omitempty"`
 	Contacts       []EmployeeContact `gorm:"foreignKey:EmployeeID" json:"contacts,omitempty"`
 	Cards          []EmployeeCard    `gorm:"foreignKey:EmployeeID" json:"cards,omitempty"`
 	User           *User             `gorm:"foreignKey:EmployeeID" json:"user,omitempty"`

@@ -45,7 +45,8 @@ func TestTariffService_Create_Success(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	tenant := createTestTenantForTariffService(t, db)
@@ -67,7 +68,8 @@ func TestTariffService_Create_WithWeekPlan(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	tenant := createTestTenantForTariffService(t, db)
@@ -89,7 +91,8 @@ func TestTariffService_Create_WithDescription(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	tenant := createTestTenantForTariffService(t, db)
@@ -112,7 +115,8 @@ func TestTariffService_Create_WithValidityDates(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	tenant := createTestTenantForTariffService(t, db)
@@ -139,7 +143,8 @@ func TestTariffService_Create_EmptyCode(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	tenant := createTestTenantForTariffService(t, db)
@@ -158,7 +163,8 @@ func TestTariffService_Create_EmptyName(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	tenant := createTestTenantForTariffService(t, db)
@@ -177,7 +183,8 @@ func TestTariffService_Create_DuplicateCode(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	tenant := createTestTenantForTariffService(t, db)
@@ -203,7 +210,8 @@ func TestTariffService_Create_InvalidWeekPlan(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	tenant := createTestTenantForTariffService(t, db)
@@ -224,7 +232,8 @@ func TestTariffService_Create_WeekPlanFromOtherTenant(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	tenant1 := createTestTenantForTariffService(t, db)
@@ -249,7 +258,8 @@ func TestTariffService_GetByID_Success(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	tenant := createTestTenantForTariffService(t, db)
@@ -272,7 +282,8 @@ func TestTariffService_GetByID_NotFound(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	_, err := svc.GetByID(ctx, uuid.New())
@@ -283,7 +294,8 @@ func TestTariffService_GetDetails_Success(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	tenant := createTestTenantForTariffService(t, db)
@@ -319,7 +331,8 @@ func TestTariffService_GetDetails_NotFound(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	_, err := svc.GetDetails(ctx, uuid.New())
@@ -330,7 +343,8 @@ func TestTariffService_Update_Success(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	tenant := createTestTenantForTariffService(t, db)
@@ -360,7 +374,8 @@ func TestTariffService_Update_AddWeekPlan(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	tenant := createTestTenantForTariffService(t, db)
@@ -388,7 +403,8 @@ func TestTariffService_Update_ClearWeekPlan(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	tenant := createTestTenantForTariffService(t, db)
@@ -417,7 +433,8 @@ func TestTariffService_Update_NotFound(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	tenant := createTestTenantForTariffService(t, db)
@@ -435,7 +452,8 @@ func TestTariffService_Update_EmptyName(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	tenant := createTestTenantForTariffService(t, db)
@@ -461,7 +479,8 @@ func TestTariffService_Update_InvalidWeekPlan(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	tenant := createTestTenantForTariffService(t, db)
@@ -487,7 +506,8 @@ func TestTariffService_Delete_Success(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	tenant := createTestTenantForTariffService(t, db)
@@ -511,7 +531,8 @@ func TestTariffService_Delete_NotFound(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	err := svc.Delete(ctx, uuid.New())
@@ -522,7 +543,8 @@ func TestTariffService_List(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	tenant := createTestTenantForTariffService(t, db)
@@ -546,7 +568,8 @@ func TestTariffService_ListActive(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	tenant := createTestTenantForTariffService(t, db)
@@ -573,7 +596,8 @@ func TestTariffService_CreateBreak_Success(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	tenant := createTestTenantForTariffService(t, db)
@@ -603,7 +627,8 @@ func TestTariffService_CreateBreak_TariffNotFound(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	breakInput := service.CreateTariffBreakInput{
@@ -620,7 +645,8 @@ func TestTariffService_CreateBreak_InvalidBreakType(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	tenant := createTestTenantForTariffService(t, db)
@@ -642,7 +668,8 @@ func TestTariffService_CreateBreak_ZeroDuration(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	tenant := createTestTenantForTariffService(t, db)
@@ -664,7 +691,8 @@ func TestTariffService_CreateBreak_SortOrderIncrement(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	tenant := createTestTenantForTariffService(t, db)
@@ -687,7 +715,8 @@ func TestTariffService_DeleteBreak_Success(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	tenant := createTestTenantForTariffService(t, db)
@@ -709,7 +738,8 @@ func TestTariffService_DeleteBreak_TariffNotFound(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	err := svc.DeleteBreak(ctx, uuid.New(), uuid.New())
@@ -720,7 +750,8 @@ func TestTariffService_DeleteBreak_BreakNotFound(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	tenant := createTestTenantForTariffService(t, db)
@@ -736,7 +767,8 @@ func TestTariffService_DeleteBreak_WrongTariff(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	ctx := context.Background()
 
 	tenant := createTestTenantForTariffService(t, db)

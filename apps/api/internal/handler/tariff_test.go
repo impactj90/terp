@@ -25,8 +25,9 @@ func setupTariffHandler(t *testing.T) (*handler.TariffHandler, *service.TariffSe
 	db := testutil.SetupTestDB(t)
 	tariffRepo := repository.NewTariffRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
 	tenantRepo := repository.NewTenantRepository(db)
-	svc := service.NewTariffService(tariffRepo, weekPlanRepo)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	h := handler.NewTariffHandler(svc)
 
 	// Create test tenant
