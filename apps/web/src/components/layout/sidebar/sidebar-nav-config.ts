@@ -88,6 +88,18 @@ export const navConfig: NavSection[] = [
         icon: Palmtree,
         description: 'View vacation balance and history',
       },
+      {
+        title: 'Monthly Evaluation',
+        href: '/monthly-evaluation',
+        icon: FileText,
+        description: 'Monthly time evaluation and closing',
+      },
+      {
+        title: 'Year Overview',
+        href: '/year-overview',
+        icon: CalendarRange,
+        description: 'View year summary with monthly metrics',
+      },
     ],
   },
   {
