@@ -2,7 +2,8 @@
 
 # Variables
 DOCKER_COMPOSE = docker compose -p terp -f docker/docker-compose.yml
-MIGRATE = migrate
+GOBIN = $(shell go env GOPATH)/bin
+MIGRATE = $(GOBIN)/migrate
 LOCAL_DB = postgres://dev:dev@localhost:5432/terp?sslmode=disable
 
 # Colors for help
@@ -69,20 +70,25 @@ fmt: ## Format Go code with gofmt
 tidy: ## Run go mod tidy
 	cd apps/api && go mod tidy
 
+## ensure-migrate: Auto-install migrate binary if missing
+$(MIGRATE):
+	@echo "migrate not found, installing..."
+	go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.17.1
+
 ## migrate-up: Run database migrations (local)
-migrate-up: ## Apply all pending migrations locally
+migrate-up: $(MIGRATE) ## Apply all pending migrations locally
 	$(MIGRATE) -path db/migrations -database "$(LOCAL_DB)" up
 
 ## migrate-down: Rollback last migration (local)
-migrate-down: ## Rollback last migration locally
+migrate-down: $(MIGRATE) ## Rollback last migration locally
 	$(MIGRATE) -path db/migrations -database "$(LOCAL_DB)" down 1
 
 ## migrate-status: Check migration status (local)
-migrate-status: ## Show current migration version locally
+migrate-status: $(MIGRATE) ## Show current migration version locally
 	$(MIGRATE) -path db/migrations -database "$(LOCAL_DB)" version
 
 ## migrate-create: Create new migration file
-migrate-create: ## Create a new migration (usage: make migrate-create name=migration_name)
+migrate-create: $(MIGRATE) ## Create a new migration (usage: make migrate-create name=migration_name)
 	$(MIGRATE) create -ext sql -dir db/migrations -seq $(name)
 
 ## swagger-bundle: Bundle OpenAPI spec into single file
