@@ -155,6 +155,8 @@ func (h *DayPlanHandler) Create(w http.ResponseWriter, r *http.Request) {
 		switch err {
 		case service.ErrDayPlanCodeRequired:
 			respondError(w, http.StatusBadRequest, "Day plan code is required")
+		case service.ErrDayPlanCodeReserved:
+			respondError(w, http.StatusBadRequest, "Day plan code is reserved")
 		case service.ErrDayPlanNameRequired:
 			respondError(w, http.StatusBadRequest, "Day plan name is required")
 		case service.ErrDayPlanCodeExists:
@@ -341,6 +343,8 @@ func (h *DayPlanHandler) Copy(w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusNotFound, "Day plan not found")
 		case service.ErrDayPlanCodeRequired:
 			respondError(w, http.StatusBadRequest, "New code is required")
+		case service.ErrDayPlanCodeReserved:
+			respondError(w, http.StatusBadRequest, "Day plan code is reserved")
 		case service.ErrDayPlanNameRequired:
 			respondError(w, http.StatusBadRequest, "New name is required")
 		case service.ErrDayPlanCodeExists:
@@ -399,6 +403,9 @@ func (h *DayPlanHandler) AddBreak(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.IsPaid != nil {
 		input.IsPaid = *req.IsPaid
+	}
+	if req.MinutesDifference != nil {
+		input.MinutesDifference = *req.MinutesDifference
 	}
 
 	b, err := h.dayPlanService.AddBreak(r.Context(), planID, input)
