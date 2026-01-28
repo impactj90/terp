@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { Calendar, FileText, Users } from 'lucide-react'
+import { Calendar, CalendarPlus, FileText, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface TeamQuickActionsProps {
@@ -18,6 +18,12 @@ export function TeamQuickActions({ teamId: _teamId }: TeamQuickActionsProps) {
 
   return (
     <div className="flex flex-wrap gap-2">
+      <Button variant="outline" size="sm" asChild className="gap-2">
+        <Link href="/absences">
+          <CalendarPlus className="h-4 w-4" />
+          {t('addAbsence')}
+        </Link>
+      </Button>
       <Button variant="outline" size="sm" asChild className="gap-2">
         <Link href="/admin/teams">
           <Users className="h-4 w-4" />

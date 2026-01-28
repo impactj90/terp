@@ -1,20 +1,23 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { useQueries } from '@tanstack/react-query'
 import { CalendarOff } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Calendar } from '@/components/ui/calendar'
 import { api } from '@/lib/api'
-import { formatDate, formatRelativeDate } from '@/lib/time-utils'
+import { formatDate, formatRelativeDate, parseISODate } from '@/lib/time-utils'
 import type { components } from '@/lib/api/types'
 
 type TeamMember = components['schemas']['TeamMember']
 
 interface TeamUpcomingAbsencesProps {
   members: TeamMember[]
+  from: string
+  to: string
 }
 
 interface AbsenceEntry {
@@ -27,18 +30,21 @@ interface AbsenceEntry {
 const MAX_ENTRIES = 10
 
 /**
- * Card showing upcoming absences across all team members for the next 14 days.
+ * Card showing upcoming absences across all team members for the selected range.
  * Fetches absences per member in parallel and merges into a sorted list.
  */
-export function TeamUpcomingAbsences({ members }: TeamUpcomingAbsencesProps) {
+export function TeamUpcomingAbsences({ members, from, to }: TeamUpcomingAbsencesProps) {
   const t = useTranslations('teamOverview')
 
-  // Calculate date range: today to today + 14 days
-  const today = new Date()
-  const futureDate = new Date(today)
-  futureDate.setDate(futureDate.getDate() + 14)
-  const fromDate = formatDate(today)
-  const toDate = formatDate(futureDate)
+  const fromDate = from
+  const toDate = to
+  const fromDateObj = useMemo(() => parseISODate(fromDate), [fromDate])
+  const toDateObj = useMemo(() => parseISODate(toDate), [toDate])
+  const [month, setMonth] = useState(fromDateObj)
+
+  useEffect(() => {
+    setMonth(fromDateObj)
+  }, [fromDateObj])
 
   // Fetch absences per member in parallel
   const absenceQueries = useQueries({
@@ -97,6 +103,15 @@ export function TeamUpcomingAbsences({ members }: TeamUpcomingAbsencesProps) {
     return entries
   }, [absenceQueries])
 
+  const absenceDates = useMemo(() => {
+    const unique = new Map<string, Date>()
+    for (const entry of allAbsences) {
+      const dateObj = parseISODate(entry.absenceDate)
+      unique.set(formatDate(dateObj), dateObj)
+    }
+    return Array.from(unique.values())
+  }, [allAbsences])
+
   const displayedAbsences = allAbsences.slice(0, MAX_ENTRIES)
   const hasMore = allAbsences.length > MAX_ENTRIES
 
@@ -133,37 +148,51 @@ export function TeamUpcomingAbsences({ members }: TeamUpcomingAbsencesProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {displayedAbsences.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-6">
-            {t('noUpcomingAbsences')}
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {displayedAbsences.map((absence, i) => (
-              <div
-                key={`${absence.absenceDate}-${absence.employeeName}-${i}`}
-                className="flex items-center justify-between gap-2 text-sm"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{absence.employeeName}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatRelativeDate(absence.absenceDate)}
-                    {absence.halfDay && ` ${t('halfDayLabel')}`}
-                  </p>
-                </div>
-                <Badge variant="secondary" className="shrink-0">
-                  {absence.absenceTypeName}
-                </Badge>
-              </div>
-            ))}
-
-            {hasMore && (
-              <p className="text-xs text-muted-foreground text-center pt-2">
-                {t('moreAbsences', { count: allAbsences.length - MAX_ENTRIES })}
-              </p>
-            )}
+        <div className="space-y-4">
+          <div className="rounded-md border bg-muted/30">
+            <Calendar
+              month={month}
+              onMonthChange={setMonth}
+              mode="single"
+              selected={undefined}
+              absences={absenceDates}
+              minDate={fromDateObj}
+              maxDate={toDateObj}
+            />
           </div>
-        )}
+
+          {displayedAbsences.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              {t('noUpcomingAbsences')}
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {displayedAbsences.map((absence, i) => (
+                <div
+                  key={`${absence.absenceDate}-${absence.employeeName}-${i}`}
+                  className="flex items-center justify-between gap-2 text-sm"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{absence.employeeName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatRelativeDate(absence.absenceDate)}
+                      {absence.halfDay && ` ${t('halfDayLabel')}`}
+                    </p>
+                  </div>
+                  <Badge variant="secondary" className="shrink-0">
+                    {absence.absenceTypeName}
+                  </Badge>
+                </div>
+              ))}
+
+              {hasMore && (
+                <p className="text-xs text-muted-foreground text-center pt-2">
+                  {t('moreAbsences', { count: allAbsences.length - MAX_ENTRIES })}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   )

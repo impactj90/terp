@@ -1,10 +1,11 @@
 'use client'
 
 import { useMemo } from 'react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TeamMemberStatusRow } from './team-member-status-row'
+import { formatDisplayDate, parseISODate } from '@/lib/time-utils'
 import type { components } from '@/lib/api/types'
 
 type TeamMember = components['schemas']['TeamMember']
@@ -19,7 +20,7 @@ interface TeamAttendanceListProps {
   date?: string
 }
 
-type AttendanceGroup = 'present' | 'on-leave' | 'not-yet-in'
+type AttendanceGroup = 'in' | 'out' | 'on-leave' | 'not-yet-in'
 
 interface GroupedMember {
   member: TeamMember
@@ -27,7 +28,24 @@ interface GroupedMember {
   group: AttendanceGroup
 }
 
-function classifyMember(member: TeamMember, dayView: DayViewData): AttendanceGroup {
+function getWorkBookings(dayView: DayViewData) {
+  const bookings = dayView?.bookings ?? []
+  return bookings.filter(
+    (b: { booking_type?: { direction?: string } }) =>
+      b.booking_type?.direction === 'in' || b.booking_type?.direction === 'out'
+  )
+}
+
+function getLastDirection(dayView: DayViewData) {
+  const workBookings = getWorkBookings(dayView)
+  if (workBookings.length === 0) return null
+  const sorted = [...workBookings].sort(
+    (a: { edited_time: number }, b: { edited_time: number }) => a.edited_time - b.edited_time
+  )
+  return sorted[sorted.length - 1]?.booking_type?.direction ?? null
+}
+
+function classifyMember(dayView: DayViewData): AttendanceGroup {
   if (!dayView) return 'not-yet-in'
 
   const isHoliday = dayView.is_holiday ?? false
@@ -38,35 +56,40 @@ function classifyMember(member: TeamMember, dayView: DayViewData): AttendanceGro
   if (isAbsence) return 'on-leave'
   if (isHoliday || isWeekend) return 'not-yet-in'
 
-  const bookings = dayView.bookings ?? []
-  const workBookings = bookings.filter(
-    (b: { booking_type?: { direction?: string } }) =>
-      b.booking_type?.direction === 'in' || b.booking_type?.direction === 'out'
-  )
-
-  if (workBookings.length > 0) return 'present'
+  const lastDirection = getLastDirection(dayView)
+  if (lastDirection === 'in') return 'in'
+  if (lastDirection === 'out') return 'out'
   return 'not-yet-in'
 }
 
 const groupLabelKeys: Record<AttendanceGroup, string> = {
-  present: 'filterPresent',
+  in: 'filterIn',
+  out: 'filterOut',
   'on-leave': 'filterOnLeave',
   'not-yet-in': 'filterNotYetIn',
 }
 
-const groupOrder: AttendanceGroup[] = ['present', 'on-leave', 'not-yet-in']
+const groupOrder: AttendanceGroup[] = ['in', 'out', 'on-leave', 'not-yet-in']
 
 /**
  * Team attendance list showing all team members grouped by status.
- * Groups: Present first, then On Leave, then Not Yet In.
+ * Groups: In, Out, On Leave, then Not Yet In.
  * Receives pre-fetched day views data from the parent page to avoid duplicate requests.
  */
 export function TeamAttendanceList({
   members,
   dayViewsData,
   dayViewsLoading,
+  date,
 }: TeamAttendanceListProps) {
   const t = useTranslations('teamOverview')
+  const locale = useLocale()
+  const attendanceDateLabel = date
+    ? formatDisplayDate(parseISODate(date), 'short', locale)
+    : null
+  const title = attendanceDateLabel
+    ? t('attendanceForDate', { date: attendanceDateLabel })
+    : t('teamAttendance')
   // Create employeeId -> dayView map for O(1) lookup
   const dayViewMap = useMemo(() => {
     const map = new Map<string, DayViewData>()
@@ -81,14 +104,15 @@ export function TeamAttendanceList({
   // Classify and group members
   const grouped = useMemo(() => {
     const result: Record<AttendanceGroup, GroupedMember[]> = {
-      present: [],
+      in: [],
+      out: [],
       'on-leave': [],
       'not-yet-in': [],
     }
 
     for (const member of members) {
       const dayView = dayViewMap.get(member.employee_id)
-      const group = classifyMember(member, dayView)
+      const group = classifyMember(dayView)
       result[group].push({ member, dayView, group })
     }
 
@@ -99,7 +123,7 @@ export function TeamAttendanceList({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>{t('teamAttendance')}</CardTitle>
+          <CardTitle>{title}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -122,7 +146,7 @@ export function TeamAttendanceList({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t('teamAttendance')}</CardTitle>
+        <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">

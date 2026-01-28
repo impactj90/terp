@@ -5,6 +5,8 @@ interface UseTeamDayViewsOptions {
   employeeIds: string[]
   date: string
   enabled?: boolean
+  staleTime?: number
+  refetchInterval?: number | false
 }
 
 /**
@@ -22,7 +24,13 @@ interface UseTeamDayViewsOptions {
  * })
  * ```
  */
-export function useTeamDayViews({ employeeIds, date, enabled = true }: UseTeamDayViewsOptions) {
+export function useTeamDayViews({
+  employeeIds,
+  date,
+  enabled = true,
+  staleTime = 30 * 1000,
+  refetchInterval = false,
+}: UseTeamDayViewsOptions) {
   const queries = useQueries({
     queries: employeeIds.map((employeeId) => ({
       queryKey: ['/employees/{id}/day/{date}', undefined, { id: employeeId, date }],
@@ -36,7 +44,9 @@ export function useTeamDayViews({ employeeIds, date, enabled = true }: UseTeamDa
         return { employeeId, ...(data as Record<string, unknown>) }
       },
       enabled: enabled && !!employeeId && !!date,
-      staleTime: 30 * 1000, // 30 seconds stale time (matches useEmployeeDayView)
+      staleTime,
+      refetchInterval,
+      refetchIntervalInBackground: Boolean(refetchInterval),
     })),
   })
 

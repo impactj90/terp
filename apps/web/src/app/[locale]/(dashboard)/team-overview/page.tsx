@@ -1,22 +1,25 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { RefreshCw } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/providers/auth-provider'
-import { useTeams, useTeam } from '@/hooks/api'
+import { useTeams, useTeam, useTeamDailyValues } from '@/hooks/api'
 import { useTeamDayViews } from '@/hooks/api/use-team-day-views'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { getToday } from '@/lib/time-utils'
+import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
+import { formatDate, getWeekRange } from '@/lib/time-utils'
 import {
   TeamSelector,
   TeamAttendanceList,
   TeamStatsCards,
+  TeamAttendancePattern,
   TeamUpcomingAbsences,
   TeamQuickActions,
+  TeamExportButtons,
 } from '@/components/team-overview'
 import Link from 'next/link'
 import { Users } from 'lucide-react'
@@ -26,7 +29,16 @@ export default function TeamOverviewPage() {
   const { isLoading: authLoading } = useAuth()
   const queryClient = useQueryClient()
   const [selectedTeamId, setSelectedTeamId] = useState<string | undefined>(undefined)
-  const today = getToday()
+  const defaultRange = useMemo(() => {
+    const { start, end } = getWeekRange(new Date())
+    return { from: start, to: end }
+  }, [])
+  const [range, setRange] = useState<DateRange>(defaultRange)
+  const rangeFrom = range?.from ?? defaultRange.from
+  const rangeTo = range?.to ?? rangeFrom
+  const rangeFromDate = formatDate(rangeFrom)
+  const rangeToDate = formatDate(rangeTo)
+  const attendanceDate = formatDate(rangeTo)
 
   // Fetch active teams for selector
   const { data: teamsData, isLoading: teamsLoading } = useTeams({
@@ -59,7 +71,17 @@ export default function TeamOverviewPage() {
     refetchAll,
   } = useTeamDayViews({
     employeeIds,
-    date: today,
+    date: attendanceDate,
+    enabled: members.length > 0,
+    refetchInterval: selectedTeamId ? 30 * 1000 : false,
+  })
+  const {
+    data: rangeDailyValues,
+    isLoading: rangeDailyValuesLoading,
+  } = useTeamDailyValues({
+    employeeIds,
+    from: rangeFromDate,
+    to: rangeToDate,
     enabled: members.length > 0,
   })
 
@@ -84,12 +106,24 @@ export default function TeamOverviewPage() {
             {t('subtitle')}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="min-w-[240px]">
+            <DateRangePicker value={range} onChange={(next) => next && setRange(next)} />
+          </div>
           {selectedTeamId && (
             <Button variant="outline" size="sm" onClick={handleRefresh} className="gap-2">
               <RefreshCw className="h-4 w-4" />
               {t('refresh')}
             </Button>
+          )}
+          {selectedTeamId && (
+            <TeamExportButtons
+              members={members}
+              rangeDailyValues={rangeDailyValues}
+              rangeFrom={rangeFromDate}
+              rangeTo={rangeToDate}
+              isLoading={rangeDailyValuesLoading || teamLoading}
+            />
           )}
           <TeamQuickActions teamId={selectedTeamId} />
         </div>
@@ -148,20 +182,35 @@ export default function TeamOverviewPage() {
                 members={members}
                 dayViewsData={dayViewsData}
                 dayViewsLoading={dayViewsLoading || teamLoading}
+                rangeDailyValues={rangeDailyValues}
+                rangeLoading={rangeDailyValuesLoading || teamLoading}
+                rangeFrom={rangeFromDate}
+                rangeTo={rangeToDate}
               />
 
               {/* Two-column layout */}
               <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
                 {/* Left: Attendance list */}
-                <TeamAttendanceList
-                  members={members}
-                  dayViewsData={dayViewsData}
-                  dayViewsLoading={dayViewsLoading || teamLoading}
-                  date={today}
-                />
+                <div className="space-y-6">
+                  <TeamAttendanceList
+                    members={members}
+                    dayViewsData={dayViewsData}
+                    dayViewsLoading={dayViewsLoading || teamLoading}
+                    date={attendanceDate}
+                  />
+                  <TeamAttendancePattern
+                    rangeDailyValues={rangeDailyValues}
+                    rangeLoading={rangeDailyValuesLoading || teamLoading}
+                    rangeFrom={rangeFromDate}
+                    rangeTo={rangeToDate}
+                    membersCount={members.length}
+                  />
+                </div>
 
                 {/* Right: Upcoming absences */}
-                <TeamUpcomingAbsences members={members} />
+                <div className="space-y-6">
+                  <TeamUpcomingAbsences members={members} from={rangeFromDate} to={rangeToDate} />
+                </div>
               </div>
             </>
           )}
@@ -197,7 +246,7 @@ function TeamOverviewSkeleton() {
       </div>
       <Skeleton className="h-10 w-[280px]" />
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
+        {Array.from({ length: 8 }).map((_, i) => (
           <Skeleton key={i} className="h-32" />
         ))}
       </div>

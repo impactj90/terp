@@ -2,12 +2,10 @@
 
 import { useMemo } from 'react'
 import { useTranslations } from 'next-intl'
-import { useQueries } from '@tanstack/react-query'
 import { Users, Clock, CalendarOff, AlertTriangle } from 'lucide-react'
 import { StatsCard } from '@/components/dashboard'
-import { formatMinutes, getWeekStart, formatDate } from '@/lib/time-utils'
-import { authStorage, tenantIdStorage } from '@/lib/api'
-import { clientEnv } from '@/config/env'
+import { formatMinutes, formatBalance } from '@/lib/time-utils'
+import type { TeamDailyValuesResult } from '@/hooks/api/use-team-daily-values'
 import type { components } from '@/lib/api/types'
 
 type TeamMember = components['schemas']['TeamMember']
@@ -19,39 +17,28 @@ interface TeamStatsCardsProps {
   members: TeamMember[]
   dayViewsData: DayViewData[]
   dayViewsLoading: boolean
-}
-
-async function fetchDailyValues(employeeId: string, year: number, month: number) {
-  const token = authStorage.getToken()
-  const tenantId = tenantIdStorage.getTenantId()
-
-  const response = await fetch(
-    `${clientEnv.apiUrl}/employees/${employeeId}/months/${year}/${month}/days`,
-    {
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(tenantId ? { 'X-Tenant-ID': tenantId } : {}),
-      },
-    }
-  )
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Request failed' }))
-    throw new Error(error.message || 'Request failed')
-  }
-
-  return response.json()
+  rangeDailyValues: TeamDailyValuesResult[]
+  rangeLoading: boolean
+  rangeFrom: string
+  rangeTo: string
 }
 
 /**
- * Grid of 4 stat cards showing team-level metrics.
- * Cards: Present Today, Team Hours This Week, Absences Today, Issues.
+ * Grid of stat cards showing team-level metrics.
+ * Cards: Present Today, Team Hours (range), Absences Today, Issues, and range summaries.
  *
- * Cards 1, 3, 4 derive data from the dayViewsData prop (pre-fetched).
- * Card 2 fetches weekly data per member using parallel queries.
+ * Today-focused cards derive data from dayViewsData (pre-fetched).
+ * Range cards derive data from rangeDailyValues.
  */
-export function TeamStatsCards({ members, dayViewsData, dayViewsLoading }: TeamStatsCardsProps) {
+export function TeamStatsCards({
+  members,
+  dayViewsData,
+  dayViewsLoading,
+  rangeDailyValues,
+  rangeLoading,
+  rangeFrom,
+  rangeTo,
+}: TeamStatsCardsProps) {
   const t = useTranslations('teamOverview')
 
   // Compute today stats from dayViewsData
@@ -90,46 +77,38 @@ export function TeamStatsCards({ members, dayViewsData, dayViewsLoading }: TeamS
     return { presentCount, absenceCount, issueCount }
   }, [dayViewsData])
 
-  // Fetch weekly data per member for "Team Hours This Week"
-  const weekStart = formatDate(getWeekStart())
-  const weekDate = new Date(weekStart)
-  const weekYear = weekDate.getFullYear()
-  const weekMonth = weekDate.getMonth() + 1
-
-  const weeklyQueries = useQueries({
-    queries: members.map((m) => ({
-      queryKey: ['employees', m.employee_id, 'months', weekYear, weekMonth, 'days'],
-      queryFn: () => fetchDailyValues(m.employee_id, weekYear, weekMonth),
-      enabled: members.length > 0,
-      staleTime: 60 * 1000, // 1 minute stale for weekly data
-    })),
-  })
-
-  const weeklyStats = useMemo(() => {
+  const rangeStats = useMemo(() => {
     let totalNetMinutes = 0
     let totalTargetMinutes = 0
+    let totalOvertimeMinutes = 0
+    let totalUndertimeMinutes = 0
+    let absenceDays = 0
 
-    // Filter daily values to current week only
-    const weekStartDate = getWeekStart()
-    const weekEndDate = new Date(weekStartDate)
-    weekEndDate.setDate(weekEndDate.getDate() + 6)
-
-    for (const query of weeklyQueries) {
-      if (!query.data?.data) continue
-      for (const dv of query.data.data) {
-        // Filter to current week dates
-        const valueDate = new Date(dv.value_date)
-        if (valueDate >= weekStartDate && valueDate <= weekEndDate) {
-          totalNetMinutes += dv.net_time ?? dv.net_minutes ?? 0
-          totalTargetMinutes += dv.target_time ?? dv.target_minutes ?? 0
+    for (const result of rangeDailyValues) {
+      for (const dv of result.values ?? []) {
+        totalNetMinutes += dv.net_minutes ?? 0
+        totalTargetMinutes += dv.target_minutes ?? 0
+        totalOvertimeMinutes += dv.overtime_minutes ?? 0
+        totalUndertimeMinutes += dv.undertime_minutes ?? 0
+        if (dv.is_absence) {
+          absenceDays += 1
         }
       }
     }
 
-    return { totalNetMinutes, totalTargetMinutes }
-  }, [weeklyQueries])
+    const totalBalance = totalOvertimeMinutes - totalUndertimeMinutes
+    const avgBalance = members.length > 0 ? Math.round(totalBalance / members.length) : 0
 
-  const weeklyLoading = weeklyQueries.some((q) => q.isLoading)
+    return {
+      totalNetMinutes,
+      totalTargetMinutes,
+      totalOvertimeMinutes,
+      totalUndertimeMinutes,
+      totalBalance,
+      avgBalance,
+      absenceDays,
+    }
+  }, [members.length, rangeDailyValues])
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -142,13 +121,22 @@ export function TeamStatsCards({ members, dayViewsData, dayViewsLoading }: TeamS
         isLoading={dayViewsLoading && members.length === 0}
       />
 
-      {/* Team Hours This Week */}
+      {/* Team Hours (Selected Range) */}
       <StatsCard
-        title={t('teamHoursThisWeek')}
-        value={weeklyLoading ? '-' : formatMinutes(weeklyStats.totalNetMinutes)}
-        description={t('targetLabel', { time: formatMinutes(weeklyStats.totalTargetMinutes) })}
+        title={t('teamHoursInRange')}
+        value={rangeLoading ? '-' : formatMinutes(rangeStats.totalNetMinutes)}
+        description={t('targetLabel', { time: formatMinutes(rangeStats.totalTargetMinutes) })}
         icon={Clock}
-        isLoading={weeklyLoading && members.length === 0}
+        isLoading={rangeLoading && members.length === 0}
+      />
+
+      {/* Avg Overtime (per member) */}
+      <StatsCard
+        title={t('avgOvertime')}
+        value={rangeLoading ? '-' : formatBalance(rangeStats.avgBalance)}
+        description={t('rangeLabel', { from: rangeFrom, to: rangeTo })}
+        icon={Clock}
+        isLoading={rangeLoading && members.length === 0}
       />
 
       {/* Absences Today */}
@@ -164,6 +152,31 @@ export function TeamStatsCards({ members, dayViewsData, dayViewsLoading }: TeamS
         }
         icon={CalendarOff}
         isLoading={dayViewsLoading && members.length === 0}
+      />
+
+      {/* Absence Days (range) */}
+      <StatsCard
+        title={t('absenceDaysInRange')}
+        value={rangeLoading ? '-' : String(rangeStats.absenceDays)}
+        description={t('rangeLabel', { from: rangeFrom, to: rangeTo })}
+        icon={CalendarOff}
+        isLoading={rangeLoading && members.length === 0}
+      />
+
+      {/* Overtime / Undertime totals */}
+      <StatsCard
+        title={t('totalOvertime')}
+        value={rangeLoading ? '-' : formatMinutes(rangeStats.totalOvertimeMinutes)}
+        description={t('rangeLabel', { from: rangeFrom, to: rangeTo })}
+        icon={Clock}
+        isLoading={rangeLoading && members.length === 0}
+      />
+      <StatsCard
+        title={t('totalUndertime')}
+        value={rangeLoading ? '-' : formatMinutes(rangeStats.totalUndertimeMinutes)}
+        description={t('rangeLabel', { from: rangeFrom, to: rangeTo })}
+        icon={Clock}
+        isLoading={rangeLoading && members.length === 0}
       />
 
       {/* Issues */}
