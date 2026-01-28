@@ -61,6 +61,22 @@ func (r *UserRepository) GetByEmail(ctx context.Context, tenantID uuid.UUID, ema
 	return &user, nil
 }
 
+// GetByEmployeeID retrieves a user by employee ID within a tenant.
+func (r *UserRepository) GetByEmployeeID(ctx context.Context, tenantID, employeeID uuid.UUID) (*model.User, error) {
+	var user model.User
+	err := r.db.GORM.WithContext(ctx).
+		Where("tenant_id = ? AND employee_id = ?", tenantID, employeeID).
+		First(&user).Error
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrUserNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user by employee id: %w", err)
+	}
+	return &user, nil
+}
+
 // Update updates a user.
 func (r *UserRepository) Update(ctx context.Context, user *model.User) error {
 	return r.db.GORM.WithContext(ctx).Save(user).Error

@@ -26,12 +26,18 @@ type dailyValueRepositoryForService interface {
 
 // DailyValueService handles daily value list/approval logic.
 type DailyValueService struct {
-	repo dailyValueRepositoryForService
+	repo            dailyValueRepositoryForService
+	notificationSvc *NotificationService
 }
 
 // NewDailyValueService creates a new DailyValueService.
 func NewDailyValueService(repo dailyValueRepositoryForService) *DailyValueService {
 	return &DailyValueService{repo: repo}
+}
+
+// SetNotificationService sets the notification service for daily value events.
+func (s *DailyValueService) SetNotificationService(notificationSvc *NotificationService) {
+	s.notificationSvc = notificationSvc
 }
 
 // ListAll returns daily values matching filters for a tenant.
@@ -74,5 +80,22 @@ func (s *DailyValueService) Approve(ctx context.Context, tenantID, id uuid.UUID)
 		return nil, err
 	}
 
+	s.notifyTimesheetApproved(ctx, dv)
+
 	return dv, nil
+}
+
+func (s *DailyValueService) notifyTimesheetApproved(ctx context.Context, dv *model.DailyValue) {
+	if s.notificationSvc == nil || dv == nil {
+		return
+	}
+
+	dateLabel := dv.ValueDate.Format("2006-01-02")
+	link := fmt.Sprintf("/timesheet?view=day&date=%s", dateLabel)
+	_, _ = s.notificationSvc.CreateForEmployee(ctx, dv.TenantID, dv.EmployeeID, CreateNotificationInput{
+		Type:    model.NotificationTypeApprovals,
+		Title:   "Timesheet approved",
+		Message: fmt.Sprintf("Your timesheet for %s was approved.", dateLabel),
+		Link:    &link,
+	})
 }

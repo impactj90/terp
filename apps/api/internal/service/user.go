@@ -17,11 +17,17 @@ var (
 )
 
 type UserService struct {
-	userRepo *repository.UserRepository
+	userRepo        *repository.UserRepository
+	notificationSvc *NotificationService
 }
 
 func NewUserService(userRepo *repository.UserRepository) *UserService {
 	return &UserService{userRepo: userRepo}
+}
+
+// SetNotificationService sets the notification service for user events.
+func (s *UserService) SetNotificationService(notificationSvc *NotificationService) {
+	s.notificationSvc = notificationSvc
 }
 
 // GetByID retrieves a user by ID.
@@ -73,6 +79,7 @@ func (s *UserService) Update(ctx context.Context, requesterID, targetID uuid.UUI
 	}
 
 	// Apply allowed updates
+	previousDisplayName := user.DisplayName
 	if name, ok := updates["display_name"].(string); ok && name != "" {
 		user.DisplayName = name
 	}
@@ -82,6 +89,18 @@ func (s *UserService) Update(ctx context.Context, requesterID, targetID uuid.UUI
 
 	if err := s.userRepo.Update(ctx, user); err != nil {
 		return nil, err
+	}
+
+	if s.notificationSvc != nil && user.TenantID != nil && previousDisplayName != user.DisplayName {
+		link := "/profile"
+		_, _ = s.notificationSvc.Create(ctx, CreateNotificationInput{
+			TenantID: *user.TenantID,
+			UserID:   user.ID,
+			Type:     model.NotificationTypeSystem,
+			Title:    "Profile updated",
+			Message:  "Your display name was updated.",
+			Link:     &link,
+		})
 	}
 
 	return user, nil
@@ -107,8 +126,9 @@ func (s *UserService) Delete(ctx context.Context, requesterID, targetID uuid.UUI
 }
 
 // UpsertDevUser ensures a dev user exists in the database.
-func (s *UserService) UpsertDevUser(ctx context.Context, id uuid.UUID, email, displayName string, role model.UserRole) error {
+func (s *UserService) UpsertDevUser(ctx context.Context, id uuid.UUID, tenantID uuid.UUID, email, displayName string, role model.UserRole) error {
 	user := &model.User{
+		TenantID:    &tenantID,
 		Email:       email,
 		DisplayName: displayName,
 		Role:        role,

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -73,6 +74,7 @@ type AbsenceService struct {
 	holidayRepo     holidayRepositoryForAbsence
 	empDayPlanRepo  empDayPlanRepositoryForAbsence
 	recalcSvc       recalcServiceForAbsence
+	notificationSvc *NotificationService
 }
 
 // NewAbsenceService creates a new AbsenceService instance.
@@ -90,6 +92,11 @@ func NewAbsenceService(
 		empDayPlanRepo:  empDayPlanRepo,
 		recalcSvc:       recalcSvc,
 	}
+}
+
+// SetNotificationService sets the notification service for absence events.
+func (s *AbsenceService) SetNotificationService(notificationSvc *NotificationService) {
+	s.notificationSvc = notificationSvc
 }
 
 // CreateAbsenceRangeInput represents the input for creating absences over a date range.
@@ -169,6 +176,9 @@ func (s *AbsenceService) Approve(ctx context.Context, id, approvedBy uuid.UUID) 
 	// Trigger recalculation for the affected date
 	_, _ = s.recalcSvc.TriggerRecalc(ctx, ad.TenantID, ad.EmployeeID, ad.AbsenceDate)
 
+	// Notify employee about approval
+	s.notifyAbsenceDecision(ctx, ad, model.AbsenceStatusApproved)
+
 	return ad, nil
 }
 
@@ -196,6 +206,9 @@ func (s *AbsenceService) Reject(ctx context.Context, id uuid.UUID, reason string
 
 	// Trigger recalculation for the affected date
 	_, _ = s.recalcSvc.TriggerRecalc(ctx, ad.TenantID, ad.EmployeeID, ad.AbsenceDate)
+
+	// Notify employee about rejection
+	s.notifyAbsenceDecision(ctx, ad, model.AbsenceStatusRejected)
 
 	return ad, nil
 }
@@ -333,10 +346,77 @@ func (s *AbsenceService) CreateRange(ctx context.Context, input CreateAbsenceRan
 	// Trigger recalculation for the affected range
 	_, _ = s.recalcSvc.TriggerRecalcRange(ctx, input.TenantID, input.EmployeeID, input.FromDate, input.ToDate)
 
+	// Notify admins about pending absence requests
+	if input.Status == model.AbsenceStatusPending {
+		s.notifyPendingAbsence(ctx, input, absenceType)
+	}
+
 	return &CreateAbsenceRangeResult{
 		CreatedDays:  daysToCreate,
 		SkippedDates: skippedDates,
 	}, nil
+}
+
+func (s *AbsenceService) notifyPendingAbsence(ctx context.Context, input CreateAbsenceRangeInput, absenceType *model.AbsenceType) {
+	if s.notificationSvc == nil {
+		return
+	}
+
+	fromDate := normalizeDate(input.FromDate)
+	toDate := normalizeDate(input.ToDate)
+	dateLabel := fromDate.Format("2006-01-02")
+	if !fromDate.Equal(toDate) {
+		dateLabel = fmt.Sprintf("%s to %s", fromDate.Format("2006-01-02"), toDate.Format("2006-01-02"))
+	}
+
+	absenceTypeName := "Absence"
+	if absenceType != nil && absenceType.Name != "" {
+		absenceTypeName = absenceType.Name
+	}
+
+	link := "/admin/approvals"
+	_, _ = s.notificationSvc.CreateForTenantAdmins(ctx, input.TenantID, CreateNotificationInput{
+		Type:    model.NotificationTypeReminders,
+		Title:   "Absence approval required",
+		Message: fmt.Sprintf("%s request for %s is pending approval.", absenceTypeName, dateLabel),
+		Link:    &link,
+	})
+}
+
+func (s *AbsenceService) notifyAbsenceDecision(ctx context.Context, absence *model.AbsenceDay, status model.AbsenceStatus) {
+	if s.notificationSvc == nil || absence == nil {
+		return
+	}
+
+	absenceTypeName := "Absence"
+	if absence.AbsenceType != nil && absence.AbsenceType.Name != "" {
+		absenceTypeName = absence.AbsenceType.Name
+	}
+
+	dateLabel := normalizeDate(absence.AbsenceDate).Format("2006-01-02")
+	link := "/absences"
+
+	var title string
+	var message string
+	if status == model.AbsenceStatusApproved {
+		title = "Absence approved"
+		message = fmt.Sprintf("%s on %s was approved.", absenceTypeName, dateLabel)
+	} else if status == model.AbsenceStatusRejected {
+		title = "Absence rejected"
+		message = fmt.Sprintf("%s on %s was rejected.", absenceTypeName, dateLabel)
+		if absence.RejectionReason != nil && *absence.RejectionReason != "" {
+			message = fmt.Sprintf("%s (Reason: %s)", message, *absence.RejectionReason)
+		}
+	} else {
+		return
+	}
+
+	_, _ = s.notificationSvc.CreateForEmployee(ctx, absence.TenantID, absence.EmployeeID, CreateNotificationInput{
+		Type:    model.NotificationTypeApprovals,
+		Title:   title,
+		Message: message,
+		Link:    &link,
+	})
 }
 
 // buildHolidaySet creates a set of holiday dates for O(1) lookup.

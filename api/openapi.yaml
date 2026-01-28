@@ -47,6 +47,8 @@ tags:
     description: Authentication endpoints
   - name: Users
     description: User management
+  - name: Notifications
+    description: Notification preferences and history
   - name: Tenants
     description: Tenant management
   - name: Employees
@@ -134,6 +136,18 @@ paths:
     $ref: 'paths/users.yaml#/~1users'
   /users/{id}:
     $ref: 'paths/users.yaml#/~1users~1{id}'
+
+  # Notifications
+  /notifications:
+    $ref: 'paths/notifications.yaml#/~1notifications'
+  /notifications/{id}/read:
+    $ref: 'paths/notifications.yaml#/~1notifications~1{id}~1read'
+  /notifications/read-all:
+    $ref: 'paths/notifications.yaml#/~1notifications~1read-all'
+  /notifications/stream:
+    $ref: 'paths/notifications.yaml#/~1notifications~1stream'
+  /notification-preferences:
+    $ref: 'paths/notifications.yaml#/~1notification-preferences'
 
   # Tenants
   /tenants:
@@ -397,6 +411,18 @@ definitions:
     $ref: 'schemas/users.yaml#/UpdateUserRequest'
   UserList:
     $ref: 'schemas/users.yaml#/UserList'
+
+  # Notifications
+  Notification:
+    $ref: 'schemas/notifications.yaml#/Notification'
+  NotificationList:
+    $ref: 'schemas/notifications.yaml#/NotificationList'
+  NotificationPreferences:
+    $ref: 'schemas/notifications.yaml#/NotificationPreferences'
+  UpdateNotificationPreferencesRequest:
+    $ref: 'schemas/notifications.yaml#/UpdateNotificationPreferencesRequest'
+  MarkNotificationsReadResponse:
+    $ref: 'schemas/notifications.yaml#/MarkNotificationsReadResponse'
 
   # Tenants
   Tenant:

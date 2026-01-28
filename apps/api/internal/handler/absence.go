@@ -159,7 +159,7 @@ func (h *AbsenceHandler) CreateRange(w http.ResponseWriter, r *http.Request) {
 		FromDate:      time.Time(*req.From),
 		ToDate:        time.Time(*req.To),
 		Duration:      decimal.NewFromFloat(*req.Duration),
-		Status:        model.AbsenceStatusApproved, // Admin-created absences are auto-approved
+		Status:        model.AbsenceStatusPending, // Always pending; approvals handled separately
 	}
 
 	// Optional notes

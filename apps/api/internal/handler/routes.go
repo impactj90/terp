@@ -266,3 +266,18 @@ func RegisterMonthlyEvalRoutes(r chi.Router, h *MonthlyEvalHandler) {
 		})
 	})
 }
+
+// RegisterNotificationRoutes registers notification routes.
+func RegisterNotificationRoutes(r chi.Router, h *NotificationHandler) {
+	r.Route("/notifications", func(r chi.Router) {
+		r.Get("/", h.List)
+		r.Get("/stream", h.Stream)
+		r.Post("/read-all", h.MarkAllRead)
+		r.Post("/{id}/read", h.MarkRead)
+	})
+
+	r.Route("/notification-preferences", func(r chi.Router) {
+		r.Get("/", h.GetPreferences)
+		r.Put("/", h.UpdatePreferences)
+	})
+}

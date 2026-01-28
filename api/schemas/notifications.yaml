@@ -1,0 +1,132 @@
+# Notification-related schemas
+Notification:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - user_id
+    - type
+    - title
+    - message
+    - created_at
+    - updated_at
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    user_id:
+      type: string
+      format: uuid
+    type:
+      type: string
+      enum:
+        - approvals
+        - errors
+        - reminders
+        - system
+    title:
+      type: string
+      example: "Absence approved"
+    message:
+      type: string
+      example: "Vacation on 2026-01-20 was approved."
+    link:
+      type: string
+      x-nullable: true
+    read_at:
+      type: string
+      format: date-time
+      x-nullable: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+NotificationList:
+  type: object
+  required:
+    - data
+    - total
+    - unread_count
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/Notification'
+    total:
+      type: integer
+      format: int64
+      example: 50
+    unread_count:
+      type: integer
+      format: int64
+      example: 3
+
+NotificationPreferences:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - user_id
+    - approvals_enabled
+    - errors_enabled
+    - reminders_enabled
+    - system_enabled
+    - created_at
+    - updated_at
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    user_id:
+      type: string
+      format: uuid
+    approvals_enabled:
+      type: boolean
+    errors_enabled:
+      type: boolean
+    reminders_enabled:
+      type: boolean
+    system_enabled:
+      type: boolean
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+UpdateNotificationPreferencesRequest:
+  type: object
+  required:
+    - approvals_enabled
+    - errors_enabled
+    - reminders_enabled
+    - system_enabled
+  properties:
+    approvals_enabled:
+      type: boolean
+    errors_enabled:
+      type: boolean
+    reminders_enabled:
+      type: boolean
+    system_enabled:
+      type: boolean
+
+MarkNotificationsReadResponse:
+  type: object
+  required:
+    - count
+  properties:
+    count:
+      type: integer
+      format: int64
+      example: 5

@@ -80,6 +80,8 @@ func main() {
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
 	tariffRepo := repository.NewTariffRepository(db)
 	bookingTypeRepo := repository.NewBookingTypeRepository(db)
+	notificationRepo := repository.NewNotificationRepository(db)
+	notificationPreferencesRepo := repository.NewNotificationPreferencesRepository(db)
 
 	// Initialize services
 	userService := service.NewUserService(userRepo)
@@ -96,6 +98,9 @@ func main() {
 	weekPlanService := service.NewWeekPlanService(weekPlanRepo, dayPlanRepo)
 	tariffService := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	bookingTypeService := service.NewBookingTypeService(bookingTypeRepo)
+	notificationService := service.NewNotificationService(notificationRepo, notificationPreferencesRepo, userRepo)
+	notificationStreamHub := service.NewNotificationStreamHub()
+	notificationService.SetStreamHub(notificationStreamHub)
 
 	// Initialize calculation services
 	bookingRepo := repository.NewBookingRepository(db)
@@ -166,6 +171,7 @@ func main() {
 	tariffHandler := handler.NewTariffHandler(tariffService)
 	bookingTypeHandler := handler.NewBookingTypeHandler(bookingTypeService)
 	dailyValueHandler := handler.NewDailyValueHandler(dailyValueService)
+	notificationHandler := handler.NewNotificationHandler(notificationService, notificationStreamHub)
 
 	// Initialize BookingHandler
 	bookingHandler := handler.NewBookingHandler(
@@ -176,6 +182,12 @@ func main() {
 		empDayPlanRepo,
 		holidayRepo,
 	)
+
+	// Wire notification service into producers
+	absenceService.SetNotificationService(notificationService)
+	dailyCalcService.SetNotificationService(notificationService)
+	dailyValueService.SetNotificationService(notificationService)
+	userService.SetNotificationService(notificationService)
 
 	// Initialize tenant middleware
 	tenantMiddleware := middleware.NewTenantMiddleware(tenantService)
@@ -244,6 +256,7 @@ func main() {
 				handler.RegisterAbsenceRoutes(r, absenceHandler)
 				handler.RegisterVacationRoutes(r, vacationHandler)
 				handler.RegisterMonthlyEvalRoutes(r, monthlyEvalHandler)
+				handler.RegisterNotificationRoutes(r, notificationHandler)
 			})
 		})
 

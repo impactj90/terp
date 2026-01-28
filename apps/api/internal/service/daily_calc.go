@@ -95,12 +95,13 @@ type holidayLookup interface {
 
 // DailyCalcService orchestrates daily time calculations.
 type DailyCalcService struct {
-	bookingRepo    bookingRepository
-	empDayPlanRepo employeeDayPlanRepository
-	dayPlanRepo    dayPlanLookup
-	dailyValueRepo dailyValueRepository
-	holidayRepo    holidayLookup
-	calc           *calculation.Calculator
+	bookingRepo     bookingRepository
+	empDayPlanRepo  employeeDayPlanRepository
+	dayPlanRepo     dayPlanLookup
+	dailyValueRepo  dailyValueRepository
+	holidayRepo     holidayLookup
+	calc            *calculation.Calculator
+	notificationSvc *NotificationService
 }
 
 // NewDailyCalcService creates a new DailyCalcService instance.
@@ -119,6 +120,11 @@ func NewDailyCalcService(
 		holidayRepo:    holidayRepo,
 		calc:           calculation.NewCalculator(),
 	}
+}
+
+// SetNotificationService sets the notification service for calculation events.
+func (s *DailyCalcService) SetNotificationService(notificationSvc *NotificationService) {
+	s.notificationSvc = notificationSvc
 }
 
 // CalculateDay performs daily calculation for an employee on a specific date.
@@ -171,12 +177,44 @@ func (s *DailyCalcService) CalculateDay(ctx context.Context, tenantID, employeeI
 	}
 
 	// 5. Set tenant and persist
+	previousValue, _ := s.dailyValueRepo.GetByEmployeeDate(ctx, employeeID, date)
 	dailyValue.TenantID = tenantID
 	if err := s.dailyValueRepo.Upsert(ctx, dailyValue); err != nil {
 		return nil, err
 	}
 
+	// Notify on newly detected errors
+	s.notifyDailyCalcError(ctx, tenantID, employeeID, date, previousValue, dailyValue)
+
 	return dailyValue, nil
+}
+
+func (s *DailyCalcService) notifyDailyCalcError(
+	ctx context.Context,
+	tenantID, employeeID uuid.UUID,
+	date time.Time,
+	previousValue, currentValue *model.DailyValue,
+) {
+	if s.notificationSvc == nil || currentValue == nil {
+		return
+	}
+
+	if !currentValue.HasError {
+		return
+	}
+
+	if previousValue != nil && previousValue.HasError {
+		return
+	}
+
+	dateLabel := date.Format("2006-01-02")
+	link := fmt.Sprintf("/timesheet?view=day&date=%s", dateLabel)
+	_, _ = s.notificationSvc.CreateForEmployee(ctx, tenantID, employeeID, CreateNotificationInput{
+		Type:    model.NotificationTypeErrors,
+		Title:   "Timesheet error",
+		Message: fmt.Sprintf("Calculation error detected on %s.", dateLabel),
+		Link:    &link,
+	})
 }
 
 func (s *DailyCalcService) loadBookingsForCalculation(

@@ -51,6 +51,8 @@ tags:
     description: Authentication endpoints
   - name: Users
     description: User management
+  - name: Notifications
+    description: Notification preferences and history
   - name: Tenants
     description: Tenant management
   - name: Employees
@@ -389,6 +391,159 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+  /notifications:
+    get:
+      tags:
+        - Notifications
+      summary: List notifications for the current user
+      operationId: listNotifications
+      parameters:
+        - name: type
+          in: query
+          description: Filter by notification type
+          schema:
+            type: string
+            enum:
+              - approvals
+              - errors
+              - reminders
+              - system
+        - name: unread
+          in: query
+          description: Filter by unread status
+          schema:
+            type: boolean
+        - name: from
+          in: query
+          description: Start datetime filter
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          description: End datetime filter
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  "/notifications/{id}/read":
+    post:
+      tags:
+        - Notifications
+      summary: Mark notification as read
+      operationId: markNotificationRead
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Updated notification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /notifications/read-all:
+    post:
+      tags:
+        - Notifications
+      summary: Mark all notifications as read
+      operationId: markAllNotificationsRead
+      responses:
+        "200":
+          description: Count of notifications marked as read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarkNotificationsReadResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /notifications/stream:
+    get:
+      tags:
+        - Notifications
+      summary: Stream notifications for the current user
+      operationId: streamNotifications
+      responses:
+        "200":
+          description: Server-sent events stream
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /notification-preferences:
+    get:
+      tags:
+        - Notifications
+      summary: Get notification preferences for the current user
+      operationId: getNotificationPreferences
+      responses:
+        "200":
+          description: Notification preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationPreferences"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    put:
+      tags:
+        - Notifications
+      summary: Update notification preferences for the current user
+      operationId: updateNotificationPreferences
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateNotificationPreferencesRequest"
+        required: true
+      responses:
+        "200":
+          description: Updated notification preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationPreferences"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /tenants:
     get:
       tags:
@@ -5888,6 +6043,133 @@ components:
             $ref: "#/components/schemas/User"
         meta:
           $ref: "#/components/schemas/PaginationMeta"
+    Notification:
+      type: object
+      required:
+        - id
+        - tenant_id
+        - user_id
+        - type
+        - title
+        - message
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+            - approvals
+            - errors
+            - reminders
+            - system
+        title:
+          type: string
+          example: Absence approved
+        message:
+          type: string
+          example: Vacation on 2026-01-20 was approved.
+        link:
+          type: string
+          nullable: true
+        read_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    NotificationList:
+      type: object
+      required:
+        - data
+        - total
+        - unread_count
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Notification"
+        total:
+          type: integer
+          format: int64
+          example: 50
+        unread_count:
+          type: integer
+          format: int64
+          example: 3
+    NotificationPreferences:
+      type: object
+      required:
+        - id
+        - tenant_id
+        - user_id
+        - approvals_enabled
+        - errors_enabled
+        - reminders_enabled
+        - system_enabled
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        approvals_enabled:
+          type: boolean
+        errors_enabled:
+          type: boolean
+        reminders_enabled:
+          type: boolean
+        system_enabled:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    UpdateNotificationPreferencesRequest:
+      type: object
+      required:
+        - approvals_enabled
+        - errors_enabled
+        - reminders_enabled
+        - system_enabled
+      properties:
+        approvals_enabled:
+          type: boolean
+        errors_enabled:
+          type: boolean
+        reminders_enabled:
+          type: boolean
+        system_enabled:
+          type: boolean
+    MarkNotificationsReadResponse:
+      type: object
+      required:
+        - count
+      properties:
+        count:
+          type: integer
+          format: int64
+          example: 5
     Tenant:
       type: object
       required:

@@ -152,7 +152,7 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 
 	// Ensure all dev users exist (so seeded data can reference any dev user IDs)
 	for _, user := range auth.DevUsers {
-		if err := h.userService.UpsertDevUser(r.Context(), user.ID, user.Email, user.DisplayName, model.UserRole(user.Role)); err != nil {
+		if err := h.userService.UpsertDevUser(r.Context(), user.ID, devTenant.ID, user.Email, user.DisplayName, model.UserRole(user.Role)); err != nil {
 			respondError(w, http.StatusInternalServerError, "failed to sync dev users to database")
 			return
 		}

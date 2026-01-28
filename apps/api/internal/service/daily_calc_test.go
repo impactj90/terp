@@ -130,6 +130,9 @@ func newTestService(
 	if dayPlanRepo == nil {
 		dayPlanRepo = new(mockDayPlanRepository)
 	}
+	if dailyValueRepo != nil {
+		dailyValueRepo.On("GetByEmployeeDate", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
+	}
 	return NewDailyCalcService(bookingRepo, empDayPlanRepo, dayPlanRepo, dailyValueRepo, holidayRepo)
 }
 
