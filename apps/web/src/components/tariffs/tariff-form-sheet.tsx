@@ -224,6 +224,27 @@ export function TariffFormSheet({
     setError(null)
 
     const errors = validateForm(form, isEdit)
+    if (form.rhythmType === 'weekly' && !form.weekPlanId) {
+      errors.push(t('validationWeekPlanRequired'))
+    }
+    if (form.rhythmType === 'rolling_weekly' && form.weekPlanIds.length === 0) {
+      errors.push(t('validationRollingWeekPlansRequired'))
+    }
+    if (form.rhythmType === 'x_days') {
+      const cycleDays = form.cycleDays ?? 0
+      const cycleValid = cycleDays > 0
+      if (!cycleValid) {
+        errors.push(t('validationXDaysCycleRequired'))
+      }
+      if (cycleValid) {
+        const hasMissingAssignments =
+          form.dayPlans.length < cycleDays ||
+          form.dayPlans.some((dp) => !dp.dayPlanId)
+        if (hasMissingAssignments) {
+          errors.push(t('validationXDaysAssignmentsRequired'))
+        }
+      }
+    }
     if (errors.length > 0) {
       setError(errors.join('. '))
       return

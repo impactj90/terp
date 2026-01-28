@@ -105,10 +105,14 @@ export function DayPlanDetailSheet({
                   {dayPlan.plan_type === 'flextime' && (
                     <DetailRow label={t('labelArriveUntil')} value={dayPlan.come_to != null ? formatTime(dayPlan.come_to) : '-'} />
                   )}
-                  {dayPlan.plan_type === 'flextime' && (
+                  {dayPlan.plan_type === 'fixed' ? (
                     <DetailRow label={t('labelLeaveFrom')} value={dayPlan.go_from != null ? formatTime(dayPlan.go_from) : '-'} />
+                  ) : (
+                    <>
+                      <DetailRow label={t('labelLeaveFrom')} value={dayPlan.go_from != null ? formatTime(dayPlan.go_from) : '-'} />
+                      <DetailRow label={t('labelLeaveUntil')} value={dayPlan.go_to != null ? formatTime(dayPlan.go_to) : '-'} />
+                    </>
                   )}
-                  <DetailRow label={t('labelLeaveUntil')} value={dayPlan.go_to != null ? formatTime(dayPlan.go_to) : '-'} />
                   {dayPlan.plan_type === 'flextime' && dayPlan.core_start != null && (
                     <>
                       <DetailRow label={t('labelCoreStart')} value={formatTime(dayPlan.core_start)} />

@@ -85,8 +85,8 @@ const INITIAL_STATE: FormState = {
   planType: 'fixed',
   comeFrom: 420, // 07:00
   comeTo: null,
-  goFrom: null,
-  goTo: 1020, // 17:00
+  goFrom: 1020, // 17:00
+  goTo: null,
   coreStart: null,
   coreEnd: null,
   regularHours: 480, // 8 hours
@@ -122,6 +122,13 @@ function validateForm(form: FormState, isEdit: boolean): string[] {
   if (form.regularHours <= 0) errors.push('Regular hours must be greater than 0')
   return errors
 }
+
+const RESERVED_DAY_PLAN_CODES = new Set(['U', 'K', 'S'])
+const ROUNDING_INTERVAL_TYPES = new Set(['up', 'down', 'nearest'])
+const ROUNDING_VALUE_TYPES = new Set(['add', 'subtract'])
+
+const isReservedDayPlanCode = (code: string) =>
+  RESERVED_DAY_PLAN_CODES.has(code.trim().toUpperCase())
 
 export function DayPlanFormSheet({
   open,
@@ -187,13 +194,13 @@ export function DayPlanFormSheet({
     }
   }, [open, fullDayPlan, isEdit])
 
-  // Update comeTo/goFrom when planType changes
+  // Clear unused time window fields when switching to fixed plans
   React.useEffect(() => {
     if (form.planType === 'fixed') {
       setForm((prev) => ({
         ...prev,
         comeTo: null,
-        goFrom: null,
+        goTo: null,
       }))
     }
   }, [form.planType])
@@ -203,85 +210,122 @@ export function DayPlanFormSheet({
     setError(null)
 
     const errors = validateForm(form, isEdit)
+    if (!isEdit && isReservedDayPlanCode(form.code)) {
+      errors.push(t('validationCodeReserved'))
+    }
+    if (
+      ROUNDING_INTERVAL_TYPES.has(form.roundingComeType) &&
+      (!form.roundingComeInterval || form.roundingComeInterval <= 0)
+    ) {
+      errors.push(t('validationRoundingArrivalInterval'))
+    }
+    if (
+      ROUNDING_VALUE_TYPES.has(form.roundingComeType) &&
+      form.roundingComeAddValue == null
+    ) {
+      errors.push(t('validationRoundingArrivalValue'))
+    }
+    if (
+      ROUNDING_INTERVAL_TYPES.has(form.roundingGoType) &&
+      (!form.roundingGoInterval || form.roundingGoInterval <= 0)
+    ) {
+      errors.push(t('validationRoundingDepartureInterval'))
+    }
+    if (
+      ROUNDING_VALUE_TYPES.has(form.roundingGoType) &&
+      form.roundingGoAddValue == null
+    ) {
+      errors.push(t('validationRoundingDepartureValue'))
+    }
     if (errors.length > 0) {
       setError(errors.join('. '))
       return
     }
 
     try {
+      const submissionForm: FormState = {
+        ...form,
+        ...(form.planType === 'fixed'
+          ? { comeTo: null, goTo: null }
+          : {
+              toleranceComePlus: 0,
+              toleranceGoMinus: 0,
+              variableWorkTime: false,
+            }),
+      }
       if (isEdit && dayPlan) {
         const body: UpdateDayPlanRequest = {
-          name: form.name,
-          description: form.description || undefined,
-          plan_type: form.planType,
-          come_from: form.comeFrom ?? undefined,
-          come_to: form.comeTo ?? undefined,
-          go_from: form.goFrom ?? undefined,
-          go_to: form.goTo ?? undefined,
-          core_start: form.coreStart ?? undefined,
-          core_end: form.coreEnd ?? undefined,
-          regular_hours: form.regularHours,
-          regular_hours_2: form.regularHours2 ?? undefined,
-          from_employee_master: form.fromEmployeeMaster,
-          tolerance_come_plus: form.toleranceComePlus,
-          tolerance_come_minus: form.toleranceComeMinus,
-          tolerance_go_plus: form.toleranceGoPlus,
-          tolerance_go_minus: form.toleranceGoMinus,
-          variable_work_time: form.variableWorkTime,
-          rounding_come_type: form.roundingComeType as UpdateDayPlanRequest['rounding_come_type'],
-          rounding_come_interval: form.roundingComeInterval ?? undefined,
-          rounding_come_add_value: form.roundingComeAddValue ?? undefined,
-          rounding_go_type: form.roundingGoType as UpdateDayPlanRequest['rounding_go_type'],
-          rounding_go_interval: form.roundingGoInterval ?? undefined,
-          rounding_go_add_value: form.roundingGoAddValue ?? undefined,
-          round_all_bookings: form.roundAllBookings,
-          min_work_time: form.minWorkTime ?? undefined,
-          max_net_work_time: form.maxNetWorkTime ?? undefined,
-          holiday_credit_cat1: form.holidayCreditCat1 ?? undefined,
-          holiday_credit_cat2: form.holidayCreditCat2 ?? undefined,
-          holiday_credit_cat3: form.holidayCreditCat3 ?? undefined,
-          vacation_deduction: form.vacationDeduction,
-          no_booking_behavior: form.noBookingBehavior as UpdateDayPlanRequest['no_booking_behavior'],
-          day_change_behavior: form.dayChangeBehavior as UpdateDayPlanRequest['day_change_behavior'],
-          is_active: form.isActive,
+          name: submissionForm.name,
+          description: submissionForm.description || undefined,
+          plan_type: submissionForm.planType,
+          come_from: submissionForm.comeFrom ?? undefined,
+          come_to: submissionForm.comeTo ?? undefined,
+          go_from: submissionForm.goFrom ?? undefined,
+          go_to: submissionForm.goTo ?? undefined,
+          core_start: submissionForm.coreStart ?? undefined,
+          core_end: submissionForm.coreEnd ?? undefined,
+          regular_hours: submissionForm.regularHours,
+          regular_hours_2: submissionForm.regularHours2 ?? undefined,
+          from_employee_master: submissionForm.fromEmployeeMaster,
+          tolerance_come_plus: submissionForm.toleranceComePlus,
+          tolerance_come_minus: submissionForm.toleranceComeMinus,
+          tolerance_go_plus: submissionForm.toleranceGoPlus,
+          tolerance_go_minus: submissionForm.toleranceGoMinus,
+          variable_work_time: submissionForm.variableWorkTime,
+          rounding_come_type: submissionForm.roundingComeType as UpdateDayPlanRequest['rounding_come_type'],
+          rounding_come_interval: submissionForm.roundingComeInterval ?? undefined,
+          rounding_come_add_value: submissionForm.roundingComeAddValue ?? undefined,
+          rounding_go_type: submissionForm.roundingGoType as UpdateDayPlanRequest['rounding_go_type'],
+          rounding_go_interval: submissionForm.roundingGoInterval ?? undefined,
+          rounding_go_add_value: submissionForm.roundingGoAddValue ?? undefined,
+          round_all_bookings: submissionForm.roundAllBookings,
+          min_work_time: submissionForm.minWorkTime ?? undefined,
+          max_net_work_time: submissionForm.maxNetWorkTime ?? undefined,
+          holiday_credit_cat1: submissionForm.holidayCreditCat1 ?? undefined,
+          holiday_credit_cat2: submissionForm.holidayCreditCat2 ?? undefined,
+          holiday_credit_cat3: submissionForm.holidayCreditCat3 ?? undefined,
+          vacation_deduction: submissionForm.vacationDeduction,
+          no_booking_behavior: submissionForm.noBookingBehavior as UpdateDayPlanRequest['no_booking_behavior'],
+          day_change_behavior: submissionForm.dayChangeBehavior as UpdateDayPlanRequest['day_change_behavior'],
+          is_active: submissionForm.isActive,
         }
         await updateMutation.mutateAsync({ path: { id: dayPlan.id }, body })
       } else {
         const body: CreateDayPlanRequest = {
-          code: form.code,
-          name: form.name,
-          description: form.description || undefined,
-          plan_type: form.planType,
-          come_from: form.comeFrom ?? undefined,
-          come_to: form.comeTo ?? undefined,
-          go_from: form.goFrom ?? undefined,
-          go_to: form.goTo ?? undefined,
-          core_start: form.coreStart ?? undefined,
-          core_end: form.coreEnd ?? undefined,
-          regular_hours: form.regularHours,
-          regular_hours_2: form.regularHours2 ?? undefined,
-          from_employee_master: form.fromEmployeeMaster,
-          tolerance_come_plus: form.toleranceComePlus,
-          tolerance_come_minus: form.toleranceComeMinus,
-          tolerance_go_plus: form.toleranceGoPlus,
-          tolerance_go_minus: form.toleranceGoMinus,
-          variable_work_time: form.variableWorkTime,
-          rounding_come_type: form.roundingComeType as CreateDayPlanRequest['rounding_come_type'],
-          rounding_come_interval: form.roundingComeInterval ?? undefined,
-          rounding_come_add_value: form.roundingComeAddValue ?? undefined,
-          rounding_go_type: form.roundingGoType as CreateDayPlanRequest['rounding_go_type'],
-          rounding_go_interval: form.roundingGoInterval ?? undefined,
-          rounding_go_add_value: form.roundingGoAddValue ?? undefined,
-          round_all_bookings: form.roundAllBookings,
-          min_work_time: form.minWorkTime ?? undefined,
-          max_net_work_time: form.maxNetWorkTime ?? undefined,
-          holiday_credit_cat1: form.holidayCreditCat1 ?? undefined,
-          holiday_credit_cat2: form.holidayCreditCat2 ?? undefined,
-          holiday_credit_cat3: form.holidayCreditCat3 ?? undefined,
-          vacation_deduction: form.vacationDeduction,
-          no_booking_behavior: form.noBookingBehavior as CreateDayPlanRequest['no_booking_behavior'],
-          day_change_behavior: form.dayChangeBehavior as CreateDayPlanRequest['day_change_behavior'],
-          is_active: form.isActive,
+          code: submissionForm.code,
+          name: submissionForm.name,
+          description: submissionForm.description || undefined,
+          plan_type: submissionForm.planType,
+          come_from: submissionForm.comeFrom ?? undefined,
+          come_to: submissionForm.comeTo ?? undefined,
+          go_from: submissionForm.goFrom ?? undefined,
+          go_to: submissionForm.goTo ?? undefined,
+          core_start: submissionForm.coreStart ?? undefined,
+          core_end: submissionForm.coreEnd ?? undefined,
+          regular_hours: submissionForm.regularHours,
+          regular_hours_2: submissionForm.regularHours2 ?? undefined,
+          from_employee_master: submissionForm.fromEmployeeMaster,
+          tolerance_come_plus: submissionForm.toleranceComePlus,
+          tolerance_come_minus: submissionForm.toleranceComeMinus,
+          tolerance_go_plus: submissionForm.toleranceGoPlus,
+          tolerance_go_minus: submissionForm.toleranceGoMinus,
+          variable_work_time: submissionForm.variableWorkTime,
+          rounding_come_type: submissionForm.roundingComeType as CreateDayPlanRequest['rounding_come_type'],
+          rounding_come_interval: submissionForm.roundingComeInterval ?? undefined,
+          rounding_come_add_value: submissionForm.roundingComeAddValue ?? undefined,
+          rounding_go_type: submissionForm.roundingGoType as CreateDayPlanRequest['rounding_go_type'],
+          rounding_go_interval: submissionForm.roundingGoInterval ?? undefined,
+          rounding_go_add_value: submissionForm.roundingGoAddValue ?? undefined,
+          round_all_bookings: submissionForm.roundAllBookings,
+          min_work_time: submissionForm.minWorkTime ?? undefined,
+          max_net_work_time: submissionForm.maxNetWorkTime ?? undefined,
+          holiday_credit_cat1: submissionForm.holidayCreditCat1 ?? undefined,
+          holiday_credit_cat2: submissionForm.holidayCreditCat2 ?? undefined,
+          holiday_credit_cat3: submissionForm.holidayCreditCat3 ?? undefined,
+          vacation_deduction: submissionForm.vacationDeduction,
+          no_booking_behavior: submissionForm.noBookingBehavior as CreateDayPlanRequest['no_booking_behavior'],
+          day_change_behavior: submissionForm.dayChangeBehavior as CreateDayPlanRequest['day_change_behavior'],
+          is_active: submissionForm.isActive,
         }
         await createMutation.mutateAsync({ body })
       }
@@ -413,31 +457,17 @@ export function DayPlanFormSheet({
 
               {/* Time Windows Tab */}
               <TabsContent value="time" className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="comeFrom">{t('fieldArriveFrom')}</Label>
-                    <TimeInput
-                      id="comeFrom"
-                      value={form.comeFrom}
-                      onChange={(v) => setForm({ ...form, comeFrom: v })}
-                      className="w-full"
-                    />
-                  </div>
-                  {form.planType === 'flextime' && (
+                {form.planType === 'fixed' ? (
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="comeTo">{t('fieldArriveUntil')}</Label>
+                      <Label htmlFor="comeFrom">{t('fieldArriveFrom')}</Label>
                       <TimeInput
-                        id="comeTo"
-                        value={form.comeTo}
-                        onChange={(v) => setForm({ ...form, comeTo: v })}
+                        id="comeFrom"
+                        value={form.comeFrom}
+                        onChange={(v) => setForm({ ...form, comeFrom: v })}
                         className="w-full"
                       />
                     </div>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  {form.planType === 'flextime' && (
                     <div className="space-y-2">
                       <Label htmlFor="goFrom">{t('fieldLeaveFrom')}</Label>
                       <TimeInput
@@ -447,17 +477,52 @@ export function DayPlanFormSheet({
                         className="w-full"
                       />
                     </div>
-                  )}
-                  <div className="space-y-2">
-                    <Label htmlFor="goTo">{t('fieldLeaveUntil')}</Label>
-                    <TimeInput
-                      id="goTo"
-                      value={form.goTo}
-                      onChange={(v) => setForm({ ...form, goTo: v })}
-                      className="w-full"
-                    />
                   </div>
-                </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="comeFrom">{t('fieldArriveFrom')}</Label>
+                        <TimeInput
+                          id="comeFrom"
+                          value={form.comeFrom}
+                          onChange={(v) => setForm({ ...form, comeFrom: v })}
+                          className="w-full"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="comeTo">{t('fieldArriveUntil')}</Label>
+                        <TimeInput
+                          id="comeTo"
+                          value={form.comeTo}
+                          onChange={(v) => setForm({ ...form, comeTo: v })}
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="goFrom">{t('fieldLeaveFrom')}</Label>
+                        <TimeInput
+                          id="goFrom"
+                          value={form.goFrom}
+                          onChange={(v) => setForm({ ...form, goFrom: v })}
+                          className="w-full"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="goTo">{t('fieldLeaveUntil')}</Label>
+                        <TimeInput
+                          id="goTo"
+                          value={form.goTo}
+                          onChange={(v) => setForm({ ...form, goTo: v })}
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 {form.planType === 'flextime' && (
                   <>
@@ -520,67 +585,100 @@ export function DayPlanFormSheet({
                   {t('toleranceDescription')}
                 </p>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="toleranceComeMinus">{t('fieldArriveEarly')}</Label>
-                    <DurationInput
-                      id="toleranceComeMinus"
-                      value={form.toleranceComeMinus}
-                      onChange={(v) => setForm({ ...form, toleranceComeMinus: v ?? 0 })}
-                      format="minutes"
-                      placeholder={t('placeholderMinutes')}
-                      className="w-full"
-                    />
+                {form.planType === 'flextime' ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="toleranceComeMinus">{t('fieldArriveEarly')}</Label>
+                      <DurationInput
+                        id="toleranceComeMinus"
+                        value={form.toleranceComeMinus}
+                        onChange={(v) => setForm({ ...form, toleranceComeMinus: v ?? 0 })}
+                        format="minutes"
+                        placeholder={t('placeholderMinutes')}
+                        className="w-full"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="toleranceGoPlus">{t('fieldLeaveLate')}</Label>
+                      <DurationInput
+                        id="toleranceGoPlus"
+                        value={form.toleranceGoPlus}
+                        onChange={(v) => setForm({ ...form, toleranceGoPlus: v ?? 0 })}
+                        format="minutes"
+                        placeholder={t('placeholderMinutes')}
+                        className="w-full"
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="toleranceComePlus">{t('fieldArriveLate')}</Label>
-                    <DurationInput
-                      id="toleranceComePlus"
-                      value={form.toleranceComePlus}
-                      onChange={(v) => setForm({ ...form, toleranceComePlus: v ?? 0 })}
-                      format="minutes"
-                      placeholder={t('placeholderMinutes')}
-                      className="w-full"
-                    />
-                  </div>
-                </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="toleranceComeMinus">{t('fieldArriveEarly')}</Label>
+                        <DurationInput
+                          id="toleranceComeMinus"
+                          value={form.toleranceComeMinus}
+                          onChange={(v) => setForm({ ...form, toleranceComeMinus: v ?? 0 })}
+                          format="minutes"
+                          placeholder={t('placeholderMinutes')}
+                          className="w-full"
+                          disabled={!form.variableWorkTime}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="toleranceComePlus">{t('fieldArriveLate')}</Label>
+                        <DurationInput
+                          id="toleranceComePlus"
+                          value={form.toleranceComePlus}
+                          onChange={(v) => setForm({ ...form, toleranceComePlus: v ?? 0 })}
+                          format="minutes"
+                          placeholder={t('placeholderMinutes')}
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="toleranceGoMinus">{t('fieldLeaveEarly')}</Label>
-                    <DurationInput
-                      id="toleranceGoMinus"
-                      value={form.toleranceGoMinus}
-                      onChange={(v) => setForm({ ...form, toleranceGoMinus: v ?? 0 })}
-                      format="minutes"
-                      placeholder={t('placeholderMinutes')}
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="toleranceGoPlus">{t('fieldLeaveLate')}</Label>
-                    <DurationInput
-                      id="toleranceGoPlus"
-                      value={form.toleranceGoPlus}
-                      onChange={(v) => setForm({ ...form, toleranceGoPlus: v ?? 0 })}
-                      format="minutes"
-                      placeholder={t('placeholderMinutes')}
-                      className="w-full"
-                    />
-                  </div>
-                </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="toleranceGoMinus">{t('fieldLeaveEarly')}</Label>
+                        <DurationInput
+                          id="toleranceGoMinus"
+                          value={form.toleranceGoMinus}
+                          onChange={(v) => setForm({ ...form, toleranceGoMinus: v ?? 0 })}
+                          format="minutes"
+                          placeholder={t('placeholderMinutes')}
+                          className="w-full"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="toleranceGoPlus">{t('fieldLeaveLate')}</Label>
+                        <DurationInput
+                          id="toleranceGoPlus"
+                          value={form.toleranceGoPlus}
+                          onChange={(v) => setForm({ ...form, toleranceGoPlus: v ?? 0 })}
+                          format="minutes"
+                          placeholder={t('placeholderMinutes')}
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
 
-                {form.planType === 'fixed' && (
-                  <div className="flex items-center space-x-2 mt-4">
-                    <Checkbox
-                      id="variableWorkTime"
-                      checked={form.variableWorkTime}
-                      onCheckedChange={(c) => setForm({ ...form, variableWorkTime: !!c })}
-                    />
-                    <Label htmlFor="variableWorkTime" className="font-normal">
-                      {t('fieldVariableWorkTime')}
-                    </Label>
-                  </div>
+                    <div className="space-y-2 mt-4">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="variableWorkTime"
+                          checked={form.variableWorkTime}
+                          onCheckedChange={(c) => setForm({ ...form, variableWorkTime: !!c })}
+                        />
+                        <Label htmlFor="variableWorkTime" className="font-normal">
+                          {t('fieldVariableWorkTime')}
+                        </Label>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {t('variableWorkTimeHelp')}
+                      </p>
+                    </div>
+                  </>
                 )}
               </TabsContent>
 

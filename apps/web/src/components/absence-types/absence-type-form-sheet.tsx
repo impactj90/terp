@@ -112,6 +112,7 @@ export function AbsenceTypeFormSheet({
     const errors: string[] = []
     if (!form.code.trim()) errors.push(t('validationCodeRequired'))
     else if (form.code.length > 20) errors.push(t('validationCodeMaxLength'))
+    else if (!/^[UKS]/i.test(form.code.trim())) errors.push(t('validationCodePrefix'))
     if (!form.name.trim()) errors.push(t('validationNameRequired'))
     else if (form.name.length > 255) errors.push(t('validationNameMaxLength'))
     if (form.color && !/^#[0-9A-Fa-f]{6}$/.test(form.color)) errors.push(t('validationColorFormat'))

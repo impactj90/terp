@@ -20,6 +20,11 @@ import type { components } from '@/lib/api/types'
 
 type DayPlan = components['schemas']['DayPlan']
 
+const RESERVED_DAY_PLAN_CODES = new Set(['U', 'K', 'S'])
+
+const isReservedDayPlanCode = (code: string) =>
+  RESERVED_DAY_PLAN_CODES.has(code.trim().toUpperCase())
+
 interface CopyDayPlanDialogProps {
   dayPlan: DayPlan | null
   open: boolean
@@ -51,6 +56,10 @@ export function CopyDayPlanDialog({ dayPlan, open, onOpenChange }: CopyDayPlanDi
 
     if (!newCode.trim()) {
       setError(t('validationCodeRequired'))
+      return
+    }
+    if (isReservedDayPlanCode(newCode)) {
+      setError(t('validationCodeReserved'))
       return
     }
     if (!newName.trim()) {

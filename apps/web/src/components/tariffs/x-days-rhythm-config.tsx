@@ -94,17 +94,16 @@ export function XDaysRhythmConfig({
                 <div key={dp.dayPosition} className="flex items-center gap-2 py-1">
                   <span className="w-16 text-sm font-medium">{t('dayNumber', { number: dp.dayPosition })}:</span>
                   <Select
-                    value={dp.dayPlanId ?? '__off__'}
+                    value={dp.dayPlanId ?? ''}
                     onValueChange={(v) =>
-                      handleDayPlanChange(dp.dayPosition, v === '__off__' ? null : v)
+                      handleDayPlanChange(dp.dayPosition, v || null)
                     }
                     disabled={disabled}
                   >
                     <SelectTrigger className="flex-1">
-                      <SelectValue />
+                      <SelectValue placeholder={t('selectDayPlan')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__off__">{t('offDayNoPlan')}</SelectItem>
                       {availableDayPlans.map((plan) => (
                         <SelectItem key={plan.id} value={plan.id}>
                           {plan.code} - {plan.name}
