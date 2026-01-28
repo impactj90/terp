@@ -11,13 +11,14 @@ import (
 )
 
 var (
-	ErrAccountNotFound        = errors.New("account not found")
-	ErrAccountCodeRequired    = errors.New("account code is required")
-	ErrAccountNameRequired    = errors.New("account name is required")
-	ErrAccountTypeRequired    = errors.New("account type is required")
-	ErrAccountCodeExists      = errors.New("account code already exists")
-	ErrCannotDeleteSystem     = errors.New("cannot delete system account")
-	ErrCannotModifySystemCode = errors.New("cannot modify system account code")
+	ErrAccountNotFound           = errors.New("account not found")
+	ErrAccountCodeRequired       = errors.New("account code is required")
+	ErrAccountNameRequired       = errors.New("account name is required")
+	ErrAccountTypeRequired       = errors.New("account type is required")
+	ErrAccountCodeExists         = errors.New("account code already exists")
+	ErrCannotDeleteSystem        = errors.New("cannot delete system account")
+	ErrCannotModifySystemCode    = errors.New("cannot modify system account code")
+	ErrCannotModifySystemAccount = errors.New("cannot modify system account")
 )
 
 // accountRepository defines the interface for account data access.
@@ -31,6 +32,8 @@ type accountRepository interface {
 	ListWithSystem(ctx context.Context, tenantID uuid.UUID) ([]model.Account, error)
 	GetSystemAccounts(ctx context.Context) ([]model.Account, error)
 	ListActive(ctx context.Context, tenantID uuid.UUID) ([]model.Account, error)
+	ListFiltered(ctx context.Context, tenantID uuid.UUID, includeSystem bool, active *bool, accountType *model.AccountType) ([]model.Account, error)
+	ListDayPlansUsingAccount(ctx context.Context, tenantID uuid.UUID, accountID uuid.UUID) ([]model.AccountUsageDayPlan, error)
 }
 
 type AccountService struct {
@@ -43,12 +46,17 @@ func NewAccountService(accountRepo accountRepository) *AccountService {
 
 // CreateAccountInput represents the input for creating an account.
 type CreateAccountInput struct {
-	TenantID    uuid.UUID
-	Code        string
-	Name        string
-	AccountType model.AccountType
-	Unit        model.AccountUnit
-	IsActive    bool
+	TenantID          uuid.UUID
+	Code              string
+	Name              string
+	AccountType       model.AccountType
+	Unit              model.AccountUnit
+	Description       *string
+	IsPayrollRelevant bool
+	PayrollCode       *string
+	SortOrder         int
+	YearCarryover     *bool
+	IsActive          bool
 }
 
 // Create creates a new account with validation.
@@ -71,6 +79,10 @@ func (s *AccountService) Create(ctx context.Context, input CreateAccountInput) (
 	if unit == "" {
 		unit = model.AccountUnitMinutes
 	}
+	yearCarryover := true
+	if input.YearCarryover != nil {
+		yearCarryover = *input.YearCarryover
+	}
 
 	// Check for existing account with same code for this tenant
 	existing, err := s.accountRepo.GetByCode(ctx, &input.TenantID, code)
@@ -79,13 +91,18 @@ func (s *AccountService) Create(ctx context.Context, input CreateAccountInput) (
 	}
 
 	account := &model.Account{
-		TenantID:    &input.TenantID,
-		Code:        code,
-		Name:        name,
-		AccountType: input.AccountType,
-		Unit:        unit,
-		IsSystem:    false,
-		IsActive:    input.IsActive,
+		TenantID:          &input.TenantID,
+		Code:              code,
+		Name:              name,
+		Description:       input.Description,
+		AccountType:       input.AccountType,
+		Unit:              unit,
+		YearCarryover:     yearCarryover,
+		IsPayrollRelevant: input.IsPayrollRelevant,
+		PayrollCode:       input.PayrollCode,
+		SortOrder:         input.SortOrder,
+		IsSystem:          false,
+		IsActive:          input.IsActive,
 	}
 
 	if err := s.accountRepo.Create(ctx, account); err != nil {
@@ -115,9 +132,14 @@ func (s *AccountService) GetByCode(ctx context.Context, tenantID uuid.UUID, code
 
 // UpdateAccountInput represents the input for updating an account.
 type UpdateAccountInput struct {
-	Name     *string
-	Unit     *model.AccountUnit
-	IsActive *bool
+	Name              *string
+	Description       *string
+	Unit              *model.AccountUnit
+	YearCarryover     *bool
+	IsPayrollRelevant *bool
+	PayrollCode       *string
+	SortOrder         *int
+	IsActive          *bool
 }
 
 // Update updates an account.
@@ -125,6 +147,9 @@ func (s *AccountService) Update(ctx context.Context, id uuid.UUID, input UpdateA
 	account, err := s.accountRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, ErrAccountNotFound
+	}
+	if account.IsSystem {
+		return nil, ErrCannotModifySystemAccount
 	}
 
 	if input.Name != nil {
@@ -136,6 +161,21 @@ func (s *AccountService) Update(ctx context.Context, id uuid.UUID, input UpdateA
 	}
 	if input.Unit != nil {
 		account.Unit = *input.Unit
+	}
+	if input.Description != nil {
+		account.Description = input.Description
+	}
+	if input.YearCarryover != nil {
+		account.YearCarryover = *input.YearCarryover
+	}
+	if input.IsPayrollRelevant != nil {
+		account.IsPayrollRelevant = *input.IsPayrollRelevant
+	}
+	if input.PayrollCode != nil {
+		account.PayrollCode = input.PayrollCode
+	}
+	if input.SortOrder != nil {
+		account.SortOrder = *input.SortOrder
 	}
 	if input.IsActive != nil {
 		account.IsActive = *input.IsActive
@@ -181,4 +221,14 @@ func (s *AccountService) GetSystemAccounts(ctx context.Context) ([]model.Account
 // ListActive retrieves all active accounts for a tenant.
 func (s *AccountService) ListActive(ctx context.Context, tenantID uuid.UUID) ([]model.Account, error) {
 	return s.accountRepo.ListActive(ctx, tenantID)
+}
+
+// ListFiltered retrieves accounts with optional filters.
+func (s *AccountService) ListFiltered(ctx context.Context, tenantID uuid.UUID, includeSystem bool, active *bool, accountType *model.AccountType) ([]model.Account, error) {
+	return s.accountRepo.ListFiltered(ctx, tenantID, includeSystem, active, accountType)
+}
+
+// GetUsage returns day plans that reference the account.
+func (s *AccountService) GetUsage(ctx context.Context, tenantID uuid.UUID, accountID uuid.UUID) ([]model.AccountUsageDayPlan, error) {
+	return s.accountRepo.ListDayPlansUsingAccount(ctx, tenantID, accountID)
 }

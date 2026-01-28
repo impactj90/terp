@@ -21,7 +21,7 @@ import (
 	"github.com/tolga/terp/internal/testutil"
 )
 
-func setupAccountHandler(t *testing.T) (*handler.AccountHandler, *service.AccountService, *repository.AccountRepository, *model.Tenant) {
+func setupAccountHandler(t *testing.T) (*handler.AccountHandler, *service.AccountService, *repository.AccountRepository, *model.Tenant, *repository.DB) {
 	db := testutil.SetupTestDB(t)
 	accountRepo := repository.NewAccountRepository(db)
 	tenantRepo := repository.NewTenantRepository(db)
@@ -37,7 +37,7 @@ func setupAccountHandler(t *testing.T) (*handler.AccountHandler, *service.Accoun
 	err := tenantRepo.Create(context.Background(), tenant)
 	require.NoError(t, err)
 
-	return h, svc, accountRepo, tenant
+	return h, svc, accountRepo, tenant, db
 }
 
 func withAccountTenantContext(r *http.Request, tenant *model.Tenant) *http.Request {
@@ -46,7 +46,7 @@ func withAccountTenantContext(r *http.Request, tenant *model.Tenant) *http.Reque
 }
 
 func TestAccountHandler_Create_Success(t *testing.T) {
-	h, _, _, tenant := setupAccountHandler(t)
+	h, _, _, tenant, _ := setupAccountHandler(t)
 
 	body := `{"code": "OVERTIME", "name": "Overtime Account", "account_type": "bonus"}`
 	req := httptest.NewRequest("POST", "/accounts", bytes.NewBufferString(body))
@@ -66,7 +66,7 @@ func TestAccountHandler_Create_Success(t *testing.T) {
 }
 
 func TestAccountHandler_Create_InvalidBody(t *testing.T) {
-	h, _, _, tenant := setupAccountHandler(t)
+	h, _, _, tenant, _ := setupAccountHandler(t)
 
 	req := httptest.NewRequest("POST", "/accounts", bytes.NewBufferString("invalid"))
 	req = withAccountTenantContext(req, tenant)
@@ -78,7 +78,7 @@ func TestAccountHandler_Create_InvalidBody(t *testing.T) {
 }
 
 func TestAccountHandler_Create_MissingCode(t *testing.T) {
-	h, _, _, tenant := setupAccountHandler(t)
+	h, _, _, tenant, _ := setupAccountHandler(t)
 
 	body := `{"name": "Test Account", "account_type": "bonus"}`
 	req := httptest.NewRequest("POST", "/accounts", bytes.NewBufferString(body))
@@ -92,7 +92,7 @@ func TestAccountHandler_Create_MissingCode(t *testing.T) {
 }
 
 func TestAccountHandler_Create_MissingName(t *testing.T) {
-	h, _, _, tenant := setupAccountHandler(t)
+	h, _, _, tenant, _ := setupAccountHandler(t)
 
 	body := `{"code": "TEST", "account_type": "bonus"}`
 	req := httptest.NewRequest("POST", "/accounts", bytes.NewBufferString(body))
@@ -106,7 +106,7 @@ func TestAccountHandler_Create_MissingName(t *testing.T) {
 }
 
 func TestAccountHandler_Create_NoTenant(t *testing.T) {
-	h, _, _, _ := setupAccountHandler(t)
+	h, _, _, _, _ := setupAccountHandler(t)
 
 	body := `{"code": "TEST", "name": "Test", "account_type": "bonus"}`
 	req := httptest.NewRequest("POST", "/accounts", bytes.NewBufferString(body))
@@ -119,7 +119,7 @@ func TestAccountHandler_Create_NoTenant(t *testing.T) {
 }
 
 func TestAccountHandler_Create_DuplicateCode(t *testing.T) {
-	h, svc, _, tenant := setupAccountHandler(t)
+	h, svc, _, tenant, _ := setupAccountHandler(t)
 	ctx := context.Background()
 
 	// Create first account
@@ -146,7 +146,7 @@ func TestAccountHandler_Create_DuplicateCode(t *testing.T) {
 }
 
 func TestAccountHandler_Get_Success(t *testing.T) {
-	h, svc, _, tenant := setupAccountHandler(t)
+	h, svc, _, tenant, _ := setupAccountHandler(t)
 	ctx := context.Background()
 
 	input := service.CreateAccountInput{
@@ -176,7 +176,7 @@ func TestAccountHandler_Get_Success(t *testing.T) {
 }
 
 func TestAccountHandler_Get_InvalidID(t *testing.T) {
-	h, _, _, _ := setupAccountHandler(t)
+	h, _, _, _, _ := setupAccountHandler(t)
 
 	req := httptest.NewRequest("GET", "/accounts/invalid", nil)
 	rctx := chi.NewRouteContext()
@@ -190,7 +190,7 @@ func TestAccountHandler_Get_InvalidID(t *testing.T) {
 }
 
 func TestAccountHandler_Get_NotFound(t *testing.T) {
-	h, _, _, _ := setupAccountHandler(t)
+	h, _, _, _, _ := setupAccountHandler(t)
 
 	req := httptest.NewRequest("GET", "/accounts/00000000-0000-0000-0000-000000000000", nil)
 	rctx := chi.NewRouteContext()
@@ -204,7 +204,7 @@ func TestAccountHandler_Get_NotFound(t *testing.T) {
 }
 
 func TestAccountHandler_List_Success(t *testing.T) {
-	h, svc, _, tenant := setupAccountHandler(t)
+	h, svc, _, tenant, _ := setupAccountHandler(t)
 	ctx := context.Background()
 
 	// Create test accounts
@@ -237,7 +237,7 @@ func TestAccountHandler_List_Success(t *testing.T) {
 }
 
 func TestAccountHandler_List_ActiveOnly(t *testing.T) {
-	h, svc, _, tenant := setupAccountHandler(t)
+	h, svc, _, tenant, _ := setupAccountHandler(t)
 	ctx := context.Background()
 
 	// Create active account
@@ -280,7 +280,7 @@ func TestAccountHandler_List_ActiveOnly(t *testing.T) {
 }
 
 func TestAccountHandler_List_IncludeSystem(t *testing.T) {
-	h, svc, repo, tenant := setupAccountHandler(t)
+	h, svc, repo, tenant, _ := setupAccountHandler(t)
 	ctx := context.Background()
 
 	// Create tenant account
@@ -321,8 +321,46 @@ func TestAccountHandler_List_IncludeSystem(t *testing.T) {
 	assert.GreaterOrEqual(t, len(result), 2)
 }
 
+func TestAccountHandler_List_FilterByType(t *testing.T) {
+	h, svc, _, tenant, _ := setupAccountHandler(t)
+	ctx := context.Background()
+
+	_, err := svc.Create(ctx, service.CreateAccountInput{
+		TenantID:    tenant.ID,
+		Code:        "BONUS",
+		Name:        "Bonus Account",
+		AccountType: model.AccountTypeBonus,
+		IsActive:    true,
+	})
+	require.NoError(t, err)
+
+	_, err = svc.Create(ctx, service.CreateAccountInput{
+		TenantID:    tenant.ID,
+		Code:        "TRACK",
+		Name:        "Tracking Account",
+		AccountType: model.AccountTypeTracking,
+		IsActive:    true,
+	})
+	require.NoError(t, err)
+
+	req := httptest.NewRequest("GET", "/accounts?account_type=tracking", nil)
+	req = withAccountTenantContext(req, tenant)
+	rr := httptest.NewRecorder()
+
+	h.List(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	var response struct {
+		Data []model.Account `json:"data"`
+	}
+	err = json.Unmarshal(rr.Body.Bytes(), &response)
+	require.NoError(t, err)
+	assert.Len(t, response.Data, 1)
+	assert.Equal(t, model.AccountTypeTracking, response.Data[0].AccountType)
+}
+
 func TestAccountHandler_List_NoTenant(t *testing.T) {
-	h, _, _, _ := setupAccountHandler(t)
+	h, _, _, _, _ := setupAccountHandler(t)
 
 	req := httptest.NewRequest("GET", "/accounts", nil)
 	rr := httptest.NewRecorder()
@@ -333,7 +371,7 @@ func TestAccountHandler_List_NoTenant(t *testing.T) {
 }
 
 func TestAccountHandler_Update_Success(t *testing.T) {
-	h, svc, _, tenant := setupAccountHandler(t)
+	h, svc, _, tenant, _ := setupAccountHandler(t)
 	ctx := context.Background()
 
 	input := service.CreateAccountInput{
@@ -364,8 +402,37 @@ func TestAccountHandler_Update_Success(t *testing.T) {
 	assert.False(t, result.IsActive)
 }
 
+func TestAccountHandler_Update_SystemAccount(t *testing.T) {
+	h, _, repo, tenant, _ := setupAccountHandler(t)
+	ctx := context.Background()
+
+	sysAccount := &model.Account{
+		TenantID:    nil,
+		Code:        "SYS_ACC",
+		Name:        "System Account",
+		AccountType: model.AccountTypeTracking,
+		Unit:        model.AccountUnitMinutes,
+		IsSystem:    true,
+		IsActive:    true,
+	}
+	require.NoError(t, repo.Create(ctx, sysAccount))
+
+	body := `{"name": "Updated System"}`
+	req := httptest.NewRequest("PATCH", "/accounts/"+sysAccount.ID.String(), bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("id", sysAccount.ID.String())
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	req = withAccountTenantContext(req, tenant)
+	rr := httptest.NewRecorder()
+
+	h.Update(rr, req)
+
+	assert.Equal(t, http.StatusForbidden, rr.Code)
+}
+
 func TestAccountHandler_Update_InvalidID(t *testing.T) {
-	h, _, _, _ := setupAccountHandler(t)
+	h, _, _, _, _ := setupAccountHandler(t)
 
 	body := `{"name": "Updated"}`
 	req := httptest.NewRequest("PATCH", "/accounts/invalid", bytes.NewBufferString(body))
@@ -381,7 +448,7 @@ func TestAccountHandler_Update_InvalidID(t *testing.T) {
 }
 
 func TestAccountHandler_Update_NotFound(t *testing.T) {
-	h, _, _, _ := setupAccountHandler(t)
+	h, _, _, _, _ := setupAccountHandler(t)
 
 	body := `{"name": "Updated"}`
 	req := httptest.NewRequest("PATCH", "/accounts/00000000-0000-0000-0000-000000000000", bytes.NewBufferString(body))
@@ -397,7 +464,7 @@ func TestAccountHandler_Update_NotFound(t *testing.T) {
 }
 
 func TestAccountHandler_Update_InvalidBody(t *testing.T) {
-	h, svc, _, tenant := setupAccountHandler(t)
+	h, svc, _, tenant, _ := setupAccountHandler(t)
 	ctx := context.Background()
 
 	input := service.CreateAccountInput{
@@ -421,7 +488,7 @@ func TestAccountHandler_Update_InvalidBody(t *testing.T) {
 }
 
 func TestAccountHandler_Delete_Success(t *testing.T) {
-	h, svc, _, tenant := setupAccountHandler(t)
+	h, svc, _, tenant, _ := setupAccountHandler(t)
 	ctx := context.Background()
 
 	input := service.CreateAccountInput{
@@ -449,7 +516,7 @@ func TestAccountHandler_Delete_Success(t *testing.T) {
 }
 
 func TestAccountHandler_Delete_InvalidID(t *testing.T) {
-	h, _, _, _ := setupAccountHandler(t)
+	h, _, _, _, _ := setupAccountHandler(t)
 
 	req := httptest.NewRequest("DELETE", "/accounts/invalid", nil)
 	rctx := chi.NewRouteContext()
@@ -463,7 +530,7 @@ func TestAccountHandler_Delete_InvalidID(t *testing.T) {
 }
 
 func TestAccountHandler_Delete_NotFound(t *testing.T) {
-	h, _, _, _ := setupAccountHandler(t)
+	h, _, _, _, _ := setupAccountHandler(t)
 
 	req := httptest.NewRequest("DELETE", "/accounts/00000000-0000-0000-0000-000000000000", nil)
 	rctx := chi.NewRouteContext()
@@ -477,7 +544,7 @@ func TestAccountHandler_Delete_NotFound(t *testing.T) {
 }
 
 func TestAccountHandler_Delete_SystemAccount(t *testing.T) {
-	h, _, repo, _ := setupAccountHandler(t)
+	h, _, repo, _, _ := setupAccountHandler(t)
 	ctx := context.Background()
 
 	// Create system account via repo
@@ -500,4 +567,60 @@ func TestAccountHandler_Delete_SystemAccount(t *testing.T) {
 	h.Delete(rr, req)
 
 	assert.Equal(t, http.StatusForbidden, rr.Code)
+}
+
+func TestAccountHandler_Usage_Success(t *testing.T) {
+	h, svc, _, tenant, db := setupAccountHandler(t)
+	ctx := context.Background()
+
+	account, err := svc.Create(ctx, service.CreateAccountInput{
+		TenantID:    tenant.ID,
+		Code:        "BONUS",
+		Name:        "Bonus Account",
+		AccountType: model.AccountTypeBonus,
+		IsActive:    true,
+	})
+	require.NoError(t, err)
+
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	dayPlan := &model.DayPlan{
+		TenantID: tenant.ID,
+		Code:     "PLAN-1",
+		Name:     "Plan One",
+		PlanType: model.PlanTypeFixed,
+		IsActive: true,
+	}
+	require.NoError(t, dayPlanRepo.Create(ctx, dayPlan))
+
+	bonus := &model.DayPlanBonus{
+		DayPlanID:       dayPlan.ID,
+		AccountID:       account.ID,
+		TimeFrom:        480,
+		TimeTo:          540,
+		CalculationType: model.CalculationFixed,
+		ValueMinutes:    30,
+	}
+	require.NoError(t, dayPlanRepo.AddBonus(ctx, bonus))
+
+	req := httptest.NewRequest("GET", "/accounts/"+account.ID.String()+"/usage", nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("id", account.ID.String())
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	req = withAccountTenantContext(req, tenant)
+	rr := httptest.NewRecorder()
+
+	h.Usage(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	var result struct {
+		AccountID  uuid.UUID                   `json:"account_id"`
+		UsageCount int                         `json:"usage_count"`
+		DayPlans   []model.AccountUsageDayPlan `json:"day_plans"`
+	}
+	err = json.Unmarshal(rr.Body.Bytes(), &result)
+	require.NoError(t, err)
+	assert.Equal(t, account.ID, result.AccountID)
+	assert.Equal(t, 1, result.UsageCount)
+	require.Len(t, result.DayPlans, 1)
+	assert.Equal(t, dayPlan.Code, result.DayPlans[0].Code)
 }

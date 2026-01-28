@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
 import {
   Table,
   TableBody,
@@ -46,6 +47,7 @@ interface AccountDataTableProps {
   onView: (account: Account) => void
   onEdit: (account: Account) => void
   onDelete: (account: Account) => void
+  onToggleActive?: (account: Account, isActive: boolean) => void
 }
 
 const accountTypeConfig: Record<string, {
@@ -56,10 +58,6 @@ const accountTypeConfig: Record<string, {
   bonus: { labelKey: 'typeBonus', icon: Award, variant: 'default' },
   tracking: { labelKey: 'typeTracking', icon: BarChart3, variant: 'secondary' },
   balance: { labelKey: 'typeBalance', icon: Scale, variant: 'outline' },
-  time: { labelKey: 'typeTime', icon: BarChart3, variant: 'secondary' },
-  deduction: { labelKey: 'typeDeduction', icon: BarChart3, variant: 'secondary' },
-  vacation: { labelKey: 'typeVacation', icon: Scale, variant: 'outline' },
-  sick: { labelKey: 'typeSick', icon: Scale, variant: 'outline' },
 }
 
 const unitLabelKeys: Record<string, string> = {
@@ -74,6 +72,7 @@ export function AccountDataTable({
   onView,
   onEdit,
   onDelete,
+  onToggleActive,
 }: AccountDataTableProps) {
   const t = useTranslations('adminAccounts')
 
@@ -94,6 +93,7 @@ export function AccountDataTable({
           <TableHead>{t('columnName')}</TableHead>
           <TableHead className="w-28">{t('columnType')}</TableHead>
           <TableHead className="w-20">{t('columnUnit')}</TableHead>
+          <TableHead className="w-20">{t('columnUsage')}</TableHead>
           <TableHead className="w-24">{t('columnStatus')}</TableHead>
           <TableHead className="w-16">
             <span className="sr-only">{t('actions')}</span>
@@ -107,6 +107,7 @@ export function AccountDataTable({
           const TypeIcon = typeInfo.icon
           // unit field comes from runtime but may not be in TS types
           const unit = (account as Record<string, unknown>).unit as string | undefined
+          const usageCount = (account as Record<string, unknown>).usage_count as number | undefined
 
           return (
             <TableRow
@@ -131,8 +132,11 @@ export function AccountDataTable({
               <TableCell className="text-sm text-muted-foreground">
                 {unit ? (unitLabelKeys[unit] ? t(unitLabelKeys[unit] as Parameters<typeof t>[0]) : unit) : '-'}
               </TableCell>
+              <TableCell className="text-sm text-muted-foreground">
+                {usageCount ?? 0}
+              </TableCell>
               <TableCell>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-2">
                   {account.is_system && (
                     <Badge variant="outline" className="text-xs">
                       <Lock className="mr-1 h-3 w-3" />
@@ -148,6 +152,15 @@ export function AccountDataTable({
                     <Badge variant="default" className="text-xs">
                       {t('statusActive')}
                     </Badge>
+                  )}
+                  {onToggleActive && (
+                    <div onClick={(event) => event.stopPropagation()}>
+                      <Switch
+                        checked={account.is_active}
+                        onCheckedChange={(checked) => onToggleActive(account, checked)}
+                        disabled={account.is_system}
+                      />
+                    </div>
                   )}
                 </div>
               </TableCell>
@@ -229,6 +242,7 @@ function AccountDataTableSkeleton() {
           <TableHead><Skeleton className="h-4 w-16" /></TableHead>
           <TableHead className="w-28"><Skeleton className="h-4 w-16" /></TableHead>
           <TableHead className="w-20"><Skeleton className="h-4 w-12" /></TableHead>
+          <TableHead className="w-20"><Skeleton className="h-4 w-12" /></TableHead>
           <TableHead className="w-24"><Skeleton className="h-4 w-16" /></TableHead>
           <TableHead className="w-16" />
         </TableRow>
@@ -240,6 +254,7 @@ function AccountDataTableSkeleton() {
             <TableCell><Skeleton className="h-4 w-12" /></TableCell>
             <TableCell><Skeleton className="h-4 w-32" /></TableCell>
             <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
+            <TableCell><Skeleton className="h-4 w-12" /></TableCell>
             <TableCell><Skeleton className="h-4 w-12" /></TableCell>
             <TableCell><Skeleton className="h-5 w-14 rounded-full" /></TableCell>
             <TableCell><Skeleton className="h-8 w-8" /></TableCell>

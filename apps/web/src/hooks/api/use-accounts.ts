@@ -1,7 +1,7 @@
 import { useApiQuery, useApiMutation } from '@/hooks'
 
 interface UseAccountsOptions {
-  accountType?: 'time' | 'bonus' | 'deduction' | 'vacation' | 'sick'
+  accountType?: 'bonus' | 'tracking' | 'balance'
   active?: boolean
   includeSystem?: boolean
   enabled?: boolean
@@ -49,6 +49,16 @@ export function useAccount(id: string, enabled = true) {
 }
 
 /**
+ * Hook to fetch account usage by ID.
+ */
+export function useAccountUsage(id: string, enabled = true) {
+  return useApiQuery('/accounts/{id}/usage', {
+    path: { id },
+    enabled: enabled && !!id,
+  })
+}
+
+/**
  * Hook to create a new account.
  */
 export function useCreateAccount() {
@@ -62,7 +72,11 @@ export function useCreateAccount() {
  */
 export function useUpdateAccount() {
   return useApiMutation('/accounts/{id}', 'patch', {
-    invalidateKeys: [['/accounts']],
+    invalidateKeys: [
+      ['/accounts'],
+      ['/accounts/{id}'],
+      ['/accounts/{id}/usage'],
+    ],
   })
 }
 
@@ -71,6 +85,10 @@ export function useUpdateAccount() {
  */
 export function useDeleteAccount() {
   return useApiMutation('/accounts/{id}', 'delete', {
-    invalidateKeys: [['/accounts']],
+    invalidateKeys: [
+      ['/accounts'],
+      ['/accounts/{id}'],
+      ['/accounts/{id}/usage'],
+    ],
   })
 }

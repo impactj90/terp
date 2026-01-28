@@ -21,9 +21,9 @@ import (
 type Account struct {
 
 	// account type
-	// Example: time
+	// Example: bonus
 	// Required: true
-	// Enum: ["time","bonus","deduction","vacation","sick"]
+	// Enum: ["bonus","tracking","balance"]
 	AccountType *string `json:"account_type"`
 
 	// code
@@ -72,9 +72,22 @@ type Account struct {
 	// Format: uuid
 	TenantID *strfmt.UUID `json:"tenant_id"`
 
+	// unit
+	// Example: minutes
+	// Enum: ["minutes","hours","days"]
+	Unit string `json:"unit,omitempty"`
+
 	// updated at
 	// Format: date-time
 	UpdatedAt strfmt.DateTime `json:"updated_at,omitempty"`
+
+	// Number of day plans that reference this account
+	// Example: 0
+	UsageCount int64 `json:"usage_count,omitempty"`
+
+	// Carry over balance at year end
+	// Example: true
+	YearCarryover bool `json:"year_carryover,omitempty"`
 }
 
 // Validate validates this account
@@ -105,6 +118,10 @@ func (m *Account) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
+	if err := m.validateUnit(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateUpdatedAt(formats); err != nil {
 		res = append(res, err)
 	}
@@ -119,7 +136,7 @@ var accountTypeAccountTypePropEnum []any
 
 func init() {
 	var res []string
-	if err := json.Unmarshal([]byte(`["time","bonus","deduction","vacation","sick"]`), &res); err != nil {
+	if err := json.Unmarshal([]byte(`["bonus","tracking","balance"]`), &res); err != nil {
 		panic(err)
 	}
 	for _, v := range res {
@@ -129,20 +146,14 @@ func init() {
 
 const (
 
-	// AccountAccountTypeTime captures enum value "time"
-	AccountAccountTypeTime string = "time"
-
 	// AccountAccountTypeBonus captures enum value "bonus"
 	AccountAccountTypeBonus string = "bonus"
 
-	// AccountAccountTypeDeduction captures enum value "deduction"
-	AccountAccountTypeDeduction string = "deduction"
+	// AccountAccountTypeTracking captures enum value "tracking"
+	AccountAccountTypeTracking string = "tracking"
 
-	// AccountAccountTypeVacation captures enum value "vacation"
-	AccountAccountTypeVacation string = "vacation"
-
-	// AccountAccountTypeSick captures enum value "sick"
-	AccountAccountTypeSick string = "sick"
+	// AccountAccountTypeBalance captures enum value "balance"
+	AccountAccountTypeBalance string = "balance"
 )
 
 // prop value enum
@@ -217,6 +228,51 @@ func (m *Account) validateTenantID(formats strfmt.Registry) error {
 	}
 
 	if err := validate.FormatOf("tenant_id", "body", "uuid", m.TenantID.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var accountTypeUnitPropEnum []any
+
+func init() {
+	var res []string
+	if err := json.Unmarshal([]byte(`["minutes","hours","days"]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		accountTypeUnitPropEnum = append(accountTypeUnitPropEnum, v)
+	}
+}
+
+const (
+
+	// AccountUnitMinutes captures enum value "minutes"
+	AccountUnitMinutes string = "minutes"
+
+	// AccountUnitHours captures enum value "hours"
+	AccountUnitHours string = "hours"
+
+	// AccountUnitDays captures enum value "days"
+	AccountUnitDays string = "days"
+)
+
+// prop value enum
+func (m *Account) validateUnitEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, accountTypeUnitPropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *Account) validateUnit(formats strfmt.Registry) error {
+	if swag.IsZero(m.Unit) { // not required
+		return nil
+	}
+
+	// value enum
+	if err := m.validateUnitEnum("unit", "body", m.Unit); err != nil {
 		return err
 	}
 

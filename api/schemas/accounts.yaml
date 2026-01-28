@@ -28,16 +28,25 @@ Account:
     account_type:
       type: string
       enum:
-        - time
         - bonus
-        - deduction
-        - vacation
-        - sick
-      example: "time"
+        - tracking
+        - balance
+      example: "bonus"
+    unit:
+      type: string
+      enum:
+        - minutes
+        - hours
+        - days
+      example: "minutes"
     is_system:
       type: boolean
       description: System accounts cannot be deleted
       example: false
+    year_carryover:
+      type: boolean
+      description: Carry over balance at year end
+      example: true
     is_payroll_relevant:
       type: boolean
       description: Include in payroll export
@@ -52,6 +61,10 @@ Account:
     is_active:
       type: boolean
       example: true
+    usage_count:
+      type: integer
+      description: Number of day plans that reference this account
+      example: 0
     created_at:
       type: string
       format: date-time
@@ -154,11 +167,17 @@ CreateAccountRequest:
     account_type:
       type: string
       enum:
-        - time
         - bonus
-        - deduction
-        - vacation
-        - sick
+        - tracking
+        - balance
+    unit:
+      type: string
+      enum:
+        - minutes
+        - hours
+        - days
+    year_carryover:
+      type: boolean
     is_payroll_relevant:
       type: boolean
       default: false
@@ -176,12 +195,20 @@ UpdateAccountRequest:
       maxLength: 255
     description:
       type: string
+    unit:
+      type: string
+      enum:
+        - minutes
+        - hours
+        - days
     is_payroll_relevant:
       type: boolean
     payroll_code:
       type: string
     sort_order:
       type: integer
+    year_carryover:
+      type: boolean
     is_active:
       type: boolean
 
@@ -204,3 +231,36 @@ AccountValueList:
       type: array
       items:
         $ref: '#/AccountValue'
+
+AccountUsageDayPlan:
+  type: object
+  required:
+    - id
+    - code
+    - name
+  properties:
+    id:
+      type: string
+      format: uuid
+    code:
+      type: string
+    name:
+      type: string
+
+AccountUsage:
+  type: object
+  required:
+    - account_id
+    - usage_count
+    - day_plans
+  properties:
+    account_id:
+      type: string
+      format: uuid
+    usage_count:
+      type: integer
+      example: 2
+    day_plans:
+      type: array
+      items:
+        $ref: '#/AccountUsageDayPlan'

@@ -7,6 +7,7 @@ package models
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -38,6 +39,13 @@ type UpdateAccountRequest struct {
 
 	// sort order
 	SortOrder int64 `json:"sort_order,omitempty"`
+
+	// unit
+	// Enum: ["minutes","hours","days"]
+	Unit string `json:"unit,omitempty"`
+
+	// year carryover
+	YearCarryover bool `json:"year_carryover,omitempty"`
 }
 
 // Validate validates this update account request
@@ -45,6 +53,10 @@ func (m *UpdateAccountRequest) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.validateName(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateUnit(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -64,6 +76,51 @@ func (m *UpdateAccountRequest) validateName(formats strfmt.Registry) error {
 	}
 
 	if err := validate.MaxLength("name", "body", m.Name, 255); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var updateAccountRequestTypeUnitPropEnum []any
+
+func init() {
+	var res []string
+	if err := json.Unmarshal([]byte(`["minutes","hours","days"]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		updateAccountRequestTypeUnitPropEnum = append(updateAccountRequestTypeUnitPropEnum, v)
+	}
+}
+
+const (
+
+	// UpdateAccountRequestUnitMinutes captures enum value "minutes"
+	UpdateAccountRequestUnitMinutes string = "minutes"
+
+	// UpdateAccountRequestUnitHours captures enum value "hours"
+	UpdateAccountRequestUnitHours string = "hours"
+
+	// UpdateAccountRequestUnitDays captures enum value "days"
+	UpdateAccountRequestUnitDays string = "days"
+)
+
+// prop value enum
+func (m *UpdateAccountRequest) validateUnitEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, updateAccountRequestTypeUnitPropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *UpdateAccountRequest) validateUnit(formats strfmt.Registry) error {
+	if swag.IsZero(m.Unit) { // not required
+		return nil
+	}
+
+	// value enum
+	if err := m.validateUnitEnum("unit", "body", m.Unit); err != nil {
 		return err
 	}
 

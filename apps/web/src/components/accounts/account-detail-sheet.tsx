@@ -22,7 +22,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { useAccount } from '@/hooks/api'
+import { useAccount, useAccountUsage } from '@/hooks/api'
 import type { components } from '@/lib/api/types'
 
 type Account = components['schemas']['Account']
@@ -72,10 +72,6 @@ const accountTypeConfig: Record<string, {
   bonus: { labelKey: 'typeBonus', icon: Award, variant: 'default', color: 'bg-amber-100' },
   tracking: { labelKey: 'typeTracking', icon: BarChart3, variant: 'secondary', color: 'bg-blue-100' },
   balance: { labelKey: 'typeBalance', icon: Scale, variant: 'outline', color: 'bg-green-100' },
-  time: { labelKey: 'typeTime', icon: BarChart3, variant: 'secondary', color: 'bg-blue-100' },
-  deduction: { labelKey: 'typeDeduction', icon: BarChart3, variant: 'secondary', color: 'bg-red-100' },
-  vacation: { labelKey: 'typeVacation', icon: Scale, variant: 'outline', color: 'bg-green-100' },
-  sick: { labelKey: 'typeSick', icon: Scale, variant: 'outline', color: 'bg-purple-100' },
 }
 
 const unitLabelKeys: Record<string, string> = {
@@ -93,6 +89,7 @@ export function AccountDetailSheet({
 }: AccountDetailSheetProps) {
   const t = useTranslations('adminAccounts')
   const { data: account, isLoading } = useAccount(accountId || '', open && !!accountId)
+  const { data: usageData } = useAccountUsage(accountId || '', open && !!accountId)
 
   const formatDateTime = (date: string | undefined | null) => {
     if (!date) return '-'
@@ -108,10 +105,13 @@ export function AccountDetailSheet({
 
   // Unit from runtime (may not be in TS types)
   const unit = (account as Record<string, unknown> | undefined)?.unit as string | undefined
+  const yearCarryover = (account as Record<string, unknown> | undefined)?.year_carryover as boolean | undefined
+  const usagePlans = (usageData as { day_plans?: Array<{ id: string; code: string; name: string }> } | undefined)?.day_plans ?? []
+  const usageCount = (usageData as { usage_count?: number } | undefined)?.usage_count ?? 0
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-lg flex flex-col">
+      <SheetContent side="right" className="w-full sm:max-w-lg flex min-h-0 flex-col">
         <SheetHeader>
           <SheetTitle>{t('accountDetails')}</SheetTitle>
           <SheetDescription>{t('viewAccountInfo')}</SheetDescription>
@@ -192,6 +192,10 @@ export function AccountDetailSheet({
                   </div>
                   <DetailRow label={t('fieldPayrollCode')} value={account.payroll_code} />
                   <DetailRow label={t('fieldSortOrder')} value={account.sort_order?.toString()} />
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">{t('fieldYearCarryover')}</span>
+                    <BooleanBadge value={yearCarryover} trueLabel={t('yes')} falseLabel={t('no')} />
+                  </div>
                 </div>
               </div>
 
@@ -201,6 +205,26 @@ export function AccountDetailSheet({
                 <div className="rounded-lg border p-4">
                   <DetailRow label={t('labelCreated')} value={formatDateTime(account.created_at)} />
                   <DetailRow label={t('labelLastUpdated')} value={formatDateTime(account.updated_at)} />
+                </div>
+              </div>
+
+              {/* Usage */}
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium text-muted-foreground">{t('sectionUsage')}</h4>
+                <div className="rounded-lg border p-4 space-y-3">
+                  <DetailRow label={t('sectionUsage')} value={t('usageCount', { count: usageCount })} />
+                  {usageCount === 0 ? (
+                    <p className="text-sm text-muted-foreground">{t('usageNone')}</p>
+                  ) : (
+                    <ul className="space-y-1 text-sm">
+                      {usagePlans.map((plan) => (
+                        <li key={plan.id} className="flex justify-between">
+                          <span className="font-mono text-muted-foreground">{plan.code}</span>
+                          <span className="text-right">{plan.name}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </div>
             </div>

@@ -18,12 +18,14 @@
         in: query
         type: string
         enum:
-          - time
           - bonus
-          - deduction
-          - vacation
-          - sick
+          - tracking
+          - balance
         description: Filter by account type
+      - name: include_system
+        in: query
+        type: boolean
+        description: Include system accounts in results
       - name: payroll_relevant
         in: query
         type: boolean
@@ -132,6 +134,28 @@
         description: Cannot delete system accounts
         schema:
           $ref: '../schemas/common.yaml#/ProblemDetails'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/accounts/{id}/usage:
+  get:
+    tags:
+      - Accounts
+    summary: Get account usage
+    operationId: getAccountUsage
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Account usage details
+        schema:
+          $ref: '../schemas/accounts.yaml#/AccountUsage'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
       404:
         $ref: '../responses/errors.yaml#/NotFound'
 

@@ -29,7 +29,7 @@ func NewAccountRepository(db *DB) *AccountRepository {
 // Create creates a new account.
 func (r *AccountRepository) Create(ctx context.Context, account *model.Account) error {
 	return r.db.GORM.WithContext(ctx).
-		Select("TenantID", "Code", "Name", "AccountType", "Unit", "IsSystem", "IsActive").
+		Select("TenantID", "Code", "Name", "Description", "AccountType", "Unit", "YearCarryover", "IsPayrollRelevant", "PayrollCode", "SortOrder", "IsSystem", "IsActive").
 		Create(account).Error
 }
 
@@ -73,8 +73,19 @@ func (r *AccountRepository) GetByCode(ctx context.Context, tenantID *uuid.UUID, 
 func (r *AccountRepository) Upsert(ctx context.Context, account *model.Account) error {
 	return r.db.GORM.WithContext(ctx).
 		Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "tenant_id"}, {Name: "code"}},
-			DoUpdates: clause.AssignmentColumns([]string{"name", "account_type", "unit", "is_active", "updated_at"}),
+			Columns: []clause.Column{{Name: "tenant_id"}, {Name: "code"}},
+			DoUpdates: clause.AssignmentColumns([]string{
+				"name",
+				"description",
+				"account_type",
+				"unit",
+				"year_carryover",
+				"is_payroll_relevant",
+				"payroll_code",
+				"sort_order",
+				"is_active",
+				"updated_at",
+			}),
 		}).
 		Create(account).Error
 }
@@ -150,4 +161,52 @@ func (r *AccountRepository) ListActive(ctx context.Context, tenantID uuid.UUID) 
 		return nil, fmt.Errorf("failed to list active accounts: %w", err)
 	}
 	return accounts, nil
+}
+
+// ListFiltered retrieves accounts with optional filters for system, active, and type.
+func (r *AccountRepository) ListFiltered(ctx context.Context, tenantID uuid.UUID, includeSystem bool, active *bool, accountType *model.AccountType) ([]model.Account, error) {
+	var accounts []model.Account
+	usageSubquery := r.db.GORM.WithContext(ctx).
+		Table("day_plan_bonuses").
+		Select("day_plan_bonuses.account_id AS account_id, COUNT(DISTINCT day_plan_bonuses.day_plan_id) AS usage_count").
+		Joins("JOIN day_plans ON day_plans.id = day_plan_bonuses.day_plan_id").
+		Where("day_plans.tenant_id = ?", tenantID).
+		Group("day_plan_bonuses.account_id")
+	query := r.db.GORM.WithContext(ctx).
+		Table("accounts").
+		Select("accounts.*, COALESCE(usage.usage_count, 0) AS usage_count").
+		Joins("LEFT JOIN (?) AS usage ON usage.account_id = accounts.id", usageSubquery)
+	if includeSystem {
+		query = query.Where("tenant_id = ? OR tenant_id IS NULL", tenantID)
+	} else {
+		query = query.Where("tenant_id = ?", tenantID)
+	}
+	if active != nil {
+		query = query.Where("is_active = ?", *active)
+	}
+	if accountType != nil && *accountType != "" {
+		query = query.Where("account_type = ?", *accountType)
+	}
+	err := query.Order("is_system DESC, sort_order ASC, code ASC").Find(&accounts).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to list accounts with filters: %w", err)
+	}
+	return accounts, nil
+}
+
+// ListDayPlansUsingAccount returns day plans that reference the account via bonuses.
+func (r *AccountRepository) ListDayPlansUsingAccount(ctx context.Context, tenantID uuid.UUID, accountID uuid.UUID) ([]model.AccountUsageDayPlan, error) {
+	var plans []model.AccountUsageDayPlan
+	err := r.db.GORM.WithContext(ctx).
+		Table("day_plan_bonuses").
+		Select("day_plans.id, day_plans.code, day_plans.name").
+		Joins("JOIN day_plans ON day_plans.id = day_plan_bonuses.day_plan_id").
+		Where("day_plan_bonuses.account_id = ? AND day_plans.tenant_id = ?", accountID, tenantID).
+		Group("day_plans.id, day_plans.code, day_plans.name").
+		Order("day_plans.code ASC").
+		Scan(&plans).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to list day plans for account: %w", err)
+	}
+	return plans, nil
 }

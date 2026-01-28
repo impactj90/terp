@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import { Plus, Wallet, X } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
 import { useHasRole } from '@/hooks'
-import { useAccounts, useDeleteAccount } from '@/hooks/api'
+import { useAccounts, useAccountUsage, useDeleteAccount, useUpdateAccount } from '@/hooks/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { SearchInput } from '@/components/ui/search-input'
@@ -69,6 +69,9 @@ export default function AccountsPage() {
 
   // Delete mutation
   const deleteMutation = useDeleteAccount()
+  const updateMutation = useUpdateAccount()
+
+  const { data: deleteUsageData } = useAccountUsage(deleteItem?.id ?? '', !!deleteItem)
 
   // Redirect if not admin
   React.useEffect(() => {
@@ -136,12 +139,54 @@ export default function AccountsPage() {
     }
   }
 
+  const handleToggleActive = async (account: Account, isActive: boolean) => {
+    try {
+      const unit = (account as Record<string, unknown>).unit as 'minutes' | 'hours' | 'days' | undefined
+      const yearCarryover = (account as Record<string, unknown>).year_carryover as boolean | undefined
+      await updateMutation.mutateAsync({
+        path: { id: account.id },
+        body: {
+          name: account.name,
+          description: account.description ?? undefined,
+          is_payroll_relevant: account.is_payroll_relevant ?? false,
+          payroll_code: account.payroll_code ?? undefined,
+          sort_order: account.sort_order ?? 0,
+          unit: unit ?? 'minutes',
+          year_carryover: yearCarryover ?? true,
+          is_active: isActive,
+        },
+      })
+    } catch {
+      // Error handled by mutation
+    }
+  }
+
   const handleFormSuccess = () => {
     setCreateOpen(false)
     setEditItem(null)
   }
 
   const hasFilters = Boolean(search || typeFilter !== 'all' || statusFilter !== 'all' || !showSystem)
+
+  const groupedAccounts = React.useMemo(() => {
+    const groups: Record<string, Account[]> = {
+      bonus: [],
+      tracking: [],
+      balance: [],
+    }
+    filteredAccounts.forEach((account) => {
+      const accountType = (account as Record<string, unknown>).account_type as string || 'tracking'
+      if (!groups[accountType]) groups[accountType] = []
+      groups[accountType].push(account)
+    })
+    return groups
+  }, [filteredAccounts])
+
+  const accountGroups = [
+    { key: 'bonus', label: t('typeBonus') },
+    { key: 'tracking', label: t('typeTracking') },
+    { key: 'balance', label: t('typeBalance') },
+  ]
 
   const clearFilters = () => {
     setSearch('')
@@ -248,13 +293,27 @@ export default function AccountsPage() {
               onCreateClick={() => setCreateOpen(true)}
             />
           ) : (
-            <AccountDataTable
-              accounts={filteredAccounts}
-              isLoading={false}
-              onView={handleView}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
+            <div className="divide-y">
+              {accountGroups.map((group) => {
+                const accounts = groupedAccounts[group.key] ?? []
+                if (accounts.length === 0) return null
+                return (
+                  <div key={group.key} className="p-6 pt-4">
+                    <div className="mb-3 text-sm font-medium text-muted-foreground">
+                      {group.label} ({accounts.length})
+                    </div>
+                    <AccountDataTable
+                      accounts={accounts}
+                      isLoading={false}
+                      onView={handleView}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                      onToggleActive={handleToggleActive}
+                    />
+                  </div>
+                )
+              })}
+            </div>
           )}
         </CardContent>
       </Card>
@@ -296,7 +355,19 @@ export default function AccountsPage() {
         title={t('deleteAccount')}
         description={
           deleteItem
-            ? t('deleteDescription', { name: deleteItem.name, code: deleteItem.code })
+            ? [
+                t('deleteDescription', { name: deleteItem.name, code: deleteItem.code }),
+                (deleteUsageData as { usage_count?: number; day_plans?: Array<{ code: string }> } | undefined)?.usage_count
+                  ? t('deleteUsageWarning', {
+                      count: (deleteUsageData as { usage_count?: number } | undefined)?.usage_count ?? 0,
+                      plans: ((deleteUsageData as { day_plans?: Array<{ code: string }> } | undefined)?.day_plans ?? [])
+                        .map((plan) => plan.code)
+                        .join(', '),
+                    })
+                  : '',
+              ]
+                .filter(Boolean)
+                .join(' ')
             : ''
         }
         confirmLabel={t('delete')}

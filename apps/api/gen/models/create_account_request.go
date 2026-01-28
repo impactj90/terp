@@ -22,7 +22,7 @@ type CreateAccountRequest struct {
 
 	// account type
 	// Required: true
-	// Enum: ["time","bonus","deduction","vacation","sick"]
+	// Enum: ["bonus","tracking","balance"]
 	AccountType *string `json:"account_type"`
 
 	// code
@@ -48,6 +48,13 @@ type CreateAccountRequest struct {
 
 	// sort order
 	SortOrder int64 `json:"sort_order,omitempty"`
+
+	// unit
+	// Enum: ["minutes","hours","days"]
+	Unit string `json:"unit,omitempty"`
+
+	// year carryover
+	YearCarryover bool `json:"year_carryover,omitempty"`
 }
 
 // Validate validates this create account request
@@ -66,6 +73,10 @@ func (m *CreateAccountRequest) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
+	if err := m.validateUnit(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
@@ -76,7 +87,7 @@ var createAccountRequestTypeAccountTypePropEnum []any
 
 func init() {
 	var res []string
-	if err := json.Unmarshal([]byte(`["time","bonus","deduction","vacation","sick"]`), &res); err != nil {
+	if err := json.Unmarshal([]byte(`["bonus","tracking","balance"]`), &res); err != nil {
 		panic(err)
 	}
 	for _, v := range res {
@@ -86,20 +97,14 @@ func init() {
 
 const (
 
-	// CreateAccountRequestAccountTypeTime captures enum value "time"
-	CreateAccountRequestAccountTypeTime string = "time"
-
 	// CreateAccountRequestAccountTypeBonus captures enum value "bonus"
 	CreateAccountRequestAccountTypeBonus string = "bonus"
 
-	// CreateAccountRequestAccountTypeDeduction captures enum value "deduction"
-	CreateAccountRequestAccountTypeDeduction string = "deduction"
+	// CreateAccountRequestAccountTypeTracking captures enum value "tracking"
+	CreateAccountRequestAccountTypeTracking string = "tracking"
 
-	// CreateAccountRequestAccountTypeVacation captures enum value "vacation"
-	CreateAccountRequestAccountTypeVacation string = "vacation"
-
-	// CreateAccountRequestAccountTypeSick captures enum value "sick"
-	CreateAccountRequestAccountTypeSick string = "sick"
+	// CreateAccountRequestAccountTypeBalance captures enum value "balance"
+	CreateAccountRequestAccountTypeBalance string = "balance"
 )
 
 // prop value enum
@@ -152,6 +157,51 @@ func (m *CreateAccountRequest) validateName(formats strfmt.Registry) error {
 	}
 
 	if err := validate.MaxLength("name", "body", *m.Name, 255); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var createAccountRequestTypeUnitPropEnum []any
+
+func init() {
+	var res []string
+	if err := json.Unmarshal([]byte(`["minutes","hours","days"]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		createAccountRequestTypeUnitPropEnum = append(createAccountRequestTypeUnitPropEnum, v)
+	}
+}
+
+const (
+
+	// CreateAccountRequestUnitMinutes captures enum value "minutes"
+	CreateAccountRequestUnitMinutes string = "minutes"
+
+	// CreateAccountRequestUnitHours captures enum value "hours"
+	CreateAccountRequestUnitHours string = "hours"
+
+	// CreateAccountRequestUnitDays captures enum value "days"
+	CreateAccountRequestUnitDays string = "days"
+)
+
+// prop value enum
+func (m *CreateAccountRequest) validateUnitEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, createAccountRequestTypeUnitPropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *CreateAccountRequest) validateUnit(formats strfmt.Registry) error {
+	if swag.IsZero(m.Unit) { // not required
+		return nil
+	}
+
+	// value enum
+	if err := m.validateUnitEnum("unit", "body", m.Unit); err != nil {
 		return err
 	}
 

@@ -42,6 +42,8 @@ interface FormState {
   name: string
   description: string
   accountType: string
+  unit: string
+  yearCarryover: boolean
   isPayrollRelevant: boolean
   payrollCode: string
   sortOrder: number
@@ -52,7 +54,9 @@ const INITIAL_STATE: FormState = {
   code: '',
   name: '',
   description: '',
-  accountType: 'time',
+  accountType: 'tracking',
+  unit: 'minutes',
+  yearCarryover: true,
   isPayrollRelevant: false,
   payrollCode: '',
   sortOrder: 0,
@@ -60,11 +64,15 @@ const INITIAL_STATE: FormState = {
 }
 
 const ACCOUNT_TYPE_OPTIONS = [
-  { value: 'time', labelKey: 'typeTime' },
   { value: 'bonus', labelKey: 'typeBonus' },
-  { value: 'deduction', labelKey: 'typeDeduction' },
-  { value: 'vacation', labelKey: 'typeVacation' },
-  { value: 'sick', labelKey: 'typeSick' },
+  { value: 'tracking', labelKey: 'typeTracking' },
+  { value: 'balance', labelKey: 'typeBalance' },
+] as const
+
+const UNIT_OPTIONS = [
+  { value: 'minutes', labelKey: 'unitMinutes' },
+  { value: 'hours', labelKey: 'unitHours' },
+  { value: 'days', labelKey: 'unitDays' },
 ] as const
 
 export function AccountFormSheet({
@@ -91,7 +99,9 @@ export function AccountFormSheet({
           code: account.code || '',
           name: account.name || '',
           description: account.description || '',
-          accountType: account.account_type || 'time',
+          accountType: account.account_type || 'tracking',
+          unit: (account as Record<string, unknown>).unit as string || 'minutes',
+          yearCarryover: (account as Record<string, unknown>).year_carryover as boolean ?? true,
           isPayrollRelevant: account.is_payroll_relevant ?? false,
           payrollCode: account.payroll_code || '',
           sortOrder: account.sort_order ?? 0,
@@ -128,6 +138,8 @@ export function AccountFormSheet({
             is_payroll_relevant: form.isPayrollRelevant,
             payroll_code: form.payrollCode.trim() || undefined,
             sort_order: form.sortOrder,
+            unit: form.unit as 'minutes' | 'hours' | 'days',
+            year_carryover: form.yearCarryover,
             is_active: form.isActive,
           },
         })
@@ -137,10 +149,12 @@ export function AccountFormSheet({
             code: form.code.trim(),
             name: form.name.trim(),
             description: form.description.trim() || undefined,
-            account_type: form.accountType as 'time' | 'bonus' | 'deduction' | 'vacation' | 'sick',
+            account_type: form.accountType as 'bonus' | 'tracking' | 'balance',
             is_payroll_relevant: form.isPayrollRelevant,
             payroll_code: form.payrollCode.trim() || undefined,
             sort_order: form.sortOrder,
+            unit: form.unit as 'minutes' | 'hours' | 'days',
+            year_carryover: form.yearCarryover,
           },
         })
       }
@@ -162,7 +176,7 @@ export function AccountFormSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-lg flex flex-col">
+      <SheetContent side="right" className="w-full sm:max-w-lg flex min-h-0 flex-col">
         <SheetHeader>
           <SheetTitle>{isEdit ? t('editAccount') : t('newAccount')}</SheetTitle>
           <SheetDescription>
@@ -287,6 +301,48 @@ export function AccountFormSheet({
                   onChange={(e) => setForm((prev) => ({ ...prev, payrollCode: e.target.value }))}
                   disabled={isSubmitting}
                   placeholder={t('payrollCodePlaceholder')}
+                />
+              </div>
+            </div>
+
+            {/* Configuration */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-muted-foreground">{t('sectionConfiguration')}</h3>
+
+              <div className="space-y-2">
+                <Label>{t('fieldUnit')}</Label>
+                <Select
+                  value={form.unit}
+                  onValueChange={(value) => setForm((prev) => ({ ...prev, unit: value }))}
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('fieldUnit')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {UNIT_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {t(option.labelKey as Parameters<typeof t>[0])}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="yearCarryover">{t('fieldYearCarryover')}</Label>
+                  <p className="text-xs text-muted-foreground">
+                    {t('fieldYearCarryoverDescription')}
+                  </p>
+                </div>
+                <Switch
+                  id="yearCarryover"
+                  checked={form.yearCarryover}
+                  onCheckedChange={(checked) =>
+                    setForm((prev) => ({ ...prev, yearCarryover: checked }))
+                  }
+                  disabled={isSubmitting}
                 />
               </div>
             </div>

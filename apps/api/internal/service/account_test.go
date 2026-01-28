@@ -264,6 +264,32 @@ func TestAccountService_Update_Success(t *testing.T) {
 	assert.False(t, updated.IsActive)
 }
 
+func TestAccountService_Update_SystemAccount(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewAccountRepository(db)
+	svc := service.NewAccountService(repo)
+	ctx := context.Background()
+
+	sysAccount := &model.Account{
+		TenantID:    nil,
+		Code:        "SYS_ACC",
+		Name:        "System Account",
+		AccountType: model.AccountTypeTracking,
+		Unit:        model.AccountUnitMinutes,
+		IsSystem:    true,
+		IsActive:    true,
+	}
+	require.NoError(t, repo.Create(ctx, sysAccount))
+
+	newName := "Updated"
+	updateInput := service.UpdateAccountInput{
+		Name: &newName,
+	}
+
+	_, err := svc.Update(ctx, sysAccount.ID, updateInput)
+	assert.ErrorIs(t, err, service.ErrCannotModifySystemAccount)
+}
+
 func TestAccountService_Update_NotFound(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewAccountRepository(db)

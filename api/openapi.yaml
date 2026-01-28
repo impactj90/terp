@@ -312,6 +312,8 @@ paths:
     $ref: 'paths/accounts.yaml#/~1accounts'
   /accounts/{id}:
     $ref: 'paths/accounts.yaml#/~1accounts~1{id}'
+  /accounts/{id}/usage:
+    $ref: 'paths/accounts.yaml#/~1accounts~1{id}~1usage'
   /account-values:
     $ref: 'paths/accounts.yaml#/~1account-values'
 
@@ -473,6 +475,8 @@ definitions:
     $ref: 'schemas/accounts.yaml#/AccountSummary'
   AccountValue:
     $ref: 'schemas/accounts.yaml#/AccountValue'
+  AccountUsage:
+    $ref: 'schemas/accounts.yaml#/AccountUsage'
   CreateAccountRequest:
     $ref: 'schemas/accounts.yaml#/CreateAccountRequest'
   UpdateAccountRequest:
