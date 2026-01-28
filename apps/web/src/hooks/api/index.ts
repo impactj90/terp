@@ -66,6 +66,15 @@ export {
 // Users
 export { useUser, useUpdateUser } from './use-user'
 
+// Notifications
+export {
+  useNotifications,
+  useMarkNotificationRead,
+  useMarkAllNotificationsRead,
+  useNotificationPreferences,
+  useUpdateNotificationPreferences,
+} from './use-notifications'
+
 // Absences
 export {
   useAbsenceTypes,

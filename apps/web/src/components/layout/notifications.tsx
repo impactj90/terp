@@ -1,7 +1,14 @@
 'use client'
 
-import { useTranslations } from 'next-intl'
-import { Bell } from 'lucide-react'
+import Link from 'next/link'
+import { useLocale, useTranslations } from 'next-intl'
+import {
+  Bell,
+  CheckCircle,
+  AlertTriangle,
+  Clock,
+  Settings,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -13,40 +20,33 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+  useMarkAllNotificationsRead,
+  useMarkNotificationRead,
+  useNotifications,
+} from '@/hooks/api'
+import { useNotificationsStream } from '@/hooks/use-notifications-stream'
+import { useAuth } from '@/providers/auth-provider'
+import { formatRelativeTime } from '@/lib/time-utils'
 
-// Placeholder notification type - replace with actual API type when available
-interface Notification {
+const notificationIcons = {
+  approvals: CheckCircle,
+  errors: AlertTriangle,
+  reminders: Clock,
+  system: Settings,
+} as const
+
+type NotificationType = keyof typeof notificationIcons
+
+type Notification = {
   id: string
+  type: NotificationType
   title: string
   message: string
-  timestamp: string
-  read: boolean
+  link?: string | null
+  read_at?: string | null
+  created_at: string
 }
-
-// Placeholder notifications - replace with actual API data
-const placeholderNotifications: Notification[] = [
-  {
-    id: '1',
-    title: 'Time approval required',
-    message: 'John Doe has submitted time entries for approval',
-    timestamp: '10 min ago',
-    read: false,
-  },
-  {
-    id: '2',
-    title: 'Absence request',
-    message: 'Jane Smith requested vacation from Dec 20-25',
-    timestamp: '1 hour ago',
-    read: false,
-  },
-  {
-    id: '3',
-    title: 'Monthly report ready',
-    message: 'November time tracking report is now available',
-    timestamp: '2 hours ago',
-    read: true,
-  },
-]
 
 interface NotificationsProps {
   /** Override notification count (for testing/demo) */
@@ -59,11 +59,29 @@ interface NotificationsProps {
  */
 export function Notifications({ count }: NotificationsProps) {
   const t = useTranslations('header')
+  const locale = useLocale()
+  const { isAuthenticated } = useAuth()
 
-  // In a real implementation, this would come from an API hook
-  const notifications = placeholderNotifications
+  useNotificationsStream({ enabled: isAuthenticated })
+
+  const { data } = useNotifications({ limit: 10, enabled: isAuthenticated })
+  const markRead = useMarkNotificationRead()
+  const markAllRead = useMarkAllNotificationsRead()
+
+  const notifications = (data?.data ?? []) as Notification[]
   const unreadCount =
-    count ?? notifications.filter((n) => !n.read).length
+    count ?? data?.unread_count ?? notifications.filter((n) => !n.read_at).length
+
+  const handleMarkAll = () => {
+    if (unreadCount === 0) return
+    markAllRead.mutate({})
+  }
+
+  const handleNotificationClick = (notification: Notification) => {
+    if (!notification.read_at) {
+      markRead.mutate({ path: { id: notification.id } })
+    }
+  }
 
   return (
     <DropdownMenu>
@@ -87,12 +105,16 @@ export function Notifications({ count }: NotificationsProps) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
         <DropdownMenuLabel className="flex items-center justify-between">
-          <span>{t('notifications')}</span>
+          <span>
+            {t('notifications')}
+            {unreadCount > 0 ? ` (${t('newCount', { count: unreadCount })})` : ''}
+          </span>
           {unreadCount > 0 && (
             <Button
               variant="ghost"
               size="sm"
               className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
+              onClick={handleMarkAll}
             >
               {t('markAllAsRead')}
             </Button>
@@ -105,34 +127,50 @@ export function Notifications({ count }: NotificationsProps) {
               {t('noNotifications')}
             </div>
           ) : (
-            notifications.map((notification) => (
-              <DropdownMenuItem
-                key={notification.id}
-                className="flex cursor-pointer flex-col items-start gap-1 p-4"
-              >
-                <div className="flex w-full items-start justify-between gap-2">
-                  <span
-                    className={`text-sm font-medium ${!notification.read ? 'text-foreground' : 'text-muted-foreground'}`}
+            notifications.map((notification) => {
+              const Icon = notificationIcons[notification.type]
+              const isUnread = !notification.read_at
+              return (
+                <DropdownMenuItem
+                  key={notification.id}
+                  asChild
+                  className="flex cursor-pointer flex-col items-start gap-1 p-4"
+                  onSelect={() => handleNotificationClick(notification)}
+                >
+                  <Link
+                    href={notification.link ?? '/notifications'}
+                    className="flex w-full flex-col gap-1"
                   >
-                    {notification.title}
-                  </span>
-                  {!notification.read && (
-                    <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground line-clamp-2">
-                  {notification.message}
-                </p>
-                <span className="text-xs text-muted-foreground">
-                  {notification.timestamp}
-                </span>
-              </DropdownMenuItem>
-            ))
+                    <div className="flex w-full items-start justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full bg-muted p-1">
+                          <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                        </span>
+                        <span
+                          className={`text-sm ${isUnread ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}
+                        >
+                          {notification.title}
+                        </span>
+                      </div>
+                      {isUnread && (
+                        <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-2">
+                      {notification.message}
+                    </p>
+                    <span className="text-xs text-muted-foreground">
+                      {formatRelativeTime(notification.created_at, locale)}
+                    </span>
+                  </Link>
+                </DropdownMenuItem>
+              )
+            })
           )}
         </ScrollArea>
         <DropdownMenuSeparator />
-        <DropdownMenuItem className="justify-center text-sm font-medium">
-          {t('viewAllNotifications')}
+        <DropdownMenuItem asChild className="justify-center text-sm font-medium">
+          <Link href="/notifications">{t('viewAllNotifications')}</Link>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

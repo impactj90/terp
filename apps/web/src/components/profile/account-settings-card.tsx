@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import {
   Card,
   CardHeader,
@@ -208,20 +209,21 @@ export function AccountSettingsCard({ user }: AccountSettingsCardProps) {
           </p>
         </div>
 
-        {/* Notification Preferences (placeholder) */}
+        {/* Notification Preferences */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Bell className="h-4 w-4 text-muted-foreground" />
               <Label>{t('notifications')}</Label>
             </div>
-            <Badge variant="secondary" className="text-xs">
-              <Construction className="mr-1 h-3 w-3" />
-              {t('comingSoon')}
-            </Badge>
+            <Button asChild size="sm" variant="outline">
+              <Link href="/notifications?tab=preferences">
+                {t('manageNotifications')}
+              </Link>
+            </Button>
           </div>
           <p className="text-sm text-muted-foreground">
-            {t('notificationsComingSoon')}
+            {t('notificationsDescription')}
           </p>
         </div>
       </CardContent>

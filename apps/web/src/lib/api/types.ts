@@ -198,6 +198,92 @@ export interface paths {
         patch: operations["updateUser"];
         trace?: never;
     };
+    "/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List notifications for the current user */
+        get: operations["listNotifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/{id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark notification as read */
+        post: operations["markNotificationRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark all notifications as read */
+        post: operations["markAllNotificationsRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stream notifications for the current user */
+        get: operations["streamNotifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notification-preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get notification preferences for the current user */
+        get: operations["getNotificationPreferences"];
+        /** Update notification preferences for the current user */
+        put: operations["updateNotificationPreferences"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tenants": {
         parameters: {
             query?: never;
@@ -2303,6 +2389,69 @@ export interface components {
         UserList: {
             data: components["schemas"]["User"][];
             meta: components["schemas"]["PaginationMeta"];
+        };
+        Notification: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** Format: uuid */
+            user_id: string;
+            /** @enum {string} */
+            type: "approvals" | "errors" | "reminders" | "system";
+            /** @example Absence approved */
+            title: string;
+            /** @example Vacation on 2026-01-20 was approved. */
+            message: string;
+            link?: string | null;
+            /** Format: date-time */
+            read_at?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        NotificationList: {
+            data: components["schemas"]["Notification"][];
+            /**
+             * Format: int64
+             * @example 50
+             */
+            total: number;
+            /**
+             * Format: int64
+             * @example 3
+             */
+            unread_count: number;
+        };
+        NotificationPreferences: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** Format: uuid */
+            user_id: string;
+            approvals_enabled: boolean;
+            errors_enabled: boolean;
+            reminders_enabled: boolean;
+            system_enabled: boolean;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        UpdateNotificationPreferencesRequest: {
+            approvals_enabled: boolean;
+            errors_enabled: boolean;
+            reminders_enabled: boolean;
+            system_enabled: boolean;
+        };
+        MarkNotificationsReadResponse: {
+            /**
+             * Format: int64
+             * @example 5
+             */
+            count: number;
         };
         Tenant: {
             /** Format: uuid */
@@ -5082,6 +5231,154 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    listNotifications: {
+        parameters: {
+            query?: {
+                /** @description Filter by notification type */
+                type?: "approvals" | "errors" | "reminders" | "system";
+                /** @description Filter by unread status */
+                unread?: boolean;
+                /** @description Start datetime filter */
+                from?: string;
+                /** @description End datetime filter */
+                to?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of notifications */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    markNotificationRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Updated notification */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Notification"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    markAllNotificationsRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Count of notifications marked as read */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarkNotificationsReadResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    streamNotifications: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Server-sent events stream */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getNotificationPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Notification preferences */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPreferences"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    updateNotificationPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateNotificationPreferencesRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated notification preferences */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPreferences"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     listTenants: {

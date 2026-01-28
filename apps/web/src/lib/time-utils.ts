@@ -325,3 +325,36 @@ export function isWeekend(date: Date): boolean {
   const day = date.getDay()
   return day === 0 || day === 6
 }
+
+/**
+ * Format ISO datetime as a relative time string.
+ * @example formatRelativeTime('2026-01-25T12:00:00Z', 'en') => "2 hours ago"
+ */
+export function formatRelativeTime(isoString: string, locale: string = 'en'): string {
+  const date = new Date(isoString)
+  if (isNaN(date.getTime())) {
+    return ''
+  }
+
+  const now = new Date()
+  const diffInSeconds = Math.round((date.getTime() - now.getTime()) / 1000)
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
+
+  const units: Array<{ unit: Intl.RelativeTimeFormatUnit; seconds: number }> = [
+    { unit: 'year', seconds: 60 * 60 * 24 * 365 },
+    { unit: 'month', seconds: 60 * 60 * 24 * 30 },
+    { unit: 'week', seconds: 60 * 60 * 24 * 7 },
+    { unit: 'day', seconds: 60 * 60 * 24 },
+    { unit: 'hour', seconds: 60 * 60 },
+    { unit: 'minute', seconds: 60 },
+    { unit: 'second', seconds: 1 },
+  ]
+
+  for (const unit of units) {
+    if (Math.abs(diffInSeconds) >= unit.seconds || unit.unit === 'second') {
+      return rtf.format(Math.round(diffInSeconds / unit.seconds), unit.unit)
+    }
+  }
+
+  return rtf.format(0, 'second')
+}
