@@ -3,7 +3,6 @@
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { ClipboardCheck } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
 import { useHasRole } from '@/hooks'
 import { useAbsences, useApproveAbsence, useRejectAbsence } from '@/hooks/api'

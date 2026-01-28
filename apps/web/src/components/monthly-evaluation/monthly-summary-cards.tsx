@@ -53,7 +53,6 @@ export function MonthlySummaryCards({
 
   // Get flextime from end balance
   const flextimeBalance = monthlyValue.flextime_end ?? 0
-  const flextimeChange = monthlyValue.flextime_change ?? 0
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

@@ -134,8 +134,6 @@ export function WeekPlanDetailSheet({
 }
 
 function WeekGrid({ weekPlan }: { weekPlan: WeekPlan }) {
-  const t = useTranslations('adminWeekPlans')
-
   return (
     <div className="grid grid-cols-7 gap-2">
       {DAYS.map((day) => {

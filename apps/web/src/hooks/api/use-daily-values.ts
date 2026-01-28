@@ -128,7 +128,7 @@ function transformDailyValues(values: DailyValue[]): DailyValue[] {
  * Returns { data: DailyValue[] } to match expected shape.
  */
 export function useDailyValues(options: UseDailyValuesOptions = {}) {
-  const { employeeId, year, month, from, to, enabled = true } = options
+  const { employeeId, year, month, from, enabled = true } = options
 
   // Support legacy from/to parameters by extracting year/month
   let queryYear = year
