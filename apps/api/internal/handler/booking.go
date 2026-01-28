@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/tolga/terp/gen/models"
+	"github.com/tolga/terp/internal/calculation"
 	"github.com/tolga/terp/internal/middleware"
 	"github.com/tolga/terp/internal/model"
 	"github.com/tolga/terp/internal/repository"
@@ -444,13 +445,11 @@ func (h *BookingHandler) buildDayViewResponse(
 
 	// Add daily value if exists
 	if dailyValue != nil {
-		response.DailyValue.GrossMinutes = int64(dailyValue.GrossTime)
-		response.DailyValue.NetMinutes = int64(dailyValue.NetTime)
-		response.DailyValue.TargetMinutes = int64(dailyValue.TargetTime)
-		response.DailyValue.OvertimeMinutes = int64(dailyValue.Overtime)
-		response.DailyValue.UndertimeMinutes = int64(dailyValue.Undertime)
-		response.DailyValue.BreakMinutes = int64(dailyValue.BreakTime)
-		response.DailyValue.HasErrors = dailyValue.HasError
+		dvResp := h.dailyValueToResponse(dailyValue)
+		if dvResp != nil {
+			response.DailyValue = struct{ models.DailyValue }{DailyValue: *dvResp}
+			response.Errors = dvResp.Errors
+		}
 	}
 
 	// Add day plan summary if exists
@@ -549,5 +548,90 @@ func (h *BookingHandler) dailyValueToResponse(dv *model.DailyValue) *models.Dail
 		BalanceMinutes:   int64(dv.Balance()),
 		HasErrors:        dv.HasError,
 		Status:           &status,
+		Errors:           buildDailyErrors(dv),
+	}
+}
+
+func buildDailyErrors(dv *model.DailyValue) []*models.DailyError {
+	if dv == nil {
+		return nil
+	}
+
+	errorCount := len(dv.ErrorCodes) + len(dv.Warnings)
+	if errorCount == 0 {
+		return nil
+	}
+
+	dailyValueID := strfmt.UUID(dv.ID.String())
+	errors := make([]*models.DailyError, 0, errorCount)
+
+	appendError := func(code string, severity string) {
+		if code == "" {
+			return
+		}
+
+		id := strfmt.UUID(uuid.NewString())
+		errorType := mapDailyErrorType(code)
+		message := code
+
+		errors = append(errors, &models.DailyError{
+			ID:           &id,
+			DailyValueID: &dailyValueID,
+			ErrorType:    &errorType,
+			Message:      &message,
+			Severity:     severity,
+		})
+	}
+
+	for _, code := range dv.ErrorCodes {
+		appendError(code, models.DailyErrorSeverityError)
+	}
+	for _, code := range dv.Warnings {
+		appendError(code, models.DailyErrorSeverityWarning)
+	}
+
+	if len(errors) == 0 {
+		return nil
+	}
+
+	return errors
+}
+
+func mapDailyErrorType(code string) string {
+	switch code {
+	case calculation.ErrCodeMissingCome,
+		calculation.ErrCodeMissingGo,
+		calculation.ErrCodeNoBookings:
+		return models.DailyErrorErrorTypeMissingBooking
+	case calculation.ErrCodeUnpairedBooking:
+		return models.DailyErrorErrorTypeUnpairedBooking
+	case calculation.ErrCodeDuplicateInTime:
+		return models.DailyErrorErrorTypeOverlappingBookings
+	case calculation.ErrCodeEarlyCome,
+		calculation.ErrCodeLateCome,
+		calculation.ErrCodeEarlyGo,
+		calculation.ErrCodeLateGo,
+		calculation.ErrCodeMissedCoreStart,
+		calculation.ErrCodeMissedCoreEnd:
+		return models.DailyErrorErrorTypeCoreTimeViolation
+	case calculation.ErrCodeBelowMinWorkTime:
+		return models.DailyErrorErrorTypeBelowMinHours
+	case calculation.WarnCodeNoBreakRecorded,
+		calculation.WarnCodeShortBreak,
+		calculation.WarnCodeManualBreak,
+		calculation.WarnCodeAutoBreakApplied:
+		return models.DailyErrorErrorTypeBreakViolation
+	case calculation.WarnCodeMaxTimeReached:
+		return models.DailyErrorErrorTypeExceedsMaxHours
+	case calculation.WarnCodeCrossMidnight,
+		calculation.WarnCodeMonthlyCap,
+		calculation.WarnCodeFlextimeCapped,
+		calculation.WarnCodeBelowThreshold,
+		calculation.WarnCodeNoCarryover,
+		calculation.ErrCodeInvalidTime,
+		calculation.ErrCodeNoMatchingShift:
+		return models.DailyErrorErrorTypeInvalidSequence
+	default:
+		return models.DailyErrorErrorTypeInvalidSequence
 	}
 }
