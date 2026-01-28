@@ -20,10 +20,15 @@ Last updated: 2026-01-28
 8. Frontend data layer (hooks + cache invalidation)
 9. Frontend UI (bell dropdown + page)
 10. Example flow: absence approved (real-time UI update)
-11. How to add a new notification
-12. How to change behavior (preferences, types, UI)
-13. How to remove a notification source
-14. Debugging and verification
+11. How to add a new notification type
+12. How to add a new notification source
+13. How to create a new notification (step-by-step recipe)
+14. How to send notifications to other services (cross-service patterns)
+15. Extension playbook (for any new use case)
+16. Pattern: notify all employees/subscribers
+17. How to change or remove a notification source
+18. Debugging and verification
+19. Files and references
 
 ---
 
@@ -144,7 +149,7 @@ Why this matters:
 
 - The NotificationService needs a repository for DB access.
 - The NotificationService needs a user repo to target employees or admins.
-- The stream hub is optional but required for real-time updates.
+- The stream hub is required for real-time updates.
 - Each domain service gets the NotificationService so it can emit notifications.
 
 ---
@@ -503,7 +508,265 @@ _, _ = s.notificationSvc.Create(ctx, service.CreateNotificationInput{
 
 ---
 
-## 13) How to change or remove a notification source
+## 13) How to create a new notification (step-by-step recipe)
+
+This is the concrete “what to do, where to do it” checklist for adding any new notification.
+
+### Step A — Decide who receives it
+
+Pick one of the delivery helpers in `NotificationService`:
+
+- `Create(...)` → single user (you already know user ID)
+- `CreateForEmployee(...)` → employee-based (maps employee → user)
+- `CreateForTenantAdmins(...)` → broadcast to all admins in tenant
+
+### Step B — Identify the event owner
+
+Notifications should be emitted **inside the service that owns the business event**:
+
+- Absence events → `apps/api/internal/service/absence.go`
+- Timesheet approval → `apps/api/internal/service/dailyvalue.go`
+- Daily calc errors → `apps/api/internal/service/daily_calc.go`
+- User profile changes → `apps/api/internal/service/user.go`
+
+### Step C — Add the call in the service
+
+Example: send a reminder when a report is created in some hypothetical `ReportService`:
+
+```go
+func (s *ReportService) CreateReport(ctx context.Context, tenantID, userID uuid.UUID, ...) error {
+    // ...report creation logic...
+
+    link := fmt.Sprintf("/reports/%s", reportID.String())
+    _, _ = s.notificationSvc.Create(ctx, service.CreateNotificationInput{
+        TenantID: tenantID,
+        UserID:   userID,
+        Type:     model.NotificationTypeSystem,
+        Title:    "Report ready",
+        Message:  "Your report has finished generating.",
+        Link:     &link,
+    })
+
+    return nil
+}
+```
+
+### Step D — Ensure NotificationService is injected
+
+If the service doesn’t already have notifications wired, add it like this:
+
+```go
+type ReportService struct {
+    // ...
+    notificationSvc *NotificationService
+}
+
+func (s *ReportService) SetNotificationService(notificationSvc *NotificationService) {
+    s.notificationSvc = notificationSvc
+}
+```
+
+Then wire it in `apps/api/cmd/server/main.go` alongside the existing producers:
+
+```go
+reportService.SetNotificationService(notificationService)
+```
+
+### Step E — Frontend link target
+
+Ensure the `Link` is a valid route in the web app so users can click the notification.
+
+---
+
+## 14) How to send notifications to other services (cross-service patterns)
+
+Some services don’t have direct access to user IDs or tenant IDs. These patterns help bridge that gap.
+
+### Pattern 1 — Employee-based delivery (common)
+
+When you have an `employeeID`, let `NotificationService` resolve the user:
+
+```go
+_, _ = s.notificationSvc.CreateForEmployee(ctx, tenantID, employeeID, service.CreateNotificationInput{
+    Type:    model.NotificationTypeApprovals,
+    Title:   "Absence approved",
+    Message: "Your absence request was approved.",
+    Link:    &link,
+})
+```
+
+### Pattern 2 — Admin broadcast (tenant-wide)
+
+Use for reminders and approvals:
+
+```go
+_, _ = s.notificationSvc.CreateForTenantAdmins(ctx, tenantID, service.CreateNotificationInput{
+    Type:    model.NotificationTypeReminders,
+    Title:   "Pending approvals",
+    Message: "There are pending approvals waiting.",
+    Link:    &link,
+})
+```
+
+### Pattern 3 — Direct user ID (most explicit)
+
+Use when you already have a specific user ID:
+
+```go
+_, _ = s.notificationSvc.Create(ctx, service.CreateNotificationInput{
+    TenantID: tenantID,
+    UserID:   userID,
+    Type:     model.NotificationTypeSystem,
+    Title:    "Account updated",
+    Message:  "Your account settings were updated.",
+    Link:     &link,
+})
+```
+
+### Pattern 4 — Multi-step cascade (service → service)
+
+If Service A doesn’t know the user, but knows an entity ID:
+
+1) Service A resolves the entity → employee
+2) Service A calls `CreateForEmployee`
+3) NotificationService resolves employee → user
+
+Keep resolution logic in **domain services**, not in handlers.
+
+---
+
+## 15) Extension playbook (for any new use case)
+
+This section is the “just follow these steps” guide for extending notifications with minimal guesswork.
+
+### Step 1 — Define the use case clearly
+
+Answer these questions before touching code:
+
+- **Audience**: Who should receive it? (single user, employee’s user, all admins, all employees, a subset/group)
+- **Trigger**: What business event should create the notification?
+- **Type**: Which category should it belong to? (`approvals`, `errors`, `reminders`, `system`)
+- **Link**: Where should the user land when they click it?
+- **Urgency**: Does it need real-time updates or is a refresh OK?
+
+### Step 2 — Choose the right delivery helper
+
+Use a standard helper from `NotificationService`:
+
+- **Single user** → `Create(...)`
+- **Employee user** → `CreateForEmployee(...)`
+- **All admins** → `CreateForTenantAdmins(...)`
+
+If you need a different audience, **add a helper** (example below).
+
+### Step 3 — Put the call in the owning service (not the handler)
+
+For example, if the event is “monthly report generated”, add the notification call inside `ReportService.CreateReport(...)`, not inside the HTTP handler.
+
+### Step 4 — Build a good payload
+
+Recommended payload structure:
+
+- **Title**: short, action-focused (e.g., “Report ready”)
+- **Message**: specific detail (e.g., “January report generated for Team Alpha”)
+- **Link**: direct route to the content (e.g., `/reports/123`)
+- **Type**: one of the allowed categories
+
+### Step 5 — Consider preferences
+
+Preferences are auto-checked by `NotificationService.Create(...)`. If your notification is a new type, you must add a preference column + UI toggle. If you use existing types, you get preference gating “for free.”
+
+### Step 6 — Decide on real-time UI updates
+
+If the notification should update other UI views immediately (like “Your requests”), add a cache invalidation in the SSE hook.
+
+`apps/web/src/hooks/use-notifications-stream.ts`:
+
+```ts
+if (eventName === 'notification.created') {
+  queryClient.invalidateQueries({ queryKey: ['/employees/{id}/absences'] })
+}
+```
+
+### Step 7 — Confirm UI expectations
+
+- If a new type is added, update icon/labels in dropdown and notifications page.
+- If a new preference is added, add a toggle and copy in preferences UI.
+- Verify the click target exists and is reachable for that user.
+
+---
+
+## 16) Pattern: notify all employees/subscribers
+
+There is **no built-in “broadcast to all employees” helper** yet. For this use case, add a helper method to `NotificationService` so all callers use the same rules (preferences + SSE publishing).
+
+### Step A — Add a helper in `NotificationService`
+
+```go
+// CreateForTenantUsers notifies all active users in a tenant.
+func (s *NotificationService) CreateForTenantUsers(
+    ctx context.Context,
+    tenantID uuid.UUID,
+    input CreateNotificationInput,
+) ([]model.Notification, error) {
+    if s.userRepo == nil {
+        return nil, errors.New("user repository not configured")
+    }
+
+    users, err := s.userRepo.ListByTenant(ctx, tenantID, false)
+    if err != nil {
+        return nil, err
+    }
+
+    created := make([]model.Notification, 0, len(users))
+    for i := range users {
+        user := users[i]
+        notif, err := s.Create(ctx, CreateNotificationInput{
+            TenantID: tenantID,
+            UserID:   user.ID,
+            Type:     input.Type,
+            Title:    input.Title,
+            Message:  input.Message,
+            Link:     input.Link,
+        })
+        if err != nil {
+            return nil, err
+        }
+        if notif != nil {
+            created = append(created, *notif)
+        }
+    }
+
+    return created, nil
+}
+```
+
+### Step B — Use it from the owning service
+
+```go
+_, _ = s.notificationSvc.CreateForTenantUsers(ctx, tenantID, service.CreateNotificationInput{
+    Type:    model.NotificationTypeSystem,
+    Title:   "Month closed",
+    Message: "January has been closed successfully.",
+    Link:    &link,
+})
+```
+
+### Step C — Define “subscribers” clearly
+
+If “subscribers” is not “all users,” add a repository query that returns only those users (e.g., a user preference flag, a group membership, or role).
+
+### Performance note
+
+Broadcasting loops through users and creates individual rows. For large tenants, consider:
+
+- bulk insert optimization
+- background job queue
+- limiting to “active only” users
+
+---
+
+## 17) How to change or remove a notification source
 
 1) Find where `NotificationService` is called in the relevant domain service.
 2) Remove or change the call.
@@ -511,23 +774,23 @@ _, _ = s.notificationSvc.Create(ctx, service.CreateNotificationInput{
 
 ---
 
-## 14) Debugging and verification
+## 18) Debugging and verification
 
-### 14.1 Quick API checks
+### 18.1 Quick API checks
 
 - `GET /notifications`
 - `GET /notifications?unread=true`
 - `GET /notification-preferences`
 - `GET /notifications/stream` (SSE)
 
-### 14.2 Common failure causes
+### 18.2 Common failure causes
 
 - Missing migrations (notifications tables missing)
 - Missing `X-Tenant-ID` header
 - SSE stream not running (header not mounted)
 - Preferences disabled
 
-### 14.3 End-to-end manual test (recommended)
+### 18.3 End-to-end manual test (recommended)
 
 1) Log in user + admin in two browsers.
 2) User requests absence.
@@ -536,7 +799,7 @@ _, _ = s.notificationSvc.Create(ctx, service.CreateNotificationInput{
 
 ---
 
-## 15) Files and references
+## 19) Files and references
 
 Backend:
 
