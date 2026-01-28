@@ -3629,12 +3629,14 @@ paths:
           in: query
           type: string
           enum:
-            - time
             - bonus
-            - deduction
-            - vacation
-            - sick
+            - tracking
+            - balance
           description: Filter by account type
+        - name: include_system
+          in: query
+          type: boolean
+          description: Include system accounts in results
         - name: payroll_relevant
           in: query
           type: boolean
@@ -3742,6 +3744,27 @@ paths:
           description: Cannot delete system accounts
           schema:
             $ref: '#/definitions/ProblemDetails'
+        '404':
+          $ref: '#/responses/NotFound'
+  '/accounts/{id}/usage':
+    get:
+      tags:
+        - Accounts
+      summary: Get account usage
+      operationId: getAccountUsage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Account usage details
+          schema:
+            $ref: '#/definitions/AccountUsage'
+        '401':
+          $ref: '#/responses/Unauthorized'
         '404':
           $ref: '#/responses/NotFound'
   /account-values:
@@ -6505,16 +6528,25 @@ definitions:
       account_type:
         type: string
         enum:
-          - time
           - bonus
-          - deduction
-          - vacation
-          - sick
-        example: time
+          - tracking
+          - balance
+        example: bonus
+      unit:
+        type: string
+        enum:
+          - minutes
+          - hours
+          - days
+        example: minutes
       is_system:
         type: boolean
         description: System accounts cannot be deleted
         example: false
+      year_carryover:
+        type: boolean
+        description: Carry over balance at year end
+        example: true
       is_payroll_relevant:
         type: boolean
         description: Include in payroll export
@@ -6529,6 +6561,10 @@ definitions:
       is_active:
         type: boolean
         example: true
+      usage_count:
+        type: integer
+        description: Number of day plans that reference this account
+        example: 0
       created_at:
         type: string
         format: date-time
@@ -6607,6 +6643,35 @@ definitions:
         allOf:
           - $ref: '#/definitions/EmployeeSummary'
         x-nullable: true
+  AccountUsage:
+    type: object
+    required:
+      - account_id
+      - usage_count
+      - day_plans
+    properties:
+      account_id:
+        type: string
+        format: uuid
+      usage_count:
+        type: integer
+        example: 2
+      day_plans:
+        type: array
+        items:
+          type: object
+          required:
+            - id
+            - code
+            - name
+          properties:
+            id:
+              type: string
+              format: uuid
+            code:
+              type: string
+            name:
+              type: string
   CreateAccountRequest:
     type: object
     required:
@@ -6627,11 +6692,17 @@ definitions:
       account_type:
         type: string
         enum:
-          - time
           - bonus
-          - deduction
-          - vacation
-          - sick
+          - tracking
+          - balance
+      unit:
+        type: string
+        enum:
+          - minutes
+          - hours
+          - days
+      year_carryover:
+        type: boolean
       is_payroll_relevant:
         type: boolean
         default: false
@@ -6648,12 +6719,20 @@ definitions:
         maxLength: 255
       description:
         type: string
+      unit:
+        type: string
+        enum:
+          - minutes
+          - hours
+          - days
       is_payroll_relevant:
         type: boolean
       payroll_code:
         type: string
       sort_order:
         type: integer
+      year_carryover:
+        type: boolean
       is_active:
         type: boolean
   AccountList:
@@ -8633,6 +8712,9 @@ definitions:
           - cancelled
         example: approved
       notes:
+        type: string
+        x-nullable: true
+      rejection_reason:
         type: string
         x-nullable: true
       approved_by:

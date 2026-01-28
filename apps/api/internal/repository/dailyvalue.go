@@ -41,6 +41,7 @@ func NewDailyValueRepository(db *DB) *DailyValueRepository {
 
 // Create creates a new daily value.
 func (r *DailyValueRepository) Create(ctx context.Context, dv *model.DailyValue) error {
+	normalizeDailyValueStatus(dv)
 	return r.db.GORM.WithContext(ctx).Create(dv).Error
 }
 
@@ -61,6 +62,7 @@ func (r *DailyValueRepository) GetByID(ctx context.Context, id uuid.UUID) (*mode
 
 // Update updates a daily value.
 func (r *DailyValueRepository) Update(ctx context.Context, dv *model.DailyValue) error {
+	normalizeDailyValueStatus(dv)
 	return r.db.GORM.WithContext(ctx).Save(dv).Error
 }
 
@@ -107,14 +109,46 @@ func (r *DailyValueRepository) GetByEmployeeDateRange(ctx context.Context, emplo
 	return values, nil
 }
 
+// ListAll returns daily values matching optional filters for a tenant.
+// Preloads Employee relation for display purposes.
+func (r *DailyValueRepository) ListAll(ctx context.Context, tenantID uuid.UUID, opts model.DailyValueListOptions) ([]model.DailyValue, error) {
+	var values []model.DailyValue
+	q := r.db.GORM.WithContext(ctx).
+		Preload("Employee").
+		Where("tenant_id = ?", tenantID)
+
+	if opts.EmployeeID != nil {
+		q = q.Where("employee_id = ?", *opts.EmployeeID)
+	}
+	if opts.Status != nil {
+		q = q.Where("status = ?", *opts.Status)
+	}
+	if opts.From != nil {
+		q = q.Where("value_date >= ?", *opts.From)
+	}
+	if opts.To != nil {
+		q = q.Where("value_date <= ?", *opts.To)
+	}
+	if opts.HasErrors != nil {
+		q = q.Where("has_error = ?", *opts.HasErrors)
+	}
+
+	err := q.Order("value_date ASC").Find(&values).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to list daily values: %w", err)
+	}
+	return values, nil
+}
+
 // Upsert creates or updates a daily value based on employee_id + value_date.
 func (r *DailyValueRepository) Upsert(ctx context.Context, dv *model.DailyValue) error {
+	normalizeDailyValueStatus(dv)
 	return r.db.GORM.WithContext(ctx).
 		Clauses(clause.OnConflict{
 			Columns: []clause.Column{{Name: "employee_id"}, {Name: "value_date"}},
 			DoUpdates: clause.AssignmentColumns([]string{
 				"gross_time", "net_time", "target_time", "overtime", "undertime", "break_time",
-				"has_error", "error_codes", "warnings",
+				"has_error", "error_codes", "warnings", "status",
 				"first_come", "last_go", "booking_count",
 				"calculated_at", "calculation_version", "updated_at",
 			}),
@@ -127,17 +161,33 @@ func (r *DailyValueRepository) BulkUpsert(ctx context.Context, values []model.Da
 	if len(values) == 0 {
 		return nil
 	}
+	for i := range values {
+		normalizeDailyValueStatus(&values[i])
+	}
 	return r.db.GORM.WithContext(ctx).
 		Clauses(clause.OnConflict{
 			Columns: []clause.Column{{Name: "employee_id"}, {Name: "value_date"}},
 			DoUpdates: clause.AssignmentColumns([]string{
 				"gross_time", "net_time", "target_time", "overtime", "undertime", "break_time",
-				"has_error", "error_codes", "warnings",
+				"has_error", "error_codes", "warnings", "status",
 				"first_come", "last_go", "booking_count",
 				"calculated_at", "calculation_version", "updated_at",
 			}),
 		}).
 		CreateInBatches(values, 100).Error
+}
+
+func normalizeDailyValueStatus(dv *model.DailyValue) {
+	if dv == nil {
+		return
+	}
+	if dv.Status == "" {
+		if dv.HasError {
+			dv.Status = model.DailyValueStatusError
+		} else {
+			dv.Status = model.DailyValueStatusCalculated
+		}
+	}
 }
 
 // GetWithErrors retrieves daily values with errors for a tenant within a date range.

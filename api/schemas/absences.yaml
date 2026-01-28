@@ -41,6 +41,9 @@ Absence:
     notes:
       type: string
       x-nullable: true
+    rejection_reason:
+      type: string
+      x-nullable: true
     approved_by:
       type: string
       format: uuid

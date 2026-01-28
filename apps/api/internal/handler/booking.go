@@ -526,9 +526,13 @@ func (h *BookingHandler) dailyValueToResponse(dv *model.DailyValue) *models.Dail
 	tenantID := strfmt.UUID(dv.TenantID.String())
 	empID := strfmt.UUID(dv.EmployeeID.String())
 	date := strfmt.Date(dv.ValueDate)
-	status := "calculated"
-	if dv.HasError {
-		status = "error"
+	status := string(dv.Status)
+	if status == "" {
+		if dv.HasError {
+			status = "error"
+		} else {
+			status = "calculated"
+		}
 	}
 
 	return &models.DailyValue{
@@ -542,6 +546,7 @@ func (h *BookingHandler) dailyValueToResponse(dv *model.DailyValue) *models.Dail
 		OvertimeMinutes:  int64(dv.Overtime),
 		UndertimeMinutes: int64(dv.Undertime),
 		BreakMinutes:     int64(dv.BreakTime),
+		BalanceMinutes:   int64(dv.Balance()),
 		HasErrors:        dv.HasError,
 		Status:           &status,
 	}

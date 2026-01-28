@@ -51,19 +51,19 @@ type accountRepoForAuth interface {
 
 // AuthHandler handles authentication endpoints.
 type AuthHandler struct {
-	jwtManager         *auth.JWTManager
-	authConfig         *auth.Config
-	userService        *service.UserService
-	tenantService      *service.TenantService
-	employeeService    *service.EmployeeService
-	bookingTypeService *service.BookingTypeService
-	absenceService     *service.AbsenceService
-	holidayService     *service.HolidayService
-	dayPlanService     *service.DayPlanService
-	weekPlanService    *service.WeekPlanService
-	tariffService      *service.TariffService
-	departmentService  *service.DepartmentService
-	teamService        *service.TeamService
+	jwtManager          *auth.JWTManager
+	authConfig          *auth.Config
+	userService         *service.UserService
+	tenantService       *service.TenantService
+	employeeService     *service.EmployeeService
+	bookingTypeService  *service.BookingTypeService
+	absenceService      *service.AbsenceService
+	holidayService      *service.HolidayService
+	dayPlanService      *service.DayPlanService
+	weekPlanService     *service.WeekPlanService
+	tariffService       *service.TariffService
+	departmentService   *service.DepartmentService
+	teamService         *service.TeamService
 	bookingRepo         bookingRepoForAuth
 	dailyValueRepo      dailyValueRepoForAuth
 	monthlyValueRepo    monthlyValueRepoForAuth
@@ -97,19 +97,19 @@ func NewAuthHandler(
 	accountRepo accountRepoForAuth,
 ) *AuthHandler {
 	return &AuthHandler{
-		jwtManager:         jwtManager,
-		authConfig:         config,
-		userService:        userService,
-		tenantService:      tenantService,
-		employeeService:    employeeService,
-		bookingTypeService: bookingTypeService,
-		absenceService:     absenceService,
-		holidayService:     holidayService,
-		dayPlanService:     dayPlanService,
-		weekPlanService:    weekPlanService,
-		tariffService:      tariffService,
-		departmentService:  departmentService,
-		teamService:        teamService,
+		jwtManager:          jwtManager,
+		authConfig:          config,
+		userService:         userService,
+		tenantService:       tenantService,
+		employeeService:     employeeService,
+		bookingTypeService:  bookingTypeService,
+		absenceService:      absenceService,
+		holidayService:      holidayService,
+		dayPlanService:      dayPlanService,
+		weekPlanService:     weekPlanService,
+		tariffService:       tariffService,
+		departmentService:   departmentService,
+		teamService:         teamService,
 		bookingRepo:         bookingRepo,
 		dailyValueRepo:      dailyValueRepo,
 		monthlyValueRepo:    monthlyValueRepo,
@@ -150,10 +150,12 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ensure dev user exists in database
-	if err := h.userService.UpsertDevUser(r.Context(), devUser.ID, devUser.Email, devUser.DisplayName, model.UserRole(devUser.Role)); err != nil {
-		respondError(w, http.StatusInternalServerError, "failed to sync dev user to database")
-		return
+	// Ensure all dev users exist (so seeded data can reference any dev user IDs)
+	for _, user := range auth.DevUsers {
+		if err := h.userService.UpsertDevUser(r.Context(), user.ID, user.Email, user.DisplayName, model.UserRole(user.Role)); err != nil {
+			respondError(w, http.StatusInternalServerError, "failed to sync dev users to database")
+			return
+		}
 	}
 
 	// Create all dev booking types (system-level, idempotent)
@@ -241,19 +243,19 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 	for _, devWP := range auth.GetDevWeekPlans() {
 		desc := devWP.Description
 		weekPlan := &model.WeekPlan{
-			ID:                devWP.ID,
-			TenantID:          devTenant.ID,
-			Code:              devWP.Code,
-			Name:              devWP.Name,
-			Description:       &desc,
-			MondayDayPlanID:   &devWP.Monday,
-			TuesdayDayPlanID:  &devWP.Tuesday,
+			ID:                 devWP.ID,
+			TenantID:           devTenant.ID,
+			Code:               devWP.Code,
+			Name:               devWP.Name,
+			Description:        &desc,
+			MondayDayPlanID:    &devWP.Monday,
+			TuesdayDayPlanID:   &devWP.Tuesday,
 			WednesdayDayPlanID: &devWP.Wednesday,
-			ThursdayDayPlanID: &devWP.Thursday,
-			FridayDayPlanID:   &devWP.Friday,
-			SaturdayDayPlanID: &devWP.Saturday,
-			SundayDayPlanID:   &devWP.Sunday,
-			IsActive:          devWP.IsActive,
+			ThursdayDayPlanID:  &devWP.Thursday,
+			FridayDayPlanID:    &devWP.Friday,
+			SaturdayDayPlanID:  &devWP.Saturday,
+			SundayDayPlanID:    &devWP.Sunday,
+			IsActive:           devWP.IsActive,
 		}
 		if err := h.weekPlanService.UpsertDevWeekPlan(r.Context(), weekPlan); err != nil {
 			respondError(w, http.StatusInternalServerError, "failed to sync dev week plans to database")
@@ -315,11 +317,13 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Link user to their employee record if mapped
-	if empID, ok := auth.GetDevEmployeeForUser(devUser.ID); ok {
-		if err := h.userService.LinkUserToEmployee(r.Context(), devUser.ID, empID); err != nil {
-			respondError(w, http.StatusInternalServerError, "failed to link user to employee")
-			return
+	// Link dev users to their employee records if mapped
+	for _, user := range auth.DevUsers {
+		if empID, ok := auth.GetDevEmployeeForUser(user.ID); ok {
+			if err := h.userService.LinkUserToEmployee(r.Context(), user.ID, empID); err != nil {
+				respondError(w, http.StatusInternalServerError, "failed to link user to employee")
+				return
+			}
 		}
 	}
 
@@ -434,11 +438,16 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 	// Create all dev daily values (idempotent)
 	now := time.Now()
 	for _, devDV := range auth.GetDevDailyValues() {
+		status := model.DailyValueStatusCalculated
+		if devDV.HasError {
+			status = model.DailyValueStatusError
+		}
 		dv := &model.DailyValue{
 			ID:                 devDV.ID,
 			TenantID:           devTenant.ID,
 			EmployeeID:         devDV.EmployeeID,
 			ValueDate:          devDV.ValueDate,
+			Status:             status,
 			GrossTime:          devDV.GrossTime,
 			NetTime:            devDV.NetTime,
 			TargetTime:         devDV.TargetTime,

@@ -14,6 +14,9 @@ type DailyValue struct {
 	EmployeeID uuid.UUID `gorm:"type:uuid;not null;index" json:"employee_id"`
 	ValueDate  time.Time `gorm:"type:date;not null" json:"value_date"`
 
+	// Approval status
+	Status DailyValueStatus `gorm:"type:varchar(20);not null;default:'calculated'" json:"status"`
+
 	// Core time values (all in minutes)
 	GrossTime  int `gorm:"default:0" json:"gross_time"`
 	NetTime    int `gorm:"default:0" json:"net_time"`
@@ -42,6 +45,25 @@ type DailyValue struct {
 
 	// Relations
 	Employee *Employee `gorm:"foreignKey:EmployeeID" json:"employee,omitempty"`
+}
+
+// DailyValueStatus represents approval status for daily values.
+type DailyValueStatus string
+
+const (
+	DailyValueStatusPending    DailyValueStatus = "pending"
+	DailyValueStatusCalculated DailyValueStatus = "calculated"
+	DailyValueStatusError      DailyValueStatus = "error"
+	DailyValueStatusApproved   DailyValueStatus = "approved"
+)
+
+// DailyValueListOptions defines filters for listing daily values.
+type DailyValueListOptions struct {
+	EmployeeID *uuid.UUID
+	Status     *DailyValueStatus
+	From       *time.Time
+	To         *time.Time
+	HasErrors  *bool
 }
 
 // TableName returns the database table name.

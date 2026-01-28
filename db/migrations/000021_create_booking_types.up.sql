@@ -14,9 +14,18 @@ CREATE TABLE booking_types (
 CREATE INDEX idx_booking_types_tenant ON booking_types(tenant_id);
 CREATE UNIQUE INDEX idx_booking_types_code ON booking_types(COALESCE(tenant_id, '00000000-0000-0000-0000-000000000000'), code);
 
--- Seed system booking types
-INSERT INTO booking_types (code, name, direction, is_system) VALUES
-('COME', 'Clock In', 'in', true),
-('GO', 'Clock Out', 'out', true),
-('BREAK_START', 'Break Start', 'out', true),
-('BREAK_END', 'Break End', 'in', true);
+-- Seed system booking types (idempotent)
+INSERT INTO booking_types (tenant_id, code, name, direction, is_system)
+SELECT v.tenant_id, v.code, v.name, v.direction, v.is_system
+FROM (
+    VALUES
+    (NULL::uuid, 'COME', 'Clock In', 'in', true),
+    (NULL::uuid, 'GO', 'Clock Out', 'out', true),
+    (NULL::uuid, 'BREAK_START', 'Break Start', 'out', true),
+    (NULL::uuid, 'BREAK_END', 'Break End', 'in', true)
+) AS v(tenant_id, code, name, direction, is_system)
+LEFT JOIN booking_types bt
+    ON COALESCE(bt.tenant_id, '00000000-0000-0000-0000-000000000000') =
+       COALESCE(v.tenant_id, '00000000-0000-0000-0000-000000000000')
+    AND bt.code = v.code
+WHERE bt.id IS NULL;

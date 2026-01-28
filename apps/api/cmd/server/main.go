@@ -103,6 +103,7 @@ func main() {
 	dailyValueRepo := repository.NewDailyValueRepository(db)
 	dailyCalcService := service.NewDailyCalcService(bookingRepo, empDayPlanRepo, dayPlanRepo, dailyValueRepo, holidayRepo)
 	recalcService := service.NewRecalcService(dailyCalcService, employeeRepo)
+	dailyValueService := service.NewDailyValueService(dailyValueRepo)
 
 	// Initialize BookingService
 	bookingService := service.NewBookingService(bookingRepo, bookingTypeRepo, recalcService, nil)
@@ -164,6 +165,7 @@ func main() {
 	weekPlanHandler := handler.NewWeekPlanHandler(weekPlanService)
 	tariffHandler := handler.NewTariffHandler(tariffService)
 	bookingTypeHandler := handler.NewBookingTypeHandler(bookingTypeService)
+	dailyValueHandler := handler.NewDailyValueHandler(dailyValueService)
 
 	// Initialize BookingHandler
 	bookingHandler := handler.NewBookingHandler(
@@ -238,6 +240,7 @@ func main() {
 				handler.RegisterTariffRoutes(r, tariffHandler)
 				handler.RegisterBookingTypeRoutes(r, bookingTypeHandler)
 				handler.RegisterBookingRoutes(r, bookingHandler)
+				handler.RegisterDailyValueRoutes(r, dailyValueHandler)
 				handler.RegisterAbsenceRoutes(r, absenceHandler)
 				handler.RegisterVacationRoutes(r, vacationHandler)
 				handler.RegisterMonthlyEvalRoutes(r, monthlyEvalHandler)

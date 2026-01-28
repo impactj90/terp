@@ -216,6 +216,7 @@ func (s *DailyCalcService) handleOffDay(employeeID uuid.UUID, date time.Time, bo
 	dv := &model.DailyValue{
 		EmployeeID:   employeeID,
 		ValueDate:    date,
+		Status:       model.DailyValueStatusCalculated,
 		TargetTime:   0, // No target on off days
 		CalculatedAt: &now,
 		Warnings:     pq.StringArray{"OFF_DAY"},
@@ -240,6 +241,7 @@ func (s *DailyCalcService) handleHolidayCredit(
 	dv := &model.DailyValue{
 		EmployeeID:   employeeID,
 		ValueDate:    date,
+		Status:       model.DailyValueStatusCalculated,
 		CalculatedAt: &now,
 		Warnings:     pq.StringArray{"HOLIDAY"},
 	}
@@ -291,6 +293,7 @@ func (s *DailyCalcService) handleNoBookings(
 		return &model.DailyValue{
 			EmployeeID:   employeeID,
 			ValueDate:    date,
+			Status:       model.DailyValueStatusCalculated,
 			TargetTime:   targetTime,
 			NetTime:      targetTime,
 			GrossTime:    targetTime,
@@ -302,6 +305,7 @@ func (s *DailyCalcService) handleNoBookings(
 		return &model.DailyValue{
 			EmployeeID:   employeeID,
 			ValueDate:    date,
+			Status:       model.DailyValueStatusCalculated,
 			TargetTime:   targetTime,
 			NetTime:      0,
 			GrossTime:    0,
@@ -316,6 +320,7 @@ func (s *DailyCalcService) handleNoBookings(
 		return &model.DailyValue{
 			EmployeeID:   employeeID,
 			ValueDate:    date,
+			Status:       model.DailyValueStatusError,
 			TargetTime:   targetTime,
 			NetTime:      0,
 			GrossTime:    0,
@@ -332,6 +337,7 @@ func (s *DailyCalcService) handleNoBookings(
 		return &model.DailyValue{
 			EmployeeID:   employeeID,
 			ValueDate:    date,
+			Status:       model.DailyValueStatusError,
 			TargetTime:   targetTime,
 			NetTime:      0,
 			GrossTime:    0,
@@ -878,6 +884,7 @@ func (s *DailyCalcService) resultToDailyValue(employeeID uuid.UUID, date time.Ti
 	return &model.DailyValue{
 		EmployeeID:         employeeID,
 		ValueDate:          date,
+		Status:             statusFromError(result.HasError),
 		GrossTime:          result.GrossTime,
 		NetTime:            result.NetTime,
 		TargetTime:         result.TargetTime,
@@ -893,6 +900,13 @@ func (s *DailyCalcService) resultToDailyValue(employeeID uuid.UUID, date time.Ti
 		CalculatedAt:       &now,
 		CalculationVersion: 1,
 	}
+}
+
+func statusFromError(hasError bool) model.DailyValueStatus {
+	if hasError {
+		return model.DailyValueStatusError
+	}
+	return model.DailyValueStatusCalculated
 }
 
 // RecalculateRange recalculates daily values for a date range.

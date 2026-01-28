@@ -86,6 +86,7 @@ func RegisterAccountRoutes(r chi.Router, h *AccountHandler) {
 		r.Get("/", h.List)
 		r.Post("/", h.Create)
 		r.Get("/{id}", h.Get)
+		r.Get("/{id}/usage", h.Usage)
 		r.Patch("/{id}", h.Update)
 		r.Delete("/{id}", h.Delete)
 	})
@@ -216,6 +217,13 @@ func RegisterBookingRoutes(r chi.Router, h *BookingHandler) {
 		r.Get("/", h.GetDayView)
 		r.Post("/calculate", h.Calculate)
 	})
+}
+
+// RegisterDailyValueRoutes registers daily value routes.
+func RegisterDailyValueRoutes(r chi.Router, h *DailyValueHandler) {
+	r.Get("/daily-values", h.ListAll)
+	r.Get("/daily-values/{id}", h.Get)
+	r.Post("/daily-values/{id}/approve", h.Approve)
 }
 
 // RegisterAbsenceRoutes registers absence routes.

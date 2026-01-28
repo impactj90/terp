@@ -53,25 +53,34 @@ CREATE UNIQUE INDEX idx_absence_types_code ON absence_types(
     code
 );
 
--- Seed system absence types per ZMI spec
-INSERT INTO absence_types (code, name, category, portion, deducts_vacation, is_system, color, sort_order) VALUES
--- Vacation types (U prefix)
-('U', 'Urlaub', 'vacation', 1, true, true, '#4CAF50', 1),
-('UH', 'Urlaub halber Tag', 'vacation', 2, true, true, '#66BB6A', 2),
+-- Seed system absence types per ZMI spec (idempotent)
+INSERT INTO absence_types (tenant_id, code, name, category, portion, deducts_vacation, is_system, color, sort_order)
+SELECT v.tenant_id, v.code, v.name, v.category, v.portion, v.deducts_vacation, v.is_system, v.color, v.sort_order
+FROM (
+    VALUES
+    -- Vacation types (U prefix)
+    (NULL::uuid, 'U', 'Urlaub', 'vacation', 1, true, true, '#4CAF50', 1),
+    (NULL::uuid, 'UH', 'Urlaub halber Tag', 'vacation', 2, true, true, '#66BB6A', 2),
 
--- Illness types (K prefix)
-('K', 'Krankheit', 'illness', 1, false, true, '#F44336', 10),
-('KH', 'Krankheit halber Tag', 'illness', 2, false, true, '#EF5350', 11),
-('KK', 'Krankheit Kind', 'illness', 1, false, true, '#E57373', 12),
+    -- Illness types (K prefix)
+    (NULL::uuid, 'K', 'Krankheit', 'illness', 1, false, true, '#F44336', 10),
+    (NULL::uuid, 'KH', 'Krankheit halber Tag', 'illness', 2, false, true, '#EF5350', 11),
+    (NULL::uuid, 'KK', 'Krankheit Kind', 'illness', 1, false, true, '#E57373', 12),
 
--- Special leave types (S prefix)
-('S', 'Sonderurlaub', 'special', 1, false, true, '#2196F3', 20),
-('SH', 'Sonderurlaub halber Tag', 'special', 2, false, true, '#42A5F5', 21),
-('SB', 'Berufsschule', 'special', 1, false, true, '#64B5F6', 22),
-('SD', 'Dienstgang', 'special', 1, false, true, '#90CAF9', 23),
+    -- Special leave types (S prefix)
+    (NULL::uuid, 'S', 'Sonderurlaub', 'special', 1, false, true, '#2196F3', 20),
+    (NULL::uuid, 'SH', 'Sonderurlaub halber Tag', 'special', 2, false, true, '#42A5F5', 21),
+    (NULL::uuid, 'SB', 'Berufsschule', 'special', 1, false, true, '#64B5F6', 22),
+    (NULL::uuid, 'SD', 'Dienstgang', 'special', 1, false, true, '#90CAF9', 23),
 
--- Unpaid leave (no time credit)
-('UU', 'Unbezahlter Urlaub', 'unpaid', 0, false, true, '#9E9E9E', 30);
+    -- Unpaid leave (no time credit)
+    (NULL::uuid, 'UU', 'Unbezahlter Urlaub', 'unpaid', 0, false, true, '#9E9E9E', 30)
+) AS v(tenant_id, code, name, category, portion, deducts_vacation, is_system, color, sort_order)
+LEFT JOIN absence_types at
+    ON COALESCE(at.tenant_id, '00000000-0000-0000-0000-000000000000') =
+       COALESCE(v.tenant_id, '00000000-0000-0000-0000-000000000000')
+    AND at.code = v.code
+WHERE at.id IS NULL;
 
 COMMENT ON TABLE absence_types IS 'Absence type definitions per ZMI Fehltage spec';
 COMMENT ON COLUMN absence_types.portion IS 'ZMI Anteil: 0=no credit, 1=full Regelarbeitszeit, 2=half';

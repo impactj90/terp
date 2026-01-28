@@ -4112,11 +4112,14 @@ paths:
           schema:
             type: string
             enum:
-              - time
               - bonus
-              - deduction
-              - vacation
-              - sick
+              - tracking
+              - balance
+        - name: include_system
+          in: query
+          description: Include system accounts in results
+          schema:
+            type: boolean
         - name: payroll_relevant
           in: query
           description: Filter by payroll relevance
@@ -4243,6 +4246,30 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ProblemDetails"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  "/accounts/{id}/usage":
+    get:
+      tags:
+        - Accounts
+      summary: Get account usage
+      operationId: getAccountUsage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Account usage details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountUsage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
   /account-values:
@@ -7241,16 +7268,25 @@ components:
         account_type:
           type: string
           enum:
-            - time
             - bonus
-            - deduction
-            - vacation
-            - sick
-          example: time
+            - tracking
+            - balance
+          example: bonus
+        unit:
+          type: string
+          enum:
+            - minutes
+            - hours
+            - days
+          example: minutes
         is_system:
           type: boolean
           description: System accounts cannot be deleted
           example: false
+        year_carryover:
+          type: boolean
+          description: Carry over balance at year end
+          example: true
         is_payroll_relevant:
           type: boolean
           description: Include in payroll export
@@ -7265,6 +7301,10 @@ components:
         is_active:
           type: boolean
           example: true
+        usage_count:
+          type: integer
+          description: Number of day plans that reference this account
+          example: 0
         created_at:
           type: string
           format: date-time
@@ -7343,6 +7383,35 @@ components:
           allOf:
             - $ref: "#/components/schemas/EmployeeSummary"
           nullable: true
+    AccountUsage:
+      type: object
+      required:
+        - account_id
+        - usage_count
+        - day_plans
+      properties:
+        account_id:
+          type: string
+          format: uuid
+        usage_count:
+          type: integer
+          example: 2
+        day_plans:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - code
+              - name
+            properties:
+              id:
+                type: string
+                format: uuid
+              code:
+                type: string
+              name:
+                type: string
     CreateAccountRequest:
       type: object
       required:
@@ -7363,11 +7432,17 @@ components:
         account_type:
           type: string
           enum:
-            - time
             - bonus
-            - deduction
-            - vacation
-            - sick
+            - tracking
+            - balance
+        unit:
+          type: string
+          enum:
+            - minutes
+            - hours
+            - days
+        year_carryover:
+          type: boolean
         is_payroll_relevant:
           type: boolean
           default: false
@@ -7384,12 +7459,20 @@ components:
           maxLength: 255
         description:
           type: string
+        unit:
+          type: string
+          enum:
+            - minutes
+            - hours
+            - days
         is_payroll_relevant:
           type: boolean
         payroll_code:
           type: string
         sort_order:
           type: integer
+        year_carryover:
+          type: boolean
         is_active:
           type: boolean
     AccountList:
@@ -9371,6 +9454,9 @@ components:
             - cancelled
           example: approved
         notes:
+          type: string
+          nullable: true
+        rejection_reason:
           type: string
           nullable: true
         approved_by:

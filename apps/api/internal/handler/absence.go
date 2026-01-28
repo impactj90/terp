@@ -362,16 +362,17 @@ func (h *AbsenceHandler) absenceDayToResponse(ad *model.AbsenceDay) *models.Abse
 	status := string(ad.Status)
 
 	resp := &models.Absence{
-		ID:            &id,
-		TenantID:      &tenantID,
-		EmployeeID:    &employeeID,
-		AbsenceTypeID: &absenceTypeID,
-		AbsenceDate:   &date,
-		Duration:      &duration,
-		Status:        status,
-		Notes:         ad.Notes,
-		CreatedAt:     strfmt.DateTime(ad.CreatedAt),
-		UpdatedAt:     strfmt.DateTime(ad.UpdatedAt),
+		ID:              &id,
+		TenantID:        &tenantID,
+		EmployeeID:      &employeeID,
+		AbsenceTypeID:   &absenceTypeID,
+		AbsenceDate:     &date,
+		Duration:        &duration,
+		Status:          status,
+		Notes:           ad.Notes,
+		RejectionReason: ad.RejectionReason,
+		CreatedAt:       strfmt.DateTime(ad.CreatedAt),
+		UpdatedAt:       strfmt.DateTime(ad.UpdatedAt),
 	}
 
 	// Optional created by

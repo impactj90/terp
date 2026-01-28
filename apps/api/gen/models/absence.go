@@ -75,6 +75,9 @@ type Absence struct {
 	// notes
 	Notes *string `json:"notes,omitempty"`
 
+	// rejection reason
+	RejectionReason *string `json:"rejection_reason,omitempty"`
+
 	// status
 	// Example: approved
 	// Enum: ["pending","approved","rejected","cancelled"]
