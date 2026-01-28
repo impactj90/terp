@@ -35,6 +35,7 @@ func TestUserGroupRepository_Create(t *testing.T) {
 	ug := &model.UserGroup{
 		TenantID:    tenant.ID,
 		Name:        "Administrators",
+		Code:        "ADMIN",
 		Description: "Admin group",
 		IsAdmin:     true,
 		Permissions: datatypes.JSON([]byte(`["read","write"]`)),
@@ -54,6 +55,7 @@ func TestUserGroupRepository_Create_WithDefaults(t *testing.T) {
 	ug := &model.UserGroup{
 		TenantID: tenant.ID,
 		Name:     "Users",
+		Code:     "USERS",
 	}
 
 	err := repo.Create(ctx, ug)
@@ -71,6 +73,7 @@ func TestUserGroupRepository_GetByID(t *testing.T) {
 	ug := &model.UserGroup{
 		TenantID: tenant.ID,
 		Name:     "Administrators",
+		Code:     "ADMIN",
 		IsAdmin:  true,
 	}
 	require.NoError(t, repo.Create(ctx, ug))
@@ -100,6 +103,7 @@ func TestUserGroupRepository_GetByName(t *testing.T) {
 	ug := &model.UserGroup{
 		TenantID: tenant.ID,
 		Name:     "Administrators",
+		Code:     "ADMIN",
 		IsAdmin:  true,
 	}
 	require.NoError(t, repo.Create(ctx, ug))
@@ -133,6 +137,7 @@ func TestUserGroupRepository_GetByName_DifferentTenant(t *testing.T) {
 	ug := &model.UserGroup{
 		TenantID: tenant1.ID,
 		Name:     "Administrators",
+		Code:     "ADMIN",
 		IsAdmin:  true,
 	}
 	require.NoError(t, repo.Create(ctx, ug))
@@ -152,6 +157,7 @@ func TestUserGroupRepository_Update(t *testing.T) {
 	ug := &model.UserGroup{
 		TenantID: tenant.ID,
 		Name:     "Original Name",
+		Code:     "ORIGINAL",
 		IsAdmin:  false,
 	}
 	require.NoError(t, repo.Create(ctx, ug))
@@ -178,6 +184,7 @@ func TestUserGroupRepository_Delete(t *testing.T) {
 	ug := &model.UserGroup{
 		TenantID: tenant.ID,
 		Name:     "To Delete",
+		Code:     "TO_DELETE",
 	}
 	require.NoError(t, repo.Create(ctx, ug))
 
@@ -203,8 +210,8 @@ func TestUserGroupRepository_List(t *testing.T) {
 	ctx := context.Background()
 
 	tenant := createTestTenantForUserGroup(t, db)
-	require.NoError(t, repo.Create(ctx, &model.UserGroup{TenantID: tenant.ID, Name: "Admins", IsAdmin: true}))
-	require.NoError(t, repo.Create(ctx, &model.UserGroup{TenantID: tenant.ID, Name: "Users", IsAdmin: false}))
+	require.NoError(t, repo.Create(ctx, &model.UserGroup{TenantID: tenant.ID, Name: "Admins", Code: "ADMINS", IsAdmin: true}))
+	require.NoError(t, repo.Create(ctx, &model.UserGroup{TenantID: tenant.ID, Name: "Users", Code: "USERS", IsAdmin: false}))
 
 	groups, err := repo.List(ctx, tenant.ID)
 	require.NoError(t, err)
@@ -234,8 +241,8 @@ func TestUserGroupRepository_List_TenantIsolation(t *testing.T) {
 	tenant1 := createTestTenantForUserGroup(t, db)
 	tenant2 := createTestTenantForUserGroup(t, db)
 
-	require.NoError(t, repo.Create(ctx, &model.UserGroup{TenantID: tenant1.ID, Name: "Tenant1 Group"}))
-	require.NoError(t, repo.Create(ctx, &model.UserGroup{TenantID: tenant2.ID, Name: "Tenant2 Group"}))
+	require.NoError(t, repo.Create(ctx, &model.UserGroup{TenantID: tenant1.ID, Name: "Tenant1 Group", Code: "TENANT1"}))
+	require.NoError(t, repo.Create(ctx, &model.UserGroup{TenantID: tenant2.ID, Name: "Tenant2 Group", Code: "TENANT2"}))
 
 	groups1, err := repo.List(ctx, tenant1.ID)
 	require.NoError(t, err)
