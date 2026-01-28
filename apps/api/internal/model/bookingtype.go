@@ -20,6 +20,7 @@ type BookingType struct {
 	Name        string           `gorm:"type:varchar(255);not null" json:"name"`
 	Description *string          `gorm:"type:text" json:"description,omitempty"`
 	Direction   BookingDirection `gorm:"type:varchar(10);not null" json:"direction"`
+	UsageCount  int              `gorm:"-" json:"usage_count"`
 	IsSystem    bool             `gorm:"default:false" json:"is_system"`
 	IsActive    bool             `gorm:"default:true" json:"is_active"`
 	CreatedAt   time.Time        `gorm:"default:now()" json:"created_at"`

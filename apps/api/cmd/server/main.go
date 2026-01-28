@@ -84,13 +84,13 @@ func main() {
 	notificationPreferencesRepo := repository.NewNotificationPreferencesRepository(db)
 
 	// Initialize services
-	userService := service.NewUserService(userRepo)
+	userService := service.NewUserService(userRepo, userGroupRepo)
 	tenantService := service.NewTenantService(tenantRepo)
 	accountService := service.NewAccountService(accountRepo)
 	holidayService := service.NewHolidayService(holidayRepo)
 	costCenterService := service.NewCostCenterService(costCenterRepo)
 	employmentTypeService := service.NewEmploymentTypeService(employmentTypeRepo)
-	userGroupService := service.NewUserGroupService(userGroupRepo)
+	userGroupService := service.NewUserGroupService(userGroupRepo, userRepo)
 	departmentService := service.NewDepartmentService(departmentRepo)
 	teamService := service.NewTeamService(teamRepo)
 	employeeService := service.NewEmployeeService(employeeRepo)
@@ -172,6 +172,7 @@ func main() {
 	bookingTypeHandler := handler.NewBookingTypeHandler(bookingTypeService)
 	dailyValueHandler := handler.NewDailyValueHandler(dailyValueService)
 	notificationHandler := handler.NewNotificationHandler(notificationService, notificationStreamHub)
+	permissionHandler := handler.NewPermissionHandler()
 
 	// Initialize BookingHandler
 	bookingHandler := handler.NewBookingHandler(
@@ -191,6 +192,7 @@ func main() {
 
 	// Initialize tenant middleware
 	tenantMiddleware := middleware.NewTenantMiddleware(tenantService)
+	authzMiddleware := middleware.NewAuthorizationMiddleware(userRepo)
 
 	// Create router
 	r := chi.NewRouter()
@@ -233,8 +235,8 @@ func main() {
 		// Protected routes (require authentication)
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.AuthMiddleware(jwtManager))
-			handler.RegisterUserRoutes(r, userHandler)
-			handler.RegisterTenantRoutes(r, tenantHandler)
+			handler.RegisterUserRoutes(r, userHandler, authzMiddleware)
+			handler.RegisterTenantRoutes(r, tenantHandler, authzMiddleware)
 
 			// Tenant-scoped routes (require authentication + tenant header)
 			r.Group(func(r chi.Router) {
@@ -243,17 +245,18 @@ func main() {
 				handler.RegisterHolidayRoutes(r, holidayHandler)
 				handler.RegisterCostCenterRoutes(r, costCenterHandler)
 				handler.RegisterEmploymentTypeRoutes(r, employmentTypeHandler)
-				handler.RegisterUserGroupRoutes(r, userGroupHandler)
+				handler.RegisterUserGroupRoutes(r, userGroupHandler, authzMiddleware)
+				handler.RegisterPermissionRoutes(r, permissionHandler, authzMiddleware)
 				handler.RegisterDepartmentRoutes(r, departmentHandler)
 				handler.RegisterTeamRoutes(r, teamHandler)
-				handler.RegisterEmployeeRoutes(r, employeeHandler)
-				handler.RegisterDayPlanRoutes(r, dayPlanHandler)
-				handler.RegisterWeekPlanRoutes(r, weekPlanHandler)
-				handler.RegisterTariffRoutes(r, tariffHandler)
+				handler.RegisterEmployeeRoutes(r, employeeHandler, authzMiddleware)
+				handler.RegisterDayPlanRoutes(r, dayPlanHandler, authzMiddleware)
+				handler.RegisterWeekPlanRoutes(r, weekPlanHandler, authzMiddleware)
+				handler.RegisterTariffRoutes(r, tariffHandler, authzMiddleware)
 				handler.RegisterBookingTypeRoutes(r, bookingTypeHandler)
-				handler.RegisterBookingRoutes(r, bookingHandler)
-				handler.RegisterDailyValueRoutes(r, dailyValueHandler)
-				handler.RegisterAbsenceRoutes(r, absenceHandler)
+				handler.RegisterBookingRoutes(r, bookingHandler, authzMiddleware)
+				handler.RegisterDailyValueRoutes(r, dailyValueHandler, authzMiddleware)
+				handler.RegisterAbsenceRoutes(r, absenceHandler, authzMiddleware)
 				handler.RegisterVacationRoutes(r, vacationHandler)
 				handler.RegisterMonthlyEvalRoutes(r, monthlyEvalHandler)
 				handler.RegisterNotificationRoutes(r, notificationHandler)

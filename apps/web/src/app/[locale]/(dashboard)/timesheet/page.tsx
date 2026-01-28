@@ -93,6 +93,21 @@ export default function TimesheetPage() {
     }
   }, [searchParams])
 
+  useEffect(() => {
+    if (!isAdmin) return
+    if (selectedEmployeeId) return
+
+    if (userEmployeeId) {
+      setSelectedEmployeeId(userEmployeeId)
+      return
+    }
+
+    const firstEmployee = employeesData?.data?.[0]
+    if (firstEmployee?.id) {
+      setSelectedEmployeeId(firstEmployee.id)
+    }
+  }, [employeesData?.data, isAdmin, selectedEmployeeId, userEmployeeId])
+
   const effectiveEmployeeId = isAdmin ? selectedEmployeeId : userEmployeeId
 
   // Get the selected employee name for display

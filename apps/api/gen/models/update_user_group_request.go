@@ -31,6 +31,9 @@ type UpdateUserGroupRequest struct {
 	// is active
 	IsActive bool `json:"is_active,omitempty"`
 
+	// is admin
+	IsAdmin bool `json:"is_admin,omitempty"`
+
 	// name
 	// Max Length: 255
 	// Min Length: 1

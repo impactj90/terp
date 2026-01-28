@@ -3,8 +3,10 @@ package service_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -25,6 +27,23 @@ func createTestTenantForBookingTypeService(t *testing.T, db *repository.DB) *mod
 	err := tenantRepo.Create(context.Background(), tenant)
 	require.NoError(t, err)
 	return tenant
+}
+
+func createTestEmployeeForBookingTypeService(t *testing.T, db *repository.DB, tenantID uuid.UUID) *model.Employee {
+	t.Helper()
+	repo := repository.NewEmployeeRepository(db)
+	emp := &model.Employee{
+		TenantID:        tenantID,
+		PersonnelNumber: "E" + uuid.New().String()[:8],
+		PIN:             uuid.New().String()[:4],
+		FirstName:       "Test",
+		LastName:        "Employee",
+		EntryDate:       time.Now(),
+		WeeklyHours:     decimal.NewFromFloat(40.0),
+		IsActive:        true,
+	}
+	require.NoError(t, repo.Create(context.Background(), emp))
+	return emp
 }
 
 func TestBookingTypeService_Create_Success(t *testing.T) {
@@ -424,6 +443,39 @@ func TestBookingTypeService_Delete_CannotDeleteSystemType(t *testing.T) {
 
 	err := svc.Delete(ctx, systemType.ID, tenant.ID)
 	assert.ErrorIs(t, err, service.ErrCannotDeleteSystemType)
+}
+
+func TestBookingTypeService_Delete_InUse(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	bookingTypeRepo := repository.NewBookingTypeRepository(db)
+	bookingRepo := repository.NewBookingRepository(db)
+	svc := service.NewBookingTypeService(bookingTypeRepo)
+	ctx := context.Background()
+
+	tenant := createTestTenantForBookingTypeService(t, db)
+	employee := createTestEmployeeForBookingTypeService(t, db, tenant.ID)
+
+	created, err := svc.Create(ctx, service.CreateBookingTypeInput{
+		TenantID:  tenant.ID,
+		Code:      "IN-USE",
+		Name:      "In Use",
+		Direction: "in",
+	})
+	require.NoError(t, err)
+
+	booking := &model.Booking{
+		TenantID:      tenant.ID,
+		EmployeeID:    employee.ID,
+		BookingDate:   time.Now().Truncate(24 * time.Hour),
+		BookingTypeID: created.ID,
+		OriginalTime:  480,
+		EditedTime:    480,
+		Source:        model.BookingSourceWeb,
+	}
+	require.NoError(t, bookingRepo.Create(ctx, booking))
+
+	err = svc.Delete(ctx, created.ID, tenant.ID)
+	assert.ErrorIs(t, err, service.ErrCannotDeleteTypeInUse)
 }
 
 func TestBookingTypeService_Delete_WrongTenant(t *testing.T) {

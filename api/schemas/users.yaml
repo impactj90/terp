@@ -34,6 +34,11 @@ User:
       format: uuid
       x-nullable: true
       description: "ID of the linked employee record, if any"
+    user_group_id:
+      type: string
+      format: uuid
+      x-nullable: true
+      description: "ID of the assigned user group, if any"
     created_at:
       type: string
       format: date-time
@@ -56,7 +61,6 @@ UserSummary:
     avatar_url:
       type: string
       format: uri
-      x-nullable: true
 
 UpdateUserRequest:
   type: object
@@ -68,6 +72,10 @@ UpdateUserRequest:
     avatar_url:
       type: string
       format: uri
+    user_group_id:
+      type: string
+      format: uuid
+      x-nullable: true
 
 UserList:
   type: object
@@ -81,3 +89,25 @@ UserList:
         $ref: '#/User'
     meta:
       $ref: './common.yaml#/PaginationMeta'
+
+CurrentUserPermissions:
+  type: object
+  required:
+    - permission_ids
+    - is_admin
+  properties:
+    permission_ids:
+      type: array
+      items:
+        type: string
+        format: uuid
+    is_admin:
+      type: boolean
+
+CurrentUserPermissionsResponse:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      $ref: '#/CurrentUserPermissions'

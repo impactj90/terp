@@ -11,6 +11,7 @@ import (
 
 	"github.com/tolga/terp/internal/auth"
 	"github.com/tolga/terp/internal/model"
+	"github.com/tolga/terp/internal/permissions"
 	"github.com/tolga/terp/internal/service"
 )
 
@@ -651,6 +652,70 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 
 	// Return User directly (not wrapped) per OpenAPI spec
 	respondJSON(w, http.StatusOK, user)
+}
+
+// Permissions returns the current user's permission IDs.
+// GET /auth/permissions
+func (h *AuthHandler) Permissions(w http.ResponseWriter, r *http.Request) {
+	ctxUser, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		respondError(w, http.StatusUnauthorized, "not authenticated")
+		return
+	}
+
+	user, err := h.userService.GetWithRelations(r.Context(), ctxUser.ID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "failed to load user")
+		return
+	}
+
+	response := struct {
+		Data struct {
+			PermissionIDs []string `json:"permission_ids"`
+			IsAdmin       bool     `json:"is_admin"`
+		} `json:"data"`
+	}{}
+
+	// Inactive groups deny all permissions.
+	if user.UserGroup != nil && !user.UserGroup.IsActive {
+		response.Data.PermissionIDs = []string{}
+		response.Data.IsAdmin = false
+		respondJSON(w, http.StatusOK, response)
+		return
+	}
+
+	isAdmin := user.Role == model.RoleAdmin
+	if user.UserGroup != nil {
+		isAdmin = user.UserGroup.IsAdmin
+	}
+
+	response.Data.IsAdmin = isAdmin
+
+	if isAdmin {
+		all := permissions.List()
+		ids := make([]string, 0, len(all))
+		for _, perm := range all {
+			ids = append(ids, perm.ID.String())
+		}
+		response.Data.PermissionIDs = ids
+		respondJSON(w, http.StatusOK, response)
+		return
+	}
+
+	if user.UserGroup == nil {
+		response.Data.PermissionIDs = []string{}
+		respondJSON(w, http.StatusOK, response)
+		return
+	}
+
+	var permissionIDs []string
+	if err := json.Unmarshal(user.UserGroup.Permissions, &permissionIDs); err != nil {
+		respondError(w, http.StatusInternalServerError, "failed to parse permissions")
+		return
+	}
+	response.Data.PermissionIDs = permissionIDs
+
+	respondJSON(w, http.StatusOK, response)
 }
 
 // Logout clears the authentication cookie.

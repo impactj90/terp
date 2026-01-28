@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/tolga/terp/internal/model"
+	"github.com/tolga/terp/internal/permissions"
 	"github.com/tolga/terp/internal/repository"
 	"github.com/tolga/terp/internal/service"
 	"github.com/tolga/terp/internal/testutil"
@@ -30,7 +31,7 @@ func createTestTenantForUserGroupService(t *testing.T, db *repository.DB) *model
 func TestUserGroupService_Create_Success(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewUserGroupRepository(db)
-	svc := service.NewUserGroupService(repo)
+	svc := service.NewUserGroupService(repo, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForUserGroupService(t, db)
@@ -39,8 +40,12 @@ func TestUserGroupService_Create_Success(t *testing.T) {
 		TenantID:    tenant.ID,
 		Name:        "Administrators",
 		Description: "Admin group with full access",
-		Permissions: []string{"read", "write", "delete"},
-		IsAdmin:     true,
+		Permissions: []string{
+			permissions.ID("employees.view").String(),
+			permissions.ID("employees.create").String(),
+			permissions.ID("employees.delete").String(),
+		},
+		IsAdmin: true,
 	}
 
 	ug, err := svc.Create(ctx, input)
@@ -55,7 +60,7 @@ func TestUserGroupService_Create_Success(t *testing.T) {
 func TestUserGroupService_Create_WithDefaults(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewUserGroupRepository(db)
-	svc := service.NewUserGroupService(repo)
+	svc := service.NewUserGroupService(repo, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForUserGroupService(t, db)
@@ -75,7 +80,7 @@ func TestUserGroupService_Create_WithDefaults(t *testing.T) {
 func TestUserGroupService_Create_EmptyName(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewUserGroupRepository(db)
-	svc := service.NewUserGroupService(repo)
+	svc := service.NewUserGroupService(repo, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForUserGroupService(t, db)
@@ -92,7 +97,7 @@ func TestUserGroupService_Create_EmptyName(t *testing.T) {
 func TestUserGroupService_Create_WhitespaceName(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewUserGroupRepository(db)
-	svc := service.NewUserGroupService(repo)
+	svc := service.NewUserGroupService(repo, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForUserGroupService(t, db)
@@ -109,7 +114,7 @@ func TestUserGroupService_Create_WhitespaceName(t *testing.T) {
 func TestUserGroupService_Create_DuplicateName(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewUserGroupRepository(db)
-	svc := service.NewUserGroupService(repo)
+	svc := service.NewUserGroupService(repo, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForUserGroupService(t, db)
@@ -130,10 +135,28 @@ func TestUserGroupService_Create_DuplicateName(t *testing.T) {
 	assert.ErrorIs(t, err, service.ErrUserGroupNameExists)
 }
 
+func TestUserGroupService_Create_InvalidPermissionID(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewUserGroupRepository(db)
+	svc := service.NewUserGroupService(repo, nil)
+	ctx := context.Background()
+
+	tenant := createTestTenantForUserGroupService(t, db)
+
+	input := service.CreateUserGroupInput{
+		TenantID:    tenant.ID,
+		Name:        "Invalid Perms",
+		Permissions: []string{"not-a-permission"},
+	}
+
+	_, err := svc.Create(ctx, input)
+	assert.ErrorIs(t, err, service.ErrInvalidPermissionID)
+}
+
 func TestUserGroupService_Create_SameNameDifferentTenant(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewUserGroupRepository(db)
-	svc := service.NewUserGroupService(repo)
+	svc := service.NewUserGroupService(repo, nil)
 	ctx := context.Background()
 
 	tenant1 := createTestTenantForUserGroupService(t, db)
@@ -159,7 +182,7 @@ func TestUserGroupService_Create_SameNameDifferentTenant(t *testing.T) {
 func TestUserGroupService_GetByID_Success(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewUserGroupRepository(db)
-	svc := service.NewUserGroupService(repo)
+	svc := service.NewUserGroupService(repo, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForUserGroupService(t, db)
@@ -180,7 +203,7 @@ func TestUserGroupService_GetByID_Success(t *testing.T) {
 func TestUserGroupService_GetByID_NotFound(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewUserGroupRepository(db)
-	svc := service.NewUserGroupService(repo)
+	svc := service.NewUserGroupService(repo, nil)
 	ctx := context.Background()
 
 	_, err := svc.GetByID(ctx, uuid.New())
@@ -190,7 +213,7 @@ func TestUserGroupService_GetByID_NotFound(t *testing.T) {
 func TestUserGroupService_Update_Success(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewUserGroupRepository(db)
-	svc := service.NewUserGroupService(repo)
+	svc := service.NewUserGroupService(repo, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForUserGroupService(t, db)
@@ -207,7 +230,10 @@ func TestUserGroupService_Update_Success(t *testing.T) {
 	newName := "Updated Name"
 	newDesc := "Updated description"
 	isAdmin := true
-	newPerms := []string{"read", "write"}
+	newPerms := []string{
+		permissions.ID("employees.view").String(),
+		permissions.ID("employees.edit").String(),
+	}
 	updateInput := service.UpdateUserGroupInput{
 		Name:        &newName,
 		Description: &newDesc,
@@ -222,10 +248,34 @@ func TestUserGroupService_Update_Success(t *testing.T) {
 	assert.True(t, updated.IsAdmin)
 }
 
+func TestUserGroupService_Update_InvalidPermissionID(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewUserGroupRepository(db)
+	svc := service.NewUserGroupService(repo, nil)
+	ctx := context.Background()
+
+	tenant := createTestTenantForUserGroupService(t, db)
+
+	input := service.CreateUserGroupInput{
+		TenantID: tenant.ID,
+		Name:     "Test Group",
+	}
+	created, err := svc.Create(ctx, input)
+	require.NoError(t, err)
+
+	invalid := []string{"not-a-permission"}
+	updateInput := service.UpdateUserGroupInput{
+		Permissions: &invalid,
+	}
+
+	_, err = svc.Update(ctx, created.ID, updateInput)
+	assert.ErrorIs(t, err, service.ErrInvalidPermissionID)
+}
+
 func TestUserGroupService_Update_NotFound(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewUserGroupRepository(db)
-	svc := service.NewUserGroupService(repo)
+	svc := service.NewUserGroupService(repo, nil)
 	ctx := context.Background()
 
 	newName := "Updated"
@@ -240,7 +290,7 @@ func TestUserGroupService_Update_NotFound(t *testing.T) {
 func TestUserGroupService_Update_EmptyName(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewUserGroupRepository(db)
-	svc := service.NewUserGroupService(repo)
+	svc := service.NewUserGroupService(repo, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForUserGroupService(t, db)
@@ -264,7 +314,7 @@ func TestUserGroupService_Update_EmptyName(t *testing.T) {
 func TestUserGroupService_Update_DuplicateName(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewUserGroupRepository(db)
-	svc := service.NewUserGroupService(repo)
+	svc := service.NewUserGroupService(repo, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForUserGroupService(t, db)
@@ -297,7 +347,7 @@ func TestUserGroupService_Update_DuplicateName(t *testing.T) {
 func TestUserGroupService_Update_SameNameNoConflict(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewUserGroupRepository(db)
-	svc := service.NewUserGroupService(repo)
+	svc := service.NewUserGroupService(repo, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForUserGroupService(t, db)
@@ -323,7 +373,7 @@ func TestUserGroupService_Update_SameNameNoConflict(t *testing.T) {
 func TestUserGroupService_Delete_Success(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewUserGroupRepository(db)
-	svc := service.NewUserGroupService(repo)
+	svc := service.NewUserGroupService(repo, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForUserGroupService(t, db)
@@ -345,7 +395,7 @@ func TestUserGroupService_Delete_Success(t *testing.T) {
 func TestUserGroupService_Delete_NotFound(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewUserGroupRepository(db)
-	svc := service.NewUserGroupService(repo)
+	svc := service.NewUserGroupService(repo, nil)
 	ctx := context.Background()
 
 	err := svc.Delete(ctx, uuid.New())
@@ -355,7 +405,7 @@ func TestUserGroupService_Delete_NotFound(t *testing.T) {
 func TestUserGroupService_Delete_SystemGroup(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewUserGroupRepository(db)
-	svc := service.NewUserGroupService(repo)
+	svc := service.NewUserGroupService(repo, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForUserGroupService(t, db)
@@ -375,7 +425,7 @@ func TestUserGroupService_Delete_SystemGroup(t *testing.T) {
 func TestUserGroupService_Update_SystemGroup(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewUserGroupRepository(db)
-	svc := service.NewUserGroupService(repo)
+	svc := service.NewUserGroupService(repo, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForUserGroupService(t, db)
@@ -400,7 +450,7 @@ func TestUserGroupService_Update_SystemGroup(t *testing.T) {
 func TestUserGroupService_List(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewUserGroupRepository(db)
-	svc := service.NewUserGroupService(repo)
+	svc := service.NewUserGroupService(repo, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForUserGroupService(t, db)
@@ -422,7 +472,7 @@ func TestUserGroupService_List(t *testing.T) {
 	_, err = svc.Create(ctx, input2)
 	require.NoError(t, err)
 
-	groups, err := svc.List(ctx, tenant.ID)
+	groups, err := svc.List(ctx, tenant.ID, nil)
 	require.NoError(t, err)
 	assert.Len(t, groups, 2)
 }
@@ -430,12 +480,12 @@ func TestUserGroupService_List(t *testing.T) {
 func TestUserGroupService_List_Empty(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewUserGroupRepository(db)
-	svc := service.NewUserGroupService(repo)
+	svc := service.NewUserGroupService(repo, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForUserGroupService(t, db)
 
-	groups, err := svc.List(ctx, tenant.ID)
+	groups, err := svc.List(ctx, tenant.ID, nil)
 	require.NoError(t, err)
 	assert.Empty(t, groups)
 }
@@ -443,7 +493,7 @@ func TestUserGroupService_List_Empty(t *testing.T) {
 func TestUserGroupService_GetByName(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewUserGroupRepository(db)
-	svc := service.NewUserGroupService(repo)
+	svc := service.NewUserGroupService(repo, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForUserGroupService(t, db)
@@ -464,7 +514,7 @@ func TestUserGroupService_GetByName(t *testing.T) {
 func TestUserGroupService_GetByName_NotFound(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewUserGroupRepository(db)
-	svc := service.NewUserGroupService(repo)
+	svc := service.NewUserGroupService(repo, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForUserGroupService(t, db)

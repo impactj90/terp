@@ -8,6 +8,7 @@ import (
 
 	"github.com/tolga/terp/gen/models"
 	"github.com/tolga/terp/internal/model"
+	"github.com/tolga/terp/internal/permissions"
 )
 
 func respondJSON(w http.ResponseWriter, status int, data any) {
@@ -45,6 +46,14 @@ func mapUserToResponse(u *model.User) *models.User {
 		avatarURL := strfmt.URI(*u.AvatarURL)
 		resp.AvatarURL = &avatarURL
 	}
+	if u.EmployeeID != nil {
+		employeeID := strfmt.UUID(u.EmployeeID.String())
+		resp.EmployeeID = &employeeID
+	}
+	if u.UserGroupID != nil {
+		groupID := strfmt.UUID(u.UserGroupID.String())
+		resp.UserGroupID = &groupID
+	}
 
 	return resp
 }
@@ -55,4 +64,53 @@ func mapUsersToResponse(users []model.User) []*models.User {
 		result[i] = mapUserToResponse(&u)
 	}
 	return result
+}
+
+func mapUserGroupToResponse(ug *model.UserGroup) *models.UserGroup {
+	id := strfmt.UUID(ug.ID.String())
+	tenantID := strfmt.UUID(ug.TenantID.String())
+	name := ug.Name
+	code := ug.Code
+	createdAt := strfmt.DateTime(ug.CreatedAt)
+	updatedAt := strfmt.DateTime(ug.UpdatedAt)
+
+	resp := &models.UserGroup{
+		ID:        &id,
+		TenantID:  &tenantID,
+		Name:      &name,
+		Code:      &code,
+		IsActive:  ug.IsActive,
+		IsSystem:  ug.IsSystem,
+		IsAdmin:   ug.IsAdmin,
+		CreatedAt: createdAt,
+		UpdatedAt: updatedAt,
+	}
+
+	if ug.Description != "" {
+		desc := ug.Description
+		resp.Description = &desc
+	}
+
+	var permissionIDs []string
+	if err := json.Unmarshal(ug.Permissions, &permissionIDs); err == nil {
+		resp.Permissions = make([]*models.Permission, 0, len(permissionIDs))
+		for _, pid := range permissionIDs {
+			perm, ok := permissions.Lookup(pid)
+			if !ok {
+				continue
+			}
+			permID := strfmt.UUID(perm.ID.String())
+			resource := perm.Resource
+			action := perm.Action
+			description := perm.Description
+			resp.Permissions = append(resp.Permissions, &models.Permission{
+				ID:          &permID,
+				Resource:    &resource,
+				Action:      &action,
+				Description: &description,
+			})
+		}
+	}
+
+	return resp
 }

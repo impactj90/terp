@@ -29,6 +29,6 @@ export function useUser(userId: string, enabled = true) {
  */
 export function useUpdateUser() {
   return useApiMutation('/users/{id}', 'patch', {
-    invalidateKeys: [['/users/{id}'], ['/auth/me']],
+    invalidateKeys: [['/users/{id}'], ['/auth/me'], ['/users']],
   })
 }

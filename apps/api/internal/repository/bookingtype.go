@@ -82,6 +82,19 @@ func (r *BookingTypeRepository) Delete(ctx context.Context, id uuid.UUID) error 
 	return nil
 }
 
+// CountUsage counts bookings referencing a booking type for a tenant.
+func (r *BookingTypeRepository) CountUsage(ctx context.Context, tenantID uuid.UUID, bookingTypeID uuid.UUID) (int, error) {
+	var count int64
+	err := r.db.GORM.WithContext(ctx).
+		Model(&model.Booking{}).
+		Where("tenant_id = ? AND booking_type_id = ?", tenantID, bookingTypeID).
+		Count(&count).Error
+	if err != nil {
+		return 0, fmt.Errorf("failed to count booking type usage: %w", err)
+	}
+	return int(count), nil
+}
+
 // List retrieves all booking types for a tenant (tenant-specific only, excludes system types).
 func (r *BookingTypeRepository) List(ctx context.Context, tenantID uuid.UUID) ([]model.BookingType, error) {
 	var types []model.BookingType
@@ -99,10 +112,17 @@ func (r *BookingTypeRepository) List(ctx context.Context, tenantID uuid.UUID) ([
 // ListWithSystem retrieves all booking types for a tenant including system types.
 func (r *BookingTypeRepository) ListWithSystem(ctx context.Context, tenantID uuid.UUID) ([]model.BookingType, error) {
 	var types []model.BookingType
+	usageSubquery := r.db.GORM.WithContext(ctx).
+		Table("bookings").
+		Select("booking_type_id, COUNT(*) AS usage_count").
+		Where("tenant_id = ?", tenantID).
+		Group("booking_type_id")
 	err := r.db.GORM.WithContext(ctx).
-		Where("tenant_id = ? OR tenant_id IS NULL", tenantID).
-		Where("is_active = ?", true).
-		Order("is_system DESC, code ASC").
+		Table("booking_types").
+		Select("booking_types.*, COALESCE(usage.usage_count, 0) AS usage_count").
+		Joins("LEFT JOIN (?) AS usage ON usage.booking_type_id = booking_types.id", usageSubquery).
+		Where("booking_types.tenant_id = ? OR booking_types.tenant_id IS NULL", tenantID).
+		Order("booking_types.is_system DESC, booking_types.code ASC").
 		Find(&types).Error
 
 	if err != nil {

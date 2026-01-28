@@ -82,6 +82,15 @@ func (r *UserRepository) Update(ctx context.Context, user *model.User) error {
 	return r.db.GORM.WithContext(ctx).Save(user).Error
 }
 
+// UpdateRoleByGroup updates the role for all users in a group.
+func (r *UserRepository) UpdateRoleByGroup(ctx context.Context, groupID uuid.UUID, role model.UserRole) error {
+	return r.db.GORM.WithContext(ctx).
+		Model(&model.User{}).
+		Where("user_group_id = ?", groupID).
+		Update("role", role).
+		Error
+}
+
 // ListUsersParams defines parameters for listing users.
 type ListUsersParams struct {
 	Query  string

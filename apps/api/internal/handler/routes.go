@@ -1,9 +1,16 @@
 package handler
 
 import (
+	"errors"
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+
 	"github.com/tolga/terp/internal/auth"
 	"github.com/tolga/terp/internal/middleware"
+	"github.com/tolga/terp/internal/permissions"
+	"github.com/tolga/terp/internal/repository"
 )
 
 // RegisterAuthRoutes registers authentication routes.
@@ -21,29 +28,49 @@ func RegisterAuthRoutes(r chi.Router, h *AuthHandler, jwtManager *auth.JWTManage
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.AuthMiddleware(jwtManager))
 			r.Get("/me", h.Me)
+			r.Get("/permissions", h.Permissions)
 			r.Post("/logout", h.Logout)
 		})
 	})
 }
 
 // RegisterUserRoutes registers user routes.
-func RegisterUserRoutes(r chi.Router, h *UserHandler) {
+func RegisterUserRoutes(r chi.Router, h *UserHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("users.manage").String()
 	r.Route("/users", func(r chi.Router) {
-		r.Get("/", h.List)
-		r.Get("/{id}", h.GetByID)
-		r.Patch("/{id}", h.Update)
-		r.Delete("/{id}", h.Delete)
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Get("/{id}", h.GetByID)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.GetByID)
+		r.With(authz.RequireSelfOrPermission("id", permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
 	})
 }
 
 // RegisterTenantRoutes registers tenant routes.
-func RegisterTenantRoutes(r chi.Router, h *TenantHandler) {
+func RegisterTenantRoutes(r chi.Router, h *TenantHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("tenants.manage").String()
 	r.Route("/tenants", func(r chi.Router) {
-		r.Get("/", h.List)
-		r.Post("/", h.Create)
-		r.Get("/{id}", h.Get)
-		r.Patch("/{id}", h.Update)
-		r.Delete("/{id}", h.Delete)
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
 	})
 }
 
@@ -93,14 +120,33 @@ func RegisterAccountRoutes(r chi.Router, h *AccountHandler) {
 }
 
 // RegisterUserGroupRoutes registers user group routes.
-func RegisterUserGroupRoutes(r chi.Router, h *UserGroupHandler) {
+func RegisterUserGroupRoutes(r chi.Router, h *UserGroupHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("users.manage").String()
 	r.Route("/user-groups", func(r chi.Router) {
-		r.Get("/", h.List)
-		r.Post("/", h.Create)
-		r.Get("/{id}", h.Get)
-		r.Patch("/{id}", h.Update)
-		r.Delete("/{id}", h.Delete)
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
 	})
+}
+
+// RegisterPermissionRoutes registers permission routes.
+func RegisterPermissionRoutes(r chi.Router, h *PermissionHandler, authz *middleware.AuthorizationMiddleware) {
+	if authz == nil {
+		r.Get("/permissions", h.List)
+		return
+	}
+	r.With(authz.RequirePermission(permissions.ID("users.manage").String())).Get("/permissions", h.List)
 }
 
 // RegisterDepartmentRoutes registers department routes.
@@ -134,60 +180,118 @@ func RegisterTeamRoutes(r chi.Router, h *TeamHandler) {
 }
 
 // RegisterEmployeeRoutes registers employee routes.
-func RegisterEmployeeRoutes(r chi.Router, h *EmployeeHandler) {
+func RegisterEmployeeRoutes(r chi.Router, h *EmployeeHandler, authz *middleware.AuthorizationMiddleware) {
+	permView := permissions.ID("employees.view").String()
+	permCreate := permissions.ID("employees.create").String()
+	permEdit := permissions.ID("employees.edit").String()
+	permDelete := permissions.ID("employees.delete").String()
+
 	r.Route("/employees", func(r chi.Router) {
-		r.Get("/", h.List)
-		r.Post("/", h.Create)
-		r.Get("/search", h.Search)
-		r.Get("/{id}", h.Get)
-		r.Put("/{id}", h.Update)
-		r.Delete("/{id}", h.Delete)
-		r.Get("/{id}/contacts", h.ListContacts)
-		r.Post("/{id}/contacts", h.AddContact)
-		r.Delete("/{id}/contacts/{contactId}", h.RemoveContact)
-		r.Get("/{id}/cards", h.ListCards)
-		r.Post("/{id}/cards", h.AddCard)
-		r.Delete("/{id}/cards/{cardId}", h.DeactivateCard)
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/search", h.Search)
+			r.Get("/{id}", h.Get)
+			r.Put("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			r.Get("/{id}/contacts", h.ListContacts)
+			r.Post("/{id}/contacts", h.AddContact)
+			r.Delete("/{id}/contacts/{contactId}", h.RemoveContact)
+			r.Get("/{id}/cards", h.ListCards)
+			r.Post("/{id}/cards", h.AddCard)
+			r.Delete("/{id}/cards/{cardId}", h.DeactivateCard)
+			return
+		}
+
+		r.With(authz.RequirePermission(permView)).Get("/", h.List)
+		r.With(authz.RequirePermission(permCreate)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permView)).Get("/search", h.Search)
+		r.With(authz.RequirePermission(permView)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permEdit)).Put("/{id}", h.Update)
+		r.With(authz.RequirePermission(permDelete)).Delete("/{id}", h.Delete)
+		r.With(authz.RequirePermission(permView)).Get("/{id}/contacts", h.ListContacts)
+		r.With(authz.RequirePermission(permEdit)).Post("/{id}/contacts", h.AddContact)
+		r.With(authz.RequirePermission(permEdit)).Delete("/{id}/contacts/{contactId}", h.RemoveContact)
+		r.With(authz.RequirePermission(permView)).Get("/{id}/cards", h.ListCards)
+		r.With(authz.RequirePermission(permEdit)).Post("/{id}/cards", h.AddCard)
+		r.With(authz.RequirePermission(permEdit)).Delete("/{id}/cards/{cardId}", h.DeactivateCard)
 	})
 }
 
 // RegisterDayPlanRoutes registers day plan routes.
-func RegisterDayPlanRoutes(r chi.Router, h *DayPlanHandler) {
+func RegisterDayPlanRoutes(r chi.Router, h *DayPlanHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("day_plans.manage").String()
 	r.Route("/day-plans", func(r chi.Router) {
-		r.Get("/", h.List)
-		r.Post("/", h.Create)
-		r.Get("/{id}", h.Get)
-		r.Put("/{id}", h.Update)
-		r.Delete("/{id}", h.Delete)
-		r.Post("/{id}/copy", h.Copy)
-		r.Post("/{id}/breaks", h.AddBreak)
-		r.Delete("/{id}/breaks/{breakId}", h.DeleteBreak)
-		r.Post("/{id}/bonuses", h.AddBonus)
-		r.Delete("/{id}/bonuses/{bonusId}", h.DeleteBonus)
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Put("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			r.Post("/{id}/copy", h.Copy)
+			r.Post("/{id}/breaks", h.AddBreak)
+			r.Delete("/{id}/breaks/{breakId}", h.DeleteBreak)
+			r.Post("/{id}/bonuses", h.AddBonus)
+			r.Delete("/{id}/bonuses/{bonusId}", h.DeleteBonus)
+			return
+		}
+
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Put("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+		r.With(authz.RequirePermission(permManage)).Post("/{id}/copy", h.Copy)
+		r.With(authz.RequirePermission(permManage)).Post("/{id}/breaks", h.AddBreak)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}/breaks/{breakId}", h.DeleteBreak)
+		r.With(authz.RequirePermission(permManage)).Post("/{id}/bonuses", h.AddBonus)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}/bonuses/{bonusId}", h.DeleteBonus)
 	})
 }
 
 // RegisterWeekPlanRoutes registers week plan routes.
-func RegisterWeekPlanRoutes(r chi.Router, h *WeekPlanHandler) {
+func RegisterWeekPlanRoutes(r chi.Router, h *WeekPlanHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("week_plans.manage").String()
 	r.Route("/week-plans", func(r chi.Router) {
-		r.Get("/", h.List)
-		r.Post("/", h.Create)
-		r.Get("/{id}", h.Get)
-		r.Put("/{id}", h.Update)
-		r.Delete("/{id}", h.Delete)
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Put("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Put("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
 	})
 }
 
 // RegisterTariffRoutes registers tariff routes.
-func RegisterTariffRoutes(r chi.Router, h *TariffHandler) {
+func RegisterTariffRoutes(r chi.Router, h *TariffHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("tariffs.manage").String()
 	r.Route("/tariffs", func(r chi.Router) {
-		r.Get("/", h.List)
-		r.Post("/", h.Create)
-		r.Get("/{id}", h.Get)
-		r.Put("/{id}", h.Update)
-		r.Delete("/{id}", h.Delete)
-		r.Post("/{id}/breaks", h.CreateBreak)
-		r.Delete("/{id}/breaks/{breakId}", h.DeleteBreak)
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Put("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			r.Post("/{id}/breaks", h.CreateBreak)
+			r.Delete("/{id}/breaks/{breakId}", h.DeleteBreak)
+			return
+		}
+
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Put("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+		r.With(authz.RequirePermission(permManage)).Post("/{id}/breaks", h.CreateBreak)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}/breaks/{breakId}", h.DeleteBreak)
 	})
 }
 
@@ -203,49 +307,140 @@ func RegisterBookingTypeRoutes(r chi.Router, h *BookingTypeHandler) {
 }
 
 // RegisterBookingRoutes registers booking routes.
-func RegisterBookingRoutes(r chi.Router, h *BookingHandler) {
+func RegisterBookingRoutes(r chi.Router, h *BookingHandler, authz *middleware.AuthorizationMiddleware) {
+	viewOwn := permissions.ID("time_tracking.view_own").String()
+	viewAll := permissions.ID("time_tracking.view_all").String()
+	edit := permissions.ID("time_tracking.edit").String()
+
+	bookingResolver := func(r *http.Request) (uuid.UUID, error) {
+		idStr := chi.URLParam(r, "id")
+		bookingID, err := uuid.Parse(idStr)
+		if err != nil {
+			return uuid.Nil, err
+		}
+		booking, err := h.bookingRepo.GetByID(r.Context(), bookingID)
+		if err != nil {
+			if err == repository.ErrBookingNotFound {
+				return uuid.Nil, middleware.ErrResourceNotFound
+			}
+			return uuid.Nil, err
+		}
+		return booking.EmployeeID, nil
+	}
+
+	bookingCreateResolver := func(r *http.Request) (uuid.UUID, error) {
+		var body struct {
+			EmployeeID string `json:"employee_id"`
+		}
+		if err := middleware.DecodeJSONBody(r, &body); err != nil {
+			return uuid.Nil, err
+		}
+		if body.EmployeeID == "" {
+			return uuid.Nil, errors.New("employee_id required")
+		}
+		return uuid.Parse(body.EmployeeID)
+	}
+
 	r.Route("/bookings", func(r chi.Router) {
-		r.Get("/", h.List)
-		r.Post("/", h.Create)
-		r.Get("/{id}", h.GetByID)
-		r.Put("/{id}", h.Update)
-		r.Delete("/{id}", h.Delete)
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.GetByID)
+			r.Put("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+
+		r.With(authz.RequirePermission(viewAll)).Get("/", h.List)
+		r.With(
+			authz.RequirePermission(edit),
+			authz.RequireEmployeePermissionFromResolver(bookingCreateResolver, viewOwn, viewAll),
+		).Post("/", h.Create)
+		r.With(authz.RequireEmployeePermissionFromResolver(bookingResolver, viewOwn, viewAll)).Get("/{id}", h.GetByID)
+		r.With(
+			authz.RequirePermission(edit),
+			authz.RequireEmployeePermissionFromResolver(bookingResolver, viewOwn, viewAll),
+		).Put("/{id}", h.Update)
+		r.With(
+			authz.RequirePermission(edit),
+			authz.RequireEmployeePermissionFromResolver(bookingResolver, viewOwn, viewAll),
+		).Delete("/{id}", h.Delete)
 	})
 
 	// Day view routes (nested under employees)
-	r.Route("/employees/{id}/day/{date}", func(r chi.Router) {
-		r.Get("/", h.GetDayView)
-		r.Post("/calculate", h.Calculate)
-	})
+	if authz == nil {
+		r.Route("/employees/{id}/day/{date}", func(r chi.Router) {
+			r.Get("/", h.GetDayView)
+			r.Post("/calculate", h.Calculate)
+		})
+	} else {
+		r.Route("/employees/{id}/day/{date}", func(r chi.Router) {
+			r.With(authz.RequireEmployeePermission("id", viewOwn, viewAll)).Get("/", h.GetDayView)
+			r.With(authz.RequireEmployeePermission("id", viewOwn, viewAll)).Post("/calculate", h.Calculate)
+		})
+	}
 }
 
 // RegisterDailyValueRoutes registers daily value routes.
-func RegisterDailyValueRoutes(r chi.Router, h *DailyValueHandler) {
-	r.Get("/daily-values", h.ListAll)
-	r.Get("/daily-values/{id}", h.Get)
-	r.Post("/daily-values/{id}/approve", h.Approve)
+func RegisterDailyValueRoutes(r chi.Router, h *DailyValueHandler, authz *middleware.AuthorizationMiddleware) {
+	viewAll := permissions.ID("time_tracking.view_all").String()
+	approve := permissions.ID("time_tracking.approve").String()
+	if authz == nil {
+		r.Get("/daily-values", h.ListAll)
+		r.Get("/daily-values/{id}", h.Get)
+		r.Post("/daily-values/{id}/approve", h.Approve)
+		return
+	}
+
+	r.With(authz.RequirePermission(viewAll)).Get("/daily-values", h.ListAll)
+	r.With(authz.RequirePermission(viewAll)).Get("/daily-values/{id}", h.Get)
+	r.With(authz.RequirePermission(approve)).Post("/daily-values/{id}/approve", h.Approve)
 }
 
 // RegisterAbsenceRoutes registers absence routes.
-func RegisterAbsenceRoutes(r chi.Router, h *AbsenceHandler) {
+func RegisterAbsenceRoutes(r chi.Router, h *AbsenceHandler, authz *middleware.AuthorizationMiddleware) {
+	requestPerm := permissions.ID("absences.request").String()
+	approvePerm := permissions.ID("absences.approve").String()
+	managePerm := permissions.ID("absences.manage").String()
+
 	// Absence types CRUD
 	r.Route("/absence-types", func(r chi.Router) {
-		r.Get("/", h.ListTypes)
-		r.Post("/", h.CreateType)
-		r.Get("/{id}", h.GetType)
-		r.Patch("/{id}", h.UpdateType)
-		r.Delete("/{id}", h.DeleteType)
+		if authz == nil {
+			r.Get("/", h.ListTypes)
+			r.Post("/", h.CreateType)
+			r.Get("/{id}", h.GetType)
+			r.Patch("/{id}", h.UpdateType)
+			r.Delete("/{id}", h.DeleteType)
+			return
+		}
+		r.With(authz.RequirePermission(managePerm)).Get("/", h.ListTypes)
+		r.With(authz.RequirePermission(managePerm)).Post("/", h.CreateType)
+		r.With(authz.RequirePermission(managePerm)).Get("/{id}", h.GetType)
+		r.With(authz.RequirePermission(managePerm)).Patch("/{id}", h.UpdateType)
+		r.With(authz.RequirePermission(managePerm)).Delete("/{id}", h.DeleteType)
 	})
 
 	// Employee absences (nested under employees)
-	r.Get("/employees/{id}/absences", h.ListByEmployee)
-	r.Post("/employees/{id}/absences", h.CreateRange)
+	if authz == nil {
+		r.Get("/employees/{id}/absences", h.ListByEmployee)
+		r.Post("/employees/{id}/absences", h.CreateRange)
+	} else {
+		r.With(authz.RequireEmployeePermission("id", requestPerm, managePerm)).Get("/employees/{id}/absences", h.ListByEmployee)
+		r.With(authz.RequireEmployeePermission("id", requestPerm, managePerm)).Post("/employees/{id}/absences", h.CreateRange)
+	}
 
 	// Absence list and CRUD
-	r.Get("/absences", h.ListAll)
-	r.Delete("/absences/{id}", h.Delete)
-	r.Post("/absences/{id}/approve", h.Approve)
-	r.Post("/absences/{id}/reject", h.Reject)
+	if authz == nil {
+		r.Get("/absences", h.ListAll)
+		r.Delete("/absences/{id}", h.Delete)
+		r.Post("/absences/{id}/approve", h.Approve)
+		r.Post("/absences/{id}/reject", h.Reject)
+	} else {
+		r.With(authz.RequirePermission(managePerm)).Get("/absences", h.ListAll)
+		r.With(authz.RequirePermission(managePerm)).Delete("/absences/{id}", h.Delete)
+		r.With(authz.RequirePermission(approvePerm)).Post("/absences/{id}/approve", h.Approve)
+		r.With(authz.RequirePermission(approvePerm)).Post("/absences/{id}/reject", h.Reject)
+	}
 }
 
 // RegisterVacationRoutes registers vacation routes.

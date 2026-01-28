@@ -19,18 +19,29 @@ const typesPath = join(__dirname, '../src/lib/api/types.ts')
 // Read the generated types file
 let content = readFileSync(typesPath, 'utf-8')
 
-// Add type helpers after the initial comment block
-const typeHelpers = `
-// Type helpers for nested array elements (auto-generated fix)
-type EmployeeContact = NonNullable<components["schemas"]["Employee"]["contacts"]>[number];
-type EmployeeCard = NonNullable<components["schemas"]["Employee"]["cards"]>[number];
-`
+const helperComment = '// Type helpers for nested array elements (auto-generated fix)'
+const employeeContactLine =
+  'type EmployeeContact = NonNullable<components["schemas"]["Employee"]["contacts"]>[number];'
+const employeeCardLine =
+  'type EmployeeCard = NonNullable<components["schemas"]["Employee"]["cards"]>[number];'
+const tariffDayPlanLine =
+  'type TariffDayPlan = NonNullable<components["schemas"]["CreateTariffRequest"]["day_plans"]>[number];'
 
-// Insert type helpers after the export interface paths declaration ends
-// We'll add them right before the operations section
+// Insert type helpers right before the operations section if missing.
 const operationsIndex = content.indexOf('export interface operations {')
-if (operationsIndex !== -1) {
+if (operationsIndex !== -1 && !content.includes(helperComment)) {
+  const typeHelpers = `
+${helperComment}
+${employeeContactLine}
+${employeeCardLine}
+${tariffDayPlanLine}
+`
   content = content.slice(0, operationsIndex) + typeHelpers + '\n' + content.slice(operationsIndex)
+}
+
+// Ensure the tariff helper exists if older runs only injected employee helpers.
+if (content.includes(helperComment) && !content.includes(tariffDayPlanLine)) {
+  content = content.replace(employeeCardLine, `${employeeCardLine}\n${tariffDayPlanLine}`)
 }
 
 // Fix patterns that reference array items
@@ -52,6 +63,12 @@ content = content.replace(
 content = content.replace(
   /components\["schemas"\]\["Employee"\]\["cards"\]\[number\]/g,
   'EmployeeCard'
+)
+
+// components["schemas"]["CreateTariffRequest"]["day_plans"]["items"] -> TariffDayPlan
+content = content.replace(
+  /components\["schemas"\]\["CreateTariffRequest"\]\["day_plans"\]\["items"\]/g,
+  'TariffDayPlan'
 )
 
 // Write the fixed content back

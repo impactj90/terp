@@ -1,4 +1,4 @@
-import { useApiQuery } from '@/hooks'
+import { useApiQuery, useApiMutation } from '@/hooks'
 
 interface UseBookingTypesOptions {
   active?: boolean
@@ -39,5 +39,34 @@ export function useBookingType(id: string, enabled = true) {
   return useApiQuery('/booking-types/{id}', {
     path: { id },
     enabled: enabled && !!id,
+  })
+}
+
+// ==================== Mutation Hooks ====================
+
+/**
+ * Hook to create a new booking type.
+ */
+export function useCreateBookingType() {
+  return useApiMutation('/booking-types', 'post', {
+    invalidateKeys: [['/booking-types']],
+  })
+}
+
+/**
+ * Hook to update an existing booking type.
+ */
+export function useUpdateBookingType() {
+  return useApiMutation('/booking-types/{id}', 'patch', {
+    invalidateKeys: [['/booking-types']],
+  })
+}
+
+/**
+ * Hook to delete a booking type.
+ */
+export function useDeleteBookingType() {
+  return useApiMutation('/booking-types/{id}', 'delete', {
+    invalidateKeys: [['/booking-types']],
   })
 }

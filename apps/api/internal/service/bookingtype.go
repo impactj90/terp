@@ -19,6 +19,7 @@ var (
 	ErrInvalidDirection        = errors.New("invalid direction (must be 'in' or 'out')")
 	ErrCannotModifySystemType  = errors.New("cannot modify system booking type")
 	ErrCannotDeleteSystemType  = errors.New("cannot delete system booking type")
+	ErrCannotDeleteTypeInUse   = errors.New("cannot delete booking type in use")
 )
 
 // bookingTypeRepository defines the interface for booking type data access.
@@ -28,6 +29,7 @@ type bookingTypeRepository interface {
 	GetByCode(ctx context.Context, tenantID *uuid.UUID, code string) (*model.BookingType, error)
 	Update(ctx context.Context, bt *model.BookingType) error
 	Delete(ctx context.Context, id uuid.UUID) error
+	CountUsage(ctx context.Context, tenantID uuid.UUID, bookingTypeID uuid.UUID) (int, error)
 	List(ctx context.Context, tenantID uuid.UUID) ([]model.BookingType, error)
 	ListWithSystem(ctx context.Context, tenantID uuid.UUID) ([]model.BookingType, error)
 	ListActive(ctx context.Context, tenantID uuid.UUID) ([]model.BookingType, error)
@@ -166,6 +168,14 @@ func (s *BookingTypeService) Delete(ctx context.Context, id uuid.UUID, tenantID 
 	// Verify the booking type belongs to the tenant
 	if bt.TenantID == nil || *bt.TenantID != tenantID {
 		return ErrBookingTypeNotFound
+	}
+
+	usageCount, err := s.repo.CountUsage(ctx, tenantID, id)
+	if err != nil {
+		return err
+	}
+	if usageCount > 0 {
+		return ErrCannotDeleteTypeInUse
 	}
 
 	return s.repo.Delete(ctx, id)

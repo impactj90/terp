@@ -223,6 +223,22 @@ paths:
                 $ref: "#/components/schemas/User"
         "401":
           $ref: "#/components/responses/Unauthorized"
+  /auth/permissions:
+    get:
+      tags:
+        - Auth
+      summary: Get current user permissions
+      description: Returns permission IDs for the authenticated user
+      operationId: getCurrentUserPermissions
+      responses:
+        "200":
+          description: Current user permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentUserPermissionsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /auth/dev/login:
     get:
       tags:
@@ -5999,6 +6015,11 @@ components:
           format: uuid
           description: ID of the linked employee record, if any
           nullable: true
+        user_group_id:
+          type: string
+          format: uuid
+          description: ID of the assigned user group, if any
+          nullable: true
         created_at:
           type: string
           format: date-time
@@ -6020,7 +6041,6 @@ components:
         avatar_url:
           type: string
           format: uri
-          nullable: true
     UpdateUserRequest:
       type: object
       properties:
@@ -6031,6 +6051,10 @@ components:
         avatar_url:
           type: string
           format: uri
+        user_group_id:
+          type: string
+          format: uuid
+          nullable: true
     UserList:
       type: object
       required:
@@ -6043,6 +6067,26 @@ components:
             $ref: "#/components/schemas/User"
         meta:
           $ref: "#/components/schemas/PaginationMeta"
+    CurrentUserPermissions:
+      type: object
+      required:
+        - permission_ids
+        - is_admin
+      properties:
+        permission_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        is_admin:
+          type: boolean
+    CurrentUserPermissionsResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/CurrentUserPermissions"
     Notification:
       type: object
       required:
@@ -9226,6 +9270,10 @@ components:
           type: boolean
           description: System groups cannot be deleted
           example: false
+        is_admin:
+          type: boolean
+          description: Admin groups bypass permission checks
+          example: false
         is_active:
           type: boolean
           example: true
@@ -9274,6 +9322,10 @@ components:
             - update
             - delete
             - manage
+            - view_own
+            - view_all
+            - approve
+            - request
           example: read
         description:
           type: string
@@ -9299,6 +9351,8 @@ components:
           items:
             type: string
             format: uuid
+        is_admin:
+          type: boolean
     UpdateUserGroupRequest:
       type: object
       properties:
@@ -9318,6 +9372,8 @@ components:
             type: string
             format: uuid
         is_active:
+          type: boolean
+        is_admin:
           type: boolean
     UserGroupList:
       type: object

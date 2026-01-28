@@ -204,6 +204,8 @@ func (h *BookingTypeHandler) Delete(w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusNotFound, "Booking type not found")
 		case service.ErrCannotDeleteSystemType:
 			respondError(w, http.StatusForbidden, "Cannot delete system booking types")
+		case service.ErrCannotDeleteTypeInUse:
+			respondError(w, http.StatusConflict, "Cannot delete booking type in use")
 		default:
 			respondError(w, http.StatusInternalServerError, "Failed to delete booking type")
 		}

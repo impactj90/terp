@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -27,12 +28,28 @@ func (h *UserGroupHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	groups, err := h.userGroupService.List(r.Context(), tenantID)
+	var activeFilter *bool
+	if activeParam := r.URL.Query().Get("active"); activeParam != "" {
+		activeValue, err := strconv.ParseBool(activeParam)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid active filter")
+			return
+		}
+		activeFilter = &activeValue
+	}
+
+	groups, err := h.userGroupService.List(r.Context(), tenantID, activeFilter)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to list user groups")
 		return
 	}
-	respondJSON(w, http.StatusOK, groups)
+
+	result := make([]*models.UserGroup, 0, len(groups))
+	for i := range groups {
+		result = append(result, mapUserGroupToResponse(&groups[i]))
+	}
+
+	respondJSON(w, http.StatusOK, &models.UserGroupList{Data: result})
 }
 
 func (h *UserGroupHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -49,7 +66,7 @@ func (h *UserGroupHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondJSON(w, http.StatusOK, ug)
+	respondJSON(w, http.StatusOK, mapUserGroupToResponse(ug))
 }
 
 func (h *UserGroupHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -79,24 +96,33 @@ func (h *UserGroupHandler) Create(w http.ResponseWriter, r *http.Request) {
 	input := service.CreateUserGroupInput{
 		TenantID:    tenantID,
 		Name:        *req.Name,
+		Code:        *req.Code,
 		Description: req.Description,
 		Permissions: permissions,
+		IsAdmin:     req.IsAdmin,
+		IsActive:    true,
 	}
 
 	ug, err := h.userGroupService.Create(r.Context(), input)
 	if err != nil {
 		switch err {
+		case service.ErrInvalidPermissionID:
+			respondError(w, http.StatusBadRequest, "Invalid permission ID")
 		case service.ErrUserGroupNameRequired:
 			respondError(w, http.StatusBadRequest, "User group name is required")
 		case service.ErrUserGroupNameExists:
 			respondError(w, http.StatusBadRequest, "A user group with this name already exists")
+		case service.ErrUserGroupCodeRequired:
+			respondError(w, http.StatusBadRequest, "User group code is required")
+		case service.ErrUserGroupCodeExists:
+			respondError(w, http.StatusConflict, "User group code already exists")
 		default:
 			respondError(w, http.StatusInternalServerError, "Failed to create user group")
 		}
 		return
 	}
 
-	respondJSON(w, http.StatusCreated, ug)
+	respondJSON(w, http.StatusCreated, mapUserGroupToResponse(ug))
 }
 
 func (h *UserGroupHandler) Update(w http.ResponseWriter, r *http.Request) {
@@ -122,26 +148,39 @@ func (h *UserGroupHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if req.Name != "" {
 		input.Name = &req.Name
 	}
+	if req.Code != "" {
+		input.Code = &req.Code
+	}
 	if req.Description != "" {
 		input.Description = &req.Description
 	}
-	if len(req.PermissionIds) > 0 {
+	if req.PermissionIds != nil {
 		var permissions []string
 		for _, pid := range req.PermissionIds {
 			permissions = append(permissions, pid.String())
 		}
 		input.Permissions = &permissions
 	}
+	// Note: IsAdmin/IsActive cannot be reliably detected as "provided" vs "default false"
+	// with the current OpenAPI spec design.
+	input.IsAdmin = &req.IsAdmin
+	input.IsActive = &req.IsActive
 
 	ug, err := h.userGroupService.Update(r.Context(), id, input)
 	if err != nil {
 		switch err {
+		case service.ErrInvalidPermissionID:
+			respondError(w, http.StatusBadRequest, "Invalid permission ID")
 		case service.ErrUserGroupNotFound:
 			respondError(w, http.StatusNotFound, "User group not found")
 		case service.ErrUserGroupNameRequired:
 			respondError(w, http.StatusBadRequest, "User group name cannot be empty")
 		case service.ErrUserGroupNameExists:
 			respondError(w, http.StatusBadRequest, "A user group with this name already exists")
+		case service.ErrUserGroupCodeRequired:
+			respondError(w, http.StatusBadRequest, "User group code cannot be empty")
+		case service.ErrUserGroupCodeExists:
+			respondError(w, http.StatusConflict, "User group code already exists")
 		case service.ErrCannotModifySystemGroup:
 			respondError(w, http.StatusForbidden, "Cannot modify system group")
 		default:
@@ -150,7 +189,7 @@ func (h *UserGroupHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondJSON(w, http.StatusOK, ug)
+	respondJSON(w, http.StatusOK, mapUserGroupToResponse(ug))
 }
 
 func (h *UserGroupHandler) Delete(w http.ResponseWriter, r *http.Request) {

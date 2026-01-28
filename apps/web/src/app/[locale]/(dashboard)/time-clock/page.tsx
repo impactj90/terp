@@ -6,6 +6,7 @@ import { RefreshCw } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
 import { useEmployees } from '@/hooks/api/use-employees'
 import { useClockState } from '@/hooks/use-clock-state'
+import { useHasRole } from '@/hooks/use-has-role'
 import {
   ClockStatusBadge,
   RunningTimer,
@@ -39,29 +40,46 @@ const ACTION_SUCCESS_KEYS: Record<string, string> = {
 export default function TimeClockPage() {
   const t = useTranslations('timeClock')
   const tc = useTranslations('common')
-  // Note: useAuth is available for future use when user-employee link is established
-  useAuth()
+  const { user, isLoading: authLoading } = useAuth()
+  const isAdmin = useHasRole(['admin'])
 
-  // For now, fetch employees and use the first one
-  // TODO: Add employee_id to User schema or create employee selector
-  const employees = useEmployees({ limit: 10, active: true })
+  const userEmployeeId = user?.employee_id ?? null
+  const employees = useEmployees({
+    limit: 250,
+    active: true,
+    enabled: isAdmin,
+  })
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [actionError, setActionError] = useState<Error | null>(null)
 
-  // Set default employee when data loads
+  // Set default employee for admin (or use own employee for regular users)
   useEffect(() => {
-    if (!selectedEmployeeId && employees.data?.data && employees.data.data.length > 0) {
-      const firstEmployee = employees.data.data[0]
-      if (firstEmployee?.id) {
-        setSelectedEmployeeId(firstEmployee.id)
+    if (!isAdmin) {
+      if (userEmployeeId && selectedEmployeeId !== userEmployeeId) {
+        setSelectedEmployeeId(userEmployeeId)
       }
+      return
     }
-  }, [employees.data, selectedEmployeeId])
+
+    if (selectedEmployeeId) return
+
+    if (userEmployeeId) {
+      setSelectedEmployeeId(userEmployeeId)
+      return
+    }
+
+    const firstEmployee = employees.data?.data?.[0]
+    if (firstEmployee?.id) {
+      setSelectedEmployeeId(firstEmployee.id)
+    }
+  }, [employees.data, isAdmin, selectedEmployeeId, userEmployeeId])
+
+  const effectiveEmployeeId = isAdmin ? selectedEmployeeId : userEmployeeId
 
   const clockState = useClockState({
-    employeeId: selectedEmployeeId ?? '',
-    enabled: !!selectedEmployeeId,
+    employeeId: effectiveEmployeeId ?? '',
+    enabled: !!effectiveEmployeeId,
   })
 
   // Wrap handleAction to show success feedback
@@ -80,7 +98,29 @@ export default function TimeClockPage() {
   )
 
   // Loading state
-  if (employees.isLoading || !selectedEmployeeId) {
+  if (authLoading || (isAdmin && employees.isLoading)) {
+    return <TimeClockSkeleton />
+  }
+
+  if (!isAdmin && !userEmployeeId) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <p className="text-muted-foreground">{tc('noEmployeeRecord')}</p>
+        <p className="text-sm text-muted-foreground">{tc('contactAdmin')}</p>
+      </div>
+    )
+  }
+
+  if (isAdmin && employees.data?.data?.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <p className="text-muted-foreground">{t('noEmployees')}</p>
+        <p className="text-sm text-muted-foreground">{t('noEmployeesDescription')}</p>
+      </div>
+    )
+  }
+
+  if (!effectiveEmployeeId) {
     return <TimeClockSkeleton />
   }
 
@@ -123,7 +163,7 @@ export default function TimeClockPage() {
       )}
 
       {/* Employee Selector (temporary until user-employee link exists) */}
-      {employees.data?.data && employees.data.data.length > 1 && (
+      {isAdmin && employees.data?.data && employees.data.data.length > 1 && selectedEmployeeId && (
         <EmployeeSelector
           employees={employees.data.data}
           selectedId={selectedEmployeeId}

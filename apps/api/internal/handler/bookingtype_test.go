@@ -7,9 +7,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -21,7 +23,7 @@ import (
 	"github.com/tolga/terp/internal/testutil"
 )
 
-func setupBookingTypeHandler(t *testing.T) (*handler.BookingTypeHandler, *service.BookingTypeService, *repository.BookingTypeRepository, *model.Tenant) {
+func setupBookingTypeHandler(t *testing.T) (*handler.BookingTypeHandler, *service.BookingTypeService, *repository.BookingTypeRepository, *repository.DB, *model.Tenant) {
 	db := testutil.SetupTestDB(t)
 	bookingTypeRepo := repository.NewBookingTypeRepository(db)
 	tenantRepo := repository.NewTenantRepository(db)
@@ -37,7 +39,7 @@ func setupBookingTypeHandler(t *testing.T) (*handler.BookingTypeHandler, *servic
 	err := tenantRepo.Create(context.Background(), tenant)
 	require.NoError(t, err)
 
-	return h, svc, bookingTypeRepo, tenant
+	return h, svc, bookingTypeRepo, db, tenant
 }
 
 func withBookingTypeTenantContext(r *http.Request, tenant *model.Tenant) *http.Request {
@@ -45,8 +47,25 @@ func withBookingTypeTenantContext(r *http.Request, tenant *model.Tenant) *http.R
 	return r.WithContext(ctx)
 }
 
+func createTestEmployeeForBookingTypeHandler(t *testing.T, db *repository.DB, tenantID uuid.UUID) *model.Employee {
+	t.Helper()
+	repo := repository.NewEmployeeRepository(db)
+	emp := &model.Employee{
+		TenantID:        tenantID,
+		PersonnelNumber: "E" + uuid.New().String()[:8],
+		PIN:             uuid.New().String()[:4],
+		FirstName:       "Test",
+		LastName:        "Employee",
+		EntryDate:       time.Now(),
+		WeeklyHours:     decimal.NewFromFloat(40.0),
+		IsActive:        true,
+	}
+	require.NoError(t, repo.Create(context.Background(), emp))
+	return emp
+}
+
 func TestBookingTypeHandler_Create_Success(t *testing.T) {
-	h, _, _, tenant := setupBookingTypeHandler(t)
+	h, _, _, _, tenant := setupBookingTypeHandler(t)
 
 	body := `{"code": "CUSTOM-IN", "name": "Custom Clock In", "direction": "in"}`
 	req := httptest.NewRequest("POST", "/booking-types", bytes.NewBufferString(body))
@@ -66,7 +85,7 @@ func TestBookingTypeHandler_Create_Success(t *testing.T) {
 }
 
 func TestBookingTypeHandler_Create_WithDescription(t *testing.T) {
-	h, _, _, tenant := setupBookingTypeHandler(t)
+	h, _, _, _, tenant := setupBookingTypeHandler(t)
 
 	body := `{"code": "DESC-TYPE", "name": "Type with Description", "direction": "out", "description": "A custom type"}`
 	req := httptest.NewRequest("POST", "/booking-types", bytes.NewBufferString(body))
@@ -86,7 +105,7 @@ func TestBookingTypeHandler_Create_WithDescription(t *testing.T) {
 }
 
 func TestBookingTypeHandler_Create_InvalidBody(t *testing.T) {
-	h, _, _, tenant := setupBookingTypeHandler(t)
+	h, _, _, _, tenant := setupBookingTypeHandler(t)
 
 	req := httptest.NewRequest("POST", "/booking-types", bytes.NewBufferString("invalid"))
 	req = withBookingTypeTenantContext(req, tenant)
@@ -98,7 +117,7 @@ func TestBookingTypeHandler_Create_InvalidBody(t *testing.T) {
 }
 
 func TestBookingTypeHandler_Create_MissingCode(t *testing.T) {
-	h, _, _, tenant := setupBookingTypeHandler(t)
+	h, _, _, _, tenant := setupBookingTypeHandler(t)
 
 	body := `{"name": "Test Type", "direction": "in"}`
 	req := httptest.NewRequest("POST", "/booking-types", bytes.NewBufferString(body))
@@ -112,7 +131,7 @@ func TestBookingTypeHandler_Create_MissingCode(t *testing.T) {
 }
 
 func TestBookingTypeHandler_Create_MissingDirection(t *testing.T) {
-	h, _, _, tenant := setupBookingTypeHandler(t)
+	h, _, _, _, tenant := setupBookingTypeHandler(t)
 
 	body := `{"code": "TEST", "name": "Test Type"}`
 	req := httptest.NewRequest("POST", "/booking-types", bytes.NewBufferString(body))
@@ -126,7 +145,7 @@ func TestBookingTypeHandler_Create_MissingDirection(t *testing.T) {
 }
 
 func TestBookingTypeHandler_Create_InvalidDirection(t *testing.T) {
-	h, _, _, tenant := setupBookingTypeHandler(t)
+	h, _, _, _, tenant := setupBookingTypeHandler(t)
 
 	body := `{"code": "TEST", "name": "Test Type", "direction": "invalid"}`
 	req := httptest.NewRequest("POST", "/booking-types", bytes.NewBufferString(body))
@@ -140,7 +159,7 @@ func TestBookingTypeHandler_Create_InvalidDirection(t *testing.T) {
 }
 
 func TestBookingTypeHandler_Create_NoTenant(t *testing.T) {
-	h, _, _, _ := setupBookingTypeHandler(t)
+	h, _, _, _, _ := setupBookingTypeHandler(t)
 
 	body := `{"code": "TEST", "name": "Test", "direction": "in"}`
 	req := httptest.NewRequest("POST", "/booking-types", bytes.NewBufferString(body))
@@ -153,7 +172,7 @@ func TestBookingTypeHandler_Create_NoTenant(t *testing.T) {
 }
 
 func TestBookingTypeHandler_Create_DuplicateCode(t *testing.T) {
-	h, svc, _, tenant := setupBookingTypeHandler(t)
+	h, svc, _, _, tenant := setupBookingTypeHandler(t)
 	ctx := context.Background()
 
 	// Create first booking type
@@ -179,7 +198,7 @@ func TestBookingTypeHandler_Create_DuplicateCode(t *testing.T) {
 }
 
 func TestBookingTypeHandler_Get_Success(t *testing.T) {
-	h, svc, _, tenant := setupBookingTypeHandler(t)
+	h, svc, _, _, tenant := setupBookingTypeHandler(t)
 	ctx := context.Background()
 
 	input := service.CreateBookingTypeInput{
@@ -208,7 +227,7 @@ func TestBookingTypeHandler_Get_Success(t *testing.T) {
 }
 
 func TestBookingTypeHandler_Get_InvalidID(t *testing.T) {
-	h, _, _, _ := setupBookingTypeHandler(t)
+	h, _, _, _, _ := setupBookingTypeHandler(t)
 
 	req := httptest.NewRequest("GET", "/booking-types/invalid", nil)
 	rctx := chi.NewRouteContext()
@@ -222,7 +241,7 @@ func TestBookingTypeHandler_Get_InvalidID(t *testing.T) {
 }
 
 func TestBookingTypeHandler_Get_NotFound(t *testing.T) {
-	h, _, _, _ := setupBookingTypeHandler(t)
+	h, _, _, _, _ := setupBookingTypeHandler(t)
 
 	req := httptest.NewRequest("GET", "/booking-types/00000000-0000-0000-0000-000000000000", nil)
 	rctx := chi.NewRouteContext()
@@ -236,7 +255,7 @@ func TestBookingTypeHandler_Get_NotFound(t *testing.T) {
 }
 
 func TestBookingTypeHandler_List_Success(t *testing.T) {
-	h, svc, _, tenant := setupBookingTypeHandler(t)
+	h, svc, _, _, tenant := setupBookingTypeHandler(t)
 	ctx := context.Background()
 
 	// Get the repository to create system types
@@ -274,7 +293,7 @@ func TestBookingTypeHandler_List_Success(t *testing.T) {
 }
 
 func TestBookingTypeHandler_List_FilterByActive(t *testing.T) {
-	h, svc, _, tenant := setupBookingTypeHandler(t)
+	h, svc, _, _, tenant := setupBookingTypeHandler(t)
 	ctx := context.Background()
 
 	// Create active type
@@ -306,7 +325,7 @@ func TestBookingTypeHandler_List_FilterByActive(t *testing.T) {
 }
 
 func TestBookingTypeHandler_List_FilterByDirection(t *testing.T) {
-	h, svc, _, tenant := setupBookingTypeHandler(t)
+	h, svc, _, _, tenant := setupBookingTypeHandler(t)
 	ctx := context.Background()
 
 	_, err := svc.Create(ctx, service.CreateBookingTypeInput{TenantID: tenant.ID, Code: "IN-TYPE", Name: "In Type", Direction: "in"})
@@ -332,7 +351,7 @@ func TestBookingTypeHandler_List_FilterByDirection(t *testing.T) {
 }
 
 func TestBookingTypeHandler_List_NoTenant(t *testing.T) {
-	h, _, _, _ := setupBookingTypeHandler(t)
+	h, _, _, _, _ := setupBookingTypeHandler(t)
 
 	req := httptest.NewRequest("GET", "/booking-types", nil)
 	rr := httptest.NewRecorder()
@@ -343,7 +362,7 @@ func TestBookingTypeHandler_List_NoTenant(t *testing.T) {
 }
 
 func TestBookingTypeHandler_Update_Success(t *testing.T) {
-	h, svc, _, tenant := setupBookingTypeHandler(t)
+	h, svc, _, _, tenant := setupBookingTypeHandler(t)
 	ctx := context.Background()
 
 	input := service.CreateBookingTypeInput{
@@ -375,7 +394,7 @@ func TestBookingTypeHandler_Update_Success(t *testing.T) {
 }
 
 func TestBookingTypeHandler_Update_InvalidID(t *testing.T) {
-	h, _, _, tenant := setupBookingTypeHandler(t)
+	h, _, _, _, tenant := setupBookingTypeHandler(t)
 
 	body := `{"name": "Updated"}`
 	req := httptest.NewRequest("PATCH", "/booking-types/invalid", bytes.NewBufferString(body))
@@ -392,7 +411,7 @@ func TestBookingTypeHandler_Update_InvalidID(t *testing.T) {
 }
 
 func TestBookingTypeHandler_Update_NotFound(t *testing.T) {
-	h, _, _, tenant := setupBookingTypeHandler(t)
+	h, _, _, _, tenant := setupBookingTypeHandler(t)
 
 	body := `{"name": "Updated"}`
 	req := httptest.NewRequest("PATCH", "/booking-types/00000000-0000-0000-0000-000000000000", bytes.NewBufferString(body))
@@ -409,7 +428,7 @@ func TestBookingTypeHandler_Update_NotFound(t *testing.T) {
 }
 
 func TestBookingTypeHandler_Update_InvalidBody(t *testing.T) {
-	h, svc, _, tenant := setupBookingTypeHandler(t)
+	h, svc, _, _, tenant := setupBookingTypeHandler(t)
 	ctx := context.Background()
 
 	input := service.CreateBookingTypeInput{
@@ -434,7 +453,7 @@ func TestBookingTypeHandler_Update_InvalidBody(t *testing.T) {
 }
 
 func TestBookingTypeHandler_Update_CannotModifySystemType(t *testing.T) {
-	h, _, repo, tenant := setupBookingTypeHandler(t)
+	h, _, repo, _, tenant := setupBookingTypeHandler(t)
 	ctx := context.Background()
 
 	// Create system type within the test transaction using the same repo
@@ -463,7 +482,7 @@ func TestBookingTypeHandler_Update_CannotModifySystemType(t *testing.T) {
 }
 
 func TestBookingTypeHandler_Delete_Success(t *testing.T) {
-	h, svc, _, tenant := setupBookingTypeHandler(t)
+	h, svc, _, _, tenant := setupBookingTypeHandler(t)
 	ctx := context.Background()
 
 	input := service.CreateBookingTypeInput{
@@ -492,7 +511,7 @@ func TestBookingTypeHandler_Delete_Success(t *testing.T) {
 }
 
 func TestBookingTypeHandler_Delete_InvalidID(t *testing.T) {
-	h, _, _, tenant := setupBookingTypeHandler(t)
+	h, _, _, _, tenant := setupBookingTypeHandler(t)
 
 	req := httptest.NewRequest("DELETE", "/booking-types/invalid", nil)
 	rctx := chi.NewRouteContext()
@@ -507,7 +526,7 @@ func TestBookingTypeHandler_Delete_InvalidID(t *testing.T) {
 }
 
 func TestBookingTypeHandler_Delete_NotFound(t *testing.T) {
-	h, _, _, tenant := setupBookingTypeHandler(t)
+	h, _, _, _, tenant := setupBookingTypeHandler(t)
 
 	req := httptest.NewRequest("DELETE", "/booking-types/00000000-0000-0000-0000-000000000000", nil)
 	rctx := chi.NewRouteContext()
@@ -522,7 +541,7 @@ func TestBookingTypeHandler_Delete_NotFound(t *testing.T) {
 }
 
 func TestBookingTypeHandler_Delete_CannotDeleteSystemType(t *testing.T) {
-	h, _, repo, tenant := setupBookingTypeHandler(t)
+	h, _, repo, _, tenant := setupBookingTypeHandler(t)
 	ctx := context.Background()
 
 	// Create system type within the test transaction using the same repo
@@ -548,8 +567,47 @@ func TestBookingTypeHandler_Delete_CannotDeleteSystemType(t *testing.T) {
 	assert.Equal(t, http.StatusForbidden, rr.Code)
 }
 
+func TestBookingTypeHandler_Delete_InUse(t *testing.T) {
+	h, _, repo, db, tenant := setupBookingTypeHandler(t)
+	ctx := context.Background()
+
+	bookingRepo := repository.NewBookingRepository(db)
+	employee := createTestEmployeeForBookingTypeHandler(t, db, tenant.ID)
+
+	bookingType := &model.BookingType{
+		TenantID:  &tenant.ID,
+		Code:      "IN-USE",
+		Name:      "In Use",
+		Direction: model.BookingDirectionIn,
+		IsActive:  true,
+	}
+	require.NoError(t, repo.Create(ctx, bookingType))
+
+	booking := &model.Booking{
+		TenantID:      tenant.ID,
+		EmployeeID:    employee.ID,
+		BookingDate:   time.Now().Truncate(24 * time.Hour),
+		BookingTypeID: bookingType.ID,
+		OriginalTime:  480,
+		EditedTime:    480,
+		Source:        model.BookingSourceWeb,
+	}
+	require.NoError(t, bookingRepo.Create(ctx, booking))
+
+	req := httptest.NewRequest("DELETE", "/booking-types/"+bookingType.ID.String(), nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("id", bookingType.ID.String())
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	req = withBookingTypeTenantContext(req, tenant)
+	rr := httptest.NewRecorder()
+
+	h.Delete(rr, req)
+
+	assert.Equal(t, http.StatusConflict, rr.Code)
+}
+
 func TestBookingTypeHandler_Delete_NoTenant(t *testing.T) {
-	h, _, _, _ := setupBookingTypeHandler(t)
+	h, _, _, _, _ := setupBookingTypeHandler(t)
 
 	req := httptest.NewRequest("DELETE", "/booking-types/00000000-0000-0000-0000-000000000000", nil)
 	rctx := chi.NewRouteContext()

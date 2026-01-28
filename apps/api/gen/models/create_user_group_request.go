@@ -29,6 +29,9 @@ type CreateUserGroupRequest struct {
 	// description
 	Description string `json:"description,omitempty"`
 
+	// is admin
+	IsAdmin bool `json:"is_admin,omitempty"`
+
 	// name
 	// Required: true
 	// Max Length: 255

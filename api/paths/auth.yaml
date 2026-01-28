@@ -88,6 +88,21 @@
       401:
         $ref: '../responses/errors.yaml#/Unauthorized'
 
+/auth/permissions:
+  get:
+    tags:
+      - Auth
+    summary: Get current user permissions
+    description: Returns permission IDs for the authenticated user
+    operationId: getCurrentUserPermissions
+    responses:
+      200:
+        description: Current user permissions
+        schema:
+          $ref: '../schemas/users.yaml#/CurrentUserPermissionsResponse'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
 /auth/dev/login:
   get:
     tags:

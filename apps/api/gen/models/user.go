@@ -59,6 +59,10 @@ type User struct {
 	// updated at
 	// Format: date-time
 	UpdatedAt strfmt.DateTime `json:"updated_at,omitempty"`
+
+	// ID of the assigned user group, if any
+	// Format: uuid
+	UserGroupID *strfmt.UUID `json:"user_group_id,omitempty"`
 }
 
 // Validate validates this user
@@ -94,6 +98,10 @@ func (m *User) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateUpdatedAt(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateUserGroupID(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -224,6 +232,18 @@ func (m *User) validateUpdatedAt(formats strfmt.Registry) error {
 	}
 
 	if err := validate.FormatOf("updated_at", "body", "date-time", m.UpdatedAt.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *User) validateUserGroupID(formats strfmt.Registry) error {
+	if swag.IsZero(m.UserGroupID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("user_group_id", "body", "uuid", m.UserGroupID.String(), formats); err != nil {
 		return err
 	}
 

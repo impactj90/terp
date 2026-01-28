@@ -26,6 +26,10 @@ UserGroup:
       type: boolean
       description: System groups cannot be deleted
       example: false
+    is_admin:
+      type: boolean
+      description: Admin groups bypass permission checks
+      example: false
     is_active:
       type: boolean
       example: true
@@ -76,6 +80,10 @@ Permission:
         - update
         - delete
         - manage
+        - view_own
+        - view_all
+        - approve
+        - request
       example: "read"
     description:
       type: string
@@ -102,6 +110,8 @@ CreateUserGroupRequest:
       items:
         type: string
         format: uuid
+    is_admin:
+      type: boolean
 
 UpdateUserGroupRequest:
   type: object
@@ -122,6 +132,8 @@ UpdateUserGroupRequest:
         type: string
         format: uuid
     is_active:
+      type: boolean
+    is_admin:
       type: boolean
 
 UserGroupList:

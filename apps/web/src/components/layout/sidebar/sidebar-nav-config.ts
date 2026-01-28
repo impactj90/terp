@@ -17,6 +17,7 @@ import {
   Palmtree,
   UserCog,
   Shield,
+  ShieldCheck,
   ScrollText,
   Wallet,
 } from 'lucide-react'
@@ -165,6 +166,12 @@ export const navConfig: NavSection[] = [
         roles: ['admin'],
       },
       {
+        titleKey: 'bookingTypes',
+        href: '/admin/booking-types',
+        icon: Clock,
+        roles: ['admin'],
+      },
+      {
         titleKey: 'accounts',
         href: '/admin/accounts',
         icon: Wallet,
@@ -180,6 +187,12 @@ export const navConfig: NavSection[] = [
         titleKey: 'users',
         href: '/admin/users',
         icon: UserCog,
+        roles: ['admin'],
+      },
+      {
+        titleKey: 'userGroups',
+        href: '/admin/user-groups',
+        icon: ShieldCheck,
         roles: ['admin'],
       },
       {

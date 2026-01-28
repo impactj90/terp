@@ -21,7 +21,7 @@ type UserSummary struct {
 
 	// avatar url
 	// Format: uri
-	AvatarURL *strfmt.URI `json:"avatar_url,omitempty"`
+	AvatarURL strfmt.URI `json:"avatar_url,omitempty"`
 
 	// display name
 	// Example: John Doe

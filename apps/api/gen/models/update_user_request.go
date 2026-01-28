@@ -27,6 +27,10 @@ type UpdateUserRequest struct {
 	// Max Length: 255
 	// Min Length: 2
 	DisplayName string `json:"display_name,omitempty"`
+
+	// user group id
+	// Format: uuid
+	UserGroupID *strfmt.UUID `json:"user_group_id,omitempty"`
 }
 
 // Validate validates this update user request
@@ -38,6 +42,10 @@ func (m *UpdateUserRequest) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateDisplayName(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateUserGroupID(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -69,6 +77,18 @@ func (m *UpdateUserRequest) validateDisplayName(formats strfmt.Registry) error {
 	}
 
 	if err := validate.MaxLength("display_name", "body", m.DisplayName, 255); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *UpdateUserRequest) validateUserGroupID(formats strfmt.Registry) error {
+	if swag.IsZero(m.UserGroupID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("user_group_id", "body", "uuid", m.UserGroupID.String(), formats); err != nil {
 		return err
 	}
 

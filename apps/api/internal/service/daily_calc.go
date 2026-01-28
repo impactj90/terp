@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -644,7 +645,16 @@ func isBreakBooking(b model.Booking) bool {
 	if b.BookingType == nil {
 		return false
 	}
-	return b.BookingType.Code == "BREAK_START" || b.BookingType.Code == "BREAK_END"
+	return isBreakBookingType(b.BookingType.Code)
+}
+
+func isBreakBookingType(code string) bool {
+	switch strings.ToUpper(code) {
+	case "P1", "P2", "BREAK_START", "BREAK_END":
+		return true
+	default:
+		return false
+	}
 }
 
 func bookingDirection(b model.Booking) model.BookingDirection {
@@ -895,8 +905,7 @@ func (s *DailyCalcService) buildCalcInput(
 	// Convert bookings
 	for _, b := range bookings {
 		category := calculation.CategoryWork
-		if b.BookingType != nil &&
-			(b.BookingType.Code == "BREAK_START" || b.BookingType.Code == "BREAK_END") {
+		if b.BookingType != nil && isBreakBookingType(b.BookingType.Code) {
 			category = calculation.CategoryBreak
 		}
 

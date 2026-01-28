@@ -61,16 +61,19 @@ function isErrorStatus(dv: DailyValue): boolean {
   return dv.has_errors === true || dv.status === 'error'
 }
 
-function getStatusLabel(status: string | null | undefined, t: (key: string) => string): string {
+function getStatusLabel(
+  status: string | null | undefined,
+  labels: { approved: string; error: string; pending: string }
+): string {
   switch (status) {
     case 'approved':
-      return t('approved')
+      return labels.approved
     case 'error':
-      return t('error')
+      return labels.error
     case 'pending':
     case 'calculated':
     default:
-      return t('pending')
+      return labels.pending
   }
 }
 
@@ -99,6 +102,14 @@ export function TimesheetApprovalTable({
   showHistory = false,
 }: TimesheetApprovalTableProps) {
   const t = useTranslations('adminApprovals')
+  const statusLabels = React.useMemo(
+    () => ({
+      approved: t('approved'),
+      error: t('error'),
+      pending: t('pending'),
+    }),
+    [t]
+  )
   const [expandedIds, setExpandedIds] = React.useState<Set<string>>(new Set())
 
   const toggleExpanded = (id: string) => {
@@ -210,7 +221,7 @@ export function TimesheetApprovalTable({
                 {showHistory ? (
                   <TableCell>
                     <Badge variant={getStatusVariant(status)}>
-                      {getStatusLabel(status, t)}
+                      {getStatusLabel(status, statusLabels)}
                     </Badge>
                   </TableCell>
                 ) : (
@@ -258,7 +269,7 @@ export function TimesheetApprovalTable({
                       </div>
                       <div>
                         <span className="font-medium text-foreground">{t('columnStatus')}:</span>{' '}
-                        {getStatusLabel(status, t)}
+                        {getStatusLabel(status, statusLabels)}
                       </div>
                     </div>
                   </TableCell>

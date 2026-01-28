@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/tolga/terp/gen/models"
 	"github.com/tolga/terp/internal/handler"
 	"github.com/tolga/terp/internal/middleware"
 	"github.com/tolga/terp/internal/model"
@@ -25,7 +26,7 @@ func setupUserGroupHandler(t *testing.T) (*handler.UserGroupHandler, *service.Us
 	db := testutil.SetupTestDB(t)
 	userGroupRepo := repository.NewUserGroupRepository(db)
 	tenantRepo := repository.NewTenantRepository(db)
-	svc := service.NewUserGroupService(userGroupRepo)
+	svc := service.NewUserGroupService(userGroupRepo, nil)
 	h := handler.NewUserGroupHandler(svc)
 
 	// Create test tenant
@@ -57,12 +58,15 @@ func TestUserGroupHandler_Create_Success(t *testing.T) {
 	h.Create(rr, req)
 
 	assert.Equal(t, http.StatusCreated, rr.Code)
-	var result model.UserGroup
+	var result models.UserGroup
 	err := json.Unmarshal(rr.Body.Bytes(), &result)
 	require.NoError(t, err)
-	assert.Equal(t, "Administrators", result.Name)
-	assert.Equal(t, tenant.ID, result.TenantID)
-	assert.Equal(t, "Admin group", result.Description)
+	require.NotNil(t, result.Name)
+	require.NotNil(t, result.TenantID)
+	assert.Equal(t, "Administrators", *result.Name)
+	assert.Equal(t, tenant.ID.String(), result.TenantID.String())
+	require.NotNil(t, result.Description)
+	assert.Equal(t, "Admin group", *result.Description)
 }
 
 func TestUserGroupHandler_Create_MinimalFields(t *testing.T) {
@@ -77,10 +81,11 @@ func TestUserGroupHandler_Create_MinimalFields(t *testing.T) {
 	h.Create(rr, req)
 
 	assert.Equal(t, http.StatusCreated, rr.Code)
-	var result model.UserGroup
+	var result models.UserGroup
 	err := json.Unmarshal(rr.Body.Bytes(), &result)
 	require.NoError(t, err)
-	assert.Equal(t, "Users", result.Name)
+	require.NotNil(t, result.Name)
+	assert.Equal(t, "Users", *result.Name)
 }
 
 func TestUserGroupHandler_Create_InvalidBody(t *testing.T) {
@@ -167,11 +172,13 @@ func TestUserGroupHandler_Get_Success(t *testing.T) {
 	h.Get(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
-	var result model.UserGroup
+	var result models.UserGroup
 	err = json.Unmarshal(rr.Body.Bytes(), &result)
 	require.NoError(t, err)
-	assert.Equal(t, created.ID, result.ID)
-	assert.Equal(t, "Test Group", result.Name)
+	require.NotNil(t, result.ID)
+	require.NotNil(t, result.Name)
+	assert.Equal(t, created.ID.String(), result.ID.String())
+	assert.Equal(t, "Test Group", *result.Name)
 }
 
 func TestUserGroupHandler_Get_InvalidID(t *testing.T) {
@@ -229,10 +236,10 @@ func TestUserGroupHandler_List_Success(t *testing.T) {
 	h.List(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
-	var result []model.UserGroup
+	var result models.UserGroupList
 	err = json.Unmarshal(rr.Body.Bytes(), &result)
 	require.NoError(t, err)
-	assert.Len(t, result, 2)
+	assert.Len(t, result.Data, 2)
 }
 
 func TestUserGroupHandler_List_Empty(t *testing.T) {
@@ -245,10 +252,10 @@ func TestUserGroupHandler_List_Empty(t *testing.T) {
 	h.List(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
-	var result []model.UserGroup
+	var result models.UserGroupList
 	err := json.Unmarshal(rr.Body.Bytes(), &result)
 	require.NoError(t, err)
-	assert.Empty(t, result)
+	assert.Empty(t, result.Data)
 }
 
 func TestUserGroupHandler_List_NoTenant(t *testing.T) {
@@ -285,11 +292,13 @@ func TestUserGroupHandler_Update_Success(t *testing.T) {
 	h.Update(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
-	var result model.UserGroup
+	var result models.UserGroup
 	err = json.Unmarshal(rr.Body.Bytes(), &result)
 	require.NoError(t, err)
-	assert.Equal(t, "Updated", result.Name)
-	assert.Equal(t, "Updated description", result.Description)
+	require.NotNil(t, result.Name)
+	require.NotNil(t, result.Description)
+	assert.Equal(t, "Updated", *result.Name)
+	assert.Equal(t, "Updated description", *result.Description)
 }
 
 func TestUserGroupHandler_Update_InvalidID(t *testing.T) {

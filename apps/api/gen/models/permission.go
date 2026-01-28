@@ -23,7 +23,7 @@ type Permission struct {
 	// action
 	// Example: read
 	// Required: true
-	// Enum: ["create","read","update","delete","manage"]
+	// Enum: ["create","read","update","delete","manage","view_own","view_all","approve","request"]
 	Action *string `json:"action"`
 
 	// description
@@ -66,7 +66,7 @@ var permissionTypeActionPropEnum []any
 
 func init() {
 	var res []string
-	if err := json.Unmarshal([]byte(`["create","read","update","delete","manage"]`), &res); err != nil {
+	if err := json.Unmarshal([]byte(`["create","read","update","delete","manage","view_own","view_all","approve","request"]`), &res); err != nil {
 		panic(err)
 	}
 	for _, v := range res {
@@ -90,6 +90,18 @@ const (
 
 	// PermissionActionManage captures enum value "manage"
 	PermissionActionManage string = "manage"
+
+	// PermissionActionViewOwn captures enum value "view_own"
+	PermissionActionViewOwn string = "view_own"
+
+	// PermissionActionViewAll captures enum value "view_all"
+	PermissionActionViewAll string = "view_all"
+
+	// PermissionActionApprove captures enum value "approve"
+	PermissionActionApprove string = "approve"
+
+	// PermissionActionRequest captures enum value "request"
+	PermissionActionRequest string = "request"
 )
 
 // prop value enum

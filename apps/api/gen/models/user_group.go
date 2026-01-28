@@ -42,6 +42,10 @@ type UserGroup struct {
 	// Example: true
 	IsActive bool `json:"is_active,omitempty"`
 
+	// Admin groups bypass permission checks
+	// Example: false
+	IsAdmin bool `json:"is_admin,omitempty"`
+
 	// System groups cannot be deleted
 	// Example: false
 	IsSystem bool `json:"is_system,omitempty"`

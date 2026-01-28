@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -10,6 +11,8 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/tolga/terp/internal/auth"
+	"github.com/tolga/terp/internal/middleware"
+	"github.com/tolga/terp/internal/permissions"
 	"github.com/tolga/terp/internal/repository"
 	"github.com/tolga/terp/internal/service"
 )
@@ -89,6 +92,7 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		DisplayName string  `json:"display_name"`
 		AvatarURL   *string `json:"avatar_url"`
+		UserGroupID *string `json:"user_group_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid request body")
@@ -102,10 +106,27 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if req.AvatarURL != nil {
 		updates["avatar_url"] = *req.AvatarURL
 	}
+	if req.UserGroupID != nil {
+		if *req.UserGroupID == "" {
+			updates["user_group_id"] = nil
+		} else {
+			groupID, err := uuid.Parse(*req.UserGroupID)
+			if err != nil {
+				respondError(w, http.StatusBadRequest, "Invalid user group ID")
+				return
+			}
+			updates["user_group_id"] = groupID
+		}
+	}
 
-	user, err := h.userService.Update(ctx, currentUser.ID, targetID, currentUser.Role, updates)
+	canManage := hasUsersManagePermission(ctx)
+	user, err := h.userService.Update(ctx, currentUser.ID, targetID, currentUser.Role, canManage, updates)
 	if errors.Is(err, service.ErrPermissionDenied) {
 		respondError(w, http.StatusForbidden, "Permission denied")
+		return
+	}
+	if errors.Is(err, service.ErrUserGroupNotFound) {
+		respondError(w, http.StatusBadRequest, "User group not found")
 		return
 	}
 	if errors.Is(err, service.ErrUserNotFound) {
@@ -131,7 +152,8 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.userService.Delete(ctx, currentUser.ID, targetID, currentUser.Role)
+	canManage := hasUsersManagePermission(ctx)
+	err = h.userService.Delete(ctx, currentUser.ID, targetID, currentUser.Role, canManage)
 	if errors.Is(err, service.ErrPermissionDenied) {
 		respondError(w, http.StatusForbidden, "Only admins can delete users")
 		return
@@ -146,4 +168,12 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func hasUsersManagePermission(ctx context.Context) bool {
+	checker, ok := middleware.PermissionCheckerFromContext(ctx)
+	if !ok {
+		return false
+	}
+	return checker.Has(permissions.ID("users.manage").String())
 }

@@ -252,7 +252,6 @@ export default function ApprovalsPage() {
       .filter(
         (dv) =>
           (dv.status === 'calculated' || dv.status === 'pending' || !dv.status) &&
-          dv.status !== 'approved' &&
           dv.has_errors !== true
       )
       .map((dv) => dv.id)

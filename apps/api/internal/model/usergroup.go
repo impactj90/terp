@@ -12,10 +12,12 @@ type UserGroup struct {
 	ID          uuid.UUID      `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
 	TenantID    uuid.UUID      `gorm:"type:uuid;not null;index" json:"tenant_id"`
 	Name        string         `gorm:"type:varchar(100);not null" json:"name"`
+	Code        string         `gorm:"type:varchar(50);not null" json:"code"`
 	Description string         `gorm:"type:text" json:"description,omitempty"`
 	Permissions datatypes.JSON `gorm:"type:jsonb;default:'[]'" json:"permissions"`
 	IsAdmin     bool           `gorm:"default:false" json:"is_admin"`
 	IsSystem    bool           `gorm:"default:false" json:"is_system"`
+	IsActive    bool           `gorm:"default:true" json:"is_active"`
 	CreatedAt   time.Time      `gorm:"default:now()" json:"created_at"`
 	UpdatedAt   time.Time      `gorm:"default:now()" json:"updated_at"`
 }

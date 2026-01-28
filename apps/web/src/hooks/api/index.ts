@@ -19,7 +19,13 @@ export {
 } from './use-bookings'
 
 // Booking Types
-export { useBookingTypes, useBookingType } from './use-booking-types'
+export {
+  useBookingTypes,
+  useBookingType,
+  useCreateBookingType,
+  useUpdateBookingType,
+  useDeleteBookingType,
+} from './use-booking-types'
 
 // Daily Values
 export {
@@ -65,6 +71,16 @@ export {
 
 // Users
 export { useUser, useUpdateUser } from './use-user'
+export { useUsers } from './use-users'
+export {
+  useUserGroups,
+  useUserGroup,
+  useCreateUserGroup,
+  useUpdateUserGroup,
+  useDeleteUserGroup,
+} from './use-user-groups'
+export { usePermissions } from './use-permissions'
+export { useCurrentPermissions } from './use-current-permissions'
 
 // Notifications
 export {

@@ -106,6 +106,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get current user permissions
+         * @description Returns permission IDs for the authenticated user
+         */
+        get: operations["getCurrentUserPermissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/dev/login": {
         parameters: {
             query?: never;
@@ -2368,6 +2388,11 @@ export interface components {
              * @description ID of the linked employee record, if any
              */
             employee_id?: string | null;
+            /**
+             * Format: uuid
+             * @description ID of the assigned user group, if any
+             */
+            user_group_id?: string | null;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -2379,16 +2404,25 @@ export interface components {
             /** @example John Doe */
             display_name: string;
             /** Format: uri */
-            avatar_url?: string | null;
+            avatar_url?: string;
         };
         UpdateUserRequest: {
             display_name?: string;
             /** Format: uri */
             avatar_url?: string;
+            /** Format: uuid */
+            user_group_id?: string | null;
         };
         UserList: {
             data: components["schemas"]["User"][];
             meta: components["schemas"]["PaginationMeta"];
+        };
+        CurrentUserPermissions: {
+            permission_ids: string[];
+            is_admin: boolean;
+        };
+        CurrentUserPermissionsResponse: {
+            data: components["schemas"]["CurrentUserPermissions"];
         };
         Notification: {
             /** Format: uuid */
@@ -3768,7 +3802,7 @@ export interface components {
             /** @description For rolling_weekly: ordered list of week plan IDs */
             week_plan_ids?: string[];
             /** @description For x_days: day plans per position in cycle */
-            day_plans?: components["schemas"]["CreateTariffRequest"]["day_plans"]["items"][];
+            day_plans?: TariffDayPlan[];
             /** Format: double */
             annual_vacation_days?: number | null;
             work_days_per_week?: number | null;
@@ -4099,6 +4133,11 @@ export interface components {
              * @example false
              */
             is_system?: boolean;
+            /**
+             * @description Admin groups bypass permission checks
+             * @example false
+             */
+            is_admin?: boolean;
             /** @example true */
             is_active?: boolean;
             /** Format: date-time */
@@ -4122,7 +4161,7 @@ export interface components {
              * @example read
              * @enum {string}
              */
-            action: "create" | "read" | "update" | "delete" | "manage";
+            action: "create" | "read" | "update" | "delete" | "manage" | "view_own" | "view_all" | "approve" | "request";
             description?: string | null;
         };
         CreateUserGroupRequest: {
@@ -4130,6 +4169,7 @@ export interface components {
             code: string;
             description?: string;
             permission_ids?: string[];
+            is_admin?: boolean;
         };
         UpdateUserGroupRequest: {
             name?: string;
@@ -4137,6 +4177,7 @@ export interface components {
             description?: string;
             permission_ids?: string[];
             is_active?: boolean;
+            is_admin?: boolean;
         };
         UserGroupList: {
             data: components["schemas"]["UserGroup"][];
@@ -4974,6 +5015,7 @@ export type $defs = Record<string, never>;
 // Type helpers for nested array elements (auto-generated fix)
 type EmployeeContact = NonNullable<components["schemas"]["Employee"]["contacts"]>[number];
 type EmployeeCard = NonNullable<components["schemas"]["Employee"]["cards"]>[number];
+type TariffDayPlan = NonNullable<components["schemas"]["CreateTariffRequest"]["day_plans"]>[number];
 
 export interface operations {
     getHealth: {
@@ -5095,6 +5137,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["User"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    getCurrentUserPermissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current user permissions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurrentUserPermissionsResponse"];
                 };
             };
             401: components["responses"]["Unauthorized"];

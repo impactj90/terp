@@ -126,6 +126,8 @@ paths:
     $ref: 'paths/auth.yaml#/~1auth~1logout'
   /auth/me:
     $ref: 'paths/auth.yaml#/~1auth~1me'
+  /auth/permissions:
+    $ref: 'paths/auth.yaml#/~1auth~1permissions'
   /auth/dev/login:
     $ref: 'paths/auth.yaml#/~1auth~1dev~1login'
   /auth/dev/users:
@@ -411,6 +413,10 @@ definitions:
     $ref: 'schemas/users.yaml#/UpdateUserRequest'
   UserList:
     $ref: 'schemas/users.yaml#/UserList'
+  CurrentUserPermissions:
+    $ref: 'schemas/users.yaml#/CurrentUserPermissions'
+  CurrentUserPermissionsResponse:
+    $ref: 'schemas/users.yaml#/CurrentUserPermissionsResponse'
 
   # Notifications
   Notification:

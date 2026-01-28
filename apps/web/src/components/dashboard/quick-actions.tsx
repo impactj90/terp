@@ -24,7 +24,7 @@ export function QuickActions({ employeeId }: QuickActionsProps) {
   const createBooking = useCreateBooking()
 
   // Fetch booking types to get the correct IDs for clock in/out
-  const { data: bookingTypesData } = useBookingTypes()
+  const { data: bookingTypesData } = useBookingTypes({ active: true })
 
   // Get today's data to determine clock status
   const { data: dayView } = useEmployeeDayView(

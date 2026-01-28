@@ -18,11 +18,16 @@ var (
 
 type UserService struct {
 	userRepo        *repository.UserRepository
+	userGroupRepo   userGroupLookupRepository
 	notificationSvc *NotificationService
 }
 
-func NewUserService(userRepo *repository.UserRepository) *UserService {
-	return &UserService{userRepo: userRepo}
+type userGroupLookupRepository interface {
+	GetByID(ctx context.Context, id uuid.UUID) (*model.UserGroup, error)
+}
+
+func NewUserService(userRepo *repository.UserRepository, userGroupRepo userGroupLookupRepository) *UserService {
+	return &UserService{userRepo: userRepo, userGroupRepo: userGroupRepo}
 }
 
 // SetNotificationService sets the notification service for user events.
@@ -33,6 +38,15 @@ func (s *UserService) SetNotificationService(notificationSvc *NotificationServic
 // GetByID retrieves a user by ID.
 func (s *UserService) GetByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
 	user, err := s.userRepo.GetByID(ctx, id)
+	if errors.Is(err, repository.ErrUserNotFound) {
+		return nil, ErrUserNotFound
+	}
+	return user, err
+}
+
+// GetWithRelations retrieves a user with related entities.
+func (s *UserService) GetWithRelations(ctx context.Context, id uuid.UUID) (*model.User, error) {
+	user, err := s.userRepo.GetWithRelations(ctx, id)
 	if errors.Is(err, repository.ErrUserNotFound) {
 		return nil, ErrUserNotFound
 	}
@@ -64,9 +78,16 @@ func (s *UserService) List(ctx context.Context, params repository.ListUsersParam
 }
 
 // Update updates a user (only own profile or admin).
-func (s *UserService) Update(ctx context.Context, requesterID, targetID uuid.UUID, requesterRole string, updates map[string]any) (*model.User, error) {
+func (s *UserService) Update(
+	ctx context.Context,
+	requesterID,
+	targetID uuid.UUID,
+	requesterRole string,
+	requesterCanManage bool,
+	updates map[string]any,
+) (*model.User, error) {
 	// Check permissions
-	if requesterID != targetID && requesterRole != string(model.RoleAdmin) {
+	if requesterID != targetID && !requesterCanManage && requesterRole != string(model.RoleAdmin) {
 		return nil, ErrPermissionDenied
 	}
 
@@ -85,6 +106,30 @@ func (s *UserService) Update(ctx context.Context, requesterID, targetID uuid.UUI
 	}
 	if avatar, ok := updates["avatar_url"].(string); ok {
 		user.AvatarURL = &avatar
+	}
+	if groupValue, ok := updates["user_group_id"]; ok {
+		if !requesterCanManage && requesterRole != string(model.RoleAdmin) {
+			return nil, ErrPermissionDenied
+		}
+
+		if groupValue == nil {
+			user.UserGroupID = nil
+			user.Role = model.RoleUser
+		} else if groupID, ok := groupValue.(uuid.UUID); ok {
+			if s.userGroupRepo == nil {
+				return nil, errors.New("user group repository not configured")
+			}
+			group, err := s.userGroupRepo.GetByID(ctx, groupID)
+			if err != nil {
+				return nil, ErrUserGroupNotFound
+			}
+			user.UserGroupID = &group.ID
+			if group.IsAdmin {
+				user.Role = model.RoleAdmin
+			} else {
+				user.Role = model.RoleUser
+			}
+		}
 	}
 
 	if err := s.userRepo.Update(ctx, user); err != nil {
@@ -107,9 +152,15 @@ func (s *UserService) Update(ctx context.Context, requesterID, targetID uuid.UUI
 }
 
 // Delete deletes a user (admin only).
-func (s *UserService) Delete(ctx context.Context, requesterID, targetID uuid.UUID, requesterRole string) error {
+func (s *UserService) Delete(
+	ctx context.Context,
+	requesterID,
+	targetID uuid.UUID,
+	requesterRole string,
+	requesterCanManage bool,
+) error {
 	// Only admin can delete users
-	if requesterRole != string(model.RoleAdmin) {
+	if !requesterCanManage && requesterRole != string(model.RoleAdmin) {
 		return ErrPermissionDenied
 	}
 
