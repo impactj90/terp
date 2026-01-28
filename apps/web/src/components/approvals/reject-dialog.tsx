@@ -50,8 +50,11 @@ export function RejectDialog({
     }
   }, [open])
 
+  const trimmedReason = reason.trim()
+
   const handleConfirm = async () => {
-    await onConfirm(reason)
+    if (!trimmedReason) return
+    await onConfirm(trimmedReason)
   }
 
   return (
@@ -70,6 +73,11 @@ export function RejectDialog({
             rows={3}
             disabled={isLoading}
           />
+          {!trimmedReason && (
+            <p className="mt-2 text-xs text-destructive">
+              {t('reasonRequired')}
+            </p>
+          )}
         </div>
 
         <DialogFooter>
@@ -83,7 +91,7 @@ export function RejectDialog({
           <Button
             variant="destructive"
             onClick={handleConfirm}
-            disabled={isLoading}
+            disabled={isLoading || !trimmedReason}
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {t('reject')}

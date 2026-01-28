@@ -2,9 +2,10 @@
 
 import * as React from 'react'
 import { useTranslations } from 'next-intl'
-import { Check, X, Loader2, CalendarOff } from 'lucide-react'
+import { Check, X, Loader2, CalendarOff, ChevronDown, ChevronUp } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Table,
   TableBody,
@@ -25,6 +26,8 @@ interface AbsenceApprovalTableProps {
   onReject: (id: string) => void
   approvingId?: string | null
   rejectingId?: string | null
+  selectedIds: Set<string>
+  onToggleSelect: (id: string) => void
   /** When true, show the history view (approved/rejected) instead of pending */
   showHistory?: boolean
 }
@@ -51,6 +54,13 @@ function getAbsenceTypeName(absence: Absence): string {
 
 function getAbsenceTypeColor(absence: Absence): string | undefined {
   return absence.absence_type?.color ?? undefined
+}
+
+function getNoteValue(absence: Absence): string {
+  if (absence.status === 'rejected' && absence.rejection_reason) {
+    return absence.rejection_reason
+  }
+  return absence.notes ?? '-'
 }
 
 function getStatusBadgeVariant(
@@ -81,9 +91,24 @@ export function AbsenceApprovalTable({
   onReject,
   approvingId,
   rejectingId,
+  selectedIds,
+  onToggleSelect,
   showHistory = false,
 }: AbsenceApprovalTableProps) {
   const t = useTranslations('adminApprovals')
+  const [expandedIds, setExpandedIds] = React.useState<Set<string>>(new Set())
+
+  const toggleExpanded = (id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
 
   const statusLabels: Record<string, string> = {
     approved: t('approved'),
@@ -116,6 +141,7 @@ export function AbsenceApprovalTable({
     <Table>
       <TableHeader>
         <TableRow>
+          {!showHistory && <TableHead className="w-10" />}
           <TableHead>{t('columnEmployee')}</TableHead>
           <TableHead>{t('columnType')}</TableHead>
           <TableHead>{t('columnDate')}</TableHead>
@@ -127,82 +153,135 @@ export function AbsenceApprovalTable({
       </TableHeader>
       <TableBody>
         {absences.map((absence) => (
-          <TableRow key={absence.id}>
-            <TableCell className="font-medium">{getEmployeeName(absence)}</TableCell>
-            <TableCell>
-              <Badge
-                variant="outline"
-                style={
-                  getAbsenceTypeColor(absence)
-                    ? {
-                        borderColor: getAbsenceTypeColor(absence),
-                        color: getAbsenceTypeColor(absence),
-                      }
-                    : undefined
-                }
-              >
-                {getAbsenceTypeName(absence)}
-              </Badge>
-            </TableCell>
-            <TableCell>{formatDate(absence.absence_date)}</TableCell>
-            <TableCell>
-              {absence.duration === 1
-                ? t('fullDay')
-                : absence.duration === 0.5
-                  ? t('halfDay')
-                  : t('durationDays', { count: absence.duration })}
-            </TableCell>
-            <TableCell className="max-w-[200px] truncate text-muted-foreground">
-              {absence.notes ?? '-'}
-            </TableCell>
-            {showHistory ? (
+          <React.Fragment key={absence.id}>
+            <TableRow>
+              {!showHistory && (
+                <TableCell>
+                  <Checkbox
+                    checked={selectedIds.has(absence.id)}
+                    onCheckedChange={() => onToggleSelect(absence.id)}
+                    disabled={absence.status !== 'pending'}
+                    aria-label={t('selectRow')}
+                  />
+                </TableCell>
+              )}
+              <TableCell className="font-medium">
+                <button
+                  type="button"
+                  onClick={() => toggleExpanded(absence.id)}
+                  className="mr-2 inline-flex h-7 w-7 items-center justify-center rounded-md border text-muted-foreground hover:text-foreground"
+                  aria-label={t('toggleDetails')}
+                >
+                  {expandedIds.has(absence.id) ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </button>
+                {getEmployeeName(absence)}
+              </TableCell>
               <TableCell>
-                <Badge variant={getStatusBadgeVariant(absence.status ?? 'pending')}>
-                  {statusLabels[absence.status ?? 'pending'] ?? absence.status}
+                <Badge
+                  variant="outline"
+                  style={
+                    getAbsenceTypeColor(absence)
+                      ? {
+                          borderColor: getAbsenceTypeColor(absence),
+                          color: getAbsenceTypeColor(absence),
+                        }
+                      : undefined
+                  }
+                >
+                  {getAbsenceTypeName(absence)}
                 </Badge>
               </TableCell>
-            ) : (
-              <TableCell className="text-muted-foreground">
-                {absence.created_at
-                  ? new Date(absence.created_at).toLocaleDateString('de-DE')
-                  : '-'}
+              <TableCell>{formatDate(absence.absence_date)}</TableCell>
+              <TableCell>
+                {absence.duration === 1
+                  ? t('fullDay')
+                  : absence.duration === 0.5
+                    ? t('halfDay')
+                    : t('durationDays', { count: absence.duration })}
               </TableCell>
-            )}
-            {!showHistory && (
-              <TableCell className="text-right">
-                <div className="flex items-center justify-end gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                    onClick={() => onApprove(absence.id)}
-                    disabled={approvingId === absence.id || rejectingId === absence.id}
-                  >
-                    {approvingId === absence.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Check className="h-4 w-4" />
-                    )}
-                    <span className="ml-1 hidden sm:inline">{t('approve')}</span>
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    onClick={() => onReject(absence.id)}
-                    disabled={approvingId === absence.id || rejectingId === absence.id}
-                  >
-                    {rejectingId === absence.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <X className="h-4 w-4" />
-                    )}
-                    <span className="ml-1 hidden sm:inline">{t('reject')}</span>
-                  </Button>
-                </div>
+              <TableCell className="max-w-[200px] truncate text-muted-foreground">
+                {getNoteValue(absence)}
               </TableCell>
+              {showHistory ? (
+                <TableCell>
+                  <Badge variant={getStatusBadgeVariant(absence.status ?? 'pending')}>
+                    {statusLabels[absence.status ?? 'pending'] ?? absence.status}
+                  </Badge>
+                </TableCell>
+              ) : (
+                <TableCell className="text-muted-foreground">
+                  {absence.created_at
+                    ? new Date(absence.created_at).toLocaleDateString('de-DE')
+                    : '-'}
+                </TableCell>
+              )}
+              {!showHistory && (
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                      onClick={() => onApprove(absence.id)}
+                      disabled={approvingId === absence.id || rejectingId === absence.id || absence.status !== 'pending'}
+                    >
+                      {approvingId === absence.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Check className="h-4 w-4" />
+                      )}
+                      <span className="ml-1 hidden sm:inline">{t('approve')}</span>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => onReject(absence.id)}
+                      disabled={approvingId === absence.id || rejectingId === absence.id || absence.status !== 'pending'}
+                    >
+                      {rejectingId === absence.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <X className="h-4 w-4" />
+                      )}
+                      <span className="ml-1 hidden sm:inline">{t('reject')}</span>
+                    </Button>
+                  </div>
+                </TableCell>
+              )}
+            </TableRow>
+            {expandedIds.has(absence.id) && (
+              <TableRow className="bg-muted/40">
+                <TableCell colSpan={showHistory ? 6 : 8}>
+                  <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
+                    <div>
+                      <span className="font-medium text-foreground">{t('columnStatus')}:</span>{' '}
+                      {statusLabels[absence.status ?? 'pending'] ?? absence.status}
+                    </div>
+                    <div>
+                      <span className="font-medium text-foreground">{t('columnSubmitted')}:</span>{' '}
+                      {absence.created_at
+                        ? new Date(absence.created_at).toLocaleDateString('de-DE')
+                        : '-'}
+                    </div>
+                    <div>
+                      <span className="font-medium text-foreground">
+                        {absence.status === 'rejected'
+                          ? t('rejectionReason')
+                          : t('columnNotes')}
+                        :
+                      </span>{' '}
+                      {getNoteValue(absence)}
+                    </div>
+                  </div>
+                </TableCell>
+              </TableRow>
             )}
-          </TableRow>
+          </React.Fragment>
         ))}
       </TableBody>
     </Table>

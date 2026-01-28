@@ -37,8 +37,11 @@ export function ErrorBadge({ errors, className }: ErrorBadgeProps) {
       </TooltipTrigger>
       <TooltipContent side="bottom" className="max-w-xs">
         <div className="space-y-1">
-          {errors.map((error) => (
-            <div key={error.id} className="flex items-start gap-2 text-xs">
+          {errors.map((error, index) => (
+            <div
+              key={error.id ?? `${error.error_type}-${error.message}-${index}`}
+              className="flex items-start gap-2 text-xs"
+            >
               {error.severity === 'warning' ? (
                 <AlertTriangle className="h-3 w-3 text-yellow-500 shrink-0 mt-0.5" />
               ) : (

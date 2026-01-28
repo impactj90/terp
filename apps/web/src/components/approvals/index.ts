@@ -1,2 +1,6 @@
 export { AbsenceApprovalTable } from './absence-approval-table'
+export { ApprovalBulkActions } from './approval-bulk-actions'
+export { ApprovalFilters } from './approval-filters'
+export { DecisionToast } from './decision-toast'
 export { RejectDialog } from './reject-dialog'
+export { TimesheetApprovalTable } from './timesheet-approval-table'

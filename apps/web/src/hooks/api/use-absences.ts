@@ -4,7 +4,7 @@ interface UseAbsencesOptions {
   employeeId?: string
   from?: string
   to?: string
-  status?: 'pending' | 'approved' | 'rejected'
+  status?: 'pending' | 'approved' | 'rejected' | 'cancelled'
   enabled?: boolean
 }
 

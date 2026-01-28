@@ -1689,6 +1689,23 @@ export interface paths {
         patch: operations["updateAccount"];
         trace?: never;
     };
+    "/accounts/{id}/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get account usage */
+        get: operations["getAccountUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/account-values": {
         parameters: {
             query?: never;
@@ -3011,15 +3028,25 @@ export interface components {
             name: string;
             description?: string | null;
             /**
-             * @example time
+             * @example bonus
              * @enum {string}
              */
-            account_type: "time" | "bonus" | "deduction" | "vacation" | "sick";
+            account_type: "bonus" | "tracking" | "balance";
+            /**
+             * @example minutes
+             * @enum {string}
+             */
+            unit?: "minutes" | "hours" | "days";
             /**
              * @description System accounts cannot be deleted
              * @example false
              */
             is_system?: boolean;
+            /**
+             * @description Carry over balance at year end
+             * @example true
+             */
+            year_carryover?: boolean;
             /**
              * @description Include in payroll export
              * @example true
@@ -3031,6 +3058,11 @@ export interface components {
             sort_order?: number;
             /** @example true */
             is_active?: boolean;
+            /**
+             * @description Number of day plans that reference this account
+             * @example 0
+             */
+            usage_count?: number;
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */
@@ -3073,12 +3105,27 @@ export interface components {
             account?: components["schemas"]["AccountSummary"] | null;
             employee?: components["schemas"]["EmployeeSummary"] | null;
         };
+        AccountUsage: {
+            /** Format: uuid */
+            account_id: string;
+            /** @example 2 */
+            usage_count: number;
+            day_plans: {
+                /** Format: uuid */
+                id: string;
+                code: string;
+                name: string;
+            }[];
+        };
         CreateAccountRequest: {
             code: string;
             name: string;
             description?: string;
             /** @enum {string} */
-            account_type: "time" | "bonus" | "deduction" | "vacation" | "sick";
+            account_type: "bonus" | "tracking" | "balance";
+            /** @enum {string} */
+            unit?: "minutes" | "hours" | "days";
+            year_carryover?: boolean;
             /** @default false */
             is_payroll_relevant: boolean;
             payroll_code?: string;
@@ -3087,9 +3134,12 @@ export interface components {
         UpdateAccountRequest: {
             name?: string;
             description?: string;
+            /** @enum {string} */
+            unit?: "minutes" | "hours" | "days";
             is_payroll_relevant?: boolean;
             payroll_code?: string;
             sort_order?: number;
+            year_carryover?: boolean;
             is_active?: boolean;
         };
         AccountList: {
@@ -3569,10 +3619,7 @@ export interface components {
             /** @description For rolling_weekly: ordered list of week plan IDs */
             week_plan_ids?: string[];
             /** @description For x_days: day plans per position in cycle */
-            day_plans?: {
-                day_position: number;
-                day_plan_id?: string | null;
-            }[];
+            day_plans?: components["schemas"]["CreateTariffRequest"]["day_plans"]["items"][];
             /** Format: double */
             annual_vacation_days?: number | null;
             work_days_per_week?: number | null;
@@ -4193,6 +4240,7 @@ export interface components {
              */
             status?: "pending" | "approved" | "rejected" | "cancelled";
             notes?: string | null;
+            rejection_reason?: string | null;
             /** Format: uuid */
             approved_by?: string | null;
             /** Format: date-time */
@@ -8472,7 +8520,9 @@ export interface operations {
                 /** @description Filter by active status */
                 active?: boolean;
                 /** @description Filter by account type */
-                account_type?: "time" | "bonus" | "deduction" | "vacation" | "sick";
+                account_type?: "bonus" | "tracking" | "balance";
+                /** @description Include system accounts in results */
+                include_system?: boolean;
                 /** @description Filter by payroll relevance */
                 payroll_relevant?: boolean;
             };
@@ -8619,6 +8669,30 @@ export interface operations {
                     "application/json": components["schemas"]["ProblemDetails"];
                 };
             };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getAccountUsage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Account usage details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountUsage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
         };
     };

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { useApiMutation, useApiQuery } from '@/hooks'
 import { authStorage, tenantIdStorage } from '@/lib/api'
 import { clientEnv } from '@/config/env'
 
@@ -150,5 +151,41 @@ export function useDailyValues(options: UseDailyValuesOptions = {}) {
       }
     },
     enabled: enabled && !!employeeId && !!queryYear && !!queryMonth,
+  })
+}
+
+interface UseAllDailyValuesOptions {
+  employeeId?: string
+  from?: string
+  to?: string
+  status?: 'pending' | 'calculated' | 'error' | 'approved'
+  hasErrors?: boolean
+  enabled?: boolean
+}
+
+/**
+ * Hook to fetch all daily values for approvals.
+ */
+export function useAllDailyValues(options: UseAllDailyValuesOptions = {}) {
+  const { employeeId, from, to, status, hasErrors, enabled = true } = options
+
+  return useApiQuery('/daily-values', {
+    params: {
+      employee_id: employeeId,
+      from,
+      to,
+      status,
+      has_errors: hasErrors,
+    },
+    enabled,
+  })
+}
+
+/**
+ * Hook to approve a daily value.
+ */
+export function useApproveDailyValue() {
+  return useApiMutation('/daily-values/{id}/approve', 'post', {
+    invalidateKeys: [['/daily-values']],
   })
 }
