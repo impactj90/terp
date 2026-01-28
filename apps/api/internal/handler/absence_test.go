@@ -41,6 +41,7 @@ func setupAbsenceHandler(t *testing.T) *absenceTestContext {
 	holidayRepo := repository.NewHolidayRepository(db)
 	empDayPlanRepo := repository.NewEmployeeDayPlanRepository(db)
 	bookingRepo := repository.NewBookingRepository(db)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
 	dailyValueRepo := repository.NewDailyValueRepository(db)
 
 	ctx := context.Background()
@@ -80,7 +81,7 @@ func setupAbsenceHandler(t *testing.T) *absenceTestContext {
 	require.NoError(t, absenceTypeRepo.Create(ctx, absenceType))
 
 	// Create services
-	dailyCalcService := service.NewDailyCalcService(bookingRepo, empDayPlanRepo, dailyValueRepo, holidayRepo)
+	dailyCalcService := service.NewDailyCalcService(bookingRepo, empDayPlanRepo, dayPlanRepo, dailyValueRepo, holidayRepo)
 	recalcService := service.NewRecalcService(dailyCalcService, employeeRepo)
 	absenceService := service.NewAbsenceService(absenceDayRepo, absenceTypeRepo, holidayRepo, empDayPlanRepo, recalcService)
 

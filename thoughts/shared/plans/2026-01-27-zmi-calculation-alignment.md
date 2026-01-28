@@ -90,7 +90,7 @@ input.DayPlan.Breaks = append(input.DayPlan.Breaks, calculation.BreakConfig{
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Go tests pass: `make test`
+- [x] Go tests pass: `make test`
 - [ ] Lint passes: `make lint`
 
 #### Manual Verification:
@@ -153,8 +153,8 @@ adjusted, capped := ApplyWindowCapping(
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Go tests pass: `make test`
-- [ ] Added unit tests for tolerance normalization and window capping in `apps/api/internal/calculation/calculator_test.go`
+- [x] Go tests pass: `make test`
+- [x] Added unit tests for tolerance normalization and window capping in `apps/api/internal/calculation/calculator_test.go`
 
 #### Manual Verification:
 - [ ] Flextime plan ignores Come+ and Go- tolerance settings.
@@ -197,8 +197,8 @@ Implement ZMI “day change” evaluation rules for cross-midnight bookings.
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Go tests pass: `make test`
-- [ ] New tests cover each day change behavior.
+- [x] Go tests pass: `make test`
+- [x] New tests cover each day change behavior.
 
 #### Manual Verification:
 - [ ] Overnight shift with auto-complete splits into two days at midnight.
@@ -233,8 +233,8 @@ Wire the existing shift detection logic into the daily calculation flow.
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Go tests pass: `make test`
-- [ ] New tests validate shift detection integration.
+- [x] Go tests pass: `make test`
+- [x] New tests validate shift detection integration.
 
 #### Manual Verification:
 - [ ] A day plan with shift detection windows switches to the correct alternative plan when bookings match.
@@ -262,8 +262,8 @@ Enforce reserved codes U/K/S to align with ZMI manual.
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Go tests pass: `make test`
-- [ ] New tests cover reserved code enforcement.
+- [x] Go tests pass: `make test`
+- [x] New tests cover reserved code enforcement.
 
 #### Manual Verification:
 - [ ] Attempting to create/copy a day plan with code "U", "K", or "S" fails.

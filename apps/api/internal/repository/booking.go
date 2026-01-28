@@ -161,6 +161,25 @@ func (r *BookingRepository) GetByEmployeeAndDate(ctx context.Context, tenantID, 
 	return bookings, nil
 }
 
+// GetByEmployeeAndDateRange retrieves all bookings for an employee within a date range.
+func (r *BookingRepository) GetByEmployeeAndDateRange(
+	ctx context.Context,
+	tenantID, employeeID uuid.UUID,
+	startDate, endDate time.Time,
+) ([]model.Booking, error) {
+	var bookings []model.Booking
+	err := r.db.GORM.WithContext(ctx).
+		Where("tenant_id = ? AND employee_id = ? AND booking_date >= ? AND booking_date <= ?", tenantID, employeeID, startDate, endDate).
+		Preload("BookingType").
+		Order("booking_date ASC, edited_time ASC").
+		Find(&bookings).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get bookings by employee and date range: %w", err)
+	}
+	return bookings, nil
+}
+
 // GetByDateRange retrieves all bookings within a date range for a tenant.
 func (r *BookingRepository) GetByDateRange(ctx context.Context, tenantID uuid.UUID, startDate, endDate time.Time) ([]model.Booking, error) {
 	var bookings []model.Booking

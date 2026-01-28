@@ -15,6 +15,7 @@ var (
 	ErrDayPlanCodeRequired  = errors.New("day plan code is required")
 	ErrDayPlanNameRequired  = errors.New("day plan name is required")
 	ErrDayPlanCodeExists    = errors.New("day plan code already exists")
+	ErrDayPlanCodeReserved  = errors.New("day plan code is reserved")
 	ErrInvalidTimeRange     = errors.New("invalid time range")
 	ErrInvalidBreakConfig   = errors.New("invalid break configuration")
 	ErrDayPlanBreakNotFound = errors.New("day plan break not found")
@@ -84,6 +85,9 @@ func (s *DayPlanService) Create(ctx context.Context, input CreateDayPlanInput) (
 	code := strings.TrimSpace(input.Code)
 	if code == "" {
 		return nil, ErrDayPlanCodeRequired
+	}
+	if isReservedDayPlanCode(code) {
+		return nil, ErrDayPlanCodeReserved
 	}
 	name := strings.TrimSpace(input.Name)
 	if name == "" {
@@ -337,6 +341,9 @@ func (s *DayPlanService) Copy(ctx context.Context, id uuid.UUID, newCode, newNam
 	if newCode == "" {
 		return nil, ErrDayPlanCodeRequired
 	}
+	if isReservedDayPlanCode(newCode) {
+		return nil, ErrDayPlanCodeReserved
+	}
 	newName = strings.TrimSpace(newName)
 	if newName == "" {
 		return nil, ErrDayPlanNameRequired
@@ -388,15 +395,16 @@ func (s *DayPlanService) Copy(ctx context.Context, id uuid.UUID, newCode, newNam
 	// Copy breaks
 	for _, b := range original.Breaks {
 		newBreak := &model.DayPlanBreak{
-			DayPlanID:        newPlan.ID,
-			BreakType:        b.BreakType,
-			StartTime:        b.StartTime,
-			EndTime:          b.EndTime,
-			Duration:         b.Duration,
-			AfterWorkMinutes: b.AfterWorkMinutes,
-			AutoDeduct:       b.AutoDeduct,
-			IsPaid:           b.IsPaid,
-			SortOrder:        b.SortOrder,
+			DayPlanID:         newPlan.ID,
+			BreakType:         b.BreakType,
+			StartTime:         b.StartTime,
+			EndTime:           b.EndTime,
+			Duration:          b.Duration,
+			AfterWorkMinutes:  b.AfterWorkMinutes,
+			AutoDeduct:        b.AutoDeduct,
+			IsPaid:            b.IsPaid,
+			MinutesDifference: b.MinutesDifference,
+			SortOrder:         b.SortOrder,
 		}
 		if err := s.dayPlanRepo.AddBreak(ctx, newBreak); err != nil {
 			return nil, err
@@ -424,16 +432,26 @@ func (s *DayPlanService) Copy(ctx context.Context, id uuid.UUID, newCode, newNam
 	return s.dayPlanRepo.GetWithDetails(ctx, newPlan.ID)
 }
 
+func isReservedDayPlanCode(code string) bool {
+	switch strings.ToUpper(strings.TrimSpace(code)) {
+	case "U", "K", "S":
+		return true
+	default:
+		return false
+	}
+}
+
 // CreateBreakInput represents the input for creating a break.
 type CreateBreakInput struct {
-	BreakType        model.BreakType
-	StartTime        *int
-	EndTime          *int
-	Duration         int
-	AfterWorkMinutes *int
-	AutoDeduct       bool
-	IsPaid           bool
-	SortOrder        int
+	BreakType         model.BreakType
+	StartTime         *int
+	EndTime           *int
+	Duration          int
+	AfterWorkMinutes  *int
+	AutoDeduct        bool
+	IsPaid            bool
+	MinutesDifference bool
+	SortOrder         int
 }
 
 // AddBreak adds a break to a day plan.
@@ -450,15 +468,16 @@ func (s *DayPlanService) AddBreak(ctx context.Context, planID uuid.UUID, input C
 	}
 
 	b := &model.DayPlanBreak{
-		DayPlanID:        planID,
-		BreakType:        input.BreakType,
-		StartTime:        input.StartTime,
-		EndTime:          input.EndTime,
-		Duration:         input.Duration,
-		AfterWorkMinutes: input.AfterWorkMinutes,
-		AutoDeduct:       input.AutoDeduct,
-		IsPaid:           input.IsPaid,
-		SortOrder:        input.SortOrder,
+		DayPlanID:         planID,
+		BreakType:         input.BreakType,
+		StartTime:         input.StartTime,
+		EndTime:           input.EndTime,
+		Duration:          input.Duration,
+		AfterWorkMinutes:  input.AfterWorkMinutes,
+		AutoDeduct:        input.AutoDeduct,
+		IsPaid:            input.IsPaid,
+		MinutesDifference: input.MinutesDifference,
+		SortOrder:         input.SortOrder,
 	}
 
 	if err := s.dayPlanRepo.AddBreak(ctx, b); err != nil {
@@ -511,6 +530,7 @@ func (s *DayPlanService) UpdateBreak(ctx context.Context, breakID uuid.UUID, inp
 	b.AfterWorkMinutes = input.AfterWorkMinutes
 	b.AutoDeduct = input.AutoDeduct
 	b.IsPaid = input.IsPaid
+	b.MinutesDifference = input.MinutesDifference
 	b.SortOrder = input.SortOrder
 
 	if err := s.dayPlanRepo.UpdateBreak(ctx, b); err != nil {

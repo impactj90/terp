@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"fmt"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
@@ -41,24 +43,12 @@ const (
 	NoBookingUseAbsence   NoBookingBehavior = "use_absence"
 )
 
-// DayChangeBehavior defines how to handle cross-midnight shifts.
-// ZMI: Tageswechsel
-type DayChangeBehavior string
-
-const (
-	DayChangeToFirst  DayChangeBehavior = "to_first"
-	DayChangeToSecond DayChangeBehavior = "to_second"
-	DayChangeSplit    DayChangeBehavior = "split"
-	DayChangeByShift  DayChangeBehavior = "by_shift"
-)
-
 // DailyCalcConfig contains ZMI configuration for daily calculation.
 // NOTE: These settings should come from DayPlan once NOK-145 adds the fields.
 // For now, defaults are used.
 type DailyCalcConfig struct {
 	HolidayCredit     HolidayCreditCategory
 	NoBookingBehavior NoBookingBehavior
-	DayChangeBehavior DayChangeBehavior
 }
 
 // DefaultDailyCalcConfig returns sensible defaults until NOK-145 adds
@@ -67,19 +57,28 @@ func DefaultDailyCalcConfig() *DailyCalcConfig {
 	return &DailyCalcConfig{
 		HolidayCredit:     HolidayCreditTarget,
 		NoBookingBehavior: NoBookingError,
-		DayChangeBehavior: DayChangeToFirst,
 	}
 }
+
+const autoCompleteNotes = "Auto-complete day change"
 
 // bookingRepository defines the interface for booking data access.
 type bookingRepository interface {
 	GetByEmployeeAndDate(ctx context.Context, tenantID, employeeID uuid.UUID, date time.Time) ([]model.Booking, error)
+	GetByEmployeeAndDateRange(ctx context.Context, tenantID, employeeID uuid.UUID, startDate, endDate time.Time) ([]model.Booking, error)
 	UpdateCalculatedTimes(ctx context.Context, updates map[uuid.UUID]int) error
+	Create(ctx context.Context, booking *model.Booking) error
 }
 
 // employeeDayPlanRepository defines the interface for employee day plan data access.
 type employeeDayPlanRepository interface {
 	GetForEmployeeDate(ctx context.Context, employeeID uuid.UUID, date time.Time) (*model.EmployeeDayPlan, error)
+}
+
+// dayPlanLookup defines the interface for day plan lookup used in shift detection.
+type dayPlanLookup interface {
+	GetByID(ctx context.Context, id uuid.UUID) (*model.DayPlan, error)
+	GetWithDetails(ctx context.Context, id uuid.UUID) (*model.DayPlan, error)
 }
 
 // dailyValueRepository defines the interface for daily value data access.
@@ -98,6 +97,7 @@ type holidayLookup interface {
 type DailyCalcService struct {
 	bookingRepo    bookingRepository
 	empDayPlanRepo employeeDayPlanRepository
+	dayPlanRepo    dayPlanLookup
 	dailyValueRepo dailyValueRepository
 	holidayRepo    holidayLookup
 	calc           *calculation.Calculator
@@ -107,12 +107,14 @@ type DailyCalcService struct {
 func NewDailyCalcService(
 	bookingRepo bookingRepository,
 	empDayPlanRepo employeeDayPlanRepository,
+	dayPlanRepo dayPlanLookup,
 	dailyValueRepo dailyValueRepository,
 	holidayRepo holidayLookup,
 ) *DailyCalcService {
 	return &DailyCalcService{
 		bookingRepo:    bookingRepo,
 		empDayPlanRepo: empDayPlanRepo,
+		dayPlanRepo:    dayPlanRepo,
 		dailyValueRepo: dailyValueRepo,
 		holidayRepo:    holidayRepo,
 		calc:           calculation.NewCalculator(),
@@ -135,8 +137,8 @@ func (s *DailyCalcService) CalculateDay(ctx context.Context, tenantID, employeeI
 		return nil, err
 	}
 
-	// 3. Get bookings
-	bookings, err := s.bookingRepo.GetByEmployeeAndDate(ctx, tenantID, employeeID, date)
+	// 3. Get bookings (include adjacent days based on day change behavior)
+	bookings, err := s.loadBookingsForCalculation(ctx, tenantID, employeeID, date, empDayPlan)
 	if err != nil {
 		return nil, err
 	}
@@ -175,6 +177,38 @@ func (s *DailyCalcService) CalculateDay(ctx context.Context, tenantID, employeeI
 	}
 
 	return dailyValue, nil
+}
+
+func (s *DailyCalcService) loadBookingsForCalculation(
+	ctx context.Context,
+	tenantID, employeeID uuid.UUID,
+	date time.Time,
+	empDayPlan *model.EmployeeDayPlan,
+) ([]model.Booking, error) {
+	if empDayPlan == nil || empDayPlan.DayPlan == nil {
+		return s.bookingRepo.GetByEmployeeAndDate(ctx, tenantID, employeeID, date)
+	}
+
+	behavior := empDayPlan.DayPlan.DayChangeBehavior
+	if behavior == "" || behavior == model.DayChangeNone {
+		return s.bookingRepo.GetByEmployeeAndDate(ctx, tenantID, employeeID, date)
+	}
+
+	startDate := date.AddDate(0, 0, -1)
+	endDate := date.AddDate(0, 0, 1)
+	bookings, err := s.bookingRepo.GetByEmployeeAndDateRange(ctx, tenantID, employeeID, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+
+	switch behavior {
+	case model.DayChangeAtArrival, model.DayChangeAtDeparture:
+		return applyDayChangeBehavior(date, behavior, bookings), nil
+	case model.DayChangeAutoComplete:
+		return s.applyAutoCompleteDayChange(ctx, tenantID, employeeID, date, bookings)
+	default:
+		return filterBookingsByDate(bookings, date), nil
+	}
 }
 
 func (s *DailyCalcService) handleOffDay(employeeID uuid.UUID, date time.Time, bookings []model.Booking) *model.DailyValue {
@@ -309,6 +343,340 @@ func (s *DailyCalcService) handleNoBookings(
 	}
 }
 
+func applyDayChangeBehavior(
+	date time.Time,
+	behavior model.DayChangeBehavior,
+	bookings []model.Booking,
+) []model.Booking {
+	prev, current, next := partitionBookingsByDate(bookings, date)
+	pairs := pairWorkBookingsAcrossDays(prev, current, next)
+
+	selected := make(map[uuid.UUID]model.Booking, len(current))
+	for _, b := range current {
+		selected[b.ID] = b
+	}
+
+	switch behavior {
+	case model.DayChangeAtArrival:
+		for _, pair := range pairs {
+			if pair.arrival.offset == 0 && pair.departure.offset == 1 {
+				selected[pair.departure.booking.ID] = pair.departure.booking
+			}
+			if pair.arrival.offset == -1 && pair.departure.offset == 0 {
+				delete(selected, pair.departure.booking.ID)
+			}
+		}
+	case model.DayChangeAtDeparture:
+		for _, pair := range pairs {
+			if pair.departure.offset == 0 && pair.arrival.offset == -1 {
+				selected[pair.arrival.booking.ID] = pair.arrival.booking
+			}
+			if pair.departure.offset == 1 && pair.arrival.offset == 0 {
+				delete(selected, pair.arrival.booking.ID)
+			}
+		}
+	}
+
+	return sortedBookings(selected)
+}
+
+func (s *DailyCalcService) applyAutoCompleteDayChange(
+	ctx context.Context,
+	tenantID, employeeID uuid.UUID,
+	date time.Time,
+	bookings []model.Booking,
+) ([]model.Booking, error) {
+	prev, current, next := partitionBookingsByDate(bookings, date)
+	pairs := pairWorkBookingsAcrossDays(prev, current, next)
+
+	selected := make(map[uuid.UUID]model.Booking, len(current))
+	for _, b := range current {
+		selected[b.ID] = b
+	}
+
+	nextDate := date.AddDate(0, 0, 1)
+	for _, pair := range pairs {
+		if pair.arrival.offset != 0 || pair.departure.offset != 1 {
+			continue
+		}
+		if pair.arrival.booking.BookingType == nil || pair.departure.booking.BookingType == nil {
+			return nil, fmt.Errorf("auto-complete day change requires booking types to be loaded")
+		}
+
+		goBooking, created, err := s.ensureAutoCompleteBooking(
+			ctx,
+			tenantID,
+			employeeID,
+			nextDate,
+			pair.departure.booking.BookingType,
+			model.BookingDirectionOut,
+			bookings,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if created {
+			bookings = append(bookings, goBooking)
+			next = append(next, goBooking)
+		}
+
+		comeBooking, created, err := s.ensureAutoCompleteBooking(
+			ctx,
+			tenantID,
+			employeeID,
+			nextDate,
+			pair.arrival.booking.BookingType,
+			model.BookingDirectionIn,
+			bookings,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if created {
+			bookings = append(bookings, comeBooking)
+			next = append(next, comeBooking)
+		}
+
+		selected[goBooking.ID] = goBooking
+	}
+
+	return sortedBookings(selected), nil
+}
+
+func (s *DailyCalcService) ensureAutoCompleteBooking(
+	ctx context.Context,
+	tenantID, employeeID uuid.UUID,
+	date time.Time,
+	bookingType *model.BookingType,
+	direction model.BookingDirection,
+	bookings []model.Booking,
+) (model.Booking, bool, error) {
+	for _, b := range bookings {
+		if !sameDate(b.BookingDate, date) {
+			continue
+		}
+		if b.Source != model.BookingSourceCorrection || b.Notes != autoCompleteNotes || b.EditedTime != 0 {
+			continue
+		}
+		if b.BookingType != nil && b.BookingType.Direction == direction && b.BookingTypeID == bookingType.ID {
+			return b, false, nil
+		}
+	}
+
+	newBooking := model.Booking{
+		TenantID:      tenantID,
+		EmployeeID:    employeeID,
+		BookingDate:   date,
+		BookingTypeID: bookingType.ID,
+		OriginalTime:  0,
+		EditedTime:    0,
+		Source:        model.BookingSourceCorrection,
+		Notes:         autoCompleteNotes,
+		BookingType:   bookingType,
+	}
+
+	if err := s.bookingRepo.Create(ctx, &newBooking); err != nil {
+		return model.Booking{}, false, fmt.Errorf("failed to create auto-complete booking: %w", err)
+	}
+
+	return newBooking, true, nil
+}
+
+type crossDayBooking struct {
+	booking model.Booking
+	offset  int
+	absTime int
+}
+
+type crossDayPair struct {
+	arrival   crossDayBooking
+	departure crossDayBooking
+}
+
+func pairWorkBookingsAcrossDays(prev, current, next []model.Booking) []crossDayPair {
+	workBookings := make([]crossDayBooking, 0)
+	appendWork := func(bookings []model.Booking, offset int) {
+		for _, b := range bookings {
+			if isBreakBooking(b) {
+				continue
+			}
+			direction := bookingDirection(b)
+			if direction != model.BookingDirectionIn && direction != model.BookingDirectionOut {
+				continue
+			}
+			workBookings = append(workBookings, crossDayBooking{
+				booking: b,
+				offset:  offset,
+				absTime: offset*1440 + b.EditedTime,
+			})
+		}
+	}
+
+	appendWork(prev, -1)
+	appendWork(current, 0)
+	appendWork(next, 1)
+
+	sort.Slice(workBookings, func(i, j int) bool {
+		if workBookings[i].absTime == workBookings[j].absTime {
+			return workBookings[i].booking.ID.String() < workBookings[j].booking.ID.String()
+		}
+		return workBookings[i].absTime < workBookings[j].absTime
+	})
+
+	pairs := make([]crossDayPair, 0)
+	openArrivals := make([]crossDayBooking, 0)
+
+	for _, b := range workBookings {
+		if bookingDirection(b.booking) == model.BookingDirectionIn {
+			openArrivals = append(openArrivals, b)
+			continue
+		}
+		if len(openArrivals) == 0 {
+			continue
+		}
+		arrival := openArrivals[0]
+		openArrivals = openArrivals[1:]
+		pairs = append(pairs, crossDayPair{
+			arrival:   arrival,
+			departure: b,
+		})
+	}
+
+	return pairs
+}
+
+func partitionBookingsByDate(bookings []model.Booking, date time.Time) (prev, current, next []model.Booking) {
+	prevDate := date.AddDate(0, 0, -1)
+	nextDate := date.AddDate(0, 0, 1)
+
+	for _, b := range bookings {
+		switch {
+		case sameDate(b.BookingDate, prevDate):
+			prev = append(prev, b)
+		case sameDate(b.BookingDate, date):
+			current = append(current, b)
+		case sameDate(b.BookingDate, nextDate):
+			next = append(next, b)
+		}
+	}
+	return prev, current, next
+}
+
+func filterBookingsByDate(bookings []model.Booking, date time.Time) []model.Booking {
+	selected := make(map[uuid.UUID]model.Booking, 0)
+	for _, b := range bookings {
+		if sameDate(b.BookingDate, date) {
+			selected[b.ID] = b
+		}
+	}
+	return sortedBookings(selected)
+}
+
+func sortedBookings(selected map[uuid.UUID]model.Booking) []model.Booking {
+	result := make([]model.Booking, 0, len(selected))
+	for _, b := range selected {
+		result = append(result, b)
+	}
+	sort.Slice(result, func(i, j int) bool {
+		di, dj := result[i].BookingDate, result[j].BookingDate
+		if di.Equal(dj) {
+			if result[i].EditedTime == result[j].EditedTime {
+				return result[i].ID.String() < result[j].ID.String()
+			}
+			return result[i].EditedTime < result[j].EditedTime
+		}
+		return di.Before(dj)
+	})
+	return result
+}
+
+func sameDate(a, b time.Time) bool {
+	ay, am, ad := a.Date()
+	by, bm, bd := b.Date()
+	return ay == by && am == bm && ad == bd
+}
+
+func isBreakBooking(b model.Booking) bool {
+	if b.BookingType == nil {
+		return false
+	}
+	return b.BookingType.Code == "BREAK_START" || b.BookingType.Code == "BREAK_END"
+}
+
+func bookingDirection(b model.Booking) model.BookingDirection {
+	if b.BookingType != nil && b.BookingType.Direction == model.BookingDirectionOut {
+		return model.BookingDirectionOut
+	}
+	return model.BookingDirectionIn
+}
+
+type shiftDetectionLoader struct {
+	ctx   context.Context
+	repo  dayPlanLookup
+	cache map[uuid.UUID]*model.DayPlan
+}
+
+func (l *shiftDetectionLoader) LoadShiftDetectionInput(id uuid.UUID) *calculation.ShiftDetectionInput {
+	plan := l.loadPlan(id)
+	if plan == nil {
+		return nil
+	}
+	return buildShiftDetectionInput(plan)
+}
+
+func (l *shiftDetectionLoader) loadPlan(id uuid.UUID) *model.DayPlan {
+	if l.repo == nil {
+		return nil
+	}
+	if plan, ok := l.cache[id]; ok {
+		return plan
+	}
+	plan, err := l.repo.GetByID(l.ctx, id)
+	if err != nil {
+		return nil
+	}
+	if l.cache != nil {
+		l.cache[id] = plan
+	}
+	return plan
+}
+
+func buildShiftDetectionInput(plan *model.DayPlan) *calculation.ShiftDetectionInput {
+	if plan == nil {
+		return nil
+	}
+	return &calculation.ShiftDetectionInput{
+		PlanID:             plan.ID,
+		PlanCode:           plan.Code,
+		ArriveFrom:         plan.ShiftDetectArriveFrom,
+		ArriveTo:           plan.ShiftDetectArriveTo,
+		DepartFrom:         plan.ShiftDetectDepartFrom,
+		DepartTo:           plan.ShiftDetectDepartTo,
+		AlternativePlanIDs: plan.GetAlternativePlanIDs(),
+	}
+}
+
+func findFirstLastWorkBookings(bookings []model.Booking) (firstCome, lastGo *int) {
+	for _, b := range bookings {
+		if isBreakBooking(b) {
+			continue
+		}
+		switch bookingDirection(b) {
+		case model.BookingDirectionIn:
+			if firstCome == nil || b.EditedTime < *firstCome {
+				t := b.EditedTime
+				firstCome = &t
+			}
+		case model.BookingDirectionOut:
+			if lastGo == nil || b.EditedTime > *lastGo {
+				t := b.EditedTime
+				lastGo = &t
+			}
+		}
+	}
+	return firstCome, lastGo
+}
+
 func (s *DailyCalcService) calculateWithBookings(
 	ctx context.Context,
 	employeeID uuid.UUID,
@@ -317,11 +685,50 @@ func (s *DailyCalcService) calculateWithBookings(
 	bookings []model.Booking,
 	isHoliday bool,
 ) (*model.DailyValue, error) {
+	dayPlan := empDayPlan.DayPlan
+	var shiftResult *calculation.ShiftDetectionResult
+
+	if dayPlan != nil && dayPlan.HasShiftDetection() {
+		firstCome, lastGo := findFirstLastWorkBookings(bookings)
+		loader := &shiftDetectionLoader{
+			ctx:   ctx,
+			repo:  s.dayPlanRepo,
+			cache: make(map[uuid.UUID]*model.DayPlan),
+		}
+		detector := calculation.NewShiftDetector(loader)
+		result := detector.DetectShift(buildShiftDetectionInput(dayPlan), firstCome, lastGo)
+		shiftResult = &result
+
+		if !result.IsOriginalPlan && result.MatchedPlanID != uuid.Nil && s.dayPlanRepo != nil {
+			matchedPlan, err := s.dayPlanRepo.GetWithDetails(ctx, result.MatchedPlanID)
+			if err != nil {
+				return nil, err
+			}
+			if matchedPlan != nil {
+				empDayPlan = &model.EmployeeDayPlan{
+					ID:         empDayPlan.ID,
+					TenantID:   empDayPlan.TenantID,
+					EmployeeID: empDayPlan.EmployeeID,
+					PlanDate:   empDayPlan.PlanDate,
+					DayPlanID:  &matchedPlan.ID,
+					DayPlan:    matchedPlan,
+				}
+				dayPlan = matchedPlan
+			}
+		}
+	}
+
 	// Build calculation input
 	input := s.buildCalcInput(employeeID, date, empDayPlan, bookings)
 
 	// Run calculation
 	result := s.calc.Calculate(input)
+
+	// Apply shift detection errors
+	if shiftResult != nil && shiftResult.HasError {
+		result.ErrorCodes = append(result.ErrorCodes, shiftResult.ErrorCode)
+		result.HasError = true
+	}
 
 	// Add holiday warning if applicable
 	if isHoliday {
@@ -356,22 +763,40 @@ func (s *DailyCalcService) buildCalcInput(
 	// Convert day plan
 	if empDayPlan != nil && empDayPlan.DayPlan != nil {
 		dp := empDayPlan.DayPlan
+		tolerance := calculation.ToleranceConfig{
+			ComePlus:  dp.ToleranceComePlus,
+			ComeMinus: dp.ToleranceComeMinus,
+			GoPlus:    dp.ToleranceGoPlus,
+			GoMinus:   dp.ToleranceGoMinus,
+		}
+		variableWorkTime := dp.VariableWorkTime
+
+		switch dp.PlanType {
+		case model.PlanTypeFlextime:
+			// ZMI: flextime ignores Come+ and Go-; variable work time not applicable
+			tolerance.ComePlus = 0
+			tolerance.GoMinus = 0
+			variableWorkTime = false
+		case model.PlanTypeFixed:
+			// ZMI: Come- only applies to fixed plans if variable work time is enabled
+			if !dp.VariableWorkTime {
+				tolerance.ComeMinus = 0
+			}
+		}
+
 		input.DayPlan = calculation.DayPlanInput{
-			RegularHours:   dp.RegularHours,
-			ComeFrom:       dp.ComeFrom,
-			ComeTo:         dp.ComeTo,
-			GoFrom:         dp.GoFrom,
-			GoTo:           dp.GoTo,
-			CoreStart:      dp.CoreStart,
-			CoreEnd:        dp.CoreEnd,
-			MinWorkTime:    dp.MinWorkTime,
-			MaxNetWorkTime: dp.MaxNetWorkTime,
-			Tolerance: calculation.ToleranceConfig{
-				ComePlus:  dp.ToleranceComePlus,
-				ComeMinus: dp.ToleranceComeMinus,
-				GoPlus:    dp.ToleranceGoPlus,
-				GoMinus:   dp.ToleranceGoMinus,
-			},
+			PlanType:         dp.PlanType,
+			RegularHours:     dp.RegularHours,
+			ComeFrom:         dp.ComeFrom,
+			ComeTo:           dp.ComeTo,
+			GoFrom:           dp.GoFrom,
+			GoTo:             dp.GoTo,
+			CoreStart:        dp.CoreStart,
+			CoreEnd:          dp.CoreEnd,
+			MinWorkTime:      dp.MinWorkTime,
+			MaxNetWorkTime:   dp.MaxNetWorkTime,
+			VariableWorkTime: variableWorkTime,
+			Tolerance:        tolerance,
 		}
 
 		// Rounding - come
@@ -411,13 +836,14 @@ func (s *DailyCalcService) buildCalcInput(
 		// Breaks
 		for _, b := range dp.Breaks {
 			input.DayPlan.Breaks = append(input.DayPlan.Breaks, calculation.BreakConfig{
-				Type:             calculation.BreakType(b.BreakType),
-				StartTime:        b.StartTime,
-				EndTime:          b.EndTime,
-				Duration:         b.Duration,
-				AfterWorkMinutes: b.AfterWorkMinutes,
-				AutoDeduct:       b.AutoDeduct,
-				IsPaid:           b.IsPaid,
+				Type:              calculation.BreakType(b.BreakType),
+				StartTime:         b.StartTime,
+				EndTime:           b.EndTime,
+				Duration:          b.Duration,
+				AfterWorkMinutes:  b.AfterWorkMinutes,
+				AutoDeduct:        b.AutoDeduct,
+				IsPaid:            b.IsPaid,
+				MinutesDifference: b.MinutesDifference,
 			})
 		}
 	}

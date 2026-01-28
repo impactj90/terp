@@ -606,12 +606,10 @@ func TestCalculator_MultipleCappingSources(t *testing.T) {
 	// Expected capping:
 	// - Early arrival: 15 min (06:45 to 07:00)
 	// - Late departure: 60 min (19:00 to 20:00)
-	// - Max net time: gross = 795 (20:00-06:45), net capped at 600, so 795-600 = 195 min capped
-	// But gross time calculation uses actual booking times, not window times
-	// Gross = 1200 - 405 = 795 min
-	// Net = 795 - 0 (no breaks) = 795, capped to 600, so 195 capped from max net time
+	// - Max net time: gross = 720 (19:00-07:00), net capped at 600, so 120 min capped
+	// Gross time is calculated from capped booking times
 
-	assert.Equal(t, 15+60+195, result.CappedTime)
+	assert.Equal(t, 15+60+120, result.CappedTime)
 	assert.Len(t, result.Capping.Items, 3)
 
 	// Check we have all three sources
@@ -622,5 +620,5 @@ func TestCalculator_MultipleCappingSources(t *testing.T) {
 
 	assert.Equal(t, 15, sources[calculation.CappingSourceEarlyArrival])
 	assert.Equal(t, 60, sources[calculation.CappingSourceLateLeave])
-	assert.Equal(t, 195, sources[calculation.CappingSourceMaxNetTime])
+	assert.Equal(t, 120, sources[calculation.CappingSourceMaxNetTime])
 }

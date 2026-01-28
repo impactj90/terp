@@ -2,6 +2,8 @@ package calculation
 
 import (
 	"github.com/google/uuid"
+
+	"github.com/tolga/terp/internal/model"
 )
 
 // Calculator performs time tracking calculations.
@@ -29,8 +31,8 @@ func (c *Calculator) Calculate(input CalculationInput) CalculationResult {
 		return result
 	}
 
-	// Step 1: Apply rounding and tolerance to bookings
-	processedBookings := c.processBookings(input.Bookings, input.DayPlan, &result)
+	// Step 1: Apply rounding, tolerance, and window capping to bookings
+	processedBookings, validationBookings, windowCappingItems := c.processBookings(input.Bookings, input.DayPlan, &result)
 
 	// Step 2: Pair bookings
 	pairingResult := PairBookings(processedBookings)
@@ -47,9 +49,9 @@ func (c *Calculator) Calculate(input CalculationInput) CalculationResult {
 		result.ErrorCodes = append(result.ErrorCodes, ErrCodeMissingCome)
 	}
 
-	// Step 3: Calculate first come / last go
-	result.FirstCome = FindFirstCome(processedBookings)
-	result.LastGo = FindLastGo(processedBookings)
+	// Step 3: Calculate first come / last go from uncapped times
+	result.FirstCome = FindFirstCome(validationBookings)
+	result.LastGo = FindLastGo(validationBookings)
 
 	// Step 4: Validate time windows
 	c.validateTimeWindows(&result, input.DayPlan)
@@ -91,28 +93,8 @@ func (c *Calculator) Calculate(input CalculationInput) CalculationResult {
 	}
 
 	// Step 8a: Calculate and aggregate capping
-	cappingItems := make([]*CappedTime, 0)
-
-	// Early arrival capping
-	if result.FirstCome != nil {
-		earlyArrivalCap := CalculateEarlyArrivalCapping(
-			*result.FirstCome,
-			input.DayPlan.ComeFrom,
-			input.DayPlan.Tolerance.ComeMinus,
-			input.DayPlan.VariableWorkTime,
-		)
-		cappingItems = append(cappingItems, earlyArrivalCap)
-	}
-
-	// Late departure capping
-	if result.LastGo != nil {
-		lateDepatureCap := CalculateLateDepatureCapping(
-			*result.LastGo,
-			input.DayPlan.GoTo,
-			input.DayPlan.Tolerance.GoPlus,
-		)
-		cappingItems = append(cappingItems, lateDepatureCap)
-	}
+	cappingItems := make([]*CappedTime, 0, len(windowCappingItems)+1)
+	cappingItems = append(cappingItems, windowCappingItems...)
 
 	// Max net time capping
 	maxNetCap := CalculateMaxNetTimeCapping(uncappedNet, input.DayPlan.MaxNetWorkTime)
@@ -140,32 +122,85 @@ func (c *Calculator) processBookings(
 	bookings []BookingInput,
 	dayPlan DayPlanInput,
 	result *CalculationResult,
-) []BookingInput {
+) ([]BookingInput, []BookingInput, []*CappedTime) {
 	processed := make([]BookingInput, len(bookings))
+	validation := make([]BookingInput, len(bookings))
+	cappingItems := make([]*CappedTime, 0)
+
+	allowEarlyTolerance := dayPlan.VariableWorkTime || dayPlan.PlanType == model.PlanTypeFlextime
 
 	for i, b := range bookings {
 		processed[i] = b
+		validation[i] = b
 		calculatedTime := b.Time
 
 		if b.Category == CategoryWork {
 			if b.Direction == DirectionIn {
-				// Apply come tolerance
-				calculatedTime = ApplyComeTolerance(b.Time, dayPlan.ComeTo, dayPlan.Tolerance)
+				// Apply come tolerance using Kommen von
+				calculatedTime = ApplyComeTolerance(b.Time, dayPlan.ComeFrom, dayPlan.Tolerance)
 				// Apply come rounding
 				calculatedTime = RoundComeTime(calculatedTime, dayPlan.RoundingCome)
 			} else {
-				// Apply go tolerance
-				calculatedTime = ApplyGoTolerance(b.Time, dayPlan.GoFrom, dayPlan.Tolerance)
+				// Apply go tolerance using Gehen bis (fallback to Gehen von)
+				expectedGo := dayPlan.GoTo
+				if expectedGo == nil {
+					expectedGo = dayPlan.GoFrom
+				}
+				calculatedTime = ApplyGoTolerance(b.Time, expectedGo, dayPlan.Tolerance)
 				// Apply go rounding
 				calculatedTime = RoundGoTime(calculatedTime, dayPlan.RoundingGo)
 			}
 		}
 
-		processed[i].Time = calculatedTime
-		result.CalculatedTimes[b.ID] = calculatedTime
+		// Preserve pre-capped time for validation
+		validation[i].Time = calculatedTime
+
+		// Apply evaluation window capping for work bookings
+		cappedTime := calculatedTime
+		if b.Category == CategoryWork {
+			var capped int
+			if b.Direction == DirectionIn {
+				cappedTime, capped = ApplyWindowCapping(
+					calculatedTime,
+					dayPlan.ComeFrom,
+					dayPlan.GoTo,
+					dayPlan.Tolerance.ComeMinus,
+					dayPlan.Tolerance.GoPlus,
+					true,
+					allowEarlyTolerance,
+				)
+				if capped > 0 {
+					cappingItems = append(cappingItems, &CappedTime{
+						Minutes: capped,
+						Source:  CappingSourceEarlyArrival,
+						Reason:  "Arrival before evaluation window",
+					})
+				}
+			} else {
+				cappedTime, capped = ApplyWindowCapping(
+					calculatedTime,
+					dayPlan.ComeFrom,
+					dayPlan.GoTo,
+					dayPlan.Tolerance.ComeMinus,
+					dayPlan.Tolerance.GoPlus,
+					false,
+					allowEarlyTolerance,
+				)
+				if capped > 0 {
+					cappingItems = append(cappingItems, &CappedTime{
+						Minutes: capped,
+						Source:  CappingSourceLateLeave,
+						Reason:  "Departure after evaluation window",
+					})
+				}
+			}
+		}
+
+		processed[i].Time = cappedTime
+		result.CalculatedTimes[b.ID] = cappedTime
 	}
 
-	return processed
+	return processed, validation, cappingItems
 }
 
 func (c *Calculator) validateTimeWindows(result *CalculationResult, dayPlan DayPlanInput) {

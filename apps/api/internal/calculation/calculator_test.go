@@ -138,8 +138,8 @@ func TestCalculator_WithRounding(t *testing.T) {
 func TestCalculator_WithTolerance(t *testing.T) {
 	calc := calculation.NewCalculator()
 	comeID, goID := uuid.New(), uuid.New()
-	comeTo := 480  // Expected arrival: 08:00
-	goFrom := 1020 // Expected departure: 17:00
+	comeFrom := 480 // Expected arrival: 08:00
+	goTo := 1020    // Expected departure: 17:00
 
 	input := calculation.CalculationInput{
 		EmployeeID: uuid.New(),
@@ -150,8 +150,8 @@ func TestCalculator_WithTolerance(t *testing.T) {
 		},
 		DayPlan: calculation.DayPlanInput{
 			RegularHours: 480,
-			ComeTo:       &comeTo,
-			GoFrom:       &goFrom,
+			ComeFrom:     &comeFrom,
+			GoTo:         &goTo,
 			Tolerance: calculation.ToleranceConfig{
 				ComePlus: 5, // 5 min grace for late arrival
 				GoMinus:  5, // 5 min grace for early departure
@@ -167,6 +167,69 @@ func TestCalculator_WithTolerance(t *testing.T) {
 	assert.Equal(t, 540, result.GrossTime)
 	assert.Equal(t, 480, result.CalculatedTimes[comeID])
 	assert.Equal(t, 1020, result.CalculatedTimes[goID])
+}
+
+func TestCalculator_Tolerance_UsesComeFromAndGoTo(t *testing.T) {
+	calc := calculation.NewCalculator()
+	comeID, goID := uuid.New(), uuid.New()
+	comeFrom := 450 // 07:30
+	goFrom := 960   // 16:00 (should be ignored)
+	goTo := 1050    // 17:30
+
+	input := calculation.CalculationInput{
+		EmployeeID: uuid.New(),
+		Date:       time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
+		Bookings: []calculation.BookingInput{
+			{ID: comeID, Time: 453, Direction: calculation.DirectionIn, Category: calculation.CategoryWork}, // 07:33 (late by 3)
+			{ID: goID, Time: 1047, Direction: calculation.DirectionOut, Category: calculation.CategoryWork}, // 17:27 (early by 3)
+		},
+		DayPlan: calculation.DayPlanInput{
+			RegularHours: 480,
+			ComeFrom:     &comeFrom,
+			GoFrom:       &goFrom,
+			GoTo:         &goTo,
+			Tolerance: calculation.ToleranceConfig{
+				ComePlus: 5,
+				GoMinus:  5,
+			},
+		},
+	}
+
+	result := calc.Calculate(input)
+
+	// Arrival within tolerance should normalize to Kommen von (07:30)
+	assert.Equal(t, 450, result.CalculatedTimes[comeID])
+	// Departure within tolerance should normalize to Gehen bis (17:30)
+	assert.Equal(t, 1050, result.CalculatedTimes[goID])
+}
+
+func TestCalculator_WindowCappingAdjustsGrossTime(t *testing.T) {
+	calc := calculation.NewCalculator()
+	comeID, goID := uuid.New(), uuid.New()
+	comeFrom := 420 // 07:00
+	goTo := 1020    // 17:00
+
+	input := calculation.CalculationInput{
+		EmployeeID: uuid.New(),
+		Date:       time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
+		Bookings: []calculation.BookingInput{
+			{ID: comeID, Time: 405, Direction: calculation.DirectionIn, Category: calculation.CategoryWork}, // 06:45
+			{ID: goID, Time: 1050, Direction: calculation.DirectionOut, Category: calculation.CategoryWork}, // 17:30
+		},
+		DayPlan: calculation.DayPlanInput{
+			RegularHours: 480,
+			ComeFrom:     &comeFrom,
+			GoTo:         &goTo,
+		},
+	}
+
+	result := calc.Calculate(input)
+
+	// Bookings capped to evaluation window: 07:00-17:00 = 600 min
+	assert.Equal(t, 600, result.GrossTime)
+	assert.Equal(t, 420, result.CalculatedTimes[comeID])
+	assert.Equal(t, 1020, result.CalculatedTimes[goID])
+	assert.Equal(t, 45, result.CappedTime) // 15 + 30
 }
 
 func TestCalculator_UnpairedBooking(t *testing.T) {

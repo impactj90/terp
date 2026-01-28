@@ -101,7 +101,7 @@ func main() {
 	bookingRepo := repository.NewBookingRepository(db)
 	empDayPlanRepo := repository.NewEmployeeDayPlanRepository(db)
 	dailyValueRepo := repository.NewDailyValueRepository(db)
-	dailyCalcService := service.NewDailyCalcService(bookingRepo, empDayPlanRepo, dailyValueRepo, holidayRepo)
+	dailyCalcService := service.NewDailyCalcService(bookingRepo, empDayPlanRepo, dayPlanRepo, dailyValueRepo, holidayRepo)
 	recalcService := service.NewRecalcService(dailyCalcService, employeeRepo)
 
 	// Initialize BookingService

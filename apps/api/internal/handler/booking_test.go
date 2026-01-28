@@ -29,6 +29,7 @@ func setupBookingHandler(t *testing.T) (*handler.BookingHandler, *service.Bookin
 	bookingTypeRepo := repository.NewBookingTypeRepository(db)
 	bookingRepo := repository.NewBookingRepository(db)
 	empDayPlanRepo := repository.NewEmployeeDayPlanRepository(db)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
 	dailyValueRepo := repository.NewDailyValueRepository(db)
 	holidayRepo := repository.NewHolidayRepository(db)
 
@@ -65,7 +66,7 @@ func setupBookingHandler(t *testing.T) (*handler.BookingHandler, *service.Bookin
 	require.NoError(t, bookingTypeRepo.Create(ctx, bookingType))
 
 	// Create services
-	dailyCalcService := service.NewDailyCalcService(bookingRepo, empDayPlanRepo, dailyValueRepo, holidayRepo)
+	dailyCalcService := service.NewDailyCalcService(bookingRepo, empDayPlanRepo, dayPlanRepo, dailyValueRepo, holidayRepo)
 	recalcService := service.NewRecalcService(dailyCalcService, employeeRepo)
 	bookingService := service.NewBookingService(bookingRepo, bookingTypeRepo, recalcService, nil)
 

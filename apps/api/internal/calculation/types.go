@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/tolga/terp/internal/model"
 )
 
 // BookingDirection indicates whether a booking is an arrival or departure.
@@ -88,6 +90,9 @@ type ToleranceConfig struct {
 
 // DayPlanInput contains all configuration needed for calculation.
 type DayPlanInput struct {
+	// Plan metadata
+	PlanType model.PlanType
+
 	// Time windows (minutes from midnight)
 	ComeFrom  *int // Earliest allowed arrival
 	ComeTo    *int // Latest allowed arrival

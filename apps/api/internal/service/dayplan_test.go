@@ -214,6 +214,26 @@ func TestDayPlanService_Create_DuplicateCode(t *testing.T) {
 	assert.ErrorIs(t, err, service.ErrDayPlanCodeExists)
 }
 
+func TestDayPlanService_Create_ReservedCode(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewDayPlanRepository(db)
+	svc := service.NewDayPlanService(repo)
+	ctx := context.Background()
+
+	tenant := createTestTenantForDayPlanService(t, db)
+
+	input := service.CreateDayPlanInput{
+		TenantID:     tenant.ID,
+		Code:         "u",
+		Name:         "Reserved Code",
+		PlanType:     model.PlanTypeFixed,
+		RegularHours: 480,
+	}
+
+	_, err := svc.Create(ctx, input)
+	assert.ErrorIs(t, err, service.ErrDayPlanCodeReserved)
+}
+
 func TestDayPlanService_Create_InvalidTimeRange(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewDayPlanRepository(db)
@@ -641,6 +661,27 @@ func TestDayPlanService_Copy_CodeExists(t *testing.T) {
 
 	_, err = svc.Copy(ctx, created2.ID, "ORIGINAL", "Copy")
 	assert.ErrorIs(t, err, service.ErrDayPlanCodeExists)
+}
+
+func TestDayPlanService_Copy_ReservedCode(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewDayPlanRepository(db)
+	svc := service.NewDayPlanService(repo)
+	ctx := context.Background()
+
+	tenant := createTestTenantForDayPlanService(t, db)
+
+	original, err := svc.Create(ctx, service.CreateDayPlanInput{
+		TenantID:     tenant.ID,
+		Code:         "ORIGINAL",
+		Name:         "Original",
+		PlanType:     model.PlanTypeFixed,
+		RegularHours: 480,
+	})
+	require.NoError(t, err)
+
+	_, err = svc.Copy(ctx, original.ID, "K", "Copy")
+	assert.ErrorIs(t, err, service.ErrDayPlanCodeReserved)
 }
 
 func TestDayPlanService_AddBreak_Success(t *testing.T) {

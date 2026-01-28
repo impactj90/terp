@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/tolga/terp/internal/calculation"
 	"github.com/tolga/terp/internal/model"
 )
 
@@ -27,8 +28,21 @@ func (m *mockBookingRepository) GetByEmployeeAndDate(ctx context.Context, tenant
 	return args.Get(0).([]model.Booking), args.Error(1)
 }
 
+func (m *mockBookingRepository) GetByEmployeeAndDateRange(ctx context.Context, tenantID, employeeID uuid.UUID, startDate, endDate time.Time) ([]model.Booking, error) {
+	args := m.Called(ctx, tenantID, employeeID, startDate, endDate)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]model.Booking), args.Error(1)
+}
+
 func (m *mockBookingRepository) UpdateCalculatedTimes(ctx context.Context, updates map[uuid.UUID]int) error {
 	args := m.Called(ctx, updates)
+	return args.Error(0)
+}
+
+func (m *mockBookingRepository) Create(ctx context.Context, booking *model.Booking) error {
+	args := m.Called(ctx, booking)
 	return args.Error(0)
 }
 
@@ -43,6 +57,27 @@ func (m *mockEmployeeDayPlanRepository) GetForEmployeeDate(ctx context.Context, 
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*model.EmployeeDayPlan), args.Error(1)
+}
+
+// mockDayPlanRepository implements dayPlanLookup for testing.
+type mockDayPlanRepository struct {
+	mock.Mock
+}
+
+func (m *mockDayPlanRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.DayPlan, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.DayPlan), args.Error(1)
+}
+
+func (m *mockDayPlanRepository) GetWithDetails(ctx context.Context, id uuid.UUID) (*model.DayPlan, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.DayPlan), args.Error(1)
 }
 
 // mockDailyValueRepository implements dailyValueRepository for testing.
@@ -88,10 +123,14 @@ func intPtr(i int) *int {
 func newTestService(
 	bookingRepo *mockBookingRepository,
 	empDayPlanRepo *mockEmployeeDayPlanRepository,
+	dayPlanRepo *mockDayPlanRepository,
 	dailyValueRepo *mockDailyValueRepository,
 	holidayRepo *mockHolidayLookup,
 ) *DailyCalcService {
-	return NewDailyCalcService(bookingRepo, empDayPlanRepo, dailyValueRepo, holidayRepo)
+	if dayPlanRepo == nil {
+		dayPlanRepo = new(mockDayPlanRepository)
+	}
+	return NewDailyCalcService(bookingRepo, empDayPlanRepo, dayPlanRepo, dailyValueRepo, holidayRepo)
 }
 
 func createStandardDayPlan(tenantID uuid.UUID) *model.DayPlan {
@@ -115,6 +154,19 @@ func createBookingType(direction model.BookingDirection, code string) *model.Boo
 		Code:      code,
 		Name:      code,
 		Direction: direction,
+	}
+}
+
+func createBooking(tenantID, employeeID uuid.UUID, date time.Time, minutes int, bookingType *model.BookingType) model.Booking {
+	return model.Booking{
+		ID:            uuid.New(),
+		TenantID:      tenantID,
+		EmployeeID:    employeeID,
+		BookingDate:   date,
+		EditedTime:    minutes,
+		OriginalTime:  minutes,
+		BookingType:   bookingType,
+		BookingTypeID: bookingType.ID,
 	}
 }
 
@@ -180,7 +232,7 @@ func TestCalculateDay_NormalWithBookings(t *testing.T) {
 	})).Return(nil)
 
 	// Execute
-	svc := newTestService(bookingRepo, empDayPlanRepo, dailyValueRepo, holidayRepo)
+	svc := newTestService(bookingRepo, empDayPlanRepo, nil, dailyValueRepo, holidayRepo)
 	result, err := svc.CalculateDay(ctx, tenantID, employeeID, date)
 
 	// Assert
@@ -219,7 +271,7 @@ func TestCalculateDay_OffDay(t *testing.T) {
 	})).Return(nil)
 
 	// Execute
-	svc := newTestService(bookingRepo, empDayPlanRepo, dailyValueRepo, holidayRepo)
+	svc := newTestService(bookingRepo, empDayPlanRepo, nil, dailyValueRepo, holidayRepo)
 	result, err := svc.CalculateDay(ctx, tenantID, employeeID, date)
 
 	// Assert
@@ -267,7 +319,7 @@ func TestCalculateDay_OffDayWithBookings(t *testing.T) {
 	})).Return(nil)
 
 	// Execute
-	svc := newTestService(bookingRepo, empDayPlanRepo, dailyValueRepo, holidayRepo)
+	svc := newTestService(bookingRepo, empDayPlanRepo, nil, dailyValueRepo, holidayRepo)
 	result, err := svc.CalculateDay(ctx, tenantID, employeeID, date)
 
 	// Assert
@@ -321,7 +373,7 @@ func TestCalculateDay_Holiday_CreditTarget(t *testing.T) {
 	})).Return(nil)
 
 	// Execute
-	svc := newTestService(bookingRepo, empDayPlanRepo, dailyValueRepo, holidayRepo)
+	svc := newTestService(bookingRepo, empDayPlanRepo, nil, dailyValueRepo, holidayRepo)
 	result, err := svc.CalculateDay(ctx, tenantID, employeeID, date)
 
 	// Assert
@@ -367,7 +419,7 @@ func TestCalculateDay_NoBookings_Error(t *testing.T) {
 	})).Return(nil)
 
 	// Execute
-	svc := newTestService(bookingRepo, empDayPlanRepo, dailyValueRepo, holidayRepo)
+	svc := newTestService(bookingRepo, empDayPlanRepo, nil, dailyValueRepo, holidayRepo)
 	result, err := svc.CalculateDay(ctx, tenantID, employeeID, date)
 
 	// Assert
@@ -442,7 +494,7 @@ func TestCalculateDay_WorkedOnHoliday(t *testing.T) {
 	})).Return(nil)
 
 	// Execute
-	svc := newTestService(bookingRepo, empDayPlanRepo, dailyValueRepo, holidayRepo)
+	svc := newTestService(bookingRepo, empDayPlanRepo, nil, dailyValueRepo, holidayRepo)
 	result, err := svc.CalculateDay(ctx, tenantID, employeeID, date)
 
 	// Assert
@@ -475,7 +527,7 @@ func TestRecalculateRange(t *testing.T) {
 	}
 
 	// Execute
-	svc := newTestService(bookingRepo, empDayPlanRepo, dailyValueRepo, holidayRepo)
+	svc := newTestService(bookingRepo, empDayPlanRepo, nil, dailyValueRepo, holidayRepo)
 	count, err := svc.RecalculateRange(ctx, tenantID, employeeID, from, to)
 
 	// Assert
@@ -650,7 +702,6 @@ func TestDefaultDailyCalcConfig(t *testing.T) {
 
 	assert.Equal(t, HolidayCreditTarget, config.HolidayCredit)
 	assert.Equal(t, NoBookingError, config.NoBookingBehavior)
-	assert.Equal(t, DayChangeToFirst, config.DayChangeBehavior)
 }
 
 func TestBuildCalcInput_WithBreaks(t *testing.T) {
@@ -738,6 +789,280 @@ func TestBuildCalcInput_BreakBookings(t *testing.T) {
 	assert.Equal(t, "out", string(input.Bookings[0].Direction))
 	assert.Equal(t, "break", string(input.Bookings[1].Category))
 	assert.Equal(t, "in", string(input.Bookings[1].Direction))
+}
+
+func TestCalculateDay_DayChangeAtArrival(t *testing.T) {
+	ctx := context.Background()
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	date := testDate(2026, 1, 20)
+	nextDate := date.AddDate(0, 0, 1)
+
+	bookingRepo := new(mockBookingRepository)
+	empDayPlanRepo := new(mockEmployeeDayPlanRepository)
+	dailyValueRepo := new(mockDailyValueRepository)
+	holidayRepo := new(mockHolidayLookup)
+
+	dayPlan := createStandardDayPlan(tenantID)
+	dayPlan.DayChangeBehavior = model.DayChangeAtArrival
+	dayPlanID := dayPlan.ID
+	empDayPlan := &model.EmployeeDayPlan{
+		ID:         uuid.New(),
+		TenantID:   tenantID,
+		EmployeeID: employeeID,
+		PlanDate:   date,
+		DayPlanID:  &dayPlanID,
+		DayPlan:    dayPlan,
+	}
+
+	comeType := createBookingType(model.BookingDirectionIn, "COME")
+	goType := createBookingType(model.BookingDirectionOut, "GO")
+	bookings := []model.Booking{
+		createBooking(tenantID, employeeID, date, 1320, comeType),  // 22:00
+		createBooking(tenantID, employeeID, nextDate, 120, goType), // 02:00 next day
+	}
+
+	holidayRepo.On("GetByDate", ctx, tenantID, date).Return(nil, nil)
+	empDayPlanRepo.On("GetForEmployeeDate", ctx, employeeID, date).Return(empDayPlan, nil)
+	bookingRepo.On("GetByEmployeeAndDateRange", ctx, tenantID, employeeID, date.AddDate(0, 0, -1), date.AddDate(0, 0, 1)).Return(bookings, nil)
+	bookingRepo.On("UpdateCalculatedTimes", ctx, mock.Anything).Return(nil)
+	dailyValueRepo.On("Upsert", ctx, mock.MatchedBy(func(dv *model.DailyValue) bool {
+		return dv.GrossTime == 240
+	})).Return(nil)
+
+	svc := newTestService(bookingRepo, empDayPlanRepo, nil, dailyValueRepo, holidayRepo)
+	result, err := svc.CalculateDay(ctx, tenantID, employeeID, date)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Equal(t, 240, result.GrossTime)
+}
+
+func TestCalculateDay_DayChangeAtDeparture(t *testing.T) {
+	ctx := context.Background()
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	date := testDate(2026, 1, 20)
+	prevDate := date.AddDate(0, 0, -1)
+
+	bookingRepo := new(mockBookingRepository)
+	empDayPlanRepo := new(mockEmployeeDayPlanRepository)
+	dailyValueRepo := new(mockDailyValueRepository)
+	holidayRepo := new(mockHolidayLookup)
+
+	dayPlan := createStandardDayPlan(tenantID)
+	dayPlan.DayChangeBehavior = model.DayChangeAtDeparture
+	dayPlanID := dayPlan.ID
+	empDayPlan := &model.EmployeeDayPlan{
+		ID:         uuid.New(),
+		TenantID:   tenantID,
+		EmployeeID: employeeID,
+		PlanDate:   date,
+		DayPlanID:  &dayPlanID,
+		DayPlan:    dayPlan,
+	}
+
+	comeType := createBookingType(model.BookingDirectionIn, "COME")
+	goType := createBookingType(model.BookingDirectionOut, "GO")
+	bookings := []model.Booking{
+		createBooking(tenantID, employeeID, prevDate, 1320, comeType), // 22:00 previous day
+		createBooking(tenantID, employeeID, date, 120, goType),        // 02:00
+	}
+
+	holidayRepo.On("GetByDate", ctx, tenantID, date).Return(nil, nil)
+	empDayPlanRepo.On("GetForEmployeeDate", ctx, employeeID, date).Return(empDayPlan, nil)
+	bookingRepo.On("GetByEmployeeAndDateRange", ctx, tenantID, employeeID, date.AddDate(0, 0, -1), date.AddDate(0, 0, 1)).Return(bookings, nil)
+	bookingRepo.On("UpdateCalculatedTimes", ctx, mock.Anything).Return(nil)
+	dailyValueRepo.On("Upsert", ctx, mock.MatchedBy(func(dv *model.DailyValue) bool {
+		return dv.GrossTime == 240
+	})).Return(nil)
+
+	svc := newTestService(bookingRepo, empDayPlanRepo, nil, dailyValueRepo, holidayRepo)
+	result, err := svc.CalculateDay(ctx, tenantID, employeeID, date)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Equal(t, 240, result.GrossTime)
+}
+
+func TestCalculateDay_DayChangeAutoComplete(t *testing.T) {
+	ctx := context.Background()
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	date := testDate(2026, 1, 20)
+	nextDate := date.AddDate(0, 0, 1)
+
+	bookingRepo := new(mockBookingRepository)
+	empDayPlanRepo := new(mockEmployeeDayPlanRepository)
+	dailyValueRepo := new(mockDailyValueRepository)
+	holidayRepo := new(mockHolidayLookup)
+
+	dayPlan := createStandardDayPlan(tenantID)
+	dayPlan.DayChangeBehavior = model.DayChangeAutoComplete
+	dayPlanID := dayPlan.ID
+	empDayPlan := &model.EmployeeDayPlan{
+		ID:         uuid.New(),
+		TenantID:   tenantID,
+		EmployeeID: employeeID,
+		PlanDate:   date,
+		DayPlanID:  &dayPlanID,
+		DayPlan:    dayPlan,
+	}
+
+	comeType := createBookingType(model.BookingDirectionIn, "COME")
+	goType := createBookingType(model.BookingDirectionOut, "GO")
+	bookings := []model.Booking{
+		createBooking(tenantID, employeeID, date, 1320, comeType),  // 22:00
+		createBooking(tenantID, employeeID, nextDate, 120, goType), // 02:00 next day
+	}
+
+	holidayRepo.On("GetByDate", ctx, tenantID, date).Return(nil, nil)
+	empDayPlanRepo.On("GetForEmployeeDate", ctx, employeeID, date).Return(empDayPlan, nil)
+	bookingRepo.On("GetByEmployeeAndDateRange", ctx, tenantID, employeeID, date.AddDate(0, 0, -1), date.AddDate(0, 0, 1)).Return(bookings, nil)
+	bookingRepo.On("Create", ctx, mock.MatchedBy(func(b *model.Booking) bool {
+		return b.BookingDate.Equal(nextDate) &&
+			b.EditedTime == 0 &&
+			b.Source == model.BookingSourceCorrection &&
+			b.Notes == autoCompleteNotes &&
+			b.BookingType != nil &&
+			b.BookingType.Direction == model.BookingDirectionOut
+	})).Return(nil).Once()
+	bookingRepo.On("Create", ctx, mock.MatchedBy(func(b *model.Booking) bool {
+		return b.BookingDate.Equal(nextDate) &&
+			b.EditedTime == 0 &&
+			b.Source == model.BookingSourceCorrection &&
+			b.Notes == autoCompleteNotes &&
+			b.BookingType != nil &&
+			b.BookingType.Direction == model.BookingDirectionIn
+	})).Return(nil).Once()
+	bookingRepo.On("UpdateCalculatedTimes", ctx, mock.Anything).Return(nil)
+	dailyValueRepo.On("Upsert", ctx, mock.MatchedBy(func(dv *model.DailyValue) bool {
+		return dv.GrossTime == 120
+	})).Return(nil)
+
+	svc := newTestService(bookingRepo, empDayPlanRepo, nil, dailyValueRepo, holidayRepo)
+	result, err := svc.CalculateDay(ctx, tenantID, employeeID, date)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Equal(t, 120, result.GrossTime)
+}
+
+func TestCalculateDay_ShiftDetection_SelectsAlternativePlan(t *testing.T) {
+	ctx := context.Background()
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	date := testDate(2026, 1, 20)
+
+	bookingRepo := new(mockBookingRepository)
+	empDayPlanRepo := new(mockEmployeeDayPlanRepository)
+	dayPlanRepo := new(mockDayPlanRepository)
+	dailyValueRepo := new(mockDailyValueRepository)
+	holidayRepo := new(mockHolidayLookup)
+
+	assignedPlan := createStandardDayPlan(tenantID)
+	assignedPlan.ShiftDetectArriveFrom = intPtr(480)
+	assignedPlan.ShiftDetectArriveTo = intPtr(540)
+	assignedPlan.ShiftDetectDepartFrom = intPtr(960)
+	assignedPlan.ShiftDetectDepartTo = intPtr(1020)
+
+	altPlanID := uuid.New()
+	assignedPlan.ShiftAltPlan1 = &altPlanID
+
+	altPlan := &model.DayPlan{
+		ID:                    altPlanID,
+		TenantID:              tenantID,
+		Code:                  "ALT",
+		Name:                  "Alt Shift",
+		RegularHours:          420,
+		ShiftDetectArriveFrom: intPtr(420),
+		ShiftDetectArriveTo:   intPtr(480),
+		ShiftDetectDepartFrom: intPtr(900),
+		ShiftDetectDepartTo:   intPtr(960),
+	}
+
+	empDayPlan := &model.EmployeeDayPlan{
+		ID:         uuid.New(),
+		TenantID:   tenantID,
+		EmployeeID: employeeID,
+		PlanDate:   date,
+		DayPlanID:  &assignedPlan.ID,
+		DayPlan:    assignedPlan,
+	}
+
+	comeType := createBookingType(model.BookingDirectionIn, "COME")
+	goType := createBookingType(model.BookingDirectionOut, "GO")
+	bookings := []model.Booking{
+		createBooking(tenantID, employeeID, date, 435, comeType), // 07:15
+		createBooking(tenantID, employeeID, date, 930, goType),   // 15:30
+	}
+
+	holidayRepo.On("GetByDate", ctx, tenantID, date).Return(nil, nil)
+	empDayPlanRepo.On("GetForEmployeeDate", ctx, employeeID, date).Return(empDayPlan, nil)
+	bookingRepo.On("GetByEmployeeAndDate", ctx, tenantID, employeeID, date).Return(bookings, nil)
+	bookingRepo.On("UpdateCalculatedTimes", ctx, mock.Anything).Return(nil)
+	dayPlanRepo.On("GetByID", ctx, altPlanID).Return(altPlan, nil)
+	dayPlanRepo.On("GetWithDetails", ctx, altPlanID).Return(altPlan, nil)
+	dailyValueRepo.On("Upsert", ctx, mock.MatchedBy(func(dv *model.DailyValue) bool {
+		return dv.TargetTime == 420
+	})).Return(nil)
+
+	svc := newTestService(bookingRepo, empDayPlanRepo, dayPlanRepo, dailyValueRepo, holidayRepo)
+	result, err := svc.CalculateDay(ctx, tenantID, employeeID, date)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Equal(t, 420, result.TargetTime)
+}
+
+func TestCalculateDay_ShiftDetection_NoMatchAddsError(t *testing.T) {
+	ctx := context.Background()
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	date := testDate(2026, 1, 20)
+
+	bookingRepo := new(mockBookingRepository)
+	empDayPlanRepo := new(mockEmployeeDayPlanRepository)
+	dayPlanRepo := new(mockDayPlanRepository)
+	dailyValueRepo := new(mockDailyValueRepository)
+	holidayRepo := new(mockHolidayLookup)
+
+	assignedPlan := createStandardDayPlan(tenantID)
+	assignedPlan.ShiftDetectArriveFrom = intPtr(600) // 10:00
+	assignedPlan.ShiftDetectArriveTo = intPtr(660)   // 11:00
+	assignedPlan.ShiftDetectDepartFrom = intPtr(900) // 15:00
+	assignedPlan.ShiftDetectDepartTo = intPtr(960)   // 16:00
+
+	empDayPlan := &model.EmployeeDayPlan{
+		ID:         uuid.New(),
+		TenantID:   tenantID,
+		EmployeeID: employeeID,
+		PlanDate:   date,
+		DayPlanID:  &assignedPlan.ID,
+		DayPlan:    assignedPlan,
+	}
+
+	comeType := createBookingType(model.BookingDirectionIn, "COME")
+	goType := createBookingType(model.BookingDirectionOut, "GO")
+	bookings := []model.Booking{
+		createBooking(tenantID, employeeID, date, 480, comeType), // 08:00
+		createBooking(tenantID, employeeID, date, 1020, goType),  // 17:00
+	}
+
+	holidayRepo.On("GetByDate", ctx, tenantID, date).Return(nil, nil)
+	empDayPlanRepo.On("GetForEmployeeDate", ctx, employeeID, date).Return(empDayPlan, nil)
+	bookingRepo.On("GetByEmployeeAndDate", ctx, tenantID, employeeID, date).Return(bookings, nil)
+	bookingRepo.On("UpdateCalculatedTimes", ctx, mock.Anything).Return(nil)
+	dailyValueRepo.On("Upsert", ctx, mock.MatchedBy(func(dv *model.DailyValue) bool {
+		return containsString(dv.ErrorCodes, calculation.ErrCodeNoMatchingShift)
+	})).Return(nil)
+
+	svc := newTestService(bookingRepo, empDayPlanRepo, dayPlanRepo, dailyValueRepo, holidayRepo)
+	result, err := svc.CalculateDay(ctx, tenantID, employeeID, date)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Contains(t, []string(result.ErrorCodes), calculation.ErrCodeNoMatchingShift)
 }
 
 // Helper function to check if a string slice contains a value
