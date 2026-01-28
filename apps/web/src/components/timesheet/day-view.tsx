@@ -5,7 +5,7 @@ import { CalendarDays, Sun, Umbrella } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useBookings, useDailyValues } from '@/hooks/api'
+import { useEmployeeDayView } from '@/hooks/api'
 import { formatDate, formatDisplayDate, isToday, isWeekend } from '@/lib/time-utils'
 import { BookingList } from './booking-list'
 import { DailySummary } from './daily-summary'
@@ -17,6 +17,7 @@ interface DayViewProps {
   isEditable?: boolean
   onAddBooking?: () => void
   onEditBooking?: (booking: unknown) => void
+  onDeleteBooking?: (booking: unknown) => void
 }
 
 export function DayView({
@@ -25,6 +26,7 @@ export function DayView({
   isEditable = true,
   onAddBooking,
   onEditBooking,
+  onDeleteBooking,
 }: DayViewProps) {
   const t = useTranslations('timesheet')
   const locale = useLocale()
@@ -32,30 +34,18 @@ export function DayView({
   const today = isToday(date)
   const weekend = isWeekend(date)
 
-  // Fetch bookings for this day
-  const { data: bookingsData, isLoading: isLoadingBookings } = useBookings({
-    employeeId,
-    from: dateString,
-    to: dateString,
-    enabled: !!employeeId,
-  })
+  const dayView = useEmployeeDayView(employeeId ?? '', dateString, { enabled: !!employeeId })
+  const bookings = dayView.data?.bookings ?? []
+  const dailyValue = dayView.data?.daily_value ?? null
+  const dayPlan = dayView.data?.day_plan ?? dailyValue?.day_plan ?? null
+  const errors = dayView.data?.errors ?? dailyValue?.errors ?? null
 
-  // Fetch daily value for this day
-  const { data: dailyValuesData, isLoading: isLoadingDailyValues } = useDailyValues({
-    employeeId,
-    from: dateString,
-    to: dateString,
-    enabled: !!employeeId,
-  })
-
-  const bookings = bookingsData?.data ?? []
-  const dailyValue = dailyValuesData?.data?.find(dv => dv.value_date === dateString) ?? null
-
-  const isLoading = isLoadingBookings || isLoadingDailyValues
+  const isLoading = dayView.isLoading
 
   // Transform bookings to the format expected by BookingList
   const transformedBookings = bookings.map((b) => ({
     id: b.id,
+    booking_date: b.booking_date,
     booking_type: b.booking_type ? {
       code: b.booking_type.code,
       name: b.booking_type.name,
@@ -89,7 +79,7 @@ export function DayView({
               {weekend && (
                 <Badge variant="secondary" className="text-xs">{t('weekend')}</Badge>
               )}
-              {dailyValue?.is_holiday && (
+              {dayView.data?.is_holiday && (
                 <Badge variant="secondary" className="text-xs">
                   <Sun className="h-3 w-3 mr-1" />
                   {t('holiday')}
@@ -101,18 +91,20 @@ export function DayView({
                   {dailyValue.absence_type?.name ?? t('absence')}
                 </Badge>
               )}
-              <ErrorBadge errors={dailyValue?.errors as never} />
+              <ErrorBadge errors={errors as never} />
             </div>
           </div>
         </div>
 
         {/* Day plan info */}
-        {dailyValue?.day_plan && (
+        {dayPlan && (
           <div className="text-sm text-muted-foreground text-right">
-            <div>{dailyValue.day_plan.name}</div>
-            <div className="text-xs">
-              {t('targetLabel')} {Math.floor((dailyValue.target_minutes ?? 0) / 60)}:{((dailyValue.target_minutes ?? 0) % 60).toString().padStart(2, '0')}
-            </div>
+            <div>{dayPlan.name}</div>
+            {dailyValue?.target_minutes !== undefined && dailyValue?.target_minutes !== null && (
+              <div className="text-xs">
+                {t('targetLabel')} {Math.floor((dailyValue.target_minutes ?? 0) / 60)}:{((dailyValue.target_minutes ?? 0) % 60).toString().padStart(2, '0')}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -125,6 +117,7 @@ export function DayView({
           isLoading={isLoading}
           isEditable={isEditable && !dailyValue?.is_locked}
           onEdit={onEditBooking as never}
+          onDelete={onDeleteBooking as never}
           onAdd={onAddBooking}
         />
       </div>

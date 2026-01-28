@@ -1,5 +1,5 @@
 import { useTranslations } from 'next-intl'
-import { Clock, ArrowRight, Edit } from 'lucide-react'
+import { Clock, ArrowRight, Edit, Trash } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -7,6 +7,7 @@ import { BookingTimeTriple } from './time-display'
 
 interface Booking {
   id: string
+  booking_date?: string
   booking_type?: { code: string; name: string; direction: 'in' | 'out' } | null
   original_time: number
   edited_time: number
@@ -34,6 +35,7 @@ export function BookingPair({
   durationMinutes,
   isEditable = false,
   onEdit,
+  onDelete,
   className,
 }: BookingPairProps) {
   const t = useTranslations('timesheet')
@@ -114,24 +116,44 @@ export function BookingPair({
       {isEditable && (
         <div className="flex items-center gap-1">
           {hasInBooking && (
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              onClick={() => onEdit?.(inBooking)}
-              aria-label={t('editInBooking')}
-            >
-              <Edit className="h-3 w-3" />
-            </Button>
+            <>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={() => onEdit?.(inBooking)}
+                aria-label={t('editInBooking')}
+              >
+                <Edit className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={() => onDelete?.(inBooking)}
+                aria-label={t('deleteInBooking')}
+              >
+                <Trash className="h-3 w-3" />
+              </Button>
+            </>
           )}
           {hasOutBooking && (
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              onClick={() => onEdit?.(outBooking)}
-              aria-label={t('editOutBooking')}
-            >
-              <Edit className="h-3 w-3" />
-            </Button>
+            <>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={() => onEdit?.(outBooking)}
+                aria-label={t('editOutBooking')}
+              >
+                <Edit className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={() => onDelete?.(outBooking)}
+                aria-label={t('deleteOutBooking')}
+              >
+                <Trash className="h-3 w-3" />
+              </Button>
+            </>
           )}
         </div>
       )}

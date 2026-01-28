@@ -43,15 +43,6 @@ function minutesToTimeString(minutes: number): string {
   return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`
 }
 
-/**
- * Convert HH:MM string to minutes from midnight.
- */
-function timeStringToMinutes(time: string): number {
-  const parts = time.split(':').map(Number)
-  const hours = parts[0] ?? 0
-  const minutes = parts[1] ?? 0
-  return hours * 60 + minutes
-}
 
 export function BookingEditDialog({
   booking,
@@ -90,12 +81,10 @@ export function BookingEditDialog({
         return
       }
 
-      const minutes = timeStringToMinutes(editedTime)
-
       await updateBooking.mutateAsync({
         path: { id: booking.id },
         body: {
-          edited_time: minutes,
+          time: editedTime,
           notes: notes || undefined,
         },
       } as never)

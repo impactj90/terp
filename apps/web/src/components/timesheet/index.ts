@@ -14,6 +14,7 @@ export { MonthView } from './month-view'
 
 // Dialog components
 export { BookingEditDialog } from './booking-edit-dialog'
+export { BookingCreateDialog } from './booking-create-dialog'
 
 // Export components
 export { ExportButtons } from './export-buttons'

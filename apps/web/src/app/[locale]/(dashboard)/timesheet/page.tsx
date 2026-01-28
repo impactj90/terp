@@ -9,6 +9,7 @@ import { useHasRole } from '@/hooks/use-has-role'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   Select,
   SelectContent,
@@ -16,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useDailyValues, useEmployees } from '@/hooks/api'
+import { useDailyValues, useDeleteBooking, useEmployees } from '@/hooks/api'
 import {
   formatDate,
   getWeekRange,
@@ -30,21 +31,38 @@ import {
   WeekView,
   MonthView,
   BookingEditDialog,
+  BookingCreateDialog,
   ExportButtons,
 } from '@/components/timesheet'
 
 type ViewMode = 'day' | 'week' | 'month'
 
+interface Booking {
+  id: string
+  booking_date: string
+  booking_type?: { code: string; name: string; direction: 'in' | 'out' } | null
+  original_time: number
+  edited_time: number
+  calculated_time?: number | null
+  notes?: string | null
+}
+
 export default function TimesheetPage() {
   const t = useTranslations('timesheet')
+  const tc = useTranslations('common')
   const locale = useLocale()
   const { user } = useAuth()
   const isAdmin = useHasRole(['admin'])
   const searchParams = useSearchParams()
   const [viewMode, setViewMode] = useState<ViewMode>('day')
   const [currentDate, setCurrentDate] = useState(new Date())
-  const [editingBooking, setEditingBooking] = useState<unknown | null>(null)
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [deletingBooking, setDeletingBooking] = useState<Booking | null>(null)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+
+  const deleteBooking = useDeleteBooking()
 
   // For regular users, use their employee_id; for admin, allow selection
   const userEmployeeId = user?.employee_id ?? undefined
@@ -171,13 +189,36 @@ export default function TimesheetPage() {
   }
 
   const handleEditBooking = (booking: unknown) => {
-    setEditingBooking(booking)
+    setEditingBooking(booking as Booking)
     setIsEditDialogOpen(true)
   }
 
   const handleAddBooking = () => {
-    // TODO: Open add booking dialog
-    console.log('Add booking for', currentDate)
+    setIsCreateDialogOpen(true)
+  }
+
+  const handleDeleteBooking = (booking: unknown) => {
+    setDeletingBooking(booking as Booking)
+    setIsDeleteDialogOpen(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deletingBooking) return
+
+    try {
+      await deleteBooking.mutateAsync({ path: { id: deletingBooking.id } } as never)
+      setIsDeleteDialogOpen(false)
+      setDeletingBooking(null)
+    } catch (error) {
+      console.error('Failed to delete booking:', error)
+    }
+  }
+
+  const handleDeleteOpenChange = (open: boolean) => {
+    setIsDeleteDialogOpen(open)
+    if (!open) {
+      setDeletingBooking(null)
+    }
   }
 
   // Format period label for display
@@ -275,8 +316,9 @@ export default function TimesheetPage() {
               date={currentDate}
               employeeId={effectiveEmployeeId}
               isEditable={true}
-              onAddBooking={handleAddBooking}
+              onAddBooking={effectiveEmployeeId ? handleAddBooking : undefined}
               onEditBooking={handleEditBooking}
+              onDeleteBooking={handleDeleteBooking}
             />
           )}
           {viewMode === 'week' && (
@@ -303,6 +345,27 @@ export default function TimesheetPage() {
         booking={editingBooking as never}
         open={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
+      />
+
+      {/* Booking create dialog */}
+      <BookingCreateDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        employeeId={effectiveEmployeeId}
+        date={currentDate}
+      />
+
+      {/* Booking delete confirmation */}
+      <ConfirmDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={handleDeleteOpenChange}
+        title={t('deleteBookingTitle')}
+        description={t('deleteBookingDescription')}
+        confirmLabel={tc('delete')}
+        cancelLabel={tc('cancel')}
+        variant="destructive"
+        isLoading={deleteBooking.isPending}
+        onConfirm={handleConfirmDelete}
       />
     </div>
   )

@@ -6,6 +6,7 @@ import { BookingPair } from './booking-pair'
 
 interface Booking {
   id: string
+  booking_date?: string
   booking_type?: { code: string; name: string; direction: 'in' | 'out' } | null
   original_time: number
   edited_time: number
