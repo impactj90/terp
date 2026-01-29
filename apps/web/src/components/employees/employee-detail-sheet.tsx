@@ -170,6 +170,14 @@ export function EmployeeDetailSheet({
                   label={t('labelEmploymentType')}
                   value={employee.employment_type?.name}
                 />
+                <DetailRow
+                  label={t('labelTariff')}
+                  value={
+                    employee.tariff
+                      ? `${employee.tariff.code} - ${employee.tariff.name}`
+                      : undefined
+                  }
+                />
                 <DetailRow label={t('labelEntryDate')} value={formatDate(employee.entry_date)} />
                 <DetailRow label={t('labelExitDate')} value={formatDate(employee.exit_date)} />
 

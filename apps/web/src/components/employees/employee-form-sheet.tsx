@@ -36,6 +36,7 @@ import {
   useDepartments,
   useCostCenters,
   useEmploymentTypes,
+  useTariffs,
 } from '@/hooks/api'
 import { cn } from '@/lib/utils'
 import type { components } from '@/lib/api/types'
@@ -65,6 +66,7 @@ interface FormState {
   departmentId: string
   costCenterId: string
   employmentTypeId: string
+  tariffId: string
   weeklyHours: string
   vacationDaysPerYear: string
 }
@@ -81,6 +83,7 @@ const INITIAL_STATE: FormState = {
   departmentId: '',
   costCenterId: '',
   employmentTypeId: '',
+  tariffId: '',
   weeklyHours: '',
   vacationDaysPerYear: '',
 }
@@ -147,10 +150,12 @@ export function EmployeeFormSheet({
   const { data: departmentsData, isLoading: loadingDepartments } = useDepartments({ enabled: open })
   const { data: costCentersData, isLoading: loadingCostCenters } = useCostCenters({ enabled: open })
   const { data: employmentTypesData, isLoading: loadingEmploymentTypes } = useEmploymentTypes({ enabled: open })
+  const { data: tariffsData, isLoading: loadingTariffs } = useTariffs({ active: true, enabled: open })
 
   const departments = departmentsData?.data ?? []
   const costCenters = costCentersData?.data ?? []
   const employmentTypes = employmentTypesData?.data ?? []
+  const tariffs = tariffsData?.data ?? []
 
   // Reset form when opening/closing or employee changes
   React.useEffect(() => {
@@ -170,6 +175,7 @@ export function EmployeeFormSheet({
           departmentId: employee.department_id || '',
           costCenterId: employee.cost_center_id || '',
           employmentTypeId: employee.employment_type_id || '',
+          tariffId: employee.tariff_id || '',
           weeklyHours: employee.weekly_hours?.toString() || '',
           vacationDaysPerYear: employee.vacation_days_per_year?.toString() || '',
         })
@@ -207,6 +213,7 @@ export function EmployeeFormSheet({
             department_id: form.departmentId || undefined,
             cost_center_id: form.costCenterId || undefined,
             employment_type_id: form.employmentTypeId || undefined,
+            tariff_id: form.tariffId ? form.tariffId : null,
             weekly_hours: form.weeklyHours ? parseFloat(form.weeklyHours) : undefined,
             vacation_days_per_year: form.vacationDaysPerYear ? parseFloat(form.vacationDaysPerYear) : undefined,
           },
@@ -224,6 +231,7 @@ export function EmployeeFormSheet({
             department_id: form.departmentId || undefined,
             cost_center_id: form.costCenterId || undefined,
             employment_type_id: form.employmentTypeId || undefined,
+            tariff_id: form.tariffId || undefined,
             weekly_hours: form.weeklyHours ? parseFloat(form.weeklyHours) : undefined,
             vacation_days_per_year: form.vacationDaysPerYear ? parseFloat(form.vacationDaysPerYear) : undefined,
           },
@@ -242,7 +250,7 @@ export function EmployeeFormSheet({
   }
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending
-  const isLoadingReferenceData = loadingDepartments || loadingCostCenters || loadingEmploymentTypes
+  const isLoadingReferenceData = loadingDepartments || loadingCostCenters || loadingEmploymentTypes || loadingTariffs
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -472,6 +480,27 @@ export function EmployeeFormSheet({
                     {employmentTypes.map((et) => (
                       <SelectItem key={et.id} value={et.id}>
                         {et.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>{t('fieldTariff')}</Label>
+                <Select
+                  value={form.tariffId || '__none__'}
+                  onValueChange={(value) => setForm((prev) => ({ ...prev, tariffId: value === '__none__' ? '' : value }))}
+                  disabled={isSubmitting || isLoadingReferenceData}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('selectTariff')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">{t('none')}</SelectItem>
+                    {tariffs.map((tariff) => (
+                      <SelectItem key={tariff.id} value={tariff.id}>
+                        {tariff.code} - {tariff.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

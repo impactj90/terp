@@ -116,6 +116,7 @@ export function EmployeeDataTable({
           <TableHead>{t('columnName')}</TableHead>
           <TableHead>{t('columnEmail')}</TableHead>
           <TableHead>{t('columnDepartment')}</TableHead>
+          <TableHead>{t('columnTariff')}</TableHead>
           <TableHead className="w-24">{t('columnStatus')}</TableHead>
           <TableHead className="w-28">{t('columnEntryDate')}</TableHead>
           <TableHead className="w-16">
@@ -156,6 +157,9 @@ export function EmployeeDataTable({
               {employee.email || '-'}
             </TableCell>
             <TableCell>{employee.department?.name || '-'}</TableCell>
+            <TableCell className="text-muted-foreground">
+              {employee.tariff ? `${employee.tariff.code} - ${employee.tariff.name}` : '-'}
+            </TableCell>
             <TableCell>
               <StatusBadge
                 isActive={employee.is_active}

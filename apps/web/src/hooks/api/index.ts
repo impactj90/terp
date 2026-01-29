@@ -7,6 +7,7 @@ export {
   useCreateEmployee,
   useUpdateEmployee,
   useDeleteEmployee,
+  useBulkAssignTariff,
 } from './use-employees'
 
 // Bookings

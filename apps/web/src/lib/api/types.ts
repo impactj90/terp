@@ -413,6 +413,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/employees/bulk-tariff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Bulk assign tariff
+         * @description Assigns or clears a tariff for multiple employees. Provide either a list
+         *     of employee IDs or a filter that targets all matching employees.
+         */
+        patch: operations["bulkAssignTariff"];
+        trace?: never;
+    };
     "/employees/{id}": {
         parameters: {
             query?: never;
@@ -2707,7 +2728,7 @@ export interface components {
             /** Format: uuid */
             employment_type_id?: string;
             /** Format: uuid */
-            tariff_id?: string;
+            tariff_id?: string | null;
             /** Format: decimal */
             weekly_hours?: number;
             /** Format: decimal */
@@ -2728,7 +2749,7 @@ export interface components {
             /** Format: uuid */
             employment_type_id?: string;
             /** Format: uuid */
-            tariff_id?: string;
+            tariff_id?: string | null;
             /** Format: decimal */
             weekly_hours?: number;
             /** Format: decimal */
@@ -2760,8 +2781,23 @@ export interface components {
             total: number;
             /** @example 1 */
             page: number;
-            /** @example 20 */
             limit: number;
+        };
+        BulkTariffAssignmentRequest: {
+            employee_ids?: string[];
+            filter?: {
+                q?: string;
+                /** Format: uuid */
+                department_id?: string;
+                is_active?: boolean;
+            };
+            /** Format: uuid */
+            tariff_id?: string | null;
+        };
+        BulkTariffAssignmentResponse: {
+            updated: number;
+            /** @example 20 */
+            skipped: number;
         };
         Department: {
             /** Format: uuid */
@@ -5653,6 +5689,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EmployeeSummary"][];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    bulkAssignTariff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkTariffAssignmentRequest"];
+            };
+        };
+        responses: {
+            /** @description Bulk tariff assignment result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkTariffAssignmentResponse"];
                 };
             };
             400: components["responses"]["BadRequest"];

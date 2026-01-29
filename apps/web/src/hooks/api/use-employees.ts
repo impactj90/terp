@@ -99,3 +99,20 @@ export function useDeleteEmployee() {
     invalidateKeys: [['/employees']],
   })
 }
+
+/**
+ * Hook to bulk assign or clear tariffs for employees.
+ *
+ * @example
+ * ```tsx
+ * const bulkAssignTariff = useBulkAssignTariff()
+ * bulkAssignTariff.mutate({
+ *   body: { employee_ids: ['...'], tariff_id: '...' }
+ * })
+ * ```
+ */
+export function useBulkAssignTariff() {
+  return useApiMutation('/employees/bulk-tariff', 'patch', {
+    invalidateKeys: [['/employees']],
+  })
+}

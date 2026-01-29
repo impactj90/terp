@@ -1,9 +1,26 @@
 'use client'
 
 import * as React from 'react'
-import { Edit, Trash2, Users, UserPlus, Building2 } from 'lucide-react'
+import { Building2, Edit, Loader2, Tag, Trash2, UserPlus, Users } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
@@ -16,7 +33,7 @@ import {
 } from '@/components/ui/sheet'
 import { TeamStatusBadge } from './team-status-badge'
 import { MemberRoleBadge } from './member-role-badge'
-import { useTeam } from '@/hooks/api'
+import { useBulkAssignTariff, useTariffs, useTeam } from '@/hooks/api'
 import type { components } from '@/lib/api/types'
 
 type Team = components['schemas']['Team']
@@ -77,6 +94,27 @@ export function TeamDetailSheet({
 
   // Fetch team details with members
   const { data: team, isLoading, isFetching } = useTeam(teamId ?? '', open && !!teamId)
+  const [assignOpen, setAssignOpen] = React.useState(false)
+  const [tariffId, setTariffId] = React.useState('__none__')
+  const [assignError, setAssignError] = React.useState<string | null>(null)
+
+  const bulkAssignTariff = useBulkAssignTariff()
+  const { data: tariffsData, isLoading: loadingTariffs } = useTariffs({
+    active: true,
+    enabled: assignOpen,
+  })
+  const tariffs = tariffsData?.data ?? []
+
+  const memberIds = React.useMemo(() => {
+    if (!team?.members) return []
+    const unique = new Set<string>()
+    team.members.forEach((member) => {
+      if (member.employee_id) {
+        unique.add(member.employee_id)
+      }
+    })
+    return Array.from(unique)
+  }, [team])
 
   const showSkeleton = isLoading || isFetching || (teamId && !team)
 
@@ -95,6 +133,34 @@ export function TeamDetailSheet({
   const handleManageMembers = () => {
     if (team) {
       onManageMembers(team)
+    }
+  }
+
+  React.useEffect(() => {
+    if (assignOpen) {
+      setTariffId('__none__')
+      setAssignError(null)
+    }
+  }, [assignOpen])
+
+  const handleAssignTariff = async () => {
+    if (memberIds.length === 0) {
+      setAssignError(t('assignTariffNoMembers'))
+      return
+    }
+
+    setAssignError(null)
+    try {
+      await bulkAssignTariff.mutateAsync({
+        body: {
+          employee_ids: memberIds,
+          tariff_id: tariffId === '__none__' ? null : tariffId,
+        },
+      })
+      setAssignOpen(false)
+    } catch (err) {
+      const apiError = err as { detail?: string; message?: string }
+      setAssignError(apiError.detail ?? apiError.message ?? t('assignTariffError'))
     }
   }
 
@@ -143,15 +209,27 @@ export function TeamDetailSheet({
                 <SectionHeader>
                   <div className="flex items-center justify-between">
                     <span>{t('sectionMembers', { count: team.members?.length ?? 0 })}</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleManageMembers}
-                      className="h-7 px-2"
-                    >
-                      <UserPlus className="h-3.5 w-3.5 mr-1" />
-                      {t('manage')}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleManageMembers}
+                        className="h-7 px-2"
+                      >
+                        <UserPlus className="h-3.5 w-3.5 mr-1" />
+                        {t('manage')}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAssignOpen(true)}
+                        className="h-7 px-2"
+                        disabled={memberIds.length === 0}
+                      >
+                        <Tag className="h-3.5 w-3.5 mr-1" />
+                        {t('assignTariff')}
+                      </Button>
+                    </div>
                   </div>
                 </SectionHeader>
 
@@ -212,6 +290,65 @@ export function TeamDetailSheet({
                 <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
             </SheetFooter>
+
+            <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>{t('assignTariffTitle')}</DialogTitle>
+                  <DialogDescription>
+                    {t('assignTariffDescription', { count: memberIds.length })}
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4 py-2">
+                  <div className="space-y-2">
+                    <Label>{t('assignTariffSelectLabel')}</Label>
+                    <Select
+                      value={tariffId}
+                      onValueChange={setTariffId}
+                      disabled={loadingTariffs || bulkAssignTariff.isPending}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('assignTariffSelectPlaceholder')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">{t('selectNone')}</SelectItem>
+                        {tariffs.map((tariff) => (
+                          <SelectItem key={tariff.id} value={tariff.id}>
+                            {tariff.code} - {tariff.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {assignError && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{assignError}</AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setAssignOpen(false)}
+                    disabled={bulkAssignTariff.isPending}
+                  >
+                    {t('cancel')}
+                  </Button>
+                  <Button
+                    onClick={handleAssignTariff}
+                    disabled={bulkAssignTariff.isPending || memberIds.length === 0}
+                  >
+                    {bulkAssignTariff.isPending && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    {t('assignTariffApply')}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </>
         ) : (
           <>

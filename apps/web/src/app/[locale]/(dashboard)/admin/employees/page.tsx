@@ -204,6 +204,10 @@ export default function EmployeesPage() {
             selectedCount={selectedIds.size}
             selectedIds={selectedIds}
             onClear={() => setSelectedIds(new Set())}
+            filters={{
+              search: search || undefined,
+              isActive: activeFilter,
+            }}
           />
         )}
       </div>
