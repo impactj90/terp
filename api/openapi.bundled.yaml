@@ -102,6 +102,10 @@ tags:
     description: Absence type group management
   - name: Account Groups
     description: Account group management
+  - name: Booking Reasons
+    description: Booking reason management
+  - name: Booking Type Groups
+    description: Booking type group management
   - name: Groups
     description: 'Employee, workflow, and activity group management'
 securityDefinitions:
@@ -5401,6 +5405,218 @@ paths:
           $ref: '#/responses/Unauthorized'
         '404':
           $ref: '#/responses/NotFound'
+  /booking-reasons:
+    get:
+      tags:
+        - Booking Reasons
+      summary: List booking reasons
+      operationId: listBookingReasons
+      parameters:
+        - name: booking_type_id
+          in: query
+          type: string
+          format: uuid
+          description: Filter by booking type ID
+      responses:
+        '200':
+          description: List of booking reasons
+          schema:
+            $ref: '#/definitions/BookingReasonList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+    post:
+      tags:
+        - Booking Reasons
+      summary: Create booking reason
+      operationId: createBookingReason
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateBookingReasonRequest'
+      responses:
+        '201':
+          description: Created booking reason
+          schema:
+            $ref: '#/definitions/BookingReason'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '409':
+          description: Code already exists for this booking type
+          schema:
+            $ref: '#/definitions/ProblemDetails'
+  '/booking-reasons/{id}':
+    get:
+      tags:
+        - Booking Reasons
+      summary: Get booking reason by ID
+      operationId: getBookingReason
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Booking reason details
+          schema:
+            $ref: '#/definitions/BookingReason'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    patch:
+      tags:
+        - Booking Reasons
+      summary: Update booking reason
+      operationId: updateBookingReason
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateBookingReasonRequest'
+      responses:
+        '200':
+          description: Updated booking reason
+          schema:
+            $ref: '#/definitions/BookingReason'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    delete:
+      tags:
+        - Booking Reasons
+      summary: Delete booking reason
+      operationId: deleteBookingReason
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Booking reason deleted
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+  /booking-type-groups:
+    get:
+      tags:
+        - Booking Type Groups
+      summary: List booking type groups
+      operationId: listBookingTypeGroups
+      responses:
+        '200':
+          description: List of booking type groups
+          schema:
+            $ref: '#/definitions/BookingTypeGroupList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+    post:
+      tags:
+        - Booking Type Groups
+      summary: Create booking type group
+      operationId: createBookingTypeGroup
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateBookingTypeGroupRequest'
+      responses:
+        '201':
+          description: Created booking type group
+          schema:
+            $ref: '#/definitions/BookingTypeGroup'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '409':
+          description: Code already exists
+          schema:
+            $ref: '#/definitions/ProblemDetails'
+  '/booking-type-groups/{id}':
+    get:
+      tags:
+        - Booking Type Groups
+      summary: Get booking type group by ID
+      operationId: getBookingTypeGroup
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Booking type group details
+          schema:
+            $ref: '#/definitions/BookingTypeGroup'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    patch:
+      tags:
+        - Booking Type Groups
+      summary: Update booking type group
+      operationId: updateBookingTypeGroup
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateBookingTypeGroupRequest'
+      responses:
+        '200':
+          description: Updated booking type group
+          schema:
+            $ref: '#/definitions/BookingTypeGroup'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    delete:
+      tags:
+        - Booking Type Groups
+      summary: Delete booking type group
+      operationId: deleteBookingTypeGroup
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Booking type group deleted
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
   /employee-groups:
     get:
       tags:
@@ -9298,6 +9514,7 @@ definitions:
       - code
       - name
       - direction
+      - category
     properties:
       id:
         type: string
@@ -9323,6 +9540,24 @@ definitions:
           - out
         description: Whether this is an arrival (in) or departure (out) booking
         example: in
+      category:
+        type: string
+        enum:
+          - work
+          - break
+          - business_trip
+          - other
+        description: Functional category of the booking type
+        example: work
+      account_id:
+        type: string
+        format: uuid
+        x-nullable: true
+        description: Optional linked account for time calculations
+      requires_reason:
+        type: boolean
+        description: Whether bookings of this type must include a reason code
+        example: false
       is_system:
         type: boolean
         description: System types cannot be deleted
@@ -9378,6 +9613,20 @@ definitions:
         enum:
           - in
           - out
+      category:
+        type: string
+        enum:
+          - work
+          - break
+          - business_trip
+          - other
+        description: Defaults to 'work' if not specified
+      account_id:
+        type: string
+        format: uuid
+        x-nullable: true
+      requires_reason:
+        type: boolean
   UpdateBookingTypeRequest:
     type: object
     properties:
@@ -9388,6 +9637,19 @@ definitions:
       description:
         type: string
       is_active:
+        type: boolean
+      category:
+        type: string
+        enum:
+          - work
+          - break
+          - business_trip
+          - other
+      account_id:
+        type: string
+        format: uuid
+        x-nullable: true
+      requires_reason:
         type: boolean
   BookingTypeList:
     type: object
@@ -10151,6 +10413,165 @@ definitions:
         type: string
       code:
         type: string
+  BookingReason:
+    type: object
+    required:
+      - id
+      - tenant_id
+      - booking_type_id
+      - code
+      - label
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      booking_type_id:
+        type: string
+        format: uuid
+      code:
+        type: string
+        example: ERRAND
+      label:
+        type: string
+        example: Work Errand
+      is_active:
+        type: boolean
+        example: true
+      sort_order:
+        type: integer
+        example: 0
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  CreateBookingReasonRequest:
+    type: object
+    required:
+      - booking_type_id
+      - code
+      - label
+    properties:
+      booking_type_id:
+        type: string
+        format: uuid
+      code:
+        type: string
+        minLength: 1
+        maxLength: 50
+      label:
+        type: string
+        minLength: 1
+        maxLength: 255
+      sort_order:
+        type: integer
+  UpdateBookingReasonRequest:
+    type: object
+    properties:
+      label:
+        type: string
+        minLength: 1
+        maxLength: 255
+      is_active:
+        type: boolean
+      sort_order:
+        type: integer
+  BookingReasonList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/BookingReason'
+  BookingTypeGroup:
+    type: object
+    required:
+      - id
+      - code
+      - name
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      code:
+        type: string
+      name:
+        type: string
+      description:
+        type: string
+        x-nullable: true
+      is_active:
+        type: boolean
+        example: true
+      booking_type_ids:
+        type: array
+        items:
+          type: string
+          format: uuid
+        description: IDs of booking types in this group
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  CreateBookingTypeGroupRequest:
+    type: object
+    required:
+      - code
+      - name
+    properties:
+      code:
+        type: string
+        minLength: 1
+        maxLength: 50
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      description:
+        type: string
+      booking_type_ids:
+        type: array
+        items:
+          type: string
+          format: uuid
+        description: IDs of booking types to add as members
+  UpdateBookingTypeGroupRequest:
+    type: object
+    properties:
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      description:
+        type: string
+      is_active:
+        type: boolean
+      booking_type_ids:
+        type: array
+        items:
+          type: string
+          format: uuid
+        description: Replace group members with these booking type IDs
+  BookingTypeGroupList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/BookingTypeGroup'
   EmployeeGroup:
     type: object
     required:

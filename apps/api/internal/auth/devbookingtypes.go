@@ -9,6 +9,7 @@ type DevBookingType struct {
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
 	Direction   string    `json:"direction"` // "in" or "out"
+	Category    string    `json:"category"`  // "work", "break", "business_trip", "other"
 	IsActive    bool      `json:"is_active"`
 }
 
@@ -22,6 +23,7 @@ var DevBookingTypes = []DevBookingType{
 		Name:        "Kommen",
 		Description: "Clock In - Start of work",
 		Direction:   "in",
+		Category:    "work",
 		IsActive:    true,
 	},
 	{
@@ -30,6 +32,7 @@ var DevBookingTypes = []DevBookingType{
 		Name:        "Gehen",
 		Description: "Clock Out - End of work",
 		Direction:   "out",
+		Category:    "work",
 		IsActive:    true,
 	},
 	{
@@ -38,6 +41,7 @@ var DevBookingTypes = []DevBookingType{
 		Name:        "Pause Beginn",
 		Description: "Break Start",
 		Direction:   "out",
+		Category:    "break",
 		IsActive:    true,
 	},
 	{
@@ -46,6 +50,7 @@ var DevBookingTypes = []DevBookingType{
 		Name:        "Pause Ende",
 		Description: "Break End",
 		Direction:   "in",
+		Category:    "break",
 		IsActive:    true,
 	},
 	{
@@ -54,6 +59,7 @@ var DevBookingTypes = []DevBookingType{
 		Name:        "Dienstgang Beginn",
 		Description: "Work Errand Start",
 		Direction:   "out",
+		Category:    "business_trip",
 		IsActive:    true,
 	},
 	{
@@ -62,6 +68,7 @@ var DevBookingTypes = []DevBookingType{
 		Name:        "Dienstgang Ende",
 		Description: "Work Errand End",
 		Direction:   "in",
+		Category:    "business_trip",
 		IsActive:    true,
 	},
 }

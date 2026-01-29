@@ -110,6 +110,8 @@ func main() {
 	notificationStreamHub := service.NewNotificationStreamHub()
 	notificationService.SetStreamHub(notificationStreamHub)
 
+	bookingReasonRepo := repository.NewBookingReasonRepository(db)
+	bookingTypeGroupRepo := repository.NewBookingTypeGroupRepository(db)
 	accountGroupRepo := repository.NewAccountGroupRepository(db)
 	absenceTypeGroupRepo := repository.NewAbsenceTypeGroupRepository(db)
 
@@ -192,6 +194,10 @@ func main() {
 	notificationHandler := handler.NewNotificationHandler(notificationService, notificationStreamHub)
 	permissionHandler := handler.NewPermissionHandler()
 	auditLogHandler := handler.NewAuditLogHandler(auditLogService)
+	bookingReasonService := service.NewBookingReasonService(bookingReasonRepo)
+	bookingReasonHandler := handler.NewBookingReasonHandler(bookingReasonService)
+	bookingTypeGroupService := service.NewBookingTypeGroupService(bookingTypeGroupRepo)
+	bookingTypeGroupHandler := handler.NewBookingTypeGroupHandler(bookingTypeGroupService)
 	accountGroupService := service.NewAccountGroupService(accountGroupRepo)
 	accountGroupHandler := handler.NewAccountGroupHandler(accountGroupService)
 	absenceTypeGroupService := service.NewAbsenceTypeGroupService(absenceTypeGroupRepo)
@@ -288,6 +294,8 @@ func main() {
 				handler.RegisterWeekPlanRoutes(r, weekPlanHandler, authzMiddleware)
 				handler.RegisterTariffRoutes(r, tariffHandler, authzMiddleware)
 				handler.RegisterBookingTypeRoutes(r, bookingTypeHandler, authzMiddleware)
+				handler.RegisterBookingReasonRoutes(r, bookingReasonHandler, authzMiddleware)
+				handler.RegisterBookingTypeGroupRoutes(r, bookingTypeGroupHandler, authzMiddleware)
 				handler.RegisterBookingRoutes(r, bookingHandler, authzMiddleware)
 				handler.RegisterDailyValueRoutes(r, dailyValueHandler, authzMiddleware)
 				handler.RegisterAbsenceRoutes(r, absenceHandler, authzMiddleware)

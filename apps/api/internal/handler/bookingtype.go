@@ -101,11 +101,22 @@ func (h *BookingTypeHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Code:      *req.Code,
 		Name:      *req.Name,
 		Direction: *req.Direction,
+		Category:  req.Category,
 	}
 
 	// Handle optional fields
 	if req.Description != "" {
 		input.Description = &req.Description
+	}
+	if req.AccountID != nil {
+		parsed, err := uuid.Parse(req.AccountID.String())
+		if err == nil {
+			input.AccountID = &parsed
+		}
+	}
+	if req.RequiresReason {
+		v := true
+		input.RequiresReason = &v
 	}
 
 	bt, err := h.bookingTypeService.Create(r.Context(), input)
@@ -119,6 +130,8 @@ func (h *BookingTypeHandler) Create(w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusBadRequest, "Booking type direction is required")
 		case service.ErrInvalidDirection:
 			respondError(w, http.StatusBadRequest, "Invalid direction (must be 'in' or 'out')")
+		case service.ErrInvalidCategory:
+			respondError(w, http.StatusBadRequest, "Invalid category (must be 'work', 'break', 'business_trip', or 'other')")
 		case service.ErrBookingTypeCodeExists:
 			respondError(w, http.StatusConflict, "A booking type with this code already exists")
 		default:
@@ -165,6 +178,16 @@ func (h *BookingTypeHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	// IsActive needs special handling - we always pass it since it's a boolean
 	input.IsActive = &req.IsActive
+	if req.Category != "" {
+		input.Category = &req.Category
+	}
+	if req.AccountID != nil {
+		parsed, err := uuid.Parse(req.AccountID.String())
+		if err == nil {
+			input.AccountID = &parsed
+		}
+	}
+	input.RequiresReason = &req.RequiresReason
 
 	bt, err := h.bookingTypeService.Update(r.Context(), id, tenantID, input)
 	if err != nil {
@@ -175,6 +198,8 @@ func (h *BookingTypeHandler) Update(w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusBadRequest, "Booking type name cannot be empty")
 		case service.ErrCannotModifySystemType:
 			respondError(w, http.StatusForbidden, "Cannot modify system booking types")
+		case service.ErrInvalidCategory:
+			respondError(w, http.StatusBadRequest, "Invalid category (must be 'work', 'break', 'business_trip', or 'other')")
 		default:
 			respondError(w, http.StatusInternalServerError, "Failed to update booking type")
 		}

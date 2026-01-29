@@ -7,6 +7,7 @@ package models
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -19,6 +20,14 @@ import (
 // swagger:model UpdateBookingTypeRequest
 type UpdateBookingTypeRequest struct {
 
+	// account id
+	// Format: uuid
+	AccountID *strfmt.UUID `json:"account_id,omitempty"`
+
+	// category
+	// Enum: ["work","break","business_trip","other"]
+	Category string `json:"category,omitempty"`
+
 	// description
 	Description string `json:"description,omitempty"`
 
@@ -29,11 +38,22 @@ type UpdateBookingTypeRequest struct {
 	// Max Length: 255
 	// Min Length: 1
 	Name string `json:"name,omitempty"`
+
+	// requires reason
+	RequiresReason bool `json:"requires_reason,omitempty"`
 }
 
 // Validate validates this update booking type request
 func (m *UpdateBookingTypeRequest) Validate(formats strfmt.Registry) error {
 	var res []error
+
+	if err := m.validateAccountID(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateCategory(formats); err != nil {
+		res = append(res, err)
+	}
 
 	if err := m.validateName(formats); err != nil {
 		res = append(res, err)
@@ -42,6 +62,66 @@ func (m *UpdateBookingTypeRequest) Validate(formats strfmt.Registry) error {
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *UpdateBookingTypeRequest) validateAccountID(formats strfmt.Registry) error {
+	if swag.IsZero(m.AccountID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("account_id", "body", "uuid", m.AccountID.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var updateBookingTypeRequestTypeCategoryPropEnum []any
+
+func init() {
+	var res []string
+	if err := json.Unmarshal([]byte(`["work","break","business_trip","other"]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		updateBookingTypeRequestTypeCategoryPropEnum = append(updateBookingTypeRequestTypeCategoryPropEnum, v)
+	}
+}
+
+const (
+
+	// UpdateBookingTypeRequestCategoryWork captures enum value "work"
+	UpdateBookingTypeRequestCategoryWork string = "work"
+
+	// UpdateBookingTypeRequestCategoryBreak captures enum value "break"
+	UpdateBookingTypeRequestCategoryBreak string = "break"
+
+	// UpdateBookingTypeRequestCategoryBusinessTrip captures enum value "business_trip"
+	UpdateBookingTypeRequestCategoryBusinessTrip string = "business_trip"
+
+	// UpdateBookingTypeRequestCategoryOther captures enum value "other"
+	UpdateBookingTypeRequestCategoryOther string = "other"
+)
+
+// prop value enum
+func (m *UpdateBookingTypeRequest) validateCategoryEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, updateBookingTypeRequestTypeCategoryPropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *UpdateBookingTypeRequest) validateCategory(formats strfmt.Registry) error {
+	if swag.IsZero(m.Category) { // not required
+		return nil
+	}
+
+	// value enum
+	if err := m.validateCategoryEnum("category", "body", m.Category); err != nil {
+		return err
+	}
+
 	return nil
 }
 

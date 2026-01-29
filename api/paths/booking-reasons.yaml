@@ -1,0 +1,111 @@
+# Booking Reason endpoints
+/booking-reasons:
+  get:
+    tags:
+      - Booking Reasons
+    summary: List booking reasons
+    operationId: listBookingReasons
+    parameters:
+      - name: booking_type_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by booking type ID
+    responses:
+      200:
+        description: List of booking reasons
+        schema:
+          $ref: '../schemas/booking-reasons.yaml#/BookingReasonList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Booking Reasons
+    summary: Create booking reason
+    operationId: createBookingReason
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/booking-reasons.yaml#/CreateBookingReasonRequest'
+    responses:
+      201:
+        description: Created booking reason
+        schema:
+          $ref: '../schemas/booking-reasons.yaml#/BookingReason'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists for this booking type
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/booking-reasons/{id}:
+  get:
+    tags:
+      - Booking Reasons
+    summary: Get booking reason by ID
+    operationId: getBookingReason
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Booking reason details
+        schema:
+          $ref: '../schemas/booking-reasons.yaml#/BookingReason'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Booking Reasons
+    summary: Update booking reason
+    operationId: updateBookingReason
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/booking-reasons.yaml#/UpdateBookingReasonRequest'
+    responses:
+      200:
+        description: Updated booking reason
+        schema:
+          $ref: '../schemas/booking-reasons.yaml#/BookingReason'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Booking Reasons
+    summary: Delete booking reason
+    operationId: deleteBookingReason
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Booking reason deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

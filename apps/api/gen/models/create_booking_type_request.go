@@ -20,6 +20,14 @@ import (
 // swagger:model CreateBookingTypeRequest
 type CreateBookingTypeRequest struct {
 
+	// account id
+	// Format: uuid
+	AccountID *strfmt.UUID `json:"account_id,omitempty"`
+
+	// Defaults to 'work' if not specified
+	// Enum: ["work","break","business_trip","other"]
+	Category string `json:"category,omitempty"`
+
 	// code
 	// Required: true
 	// Max Length: 20
@@ -39,11 +47,22 @@ type CreateBookingTypeRequest struct {
 	// Max Length: 255
 	// Min Length: 1
 	Name *string `json:"name"`
+
+	// requires reason
+	RequiresReason bool `json:"requires_reason,omitempty"`
 }
 
 // Validate validates this create booking type request
 func (m *CreateBookingTypeRequest) Validate(formats strfmt.Registry) error {
 	var res []error
+
+	if err := m.validateAccountID(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateCategory(formats); err != nil {
+		res = append(res, err)
+	}
 
 	if err := m.validateCode(formats); err != nil {
 		res = append(res, err)
@@ -60,6 +79,66 @@ func (m *CreateBookingTypeRequest) Validate(formats strfmt.Registry) error {
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *CreateBookingTypeRequest) validateAccountID(formats strfmt.Registry) error {
+	if swag.IsZero(m.AccountID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("account_id", "body", "uuid", m.AccountID.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var createBookingTypeRequestTypeCategoryPropEnum []any
+
+func init() {
+	var res []string
+	if err := json.Unmarshal([]byte(`["work","break","business_trip","other"]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		createBookingTypeRequestTypeCategoryPropEnum = append(createBookingTypeRequestTypeCategoryPropEnum, v)
+	}
+}
+
+const (
+
+	// CreateBookingTypeRequestCategoryWork captures enum value "work"
+	CreateBookingTypeRequestCategoryWork string = "work"
+
+	// CreateBookingTypeRequestCategoryBreak captures enum value "break"
+	CreateBookingTypeRequestCategoryBreak string = "break"
+
+	// CreateBookingTypeRequestCategoryBusinessTrip captures enum value "business_trip"
+	CreateBookingTypeRequestCategoryBusinessTrip string = "business_trip"
+
+	// CreateBookingTypeRequestCategoryOther captures enum value "other"
+	CreateBookingTypeRequestCategoryOther string = "other"
+)
+
+// prop value enum
+func (m *CreateBookingTypeRequest) validateCategoryEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, createBookingTypeRequestTypeCategoryPropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *CreateBookingTypeRequest) validateCategory(formats strfmt.Registry) error {
+	if swag.IsZero(m.Category) { // not required
+		return nil
+	}
+
+	// value enum
+	if err := m.validateCategoryEnum("category", "body", m.Category); err != nil {
+		return err
+	}
+
 	return nil
 }
 

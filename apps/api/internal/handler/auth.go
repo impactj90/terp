@@ -164,6 +164,10 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 	// Create all dev booking types (system-level, idempotent)
 	for _, devBT := range auth.GetDevBookingTypes() {
 		desc := devBT.Description
+		category := model.BookingCategory(devBT.Category)
+		if category == "" {
+			category = model.BookingCategoryWork
+		}
 		bt := &model.BookingType{
 			ID:          devBT.ID,
 			TenantID:    nil, // System-level
@@ -171,6 +175,7 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 			Name:        devBT.Name,
 			Description: &desc,
 			Direction:   model.BookingDirection(devBT.Direction),
+			Category:    category,
 			IsSystem:    true,
 			IsActive:    devBT.IsActive,
 		}

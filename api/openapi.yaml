@@ -105,6 +105,10 @@ tags:
     description: Absence type group management
   - name: Account Groups
     description: Account group management
+  - name: Booking Reasons
+    description: Booking reason management
+  - name: Booking Type Groups
+    description: Booking type group management
   - name: Groups
     description: Employee, workflow, and activity group management
 
@@ -413,6 +417,18 @@ paths:
   /account-groups/{id}:
     $ref: 'paths/account-groups.yaml#/~1account-groups~1{id}'
 
+  # Booking Reasons
+  /booking-reasons:
+    $ref: 'paths/booking-reasons.yaml#/~1booking-reasons'
+  /booking-reasons/{id}:
+    $ref: 'paths/booking-reasons.yaml#/~1booking-reasons~1{id}'
+
+  # Booking Type Groups
+  /booking-type-groups:
+    $ref: 'paths/booking-type-groups.yaml#/~1booking-type-groups'
+  /booking-type-groups/{id}:
+    $ref: 'paths/booking-type-groups.yaml#/~1booking-type-groups~1{id}'
+
   # Groups
   /employee-groups:
     $ref: 'paths/groups.yaml#/~1employee-groups'
@@ -703,6 +719,26 @@ definitions:
   # Department Summary
   DepartmentSummary:
     $ref: 'schemas/departments.yaml#/DepartmentSummary'
+
+  # Booking Reasons
+  BookingReason:
+    $ref: 'schemas/booking-reasons.yaml#/BookingReason'
+  CreateBookingReasonRequest:
+    $ref: 'schemas/booking-reasons.yaml#/CreateBookingReasonRequest'
+  UpdateBookingReasonRequest:
+    $ref: 'schemas/booking-reasons.yaml#/UpdateBookingReasonRequest'
+  BookingReasonList:
+    $ref: 'schemas/booking-reasons.yaml#/BookingReasonList'
+
+  # Booking Type Groups
+  BookingTypeGroup:
+    $ref: 'schemas/booking-type-groups.yaml#/BookingTypeGroup'
+  CreateBookingTypeGroupRequest:
+    $ref: 'schemas/booking-type-groups.yaml#/CreateBookingTypeGroupRequest'
+  UpdateBookingTypeGroupRequest:
+    $ref: 'schemas/booking-type-groups.yaml#/UpdateBookingTypeGroupRequest'
+  BookingTypeGroupList:
+    $ref: 'schemas/booking-type-groups.yaml#/BookingTypeGroupList'
 
   # Groups
   EmployeeGroup:

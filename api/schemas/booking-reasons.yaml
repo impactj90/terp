@@ -1,0 +1,80 @@
+# Booking Reason schemas
+BookingReason:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - booking_type_id
+    - code
+    - label
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    booking_type_id:
+      type: string
+      format: uuid
+    code:
+      type: string
+      example: "ERRAND"
+    label:
+      type: string
+      example: "Work Errand"
+    is_active:
+      type: boolean
+      example: true
+    sort_order:
+      type: integer
+      example: 0
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+CreateBookingReasonRequest:
+  type: object
+  required:
+    - booking_type_id
+    - code
+    - label
+  properties:
+    booking_type_id:
+      type: string
+      format: uuid
+    code:
+      type: string
+      minLength: 1
+      maxLength: 50
+    label:
+      type: string
+      minLength: 1
+      maxLength: 255
+    sort_order:
+      type: integer
+
+UpdateBookingReasonRequest:
+  type: object
+  properties:
+    label:
+      type: string
+      minLength: 1
+      maxLength: 255
+    is_active:
+      type: boolean
+    sort_order:
+      type: integer
+
+BookingReasonList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/BookingReason'

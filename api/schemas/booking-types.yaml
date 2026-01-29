@@ -7,6 +7,7 @@ BookingType:
     - code
     - name
     - direction
+    - category
   properties:
     id:
       type: string
@@ -32,6 +33,24 @@ BookingType:
         - out
       description: Whether this is an arrival (in) or departure (out) booking
       example: "in"
+    category:
+      type: string
+      enum:
+        - work
+        - break
+        - business_trip
+        - other
+      description: Functional category of the booking type
+      example: "work"
+    account_id:
+      type: string
+      format: uuid
+      x-nullable: true
+      description: Optional linked account for time calculations
+    requires_reason:
+      type: boolean
+      description: Whether bookings of this type must include a reason code
+      example: false
     is_system:
       type: boolean
       description: System types cannot be deleted
@@ -89,6 +108,20 @@ CreateBookingTypeRequest:
       enum:
         - in
         - out
+    category:
+      type: string
+      enum:
+        - work
+        - break
+        - business_trip
+        - other
+      description: Defaults to 'work' if not specified
+    account_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    requires_reason:
+      type: boolean
 
 UpdateBookingTypeRequest:
   type: object
@@ -100,6 +133,19 @@ UpdateBookingTypeRequest:
     description:
       type: string
     is_active:
+      type: boolean
+    category:
+      type: string
+      enum:
+        - work
+        - break
+        - business_trip
+        - other
+    account_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    requires_reason:
       type: boolean
 
 BookingTypeList:

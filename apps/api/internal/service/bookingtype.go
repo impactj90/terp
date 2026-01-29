@@ -17,6 +17,7 @@ var (
 	ErrBookingTypeNameReq      = errors.New("booking type name is required")
 	ErrBookingTypeDirectionReq = errors.New("booking type direction is required")
 	ErrInvalidDirection        = errors.New("invalid direction (must be 'in' or 'out')")
+	ErrInvalidCategory         = errors.New("invalid category (must be 'work', 'break', 'business_trip', or 'other')")
 	ErrCannotModifySystemType  = errors.New("cannot modify system booking type")
 	ErrCannotDeleteSystemType  = errors.New("cannot delete system booking type")
 	ErrCannotDeleteTypeInUse   = errors.New("cannot delete booking type in use")
@@ -48,11 +49,14 @@ func NewBookingTypeService(repo bookingTypeRepository) *BookingTypeService {
 
 // CreateBookingTypeInput represents the input for creating a booking type.
 type CreateBookingTypeInput struct {
-	TenantID    uuid.UUID
-	Code        string
-	Name        string
-	Description *string
-	Direction   string
+	TenantID       uuid.UUID
+	Code           string
+	Name           string
+	Description    *string
+	Direction      string
+	Category       string
+	AccountID      *uuid.UUID
+	RequiresReason *bool
 }
 
 // Create creates a new booking type with validation.
@@ -82,14 +86,29 @@ func (s *BookingTypeService) Create(ctx context.Context, input CreateBookingType
 		return nil, ErrBookingTypeCodeExists
 	}
 
+	// Validate and set category (default to "work")
+	category := strings.TrimSpace(input.Category)
+	if category == "" {
+		category = string(model.BookingCategoryWork)
+	}
+	if !isValidCategory(category) {
+		return nil, ErrInvalidCategory
+	}
+
 	bt := &model.BookingType{
 		TenantID:    &input.TenantID,
 		Code:        code,
 		Name:        name,
 		Description: input.Description,
 		Direction:   model.BookingDirection(direction),
+		Category:    model.BookingCategory(category),
+		AccountID:   input.AccountID,
 		IsSystem:    false,
 		IsActive:    true,
+	}
+
+	if input.RequiresReason != nil {
+		bt.RequiresReason = *input.RequiresReason
 	}
 
 	if err := s.repo.Create(ctx, bt); err != nil {
@@ -110,9 +129,13 @@ func (s *BookingTypeService) GetByID(ctx context.Context, id uuid.UUID) (*model.
 
 // UpdateBookingTypeInput represents the input for updating a booking type.
 type UpdateBookingTypeInput struct {
-	Name        *string
-	Description *string
-	IsActive    *bool
+	Name           *string
+	Description    *string
+	IsActive       *bool
+	Category       *string
+	AccountID      *uuid.UUID
+	ClearAccountID bool
+	RequiresReason *bool
 }
 
 // Update updates a booking type.
@@ -144,6 +167,21 @@ func (s *BookingTypeService) Update(ctx context.Context, id uuid.UUID, tenantID 
 	}
 	if input.IsActive != nil {
 		bt.IsActive = *input.IsActive
+	}
+	if input.Category != nil {
+		cat := strings.TrimSpace(*input.Category)
+		if !isValidCategory(cat) {
+			return nil, ErrInvalidCategory
+		}
+		bt.Category = model.BookingCategory(cat)
+	}
+	if input.ClearAccountID {
+		bt.AccountID = nil
+	} else if input.AccountID != nil {
+		bt.AccountID = input.AccountID
+	}
+	if input.RequiresReason != nil {
+		bt.RequiresReason = *input.RequiresReason
 	}
 
 	if err := s.repo.Update(ctx, bt); err != nil {
@@ -211,4 +249,14 @@ func (s *BookingTypeService) GetSystemTypes(ctx context.Context) ([]model.Bookin
 // UpsertDevBookingType ensures a dev booking type exists in the database as a system type.
 func (s *BookingTypeService) UpsertDevBookingType(ctx context.Context, bt *model.BookingType) error {
 	return s.repo.Upsert(ctx, bt)
+}
+
+// isValidCategory returns true if the category string is a valid BookingCategory.
+func isValidCategory(category string) bool {
+	switch model.BookingCategory(category) {
+	case model.BookingCategoryWork, model.BookingCategoryBreak,
+		model.BookingCategoryBusinessTrip, model.BookingCategoryOther:
+		return true
+	}
+	return false
 }

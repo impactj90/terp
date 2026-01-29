@@ -1,0 +1,105 @@
+# Booking Type Group endpoints
+/booking-type-groups:
+  get:
+    tags:
+      - Booking Type Groups
+    summary: List booking type groups
+    operationId: listBookingTypeGroups
+    responses:
+      200:
+        description: List of booking type groups
+        schema:
+          $ref: '../schemas/booking-type-groups.yaml#/BookingTypeGroupList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Booking Type Groups
+    summary: Create booking type group
+    operationId: createBookingTypeGroup
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/booking-type-groups.yaml#/CreateBookingTypeGroupRequest'
+    responses:
+      201:
+        description: Created booking type group
+        schema:
+          $ref: '../schemas/booking-type-groups.yaml#/BookingTypeGroup'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/booking-type-groups/{id}:
+  get:
+    tags:
+      - Booking Type Groups
+    summary: Get booking type group by ID
+    operationId: getBookingTypeGroup
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Booking type group details
+        schema:
+          $ref: '../schemas/booking-type-groups.yaml#/BookingTypeGroup'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Booking Type Groups
+    summary: Update booking type group
+    operationId: updateBookingTypeGroup
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/booking-type-groups.yaml#/UpdateBookingTypeGroupRequest'
+    responses:
+      200:
+        description: Updated booking type group
+        schema:
+          $ref: '../schemas/booking-type-groups.yaml#/BookingTypeGroup'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Booking Type Groups
+    summary: Delete booking type group
+    operationId: deleteBookingTypeGroup
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Booking type group deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
