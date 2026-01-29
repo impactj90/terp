@@ -176,7 +176,7 @@ func (h *BookingHandler) modelToResponse(b *model.Booking) *models.Booking {
 		EmployeeID:    &employeeID,
 		BookingDate:   &date,
 		BookingTypeID: &bookingTypeID,
-		OriginalTime:  &originalTime,
+		OriginalTime:  originalTime,
 		EditedTime:    &editedTime,
 		Source:        &source,
 		TimeString:    timeStr,
@@ -314,6 +314,7 @@ func (h *BookingHandler) Create(w http.ResponseWriter, r *http.Request) {
 			Action:     model.AuditActionCreate,
 			EntityType: "booking",
 			EntityID:   booking.ID,
+			EntityName: "Booking " + timeutil.MinutesToString(booking.EditedTime) + " on " + booking.BookingDate.Format("2006-01-02"),
 		})
 	}
 
@@ -392,6 +393,10 @@ func (h *BookingHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Capture old values before update for audit log
+	oldEditedTime := booking.EditedTime
+	oldNotes := booking.Notes
+
 	var req models.UpdateBookingRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid request body")
@@ -432,11 +437,32 @@ func (h *BookingHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	if h.auditService != nil {
 		if tenantID, ok := middleware.TenantFromContext(r.Context()); ok {
+			changes := map[string]interface{}{}
+			if input.EditedTime != nil && *input.EditedTime != oldEditedTime {
+				changes["edited_time"] = map[string]interface{}{
+					"before": oldEditedTime,
+					"after":  *input.EditedTime,
+				}
+			}
+			if input.Notes != nil && *input.Notes != oldNotes {
+				changes["notes"] = map[string]interface{}{
+					"before": oldNotes,
+					"after":  *input.Notes,
+				}
+			}
+
+			var changesData interface{}
+			if len(changes) > 0 {
+				changesData = changes
+			}
+
 			h.auditService.Log(r.Context(), r, service.LogEntry{
 				TenantID:   tenantID,
 				Action:     model.AuditActionUpdate,
 				EntityType: "booking",
 				EntityID:   booking.ID,
+				EntityName: "Booking " + timeutil.MinutesToString(booking.EditedTime) + " on " + booking.BookingDate.Format("2006-01-02"),
+				Changes:    changesData,
 			})
 		}
 	}
@@ -493,11 +519,22 @@ func (h *BookingHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	if h.auditService != nil {
 		if tenantID, ok := middleware.TenantFromContext(r.Context()); ok {
+			deletedData := map[string]interface{}{
+				"booking_date":    booking.BookingDate.Format("2006-01-02"),
+				"original_time":   booking.OriginalTime,
+				"edited_time":     booking.EditedTime,
+				"calculated_time": booking.CalculatedTime,
+				"booking_type_id": booking.BookingTypeID.String(),
+				"employee_id":     booking.EmployeeID.String(),
+			}
+
 			h.auditService.Log(r.Context(), r, service.LogEntry{
 				TenantID:   tenantID,
 				Action:     model.AuditActionDelete,
 				EntityType: "booking",
 				EntityID:   id,
+				EntityName: "Booking " + timeutil.MinutesToString(booking.EditedTime) + " on " + booking.BookingDate.Format("2006-01-02"),
+				Changes:    deletedData,
 			})
 		}
 	}
@@ -823,4 +860,118 @@ func (h *BookingHandler) ensureEmployeeScope(ctx context.Context, employeeID uui
 		return errBookingScopeDenied
 	}
 	return nil
+}
+
+// GetLogs handles GET /bookings/{id}/logs
+func (h *BookingHandler) GetLogs(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid booking ID")
+		return
+	}
+
+	// Verify booking exists and caller has access
+	booking, err := h.bookingRepo.GetWithDetails(r.Context(), id)
+	if err != nil {
+		if err == repository.ErrBookingNotFound {
+			respondError(w, http.StatusNotFound, "Booking not found")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to get booking")
+		return
+	}
+
+	scope, err := scopeFromContext(r.Context())
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to load access scope")
+		return
+	}
+	if tenantID, ok := middleware.TenantFromContext(r.Context()); ok {
+		if !scope.AllowsTenant(tenantID) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+	}
+	if booking.Employee != nil && !scope.AllowsEmployee(booking.Employee) {
+		respondError(w, http.StatusForbidden, "Permission denied")
+		return
+	}
+
+	// Parse pagination
+	limit := 50
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if v, err := strconv.Atoi(l); err == nil && v > 0 && v <= 100 {
+			limit = v
+		}
+	}
+
+	if h.auditService == nil {
+		respondJSON(w, http.StatusOK, map[string]interface{}{
+			"data": []interface{}{},
+			"meta": map[string]interface{}{
+				"total": 0,
+			},
+		})
+		return
+	}
+
+	tenantID, ok := middleware.TenantFromContext(r.Context())
+	if !ok {
+		respondError(w, http.StatusUnauthorized, "Tenant required")
+		return
+	}
+
+	entityType := "booking"
+	filter := repository.AuditLogFilter{
+		TenantID:   tenantID,
+		EntityType: &entityType,
+		EntityID:   &id,
+		Limit:      limit,
+	}
+
+	logs, total, err := h.auditService.List(r.Context(), filter)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to get booking logs")
+		return
+	}
+
+	// Map to response format
+	data := make([]map[string]interface{}, 0, len(logs))
+	for _, l := range logs {
+		entry := map[string]interface{}{
+			"id":           l.ID.String(),
+			"tenant_id":    l.TenantID.String(),
+			"action":       string(l.Action),
+			"entity_type":  l.EntityType,
+			"entity_id":    l.EntityID.String(),
+			"performed_at": l.PerformedAt.Format(time.RFC3339),
+		}
+		if l.UserID != nil {
+			entry["user_id"] = l.UserID.String()
+		}
+		if l.EntityName != nil {
+			entry["entity_name"] = *l.EntityName
+		}
+		if l.Changes != nil {
+			entry["changes"] = json.RawMessage(l.Changes)
+		}
+		if l.Metadata != nil {
+			entry["metadata"] = json.RawMessage(l.Metadata)
+		}
+		if l.IPAddress != nil {
+			entry["ip_address"] = *l.IPAddress
+		}
+		if l.UserAgent != nil {
+			entry["user_agent"] = *l.UserAgent
+		}
+		data = append(data, entry)
+	}
+
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"data": data,
+		"meta": map[string]interface{}{
+			"total": total,
+		},
+	})
 }

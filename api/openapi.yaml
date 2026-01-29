@@ -270,6 +270,8 @@ paths:
     $ref: 'paths/bookings.yaml#/~1bookings'
   /bookings/{id}:
     $ref: 'paths/bookings.yaml#/~1bookings~1{id}'
+  /bookings/{id}/logs:
+    $ref: 'paths/bookings.yaml#/~1bookings~1{id}~1logs'
 
   # Daily Values
   /daily-values:

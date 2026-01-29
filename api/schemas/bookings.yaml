@@ -30,15 +30,25 @@ Booking:
     # Time values (minutes from midnight)
     original_time:
       type: integer
-      description: Original booking time (minutes from midnight)
+      description: >
+        Original booking time (minutes from midnight). This value is set once
+        during creation and is immutable -- it cannot be changed by any update
+        operation. Represents the raw terminal or manual ingest time.
       example: 480
+      readOnly: true
     edited_time:
       type: integer
-      description: Edited/corrected time (minutes from midnight)
+      description: >
+        Edited/corrected time (minutes from midnight). Defaults to original_time
+        on creation. Can be changed by the user via PUT /bookings/{id}. When changed,
+        calculated_time is cleared and recalculated on next day calculation.
       example: 480
     calculated_time:
       type: integer
-      description: Time after tolerance/rounding (minutes from midnight)
+      description: >
+        Time after tolerance/rounding applied (minutes from midnight). Derived
+        automatically during day calculation based on day plan settings. Cleared
+        when edited_time changes. This is the value used in final time calculations.
       x-nullable: true
     time_string:
       type: string

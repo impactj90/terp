@@ -36,7 +36,8 @@ type Booking struct {
 	// Format: uuid
 	BookingTypeID *strfmt.UUID `json:"booking_type_id"`
 
-	// Time after tolerance/rounding (minutes from midnight)
+	// Time after tolerance/rounding applied (minutes from midnight). Derived automatically during day calculation based on day plan settings. Cleared when edited_time changes. This is the value used in final time calculations.
+	//
 	CalculatedTime *int64 `json:"calculated_time,omitempty"`
 
 	// created at
@@ -47,7 +48,8 @@ type Booking struct {
 	// Format: uuid
 	CreatedBy *strfmt.UUID `json:"created_by,omitempty"`
 
-	// Edited/corrected time (minutes from midnight)
+	// Edited/corrected time (minutes from midnight). Defaults to original_time on creation. Can be changed by the user via PUT /bookings/{id}. When changed, calculated_time is cleared and recalculated on next day calculation.
+	//
 	// Example: 480
 	// Required: true
 	EditedTime *int64 `json:"edited_time"`
@@ -70,10 +72,12 @@ type Booking struct {
 	// notes
 	Notes *string `json:"notes,omitempty"`
 
-	// Original booking time (minutes from midnight)
+	// Original booking time (minutes from midnight). This value is set once during creation and is immutable -- it cannot be changed by any update operation. Represents the raw terminal or manual ingest time.
+	//
 	// Example: 480
 	// Required: true
-	OriginalTime *int64 `json:"original_time"`
+	// Read Only: true
+	OriginalTime int64 `json:"original_time"`
 
 	// ID of paired booking (in/out pair)
 	// Format: uuid
@@ -417,6 +421,10 @@ func (m *Booking) ContextValidate(ctx context.Context, formats strfmt.Registry) 
 		res = append(res, err)
 	}
 
+	if err := m.contextValidateOriginalTime(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.contextValidateTimeString(ctx, formats); err != nil {
 		res = append(res, err)
 	}
@@ -433,6 +441,15 @@ func (m *Booking) contextValidateBookingType(ctx context.Context, formats strfmt
 }
 
 func (m *Booking) contextValidateEmployee(ctx context.Context, formats strfmt.Registry) error {
+
+	return nil
+}
+
+func (m *Booking) contextValidateOriginalTime(ctx context.Context, formats strfmt.Registry) error {
+
+	if err := validate.ReadOnly(ctx, "original_time", "body", m.OriginalTime); err != nil {
+		return err
+	}
 
 	return nil
 }

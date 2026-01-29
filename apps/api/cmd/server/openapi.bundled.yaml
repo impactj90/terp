@@ -2670,6 +2670,40 @@ paths:
             $ref: '#/definitions/ProblemDetails'
         '404':
           $ref: '#/responses/NotFound'
+  '/bookings/{id}/logs':
+    get:
+      tags:
+        - Bookings
+      summary: Get booking audit logs
+      description: |
+        Returns audit trail for a specific booking. Shows all create, update,
+        and delete operations with before/after values, user identity, and timestamps.
+      operationId: getBookingLogs
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+          description: Booking ID
+        - name: limit
+          in: query
+          type: integer
+          default: 50
+          minimum: 1
+          maximum: 100
+        - name: cursor
+          in: query
+          type: string
+      responses:
+        '200':
+          description: Audit logs for this booking
+          schema:
+            $ref: '#/definitions/AuditLogList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
   /daily-values:
     get:
       tags:
@@ -10795,15 +10829,19 @@ definitions:
         format: uuid
       original_time:
         type: integer
-        description: Original booking time (minutes from midnight)
+        description: |
+          Original booking time (minutes from midnight). This value is set once during creation and is immutable -- it cannot be changed by any update operation. Represents the raw terminal or manual ingest time.
         example: 480
+        readOnly: true
       edited_time:
         type: integer
-        description: Edited/corrected time (minutes from midnight)
+        description: |
+          Edited/corrected time (minutes from midnight). Defaults to original_time on creation. Can be changed by the user via PUT /bookings/{id}. When changed, calculated_time is cleared and recalculated on next day calculation.
         example: 480
       calculated_time:
         type: integer
-        description: Time after tolerance/rounding (minutes from midnight)
+        description: |
+          Time after tolerance/rounding applied (minutes from midnight). Derived automatically during day calculation based on day plan settings. Cleared when edited_time changes. This is the value used in final time calculations.
         x-nullable: true
       time_string:
         type: string

@@ -438,6 +438,7 @@ func RegisterBookingRoutes(r chi.Router, h *BookingHandler, authz *middleware.Au
 			r.Get("/", h.List)
 			r.Post("/", h.Create)
 			r.Get("/{id}", h.GetByID)
+			r.Get("/{id}/logs", h.GetLogs)
 			r.Put("/{id}", h.Update)
 			r.Delete("/{id}", h.Delete)
 			return
@@ -449,6 +450,7 @@ func RegisterBookingRoutes(r chi.Router, h *BookingHandler, authz *middleware.Au
 			authz.RequireEmployeePermissionFromResolver(bookingCreateResolver, viewOwn, viewAll),
 		).Post("/", h.Create)
 		r.With(authz.RequireEmployeePermissionFromResolver(bookingResolver, viewOwn, viewAll)).Get("/{id}", h.GetByID)
+		r.With(authz.RequireEmployeePermissionFromResolver(bookingResolver, viewOwn, viewAll)).Get("/{id}/logs", h.GetLogs)
 		r.With(
 			authz.RequirePermission(edit),
 			authz.RequireEmployeePermissionFromResolver(bookingResolver, viewOwn, viewAll),

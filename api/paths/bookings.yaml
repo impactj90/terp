@@ -142,3 +142,38 @@
           $ref: '../schemas/common.yaml#/ProblemDetails'
       404:
         $ref: '../responses/errors.yaml#/NotFound'
+
+/bookings/{id}/logs:
+  get:
+    tags:
+      - Bookings
+    summary: Get booking audit logs
+    description: |
+      Returns audit trail for a specific booking. Shows all create, update,
+      and delete operations with before/after values, user identity, and timestamps.
+    operationId: getBookingLogs
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+        description: Booking ID
+      - name: limit
+        in: query
+        type: integer
+        default: 50
+        minimum: 1
+        maximum: 100
+      - name: cursor
+        in: query
+        type: string
+    responses:
+      200:
+        description: Audit logs for this booking
+        schema:
+          $ref: '../schemas/audit-logs.yaml#/AuditLogList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
