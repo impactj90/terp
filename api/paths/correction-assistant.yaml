@@ -1,0 +1,158 @@
+# Correction Assistant endpoints
+
+# --- Correction Message Catalog ---
+/correction-messages:
+  get:
+    tags:
+      - Correction Assistant
+    summary: List correction messages
+    description: |
+      Returns the error/hint message catalog for the tenant. Each entry maps
+      an error code to human-readable text with optional custom overrides.
+    operationId: listCorrectionMessages
+    parameters:
+      - name: severity
+        in: query
+        type: string
+        enum:
+          - error
+          - hint
+        description: Filter by severity
+      - name: is_active
+        in: query
+        type: boolean
+        description: Filter by active status
+      - name: code
+        in: query
+        type: string
+        description: Filter by error code
+    responses:
+      200:
+        description: List of correction messages
+        schema:
+          $ref: '../schemas/correction-assistant.yaml#/CorrectionMessageList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      403:
+        $ref: '../responses/errors.yaml#/Forbidden'
+
+/correction-messages/{id}:
+  get:
+    tags:
+      - Correction Assistant
+    summary: Get correction message by ID
+    operationId: getCorrectionMessage
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Correction message details
+        schema:
+          $ref: '../schemas/correction-assistant.yaml#/CorrectionMessage'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Correction Assistant
+    summary: Update correction message
+    description: |
+      Update custom text, severity, or active status for a correction message.
+      Set custom_text to override the default text in correction assistant outputs.
+      Set custom_text to null to revert to the default text.
+    operationId: updateCorrectionMessage
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/correction-assistant.yaml#/UpdateCorrectionMessageRequest'
+    responses:
+      200:
+        description: Updated correction message
+        schema:
+          $ref: '../schemas/correction-assistant.yaml#/CorrectionMessage'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+# --- Correction Assistant Query ---
+/correction-assistant:
+  get:
+    tags:
+      - Correction Assistant
+    summary: List correction assistant items
+    description: |
+      Returns daily calculation errors and hints for the correction assistant view.
+      Each item represents one employee-date with one or more errors/hints,
+      with messages resolved from the correction message catalog.
+
+      **Default date range**: When no from/to parameters are provided, returns
+      items from the first day of the previous month through the last day of
+      the current month.
+    operationId: listCorrectionAssistantItems
+    parameters:
+      - name: from
+        in: query
+        type: string
+        format: date
+        description: Start date filter (inclusive). Defaults to first day of previous month.
+      - name: to
+        in: query
+        type: string
+        format: date
+        description: End date filter (inclusive). Defaults to last day of current month.
+      - name: employee_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by employee
+      - name: department_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by department (includes all employees in department)
+      - name: severity
+        in: query
+        type: string
+        enum:
+          - error
+          - hint
+        description: Filter by error severity
+      - name: error_code
+        in: query
+        type: string
+        description: Filter by specific error code
+      - name: limit
+        in: query
+        type: integer
+        default: 50
+        minimum: 1
+        maximum: 200
+      - name: offset
+        in: query
+        type: integer
+        default: 0
+        minimum: 0
+    responses:
+      200:
+        description: List of correction assistant items
+        schema:
+          $ref: '../schemas/correction-assistant.yaml#/CorrectionAssistantList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      403:
+        $ref: '../responses/errors.yaml#/Forbidden'

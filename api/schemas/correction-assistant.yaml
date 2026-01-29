@@ -1,0 +1,162 @@
+# Correction Assistant schemas
+
+CorrectionMessage:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - code
+    - default_text
+    - severity
+    - is_active
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    code:
+      type: string
+      description: Error/warning code matching calculation engine constants
+      example: "MISSING_COME"
+    default_text:
+      type: string
+      description: System-provided default message text
+      example: "Missing arrival booking"
+    custom_text:
+      type: string
+      x-nullable: true
+      description: Tenant-specific override text. When set, replaces default_text in outputs
+    effective_text:
+      type: string
+      description: Resolved text (custom_text if set, otherwise default_text)
+      readOnly: true
+    severity:
+      type: string
+      enum:
+        - error
+        - hint
+      description: "Classification: error or hint"
+      example: "error"
+    description:
+      type: string
+      x-nullable: true
+      description: Internal description of when this error/hint occurs
+    is_active:
+      type: boolean
+      description: Whether this message is active
+      default: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+UpdateCorrectionMessageRequest:
+  type: object
+  properties:
+    custom_text:
+      type: string
+      x-nullable: true
+      description: Set to override default text, or null to clear override
+    severity:
+      type: string
+      enum:
+        - error
+        - hint
+    is_active:
+      type: boolean
+
+CorrectionMessageList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/CorrectionMessage'
+    meta:
+      $ref: './common.yaml#/PaginationMeta'
+
+CorrectionAssistantError:
+  type: object
+  required:
+    - code
+    - severity
+    - message
+  properties:
+    code:
+      type: string
+      description: Error/warning code
+      example: "MISSING_GO"
+    severity:
+      type: string
+      enum:
+        - error
+        - hint
+      example: "error"
+    message:
+      type: string
+      description: Resolved message text (custom override or default)
+      example: "Missing departure booking"
+    error_type:
+      type: string
+      enum:
+        - missing_booking
+        - unpaired_booking
+        - overlapping_bookings
+        - core_time_violation
+        - exceeds_max_hours
+        - below_min_hours
+        - break_violation
+        - invalid_sequence
+      description: Categorized error type
+
+CorrectionAssistantItem:
+  type: object
+  required:
+    - daily_value_id
+    - employee_id
+    - value_date
+    - errors
+  properties:
+    daily_value_id:
+      type: string
+      format: uuid
+    employee_id:
+      type: string
+      format: uuid
+    employee_name:
+      type: string
+      example: "Max Mustermann"
+    department_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    department_name:
+      type: string
+      x-nullable: true
+    value_date:
+      type: string
+      format: date
+      example: "2026-01-15"
+    errors:
+      type: array
+      items:
+        $ref: '#/CorrectionAssistantError'
+
+CorrectionAssistantList:
+  type: object
+  required:
+    - data
+    - meta
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/CorrectionAssistantItem'
+    meta:
+      $ref: './common.yaml#/PaginationMeta'

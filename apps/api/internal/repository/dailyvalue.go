@@ -115,6 +115,7 @@ func (r *DailyValueRepository) ListAll(ctx context.Context, tenantID uuid.UUID, 
 	var values []model.DailyValue
 	q := r.db.GORM.WithContext(ctx).
 		Preload("Employee").
+		Preload("Employee.Department").
 		Where("tenant_id = ?", tenantID)
 
 	if opts.EmployeeID != nil {

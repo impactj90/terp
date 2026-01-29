@@ -108,6 +108,8 @@ tags:
     description: Booking type group management
   - name: Groups
     description: 'Employee, workflow, and activity group management'
+  - name: Correction Assistant
+    description: Error/hint catalog and correction assistant queries
 securityDefinitions:
   BearerAuth:
     type: apiKey
@@ -5987,6 +5989,158 @@ paths:
           $ref: '#/responses/Unauthorized'
         '404':
           $ref: '#/responses/NotFound'
+  /correction-messages:
+    get:
+      tags:
+        - Correction Assistant
+      summary: List correction messages
+      description: |
+        Returns the error/hint message catalog for the tenant. Each entry maps
+        an error code to human-readable text with optional custom overrides.
+      operationId: listCorrectionMessages
+      parameters:
+        - name: severity
+          in: query
+          type: string
+          enum:
+            - error
+            - hint
+          description: Filter by severity
+        - name: is_active
+          in: query
+          type: boolean
+          description: Filter by active status
+        - name: code
+          in: query
+          type: string
+          description: Filter by error code
+      responses:
+        '200':
+          description: List of correction messages
+          schema:
+            $ref: '#/definitions/CorrectionMessageList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '403':
+          $ref: '#/responses/Forbidden'
+  '/correction-messages/{id}':
+    get:
+      tags:
+        - Correction Assistant
+      summary: Get correction message by ID
+      operationId: getCorrectionMessage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Correction message details
+          schema:
+            $ref: '#/definitions/CorrectionMessage'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    patch:
+      tags:
+        - Correction Assistant
+      summary: Update correction message
+      description: |
+        Update custom text, severity, or active status for a correction message.
+        Set custom_text to override the default text in correction assistant outputs.
+        Set custom_text to null to revert to the default text.
+      operationId: updateCorrectionMessage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateCorrectionMessageRequest'
+      responses:
+        '200':
+          description: Updated correction message
+          schema:
+            $ref: '#/definitions/CorrectionMessage'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+  /correction-assistant:
+    get:
+      tags:
+        - Correction Assistant
+      summary: List correction assistant items
+      description: |
+        Returns daily calculation errors and hints for the correction assistant view.
+        Each item represents one employee-date with one or more errors/hints,
+        with messages resolved from the correction message catalog.
+
+        **Default date range**: When no from/to parameters are provided, returns
+        items from the first day of the previous month through the last day of
+        the current month.
+      operationId: listCorrectionAssistantItems
+      parameters:
+        - name: from
+          in: query
+          type: string
+          format: date
+          description: Start date filter (inclusive). Defaults to first day of previous month.
+        - name: to
+          in: query
+          type: string
+          format: date
+          description: End date filter (inclusive). Defaults to last day of current month.
+        - name: employee_id
+          in: query
+          type: string
+          format: uuid
+          description: Filter by employee
+        - name: department_id
+          in: query
+          type: string
+          format: uuid
+          description: Filter by department (includes all employees in department)
+        - name: severity
+          in: query
+          type: string
+          enum:
+            - error
+            - hint
+          description: Filter by error severity
+        - name: error_code
+          in: query
+          type: string
+          description: Filter by specific error code
+        - name: limit
+          in: query
+          type: integer
+          default: 50
+          minimum: 1
+          maximum: 200
+        - name: offset
+          in: query
+          type: integer
+          default: 0
+          minimum: 0
+      responses:
+        '200':
+          description: List of correction assistant items
+          schema:
+            $ref: '#/definitions/CorrectionAssistantList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '403':
+          $ref: '#/responses/Forbidden'
 definitions:
   UUID:
     type: string
@@ -12155,6 +12309,161 @@ definitions:
         type: string
     required:
       - items
+  CorrectionMessage:
+    type: object
+    required:
+      - id
+      - tenant_id
+      - code
+      - default_text
+      - severity
+      - is_active
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      code:
+        type: string
+        description: Error/warning code matching calculation engine constants
+        example: MISSING_COME
+      default_text:
+        type: string
+        description: System-provided default message text
+        example: Missing arrival booking
+      custom_text:
+        type: string
+        x-nullable: true
+        description: 'Tenant-specific override text. When set, replaces default_text in outputs'
+      effective_text:
+        type: string
+        description: 'Resolved text (custom_text if set, otherwise default_text)'
+        readOnly: true
+      severity:
+        type: string
+        enum:
+          - error
+          - hint
+        description: 'Classification: error or hint'
+        example: error
+      description:
+        type: string
+        x-nullable: true
+        description: Internal description of when this error/hint occurs
+      is_active:
+        type: boolean
+        description: Whether this message is active
+        default: true
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  UpdateCorrectionMessageRequest:
+    type: object
+    properties:
+      custom_text:
+        type: string
+        x-nullable: true
+        description: 'Set to override default text, or null to clear override'
+      severity:
+        type: string
+        enum:
+          - error
+          - hint
+      is_active:
+        type: boolean
+  CorrectionMessageList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/CorrectionMessage'
+      meta:
+        $ref: '#/definitions/PaginationMeta'
+  CorrectionAssistantItem:
+    type: object
+    required:
+      - daily_value_id
+      - employee_id
+      - value_date
+      - errors
+    properties:
+      daily_value_id:
+        type: string
+        format: uuid
+      employee_id:
+        type: string
+        format: uuid
+      employee_name:
+        type: string
+        example: Max Mustermann
+      department_id:
+        type: string
+        format: uuid
+        x-nullable: true
+      department_name:
+        type: string
+        x-nullable: true
+      value_date:
+        type: string
+        format: date
+        example: '2026-01-15'
+      errors:
+        type: array
+        items:
+          $ref: '#/definitions/CorrectionAssistantError'
+  CorrectionAssistantError:
+    type: object
+    required:
+      - code
+      - severity
+      - message
+    properties:
+      code:
+        type: string
+        description: Error/warning code
+        example: MISSING_GO
+      severity:
+        type: string
+        enum:
+          - error
+          - hint
+        example: error
+      message:
+        type: string
+        description: Resolved message text (custom override or default)
+        example: Missing departure booking
+      error_type:
+        type: string
+        enum:
+          - missing_booking
+          - unpaired_booking
+          - overlapping_bookings
+          - core_time_violation
+          - exceeds_max_hours
+          - below_min_hours
+          - break_violation
+          - invalid_sequence
+        description: Categorized error type
+  CorrectionAssistantList:
+    type: object
+    required:
+      - data
+      - meta
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/CorrectionAssistantItem'
+      meta:
+        $ref: '#/definitions/PaginationMeta'
 responses:
   BadRequest:
     description: Invalid request

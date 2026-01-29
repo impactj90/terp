@@ -743,3 +743,29 @@ func RegisterGroupRoutes(r chi.Router, h *GroupHandler, authz *middleware.Author
 		h.ListActivityGroups, h.GetActivityGroup, h.CreateActivityGroup, h.UpdateActivityGroup, h.DeleteActivityGroup,
 	)
 }
+
+// RegisterCorrectionAssistantRoutes registers correction assistant routes.
+func RegisterCorrectionAssistantRoutes(r chi.Router, h *CorrectionAssistantHandler, authz *middleware.AuthorizationMiddleware) {
+	permViewAll := permissions.ID("time_tracking.view_all").String()
+	permEdit := permissions.ID("time_tracking.edit").String()
+
+	// Correction message catalog
+	r.Route("/correction-messages", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.ListMessages)
+			r.Get("/{id}", h.GetMessage)
+			r.Patch("/{id}", h.UpdateMessage)
+			return
+		}
+		r.With(authz.RequirePermission(permViewAll)).Get("/", h.ListMessages)
+		r.With(authz.RequirePermission(permViewAll)).Get("/{id}", h.GetMessage)
+		r.With(authz.RequirePermission(permEdit)).Patch("/{id}", h.UpdateMessage)
+	})
+
+	// Correction assistant query
+	if authz == nil {
+		r.Get("/correction-assistant", h.ListItems)
+	} else {
+		r.With(authz.RequirePermission(permViewAll)).Get("/correction-assistant", h.ListItems)
+	}
+}

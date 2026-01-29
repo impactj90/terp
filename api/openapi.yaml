@@ -111,6 +111,8 @@ tags:
     description: Booking type group management
   - name: Groups
     description: Employee, workflow, and activity group management
+  - name: Correction Assistant
+    description: Error/hint catalog and correction assistant queries
 
 securityDefinitions:
   BearerAuth:
@@ -444,6 +446,14 @@ paths:
     $ref: 'paths/groups.yaml#/~1activity-groups'
   /activity-groups/{id}:
     $ref: 'paths/groups.yaml#/~1activity-groups~1{id}'
+
+  # Correction Assistant
+  /correction-messages:
+    $ref: 'paths/correction-assistant.yaml#/~1correction-messages'
+  /correction-messages/{id}:
+    $ref: 'paths/correction-assistant.yaml#/~1correction-messages~1{id}'
+  /correction-assistant:
+    $ref: 'paths/correction-assistant.yaml#/~1correction-assistant'
 
 definitions:
   # Common
@@ -861,6 +871,20 @@ definitions:
     $ref: 'schemas/monthly-evaluations.yaml#/UpdateMonthlyEvaluationRequest'
   MonthlyEvaluationList:
     $ref: 'schemas/monthly-evaluations.yaml#/MonthlyEvaluationList'
+
+  # Correction Assistant
+  CorrectionMessage:
+    $ref: 'schemas/correction-assistant.yaml#/CorrectionMessage'
+  UpdateCorrectionMessageRequest:
+    $ref: 'schemas/correction-assistant.yaml#/UpdateCorrectionMessageRequest'
+  CorrectionMessageList:
+    $ref: 'schemas/correction-assistant.yaml#/CorrectionMessageList'
+  CorrectionAssistantItem:
+    $ref: 'schemas/correction-assistant.yaml#/CorrectionAssistantItem'
+  CorrectionAssistantError:
+    $ref: 'schemas/correction-assistant.yaml#/CorrectionAssistantError'
+  CorrectionAssistantList:
+    $ref: 'schemas/correction-assistant.yaml#/CorrectionAssistantList'
 
 responses:
   BadRequest:

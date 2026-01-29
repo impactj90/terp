@@ -204,6 +204,9 @@ func main() {
 	absenceTypeGroupHandler := handler.NewAbsenceTypeGroupHandler(absenceTypeGroupService)
 	groupHandler := handler.NewGroupHandler(groupService)
 	edpHandler := handler.NewEmployeeDayPlanHandler(edpService)
+	correctionMessageRepo := repository.NewCorrectionMessageRepository(db)
+	correctionAssistantService := service.NewCorrectionAssistantService(correctionMessageRepo, dailyValueRepo)
+	correctionAssistantHandler := handler.NewCorrectionAssistantHandler(correctionAssistantService)
 
 	// Initialize BookingHandler
 	bookingHandler := handler.NewBookingHandler(
@@ -306,6 +309,7 @@ func main() {
 				handler.RegisterAuditLogRoutes(r, auditLogHandler, authzMiddleware)
 				handler.RegisterGroupRoutes(r, groupHandler, authzMiddleware)
 				handler.RegisterEmployeeDayPlanRoutes(r, edpHandler, authzMiddleware)
+				handler.RegisterCorrectionAssistantRoutes(r, correctionAssistantHandler, authzMiddleware)
 			})
 		})
 
