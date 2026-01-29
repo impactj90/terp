@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,6 +25,8 @@ var (
 	ErrAbsenceTypeNotFound  = errors.New("absence type not found")
 	ErrCannotModifySystem   = errors.New("cannot modify system absence type")
 	ErrAbsenceCodeExists    = errors.New("absence type code already exists")
+	ErrInvalidCodePrefix    = errors.New("code prefix must match category: U for vacation, K for illness, S for special")
+	ErrInvalidPortion       = errors.New("portion must be 0 (none), 1 (full), or 2 (half)")
 )
 
 // absenceDayRepositoryForService defines the interface for absence day data access.
@@ -506,8 +509,49 @@ func (s *AbsenceService) GetTypeByID(ctx context.Context, tenantID, id uuid.UUID
 	return at, nil
 }
 
+// ValidateAbsenceType validates portion and code prefix per category.
+func ValidateAbsenceType(at *model.AbsenceType) error {
+	// Validate portion value
+	if at.Portion != model.AbsencePortionNone &&
+		at.Portion != model.AbsencePortionFull &&
+		at.Portion != model.AbsencePortionHalf {
+		return ErrInvalidPortion
+	}
+
+	// Validate code prefix per category
+	code := strings.TrimSpace(at.Code)
+	if code == "" {
+		return errors.New("absence type code is required")
+	}
+	prefix := strings.ToUpper(code[:1])
+	switch at.Category {
+	case model.AbsenceCategoryVacation:
+		if prefix != "U" {
+			return fmt.Errorf("%w: vacation types must start with U, got %q", ErrInvalidCodePrefix, code)
+		}
+	case model.AbsenceCategoryIllness:
+		if prefix != "K" {
+			return fmt.Errorf("%w: illness types must start with K, got %q", ErrInvalidCodePrefix, code)
+		}
+	case model.AbsenceCategorySpecial:
+		if prefix != "S" {
+			return fmt.Errorf("%w: special types must start with S, got %q", ErrInvalidCodePrefix, code)
+		}
+	case model.AbsenceCategoryUnpaid:
+		// Unpaid types use U prefix per ZMI convention (e.g., UU)
+		if prefix != "U" {
+			return fmt.Errorf("%w: unpaid types must start with U, got %q", ErrInvalidCodePrefix, code)
+		}
+	}
+	return nil
+}
+
 // CreateType creates a new tenant-specific absence type.
 func (s *AbsenceService) CreateType(ctx context.Context, at *model.AbsenceType) (*model.AbsenceType, error) {
+	if err := ValidateAbsenceType(at); err != nil {
+		return nil, err
+	}
+
 	// Check if code already exists for this tenant
 	existing, err := s.absenceTypeRepo.GetByCode(ctx, *at.TenantID, at.Code)
 	if err == nil && existing != nil {
@@ -546,6 +590,10 @@ func (s *AbsenceService) UpdateType(ctx context.Context, at *model.AbsenceType) 
 	// Preserve immutable fields
 	at.IsSystem = existing.IsSystem
 	at.CreatedAt = existing.CreatedAt
+
+	if err := ValidateAbsenceType(at); err != nil {
+		return nil, err
+	}
 
 	if err := s.absenceTypeRepo.Update(ctx, at); err != nil {
 		return nil, err

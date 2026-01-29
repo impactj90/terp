@@ -577,6 +577,11 @@ func (h *AbsenceHandler) absenceTypeToResponse(at *model.AbsenceType) *models.Ab
 		IsPaid:                 at.Portion != model.AbsencePortionNone,
 		AffectsVacationBalance: at.DeductsVacation,
 		RequiresApproval:       at.RequiresApproval,
+		Portion:                int64(at.Portion),
+		HolidayCode:            at.HolidayCode,
+		Priority:               int64(at.Priority),
+		SortOrder:              int64(at.SortOrder),
+		RequiresDocument:       at.RequiresDocument,
 		CreatedAt:              strfmt.DateTime(at.CreatedAt),
 		UpdatedAt:              strfmt.DateTime(at.UpdatedAt),
 	}
@@ -585,6 +590,12 @@ func (h *AbsenceHandler) absenceTypeToResponse(at *model.AbsenceType) *models.Ab
 	if at.TenantID != nil {
 		tenantID := strfmt.UUID(at.TenantID.String())
 		resp.TenantID = &tenantID
+	}
+
+	// Optional group FK
+	if at.AbsenceTypeGroupID != nil {
+		groupID := strfmt.UUID(at.AbsenceTypeGroupID.String())
+		resp.AbsenceTypeGroupID = &groupID
 	}
 
 	return resp
@@ -724,15 +735,35 @@ func (h *AbsenceHandler) CreateType(w http.ResponseWriter, r *http.Request) {
 	if req.IsPaid != nil && *req.IsPaid {
 		at.Portion = model.AbsencePortionFull
 	}
+	// New ZMI fields
+	if req.Portion != nil {
+		at.Portion = model.AbsencePortion(int(*req.Portion))
+	}
+	if req.HolidayCode != "" {
+		at.HolidayCode = &req.HolidayCode
+	}
+	at.Priority = int(req.Priority)
+	at.SortOrder = int(req.SortOrder)
+	if req.RequiresDocument != nil {
+		at.RequiresDocument = *req.RequiresDocument
+	}
+	if req.AbsenceTypeGroupID.String() != "" && req.AbsenceTypeGroupID.String() != "00000000-0000-0000-0000-000000000000" {
+		gID, parseErr := uuid.Parse(req.AbsenceTypeGroupID.String())
+		if parseErr == nil {
+			at.AbsenceTypeGroupID = &gID
+		}
+	}
 	if at.Color == "" {
 		at.Color = "#808080"
 	}
 
 	created, err := h.absenceService.CreateType(r.Context(), at)
 	if err != nil {
-		switch err {
-		case service.ErrAbsenceCodeExists:
+		switch {
+		case err == service.ErrAbsenceCodeExists:
 			respondError(w, http.StatusConflict, "Absence type code already exists")
+		case errors.Is(err, service.ErrInvalidPortion) || errors.Is(err, service.ErrInvalidCodePrefix):
+			respondError(w, http.StatusBadRequest, err.Error())
 		default:
 			respondError(w, http.StatusInternalServerError, "Failed to create absence type")
 		}
@@ -801,17 +832,35 @@ func (h *AbsenceHandler) UpdateType(w http.ResponseWriter, r *http.Request) {
 	} else {
 		existing.Portion = model.AbsencePortionNone
 	}
+	// New ZMI fields
+	if req.Portion != 0 {
+		existing.Portion = model.AbsencePortion(int(req.Portion))
+	}
+	if req.HolidayCode != "" {
+		existing.HolidayCode = &req.HolidayCode
+	}
+	existing.Priority = int(req.Priority)
+	existing.SortOrder = int(req.SortOrder)
+	existing.RequiresDocument = req.RequiresDocument
+	if req.AbsenceTypeGroupID.String() != "" && req.AbsenceTypeGroupID.String() != "00000000-0000-0000-0000-000000000000" {
+		gID, parseErr := uuid.Parse(req.AbsenceTypeGroupID.String())
+		if parseErr == nil {
+			existing.AbsenceTypeGroupID = &gID
+		}
+	}
 
 	// Ensure tenant ID is set for update
 	existing.TenantID = &tenantID
 
 	updated, err := h.absenceService.UpdateType(r.Context(), existing)
 	if err != nil {
-		switch err {
-		case service.ErrAbsenceTypeNotFound:
+		switch {
+		case err == service.ErrAbsenceTypeNotFound:
 			respondError(w, http.StatusNotFound, "Absence type not found")
-		case service.ErrCannotModifySystem:
+		case err == service.ErrCannotModifySystem:
 			respondError(w, http.StatusForbidden, "Cannot modify system absence type")
+		case errors.Is(err, service.ErrInvalidPortion) || errors.Is(err, service.ErrInvalidCodePrefix):
+			respondError(w, http.StatusBadRequest, err.Error())
 		default:
 			respondError(w, http.StatusInternalServerError, "Failed to update absence type")
 		}

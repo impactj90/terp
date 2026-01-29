@@ -61,6 +61,10 @@ type AbsenceType struct {
 	IsSystem bool `gorm:"default:false" json:"is_system"`
 	IsActive bool `gorm:"default:true" json:"is_active"`
 
+	// Group assignment
+	AbsenceTypeGroupID *uuid.UUID        `gorm:"type:uuid" json:"absence_type_group_id,omitempty"`
+	AbsenceTypeGroup   *AbsenceTypeGroup `gorm:"foreignKey:AbsenceTypeGroupID" json:"absence_type_group,omitempty"`
+
 	// Relations
 	Tenant *Tenant `gorm:"foreignKey:TenantID" json:"tenant,omitempty"`
 }

@@ -1,0 +1,105 @@
+# Absence Type Group endpoints
+/absence-type-groups:
+  get:
+    tags:
+      - Absence Type Groups
+    summary: List absence type groups
+    operationId: listAbsenceTypeGroups
+    responses:
+      200:
+        description: List of absence type groups
+        schema:
+          $ref: '../schemas/absence-type-groups.yaml#/AbsenceTypeGroupList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Absence Type Groups
+    summary: Create absence type group
+    operationId: createAbsenceTypeGroup
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/absence-type-groups.yaml#/CreateAbsenceTypeGroupRequest'
+    responses:
+      201:
+        description: Created absence type group
+        schema:
+          $ref: '../schemas/absence-type-groups.yaml#/AbsenceTypeGroup'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/absence-type-groups/{id}:
+  get:
+    tags:
+      - Absence Type Groups
+    summary: Get absence type group by ID
+    operationId: getAbsenceTypeGroup
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Absence type group details
+        schema:
+          $ref: '../schemas/absence-type-groups.yaml#/AbsenceTypeGroup'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Absence Type Groups
+    summary: Update absence type group
+    operationId: updateAbsenceTypeGroup
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/absence-type-groups.yaml#/UpdateAbsenceTypeGroupRequest'
+    responses:
+      200:
+        description: Updated absence type group
+        schema:
+          $ref: '../schemas/absence-type-groups.yaml#/AbsenceTypeGroup'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Absence Type Groups
+    summary: Delete absence type group
+    operationId: deleteAbsenceTypeGroup
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Absence type group deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

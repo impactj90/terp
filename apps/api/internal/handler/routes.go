@@ -625,6 +625,26 @@ func RegisterEmployeeDayPlanRoutes(r chi.Router, h *EmployeeDayPlanHandler, auth
 	})
 }
 
+// RegisterAbsenceTypeGroupRoutes registers absence type group routes.
+func RegisterAbsenceTypeGroupRoutes(r chi.Router, h *AbsenceTypeGroupHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("absence_types.manage").String()
+	r.Route("/absence-type-groups", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+	})
+}
+
 // RegisterGroupRoutes registers employee group, workflow group, and activity group routes.
 func RegisterGroupRoutes(r chi.Router, h *GroupHandler, authz *middleware.AuthorizationMiddleware) {
 	permManage := permissions.ID("groups.manage").String()

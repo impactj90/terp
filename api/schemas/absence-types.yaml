@@ -44,6 +44,33 @@ AbsenceType:
     requires_approval:
       type: boolean
       example: true
+    portion:
+      type: integer
+      enum: [0, 1, 2]
+      description: "ZMI Anteil: portion of regular hours credited (0=none, 1=full, 2=half)"
+      example: 1
+    holiday_code:
+      type: string
+      x-nullable: true
+      description: "ZMI Kürzel am Feiertag: alternative code used on holidays"
+      example: "UH"
+    priority:
+      type: integer
+      description: "ZMI Priorität: higher value wins when holiday and absence overlap"
+      example: 0
+    sort_order:
+      type: integer
+      description: Display ordering
+      example: 0
+    requires_document:
+      type: boolean
+      description: Whether this absence type requires a medical certificate or document
+      example: false
+    absence_type_group_id:
+      type: string
+      format: uuid
+      x-nullable: true
+      description: Group this absence type belongs to
     color:
       type: string
       description: Hex color for UI display
@@ -119,6 +146,28 @@ CreateAbsenceTypeRequest:
       default: true
     color:
       type: string
+    portion:
+      type: integer
+      enum: [0, 1, 2]
+      default: 1
+      description: "ZMI Anteil: 0=none, 1=full, 2=half"
+    holiday_code:
+      type: string
+      maxLength: 10
+      description: "Alternative code on holidays"
+    priority:
+      type: integer
+      default: 0
+      description: "Priority when holiday+absence overlap"
+    sort_order:
+      type: integer
+      default: 0
+    requires_document:
+      type: boolean
+      default: false
+    absence_type_group_id:
+      type: string
+      format: uuid
 
 UpdateAbsenceTypeRequest:
   type: object
@@ -148,6 +197,22 @@ UpdateAbsenceTypeRequest:
       type: string
     is_active:
       type: boolean
+    portion:
+      type: integer
+      enum: [0, 1, 2]
+      description: "ZMI Anteil: 0=none, 1=full, 2=half"
+    holiday_code:
+      type: string
+      maxLength: 10
+    priority:
+      type: integer
+    sort_order:
+      type: integer
+    requires_document:
+      type: boolean
+    absence_type_group_id:
+      type: string
+      format: uuid
 
 AbsenceTypeList:
   type: object

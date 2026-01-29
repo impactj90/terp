@@ -101,6 +101,8 @@ tags:
     description: Employee day plan assignments
   - name: Monthly Evaluations
     description: Monthly evaluation configuration
+  - name: Absence Type Groups
+    description: Absence type group management
   - name: Groups
     description: Employee, workflow, and activity group management
 
@@ -397,6 +399,12 @@ paths:
   /monthly-evaluations/{id}/set-default:
     $ref: 'paths/monthly-evaluations.yaml#/~1monthly-evaluations~1{id}~1set-default'
 
+  # Absence Type Groups
+  /absence-type-groups:
+    $ref: 'paths/absence-type-groups.yaml#/~1absence-type-groups'
+  /absence-type-groups/{id}:
+    $ref: 'paths/absence-type-groups.yaml#/~1absence-type-groups~1{id}'
+
   # Groups
   /employee-groups:
     $ref: 'paths/groups.yaml#/~1employee-groups'
@@ -633,6 +641,16 @@ definitions:
     $ref: 'schemas/absence-types.yaml#/UpdateAbsenceTypeRequest'
   AbsenceTypeList:
     $ref: 'schemas/absence-types.yaml#/AbsenceTypeList'
+
+  # Absence Type Groups
+  AbsenceTypeGroup:
+    $ref: 'schemas/absence-type-groups.yaml#/AbsenceTypeGroup'
+  CreateAbsenceTypeGroupRequest:
+    $ref: 'schemas/absence-type-groups.yaml#/CreateAbsenceTypeGroupRequest'
+  UpdateAbsenceTypeGroupRequest:
+    $ref: 'schemas/absence-type-groups.yaml#/UpdateAbsenceTypeGroupRequest'
+  AbsenceTypeGroupList:
+    $ref: 'schemas/absence-type-groups.yaml#/AbsenceTypeGroupList'
 
   # Vacation Balances
   VacationBalance:

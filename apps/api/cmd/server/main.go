@@ -110,6 +110,8 @@ func main() {
 	notificationStreamHub := service.NewNotificationStreamHub()
 	notificationService.SetStreamHub(notificationStreamHub)
 
+	absenceTypeGroupRepo := repository.NewAbsenceTypeGroupRepository(db)
+
 	// Initialize calculation services
 	bookingRepo := repository.NewBookingRepository(db)
 	dailyValueRepo := repository.NewDailyValueRepository(db)
@@ -189,6 +191,8 @@ func main() {
 	notificationHandler := handler.NewNotificationHandler(notificationService, notificationStreamHub)
 	permissionHandler := handler.NewPermissionHandler()
 	auditLogHandler := handler.NewAuditLogHandler(auditLogService)
+	absenceTypeGroupService := service.NewAbsenceTypeGroupService(absenceTypeGroupRepo)
+	absenceTypeGroupHandler := handler.NewAbsenceTypeGroupHandler(absenceTypeGroupService)
 	groupHandler := handler.NewGroupHandler(groupService)
 	edpHandler := handler.NewEmployeeDayPlanHandler(edpService)
 
@@ -283,6 +287,7 @@ func main() {
 				handler.RegisterBookingRoutes(r, bookingHandler, authzMiddleware)
 				handler.RegisterDailyValueRoutes(r, dailyValueHandler, authzMiddleware)
 				handler.RegisterAbsenceRoutes(r, absenceHandler, authzMiddleware)
+				handler.RegisterAbsenceTypeGroupRoutes(r, absenceTypeGroupHandler, authzMiddleware)
 				handler.RegisterVacationRoutes(r, vacationHandler)
 				handler.RegisterMonthlyEvalRoutes(r, monthlyEvalHandler, authzMiddleware)
 				handler.RegisterNotificationRoutes(r, notificationHandler, authzMiddleware)

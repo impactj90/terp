@@ -20,6 +20,10 @@ import (
 // swagger:model AbsenceType
 type AbsenceType struct {
 
+	// Group this absence type belongs to
+	// Format: uuid
+	AbsenceTypeGroupID *strfmt.UUID `json:"absence_type_group_id,omitempty"`
+
 	// Whether this absence type deducts from vacation balance
 	// Example: true
 	AffectsVacationBalance bool `json:"affects_vacation_balance,omitempty"`
@@ -46,6 +50,10 @@ type AbsenceType struct {
 	// description
 	Description *string `json:"description,omitempty"`
 
+	// ZMI Kürzel am Feiertag: alternative code used on holidays
+	// Example: UH
+	HolidayCode *string `json:"holiday_code,omitempty"`
+
 	// id
 	// Required: true
 	// Format: uuid
@@ -68,9 +76,26 @@ type AbsenceType struct {
 	// Required: true
 	Name *string `json:"name"`
 
+	// ZMI Anteil: portion of regular hours credited (0=none, 1=full, 2=half)
+	// Example: 1
+	// Enum: [0,1,2]
+	Portion int64 `json:"portion,omitempty"`
+
+	// ZMI Priorität: higher value wins when holiday and absence overlap
+	// Example: 0
+	Priority int64 `json:"priority,omitempty"`
+
 	// requires approval
 	// Example: true
 	RequiresApproval bool `json:"requires_approval,omitempty"`
+
+	// Whether this absence type requires a medical certificate or document
+	// Example: false
+	RequiresDocument bool `json:"requires_document,omitempty"`
+
+	// Display ordering
+	// Example: 0
+	SortOrder int64 `json:"sort_order,omitempty"`
 
 	// Null for system absence types
 	// Format: uuid
@@ -84,6 +109,10 @@ type AbsenceType struct {
 // Validate validates this absence type
 func (m *AbsenceType) Validate(formats strfmt.Registry) error {
 	var res []error
+
+	if err := m.validateAbsenceTypeGroupID(formats); err != nil {
+		res = append(res, err)
+	}
 
 	if err := m.validateCategory(formats); err != nil {
 		res = append(res, err)
@@ -105,6 +134,10 @@ func (m *AbsenceType) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
+	if err := m.validatePortion(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateTenantID(formats); err != nil {
 		res = append(res, err)
 	}
@@ -116,6 +149,18 @@ func (m *AbsenceType) Validate(formats strfmt.Registry) error {
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *AbsenceType) validateAbsenceTypeGroupID(formats strfmt.Registry) error {
+	if swag.IsZero(m.AbsenceTypeGroupID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("absence_type_group_id", "body", "uuid", m.AbsenceTypeGroupID.String(), formats); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -211,6 +256,39 @@ func (m *AbsenceType) validateID(formats strfmt.Registry) error {
 func (m *AbsenceType) validateName(formats strfmt.Registry) error {
 
 	if err := validate.Required("name", "body", m.Name); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var absenceTypeTypePortionPropEnum []any
+
+func init() {
+	var res []int64
+	if err := json.Unmarshal([]byte(`[0,1,2]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		absenceTypeTypePortionPropEnum = append(absenceTypeTypePortionPropEnum, v)
+	}
+}
+
+// prop value enum
+func (m *AbsenceType) validatePortionEnum(path, location string, value int64) error {
+	if err := validate.EnumCase(path, location, value, absenceTypeTypePortionPropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *AbsenceType) validatePortion(formats strfmt.Registry) error {
+	if swag.IsZero(m.Portion) { // not required
+		return nil
+	}
+
+	// value enum
+	if err := m.validatePortionEnum("portion", "body", m.Portion); err != nil {
 		return err
 	}
 
