@@ -734,6 +734,30 @@ paths:
           $ref: '#/responses/BadRequest'
         '401':
           $ref: '#/responses/Unauthorized'
+  /employees/bulk-tariff:
+    patch:
+      tags:
+        - Employees
+      summary: Bulk assign tariff
+      description: |
+        Assigns or clears a tariff for multiple employees. Provide either a list
+        of employee IDs or a filter that targets all matching employees.
+      operationId: bulkAssignTariff
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/BulkTariffAssignmentRequest'
+      responses:
+        '200':
+          description: Bulk tariff assignment result
+          schema:
+            $ref: '#/definitions/BulkTariffAssignmentResponse'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
   '/employees/{id}':
     get:
       tags:
@@ -5881,6 +5905,7 @@ definitions:
       tariff_id:
         type: string
         format: uuid
+        x-nullable: true
       weekly_hours:
         type: number
         format: decimal
@@ -5918,6 +5943,7 @@ definitions:
       tariff_id:
         type: string
         format: uuid
+        x-nullable: true
       weekly_hours:
         type: number
         format: decimal
@@ -5989,6 +6015,38 @@ definitions:
         type: integer
         example: 1
       limit:
+        type: integer
+  BulkTariffAssignmentRequest:
+    type: object
+    properties:
+      employee_ids:
+        type: array
+        items:
+          type: string
+          format: uuid
+      filter:
+        type: object
+        properties:
+          q:
+            type: string
+          department_id:
+            type: string
+            format: uuid
+          is_active:
+            type: boolean
+      tariff_id:
+        type: string
+        format: uuid
+        x-nullable: true
+  BulkTariffAssignmentResponse:
+    type: object
+    required:
+      - updated
+      - skipped
+    properties:
+      updated:
+        type: integer
+      skipped:
         type: integer
         example: 20
   Department:

@@ -135,3 +135,20 @@ func (r *EmployeeDayPlanRepository) DeleteRange(ctx context.Context, employeeID 
 	}
 	return nil
 }
+
+// DeleteRangeBySource deletes employee day plans for an employee within a date range filtered by source.
+func (r *EmployeeDayPlanRepository) DeleteRangeBySource(
+	ctx context.Context,
+	employeeID uuid.UUID,
+	from, to time.Time,
+	source model.EmployeeDayPlanSource,
+) error {
+	result := r.db.GORM.WithContext(ctx).
+		Where("employee_id = ? AND plan_date >= ? AND plan_date <= ? AND source = ?", employeeID, from, to, source).
+		Delete(&model.EmployeeDayPlan{})
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to delete employee day plans by source: %w", result.Error)
+	}
+	return nil
+}

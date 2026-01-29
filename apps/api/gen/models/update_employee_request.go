@@ -54,7 +54,7 @@ type UpdateEmployeeRequest struct {
 
 	// tariff id
 	// Format: uuid
-	TariffID strfmt.UUID `json:"tariff_id,omitempty"`
+	TariffID *strfmt.UUID `json:"tariff_id,omitempty"`
 
 	// vacation days per year
 	VacationDaysPerYear float64 `json:"vacation_days_per_year,omitempty"`

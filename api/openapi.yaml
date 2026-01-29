@@ -162,6 +162,8 @@ paths:
     $ref: 'paths/employees.yaml#/~1employees'
   /employees/search:
     $ref: 'paths/employees.yaml#/~1employees~1search'
+  /employees/bulk-tariff:
+    $ref: 'paths/employees.yaml#/~1employees~1bulk-tariff'
   /employees/{id}:
     $ref: 'paths/employees.yaml#/~1employees~1{id}'
   /employees/{id}/contacts:
@@ -465,6 +467,10 @@ definitions:
     $ref: 'schemas/employees.yaml#/CreateEmployeeCardRequest'
   EmployeeList:
     $ref: 'schemas/employees.yaml#/EmployeeList'
+  BulkTariffAssignmentRequest:
+    $ref: 'schemas/employees.yaml#/BulkTariffAssignmentRequest'
+  BulkTariffAssignmentResponse:
+    $ref: 'schemas/employees.yaml#/BulkTariffAssignmentResponse'
 
   # Departments
   Department:

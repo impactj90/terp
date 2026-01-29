@@ -263,6 +263,7 @@ CreateEmployeeRequest:
     tariff_id:
       type: string
       format: uuid
+      x-nullable: true
     weekly_hours:
       type: number
       format: decimal
@@ -301,6 +302,7 @@ UpdateEmployeeRequest:
     tariff_id:
       type: string
       format: uuid
+      x-nullable: true
     weekly_hours:
       type: number
       format: decimal
@@ -375,5 +377,42 @@ EmployeeList:
       type: integer
       example: 1
     limit:
+      type: integer
+
+BulkTariffAssignmentFilter:
+  type: object
+  properties:
+    q:
+      type: string
+    department_id:
+      type: string
+      format: uuid
+    is_active:
+      type: boolean
+
+BulkTariffAssignmentRequest:
+  type: object
+  properties:
+    employee_ids:
+      type: array
+      items:
+        type: string
+        format: uuid
+    filter:
+      $ref: '#/BulkTariffAssignmentFilter'
+    tariff_id:
+      type: string
+      format: uuid
+      x-nullable: true
+
+BulkTariffAssignmentResponse:
+  type: object
+  required:
+    - updated
+    - skipped
+  properties:
+    updated:
+      type: integer
+    skipped:
       type: integer
       example: 20

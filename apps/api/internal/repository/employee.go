@@ -129,7 +129,7 @@ func (r *EmployeeRepository) List(ctx context.Context, filter EmployeeFilter) ([
 	var employees []model.Employee
 	var total int64
 
-	query := r.db.GORM.WithContext(ctx).Model(&model.Employee{}).Where("tenant_id = ?", filter.TenantID)
+	query := r.db.GORM.WithContext(ctx).Model(&model.Employee{}).Preload("Tariff").Where("tenant_id = ?", filter.TenantID)
 
 	if filter.DepartmentID != nil {
 		query = query.Where("department_id = ?", *filter.DepartmentID)
@@ -169,6 +169,7 @@ func (r *EmployeeRepository) List(ctx context.Context, filter EmployeeFilter) ([
 func (r *EmployeeRepository) GetWithDetails(ctx context.Context, id uuid.UUID) (*model.Employee, error) {
 	var emp model.Employee
 	err := r.db.GORM.WithContext(ctx).
+		Preload("Tariff").
 		Preload("Department").
 		Preload("CostCenter").
 		Preload("EmploymentType").

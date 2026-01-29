@@ -76,6 +76,7 @@ func main() {
 	departmentRepo := repository.NewDepartmentRepository(db)
 	teamRepo := repository.NewTeamRepository(db)
 	employeeRepo := repository.NewEmployeeRepository(db)
+	empDayPlanRepo := repository.NewEmployeeDayPlanRepository(db)
 	dayPlanRepo := repository.NewDayPlanRepository(db)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
 	tariffRepo := repository.NewTariffRepository(db)
@@ -93,7 +94,7 @@ func main() {
 	userGroupService := service.NewUserGroupService(userGroupRepo, userRepo)
 	departmentService := service.NewDepartmentService(departmentRepo)
 	teamService := service.NewTeamService(teamRepo)
-	employeeService := service.NewEmployeeService(employeeRepo)
+	employeeService := service.NewEmployeeService(employeeRepo, tariffRepo, empDayPlanRepo)
 	dayPlanService := service.NewDayPlanService(dayPlanRepo)
 	weekPlanService := service.NewWeekPlanService(weekPlanRepo, dayPlanRepo)
 	tariffService := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
@@ -104,7 +105,6 @@ func main() {
 
 	// Initialize calculation services
 	bookingRepo := repository.NewBookingRepository(db)
-	empDayPlanRepo := repository.NewEmployeeDayPlanRepository(db)
 	dailyValueRepo := repository.NewDailyValueRepository(db)
 	dailyCalcService := service.NewDailyCalcService(bookingRepo, empDayPlanRepo, dayPlanRepo, dailyValueRepo, holidayRepo)
 	recalcService := service.NewRecalcService(dailyCalcService, employeeRepo)

@@ -96,6 +96,31 @@
       401:
         $ref: '../responses/errors.yaml#/Unauthorized'
 
+/employees/bulk-tariff:
+  patch:
+    tags:
+      - Employees
+    summary: Bulk assign tariff
+    description: |
+      Assigns or clears a tariff for multiple employees. Provide either a list
+      of employee IDs or a filter that targets all matching employees.
+    operationId: bulkAssignTariff
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/employees.yaml#/BulkTariffAssignmentRequest'
+    responses:
+      200:
+        description: Bulk tariff assignment result
+        schema:
+          $ref: '../schemas/employees.yaml#/BulkTariffAssignmentResponse'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
 /employees/{id}:
   get:
     tags:

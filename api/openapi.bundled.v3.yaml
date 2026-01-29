@@ -810,6 +810,32 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+  /employees/bulk-tariff:
+    patch:
+      tags:
+        - Employees
+      summary: Bulk assign tariff
+      description: |
+        Assigns or clears a tariff for multiple employees. Provide either a list
+        of employee IDs or a filter that targets all matching employees.
+      operationId: bulkAssignTariff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkTariffAssignmentRequest"
+        required: true
+      responses:
+        "200":
+          description: Bulk tariff assignment result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkTariffAssignmentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   "/employees/{id}":
     get:
       tags:
@@ -6638,6 +6664,7 @@ components:
         tariff_id:
           type: string
           format: uuid
+          nullable: true
         weekly_hours:
           type: number
           format: decimal
@@ -6675,6 +6702,7 @@ components:
         tariff_id:
           type: string
           format: uuid
+          nullable: true
         weekly_hours:
           type: number
           format: decimal
@@ -6746,6 +6774,38 @@ components:
           type: integer
           example: 1
         limit:
+          type: integer
+    BulkTariffAssignmentRequest:
+      type: object
+      properties:
+        employee_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        filter:
+          type: object
+          properties:
+            q:
+              type: string
+            department_id:
+              type: string
+              format: uuid
+            is_active:
+              type: boolean
+        tariff_id:
+          type: string
+          format: uuid
+          nullable: true
+    BulkTariffAssignmentResponse:
+      type: object
+      required:
+        - updated
+        - skipped
+      properties:
+        updated:
+          type: integer
+        skipped:
           type: integer
           example: 20
     Department:

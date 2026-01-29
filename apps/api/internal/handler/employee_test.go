@@ -26,7 +26,7 @@ func setupEmployeeHandler(t *testing.T) (*handler.EmployeeHandler, *service.Empl
 	db := testutil.SetupTestDB(t)
 	employeeRepo := repository.NewEmployeeRepository(db)
 	tenantRepo := repository.NewTenantRepository(db)
-	svc := service.NewEmployeeService(employeeRepo)
+	svc := service.NewEmployeeService(employeeRepo, nil, nil)
 	h := handler.NewEmployeeHandler(svc)
 
 	// Create test tenant

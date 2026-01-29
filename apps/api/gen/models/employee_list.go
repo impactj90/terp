@@ -26,7 +26,6 @@ type EmployeeList struct {
 	Data []*Employee `json:"data"`
 
 	// limit
-	// Example: 20
 	// Required: true
 	Limit *int64 `json:"limit"`
 

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -192,6 +193,15 @@ func (h *EmployeeHandler) Create(w http.ResponseWriter, r *http.Request) {
 		}
 		input.EmploymentTypeID = &etID
 	}
+	// Handle optional tariff_id
+	if req.TariffID != nil {
+		tariffID, err := uuid.Parse(req.TariffID.String())
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid tariff ID")
+			return
+		}
+		input.TariffID = &tariffID
+	}
 
 	emp, err := h.employeeService.Create(r.Context(), input)
 	if err != nil {
@@ -227,8 +237,14 @@ func (h *EmployeeHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
 	var req models.UpdateEmployeeRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.Unmarshal(body, &req); err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
@@ -292,6 +308,27 @@ func (h *EmployeeHandler) Update(w http.ResponseWriter, r *http.Request) {
 		input.VacationDaysPerYear = &req.VacationDaysPerYear
 	}
 
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(body, &raw); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+	if rawTariff, ok := raw["tariff_id"]; ok {
+		if string(rawTariff) == "null" {
+			input.ClearTariffID = true
+		} else if req.TariffID != nil {
+			tariffID, err := uuid.Parse(req.TariffID.String())
+			if err != nil {
+				respondError(w, http.StatusBadRequest, "Invalid tariff ID")
+				return
+			}
+			input.TariffID = &tariffID
+		} else {
+			respondError(w, http.StatusBadRequest, "Invalid tariff ID")
+			return
+		}
+	}
+
 	emp, err := h.employeeService.Update(r.Context(), id, input)
 	if err != nil {
 		switch err {
@@ -310,6 +347,121 @@ func (h *EmployeeHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondJSON(w, http.StatusOK, emp)
+}
+
+func (h *EmployeeHandler) BulkAssignTariff(w http.ResponseWriter, r *http.Request) {
+	tenantID, ok := middleware.TenantFromContext(r.Context())
+	if !ok {
+		respondError(w, http.StatusUnauthorized, "Tenant required")
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	var req models.BulkTariffAssignmentRequest
+	if err := json.Unmarshal(body, &req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if err := req.Validate(nil); err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(body, &raw); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	rawTariff, hasTariff := raw["tariff_id"]
+	if !hasTariff {
+		respondError(w, http.StatusBadRequest, "tariff_id is required")
+		return
+	}
+
+	input := service.BulkAssignTariffInput{
+		TenantID: tenantID,
+	}
+
+	if string(rawTariff) == "null" {
+		input.ClearTariff = true
+	} else if req.TariffID != nil {
+		tariffID, err := uuid.Parse(req.TariffID.String())
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid tariff ID")
+			return
+		}
+		input.TariffID = &tariffID
+	} else {
+		respondError(w, http.StatusBadRequest, "Invalid tariff ID")
+		return
+	}
+
+	if len(req.EmployeeIds) > 0 {
+		input.EmployeeIDs = make([]uuid.UUID, 0, len(req.EmployeeIds))
+		for _, id := range req.EmployeeIds {
+			parsed, err := uuid.Parse(id.String())
+			if err != nil {
+				respondError(w, http.StatusBadRequest, "Invalid employee ID")
+				return
+			}
+			input.EmployeeIDs = append(input.EmployeeIDs, parsed)
+		}
+	} else if req.Filter != nil {
+		var rawFilter map[string]json.RawMessage
+		if rawFilterMessage, ok := raw["filter"]; ok && len(rawFilterMessage) > 0 {
+			if err := json.Unmarshal(rawFilterMessage, &rawFilter); err != nil {
+				respondError(w, http.StatusBadRequest, "Invalid filter")
+				return
+			}
+		}
+
+		filter := repository.EmployeeFilter{
+			TenantID: tenantID,
+		}
+		if _, ok := rawFilter["q"]; ok {
+			filter.SearchQuery = req.Filter.Q
+		}
+		if _, ok := rawFilter["department_id"]; ok && req.Filter.DepartmentID != "" {
+			deptID, err := uuid.Parse(req.Filter.DepartmentID.String())
+			if err != nil {
+				respondError(w, http.StatusBadRequest, "Invalid department ID")
+				return
+			}
+			filter.DepartmentID = &deptID
+		}
+		if rawValue, ok := rawFilter["is_active"]; ok {
+			var isActive bool
+			if err := json.Unmarshal(rawValue, &isActive); err != nil {
+				respondError(w, http.StatusBadRequest, "Invalid is_active filter")
+				return
+			}
+			filter.IsActive = &isActive
+		}
+		input.Filter = &filter
+	} else {
+		respondError(w, http.StatusBadRequest, "employee_ids or filter is required")
+		return
+	}
+
+	updated, skipped, err := h.employeeService.BulkAssignTariff(r.Context(), input)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to bulk assign tariff")
+		return
+	}
+
+	updatedCount := int64(updated)
+	skippedCount := int64(skipped)
+	respondJSON(w, http.StatusOK, models.BulkTariffAssignmentResponse{
+		Updated: &updatedCount,
+		Skipped: &skippedCount,
+	})
 }
 
 func (h *EmployeeHandler) Delete(w http.ResponseWriter, r *http.Request) {

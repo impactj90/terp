@@ -89,9 +89,9 @@ make generate-web
 ### Success Criteria
 
 #### Automated Verification
-- [ ] OpenAPI regenerates cleanly: `make generate`
-- [ ] Web types regenerate: `make generate-web`
-- [ ] API tests pass: `go test ./apps/api/internal/handler -run Employee`
+- [x] OpenAPI regenerates cleanly: `make generate`
+- [x] Web types regenerate: `make generate-web`
+- [x] API tests pass: `go test ./apps/api/internal/handler -run Employee`
 
 #### Manual Verification
 - [ ] Create employee without tariff succeeds.
@@ -140,8 +140,8 @@ When tariff is assigned/cleared, generate or remove tariff‑sourced employee da
 ### Success Criteria
 
 #### Automated Verification
-- [ ] Unit test for sync preserves manual plans (tariff updates don’t overwrite manual/holiday).
-- [ ] Unit test for tariff removal deletes only `source=tariff` rows.
+- [x] Unit test for sync preserves manual plans (tariff updates don’t overwrite manual/holiday).
+- [x] Unit test for tariff removal deletes only `source=tariff` rows.
 
 #### Manual Verification
 - [ ] Assign tariff to employee ⇒ day plans appear for future dates.
@@ -186,9 +186,9 @@ Provide a backend endpoint to assign/clear tariffs for multiple employees, suppo
 ### Success Criteria
 
 #### Automated Verification
-- [ ] New endpoint appears in OpenAPI: `make generate`
-- [ ] Unit test for bulk with selected IDs
-- [ ] Unit test for bulk with filter (all filtered)
+- [x] New endpoint appears in OpenAPI: `make generate`
+- [x] Unit test for bulk with selected IDs
+- [x] Unit test for bulk with filter (all filtered)
 
 #### Manual Verification
 - [ ] Bulk assign applies to selected employees.
@@ -246,7 +246,7 @@ Add tariff selector to employee create/edit, show tariff in list/detail, and pro
 ### Success Criteria
 
 #### Automated Verification
-- [ ] Typecheck (if available): `make -C apps/web test` (or project standard)
+- [x] Typecheck (if available): `make -C apps/web test` (or project standard)
 
 #### Manual Verification
 - [ ] Tariff selector appears in employee create/edit and is optional.

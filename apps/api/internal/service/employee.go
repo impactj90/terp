@@ -30,6 +30,7 @@ var (
 	ErrContactValueRequired      = errors.New("contact value is required")
 	ErrCardNumberRequired        = errors.New("card number is required")
 	ErrEmployeeHasActiveBookings = errors.New("cannot deactivate employee with active bookings")
+	ErrTariffSyncUnavailable     = errors.New("tariff sync repositories not configured")
 )
 
 // employeeRepository defines the interface for employee data access.
@@ -55,12 +56,32 @@ type employeeRepository interface {
 	Upsert(ctx context.Context, emp *model.Employee) error
 }
 
-type EmployeeService struct {
-	employeeRepo employeeRepository
+type employeeTariffRepository interface {
+	GetWithDetails(ctx context.Context, id uuid.UUID) (*model.Tariff, error)
 }
 
-func NewEmployeeService(employeeRepo employeeRepository) *EmployeeService {
-	return &EmployeeService{employeeRepo: employeeRepo}
+type employeeTariffDayPlanRepository interface {
+	GetForEmployeeDateRange(ctx context.Context, employeeID uuid.UUID, from, to time.Time) ([]model.EmployeeDayPlan, error)
+	BulkCreate(ctx context.Context, plans []model.EmployeeDayPlan) error
+	DeleteRangeBySource(ctx context.Context, employeeID uuid.UUID, from, to time.Time, source model.EmployeeDayPlanSource) error
+}
+
+type EmployeeService struct {
+	employeeRepo        employeeRepository
+	tariffRepo          employeeTariffRepository
+	employeeDayPlanRepo employeeTariffDayPlanRepository
+}
+
+func NewEmployeeService(
+	employeeRepo employeeRepository,
+	tariffRepo employeeTariffRepository,
+	employeeDayPlanRepo employeeTariffDayPlanRepository,
+) *EmployeeService {
+	return &EmployeeService{
+		employeeRepo:        employeeRepo,
+		tariffRepo:          tariffRepo,
+		employeeDayPlanRepo: employeeDayPlanRepo,
+	}
 }
 
 // CreateEmployeeInput represents the input for creating an employee.
@@ -76,6 +97,7 @@ type CreateEmployeeInput struct {
 	DepartmentID        *uuid.UUID
 	CostCenterID        *uuid.UUID
 	EmploymentTypeID    *uuid.UUID
+	TariffID            *uuid.UUID
 	WeeklyHours         float64
 	VacationDaysPerYear float64
 }
@@ -129,6 +151,7 @@ func (s *EmployeeService) Create(ctx context.Context, input CreateEmployeeInput)
 		DepartmentID:     input.DepartmentID,
 		CostCenterID:     input.CostCenterID,
 		EmploymentTypeID: input.EmploymentTypeID,
+		TariffID:         input.TariffID,
 		IsActive:         true,
 	}
 
@@ -141,6 +164,12 @@ func (s *EmployeeService) Create(ctx context.Context, input CreateEmployeeInput)
 
 	if err := s.employeeRepo.Create(ctx, emp); err != nil {
 		return nil, err
+	}
+
+	if input.TariffID != nil {
+		if err := s.syncEmployeeDayPlansForTariff(ctx, emp, *input.TariffID); err != nil {
+			return nil, err
+		}
 	}
 
 	return emp, nil
@@ -174,12 +203,23 @@ type UpdateEmployeeInput struct {
 	DepartmentID        *uuid.UUID
 	CostCenterID        *uuid.UUID
 	EmploymentTypeID    *uuid.UUID
+	TariffID            *uuid.UUID
 	WeeklyHours         *float64
 	VacationDaysPerYear *float64
 	IsActive            *bool
 	ClearDepartmentID   bool
 	ClearCostCenterID   bool
 	ClearEmploymentType bool
+	ClearTariffID       bool
+}
+
+// BulkAssignTariffInput represents the input for bulk tariff assignment.
+type BulkAssignTariffInput struct {
+	TenantID    uuid.UUID
+	EmployeeIDs []uuid.UUID
+	Filter      *repository.EmployeeFilter
+	TariffID    *uuid.UUID
+	ClearTariff bool
 }
 
 // Update updates an employee.
@@ -188,6 +228,7 @@ func (s *EmployeeService) Update(ctx context.Context, id uuid.UUID, input Update
 	if err != nil {
 		return nil, ErrEmployeeNotFound
 	}
+	oldTariffID := emp.TariffID
 
 	if input.FirstName != nil {
 		firstName := strings.TrimSpace(*input.FirstName)
@@ -230,6 +271,11 @@ func (s *EmployeeService) Update(ctx context.Context, id uuid.UUID, input Update
 	} else if input.EmploymentTypeID != nil {
 		emp.EmploymentTypeID = input.EmploymentTypeID
 	}
+	if input.ClearTariffID {
+		emp.TariffID = nil
+	} else if input.TariffID != nil {
+		emp.TariffID = input.TariffID
+	}
 	if input.WeeklyHours != nil {
 		emp.WeeklyHours = decimal.NewFromFloat(*input.WeeklyHours)
 	}
@@ -244,7 +290,186 @@ func (s *EmployeeService) Update(ctx context.Context, id uuid.UUID, input Update
 		return nil, err
 	}
 
+	tariffChanged := input.TariffID != nil && (oldTariffID == nil || *oldTariffID != *input.TariffID)
+	tariffCleared := input.ClearTariffID && oldTariffID != nil
+
+	if tariffChanged || tariffCleared {
+		if oldTariffID != nil {
+			if err := s.clearTariffDayPlans(ctx, emp, *oldTariffID); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if tariffChanged {
+		if err := s.syncEmployeeDayPlansForTariff(ctx, emp, *input.TariffID); err != nil {
+			return nil, err
+		}
+	}
+
 	return emp, nil
+}
+
+// BulkAssignTariff assigns or clears tariffs for a set of employees.
+func (s *EmployeeService) BulkAssignTariff(ctx context.Context, input BulkAssignTariffInput) (int, int, error) {
+	var employees []model.Employee
+	updated := 0
+	skipped := 0
+
+	if len(input.EmployeeIDs) > 0 {
+		for _, id := range input.EmployeeIDs {
+			emp, err := s.employeeRepo.GetByID(ctx, id)
+			if err != nil || emp == nil {
+				skipped++
+				continue
+			}
+			if emp.TenantID != input.TenantID {
+				skipped++
+				continue
+			}
+			employees = append(employees, *emp)
+		}
+	} else if input.Filter != nil {
+		filter := *input.Filter
+		filter.TenantID = input.TenantID
+		filter.Offset = 0
+		filter.Limit = 0
+		var err error
+		employees, _, err = s.employeeRepo.List(ctx, filter)
+		if err != nil {
+			return 0, 0, err
+		}
+	} else {
+		return 0, 0, errors.New("employee_ids or filter is required")
+	}
+
+	for _, emp := range employees {
+		updateInput := UpdateEmployeeInput{
+			TariffID:      input.TariffID,
+			ClearTariffID: input.ClearTariff,
+		}
+		if _, err := s.Update(ctx, emp.ID, updateInput); err != nil {
+			skipped++
+			continue
+		}
+		updated++
+	}
+
+	return updated, skipped, nil
+}
+
+func (s *EmployeeService) syncEmployeeDayPlansForTariff(ctx context.Context, emp *model.Employee, tariffID uuid.UUID) error {
+	if s.tariffRepo == nil || s.employeeDayPlanRepo == nil {
+		return ErrTariffSyncUnavailable
+	}
+
+	tariff, err := s.tariffRepo.GetWithDetails(ctx, tariffID)
+	if err != nil {
+		return err
+	}
+
+	start, end, ok := s.getTariffSyncWindow(emp, tariff)
+	if !ok {
+		return nil
+	}
+
+	existingPlans, err := s.employeeDayPlanRepo.GetForEmployeeDateRange(ctx, emp.ID, start, end)
+	if err != nil {
+		return err
+	}
+
+	skipDates := make(map[string]struct{}, len(existingPlans))
+	for _, plan := range existingPlans {
+		if plan.Source != model.EmployeeDayPlanSourceTariff {
+			skipDates[plan.PlanDate.Format("2006-01-02")] = struct{}{}
+		}
+	}
+
+	if err := s.employeeDayPlanRepo.DeleteRangeBySource(ctx, emp.ID, start, end, model.EmployeeDayPlanSourceTariff); err != nil {
+		return err
+	}
+
+	plans := make([]model.EmployeeDayPlan, 0, int(end.Sub(start).Hours()/24)+1)
+	for date := start; !date.After(end); date = date.AddDate(0, 0, 1) {
+		if _, ok := skipDates[date.Format("2006-01-02")]; ok {
+			continue
+		}
+
+		dayPlanID := tariff.GetDayPlanIDForDate(date)
+		if dayPlanID == nil {
+			continue
+		}
+
+		plans = append(plans, model.EmployeeDayPlan{
+			TenantID:   emp.TenantID,
+			EmployeeID: emp.ID,
+			PlanDate:   date,
+			DayPlanID:  dayPlanID,
+			Source:     model.EmployeeDayPlanSourceTariff,
+		})
+	}
+
+	if err := s.employeeDayPlanRepo.BulkCreate(ctx, plans); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *EmployeeService) clearTariffDayPlans(ctx context.Context, emp *model.Employee, tariffID uuid.UUID) error {
+	if s.tariffRepo == nil || s.employeeDayPlanRepo == nil {
+		return ErrTariffSyncUnavailable
+	}
+
+	tariff, err := s.tariffRepo.GetWithDetails(ctx, tariffID)
+	if err != nil {
+		return err
+	}
+
+	start, end, ok := s.getTariffSyncWindow(emp, tariff)
+	if !ok {
+		return nil
+	}
+
+	return s.employeeDayPlanRepo.DeleteRangeBySource(ctx, emp.ID, start, end, model.EmployeeDayPlanSourceTariff)
+}
+
+func (s *EmployeeService) getTariffSyncWindow(emp *model.Employee, tariff *model.Tariff) (time.Time, time.Time, bool) {
+	today := time.Now().Truncate(24 * time.Hour)
+	start := maxDate(today, emp.EntryDate.Truncate(24*time.Hour))
+	if tariff != nil && tariff.ValidFrom != nil {
+		validFrom := tariff.ValidFrom.Truncate(24 * time.Hour)
+		if validFrom.After(start) {
+			start = validFrom
+		}
+	}
+
+	end := today.AddDate(1, 0, 0)
+	if emp.ExitDate != nil {
+		exitDate := emp.ExitDate.Truncate(24 * time.Hour)
+		if exitDate.Before(end) {
+			end = exitDate
+		}
+	}
+	if tariff != nil && tariff.ValidTo != nil {
+		validTo := tariff.ValidTo.Truncate(24 * time.Hour)
+		if validTo.Before(end) {
+			end = validTo
+		}
+	}
+
+	if start.After(end) {
+		return start, end, false
+	}
+
+	return start, end, true
+}
+
+func maxDate(left, right time.Time) time.Time {
+	if left.After(right) {
+		return left
+	}
+	return right
 }
 
 // Deactivate deactivates an employee and sets exit date if not set.
