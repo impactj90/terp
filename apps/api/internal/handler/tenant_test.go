@@ -28,11 +28,15 @@ func setupTenantHandler(t *testing.T) (*handler.TenantHandler, *service.TenantSe
 	return h, svc
 }
 
+func tenantRequestBody(name, slug string) string {
+	return `{"name": "` + name + `", "slug": "` + slug + `", "address_street": "Main Street 1", "address_zip": "10115", "address_city": "Berlin", "address_country": "DE"}`
+}
+
 func TestTenantHandler_Create_Success(t *testing.T) {
 	h, _ := setupTenantHandler(t)
 
 	slug := "test-" + uuid.New().String()[:8]
-	body := `{"name": "Test Tenant", "slug": "` + slug + `"}`
+	body := tenantRequestBody("Test Tenant", slug)
 	req := httptest.NewRequest("POST", "/tenants", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
@@ -64,10 +68,17 @@ func TestTenantHandler_Create_SlugExists(t *testing.T) {
 	ctx := context.Background()
 
 	slug := "existing-" + uuid.New().String()[:8]
-	_, err := svc.Create(ctx, "First", slug)
+	_, err := svc.Create(ctx, service.CreateTenantInput{
+		Name:           "First",
+		Slug:           slug,
+		AddressStreet:  "Main Street 1",
+		AddressZip:     "10115",
+		AddressCity:    "Berlin",
+		AddressCountry: "DE",
+	})
 	require.NoError(t, err)
 
-	body := `{"name": "Second", "slug": "` + slug + `"}`
+	body := tenantRequestBody("Second", slug)
 	req := httptest.NewRequest("POST", "/tenants", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
@@ -80,7 +91,7 @@ func TestTenantHandler_Create_SlugExists(t *testing.T) {
 func TestTenantHandler_Create_InvalidSlug(t *testing.T) {
 	h, _ := setupTenantHandler(t)
 
-	body := `{"name": "Test", "slug": "ab"}`
+	body := tenantRequestBody("Test", "ab")
 	req := httptest.NewRequest("POST", "/tenants", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
@@ -94,7 +105,14 @@ func TestTenantHandler_Get_Success(t *testing.T) {
 	h, svc := setupTenantHandler(t)
 	ctx := context.Background()
 
-	tenant, err := svc.Create(ctx, "Test", "test-"+uuid.New().String()[:8])
+	tenant, err := svc.Create(ctx, service.CreateTenantInput{
+		Name:           "Test",
+		Slug:           "test-" + uuid.New().String()[:8],
+		AddressStreet:  "Main Street 1",
+		AddressZip:     "10115",
+		AddressCity:    "Berlin",
+		AddressCountry: "DE",
+	})
 	require.NoError(t, err)
 
 	req := httptest.NewRequest("GET", "/tenants/"+tenant.ID.String(), nil)
@@ -145,9 +163,23 @@ func TestTenantHandler_List(t *testing.T) {
 	h, svc := setupTenantHandler(t)
 	ctx := context.Background()
 
-	_, err := svc.Create(ctx, "Tenant A", "tenant-a-"+uuid.New().String()[:8])
+	_, err := svc.Create(ctx, service.CreateTenantInput{
+		Name:           "Tenant A",
+		Slug:           "tenant-a-" + uuid.New().String()[:8],
+		AddressStreet:  "Main Street 1",
+		AddressZip:     "10115",
+		AddressCity:    "Berlin",
+		AddressCountry: "DE",
+	})
 	require.NoError(t, err)
-	_, err = svc.Create(ctx, "Tenant B", "tenant-b-"+uuid.New().String()[:8])
+	_, err = svc.Create(ctx, service.CreateTenantInput{
+		Name:           "Tenant B",
+		Slug:           "tenant-b-" + uuid.New().String()[:8],
+		AddressStreet:  "Second Street 2",
+		AddressZip:     "10117",
+		AddressCity:    "Berlin",
+		AddressCountry: "DE",
+	})
 	require.NoError(t, err)
 
 	req := httptest.NewRequest("GET", "/tenants", nil)
@@ -167,15 +199,29 @@ func TestTenantHandler_List_ActiveOnly(t *testing.T) {
 	ctx := context.Background()
 
 	activeName := "Active-" + uuid.New().String()[:8]
-	active, err := svc.Create(ctx, activeName, "active-"+uuid.New().String()[:8])
+	active, err := svc.Create(ctx, service.CreateTenantInput{
+		Name:           activeName,
+		Slug:           "active-" + uuid.New().String()[:8],
+		AddressStreet:  "Main Street 1",
+		AddressZip:     "10115",
+		AddressCity:    "Berlin",
+		AddressCountry: "DE",
+	})
 	require.NoError(t, err)
 
-	inactive, err := svc.Create(ctx, "Inactive", "inactive-"+uuid.New().String()[:8])
+	inactive, err := svc.Create(ctx, service.CreateTenantInput{
+		Name:           "Inactive",
+		Slug:           "inactive-" + uuid.New().String()[:8],
+		AddressStreet:  "Side Street 5",
+		AddressZip:     "10118",
+		AddressCity:    "Berlin",
+		AddressCountry: "DE",
+	})
 	require.NoError(t, err)
-	inactive.IsActive = false
-	require.NoError(t, svc.Update(ctx, inactive))
+	isActive := false
+	require.NoError(t, svc.Update(ctx, inactive, service.UpdateTenantInput{IsActive: &isActive}))
 
-	req := httptest.NewRequest("GET", "/tenants?active=true", nil)
+	req := httptest.NewRequest("GET", "/tenants", nil)
 	rr := httptest.NewRecorder()
 
 	h.List(rr, req)
@@ -196,11 +242,56 @@ func TestTenantHandler_List_ActiveOnly(t *testing.T) {
 	assert.True(t, found, "Active tenant should be in results")
 }
 
+func TestTenantHandler_List_IncludeInactive(t *testing.T) {
+	h, svc := setupTenantHandler(t)
+	ctx := context.Background()
+
+	_, err := svc.Create(ctx, service.CreateTenantInput{
+		Name:           "Active Tenant",
+		Slug:           "active-" + uuid.New().String()[:8],
+		AddressStreet:  "Main Street 1",
+		AddressZip:     "10115",
+		AddressCity:    "Berlin",
+		AddressCountry: "DE",
+	})
+	require.NoError(t, err)
+
+	inactive, err := svc.Create(ctx, service.CreateTenantInput{
+		Name:           "Inactive Tenant",
+		Slug:           "inactive-" + uuid.New().String()[:8],
+		AddressStreet:  "Side Street 5",
+		AddressZip:     "10118",
+		AddressCity:    "Berlin",
+		AddressCountry: "DE",
+	})
+	require.NoError(t, err)
+	isActive := false
+	require.NoError(t, svc.Update(ctx, inactive, service.UpdateTenantInput{IsActive: &isActive}))
+
+	req := httptest.NewRequest("GET", "/tenants?include_inactive=true", nil)
+	rr := httptest.NewRecorder()
+
+	h.List(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	var result []model.Tenant
+	err = json.Unmarshal(rr.Body.Bytes(), &result)
+	require.NoError(t, err)
+	assert.GreaterOrEqual(t, len(result), 2)
+}
+
 func TestTenantHandler_Update_Success(t *testing.T) {
 	h, svc := setupTenantHandler(t)
 	ctx := context.Background()
 
-	tenant, err := svc.Create(ctx, "Original", "test-"+uuid.New().String()[:8])
+	tenant, err := svc.Create(ctx, service.CreateTenantInput{
+		Name:           "Original",
+		Slug:           "test-" + uuid.New().String()[:8],
+		AddressStreet:  "Main Street 1",
+		AddressZip:     "10115",
+		AddressCity:    "Berlin",
+		AddressCountry: "DE",
+	})
 	require.NoError(t, err)
 
 	body := `{"name": "Updated"}`
@@ -252,11 +343,18 @@ func TestTenantHandler_Update_NotFound(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, rr.Code)
 }
 
-func TestTenantHandler_Delete(t *testing.T) {
+func TestTenantHandler_Deactivate(t *testing.T) {
 	h, svc := setupTenantHandler(t)
 	ctx := context.Background()
 
-	tenant, err := svc.Create(ctx, "ToDelete", "to-delete-"+uuid.New().String()[:8])
+	tenant, err := svc.Create(ctx, service.CreateTenantInput{
+		Name:           "ToDeactivate",
+		Slug:           "to-delete-" + uuid.New().String()[:8],
+		AddressStreet:  "Main Street 1",
+		AddressZip:     "10115",
+		AddressCity:    "Berlin",
+		AddressCountry: "DE",
+	})
 	require.NoError(t, err)
 
 	req := httptest.NewRequest("DELETE", "/tenants/"+tenant.ID.String(), nil)
@@ -269,9 +367,9 @@ func TestTenantHandler_Delete(t *testing.T) {
 
 	assert.Equal(t, http.StatusNoContent, rr.Code)
 
-	// Verify deleted
-	_, err = svc.GetByID(ctx, tenant.ID)
-	assert.ErrorIs(t, err, service.ErrTenantNotFound)
+	found, err := svc.GetByID(ctx, tenant.ID)
+	require.NoError(t, err)
+	assert.False(t, found.IsActive)
 }
 
 func TestTenantHandler_Delete_InvalidID(t *testing.T) {

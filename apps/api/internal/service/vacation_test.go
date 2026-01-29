@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/tolga/terp/internal/calculation"
 	"github.com/tolga/terp/internal/model"
 )
 
@@ -72,6 +73,30 @@ func (m *mockEmployeeRepoForVacation) GetByID(ctx context.Context, id uuid.UUID)
 	return args.Get(0).(*model.Employee), args.Error(1)
 }
 
+type mockTenantRepoForVacation struct {
+	mock.Mock
+}
+
+func (m *mockTenantRepoForVacation) GetByID(ctx context.Context, id uuid.UUID) (*model.Tenant, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.Tenant), args.Error(1)
+}
+
+type mockTariffRepoForVacation struct {
+	mock.Mock
+}
+
+func (m *mockTariffRepoForVacation) GetByID(ctx context.Context, id uuid.UUID) (*model.Tariff, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.Tariff), args.Error(1)
+}
+
 // --- Test helper ---
 
 func newTestVacationService(maxCarryover decimal.Decimal) (
@@ -80,21 +105,33 @@ func newTestVacationService(maxCarryover decimal.Decimal) (
 	*mockAbsenceDayRepoForVacation,
 	*mockAbsenceTypeRepoForVacation,
 	*mockEmployeeRepoForVacation,
+	*mockTenantRepoForVacation,
+	*mockTariffRepoForVacation,
 ) {
 	vacBalanceRepo := new(mockVacationBalanceRepoForVacation)
 	absenceDayRepo := new(mockAbsenceDayRepoForVacation)
 	absenceTypeRepo := new(mockAbsenceTypeRepoForVacation)
 	employeeRepo := new(mockEmployeeRepoForVacation)
+	tenantRepo := new(mockTenantRepoForVacation)
+	tariffRepo := new(mockTariffRepoForVacation)
 
-	svc := NewVacationService(vacBalanceRepo, absenceDayRepo, absenceTypeRepo, employeeRepo, maxCarryover)
-	return svc, vacBalanceRepo, absenceDayRepo, absenceTypeRepo, employeeRepo
+	svc := NewVacationService(
+		vacBalanceRepo,
+		absenceDayRepo,
+		absenceTypeRepo,
+		employeeRepo,
+		tenantRepo,
+		tariffRepo,
+		maxCarryover,
+	)
+	return svc, vacBalanceRepo, absenceDayRepo, absenceTypeRepo, employeeRepo, tenantRepo, tariffRepo
 }
 
 // --- GetBalance Tests ---
 
 func TestVacationService_GetBalance_Success(t *testing.T) {
 	ctx := context.Background()
-	svc, vacBalanceRepo, _, _, _ := newTestVacationService(decimal.Zero)
+	svc, vacBalanceRepo, _, _, _, _, _ := newTestVacationService(decimal.Zero)
 
 	employeeID := uuid.New()
 	year := 2026
@@ -122,7 +159,7 @@ func TestVacationService_GetBalance_Success(t *testing.T) {
 
 func TestVacationService_GetBalance_NotFound(t *testing.T) {
 	ctx := context.Background()
-	svc, vacBalanceRepo, _, _, _ := newTestVacationService(decimal.Zero)
+	svc, vacBalanceRepo, _, _, _, _, _ := newTestVacationService(decimal.Zero)
 
 	employeeID := uuid.New()
 	vacBalanceRepo.On("GetByEmployeeYear", ctx, employeeID, 2026).Return(nil, nil)
@@ -134,7 +171,7 @@ func TestVacationService_GetBalance_NotFound(t *testing.T) {
 
 func TestVacationService_GetBalance_InvalidYear(t *testing.T) {
 	ctx := context.Background()
-	svc, _, _, _, _ := newTestVacationService(decimal.Zero)
+	svc, _, _, _, _, _, _ := newTestVacationService(decimal.Zero)
 
 	_, err := svc.GetBalance(ctx, uuid.New(), 1800)
 	assert.ErrorIs(t, err, ErrInvalidYear)
@@ -147,7 +184,7 @@ func TestVacationService_GetBalance_InvalidYear(t *testing.T) {
 
 func TestVacationService_InitializeYear_FullYear(t *testing.T) {
 	ctx := context.Background()
-	svc, vacBalanceRepo, _, _, employeeRepo := newTestVacationService(decimal.Zero)
+	svc, vacBalanceRepo, _, _, employeeRepo, tenantRepo, _ := newTestVacationService(decimal.Zero)
 
 	employeeID := uuid.New()
 	tenantID := uuid.New()
@@ -161,6 +198,10 @@ func TestVacationService_InitializeYear_FullYear(t *testing.T) {
 	}
 
 	employeeRepo.On("GetByID", ctx, employeeID).Return(employee, nil)
+	tenantRepo.On("GetByID", ctx, tenantID).Return(&model.Tenant{
+		ID:            tenantID,
+		VacationBasis: model.VacationBasisCalendarYear,
+	}, nil)
 	vacBalanceRepo.On("GetByEmployeeYear", ctx, employeeID, 2026).Return(nil, nil) // No existing balance
 	vacBalanceRepo.On("Upsert", ctx, mock.MatchedBy(func(b *model.VacationBalance) bool {
 		return b.EmployeeID == employeeID &&
@@ -180,7 +221,7 @@ func TestVacationService_InitializeYear_FullYear(t *testing.T) {
 func TestVacationService_InitializeYear_PartYear(t *testing.T) {
 	// Employee started July 1, 2026 -> 6 months -> 30 * 6/12 = 15 days
 	ctx := context.Background()
-	svc, vacBalanceRepo, _, _, employeeRepo := newTestVacationService(decimal.Zero)
+	svc, vacBalanceRepo, _, _, employeeRepo, tenantRepo, _ := newTestVacationService(decimal.Zero)
 
 	employeeID := uuid.New()
 	tenantID := uuid.New()
@@ -194,6 +235,10 @@ func TestVacationService_InitializeYear_PartYear(t *testing.T) {
 	}
 
 	employeeRepo.On("GetByID", ctx, employeeID).Return(employee, nil)
+	tenantRepo.On("GetByID", ctx, tenantID).Return(&model.Tenant{
+		ID:            tenantID,
+		VacationBasis: model.VacationBasisCalendarYear,
+	}, nil)
 	vacBalanceRepo.On("GetByEmployeeYear", ctx, employeeID, 2026).Return(nil, nil)
 	vacBalanceRepo.On("Upsert", ctx, mock.MatchedBy(func(b *model.VacationBalance) bool {
 		// 6 months (Jul-Dec) -> 30 * 6/12 = 15.0
@@ -209,7 +254,7 @@ func TestVacationService_InitializeYear_PartYear(t *testing.T) {
 func TestVacationService_InitializeYear_PartTime(t *testing.T) {
 	// Employee works 20h/week out of 40h standard -> 30 * 20/40 = 15 days
 	ctx := context.Background()
-	svc, vacBalanceRepo, _, _, employeeRepo := newTestVacationService(decimal.Zero)
+	svc, vacBalanceRepo, _, _, employeeRepo, tenantRepo, _ := newTestVacationService(decimal.Zero)
 
 	employeeID := uuid.New()
 	tenantID := uuid.New()
@@ -223,6 +268,10 @@ func TestVacationService_InitializeYear_PartTime(t *testing.T) {
 	}
 
 	employeeRepo.On("GetByID", ctx, employeeID).Return(employee, nil)
+	tenantRepo.On("GetByID", ctx, tenantID).Return(&model.Tenant{
+		ID:            tenantID,
+		VacationBasis: model.VacationBasisCalendarYear,
+	}, nil)
 	vacBalanceRepo.On("GetByEmployeeYear", ctx, employeeID, 2026).Return(nil, nil)
 	vacBalanceRepo.On("Upsert", ctx, mock.MatchedBy(func(b *model.VacationBalance) bool {
 		// Full year, part-time: 30 * (20/40) = 15.0
@@ -238,7 +287,7 @@ func TestVacationService_InitializeYear_PartTime(t *testing.T) {
 func TestVacationService_InitializeYear_PreservesExistingFields(t *testing.T) {
 	// When re-initializing, carryover/adjustments/taken should be preserved
 	ctx := context.Background()
-	svc, vacBalanceRepo, _, _, employeeRepo := newTestVacationService(decimal.Zero)
+	svc, vacBalanceRepo, _, _, employeeRepo, tenantRepo, _ := newTestVacationService(decimal.Zero)
 
 	employeeID := uuid.New()
 	tenantID := uuid.New()
@@ -262,6 +311,10 @@ func TestVacationService_InitializeYear_PreservesExistingFields(t *testing.T) {
 	}
 
 	employeeRepo.On("GetByID", ctx, employeeID).Return(employee, nil)
+	tenantRepo.On("GetByID", ctx, tenantID).Return(&model.Tenant{
+		ID:            tenantID,
+		VacationBasis: model.VacationBasisCalendarYear,
+	}, nil)
 	vacBalanceRepo.On("GetByEmployeeYear", ctx, employeeID, 2026).Return(existing, nil)
 	vacBalanceRepo.On("Upsert", ctx, mock.MatchedBy(func(b *model.VacationBalance) bool {
 		// Entitlement recalculated, but carryover/adjustments/taken preserved
@@ -280,7 +333,7 @@ func TestVacationService_InitializeYear_PreservesExistingFields(t *testing.T) {
 
 func TestVacationService_InitializeYear_EmployeeNotFound(t *testing.T) {
 	ctx := context.Background()
-	svc, _, _, _, employeeRepo := newTestVacationService(decimal.Zero)
+	svc, _, _, _, employeeRepo, _, _ := newTestVacationService(decimal.Zero)
 
 	employeeID := uuid.New()
 	employeeRepo.On("GetByID", ctx, employeeID).Return(nil, errors.New("not found"))
@@ -292,17 +345,33 @@ func TestVacationService_InitializeYear_EmployeeNotFound(t *testing.T) {
 
 func TestVacationService_InitializeYear_InvalidYear(t *testing.T) {
 	ctx := context.Background()
-	svc, _, _, _, _ := newTestVacationService(decimal.Zero)
+	svc, _, _, _, _, _, _ := newTestVacationService(decimal.Zero)
 
 	_, err := svc.InitializeYear(ctx, uuid.New(), 0)
 	assert.ErrorIs(t, err, ErrInvalidYear)
+}
+
+func TestVacationService_ResolveVacationBasis_UsesTenantDefault(t *testing.T) {
+	ctx := context.Background()
+	svc, _, _, _, _, tenantRepo, _ := newTestVacationService(decimal.Zero)
+
+	tenantID := uuid.New()
+	employee := &model.Employee{TenantID: tenantID}
+
+	tenantRepo.On("GetByID", ctx, tenantID).Return(&model.Tenant{
+		ID:            tenantID,
+		VacationBasis: model.VacationBasisEntryDate,
+	}, nil)
+
+	basis := svc.resolveVacationBasis(ctx, employee)
+	assert.Equal(t, calculation.VacationBasisEntryDate, basis)
 }
 
 // --- RecalculateTaken Tests ---
 
 func TestVacationService_RecalculateTaken_Success(t *testing.T) {
 	ctx := context.Background()
-	svc, vacBalanceRepo, absenceDayRepo, absenceTypeRepo, employeeRepo := newTestVacationService(decimal.Zero)
+	svc, vacBalanceRepo, absenceDayRepo, absenceTypeRepo, employeeRepo, _, _ := newTestVacationService(decimal.Zero)
 
 	employeeID := uuid.New()
 	tenantID := uuid.New()
@@ -340,7 +409,7 @@ func TestVacationService_RecalculateTaken_Success(t *testing.T) {
 
 func TestVacationService_RecalculateTaken_NoVacationTypes(t *testing.T) {
 	ctx := context.Background()
-	svc, vacBalanceRepo, _, absenceTypeRepo, employeeRepo := newTestVacationService(decimal.Zero)
+	svc, vacBalanceRepo, _, absenceTypeRepo, employeeRepo, _, _ := newTestVacationService(decimal.Zero)
 
 	employeeID := uuid.New()
 	tenantID := uuid.New()
@@ -364,7 +433,7 @@ func TestVacationService_RecalculateTaken_NoVacationTypes(t *testing.T) {
 
 func TestVacationService_RecalculateTaken_EmployeeNotFound(t *testing.T) {
 	ctx := context.Background()
-	svc, _, _, _, employeeRepo := newTestVacationService(decimal.Zero)
+	svc, _, _, _, employeeRepo, _, _ := newTestVacationService(decimal.Zero)
 
 	employeeID := uuid.New()
 	employeeRepo.On("GetByID", ctx, employeeID).Return(nil, errors.New("not found"))
@@ -376,7 +445,7 @@ func TestVacationService_RecalculateTaken_EmployeeNotFound(t *testing.T) {
 
 func TestVacationService_RecalculateTaken_InvalidYear(t *testing.T) {
 	ctx := context.Background()
-	svc, _, _, _, _ := newTestVacationService(decimal.Zero)
+	svc, _, _, _, _, _, _ := newTestVacationService(decimal.Zero)
 
 	err := svc.RecalculateTaken(ctx, uuid.New(), -1)
 	assert.ErrorIs(t, err, ErrInvalidYear)
@@ -386,7 +455,7 @@ func TestVacationService_RecalculateTaken_InvalidYear(t *testing.T) {
 
 func TestVacationService_AdjustBalance_Success(t *testing.T) {
 	ctx := context.Background()
-	svc, vacBalanceRepo, _, _, _ := newTestVacationService(decimal.Zero)
+	svc, vacBalanceRepo, _, _, _, _, _ := newTestVacationService(decimal.Zero)
 
 	employeeID := uuid.New()
 	existing := &model.VacationBalance{
@@ -410,7 +479,7 @@ func TestVacationService_AdjustBalance_Success(t *testing.T) {
 
 func TestVacationService_AdjustBalance_NegativeAdjustment(t *testing.T) {
 	ctx := context.Background()
-	svc, vacBalanceRepo, _, _, _ := newTestVacationService(decimal.Zero)
+	svc, vacBalanceRepo, _, _, _, _, _ := newTestVacationService(decimal.Zero)
 
 	employeeID := uuid.New()
 	existing := &model.VacationBalance{
@@ -432,7 +501,7 @@ func TestVacationService_AdjustBalance_NegativeAdjustment(t *testing.T) {
 
 func TestVacationService_AdjustBalance_NotFound(t *testing.T) {
 	ctx := context.Background()
-	svc, vacBalanceRepo, _, _, _ := newTestVacationService(decimal.Zero)
+	svc, vacBalanceRepo, _, _, _, _, _ := newTestVacationService(decimal.Zero)
 
 	employeeID := uuid.New()
 	vacBalanceRepo.On("GetByEmployeeYear", ctx, employeeID, 2026).Return(nil, nil)
@@ -444,7 +513,7 @@ func TestVacationService_AdjustBalance_NotFound(t *testing.T) {
 
 func TestVacationService_AdjustBalance_InvalidYear(t *testing.T) {
 	ctx := context.Background()
-	svc, _, _, _, _ := newTestVacationService(decimal.Zero)
+	svc, _, _, _, _, _, _ := newTestVacationService(decimal.Zero)
 
 	err := svc.AdjustBalance(ctx, uuid.New(), 0, decimal.NewFromInt(1), "test")
 	assert.ErrorIs(t, err, ErrInvalidYear)
@@ -455,7 +524,7 @@ func TestVacationService_AdjustBalance_InvalidYear(t *testing.T) {
 func TestVacationService_CarryoverFromPreviousYear_Success(t *testing.T) {
 	ctx := context.Background()
 	maxCarryover := decimal.NewFromInt(10)
-	svc, vacBalanceRepo, _, _, employeeRepo := newTestVacationService(maxCarryover)
+	svc, vacBalanceRepo, _, _, employeeRepo, _, _ := newTestVacationService(maxCarryover)
 
 	employeeID := uuid.New()
 	tenantID := uuid.New()
@@ -489,7 +558,7 @@ func TestVacationService_CarryoverFromPreviousYear_Success(t *testing.T) {
 func TestVacationService_CarryoverFromPreviousYear_CappedAtMax(t *testing.T) {
 	ctx := context.Background()
 	maxCarryover := decimal.NewFromInt(5)
-	svc, vacBalanceRepo, _, _, employeeRepo := newTestVacationService(maxCarryover)
+	svc, vacBalanceRepo, _, _, employeeRepo, _, _ := newTestVacationService(maxCarryover)
 
 	employeeID := uuid.New()
 	tenantID := uuid.New()
@@ -520,7 +589,7 @@ func TestVacationService_CarryoverFromPreviousYear_CappedAtMax(t *testing.T) {
 
 func TestVacationService_CarryoverFromPreviousYear_Unlimited(t *testing.T) {
 	ctx := context.Background()
-	svc, vacBalanceRepo, _, _, employeeRepo := newTestVacationService(decimal.Zero) // 0 = unlimited
+	svc, vacBalanceRepo, _, _, employeeRepo, _, _ := newTestVacationService(decimal.Zero) // 0 = unlimited
 
 	employeeID := uuid.New()
 	tenantID := uuid.New()
@@ -551,7 +620,7 @@ func TestVacationService_CarryoverFromPreviousYear_Unlimited(t *testing.T) {
 
 func TestVacationService_CarryoverFromPreviousYear_NoPreviousBalance(t *testing.T) {
 	ctx := context.Background()
-	svc, vacBalanceRepo, _, _, employeeRepo := newTestVacationService(decimal.Zero)
+	svc, vacBalanceRepo, _, _, employeeRepo, _, _ := newTestVacationService(decimal.Zero)
 
 	employeeID := uuid.New()
 	employee := &model.Employee{ID: employeeID, TenantID: uuid.New()}
@@ -569,7 +638,7 @@ func TestVacationService_CarryoverFromPreviousYear_NoPreviousBalance(t *testing.
 
 func TestVacationService_CarryoverFromPreviousYear_NegativeAvailable(t *testing.T) {
 	ctx := context.Background()
-	svc, vacBalanceRepo, _, _, employeeRepo := newTestVacationService(decimal.Zero)
+	svc, vacBalanceRepo, _, _, employeeRepo, _, _ := newTestVacationService(decimal.Zero)
 
 	employeeID := uuid.New()
 	employee := &model.Employee{ID: employeeID, TenantID: uuid.New()}
@@ -595,7 +664,7 @@ func TestVacationService_CarryoverFromPreviousYear_NegativeAvailable(t *testing.
 func TestVacationService_CarryoverFromPreviousYear_UpdatesExisting(t *testing.T) {
 	ctx := context.Background()
 	maxCarryover := decimal.NewFromInt(10)
-	svc, vacBalanceRepo, _, _, employeeRepo := newTestVacationService(maxCarryover)
+	svc, vacBalanceRepo, _, _, employeeRepo, _, _ := newTestVacationService(maxCarryover)
 
 	employeeID := uuid.New()
 	tenantID := uuid.New()
@@ -635,7 +704,7 @@ func TestVacationService_CarryoverFromPreviousYear_UpdatesExisting(t *testing.T)
 
 func TestVacationService_CarryoverFromPreviousYear_EmployeeNotFound(t *testing.T) {
 	ctx := context.Background()
-	svc, _, _, _, employeeRepo := newTestVacationService(decimal.Zero)
+	svc, _, _, _, employeeRepo, _, _ := newTestVacationService(decimal.Zero)
 
 	employeeID := uuid.New()
 	employeeRepo.On("GetByID", ctx, employeeID).Return(nil, errors.New("not found"))
@@ -647,7 +716,7 @@ func TestVacationService_CarryoverFromPreviousYear_EmployeeNotFound(t *testing.T
 
 func TestVacationService_CarryoverFromPreviousYear_InvalidYear(t *testing.T) {
 	ctx := context.Background()
-	svc, _, _, _, _ := newTestVacationService(decimal.Zero)
+	svc, _, _, _, _, _, _ := newTestVacationService(decimal.Zero)
 
 	err := svc.CarryoverFromPreviousYear(ctx, uuid.New(), 1900) // min is 1901 for carryover
 	assert.ErrorIs(t, err, ErrInvalidYear)

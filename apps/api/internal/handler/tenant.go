@@ -3,11 +3,15 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
 	"github.com/tolga/terp/gen/models"
+	"github.com/tolga/terp/internal/model"
+	"github.com/tolga/terp/internal/repository"
 	"github.com/tolga/terp/internal/service"
 )
 
@@ -20,9 +24,31 @@ func NewTenantHandler(tenantService *service.TenantService) *TenantHandler {
 }
 
 func (h *TenantHandler) List(w http.ResponseWriter, r *http.Request) {
-	activeOnly := r.URL.Query().Get("active") == "true"
+	query := r.URL.Query()
+	nameFilter := strings.TrimSpace(query.Get("name"))
 
-	tenants, err := h.tenantService.List(r.Context(), activeOnly)
+	var activeFilter *bool
+	activeParam := strings.TrimSpace(query.Get("active"))
+	if activeParam != "" {
+		parsed, err := strconv.ParseBool(activeParam)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid active filter")
+			return
+		}
+		activeFilter = &parsed
+	} else if query.Get("include_inactive") != "true" {
+		defaultActive := true
+		activeFilter = &defaultActive
+	}
+
+	filters := repository.TenantListFilters{
+		Active: activeFilter,
+	}
+	if nameFilter != "" {
+		filters.Name = &nameFilter
+	}
+
+	tenants, err := h.tenantService.List(r.Context(), filters)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to list tenants")
 		return
@@ -61,13 +87,39 @@ func (h *TenantHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenant, err := h.tenantService.Create(r.Context(), *req.Name, *req.Slug)
+	input := service.CreateTenantInput{
+		Name:                  *req.Name,
+		Slug:                  *req.Slug,
+		AddressStreet:         *req.AddressStreet,
+		AddressZip:            *req.AddressZip,
+		AddressCity:           *req.AddressCity,
+		AddressCountry:        *req.AddressCountry,
+		Phone:                 req.Phone,
+		PayrollExportBasePath: req.PayrollExportBasePath,
+		Notes:                 req.Notes,
+	}
+	if req.Email != nil {
+		emailValue := req.Email.String()
+		input.Email = &emailValue
+	}
+	if req.VacationBasis != "" {
+		vb := model.VacationBasis(req.VacationBasis)
+		input.VacationBasis = &vb
+	}
+
+	tenant, err := h.tenantService.Create(r.Context(), input)
 	if err != nil {
 		switch err {
 		case service.ErrTenantSlugExists:
 			respondError(w, http.StatusBadRequest, "Tenant slug already exists")
 		case service.ErrInvalidTenantSlug:
 			respondError(w, http.StatusBadRequest, "Invalid tenant slug")
+		case service.ErrInvalidTenantName:
+			respondError(w, http.StatusBadRequest, "Invalid tenant name")
+		case service.ErrInvalidAddress:
+			respondError(w, http.StatusBadRequest, "Invalid tenant address")
+		case service.ErrInvalidTenantVacationBasis:
+			respondError(w, http.StatusBadRequest, "Invalid vacation basis")
 		default:
 			respondError(w, http.StatusInternalServerError, "Failed to create tenant")
 		}
@@ -103,15 +155,37 @@ func (h *TenantHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Name != "" {
-		tenant.Name = req.Name
+	input := service.UpdateTenantInput{
+		Name:                  req.Name,
+		AddressStreet:         req.AddressStreet,
+		AddressZip:            req.AddressZip,
+		AddressCity:           req.AddressCity,
+		AddressCountry:        req.AddressCountry,
+		Phone:                 req.Phone,
+		PayrollExportBasePath: req.PayrollExportBasePath,
+		Notes:                 req.Notes,
+		IsActive:              req.IsActive,
 	}
-	// Note: IsActive cannot be reliably detected as "provided" vs "default false"
-	// with the current OpenAPI spec design. This will always set IsActive.
-	tenant.IsActive = req.IsActive
+	if req.Email != nil {
+		emailValue := req.Email.String()
+		input.Email = &emailValue
+	}
+	if req.VacationBasis != nil {
+		vb := model.VacationBasis(*req.VacationBasis)
+		input.VacationBasis = &vb
+	}
 
-	if err := h.tenantService.Update(r.Context(), tenant); err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to update tenant")
+	if err := h.tenantService.Update(r.Context(), tenant, input); err != nil {
+		switch err {
+		case service.ErrInvalidTenantName:
+			respondError(w, http.StatusBadRequest, "Invalid tenant name")
+		case service.ErrInvalidAddress:
+			respondError(w, http.StatusBadRequest, "Invalid tenant address")
+		case service.ErrInvalidTenantVacationBasis:
+			respondError(w, http.StatusBadRequest, "Invalid vacation basis")
+		default:
+			respondError(w, http.StatusInternalServerError, "Failed to update tenant")
+		}
 		return
 	}
 
@@ -126,8 +200,13 @@ func (h *TenantHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.tenantService.Delete(r.Context(), id); err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to delete tenant")
+	if err := h.tenantService.Deactivate(r.Context(), id); err != nil {
+		switch err {
+		case service.ErrTenantNotFound:
+			respondError(w, http.StatusNotFound, "Tenant not found")
+		default:
+			respondError(w, http.StatusInternalServerError, "Failed to deactivate tenant")
+		}
 		return
 	}
 

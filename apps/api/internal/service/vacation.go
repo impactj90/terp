@@ -35,6 +35,16 @@ type absenceTypeRepoForVacation interface {
 	List(ctx context.Context, tenantID uuid.UUID, includeSystem bool) ([]model.AbsenceType, error)
 }
 
+// tenantRepoForVacation defines the interface for tenant data access.
+type tenantRepoForVacation interface {
+	GetByID(ctx context.Context, id uuid.UUID) (*model.Tenant, error)
+}
+
+// tariffRepoForVacation defines the interface for tariff data access.
+type tariffRepoForVacation interface {
+	GetByID(ctx context.Context, id uuid.UUID) (*model.Tariff, error)
+}
+
 // employeeRepoForVacation defines the interface for employee data.
 type employeeRepoForVacation interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*model.Employee, error)
@@ -46,6 +56,8 @@ type VacationService struct {
 	absenceDayRepo      absenceDayRepoForVacation
 	absenceTypeRepo     absenceTypeRepoForVacation
 	employeeRepo        employeeRepoForVacation
+	tenantRepo          tenantRepoForVacation
+	tariffRepo          tariffRepoForVacation
 	defaultMaxCarryover decimal.Decimal // 0 = unlimited
 }
 
@@ -55,6 +67,8 @@ func NewVacationService(
 	absenceDayRepo absenceDayRepoForVacation,
 	absenceTypeRepo absenceTypeRepoForVacation,
 	employeeRepo employeeRepoForVacation,
+	tenantRepo tenantRepoForVacation,
+	tariffRepo tariffRepoForVacation,
 	defaultMaxCarryover decimal.Decimal,
 ) *VacationService {
 	return &VacationService{
@@ -62,6 +76,8 @@ func NewVacationService(
 		absenceDayRepo:      absenceDayRepo,
 		absenceTypeRepo:     absenceTypeRepo,
 		employeeRepo:        employeeRepo,
+		tenantRepo:          tenantRepo,
+		tariffRepo:          tariffRepo,
 		defaultMaxCarryover: defaultMaxCarryover,
 	}
 }
@@ -99,6 +115,8 @@ func (s *VacationService) InitializeYear(ctx context.Context, employeeID uuid.UU
 		return nil, ErrEmployeeNotFound
 	}
 
+	basis := s.resolveVacationBasis(ctx, employee)
+
 	// Build calculation input with available fields and sensible defaults
 	input := calculation.VacationCalcInput{
 		EntryDate:           employee.EntryDate,
@@ -106,7 +124,7 @@ func (s *VacationService) InitializeYear(ctx context.Context, employeeID uuid.UU
 		WeeklyHours:         employee.WeeklyHours,
 		BaseVacationDays:    employee.VacationDaysPerYear,
 		StandardWeeklyHours: decimal.NewFromInt(40), // Default until tariff ZMI fields available
-		Basis:               calculation.VacationBasisCalendarYear,
+		Basis:               basis,
 		Year:                year,
 		ReferenceDate:       time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC),
 		// BirthDate, HasDisability, SpecialCalcs: zero values (no bonuses applied)
@@ -140,6 +158,21 @@ func (s *VacationService) InitializeYear(ctx context.Context, employeeID uuid.UU
 	}
 
 	return &balance, nil
+}
+
+func (s *VacationService) resolveVacationBasis(ctx context.Context, employee *model.Employee) calculation.VacationBasis {
+	basis := model.VacationBasisCalendarYear
+	if s.tenantRepo != nil {
+		if tenant, err := s.tenantRepo.GetByID(ctx, employee.TenantID); err == nil && tenant != nil {
+			basis = tenant.GetVacationBasis()
+		}
+	}
+	if employee.TariffID != nil && s.tariffRepo != nil {
+		if tariff, err := s.tariffRepo.GetByID(ctx, *employee.TariffID); err == nil && tariff != nil {
+			basis = tariff.GetVacationBasis()
+		}
+	}
+	return calculation.VacationBasis(basis)
 }
 
 // RecalculateTaken recalculates the vacation days taken for an employee in a year.

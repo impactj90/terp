@@ -315,7 +315,9 @@ export interface paths {
          * List tenants
          * @description Returns all tenants (organizations/companies) in the system. Each tenant
          *     has isolated data. Use for tenant selection screens or admin dashboards.
-         *     Filter by active status to show only enabled tenants.
+         *     Filter by active status to show only enabled tenants. By default, inactive
+         *     tenants are excluded unless include_inactive is true or an explicit
+         *     active filter is provided.
          */
         get: operations["listTenants"];
         put?: never;
@@ -348,10 +350,9 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Delete tenant
-         * @description Permanently deletes a tenant and ALL its data. This action cannot be
-         *     undone. Consider deactivating instead to preserve data. Requires
-         *     admin privileges.
+         * Deactivate tenant
+         * @description Deactivates a tenant by setting is_active=false. Deactivated tenants
+         *     cannot be used in tenant-scoped APIs. Requires admin privileges.
          */
         delete: operations["deleteTenant"];
         options?: never;
@@ -2515,6 +2516,30 @@ export interface components {
             name: string;
             /** @example acme-corp */
             slug: string;
+            /** @example Main Street 1 */
+            address_street?: string;
+            /** @example 10115 */
+            address_zip?: string;
+            /** @example Berlin */
+            address_city?: string;
+            /** @example DE */
+            address_country?: string;
+            /** @example +49 30 123456 */
+            phone?: string;
+            /**
+             * Format: email
+             * @example info@example.com
+             */
+            email?: string;
+            /** @example /var/lib/payroll/exports */
+            payroll_export_base_path?: string;
+            /** @example Primary HQ tenant */
+            notes?: string;
+            /**
+             * @example calendar_year
+             * @enum {string}
+             */
+            vacation_basis: "calendar_year" | "entry_date";
             /** @example {} */
             settings?: {
                 [key: string]: unknown;
@@ -2531,10 +2556,45 @@ export interface components {
             name: string;
             /** @example acme-corp */
             slug: string;
+            /** @example Main Street 1 */
+            address_street: string;
+            /** @example 10115 */
+            address_zip: string;
+            /** @example Berlin */
+            address_city: string;
+            /** @example DE */
+            address_country: string;
+            /** @example +49 30 123456 */
+            phone?: string | null;
+            /**
+             * Format: email
+             * @example info@example.com
+             */
+            email?: string | null;
+            /** @example /var/lib/payroll/exports */
+            payroll_export_base_path?: string | null;
+            /** @example Primary HQ tenant */
+            notes?: string | null;
+            /**
+             * @example calendar_year
+             * @enum {string}
+             */
+            vacation_basis?: "calendar_year" | "entry_date";
         };
         UpdateTenantRequest: {
-            name?: string;
-            is_active?: boolean;
+            name?: string | null;
+            address_street?: string | null;
+            address_zip?: string | null;
+            address_city?: string | null;
+            address_country?: string | null;
+            phone?: string | null;
+            /** Format: email */
+            email?: string | null;
+            payroll_export_base_path?: string | null;
+            notes?: string | null;
+            /** @enum {string|null} */
+            vacation_basis?: "calendar_year" | "entry_date" | null;
+            is_active?: boolean | null;
         };
         TenantList: {
             data: components["schemas"]["Tenant"][];
@@ -5483,8 +5543,12 @@ export interface operations {
     listTenants: {
         parameters: {
             query?: {
-                /** @description Filter by active status */
+                /** @description Filter by active status (true/false) */
                 active?: boolean;
+                /** @description Include inactive tenants when no active filter is specified */
+                include_inactive?: boolean;
+                /** @description Case-insensitive name search filter */
+                name?: string;
             };
             header?: never;
             path?: never;

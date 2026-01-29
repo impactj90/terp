@@ -108,12 +108,13 @@ func TestTenantRepository_List(t *testing.T) {
 	require.NoError(t, repo.Update(ctx, inactive))
 
 	// All tenants
-	all, err := repo.List(ctx, false)
+	all, err := repo.List(ctx, repository.TenantListFilters{})
 	require.NoError(t, err)
 	assert.Len(t, all, 2)
 
 	// Active only
-	active, err := repo.List(ctx, true)
+	activeOnly := true
+	active, err := repo.List(ctx, repository.TenantListFilters{Active: &activeOnly})
 	require.NoError(t, err)
 	assert.Len(t, active, 1)
 	assert.Equal(t, "Active", active[0].Name)
@@ -141,4 +142,19 @@ func TestTenantRepository_Delete_NotFound(t *testing.T) {
 
 	err := repo.Delete(ctx, uuid.New())
 	assert.ErrorIs(t, err, repository.ErrTenantNotFound)
+}
+
+func TestTenantRepository_List_NameFilter(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewTenantRepository(db)
+	ctx := context.Background()
+
+	require.NoError(t, repo.Create(ctx, &model.Tenant{Name: "Alpha Company", Slug: "alpha"}))
+	require.NoError(t, repo.Create(ctx, &model.Tenant{Name: "Beta Group", Slug: "beta"}))
+
+	name := "alpha"
+	result, err := repo.List(ctx, repository.TenantListFilters{Name: &name})
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+	assert.Equal(t, "Alpha Company", result[0].Name)
 }

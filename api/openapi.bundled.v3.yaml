@@ -565,17 +565,33 @@ paths:
       tags:
         - Tenants
       summary: List tenants
-      description: |
+      description: >
         Returns all tenants (organizations/companies) in the system. Each tenant
+
         has isolated data. Use for tenant selection screens or admin dashboards.
-        Filter by active status to show only enabled tenants.
+
+        Filter by active status to show only enabled tenants. By default, inactive
+
+        tenants are excluded unless include_inactive is true or an explicit
+
+        active filter is provided.
       operationId: listTenants
       parameters:
         - name: active
           in: query
-          description: Filter by active status
+          description: Filter by active status (true/false)
           schema:
             type: boolean
+        - name: include_inactive
+          in: query
+          description: Include inactive tenants when no active filter is specified
+          schema:
+            type: boolean
+        - name: name
+          in: query
+          description: Case-insensitive name search filter
+          schema:
+            type: string
       responses:
         "200":
           description: List of tenants
@@ -681,11 +697,10 @@ paths:
     delete:
       tags:
         - Tenants
-      summary: Delete tenant
+      summary: Deactivate tenant
       description: |
-        Permanently deletes a tenant and ALL its data. This action cannot be
-        undone. Consider deactivating instead to preserve data. Requires
-        admin privileges.
+        Deactivates a tenant by setting is_active=false. Deactivated tenants
+        cannot be used in tenant-scoped APIs. Requires admin privileges.
       operationId: deleteTenant
       parameters:
         - name: id
@@ -6247,6 +6262,7 @@ components:
         - name
         - slug
         - is_active
+        - vacation_basis
         - created_at
       properties:
         id:
@@ -6258,6 +6274,37 @@ components:
         slug:
           type: string
           example: acme-corp
+        address_street:
+          type: string
+          example: Main Street 1
+        address_zip:
+          type: string
+          example: "10115"
+        address_city:
+          type: string
+          example: Berlin
+        address_country:
+          type: string
+          example: DE
+        phone:
+          type: string
+          example: +49 30 123456
+        email:
+          type: string
+          format: email
+          example: info@example.com
+        payroll_export_base_path:
+          type: string
+          example: /var/lib/payroll/exports
+        notes:
+          type: string
+          example: Primary HQ tenant
+        vacation_basis:
+          type: string
+          enum:
+            - calendar_year
+            - entry_date
+          example: calendar_year
         settings:
           type: object
           additionalProperties: true
@@ -6276,6 +6323,10 @@ components:
       required:
         - name
         - slug
+        - address_street
+        - address_zip
+        - address_city
+        - address_country
       properties:
         name:
           type: string
@@ -6288,6 +6339,51 @@ components:
           maxLength: 100
           pattern: ^[a-z0-9-]+$
           example: acme-corp
+        address_street:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: Main Street 1
+        address_zip:
+          type: string
+          minLength: 1
+          maxLength: 20
+          example: "10115"
+        address_city:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Berlin
+        address_country:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: DE
+        phone:
+          type: string
+          maxLength: 50
+          example: +49 30 123456
+          nullable: true
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          example: info@example.com
+          nullable: true
+        payroll_export_base_path:
+          type: string
+          example: /var/lib/payroll/exports
+          nullable: true
+        notes:
+          type: string
+          example: Primary HQ tenant
+          nullable: true
+        vacation_basis:
+          type: string
+          enum:
+            - calendar_year
+            - entry_date
+          example: calendar_year
     UpdateTenantRequest:
       type: object
       properties:
@@ -6295,8 +6391,51 @@ components:
           type: string
           minLength: 1
           maxLength: 255
+          nullable: true
+        address_street:
+          type: string
+          minLength: 1
+          maxLength: 255
+          nullable: true
+        address_zip:
+          type: string
+          minLength: 1
+          maxLength: 20
+          nullable: true
+        address_city:
+          type: string
+          minLength: 1
+          maxLength: 100
+          nullable: true
+        address_country:
+          type: string
+          minLength: 1
+          maxLength: 100
+          nullable: true
+        phone:
+          type: string
+          maxLength: 50
+          nullable: true
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          nullable: true
+        payroll_export_base_path:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        vacation_basis:
+          type: string
+          enum:
+            - calendar_year
+            - entry_date
+          nullable: true
         is_active:
           type: boolean
+          nullable: true
     TenantList:
       type: object
       required:

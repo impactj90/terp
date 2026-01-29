@@ -121,7 +121,15 @@ func main() {
 
 	// Initialize VacationService
 	vacationBalanceRepo := repository.NewVacationBalanceRepository(db)
-	vacationService := service.NewVacationService(vacationBalanceRepo, absenceDayRepo, absenceTypeRepo, employeeRepo, decimal.Zero)
+	vacationService := service.NewVacationService(
+		vacationBalanceRepo,
+		absenceDayRepo,
+		absenceTypeRepo,
+		employeeRepo,
+		tenantRepo,
+		tariffRepo,
+		decimal.Zero,
+	)
 	vacationHandler := handler.NewVacationHandler(vacationService)
 
 	// Initialize MonthlyEvalService

@@ -44,7 +44,14 @@ func TestRequireTenant_Success(t *testing.T) {
 	mw, svc := setupTenantMiddleware(t)
 	ctx := context.Background()
 
-	tenant, err := svc.Create(ctx, "Test Tenant", "test-"+uuid.New().String()[:8])
+	tenant, err := svc.Create(ctx, service.CreateTenantInput{
+		Name:           "Test Tenant",
+		Slug:           "test-" + uuid.New().String()[:8],
+		AddressStreet:  "Main Street 1",
+		AddressZip:     "10115",
+		AddressCity:    "Berlin",
+		AddressCountry: "DE",
+	})
 	require.NoError(t, err)
 
 	handler := mw.RequireTenant(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -117,11 +124,18 @@ func TestRequireTenant_InactiveTenant(t *testing.T) {
 	mw, svc := setupTenantMiddleware(t)
 	ctx := context.Background()
 
-	tenant, err := svc.Create(ctx, "Inactive Tenant", "inactive-"+uuid.New().String()[:8])
+	tenant, err := svc.Create(ctx, service.CreateTenantInput{
+		Name:           "Inactive Tenant",
+		Slug:           "inactive-" + uuid.New().String()[:8],
+		AddressStreet:  "Main Street 1",
+		AddressZip:     "10115",
+		AddressCity:    "Berlin",
+		AddressCountry: "DE",
+	})
 	require.NoError(t, err)
 
-	tenant.IsActive = false
-	err = svc.Update(ctx, tenant)
+	isActive := false
+	err = svc.Update(ctx, tenant, service.UpdateTenantInput{IsActive: &isActive})
 	require.NoError(t, err)
 
 	handler := mw.RequireTenant(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -142,7 +156,14 @@ func TestOptionalTenant_WithValidHeader(t *testing.T) {
 	mw, svc := setupTenantMiddleware(t)
 	ctx := context.Background()
 
-	tenant, err := svc.Create(ctx, "Test Tenant", "test-"+uuid.New().String()[:8])
+	tenant, err := svc.Create(ctx, service.CreateTenantInput{
+		Name:           "Test Tenant",
+		Slug:           "test-" + uuid.New().String()[:8],
+		AddressStreet:  "Main Street 1",
+		AddressZip:     "10115",
+		AddressCity:    "Berlin",
+		AddressCountry: "DE",
+	})
 	require.NoError(t, err)
 
 	handler := mw.OptionalTenant(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

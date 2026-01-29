@@ -6,6 +6,7 @@ Tenant:
     - name
     - slug
     - is_active
+    - vacation_basis
     - created_at
   properties:
     id:
@@ -17,6 +18,35 @@ Tenant:
     slug:
       type: string
       example: "acme-corp"
+    address_street:
+      type: string
+      example: "Main Street 1"
+    address_zip:
+      type: string
+      example: "10115"
+    address_city:
+      type: string
+      example: "Berlin"
+    address_country:
+      type: string
+      example: "DE"
+    phone:
+      type: string
+      example: "+49 30 123456"
+    email:
+      type: string
+      format: email
+      example: "info@example.com"
+    payroll_export_base_path:
+      type: string
+      example: "/var/lib/payroll/exports"
+    notes:
+      type: string
+      example: "Primary HQ tenant"
+    vacation_basis:
+      type: string
+      enum: ["calendar_year", "entry_date"]
+      example: "calendar_year"
     settings:
       type: object
       additionalProperties: true
@@ -36,6 +66,10 @@ CreateTenantRequest:
   required:
     - name
     - slug
+    - address_street
+    - address_zip
+    - address_city
+    - address_country
   properties:
     name:
       type: string
@@ -48,16 +82,100 @@ CreateTenantRequest:
       maxLength: 100
       pattern: "^[a-z0-9-]+$"
       example: "acme-corp"
+    address_street:
+      type: string
+      minLength: 1
+      maxLength: 255
+      example: "Main Street 1"
+    address_zip:
+      type: string
+      minLength: 1
+      maxLength: 20
+      example: "10115"
+    address_city:
+      type: string
+      minLength: 1
+      maxLength: 100
+      example: "Berlin"
+    address_country:
+      type: string
+      minLength: 1
+      maxLength: 100
+      example: "DE"
+    phone:
+      type: string
+      x-nullable: true
+      maxLength: 50
+      example: "+49 30 123456"
+    email:
+      type: string
+      format: email
+      x-nullable: true
+      maxLength: 255
+      example: "info@example.com"
+    payroll_export_base_path:
+      type: string
+      x-nullable: true
+      example: "/var/lib/payroll/exports"
+    notes:
+      type: string
+      x-nullable: true
+      example: "Primary HQ tenant"
+    vacation_basis:
+      type: string
+      enum: ["calendar_year", "entry_date"]
+      example: "calendar_year"
 
 UpdateTenantRequest:
   type: object
   properties:
     name:
       type: string
+      x-nullable: true
       minLength: 1
       maxLength: 255
+    address_street:
+      type: string
+      x-nullable: true
+      minLength: 1
+      maxLength: 255
+    address_zip:
+      type: string
+      x-nullable: true
+      minLength: 1
+      maxLength: 20
+    address_city:
+      type: string
+      x-nullable: true
+      minLength: 1
+      maxLength: 100
+    address_country:
+      type: string
+      x-nullable: true
+      minLength: 1
+      maxLength: 100
+    phone:
+      type: string
+      x-nullable: true
+      maxLength: 50
+    email:
+      type: string
+      format: email
+      x-nullable: true
+      maxLength: 255
+    payroll_export_base_path:
+      type: string
+      x-nullable: true
+    notes:
+      type: string
+      x-nullable: true
+    vacation_basis:
+      type: string
+      x-nullable: true
+      enum: ["calendar_year", "entry_date"]
     is_active:
       type: boolean
+      x-nullable: true
 
 TenantList:
   type: object

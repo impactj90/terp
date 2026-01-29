@@ -7,6 +7,7 @@ package models
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -19,12 +20,59 @@ import (
 // swagger:model CreateTenantRequest
 type CreateTenantRequest struct {
 
+	// address city
+	// Example: Berlin
+	// Required: true
+	// Max Length: 100
+	// Min Length: 1
+	AddressCity *string `json:"address_city"`
+
+	// address country
+	// Example: DE
+	// Required: true
+	// Max Length: 100
+	// Min Length: 1
+	AddressCountry *string `json:"address_country"`
+
+	// address street
+	// Example: Main Street 1
+	// Required: true
+	// Max Length: 255
+	// Min Length: 1
+	AddressStreet *string `json:"address_street"`
+
+	// address zip
+	// Example: 10115
+	// Required: true
+	// Max Length: 20
+	// Min Length: 1
+	AddressZip *string `json:"address_zip"`
+
+	// email
+	// Example: info@example.com
+	// Max Length: 255
+	// Format: email
+	Email *strfmt.Email `json:"email,omitempty"`
+
 	// name
 	// Example: Acme Corp
 	// Required: true
 	// Max Length: 255
 	// Min Length: 1
 	Name *string `json:"name"`
+
+	// notes
+	// Example: Primary HQ tenant
+	Notes *string `json:"notes,omitempty"`
+
+	// payroll export base path
+	// Example: /var/lib/payroll/exports
+	PayrollExportBasePath *string `json:"payroll_export_base_path,omitempty"`
+
+	// phone
+	// Example: +49 30 123456
+	// Max Length: 50
+	Phone *string `json:"phone,omitempty"`
 
 	// slug
 	// Example: acme-corp
@@ -33,13 +81,42 @@ type CreateTenantRequest struct {
 	// Min Length: 3
 	// Pattern: ^[a-z0-9-]+$
 	Slug *string `json:"slug"`
+
+	// vacation basis
+	// Example: calendar_year
+	// Enum: ["calendar_year","entry_date"]
+	VacationBasis string `json:"vacation_basis,omitempty"`
 }
 
 // Validate validates this create tenant request
 func (m *CreateTenantRequest) Validate(formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.validateAddressCity(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateAddressCountry(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateAddressStreet(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateAddressZip(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateEmail(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateName(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validatePhone(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -47,9 +124,97 @@ func (m *CreateTenantRequest) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
+	if err := m.validateVacationBasis(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *CreateTenantRequest) validateAddressCity(formats strfmt.Registry) error {
+
+	if err := validate.Required("address_city", "body", m.AddressCity); err != nil {
+		return err
+	}
+
+	if err := validate.MinLength("address_city", "body", *m.AddressCity, 1); err != nil {
+		return err
+	}
+
+	if err := validate.MaxLength("address_city", "body", *m.AddressCity, 100); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *CreateTenantRequest) validateAddressCountry(formats strfmt.Registry) error {
+
+	if err := validate.Required("address_country", "body", m.AddressCountry); err != nil {
+		return err
+	}
+
+	if err := validate.MinLength("address_country", "body", *m.AddressCountry, 1); err != nil {
+		return err
+	}
+
+	if err := validate.MaxLength("address_country", "body", *m.AddressCountry, 100); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *CreateTenantRequest) validateAddressStreet(formats strfmt.Registry) error {
+
+	if err := validate.Required("address_street", "body", m.AddressStreet); err != nil {
+		return err
+	}
+
+	if err := validate.MinLength("address_street", "body", *m.AddressStreet, 1); err != nil {
+		return err
+	}
+
+	if err := validate.MaxLength("address_street", "body", *m.AddressStreet, 255); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *CreateTenantRequest) validateAddressZip(formats strfmt.Registry) error {
+
+	if err := validate.Required("address_zip", "body", m.AddressZip); err != nil {
+		return err
+	}
+
+	if err := validate.MinLength("address_zip", "body", *m.AddressZip, 1); err != nil {
+		return err
+	}
+
+	if err := validate.MaxLength("address_zip", "body", *m.AddressZip, 20); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *CreateTenantRequest) validateEmail(formats strfmt.Registry) error {
+	if swag.IsZero(m.Email) { // not required
+		return nil
+	}
+
+	if err := validate.MaxLength("email", "body", m.Email.String(), 255); err != nil {
+		return err
+	}
+
+	if err := validate.FormatOf("email", "body", "email", m.Email.String(), formats); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -64,6 +229,18 @@ func (m *CreateTenantRequest) validateName(formats strfmt.Registry) error {
 	}
 
 	if err := validate.MaxLength("name", "body", *m.Name, 255); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *CreateTenantRequest) validatePhone(formats strfmt.Registry) error {
+	if swag.IsZero(m.Phone) { // not required
+		return nil
+	}
+
+	if err := validate.MaxLength("phone", "body", *m.Phone, 50); err != nil {
 		return err
 	}
 
@@ -85,6 +262,48 @@ func (m *CreateTenantRequest) validateSlug(formats strfmt.Registry) error {
 	}
 
 	if err := validate.Pattern("slug", "body", *m.Slug, `^[a-z0-9-]+$`); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var createTenantRequestTypeVacationBasisPropEnum []any
+
+func init() {
+	var res []string
+	if err := json.Unmarshal([]byte(`["calendar_year","entry_date"]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		createTenantRequestTypeVacationBasisPropEnum = append(createTenantRequestTypeVacationBasisPropEnum, v)
+	}
+}
+
+const (
+
+	// CreateTenantRequestVacationBasisCalendarYear captures enum value "calendar_year"
+	CreateTenantRequestVacationBasisCalendarYear string = "calendar_year"
+
+	// CreateTenantRequestVacationBasisEntryDate captures enum value "entry_date"
+	CreateTenantRequestVacationBasisEntryDate string = "entry_date"
+)
+
+// prop value enum
+func (m *CreateTenantRequest) validateVacationBasisEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, createTenantRequestTypeVacationBasisPropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *CreateTenantRequest) validateVacationBasis(formats strfmt.Registry) error {
+	if swag.IsZero(m.VacationBasis) { // not required
+		return nil
+	}
+
+	// value enum
+	if err := m.validateVacationBasisEnum("vacation_basis", "body", m.VacationBasis); err != nil {
 		return err
 	}
 

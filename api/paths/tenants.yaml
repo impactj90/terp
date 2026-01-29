@@ -7,13 +7,23 @@
     description: |
       Returns all tenants (organizations/companies) in the system. Each tenant
       has isolated data. Use for tenant selection screens or admin dashboards.
-      Filter by active status to show only enabled tenants.
+      Filter by active status to show only enabled tenants. By default, inactive
+      tenants are excluded unless include_inactive is true or an explicit
+      active filter is provided.
     operationId: listTenants
     parameters:
       - name: active
         in: query
         type: boolean
-        description: Filter by active status
+        description: Filter by active status (true/false)
+      - name: include_inactive
+        in: query
+        type: boolean
+        description: Include inactive tenants when no active filter is specified
+      - name: name
+        in: query
+        type: string
+        description: Case-insensitive name search filter
     responses:
       200:
         description: List of tenants
@@ -106,11 +116,10 @@
   delete:
     tags:
       - Tenants
-    summary: Delete tenant
+    summary: Deactivate tenant
     description: |
-      Permanently deletes a tenant and ALL its data. This action cannot be
-      undone. Consider deactivating instead to preserve data. Requires
-      admin privileges.
+      Deactivates a tenant by setting is_active=false. Deactivated tenants
+      cannot be used in tenant-scoped APIs. Requires admin privileges.
     operationId: deleteTenant
     parameters:
       - name: id

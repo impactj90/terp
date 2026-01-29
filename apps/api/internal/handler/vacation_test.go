@@ -35,6 +35,7 @@ func setupVacationHandler(t *testing.T) *vacationTestContext {
 	db := testutil.SetupTestDB(t)
 	tenantRepo := repository.NewTenantRepository(db)
 	employeeRepo := repository.NewEmployeeRepository(db)
+	tariffRepo := repository.NewTariffRepository(db)
 	vacationBalanceRepo := repository.NewVacationBalanceRepository(db)
 	absenceDayRepo := repository.NewAbsenceDayRepository(db)
 	absenceTypeRepo := repository.NewAbsenceTypeRepository(db)
@@ -63,7 +64,13 @@ func setupVacationHandler(t *testing.T) *vacationTestContext {
 
 	// Create vacation service
 	vacationService := service.NewVacationService(
-		vacationBalanceRepo, absenceDayRepo, absenceTypeRepo, employeeRepo, decimal.Zero,
+		vacationBalanceRepo,
+		absenceDayRepo,
+		absenceTypeRepo,
+		employeeRepo,
+		tenantRepo,
+		tariffRepo,
+		decimal.Zero,
 	)
 
 	// Create handler

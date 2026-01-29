@@ -20,6 +20,12 @@ type TenantRepository struct {
 	db *DB
 }
 
+// TenantListFilters controls tenant listing behavior.
+type TenantListFilters struct {
+	Name   *string
+	Active *bool
+}
+
 // NewTenantRepository creates a new tenant repository.
 func NewTenantRepository(db *DB) *TenantRepository {
 	return &TenantRepository{db: db}
@@ -65,11 +71,14 @@ func (r *TenantRepository) Update(ctx context.Context, tenant *model.Tenant) err
 	return r.db.GORM.WithContext(ctx).Save(tenant).Error
 }
 
-// List retrieves tenants with optional active-only filtering.
-func (r *TenantRepository) List(ctx context.Context, activeOnly bool) ([]model.Tenant, error) {
+// List retrieves tenants with optional filters.
+func (r *TenantRepository) List(ctx context.Context, filters TenantListFilters) ([]model.Tenant, error) {
 	query := r.db.GORM.WithContext(ctx)
-	if activeOnly {
-		query = query.Where("is_active = ?", true)
+	if filters.Active != nil {
+		query = query.Where("is_active = ?", *filters.Active)
+	}
+	if filters.Name != nil && *filters.Name != "" {
+		query = query.Where("name ILIKE ?", "%"+*filters.Name+"%")
 	}
 
 	var tenants []model.Tenant

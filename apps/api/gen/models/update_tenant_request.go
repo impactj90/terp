@@ -7,6 +7,7 @@ package models
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -19,20 +20,87 @@ import (
 // swagger:model UpdateTenantRequest
 type UpdateTenantRequest struct {
 
+	// address city
+	// Max Length: 100
+	// Min Length: 1
+	AddressCity *string `json:"address_city,omitempty"`
+
+	// address country
+	// Max Length: 100
+	// Min Length: 1
+	AddressCountry *string `json:"address_country,omitempty"`
+
+	// address street
+	// Max Length: 255
+	// Min Length: 1
+	AddressStreet *string `json:"address_street,omitempty"`
+
+	// address zip
+	// Max Length: 20
+	// Min Length: 1
+	AddressZip *string `json:"address_zip,omitempty"`
+
+	// email
+	// Max Length: 255
+	// Format: email
+	Email *strfmt.Email `json:"email,omitempty"`
+
 	// is active
-	IsActive bool `json:"is_active,omitempty"`
+	IsActive *bool `json:"is_active,omitempty"`
 
 	// name
 	// Max Length: 255
 	// Min Length: 1
-	Name string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty"`
+
+	// notes
+	Notes *string `json:"notes,omitempty"`
+
+	// payroll export base path
+	PayrollExportBasePath *string `json:"payroll_export_base_path,omitempty"`
+
+	// phone
+	// Max Length: 50
+	Phone *string `json:"phone,omitempty"`
+
+	// vacation basis
+	// Enum: ["calendar_year","entry_date"]
+	VacationBasis *string `json:"vacation_basis,omitempty"`
 }
 
 // Validate validates this update tenant request
 func (m *UpdateTenantRequest) Validate(formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.validateAddressCity(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateAddressCountry(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateAddressStreet(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateAddressZip(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateEmail(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateName(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validatePhone(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateVacationBasis(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -42,16 +110,150 @@ func (m *UpdateTenantRequest) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
+func (m *UpdateTenantRequest) validateAddressCity(formats strfmt.Registry) error {
+	if swag.IsZero(m.AddressCity) { // not required
+		return nil
+	}
+
+	if err := validate.MinLength("address_city", "body", *m.AddressCity, 1); err != nil {
+		return err
+	}
+
+	if err := validate.MaxLength("address_city", "body", *m.AddressCity, 100); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *UpdateTenantRequest) validateAddressCountry(formats strfmt.Registry) error {
+	if swag.IsZero(m.AddressCountry) { // not required
+		return nil
+	}
+
+	if err := validate.MinLength("address_country", "body", *m.AddressCountry, 1); err != nil {
+		return err
+	}
+
+	if err := validate.MaxLength("address_country", "body", *m.AddressCountry, 100); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *UpdateTenantRequest) validateAddressStreet(formats strfmt.Registry) error {
+	if swag.IsZero(m.AddressStreet) { // not required
+		return nil
+	}
+
+	if err := validate.MinLength("address_street", "body", *m.AddressStreet, 1); err != nil {
+		return err
+	}
+
+	if err := validate.MaxLength("address_street", "body", *m.AddressStreet, 255); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *UpdateTenantRequest) validateAddressZip(formats strfmt.Registry) error {
+	if swag.IsZero(m.AddressZip) { // not required
+		return nil
+	}
+
+	if err := validate.MinLength("address_zip", "body", *m.AddressZip, 1); err != nil {
+		return err
+	}
+
+	if err := validate.MaxLength("address_zip", "body", *m.AddressZip, 20); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *UpdateTenantRequest) validateEmail(formats strfmt.Registry) error {
+	if swag.IsZero(m.Email) { // not required
+		return nil
+	}
+
+	if err := validate.MaxLength("email", "body", m.Email.String(), 255); err != nil {
+		return err
+	}
+
+	if err := validate.FormatOf("email", "body", "email", m.Email.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (m *UpdateTenantRequest) validateName(formats strfmt.Registry) error {
 	if swag.IsZero(m.Name) { // not required
 		return nil
 	}
 
-	if err := validate.MinLength("name", "body", m.Name, 1); err != nil {
+	if err := validate.MinLength("name", "body", *m.Name, 1); err != nil {
 		return err
 	}
 
-	if err := validate.MaxLength("name", "body", m.Name, 255); err != nil {
+	if err := validate.MaxLength("name", "body", *m.Name, 255); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *UpdateTenantRequest) validatePhone(formats strfmt.Registry) error {
+	if swag.IsZero(m.Phone) { // not required
+		return nil
+	}
+
+	if err := validate.MaxLength("phone", "body", *m.Phone, 50); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var updateTenantRequestTypeVacationBasisPropEnum []any
+
+func init() {
+	var res []string
+	if err := json.Unmarshal([]byte(`["calendar_year","entry_date"]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		updateTenantRequestTypeVacationBasisPropEnum = append(updateTenantRequestTypeVacationBasisPropEnum, v)
+	}
+}
+
+const (
+
+	// UpdateTenantRequestVacationBasisCalendarYear captures enum value "calendar_year"
+	UpdateTenantRequestVacationBasisCalendarYear string = "calendar_year"
+
+	// UpdateTenantRequestVacationBasisEntryDate captures enum value "entry_date"
+	UpdateTenantRequestVacationBasisEntryDate string = "entry_date"
+)
+
+// prop value enum
+func (m *UpdateTenantRequest) validateVacationBasisEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, updateTenantRequestTypeVacationBasisPropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *UpdateTenantRequest) validateVacationBasis(formats strfmt.Registry) error {
+	if swag.IsZero(m.VacationBasis) { // not required
+		return nil
+	}
+
+	// value enum
+	if err := m.validateVacationBasisEnum("vacation_basis", "body", *m.VacationBasis); err != nil {
 		return err
 	}
 

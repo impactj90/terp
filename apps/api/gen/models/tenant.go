@@ -7,6 +7,7 @@ package models
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -19,10 +20,31 @@ import (
 // swagger:model Tenant
 type Tenant struct {
 
+	// address city
+	// Example: Berlin
+	AddressCity string `json:"address_city,omitempty"`
+
+	// address country
+	// Example: DE
+	AddressCountry string `json:"address_country,omitempty"`
+
+	// address street
+	// Example: Main Street 1
+	AddressStreet string `json:"address_street,omitempty"`
+
+	// address zip
+	// Example: 10115
+	AddressZip string `json:"address_zip,omitempty"`
+
 	// created at
 	// Required: true
 	// Format: date-time
 	CreatedAt *strfmt.DateTime `json:"created_at"`
+
+	// email
+	// Example: info@example.com
+	// Format: email
+	Email strfmt.Email `json:"email,omitempty"`
 
 	// id
 	// Required: true
@@ -39,6 +61,18 @@ type Tenant struct {
 	// Required: true
 	Name *string `json:"name"`
 
+	// notes
+	// Example: Primary HQ tenant
+	Notes string `json:"notes,omitempty"`
+
+	// payroll export base path
+	// Example: /var/lib/payroll/exports
+	PayrollExportBasePath string `json:"payroll_export_base_path,omitempty"`
+
+	// phone
+	// Example: +49 30 123456
+	Phone string `json:"phone,omitempty"`
+
 	// settings
 	// Example: {}
 	Settings any `json:"settings,omitempty"`
@@ -51,6 +85,12 @@ type Tenant struct {
 	// updated at
 	// Format: date-time
 	UpdatedAt strfmt.DateTime `json:"updated_at,omitempty"`
+
+	// vacation basis
+	// Example: calendar_year
+	// Required: true
+	// Enum: ["calendar_year","entry_date"]
+	VacationBasis *string `json:"vacation_basis"`
 }
 
 // Validate validates this tenant
@@ -58,6 +98,10 @@ func (m *Tenant) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.validateCreatedAt(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateEmail(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -81,6 +125,10 @@ func (m *Tenant) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
+	if err := m.validateVacationBasis(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
@@ -94,6 +142,18 @@ func (m *Tenant) validateCreatedAt(formats strfmt.Registry) error {
 	}
 
 	if err := validate.FormatOf("created_at", "body", "date-time", m.CreatedAt.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *Tenant) validateEmail(formats strfmt.Registry) error {
+	if swag.IsZero(m.Email) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("email", "body", "email", m.Email.String(), formats); err != nil {
 		return err
 	}
 
@@ -146,6 +206,49 @@ func (m *Tenant) validateUpdatedAt(formats strfmt.Registry) error {
 	}
 
 	if err := validate.FormatOf("updated_at", "body", "date-time", m.UpdatedAt.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var tenantTypeVacationBasisPropEnum []any
+
+func init() {
+	var res []string
+	if err := json.Unmarshal([]byte(`["calendar_year","entry_date"]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		tenantTypeVacationBasisPropEnum = append(tenantTypeVacationBasisPropEnum, v)
+	}
+}
+
+const (
+
+	// TenantVacationBasisCalendarYear captures enum value "calendar_year"
+	TenantVacationBasisCalendarYear string = "calendar_year"
+
+	// TenantVacationBasisEntryDate captures enum value "entry_date"
+	TenantVacationBasisEntryDate string = "entry_date"
+)
+
+// prop value enum
+func (m *Tenant) validateVacationBasisEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, tenantTypeVacationBasisPropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *Tenant) validateVacationBasis(formats strfmt.Registry) error {
+
+	if err := validate.Required("vacation_basis", "body", m.VacationBasis); err != nil {
+		return err
+	}
+
+	// value enum
+	if err := m.validateVacationBasisEnum("vacation_basis", "body", *m.VacationBasis); err != nil {
 		return err
 	}
 
