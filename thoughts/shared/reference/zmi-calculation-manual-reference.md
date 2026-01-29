@@ -24,6 +24,7 @@
 5. [Pausen - Breaks](#5-pausen---breaks)
 6. [Toleranz - Tolerance](#6-toleranz---tolerance)
 7. [Abgleich - Rounding](#7-abgleich---rounding)
+   - [Abgleich relativ zur Kommt-/Gehtzeit](#78-abgleich-relativ-zur-komm--gehtzeit)
 8. [Sonderfunktionen - Special Functions](#8-sonderfunktionen---special-functions)
 9. [Zuschläge - Surcharges](#9-zuschläge---surcharges)
 10. [Schichterkennung - Shift Detection](#10-schichterkennung---shift-detection)
@@ -759,6 +760,50 @@ if (AlleBuchungenRunden == false) {
 | Mathematical   | Mathematisch      | Either                 | 06:07 → 06:00, 06:08 → 06:15 |
 | Add Value      | Wert addieren     | Walk time compensation | 06:00 + 10 → 06:10           |
 | Subtract Value | Wert subtrahieren | Shower time deduction  | 16:00 - 10 → 15:50           |
+
+---
+
+# 7.8 Abgleich relativ zur Kommt-/Gehtzeit
+
+📄 **PAGE 4680 (System Settings - Optionen)**
+
+📗 **ORIGINAL**:
+
+> "Abgleich relativ zur im Zeitplan hinterlegten Komm-/Gehtzeit runden:
+> Bei Aktivieren dieser Option werden die Rundungsregeln nochmals beeinflusst. Ein Beispiel soll dies deutlich machen:
+> Im Zeitplan ist als Rundungsregel bei Kommt hinterlegt: Aufrunden auf 15 Minuten
+> Option Abgleich relativ ... nicht aktiviert:
+> Arbeitsbeginn lt. Tagesplan: 8:10 Uhr
+> Mitarbeiter/-in kommt um 8:11 Uhr, seine Kommt-Zeit wird auf 8:15 Uhr aufgerundet
+> Mitarbeiter/-in kommt um 8:16 Uhr, seine Kommt-Zeit wird auf 8:30 Uhr aufgerundet
+> Option Abgleich relativ ... aktiviert:
+> Arbeitsbeginn lt. Tagesplan: 8:10 Uhr
+> Mitarbeiter/-in kommt um 8:11 Uhr, seine Kommt-Zeit wird auf 8:25 Uhr aufgerundet
+> Mitarbeiter/-in kommt um 8:16 Uhr, seine Kommt-Zeit wird auf 8:25 Uhr aufgerundet"
+
+📘 **TRANSLATION**:
+
+> "Round relative to the arrival/departure time stored in the day plan:
+> When this option is enabled, the rounding rules are influenced again. An example makes this clear:
+> In the day plan, the rounding rule for arrival is set: round up to 15 minutes
+> Option not activated:
+> Planned work start: 8:10
+> Employee arrives at 8:11, arrival is rounded up to 8:15
+> Employee arrives at 8:16, arrival is rounded up to 8:30
+> Option activated:
+> Planned work start: 8:10
+> Employee arrives at 8:11, arrival is rounded up to 8:25
+> Employee arrives at 8:16, arrival is rounded up to 8:25"
+
+📙 **DERIVED**:
+
+```
+if (RoundRelativeToPlanStart) {
+    // Rounding grid is anchored at planned start time (Kommen von/Gehen von)
+} else {
+    // Rounding grid is anchored at absolute clock (00:00)
+}
+```
 
 ---
 
@@ -1726,6 +1771,32 @@ type Holiday struct {
 
 > "The 'Code on holiday' means that ZMI Time should use a different absence code on holidays.
 > The priority determines which calculation takes effect if an absence day is entered in addition to a holiday."
+
+---
+
+## 18.3 Holiday Maintenance Notes
+
+📄 **PAGE 23**
+
+📗 **ORIGINAL**:
+
+> "Haben Sie Feiertage vor dem aktuellen Tag gelöscht oder geändert,
+> müssen die betroffenen Monate neu berechnet werden!
+> Die Feiertage müssen pro Mandant angelegt werden."
+
+📘 **TRANSLATION**:
+
+> "If you delete or change holidays before the current day,
+> the affected months must be recalculated!
+> Holidays must be created per mandant (tenant)."
+
+📙 **DERIVED**:
+
+```
+If holiday changes affect past dates:
+  -> mark affected months for recalculation
+Holidays are tenant-specific.
+```
 
 ---
 
