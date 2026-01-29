@@ -115,6 +115,8 @@ export {
   useCreateHoliday,
   useUpdateHoliday,
   useDeleteHoliday,
+  useGenerateHolidays,
+  useCopyHolidays,
 } from './use-holidays'
 
 // Departments

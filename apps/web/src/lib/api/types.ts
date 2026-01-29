@@ -1361,7 +1361,7 @@ export interface paths {
         put?: never;
         /**
          * Create holiday
-         * @description Creates a new holiday. Supports full-day and half-day holidays.
+         * @description Creates a new holiday with category 1/2/3 (full, half, custom).
          *     Optionally restrict to specific departments. Duplicate dates for
          *     the same tenant are not allowed.
          */
@@ -1396,7 +1396,7 @@ export interface paths {
         head?: never;
         /**
          * Update holiday
-         * @description Updates a holiday's name, date, or half-day status. Changes may trigger
+         * @description Updates a holiday's name, date, or category. Changes may trigger
          *     recalculation of affected employees' time records.
          */
         patch: operations["updateHoliday"];
@@ -2611,8 +2611,12 @@ export interface components {
             holiday_date: string;
             /** @example New Year's Day */
             name: string;
-            /** @example false */
-            is_half_day: boolean;
+            /**
+             * @description Holiday credit category (1=full, 2=half, 3=custom)
+             * @example 1
+             * @enum {integer}
+             */
+            category: 1 | 2 | 3;
             /** @example true */
             applies_to_all: boolean;
             /**
@@ -2625,6 +2629,18 @@ export interface components {
             /** Format: date-time */
             updated_at?: string;
         };
+        HolidayCategoryOverride: {
+            /** @example 12 */
+            month: number;
+            /** @example 24 */
+            day: number;
+            /**
+             * @description Holiday credit category (1=full, 2=half, 3=custom)
+             * @example 2
+             * @enum {integer}
+             */
+            category: 1 | 2 | 3;
+        };
         CreateHolidayRequest: {
             /**
              * Format: date
@@ -2633,8 +2649,12 @@ export interface components {
             holiday_date: string;
             /** @example New Year's Day */
             name: string;
-            /** @default false */
-            is_half_day: boolean;
+            /**
+             * @description Holiday credit category (1=full, 2=half, 3=custom)
+             * @example 1
+             * @enum {integer}
+             */
+            category: 1 | 2 | 3;
             /** @default true */
             applies_to_all: boolean;
             /**
@@ -2647,10 +2667,34 @@ export interface components {
             /** Format: date */
             holiday_date?: string;
             name?: string;
-            is_half_day?: boolean;
+            /**
+             * @description Holiday credit category (1=full, 2=half, 3=custom)
+             * @enum {integer}
+             */
+            category?: 1 | 2 | 3;
             applies_to_all?: boolean;
             /** Format: uuid */
             department_id?: string;
+        };
+        GenerateHolidaysRequest: {
+            /** @example 2026 */
+            year: number;
+            /**
+             * @description German federal state (Bundesland) code
+             * @enum {string}
+             */
+            state: "BW" | "BY" | "BE" | "BB" | "HB" | "HH" | "HE" | "MV" | "NI" | "NW" | "RP" | "SL" | "SN" | "ST" | "SH" | "TH";
+            /** @default true */
+            skip_existing: boolean;
+        };
+        CopyHolidaysRequest: {
+            /** @example 2025 */
+            source_year: number;
+            /** @example 2026 */
+            target_year: number;
+            category_overrides?: components["schemas"]["HolidayCategoryOverride"][];
+            /** @default true */
+            skip_existing: boolean;
         };
         HolidayList: {
             data: components["schemas"]["Holiday"][];
@@ -7942,6 +7986,8 @@ export interface operations {
                 from?: string;
                 /** @description End date for range filter (inclusive) */
                 to?: string;
+                /** @description Optional department filter (includes tenant-wide holidays) */
+                department_id?: string;
             };
             header?: never;
             path?: never;

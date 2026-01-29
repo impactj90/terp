@@ -31,6 +31,7 @@ var (
 	ErrCardNumberRequired        = errors.New("card number is required")
 	ErrEmployeeHasActiveBookings = errors.New("cannot deactivate employee with active bookings")
 	ErrTariffSyncUnavailable     = errors.New("tariff sync repositories not configured")
+	ErrEmployeeExited            = errors.New("employee has exited; operation not allowed after exit date")
 )
 
 // employeeRepository defines the interface for employee data access.
@@ -54,6 +55,7 @@ type employeeRepository interface {
 	UpdateCard(ctx context.Context, card *model.EmployeeCard) error
 	ListCards(ctx context.Context, employeeID uuid.UUID) ([]model.EmployeeCard, error)
 	Upsert(ctx context.Context, emp *model.Employee) error
+	NextPIN(ctx context.Context, tenantID uuid.UUID) (string, error)
 }
 
 type employeeTariffRepository interface {
@@ -100,6 +102,32 @@ type CreateEmployeeInput struct {
 	TariffID            *uuid.UUID
 	WeeklyHours         float64
 	VacationDaysPerYear float64
+	// Extended fields (ZMI-TICKET-004)
+	ExitReason         string
+	Notes              string
+	AddressStreet      string
+	AddressZip         string
+	AddressCity        string
+	AddressCountry     string
+	BirthDate          *time.Time
+	Gender             string
+	Nationality        string
+	Religion           string
+	MaritalStatus      string
+	BirthPlace         string
+	BirthCountry       string
+	RoomNumber         string
+	PhotoURL           string
+	EmployeeGroupID    *uuid.UUID
+	WorkflowGroupID    *uuid.UUID
+	ActivityGroupID    *uuid.UUID
+	PartTimePercent    *float64
+	DisabilityFlag     bool
+	DailyTargetHours   *float64
+	WeeklyTargetHours  *float64
+	MonthlyTargetHours *float64
+	AnnualTargetHours  *float64
+	WorkDaysPerWeek    *float64
 }
 
 // Create creates a new employee with validation.
@@ -109,10 +137,6 @@ func (s *EmployeeService) Create(ctx context.Context, input CreateEmployeeInput)
 	if personnelNumber == "" {
 		return nil, ErrPersonnelNumberRequired
 	}
-	pin := strings.TrimSpace(input.PIN)
-	if pin == "" {
-		return nil, ErrPINRequired
-	}
 	firstName := strings.TrimSpace(input.FirstName)
 	if firstName == "" {
 		return nil, ErrFirstNameRequired
@@ -120,6 +144,16 @@ func (s *EmployeeService) Create(ctx context.Context, input CreateEmployeeInput)
 	lastName := strings.TrimSpace(input.LastName)
 	if lastName == "" {
 		return nil, ErrLastNameRequired
+	}
+
+	// PIN auto-assignment: if empty, generate the next available numeric PIN
+	pin := strings.TrimSpace(input.PIN)
+	if pin == "" {
+		var err error
+		pin, err = s.employeeRepo.NextPIN(ctx, input.TenantID)
+		if err != nil {
+			return nil, ErrPINRequired
+		}
 	}
 
 	// Validate entry date (not more than 6 months in future)
@@ -153,6 +187,26 @@ func (s *EmployeeService) Create(ctx context.Context, input CreateEmployeeInput)
 		EmploymentTypeID: input.EmploymentTypeID,
 		TariffID:         input.TariffID,
 		IsActive:         true,
+		// Extended fields
+		ExitReason:      strings.TrimSpace(input.ExitReason),
+		Notes:           strings.TrimSpace(input.Notes),
+		AddressStreet:   strings.TrimSpace(input.AddressStreet),
+		AddressZip:      strings.TrimSpace(input.AddressZip),
+		AddressCity:     strings.TrimSpace(input.AddressCity),
+		AddressCountry:  strings.TrimSpace(input.AddressCountry),
+		BirthDate:       input.BirthDate,
+		Gender:          strings.TrimSpace(input.Gender),
+		Nationality:     strings.TrimSpace(input.Nationality),
+		Religion:        strings.TrimSpace(input.Religion),
+		MaritalStatus:   strings.TrimSpace(input.MaritalStatus),
+		BirthPlace:      strings.TrimSpace(input.BirthPlace),
+		BirthCountry:    strings.TrimSpace(input.BirthCountry),
+		RoomNumber:      strings.TrimSpace(input.RoomNumber),
+		PhotoURL:        strings.TrimSpace(input.PhotoURL),
+		EmployeeGroupID: input.EmployeeGroupID,
+		WorkflowGroupID: input.WorkflowGroupID,
+		ActivityGroupID: input.ActivityGroupID,
+		DisabilityFlag:  input.DisabilityFlag,
 	}
 
 	if input.WeeklyHours > 0 {
@@ -160,6 +214,30 @@ func (s *EmployeeService) Create(ctx context.Context, input CreateEmployeeInput)
 	}
 	if input.VacationDaysPerYear > 0 {
 		emp.VacationDaysPerYear = decimal.NewFromFloat(input.VacationDaysPerYear)
+	}
+	if input.PartTimePercent != nil {
+		v := decimal.NewFromFloat(*input.PartTimePercent)
+		emp.PartTimePercent = &v
+	}
+	if input.DailyTargetHours != nil {
+		v := decimal.NewFromFloat(*input.DailyTargetHours)
+		emp.DailyTargetHours = &v
+	}
+	if input.WeeklyTargetHours != nil {
+		v := decimal.NewFromFloat(*input.WeeklyTargetHours)
+		emp.WeeklyTargetHours = &v
+	}
+	if input.MonthlyTargetHours != nil {
+		v := decimal.NewFromFloat(*input.MonthlyTargetHours)
+		emp.MonthlyTargetHours = &v
+	}
+	if input.AnnualTargetHours != nil {
+		v := decimal.NewFromFloat(*input.AnnualTargetHours)
+		emp.AnnualTargetHours = &v
+	}
+	if input.WorkDaysPerWeek != nil {
+		v := decimal.NewFromFloat(*input.WorkDaysPerWeek)
+		emp.WorkDaysPerWeek = &v
 	}
 
 	if err := s.employeeRepo.Create(ctx, emp); err != nil {
@@ -211,6 +289,37 @@ type UpdateEmployeeInput struct {
 	ClearCostCenterID   bool
 	ClearEmploymentType bool
 	ClearTariffID       bool
+	// Extended fields (ZMI-TICKET-004)
+	ExitReason         *string
+	Notes              *string
+	AddressStreet      *string
+	AddressZip         *string
+	AddressCity        *string
+	AddressCountry     *string
+	BirthDate          *time.Time
+	Gender             *string
+	Nationality        *string
+	Religion           *string
+	MaritalStatus      *string
+	BirthPlace         *string
+	BirthCountry       *string
+	RoomNumber         *string
+	PhotoURL           *string
+	EmployeeGroupID    *uuid.UUID
+	WorkflowGroupID    *uuid.UUID
+	ActivityGroupID    *uuid.UUID
+	PartTimePercent    *float64
+	DisabilityFlag     *bool
+	DailyTargetHours   *float64
+	WeeklyTargetHours  *float64
+	MonthlyTargetHours *float64
+	AnnualTargetHours  *float64
+	WorkDaysPerWeek    *float64
+	// Clear flags for nullable FK fields
+	ClearEmployeeGroupID bool
+	ClearWorkflowGroupID bool
+	ClearActivityGroupID bool
+	ClearBirthDate       bool
 }
 
 // BulkAssignTariffInput represents the input for bulk tariff assignment.
@@ -284,6 +393,96 @@ func (s *EmployeeService) Update(ctx context.Context, id uuid.UUID, input Update
 	}
 	if input.IsActive != nil {
 		emp.IsActive = *input.IsActive
+	}
+	// Extended fields
+	if input.ExitReason != nil {
+		emp.ExitReason = strings.TrimSpace(*input.ExitReason)
+	}
+	if input.Notes != nil {
+		emp.Notes = strings.TrimSpace(*input.Notes)
+	}
+	if input.AddressStreet != nil {
+		emp.AddressStreet = strings.TrimSpace(*input.AddressStreet)
+	}
+	if input.AddressZip != nil {
+		emp.AddressZip = strings.TrimSpace(*input.AddressZip)
+	}
+	if input.AddressCity != nil {
+		emp.AddressCity = strings.TrimSpace(*input.AddressCity)
+	}
+	if input.AddressCountry != nil {
+		emp.AddressCountry = strings.TrimSpace(*input.AddressCountry)
+	}
+	if input.ClearBirthDate {
+		emp.BirthDate = nil
+	} else if input.BirthDate != nil {
+		emp.BirthDate = input.BirthDate
+	}
+	if input.Gender != nil {
+		emp.Gender = strings.TrimSpace(*input.Gender)
+	}
+	if input.Nationality != nil {
+		emp.Nationality = strings.TrimSpace(*input.Nationality)
+	}
+	if input.Religion != nil {
+		emp.Religion = strings.TrimSpace(*input.Religion)
+	}
+	if input.MaritalStatus != nil {
+		emp.MaritalStatus = strings.TrimSpace(*input.MaritalStatus)
+	}
+	if input.BirthPlace != nil {
+		emp.BirthPlace = strings.TrimSpace(*input.BirthPlace)
+	}
+	if input.BirthCountry != nil {
+		emp.BirthCountry = strings.TrimSpace(*input.BirthCountry)
+	}
+	if input.RoomNumber != nil {
+		emp.RoomNumber = strings.TrimSpace(*input.RoomNumber)
+	}
+	if input.PhotoURL != nil {
+		emp.PhotoURL = strings.TrimSpace(*input.PhotoURL)
+	}
+	if input.ClearEmployeeGroupID {
+		emp.EmployeeGroupID = nil
+	} else if input.EmployeeGroupID != nil {
+		emp.EmployeeGroupID = input.EmployeeGroupID
+	}
+	if input.ClearWorkflowGroupID {
+		emp.WorkflowGroupID = nil
+	} else if input.WorkflowGroupID != nil {
+		emp.WorkflowGroupID = input.WorkflowGroupID
+	}
+	if input.ClearActivityGroupID {
+		emp.ActivityGroupID = nil
+	} else if input.ActivityGroupID != nil {
+		emp.ActivityGroupID = input.ActivityGroupID
+	}
+	if input.DisabilityFlag != nil {
+		emp.DisabilityFlag = *input.DisabilityFlag
+	}
+	if input.PartTimePercent != nil {
+		v := decimal.NewFromFloat(*input.PartTimePercent)
+		emp.PartTimePercent = &v
+	}
+	if input.DailyTargetHours != nil {
+		v := decimal.NewFromFloat(*input.DailyTargetHours)
+		emp.DailyTargetHours = &v
+	}
+	if input.WeeklyTargetHours != nil {
+		v := decimal.NewFromFloat(*input.WeeklyTargetHours)
+		emp.WeeklyTargetHours = &v
+	}
+	if input.MonthlyTargetHours != nil {
+		v := decimal.NewFromFloat(*input.MonthlyTargetHours)
+		emp.MonthlyTargetHours = &v
+	}
+	if input.AnnualTargetHours != nil {
+		v := decimal.NewFromFloat(*input.AnnualTargetHours)
+		emp.AnnualTargetHours = &v
+	}
+	if input.WorkDaysPerWeek != nil {
+		v := decimal.NewFromFloat(*input.WorkDaysPerWeek)
+		emp.WorkDaysPerWeek = &v
 	}
 
 	if err := s.employeeRepo.Update(ctx, emp); err != nil {
@@ -549,6 +748,15 @@ func (s *EmployeeService) AddContact(ctx context.Context, input CreateContactInp
 	return contact, nil
 }
 
+// GetContactByID retrieves a contact by ID.
+func (s *EmployeeService) GetContactByID(ctx context.Context, contactID uuid.UUID) (*model.EmployeeContact, error) {
+	contact, err := s.employeeRepo.GetContactByID(ctx, contactID)
+	if err != nil {
+		return nil, ErrContactNotFound
+	}
+	return contact, nil
+}
+
 // RemoveContact removes a contact from an employee.
 func (s *EmployeeService) RemoveContact(ctx context.Context, contactID uuid.UUID) error {
 	_, err := s.employeeRepo.GetContactByID(ctx, contactID)
@@ -618,6 +826,15 @@ func (s *EmployeeService) AddCard(ctx context.Context, input CreateCardInput) (*
 		return nil, err
 	}
 
+	return card, nil
+}
+
+// GetCardByID retrieves a card by ID.
+func (s *EmployeeService) GetCardByID(ctx context.Context, cardID uuid.UUID) (*model.EmployeeCard, error) {
+	card, err := s.employeeRepo.GetCardByID(ctx, cardID)
+	if err != nil {
+		return nil, ErrCardNotFound
+	}
 	return card, nil
 }
 

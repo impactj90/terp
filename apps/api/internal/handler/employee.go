@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"strconv"
@@ -19,7 +21,12 @@ import (
 
 type EmployeeHandler struct {
 	employeeService *service.EmployeeService
+	auditService    *service.AuditLogService
 }
+
+func (h *EmployeeHandler) SetAuditService(s *service.AuditLogService) { h.auditService = s }
+
+var errEmployeeScopeDenied = errors.New("employee access denied by scope")
 
 func NewEmployeeHandler(employeeService *service.EmployeeService) *EmployeeHandler {
 	return &EmployeeHandler{employeeService: employeeService}
@@ -48,12 +55,25 @@ func (h *EmployeeHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	scope, err := scopeFromContext(r.Context())
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to load access scope")
+		return
+	}
+	if !scope.AllowsTenant(tenantID) {
+		respondError(w, http.StatusForbidden, "Permission denied")
+		return
+	}
+
 	// Parse query parameters
 	filter := repository.EmployeeFilter{
 		TenantID:    tenantID,
 		SearchQuery: r.URL.Query().Get("q"),
 		Limit:       50, // Default limit
 	}
+	filter.ScopeType = scope.Type
+	filter.ScopeDepartmentIDs = scope.DepartmentIDs
+	filter.ScopeEmployeeIDs = scope.EmployeeIDs
 
 	// Parse pagination
 	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
@@ -100,6 +120,16 @@ func (h *EmployeeHandler) Search(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	scope, err := scopeFromContext(r.Context())
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to load access scope")
+		return
+	}
+	if !scope.AllowsTenant(tenantID) {
+		respondError(w, http.StatusForbidden, "Permission denied")
+		return
+	}
+
 	query := r.URL.Query().Get("q")
 	if query == "" {
 		respondError(w, http.StatusBadRequest, "Search query is required")
@@ -110,6 +140,17 @@ func (h *EmployeeHandler) Search(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to search employees")
 		return
+	}
+
+	if scope.Type == model.DataScopeDepartment || scope.Type == model.DataScopeEmployee {
+		filtered := make([]model.Employee, 0, len(employees))
+		for i := range employees {
+			emp := employees[i]
+			if scope.AllowsEmployee(&emp) {
+				filtered = append(filtered, emp)
+			}
+		}
+		employees = filtered
 	}
 
 	respondJSON(w, http.StatusOK, employees)
@@ -126,6 +167,16 @@ func (h *EmployeeHandler) Get(w http.ResponseWriter, r *http.Request) {
 	emp, err := h.employeeService.GetDetails(r.Context(), id)
 	if err != nil {
 		respondError(w, http.StatusNotFound, "Employee not found")
+		return
+	}
+
+	scope, err := scopeFromContext(r.Context())
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to load access scope")
+		return
+	}
+	if !scope.AllowsEmployee(emp) {
+		respondError(w, http.StatusForbidden, "Permission denied")
 		return
 	}
 
@@ -154,7 +205,7 @@ func (h *EmployeeHandler) Create(w http.ResponseWriter, r *http.Request) {
 	input := service.CreateEmployeeInput{
 		TenantID:            tenantID,
 		PersonnelNumber:     *req.PersonnelNumber,
-		PIN:                 *req.Pin,
+		PIN:                 req.Pin, // PIN is optional; service auto-assigns if empty
 		FirstName:           *req.FirstName,
 		LastName:            *req.LastName,
 		Email:               string(req.Email),
@@ -162,6 +213,28 @@ func (h *EmployeeHandler) Create(w http.ResponseWriter, r *http.Request) {
 		EntryDate:           time.Time(*req.EntryDate),
 		WeeklyHours:         req.WeeklyHours,
 		VacationDaysPerYear: req.VacationDaysPerYear,
+		// Extended fields
+		ExitReason:     req.ExitReason,
+		Notes:          req.Notes,
+		AddressStreet:  req.AddressStreet,
+		AddressZip:     req.AddressZip,
+		AddressCity:    req.AddressCity,
+		AddressCountry: req.AddressCountry,
+		Gender:         req.Gender,
+		Nationality:    req.Nationality,
+		Religion:       req.Religion,
+		MaritalStatus:  req.MaritalStatus,
+		BirthPlace:     req.BirthPlace,
+		BirthCountry:   req.BirthCountry,
+		RoomNumber:     req.RoomNumber,
+		PhotoURL:       req.PhotoURL,
+		DisabilityFlag: req.DisabilityFlag,
+	}
+
+	// Handle optional birth_date
+	if !time.Time(req.BirthDate).IsZero() {
+		bd := time.Time(req.BirthDate)
+		input.BirthDate = &bd
 	}
 
 	// Handle optional department_id
@@ -202,6 +275,50 @@ func (h *EmployeeHandler) Create(w http.ResponseWriter, r *http.Request) {
 		}
 		input.TariffID = &tariffID
 	}
+	// Handle optional group IDs
+	if req.EmployeeGroupID != "" {
+		id, err := uuid.Parse(req.EmployeeGroupID.String())
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid employee group ID")
+			return
+		}
+		input.EmployeeGroupID = &id
+	}
+	if req.WorkflowGroupID != "" {
+		id, err := uuid.Parse(req.WorkflowGroupID.String())
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid workflow group ID")
+			return
+		}
+		input.WorkflowGroupID = &id
+	}
+	if req.ActivityGroupID != "" {
+		id, err := uuid.Parse(req.ActivityGroupID.String())
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid activity group ID")
+			return
+		}
+		input.ActivityGroupID = &id
+	}
+	// Handle optional decimal fields
+	if req.PartTimePercent != 0 {
+		input.PartTimePercent = &req.PartTimePercent
+	}
+	if req.DailyTargetHours != 0 {
+		input.DailyTargetHours = &req.DailyTargetHours
+	}
+	if req.WeeklyTargetHours != 0 {
+		input.WeeklyTargetHours = &req.WeeklyTargetHours
+	}
+	if req.MonthlyTargetHours != 0 {
+		input.MonthlyTargetHours = &req.MonthlyTargetHours
+	}
+	if req.AnnualTargetHours != 0 {
+		input.AnnualTargetHours = &req.AnnualTargetHours
+	}
+	if req.WorkDaysPerWeek != 0 {
+		input.WorkDaysPerWeek = &req.WorkDaysPerWeek
+	}
 
 	emp, err := h.employeeService.Create(r.Context(), input)
 	if err != nil {
@@ -226,6 +343,16 @@ func (h *EmployeeHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.auditService != nil {
+		h.auditService.Log(r.Context(), r, service.LogEntry{
+			TenantID:   tenantID,
+			Action:     model.AuditActionCreate,
+			EntityType: "employee",
+			EntityID:   emp.ID,
+			EntityName: emp.FirstName + " " + emp.LastName,
+		})
+	}
+
 	respondJSON(w, http.StatusCreated, emp)
 }
 
@@ -234,6 +361,19 @@ func (h *EmployeeHandler) Update(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid employee ID")
+		return
+	}
+
+	if _, err := h.ensureEmployeeScope(r.Context(), id); err != nil {
+		if errors.Is(err, service.ErrEmployeeNotFound) {
+			respondError(w, http.StatusNotFound, "Employee not found")
+			return
+		}
+		if errors.Is(err, errEmployeeScopeDenied) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to verify access")
 		return
 	}
 
@@ -329,6 +469,117 @@ func (h *EmployeeHandler) Update(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Extended fields - only set if provided in the request body
+	if _, ok := raw["exit_reason"]; ok {
+		input.ExitReason = &req.ExitReason
+	}
+	if _, ok := raw["notes"]; ok {
+		input.Notes = &req.Notes
+	}
+	if _, ok := raw["address_street"]; ok {
+		input.AddressStreet = &req.AddressStreet
+	}
+	if _, ok := raw["address_zip"]; ok {
+		input.AddressZip = &req.AddressZip
+	}
+	if _, ok := raw["address_city"]; ok {
+		input.AddressCity = &req.AddressCity
+	}
+	if _, ok := raw["address_country"]; ok {
+		input.AddressCountry = &req.AddressCountry
+	}
+	if _, ok := raw["birth_date"]; ok {
+		if !time.Time(req.BirthDate).IsZero() {
+			bd := time.Time(req.BirthDate)
+			input.BirthDate = &bd
+		} else {
+			input.ClearBirthDate = true
+		}
+	}
+	if _, ok := raw["gender"]; ok {
+		input.Gender = &req.Gender
+	}
+	if _, ok := raw["nationality"]; ok {
+		input.Nationality = &req.Nationality
+	}
+	if _, ok := raw["religion"]; ok {
+		input.Religion = &req.Religion
+	}
+	if _, ok := raw["marital_status"]; ok {
+		input.MaritalStatus = &req.MaritalStatus
+	}
+	if _, ok := raw["birth_place"]; ok {
+		input.BirthPlace = &req.BirthPlace
+	}
+	if _, ok := raw["birth_country"]; ok {
+		input.BirthCountry = &req.BirthCountry
+	}
+	if _, ok := raw["room_number"]; ok {
+		input.RoomNumber = &req.RoomNumber
+	}
+	if _, ok := raw["photo_url"]; ok {
+		input.PhotoURL = &req.PhotoURL
+	}
+	if _, ok := raw["disability_flag"]; ok {
+		input.DisabilityFlag = &req.DisabilityFlag
+	}
+	if _, ok := raw["part_time_percent"]; ok {
+		input.PartTimePercent = &req.PartTimePercent
+	}
+	if _, ok := raw["daily_target_hours"]; ok {
+		input.DailyTargetHours = &req.DailyTargetHours
+	}
+	if _, ok := raw["weekly_target_hours"]; ok {
+		input.WeeklyTargetHours = &req.WeeklyTargetHours
+	}
+	if _, ok := raw["monthly_target_hours"]; ok {
+		input.MonthlyTargetHours = &req.MonthlyTargetHours
+	}
+	if _, ok := raw["annual_target_hours"]; ok {
+		input.AnnualTargetHours = &req.AnnualTargetHours
+	}
+	if _, ok := raw["work_days_per_week"]; ok {
+		input.WorkDaysPerWeek = &req.WorkDaysPerWeek
+	}
+
+	// Handle group FK fields with explicit null support
+	if rawVal, ok := raw["employee_group_id"]; ok {
+		if string(rawVal) == "null" {
+			input.ClearEmployeeGroupID = true
+		} else if req.EmployeeGroupID != nil {
+			gid, err := uuid.Parse(req.EmployeeGroupID.String())
+			if err != nil {
+				respondError(w, http.StatusBadRequest, "Invalid employee group ID")
+				return
+			}
+			input.EmployeeGroupID = &gid
+		}
+	}
+	if rawVal, ok := raw["workflow_group_id"]; ok {
+		if string(rawVal) == "null" {
+			input.ClearWorkflowGroupID = true
+		} else if req.WorkflowGroupID != nil {
+			gid, err := uuid.Parse(req.WorkflowGroupID.String())
+			if err != nil {
+				respondError(w, http.StatusBadRequest, "Invalid workflow group ID")
+				return
+			}
+			input.WorkflowGroupID = &gid
+		}
+	}
+	if rawVal, ok := raw["activity_group_id"]; ok {
+		if string(rawVal) == "null" {
+			input.ClearActivityGroupID = true
+		} else if req.ActivityGroupID != nil {
+			gid, err := uuid.Parse(req.ActivityGroupID.String())
+			if err != nil {
+				respondError(w, http.StatusBadRequest, "Invalid activity group ID")
+				return
+			}
+			input.ActivityGroupID = &gid
+		}
+	}
+
 	emp, err := h.employeeService.Update(r.Context(), id, input)
 	if err != nil {
 		switch err {
@@ -346,6 +597,18 @@ func (h *EmployeeHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.auditService != nil {
+		if tenantID, ok := middleware.TenantFromContext(r.Context()); ok {
+			h.auditService.Log(r.Context(), r, service.LogEntry{
+				TenantID:   tenantID,
+				Action:     model.AuditActionUpdate,
+				EntityType: "employee",
+				EntityID:   emp.ID,
+				EntityName: emp.FirstName + " " + emp.LastName,
+			})
+		}
+	}
+
 	respondJSON(w, http.StatusOK, emp)
 }
 
@@ -353,6 +616,16 @@ func (h *EmployeeHandler) BulkAssignTariff(w http.ResponseWriter, r *http.Reques
 	tenantID, ok := middleware.TenantFromContext(r.Context())
 	if !ok {
 		respondError(w, http.StatusUnauthorized, "Tenant required")
+		return
+	}
+
+	scope, err := scopeFromContext(r.Context())
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to load access scope")
+		return
+	}
+	if !scope.AllowsTenant(tenantID) {
+		respondError(w, http.StatusForbidden, "Permission denied")
 		return
 	}
 
@@ -411,6 +684,21 @@ func (h *EmployeeHandler) BulkAssignTariff(w http.ResponseWriter, r *http.Reques
 				respondError(w, http.StatusBadRequest, "Invalid employee ID")
 				return
 			}
+			if scope.Type == model.DataScopeEmployee && !scope.AllowsEmployeeID(parsed) {
+				respondError(w, http.StatusForbidden, "Permission denied")
+				return
+			}
+			if scope.Type == model.DataScopeDepartment {
+				emp, err := h.employeeService.GetByID(r.Context(), parsed)
+				if err != nil {
+					respondError(w, http.StatusNotFound, "Employee not found")
+					return
+				}
+				if !scope.AllowsEmployee(emp) {
+					respondError(w, http.StatusForbidden, "Permission denied")
+					return
+				}
+			}
 			input.EmployeeIDs = append(input.EmployeeIDs, parsed)
 		}
 	} else if req.Filter != nil {
@@ -425,6 +713,9 @@ func (h *EmployeeHandler) BulkAssignTariff(w http.ResponseWriter, r *http.Reques
 		filter := repository.EmployeeFilter{
 			TenantID: tenantID,
 		}
+		filter.ScopeType = scope.Type
+		filter.ScopeDepartmentIDs = scope.DepartmentIDs
+		filter.ScopeEmployeeIDs = scope.EmployeeIDs
 		if _, ok := rawFilter["q"]; ok {
 			filter.SearchQuery = req.Filter.Q
 		}
@@ -472,6 +763,19 @@ func (h *EmployeeHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if _, err := h.ensureEmployeeScope(r.Context(), id); err != nil {
+		if errors.Is(err, service.ErrEmployeeNotFound) {
+			respondError(w, http.StatusNotFound, "Employee not found")
+			return
+		}
+		if errors.Is(err, errEmployeeScopeDenied) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to verify access")
+		return
+	}
+
 	if err := h.employeeService.Deactivate(r.Context(), id); err != nil {
 		switch err {
 		case service.ErrEmployeeNotFound:
@@ -480,6 +784,17 @@ func (h *EmployeeHandler) Delete(w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusInternalServerError, "Failed to deactivate employee")
 		}
 		return
+	}
+
+	if h.auditService != nil {
+		if tenantID, ok := middleware.TenantFromContext(r.Context()); ok {
+			h.auditService.Log(r.Context(), r, service.LogEntry{
+				TenantID:   tenantID,
+				Action:     model.AuditActionDelete,
+				EntityType: "employee",
+				EntityID:   id,
+			})
+		}
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -492,6 +807,19 @@ func (h *EmployeeHandler) ListContacts(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid employee ID")
+		return
+	}
+
+	if _, err := h.ensureEmployeeScope(r.Context(), id); err != nil {
+		if errors.Is(err, service.ErrEmployeeNotFound) {
+			respondError(w, http.StatusNotFound, "Employee not found")
+			return
+		}
+		if errors.Is(err, errEmployeeScopeDenied) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to verify access")
 		return
 	}
 
@@ -515,6 +843,19 @@ func (h *EmployeeHandler) AddContact(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid employee ID")
+		return
+	}
+
+	if _, err := h.ensureEmployeeScope(r.Context(), id); err != nil {
+		if errors.Is(err, service.ErrEmployeeNotFound) {
+			respondError(w, http.StatusNotFound, "Employee not found")
+			return
+		}
+		if errors.Is(err, errEmployeeScopeDenied) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to verify access")
 		return
 	}
 
@@ -565,6 +906,30 @@ func (h *EmployeeHandler) RemoveContact(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	contact, err := h.employeeService.GetContactByID(r.Context(), contactID)
+	if err != nil {
+		switch err {
+		case service.ErrContactNotFound:
+			respondError(w, http.StatusNotFound, "Contact not found")
+		default:
+			respondError(w, http.StatusInternalServerError, "Failed to load contact")
+		}
+		return
+	}
+
+	if _, err := h.ensureEmployeeScope(r.Context(), contact.EmployeeID); err != nil {
+		if errors.Is(err, service.ErrEmployeeNotFound) {
+			respondError(w, http.StatusNotFound, "Employee not found")
+			return
+		}
+		if errors.Is(err, errEmployeeScopeDenied) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to verify access")
+		return
+	}
+
 	if err := h.employeeService.RemoveContact(r.Context(), contactID); err != nil {
 		switch err {
 		case service.ErrContactNotFound:
@@ -585,6 +950,19 @@ func (h *EmployeeHandler) ListCards(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid employee ID")
+		return
+	}
+
+	if _, err := h.ensureEmployeeScope(r.Context(), id); err != nil {
+		if errors.Is(err, service.ErrEmployeeNotFound) {
+			respondError(w, http.StatusNotFound, "Employee not found")
+			return
+		}
+		if errors.Is(err, errEmployeeScopeDenied) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to verify access")
 		return
 	}
 
@@ -614,6 +992,19 @@ func (h *EmployeeHandler) AddCard(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid employee ID")
+		return
+	}
+
+	if _, err := h.ensureEmployeeScope(r.Context(), id); err != nil {
+		if errors.Is(err, service.ErrEmployeeNotFound) {
+			respondError(w, http.StatusNotFound, "Employee not found")
+			return
+		}
+		if errors.Is(err, errEmployeeScopeDenied) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to verify access")
 		return
 	}
 
@@ -672,6 +1063,30 @@ func (h *EmployeeHandler) DeactivateCard(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	card, err := h.employeeService.GetCardByID(r.Context(), cardID)
+	if err != nil {
+		switch err {
+		case service.ErrCardNotFound:
+			respondError(w, http.StatusNotFound, "Card not found")
+		default:
+			respondError(w, http.StatusInternalServerError, "Failed to load card")
+		}
+		return
+	}
+
+	if _, err := h.ensureEmployeeScope(r.Context(), card.EmployeeID); err != nil {
+		if errors.Is(err, service.ErrEmployeeNotFound) {
+			respondError(w, http.StatusNotFound, "Employee not found")
+			return
+		}
+		if errors.Is(err, errEmployeeScopeDenied) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to verify access")
+		return
+	}
+
 	// Simple inline struct - no generated model for this
 	var req struct {
 		Reason string `json:"reason,omitempty"`
@@ -692,4 +1107,26 @@ func (h *EmployeeHandler) DeactivateCard(w http.ResponseWriter, r *http.Request)
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *EmployeeHandler) ensureEmployeeScope(ctx context.Context, employeeID uuid.UUID) (*model.Employee, error) {
+	emp, err := h.employeeService.GetByID(ctx, employeeID)
+	if err != nil {
+		return nil, err
+	}
+
+	scope, err := scopeFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if tenantID, ok := middleware.TenantFromContext(ctx); ok {
+		if !scope.AllowsTenant(tenantID) {
+			return nil, errEmployeeScopeDenied
+		}
+	}
+	if !scope.AllowsEmployee(emp) {
+		return nil, errEmployeeScopeDenied
+	}
+
+	return emp, nil
 }

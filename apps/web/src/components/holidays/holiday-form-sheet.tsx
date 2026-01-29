@@ -53,7 +53,7 @@ interface HolidayFormSheetProps {
 interface FormState {
   holidayDate: Date | undefined
   name: string
-  isHalfDay: boolean
+  category: number
   appliesToAll: boolean
   departmentId: string
 }
@@ -61,7 +61,7 @@ interface FormState {
 const INITIAL_STATE: FormState = {
   holidayDate: undefined,
   name: '',
-  isHalfDay: false,
+  category: 1,
   appliesToAll: true,
   departmentId: '',
 }
@@ -99,7 +99,7 @@ export function HolidayFormSheet({
         setForm({
           holidayDate: date,
           name: holiday.name,
-          isHalfDay: holiday.is_half_day ?? false,
+          category: holiday.category ?? 1,
           appliesToAll: holiday.applies_to_all ?? true,
           departmentId: holiday.department_id || '',
         })
@@ -138,7 +138,7 @@ export function HolidayFormSheet({
           body: {
             holiday_date: formatDate(form.holidayDate!),
             name: form.name.trim(),
-            is_half_day: form.isHalfDay,
+            category: form.category,
             applies_to_all: form.appliesToAll,
             department_id: form.appliesToAll ? undefined : form.departmentId || undefined,
           },
@@ -148,7 +148,7 @@ export function HolidayFormSheet({
           body: {
             holiday_date: formatDate(form.holidayDate!),
             name: form.name.trim(),
-            is_half_day: form.isHalfDay,
+            category: form.category,
             applies_to_all: form.appliesToAll,
             department_id: form.appliesToAll ? undefined : form.departmentId || undefined,
           },
@@ -241,21 +241,27 @@ export function HolidayFormSheet({
                 />
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="isHalfDay">{t('halfDayLabel')}</Label>
-                  <p className="text-xs text-muted-foreground">
-                    {t('halfDayDescription')}
-                  </p>
-                </div>
-                <Switch
-                  id="isHalfDay"
-                  checked={form.isHalfDay}
-                  onCheckedChange={(checked) =>
-                    setForm((prev) => ({ ...prev, isHalfDay: checked }))
+              <div className="space-y-2">
+                <Label>{t('categoryLabel')} *</Label>
+                <Select
+                  value={String(form.category)}
+                  onValueChange={(value) =>
+                    setForm((prev) => ({ ...prev, category: Number(value) }))
                   }
                   disabled={isSubmitting}
-                />
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('categoryPlaceholder')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">{t('categoryFull')}</SelectItem>
+                    <SelectItem value="2">{t('categoryHalf')}</SelectItem>
+                    <SelectItem value="3">{t('categoryCustom')}</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {t('categoryDescription')}
+                </p>
               </div>
             </div>
 

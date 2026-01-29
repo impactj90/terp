@@ -222,7 +222,7 @@ func ConvertBonusesToSurchargeConfigs(bonuses []model.DayPlanBonus) []SurchargeC
 	return configs
 }
 
-// GetHolidayCategoryFromFlag converts the current Holiday.IsHalfDay boolean
+// GetHolidayCategoryFromFlag converts a legacy half-day flag
 // to a ZMI-style holiday category.
 // Returns: 1 for full holiday, 2 for half holiday.
 // Note: This is a compatibility shim until TICKET-124/130 adds proper Category field.

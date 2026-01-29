@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -18,11 +20,14 @@ import (
 // DailyValueHandler handles daily value list/approval requests.
 type DailyValueHandler struct {
 	dailyValueService *service.DailyValueService
+	employeeService   *service.EmployeeService
 }
 
+var errDailyValueScopeDenied = errors.New("employee access denied by scope")
+
 // NewDailyValueHandler creates a new DailyValueHandler instance.
-func NewDailyValueHandler(dailyValueService *service.DailyValueService) *DailyValueHandler {
-	return &DailyValueHandler{dailyValueService: dailyValueService}
+func NewDailyValueHandler(dailyValueService *service.DailyValueService, employeeService *service.EmployeeService) *DailyValueHandler {
+	return &DailyValueHandler{dailyValueService: dailyValueService, employeeService: employeeService}
 }
 
 // ListAll handles GET /daily-values
@@ -33,12 +38,38 @@ func (h *DailyValueHandler) ListAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	opts := model.DailyValueListOptions{}
+	scope, err := scopeFromContext(r.Context())
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to load access scope")
+		return
+	}
+	if !scope.AllowsTenant(tenantID) {
+		respondError(w, http.StatusForbidden, "Permission denied")
+		return
+	}
+
+	opts := model.DailyValueListOptions{
+		ScopeType:          scope.Type,
+		ScopeDepartmentIDs: scope.DepartmentIDs,
+		ScopeEmployeeIDs:   scope.EmployeeIDs,
+	}
 
 	if empIDStr := r.URL.Query().Get("employee_id"); empIDStr != "" {
 		empID, err := uuid.Parse(empIDStr)
 		if err != nil {
 			respondError(w, http.StatusBadRequest, "Invalid employee_id")
+			return
+		}
+		if err := h.ensureEmployeeScope(r.Context(), empID); err != nil {
+			if errors.Is(err, service.ErrEmployeeNotFound) {
+				respondError(w, http.StatusNotFound, "Employee not found")
+				return
+			}
+			if errors.Is(err, errDailyValueScopeDenied) {
+				respondError(w, http.StatusForbidden, "Permission denied")
+				return
+			}
+			respondError(w, http.StatusInternalServerError, "Failed to verify access")
 			return
 		}
 		opts.EmployeeID = &empID
@@ -127,6 +158,19 @@ func (h *DailyValueHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := h.ensureEmployeeScope(r.Context(), dv.EmployeeID); err != nil {
+		if errors.Is(err, service.ErrEmployeeNotFound) {
+			respondError(w, http.StatusNotFound, "Employee not found")
+			return
+		}
+		if errors.Is(err, errDailyValueScopeDenied) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to verify access")
+		return
+	}
+
 	respondJSON(w, http.StatusOK, h.dailyValueToResponse(dv))
 }
 
@@ -142,6 +186,29 @@ func (h *DailyValueHandler) Approve(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid daily value ID")
+		return
+	}
+
+	existing, err := h.dailyValueService.GetByID(r.Context(), tenantID, id)
+	if err != nil {
+		switch err {
+		case service.ErrDailyValueNotFound:
+			respondError(w, http.StatusNotFound, "Daily value not found")
+		default:
+			respondError(w, http.StatusInternalServerError, "Failed to get daily value")
+		}
+		return
+	}
+	if err := h.ensureEmployeeScope(r.Context(), existing.EmployeeID); err != nil {
+		if errors.Is(err, service.ErrEmployeeNotFound) {
+			respondError(w, http.StatusNotFound, "Employee not found")
+			return
+		}
+		if errors.Is(err, errDailyValueScopeDenied) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to verify access")
 		return
 	}
 
@@ -223,4 +290,25 @@ func (h *DailyValueHandler) dailyValueToResponse(dv *model.DailyValue) *models.D
 	}
 
 	return resp
+}
+
+func (h *DailyValueHandler) ensureEmployeeScope(ctx context.Context, employeeID uuid.UUID) error {
+	emp, err := h.employeeService.GetByID(ctx, employeeID)
+	if err != nil {
+		return err
+	}
+
+	scope, err := scopeFromContext(ctx)
+	if err != nil {
+		return err
+	}
+	if tenantID, ok := middleware.TenantFromContext(ctx); ok {
+		if !scope.AllowsTenant(tenantID) {
+			return errDailyValueScopeDenied
+		}
+	}
+	if !scope.AllowsEmployee(emp) {
+		return errDailyValueScopeDenied
+	}
+	return nil
 }

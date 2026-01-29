@@ -30,6 +30,31 @@
           $ref: '../schemas/users.yaml#/UserList'
       401:
         $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Users
+    summary: Create user
+    description: |
+      Creates a new user account and optionally assigns a user group and data scope.
+      Requires users.manage permission.
+    operationId: createUser
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/users.yaml#/CreateUserRequest'
+    responses:
+      201:
+        description: Created user
+        schema:
+          $ref: '../schemas/users.yaml#/User'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      403:
+        $ref: '../responses/errors.yaml#/Forbidden'
 
 /users/{id}:
   get:
@@ -80,6 +105,59 @@
         description: Updated user
         schema:
           $ref: '../schemas/users.yaml#/User'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      403:
+        $ref: '../responses/errors.yaml#/Forbidden'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Users
+    summary: Delete user
+    description: |
+      Deletes a user account. Admin only.
+    operationId: deleteUser
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: User deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      403:
+        $ref: '../responses/errors.yaml#/Forbidden'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/users/{id}/password:
+  post:
+    tags:
+      - Users
+    summary: Change user password
+    description: |
+      Updates the password for a user. Users can change their own password; admins can reset any user's password.
+    operationId: changeUserPassword
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/users.yaml#/ChangePasswordRequest'
+    responses:
+      204:
+        description: Password updated
       400:
         $ref: '../responses/errors.yaml#/BadRequest'
       401:

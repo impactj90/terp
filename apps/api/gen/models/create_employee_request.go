@@ -7,6 +7,7 @@ package models
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -19,17 +20,56 @@ import (
 // swagger:model CreateEmployeeRequest
 type CreateEmployeeRequest struct {
 
+	// activity group id
+	// Format: uuid
+	ActivityGroupID strfmt.UUID `json:"activity_group_id,omitempty"`
+
+	// address city
+	AddressCity string `json:"address_city,omitempty"`
+
+	// address country
+	AddressCountry string `json:"address_country,omitempty"`
+
+	// address street
+	AddressStreet string `json:"address_street,omitempty"`
+
+	// address zip
+	AddressZip string `json:"address_zip,omitempty"`
+
+	// annual target hours
+	AnnualTargetHours float64 `json:"annual_target_hours,omitempty"`
+
+	// birth country
+	BirthCountry string `json:"birth_country,omitempty"`
+
+	// birth date
+	// Format: date
+	BirthDate strfmt.Date `json:"birth_date,omitempty"`
+
+	// birth place
+	BirthPlace string `json:"birth_place,omitempty"`
+
 	// cost center id
 	// Format: uuid
 	CostCenterID strfmt.UUID `json:"cost_center_id,omitempty"`
+
+	// daily target hours
+	DailyTargetHours float64 `json:"daily_target_hours,omitempty"`
 
 	// department id
 	// Format: uuid
 	DepartmentID strfmt.UUID `json:"department_id,omitempty"`
 
+	// disability flag
+	DisabilityFlag bool `json:"disability_flag,omitempty"`
+
 	// email
 	// Format: email
 	Email strfmt.Email `json:"email,omitempty"`
+
+	// employee group id
+	// Format: uuid
+	EmployeeGroupID strfmt.UUID `json:"employee_group_id,omitempty"`
 
 	// employment type id
 	// Format: uuid
@@ -40,17 +80,44 @@ type CreateEmployeeRequest struct {
 	// Format: date
 	EntryDate *strfmt.Date `json:"entry_date"`
 
+	// exit date
+	// Format: date
+	ExitDate strfmt.Date `json:"exit_date,omitempty"`
+
+	// exit reason
+	ExitReason string `json:"exit_reason,omitempty"`
+
 	// first name
 	// Required: true
 	// Max Length: 100
 	// Min Length: 1
 	FirstName *string `json:"first_name"`
 
+	// gender
+	// Enum: ["male","female","diverse","not_specified"]
+	Gender string `json:"gender,omitempty"`
+
 	// last name
 	// Required: true
 	// Max Length: 100
 	// Min Length: 1
 	LastName *string `json:"last_name"`
+
+	// marital status
+	// Enum: ["single","married","divorced","widowed","registered_partnership","not_specified"]
+	MaritalStatus string `json:"marital_status,omitempty"`
+
+	// monthly target hours
+	MonthlyTargetHours float64 `json:"monthly_target_hours,omitempty"`
+
+	// nationality
+	Nationality string `json:"nationality,omitempty"`
+
+	// notes
+	Notes string `json:"notes,omitempty"`
+
+	// part time percent
+	PartTimePercent float64 `json:"part_time_percent,omitempty"`
 
 	// personnel number
 	// Required: true
@@ -61,11 +128,18 @@ type CreateEmployeeRequest struct {
 	// phone
 	Phone string `json:"phone,omitempty"`
 
-	// pin
-	// Required: true
+	// photo url
+	PhotoURL string `json:"photo_url,omitempty"`
+
+	// Optional PIN. If not provided, auto-assigned as next available integer.
 	// Max Length: 20
-	// Min Length: 4
-	Pin *string `json:"pin"`
+	Pin string `json:"pin,omitempty"`
+
+	// religion
+	Religion string `json:"religion,omitempty"`
+
+	// room number
+	RoomNumber string `json:"room_number,omitempty"`
 
 	// tariff id
 	// Format: uuid
@@ -76,11 +150,29 @@ type CreateEmployeeRequest struct {
 
 	// weekly hours
 	WeeklyHours float64 `json:"weekly_hours,omitempty"`
+
+	// weekly target hours
+	WeeklyTargetHours float64 `json:"weekly_target_hours,omitempty"`
+
+	// work days per week
+	WorkDaysPerWeek float64 `json:"work_days_per_week,omitempty"`
+
+	// workflow group id
+	// Format: uuid
+	WorkflowGroupID strfmt.UUID `json:"workflow_group_id,omitempty"`
 }
 
 // Validate validates this create employee request
 func (m *CreateEmployeeRequest) Validate(formats strfmt.Registry) error {
 	var res []error
+
+	if err := m.validateActivityGroupID(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateBirthDate(formats); err != nil {
+		res = append(res, err)
+	}
 
 	if err := m.validateCostCenterID(formats); err != nil {
 		res = append(res, err)
@@ -94,6 +186,10 @@ func (m *CreateEmployeeRequest) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
+	if err := m.validateEmployeeGroupID(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateEmploymentTypeID(formats); err != nil {
 		res = append(res, err)
 	}
@@ -102,11 +198,23 @@ func (m *CreateEmployeeRequest) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
+	if err := m.validateExitDate(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateFirstName(formats); err != nil {
 		res = append(res, err)
 	}
 
+	if err := m.validateGender(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateLastName(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateMaritalStatus(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -122,9 +230,37 @@ func (m *CreateEmployeeRequest) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
+	if err := m.validateWorkflowGroupID(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *CreateEmployeeRequest) validateActivityGroupID(formats strfmt.Registry) error {
+	if swag.IsZero(m.ActivityGroupID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("activity_group_id", "body", "uuid", m.ActivityGroupID.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *CreateEmployeeRequest) validateBirthDate(formats strfmt.Registry) error {
+	if swag.IsZero(m.BirthDate) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("birth_date", "body", "date", m.BirthDate.String(), formats); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -164,6 +300,18 @@ func (m *CreateEmployeeRequest) validateEmail(formats strfmt.Registry) error {
 	return nil
 }
 
+func (m *CreateEmployeeRequest) validateEmployeeGroupID(formats strfmt.Registry) error {
+	if swag.IsZero(m.EmployeeGroupID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("employee_group_id", "body", "uuid", m.EmployeeGroupID.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (m *CreateEmployeeRequest) validateEmploymentTypeID(formats strfmt.Registry) error {
 	if swag.IsZero(m.EmploymentTypeID) { // not required
 		return nil
@@ -189,6 +337,18 @@ func (m *CreateEmployeeRequest) validateEntryDate(formats strfmt.Registry) error
 	return nil
 }
 
+func (m *CreateEmployeeRequest) validateExitDate(formats strfmt.Registry) error {
+	if swag.IsZero(m.ExitDate) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("exit_date", "body", "date", m.ExitDate.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (m *CreateEmployeeRequest) validateFirstName(formats strfmt.Registry) error {
 
 	if err := validate.Required("first_name", "body", m.FirstName); err != nil {
@@ -206,6 +366,54 @@ func (m *CreateEmployeeRequest) validateFirstName(formats strfmt.Registry) error
 	return nil
 }
 
+var createEmployeeRequestTypeGenderPropEnum []any
+
+func init() {
+	var res []string
+	if err := json.Unmarshal([]byte(`["male","female","diverse","not_specified"]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		createEmployeeRequestTypeGenderPropEnum = append(createEmployeeRequestTypeGenderPropEnum, v)
+	}
+}
+
+const (
+
+	// CreateEmployeeRequestGenderMale captures enum value "male"
+	CreateEmployeeRequestGenderMale string = "male"
+
+	// CreateEmployeeRequestGenderFemale captures enum value "female"
+	CreateEmployeeRequestGenderFemale string = "female"
+
+	// CreateEmployeeRequestGenderDiverse captures enum value "diverse"
+	CreateEmployeeRequestGenderDiverse string = "diverse"
+
+	// CreateEmployeeRequestGenderNotSpecified captures enum value "not_specified"
+	CreateEmployeeRequestGenderNotSpecified string = "not_specified"
+)
+
+// prop value enum
+func (m *CreateEmployeeRequest) validateGenderEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, createEmployeeRequestTypeGenderPropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *CreateEmployeeRequest) validateGender(formats strfmt.Registry) error {
+	if swag.IsZero(m.Gender) { // not required
+		return nil
+	}
+
+	// value enum
+	if err := m.validateGenderEnum("gender", "body", m.Gender); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (m *CreateEmployeeRequest) validateLastName(formats strfmt.Registry) error {
 
 	if err := validate.Required("last_name", "body", m.LastName); err != nil {
@@ -217,6 +425,60 @@ func (m *CreateEmployeeRequest) validateLastName(formats strfmt.Registry) error 
 	}
 
 	if err := validate.MaxLength("last_name", "body", *m.LastName, 100); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var createEmployeeRequestTypeMaritalStatusPropEnum []any
+
+func init() {
+	var res []string
+	if err := json.Unmarshal([]byte(`["single","married","divorced","widowed","registered_partnership","not_specified"]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		createEmployeeRequestTypeMaritalStatusPropEnum = append(createEmployeeRequestTypeMaritalStatusPropEnum, v)
+	}
+}
+
+const (
+
+	// CreateEmployeeRequestMaritalStatusSingle captures enum value "single"
+	CreateEmployeeRequestMaritalStatusSingle string = "single"
+
+	// CreateEmployeeRequestMaritalStatusMarried captures enum value "married"
+	CreateEmployeeRequestMaritalStatusMarried string = "married"
+
+	// CreateEmployeeRequestMaritalStatusDivorced captures enum value "divorced"
+	CreateEmployeeRequestMaritalStatusDivorced string = "divorced"
+
+	// CreateEmployeeRequestMaritalStatusWidowed captures enum value "widowed"
+	CreateEmployeeRequestMaritalStatusWidowed string = "widowed"
+
+	// CreateEmployeeRequestMaritalStatusRegisteredPartnership captures enum value "registered_partnership"
+	CreateEmployeeRequestMaritalStatusRegisteredPartnership string = "registered_partnership"
+
+	// CreateEmployeeRequestMaritalStatusNotSpecified captures enum value "not_specified"
+	CreateEmployeeRequestMaritalStatusNotSpecified string = "not_specified"
+)
+
+// prop value enum
+func (m *CreateEmployeeRequest) validateMaritalStatusEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, createEmployeeRequestTypeMaritalStatusPropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *CreateEmployeeRequest) validateMaritalStatus(formats strfmt.Registry) error {
+	if swag.IsZero(m.MaritalStatus) { // not required
+		return nil
+	}
+
+	// value enum
+	if err := m.validateMaritalStatusEnum("marital_status", "body", m.MaritalStatus); err != nil {
 		return err
 	}
 
@@ -241,16 +503,11 @@ func (m *CreateEmployeeRequest) validatePersonnelNumber(formats strfmt.Registry)
 }
 
 func (m *CreateEmployeeRequest) validatePin(formats strfmt.Registry) error {
-
-	if err := validate.Required("pin", "body", m.Pin); err != nil {
-		return err
+	if swag.IsZero(m.Pin) { // not required
+		return nil
 	}
 
-	if err := validate.MinLength("pin", "body", *m.Pin, 4); err != nil {
-		return err
-	}
-
-	if err := validate.MaxLength("pin", "body", *m.Pin, 20); err != nil {
+	if err := validate.MaxLength("pin", "body", m.Pin, 20); err != nil {
 		return err
 	}
 
@@ -263,6 +520,18 @@ func (m *CreateEmployeeRequest) validateTariffID(formats strfmt.Registry) error 
 	}
 
 	if err := validate.FormatOf("tariff_id", "body", "uuid", m.TariffID.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *CreateEmployeeRequest) validateWorkflowGroupID(formats strfmt.Registry) error {
+	if swag.IsZero(m.WorkflowGroupID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("workflow_group_id", "body", "uuid", m.WorkflowGroupID.String(), formats); err != nil {
 		return err
 	}
 

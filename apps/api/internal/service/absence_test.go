@@ -138,8 +138,8 @@ type mockHolidayRepositoryForAbsence struct {
 	mock.Mock
 }
 
-func (m *mockHolidayRepositoryForAbsence) GetByDateRange(ctx context.Context, tenantID uuid.UUID, from, to time.Time) ([]model.Holiday, error) {
-	args := m.Called(ctx, tenantID, from, to)
+func (m *mockHolidayRepositoryForAbsence) GetByDateRange(ctx context.Context, tenantID uuid.UUID, from, to time.Time, departmentID *uuid.UUID) ([]model.Holiday, error) {
+	args := m.Called(ctx, tenantID, from, to, departmentID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -375,7 +375,7 @@ func TestAbsenceService_CreateRange_Success_WeekdaysOnly(t *testing.T) {
 		TenantID: &tenantID,
 		IsActive: true,
 	}, nil)
-	holidayRepo.On("GetByDateRange", ctx, tenantID, from, to).Return([]model.Holiday{}, nil)
+	holidayRepo.On("GetByDateRange", ctx, tenantID, from, to, (*uuid.UUID)(nil)).Return([]model.Holiday{}, nil)
 
 	// All 5 weekdays have day plans assigned
 	somePlanID := uuid.New()
@@ -430,7 +430,7 @@ func TestAbsenceService_CreateRange_SkipsWeekends(t *testing.T) {
 	absenceTypeRepo.On("GetByID", ctx, absenceTypeID).Return(&model.AbsenceType{
 		ID: absenceTypeID, TenantID: &tenantID, IsActive: true,
 	}, nil)
-	holidayRepo.On("GetByDateRange", ctx, tenantID, from, to).Return([]model.Holiday{}, nil)
+	holidayRepo.On("GetByDateRange", ctx, tenantID, from, to, (*uuid.UUID)(nil)).Return([]model.Holiday{}, nil)
 
 	// Day plans for Mon-Fri only (weekends won't be looked up since they're skipped first)
 	somePlanID := uuid.New()
@@ -476,7 +476,7 @@ func TestAbsenceService_CreateRange_SkipsHolidays(t *testing.T) {
 	absenceTypeRepo.On("GetByID", ctx, absenceTypeID).Return(&model.AbsenceType{
 		ID: absenceTypeID, TenantID: &tenantID, IsActive: true,
 	}, nil)
-	holidayRepo.On("GetByDateRange", ctx, tenantID, from, to).Return([]model.Holiday{
+	holidayRepo.On("GetByDateRange", ctx, tenantID, from, to, (*uuid.UUID)(nil)).Return([]model.Holiday{
 		{HolidayDate: wednesday, Name: "Holiday"},
 	}, nil)
 
@@ -524,7 +524,7 @@ func TestAbsenceService_CreateRange_SkipsOffDays(t *testing.T) {
 	absenceTypeRepo.On("GetByID", ctx, absenceTypeID).Return(&model.AbsenceType{
 		ID: absenceTypeID, TenantID: &tenantID, IsActive: true,
 	}, nil)
-	holidayRepo.On("GetByDateRange", ctx, tenantID, from, to).Return([]model.Holiday{}, nil)
+	holidayRepo.On("GetByDateRange", ctx, tenantID, from, to, (*uuid.UUID)(nil)).Return([]model.Holiday{}, nil)
 
 	somePlanID := uuid.New()
 	empDayPlanRepo.On("GetForEmployeeDateRange", ctx, employeeID, from, to).Return([]model.EmployeeDayPlan{
@@ -569,7 +569,7 @@ func TestAbsenceService_CreateRange_SkipsExistingAbsences(t *testing.T) {
 	absenceTypeRepo.On("GetByID", ctx, absenceTypeID).Return(&model.AbsenceType{
 		ID: absenceTypeID, TenantID: &tenantID, IsActive: true,
 	}, nil)
-	holidayRepo.On("GetByDateRange", ctx, tenantID, from, to).Return([]model.Holiday{}, nil)
+	holidayRepo.On("GetByDateRange", ctx, tenantID, from, to, (*uuid.UUID)(nil)).Return([]model.Holiday{}, nil)
 
 	somePlanID := uuid.New()
 	empDayPlanRepo.On("GetForEmployeeDateRange", ctx, employeeID, from, to).Return([]model.EmployeeDayPlan{
@@ -711,7 +711,7 @@ func TestAbsenceService_CreateRange_SystemAbsenceType(t *testing.T) {
 	absenceTypeRepo.On("GetByID", ctx, absenceTypeID).Return(&model.AbsenceType{
 		ID: absenceTypeID, TenantID: nil, IsActive: true, IsSystem: true,
 	}, nil)
-	holidayRepo.On("GetByDateRange", ctx, tenantID, from, to).Return([]model.Holiday{}, nil)
+	holidayRepo.On("GetByDateRange", ctx, tenantID, from, to, (*uuid.UUID)(nil)).Return([]model.Holiday{}, nil)
 
 	somePlanID := uuid.New()
 	empDayPlanRepo.On("GetForEmployeeDateRange", ctx, employeeID, from, to).Return([]model.EmployeeDayPlan{
@@ -749,7 +749,7 @@ func TestAbsenceService_CreateRange_AllDatesSkipped(t *testing.T) {
 	absenceTypeRepo.On("GetByID", ctx, absenceTypeID).Return(&model.AbsenceType{
 		ID: absenceTypeID, TenantID: &tenantID, IsActive: true,
 	}, nil)
-	holidayRepo.On("GetByDateRange", ctx, tenantID, from, to).Return([]model.Holiday{}, nil)
+	holidayRepo.On("GetByDateRange", ctx, tenantID, from, to, (*uuid.UUID)(nil)).Return([]model.Holiday{}, nil)
 	empDayPlanRepo.On("GetForEmployeeDateRange", ctx, employeeID, from, to).Return([]model.EmployeeDayPlan{}, nil)
 
 	input := CreateAbsenceRangeInput{
@@ -776,7 +776,7 @@ func TestAbsenceService_CreateRange_SingleDay(t *testing.T) {
 	absenceTypeRepo.On("GetByID", ctx, absenceTypeID).Return(&model.AbsenceType{
 		ID: absenceTypeID, TenantID: &tenantID, IsActive: true,
 	}, nil)
-	holidayRepo.On("GetByDateRange", ctx, tenantID, date, date).Return([]model.Holiday{}, nil)
+	holidayRepo.On("GetByDateRange", ctx, tenantID, date, date, (*uuid.UUID)(nil)).Return([]model.Holiday{}, nil)
 
 	somePlanID := uuid.New()
 	empDayPlanRepo.On("GetForEmployeeDateRange", ctx, employeeID, date, date).Return([]model.EmployeeDayPlan{
@@ -815,7 +815,7 @@ func TestAbsenceService_CreateRange_HalfDay(t *testing.T) {
 	absenceTypeRepo.On("GetByID", ctx, absenceTypeID).Return(&model.AbsenceType{
 		ID: absenceTypeID, TenantID: &tenantID, IsActive: true,
 	}, nil)
-	holidayRepo.On("GetByDateRange", ctx, tenantID, date, date).Return([]model.Holiday{}, nil)
+	holidayRepo.On("GetByDateRange", ctx, tenantID, date, date, (*uuid.UUID)(nil)).Return([]model.Holiday{}, nil)
 
 	somePlanID := uuid.New()
 	empDayPlanRepo.On("GetForEmployeeDateRange", ctx, employeeID, date, date).Return([]model.EmployeeDayPlan{

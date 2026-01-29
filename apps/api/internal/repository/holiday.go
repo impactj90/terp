@@ -31,7 +31,7 @@ func (r *HolidayRepository) Create(ctx context.Context, holiday *model.Holiday) 
 	// Explicitly select fields including booleans to ensure zero values are inserted
 	// rather than letting database defaults take over.
 	return r.db.GORM.WithContext(ctx).
-		Select("TenantID", "HolidayDate", "Name", "IsHalfDay", "AppliesToAll", "DepartmentID").
+		Select("TenantID", "HolidayDate", "Name", "Category", "AppliesToAll", "DepartmentID").
 		Create(holiday).Error
 }
 
@@ -68,10 +68,15 @@ func (r *HolidayRepository) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 // GetByDateRange retrieves holidays within a date range for a tenant.
-func (r *HolidayRepository) GetByDateRange(ctx context.Context, tenantID uuid.UUID, from, to time.Time) ([]model.Holiday, error) {
+func (r *HolidayRepository) GetByDateRange(ctx context.Context, tenantID uuid.UUID, from, to time.Time, departmentID *uuid.UUID) ([]model.Holiday, error) {
 	var holidays []model.Holiday
-	err := r.db.GORM.WithContext(ctx).
-		Where("tenant_id = ? AND holiday_date >= ? AND holiday_date <= ?", tenantID, from, to).
+	query := r.db.GORM.WithContext(ctx).
+		Where("tenant_id = ? AND holiday_date >= ? AND holiday_date <= ?", tenantID, from, to)
+	if departmentID != nil {
+		query = query.Where("(applies_to_all = true OR department_id = ?)", *departmentID)
+	}
+
+	err := query.
 		Order("holiday_date ASC").
 		Find(&holidays).Error
 
@@ -99,10 +104,15 @@ func (r *HolidayRepository) GetByDate(ctx context.Context, tenantID uuid.UUID, d
 }
 
 // ListByYear retrieves all holidays for a tenant in a specific year.
-func (r *HolidayRepository) ListByYear(ctx context.Context, tenantID uuid.UUID, year int) ([]model.Holiday, error) {
+func (r *HolidayRepository) ListByYear(ctx context.Context, tenantID uuid.UUID, year int, departmentID *uuid.UUID) ([]model.Holiday, error) {
 	var holidays []model.Holiday
-	err := r.db.GORM.WithContext(ctx).
-		Where("tenant_id = ? AND EXTRACT(YEAR FROM holiday_date) = ?", tenantID, year).
+	query := r.db.GORM.WithContext(ctx).
+		Where("tenant_id = ? AND EXTRACT(YEAR FROM holiday_date) = ?", tenantID, year)
+	if departmentID != nil {
+		query = query.Where("(applies_to_all = true OR department_id = ?)", *departmentID)
+	}
+
+	err := query.
 		Order("holiday_date ASC").
 		Find(&holidays).Error
 

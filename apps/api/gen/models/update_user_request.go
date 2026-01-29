@@ -7,6 +7,8 @@ package models
 
 import (
 	"context"
+	"encoding/json"
+	"strconv"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -23,14 +25,43 @@ type UpdateUserRequest struct {
 	// Format: uri
 	AvatarURL strfmt.URI `json:"avatar_url,omitempty"`
 
+	// data scope department ids
+	DataScopeDepartmentIds []strfmt.UUID `json:"data_scope_department_ids"`
+
+	// data scope employee ids
+	DataScopeEmployeeIds []strfmt.UUID `json:"data_scope_employee_ids"`
+
+	// data scope tenant ids
+	DataScopeTenantIds []strfmt.UUID `json:"data_scope_tenant_ids"`
+
+	// data scope type
+	// Enum: ["all","tenant","department","employee"]
+	DataScopeType string `json:"data_scope_type,omitempty"`
+
 	// display name
 	// Max Length: 255
 	// Min Length: 2
 	DisplayName string `json:"display_name,omitempty"`
 
+	// employee id
+	// Format: uuid
+	EmployeeID *strfmt.UUID `json:"employee_id,omitempty"`
+
+	// is active
+	IsActive bool `json:"is_active,omitempty"`
+
+	// is locked
+	IsLocked bool `json:"is_locked,omitempty"`
+
+	// sso id
+	SsoID *string `json:"sso_id,omitempty"`
+
 	// user group id
 	// Format: uuid
 	UserGroupID *strfmt.UUID `json:"user_group_id,omitempty"`
+
+	// username
+	Username *string `json:"username,omitempty"`
 }
 
 // Validate validates this update user request
@@ -41,7 +72,27 @@ func (m *UpdateUserRequest) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
+	if err := m.validateDataScopeDepartmentIds(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateDataScopeEmployeeIds(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateDataScopeTenantIds(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateDataScopeType(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateDisplayName(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateEmployeeID(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -67,6 +118,102 @@ func (m *UpdateUserRequest) validateAvatarURL(formats strfmt.Registry) error {
 	return nil
 }
 
+func (m *UpdateUserRequest) validateDataScopeDepartmentIds(formats strfmt.Registry) error {
+	if swag.IsZero(m.DataScopeDepartmentIds) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.DataScopeDepartmentIds); i++ {
+
+		if err := validate.FormatOf("data_scope_department_ids"+"."+strconv.Itoa(i), "body", "uuid", m.DataScopeDepartmentIds[i].String(), formats); err != nil {
+			return err
+		}
+
+	}
+
+	return nil
+}
+
+func (m *UpdateUserRequest) validateDataScopeEmployeeIds(formats strfmt.Registry) error {
+	if swag.IsZero(m.DataScopeEmployeeIds) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.DataScopeEmployeeIds); i++ {
+
+		if err := validate.FormatOf("data_scope_employee_ids"+"."+strconv.Itoa(i), "body", "uuid", m.DataScopeEmployeeIds[i].String(), formats); err != nil {
+			return err
+		}
+
+	}
+
+	return nil
+}
+
+func (m *UpdateUserRequest) validateDataScopeTenantIds(formats strfmt.Registry) error {
+	if swag.IsZero(m.DataScopeTenantIds) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.DataScopeTenantIds); i++ {
+
+		if err := validate.FormatOf("data_scope_tenant_ids"+"."+strconv.Itoa(i), "body", "uuid", m.DataScopeTenantIds[i].String(), formats); err != nil {
+			return err
+		}
+
+	}
+
+	return nil
+}
+
+var updateUserRequestTypeDataScopeTypePropEnum []any
+
+func init() {
+	var res []string
+	if err := json.Unmarshal([]byte(`["all","tenant","department","employee"]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		updateUserRequestTypeDataScopeTypePropEnum = append(updateUserRequestTypeDataScopeTypePropEnum, v)
+	}
+}
+
+const (
+
+	// UpdateUserRequestDataScopeTypeAll captures enum value "all"
+	UpdateUserRequestDataScopeTypeAll string = "all"
+
+	// UpdateUserRequestDataScopeTypeTenant captures enum value "tenant"
+	UpdateUserRequestDataScopeTypeTenant string = "tenant"
+
+	// UpdateUserRequestDataScopeTypeDepartment captures enum value "department"
+	UpdateUserRequestDataScopeTypeDepartment string = "department"
+
+	// UpdateUserRequestDataScopeTypeEmployee captures enum value "employee"
+	UpdateUserRequestDataScopeTypeEmployee string = "employee"
+)
+
+// prop value enum
+func (m *UpdateUserRequest) validateDataScopeTypeEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, updateUserRequestTypeDataScopeTypePropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *UpdateUserRequest) validateDataScopeType(formats strfmt.Registry) error {
+	if swag.IsZero(m.DataScopeType) { // not required
+		return nil
+	}
+
+	// value enum
+	if err := m.validateDataScopeTypeEnum("data_scope_type", "body", m.DataScopeType); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (m *UpdateUserRequest) validateDisplayName(formats strfmt.Registry) error {
 	if swag.IsZero(m.DisplayName) { // not required
 		return nil
@@ -77,6 +224,18 @@ func (m *UpdateUserRequest) validateDisplayName(formats strfmt.Registry) error {
 	}
 
 	if err := validate.MaxLength("display_name", "body", m.DisplayName, 255); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *UpdateUserRequest) validateEmployeeID(formats strfmt.Registry) error {
+	if swag.IsZero(m.EmployeeID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("employee_id", "body", "uuid", m.EmployeeID.String(), formats); err != nil {
 		return err
 	}
 

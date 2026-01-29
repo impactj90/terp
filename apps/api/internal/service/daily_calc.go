@@ -137,6 +137,10 @@ func (s *DailyCalcService) CalculateDay(ctx context.Context, tenantID, employeeI
 	// 1. Check for holiday
 	holiday, _ := s.holidayRepo.GetByDate(ctx, tenantID, date)
 	isHoliday := holiday != nil
+	holidayCategory := 0
+	if holiday != nil {
+		holidayCategory = holiday.Category
+	}
 
 	// 2. Get day plan (nil, nil = no plan assigned = off day)
 	empDayPlan, err := s.empDayPlanRepo.GetForEmployeeDate(ctx, employeeID, date)
@@ -158,7 +162,7 @@ func (s *DailyCalcService) CalculateDay(ctx context.Context, tenantID, employeeI
 		dailyValue = s.handleOffDay(employeeID, date, bookings)
 	} else if isHoliday && len(bookings) == 0 {
 		// Holiday without bookings - apply holiday credit
-		dailyValue = s.handleHolidayCredit(employeeID, date, empDayPlan, config)
+		dailyValue = s.handleHolidayCredit(employeeID, date, empDayPlan, holidayCategory, config)
 	} else if len(bookings) == 0 {
 		// No bookings, no holiday - apply no-booking behavior
 		dailyValue, err = s.handleNoBookings(ctx, employeeID, date, empDayPlan, config)
@@ -274,6 +278,7 @@ func (s *DailyCalcService) handleHolidayCredit(
 	employeeID uuid.UUID,
 	date time.Time,
 	empDayPlan *model.EmployeeDayPlan,
+	holidayCategory int,
 	config *DailyCalcConfig,
 ) *model.DailyValue {
 	now := time.Now()
@@ -291,21 +296,32 @@ func (s *DailyCalcService) handleHolidayCredit(
 	}
 	dv.TargetTime = targetTime
 
-	switch config.HolidayCredit {
-	case HolidayCreditTarget:
-		// Credit full target time
-		dv.NetTime = targetTime
-		dv.GrossTime = targetTime
-	case HolidayCreditAverage:
-		// TODO: Calculate average from previous days (TICKET-127)
-		dv.NetTime = targetTime
-		dv.GrossTime = targetTime
-		dv.Warnings = append(dv.Warnings, "AVERAGE_NOT_IMPLEMENTED")
-	case HolidayCreditNone:
-		// No credit
-		dv.NetTime = 0
-		dv.GrossTime = 0
-		dv.Undertime = targetTime
+	category := holidayCategory
+	if category == 0 {
+		category = int(config.HolidayCredit)
+	}
+
+	credit := 0
+	if empDayPlan != nil && empDayPlan.DayPlan != nil {
+		credit = empDayPlan.DayPlan.GetHolidayCredit(category)
+	}
+	if credit == 0 {
+		switch category {
+		case 1:
+			credit = targetTime
+		case 2:
+			credit = targetTime / 2
+		case 3:
+			credit = 0
+		default:
+			credit = targetTime
+		}
+	}
+
+	dv.NetTime = credit
+	dv.GrossTime = credit
+	if credit < targetTime {
+		dv.Undertime = targetTime - credit
 	}
 
 	return dv

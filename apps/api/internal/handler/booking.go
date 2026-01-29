@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -23,16 +25,23 @@ import (
 type BookingHandler struct {
 	bookingService   *service.BookingService
 	dailyCalcService *service.DailyCalcService
+	employeeService  *service.EmployeeService
 	bookingRepo      *repository.BookingRepository
 	dailyValueRepo   *repository.DailyValueRepository
 	empDayPlanRepo   *repository.EmployeeDayPlanRepository
 	holidayRepo      *repository.HolidayRepository
+	auditService     *service.AuditLogService
 }
+
+func (h *BookingHandler) SetAuditService(s *service.AuditLogService) { h.auditService = s }
+
+var errBookingScopeDenied = errors.New("employee access denied by scope")
 
 // NewBookingHandler creates a new BookingHandler instance.
 func NewBookingHandler(
 	bookingService *service.BookingService,
 	dailyCalcService *service.DailyCalcService,
+	employeeService *service.EmployeeService,
 	bookingRepo *repository.BookingRepository,
 	dailyValueRepo *repository.DailyValueRepository,
 	empDayPlanRepo *repository.EmployeeDayPlanRepository,
@@ -41,6 +50,7 @@ func NewBookingHandler(
 	return &BookingHandler{
 		bookingService:   bookingService,
 		dailyCalcService: dailyCalcService,
+		employeeService:  employeeService,
 		bookingRepo:      bookingRepo,
 		dailyValueRepo:   dailyValueRepo,
 		empDayPlanRepo:   empDayPlanRepo,
@@ -56,17 +66,42 @@ func (h *BookingHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	scope, err := scopeFromContext(r.Context())
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to load access scope")
+		return
+	}
+	if !scope.AllowsTenant(tenantID) {
+		respondError(w, http.StatusForbidden, "Permission denied")
+		return
+	}
+
 	// Build filter from query params
 	filter := repository.BookingFilter{
 		TenantID: tenantID,
 		Limit:    50, // Default
 	}
+	filter.ScopeType = scope.Type
+	filter.ScopeDepartmentIDs = scope.DepartmentIDs
+	filter.ScopeEmployeeIDs = scope.EmployeeIDs
 
 	// Parse employee_id filter
 	if empID := r.URL.Query().Get("employee_id"); empID != "" {
 		id, err := uuid.Parse(empID)
 		if err != nil {
 			respondError(w, http.StatusBadRequest, "Invalid employee_id")
+			return
+		}
+		if err := h.ensureEmployeeScope(r.Context(), id); err != nil {
+			if errors.Is(err, service.ErrEmployeeNotFound) {
+				respondError(w, http.StatusNotFound, "Employee not found")
+				return
+			}
+			if errors.Is(err, errBookingScopeDenied) {
+				respondError(w, http.StatusForbidden, "Permission denied")
+				return
+			}
+			respondError(w, http.StatusInternalServerError, "Failed to verify access")
 			return
 		}
 		filter.EmployeeID = &id
@@ -229,6 +264,18 @@ func (h *BookingHandler) Create(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusBadRequest, "Invalid employee_id")
 		return
 	}
+	if err := h.ensureEmployeeScope(r.Context(), employeeID); err != nil {
+		if errors.Is(err, service.ErrEmployeeNotFound) {
+			respondError(w, http.StatusNotFound, "Employee not found")
+			return
+		}
+		if errors.Is(err, errBookingScopeDenied) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to verify access")
+		return
+	}
 	bookingTypeID, err := uuid.Parse(req.BookingTypeID.String())
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid booking_type_id")
@@ -261,6 +308,15 @@ func (h *BookingHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.auditService != nil {
+		h.auditService.Log(r.Context(), r, service.LogEntry{
+			TenantID:   tenantID,
+			Action:     model.AuditActionCreate,
+			EntityType: "booking",
+			EntityID:   booking.ID,
+		})
+	}
+
 	respondJSON(w, http.StatusCreated, h.modelToResponse(booking))
 }
 
@@ -283,6 +339,22 @@ func (h *BookingHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	scope, err := scopeFromContext(r.Context())
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to load access scope")
+		return
+	}
+	if tenantID, ok := middleware.TenantFromContext(r.Context()); ok {
+		if !scope.AllowsTenant(tenantID) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+	}
+	if !scope.AllowsEmployee(booking.Employee) {
+		respondError(w, http.StatusForbidden, "Permission denied")
+		return
+	}
+
 	respondJSON(w, http.StatusOK, h.modelToResponse(booking))
 }
 
@@ -292,6 +364,31 @@ func (h *BookingHandler) Update(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid booking ID")
+		return
+	}
+
+	booking, err := h.bookingRepo.GetWithDetails(r.Context(), id)
+	if err != nil {
+		if err == repository.ErrBookingNotFound {
+			respondError(w, http.StatusNotFound, "Booking not found")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to get booking")
+		return
+	}
+	scope, err := scopeFromContext(r.Context())
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to load access scope")
+		return
+	}
+	if tenantID, ok := middleware.TenantFromContext(r.Context()); ok {
+		if !scope.AllowsTenant(tenantID) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+	}
+	if !scope.AllowsEmployee(booking.Employee) {
+		respondError(w, http.StatusForbidden, "Permission denied")
 		return
 	}
 
@@ -318,7 +415,7 @@ func (h *BookingHandler) Update(w http.ResponseWriter, r *http.Request) {
 		input.Notes = &req.Notes
 	}
 
-	booking, err := h.bookingService.Update(r.Context(), id, input)
+	booking, err = h.bookingService.Update(r.Context(), id, input)
 	if err != nil {
 		switch err {
 		case service.ErrBookingNotFound:
@@ -333,6 +430,17 @@ func (h *BookingHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.auditService != nil {
+		if tenantID, ok := middleware.TenantFromContext(r.Context()); ok {
+			h.auditService.Log(r.Context(), r, service.LogEntry{
+				TenantID:   tenantID,
+				Action:     model.AuditActionUpdate,
+				EntityType: "booking",
+				EntityID:   booking.ID,
+			})
+		}
+	}
+
 	respondJSON(w, http.StatusOK, h.modelToResponse(booking))
 }
 
@@ -342,6 +450,31 @@ func (h *BookingHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid booking ID")
+		return
+	}
+
+	booking, err := h.bookingRepo.GetWithDetails(r.Context(), id)
+	if err != nil {
+		if err == repository.ErrBookingNotFound {
+			respondError(w, http.StatusNotFound, "Booking not found")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to get booking")
+		return
+	}
+	scope, err := scopeFromContext(r.Context())
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to load access scope")
+		return
+	}
+	if tenantID, ok := middleware.TenantFromContext(r.Context()); ok {
+		if !scope.AllowsTenant(tenantID) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+	}
+	if !scope.AllowsEmployee(booking.Employee) {
+		respondError(w, http.StatusForbidden, "Permission denied")
 		return
 	}
 
@@ -356,6 +489,17 @@ func (h *BookingHandler) Delete(w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusInternalServerError, "Failed to delete booking")
 		}
 		return
+	}
+
+	if h.auditService != nil {
+		if tenantID, ok := middleware.TenantFromContext(r.Context()); ok {
+			h.auditService.Log(r.Context(), r, service.LogEntry{
+				TenantID:   tenantID,
+				Action:     model.AuditActionDelete,
+				EntityType: "booking",
+				EntityID:   id,
+			})
+		}
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -374,6 +518,30 @@ func (h *BookingHandler) GetDayView(w http.ResponseWriter, r *http.Request) {
 	employeeID, err := uuid.Parse(employeeIDStr)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid employee ID")
+		return
+	}
+	if err := h.ensureEmployeeScope(r.Context(), employeeID); err != nil {
+		if errors.Is(err, service.ErrEmployeeNotFound) {
+			respondError(w, http.StatusNotFound, "Employee not found")
+			return
+		}
+		if errors.Is(err, errBookingScopeDenied) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to verify access")
+		return
+	}
+	if err := h.ensureEmployeeScope(r.Context(), employeeID); err != nil {
+		if errors.Is(err, service.ErrEmployeeNotFound) {
+			respondError(w, http.StatusNotFound, "Employee not found")
+			return
+		}
+		if errors.Is(err, errBookingScopeDenied) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to verify access")
 		return
 	}
 
@@ -634,4 +802,25 @@ func mapDailyErrorType(code string) string {
 	default:
 		return models.DailyErrorErrorTypeInvalidSequence
 	}
+}
+
+func (h *BookingHandler) ensureEmployeeScope(ctx context.Context, employeeID uuid.UUID) error {
+	emp, err := h.employeeService.GetByID(ctx, employeeID)
+	if err != nil {
+		return err
+	}
+
+	scope, err := scopeFromContext(ctx)
+	if err != nil {
+		return err
+	}
+	if tenantID, ok := middleware.TenantFromContext(ctx); ok {
+		if !scope.AllowsTenant(tenantID) {
+			return errBookingScopeDenied
+		}
+	}
+	if !scope.AllowsEmployee(emp) {
+		return errBookingScopeDenied
+	}
+	return nil
 }

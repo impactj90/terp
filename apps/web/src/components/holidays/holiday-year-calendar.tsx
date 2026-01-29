@@ -61,6 +61,17 @@ function getLocaleMonthName(locale: string, year: number, month: number): string
   return new Intl.DateTimeFormat(locale, { month: 'long' }).format(new Date(year, month, 1))
 }
 
+function getHolidayCategoryClasses(category: number): string {
+  switch (category) {
+    case 2:
+      return 'bg-orange-300 text-orange-900 hover:bg-orange-400 dark:bg-orange-500/60 dark:text-orange-50 dark:hover:bg-orange-500/70'
+    case 3:
+      return 'bg-blue-500 text-white hover:bg-blue-600'
+    default:
+      return 'bg-red-500 text-white hover:bg-red-600'
+  }
+}
+
 function MonthMiniCalendar({
   year,
   month,
@@ -135,7 +146,7 @@ function MonthMiniCalendar({
 
               const holiday = getHoliday(date)
               const isHolidayDate = !!holiday
-              const isHalfDay = holiday?.is_half_day
+              const holidayCategory = holiday?.category ?? 1
               const weekend = isWeekend(date)
               const today = isToday(date)
 
@@ -149,8 +160,7 @@ function MonthMiniCalendar({
                     'hover:bg-muted focus:outline-none focus-visible:ring-1 focus-visible:ring-ring',
                     today && 'ring-1 ring-primary',
                     weekend && !isHolidayDate && 'text-muted-foreground bg-muted/30',
-                    isHolidayDate && !isHalfDay && 'bg-red-500 text-white hover:bg-red-600',
-                    isHolidayDate && isHalfDay && 'bg-red-200 text-red-900 dark:bg-red-900/50 dark:text-red-100 hover:bg-red-300 dark:hover:bg-red-900/70'
+                    isHolidayDate && getHolidayCategoryClasses(holidayCategory)
                   )}
                   title={holiday?.name}
                 >
@@ -195,11 +205,15 @@ export function HolidayYearCalendar({
       <div className="flex flex-wrap gap-4 text-sm justify-center">
         <div className="flex items-center gap-2">
           <span className="h-4 w-4 rounded-sm bg-red-500" />
-          <span className="text-muted-foreground">{t('legendFullDay')}</span>
+          <span className="text-muted-foreground">{t('legendCategoryFull')}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="h-4 w-4 rounded-sm bg-red-200 dark:bg-red-900/50" />
-          <span className="text-muted-foreground">{t('legendHalfDay')}</span>
+          <span className="h-4 w-4 rounded-sm bg-orange-300 dark:bg-orange-500/60" />
+          <span className="text-muted-foreground">{t('legendCategoryHalf')}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="h-4 w-4 rounded-sm bg-blue-500" />
+          <span className="text-muted-foreground">{t('legendCategoryCustom')}</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="h-4 w-4 rounded-sm bg-muted/50" />

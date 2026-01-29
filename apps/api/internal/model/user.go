@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -13,6 +14,15 @@ type UserRole string
 const (
 	RoleUser  UserRole = "user"
 	RoleAdmin UserRole = "admin"
+)
+
+type DataScopeType string
+
+const (
+	DataScopeAll        DataScopeType = "all"
+	DataScopeTenant     DataScopeType = "tenant"
+	DataScopeDepartment DataScopeType = "department"
+	DataScopeEmployee   DataScopeType = "employee"
 )
 
 // User represents a user in the system.
@@ -27,9 +37,16 @@ type User struct {
 	AvatarURL   *string        `gorm:"type:text" json:"avatar_url,omitempty"`
 	Role        UserRole       `gorm:"type:varchar(50);not null;default:'user'" json:"role"`
 	IsActive    bool           `gorm:"default:true" json:"is_active"`
-	CreatedAt   time.Time      `gorm:"default:now()" json:"created_at"`
-	UpdatedAt   time.Time      `gorm:"default:now()" json:"updated_at"`
-	DeletedAt   gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
+	PasswordHash *string       `gorm:"type:varchar(255)" json:"-"`
+	SSOID        *string       `gorm:"type:varchar(255)" json:"sso_id,omitempty"`
+	IsLocked     bool          `gorm:"default:false" json:"is_locked"`
+	DataScopeType          DataScopeType  `gorm:"type:varchar(20);not null;default:'all'" json:"data_scope_type"`
+	DataScopeTenantIDs     pq.StringArray `gorm:"type:uuid[];default:'{}'" json:"data_scope_tenant_ids,omitempty"`
+	DataScopeDepartmentIDs pq.StringArray `gorm:"type:uuid[];default:'{}'" json:"data_scope_department_ids,omitempty"`
+	DataScopeEmployeeIDs   pq.StringArray `gorm:"type:uuid[];default:'{}'" json:"data_scope_employee_ids,omitempty"`
+	CreatedAt              time.Time      `gorm:"default:now()" json:"created_at"`
+	UpdatedAt              time.Time      `gorm:"default:now()" json:"updated_at"`
+	DeletedAt              gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
 
 	// Relations
 	Tenant    *Tenant    `gorm:"foreignKey:TenantID" json:"tenant,omitempty"`

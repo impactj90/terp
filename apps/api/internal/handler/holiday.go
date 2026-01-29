@@ -29,6 +29,16 @@ func (h *HolidayHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var departmentID *uuid.UUID
+	if departmentStr := r.URL.Query().Get("department_id"); departmentStr != "" {
+		parsed, err := uuid.Parse(departmentStr)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid department_id parameter")
+			return
+		}
+		departmentID = &parsed
+	}
+
 	// Check for year filter
 	if yearStr := r.URL.Query().Get("year"); yearStr != "" {
 		year, err := strconv.Atoi(yearStr)
@@ -36,7 +46,7 @@ func (h *HolidayHandler) List(w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusBadRequest, "Invalid year parameter")
 			return
 		}
-		holidays, err := h.holidayService.ListByYear(r.Context(), tenantID, year)
+		holidays, err := h.holidayService.ListByYear(r.Context(), tenantID, year, departmentID)
 		if err != nil {
 			respondError(w, http.StatusInternalServerError, "Failed to list holidays")
 			return
@@ -59,7 +69,7 @@ func (h *HolidayHandler) List(w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusBadRequest, "Invalid to date format (use YYYY-MM-DD)")
 			return
 		}
-		holidays, err := h.holidayService.ListByDateRange(r.Context(), tenantID, from, to)
+		holidays, err := h.holidayService.ListByDateRange(r.Context(), tenantID, from, to, departmentID)
 		if err != nil {
 			respondError(w, http.StatusInternalServerError, "Failed to list holidays")
 			return
@@ -69,7 +79,7 @@ func (h *HolidayHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Default: list current year
-	holidays, err := h.holidayService.ListByYear(r.Context(), tenantID, time.Now().Year())
+	holidays, err := h.holidayService.ListByYear(r.Context(), tenantID, time.Now().Year(), departmentID)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to list holidays")
 		return
@@ -121,9 +131,9 @@ func (h *HolidayHandler) Create(w http.ResponseWriter, r *http.Request) {
 		appliesToAll = *req.AppliesToAll
 	}
 
-	isHalfDay := false
-	if req.IsHalfDay != nil {
-		isHalfDay = *req.IsHalfDay
+	category := 0
+	if req.Category != nil {
+		category = int(*req.Category)
 	}
 
 	// Convert department ID if provided
@@ -139,7 +149,7 @@ func (h *HolidayHandler) Create(w http.ResponseWriter, r *http.Request) {
 		TenantID:     tenantID,
 		HolidayDate:  holidayDate,
 		Name:         *req.Name,
-		IsHalfDay:    isHalfDay,
+		Category:     category,
 		AppliesToAll: appliesToAll,
 		DepartmentID: departmentID,
 	}
@@ -151,6 +161,8 @@ func (h *HolidayHandler) Create(w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusBadRequest, "Holiday name is required")
 		case service.ErrHolidayDateRequired:
 			respondError(w, http.StatusBadRequest, "Holiday date is required")
+		case service.ErrHolidayCategoryInvalid:
+			respondError(w, http.StatusBadRequest, "Holiday category must be 1, 2, or 3")
 		case service.ErrHolidayAlreadyExists:
 			respondError(w, http.StatusBadRequest, "A holiday already exists on this date")
 		default:
@@ -188,8 +200,12 @@ func (h *HolidayHandler) Update(w http.ResponseWriter, r *http.Request) {
 		input.Name = &req.Name
 	}
 
+	if req.Category != 0 {
+		category := int(req.Category)
+		input.Category = &category
+	}
+
 	// Note: Bool fields cannot be reliably detected as "provided" vs "default false"
-	input.IsHalfDay = &req.IsHalfDay
 	input.AppliesToAll = &req.AppliesToAll
 
 	// Convert department ID if provided
@@ -213,6 +229,8 @@ func (h *HolidayHandler) Update(w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusNotFound, "Holiday not found")
 		case service.ErrHolidayNameRequired:
 			respondError(w, http.StatusBadRequest, "Holiday name cannot be empty")
+		case service.ErrHolidayCategoryInvalid:
+			respondError(w, http.StatusBadRequest, "Holiday category must be 1, 2, or 3")
 		default:
 			respondError(w, http.StatusInternalServerError, "Failed to update holiday")
 		}
@@ -240,4 +258,114 @@ func (h *HolidayHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *HolidayHandler) Generate(w http.ResponseWriter, r *http.Request) {
+	tenantID, ok := middleware.TenantFromContext(r.Context())
+	if !ok {
+		respondError(w, http.StatusUnauthorized, "Tenant required")
+		return
+	}
+
+	var req models.GenerateHolidaysRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if err := req.Validate(nil); err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	input := service.GenerateHolidayInput{
+		TenantID:     tenantID,
+		Year:         int(*req.Year),
+		State:        *req.State,
+		SkipExisting: true,
+	}
+	if req.SkipExisting != nil {
+		input.SkipExisting = *req.SkipExisting
+	}
+
+	holidays, err := h.holidayService.GenerateForYearState(r.Context(), input)
+	if err != nil {
+		switch err {
+		case service.ErrHolidayYearInvalid:
+			respondError(w, http.StatusBadRequest, "Invalid year")
+		case service.ErrHolidayStateInvalid:
+			respondError(w, http.StatusBadRequest, "Invalid state")
+		default:
+			respondError(w, http.StatusInternalServerError, "Failed to generate holidays")
+		}
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, holidays)
+}
+
+func (h *HolidayHandler) Copy(w http.ResponseWriter, r *http.Request) {
+	tenantID, ok := middleware.TenantFromContext(r.Context())
+	if !ok {
+		respondError(w, http.StatusUnauthorized, "Tenant required")
+		return
+	}
+
+	var req models.CopyHolidaysRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if err := req.Validate(nil); err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	overrides := make([]service.HolidayCategoryOverride, 0, len(req.CategoryOverrides))
+	for _, override := range req.CategoryOverrides {
+		if override == nil {
+			continue
+		}
+		if override.Month == nil || override.Day == nil || override.Category == nil {
+			continue
+		}
+		overrides = append(overrides, service.HolidayCategoryOverride{
+			Month:    int(*override.Month),
+			Day:      int(*override.Day),
+			Category: int(*override.Category),
+		})
+	}
+
+	input := service.CopyHolidayInput{
+		TenantID:          tenantID,
+		SourceYear:        int(*req.SourceYear),
+		TargetYear:        int(*req.TargetYear),
+		CategoryOverrides: overrides,
+		SkipExisting:      true,
+	}
+	if req.SkipExisting != nil {
+		input.SkipExisting = *req.SkipExisting
+	}
+
+	holidays, err := h.holidayService.CopyFromYear(r.Context(), input)
+	if err != nil {
+		switch err {
+		case service.ErrHolidayYearInvalid:
+			respondError(w, http.StatusBadRequest, "Invalid year")
+		case service.ErrHolidayCopySameYear:
+			respondError(w, http.StatusBadRequest, "Source and target year must differ")
+		case service.ErrHolidayNoSourceYear:
+			respondError(w, http.StatusNotFound, "No holidays found for source year")
+		case service.ErrHolidayOverrideInvalid:
+			respondError(w, http.StatusBadRequest, "Invalid category override")
+		case service.ErrHolidayCategoryInvalid:
+			respondError(w, http.StatusBadRequest, "Holiday category must be 1, 2, or 3")
+		default:
+			respondError(w, http.StatusInternalServerError, "Failed to copy holidays")
+		}
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, holidays)
 }

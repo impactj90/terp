@@ -156,6 +156,21 @@ func (r *AbsenceDayRepository) ListAll(ctx context.Context, tenantID uuid.UUID, 
 	if opts.To != nil {
 		q = q.Where("absence_date <= ?", *opts.To)
 	}
+	switch opts.ScopeType {
+	case model.DataScopeDepartment:
+		if len(opts.ScopeDepartmentIDs) == 0 {
+			q = q.Where("1 = 0")
+		} else {
+			q = q.Joins("JOIN employees ON employees.id = absence_days.employee_id").
+				Where("employees.department_id IN ?", opts.ScopeDepartmentIDs)
+		}
+	case model.DataScopeEmployee:
+		if len(opts.ScopeEmployeeIDs) == 0 {
+			q = q.Where("1 = 0")
+		} else {
+			q = q.Where("employee_id IN ?", opts.ScopeEmployeeIDs)
+		}
+	}
 
 	err := q.Order("absence_date ASC").Find(&days).Error
 	if err != nil {

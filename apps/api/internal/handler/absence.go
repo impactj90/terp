@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -19,13 +21,20 @@ import (
 
 // AbsenceHandler handles absence-related HTTP requests.
 type AbsenceHandler struct {
-	absenceService *service.AbsenceService
+	absenceService  *service.AbsenceService
+	employeeService *service.EmployeeService
+	auditService    *service.AuditLogService
 }
 
+func (h *AbsenceHandler) SetAuditService(s *service.AuditLogService) { h.auditService = s }
+
+var errAbsenceScopeDenied = errors.New("employee access denied by scope")
+
 // NewAbsenceHandler creates a new AbsenceHandler instance.
-func NewAbsenceHandler(absenceService *service.AbsenceService) *AbsenceHandler {
+func NewAbsenceHandler(absenceService *service.AbsenceService, employeeService *service.EmployeeService) *AbsenceHandler {
 	return &AbsenceHandler{
-		absenceService: absenceService,
+		absenceService:  absenceService,
+		employeeService: employeeService,
 	}
 }
 
@@ -67,6 +76,32 @@ func (h *AbsenceHandler) ListByEmployee(w http.ResponseWriter, r *http.Request) 
 	employeeID, err := uuid.Parse(employeeIDStr)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid employee ID")
+		return
+	}
+
+	if err := h.ensureEmployeeScope(r.Context(), employeeID); err != nil {
+		if errors.Is(err, service.ErrEmployeeNotFound) {
+			respondError(w, http.StatusNotFound, "Employee not found")
+			return
+		}
+		if errors.Is(err, errAbsenceScopeDenied) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to verify access")
+		return
+	}
+
+	if err := h.ensureEmployeeScope(r.Context(), employeeID); err != nil {
+		if errors.Is(err, service.ErrEmployeeNotFound) {
+			respondError(w, http.StatusNotFound, "Employee not found")
+			return
+		}
+		if errors.Is(err, errAbsenceScopeDenied) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to verify access")
 		return
 	}
 
@@ -192,6 +227,19 @@ func (h *AbsenceHandler) CreateRange(w http.ResponseWriter, r *http.Request) {
 		response.Data = append(response.Data, h.absenceDayToResponse(&result.CreatedDays[i]))
 	}
 
+	if h.auditService != nil {
+		if tenantID, ok := middleware.TenantFromContext(r.Context()); ok {
+			for i := range result.CreatedDays {
+				h.auditService.Log(r.Context(), r, service.LogEntry{
+					TenantID:   tenantID,
+					Action:     model.AuditActionCreate,
+					EntityType: "absence",
+					EntityID:   result.CreatedDays[i].ID,
+				})
+			}
+		}
+	}
+
 	respondJSON(w, http.StatusCreated, response)
 }
 
@@ -201,6 +249,23 @@ func (h *AbsenceHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid absence ID")
+		return
+	}
+
+	if _, err := h.ensureAbsenceScope(r.Context(), id); err != nil {
+		if errors.Is(err, service.ErrAbsenceNotFound) {
+			respondError(w, http.StatusNotFound, "Absence not found")
+			return
+		}
+		if errors.Is(err, service.ErrEmployeeNotFound) {
+			respondError(w, http.StatusNotFound, "Employee not found")
+			return
+		}
+		if errors.Is(err, errAbsenceScopeDenied) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to verify access")
 		return
 	}
 
@@ -215,6 +280,17 @@ func (h *AbsenceHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.auditService != nil {
+		if tenantID, ok := middleware.TenantFromContext(r.Context()); ok {
+			h.auditService.Log(r.Context(), r, service.LogEntry{
+				TenantID:   tenantID,
+				Action:     model.AuditActionDelete,
+				EntityType: "absence",
+				EntityID:   id,
+			})
+		}
+	}
+
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -226,13 +302,38 @@ func (h *AbsenceHandler) ListAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	scope, err := scopeFromContext(r.Context())
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to load access scope")
+		return
+	}
+	if !scope.AllowsTenant(tenantID) {
+		respondError(w, http.StatusForbidden, "Permission denied")
+		return
+	}
+
 	var opts model.AbsenceListOptions
+	opts.ScopeType = scope.Type
+	opts.ScopeDepartmentIDs = scope.DepartmentIDs
+	opts.ScopeEmployeeIDs = scope.EmployeeIDs
 
 	// Parse optional query filters
 	if empIDStr := r.URL.Query().Get("employee_id"); empIDStr != "" {
 		empID, err := uuid.Parse(empIDStr)
 		if err != nil {
 			respondError(w, http.StatusBadRequest, "Invalid employee_id")
+			return
+		}
+		if err := h.ensureEmployeeScope(r.Context(), empID); err != nil {
+			if errors.Is(err, service.ErrEmployeeNotFound) {
+				respondError(w, http.StatusNotFound, "Employee not found")
+				return
+			}
+			if errors.Is(err, errAbsenceScopeDenied) {
+				respondError(w, http.StatusForbidden, "Permission denied")
+				return
+			}
+			respondError(w, http.StatusInternalServerError, "Failed to verify access")
 			return
 		}
 		opts.EmployeeID = &empID
@@ -295,6 +396,23 @@ func (h *AbsenceHandler) Approve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if _, err := h.ensureAbsenceScope(r.Context(), id); err != nil {
+		if errors.Is(err, service.ErrAbsenceNotFound) {
+			respondError(w, http.StatusNotFound, "Absence not found")
+			return
+		}
+		if errors.Is(err, service.ErrEmployeeNotFound) {
+			respondError(w, http.StatusNotFound, "Employee not found")
+			return
+		}
+		if errors.Is(err, errAbsenceScopeDenied) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to verify access")
+		return
+	}
+
 	// Get the authenticated user for approved_by
 	user, ok := auth.UserFromContext(r.Context())
 	if !ok {
@@ -324,6 +442,23 @@ func (h *AbsenceHandler) Reject(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid absence ID")
+		return
+	}
+
+	if _, err := h.ensureAbsenceScope(r.Context(), id); err != nil {
+		if errors.Is(err, service.ErrAbsenceNotFound) {
+			respondError(w, http.StatusNotFound, "Absence not found")
+			return
+		}
+		if errors.Is(err, service.ErrEmployeeNotFound) {
+			respondError(w, http.StatusNotFound, "Employee not found")
+			return
+		}
+		if errors.Is(err, errAbsenceScopeDenied) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to verify access")
 		return
 	}
 
@@ -485,6 +620,38 @@ func mapAPICategory(apiCategory string) model.AbsenceCategory {
 	default:
 		return model.AbsenceCategorySpecial
 	}
+}
+
+func (h *AbsenceHandler) ensureEmployeeScope(ctx context.Context, employeeID uuid.UUID) error {
+	emp, err := h.employeeService.GetByID(ctx, employeeID)
+	if err != nil {
+		return err
+	}
+
+	scope, err := scopeFromContext(ctx)
+	if err != nil {
+		return err
+	}
+	if tenantID, ok := middleware.TenantFromContext(ctx); ok {
+		if !scope.AllowsTenant(tenantID) {
+			return errAbsenceScopeDenied
+		}
+	}
+	if !scope.AllowsEmployee(emp) {
+		return errAbsenceScopeDenied
+	}
+	return nil
+}
+
+func (h *AbsenceHandler) ensureAbsenceScope(ctx context.Context, absenceID uuid.UUID) (*model.AbsenceDay, error) {
+	absence, err := h.absenceService.GetByID(ctx, absenceID)
+	if err != nil {
+		return nil, err
+	}
+	if err := h.ensureEmployeeScope(ctx, absence.EmployeeID); err != nil {
+		return nil, err
+	}
+	return absence, nil
 }
 
 // GetType handles GET /absence-types/{id}

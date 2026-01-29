@@ -6,6 +6,7 @@ interface UseHolidaysOptions {
   year?: number
   from?: string
   to?: string
+  departmentId?: string
   enabled?: boolean
 }
 
@@ -25,10 +26,10 @@ interface UseHolidaysOptions {
  * ```
  */
 export function useHolidays(options: UseHolidaysOptions = {}) {
-  const { year, from, to, enabled = true } = options
+  const { year, from, to, departmentId, enabled = true } = options
 
   return useApiQuery('/holidays', {
-    params: { year, from, to },
+    params: { year, from, to, department_id: departmentId },
     enabled,
   })
 }
@@ -60,7 +61,7 @@ export function useHoliday(id: string, enabled = true) {
  *   body: {
  *     name: 'Christmas Day',
  *     holiday_date: '2026-12-25',
- *     is_half_day: false,
+ *     category: 1,
  *     applies_to_all: true,
  *   }
  * })
@@ -101,6 +102,40 @@ export function useUpdateHoliday() {
  */
 export function useDeleteHoliday() {
   return useApiMutation('/holidays/{id}', 'delete', {
+    invalidateKeys: [['/holidays']],
+  })
+}
+
+/**
+ * Hook to generate holidays for a year and state.
+ *
+ * @example
+ * ```tsx
+ * const generateHolidays = useGenerateHolidays()
+ * generateHolidays.mutate({
+ *   body: { year: 2026, state: 'BY' }
+ * })
+ * ```
+ */
+export function useGenerateHolidays() {
+  return useApiMutation('/holidays/generate', 'post', {
+    invalidateKeys: [['/holidays']],
+  })
+}
+
+/**
+ * Hook to copy holidays from another year.
+ *
+ * @example
+ * ```tsx
+ * const copyHolidays = useCopyHolidays()
+ * copyHolidays.mutate({
+ *   body: { source_year: 2025, target_year: 2026 }
+ * })
+ * ```
+ */
+export function useCopyHolidays() {
+  return useApiMutation('/holidays/copy', 'post', {
     invalidateKeys: [['/holidays']],
   })
 }

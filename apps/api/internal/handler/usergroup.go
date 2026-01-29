@@ -10,16 +10,20 @@ import (
 
 	"github.com/tolga/terp/gen/models"
 	"github.com/tolga/terp/internal/middleware"
+	"github.com/tolga/terp/internal/model"
 	"github.com/tolga/terp/internal/service"
 )
 
 type UserGroupHandler struct {
 	userGroupService *service.UserGroupService
+	auditService     *service.AuditLogService
 }
 
 func NewUserGroupHandler(userGroupService *service.UserGroupService) *UserGroupHandler {
 	return &UserGroupHandler{userGroupService: userGroupService}
 }
+
+func (h *UserGroupHandler) SetAuditService(s *service.AuditLogService) { h.auditService = s }
 
 func (h *UserGroupHandler) List(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := middleware.TenantFromContext(r.Context())
@@ -122,6 +126,16 @@ func (h *UserGroupHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.auditService != nil {
+		h.auditService.Log(r.Context(), r, service.LogEntry{
+			TenantID:   tenantID,
+			Action:     model.AuditActionCreate,
+			EntityType: "user_group",
+			EntityID:   ug.ID,
+			EntityName: ug.Name,
+		})
+	}
+
 	respondJSON(w, http.StatusCreated, mapUserGroupToResponse(ug))
 }
 
@@ -189,6 +203,18 @@ func (h *UserGroupHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.auditService != nil {
+		if tenantID, ok := middleware.TenantFromContext(r.Context()); ok {
+			h.auditService.Log(r.Context(), r, service.LogEntry{
+				TenantID:   tenantID,
+				Action:     model.AuditActionUpdate,
+				EntityType: "user_group",
+				EntityID:   ug.ID,
+				EntityName: ug.Name,
+			})
+		}
+	}
+
 	respondJSON(w, http.StatusOK, mapUserGroupToResponse(ug))
 }
 
@@ -210,6 +236,17 @@ func (h *UserGroupHandler) Delete(w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusInternalServerError, "Failed to delete user group")
 		}
 		return
+	}
+
+	if h.auditService != nil {
+		if tenantID, ok := middleware.TenantFromContext(r.Context()); ok {
+			h.auditService.Log(r.Context(), r, service.LogEntry{
+				TenantID:   tenantID,
+				Action:     model.AuditActionDelete,
+				EntityType: "user_group",
+				EntityID:   id,
+			})
+		}
 	}
 
 	w.WriteHeader(http.StatusNoContent)

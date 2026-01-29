@@ -43,6 +43,17 @@ export function HolidayDataTable({
 }: HolidayDataTableProps) {
   const t = useTranslations('adminHolidays')
 
+  const getCategoryBadge = (category: number) => {
+    switch (category) {
+      case 2:
+        return { label: t('categoryHalf'), variant: 'secondary' as const }
+      case 3:
+        return { label: t('categoryCustom'), variant: 'outline' as const }
+      default:
+        return { label: t('categoryFull'), variant: 'default' as const }
+    }
+  }
+
   if (isLoading) {
     return <HolidayDataTableSkeleton />
   }
@@ -87,9 +98,10 @@ export function HolidayDataTable({
               </div>
             </TableCell>
             <TableCell>
-              <Badge variant={holiday.is_half_day ? 'secondary' : 'default'}>
-                {holiday.is_half_day ? t('halfDay') : t('fullDay')}
-              </Badge>
+              {(() => {
+                const badge = getCategoryBadge(holiday.category ?? 1)
+                return <Badge variant={badge.variant}>{badge.label}</Badge>
+              })()}
             </TableCell>
             <TableCell>
               {holiday.applies_to_all ? (

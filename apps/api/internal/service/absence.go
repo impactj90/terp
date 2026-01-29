@@ -53,7 +53,7 @@ type absenceTypeRepositoryForService interface {
 
 // holidayRepositoryForAbsence defines the interface for holiday lookups.
 type holidayRepositoryForAbsence interface {
-	GetByDateRange(ctx context.Context, tenantID uuid.UUID, from, to time.Time) ([]model.Holiday, error)
+	GetByDateRange(ctx context.Context, tenantID uuid.UUID, from, to time.Time, departmentID *uuid.UUID) ([]model.Holiday, error)
 }
 
 // empDayPlanRepositoryForAbsence defines the interface for employee day plan lookups.
@@ -277,7 +277,7 @@ func (s *AbsenceService) CreateRange(ctx context.Context, input CreateAbsenceRan
 	}
 
 	// Batch-fetch holidays for the range
-	holidays, err := s.holidayRepo.GetByDateRange(ctx, input.TenantID, input.FromDate, input.ToDate)
+	holidays, err := s.holidayRepo.GetByDateRange(ctx, input.TenantID, input.FromDate, input.ToDate, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -41,6 +41,14 @@ func mapUserToResponse(u *model.User) *models.User {
 		UpdatedAt:   updatedAt,
 	}
 
+	if u.TenantID != nil {
+		tenantID := strfmt.UUID(u.TenantID.String())
+		resp.TenantID = &tenantID
+	}
+	if u.Username != nil {
+		resp.Username = u.Username
+	}
+
 	// Handle optional avatar URL
 	if u.AvatarURL != nil {
 		avatarURL := strfmt.URI(*u.AvatarURL)
@@ -53,6 +61,37 @@ func mapUserToResponse(u *model.User) *models.User {
 	if u.UserGroupID != nil {
 		groupID := strfmt.UUID(u.UserGroupID.String())
 		resp.UserGroupID = &groupID
+	}
+	if u.SSOID != nil {
+		resp.SsoID = u.SSOID
+	}
+
+	resp.IsActive = u.IsActive
+	resp.IsLocked = u.IsLocked
+
+	if u.DataScopeType != "" {
+		resp.DataScopeType = string(u.DataScopeType)
+	}
+	if len(u.DataScopeTenantIDs) > 0 {
+		ids := make([]strfmt.UUID, 0, len(u.DataScopeTenantIDs))
+		for _, id := range u.DataScopeTenantIDs {
+			ids = append(ids, strfmt.UUID(id))
+		}
+		resp.DataScopeTenantIds = ids
+	}
+	if len(u.DataScopeDepartmentIDs) > 0 {
+		ids := make([]strfmt.UUID, 0, len(u.DataScopeDepartmentIDs))
+		for _, id := range u.DataScopeDepartmentIDs {
+			ids = append(ids, strfmt.UUID(id))
+		}
+		resp.DataScopeDepartmentIds = ids
+	}
+	if len(u.DataScopeEmployeeIDs) > 0 {
+		ids := make([]strfmt.UUID, 0, len(u.DataScopeEmployeeIDs))
+		for _, id := range u.DataScopeEmployeeIDs {
+			ids = append(ids, strfmt.UUID(id))
+		}
+		resp.DataScopeEmployeeIds = ids
 	}
 
 	return resp

@@ -7,6 +7,7 @@ package models
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -22,6 +23,12 @@ type CreateHolidayRequest struct {
 	// applies to all
 	AppliesToAll *bool `json:"applies_to_all,omitempty"`
 
+	// Holiday credit category (1=full, 2=half, 3=custom)
+	// Example: 1
+	// Required: true
+	// Enum: [1,2,3]
+	Category *int64 `json:"category"`
+
 	// Optional department restriction
 	// Format: uuid
 	DepartmentID strfmt.UUID `json:"department_id,omitempty"`
@@ -31,9 +38,6 @@ type CreateHolidayRequest struct {
 	// Required: true
 	// Format: date
 	HolidayDate *strfmt.Date `json:"holiday_date"`
-
-	// is half day
-	IsHalfDay *bool `json:"is_half_day,omitempty"`
 
 	// name
 	// Example: New Year's Day
@@ -46,6 +50,10 @@ type CreateHolidayRequest struct {
 // Validate validates this create holiday request
 func (m *CreateHolidayRequest) Validate(formats strfmt.Registry) error {
 	var res []error
+
+	if err := m.validateCategory(formats); err != nil {
+		res = append(res, err)
+	}
 
 	if err := m.validateDepartmentID(formats); err != nil {
 		res = append(res, err)
@@ -62,6 +70,40 @@ func (m *CreateHolidayRequest) Validate(formats strfmt.Registry) error {
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+var createHolidayRequestTypeCategoryPropEnum []any
+
+func init() {
+	var res []int64
+	if err := json.Unmarshal([]byte(`[1,2,3]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		createHolidayRequestTypeCategoryPropEnum = append(createHolidayRequestTypeCategoryPropEnum, v)
+	}
+}
+
+// prop value enum
+func (m *CreateHolidayRequest) validateCategoryEnum(path, location string, value int64) error {
+	if err := validate.EnumCase(path, location, value, createHolidayRequestTypeCategoryPropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *CreateHolidayRequest) validateCategory(formats strfmt.Registry) error {
+
+	if err := validate.Required("category", "body", m.Category); err != nil {
+		return err
+	}
+
+	// value enum
+	if err := m.validateCategoryEnum("category", "body", *m.Category); err != nil {
+		return err
+	}
+
 	return nil
 }
 

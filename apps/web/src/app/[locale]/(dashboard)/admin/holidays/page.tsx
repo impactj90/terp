@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Plus, CalendarDays, List, CalendarRange, X } from 'lucide-react'
+import { Plus, CalendarDays, List, CalendarRange, X, Copy, Wand2 } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
 import { useHasRole } from '@/hooks'
 import { useHolidays, useDeleteHoliday } from '@/hooks/api'
@@ -19,6 +19,8 @@ import {
   HolidayYearCalendar,
   HolidayFormSheet,
   HolidayDetailSheet,
+  HolidayGenerateDialog,
+  HolidayCopyDialog,
 } from '@/components/holidays'
 import type { components } from '@/lib/api/types'
 
@@ -41,6 +43,8 @@ export default function HolidaysPage() {
   const [editHoliday, setEditHoliday] = React.useState<Holiday | null>(null)
   const [viewHoliday, setViewHoliday] = React.useState<Holiday | null>(null)
   const [deleteHoliday, setDeleteHoliday] = React.useState<Holiday | null>(null)
+  const [generateOpen, setGenerateOpen] = React.useState(false)
+  const [copyOpen, setCopyOpen] = React.useState(false)
 
   // Fetch holidays for selected year
   const { data: holidaysData, isLoading } = useHolidays({
@@ -129,10 +133,20 @@ export default function HolidaysPage() {
             {t('subtitle')}
           </p>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          {t('newHoliday')}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setGenerateOpen(true)}>
+            <Wand2 className="mr-2 h-4 w-4" />
+            {t('generateButton')}
+          </Button>
+          <Button variant="outline" onClick={() => setCopyOpen(true)}>
+            <Copy className="mr-2 h-4 w-4" />
+            {t('copyButton')}
+          </Button>
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            {t('newHoliday')}
+          </Button>
+        </div>
       </div>
 
       {/* Filters bar */}
@@ -261,6 +275,20 @@ export default function HolidaysPage() {
         variant="destructive"
         isLoading={deleteMutation.isPending}
         onConfirm={handleConfirmDelete}
+      />
+
+      {/* Generate Dialog */}
+      <HolidayGenerateDialog
+        open={generateOpen}
+        year={year}
+        onOpenChange={setGenerateOpen}
+      />
+
+      {/* Copy Dialog */}
+      <HolidayCopyDialog
+        open={copyOpen}
+        targetYear={year}
+        onOpenChange={setCopyOpen}
       />
     </div>
   )

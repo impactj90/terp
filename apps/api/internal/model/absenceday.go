@@ -32,6 +32,9 @@ type AbsenceListOptions struct {
 	Status        *AbsenceStatus
 	From          *time.Time
 	To            *time.Time
+	ScopeType          DataScopeType
+	ScopeDepartmentIDs []uuid.UUID
+	ScopeEmployeeIDs   []uuid.UUID
 }
 
 // AbsenceDay represents an employee absence record for a specific date.

@@ -64,6 +64,9 @@ type DailyValueListOptions struct {
 	From       *time.Time
 	To         *time.Time
 	HasErrors  *bool
+	ScopeType          DataScopeType
+	ScopeDepartmentIDs []uuid.UUID
+	ScopeEmployeeIDs   []uuid.UUID
 }
 
 // TableName returns the database table name.

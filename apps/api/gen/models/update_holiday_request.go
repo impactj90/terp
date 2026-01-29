@@ -7,6 +7,7 @@ package models
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -22,6 +23,10 @@ type UpdateHolidayRequest struct {
 	// applies to all
 	AppliesToAll bool `json:"applies_to_all,omitempty"`
 
+	// Holiday credit category (1=full, 2=half, 3=custom)
+	// Enum: [1,2,3]
+	Category int64 `json:"category,omitempty"`
+
 	// department id
 	// Format: uuid
 	DepartmentID strfmt.UUID `json:"department_id,omitempty"`
@@ -29,9 +34,6 @@ type UpdateHolidayRequest struct {
 	// holiday date
 	// Format: date
 	HolidayDate strfmt.Date `json:"holiday_date,omitempty"`
-
-	// is half day
-	IsHalfDay bool `json:"is_half_day,omitempty"`
 
 	// name
 	// Max Length: 255
@@ -42,6 +44,10 @@ type UpdateHolidayRequest struct {
 // Validate validates this update holiday request
 func (m *UpdateHolidayRequest) Validate(formats strfmt.Registry) error {
 	var res []error
+
+	if err := m.validateCategory(formats); err != nil {
+		res = append(res, err)
+	}
 
 	if err := m.validateDepartmentID(formats); err != nil {
 		res = append(res, err)
@@ -58,6 +64,39 @@ func (m *UpdateHolidayRequest) Validate(formats strfmt.Registry) error {
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+var updateHolidayRequestTypeCategoryPropEnum []any
+
+func init() {
+	var res []int64
+	if err := json.Unmarshal([]byte(`[1,2,3]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		updateHolidayRequestTypeCategoryPropEnum = append(updateHolidayRequestTypeCategoryPropEnum, v)
+	}
+}
+
+// prop value enum
+func (m *UpdateHolidayRequest) validateCategoryEnum(path, location string, value int64) error {
+	if err := validate.EnumCase(path, location, value, updateHolidayRequestTypeCategoryPropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *UpdateHolidayRequest) validateCategory(formats strfmt.Registry) error {
+	if swag.IsZero(m.Category) { // not required
+		return nil
+	}
+
+	// value enum
+	if err := m.validateCategoryEnum("category", "body", m.Category); err != nil {
+		return err
+	}
+
 	return nil
 }
 

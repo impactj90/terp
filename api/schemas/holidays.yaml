@@ -6,7 +6,7 @@ Holiday:
     - tenant_id
     - holiday_date
     - name
-    - is_half_day
+    - category
     - applies_to_all
     - created_at
   properties:
@@ -23,9 +23,11 @@ Holiday:
     name:
       type: string
       example: "New Year's Day"
-    is_half_day:
-      type: boolean
-      example: false
+    category:
+      type: integer
+      enum: [1, 2, 3]
+      description: Holiday credit category (1=full, 2=half, 3=custom)
+      example: 1
     applies_to_all:
       type: boolean
       example: true
@@ -45,6 +47,7 @@ CreateHolidayRequest:
   required:
     - holiday_date
     - name
+    - category
   properties:
     holiday_date:
       type: string
@@ -55,9 +58,11 @@ CreateHolidayRequest:
       minLength: 1
       maxLength: 255
       example: "New Year's Day"
-    is_half_day:
-      type: boolean
-      default: false
+    category:
+      type: integer
+      enum: [1, 2, 3]
+      description: Holiday credit category (1=full, 2=half, 3=custom)
+      example: 1
     applies_to_all:
       type: boolean
       default: true
@@ -76,8 +81,10 @@ UpdateHolidayRequest:
       type: string
       minLength: 1
       maxLength: 255
-    is_half_day:
-      type: boolean
+    category:
+      type: integer
+      enum: [1, 2, 3]
+      description: Holiday credit category (1=full, 2=half, 3=custom)
     applies_to_all:
       type: boolean
     department_id:
@@ -93,3 +100,63 @@ HolidayList:
       type: array
       items:
         $ref: '#/Holiday'
+
+HolidayCategoryOverride:
+  type: object
+  required:
+    - month
+    - day
+    - category
+  properties:
+    month:
+      type: integer
+      minimum: 1
+      maximum: 12
+      example: 12
+    day:
+      type: integer
+      minimum: 1
+      maximum: 31
+      example: 24
+    category:
+      type: integer
+      enum: [1, 2, 3]
+      description: Holiday credit category (1=full, 2=half, 3=custom)
+      example: 2
+
+GenerateHolidaysRequest:
+  type: object
+  required:
+    - year
+    - state
+  properties:
+    year:
+      type: integer
+      example: 2026
+    state:
+      type: string
+      enum: [BW, BY, BE, BB, HB, HH, HE, MV, NI, NW, RP, SL, SN, ST, SH, TH]
+      description: German federal state (Bundesland) code
+    skip_existing:
+      type: boolean
+      default: true
+
+CopyHolidaysRequest:
+  type: object
+  required:
+    - source_year
+    - target_year
+  properties:
+    source_year:
+      type: integer
+      example: 2025
+    target_year:
+      type: integer
+      example: 2026
+    category_overrides:
+      type: array
+      items:
+        $ref: '#/HolidayCategoryOverride'
+    skip_existing:
+      type: boolean
+      default: true

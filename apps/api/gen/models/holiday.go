@@ -7,6 +7,7 @@ package models
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -23,6 +24,12 @@ type Holiday struct {
 	// Example: true
 	// Required: true
 	AppliesToAll *bool `json:"applies_to_all"`
+
+	// Holiday credit category (1=full, 2=half, 3=custom)
+	// Example: 1
+	// Required: true
+	// Enum: [1,2,3]
+	Category *int64 `json:"category"`
 
 	// created at
 	// Required: true
@@ -43,11 +50,6 @@ type Holiday struct {
 	// Required: true
 	// Format: uuid
 	ID *strfmt.UUID `json:"id"`
-
-	// is half day
-	// Example: false
-	// Required: true
-	IsHalfDay *bool `json:"is_half_day"`
 
 	// name
 	// Example: New Year's Day
@@ -72,6 +74,10 @@ func (m *Holiday) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
+	if err := m.validateCategory(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateCreatedAt(formats); err != nil {
 		res = append(res, err)
 	}
@@ -85,10 +91,6 @@ func (m *Holiday) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateID(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateIsHalfDay(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -113,6 +115,40 @@ func (m *Holiday) Validate(formats strfmt.Registry) error {
 func (m *Holiday) validateAppliesToAll(formats strfmt.Registry) error {
 
 	if err := validate.Required("applies_to_all", "body", m.AppliesToAll); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var holidayTypeCategoryPropEnum []any
+
+func init() {
+	var res []int64
+	if err := json.Unmarshal([]byte(`[1,2,3]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		holidayTypeCategoryPropEnum = append(holidayTypeCategoryPropEnum, v)
+	}
+}
+
+// prop value enum
+func (m *Holiday) validateCategoryEnum(path, location string, value int64) error {
+	if err := validate.EnumCase(path, location, value, holidayTypeCategoryPropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *Holiday) validateCategory(formats strfmt.Registry) error {
+
+	if err := validate.Required("category", "body", m.Category); err != nil {
+		return err
+	}
+
+	// value enum
+	if err := m.validateCategoryEnum("category", "body", *m.Category); err != nil {
 		return err
 	}
 
@@ -164,15 +200,6 @@ func (m *Holiday) validateID(formats strfmt.Registry) error {
 	}
 
 	if err := validate.FormatOf("id", "body", "uuid", m.ID.String(), formats); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (m *Holiday) validateIsHalfDay(formats strfmt.Registry) error {
-
-	if err := validate.Required("is_half_day", "body", m.IsHalfDay); err != nil {
 		return err
 	}
 

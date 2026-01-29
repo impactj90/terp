@@ -73,11 +73,13 @@ func setupMonthlyEvalHandler(t *testing.T) *monthlyEvalTestContext {
 	}
 	require.NoError(t, employeeRepo.Create(ctx, employee))
 
-	// Create service
+	// Create services
+	empDayPlanRepo := repository.NewEmployeeDayPlanRepository(db)
 	monthlyEvalService := service.NewMonthlyEvalService(monthlyValueRepo, dailyValueRepo, absenceDayRepo, employeeRepo, tariffRepo)
+	employeeService := service.NewEmployeeService(employeeRepo, tariffRepo, empDayPlanRepo)
 
 	// Create handler
-	h := handler.NewMonthlyEvalHandler(monthlyEvalService)
+	h := handler.NewMonthlyEvalHandler(monthlyEvalService, employeeService)
 
 	// Create auth user matching the database user
 	user := &auth.User{

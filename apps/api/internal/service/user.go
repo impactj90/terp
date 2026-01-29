@@ -6,14 +6,23 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/tolga/terp/internal/model"
 	"github.com/tolga/terp/internal/repository"
 )
 
 var (
-	ErrUserNotFound     = errors.New("user not found")
-	ErrPermissionDenied = errors.New("permission denied")
+	ErrUserNotFound          = errors.New("user not found")
+	ErrPermissionDenied      = errors.New("permission denied")
+	ErrInvalidCredentials    = errors.New("invalid credentials")
+	ErrUserInactive          = errors.New("user inactive")
+	ErrUserLocked            = errors.New("user locked")
+	ErrPasswordNotSet        = errors.New("password not set")
+	ErrPasswordRequired      = errors.New("password required")
+	ErrInvalidCurrentPassword = errors.New("invalid current password")
+	ErrInvalidDataScopeType  = errors.New("invalid data scope type")
 )
 
 type UserService struct {
@@ -26,6 +35,32 @@ type userGroupLookupRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*model.UserGroup, error)
 }
 
+type CreateUserInput struct {
+	TenantID               *uuid.UUID
+	Email                  string
+	Username               *string
+	DisplayName            string
+	UserGroupID            *uuid.UUID
+	EmployeeID             *uuid.UUID
+	Password               *string
+	SSOID                  *string
+	IsActive               *bool
+	IsLocked               *bool
+	DataScopeType          *model.DataScopeType
+	DataScopeTenantIDs     []string
+	DataScopeDepartmentIDs []string
+	DataScopeEmployeeIDs   []string
+}
+
+type ChangePasswordInput struct {
+	RequesterID        uuid.UUID
+	TargetID           uuid.UUID
+	RequesterRole      string
+	RequesterCanManage bool
+	CurrentPassword    string
+	NewPassword        string
+}
+
 func NewUserService(userRepo *repository.UserRepository, userGroupRepo userGroupLookupRepository) *UserService {
 	return &UserService{userRepo: userRepo, userGroupRepo: userGroupRepo}
 }
@@ -33,6 +68,26 @@ func NewUserService(userRepo *repository.UserRepository, userGroupRepo userGroup
 // SetNotificationService sets the notification service for user events.
 func (s *UserService) SetNotificationService(notificationSvc *NotificationService) {
 	s.notificationSvc = notificationSvc
+}
+
+func normalizeScopeType(scope *model.DataScopeType) (model.DataScopeType, error) {
+	if scope == nil || *scope == "" {
+		return model.DataScopeAll, nil
+	}
+	switch *scope {
+	case model.DataScopeAll, model.DataScopeTenant, model.DataScopeDepartment, model.DataScopeEmployee:
+		return *scope, nil
+	default:
+		return "", ErrInvalidDataScopeType
+	}
+}
+
+func hashPassword(password string) (string, error) {
+	hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", fmt.Errorf("failed to hash password: %w", err)
+	}
+	return string(hashed), nil
 }
 
 // GetByID retrieves a user by ID.
@@ -60,6 +115,37 @@ func (s *UserService) GetByEmail(ctx context.Context, tenantID uuid.UUID, email 
 		return nil, ErrUserNotFound
 	}
 	return user, err
+}
+
+// Authenticate verifies credentials and returns the user on success.
+func (s *UserService) Authenticate(ctx context.Context, tenantID uuid.UUID, email, password string) (*model.User, error) {
+	if password == "" {
+		return nil, ErrInvalidCredentials
+	}
+
+	user, err := s.userRepo.GetByEmail(ctx, tenantID, email)
+	if errors.Is(err, repository.ErrUserNotFound) {
+		return nil, ErrInvalidCredentials
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	if !user.IsActive {
+		return nil, ErrUserInactive
+	}
+	if user.IsLocked {
+		return nil, ErrUserLocked
+	}
+	if user.PasswordHash == nil || *user.PasswordHash == "" {
+		return nil, ErrInvalidCredentials
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(*user.PasswordHash), []byte(password)); err != nil {
+		return nil, ErrInvalidCredentials
+	}
+
+	return user, nil
 }
 
 // List retrieves users with filtering.
@@ -99,19 +185,41 @@ func (s *UserService) Update(
 		return nil, err
 	}
 
+	requiresAdmin := false
+	for _, field := range []string{
+		"user_group_id",
+		"is_active",
+		"is_locked",
+		"data_scope_type",
+		"data_scope_tenant_ids",
+		"data_scope_department_ids",
+		"data_scope_employee_ids",
+		"sso_id",
+		"employee_id",
+		"username",
+	} {
+		if _, ok := updates[field]; ok {
+			requiresAdmin = true
+			break
+		}
+	}
+	if requiresAdmin && !requesterCanManage && requesterRole != string(model.RoleAdmin) {
+		return nil, ErrPermissionDenied
+	}
+
 	// Apply allowed updates
 	previousDisplayName := user.DisplayName
 	if name, ok := updates["display_name"].(string); ok && name != "" {
 		user.DisplayName = name
 	}
-	if avatar, ok := updates["avatar_url"].(string); ok {
-		user.AvatarURL = &avatar
+	if avatarValue, ok := updates["avatar_url"]; ok {
+		if avatarValue == nil {
+			user.AvatarURL = nil
+		} else if avatar, ok := avatarValue.(string); ok {
+			user.AvatarURL = &avatar
+		}
 	}
 	if groupValue, ok := updates["user_group_id"]; ok {
-		if !requesterCanManage && requesterRole != string(model.RoleAdmin) {
-			return nil, ErrPermissionDenied
-		}
-
 		if groupValue == nil {
 			user.UserGroupID = nil
 			user.Role = model.RoleUser
@@ -130,6 +238,50 @@ func (s *UserService) Update(
 				user.Role = model.RoleUser
 			}
 		}
+	}
+	if username, ok := updates["username"].(string); ok {
+		if username == "" {
+			user.Username = nil
+		} else {
+			user.Username = &username
+		}
+	}
+	if employeeValue, ok := updates["employee_id"]; ok {
+		if employeeValue == nil {
+			user.EmployeeID = nil
+		} else if empID, ok := employeeValue.(uuid.UUID); ok {
+			user.EmployeeID = &empID
+		}
+	}
+	if isActive, ok := updates["is_active"].(bool); ok {
+		user.IsActive = isActive
+	}
+	if isLocked, ok := updates["is_locked"].(bool); ok {
+		user.IsLocked = isLocked
+	}
+	if ssoValue, ok := updates["sso_id"]; ok {
+		if ssoValue == nil {
+			user.SSOID = nil
+		} else if ssoID, ok := ssoValue.(string); ok {
+			user.SSOID = &ssoID
+		}
+	}
+	if scopeValue, ok := updates["data_scope_type"].(string); ok {
+		scopeType := model.DataScopeType(scopeValue)
+		parsed, err := normalizeScopeType(&scopeType)
+		if err != nil {
+			return nil, err
+		}
+		user.DataScopeType = parsed
+	}
+	if tenantIDs, ok := updates["data_scope_tenant_ids"].([]string); ok {
+		user.DataScopeTenantIDs = pq.StringArray(tenantIDs)
+	}
+	if deptIDs, ok := updates["data_scope_department_ids"].([]string); ok {
+		user.DataScopeDepartmentIDs = pq.StringArray(deptIDs)
+	}
+	if employeeIDs, ok := updates["data_scope_employee_ids"].([]string); ok {
+		user.DataScopeEmployeeIDs = pq.StringArray(employeeIDs)
 	}
 
 	if err := s.userRepo.Update(ctx, user); err != nil {
@@ -188,6 +340,83 @@ func (s *UserService) UpsertDevUser(ctx context.Context, id uuid.UUID, tenantID 
 	return s.userRepo.Upsert(ctx, user)
 }
 
+// CreateUser creates a new user with full configuration.
+func (s *UserService) CreateUser(ctx context.Context, input CreateUserInput) (*model.User, error) {
+	user := &model.User{
+		Email:       input.Email,
+		DisplayName: input.DisplayName,
+		Role:        model.RoleUser,
+		IsActive:    true,
+		IsLocked:    false,
+	}
+
+	if input.TenantID != nil {
+		user.TenantID = input.TenantID
+	}
+	if input.Username != nil && *input.Username != "" {
+		user.Username = input.Username
+	}
+	if input.EmployeeID != nil {
+		user.EmployeeID = input.EmployeeID
+	}
+	if input.SSOID != nil {
+		if *input.SSOID == "" {
+			user.SSOID = nil
+		} else {
+			user.SSOID = input.SSOID
+		}
+	}
+	if input.IsActive != nil {
+		user.IsActive = *input.IsActive
+	}
+	if input.IsLocked != nil {
+		user.IsLocked = *input.IsLocked
+	}
+
+	scopeType, err := normalizeScopeType(input.DataScopeType)
+	if err != nil {
+		return nil, err
+	}
+	user.DataScopeType = scopeType
+	if input.DataScopeTenantIDs != nil {
+		user.DataScopeTenantIDs = pq.StringArray(input.DataScopeTenantIDs)
+	}
+	if input.DataScopeDepartmentIDs != nil {
+		user.DataScopeDepartmentIDs = pq.StringArray(input.DataScopeDepartmentIDs)
+	}
+	if input.DataScopeEmployeeIDs != nil {
+		user.DataScopeEmployeeIDs = pq.StringArray(input.DataScopeEmployeeIDs)
+	}
+
+	if input.Password != nil && *input.Password != "" {
+		hashed, err := hashPassword(*input.Password)
+		if err != nil {
+			return nil, err
+		}
+		user.PasswordHash = &hashed
+	}
+
+	if input.UserGroupID != nil {
+		if s.userGroupRepo == nil {
+			return nil, errors.New("user group repository not configured")
+		}
+		group, err := s.userGroupRepo.GetByID(ctx, *input.UserGroupID)
+		if err != nil {
+			return nil, ErrUserGroupNotFound
+		}
+		user.UserGroupID = &group.ID
+		if group.IsAdmin {
+			user.Role = model.RoleAdmin
+		}
+	}
+
+	if err := s.userRepo.Create(ctx, user); err != nil {
+		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	return user, nil
+}
+
 // Create creates a new user.
 func (s *UserService) Create(ctx context.Context, email, displayName string, role model.UserRole) (*model.User, error) {
 	user := &model.User{
@@ -201,6 +430,42 @@ func (s *UserService) Create(ctx context.Context, email, displayName string, rol
 	}
 
 	return user, nil
+}
+
+// ChangePassword updates a user's password.
+func (s *UserService) ChangePassword(ctx context.Context, input ChangePasswordInput) error {
+	if input.NewPassword == "" {
+		return ErrPasswordRequired
+	}
+
+	if input.RequesterID != input.TargetID && !input.RequesterCanManage && input.RequesterRole != string(model.RoleAdmin) {
+		return ErrPermissionDenied
+	}
+
+	user, err := s.userRepo.GetByID(ctx, input.TargetID)
+	if errors.Is(err, repository.ErrUserNotFound) {
+		return ErrUserNotFound
+	}
+	if err != nil {
+		return err
+	}
+
+	if input.RequesterID == input.TargetID && input.RequesterRole != string(model.RoleAdmin) && !input.RequesterCanManage {
+		if user.PasswordHash == nil || *user.PasswordHash == "" {
+			return ErrPasswordNotSet
+		}
+		if err := bcrypt.CompareHashAndPassword([]byte(*user.PasswordHash), []byte(input.CurrentPassword)); err != nil {
+			return ErrInvalidCurrentPassword
+		}
+	}
+
+	hashed, err := hashPassword(input.NewPassword)
+	if err != nil {
+		return err
+	}
+	user.PasswordHash = &hashed
+
+	return s.userRepo.Update(ctx, user)
 }
 
 // LinkUserToEmployee links a user to an employee record.

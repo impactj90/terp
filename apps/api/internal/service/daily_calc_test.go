@@ -646,7 +646,7 @@ func TestHandleNoBookings_UseAbsence(t *testing.T) {
 	assert.Contains(t, []string(result.Warnings), "ABSENCE_NOT_IMPLEMENTED")
 }
 
-func TestHandleHolidayCredit_None(t *testing.T) {
+func TestHandleHolidayCredit_Category3(t *testing.T) {
 	employeeID := uuid.New()
 	date := testDate(2026, 1, 1)
 
@@ -663,7 +663,7 @@ func TestHandleHolidayCredit_None(t *testing.T) {
 		DayPlan:   dayPlan,
 	}
 
-	result := svc.handleHolidayCredit(employeeID, date, empDayPlan, config)
+	result := svc.handleHolidayCredit(employeeID, date, empDayPlan, 3, config)
 
 	require.NotNil(t, result)
 	assert.Equal(t, 480, result.TargetTime)
@@ -673,7 +673,7 @@ func TestHandleHolidayCredit_None(t *testing.T) {
 	assert.Contains(t, []string(result.Warnings), "HOLIDAY")
 }
 
-func TestHandleHolidayCredit_Average(t *testing.T) {
+func TestHandleHolidayCredit_Category2(t *testing.T) {
 	employeeID := uuid.New()
 	date := testDate(2026, 1, 1)
 
@@ -690,14 +690,14 @@ func TestHandleHolidayCredit_Average(t *testing.T) {
 		DayPlan:   dayPlan,
 	}
 
-	result := svc.handleHolidayCredit(employeeID, date, empDayPlan, config)
+	result := svc.handleHolidayCredit(employeeID, date, empDayPlan, 2, config)
 
 	require.NotNil(t, result)
-	// Average falls back to target for now
 	assert.Equal(t, 480, result.TargetTime)
-	assert.Equal(t, 480, result.NetTime)
+	assert.Equal(t, 240, result.NetTime)
+	assert.Equal(t, 240, result.GrossTime)
+	assert.Equal(t, 240, result.Undertime)
 	assert.Contains(t, []string(result.Warnings), "HOLIDAY")
-	assert.Contains(t, []string(result.Warnings), "AVERAGE_NOT_IMPLEMENTED")
 }
 
 func TestDefaultDailyCalcConfig(t *testing.T) {

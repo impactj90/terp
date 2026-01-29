@@ -53,6 +53,17 @@ export function HolidayDetailSheet({
   const t = useTranslations('adminHolidays')
   const { data: holiday, isLoading } = useHoliday(holidayId || '', open && !!holidayId)
 
+  const getCategoryBadge = (category: number) => {
+    switch (category) {
+      case 2:
+        return { label: t('categoryHalf'), variant: 'secondary' as const }
+      case 3:
+        return { label: t('categoryCustom'), variant: 'outline' as const }
+      default:
+        return { label: t('categoryFull'), variant: 'default' as const }
+    }
+  }
+
   // Fetch department details if holiday is department-specific
   const { data: department } = useDepartment(
     holiday?.department_id || '',
@@ -99,9 +110,10 @@ export function HolidayDetailSheet({
                     {formatDateDisplay(holiday.holiday_date)}
                   </p>
                 </div>
-                <Badge variant={holiday.is_half_day ? 'secondary' : 'default'}>
-                  {holiday.is_half_day ? t('halfDay') : t('fullDay')}
-                </Badge>
+                {(() => {
+                  const badge = getCategoryBadge(holiday.category ?? 1)
+                  return <Badge variant={badge.variant}>{badge.label}</Badge>
+                })()}
               </div>
 
               {/* Details */}
@@ -113,9 +125,10 @@ export function HolidayDetailSheet({
                   <DetailRow
                     label={t('fieldType')}
                     value={
-                      <Badge variant={holiday.is_half_day ? 'secondary' : 'default'}>
-                        {holiday.is_half_day ? t('halfDay') : t('fullDay')}
-                      </Badge>
+                      (() => {
+                        const badge = getCategoryBadge(holiday.category ?? 1)
+                        return <Badge variant={badge.variant}>{badge.label}</Badge>
+                      })()
                     }
                   />
                 </div>

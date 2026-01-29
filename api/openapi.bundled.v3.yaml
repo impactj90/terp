@@ -3149,6 +3149,12 @@ paths:
           schema:
             type: string
             format: date
+        - name: department_id
+          in: query
+          description: Optional department filter (includes tenant-wide holidays)
+          schema:
+            type: string
+            format: uuid
       responses:
         "200":
           description: List of holidays
@@ -3165,7 +3171,7 @@ paths:
         - Holidays
       summary: Create holiday
       description: |
-        Creates a new holiday. Supports full-day and half-day holidays.
+        Creates a new holiday with category 1/2/3 (full, half, custom).
         Optionally restrict to specific departments. Duplicate dates for
         the same tenant are not allowed.
       operationId: createHoliday
@@ -3216,7 +3222,7 @@ paths:
         - Holidays
       summary: Update holiday
       description: |
-        Updates a holiday's name, date, or half-day status. Changes may trigger
+        Updates a holiday's name, date, or category. Changes may trigger
         recalculation of affected employees' time records.
       operationId: updateHoliday
       parameters:
@@ -6452,7 +6458,7 @@ components:
         - tenant_id
         - holiday_date
         - name
-        - is_half_day
+        - category
         - applies_to_all
         - created_at
       properties:
@@ -6469,9 +6475,14 @@ components:
         name:
           type: string
           example: New Year's Day
-        is_half_day:
-          type: boolean
-          example: false
+        category:
+          type: integer
+          enum:
+            - 1
+            - 2
+            - 3
+          description: Holiday credit category (1=full, 2=half, 3=custom)
+          example: 1
         applies_to_all:
           type: boolean
           example: true
@@ -6485,11 +6496,37 @@ components:
         updated_at:
           type: string
           format: date-time
+    HolidayCategoryOverride:
+      type: object
+      required:
+        - month
+        - day
+        - category
+      properties:
+        month:
+          type: integer
+          minimum: 1
+          maximum: 12
+          example: 12
+        day:
+          type: integer
+          minimum: 1
+          maximum: 31
+          example: 24
+        category:
+          type: integer
+          enum:
+            - 1
+            - 2
+            - 3
+          description: Holiday credit category (1=full, 2=half, 3=custom)
+          example: 2
     CreateHolidayRequest:
       type: object
       required:
         - holiday_date
         - name
+        - category
       properties:
         holiday_date:
           type: string
@@ -6500,9 +6537,14 @@ components:
           minLength: 1
           maxLength: 255
           example: New Year's Day
-        is_half_day:
-          type: boolean
-          default: false
+        category:
+          type: integer
+          enum:
+            - 1
+            - 2
+            - 3
+          description: Holiday credit category (1=full, 2=half, 3=custom)
+          example: 1
         applies_to_all:
           type: boolean
           default: true
@@ -6520,13 +6562,69 @@ components:
           type: string
           minLength: 1
           maxLength: 255
-        is_half_day:
-          type: boolean
+        category:
+          type: integer
+          enum:
+            - 1
+            - 2
+            - 3
+          description: Holiday credit category (1=full, 2=half, 3=custom)
         applies_to_all:
           type: boolean
         department_id:
           type: string
           format: uuid
+    GenerateHolidaysRequest:
+      type: object
+      required:
+        - year
+        - state
+      properties:
+        year:
+          type: integer
+          example: 2026
+        state:
+          type: string
+          enum:
+            - BW
+            - BY
+            - BE
+            - BB
+            - HB
+            - HH
+            - HE
+            - MV
+            - NI
+            - NW
+            - RP
+            - SL
+            - SN
+            - ST
+            - SH
+            - TH
+          description: German federal state (Bundesland) code
+        skip_existing:
+          type: boolean
+          default: true
+    CopyHolidaysRequest:
+      type: object
+      required:
+        - source_year
+        - target_year
+      properties:
+        source_year:
+          type: integer
+          example: 2025
+        target_year:
+          type: integer
+          example: 2026
+        category_overrides:
+          type: array
+          items:
+            $ref: "#/components/schemas/HolidayCategoryOverride"
+        skip_existing:
+          type: boolean
+          default: true
     HolidayList:
       type: object
       required:

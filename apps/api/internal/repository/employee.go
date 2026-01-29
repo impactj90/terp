@@ -20,12 +20,19 @@ var (
 
 // EmployeeFilter defines filter criteria for listing employees.
 type EmployeeFilter struct {
-	TenantID     uuid.UUID
-	DepartmentID *uuid.UUID
-	IsActive     *bool
-	SearchQuery  string
-	Offset       int
-	Limit        int
+	TenantID          uuid.UUID
+	DepartmentID      *uuid.UUID
+	EmployeeGroupID   *uuid.UUID
+	WorkflowGroupID   *uuid.UUID
+	ActivityGroupID   *uuid.UUID
+	IsActive          *bool
+	HasExitDate       *bool
+	SearchQuery       string
+	Offset            int
+	Limit             int
+	ScopeType          model.DataScopeType
+	ScopeDepartmentIDs []uuid.UUID
+	ScopeEmployeeIDs   []uuid.UUID
 }
 
 // EmployeeRepository handles employee data access.
@@ -134,8 +141,24 @@ func (r *EmployeeRepository) List(ctx context.Context, filter EmployeeFilter) ([
 	if filter.DepartmentID != nil {
 		query = query.Where("department_id = ?", *filter.DepartmentID)
 	}
+	if filter.EmployeeGroupID != nil {
+		query = query.Where("employee_group_id = ?", *filter.EmployeeGroupID)
+	}
+	if filter.WorkflowGroupID != nil {
+		query = query.Where("workflow_group_id = ?", *filter.WorkflowGroupID)
+	}
+	if filter.ActivityGroupID != nil {
+		query = query.Where("activity_group_id = ?", *filter.ActivityGroupID)
+	}
 	if filter.IsActive != nil {
 		query = query.Where("is_active = ?", *filter.IsActive)
+	}
+	if filter.HasExitDate != nil {
+		if *filter.HasExitDate {
+			query = query.Where("exit_date IS NOT NULL")
+		} else {
+			query = query.Where("exit_date IS NULL")
+		}
 	}
 	if filter.SearchQuery != "" {
 		search := "%" + strings.ToLower(filter.SearchQuery) + "%"
@@ -143,6 +166,20 @@ func (r *EmployeeRepository) List(ctx context.Context, filter EmployeeFilter) ([
 			"LOWER(first_name) LIKE ? OR LOWER(last_name) LIKE ? OR LOWER(personnel_number) LIKE ? OR LOWER(email) LIKE ?",
 			search, search, search, search,
 		)
+	}
+	switch filter.ScopeType {
+	case model.DataScopeDepartment:
+		if len(filter.ScopeDepartmentIDs) == 0 {
+			query = query.Where("1 = 0")
+		} else {
+			query = query.Where("department_id IN ?", filter.ScopeDepartmentIDs)
+		}
+	case model.DataScopeEmployee:
+		if len(filter.ScopeEmployeeIDs) == 0 {
+			query = query.Where("1 = 0")
+		} else {
+			query = query.Where("id IN ?", filter.ScopeEmployeeIDs)
+		}
 	}
 
 	// Count total
@@ -173,6 +210,9 @@ func (r *EmployeeRepository) GetWithDetails(ctx context.Context, id uuid.UUID) (
 		Preload("Department").
 		Preload("CostCenter").
 		Preload("EmploymentType").
+		Preload("EmployeeGroup").
+		Preload("WorkflowGroup").
+		Preload("ActivityGroup").
 		Preload("Contacts").
 		Preload("Cards", "is_active = ?", true).
 		Where("id = ?", id).
@@ -185,6 +225,24 @@ func (r *EmployeeRepository) GetWithDetails(ctx context.Context, id uuid.UUID) (
 		return nil, fmt.Errorf("failed to get employee with details: %w", err)
 	}
 	return &emp, nil
+}
+
+// NextPIN returns the next available integer PIN for a tenant.
+// It scans all numeric PINs and returns max+1 as a string.
+func (r *EmployeeRepository) NextPIN(ctx context.Context, tenantID uuid.UUID) (string, error) {
+	var maxPIN *int
+	err := r.db.GORM.WithContext(ctx).
+		Model(&model.Employee{}).
+		Where("tenant_id = ? AND pin ~ '^[0-9]+$'", tenantID).
+		Select("MAX(pin::integer)").
+		Scan(&maxPIN).Error
+	if err != nil {
+		return "", fmt.Errorf("failed to get next PIN: %w", err)
+	}
+	if maxPIN == nil {
+		return "1", nil
+	}
+	return fmt.Sprintf("%d", *maxPIN+1), nil
 }
 
 // Search performs a quick search for employees.

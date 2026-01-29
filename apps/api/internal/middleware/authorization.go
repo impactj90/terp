@@ -148,6 +148,13 @@ func (c *PermissionChecker) EmployeeID() *uuid.UUID {
 	return c.user.EmployeeID
 }
 
+func (c *PermissionChecker) User() *model.User {
+	if c == nil {
+		return nil
+	}
+	return c.user
+}
+
 func (m *AuthorizationMiddleware) RequirePermission(ids ...string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

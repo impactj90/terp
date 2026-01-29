@@ -83,6 +83,10 @@ func main() {
 	bookingTypeRepo := repository.NewBookingTypeRepository(db)
 	notificationRepo := repository.NewNotificationRepository(db)
 	notificationPreferencesRepo := repository.NewNotificationPreferencesRepository(db)
+	auditLogRepo := repository.NewAuditLogRepository(db)
+	employeeGroupRepo := repository.NewEmployeeGroupRepository(db)
+	workflowGroupRepo := repository.NewWorkflowGroupRepository(db)
+	activityGroupRepo := repository.NewActivityGroupRepository(db)
 
 	// Initialize services
 	userService := service.NewUserService(userRepo, userGroupRepo)
@@ -100,6 +104,8 @@ func main() {
 	tariffService := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	bookingTypeService := service.NewBookingTypeService(bookingTypeRepo)
 	notificationService := service.NewNotificationService(notificationRepo, notificationPreferencesRepo, userRepo)
+	auditLogService := service.NewAuditLogService(auditLogRepo)
+	groupService := service.NewGroupService(employeeGroupRepo, workflowGroupRepo, activityGroupRepo)
 	notificationStreamHub := service.NewNotificationStreamHub()
 	notificationService.SetStreamHub(notificationStreamHub)
 
@@ -117,7 +123,7 @@ func main() {
 	absenceDayRepo := repository.NewAbsenceDayRepository(db)
 	absenceTypeRepo := repository.NewAbsenceTypeRepository(db)
 	absenceService := service.NewAbsenceService(absenceDayRepo, absenceTypeRepo, holidayRepo, empDayPlanRepo, recalcService)
-	absenceHandler := handler.NewAbsenceHandler(absenceService)
+	absenceHandler := handler.NewAbsenceHandler(absenceService, employeeService)
 
 	// Initialize VacationService
 	vacationBalanceRepo := repository.NewVacationBalanceRepository(db)
@@ -135,11 +141,11 @@ func main() {
 	// Initialize MonthlyEvalService
 	monthlyValueRepo := repository.NewMonthlyValueRepository(db)
 	monthlyEvalService := service.NewMonthlyEvalService(monthlyValueRepo, dailyValueRepo, absenceDayRepo, employeeRepo, tariffRepo)
-	monthlyEvalHandler := handler.NewMonthlyEvalHandler(monthlyEvalService)
+	monthlyEvalHandler := handler.NewMonthlyEvalHandler(monthlyEvalService, employeeService)
 
 	// Initialize MonthlyCalcService
 	monthlyCalcService := service.NewMonthlyCalcService(monthlyEvalService, monthlyValueRepo)
-	_ = monthlyCalcService // TODO: Wire to handlers (separate ticket for monthly endpoints)
+	holidayService.SetRecalcServices(recalcService, monthlyCalcService, employeeRepo)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(
@@ -178,14 +184,17 @@ func main() {
 	weekPlanHandler := handler.NewWeekPlanHandler(weekPlanService)
 	tariffHandler := handler.NewTariffHandler(tariffService)
 	bookingTypeHandler := handler.NewBookingTypeHandler(bookingTypeService)
-	dailyValueHandler := handler.NewDailyValueHandler(dailyValueService)
+	dailyValueHandler := handler.NewDailyValueHandler(dailyValueService, employeeService)
 	notificationHandler := handler.NewNotificationHandler(notificationService, notificationStreamHub)
 	permissionHandler := handler.NewPermissionHandler()
+	auditLogHandler := handler.NewAuditLogHandler(auditLogService)
+	groupHandler := handler.NewGroupHandler(groupService)
 
 	// Initialize BookingHandler
 	bookingHandler := handler.NewBookingHandler(
 		bookingService,
 		dailyCalcService,
+		employeeService,
 		bookingRepo,
 		dailyValueRepo,
 		empDayPlanRepo,
@@ -197,6 +206,13 @@ func main() {
 	dailyCalcService.SetNotificationService(notificationService)
 	dailyValueService.SetNotificationService(notificationService)
 	userService.SetNotificationService(notificationService)
+
+	// Wire audit log service into handlers
+	userHandler.SetAuditService(auditLogService)
+	userGroupHandler.SetAuditService(auditLogService)
+	bookingHandler.SetAuditService(auditLogService)
+	absenceHandler.SetAuditService(auditLogService)
+	employeeHandler.SetAuditService(auditLogService)
 
 	// Initialize tenant middleware
 	tenantMiddleware := middleware.NewTenantMiddleware(tenantService)
@@ -249,25 +265,27 @@ func main() {
 			// Tenant-scoped routes (require authentication + tenant header)
 			r.Group(func(r chi.Router) {
 				r.Use(tenantMiddleware.RequireTenant)
-				handler.RegisterAccountRoutes(r, accountHandler)
-				handler.RegisterHolidayRoutes(r, holidayHandler)
+				handler.RegisterAccountRoutes(r, accountHandler, authzMiddleware)
+				handler.RegisterHolidayRoutes(r, holidayHandler, authzMiddleware)
 				handler.RegisterCostCenterRoutes(r, costCenterHandler)
 				handler.RegisterEmploymentTypeRoutes(r, employmentTypeHandler)
 				handler.RegisterUserGroupRoutes(r, userGroupHandler, authzMiddleware)
 				handler.RegisterPermissionRoutes(r, permissionHandler, authzMiddleware)
-				handler.RegisterDepartmentRoutes(r, departmentHandler)
-				handler.RegisterTeamRoutes(r, teamHandler)
+				handler.RegisterDepartmentRoutes(r, departmentHandler, authzMiddleware)
+				handler.RegisterTeamRoutes(r, teamHandler, authzMiddleware)
 				handler.RegisterEmployeeRoutes(r, employeeHandler, authzMiddleware)
 				handler.RegisterDayPlanRoutes(r, dayPlanHandler, authzMiddleware)
 				handler.RegisterWeekPlanRoutes(r, weekPlanHandler, authzMiddleware)
 				handler.RegisterTariffRoutes(r, tariffHandler, authzMiddleware)
-				handler.RegisterBookingTypeRoutes(r, bookingTypeHandler)
+				handler.RegisterBookingTypeRoutes(r, bookingTypeHandler, authzMiddleware)
 				handler.RegisterBookingRoutes(r, bookingHandler, authzMiddleware)
 				handler.RegisterDailyValueRoutes(r, dailyValueHandler, authzMiddleware)
 				handler.RegisterAbsenceRoutes(r, absenceHandler, authzMiddleware)
 				handler.RegisterVacationRoutes(r, vacationHandler)
-				handler.RegisterMonthlyEvalRoutes(r, monthlyEvalHandler)
-				handler.RegisterNotificationRoutes(r, notificationHandler)
+				handler.RegisterMonthlyEvalRoutes(r, monthlyEvalHandler, authzMiddleware)
+				handler.RegisterNotificationRoutes(r, notificationHandler, authzMiddleware)
+				handler.RegisterAuditLogRoutes(r, auditLogHandler, authzMiddleware)
+				handler.RegisterGroupRoutes(r, groupHandler, authzMiddleware)
 			})
 		})
 

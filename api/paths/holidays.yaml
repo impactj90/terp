@@ -24,6 +24,11 @@
         type: string
         format: date
         description: End date for range filter (inclusive)
+      - name: department_id
+        in: query
+        type: string
+        format: uuid
+        description: Optional department filter (includes tenant-wide holidays)
     responses:
       200:
         description: List of holidays
@@ -38,7 +43,7 @@
       - Holidays
     summary: Create holiday
     description: |
-      Creates a new holiday. Supports full-day and half-day holidays.
+      Creates a new holiday with category 1/2/3 (full, half, custom).
       Optionally restrict to specific departments. Duplicate dates for
       the same tenant are not allowed.
     operationId: createHoliday
@@ -85,7 +90,7 @@
       - Holidays
     summary: Update holiday
     description: |
-      Updates a holiday's name, date, or half-day status. Changes may trigger
+      Updates a holiday's name, date, or category. Changes may trigger
       recalculation of affected employees' time records.
     operationId: updateHoliday
     parameters:
@@ -127,6 +132,62 @@
     responses:
       204:
         description: Holiday deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/holidays/generate:
+  post:
+    tags:
+      - Holidays
+    summary: Generate holidays
+    description: |
+      Generates holidays for a given year and German federal state (Bundesland).
+      Existing holidays on the same dates are skipped by default.
+    operationId: generateHolidays
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/holidays.yaml#/GenerateHolidaysRequest'
+    responses:
+      201:
+        description: Generated holidays
+        schema:
+          type: array
+          items:
+            $ref: '../schemas/holidays.yaml#/Holiday'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/holidays/copy:
+  post:
+    tags:
+      - Holidays
+    summary: Copy holidays from another year
+    description: |
+      Copies holidays from a source year into a target year. Optional category
+      overrides can adjust specific dates (e.g., Christmas Eve to category 2).
+    operationId: copyHolidays
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/holidays.yaml#/CopyHolidaysRequest'
+    responses:
+      201:
+        description: Copied holidays
+        schema:
+          type: array
+          items:
+            $ref: '../schemas/holidays.yaml#/Holiday'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
       401:
         $ref: '../responses/errors.yaml#/Unauthorized'
       404:

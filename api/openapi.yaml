@@ -101,6 +101,8 @@ tags:
     description: Employee day plan assignments
   - name: Monthly Evaluations
     description: Monthly evaluation configuration
+  - name: Groups
+    description: Employee, workflow, and activity group management
 
 securityDefinitions:
   BearerAuth:
@@ -395,6 +397,20 @@ paths:
   /monthly-evaluations/{id}/set-default:
     $ref: 'paths/monthly-evaluations.yaml#/~1monthly-evaluations~1{id}~1set-default'
 
+  # Groups
+  /employee-groups:
+    $ref: 'paths/groups.yaml#/~1employee-groups'
+  /employee-groups/{id}:
+    $ref: 'paths/groups.yaml#/~1employee-groups~1{id}'
+  /workflow-groups:
+    $ref: 'paths/groups.yaml#/~1workflow-groups'
+  /workflow-groups/{id}:
+    $ref: 'paths/groups.yaml#/~1workflow-groups~1{id}'
+  /activity-groups:
+    $ref: 'paths/groups.yaml#/~1activity-groups'
+  /activity-groups/{id}:
+    $ref: 'paths/groups.yaml#/~1activity-groups~1{id}'
+
 definitions:
   # Common
   UUID:
@@ -413,6 +429,10 @@ definitions:
     $ref: 'schemas/users.yaml#/UserSummary'
   UpdateUserRequest:
     $ref: 'schemas/users.yaml#/UpdateUserRequest'
+  CreateUserRequest:
+    $ref: 'schemas/users.yaml#/CreateUserRequest'
+  ChangePasswordRequest:
+    $ref: 'schemas/users.yaml#/ChangePasswordRequest'
   UserList:
     $ref: 'schemas/users.yaml#/UserList'
   CurrentUserPermissions:
@@ -445,10 +465,16 @@ definitions:
   # Holidays
   Holiday:
     $ref: 'schemas/holidays.yaml#/Holiday'
+  HolidayCategoryOverride:
+    $ref: 'schemas/holidays.yaml#/HolidayCategoryOverride'
   CreateHolidayRequest:
     $ref: 'schemas/holidays.yaml#/CreateHolidayRequest'
   UpdateHolidayRequest:
     $ref: 'schemas/holidays.yaml#/UpdateHolidayRequest'
+  GenerateHolidaysRequest:
+    $ref: 'schemas/holidays.yaml#/GenerateHolidaysRequest'
+  CopyHolidaysRequest:
+    $ref: 'schemas/holidays.yaml#/CopyHolidaysRequest'
   HolidayList:
     $ref: 'schemas/holidays.yaml#/HolidayList'
 
@@ -641,6 +667,18 @@ definitions:
   # Department Summary
   DepartmentSummary:
     $ref: 'schemas/departments.yaml#/DepartmentSummary'
+
+  # Groups
+  EmployeeGroup:
+    $ref: 'schemas/groups.yaml#/EmployeeGroup'
+  WorkflowGroup:
+    $ref: 'schemas/groups.yaml#/WorkflowGroup'
+  ActivityGroup:
+    $ref: 'schemas/groups.yaml#/ActivityGroup'
+  CreateGroupRequest:
+    $ref: 'schemas/groups.yaml#/CreateGroupRequest'
+  UpdateGroupRequest:
+    $ref: 'schemas/groups.yaml#/UpdateGroupRequest'
 
   # Daily Values extras
   DailyValueSummary:

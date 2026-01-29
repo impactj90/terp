@@ -4,9 +4,11 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 
 	"github.com/tolga/terp/internal/auth"
@@ -202,15 +204,15 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create all dev holidays (tenant-level, idempotent)
-	for _, devH := range auth.GetDevHolidays() {
-		holiday := &model.Holiday{
-			ID:           devH.ID,
-			TenantID:     devTenant.ID,
-			HolidayDate:  devH.HolidayDate,
-			Name:         devH.Name,
-			IsHalfDay:    devH.IsHalfDay,
-			AppliesToAll: devH.AppliesToAll,
-		}
+		for _, devH := range auth.GetDevHolidays() {
+			holiday := &model.Holiday{
+				ID:           devH.ID,
+				TenantID:     devTenant.ID,
+				HolidayDate:  devH.HolidayDate,
+				Name:         devH.Name,
+				Category:     devH.Category,
+				AppliesToAll: devH.AppliesToAll,
+			}
 		if err := h.holidayService.UpsertDevHoliday(r.Context(), holiday); err != nil {
 			respondError(w, http.StatusInternalServerError, "failed to sync dev holidays to database")
 			return
@@ -598,9 +600,69 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Implement actual authentication logic
-	// For now, return not implemented
-	respondError(w, http.StatusNotImplemented, "Login not yet implemented. Use dev mode for testing.")
+	tenantIDStr := r.Header.Get("X-Tenant-ID")
+	if tenantIDStr == "" {
+		respondError(w, http.StatusBadRequest, "Tenant required")
+		return
+	}
+	tenantID, err := uuid.Parse(tenantIDStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid tenant ID")
+		return
+	}
+
+	tenant, err := h.tenantService.GetByID(r.Context(), tenantID)
+	if errors.Is(err, service.ErrTenantNotFound) {
+		respondError(w, http.StatusUnauthorized, "Invalid tenant")
+		return
+	}
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to load tenant")
+		return
+	}
+	if !tenant.IsActive {
+		respondError(w, http.StatusForbidden, "Tenant is inactive")
+		return
+	}
+
+	user, err := h.userService.Authenticate(r.Context(), tenantID, req.Email, req.Password)
+	if errors.Is(err, service.ErrInvalidCredentials) {
+		respondError(w, http.StatusUnauthorized, "Invalid credentials")
+		return
+	}
+	if errors.Is(err, service.ErrUserInactive) {
+		respondError(w, http.StatusForbidden, "User is inactive")
+		return
+	}
+	if errors.Is(err, service.ErrUserLocked) {
+		respondError(w, http.StatusForbidden, "User is locked")
+		return
+	}
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to authenticate")
+		return
+	}
+
+	token, err := h.jwtManager.Generate(user.ID, user.Email, user.DisplayName, string(user.Role))
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to generate token")
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    token,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   h.authConfig.CookieSecure,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   int(h.authConfig.JWTExpiry.Seconds()),
+	})
+
+	respondJSON(w, http.StatusOK, map[string]any{
+		"token": token,
+		"user":  mapUserToResponse(user),
+	})
 }
 
 // Refresh handles token refresh.

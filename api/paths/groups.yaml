@@ -1,0 +1,346 @@
+# Group endpoints (employee-groups, workflow-groups, activity-groups)
+
+# ===== Employee Groups =====
+/employee-groups:
+  get:
+    tags:
+      - Groups
+    summary: List employee groups
+    description: Returns all employee groups for the tenant.
+    operationId: listEmployeeGroups
+    parameters:
+      - name: active_only
+        in: query
+        type: boolean
+        description: Filter by active status
+    responses:
+      200:
+        description: List of employee groups
+        schema:
+          type: array
+          items:
+            $ref: '../schemas/groups.yaml#/EmployeeGroup'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Groups
+    summary: Create employee group
+    description: Creates a new employee group with a unique code.
+    operationId: createEmployeeGroup
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/groups.yaml#/CreateGroupRequest'
+    responses:
+      201:
+        description: Created employee group
+        schema:
+          $ref: '../schemas/groups.yaml#/EmployeeGroup'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/employee-groups/{id}:
+  get:
+    tags:
+      - Groups
+    summary: Get employee group by ID
+    operationId: getEmployeeGroup
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Employee group details
+        schema:
+          $ref: '../schemas/groups.yaml#/EmployeeGroup'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Groups
+    summary: Update employee group
+    operationId: updateEmployeeGroup
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/groups.yaml#/UpdateGroupRequest'
+    responses:
+      200:
+        description: Updated employee group
+        schema:
+          $ref: '../schemas/groups.yaml#/EmployeeGroup'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Groups
+    summary: Delete employee group
+    operationId: deleteEmployeeGroup
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Employee group deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+# ===== Workflow Groups =====
+/workflow-groups:
+  get:
+    tags:
+      - Groups
+    summary: List workflow groups
+    description: Returns all workflow groups for the tenant.
+    operationId: listWorkflowGroups
+    parameters:
+      - name: active_only
+        in: query
+        type: boolean
+        description: Filter by active status
+    responses:
+      200:
+        description: List of workflow groups
+        schema:
+          type: array
+          items:
+            $ref: '../schemas/groups.yaml#/WorkflowGroup'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Groups
+    summary: Create workflow group
+    description: Creates a new workflow group with a unique code.
+    operationId: createWorkflowGroup
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/groups.yaml#/CreateGroupRequest'
+    responses:
+      201:
+        description: Created workflow group
+        schema:
+          $ref: '../schemas/groups.yaml#/WorkflowGroup'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/workflow-groups/{id}:
+  get:
+    tags:
+      - Groups
+    summary: Get workflow group by ID
+    operationId: getWorkflowGroup
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Workflow group details
+        schema:
+          $ref: '../schemas/groups.yaml#/WorkflowGroup'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Groups
+    summary: Update workflow group
+    operationId: updateWorkflowGroup
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/groups.yaml#/UpdateGroupRequest'
+    responses:
+      200:
+        description: Updated workflow group
+        schema:
+          $ref: '../schemas/groups.yaml#/WorkflowGroup'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Groups
+    summary: Delete workflow group
+    operationId: deleteWorkflowGroup
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Workflow group deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+# ===== Activity Groups =====
+/activity-groups:
+  get:
+    tags:
+      - Groups
+    summary: List activity groups
+    description: Returns all activity groups for the tenant.
+    operationId: listActivityGroups
+    parameters:
+      - name: active_only
+        in: query
+        type: boolean
+        description: Filter by active status
+    responses:
+      200:
+        description: List of activity groups
+        schema:
+          type: array
+          items:
+            $ref: '../schemas/groups.yaml#/ActivityGroup'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Groups
+    summary: Create activity group
+    description: Creates a new activity group with a unique code.
+    operationId: createActivityGroup
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/groups.yaml#/CreateGroupRequest'
+    responses:
+      201:
+        description: Created activity group
+        schema:
+          $ref: '../schemas/groups.yaml#/ActivityGroup'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/activity-groups/{id}:
+  get:
+    tags:
+      - Groups
+    summary: Get activity group by ID
+    operationId: getActivityGroup
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Activity group details
+        schema:
+          $ref: '../schemas/groups.yaml#/ActivityGroup'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Groups
+    summary: Update activity group
+    operationId: updateActivityGroup
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/groups.yaml#/UpdateGroupRequest'
+    responses:
+      200:
+        description: Updated activity group
+        schema:
+          $ref: '../schemas/groups.yaml#/ActivityGroup'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Groups
+    summary: Delete activity group
+    operationId: deleteActivityGroup
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Activity group deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

@@ -66,13 +66,28 @@ type PermissionCategory = {
 const CATEGORY_DEFINITIONS = [
   { id: 'employees', labelKey: 'categoryEmployees', resources: ['employees'] },
   { id: 'timeTracking', labelKey: 'categoryTimeTracking', resources: ['time_tracking'] },
-  { id: 'absences', labelKey: 'categoryAbsences', resources: ['absences'] },
+  { id: 'bookingOverview', labelKey: 'categoryBookingOverview', resources: ['booking_overview'] },
+  { id: 'absences', labelKey: 'categoryAbsences', resources: ['absences', 'absence_types'] },
   {
     id: 'configuration',
     labelKey: 'categoryConfiguration',
-    resources: ['day_plans', 'week_plans', 'tariffs'],
+    resources: [
+      'day_plans',
+      'week_plans',
+      'tariffs',
+      'booking_types',
+      'holidays',
+      'departments',
+      'teams',
+      'accounts',
+    ],
   },
-  { id: 'admin', labelKey: 'categoryAdmin', resources: ['users', 'tenants', 'settings'] },
+  {
+    id: 'admin',
+    labelKey: 'categoryAdmin',
+    resources: ['users', 'tenants', 'settings', 'notifications'],
+  },
+  { id: 'reports', labelKey: 'categoryReports', resources: ['reports'] },
 ] as const
 
 const toTitleCase = (value: string) =>
@@ -134,13 +149,22 @@ export default function UserGroupsPage() {
     () => ({
       employees: t('resourceEmployees'),
       time_tracking: t('resourceTimeTracking'),
+      booking_overview: t('resourceBookingOverview'),
       absences: t('resourceAbsences'),
+      absence_types: t('resourceAbsenceTypes'),
       day_plans: t('resourceDayPlans'),
       week_plans: t('resourceWeekPlans'),
       tariffs: t('resourceTariffs'),
+      booking_types: t('resourceBookingTypes'),
+      holidays: t('resourceHolidays'),
+      departments: t('resourceDepartments'),
+      teams: t('resourceTeams'),
+      accounts: t('resourceAccounts'),
       users: t('resourceUsers'),
       tenants: t('resourceTenants'),
       settings: t('resourceSettings'),
+      notifications: t('resourceNotifications'),
+      reports: t('resourceReports'),
     }),
     [t]
   )
@@ -156,6 +180,10 @@ export default function UserGroupsPage() {
       view_all: t('actionViewAll'),
       approve: t('actionApprove'),
       request: t('actionRequest'),
+      change_day_plan: t('actionChangeDayPlan'),
+      calculate_day: t('actionCalculateDay'),
+      calculate_month: t('actionCalculateMonth'),
+      delete_bookings: t('actionDeleteBookings'),
     }),
     [t]
   )

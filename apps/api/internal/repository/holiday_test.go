@@ -36,7 +36,7 @@ func TestHolidayRepository_Create(t *testing.T) {
 		TenantID:    tenant.ID,
 		HolidayDate: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 		Name:        "New Year",
-		IsHalfDay:   false,
+		Category:    1,
 	}
 
 	err := repo.Create(ctx, holiday)
@@ -55,6 +55,7 @@ func TestHolidayRepository_GetByID(t *testing.T) {
 		TenantID:    tenant.ID,
 		HolidayDate: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 		Name:        "New Year",
+		Category:    1,
 	}
 	require.NoError(t, repo.Create(ctx, holiday))
 
@@ -84,6 +85,7 @@ func TestHolidayRepository_Update(t *testing.T) {
 		TenantID:    tenant.ID,
 		HolidayDate: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 		Name:        "Original Name",
+		Category:    1,
 	}
 	require.NoError(t, repo.Create(ctx, holiday))
 
@@ -106,6 +108,7 @@ func TestHolidayRepository_Delete(t *testing.T) {
 		TenantID:    tenant.ID,
 		HolidayDate: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 		Name:        "To Delete",
+		Category:    1,
 	}
 	require.NoError(t, repo.Create(ctx, holiday))
 
@@ -135,16 +138,18 @@ func TestHolidayRepository_GetByDateRange(t *testing.T) {
 		TenantID:    tenant.ID,
 		HolidayDate: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 		Name:        "New Year",
+		Category:    1,
 	}))
 	require.NoError(t, repo.Create(ctx, &model.Holiday{
 		TenantID:    tenant.ID,
 		HolidayDate: time.Date(2024, 12, 25, 0, 0, 0, 0, time.UTC),
 		Name:        "Christmas",
+		Category:    1,
 	}))
 
 	from := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	to := time.Date(2024, 12, 31, 0, 0, 0, 0, time.UTC)
-	holidays, err := repo.GetByDateRange(ctx, tenant.ID, from, to)
+	holidays, err := repo.GetByDateRange(ctx, tenant.ID, from, to, nil)
 	require.NoError(t, err)
 	assert.Len(t, holidays, 2)
 }
@@ -158,7 +163,7 @@ func TestHolidayRepository_GetByDateRange_Empty(t *testing.T) {
 	from := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	to := time.Date(2024, 12, 31, 0, 0, 0, 0, time.UTC)
 
-	holidays, err := repo.GetByDateRange(ctx, tenant.ID, from, to)
+	holidays, err := repo.GetByDateRange(ctx, tenant.ID, from, to, nil)
 	require.NoError(t, err)
 	assert.Empty(t, holidays)
 }
@@ -174,6 +179,7 @@ func TestHolidayRepository_GetByDate(t *testing.T) {
 		TenantID:    tenant.ID,
 		HolidayDate: date,
 		Name:        "New Year",
+		Category:    1,
 	}))
 
 	found, err := repo.GetByDate(ctx, tenant.ID, date)
@@ -205,14 +211,16 @@ func TestHolidayRepository_ListByYear(t *testing.T) {
 		TenantID:    tenant.ID,
 		HolidayDate: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 		Name:        "New Year 2024",
+		Category:    1,
 	}))
 	require.NoError(t, repo.Create(ctx, &model.Holiday{
 		TenantID:    tenant.ID,
 		HolidayDate: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
 		Name:        "New Year 2025",
+		Category:    1,
 	}))
 
-	holidays, err := repo.ListByYear(ctx, tenant.ID, 2024)
+	holidays, err := repo.ListByYear(ctx, tenant.ID, 2024, nil)
 	require.NoError(t, err)
 	assert.Len(t, holidays, 1)
 	assert.Equal(t, "New Year 2024", holidays[0].Name)
@@ -225,7 +233,7 @@ func TestHolidayRepository_ListByYear_Empty(t *testing.T) {
 
 	tenant := createTestTenant(t, db)
 
-	holidays, err := repo.ListByYear(ctx, tenant.ID, 2024)
+	holidays, err := repo.ListByYear(ctx, tenant.ID, 2024, nil)
 	require.NoError(t, err)
 	assert.Empty(t, holidays)
 }

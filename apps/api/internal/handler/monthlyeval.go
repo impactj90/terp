@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -17,12 +19,16 @@ import (
 // MonthlyEvalHandler handles monthly evaluation HTTP requests.
 type MonthlyEvalHandler struct {
 	monthlyEvalService *service.MonthlyEvalService
+	employeeService    *service.EmployeeService
 }
 
+var errMonthlyEvalScopeDenied = errors.New("employee access denied by scope")
+
 // NewMonthlyEvalHandler creates a new MonthlyEvalHandler instance.
-func NewMonthlyEvalHandler(monthlyEvalService *service.MonthlyEvalService) *MonthlyEvalHandler {
+func NewMonthlyEvalHandler(monthlyEvalService *service.MonthlyEvalService, employeeService *service.EmployeeService) *MonthlyEvalHandler {
 	return &MonthlyEvalHandler{
 		monthlyEvalService: monthlyEvalService,
+		employeeService:    employeeService,
 	}
 }
 
@@ -40,6 +46,78 @@ func (h *MonthlyEvalHandler) GetMonthSummary(w http.ResponseWriter, r *http.Requ
 	employeeID, err := uuid.Parse(employeeIDStr)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid employee ID")
+		return
+	}
+	if err := h.ensureEmployeeScope(r.Context(), employeeID); err != nil {
+		if errors.Is(err, service.ErrEmployeeNotFound) {
+			respondError(w, http.StatusNotFound, "Employee not found")
+			return
+		}
+		if errors.Is(err, errMonthlyEvalScopeDenied) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to verify access")
+		return
+	}
+	if err := h.ensureEmployeeScope(r.Context(), employeeID); err != nil {
+		if errors.Is(err, service.ErrEmployeeNotFound) {
+			respondError(w, http.StatusNotFound, "Employee not found")
+			return
+		}
+		if errors.Is(err, errMonthlyEvalScopeDenied) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to verify access")
+		return
+	}
+	if err := h.ensureEmployeeScope(r.Context(), employeeID); err != nil {
+		if errors.Is(err, service.ErrEmployeeNotFound) {
+			respondError(w, http.StatusNotFound, "Employee not found")
+			return
+		}
+		if errors.Is(err, errMonthlyEvalScopeDenied) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to verify access")
+		return
+	}
+	if err := h.ensureEmployeeScope(r.Context(), employeeID); err != nil {
+		if errors.Is(err, service.ErrEmployeeNotFound) {
+			respondError(w, http.StatusNotFound, "Employee not found")
+			return
+		}
+		if errors.Is(err, errMonthlyEvalScopeDenied) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to verify access")
+		return
+	}
+	if err := h.ensureEmployeeScope(r.Context(), employeeID); err != nil {
+		if errors.Is(err, service.ErrEmployeeNotFound) {
+			respondError(w, http.StatusNotFound, "Employee not found")
+			return
+		}
+		if errors.Is(err, errMonthlyEvalScopeDenied) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to verify access")
+		return
+	}
+	if err := h.ensureEmployeeScope(r.Context(), employeeID); err != nil {
+		if errors.Is(err, service.ErrEmployeeNotFound) {
+			respondError(w, http.StatusNotFound, "Employee not found")
+			return
+		}
+		if errors.Is(err, errMonthlyEvalScopeDenied) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to verify access")
 		return
 	}
 
@@ -406,4 +484,25 @@ func (h *MonthlyEvalHandler) summaryToResponse(s *service.MonthSummary) map[stri
 	}
 
 	return response
+}
+
+func (h *MonthlyEvalHandler) ensureEmployeeScope(ctx context.Context, employeeID uuid.UUID) error {
+	emp, err := h.employeeService.GetByID(ctx, employeeID)
+	if err != nil {
+		return err
+	}
+
+	scope, err := scopeFromContext(ctx)
+	if err != nil {
+		return err
+	}
+	if tenantID, ok := middleware.TenantFromContext(ctx); ok {
+		if !scope.AllowsTenant(tenantID) {
+			return errMonthlyEvalScopeDenied
+		}
+	}
+	if !scope.AllowsEmployee(emp) {
+		return errMonthlyEvalScopeDenied
+	}
+	return nil
 }

@@ -8,6 +8,7 @@ package models
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -30,6 +31,20 @@ type User struct {
 	// Format: date-time
 	CreatedAt *strfmt.DateTime `json:"created_at"`
 
+	// data scope department ids
+	DataScopeDepartmentIds []strfmt.UUID `json:"data_scope_department_ids"`
+
+	// data scope employee ids
+	DataScopeEmployeeIds []strfmt.UUID `json:"data_scope_employee_ids"`
+
+	// data scope tenant ids
+	DataScopeTenantIds []strfmt.UUID `json:"data_scope_tenant_ids"`
+
+	// data scope type
+	// Example: all
+	// Enum: ["all","tenant","department","employee"]
+	DataScopeType string `json:"data_scope_type,omitempty"`
+
 	// display name
 	// Example: John Doe
 	// Required: true
@@ -50,11 +65,26 @@ type User struct {
 	// Format: uuid
 	ID *strfmt.UUID `json:"id"`
 
+	// is active
+	// Example: true
+	IsActive bool `json:"is_active,omitempty"`
+
+	// is locked
+	// Example: false
+	IsLocked bool `json:"is_locked,omitempty"`
+
 	// role
 	// Example: user
 	// Required: true
 	// Enum: ["user","admin"]
 	Role *string `json:"role"`
+
+	// sso id
+	SsoID *string `json:"sso_id,omitempty"`
+
+	// tenant id
+	// Format: uuid
+	TenantID *strfmt.UUID `json:"tenant_id,omitempty"`
 
 	// updated at
 	// Format: date-time
@@ -63,6 +93,10 @@ type User struct {
 	// ID of the assigned user group, if any
 	// Format: uuid
 	UserGroupID *strfmt.UUID `json:"user_group_id,omitempty"`
+
+	// username
+	// Example: jdoe
+	Username *string `json:"username,omitempty"`
 }
 
 // Validate validates this user
@@ -74,6 +108,22 @@ func (m *User) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateCreatedAt(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateDataScopeDepartmentIds(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateDataScopeEmployeeIds(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateDataScopeTenantIds(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateDataScopeType(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -94,6 +144,10 @@ func (m *User) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateRole(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateTenantID(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -130,6 +184,102 @@ func (m *User) validateCreatedAt(formats strfmt.Registry) error {
 	}
 
 	if err := validate.FormatOf("created_at", "body", "date-time", m.CreatedAt.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *User) validateDataScopeDepartmentIds(formats strfmt.Registry) error {
+	if swag.IsZero(m.DataScopeDepartmentIds) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.DataScopeDepartmentIds); i++ {
+
+		if err := validate.FormatOf("data_scope_department_ids"+"."+strconv.Itoa(i), "body", "uuid", m.DataScopeDepartmentIds[i].String(), formats); err != nil {
+			return err
+		}
+
+	}
+
+	return nil
+}
+
+func (m *User) validateDataScopeEmployeeIds(formats strfmt.Registry) error {
+	if swag.IsZero(m.DataScopeEmployeeIds) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.DataScopeEmployeeIds); i++ {
+
+		if err := validate.FormatOf("data_scope_employee_ids"+"."+strconv.Itoa(i), "body", "uuid", m.DataScopeEmployeeIds[i].String(), formats); err != nil {
+			return err
+		}
+
+	}
+
+	return nil
+}
+
+func (m *User) validateDataScopeTenantIds(formats strfmt.Registry) error {
+	if swag.IsZero(m.DataScopeTenantIds) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.DataScopeTenantIds); i++ {
+
+		if err := validate.FormatOf("data_scope_tenant_ids"+"."+strconv.Itoa(i), "body", "uuid", m.DataScopeTenantIds[i].String(), formats); err != nil {
+			return err
+		}
+
+	}
+
+	return nil
+}
+
+var userTypeDataScopeTypePropEnum []any
+
+func init() {
+	var res []string
+	if err := json.Unmarshal([]byte(`["all","tenant","department","employee"]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		userTypeDataScopeTypePropEnum = append(userTypeDataScopeTypePropEnum, v)
+	}
+}
+
+const (
+
+	// UserDataScopeTypeAll captures enum value "all"
+	UserDataScopeTypeAll string = "all"
+
+	// UserDataScopeTypeTenant captures enum value "tenant"
+	UserDataScopeTypeTenant string = "tenant"
+
+	// UserDataScopeTypeDepartment captures enum value "department"
+	UserDataScopeTypeDepartment string = "department"
+
+	// UserDataScopeTypeEmployee captures enum value "employee"
+	UserDataScopeTypeEmployee string = "employee"
+)
+
+// prop value enum
+func (m *User) validateDataScopeTypeEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, userTypeDataScopeTypePropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *User) validateDataScopeType(formats strfmt.Registry) error {
+	if swag.IsZero(m.DataScopeType) { // not required
+		return nil
+	}
+
+	// value enum
+	if err := m.validateDataScopeTypeEnum("data_scope_type", "body", m.DataScopeType); err != nil {
 		return err
 	}
 
@@ -220,6 +370,18 @@ func (m *User) validateRole(formats strfmt.Registry) error {
 
 	// value enum
 	if err := m.validateRoleEnum("role", "body", *m.Role); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *User) validateTenantID(formats strfmt.Registry) error {
+	if swag.IsZero(m.TenantID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("tenant_id", "body", "uuid", m.TenantID.String(), formats); err != nil {
 		return err
 	}
 

@@ -67,6 +67,112 @@ Employee:
     is_active:
       type: boolean
       example: true
+    # Extended personnel master data fields (ZMI-TICKET-004)
+    exit_reason:
+      type: string
+      x-nullable: true
+    notes:
+      type: string
+      x-nullable: true
+    address_street:
+      type: string
+      x-nullable: true
+    address_zip:
+      type: string
+      x-nullable: true
+    address_city:
+      type: string
+      x-nullable: true
+    address_country:
+      type: string
+      x-nullable: true
+    birth_date:
+      type: string
+      format: date
+      x-nullable: true
+    gender:
+      type: string
+      enum:
+        - male
+        - female
+        - diverse
+        - not_specified
+      x-nullable: true
+    nationality:
+      type: string
+      x-nullable: true
+    religion:
+      type: string
+      x-nullable: true
+    marital_status:
+      type: string
+      enum:
+        - single
+        - married
+        - divorced
+        - widowed
+        - registered_partnership
+        - not_specified
+      x-nullable: true
+    birth_place:
+      type: string
+      x-nullable: true
+    birth_country:
+      type: string
+      x-nullable: true
+    room_number:
+      type: string
+      x-nullable: true
+    photo_url:
+      type: string
+      x-nullable: true
+    # Group FKs
+    employee_group_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    workflow_group_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    activity_group_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    # Tariff-related override fields (ZMI section 14.2)
+    part_time_percent:
+      type: number
+      format: decimal
+      x-nullable: true
+    disability_flag:
+      type: boolean
+    daily_target_hours:
+      type: number
+      format: decimal
+      x-nullable: true
+    weekly_target_hours:
+      type: number
+      format: decimal
+      x-nullable: true
+    monthly_target_hours:
+      type: number
+      format: decimal
+      x-nullable: true
+    annual_target_hours:
+      type: number
+      format: decimal
+      x-nullable: true
+    work_days_per_week:
+      type: number
+      format: decimal
+      x-nullable: true
+    calculation_start_date:
+      type: string
+      format: date
+      x-nullable: true
+    pin:
+      type: string
+      description: Employee PIN (included in detail view only)
     created_at:
       type: string
       format: date-time
@@ -89,6 +195,18 @@ Employee:
     tariff:
       allOf:
         - $ref: './tariffs.yaml#/TariffSummary'
+      x-nullable: true
+    employee_group:
+      allOf:
+        - $ref: './groups.yaml#/EmployeeGroup'
+      x-nullable: true
+    workflow_group:
+      allOf:
+        - $ref: './groups.yaml#/WorkflowGroup'
+      x-nullable: true
+    activity_group:
+      allOf:
+        - $ref: './groups.yaml#/ActivityGroup'
       x-nullable: true
     contacts:
       type: array
@@ -222,7 +340,6 @@ CreateEmployeeRequest:
   type: object
   required:
     - personnel_number
-    - pin
     - first_name
     - last_name
     - entry_date
@@ -233,8 +350,8 @@ CreateEmployeeRequest:
       maxLength: 50
     pin:
       type: string
-      minLength: 4
       maxLength: 20
+      description: Optional PIN. If not provided, auto-assigned as next available integer.
     first_name:
       type: string
       minLength: 1
@@ -249,6 +366,9 @@ CreateEmployeeRequest:
     phone:
       type: string
     entry_date:
+      type: string
+      format: date
+    exit_date:
       type: string
       format: date
     department_id:
@@ -268,6 +388,79 @@ CreateEmployeeRequest:
       type: number
       format: decimal
     vacation_days_per_year:
+      type: number
+      format: decimal
+    # Extended fields
+    exit_reason:
+      type: string
+    notes:
+      type: string
+    address_street:
+      type: string
+    address_zip:
+      type: string
+    address_city:
+      type: string
+    address_country:
+      type: string
+    birth_date:
+      type: string
+      format: date
+    gender:
+      type: string
+      enum:
+        - male
+        - female
+        - diverse
+        - not_specified
+    nationality:
+      type: string
+    religion:
+      type: string
+    marital_status:
+      type: string
+      enum:
+        - single
+        - married
+        - divorced
+        - widowed
+        - registered_partnership
+        - not_specified
+    birth_place:
+      type: string
+    birth_country:
+      type: string
+    room_number:
+      type: string
+    photo_url:
+      type: string
+    employee_group_id:
+      type: string
+      format: uuid
+    workflow_group_id:
+      type: string
+      format: uuid
+    activity_group_id:
+      type: string
+      format: uuid
+    part_time_percent:
+      type: number
+      format: decimal
+    disability_flag:
+      type: boolean
+    daily_target_hours:
+      type: number
+      format: decimal
+    weekly_target_hours:
+      type: number
+      format: decimal
+    monthly_target_hours:
+      type: number
+      format: decimal
+    annual_target_hours:
+      type: number
+      format: decimal
+    work_days_per_week:
       type: number
       format: decimal
 
@@ -307,6 +500,82 @@ UpdateEmployeeRequest:
       type: number
       format: decimal
     vacation_days_per_year:
+      type: number
+      format: decimal
+    # Extended fields
+    exit_reason:
+      type: string
+    notes:
+      type: string
+    address_street:
+      type: string
+    address_zip:
+      type: string
+    address_city:
+      type: string
+    address_country:
+      type: string
+    birth_date:
+      type: string
+      format: date
+    gender:
+      type: string
+      enum:
+        - male
+        - female
+        - diverse
+        - not_specified
+    nationality:
+      type: string
+    religion:
+      type: string
+    marital_status:
+      type: string
+      enum:
+        - single
+        - married
+        - divorced
+        - widowed
+        - registered_partnership
+        - not_specified
+    birth_place:
+      type: string
+    birth_country:
+      type: string
+    room_number:
+      type: string
+    photo_url:
+      type: string
+    employee_group_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    workflow_group_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    activity_group_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    part_time_percent:
+      type: number
+      format: decimal
+    disability_flag:
+      type: boolean
+    daily_target_hours:
+      type: number
+      format: decimal
+    weekly_target_hours:
+      type: number
+      format: decimal
+    monthly_target_hours:
+      type: number
+      format: decimal
+    annual_target_hours:
+      type: number
+      format: decimal
+    work_days_per_week:
       type: number
       format: decimal
 

@@ -132,6 +132,21 @@ func (r *DailyValueRepository) ListAll(ctx context.Context, tenantID uuid.UUID, 
 	if opts.HasErrors != nil {
 		q = q.Where("has_error = ?", *opts.HasErrors)
 	}
+	switch opts.ScopeType {
+	case model.DataScopeDepartment:
+		if len(opts.ScopeDepartmentIDs) == 0 {
+			q = q.Where("1 = 0")
+		} else {
+			q = q.Joins("JOIN employees ON employees.id = daily_values.employee_id").
+				Where("employees.department_id IN ?", opts.ScopeDepartmentIDs)
+		}
+	case model.DataScopeEmployee:
+		if len(opts.ScopeEmployeeIDs) == 0 {
+			q = q.Where("1 = 0")
+		} else {
+			q = q.Where("employee_id IN ?", opts.ScopeEmployeeIDs)
+		}
+	}
 
 	err := q.Order("value_date ASC").Find(&values).Error
 	if err != nil {

@@ -11,10 +11,18 @@ User:
     id:
       type: string
       format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+      x-nullable: true
     email:
       type: string
       format: email
       example: "user@example.com"
+    username:
+      type: string
+      x-nullable: true
+      example: "jdoe"
     display_name:
       type: string
       example: "John Doe"
@@ -29,6 +37,38 @@ User:
         - user
         - admin
       example: "user"
+    sso_id:
+      type: string
+      x-nullable: true
+    is_active:
+      type: boolean
+      example: true
+    is_locked:
+      type: boolean
+      example: false
+    data_scope_type:
+      type: string
+      enum:
+        - all
+        - tenant
+        - department
+        - employee
+      example: "all"
+    data_scope_tenant_ids:
+      type: array
+      items:
+        type: string
+        format: uuid
+    data_scope_department_ids:
+      type: array
+      items:
+        type: string
+        format: uuid
+    data_scope_employee_ids:
+      type: array
+      items:
+        type: string
+        format: uuid
     employee_id:
       type: string
       format: uuid
@@ -76,6 +116,115 @@ UpdateUserRequest:
       type: string
       format: uuid
       x-nullable: true
+    username:
+      type: string
+      x-nullable: true
+    employee_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    sso_id:
+      type: string
+      x-nullable: true
+    is_active:
+      type: boolean
+    is_locked:
+      type: boolean
+    data_scope_type:
+      type: string
+      enum:
+        - all
+        - tenant
+        - department
+        - employee
+    data_scope_tenant_ids:
+      type: array
+      items:
+        type: string
+        format: uuid
+    data_scope_department_ids:
+      type: array
+      items:
+        type: string
+        format: uuid
+    data_scope_employee_ids:
+      type: array
+      items:
+        type: string
+        format: uuid
+
+CreateUserRequest:
+  type: object
+  required:
+    - email
+    - display_name
+  properties:
+    tenant_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    email:
+      type: string
+      format: email
+      example: "user@example.com"
+    username:
+      type: string
+      x-nullable: true
+    display_name:
+      type: string
+      example: "John Doe"
+    password:
+      type: string
+      format: password
+    sso_id:
+      type: string
+      x-nullable: true
+    user_group_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    employee_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    is_active:
+      type: boolean
+    is_locked:
+      type: boolean
+    data_scope_type:
+      type: string
+      enum:
+        - all
+        - tenant
+        - department
+        - employee
+    data_scope_tenant_ids:
+      type: array
+      items:
+        type: string
+        format: uuid
+    data_scope_department_ids:
+      type: array
+      items:
+        type: string
+        format: uuid
+    data_scope_employee_ids:
+      type: array
+      items:
+        type: string
+        format: uuid
+
+ChangePasswordRequest:
+  type: object
+  required:
+    - new_password
+  properties:
+    current_password:
+      type: string
+      format: password
+    new_password:
+      type: string
+      format: password
 
 UserList:
   type: object

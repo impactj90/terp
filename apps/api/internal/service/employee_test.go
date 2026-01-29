@@ -107,7 +107,7 @@ func TestEmployeeService_Create_EmptyPersonnelNumber(t *testing.T) {
 	assert.ErrorIs(t, err, service.ErrPersonnelNumberRequired)
 }
 
-func TestEmployeeService_Create_EmptyPIN(t *testing.T) {
+func TestEmployeeService_Create_EmptyPIN_AutoAssigns(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
 	svc := service.NewEmployeeService(repo, nil, nil)
@@ -123,8 +123,23 @@ func TestEmployeeService_Create_EmptyPIN(t *testing.T) {
 		EntryDate:       time.Now(),
 	}
 
-	_, err := svc.Create(ctx, input)
-	assert.ErrorIs(t, err, service.ErrPINRequired)
+	emp, err := svc.Create(ctx, input)
+	require.NoError(t, err)
+	// Auto-assigned PIN should be a non-empty numeric string
+	assert.NotEmpty(t, emp.PIN)
+
+	// Creating another should get the next PIN
+	input2 := service.CreateEmployeeInput{
+		TenantID:        tenant.ID,
+		PersonnelNumber: "E002",
+		FirstName:       "Jane",
+		LastName:        "Smith",
+		EntryDate:       time.Now(),
+	}
+	emp2, err := svc.Create(ctx, input2)
+	require.NoError(t, err)
+	assert.NotEmpty(t, emp2.PIN)
+	assert.NotEqual(t, emp.PIN, emp2.PIN, "Auto-assigned PINs should be unique")
 }
 
 func TestEmployeeService_Create_EmptyFirstName(t *testing.T) {
@@ -832,4 +847,149 @@ func TestEmployeeService_ListCards_EmployeeNotFound(t *testing.T) {
 
 	_, err := svc.ListCards(ctx, uuid.New())
 	assert.ErrorIs(t, err, service.ErrEmployeeNotFound)
+}
+
+// --- Extended field tests (ZMI-TICKET-004) ---
+
+func TestEmployeeService_Create_WithExtendedFields(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewEmployeeRepository(db)
+	svc := service.NewEmployeeService(repo, nil, nil)
+	ctx := context.Background()
+
+	tenant := createTestTenantForEmployeeService(t, db)
+	bd := time.Date(1990, 5, 15, 0, 0, 0, 0, time.UTC)
+	ptp := 80.0
+	dth := 8.0
+	wth := 40.0
+
+	input := service.CreateEmployeeInput{
+		TenantID:        tenant.ID,
+		PersonnelNumber: "EXT01",
+		PIN:             "9999",
+		FirstName:       "Maria",
+		LastName:        "Mustermann",
+		Email:           "maria@example.com",
+		EntryDate:       time.Now().AddDate(0, -1, 0),
+		// Extended fields
+		AddressStreet:  "Hauptstr. 1",
+		AddressZip:     "12345",
+		AddressCity:    "Berlin",
+		AddressCountry: "DE",
+		BirthDate:      &bd,
+		Gender:         "female",
+		Nationality:    "German",
+		Religion:       "none",
+		MaritalStatus:  "single",
+		BirthPlace:     "Munich",
+		BirthCountry:   "DE",
+		RoomNumber:     "A101",
+		PhotoURL:       "https://example.com/photo.jpg",
+		Notes:          "Test notes",
+		PartTimePercent: &ptp,
+		DisabilityFlag:  true,
+		DailyTargetHours: &dth,
+		WeeklyTargetHours: &wth,
+	}
+
+	emp, err := svc.Create(ctx, input)
+	require.NoError(t, err)
+	assert.Equal(t, "Hauptstr. 1", emp.AddressStreet)
+	assert.Equal(t, "12345", emp.AddressZip)
+	assert.Equal(t, "Berlin", emp.AddressCity)
+	assert.Equal(t, "DE", emp.AddressCountry)
+	assert.NotNil(t, emp.BirthDate)
+	assert.Equal(t, "female", emp.Gender)
+	assert.Equal(t, "German", emp.Nationality)
+	assert.Equal(t, "none", emp.Religion)
+	assert.Equal(t, "single", emp.MaritalStatus)
+	assert.Equal(t, "Munich", emp.BirthPlace)
+	assert.Equal(t, "DE", emp.BirthCountry)
+	assert.Equal(t, "A101", emp.RoomNumber)
+	assert.Equal(t, "https://example.com/photo.jpg", emp.PhotoURL)
+	assert.Equal(t, "Test notes", emp.Notes)
+	assert.True(t, emp.DisabilityFlag)
+	assert.NotNil(t, emp.PartTimePercent)
+	assert.True(t, emp.PartTimePercent.Equal(decimal.NewFromFloat(80.0)))
+	assert.NotNil(t, emp.DailyTargetHours)
+	assert.True(t, emp.DailyTargetHours.Equal(decimal.NewFromFloat(8.0)))
+	assert.NotNil(t, emp.WeeklyTargetHours)
+	assert.True(t, emp.WeeklyTargetHours.Equal(decimal.NewFromFloat(40.0)))
+}
+
+func TestEmployeeService_Update_ExtendedFields(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewEmployeeRepository(db)
+	svc := service.NewEmployeeService(repo, nil, nil)
+	ctx := context.Background()
+
+	tenant := createTestTenantForEmployeeService(t, db)
+
+	input := service.CreateEmployeeInput{
+		TenantID:        tenant.ID,
+		PersonnelNumber: "EXT02",
+		PIN:             "8888",
+		FirstName:       "Max",
+		LastName:        "Mustermann",
+		EntryDate:       time.Now().AddDate(0, -1, 0),
+	}
+	emp, err := svc.Create(ctx, input)
+	require.NoError(t, err)
+
+	// Update extended fields
+	street := "Neue Str. 5"
+	city := "Hamburg"
+	gender := "male"
+	notes := "Updated notes"
+	disability := true
+	partTime := 50.0
+
+	updateInput := service.UpdateEmployeeInput{
+		AddressStreet:  &street,
+		AddressCity:    &city,
+		Gender:         &gender,
+		Notes:          &notes,
+		DisabilityFlag: &disability,
+		PartTimePercent: &partTime,
+	}
+	updated, err := svc.Update(ctx, emp.ID, updateInput)
+	require.NoError(t, err)
+	assert.Equal(t, "Neue Str. 5", updated.AddressStreet)
+	assert.Equal(t, "Hamburg", updated.AddressCity)
+	assert.Equal(t, "male", updated.Gender)
+	assert.Equal(t, "Updated notes", updated.Notes)
+	assert.True(t, updated.DisabilityFlag)
+	assert.NotNil(t, updated.PartTimePercent)
+	assert.True(t, updated.PartTimePercent.Equal(decimal.NewFromFloat(50.0)))
+}
+
+func TestEmployeeService_Update_ClearBirthDate(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewEmployeeRepository(db)
+	svc := service.NewEmployeeService(repo, nil, nil)
+	ctx := context.Background()
+
+	tenant := createTestTenantForEmployeeService(t, db)
+	bd := time.Date(1990, 5, 15, 0, 0, 0, 0, time.UTC)
+
+	input := service.CreateEmployeeInput{
+		TenantID:        tenant.ID,
+		PersonnelNumber: "EXT03",
+		PIN:             "7777",
+		FirstName:       "Anna",
+		LastName:        "Schmidt",
+		EntryDate:       time.Now().AddDate(0, -1, 0),
+		BirthDate:       &bd,
+	}
+	emp, err := svc.Create(ctx, input)
+	require.NoError(t, err)
+	require.NotNil(t, emp.BirthDate)
+
+	// Clear the birth date
+	updateInput := service.UpdateEmployeeInput{
+		ClearBirthDate: true,
+	}
+	updated, err := svc.Update(ctx, emp.ID, updateInput)
+	require.NoError(t, err)
+	assert.Nil(t, updated.BirthDate)
 }

@@ -25,6 +25,9 @@ type BookingFilter struct {
 	Direction  *model.BookingDirection // filter by booking type direction
 	Source     *model.BookingSource
 	HasPair    *bool // nil = all, true = only paired, false = only unpaired
+	ScopeType          model.DataScopeType
+	ScopeDepartmentIDs []uuid.UUID
+	ScopeEmployeeIDs   []uuid.UUID
 	Offset     int
 	Limit      int
 }
@@ -104,6 +107,21 @@ func (r *BookingRepository) List(ctx context.Context, filter BookingFilter) ([]m
 
 	if filter.EmployeeID != nil {
 		query = query.Where("employee_id = ?", *filter.EmployeeID)
+	}
+	switch filter.ScopeType {
+	case model.DataScopeDepartment:
+		if len(filter.ScopeDepartmentIDs) == 0 {
+			query = query.Where("1 = 0")
+		} else {
+			query = query.Joins("JOIN employees ON employees.id = bookings.employee_id").
+				Where("employees.department_id IN ?", filter.ScopeDepartmentIDs)
+		}
+	case model.DataScopeEmployee:
+		if len(filter.ScopeEmployeeIDs) == 0 {
+			query = query.Where("1 = 0")
+		} else {
+			query = query.Where("employee_id IN ?", filter.ScopeEmployeeIDs)
+		}
 	}
 	if filter.StartDate != nil {
 		query = query.Where("booking_date >= ?", *filter.StartDate)

@@ -49,7 +49,7 @@ func withTenantContext(r *http.Request, tenant *model.Tenant) *http.Request {
 func TestHolidayHandler_Create_Success(t *testing.T) {
 	h, _, tenant := setupHolidayHandler(t)
 
-	body := `{"holiday_date": "2024-01-01", "name": "New Year's Day", "is_half_day": false, "applies_to_all": true}`
+	body := `{"holiday_date": "2024-01-01", "name": "New Year's Day", "category": 1, "applies_to_all": true}`
 	req := httptest.NewRequest("POST", "/holidays", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req = withTenantContext(req, tenant)
@@ -63,14 +63,14 @@ func TestHolidayHandler_Create_Success(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "New Year's Day", result.Name)
 	assert.Equal(t, tenant.ID, result.TenantID)
-	assert.False(t, result.IsHalfDay)
+	assert.Equal(t, 1, result.Category)
 	assert.True(t, result.AppliesToAll)
 }
 
-func TestHolidayHandler_Create_HalfDay(t *testing.T) {
+func TestHolidayHandler_Create_Category2(t *testing.T) {
 	h, _, tenant := setupHolidayHandler(t)
 
-	body := `{"holiday_date": "2024-12-24", "name": "Christmas Eve", "is_half_day": true}`
+	body := `{"holiday_date": "2024-12-24", "name": "Christmas Eve", "category": 2}`
 	req := httptest.NewRequest("POST", "/holidays", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req = withTenantContext(req, tenant)
@@ -82,7 +82,7 @@ func TestHolidayHandler_Create_HalfDay(t *testing.T) {
 	var result model.Holiday
 	err := json.Unmarshal(rr.Body.Bytes(), &result)
 	require.NoError(t, err)
-	assert.True(t, result.IsHalfDay)
+	assert.Equal(t, 2, result.Category)
 }
 
 func TestHolidayHandler_Create_InvalidBody(t *testing.T) {
@@ -100,7 +100,7 @@ func TestHolidayHandler_Create_InvalidBody(t *testing.T) {
 func TestHolidayHandler_Create_InvalidDate(t *testing.T) {
 	h, _, tenant := setupHolidayHandler(t)
 
-	body := `{"holiday_date": "not-a-date", "name": "Test"}`
+	body := `{"holiday_date": "not-a-date", "name": "Test", "category": 1}`
 	req := httptest.NewRequest("POST", "/holidays", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req = withTenantContext(req, tenant)
@@ -114,7 +114,7 @@ func TestHolidayHandler_Create_InvalidDate(t *testing.T) {
 func TestHolidayHandler_Create_EmptyName(t *testing.T) {
 	h, _, tenant := setupHolidayHandler(t)
 
-	body := `{"holiday_date": "2024-01-01", "name": ""}`
+	body := `{"holiday_date": "2024-01-01", "name": "", "category": 1}`
 	req := httptest.NewRequest("POST", "/holidays", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req = withTenantContext(req, tenant)
@@ -147,13 +147,14 @@ func TestHolidayHandler_Create_DuplicateDate(t *testing.T) {
 		TenantID:     tenant.ID,
 		HolidayDate:  time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 		Name:         "First",
+		Category:     1,
 		AppliesToAll: true,
 	}
 	_, err := svc.Create(ctx, input)
 	require.NoError(t, err)
 
 	// Try to create duplicate
-	body := `{"holiday_date": "2024-01-01", "name": "Second"}`
+	body := `{"holiday_date": "2024-01-01", "name": "Second", "category": 1}`
 	req := httptest.NewRequest("POST", "/holidays", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req = withTenantContext(req, tenant)
@@ -172,6 +173,7 @@ func TestHolidayHandler_Get_Success(t *testing.T) {
 		TenantID:     tenant.ID,
 		HolidayDate:  time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 		Name:         "Test Holiday",
+		Category:     1,
 		AppliesToAll: true,
 	}
 	created, err := svc.Create(ctx, input)
@@ -234,6 +236,7 @@ func TestHolidayHandler_List_ByYear(t *testing.T) {
 			TenantID:     tenant.ID,
 			HolidayDate:  date,
 			Name:         "Holiday " + string(rune('A'+i)),
+			Category:     1,
 			AppliesToAll: true,
 		}
 		_, err := svc.Create(ctx, input)
@@ -268,6 +271,7 @@ func TestHolidayHandler_List_ByDateRange(t *testing.T) {
 			TenantID:     tenant.ID,
 			HolidayDate:  date,
 			Name:         "Holiday " + string(rune('A'+i)),
+			Category:     1,
 			AppliesToAll: true,
 		}
 		_, err := svc.Create(ctx, input)
@@ -330,13 +334,13 @@ func TestHolidayHandler_Update_Success(t *testing.T) {
 		TenantID:     tenant.ID,
 		HolidayDate:  time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 		Name:         "Original",
-		IsHalfDay:    false,
+		Category:     1,
 		AppliesToAll: true,
 	}
 	created, err := svc.Create(ctx, input)
 	require.NoError(t, err)
 
-	body := `{"name": "Updated", "is_half_day": true}`
+	body := `{"name": "Updated", "category": 2}`
 	req := httptest.NewRequest("PATCH", "/holidays/"+created.ID.String(), bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	rctx := chi.NewRouteContext()
@@ -351,7 +355,7 @@ func TestHolidayHandler_Update_Success(t *testing.T) {
 	err = json.Unmarshal(rr.Body.Bytes(), &result)
 	require.NoError(t, err)
 	assert.Equal(t, "Updated", result.Name)
-	assert.True(t, result.IsHalfDay)
+	assert.Equal(t, 2, result.Category)
 }
 
 func TestHolidayHandler_Update_InvalidID(t *testing.T) {
@@ -394,6 +398,7 @@ func TestHolidayHandler_Update_InvalidBody(t *testing.T) {
 		TenantID:     tenant.ID,
 		HolidayDate:  time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 		Name:         "Original",
+		Category:     1,
 		AppliesToAll: true,
 	}
 	created, err := svc.Create(ctx, input)
@@ -418,6 +423,7 @@ func TestHolidayHandler_Delete_Success(t *testing.T) {
 		TenantID:     tenant.ID,
 		HolidayDate:  time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 		Name:         "To Delete",
+		Category:     1,
 		AppliesToAll: true,
 	}
 	created, err := svc.Create(ctx, input)
@@ -464,4 +470,65 @@ func TestHolidayHandler_Delete_NotFound(t *testing.T) {
 	h.Delete(rr, req)
 
 	assert.Equal(t, http.StatusNotFound, rr.Code)
+}
+
+func TestHolidayHandler_Generate_Success(t *testing.T) {
+	h, _, tenant := setupHolidayHandler(t)
+
+	body := `{"year": 2026, "state": "BY"}`
+	req := httptest.NewRequest("POST", "/holidays/generate", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = withTenantContext(req, tenant)
+	rr := httptest.NewRecorder()
+
+	h.Generate(rr, req)
+
+	assert.Equal(t, http.StatusCreated, rr.Code)
+	var result []model.Holiday
+	err := json.Unmarshal(rr.Body.Bytes(), &result)
+	require.NoError(t, err)
+	assert.NotEmpty(t, result)
+
+	// Ensure a known holiday exists (New Year's Day)
+	found := false
+	for _, holiday := range result {
+		if holiday.Name == "Neujahr" && holiday.HolidayDate.Equal(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)) {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found)
+}
+
+func TestHolidayHandler_Copy_Success(t *testing.T) {
+	h, svc, tenant := setupHolidayHandler(t)
+	ctx := context.Background()
+
+	// Seed a source holiday
+	source := service.CreateHolidayInput{
+		TenantID:     tenant.ID,
+		HolidayDate:  time.Date(2025, 12, 24, 0, 0, 0, 0, time.UTC),
+		Name:         "Christmas Eve",
+		Category:     1,
+		AppliesToAll: true,
+	}
+	_, err := svc.Create(ctx, source)
+	require.NoError(t, err)
+
+	body := `{"source_year": 2025, "target_year": 2026, "category_overrides": [{"month": 12, "day": 24, "category": 2}]}`
+	req := httptest.NewRequest("POST", "/holidays/copy", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = withTenantContext(req, tenant)
+	rr := httptest.NewRecorder()
+
+	h.Copy(rr, req)
+
+	assert.Equal(t, http.StatusCreated, rr.Code)
+	var result []model.Holiday
+	err = json.Unmarshal(rr.Body.Bytes(), &result)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+	assert.Equal(t, "Christmas Eve", result[0].Name)
+	assert.Equal(t, 2, result[0].Category)
+	assert.True(t, result[0].HolidayDate.Equal(time.Date(2026, 12, 24, 0, 0, 0, 0, time.UTC)))
 }
