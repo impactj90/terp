@@ -115,6 +115,10 @@ tags:
     description: Absence calculation rule management
   - name: Correction Assistant
     description: Error/hint catalog and correction assistant queries
+  - name: Vacation Special Calculations
+    description: Vacation special calculation rules (age, tenure, disability bonuses)
+  - name: Vacation Calculation Groups
+    description: Vacation calculation groups combining basis and special calculations
 
 securityDefinitions:
   BearerAuth:
@@ -462,6 +466,22 @@ paths:
     $ref: 'paths/correction-assistant.yaml#/~1correction-messages~1{id}'
   /correction-assistant:
     $ref: 'paths/correction-assistant.yaml#/~1correction-assistant'
+
+  # Vacation Special Calculations
+  /vacation-special-calculations:
+    $ref: 'paths/vacation-special-calculations.yaml#/~1vacation-special-calculations'
+  /vacation-special-calculations/{id}:
+    $ref: 'paths/vacation-special-calculations.yaml#/~1vacation-special-calculations~1{id}'
+
+  # Vacation Calculation Groups
+  /vacation-calculation-groups:
+    $ref: 'paths/vacation-calculation-groups.yaml#/~1vacation-calculation-groups'
+  /vacation-calculation-groups/{id}:
+    $ref: 'paths/vacation-calculation-groups.yaml#/~1vacation-calculation-groups~1{id}'
+
+  # Vacation Entitlement Preview
+  /vacation-entitlement/preview:
+    $ref: 'paths/vacation-entitlement.yaml#/~1vacation-entitlement~1preview'
 
 definitions:
   # Common
@@ -905,6 +925,36 @@ definitions:
     $ref: 'schemas/correction-assistant.yaml#/CorrectionAssistantError'
   CorrectionAssistantList:
     $ref: 'schemas/correction-assistant.yaml#/CorrectionAssistantList'
+
+  # Vacation Special Calculations
+  VacationSpecialCalculation:
+    $ref: 'schemas/vacation-special-calculations.yaml#/VacationSpecialCalculation'
+  VacationSpecialCalculationSummary:
+    $ref: 'schemas/vacation-special-calculations.yaml#/VacationSpecialCalculationSummary'
+  CreateVacationSpecialCalculationRequest:
+    $ref: 'schemas/vacation-special-calculations.yaml#/CreateVacationSpecialCalculationRequest'
+  UpdateVacationSpecialCalculationRequest:
+    $ref: 'schemas/vacation-special-calculations.yaml#/UpdateVacationSpecialCalculationRequest'
+  VacationSpecialCalculationList:
+    $ref: 'schemas/vacation-special-calculations.yaml#/VacationSpecialCalculationList'
+
+  # Vacation Calculation Groups
+  VacationCalculationGroup:
+    $ref: 'schemas/vacation-calculation-groups.yaml#/VacationCalculationGroup'
+  VacationCalculationGroupSummary:
+    $ref: 'schemas/vacation-calculation-groups.yaml#/VacationCalculationGroupSummary'
+  CreateVacationCalculationGroupRequest:
+    $ref: 'schemas/vacation-calculation-groups.yaml#/CreateVacationCalculationGroupRequest'
+  UpdateVacationCalculationGroupRequest:
+    $ref: 'schemas/vacation-calculation-groups.yaml#/UpdateVacationCalculationGroupRequest'
+  VacationCalculationGroupList:
+    $ref: 'schemas/vacation-calculation-groups.yaml#/VacationCalculationGroupList'
+
+  # Vacation Entitlement Preview
+  VacationEntitlementPreviewRequest:
+    $ref: 'schemas/vacation-entitlement.yaml#/VacationEntitlementPreviewRequest'
+  VacationEntitlementPreview:
+    $ref: 'schemas/vacation-entitlement.yaml#/VacationEntitlementPreview'
 
 responses:
   BadRequest:

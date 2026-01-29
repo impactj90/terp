@@ -63,6 +63,8 @@ func setupVacationHandler(t *testing.T) *vacationTestContext {
 	require.NoError(t, employeeRepo.Create(ctx, employee))
 
 	// Create vacation service
+	employmentTypeRepo := repository.NewEmploymentTypeRepository(db)
+	vacationCalcGroupRepo := repository.NewVacationCalcGroupRepository(db)
 	vacationService := service.NewVacationService(
 		vacationBalanceRepo,
 		absenceDayRepo,
@@ -70,6 +72,8 @@ func setupVacationHandler(t *testing.T) *vacationTestContext {
 		employeeRepo,
 		tenantRepo,
 		tariffRepo,
+		employmentTypeRepo,
+		vacationCalcGroupRepo,
 		decimal.Zero,
 	)
 

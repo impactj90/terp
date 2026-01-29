@@ -1,0 +1,30 @@
+# Vacation Entitlement Preview endpoint
+/vacation-entitlement/preview:
+  post:
+    tags:
+      - Vacation
+    summary: Preview vacation entitlement for an employee
+    description: |
+      Calculates and returns a detailed breakdown of vacation entitlement for an employee in a given year.
+      Uses the employee's employment type to resolve the calculation group, or accepts an optional override.
+      Does NOT persist the result -- use /vacation-balances/initialize for that.
+    operationId: previewVacationEntitlement
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/vacation-entitlement.yaml#/VacationEntitlementPreviewRequest'
+    responses:
+      200:
+        description: Vacation entitlement breakdown
+        schema:
+          $ref: '../schemas/vacation-entitlement.yaml#/VacationEntitlementPreview'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        description: Employee not found
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'

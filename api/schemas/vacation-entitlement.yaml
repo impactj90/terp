@@ -1,0 +1,91 @@
+# Vacation Entitlement Preview schemas
+VacationEntitlementPreviewRequest:
+  type: object
+  required:
+    - employee_id
+    - year
+  properties:
+    employee_id:
+      type: string
+      format: uuid
+    year:
+      type: integer
+      example: 2026
+    calculation_group_id:
+      type: string
+      format: uuid
+      description: "Optional override: use this group instead of the employee's employment type group"
+
+VacationEntitlementPreview:
+  type: object
+  required:
+    - employee_id
+    - year
+  properties:
+    employee_id:
+      type: string
+      format: uuid
+    employee_name:
+      type: string
+      description: "Employee display name for convenience"
+    year:
+      type: integer
+    basis:
+      type: string
+      enum: [calendar_year, entry_date]
+    calculation_group_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    calculation_group_name:
+      type: string
+      x-nullable: true
+    base_entitlement:
+      type: number
+      format: double
+      description: "Full-year base vacation days from tariff/employee"
+    pro_rated_entitlement:
+      type: number
+      format: double
+      description: "After pro-rating for months employed"
+    part_time_adjustment:
+      type: number
+      format: double
+      description: "After part-time factor adjustment"
+    age_bonus:
+      type: number
+      format: double
+      description: "Bonus days from age special calculations"
+    tenure_bonus:
+      type: number
+      format: double
+      description: "Bonus days from tenure special calculations"
+    disability_bonus:
+      type: number
+      format: double
+      description: "Bonus days from disability special calculations"
+    total_entitlement:
+      type: number
+      format: double
+      description: "Final entitlement (rounded to nearest 0.5)"
+    months_employed:
+      type: integer
+      description: "Number of months employed in the year"
+    age_at_reference:
+      type: integer
+      description: "Employee age at reference date"
+    tenure_years:
+      type: integer
+      description: "Years of service at reference date"
+    weekly_hours:
+      type: number
+      format: double
+      description: "Employee weekly hours"
+    standard_weekly_hours:
+      type: number
+      format: double
+      description: "Standard full-time weekly hours"
+    part_time_factor:
+      type: number
+      format: double
+      description: "Part-time factor (weekly_hours / standard_weekly_hours)"

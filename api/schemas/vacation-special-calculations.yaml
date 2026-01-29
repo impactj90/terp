@@ -1,0 +1,107 @@
+# Vacation Special Calculation schemas
+VacationSpecialCalculation:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - type
+    - threshold
+    - bonus_days
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    type:
+      type: string
+      enum: [age, tenure, disability]
+      description: "Type of special calculation: age (Alter), tenure (Betriebszugehoerigkeit), or disability (Behinderung)"
+      example: "age"
+    threshold:
+      type: integer
+      description: "Age in years (age), tenure in years (tenure), 0 for disability"
+      example: 50
+    bonus_days:
+      type: number
+      format: double
+      description: "Additional vacation days when threshold is met"
+      example: 2.0
+    description:
+      type: string
+      x-nullable: true
+    is_active:
+      type: boolean
+      example: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+VacationSpecialCalculationSummary:
+  type: object
+  required:
+    - id
+    - type
+    - threshold
+    - bonus_days
+  properties:
+    id:
+      type: string
+      format: uuid
+    type:
+      type: string
+      enum: [age, tenure, disability]
+    threshold:
+      type: integer
+    bonus_days:
+      type: number
+      format: double
+
+CreateVacationSpecialCalculationRequest:
+  type: object
+  required:
+    - type
+    - bonus_days
+  properties:
+    type:
+      type: string
+      enum: [age, tenure, disability]
+    threshold:
+      type: integer
+      default: 0
+      description: "Age or tenure threshold in years. Must be 0 for disability type."
+    bonus_days:
+      type: number
+      format: double
+      minimum: 0.5
+      description: "Additional vacation days"
+    description:
+      type: string
+
+UpdateVacationSpecialCalculationRequest:
+  type: object
+  properties:
+    threshold:
+      type: integer
+    bonus_days:
+      type: number
+      format: double
+      minimum: 0.5
+    description:
+      type: string
+    is_active:
+      type: boolean
+
+VacationSpecialCalculationList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/VacationSpecialCalculation'

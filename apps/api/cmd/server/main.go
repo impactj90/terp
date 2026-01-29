@@ -133,6 +133,8 @@ func main() {
 
 	// Initialize VacationService
 	vacationBalanceRepo := repository.NewVacationBalanceRepository(db)
+	vacationSpecialCalcRepo := repository.NewVacationSpecialCalcRepository(db)
+	vacationCalcGroupRepo := repository.NewVacationCalcGroupRepository(db)
 	vacationService := service.NewVacationService(
 		vacationBalanceRepo,
 		absenceDayRepo,
@@ -140,9 +142,19 @@ func main() {
 		employeeRepo,
 		tenantRepo,
 		tariffRepo,
+		employmentTypeRepo,
+		vacationCalcGroupRepo,
 		decimal.Zero,
 	)
 	vacationHandler := handler.NewVacationHandler(vacationService)
+
+	// Initialize Vacation Special Calc Service
+	vacationSpecialCalcService := service.NewVacationSpecialCalcService(vacationSpecialCalcRepo)
+	vacationSpecialCalcHandler := handler.NewVacationSpecialCalcHandler(vacationSpecialCalcService)
+
+	// Initialize Vacation Calc Group Service
+	vacationCalcGroupService := service.NewVacationCalcGroupService(vacationCalcGroupRepo, vacationSpecialCalcRepo)
+	vacationCalcGroupHandler := handler.NewVacationCalcGroupHandler(vacationCalcGroupService)
 
 	// Initialize MonthlyEvalService
 	monthlyValueRepo := repository.NewMonthlyValueRepository(db)
@@ -316,6 +328,9 @@ func main() {
 				handler.RegisterEmployeeDayPlanRoutes(r, edpHandler, authzMiddleware)
 				handler.RegisterCalculationRuleRoutes(r, calculationRuleHandler, authzMiddleware)
 				handler.RegisterCorrectionAssistantRoutes(r, correctionAssistantHandler, authzMiddleware)
+				handler.RegisterVacationSpecialCalcRoutes(r, vacationSpecialCalcHandler, authzMiddleware)
+				handler.RegisterVacationCalcGroupRoutes(r, vacationCalcGroupHandler, authzMiddleware)
+				handler.RegisterVacationEntitlementRoutes(r, vacationHandler, authzMiddleware)
 			})
 		})
 

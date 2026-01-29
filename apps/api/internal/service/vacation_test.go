@@ -122,6 +122,8 @@ func newTestVacationService(maxCarryover decimal.Decimal) (
 		employeeRepo,
 		tenantRepo,
 		tariffRepo,
+		nil, // employmentTypeRepo
+		nil, // vacationCalcGroupRepo
 		maxCarryover,
 	)
 	return svc, vacBalanceRepo, absenceDayRepo, absenceTypeRepo, employeeRepo, tenantRepo, tariffRepo

@@ -764,6 +764,56 @@ func RegisterCalculationRuleRoutes(r chi.Router, h *CalculationRuleHandler, auth
 	})
 }
 
+// RegisterVacationSpecialCalcRoutes registers vacation special calculation routes.
+func RegisterVacationSpecialCalcRoutes(r chi.Router, h *VacationSpecialCalcHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("absence_types.manage").String()
+	r.Route("/vacation-special-calculations", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+	})
+}
+
+// RegisterVacationCalcGroupRoutes registers vacation calculation group routes.
+func RegisterVacationCalcGroupRoutes(r chi.Router, h *VacationCalcGroupHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("absence_types.manage").String()
+	r.Route("/vacation-calculation-groups", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+	})
+}
+
+// RegisterVacationEntitlementRoutes registers vacation entitlement preview routes.
+func RegisterVacationEntitlementRoutes(r chi.Router, h *VacationHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("absence_types.manage").String()
+	if authz == nil {
+		r.Post("/vacation-entitlement/preview", h.PreviewEntitlement)
+		return
+	}
+	r.With(authz.RequirePermission(permManage)).Post("/vacation-entitlement/preview", h.PreviewEntitlement)
+}
+
 // RegisterCorrectionAssistantRoutes registers correction assistant routes.
 func RegisterCorrectionAssistantRoutes(r chi.Router, h *CorrectionAssistantHandler, authz *middleware.AuthorizationMiddleware) {
 	permViewAll := permissions.ID("time_tracking.view_all").String()

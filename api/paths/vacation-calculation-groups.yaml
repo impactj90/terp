@@ -1,0 +1,114 @@
+# Vacation Calculation Group endpoints
+/vacation-calculation-groups:
+  get:
+    tags:
+      - Vacation Calculation Groups
+    summary: List vacation calculation groups
+    operationId: listVacationCalculationGroups
+    parameters:
+      - name: active_only
+        in: query
+        type: boolean
+        description: Filter to only active groups
+    responses:
+      200:
+        description: List of vacation calculation groups
+        schema:
+          $ref: '../schemas/vacation-calculation-groups.yaml#/VacationCalculationGroupList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Vacation Calculation Groups
+    summary: Create vacation calculation group
+    operationId: createVacationCalculationGroup
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/vacation-calculation-groups.yaml#/CreateVacationCalculationGroupRequest'
+    responses:
+      201:
+        description: Created vacation calculation group
+        schema:
+          $ref: '../schemas/vacation-calculation-groups.yaml#/VacationCalculationGroup'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists for this tenant
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/vacation-calculation-groups/{id}:
+  get:
+    tags:
+      - Vacation Calculation Groups
+    summary: Get vacation calculation group by ID
+    operationId: getVacationCalculationGroup
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Vacation calculation group details (includes linked special calculations)
+        schema:
+          $ref: '../schemas/vacation-calculation-groups.yaml#/VacationCalculationGroup'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Vacation Calculation Groups
+    summary: Update vacation calculation group
+    operationId: updateVacationCalculationGroup
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/vacation-calculation-groups.yaml#/UpdateVacationCalculationGroupRequest'
+    responses:
+      200:
+        description: Updated vacation calculation group
+        schema:
+          $ref: '../schemas/vacation-calculation-groups.yaml#/VacationCalculationGroup'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Vacation Calculation Groups
+    summary: Delete vacation calculation group
+    operationId: deleteVacationCalculationGroup
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Vacation calculation group deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+      409:
+        description: Group is still assigned to employment types
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'

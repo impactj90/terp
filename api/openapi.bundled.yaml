@@ -112,6 +112,10 @@ tags:
     description: Absence calculation rule management
   - name: Correction Assistant
     description: Error/hint catalog and correction assistant queries
+  - name: Vacation Special Calculations
+    description: 'Vacation special calculation rules (age, tenure, disability bonuses)'
+  - name: Vacation Calculation Groups
+    description: Vacation calculation groups combining basis and special calculations
 securityDefinitions:
   BearerAuth:
     type: apiKey
@@ -6255,6 +6259,267 @@ paths:
           $ref: '#/responses/Unauthorized'
         '403':
           $ref: '#/responses/Forbidden'
+  /vacation-special-calculations:
+    get:
+      tags:
+        - Vacation Special Calculations
+      summary: List vacation special calculations
+      operationId: listVacationSpecialCalculations
+      parameters:
+        - name: active_only
+          in: query
+          type: boolean
+          description: Filter to only active special calculations
+        - name: type
+          in: query
+          type: string
+          enum:
+            - age
+            - tenure
+            - disability
+          description: Filter by special calculation type
+      responses:
+        '200':
+          description: List of vacation special calculations
+          schema:
+            $ref: '#/definitions/VacationSpecialCalculationList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+    post:
+      tags:
+        - Vacation Special Calculations
+      summary: Create vacation special calculation
+      operationId: createVacationSpecialCalculation
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateVacationSpecialCalculationRequest'
+      responses:
+        '201':
+          description: Created vacation special calculation
+          schema:
+            $ref: '#/definitions/VacationSpecialCalculation'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '409':
+          description: Duplicate type+threshold combination for this tenant
+          schema:
+            $ref: '#/definitions/ProblemDetails'
+  '/vacation-special-calculations/{id}':
+    get:
+      tags:
+        - Vacation Special Calculations
+      summary: Get vacation special calculation by ID
+      operationId: getVacationSpecialCalculation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Vacation special calculation details
+          schema:
+            $ref: '#/definitions/VacationSpecialCalculation'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    patch:
+      tags:
+        - Vacation Special Calculations
+      summary: Update vacation special calculation
+      operationId: updateVacationSpecialCalculation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateVacationSpecialCalculationRequest'
+      responses:
+        '200':
+          description: Updated vacation special calculation
+          schema:
+            $ref: '#/definitions/VacationSpecialCalculation'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    delete:
+      tags:
+        - Vacation Special Calculations
+      summary: Delete vacation special calculation
+      operationId: deleteVacationSpecialCalculation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Vacation special calculation deleted
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+        '409':
+          description: Special calculation is still assigned to calculation groups
+          schema:
+            $ref: '#/definitions/ProblemDetails'
+  /vacation-calculation-groups:
+    get:
+      tags:
+        - Vacation Calculation Groups
+      summary: List vacation calculation groups
+      operationId: listVacationCalculationGroups
+      parameters:
+        - name: active_only
+          in: query
+          type: boolean
+          description: Filter to only active groups
+      responses:
+        '200':
+          description: List of vacation calculation groups
+          schema:
+            $ref: '#/definitions/VacationCalculationGroupList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+    post:
+      tags:
+        - Vacation Calculation Groups
+      summary: Create vacation calculation group
+      operationId: createVacationCalculationGroup
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateVacationCalculationGroupRequest'
+      responses:
+        '201':
+          description: Created vacation calculation group
+          schema:
+            $ref: '#/definitions/VacationCalculationGroup'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '409':
+          description: Code already exists for this tenant
+          schema:
+            $ref: '#/definitions/ProblemDetails'
+  '/vacation-calculation-groups/{id}':
+    get:
+      tags:
+        - Vacation Calculation Groups
+      summary: Get vacation calculation group by ID
+      operationId: getVacationCalculationGroup
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Vacation calculation group details (includes linked special calculations)
+          schema:
+            $ref: '#/definitions/VacationCalculationGroup'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    patch:
+      tags:
+        - Vacation Calculation Groups
+      summary: Update vacation calculation group
+      operationId: updateVacationCalculationGroup
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateVacationCalculationGroupRequest'
+      responses:
+        '200':
+          description: Updated vacation calculation group
+          schema:
+            $ref: '#/definitions/VacationCalculationGroup'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    delete:
+      tags:
+        - Vacation Calculation Groups
+      summary: Delete vacation calculation group
+      operationId: deleteVacationCalculationGroup
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Vacation calculation group deleted
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+        '409':
+          description: Group is still assigned to employment types
+          schema:
+            $ref: '#/definitions/ProblemDetails'
+  /vacation-entitlement/preview:
+    post:
+      tags:
+        - Vacation
+      summary: Preview vacation entitlement for an employee
+      description: |
+        Calculates and returns a detailed breakdown of vacation entitlement for an employee in a given year.
+        Uses the employee's employment type to resolve the calculation group, or accepts an optional override.
+        Does NOT persist the result -- use /vacation-balances/initialize for that.
+      operationId: previewVacationEntitlement
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/VacationEntitlementPreviewRequest'
+      responses:
+        '200':
+          description: Vacation entitlement breakdown
+          schema:
+            $ref: '#/definitions/VacationEntitlementPreview'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          description: Employee not found
+          schema:
+            $ref: '#/definitions/ProblemDetails'
 definitions:
   UUID:
     type: string
@@ -12710,6 +12975,332 @@ definitions:
           $ref: '#/definitions/CorrectionAssistantItem'
       meta:
         $ref: '#/definitions/PaginationMeta'
+  VacationSpecialCalculation:
+    type: object
+    required:
+      - id
+      - tenant_id
+      - type
+      - threshold
+      - bonus_days
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      type:
+        type: string
+        enum:
+          - age
+          - tenure
+          - disability
+        description: 'Type of special calculation: age (Alter), tenure (Betriebszugehoerigkeit), or disability (Behinderung)'
+        example: age
+      threshold:
+        type: integer
+        description: 'Age in years (age), tenure in years (tenure), 0 for disability'
+        example: 50
+      bonus_days:
+        type: number
+        format: double
+        description: Additional vacation days when threshold is met
+        example: 2
+      description:
+        type: string
+        x-nullable: true
+      is_active:
+        type: boolean
+        example: true
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  VacationSpecialCalculationSummary:
+    type: object
+    required:
+      - id
+      - type
+      - threshold
+      - bonus_days
+    properties:
+      id:
+        type: string
+        format: uuid
+      type:
+        type: string
+        enum:
+          - age
+          - tenure
+          - disability
+      threshold:
+        type: integer
+      bonus_days:
+        type: number
+        format: double
+  CreateVacationSpecialCalculationRequest:
+    type: object
+    required:
+      - type
+      - bonus_days
+    properties:
+      type:
+        type: string
+        enum:
+          - age
+          - tenure
+          - disability
+      threshold:
+        type: integer
+        default: 0
+        description: Age or tenure threshold in years. Must be 0 for disability type.
+      bonus_days:
+        type: number
+        format: double
+        minimum: 0.5
+        description: Additional vacation days
+      description:
+        type: string
+  UpdateVacationSpecialCalculationRequest:
+    type: object
+    properties:
+      threshold:
+        type: integer
+      bonus_days:
+        type: number
+        format: double
+        minimum: 0.5
+      description:
+        type: string
+      is_active:
+        type: boolean
+  VacationSpecialCalculationList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/VacationSpecialCalculation'
+  VacationCalculationGroup:
+    type: object
+    required:
+      - id
+      - tenant_id
+      - code
+      - name
+      - basis
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      code:
+        type: string
+        example: STANDARD
+      name:
+        type: string
+        example: Standard Vacation Group
+      description:
+        type: string
+        x-nullable: true
+      basis:
+        type: string
+        enum:
+          - calendar_year
+          - entry_date
+        description: 'Vacation year basis: calendar_year (Jan-Dec) or entry_date (hire anniversary)'
+        example: calendar_year
+      is_active:
+        type: boolean
+        example: true
+      special_calculations:
+        type: array
+        items:
+          $ref: '#/definitions/VacationSpecialCalculationSummary'
+        description: Special calculations linked to this group
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  VacationCalculationGroupSummary:
+    type: object
+    required:
+      - id
+      - code
+      - name
+      - basis
+    properties:
+      id:
+        type: string
+        format: uuid
+      code:
+        type: string
+      name:
+        type: string
+      basis:
+        type: string
+        enum:
+          - calendar_year
+          - entry_date
+  CreateVacationCalculationGroupRequest:
+    type: object
+    required:
+      - code
+      - name
+    properties:
+      code:
+        type: string
+        minLength: 1
+        maxLength: 50
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      description:
+        type: string
+      basis:
+        type: string
+        enum:
+          - calendar_year
+          - entry_date
+        default: calendar_year
+      special_calculation_ids:
+        type: array
+        items:
+          type: string
+          format: uuid
+        description: IDs of special calculations to link to this group
+  UpdateVacationCalculationGroupRequest:
+    type: object
+    properties:
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      description:
+        type: string
+      basis:
+        type: string
+        enum:
+          - calendar_year
+          - entry_date
+      is_active:
+        type: boolean
+      special_calculation_ids:
+        type: array
+        items:
+          type: string
+          format: uuid
+        description: Replace linked special calculations with this set
+  VacationCalculationGroupList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/VacationCalculationGroup'
+  VacationEntitlementPreviewRequest:
+    type: object
+    required:
+      - employee_id
+      - year
+    properties:
+      employee_id:
+        type: string
+        format: uuid
+      year:
+        type: integer
+        example: 2026
+      calculation_group_id:
+        type: string
+        format: uuid
+        description: 'Optional override: use this group instead of the employee''s employment type group'
+  VacationEntitlementPreview:
+    type: object
+    required:
+      - employee_id
+      - year
+    properties:
+      employee_id:
+        type: string
+        format: uuid
+      employee_name:
+        type: string
+        description: Employee display name for convenience
+      year:
+        type: integer
+      basis:
+        type: string
+        enum:
+          - calendar_year
+          - entry_date
+      calculation_group_id:
+        type: string
+        format: uuid
+        x-nullable: true
+      calculation_group_name:
+        type: string
+        x-nullable: true
+      base_entitlement:
+        type: number
+        format: double
+        description: Full-year base vacation days from tariff/employee
+      pro_rated_entitlement:
+        type: number
+        format: double
+        description: After pro-rating for months employed
+      part_time_adjustment:
+        type: number
+        format: double
+        description: After part-time factor adjustment
+      age_bonus:
+        type: number
+        format: double
+        description: Bonus days from age special calculations
+      tenure_bonus:
+        type: number
+        format: double
+        description: Bonus days from tenure special calculations
+      disability_bonus:
+        type: number
+        format: double
+        description: Bonus days from disability special calculations
+      total_entitlement:
+        type: number
+        format: double
+        description: Final entitlement (rounded to nearest 0.5)
+      months_employed:
+        type: integer
+        description: Number of months employed in the year
+      age_at_reference:
+        type: integer
+        description: Employee age at reference date
+      tenure_years:
+        type: integer
+        description: Years of service at reference date
+      weekly_hours:
+        type: number
+        format: double
+        description: Employee weekly hours
+      standard_weekly_hours:
+        type: number
+        format: double
+        description: Standard full-time weekly hours
+      part_time_factor:
+        type: number
+        format: double
+        description: Part-time factor (weekly_hours / standard_weekly_hours)
 responses:
   BadRequest:
     description: Invalid request

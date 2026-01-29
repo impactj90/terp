@@ -1,0 +1,119 @@
+# Vacation Special Calculation endpoints
+/vacation-special-calculations:
+  get:
+    tags:
+      - Vacation Special Calculations
+    summary: List vacation special calculations
+    operationId: listVacationSpecialCalculations
+    parameters:
+      - name: active_only
+        in: query
+        type: boolean
+        description: Filter to only active special calculations
+      - name: type
+        in: query
+        type: string
+        enum: [age, tenure, disability]
+        description: Filter by special calculation type
+    responses:
+      200:
+        description: List of vacation special calculations
+        schema:
+          $ref: '../schemas/vacation-special-calculations.yaml#/VacationSpecialCalculationList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Vacation Special Calculations
+    summary: Create vacation special calculation
+    operationId: createVacationSpecialCalculation
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/vacation-special-calculations.yaml#/CreateVacationSpecialCalculationRequest'
+    responses:
+      201:
+        description: Created vacation special calculation
+        schema:
+          $ref: '../schemas/vacation-special-calculations.yaml#/VacationSpecialCalculation'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Duplicate type+threshold combination for this tenant
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/vacation-special-calculations/{id}:
+  get:
+    tags:
+      - Vacation Special Calculations
+    summary: Get vacation special calculation by ID
+    operationId: getVacationSpecialCalculation
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Vacation special calculation details
+        schema:
+          $ref: '../schemas/vacation-special-calculations.yaml#/VacationSpecialCalculation'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Vacation Special Calculations
+    summary: Update vacation special calculation
+    operationId: updateVacationSpecialCalculation
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/vacation-special-calculations.yaml#/UpdateVacationSpecialCalculationRequest'
+    responses:
+      200:
+        description: Updated vacation special calculation
+        schema:
+          $ref: '../schemas/vacation-special-calculations.yaml#/VacationSpecialCalculation'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Vacation Special Calculations
+    summary: Delete vacation special calculation
+    operationId: deleteVacationSpecialCalculation
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Vacation special calculation deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+      409:
+        description: Special calculation is still assigned to calculation groups
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
