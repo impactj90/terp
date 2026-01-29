@@ -631,3 +631,114 @@ func TestCalculator_MinimumBreakFull(t *testing.T) {
 	assert.Equal(t, 30, result.BreakTime) // Capped at Duration
 	assert.Equal(t, 510, result.NetTime)
 }
+
+func TestCalculator_RoundAllBookingsFalse(t *testing.T) {
+	// When RoundAllBookings=false (default), only first-in and last-out work bookings are rounded.
+	calc := calculation.NewCalculator()
+	in1 := uuid.New()
+	out1 := uuid.New()
+	in2 := uuid.New()
+	out2 := uuid.New()
+
+	input := calculation.CalculationInput{
+		EmployeeID: uuid.New(),
+		Date:       time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
+		Bookings: []calculation.BookingInput{
+			{ID: in1, Time: 483, Direction: calculation.DirectionIn, Category: calculation.CategoryWork},    // 08:03
+			{ID: out1, Time: 723, Direction: calculation.DirectionOut, Category: calculation.CategoryBreak}, // 12:03
+			{ID: in2, Time: 753, Direction: calculation.DirectionIn, Category: calculation.CategoryBreak},   // 12:33
+			{ID: out2, Time: 1017, Direction: calculation.DirectionOut, Category: calculation.CategoryWork}, // 16:57
+		},
+		DayPlan: calculation.DayPlanInput{
+			RegularHours:    480,
+			RoundAllBookings: false,
+			RoundingCome:    &calculation.RoundingConfig{Type: calculation.RoundingUp, Interval: 15},
+			RoundingGo:      &calculation.RoundingConfig{Type: calculation.RoundingDown, Interval: 15},
+		},
+	}
+
+	result := calc.Calculate(input)
+
+	// First-in (08:03) rounded up to 08:15 = 495
+	assert.Equal(t, 495, result.CalculatedTimes[in1])
+	// Break out (12:03) NOT rounded (intermediate booking)
+	assert.Equal(t, 723, result.CalculatedTimes[out1])
+	// Break in (12:33) NOT rounded (intermediate booking)
+	assert.Equal(t, 753, result.CalculatedTimes[in2])
+	// Last-out (16:57) rounded down to 16:45 = 1005
+	assert.Equal(t, 1005, result.CalculatedTimes[out2])
+}
+
+func TestCalculator_RoundAllBookingsTrue(t *testing.T) {
+	// When RoundAllBookings=true, all work bookings are rounded.
+	calc := calculation.NewCalculator()
+	in1 := uuid.New()
+	out1 := uuid.New()
+	in2 := uuid.New()
+	out2 := uuid.New()
+
+	input := calculation.CalculationInput{
+		EmployeeID: uuid.New(),
+		Date:       time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
+		Bookings: []calculation.BookingInput{
+			{ID: in1, Time: 483, Direction: calculation.DirectionIn, Category: calculation.CategoryWork},    // 08:03
+			{ID: out1, Time: 723, Direction: calculation.DirectionOut, Category: calculation.CategoryWork},  // 12:03 (work out, not break)
+			{ID: in2, Time: 753, Direction: calculation.DirectionIn, Category: calculation.CategoryWork},    // 12:33 (work in, not break)
+			{ID: out2, Time: 1017, Direction: calculation.DirectionOut, Category: calculation.CategoryWork}, // 16:57
+		},
+		DayPlan: calculation.DayPlanInput{
+			RegularHours:    480,
+			RoundAllBookings: true,
+			RoundingCome:    &calculation.RoundingConfig{Type: calculation.RoundingUp, Interval: 15},
+			RoundingGo:      &calculation.RoundingConfig{Type: calculation.RoundingDown, Interval: 15},
+		},
+	}
+
+	result := calc.Calculate(input)
+
+	// All in-bookings rounded up to nearest 15: 08:03 → 08:15 = 495
+	assert.Equal(t, 495, result.CalculatedTimes[in1])
+	// All out-bookings rounded down to nearest 15: 12:03 → 12:00 = 720
+	assert.Equal(t, 720, result.CalculatedTimes[out1])
+	// All in-bookings rounded up: 12:33 → 12:45 = 765
+	assert.Equal(t, 765, result.CalculatedTimes[in2])
+	// All out-bookings rounded down: 16:57 → 16:45 = 1005
+	assert.Equal(t, 1005, result.CalculatedTimes[out2])
+}
+
+func TestCalculator_RoundAllBookingsDefault(t *testing.T) {
+	// Default (zero value) for RoundAllBookings is false, so only first/last are rounded.
+	calc := calculation.NewCalculator()
+	in1 := uuid.New()
+	out1 := uuid.New()
+	in2 := uuid.New()
+	out2 := uuid.New()
+
+	input := calculation.CalculationInput{
+		EmployeeID: uuid.New(),
+		Date:       time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
+		Bookings: []calculation.BookingInput{
+			{ID: in1, Time: 487, Direction: calculation.DirectionIn, Category: calculation.CategoryWork},    // 08:07
+			{ID: out1, Time: 727, Direction: calculation.DirectionOut, Category: calculation.CategoryBreak}, // 12:07
+			{ID: in2, Time: 757, Direction: calculation.DirectionIn, Category: calculation.CategoryBreak},   // 12:37
+			{ID: out2, Time: 1013, Direction: calculation.DirectionOut, Category: calculation.CategoryWork}, // 16:53
+		},
+		DayPlan: calculation.DayPlanInput{
+			RegularHours: 480,
+			// RoundAllBookings not set - defaults to false
+			RoundingCome: &calculation.RoundingConfig{Type: calculation.RoundingUp, Interval: 15},
+			RoundingGo:   &calculation.RoundingConfig{Type: calculation.RoundingDown, Interval: 15},
+		},
+	}
+
+	result := calc.Calculate(input)
+
+	// First-in (08:07) rounded up to 08:15 = 495
+	assert.Equal(t, 495, result.CalculatedTimes[in1])
+	// Break out (12:07) NOT rounded
+	assert.Equal(t, 727, result.CalculatedTimes[out1])
+	// Break in (12:37) NOT rounded
+	assert.Equal(t, 757, result.CalculatedTimes[in2])
+	// Last-out (16:53) rounded down to 16:45 = 1005
+	assert.Equal(t, 1005, result.CalculatedTimes[out2])
+}

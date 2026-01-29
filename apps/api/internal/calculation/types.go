@@ -115,6 +115,11 @@ type DayPlanInput struct {
 	// VariableWorkTime enables tolerance_come_minus for evaluation window capping
 	// ZMI: variable Arbeitszeit
 	VariableWorkTime bool
+
+	// RoundAllBookings applies rounding to every in/out booking.
+	// When false (default), only the first arrival and last departure are rounded.
+	// ZMI: Alle Buchungen runden
+	RoundAllBookings bool
 }
 
 // CalculationInput contains all data needed for a day's calculation.

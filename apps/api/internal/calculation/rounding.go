@@ -1,5 +1,10 @@
 package calculation
 
+// TODO(ZMI-TICKET-023): Add support for rounding relative to plan start time.
+// When system settings enable relative rounding, the rounding grid should be
+// anchored at the planned start time (e.g., ComeFrom) instead of absolute
+// clock intervals (00:00). Requires system settings service from ZMI-TICKET-023.
+
 // RoundTime applies rounding to a time value based on configuration.
 // Returns the original time if config is nil or has RoundingNone type.
 //

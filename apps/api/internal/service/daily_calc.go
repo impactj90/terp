@@ -14,53 +14,6 @@ import (
 	"github.com/tolga/terp/internal/model"
 )
 
-// HolidayCreditCategory represents how holidays credit time.
-// ZMI: Zeitgutschrift an Feiertagen
-type HolidayCreditCategory int
-
-const (
-	// HolidayCreditTarget - Credit target time (Sollzeit)
-	// ZMI: Kategorie 1
-	HolidayCreditTarget HolidayCreditCategory = 1
-
-	// HolidayCreditAverage - Credit average time (Durchschnittszeit)
-	// ZMI: Kategorie 2 - BLOCKED by TICKET-127
-	HolidayCreditAverage HolidayCreditCategory = 2
-
-	// HolidayCreditNone - No credit on holidays
-	// ZMI: Kategorie 3
-	HolidayCreditNone HolidayCreditCategory = 3
-)
-
-// NoBookingBehavior defines how to handle days without bookings.
-// ZMI: Tage ohne Buchungen
-type NoBookingBehavior string
-
-const (
-	NoBookingError        NoBookingBehavior = "error"
-	NoBookingCreditTarget NoBookingBehavior = "credit_target"
-	NoBookingCreditZero   NoBookingBehavior = "credit_zero"
-	NoBookingSkip         NoBookingBehavior = "skip"
-	NoBookingUseAbsence   NoBookingBehavior = "use_absence"
-)
-
-// DailyCalcConfig contains ZMI configuration for daily calculation.
-// NOTE: These settings should come from DayPlan once NOK-145 adds the fields.
-// For now, defaults are used.
-type DailyCalcConfig struct {
-	HolidayCredit     HolidayCreditCategory
-	NoBookingBehavior NoBookingBehavior
-}
-
-// DefaultDailyCalcConfig returns sensible defaults until NOK-145 adds
-// the ZMI fields to day_plans table.
-func DefaultDailyCalcConfig() *DailyCalcConfig {
-	return &DailyCalcConfig{
-		HolidayCredit:     HolidayCreditTarget,
-		NoBookingBehavior: NoBookingError,
-	}
-}
-
 const autoCompleteNotes = "Auto-complete day change"
 
 // bookingRepository defines the interface for booking data access.
@@ -94,6 +47,16 @@ type holidayLookup interface {
 	GetByDate(ctx context.Context, tenantID uuid.UUID, date time.Time) (*model.Holiday, error)
 }
 
+// employeeLookup provides employee data for daily calculation.
+type employeeLookup interface {
+	GetByID(ctx context.Context, id uuid.UUID) (*model.Employee, error)
+}
+
+// absenceDayLookup checks for absence days during daily calculation.
+type absenceDayLookup interface {
+	GetByEmployeeDate(ctx context.Context, employeeID uuid.UUID, date time.Time) (*model.AbsenceDay, error)
+}
+
 // DailyCalcService orchestrates daily time calculations.
 type DailyCalcService struct {
 	bookingRepo     bookingRepository
@@ -101,6 +64,8 @@ type DailyCalcService struct {
 	dayPlanRepo     dayPlanLookup
 	dailyValueRepo  dailyValueRepository
 	holidayRepo     holidayLookup
+	employeeRepo    employeeLookup
+	absenceDayRepo  absenceDayLookup
 	calc            *calculation.Calculator
 	notificationSvc *NotificationService
 }
@@ -112,6 +77,8 @@ func NewDailyCalcService(
 	dayPlanRepo dayPlanLookup,
 	dailyValueRepo dailyValueRepository,
 	holidayRepo holidayLookup,
+	employeeRepo employeeLookup,
+	absenceDayRepo absenceDayLookup,
 ) *DailyCalcService {
 	return &DailyCalcService{
 		bookingRepo:    bookingRepo,
@@ -119,6 +86,8 @@ func NewDailyCalcService(
 		dayPlanRepo:    dayPlanRepo,
 		dailyValueRepo: dailyValueRepo,
 		holidayRepo:    holidayRepo,
+		employeeRepo:   employeeRepo,
+		absenceDayRepo: absenceDayRepo,
 		calc:           calculation.NewCalculator(),
 	}
 }
@@ -128,12 +97,41 @@ func (s *DailyCalcService) SetNotificationService(notificationSvc *NotificationS
 	s.notificationSvc = notificationSvc
 }
 
+// TODO(ZMI-TICKET-006): Verify vacation deduction integration.
+// The VacationDeduction field on the day plan should be used by the absence
+// service when deducting vacation balance. Verify this integration when
+// absence workflow tickets are implemented.
+
+// resolveTargetHours resolves the effective target hours for a day using the ZMI priority chain:
+// 1. Employee master (DailyTargetHours) if day plan has FromEmployeeMaster=true
+// 2. RegularHours2 if the day is an absence day
+// 3. RegularHours (default)
+func (s *DailyCalcService) resolveTargetHours(ctx context.Context, employeeID uuid.UUID, date time.Time, dp *model.DayPlan) int {
+	if dp == nil {
+		return 0
+	}
+
+	var employeeTargetMinutes *int
+	if dp.FromEmployeeMaster {
+		emp, err := s.employeeRepo.GetByID(ctx, employeeID)
+		if err == nil && emp != nil && emp.DailyTargetHours != nil {
+			minutes := int(emp.DailyTargetHours.InexactFloat64() * 60)
+			employeeTargetMinutes = &minutes
+		}
+	}
+
+	isAbsenceDay := false
+	absence, err := s.absenceDayRepo.GetByEmployeeDate(ctx, employeeID, date)
+	if err == nil && absence != nil && absence.IsApproved() {
+		isAbsenceDay = true
+	}
+
+	return dp.GetEffectiveRegularHours(isAbsenceDay, employeeTargetMinutes)
+}
+
 // CalculateDay performs daily calculation for an employee on a specific date.
 // Returns the calculated DailyValue (persisted) or nil if calculation should be skipped.
 func (s *DailyCalcService) CalculateDay(ctx context.Context, tenantID, employeeID uuid.UUID, date time.Time) (*model.DailyValue, error) {
-	// Use defaults until NOK-145 adds ZMI fields to day_plans
-	config := DefaultDailyCalcConfig()
-
 	// 1. Check for holiday
 	holiday, _ := s.holidayRepo.GetByDate(ctx, tenantID, date)
 	isHoliday := holiday != nil
@@ -162,10 +160,10 @@ func (s *DailyCalcService) CalculateDay(ctx context.Context, tenantID, employeeI
 		dailyValue = s.handleOffDay(employeeID, date, bookings)
 	} else if isHoliday && len(bookings) == 0 {
 		// Holiday without bookings - apply holiday credit
-		dailyValue = s.handleHolidayCredit(employeeID, date, empDayPlan, holidayCategory, config)
+		dailyValue = s.handleHolidayCredit(ctx, employeeID, date, empDayPlan, holidayCategory)
 	} else if len(bookings) == 0 {
 		// No bookings, no holiday - apply no-booking behavior
-		dailyValue, err = s.handleNoBookings(ctx, employeeID, date, empDayPlan, config)
+		dailyValue, err = s.handleNoBookings(ctx, employeeID, date, empDayPlan)
 		if err != nil {
 			return nil, err
 		}
@@ -275,11 +273,11 @@ func (s *DailyCalcService) handleOffDay(employeeID uuid.UUID, date time.Time, bo
 }
 
 func (s *DailyCalcService) handleHolidayCredit(
+	ctx context.Context,
 	employeeID uuid.UUID,
 	date time.Time,
 	empDayPlan *model.EmployeeDayPlan,
 	holidayCategory int,
-	config *DailyCalcConfig,
 ) *model.DailyValue {
 	now := time.Now()
 	dv := &model.DailyValue{
@@ -292,30 +290,15 @@ func (s *DailyCalcService) handleHolidayCredit(
 
 	targetTime := 0
 	if empDayPlan != nil && empDayPlan.DayPlan != nil {
-		targetTime = empDayPlan.DayPlan.RegularHours
+		targetTime = s.resolveTargetHours(ctx, employeeID, date, empDayPlan.DayPlan)
 	}
 	dv.TargetTime = targetTime
 
-	category := holidayCategory
-	if category == 0 {
-		category = int(config.HolidayCredit)
-	}
-
+	// ZMI: Use day plan credit for the holiday category.
+	// If not configured, credit 0 (per ZMI spec).
 	credit := 0
-	if empDayPlan != nil && empDayPlan.DayPlan != nil {
-		credit = empDayPlan.DayPlan.GetHolidayCredit(category)
-	}
-	if credit == 0 {
-		switch category {
-		case 1:
-			credit = targetTime
-		case 2:
-			credit = targetTime / 2
-		case 3:
-			credit = 0
-		default:
-			credit = targetTime
-		}
+	if empDayPlan != nil && empDayPlan.DayPlan != nil && holidayCategory > 0 {
+		credit = empDayPlan.DayPlan.GetHolidayCredit(holidayCategory)
 	}
 
 	dv.NetTime = credit
@@ -332,19 +315,18 @@ func (s *DailyCalcService) handleNoBookings(
 	employeeID uuid.UUID,
 	date time.Time,
 	empDayPlan *model.EmployeeDayPlan,
-	config *DailyCalcConfig,
 ) (*model.DailyValue, error) {
 	now := time.Now()
 	targetTime := 0
+	behavior := model.NoBookingError // default
 	if empDayPlan != nil && empDayPlan.DayPlan != nil {
-		targetTime = empDayPlan.DayPlan.RegularHours
+		targetTime = s.resolveTargetHours(ctx, employeeID, date, empDayPlan.DayPlan)
+		behavior = empDayPlan.DayPlan.NoBookingBehavior
 	}
 
-	switch config.NoBookingBehavior {
-	case NoBookingSkip:
-		return nil, nil
-
-	case NoBookingCreditTarget:
+	switch behavior {
+	case model.NoBookingAdoptTarget:
+		// ZMI: Sollzeit übernehmen — credit target time as if worked
 		return &model.DailyValue{
 			EmployeeID:   employeeID,
 			ValueDate:    date,
@@ -356,7 +338,8 @@ func (s *DailyCalcService) handleNoBookings(
 			CalculatedAt: &now,
 		}, nil
 
-	case NoBookingCreditZero:
+	case model.NoBookingDeductTarget:
+		// ZMI: Sollzeit abziehen — subtract target (undertime = target, no bookings)
 		return &model.DailyValue{
 			EmployeeID:   employeeID,
 			ValueDate:    date,
@@ -365,30 +348,43 @@ func (s *DailyCalcService) handleNoBookings(
 			NetTime:      0,
 			GrossTime:    0,
 			Undertime:    targetTime,
-			Warnings:     pq.StringArray{"NO_BOOKINGS_ZERO"},
+			Warnings:     pq.StringArray{"NO_BOOKINGS_DEDUCTED"},
 			CalculatedAt: &now,
 		}, nil
 
-	case NoBookingUseAbsence:
-		// TODO: Check absence when AbsenceDayRepository exists (NOK-132-137)
-		// For now, fall through to error with warning
+	case model.NoBookingVocationalSchool:
+		// ZMI: Berufsschule — auto-create absence for past dates
+		// TODO: Create absence day of configured type when absence workflow is integrated
+		// For now, credit target time (vocational school days count as worked)
 		return &model.DailyValue{
 			EmployeeID:   employeeID,
 			ValueDate:    date,
-			Status:       model.DailyValueStatusError,
+			Status:       model.DailyValueStatusCalculated,
 			TargetTime:   targetTime,
-			NetTime:      0,
-			GrossTime:    0,
-			Undertime:    targetTime,
-			HasError:     true,
-			ErrorCodes:   pq.StringArray{"NO_BOOKINGS"},
-			Warnings:     pq.StringArray{"ABSENCE_NOT_IMPLEMENTED"},
+			NetTime:      targetTime,
+			GrossTime:    targetTime,
+			Warnings:     pq.StringArray{"VOCATIONAL_SCHOOL", "ABSENCE_CREATION_NOT_IMPLEMENTED"},
 			CalculatedAt: &now,
 		}, nil
 
-	case NoBookingError:
+	case model.NoBookingTargetWithOrder:
+		// ZMI: Sollzeit mit Auftrag — credit target to default order
+		// TODO: Create order booking entry when order module is available
+		return &model.DailyValue{
+			EmployeeID:   employeeID,
+			ValueDate:    date,
+			Status:       model.DailyValueStatusCalculated,
+			TargetTime:   targetTime,
+			NetTime:      targetTime,
+			GrossTime:    targetTime,
+			Warnings:     pq.StringArray{"NO_BOOKINGS_CREDITED", "ORDER_BOOKING_NOT_IMPLEMENTED"},
+			CalculatedAt: &now,
+		}, nil
+
+	case model.NoBookingError:
 		fallthrough
 	default:
+		// ZMI: Keine Auswertung — mark as error
 		return &model.DailyValue{
 			EmployeeID:   employeeID,
 			ValueDate:    date,
@@ -789,7 +785,7 @@ func (s *DailyCalcService) calculateWithBookings(
 	}
 
 	// Build calculation input
-	input := s.buildCalcInput(employeeID, date, empDayPlan, bookings)
+	input := s.buildCalcInput(ctx, employeeID, date, empDayPlan, bookings)
 
 	// Run calculation
 	result := s.calc.Calculate(input)
@@ -819,6 +815,7 @@ func (s *DailyCalcService) calculateWithBookings(
 }
 
 func (s *DailyCalcService) buildCalcInput(
+	ctx context.Context,
 	employeeID uuid.UUID,
 	date time.Time,
 	empDayPlan *model.EmployeeDayPlan,
@@ -854,9 +851,12 @@ func (s *DailyCalcService) buildCalcInput(
 			}
 		}
 
+		// Resolve target hours using ZMI priority chain
+		regularHours := s.resolveTargetHours(ctx, employeeID, date, dp)
+
 		input.DayPlan = calculation.DayPlanInput{
 			PlanType:         dp.PlanType,
-			RegularHours:     dp.RegularHours,
+			RegularHours:     regularHours,
 			ComeFrom:         dp.ComeFrom,
 			ComeTo:           dp.ComeTo,
 			GoFrom:           dp.GoFrom,
@@ -866,6 +866,7 @@ func (s *DailyCalcService) buildCalcInput(
 			MinWorkTime:      dp.MinWorkTime,
 			MaxNetWorkTime:   dp.MaxNetWorkTime,
 			VariableWorkTime: variableWorkTime,
+			RoundAllBookings: dp.RoundAllBookings,
 			Tolerance:        tolerance,
 		}
 

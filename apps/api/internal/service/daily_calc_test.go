@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -111,6 +112,32 @@ func (m *mockHolidayLookup) GetByDate(ctx context.Context, tenantID uuid.UUID, d
 	return args.Get(0).(*model.Holiday), args.Error(1)
 }
 
+// mockEmployeeLookup implements employeeLookup for testing.
+type mockEmployeeLookup struct {
+	mock.Mock
+}
+
+func (m *mockEmployeeLookup) GetByID(ctx context.Context, id uuid.UUID) (*model.Employee, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.Employee), args.Error(1)
+}
+
+// mockAbsenceDayLookup implements absenceDayLookup for testing.
+type mockAbsenceDayLookup struct {
+	mock.Mock
+}
+
+func (m *mockAbsenceDayLookup) GetByEmployeeDate(ctx context.Context, employeeID uuid.UUID, date time.Time) (*model.AbsenceDay, error) {
+	args := m.Called(ctx, employeeID, date)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.AbsenceDay), args.Error(1)
+}
+
 // Helper functions for tests
 func testDate(year, month, day int) time.Time {
 	return time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
@@ -130,10 +157,13 @@ func newTestService(
 	if dayPlanRepo == nil {
 		dayPlanRepo = new(mockDayPlanRepository)
 	}
+	employeeRepo := new(mockEmployeeLookup)
+	absenceDayRepo := new(mockAbsenceDayLookup)
+	absenceDayRepo.On("GetByEmployeeDate", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 	if dailyValueRepo != nil {
 		dailyValueRepo.On("GetByEmployeeDate", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 	}
-	return NewDailyCalcService(bookingRepo, empDayPlanRepo, dayPlanRepo, dailyValueRepo, holidayRepo)
+	return NewDailyCalcService(bookingRepo, empDayPlanRepo, dayPlanRepo, dailyValueRepo, holidayRepo, employeeRepo, absenceDayRepo)
 }
 
 func createStandardDayPlan(tenantID uuid.UUID) *model.DayPlan {
@@ -351,10 +381,12 @@ func TestCalculateDay_Holiday_CreditTarget(t *testing.T) {
 		TenantID:    tenantID,
 		HolidayDate: date,
 		Name:        "New Year's Day",
+		Category:    1,
 	}
 
-	// Day plan with 8 hour target
+	// Day plan with 8 hour target and holiday credit cat1 configured
 	dayPlan := createStandardDayPlan(tenantID)
+	dayPlan.HolidayCreditCat1 = intPtr(480) // Full target credit for category 1 holidays
 	dayPlanID := dayPlan.ID
 	empDayPlan := &model.EmployeeDayPlan{
 		ID:         uuid.New(),
@@ -538,49 +570,27 @@ func TestRecalculateRange(t *testing.T) {
 	assert.Equal(t, 3, count)
 }
 
-func TestHandleNoBookings_Skip(t *testing.T) {
+func TestHandleNoBookings_AdoptTarget(t *testing.T) {
 	ctx := context.Background()
 	employeeID := uuid.New()
 	date := testDate(2026, 1, 20)
 
-	svc := &DailyCalcService{}
-
-	config := &DailyCalcConfig{
-		NoBookingBehavior: NoBookingSkip,
+	absenceDayRepo := new(mockAbsenceDayLookup)
+	absenceDayRepo.On("GetByEmployeeDate", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
+	svc := &DailyCalcService{
+		employeeRepo:   new(mockEmployeeLookup),
+		absenceDayRepo: absenceDayRepo,
 	}
 
 	dayPlan := createStandardDayPlan(uuid.New())
+	dayPlan.NoBookingBehavior = model.NoBookingAdoptTarget
 	dayPlanID := dayPlan.ID
 	empDayPlan := &model.EmployeeDayPlan{
 		DayPlanID: &dayPlanID,
 		DayPlan:   dayPlan,
 	}
 
-	result, err := svc.handleNoBookings(ctx, employeeID, date, empDayPlan, config)
-
-	require.NoError(t, err)
-	assert.Nil(t, result) // Should return nil to indicate skip
-}
-
-func TestHandleNoBookings_CreditTarget(t *testing.T) {
-	ctx := context.Background()
-	employeeID := uuid.New()
-	date := testDate(2026, 1, 20)
-
-	svc := &DailyCalcService{}
-
-	config := &DailyCalcConfig{
-		NoBookingBehavior: NoBookingCreditTarget,
-	}
-
-	dayPlan := createStandardDayPlan(uuid.New())
-	dayPlanID := dayPlan.ID
-	empDayPlan := &model.EmployeeDayPlan{
-		DayPlanID: &dayPlanID,
-		DayPlan:   dayPlan,
-	}
-
-	result, err := svc.handleNoBookings(ctx, employeeID, date, empDayPlan, config)
+	result, err := svc.handleNoBookings(ctx, employeeID, date, empDayPlan)
 
 	require.NoError(t, err)
 	require.NotNil(t, result)
@@ -590,25 +600,27 @@ func TestHandleNoBookings_CreditTarget(t *testing.T) {
 	assert.Contains(t, []string(result.Warnings), "NO_BOOKINGS_CREDITED")
 }
 
-func TestHandleNoBookings_CreditZero(t *testing.T) {
+func TestHandleNoBookings_DeductTarget(t *testing.T) {
 	ctx := context.Background()
 	employeeID := uuid.New()
 	date := testDate(2026, 1, 20)
 
-	svc := &DailyCalcService{}
-
-	config := &DailyCalcConfig{
-		NoBookingBehavior: NoBookingCreditZero,
+	absenceDayRepo := new(mockAbsenceDayLookup)
+	absenceDayRepo.On("GetByEmployeeDate", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
+	svc := &DailyCalcService{
+		employeeRepo:   new(mockEmployeeLookup),
+		absenceDayRepo: absenceDayRepo,
 	}
 
 	dayPlan := createStandardDayPlan(uuid.New())
+	dayPlan.NoBookingBehavior = model.NoBookingDeductTarget
 	dayPlanID := dayPlan.ID
 	empDayPlan := &model.EmployeeDayPlan{
 		DayPlanID: &dayPlanID,
 		DayPlan:   dayPlan,
 	}
 
-	result, err := svc.handleNoBookings(ctx, employeeID, date, empDayPlan, config)
+	result, err := svc.handleNoBookings(ctx, employeeID, date, empDayPlan)
 
 	require.NoError(t, err)
 	require.NotNil(t, result)
@@ -616,54 +628,58 @@ func TestHandleNoBookings_CreditZero(t *testing.T) {
 	assert.Equal(t, 0, result.NetTime)
 	assert.Equal(t, 0, result.GrossTime)
 	assert.Equal(t, 480, result.Undertime)
-	assert.Contains(t, []string(result.Warnings), "NO_BOOKINGS_ZERO")
+	assert.Contains(t, []string(result.Warnings), "NO_BOOKINGS_DEDUCTED")
 }
 
-func TestHandleNoBookings_UseAbsence(t *testing.T) {
+func TestHandleNoBookings_Error(t *testing.T) {
 	ctx := context.Background()
 	employeeID := uuid.New()
 	date := testDate(2026, 1, 20)
 
-	svc := &DailyCalcService{}
-
-	config := &DailyCalcConfig{
-		NoBookingBehavior: NoBookingUseAbsence,
+	absenceDayRepo := new(mockAbsenceDayLookup)
+	absenceDayRepo.On("GetByEmployeeDate", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
+	svc := &DailyCalcService{
+		employeeRepo:   new(mockEmployeeLookup),
+		absenceDayRepo: absenceDayRepo,
 	}
 
 	dayPlan := createStandardDayPlan(uuid.New())
+	dayPlan.NoBookingBehavior = model.NoBookingError
 	dayPlanID := dayPlan.ID
 	empDayPlan := &model.EmployeeDayPlan{
 		DayPlanID: &dayPlanID,
 		DayPlan:   dayPlan,
 	}
 
-	result, err := svc.handleNoBookings(ctx, employeeID, date, empDayPlan, config)
+	result, err := svc.handleNoBookings(ctx, employeeID, date, empDayPlan)
 
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	assert.True(t, result.HasError)
 	assert.Contains(t, []string(result.ErrorCodes), "NO_BOOKINGS")
-	assert.Contains(t, []string(result.Warnings), "ABSENCE_NOT_IMPLEMENTED")
 }
 
-func TestHandleHolidayCredit_Category3(t *testing.T) {
+func TestHandleHolidayCredit_Category3_NoCredit(t *testing.T) {
+	ctx := context.Background()
 	employeeID := uuid.New()
 	date := testDate(2026, 1, 1)
 
-	svc := &DailyCalcService{}
-
-	config := &DailyCalcConfig{
-		HolidayCredit: HolidayCreditNone,
+	absenceDayRepo := new(mockAbsenceDayLookup)
+	absenceDayRepo.On("GetByEmployeeDate", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
+	svc := &DailyCalcService{
+		employeeRepo:   new(mockEmployeeLookup),
+		absenceDayRepo: absenceDayRepo,
 	}
 
 	dayPlan := createStandardDayPlan(uuid.New())
+	// No holiday credit configured — should credit 0 per ZMI spec
 	dayPlanID := dayPlan.ID
 	empDayPlan := &model.EmployeeDayPlan{
 		DayPlanID: &dayPlanID,
 		DayPlan:   dayPlan,
 	}
 
-	result := svc.handleHolidayCredit(employeeID, date, empDayPlan, 3, config)
+	result := svc.handleHolidayCredit(ctx, employeeID, date, empDayPlan, 3)
 
 	require.NotNil(t, result)
 	assert.Equal(t, 480, result.TargetTime)
@@ -673,24 +689,117 @@ func TestHandleHolidayCredit_Category3(t *testing.T) {
 	assert.Contains(t, []string(result.Warnings), "HOLIDAY")
 }
 
-func TestHandleHolidayCredit_Category2(t *testing.T) {
+func TestHandleHolidayCredit_Category1_WithCredit(t *testing.T) {
+	ctx := context.Background()
 	employeeID := uuid.New()
 	date := testDate(2026, 1, 1)
 
-	svc := &DailyCalcService{}
-
-	config := &DailyCalcConfig{
-		HolidayCredit: HolidayCreditAverage,
+	absenceDayRepo := new(mockAbsenceDayLookup)
+	absenceDayRepo.On("GetByEmployeeDate", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
+	svc := &DailyCalcService{
+		employeeRepo:   new(mockEmployeeLookup),
+		absenceDayRepo: absenceDayRepo,
 	}
 
 	dayPlan := createStandardDayPlan(uuid.New())
+	dayPlan.HolidayCreditCat1 = intPtr(480) // Full day credit
 	dayPlanID := dayPlan.ID
 	empDayPlan := &model.EmployeeDayPlan{
 		DayPlanID: &dayPlanID,
 		DayPlan:   dayPlan,
 	}
 
-	result := svc.handleHolidayCredit(employeeID, date, empDayPlan, 2, config)
+	result := svc.handleHolidayCredit(ctx, employeeID, date, empDayPlan, 1)
+
+	require.NotNil(t, result)
+	assert.Equal(t, 480, result.TargetTime)
+	assert.Equal(t, 480, result.NetTime)
+	assert.Equal(t, 480, result.GrossTime)
+	assert.Equal(t, 0, result.Undertime)
+	assert.Contains(t, []string(result.Warnings), "HOLIDAY")
+}
+
+func TestHandleNoBookings_VocationalSchool(t *testing.T) {
+	ctx := context.Background()
+	employeeID := uuid.New()
+	date := testDate(2026, 1, 20)
+
+	absenceDayRepo := new(mockAbsenceDayLookup)
+	absenceDayRepo.On("GetByEmployeeDate", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
+	svc := &DailyCalcService{
+		employeeRepo:   new(mockEmployeeLookup),
+		absenceDayRepo: absenceDayRepo,
+	}
+
+	dayPlan := createStandardDayPlan(uuid.New())
+	dayPlan.NoBookingBehavior = model.NoBookingVocationalSchool
+	dayPlanID := dayPlan.ID
+	empDayPlan := &model.EmployeeDayPlan{
+		DayPlanID: &dayPlanID,
+		DayPlan:   dayPlan,
+	}
+
+	result, err := svc.handleNoBookings(ctx, employeeID, date, empDayPlan)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Equal(t, 480, result.TargetTime)
+	assert.Equal(t, 480, result.NetTime)
+	assert.Equal(t, 480, result.GrossTime)
+	assert.Contains(t, []string(result.Warnings), "VOCATIONAL_SCHOOL")
+}
+
+func TestHandleNoBookings_TargetWithOrder(t *testing.T) {
+	ctx := context.Background()
+	employeeID := uuid.New()
+	date := testDate(2026, 1, 20)
+
+	absenceDayRepo := new(mockAbsenceDayLookup)
+	absenceDayRepo.On("GetByEmployeeDate", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
+	svc := &DailyCalcService{
+		employeeRepo:   new(mockEmployeeLookup),
+		absenceDayRepo: absenceDayRepo,
+	}
+
+	dayPlan := createStandardDayPlan(uuid.New())
+	dayPlan.NoBookingBehavior = model.NoBookingTargetWithOrder
+	dayPlanID := dayPlan.ID
+	empDayPlan := &model.EmployeeDayPlan{
+		DayPlanID: &dayPlanID,
+		DayPlan:   dayPlan,
+	}
+
+	result, err := svc.handleNoBookings(ctx, employeeID, date, empDayPlan)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Equal(t, 480, result.TargetTime)
+	assert.Equal(t, 480, result.NetTime)
+	assert.Equal(t, 480, result.GrossTime)
+	assert.Contains(t, []string(result.Warnings), "ORDER_BOOKING_NOT_IMPLEMENTED")
+}
+
+func TestHandleHolidayCredit_Category2_WithCredit(t *testing.T) {
+	ctx := context.Background()
+	employeeID := uuid.New()
+	date := testDate(2026, 1, 1)
+
+	absenceDayRepo := new(mockAbsenceDayLookup)
+	absenceDayRepo.On("GetByEmployeeDate", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
+	svc := &DailyCalcService{
+		employeeRepo:   new(mockEmployeeLookup),
+		absenceDayRepo: absenceDayRepo,
+	}
+
+	dayPlan := createStandardDayPlan(uuid.New())
+	dayPlan.HolidayCreditCat2 = intPtr(240) // Half day credit for category 2
+	dayPlanID := dayPlan.ID
+	empDayPlan := &model.EmployeeDayPlan{
+		DayPlanID: &dayPlanID,
+		DayPlan:   dayPlan,
+	}
+
+	result := svc.handleHolidayCredit(ctx, employeeID, date, empDayPlan, 2)
 
 	require.NotNil(t, result)
 	assert.Equal(t, 480, result.TargetTime)
@@ -700,19 +809,128 @@ func TestHandleHolidayCredit_Category2(t *testing.T) {
 	assert.Contains(t, []string(result.Warnings), "HOLIDAY")
 }
 
-func TestDefaultDailyCalcConfig(t *testing.T) {
-	config := DefaultDailyCalcConfig()
+func TestResolveTargetHours_EmployeeMaster(t *testing.T) {
+	ctx := context.Background()
+	employeeID := uuid.New()
+	date := testDate(2026, 1, 20)
 
-	assert.Equal(t, HolidayCreditTarget, config.HolidayCredit)
-	assert.Equal(t, NoBookingError, config.NoBookingBehavior)
+	dailyTarget := decimal.NewFromFloat(7.5)
+	emp := &model.Employee{
+		ID:               employeeID,
+		DailyTargetHours: &dailyTarget,
+	}
+
+	employeeRepo := new(mockEmployeeLookup)
+	employeeRepo.On("GetByID", ctx, employeeID).Return(emp, nil)
+	absenceDayRepo := new(mockAbsenceDayLookup)
+	absenceDayRepo.On("GetByEmployeeDate", ctx, employeeID, date).Return(nil, nil)
+
+	svc := &DailyCalcService{
+		employeeRepo:   employeeRepo,
+		absenceDayRepo: absenceDayRepo,
+	}
+
+	dp := createStandardDayPlan(uuid.New())
+	dp.FromEmployeeMaster = true
+
+	result := svc.resolveTargetHours(ctx, employeeID, date, dp)
+	assert.Equal(t, 450, result) // 7.5 * 60
+}
+
+func TestResolveTargetHours_RegularHours2OnAbsenceDay(t *testing.T) {
+	ctx := context.Background()
+	employeeID := uuid.New()
+	date := testDate(2026, 1, 20)
+
+	absence := &model.AbsenceDay{
+		EmployeeID:  employeeID,
+		AbsenceDate: date,
+		Status:      model.AbsenceStatusApproved,
+	}
+
+	employeeRepo := new(mockEmployeeLookup)
+	absenceDayRepo := new(mockAbsenceDayLookup)
+	absenceDayRepo.On("GetByEmployeeDate", ctx, employeeID, date).Return(absence, nil)
+
+	svc := &DailyCalcService{
+		employeeRepo:   employeeRepo,
+		absenceDayRepo: absenceDayRepo,
+	}
+
+	dp := createStandardDayPlan(uuid.New())
+	dp.RegularHours2 = intPtr(360)
+
+	result := svc.resolveTargetHours(ctx, employeeID, date, dp)
+	assert.Equal(t, 360, result)
+}
+
+func TestResolveTargetHours_FallsBackToRegularHours(t *testing.T) {
+	ctx := context.Background()
+	employeeID := uuid.New()
+	date := testDate(2026, 1, 20)
+
+	employeeRepo := new(mockEmployeeLookup)
+	absenceDayRepo := new(mockAbsenceDayLookup)
+	absenceDayRepo.On("GetByEmployeeDate", ctx, employeeID, date).Return(nil, nil)
+
+	svc := &DailyCalcService{
+		employeeRepo:   employeeRepo,
+		absenceDayRepo: absenceDayRepo,
+	}
+
+	dp := createStandardDayPlan(uuid.New())
+
+	result := svc.resolveTargetHours(ctx, employeeID, date, dp)
+	assert.Equal(t, 480, result) // Standard RegularHours
+}
+
+func TestResolveTargetHours_EmployeeMasterTakesPriority(t *testing.T) {
+	ctx := context.Background()
+	employeeID := uuid.New()
+	date := testDate(2026, 1, 20)
+
+	dailyTarget := decimal.NewFromFloat(7.0)
+	emp := &model.Employee{
+		ID:               employeeID,
+		DailyTargetHours: &dailyTarget,
+	}
+
+	absence := &model.AbsenceDay{
+		EmployeeID:  employeeID,
+		AbsenceDate: date,
+		Status:      model.AbsenceStatusApproved,
+	}
+
+	employeeRepo := new(mockEmployeeLookup)
+	employeeRepo.On("GetByID", ctx, employeeID).Return(emp, nil)
+	absenceDayRepo := new(mockAbsenceDayLookup)
+	absenceDayRepo.On("GetByEmployeeDate", ctx, employeeID, date).Return(absence, nil)
+
+	svc := &DailyCalcService{
+		employeeRepo:   employeeRepo,
+		absenceDayRepo: absenceDayRepo,
+	}
+
+	dp := createStandardDayPlan(uuid.New())
+	dp.FromEmployeeMaster = true
+	dp.RegularHours2 = intPtr(360) // Should be ignored because employee master takes priority
+
+	result := svc.resolveTargetHours(ctx, employeeID, date, dp)
+	assert.Equal(t, 420, result) // 7.0 * 60 = employee master wins
 }
 
 func TestBuildCalcInput_WithBreaks(t *testing.T) {
+	ctx := context.Background()
 	tenantID := uuid.New()
 	employeeID := uuid.New()
 	date := testDate(2026, 1, 20)
 
-	svc := &DailyCalcService{}
+	absenceDayRepo := new(mockAbsenceDayLookup)
+	absenceDayRepo.On("GetByEmployeeDate", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
+	svc := &DailyCalcService{
+		employeeRepo:   new(mockEmployeeLookup),
+		absenceDayRepo: absenceDayRepo,
+	}
 
 	// Day plan with breaks
 	dayPlan := createStandardDayPlan(tenantID)
@@ -751,7 +969,7 @@ func TestBuildCalcInput_WithBreaks(t *testing.T) {
 		},
 	}
 
-	input := svc.buildCalcInput(employeeID, date, empDayPlan, bookings)
+	input := svc.buildCalcInput(ctx, employeeID, date, empDayPlan, bookings)
 
 	assert.Equal(t, employeeID, input.EmployeeID)
 	assert.Equal(t, date, input.Date)
@@ -762,10 +980,16 @@ func TestBuildCalcInput_WithBreaks(t *testing.T) {
 }
 
 func TestBuildCalcInput_BreakBookings(t *testing.T) {
+	ctx := context.Background()
 	employeeID := uuid.New()
 	date := testDate(2026, 1, 20)
 
-	svc := &DailyCalcService{}
+	absenceDayRepo := new(mockAbsenceDayLookup)
+	absenceDayRepo.On("GetByEmployeeDate", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
+	svc := &DailyCalcService{
+		employeeRepo:   new(mockEmployeeLookup),
+		absenceDayRepo: absenceDayRepo,
+	}
 
 	// Bookings with break type
 	breakStartType := createBookingType(model.BookingDirectionOut, "BREAK_START")
@@ -785,7 +1009,7 @@ func TestBuildCalcInput_BreakBookings(t *testing.T) {
 		},
 	}
 
-	input := svc.buildCalcInput(employeeID, date, nil, bookings)
+	input := svc.buildCalcInput(ctx, employeeID, date, nil, bookings)
 
 	assert.Len(t, input.Bookings, 2)
 	assert.Equal(t, "break", string(input.Bookings[0].Category))

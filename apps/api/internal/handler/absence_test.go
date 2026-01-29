@@ -82,7 +82,7 @@ func setupAbsenceHandler(t *testing.T) *absenceTestContext {
 
 	// Create services
 	tariffRepo := repository.NewTariffRepository(db)
-	dailyCalcService := service.NewDailyCalcService(bookingRepo, empDayPlanRepo, dayPlanRepo, dailyValueRepo, holidayRepo)
+	dailyCalcService := service.NewDailyCalcService(bookingRepo, empDayPlanRepo, dayPlanRepo, dailyValueRepo, holidayRepo, employeeRepo, absenceDayRepo)
 	recalcService := service.NewRecalcService(dailyCalcService, employeeRepo)
 	absenceService := service.NewAbsenceService(absenceDayRepo, absenceTypeRepo, holidayRepo, empDayPlanRepo, recalcService)
 	employeeService := service.NewEmployeeService(employeeRepo, tariffRepo, empDayPlanRepo)

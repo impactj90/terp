@@ -113,7 +113,8 @@ func main() {
 	// Initialize calculation services
 	bookingRepo := repository.NewBookingRepository(db)
 	dailyValueRepo := repository.NewDailyValueRepository(db)
-	dailyCalcService := service.NewDailyCalcService(bookingRepo, empDayPlanRepo, dayPlanRepo, dailyValueRepo, holidayRepo)
+	absenceDayRepo := repository.NewAbsenceDayRepository(db)
+	dailyCalcService := service.NewDailyCalcService(bookingRepo, empDayPlanRepo, dayPlanRepo, dailyValueRepo, holidayRepo, employeeRepo, absenceDayRepo)
 	recalcService := service.NewRecalcService(dailyCalcService, employeeRepo)
 	dailyValueService := service.NewDailyValueService(dailyValueRepo)
 
@@ -121,7 +122,6 @@ func main() {
 	bookingService := service.NewBookingService(bookingRepo, bookingTypeRepo, recalcService, nil)
 
 	// Initialize AbsenceService
-	absenceDayRepo := repository.NewAbsenceDayRepository(db)
 	absenceTypeRepo := repository.NewAbsenceTypeRepository(db)
 	absenceService := service.NewAbsenceService(absenceDayRepo, absenceTypeRepo, holidayRepo, empDayPlanRepo, recalcService)
 	absenceHandler := handler.NewAbsenceHandler(absenceService, employeeService)

@@ -129,6 +129,23 @@ func (c *Calculator) processBookings(
 
 	allowEarlyTolerance := dayPlan.VariableWorkTime || dayPlan.PlanType == model.PlanTypeFlextime
 
+	// Identify first-in and last-out work booking indices for rounding scope
+	firstInIdx := -1
+	lastOutIdx := -1
+	if !dayPlan.RoundAllBookings {
+		for i, b := range bookings {
+			if b.Category != CategoryWork {
+				continue
+			}
+			if b.Direction == DirectionIn && firstInIdx == -1 {
+				firstInIdx = i
+			}
+			if b.Direction == DirectionOut {
+				lastOutIdx = i
+			}
+		}
+	}
+
 	for i, b := range bookings {
 		processed[i] = b
 		validation[i] = b
@@ -138,8 +155,10 @@ func (c *Calculator) processBookings(
 			if b.Direction == DirectionIn {
 				// Apply come tolerance using Kommen von
 				calculatedTime = ApplyComeTolerance(b.Time, dayPlan.ComeFrom, dayPlan.Tolerance)
-				// Apply come rounding
-				calculatedTime = RoundComeTime(calculatedTime, dayPlan.RoundingCome)
+				// Apply come rounding (only first-in unless RoundAllBookings)
+				if dayPlan.RoundAllBookings || i == firstInIdx {
+					calculatedTime = RoundComeTime(calculatedTime, dayPlan.RoundingCome)
+				}
 			} else {
 				// Apply go tolerance using Gehen bis (fallback to Gehen von)
 				expectedGo := dayPlan.GoTo
@@ -147,8 +166,10 @@ func (c *Calculator) processBookings(
 					expectedGo = dayPlan.GoFrom
 				}
 				calculatedTime = ApplyGoTolerance(b.Time, expectedGo, dayPlan.Tolerance)
-				// Apply go rounding
-				calculatedTime = RoundGoTime(calculatedTime, dayPlan.RoundingGo)
+				// Apply go rounding (only last-out unless RoundAllBookings)
+				if dayPlan.RoundAllBookings || i == lastOutIdx {
+					calculatedTime = RoundGoTime(calculatedTime, dayPlan.RoundingGo)
+				}
 			}
 		}
 

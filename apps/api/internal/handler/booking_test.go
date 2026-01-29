@@ -32,6 +32,7 @@ func setupBookingHandler(t *testing.T) (*handler.BookingHandler, *service.Bookin
 	dayPlanRepo := repository.NewDayPlanRepository(db)
 	dailyValueRepo := repository.NewDailyValueRepository(db)
 	holidayRepo := repository.NewHolidayRepository(db)
+	absenceDayRepo := repository.NewAbsenceDayRepository(db)
 
 	ctx := context.Background()
 
@@ -67,7 +68,7 @@ func setupBookingHandler(t *testing.T) (*handler.BookingHandler, *service.Bookin
 
 	// Create services
 	tariffRepo := repository.NewTariffRepository(db)
-	dailyCalcService := service.NewDailyCalcService(bookingRepo, empDayPlanRepo, dayPlanRepo, dailyValueRepo, holidayRepo)
+	dailyCalcService := service.NewDailyCalcService(bookingRepo, empDayPlanRepo, dayPlanRepo, dailyValueRepo, holidayRepo, employeeRepo, absenceDayRepo)
 	recalcService := service.NewRecalcService(dailyCalcService, employeeRepo)
 	bookingService := service.NewBookingService(bookingRepo, bookingTypeRepo, recalcService, nil)
 	employeeService := service.NewEmployeeService(employeeRepo, tariffRepo, empDayPlanRepo)
