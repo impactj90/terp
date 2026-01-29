@@ -78,7 +78,7 @@ export function CloseMonthSheet({
             {t('closeMonth')}
           </SheetTitle>
           <SheetDescription>
-            {t('closeDescription', { month: monthLabel })}
+            {t('closeDescription', { monthLabel })}
           </SheetDescription>
         </SheetHeader>
 
