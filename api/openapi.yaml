@@ -111,6 +111,8 @@ tags:
     description: Booking type group management
   - name: Groups
     description: Employee, workflow, and activity group management
+  - name: Calculation Rules
+    description: Absence calculation rule management
   - name: Correction Assistant
     description: Error/hint catalog and correction assistant queries
 
@@ -446,6 +448,12 @@ paths:
     $ref: 'paths/groups.yaml#/~1activity-groups'
   /activity-groups/{id}:
     $ref: 'paths/groups.yaml#/~1activity-groups~1{id}'
+
+  # Calculation Rules
+  /calculation-rules:
+    $ref: 'paths/calculation-rules.yaml#/~1calculation-rules'
+  /calculation-rules/{id}:
+    $ref: 'paths/calculation-rules.yaml#/~1calculation-rules~1{id}'
 
   # Correction Assistant
   /correction-messages:
@@ -871,6 +879,18 @@ definitions:
     $ref: 'schemas/monthly-evaluations.yaml#/UpdateMonthlyEvaluationRequest'
   MonthlyEvaluationList:
     $ref: 'schemas/monthly-evaluations.yaml#/MonthlyEvaluationList'
+
+  # Calculation Rules
+  CalculationRule:
+    $ref: 'schemas/calculation-rules.yaml#/CalculationRule'
+  CalculationRuleSummary:
+    $ref: 'schemas/calculation-rules.yaml#/CalculationRuleSummary'
+  CreateCalculationRuleRequest:
+    $ref: 'schemas/calculation-rules.yaml#/CreateCalculationRuleRequest'
+  UpdateCalculationRuleRequest:
+    $ref: 'schemas/calculation-rules.yaml#/UpdateCalculationRuleRequest'
+  CalculationRuleList:
+    $ref: 'schemas/calculation-rules.yaml#/CalculationRuleList'
 
   # Correction Assistant
   CorrectionMessage:

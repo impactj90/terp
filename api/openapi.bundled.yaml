@@ -108,6 +108,8 @@ tags:
     description: Booking type group management
   - name: Groups
     description: 'Employee, workflow, and activity group management'
+  - name: Calculation Rules
+    description: Absence calculation rule management
   - name: Correction Assistant
     description: Error/hint catalog and correction assistant queries
 securityDefinitions:
@@ -5989,6 +5991,118 @@ paths:
           $ref: '#/responses/Unauthorized'
         '404':
           $ref: '#/responses/NotFound'
+  /calculation-rules:
+    get:
+      tags:
+        - Calculation Rules
+      summary: List calculation rules
+      operationId: listCalculationRules
+      parameters:
+        - name: active_only
+          in: query
+          type: boolean
+          description: Filter to only active rules
+      responses:
+        '200':
+          description: List of calculation rules
+          schema:
+            $ref: '#/definitions/CalculationRuleList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+    post:
+      tags:
+        - Calculation Rules
+      summary: Create calculation rule
+      operationId: createCalculationRule
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateCalculationRuleRequest'
+      responses:
+        '201':
+          description: Created calculation rule
+          schema:
+            $ref: '#/definitions/CalculationRule'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '409':
+          description: Code already exists for this tenant
+          schema:
+            $ref: '#/definitions/ProblemDetails'
+  '/calculation-rules/{id}':
+    get:
+      tags:
+        - Calculation Rules
+      summary: Get calculation rule by ID
+      operationId: getCalculationRule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Calculation rule details
+          schema:
+            $ref: '#/definitions/CalculationRule'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    patch:
+      tags:
+        - Calculation Rules
+      summary: Update calculation rule
+      operationId: updateCalculationRule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateCalculationRuleRequest'
+      responses:
+        '200':
+          description: Updated calculation rule
+          schema:
+            $ref: '#/definitions/CalculationRule'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    delete:
+      tags:
+        - Calculation Rules
+      summary: Delete calculation rule
+      operationId: deleteCalculationRule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Calculation rule deleted
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+        '409':
+          description: Rule is still assigned to absence types
+          schema:
+            $ref: '#/definitions/ProblemDetails'
   /correction-messages:
     get:
       tags:
@@ -9923,6 +10037,11 @@ definitions:
         format: uuid
         x-nullable: true
         description: Group this absence type belongs to
+      calculation_rule_id:
+        type: string
+        format: uuid
+        x-nullable: true
+        description: Calculation rule that determines account value for this absence type
       color:
         type: string
         description: Hex color for UI display
@@ -10021,6 +10140,9 @@ definitions:
       absence_type_group_id:
         type: string
         format: uuid
+      calculation_rule_id:
+        type: string
+        format: uuid
   UpdateAbsenceTypeRequest:
     type: object
     properties:
@@ -10066,6 +10188,9 @@ definitions:
       requires_document:
         type: boolean
       absence_type_group_id:
+        type: string
+        format: uuid
+      calculation_rule_id:
         type: string
         format: uuid
   AbsenceTypeList:
@@ -12309,6 +12434,127 @@ definitions:
         type: string
     required:
       - items
+  CalculationRule:
+    type: object
+    required:
+      - id
+      - tenant_id
+      - code
+      - name
+      - value
+      - factor
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      code:
+        type: string
+        example: FULL_DAY
+      name:
+        type: string
+        example: Full Day Absence
+      description:
+        type: string
+        x-nullable: true
+      account_id:
+        type: string
+        format: uuid
+        x-nullable: true
+        description: Linked account for writing calculated values
+      value:
+        type: integer
+        description: Value in minutes. 0 means use daily target time from employee time plan
+        example: 0
+      factor:
+        type: number
+        format: double
+        description: 'Multiplier applied to value or daily target time (e.g. 1.0 = full, 0.5 = half)'
+        example: 1
+      is_active:
+        type: boolean
+        example: true
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  CalculationRuleSummary:
+    type: object
+    required:
+      - id
+      - code
+      - name
+    properties:
+      id:
+        type: string
+        format: uuid
+      code:
+        type: string
+      name:
+        type: string
+  CreateCalculationRuleRequest:
+    type: object
+    required:
+      - code
+      - name
+    properties:
+      code:
+        type: string
+        minLength: 1
+        maxLength: 50
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      description:
+        type: string
+      account_id:
+        type: string
+        format: uuid
+      value:
+        type: integer
+        default: 0
+        description: Value in minutes. 0 = use daily target time
+      factor:
+        type: number
+        format: double
+        default: 1
+        description: 'Multiplier (e.g. 1.0 = full, 0.5 = half)'
+  UpdateCalculationRuleRequest:
+    type: object
+    properties:
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      description:
+        type: string
+      account_id:
+        type: string
+        format: uuid
+        x-nullable: true
+      value:
+        type: integer
+        description: Value in minutes. 0 = use daily target time
+      factor:
+        type: number
+        format: double
+        description: 'Multiplier (e.g. 1.0 = full, 0.5 = half)'
+      is_active:
+        type: boolean
+  CalculationRuleList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/CalculationRule'
   CorrectionMessage:
     type: object
     required:

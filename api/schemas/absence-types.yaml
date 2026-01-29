@@ -71,6 +71,11 @@ AbsenceType:
       format: uuid
       x-nullable: true
       description: Group this absence type belongs to
+    calculation_rule_id:
+      type: string
+      format: uuid
+      x-nullable: true
+      description: Calculation rule that determines account value for this absence type
     color:
       type: string
       description: Hex color for UI display
@@ -168,6 +173,9 @@ CreateAbsenceTypeRequest:
     absence_type_group_id:
       type: string
       format: uuid
+    calculation_rule_id:
+      type: string
+      format: uuid
 
 UpdateAbsenceTypeRequest:
   type: object
@@ -211,6 +219,9 @@ UpdateAbsenceTypeRequest:
     requires_document:
       type: boolean
     absence_type_group_id:
+      type: string
+      format: uuid
+    calculation_rule_id:
       type: string
       format: uuid
 

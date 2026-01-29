@@ -744,6 +744,26 @@ func RegisterGroupRoutes(r chi.Router, h *GroupHandler, authz *middleware.Author
 	)
 }
 
+// RegisterCalculationRuleRoutes registers calculation rule routes.
+func RegisterCalculationRuleRoutes(r chi.Router, h *CalculationRuleHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("absence_types.manage").String()
+	r.Route("/calculation-rules", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+	})
+}
+
 // RegisterCorrectionAssistantRoutes registers correction assistant routes.
 func RegisterCorrectionAssistantRoutes(r chi.Router, h *CorrectionAssistantHandler, authz *middleware.AuthorizationMiddleware) {
 	permViewAll := permissions.ID("time_tracking.view_all").String()

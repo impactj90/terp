@@ -1,0 +1,114 @@
+# Calculation Rule endpoints
+/calculation-rules:
+  get:
+    tags:
+      - Calculation Rules
+    summary: List calculation rules
+    operationId: listCalculationRules
+    parameters:
+      - name: active_only
+        in: query
+        type: boolean
+        description: Filter to only active rules
+    responses:
+      200:
+        description: List of calculation rules
+        schema:
+          $ref: '../schemas/calculation-rules.yaml#/CalculationRuleList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Calculation Rules
+    summary: Create calculation rule
+    operationId: createCalculationRule
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/calculation-rules.yaml#/CreateCalculationRuleRequest'
+    responses:
+      201:
+        description: Created calculation rule
+        schema:
+          $ref: '../schemas/calculation-rules.yaml#/CalculationRule'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists for this tenant
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/calculation-rules/{id}:
+  get:
+    tags:
+      - Calculation Rules
+    summary: Get calculation rule by ID
+    operationId: getCalculationRule
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Calculation rule details
+        schema:
+          $ref: '../schemas/calculation-rules.yaml#/CalculationRule'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Calculation Rules
+    summary: Update calculation rule
+    operationId: updateCalculationRule
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/calculation-rules.yaml#/UpdateCalculationRuleRequest'
+    responses:
+      200:
+        description: Updated calculation rule
+        schema:
+          $ref: '../schemas/calculation-rules.yaml#/CalculationRule'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Calculation Rules
+    summary: Delete calculation rule
+    operationId: deleteCalculationRule
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Calculation rule deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+      409:
+        description: Rule is still assigned to absence types
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'

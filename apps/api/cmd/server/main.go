@@ -204,6 +204,10 @@ func main() {
 	absenceTypeGroupHandler := handler.NewAbsenceTypeGroupHandler(absenceTypeGroupService)
 	groupHandler := handler.NewGroupHandler(groupService)
 	edpHandler := handler.NewEmployeeDayPlanHandler(edpService)
+	calculationRuleRepo := repository.NewCalculationRuleRepository(db)
+	calculationRuleService := service.NewCalculationRuleService(calculationRuleRepo)
+	calculationRuleHandler := handler.NewCalculationRuleHandler(calculationRuleService)
+
 	correctionMessageRepo := repository.NewCorrectionMessageRepository(db)
 	correctionAssistantService := service.NewCorrectionAssistantService(correctionMessageRepo, dailyValueRepo)
 	correctionAssistantHandler := handler.NewCorrectionAssistantHandler(correctionAssistantService)
@@ -231,6 +235,7 @@ func main() {
 	bookingHandler.SetAuditService(auditLogService)
 	absenceHandler.SetAuditService(auditLogService)
 	employeeHandler.SetAuditService(auditLogService)
+	calculationRuleHandler.SetAuditService(auditLogService)
 
 	// Initialize tenant middleware
 	tenantMiddleware := middleware.NewTenantMiddleware(tenantService)
@@ -309,6 +314,7 @@ func main() {
 				handler.RegisterAuditLogRoutes(r, auditLogHandler, authzMiddleware)
 				handler.RegisterGroupRoutes(r, groupHandler, authzMiddleware)
 				handler.RegisterEmployeeDayPlanRoutes(r, edpHandler, authzMiddleware)
+				handler.RegisterCalculationRuleRoutes(r, calculationRuleHandler, authzMiddleware)
 				handler.RegisterCorrectionAssistantRoutes(r, correctionAssistantHandler, authzMiddleware)
 			})
 		})

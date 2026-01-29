@@ -65,6 +65,10 @@ type AbsenceType struct {
 	AbsenceTypeGroupID *uuid.UUID        `gorm:"type:uuid" json:"absence_type_group_id,omitempty"`
 	AbsenceTypeGroup   *AbsenceTypeGroup `gorm:"foreignKey:AbsenceTypeGroupID" json:"absence_type_group,omitempty"`
 
+	// Calculation rule
+	CalculationRuleID *uuid.UUID       `gorm:"type:uuid" json:"calculation_rule_id,omitempty"`
+	CalculationRule   *CalculationRule `gorm:"foreignKey:CalculationRuleID" json:"calculation_rule,omitempty"`
+
 	// Relations
 	Tenant *Tenant `gorm:"foreignKey:TenantID" json:"tenant,omitempty"`
 }
