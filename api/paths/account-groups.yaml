@@ -1,0 +1,105 @@
+# Account Group endpoints
+/account-groups:
+  get:
+    tags:
+      - Account Groups
+    summary: List account groups
+    operationId: listAccountGroups
+    responses:
+      200:
+        description: List of account groups
+        schema:
+          $ref: '../schemas/account-groups.yaml#/AccountGroupList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Account Groups
+    summary: Create account group
+    operationId: createAccountGroup
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/account-groups.yaml#/CreateAccountGroupRequest'
+    responses:
+      201:
+        description: Created account group
+        schema:
+          $ref: '../schemas/account-groups.yaml#/AccountGroup'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/account-groups/{id}:
+  get:
+    tags:
+      - Account Groups
+    summary: Get account group by ID
+    operationId: getAccountGroup
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Account group details
+        schema:
+          $ref: '../schemas/account-groups.yaml#/AccountGroup'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Account Groups
+    summary: Update account group
+    operationId: updateAccountGroup
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/account-groups.yaml#/UpdateAccountGroupRequest'
+    responses:
+      200:
+        description: Updated account group
+        schema:
+          $ref: '../schemas/account-groups.yaml#/AccountGroup'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Account Groups
+    summary: Delete account group
+    operationId: deleteAccountGroup
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Account group deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

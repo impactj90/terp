@@ -19,8 +19,8 @@
         type: string
         enum:
           - bonus
-          - tracking
-          - balance
+          - day
+          - month
         description: Filter by account type
       - name: include_system
         in: query

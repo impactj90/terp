@@ -61,7 +61,17 @@ func (h *AccountHandler) List(w http.ResponseWriter, r *http.Request) {
 		accountTypeFilter = &accountType
 	}
 
-	accounts, err := h.accountService.ListFiltered(r.Context(), tenantID, includeSystem, activeFilter, accountTypeFilter)
+	var payrollRelevantFilter *bool
+	if prStr := r.URL.Query().Get("payroll_relevant"); prStr != "" {
+		pr, err := strconv.ParseBool(prStr)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid payroll_relevant filter")
+			return
+		}
+		payrollRelevantFilter = &pr
+	}
+
+	accounts, err := h.accountService.ListFiltered(r.Context(), tenantID, includeSystem, activeFilter, accountTypeFilter, payrollRelevantFilter)
 
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to list accounts")
@@ -123,6 +133,11 @@ func (h *AccountHandler) Create(w http.ResponseWriter, r *http.Request) {
 		unit = model.AccountUnitMinutes
 	}
 
+	displayFormat := model.DisplayFormat(req.DisplayFormat)
+	if req.DisplayFormat == "" {
+		displayFormat = model.DisplayFormatDecimal
+	}
+
 	isPayrollRelevant := false
 	if req.IsPayrollRelevant != nil {
 		isPayrollRelevant = *req.IsPayrollRelevant
@@ -133,6 +148,16 @@ func (h *AccountHandler) Create(w http.ResponseWriter, r *http.Request) {
 		payrollCode = &req.PayrollCode
 	}
 
+	var accountGroupID *uuid.UUID
+	if req.AccountGroupID != nil {
+		gid, err := uuid.Parse(req.AccountGroupID.String())
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid account_group_id")
+			return
+		}
+		accountGroupID = &gid
+	}
+
 	input := service.CreateAccountInput{
 		TenantID:          tenantID,
 		Code:              *req.Code,
@@ -140,6 +165,9 @@ func (h *AccountHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Description:       description,
 		AccountType:       accountType,
 		Unit:              unit,
+		DisplayFormat:     displayFormat,
+		BonusFactor:       req.BonusFactor,
+		AccountGroupID:    accountGroupID,
 		YearCarryover:     &req.YearCarryover,
 		IsPayrollRelevant: isPayrollRelevant,
 		PayrollCode:       payrollCode,
@@ -197,6 +225,19 @@ func (h *AccountHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if req.Unit != "" {
 		unit := model.AccountUnit(req.Unit)
 		input.Unit = &unit
+	}
+	if req.DisplayFormat != "" {
+		df := model.DisplayFormat(req.DisplayFormat)
+		input.DisplayFormat = &df
+	}
+	input.BonusFactor = req.BonusFactor
+	if req.AccountGroupID != nil {
+		gid, err := uuid.Parse(req.AccountGroupID.String())
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid account_group_id")
+			return
+		}
+		input.AccountGroupID = &gid
 	}
 	input.YearCarryover = &req.YearCarryover
 	input.IsPayrollRelevant = &req.IsPayrollRelevant
@@ -280,10 +321,10 @@ func parseAccountType(apiType string) (model.AccountType, bool) {
 	switch apiType {
 	case "bonus":
 		return model.AccountTypeBonus, true
-	case "tracking", "time":
-		return model.AccountTypeTracking, true
-	case "balance", "vacation", "sick", "deduction":
-		return model.AccountTypeBalance, true
+	case "day":
+		return model.AccountTypeDay, true
+	case "month":
+		return model.AccountTypeMonth, true
 	default:
 		return "", false
 	}

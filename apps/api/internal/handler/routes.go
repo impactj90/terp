@@ -148,6 +148,26 @@ func RegisterAccountRoutes(r chi.Router, h *AccountHandler, authz *middleware.Au
 	})
 }
 
+// RegisterAccountGroupRoutes registers account group routes.
+func RegisterAccountGroupRoutes(r chi.Router, h *AccountGroupHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("accounts.manage").String()
+	r.Route("/account-groups", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+	})
+}
+
 // RegisterUserGroupRoutes registers user group routes.
 func RegisterUserGroupRoutes(r chi.Router, h *UserGroupHandler, authz *middleware.AuthorizationMiddleware) {
 	permManage := permissions.ID("users.manage").String()

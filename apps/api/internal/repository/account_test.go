@@ -54,7 +54,7 @@ func TestAccountRepository_Create_SystemAccount(t *testing.T) {
 		TenantID:    nil,
 		Code:        "SYS_TEST_" + uuid.New().String()[:8],
 		Name:        "System Test Account",
-		AccountType: model.AccountTypeTracking,
+		AccountType: model.AccountTypeDay,
 		Unit:        model.AccountUnitMinutes,
 		IsSystem:    true,
 		IsActive:    true,
@@ -127,7 +127,7 @@ func TestAccountRepository_GetByCode_System(t *testing.T) {
 		TenantID:    nil,
 		Code:        "SYS_CODE_" + uuid.New().String()[:8],
 		Name:        "System Account",
-		AccountType: model.AccountTypeTracking,
+		AccountType: model.AccountTypeDay,
 		Unit:        model.AccountUnitMinutes,
 		IsSystem:    true,
 	}
@@ -222,7 +222,7 @@ func TestAccountRepository_List(t *testing.T) {
 		TenantID:    &tenant.ID,
 		Code:        "VACATION",
 		Name:        "Vacation",
-		AccountType: model.AccountTypeBalance,
+		AccountType: model.AccountTypeMonth,
 		Unit:        model.AccountUnitDays,
 	}))
 
@@ -264,7 +264,7 @@ func TestAccountRepository_ListWithSystem(t *testing.T) {
 		TenantID:    nil,
 		Code:        "SYS_LIST_" + uuid.New().String()[:8],
 		Name:        "System Account",
-		AccountType: model.AccountTypeTracking,
+		AccountType: model.AccountTypeDay,
 		Unit:        model.AccountUnitMinutes,
 		IsSystem:    true,
 	}))
@@ -305,7 +305,7 @@ func TestAccountRepository_GetSystemAccounts(t *testing.T) {
 		TenantID:    nil,
 		Code:        "SYS_GET_" + uuid.New().String()[:8],
 		Name:        "System Account",
-		AccountType: model.AccountTypeTracking,
+		AccountType: model.AccountTypeDay,
 		Unit:        model.AccountUnitMinutes,
 		IsSystem:    true,
 	}))

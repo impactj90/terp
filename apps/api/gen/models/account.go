@@ -20,11 +20,19 @@ import (
 // swagger:model Account
 type Account struct {
 
+	// ID of the account group this account belongs to
+	// Format: uuid
+	AccountGroupID *strfmt.UUID `json:"account_group_id,omitempty"`
+
 	// account type
 	// Example: bonus
 	// Required: true
-	// Enum: ["bonus","tracking","balance"]
+	// Enum: ["bonus","day","month"]
 	AccountType *string `json:"account_type"`
+
+	// Multiplier for bonus calculations (e.g. 1.5 for 150%)
+	// Example: 1.5
+	BonusFactor *float64 `json:"bonus_factor,omitempty"`
 
 	// code
 	// Example: OT
@@ -37,6 +45,11 @@ type Account struct {
 
 	// description
 	Description *string `json:"description,omitempty"`
+
+	// Display format for account values
+	// Example: decimal
+	// Enum: ["decimal","hh_mm"]
+	DisplayFormat string `json:"display_format,omitempty"`
 
 	// id
 	// Required: true
@@ -94,6 +107,10 @@ type Account struct {
 func (m *Account) Validate(formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.validateAccountGroupID(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateAccountType(formats); err != nil {
 		res = append(res, err)
 	}
@@ -103,6 +120,10 @@ func (m *Account) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateCreatedAt(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateDisplayFormat(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -132,11 +153,23 @@ func (m *Account) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
+func (m *Account) validateAccountGroupID(formats strfmt.Registry) error {
+	if swag.IsZero(m.AccountGroupID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("account_group_id", "body", "uuid", m.AccountGroupID.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 var accountTypeAccountTypePropEnum []any
 
 func init() {
 	var res []string
-	if err := json.Unmarshal([]byte(`["bonus","tracking","balance"]`), &res); err != nil {
+	if err := json.Unmarshal([]byte(`["bonus","day","month"]`), &res); err != nil {
 		panic(err)
 	}
 	for _, v := range res {
@@ -149,11 +182,11 @@ const (
 	// AccountAccountTypeBonus captures enum value "bonus"
 	AccountAccountTypeBonus string = "bonus"
 
-	// AccountAccountTypeTracking captures enum value "tracking"
-	AccountAccountTypeTracking string = "tracking"
+	// AccountAccountTypeDay captures enum value "day"
+	AccountAccountTypeDay string = "day"
 
-	// AccountAccountTypeBalance captures enum value "balance"
-	AccountAccountTypeBalance string = "balance"
+	// AccountAccountTypeMonth captures enum value "month"
+	AccountAccountTypeMonth string = "month"
 )
 
 // prop value enum
@@ -193,6 +226,48 @@ func (m *Account) validateCreatedAt(formats strfmt.Registry) error {
 	}
 
 	if err := validate.FormatOf("created_at", "body", "date-time", m.CreatedAt.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var accountTypeDisplayFormatPropEnum []any
+
+func init() {
+	var res []string
+	if err := json.Unmarshal([]byte(`["decimal","hh_mm"]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		accountTypeDisplayFormatPropEnum = append(accountTypeDisplayFormatPropEnum, v)
+	}
+}
+
+const (
+
+	// AccountDisplayFormatDecimal captures enum value "decimal"
+	AccountDisplayFormatDecimal string = "decimal"
+
+	// AccountDisplayFormatHhMm captures enum value "hh_mm"
+	AccountDisplayFormatHhMm string = "hh_mm"
+)
+
+// prop value enum
+func (m *Account) validateDisplayFormatEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, accountTypeDisplayFormatPropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *Account) validateDisplayFormat(formats strfmt.Registry) error {
+	if swag.IsZero(m.DisplayFormat) { // not required
+		return nil
+	}
+
+	// value enum
+	if err := m.validateDisplayFormatEnum("display_format", "body", m.DisplayFormat); err != nil {
 		return err
 	}
 

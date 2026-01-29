@@ -29,7 +29,7 @@ func NewAccountRepository(db *DB) *AccountRepository {
 // Create creates a new account.
 func (r *AccountRepository) Create(ctx context.Context, account *model.Account) error {
 	return r.db.GORM.WithContext(ctx).
-		Select("TenantID", "Code", "Name", "Description", "AccountType", "Unit", "YearCarryover", "IsPayrollRelevant", "PayrollCode", "SortOrder", "IsSystem", "IsActive").
+		Select("TenantID", "Code", "Name", "Description", "AccountType", "Unit", "DisplayFormat", "BonusFactor", "AccountGroupID", "YearCarryover", "IsPayrollRelevant", "PayrollCode", "SortOrder", "IsSystem", "IsActive").
 		Create(account).Error
 }
 
@@ -79,6 +79,9 @@ func (r *AccountRepository) Upsert(ctx context.Context, account *model.Account) 
 				"description",
 				"account_type",
 				"unit",
+				"display_format",
+				"bonus_factor",
+				"account_group_id",
 				"year_carryover",
 				"is_payroll_relevant",
 				"payroll_code",
@@ -164,7 +167,7 @@ func (r *AccountRepository) ListActive(ctx context.Context, tenantID uuid.UUID) 
 }
 
 // ListFiltered retrieves accounts with optional filters for system, active, and type.
-func (r *AccountRepository) ListFiltered(ctx context.Context, tenantID uuid.UUID, includeSystem bool, active *bool, accountType *model.AccountType) ([]model.Account, error) {
+func (r *AccountRepository) ListFiltered(ctx context.Context, tenantID uuid.UUID, includeSystem bool, active *bool, accountType *model.AccountType, payrollRelevant *bool) ([]model.Account, error) {
 	var accounts []model.Account
 	usageSubquery := r.db.GORM.WithContext(ctx).
 		Table("day_plan_bonuses").
@@ -186,6 +189,9 @@ func (r *AccountRepository) ListFiltered(ctx context.Context, tenantID uuid.UUID
 	}
 	if accountType != nil && *accountType != "" {
 		query = query.Where("account_type = ?", *accountType)
+	}
+	if payrollRelevant != nil {
+		query = query.Where("is_payroll_relevant = ?", *payrollRelevant)
 	}
 	err := query.Order("is_system DESC, sort_order ASC, code ASC").Find(&accounts).Error
 	if err != nil {

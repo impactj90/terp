@@ -299,7 +299,7 @@ func TestAccountHandler_List_IncludeSystem(t *testing.T) {
 		TenantID:    nil,
 		Code:        "SYS_HANDLER_" + uuid.New().String()[:8],
 		Name:        "System Account",
-		AccountType: model.AccountTypeTracking,
+		AccountType: model.AccountTypeDay,
 		Unit:        model.AccountUnitMinutes,
 		IsSystem:    true,
 	}
@@ -338,12 +338,12 @@ func TestAccountHandler_List_FilterByType(t *testing.T) {
 		TenantID:    tenant.ID,
 		Code:        "TRACK",
 		Name:        "Tracking Account",
-		AccountType: model.AccountTypeTracking,
+		AccountType: model.AccountTypeDay,
 		IsActive:    true,
 	})
 	require.NoError(t, err)
 
-	req := httptest.NewRequest("GET", "/accounts?account_type=tracking", nil)
+	req := httptest.NewRequest("GET", "/accounts?account_type=day", nil)
 	req = withAccountTenantContext(req, tenant)
 	rr := httptest.NewRecorder()
 
@@ -356,7 +356,7 @@ func TestAccountHandler_List_FilterByType(t *testing.T) {
 	err = json.Unmarshal(rr.Body.Bytes(), &response)
 	require.NoError(t, err)
 	assert.Len(t, response.Data, 1)
-	assert.Equal(t, model.AccountTypeTracking, response.Data[0].AccountType)
+	assert.Equal(t, model.AccountTypeDay, response.Data[0].AccountType)
 }
 
 func TestAccountHandler_List_NoTenant(t *testing.T) {
@@ -410,7 +410,7 @@ func TestAccountHandler_Update_SystemAccount(t *testing.T) {
 		TenantID:    nil,
 		Code:        "SYS_ACC",
 		Name:        "System Account",
-		AccountType: model.AccountTypeTracking,
+		AccountType: model.AccountTypeDay,
 		Unit:        model.AccountUnitMinutes,
 		IsSystem:    true,
 		IsActive:    true,
@@ -552,7 +552,7 @@ func TestAccountHandler_Delete_SystemAccount(t *testing.T) {
 		TenantID:    nil,
 		Code:        "SYS_DEL_HANDLER_" + uuid.New().String()[:8],
 		Name:        "System Account",
-		AccountType: model.AccountTypeTracking,
+		AccountType: model.AccountTypeDay,
 		Unit:        model.AccountUnitMinutes,
 		IsSystem:    true,
 	}

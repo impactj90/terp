@@ -32,7 +32,7 @@ type accountRepository interface {
 	ListWithSystem(ctx context.Context, tenantID uuid.UUID) ([]model.Account, error)
 	GetSystemAccounts(ctx context.Context) ([]model.Account, error)
 	ListActive(ctx context.Context, tenantID uuid.UUID) ([]model.Account, error)
-	ListFiltered(ctx context.Context, tenantID uuid.UUID, includeSystem bool, active *bool, accountType *model.AccountType) ([]model.Account, error)
+	ListFiltered(ctx context.Context, tenantID uuid.UUID, includeSystem bool, active *bool, accountType *model.AccountType, payrollRelevant *bool) ([]model.Account, error)
 	ListDayPlansUsingAccount(ctx context.Context, tenantID uuid.UUID, accountID uuid.UUID) ([]model.AccountUsageDayPlan, error)
 }
 
@@ -51,6 +51,9 @@ type CreateAccountInput struct {
 	Name              string
 	AccountType       model.AccountType
 	Unit              model.AccountUnit
+	DisplayFormat     model.DisplayFormat
+	BonusFactor       *float64
+	AccountGroupID    *uuid.UUID
 	Description       *string
 	IsPayrollRelevant bool
 	PayrollCode       *string
@@ -79,6 +82,10 @@ func (s *AccountService) Create(ctx context.Context, input CreateAccountInput) (
 	if unit == "" {
 		unit = model.AccountUnitMinutes
 	}
+	displayFormat := input.DisplayFormat
+	if displayFormat == "" {
+		displayFormat = model.DisplayFormatDecimal
+	}
 	yearCarryover := true
 	if input.YearCarryover != nil {
 		yearCarryover = *input.YearCarryover
@@ -97,6 +104,9 @@ func (s *AccountService) Create(ctx context.Context, input CreateAccountInput) (
 		Description:       input.Description,
 		AccountType:       input.AccountType,
 		Unit:              unit,
+		DisplayFormat:     displayFormat,
+		BonusFactor:       input.BonusFactor,
+		AccountGroupID:    input.AccountGroupID,
 		YearCarryover:     yearCarryover,
 		IsPayrollRelevant: input.IsPayrollRelevant,
 		PayrollCode:       input.PayrollCode,
@@ -135,6 +145,9 @@ type UpdateAccountInput struct {
 	Name              *string
 	Description       *string
 	Unit              *model.AccountUnit
+	DisplayFormat     *model.DisplayFormat
+	BonusFactor       *float64
+	AccountGroupID    *uuid.UUID
 	YearCarryover     *bool
 	IsPayrollRelevant *bool
 	PayrollCode       *string
@@ -161,6 +174,15 @@ func (s *AccountService) Update(ctx context.Context, id uuid.UUID, input UpdateA
 	}
 	if input.Unit != nil {
 		account.Unit = *input.Unit
+	}
+	if input.DisplayFormat != nil {
+		account.DisplayFormat = *input.DisplayFormat
+	}
+	if input.BonusFactor != nil {
+		account.BonusFactor = input.BonusFactor
+	}
+	if input.AccountGroupID != nil {
+		account.AccountGroupID = input.AccountGroupID
 	}
 	if input.Description != nil {
 		account.Description = input.Description
@@ -224,8 +246,8 @@ func (s *AccountService) ListActive(ctx context.Context, tenantID uuid.UUID) ([]
 }
 
 // ListFiltered retrieves accounts with optional filters.
-func (s *AccountService) ListFiltered(ctx context.Context, tenantID uuid.UUID, includeSystem bool, active *bool, accountType *model.AccountType) ([]model.Account, error) {
-	return s.accountRepo.ListFiltered(ctx, tenantID, includeSystem, active, accountType)
+func (s *AccountService) ListFiltered(ctx context.Context, tenantID uuid.UUID, includeSystem bool, active *bool, accountType *model.AccountType, payrollRelevant *bool) ([]model.Account, error) {
+	return s.accountRepo.ListFiltered(ctx, tenantID, includeSystem, active, accountType, payrollRelevant)
 }
 
 // GetUsage returns day plans that reference the account.

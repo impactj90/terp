@@ -7,7 +7,7 @@ type DevAccount struct {
 	ID          uuid.UUID
 	Code        string
 	Name        string
-	AccountType string // "bonus", "tracking", "balance"
+	AccountType string // "bonus", "day", "month"
 	Unit        string // "minutes", "hours", "days"
 }
 
@@ -41,21 +41,21 @@ var DevAccounts = []DevAccount{
 		ID:          uuid.MustParse("00000000-0000-0000-0000-000000001104"),
 		Code:        "ONCALL",
 		Name:        "On-Call Duty",
-		AccountType: "tracking",
+		AccountType: "day",
 		Unit:        "minutes",
 	},
 	{
 		ID:          uuid.MustParse("00000000-0000-0000-0000-000000001105"),
 		Code:        "TRAVEL",
 		Name:        "Travel Time",
-		AccountType: "tracking",
+		AccountType: "day",
 		Unit:        "minutes",
 	},
 	{
 		ID:          uuid.MustParse("00000000-0000-0000-0000-000000001106"),
 		Code:        "SICK",
 		Name:        "Sick Leave Balance",
-		AccountType: "balance",
+		AccountType: "month",
 		Unit:        "days",
 	},
 }

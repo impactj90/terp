@@ -274,7 +274,7 @@ func TestAccountService_Update_SystemAccount(t *testing.T) {
 		TenantID:    nil,
 		Code:        "SYS_ACC",
 		Name:        "System Account",
-		AccountType: model.AccountTypeTracking,
+		AccountType: model.AccountTypeDay,
 		Unit:        model.AccountUnitMinutes,
 		IsSystem:    true,
 		IsActive:    true,
@@ -376,7 +376,7 @@ func TestAccountService_Delete_SystemAccount(t *testing.T) {
 		TenantID:    nil,
 		Code:        "SYS_DEL_" + uuid.New().String()[:8],
 		Name:        "System Account",
-		AccountType: model.AccountTypeTracking,
+		AccountType: model.AccountTypeDay,
 		Unit:        model.AccountUnitMinutes,
 		IsSystem:    true,
 	}
@@ -472,7 +472,7 @@ func TestAccountService_ListWithSystem(t *testing.T) {
 		TenantID:    nil,
 		Code:        "SYS_LIST_SVC_" + uuid.New().String()[:8],
 		Name:        "System Account",
-		AccountType: model.AccountTypeTracking,
+		AccountType: model.AccountTypeDay,
 		Unit:        model.AccountUnitMinutes,
 		IsSystem:    true,
 	}
@@ -494,7 +494,7 @@ func TestAccountService_GetSystemAccounts(t *testing.T) {
 		TenantID:    nil,
 		Code:        "SYS_GET_SVC_" + uuid.New().String()[:8],
 		Name:        "System Account",
-		AccountType: model.AccountTypeTracking,
+		AccountType: model.AccountTypeDay,
 		Unit:        model.AccountUnitMinutes,
 		IsSystem:    true,
 	}

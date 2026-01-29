@@ -20,8 +20,19 @@ import (
 // swagger:model UpdateAccountRequest
 type UpdateAccountRequest struct {
 
+	// ID of the account group this account belongs to
+	// Format: uuid
+	AccountGroupID *strfmt.UUID `json:"account_group_id,omitempty"`
+
+	// Multiplier for bonus calculations (e.g. 1.5 for 150%)
+	BonusFactor *float64 `json:"bonus_factor,omitempty"`
+
 	// description
 	Description string `json:"description,omitempty"`
+
+	// Display format for account values
+	// Enum: ["decimal","hh_mm"]
+	DisplayFormat string `json:"display_format,omitempty"`
 
 	// is active
 	IsActive bool `json:"is_active,omitempty"`
@@ -52,6 +63,14 @@ type UpdateAccountRequest struct {
 func (m *UpdateAccountRequest) Validate(formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.validateAccountGroupID(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateDisplayFormat(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateName(formats); err != nil {
 		res = append(res, err)
 	}
@@ -63,6 +82,60 @@ func (m *UpdateAccountRequest) Validate(formats strfmt.Registry) error {
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *UpdateAccountRequest) validateAccountGroupID(formats strfmt.Registry) error {
+	if swag.IsZero(m.AccountGroupID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("account_group_id", "body", "uuid", m.AccountGroupID.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var updateAccountRequestTypeDisplayFormatPropEnum []any
+
+func init() {
+	var res []string
+	if err := json.Unmarshal([]byte(`["decimal","hh_mm"]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		updateAccountRequestTypeDisplayFormatPropEnum = append(updateAccountRequestTypeDisplayFormatPropEnum, v)
+	}
+}
+
+const (
+
+	// UpdateAccountRequestDisplayFormatDecimal captures enum value "decimal"
+	UpdateAccountRequestDisplayFormatDecimal string = "decimal"
+
+	// UpdateAccountRequestDisplayFormatHhMm captures enum value "hh_mm"
+	UpdateAccountRequestDisplayFormatHhMm string = "hh_mm"
+)
+
+// prop value enum
+func (m *UpdateAccountRequest) validateDisplayFormatEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, updateAccountRequestTypeDisplayFormatPropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *UpdateAccountRequest) validateDisplayFormat(formats strfmt.Registry) error {
+	if swag.IsZero(m.DisplayFormat) { // not required
+		return nil
+	}
+
+	// value enum
+	if err := m.validateDisplayFormatEnum("display_format", "body", m.DisplayFormat); err != nil {
+		return err
+	}
+
 	return nil
 }
 

@@ -29,8 +29,8 @@ Account:
       type: string
       enum:
         - bonus
-        - tracking
-        - balance
+        - day
+        - month
       example: "bonus"
     unit:
       type: string
@@ -39,6 +39,24 @@ Account:
         - hours
         - days
       example: "minutes"
+    display_format:
+      type: string
+      enum:
+        - decimal
+        - hh_mm
+      description: Display format for account values
+      example: "decimal"
+    bonus_factor:
+      type: number
+      format: double
+      x-nullable: true
+      description: Multiplier for bonus calculations (e.g. 1.5 for 150%)
+      example: 1.5
+    account_group_id:
+      type: string
+      format: uuid
+      x-nullable: true
+      description: ID of the account group this account belongs to
     is_system:
       type: boolean
       description: System accounts cannot be deleted
@@ -168,14 +186,30 @@ CreateAccountRequest:
       type: string
       enum:
         - bonus
-        - tracking
-        - balance
+        - day
+        - month
     unit:
       type: string
       enum:
         - minutes
         - hours
         - days
+    display_format:
+      type: string
+      enum:
+        - decimal
+        - hh_mm
+      description: Display format for account values
+    bonus_factor:
+      type: number
+      format: double
+      x-nullable: true
+      description: Multiplier for bonus calculations (e.g. 1.5 for 150%)
+    account_group_id:
+      type: string
+      format: uuid
+      x-nullable: true
+      description: ID of the account group this account belongs to
     year_carryover:
       type: boolean
     is_payroll_relevant:
@@ -201,6 +235,22 @@ UpdateAccountRequest:
         - minutes
         - hours
         - days
+    display_format:
+      type: string
+      enum:
+        - decimal
+        - hh_mm
+      description: Display format for account values
+    bonus_factor:
+      type: number
+      format: double
+      x-nullable: true
+      description: Multiplier for bonus calculations (e.g. 1.5 for 150%)
+    account_group_id:
+      type: string
+      format: uuid
+      x-nullable: true
+      description: ID of the account group this account belongs to
     is_payroll_relevant:
       type: boolean
     payroll_code:

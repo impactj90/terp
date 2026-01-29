@@ -110,6 +110,7 @@ func main() {
 	notificationStreamHub := service.NewNotificationStreamHub()
 	notificationService.SetStreamHub(notificationStreamHub)
 
+	accountGroupRepo := repository.NewAccountGroupRepository(db)
 	absenceTypeGroupRepo := repository.NewAbsenceTypeGroupRepository(db)
 
 	// Initialize calculation services
@@ -191,6 +192,8 @@ func main() {
 	notificationHandler := handler.NewNotificationHandler(notificationService, notificationStreamHub)
 	permissionHandler := handler.NewPermissionHandler()
 	auditLogHandler := handler.NewAuditLogHandler(auditLogService)
+	accountGroupService := service.NewAccountGroupService(accountGroupRepo)
+	accountGroupHandler := handler.NewAccountGroupHandler(accountGroupService)
 	absenceTypeGroupService := service.NewAbsenceTypeGroupService(absenceTypeGroupRepo)
 	absenceTypeGroupHandler := handler.NewAbsenceTypeGroupHandler(absenceTypeGroupService)
 	groupHandler := handler.NewGroupHandler(groupService)
@@ -272,6 +275,7 @@ func main() {
 			r.Group(func(r chi.Router) {
 				r.Use(tenantMiddleware.RequireTenant)
 				handler.RegisterAccountRoutes(r, accountHandler, authzMiddleware)
+				handler.RegisterAccountGroupRoutes(r, accountGroupHandler, authzMiddleware)
 				handler.RegisterHolidayRoutes(r, holidayHandler, authzMiddleware)
 				handler.RegisterCostCenterRoutes(r, costCenterHandler)
 				handler.RegisterEmploymentTypeRoutes(r, employmentTypeHandler)

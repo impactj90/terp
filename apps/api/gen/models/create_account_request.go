@@ -20,10 +20,17 @@ import (
 // swagger:model CreateAccountRequest
 type CreateAccountRequest struct {
 
+	// ID of the account group this account belongs to
+	// Format: uuid
+	AccountGroupID *strfmt.UUID `json:"account_group_id,omitempty"`
+
 	// account type
 	// Required: true
-	// Enum: ["bonus","tracking","balance"]
+	// Enum: ["bonus","day","month"]
 	AccountType *string `json:"account_type"`
+
+	// Multiplier for bonus calculations (e.g. 1.5 for 150%)
+	BonusFactor *float64 `json:"bonus_factor,omitempty"`
 
 	// code
 	// Required: true
@@ -33,6 +40,10 @@ type CreateAccountRequest struct {
 
 	// description
 	Description string `json:"description,omitempty"`
+
+	// Display format for account values
+	// Enum: ["decimal","hh_mm"]
+	DisplayFormat string `json:"display_format,omitempty"`
 
 	// is payroll relevant
 	IsPayrollRelevant *bool `json:"is_payroll_relevant,omitempty"`
@@ -61,11 +72,19 @@ type CreateAccountRequest struct {
 func (m *CreateAccountRequest) Validate(formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.validateAccountGroupID(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateAccountType(formats); err != nil {
 		res = append(res, err)
 	}
 
 	if err := m.validateCode(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateDisplayFormat(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -83,11 +102,23 @@ func (m *CreateAccountRequest) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
+func (m *CreateAccountRequest) validateAccountGroupID(formats strfmt.Registry) error {
+	if swag.IsZero(m.AccountGroupID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("account_group_id", "body", "uuid", m.AccountGroupID.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 var createAccountRequestTypeAccountTypePropEnum []any
 
 func init() {
 	var res []string
-	if err := json.Unmarshal([]byte(`["bonus","tracking","balance"]`), &res); err != nil {
+	if err := json.Unmarshal([]byte(`["bonus","day","month"]`), &res); err != nil {
 		panic(err)
 	}
 	for _, v := range res {
@@ -100,11 +131,11 @@ const (
 	// CreateAccountRequestAccountTypeBonus captures enum value "bonus"
 	CreateAccountRequestAccountTypeBonus string = "bonus"
 
-	// CreateAccountRequestAccountTypeTracking captures enum value "tracking"
-	CreateAccountRequestAccountTypeTracking string = "tracking"
+	// CreateAccountRequestAccountTypeDay captures enum value "day"
+	CreateAccountRequestAccountTypeDay string = "day"
 
-	// CreateAccountRequestAccountTypeBalance captures enum value "balance"
-	CreateAccountRequestAccountTypeBalance string = "balance"
+	// CreateAccountRequestAccountTypeMonth captures enum value "month"
+	CreateAccountRequestAccountTypeMonth string = "month"
 )
 
 // prop value enum
@@ -140,6 +171,48 @@ func (m *CreateAccountRequest) validateCode(formats strfmt.Registry) error {
 	}
 
 	if err := validate.MaxLength("code", "body", *m.Code, 20); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var createAccountRequestTypeDisplayFormatPropEnum []any
+
+func init() {
+	var res []string
+	if err := json.Unmarshal([]byte(`["decimal","hh_mm"]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		createAccountRequestTypeDisplayFormatPropEnum = append(createAccountRequestTypeDisplayFormatPropEnum, v)
+	}
+}
+
+const (
+
+	// CreateAccountRequestDisplayFormatDecimal captures enum value "decimal"
+	CreateAccountRequestDisplayFormatDecimal string = "decimal"
+
+	// CreateAccountRequestDisplayFormatHhMm captures enum value "hh_mm"
+	CreateAccountRequestDisplayFormatHhMm string = "hh_mm"
+)
+
+// prop value enum
+func (m *CreateAccountRequest) validateDisplayFormatEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, createAccountRequestTypeDisplayFormatPropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *CreateAccountRequest) validateDisplayFormat(formats strfmt.Registry) error {
+	if swag.IsZero(m.DisplayFormat) { // not required
+		return nil
+	}
+
+	// value enum
+	if err := m.validateDisplayFormatEnum("display_format", "body", m.DisplayFormat); err != nil {
 		return err
 	}
 

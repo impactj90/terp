@@ -103,6 +103,8 @@ tags:
     description: Monthly evaluation configuration
   - name: Absence Type Groups
     description: Absence type group management
+  - name: Account Groups
+    description: Account group management
   - name: Groups
     description: Employee, workflow, and activity group management
 
@@ -405,6 +407,12 @@ paths:
   /absence-type-groups/{id}:
     $ref: 'paths/absence-type-groups.yaml#/~1absence-type-groups~1{id}'
 
+  # Account Groups
+  /account-groups:
+    $ref: 'paths/account-groups.yaml#/~1account-groups'
+  /account-groups/{id}:
+    $ref: 'paths/account-groups.yaml#/~1account-groups~1{id}'
+
   # Groups
   /employee-groups:
     $ref: 'paths/groups.yaml#/~1employee-groups'
@@ -651,6 +659,16 @@ definitions:
     $ref: 'schemas/absence-type-groups.yaml#/UpdateAbsenceTypeGroupRequest'
   AbsenceTypeGroupList:
     $ref: 'schemas/absence-type-groups.yaml#/AbsenceTypeGroupList'
+
+  # Account Groups
+  AccountGroup:
+    $ref: 'schemas/account-groups.yaml#/AccountGroup'
+  CreateAccountGroupRequest:
+    $ref: 'schemas/account-groups.yaml#/CreateAccountGroupRequest'
+  UpdateAccountGroupRequest:
+    $ref: 'schemas/account-groups.yaml#/UpdateAccountGroupRequest'
+  AccountGroupList:
+    $ref: 'schemas/account-groups.yaml#/AccountGroupList'
 
   # Vacation Balances
   VacationBalance:
