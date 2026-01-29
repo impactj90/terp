@@ -241,6 +241,8 @@ func (h *TariffHandler) Create(w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusBadRequest, "Invalid day plan reference")
 		case service.ErrInvalidDayPosition:
 			respondError(w, http.StatusBadRequest, "Day position must be between 1 and cycle_days")
+		case service.ErrRhythmStartDateRequired:
+			respondError(w, http.StatusBadRequest, "rhythm_start_date is required for rolling_weekly and x_days rhythms")
 		default:
 			respondError(w, http.StatusInternalServerError, "Failed to create tariff")
 		}
@@ -407,6 +409,8 @@ func (h *TariffHandler) Update(w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusBadRequest, "Invalid day plan reference")
 		case service.ErrInvalidDayPosition:
 			respondError(w, http.StatusBadRequest, "Day position must be between 1 and cycle_days")
+		case service.ErrRhythmStartDateRequired:
+			respondError(w, http.StatusBadRequest, "rhythm_start_date is required for rolling_weekly and x_days rhythms")
 		default:
 			respondError(w, http.StatusInternalServerError, "Failed to update tariff")
 		}

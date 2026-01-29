@@ -42,6 +42,24 @@ func createTestDayPlanForWeekPlanService(t *testing.T, db *repository.DB, tenant
 	return plan
 }
 
+// completeWeekPlanInput returns a CreateWeekPlanInput with all 7 days filled.
+func completeWeekPlanInput(t *testing.T, db *repository.DB, tenantID uuid.UUID, code, name string) service.CreateWeekPlanInput {
+	t.Helper()
+	dp := createTestDayPlanForWeekPlanService(t, db, tenantID, code+"-"+uuid.New().String()[:4])
+	return service.CreateWeekPlanInput{
+		TenantID:           tenantID,
+		Code:               code,
+		Name:               name,
+		MondayDayPlanID:    &dp.ID,
+		TuesdayDayPlanID:   &dp.ID,
+		WednesdayDayPlanID: &dp.ID,
+		ThursdayDayPlanID:  &dp.ID,
+		FridayDayPlanID:    &dp.ID,
+		SaturdayDayPlanID:  &dp.ID,
+		SundayDayPlanID:    &dp.ID,
+	}
+}
+
 func TestWeekPlanService_Create_Success(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
@@ -50,12 +68,7 @@ func TestWeekPlanService_Create_Success(t *testing.T) {
 	ctx := context.Background()
 
 	tenant := createTestTenantForWeekPlanService(t, db)
-
-	input := service.CreateWeekPlanInput{
-		TenantID: tenant.ID,
-		Code:     "STANDARD",
-		Name:     "Standard Week",
-	}
+	input := completeWeekPlanInput(t, db, tenant.ID, "STANDARD", "Standard Week")
 
 	plan, err := svc.Create(ctx, input)
 	require.NoError(t, err)
@@ -74,20 +87,26 @@ func TestWeekPlanService_Create_WithDayPlans(t *testing.T) {
 	tenant := createTestTenantForWeekPlanService(t, db)
 	monPlan := createTestDayPlanForWeekPlanService(t, db, tenant.ID, "MON-SVC")
 	tuePlan := createTestDayPlanForWeekPlanService(t, db, tenant.ID, "TUE-SVC")
+	otherPlan := createTestDayPlanForWeekPlanService(t, db, tenant.ID, "OTHER-SVC")
 
 	input := service.CreateWeekPlanInput{
-		TenantID:         tenant.ID,
-		Code:             "WITH-DAYS",
-		Name:             "Week with Days",
-		MondayDayPlanID:  &monPlan.ID,
-		TuesdayDayPlanID: &tuePlan.ID,
+		TenantID:           tenant.ID,
+		Code:               "WITH-DAYS",
+		Name:               "Week with Days",
+		MondayDayPlanID:    &monPlan.ID,
+		TuesdayDayPlanID:   &tuePlan.ID,
+		WednesdayDayPlanID: &otherPlan.ID,
+		ThursdayDayPlanID:  &otherPlan.ID,
+		FridayDayPlanID:    &otherPlan.ID,
+		SaturdayDayPlanID:  &otherPlan.ID,
+		SundayDayPlanID:    &otherPlan.ID,
 	}
 
 	plan, err := svc.Create(ctx, input)
 	require.NoError(t, err)
 	assert.Equal(t, &monPlan.ID, plan.MondayDayPlanID)
 	assert.Equal(t, &tuePlan.ID, plan.TuesdayDayPlanID)
-	assert.Nil(t, plan.WednesdayDayPlanID)
+	assert.NotNil(t, plan.WednesdayDayPlanID)
 }
 
 func TestWeekPlanService_Create_WithDescription(t *testing.T) {
@@ -100,17 +119,35 @@ func TestWeekPlanService_Create_WithDescription(t *testing.T) {
 	tenant := createTestTenantForWeekPlanService(t, db)
 	description := "A standard 5-day work week"
 
-	input := service.CreateWeekPlanInput{
-		TenantID:    tenant.ID,
-		Code:        "DESC-TEST",
-		Name:        "Description Test",
-		Description: &description,
-	}
+	input := completeWeekPlanInput(t, db, tenant.ID, "DESC-TEST", "Description Test")
+	input.Description = &description
 
 	plan, err := svc.Create(ctx, input)
 	require.NoError(t, err)
 	require.NotNil(t, plan.Description)
 	assert.Equal(t, description, *plan.Description)
+}
+
+func TestWeekPlanService_Create_Incomplete(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	weekPlanRepo := repository.NewWeekPlanRepository(db)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewWeekPlanService(weekPlanRepo, dayPlanRepo)
+	ctx := context.Background()
+
+	tenant := createTestTenantForWeekPlanService(t, db)
+	dp := createTestDayPlanForWeekPlanService(t, db, tenant.ID, "PARTIAL")
+
+	// Only Monday set — missing 6 other days
+	input := service.CreateWeekPlanInput{
+		TenantID:        tenant.ID,
+		Code:            "INCOMPLETE",
+		Name:            "Incomplete Week",
+		MondayDayPlanID: &dp.ID,
+	}
+
+	_, err := svc.Create(ctx, input)
+	assert.ErrorIs(t, err, service.ErrWeekPlanIncomplete)
 }
 
 func TestWeekPlanService_Create_EmptyCode(t *testing.T) {
@@ -160,19 +197,13 @@ func TestWeekPlanService_Create_DuplicateCode(t *testing.T) {
 
 	tenant := createTestTenantForWeekPlanService(t, db)
 
-	input := service.CreateWeekPlanInput{
-		TenantID: tenant.ID,
-		Code:     "DUPLICATE",
-		Name:     "First Plan",
-	}
+	input := completeWeekPlanInput(t, db, tenant.ID, "DUPLICATE", "First Plan")
 	_, err := svc.Create(ctx, input)
 	require.NoError(t, err)
 
-	input2 := service.CreateWeekPlanInput{
-		TenantID: tenant.ID,
-		Code:     "DUPLICATE",
-		Name:     "Second Plan",
-	}
+	input2 := completeWeekPlanInput(t, db, tenant.ID, "DUPLICATE", "Second Plan")
+	// Use same code to trigger duplicate
+	input2.Code = "DUPLICATE"
 	_, err = svc.Create(ctx, input2)
 	assert.ErrorIs(t, err, service.ErrWeekPlanCodeExists)
 }
@@ -186,12 +217,19 @@ func TestWeekPlanService_Create_InvalidDayPlan(t *testing.T) {
 
 	tenant := createTestTenantForWeekPlanService(t, db)
 	invalidID := uuid.New()
+	dp := createTestDayPlanForWeekPlanService(t, db, tenant.ID, "VALID")
 
 	input := service.CreateWeekPlanInput{
-		TenantID:        tenant.ID,
-		Code:            "INVALID-DAY",
-		Name:            "Invalid Day Plan",
-		MondayDayPlanID: &invalidID,
+		TenantID:           tenant.ID,
+		Code:               "INVALID-DAY",
+		Name:               "Invalid Day Plan",
+		MondayDayPlanID:    &invalidID,
+		TuesdayDayPlanID:   &dp.ID,
+		WednesdayDayPlanID: &dp.ID,
+		ThursdayDayPlanID:  &dp.ID,
+		FridayDayPlanID:    &dp.ID,
+		SaturdayDayPlanID:  &dp.ID,
+		SundayDayPlanID:    &dp.ID,
 	}
 
 	_, err := svc.Create(ctx, input)
@@ -210,13 +248,20 @@ func TestWeekPlanService_Create_DayPlanFromOtherTenant(t *testing.T) {
 
 	// Create day plan for tenant2
 	otherTenantPlan := createTestDayPlanForWeekPlanService(t, db, tenant2.ID, "OTHER-TENANT")
+	dp := createTestDayPlanForWeekPlanService(t, db, tenant1.ID, "VALID")
 
-	// Try to use it for tenant1's week plan
+	// Try to use other tenant's plan for Monday
 	input := service.CreateWeekPlanInput{
-		TenantID:        tenant1.ID,
-		Code:            "CROSS-TENANT",
-		Name:            "Cross Tenant",
-		MondayDayPlanID: &otherTenantPlan.ID,
+		TenantID:           tenant1.ID,
+		Code:               "CROSS-TENANT",
+		Name:               "Cross Tenant",
+		MondayDayPlanID:    &otherTenantPlan.ID,
+		TuesdayDayPlanID:   &dp.ID,
+		WednesdayDayPlanID: &dp.ID,
+		ThursdayDayPlanID:  &dp.ID,
+		FridayDayPlanID:    &dp.ID,
+		SaturdayDayPlanID:  &dp.ID,
+		SundayDayPlanID:    &dp.ID,
 	}
 
 	_, err := svc.Create(ctx, input)
@@ -231,12 +276,8 @@ func TestWeekPlanService_GetByID_Success(t *testing.T) {
 	ctx := context.Background()
 
 	tenant := createTestTenantForWeekPlanService(t, db)
+	input := completeWeekPlanInput(t, db, tenant.ID, "GET", "Get Test")
 
-	input := service.CreateWeekPlanInput{
-		TenantID: tenant.ID,
-		Code:     "GET",
-		Name:     "Get Test",
-	}
 	created, err := svc.Create(ctx, input)
 	require.NoError(t, err)
 
@@ -266,12 +307,19 @@ func TestWeekPlanService_GetDetails_Success(t *testing.T) {
 
 	tenant := createTestTenantForWeekPlanService(t, db)
 	monPlan := createTestDayPlanForWeekPlanService(t, db, tenant.ID, "MON-DETAILS")
+	otherPlan := createTestDayPlanForWeekPlanService(t, db, tenant.ID, "OTHER-DETAILS")
 
 	input := service.CreateWeekPlanInput{
-		TenantID:        tenant.ID,
-		Code:            "DETAILS",
-		Name:            "Details Test",
-		MondayDayPlanID: &monPlan.ID,
+		TenantID:           tenant.ID,
+		Code:               "DETAILS",
+		Name:               "Details Test",
+		MondayDayPlanID:    &monPlan.ID,
+		TuesdayDayPlanID:   &otherPlan.ID,
+		WednesdayDayPlanID: &otherPlan.ID,
+		ThursdayDayPlanID:  &otherPlan.ID,
+		FridayDayPlanID:    &otherPlan.ID,
+		SaturdayDayPlanID:  &otherPlan.ID,
+		SundayDayPlanID:    &otherPlan.ID,
 	}
 	created, err := svc.Create(ctx, input)
 	require.NoError(t, err)
@@ -302,12 +350,8 @@ func TestWeekPlanService_Update_Success(t *testing.T) {
 	ctx := context.Background()
 
 	tenant := createTestTenantForWeekPlanService(t, db)
+	input := completeWeekPlanInput(t, db, tenant.ID, "UPDATE", "Original Name")
 
-	input := service.CreateWeekPlanInput{
-		TenantID: tenant.ID,
-		Code:     "UPDATE",
-		Name:     "Original Name",
-	}
 	created, err := svc.Create(ctx, input)
 	require.NoError(t, err)
 
@@ -324,7 +368,7 @@ func TestWeekPlanService_Update_Success(t *testing.T) {
 	assert.False(t, updated.IsActive)
 }
 
-func TestWeekPlanService_Update_AddDayPlan(t *testing.T) {
+func TestWeekPlanService_Update_SwapDayPlan(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
 	dayPlanRepo := repository.NewDayPlanRepository(db)
@@ -332,27 +376,23 @@ func TestWeekPlanService_Update_AddDayPlan(t *testing.T) {
 	ctx := context.Background()
 
 	tenant := createTestTenantForWeekPlanService(t, db)
-	monPlan := createTestDayPlanForWeekPlanService(t, db, tenant.ID, "MON-UPDATE")
+	input := completeWeekPlanInput(t, db, tenant.ID, "SWAP-DAY", "Swap Day Plan")
 
-	input := service.CreateWeekPlanInput{
-		TenantID: tenant.ID,
-		Code:     "UPDATE-DAY",
-		Name:     "Update Day Plan",
-	}
 	created, err := svc.Create(ctx, input)
 	require.NoError(t, err)
-	assert.Nil(t, created.MondayDayPlanID)
 
+	// Swap Monday to a new day plan
+	newDayPlan := createTestDayPlanForWeekPlanService(t, db, tenant.ID, "NEW-MON")
 	updateInput := service.UpdateWeekPlanInput{
-		MondayDayPlanID: &monPlan.ID,
+		MondayDayPlanID: &newDayPlan.ID,
 	}
 
 	updated, err := svc.Update(ctx, created.ID, updateInput)
 	require.NoError(t, err)
-	assert.Equal(t, &monPlan.ID, updated.MondayDayPlanID)
+	assert.Equal(t, &newDayPlan.ID, updated.MondayDayPlanID)
 }
 
-func TestWeekPlanService_Update_ClearDayPlan(t *testing.T) {
+func TestWeekPlanService_Update_ClearDayPlan_Rejected(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	weekPlanRepo := repository.NewWeekPlanRepository(db)
 	dayPlanRepo := repository.NewDayPlanRepository(db)
@@ -360,25 +400,18 @@ func TestWeekPlanService_Update_ClearDayPlan(t *testing.T) {
 	ctx := context.Background()
 
 	tenant := createTestTenantForWeekPlanService(t, db)
-	monPlan := createTestDayPlanForWeekPlanService(t, db, tenant.ID, "MON-CLEAR")
+	input := completeWeekPlanInput(t, db, tenant.ID, "CLEAR-DAY", "Clear Day Plan")
 
-	input := service.CreateWeekPlanInput{
-		TenantID:        tenant.ID,
-		Code:            "CLEAR-DAY",
-		Name:            "Clear Day Plan",
-		MondayDayPlanID: &monPlan.ID,
-	}
 	created, err := svc.Create(ctx, input)
 	require.NoError(t, err)
-	assert.NotNil(t, created.MondayDayPlanID)
 
+	// Clearing a day plan should fail since it would make the week plan incomplete
 	updateInput := service.UpdateWeekPlanInput{
 		ClearMondayDayPlan: true,
 	}
 
-	updated, err := svc.Update(ctx, created.ID, updateInput)
-	require.NoError(t, err)
-	assert.Nil(t, updated.MondayDayPlanID)
+	_, err = svc.Update(ctx, created.ID, updateInput)
+	assert.ErrorIs(t, err, service.ErrWeekPlanIncomplete)
 }
 
 func TestWeekPlanService_Update_NotFound(t *testing.T) {
@@ -405,12 +438,8 @@ func TestWeekPlanService_Update_EmptyName(t *testing.T) {
 	ctx := context.Background()
 
 	tenant := createTestTenantForWeekPlanService(t, db)
+	input := completeWeekPlanInput(t, db, tenant.ID, "UPDATE-EMPTY", "Original Name")
 
-	input := service.CreateWeekPlanInput{
-		TenantID: tenant.ID,
-		Code:     "UPDATE",
-		Name:     "Original Name",
-	}
 	created, err := svc.Create(ctx, input)
 	require.NoError(t, err)
 
@@ -431,12 +460,8 @@ func TestWeekPlanService_Update_InvalidDayPlan(t *testing.T) {
 	ctx := context.Background()
 
 	tenant := createTestTenantForWeekPlanService(t, db)
+	input := completeWeekPlanInput(t, db, tenant.ID, "UPDATE-INVALID", "Update Invalid")
 
-	input := service.CreateWeekPlanInput{
-		TenantID: tenant.ID,
-		Code:     "UPDATE-INVALID",
-		Name:     "Update Invalid",
-	}
 	created, err := svc.Create(ctx, input)
 	require.NoError(t, err)
 
@@ -457,12 +482,8 @@ func TestWeekPlanService_Delete_Success(t *testing.T) {
 	ctx := context.Background()
 
 	tenant := createTestTenantForWeekPlanService(t, db)
+	input := completeWeekPlanInput(t, db, tenant.ID, "DELETE", "To Delete")
 
-	input := service.CreateWeekPlanInput{
-		TenantID: tenant.ID,
-		Code:     "DELETE",
-		Name:     "To Delete",
-	}
 	created, err := svc.Create(ctx, input)
 	require.NoError(t, err)
 
@@ -494,11 +515,7 @@ func TestWeekPlanService_List(t *testing.T) {
 	tenant := createTestTenantForWeekPlanService(t, db)
 
 	for _, code := range []string{"PLAN-A", "PLAN-B", "PLAN-C"} {
-		input := service.CreateWeekPlanInput{
-			TenantID: tenant.ID,
-			Code:     code,
-			Name:     "Plan " + code,
-		}
+		input := completeWeekPlanInput(t, db, tenant.ID, code, "Plan "+code)
 		_, err := svc.Create(ctx, input)
 		require.NoError(t, err)
 	}
@@ -518,11 +535,13 @@ func TestWeekPlanService_ListActive(t *testing.T) {
 	tenant := createTestTenantForWeekPlanService(t, db)
 
 	// Create active plan
-	_, err := svc.Create(ctx, service.CreateWeekPlanInput{TenantID: tenant.ID, Code: "ACTIVE", Name: "Active Plan"})
+	input1 := completeWeekPlanInput(t, db, tenant.ID, "ACTIVE", "Active Plan")
+	_, err := svc.Create(ctx, input1)
 	require.NoError(t, err)
 
 	// Create and deactivate another plan
-	created2, err := svc.Create(ctx, service.CreateWeekPlanInput{TenantID: tenant.ID, Code: "INACTIVE", Name: "Inactive Plan"})
+	input2 := completeWeekPlanInput(t, db, tenant.ID, "INACTIVE", "Inactive Plan")
+	created2, err := svc.Create(ctx, input2)
 	require.NoError(t, err)
 
 	isActive := false

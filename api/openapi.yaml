@@ -769,6 +769,12 @@ definitions:
     $ref: 'schemas/employee-day-plans.yaml#/UpdateEmployeeDayPlanRequest'
   EmployeeDayPlanList:
     $ref: 'schemas/employee-day-plans.yaml#/EmployeeDayPlanList'
+  BulkCreateEmployeeDayPlanRequest:
+    $ref: 'schemas/employee-day-plans.yaml#/BulkCreateEmployeeDayPlanRequest'
+  DeleteRangeRequest:
+    $ref: 'schemas/employee-day-plans.yaml#/DeleteRangeRequest'
+  EmployeeDayPlanSource:
+    $ref: 'schemas/employee-day-plans.yaml#/EmployeeDayPlanSource'
 
   # Monthly Evaluations
   MonthlyEvaluation:

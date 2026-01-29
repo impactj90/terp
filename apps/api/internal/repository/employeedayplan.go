@@ -101,6 +101,24 @@ func (r *EmployeeDayPlanRepository) GetForEmployeeDateRange(ctx context.Context,
 	return plans, nil
 }
 
+// List retrieves employee day plans for a tenant with required date range, optional employee filter.
+func (r *EmployeeDayPlanRepository) List(ctx context.Context, tenantID uuid.UUID, employeeID *uuid.UUID, from, to time.Time) ([]model.EmployeeDayPlan, error) {
+	q := r.db.GORM.WithContext(ctx).
+		Preload("DayPlan").
+		Where("tenant_id = ? AND plan_date >= ? AND plan_date <= ?", tenantID, from, to)
+
+	if employeeID != nil {
+		q = q.Where("employee_id = ?", *employeeID)
+	}
+
+	var plans []model.EmployeeDayPlan
+	err := q.Order("employee_id ASC, plan_date ASC").Find(&plans).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to list employee day plans: %w", err)
+	}
+	return plans, nil
+}
+
 // Upsert creates or updates an employee day plan based on employee_id + plan_date.
 func (r *EmployeeDayPlanRepository) Upsert(ctx context.Context, plan *model.EmployeeDayPlan) error {
 	return r.db.GORM.WithContext(ctx).

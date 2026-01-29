@@ -16,6 +16,7 @@ var (
 	ErrInvalidDayPlan     = errors.New("invalid day plan reference")
 	ErrWeekPlanCodeReq    = errors.New("week plan code is required")
 	ErrWeekPlanNameReq    = errors.New("week plan name is required")
+	ErrWeekPlanIncomplete = errors.New("week plan must have a day plan assigned for all 7 days")
 )
 
 // weekPlanRepository defines the interface for week plan data access.
@@ -94,6 +95,14 @@ func (s *WeekPlanService) Create(ctx context.Context, input CreateWeekPlanInput)
 				return nil, ErrInvalidDayPlan
 			}
 		}
+	}
+
+	// Validate all 7 days have day plans assigned (ZMI manual Section 11.2)
+	if input.MondayDayPlanID == nil || input.TuesdayDayPlanID == nil ||
+		input.WednesdayDayPlanID == nil || input.ThursdayDayPlanID == nil ||
+		input.FridayDayPlanID == nil || input.SaturdayDayPlanID == nil ||
+		input.SundayDayPlanID == nil {
+		return nil, ErrWeekPlanIncomplete
 	}
 
 	weekPlan := &model.WeekPlan{
@@ -206,6 +215,14 @@ func (s *WeekPlanService) Update(ctx context.Context, id uuid.UUID, input Update
 
 	if input.IsActive != nil {
 		plan.IsActive = *input.IsActive
+	}
+
+	// Validate completeness after applying updates (ZMI manual Section 11.2)
+	if plan.MondayDayPlanID == nil || plan.TuesdayDayPlanID == nil ||
+		plan.WednesdayDayPlanID == nil || plan.ThursdayDayPlanID == nil ||
+		plan.FridayDayPlanID == nil || plan.SaturdayDayPlanID == nil ||
+		plan.SundayDayPlanID == nil {
+		return nil, ErrWeekPlanIncomplete
 	}
 
 	if err := s.weekPlanRepo.Update(ctx, plan); err != nil {

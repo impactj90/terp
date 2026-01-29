@@ -61,6 +61,7 @@ var allPermissions = []Permission{
 	{ID: permissionID("users.manage"), Resource: "users", Action: "manage", Description: "Manage users"},
 	{ID: permissionID("tenants.manage"), Resource: "tenants", Action: "manage", Description: "Manage tenants"},
 	{ID: permissionID("settings.manage"), Resource: "settings", Action: "manage", Description: "Manage settings"},
+	{ID: permissionID("time_plans.manage"), Resource: "time_plans", Action: "manage", Description: "Manage employee day plans and time plan assignments"},
 }
 
 var permissionByID = func() map[string]Permission {

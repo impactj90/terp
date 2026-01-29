@@ -787,3 +787,105 @@ func TestTariffService_DeleteBreak_WrongTariff(t *testing.T) {
 	err = svc.DeleteBreak(ctx, tariff2.ID, tariffBreak.ID)
 	assert.ErrorIs(t, err, service.ErrTariffBreakNotFound)
 }
+
+func TestTariffService_Create_RollingWeekly_RequiresRhythmStartDate(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	tariffRepo := repository.NewTariffRepository(db)
+	weekPlanRepo := repository.NewWeekPlanRepository(db)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
+	ctx := context.Background()
+
+	tenant := createTestTenantForTariffService(t, db)
+	wp := createTestWeekPlanForTariffService(t, db, tenant.ID, "WP-ROLL")
+
+	input := service.CreateTariffInput{
+		TenantID:    tenant.ID,
+		Code:        "ROLL-NO-DATE",
+		Name:        "Rolling without start date",
+		RhythmType:  model.RhythmTypeRollingWeekly,
+		WeekPlanIDs: []uuid.UUID{wp.ID},
+		// RhythmStartDate intentionally omitted
+	}
+
+	_, err := svc.Create(ctx, input)
+	assert.ErrorIs(t, err, service.ErrRhythmStartDateRequired)
+}
+
+func TestTariffService_Create_RollingWeekly_WithRhythmStartDate(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	tariffRepo := repository.NewTariffRepository(db)
+	weekPlanRepo := repository.NewWeekPlanRepository(db)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
+	ctx := context.Background()
+
+	tenant := createTestTenantForTariffService(t, db)
+	wp := createTestWeekPlanForTariffService(t, db, tenant.ID, "WP-ROLL-OK")
+
+	startDate := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	input := service.CreateTariffInput{
+		TenantID:        tenant.ID,
+		Code:            "ROLL-OK",
+		Name:            "Rolling with start date",
+		RhythmType:      model.RhythmTypeRollingWeekly,
+		WeekPlanIDs:     []uuid.UUID{wp.ID},
+		RhythmStartDate: &startDate,
+	}
+
+	tariff, err := svc.Create(ctx, input)
+	require.NoError(t, err)
+	assert.Equal(t, model.RhythmTypeRollingWeekly, tariff.RhythmType)
+	assert.NotNil(t, tariff.RhythmStartDate)
+}
+
+func TestTariffService_Create_XDays_RequiresRhythmStartDate(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	tariffRepo := repository.NewTariffRepository(db)
+	weekPlanRepo := repository.NewWeekPlanRepository(db)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
+	ctx := context.Background()
+
+	tenant := createTestTenantForTariffService(t, db)
+	cycleDays := 14
+
+	input := service.CreateTariffInput{
+		TenantID:   tenant.ID,
+		Code:       "XDAYS-NO-DATE",
+		Name:       "XDays without start date",
+		RhythmType: model.RhythmTypeXDays,
+		CycleDays:  &cycleDays,
+		// RhythmStartDate intentionally omitted
+	}
+
+	_, err := svc.Create(ctx, input)
+	assert.ErrorIs(t, err, service.ErrRhythmStartDateRequired)
+}
+
+func TestTariffService_Create_XDays_WithRhythmStartDate(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	tariffRepo := repository.NewTariffRepository(db)
+	weekPlanRepo := repository.NewWeekPlanRepository(db)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	svc := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
+	ctx := context.Background()
+
+	tenant := createTestTenantForTariffService(t, db)
+	cycleDays := 14
+	startDate := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	input := service.CreateTariffInput{
+		TenantID:        tenant.ID,
+		Code:            "XDAYS-OK",
+		Name:            "XDays with start date",
+		RhythmType:      model.RhythmTypeXDays,
+		CycleDays:       &cycleDays,
+		RhythmStartDate: &startDate,
+	}
+
+	tariff, err := svc.Create(ctx, input)
+	require.NoError(t, err)
+	assert.Equal(t, model.RhythmTypeXDays, tariff.RhythmType)
+	assert.NotNil(t, tariff.RhythmStartDate)
+}

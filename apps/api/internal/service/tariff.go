@@ -28,7 +28,8 @@ var (
 	ErrInvalidCycleDays     = errors.New("cycle days must be between 1 and 365")
 	ErrCycleDaysRequired    = errors.New("cycle_days is required for x_days rhythm")
 	ErrWeekPlansRequired    = errors.New("week_plan_ids are required for rolling_weekly rhythm")
-	ErrInvalidDayPosition   = errors.New("day position must be between 1 and cycle_days")
+	ErrInvalidDayPosition      = errors.New("day position must be between 1 and cycle_days")
+	ErrRhythmStartDateRequired = errors.New("rhythm_start_date is required for rolling_weekly and x_days rhythms")
 	// Note: ErrInvalidDayPlan is defined in weekplan.go
 )
 
@@ -167,6 +168,10 @@ func (s *TariffService) Create(ctx context.Context, input CreateTariffInput) (*m
 		if len(input.WeekPlanIDs) == 0 {
 			return nil, ErrWeekPlansRequired
 		}
+		// Require rhythm_start_date
+		if input.RhythmStartDate == nil {
+			return nil, ErrRhythmStartDateRequired
+		}
 		// Validate all week plans
 		for _, wpID := range input.WeekPlanIDs {
 			plan, err := s.weekPlanRepo.GetByID(ctx, wpID)
@@ -179,6 +184,10 @@ func (s *TariffService) Create(ctx context.Context, input CreateTariffInput) (*m
 		// For x_days, require cycle_days
 		if input.CycleDays == nil {
 			return nil, ErrCycleDaysRequired
+		}
+		// Require rhythm_start_date
+		if input.RhythmStartDate == nil {
+			return nil, ErrRhythmStartDateRequired
 		}
 		if *input.CycleDays < 1 || *input.CycleDays > 365 {
 			return nil, ErrInvalidCycleDays

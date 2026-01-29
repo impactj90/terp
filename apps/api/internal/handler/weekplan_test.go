@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -58,10 +59,42 @@ func withWeekPlanTenantContext(r *http.Request, tenant *model.Tenant) *http.Requ
 	return r.WithContext(ctx)
 }
 
-func TestWeekPlanHandler_Create_Success(t *testing.T) {
-	h, _, tenant, _ := setupWeekPlanHandler(t)
+// completeWeekPlanJSON returns a JSON body with all 7 day plans filled.
+func completeWeekPlanJSON(code, name string, dayPlanID uuid.UUID) string {
+	dpStr := dayPlanID.String()
+	return fmt.Sprintf(`{
+		"code": "%s",
+		"name": "%s",
+		"monday_day_plan_id": "%s",
+		"tuesday_day_plan_id": "%s",
+		"wednesday_day_plan_id": "%s",
+		"thursday_day_plan_id": "%s",
+		"friday_day_plan_id": "%s",
+		"saturday_day_plan_id": "%s",
+		"sunday_day_plan_id": "%s"
+	}`, code, name, dpStr, dpStr, dpStr, dpStr, dpStr, dpStr, dpStr)
+}
 
-	body := `{"code": "WEEK-001", "name": "Standard Week"}`
+// completeServiceInput returns a service input with all 7 day plans filled.
+func completeServiceInput(tenantID uuid.UUID, code, name string, dayPlanID uuid.UUID) service.CreateWeekPlanInput {
+	return service.CreateWeekPlanInput{
+		TenantID:           tenantID,
+		Code:               code,
+		Name:               name,
+		MondayDayPlanID:    &dayPlanID,
+		TuesdayDayPlanID:   &dayPlanID,
+		WednesdayDayPlanID: &dayPlanID,
+		ThursdayDayPlanID:  &dayPlanID,
+		FridayDayPlanID:    &dayPlanID,
+		SaturdayDayPlanID:  &dayPlanID,
+		SundayDayPlanID:    &dayPlanID,
+	}
+}
+
+func TestWeekPlanHandler_Create_Success(t *testing.T) {
+	h, _, tenant, dayPlan := setupWeekPlanHandler(t)
+
+	body := completeWeekPlanJSON("WEEK-001", "Standard Week", dayPlan.ID)
 	req := httptest.NewRequest("POST", "/week-plans", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req = withWeekPlanTenantContext(req, tenant)
@@ -77,10 +110,11 @@ func TestWeekPlanHandler_Create_Success(t *testing.T) {
 	assert.Equal(t, "Standard Week", result.Name)
 }
 
-func TestWeekPlanHandler_Create_WithDayPlans(t *testing.T) {
+func TestWeekPlanHandler_Create_Incomplete(t *testing.T) {
 	h, _, tenant, dayPlan := setupWeekPlanHandler(t)
 
-	body := `{"code": "WEEK-002", "name": "Week with Day Plans", "monday_day_plan_id": "` + dayPlan.ID.String() + `"}`
+	// Only Monday set
+	body := `{"code": "INCOMPLETE", "name": "Incomplete Week", "monday_day_plan_id": "` + dayPlan.ID.String() + `"}`
 	req := httptest.NewRequest("POST", "/week-plans", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req = withWeekPlanTenantContext(req, tenant)
@@ -88,13 +122,7 @@ func TestWeekPlanHandler_Create_WithDayPlans(t *testing.T) {
 
 	h.Create(rr, req)
 
-	assert.Equal(t, http.StatusCreated, rr.Code)
-	var result model.WeekPlan
-	err := json.Unmarshal(rr.Body.Bytes(), &result)
-	require.NoError(t, err)
-	assert.Equal(t, "WEEK-002", result.Code)
-	require.NotNil(t, result.MondayDayPlanID)
-	assert.Equal(t, dayPlan.ID, *result.MondayDayPlanID)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 func TestWeekPlanHandler_Create_InvalidBody(t *testing.T) {
@@ -137,20 +165,15 @@ func TestWeekPlanHandler_Create_NoTenant(t *testing.T) {
 }
 
 func TestWeekPlanHandler_Create_DuplicateCode(t *testing.T) {
-	h, svc, tenant, _ := setupWeekPlanHandler(t)
+	h, svc, tenant, dayPlan := setupWeekPlanHandler(t)
 	ctx := context.Background()
 
-	// Create first plan
-	input := service.CreateWeekPlanInput{
-		TenantID: tenant.ID,
-		Code:     "DUPLICATE",
-		Name:     "First",
-	}
-	_, err := svc.Create(ctx, input)
+	// Create first plan via service
+	_, err := svc.Create(ctx, completeServiceInput(tenant.ID, "DUPLICATE", "First", dayPlan.ID))
 	require.NoError(t, err)
 
-	// Try to create duplicate
-	body := `{"code": "DUPLICATE", "name": "Second"}`
+	// Try to create duplicate via handler
+	body := completeWeekPlanJSON("DUPLICATE", "Second", dayPlan.ID)
 	req := httptest.NewRequest("POST", "/week-plans", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req = withWeekPlanTenantContext(req, tenant)
@@ -162,9 +185,20 @@ func TestWeekPlanHandler_Create_DuplicateCode(t *testing.T) {
 }
 
 func TestWeekPlanHandler_Create_InvalidDayPlan(t *testing.T) {
-	h, _, tenant, _ := setupWeekPlanHandler(t)
+	h, _, tenant, dayPlan := setupWeekPlanHandler(t)
 
-	body := `{"code": "INVALID-DP", "name": "Invalid", "monday_day_plan_id": "` + uuid.New().String() + `"}`
+	invalidID := uuid.New().String()
+	dpStr := dayPlan.ID.String()
+	body := fmt.Sprintf(`{
+		"code": "INVALID-DP", "name": "Invalid",
+		"monday_day_plan_id": "%s",
+		"tuesday_day_plan_id": "%s",
+		"wednesday_day_plan_id": "%s",
+		"thursday_day_plan_id": "%s",
+		"friday_day_plan_id": "%s",
+		"saturday_day_plan_id": "%s",
+		"sunday_day_plan_id": "%s"
+	}`, invalidID, dpStr, dpStr, dpStr, dpStr, dpStr, dpStr)
 	req := httptest.NewRequest("POST", "/week-plans", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req = withWeekPlanTenantContext(req, tenant)
@@ -176,15 +210,10 @@ func TestWeekPlanHandler_Create_InvalidDayPlan(t *testing.T) {
 }
 
 func TestWeekPlanHandler_Get_Success(t *testing.T) {
-	h, svc, tenant, _ := setupWeekPlanHandler(t)
+	h, svc, tenant, dayPlan := setupWeekPlanHandler(t)
 	ctx := context.Background()
 
-	input := service.CreateWeekPlanInput{
-		TenantID: tenant.ID,
-		Code:     "GET-TEST",
-		Name:     "Get Test",
-	}
-	created, err := svc.Create(ctx, input)
+	created, err := svc.Create(ctx, completeServiceInput(tenant.ID, "GET-TEST", "Get Test", dayPlan.ID))
 	require.NoError(t, err)
 
 	req := httptest.NewRequest("GET", "/week-plans/"+created.ID.String(), nil)
@@ -232,17 +261,11 @@ func TestWeekPlanHandler_Get_NotFound(t *testing.T) {
 }
 
 func TestWeekPlanHandler_List_Success(t *testing.T) {
-	h, svc, tenant, _ := setupWeekPlanHandler(t)
+	h, svc, tenant, dayPlan := setupWeekPlanHandler(t)
 	ctx := context.Background()
 
-	// Create test plans
 	for _, code := range []string{"PLAN-A", "PLAN-B"} {
-		input := service.CreateWeekPlanInput{
-			TenantID: tenant.ID,
-			Code:     code,
-			Name:     "Plan " + code,
-		}
-		_, err := svc.Create(ctx, input)
+		_, err := svc.Create(ctx, completeServiceInput(tenant.ID, code, "Plan "+code, dayPlan.ID))
 		require.NoError(t, err)
 	}
 
@@ -260,15 +283,13 @@ func TestWeekPlanHandler_List_Success(t *testing.T) {
 }
 
 func TestWeekPlanHandler_List_ActiveOnly(t *testing.T) {
-	h, svc, tenant, _ := setupWeekPlanHandler(t)
+	h, svc, tenant, dayPlan := setupWeekPlanHandler(t)
 	ctx := context.Background()
 
-	// Create active plan
-	_, err := svc.Create(ctx, service.CreateWeekPlanInput{TenantID: tenant.ID, Code: "ACTIVE", Name: "Active"})
+	_, err := svc.Create(ctx, completeServiceInput(tenant.ID, "ACTIVE", "Active", dayPlan.ID))
 	require.NoError(t, err)
 
-	// Create and deactivate another plan
-	created2, err := svc.Create(ctx, service.CreateWeekPlanInput{TenantID: tenant.ID, Code: "INACTIVE", Name: "Inactive"})
+	created2, err := svc.Create(ctx, completeServiceInput(tenant.ID, "INACTIVE", "Inactive", dayPlan.ID))
 	require.NoError(t, err)
 	isActive := false
 	_, err = svc.Update(ctx, created2.ID, service.UpdateWeekPlanInput{IsActive: &isActive})
@@ -300,15 +321,10 @@ func TestWeekPlanHandler_List_NoTenant(t *testing.T) {
 }
 
 func TestWeekPlanHandler_Update_Success(t *testing.T) {
-	h, svc, tenant, _ := setupWeekPlanHandler(t)
+	h, svc, tenant, dayPlan := setupWeekPlanHandler(t)
 	ctx := context.Background()
 
-	input := service.CreateWeekPlanInput{
-		TenantID: tenant.ID,
-		Code:     "UPDATE",
-		Name:     "Original",
-	}
-	created, err := svc.Create(ctx, input)
+	created, err := svc.Create(ctx, completeServiceInput(tenant.ID, "UPDATE", "Original", dayPlan.ID))
 	require.NoError(t, err)
 
 	body := `{"name": "Updated", "is_active": false}`
@@ -327,36 +343,6 @@ func TestWeekPlanHandler_Update_Success(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "Updated", result.Name)
 	assert.False(t, result.IsActive)
-}
-
-func TestWeekPlanHandler_Update_AddDayPlan(t *testing.T) {
-	h, svc, tenant, dayPlan := setupWeekPlanHandler(t)
-	ctx := context.Background()
-
-	input := service.CreateWeekPlanInput{
-		TenantID: tenant.ID,
-		Code:     "UPDATE-DP",
-		Name:     "Update Day Plan",
-	}
-	created, err := svc.Create(ctx, input)
-	require.NoError(t, err)
-
-	body := `{"monday_day_plan_id": "` + dayPlan.ID.String() + `"}`
-	req := httptest.NewRequest("PUT", "/week-plans/"+created.ID.String(), bytes.NewBufferString(body))
-	req.Header.Set("Content-Type", "application/json")
-	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("id", created.ID.String())
-	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
-	rr := httptest.NewRecorder()
-
-	h.Update(rr, req)
-
-	assert.Equal(t, http.StatusOK, rr.Code)
-	var result model.WeekPlan
-	err = json.Unmarshal(rr.Body.Bytes(), &result)
-	require.NoError(t, err)
-	require.NotNil(t, result.MondayDayPlanID)
-	assert.Equal(t, dayPlan.ID, *result.MondayDayPlanID)
 }
 
 func TestWeekPlanHandler_Update_InvalidID(t *testing.T) {
@@ -392,15 +378,10 @@ func TestWeekPlanHandler_Update_NotFound(t *testing.T) {
 }
 
 func TestWeekPlanHandler_Update_InvalidBody(t *testing.T) {
-	h, svc, tenant, _ := setupWeekPlanHandler(t)
+	h, svc, tenant, dayPlan := setupWeekPlanHandler(t)
 	ctx := context.Background()
 
-	input := service.CreateWeekPlanInput{
-		TenantID: tenant.ID,
-		Code:     "UPDATE",
-		Name:     "Original",
-	}
-	created, err := svc.Create(ctx, input)
+	created, err := svc.Create(ctx, completeServiceInput(tenant.ID, "UPDATE-INV", "Original", dayPlan.ID))
 	require.NoError(t, err)
 
 	req := httptest.NewRequest("PUT", "/week-plans/"+created.ID.String(), bytes.NewBufferString("invalid"))
@@ -415,15 +396,10 @@ func TestWeekPlanHandler_Update_InvalidBody(t *testing.T) {
 }
 
 func TestWeekPlanHandler_Delete_Success(t *testing.T) {
-	h, svc, tenant, _ := setupWeekPlanHandler(t)
+	h, svc, tenant, dayPlan := setupWeekPlanHandler(t)
 	ctx := context.Background()
 
-	input := service.CreateWeekPlanInput{
-		TenantID: tenant.ID,
-		Code:     "DELETE",
-		Name:     "To Delete",
-	}
-	created, err := svc.Create(ctx, input)
+	created, err := svc.Create(ctx, completeServiceInput(tenant.ID, "DELETE", "To Delete", dayPlan.ID))
 	require.NoError(t, err)
 
 	req := httptest.NewRequest("DELETE", "/week-plans/"+created.ID.String(), nil)

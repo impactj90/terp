@@ -132,6 +132,8 @@ func (h *WeekPlanHandler) Create(w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusConflict, "A week plan with this code already exists")
 		case service.ErrInvalidDayPlan:
 			respondError(w, http.StatusBadRequest, "Invalid day plan reference")
+		case service.ErrWeekPlanIncomplete:
+			respondError(w, http.StatusBadRequest, "Week plan must have a day plan assigned for all 7 days")
 		default:
 			respondError(w, http.StatusInternalServerError, "Failed to create week plan")
 		}
@@ -208,6 +210,8 @@ func (h *WeekPlanHandler) Update(w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusBadRequest, "Week plan name cannot be empty")
 		case service.ErrInvalidDayPlan:
 			respondError(w, http.StatusBadRequest, "Invalid day plan reference")
+		case service.ErrWeekPlanIncomplete:
+			respondError(w, http.StatusBadRequest, "Week plan must have a day plan assigned for all 7 days")
 		default:
 			respondError(w, http.StatusInternalServerError, "Failed to update week plan")
 		}

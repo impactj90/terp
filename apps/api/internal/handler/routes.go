@@ -600,6 +600,31 @@ func RegisterNotificationRoutes(r chi.Router, h *NotificationHandler, authz *mid
 	})
 }
 
+// RegisterEmployeeDayPlanRoutes registers employee day plan routes.
+func RegisterEmployeeDayPlanRoutes(r chi.Router, h *EmployeeDayPlanHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("time_plans.manage").String()
+	r.Route("/employee-day-plans", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Post("/bulk", h.BulkCreate)
+			r.Post("/delete-range", h.DeleteRange)
+			r.Get("/{id}", h.Get)
+			r.Put("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Post("/bulk", h.BulkCreate)
+		r.With(authz.RequirePermission(permManage)).Post("/delete-range", h.DeleteRange)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Put("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+	})
+}
+
 // RegisterGroupRoutes registers employee group, workflow group, and activity group routes.
 func RegisterGroupRoutes(r chi.Router, h *GroupHandler, authz *middleware.AuthorizationMiddleware) {
 	permManage := permissions.ID("groups.manage").String()

@@ -16,7 +16,7 @@ import (
 
 // EmployeeDayPlanSource employee day plan source
 //
-// swagger:model employeeDayPlanSource
+// swagger:model EmployeeDayPlanSource
 type EmployeeDayPlanSource string
 
 func NewEmployeeDayPlanSource(value EmployeeDayPlanSource) *EmployeeDayPlanSource {

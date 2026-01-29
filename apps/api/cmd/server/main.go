@@ -106,6 +106,7 @@ func main() {
 	notificationService := service.NewNotificationService(notificationRepo, notificationPreferencesRepo, userRepo)
 	auditLogService := service.NewAuditLogService(auditLogRepo)
 	groupService := service.NewGroupService(employeeGroupRepo, workflowGroupRepo, activityGroupRepo)
+	edpService := service.NewEmployeeDayPlanService(empDayPlanRepo, employeeRepo, dayPlanRepo)
 	notificationStreamHub := service.NewNotificationStreamHub()
 	notificationService.SetStreamHub(notificationStreamHub)
 
@@ -189,6 +190,7 @@ func main() {
 	permissionHandler := handler.NewPermissionHandler()
 	auditLogHandler := handler.NewAuditLogHandler(auditLogService)
 	groupHandler := handler.NewGroupHandler(groupService)
+	edpHandler := handler.NewEmployeeDayPlanHandler(edpService)
 
 	// Initialize BookingHandler
 	bookingHandler := handler.NewBookingHandler(
@@ -286,6 +288,7 @@ func main() {
 				handler.RegisterNotificationRoutes(r, notificationHandler, authzMiddleware)
 				handler.RegisterAuditLogRoutes(r, auditLogHandler, authzMiddleware)
 				handler.RegisterGroupRoutes(r, groupHandler, authzMiddleware)
+				handler.RegisterEmployeeDayPlanRoutes(r, edpHandler, authzMiddleware)
 			})
 		})
 
