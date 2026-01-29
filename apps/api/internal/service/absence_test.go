@@ -461,8 +461,10 @@ func TestAbsenceService_CreateRange_SkipsWeekends(t *testing.T) {
 	assert.Len(t, result.SkippedDates, 2) // Saturday + Sunday
 }
 
-func TestAbsenceService_CreateRange_SkipsHolidays(t *testing.T) {
-	// Mon-Fri, with Wednesday as holiday -> 4 created, 1 skipped
+func TestAbsenceService_CreateRange_AllowsHolidays(t *testing.T) {
+	// Mon-Fri, with Wednesday as holiday -> 5 created, 0 skipped
+	// Per ZMI spec (Section 18.2), absences are allowed on holidays.
+	// Priority-based resolution happens in daily calculation.
 	ctx := context.Background()
 	svc, absenceDayRepo, absenceTypeRepo, holidayRepo, empDayPlanRepo, recalcSvc := newTestAbsenceService()
 
@@ -484,14 +486,14 @@ func TestAbsenceService_CreateRange_SkipsHolidays(t *testing.T) {
 	empDayPlanRepo.On("GetForEmployeeDateRange", ctx, employeeID, from, to).Return([]model.EmployeeDayPlan{
 		{PlanDate: time.Date(2026, 1, 26, 0, 0, 0, 0, time.UTC), DayPlanID: &somePlanID},
 		{PlanDate: time.Date(2026, 1, 27, 0, 0, 0, 0, time.UTC), DayPlanID: &somePlanID},
-		{PlanDate: wednesday, DayPlanID: &somePlanID}, // Has plan but is holiday
+		{PlanDate: wednesday, DayPlanID: &somePlanID}, // Has plan and is holiday — still creates absence
 		{PlanDate: time.Date(2026, 1, 29, 0, 0, 0, 0, time.UTC), DayPlanID: &somePlanID},
 		{PlanDate: time.Date(2026, 1, 30, 0, 0, 0, 0, time.UTC), DayPlanID: &somePlanID},
 	}, nil)
 
 	absenceDayRepo.On("GetByEmployeeDate", ctx, employeeID, mock.AnythingOfType("time.Time")).Return(nil, nil)
 	absenceDayRepo.On("CreateRange", ctx, mock.MatchedBy(func(days []model.AbsenceDay) bool {
-		return len(days) == 4
+		return len(days) == 5 // All 5 weekdays including holiday
 	})).Return(nil)
 	recalcSvc.On("TriggerRecalcRange", ctx, tenantID, employeeID, from, to).Return(&RecalcResult{}, nil)
 
@@ -504,9 +506,55 @@ func TestAbsenceService_CreateRange_SkipsHolidays(t *testing.T) {
 	result, err := svc.CreateRange(ctx, input)
 
 	require.NoError(t, err)
-	assert.Len(t, result.CreatedDays, 4)
-	assert.Len(t, result.SkippedDates, 1)
-	assert.Equal(t, wednesday, result.SkippedDates[0])
+	assert.Len(t, result.CreatedDays, 5) // All 5 weekdays including holiday
+	assert.Empty(t, result.SkippedDates)  // No dates skipped
+}
+
+func TestAbsenceService_CreateRange_IncludesHolidays(t *testing.T) {
+	// Verify that holiday dates get absence records created with correct fields.
+	ctx := context.Background()
+	svc, absenceDayRepo, absenceTypeRepo, holidayRepo, empDayPlanRepo, recalcSvc := newTestAbsenceService()
+
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	absenceTypeID := uuid.New()
+	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC) // Wednesday (holiday)
+
+	absenceTypeRepo.On("GetByID", ctx, absenceTypeID).Return(&model.AbsenceType{
+		ID: absenceTypeID, TenantID: &tenantID, IsActive: true,
+	}, nil)
+	holidayRepo.On("GetByDateRange", ctx, tenantID, date, date, (*uuid.UUID)(nil)).Return([]model.Holiday{
+		{HolidayDate: date, Name: "Holiday"},
+	}, nil)
+
+	somePlanID := uuid.New()
+	empDayPlanRepo.On("GetForEmployeeDateRange", ctx, employeeID, date, date).Return([]model.EmployeeDayPlan{
+		{PlanDate: date, DayPlanID: &somePlanID},
+	}, nil)
+
+	absenceDayRepo.On("GetByEmployeeDate", ctx, employeeID, date).Return(nil, nil)
+	absenceDayRepo.On("CreateRange", ctx, mock.MatchedBy(func(days []model.AbsenceDay) bool {
+		if len(days) != 1 {
+			return false
+		}
+		return days[0].AbsenceDate.Equal(date) &&
+			days[0].EmployeeID == employeeID &&
+			days[0].AbsenceTypeID == absenceTypeID
+	})).Return(nil)
+	recalcSvc.On("TriggerRecalcRange", ctx, tenantID, employeeID, date, date).Return(&RecalcResult{}, nil)
+
+	input := CreateAbsenceRangeInput{
+		TenantID: tenantID, EmployeeID: employeeID, AbsenceTypeID: absenceTypeID,
+		FromDate: date, ToDate: date,
+		Duration: decimal.NewFromInt(1), Status: model.AbsenceStatusPending,
+	}
+
+	result, err := svc.CreateRange(ctx, input)
+
+	require.NoError(t, err)
+	assert.Len(t, result.CreatedDays, 1)
+	assert.Equal(t, date, result.CreatedDays[0].AbsenceDate)
+	assert.Empty(t, result.SkippedDates)
 }
 
 func TestAbsenceService_CreateRange_SkipsOffDays(t *testing.T) {
@@ -885,4 +933,95 @@ func TestBuildDayPlanMap(t *testing.T) {
 	assert.NotNil(t, m[time.Date(2026, 1, 26, 0, 0, 0, 0, time.UTC)])
 	assert.NotNil(t, m[time.Date(2026, 1, 27, 0, 0, 0, 0, time.UTC)])
 	assert.Nil(t, m[time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)]) // Not in map
+}
+
+func TestAbsenceService_Update_Duration(t *testing.T) {
+	ctx := context.Background()
+	svc, absenceDayRepo, _, _, _, recalcSvc := newTestAbsenceService()
+
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	absenceID := uuid.New()
+	date := time.Date(2026, 2, 2, 0, 0, 0, 0, time.UTC)
+
+	existing := &model.AbsenceDay{
+		ID: absenceID, TenantID: tenantID, EmployeeID: employeeID,
+		AbsenceDate: date, AbsenceTypeID: uuid.New(),
+		Duration: decimal.NewFromInt(1), Status: model.AbsenceStatusPending,
+	}
+
+	absenceDayRepo.On("GetByID", ctx, absenceID).Return(existing, nil)
+	absenceDayRepo.On("Update", ctx, mock.MatchedBy(func(ad *model.AbsenceDay) bool {
+		return ad.Duration.Equal(decimal.NewFromFloat(0.5))
+	})).Return(nil)
+	recalcSvc.On("TriggerRecalc", ctx, tenantID, employeeID, date).Return(&RecalcResult{}, nil)
+
+	halfDay := decimal.NewFromFloat(0.5)
+	result, err := svc.Update(ctx, absenceID, UpdateAbsenceInput{Duration: &halfDay})
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.True(t, result.Duration.Equal(decimal.NewFromFloat(0.5)))
+}
+
+func TestAbsenceService_Update_Notes(t *testing.T) {
+	ctx := context.Background()
+	svc, absenceDayRepo, _, _, _, recalcSvc := newTestAbsenceService()
+
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	absenceID := uuid.New()
+	date := time.Date(2026, 2, 2, 0, 0, 0, 0, time.UTC)
+
+	existing := &model.AbsenceDay{
+		ID: absenceID, TenantID: tenantID, EmployeeID: employeeID,
+		AbsenceDate: date, AbsenceTypeID: uuid.New(),
+		Duration: decimal.NewFromInt(1), Status: model.AbsenceStatusPending,
+	}
+
+	absenceDayRepo.On("GetByID", ctx, absenceID).Return(existing, nil)
+	absenceDayRepo.On("Update", ctx, mock.MatchedBy(func(ad *model.AbsenceDay) bool {
+		return ad.Notes != nil && *ad.Notes == "Updated note"
+	})).Return(nil)
+	recalcSvc.On("TriggerRecalc", ctx, tenantID, employeeID, date).Return(&RecalcResult{}, nil)
+
+	notes := "Updated note"
+	result, err := svc.Update(ctx, absenceID, UpdateAbsenceInput{Notes: &notes})
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Equal(t, "Updated note", *result.Notes)
+}
+
+func TestAbsenceService_Update_RejectsNonPending(t *testing.T) {
+	ctx := context.Background()
+	svc, absenceDayRepo, _, _, _, _ := newTestAbsenceService()
+
+	absenceID := uuid.New()
+	existing := &model.AbsenceDay{
+		ID: absenceID, TenantID: uuid.New(), EmployeeID: uuid.New(),
+		AbsenceDate: time.Date(2026, 2, 2, 0, 0, 0, 0, time.UTC),
+		AbsenceTypeID: uuid.New(),
+		Duration: decimal.NewFromInt(1), Status: model.AbsenceStatusApproved, // NOT pending
+	}
+
+	absenceDayRepo.On("GetByID", ctx, absenceID).Return(existing, nil)
+
+	notes := "try to update"
+	_, err := svc.Update(ctx, absenceID, UpdateAbsenceInput{Notes: &notes})
+
+	assert.ErrorIs(t, err, ErrAbsenceNotPending)
+}
+
+func TestAbsenceService_Update_NotFound(t *testing.T) {
+	ctx := context.Background()
+	svc, absenceDayRepo, _, _, _, _ := newTestAbsenceService()
+
+	absenceID := uuid.New()
+	absenceDayRepo.On("GetByID", ctx, absenceID).Return(nil, ErrAbsenceNotFound)
+
+	notes := "try to update"
+	_, err := svc.Update(ctx, absenceID, UpdateAbsenceInput{Notes: &notes})
+
+	assert.ErrorIs(t, err, ErrAbsenceNotFound)
 }

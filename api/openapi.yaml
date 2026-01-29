@@ -727,6 +727,8 @@ definitions:
     $ref: 'schemas/absences.yaml#/Absence'
   CreateAbsenceRangeRequest:
     $ref: 'schemas/absences.yaml#/CreateAbsenceRangeRequest'
+  UpdateAbsenceRequest:
+    $ref: 'schemas/absences.yaml#/UpdateAbsenceRequest'
   AbsenceList:
     $ref: 'schemas/absences.yaml#/AbsenceList'
 

@@ -119,7 +119,7 @@ type CreateAbsenceRangeInput struct {
 // CreateAbsenceRangeResult contains the result of a range creation.
 type CreateAbsenceRangeResult struct {
 	CreatedDays  []model.AbsenceDay
-	SkippedDates []time.Time // Dates skipped (weekends, holidays, off-days, existing absences)
+	SkippedDates []time.Time // Dates skipped (weekends, off-days, existing absences)
 }
 
 // ListTypes retrieves all absence types for a tenant, including system types.
@@ -240,6 +240,47 @@ func (s *AbsenceService) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+// UpdateAbsenceInput defines the input for updating an absence day.
+type UpdateAbsenceInput struct {
+	Duration      *decimal.Decimal
+	HalfDayPeriod *model.HalfDayPeriod
+	Notes         *string
+}
+
+// Update modifies a pending absence day's editable fields.
+// Only pending absences can be updated (approved/rejected cannot).
+func (s *AbsenceService) Update(ctx context.Context, id uuid.UUID, input UpdateAbsenceInput) (*model.AbsenceDay, error) {
+	ad, err := s.absenceDayRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, ErrAbsenceNotFound
+	}
+
+	// Only pending absences can be edited
+	if ad.Status != model.AbsenceStatusPending {
+		return nil, ErrAbsenceNotPending
+	}
+
+	// Apply updates
+	if input.Duration != nil {
+		ad.Duration = *input.Duration
+	}
+	if input.HalfDayPeriod != nil {
+		ad.HalfDayPeriod = input.HalfDayPeriod
+	}
+	if input.Notes != nil {
+		ad.Notes = input.Notes
+	}
+
+	if err := s.absenceDayRepo.Update(ctx, ad); err != nil {
+		return nil, err
+	}
+
+	// Trigger recalculation in case duration changed
+	_, _ = s.recalcSvc.TriggerRecalc(ctx, ad.TenantID, ad.EmployeeID, ad.AbsenceDate)
+
+	return ad, nil
+}
+
 // DeleteRange deletes all absence days for an employee within a date range and triggers recalculation.
 func (s *AbsenceService) DeleteRange(ctx context.Context, tenantID, employeeID uuid.UUID, from, to time.Time) error {
 	if from.After(to) {
@@ -257,7 +298,8 @@ func (s *AbsenceService) DeleteRange(ctx context.Context, tenantID, employeeID u
 	return nil
 }
 
-// CreateRange creates absence days for a date range, skipping weekends, holidays, and off-days.
+// CreateRange creates absence days for a date range, skipping weekends and off-days.
+// Holidays are NOT skipped — absences can be created on holidays per ZMI spec.
 // Dates with existing absences are also skipped (not an error).
 // Returns the created days and all skipped dates.
 func (s *AbsenceService) CreateRange(ctx context.Context, input CreateAbsenceRangeInput) (*CreateAbsenceRangeResult, error) {
@@ -279,12 +321,8 @@ func (s *AbsenceService) CreateRange(ctx context.Context, input CreateAbsenceRan
 		return nil, ErrInvalidAbsenceType
 	}
 
-	// Batch-fetch holidays for the range
-	holidays, err := s.holidayRepo.GetByDateRange(ctx, input.TenantID, input.FromDate, input.ToDate, nil)
-	if err != nil {
-		return nil, err
-	}
-	holidaySet := buildHolidaySet(holidays)
+	// NOTE: Holiday fetch removed — holidays no longer block absence creation.
+	// Priority resolution happens in daily calculation (CalculateDay).
 
 	// Batch-fetch day plans for the range
 	dayPlans, err := s.empDayPlanRepo.GetForEmployeeDateRange(ctx, input.EmployeeID, input.FromDate, input.ToDate)
@@ -300,8 +338,8 @@ func (s *AbsenceService) CreateRange(ctx context.Context, input CreateAbsenceRan
 	current := normalizeDate(input.FromDate)
 	toDate := normalizeDate(input.ToDate)
 	for !current.After(toDate) {
-		// Check if date should be skipped (weekend/holiday/off-day)
-		skip, _ := s.shouldSkipDate(current, holidaySet, dayPlanMap)
+		// Check if date should be skipped (weekend/off-day)
+		skip, _ := s.shouldSkipDate(current, dayPlanMap)
 		if skip {
 			skippedDates = append(skippedDates, current)
 			current = current.AddDate(0, 0, 1)
@@ -454,10 +492,11 @@ const (
 )
 
 // shouldSkipDate determines whether to skip creating an absence on this date.
-// Always skips: weekends, holidays, off-days (no plan or DayPlanID == nil).
+// Skips: weekends, off-days (no plan or DayPlanID == nil).
+// Does NOT skip holidays — absences are allowed on holidays per ZMI spec (Section 18.2).
+// Priority-based resolution between holiday and absence happens in daily calculation.
 func (s *AbsenceService) shouldSkipDate(
 	date time.Time,
-	holidaySet map[time.Time]bool,
 	dayPlanMap map[time.Time]*model.EmployeeDayPlan,
 ) (bool, skipReason) {
 	normalized := normalizeDate(date)
@@ -468,10 +507,9 @@ func (s *AbsenceService) shouldSkipDate(
 		return true, skipReasonWeekend
 	}
 
-	// Skip holidays
-	if holidaySet[normalized] {
-		return true, skipReasonHoliday
-	}
+	// NOTE: Holidays are NOT skipped. Per ZMI spec (Section 18.2),
+	// absences may be created on holidays. Priority-based resolution
+	// happens in daily calculation (CalculateDay).
 
 	// Skip off-days: no plan record means no scheduled work
 	plan, exists := dayPlanMap[normalized]

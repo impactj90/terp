@@ -3159,20 +3159,7 @@ paths:
           in: body
           required: true
           schema:
-            type: object
-            properties:
-              duration:
-                type: number
-                format: decimal
-              notes:
-                type: string
-              status:
-                type: string
-                enum:
-                  - pending
-                  - approved
-                  - rejected
-                  - cancelled
+            $ref: '#/definitions/UpdateAbsenceRequest'
       responses:
         '200':
           description: Updated absence
@@ -10511,6 +10498,21 @@ definitions:
         example: 1
       notes:
         type: string
+  UpdateAbsenceRequest:
+    type: object
+    properties:
+      duration:
+        type: number
+        format: decimal
+      notes:
+        type: string
+      status:
+        type: string
+        enum:
+          - pending
+          - approved
+          - rejected
+          - cancelled
   AbsenceList:
     type: object
     required:

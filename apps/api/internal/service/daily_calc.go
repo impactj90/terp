@@ -159,8 +159,15 @@ func (s *DailyCalcService) CalculateDay(ctx context.Context, tenantID, employeeI
 		// Off day - no day plan assigned
 		dailyValue = s.handleOffDay(employeeID, date, bookings)
 	} else if isHoliday && len(bookings) == 0 {
-		// Holiday without bookings - apply holiday credit
-		dailyValue = s.handleHolidayCredit(ctx, employeeID, date, empDayPlan, holidayCategory)
+		// Holiday without bookings - check for absence with priority override
+		absence, _ := s.absenceDayRepo.GetByEmployeeDate(ctx, employeeID, date)
+		if absence != nil && absence.IsApproved() && absence.AbsenceType != nil && absence.AbsenceType.Priority > 0 {
+			// Absence has priority > 0: use absence credit instead of holiday credit
+			dailyValue = s.handleAbsenceCredit(ctx, employeeID, date, empDayPlan, absence)
+		} else {
+			// No absence or absence priority == 0: use holiday credit (existing behavior)
+			dailyValue = s.handleHolidayCredit(ctx, employeeID, date, empDayPlan, holidayCategory)
+		}
 	} else if len(bookings) == 0 {
 		// No bookings, no holiday - apply no-booking behavior
 		dailyValue, err = s.handleNoBookings(ctx, employeeID, date, empDayPlan)
@@ -301,6 +308,41 @@ func (s *DailyCalcService) handleHolidayCredit(
 		credit = empDayPlan.DayPlan.GetHolidayCredit(holidayCategory)
 	}
 
+	dv.NetTime = credit
+	dv.GrossTime = credit
+	if credit < targetTime {
+		dv.Undertime = targetTime - credit
+	}
+
+	return dv
+}
+
+// handleAbsenceCredit processes a day where an approved absence overrides a holiday via priority.
+// Uses the absence type's portion to calculate credit instead of holiday credit.
+func (s *DailyCalcService) handleAbsenceCredit(
+	ctx context.Context,
+	employeeID uuid.UUID,
+	date time.Time,
+	empDayPlan *model.EmployeeDayPlan,
+	absence *model.AbsenceDay,
+) *model.DailyValue {
+	now := time.Now()
+	dv := &model.DailyValue{
+		EmployeeID:   employeeID,
+		ValueDate:    date,
+		Status:       model.DailyValueStatusCalculated,
+		CalculatedAt: &now,
+		Warnings:     pq.StringArray{"ABSENCE_ON_HOLIDAY"},
+	}
+
+	targetTime := 0
+	if empDayPlan != nil && empDayPlan.DayPlan != nil {
+		targetTime = s.resolveTargetHours(ctx, employeeID, date, empDayPlan.DayPlan)
+	}
+	dv.TargetTime = targetTime
+
+	// Use absence credit calculation: regelarbeitszeit * portion * duration
+	credit := absence.CalculateCredit(targetTime)
 	dv.NetTime = credit
 	dv.GrossTime = credit
 	if credit < targetTime {

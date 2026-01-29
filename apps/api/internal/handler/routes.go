@@ -509,11 +509,13 @@ func RegisterAbsenceRoutes(r chi.Router, h *AbsenceHandler, authz *middleware.Au
 	// Absence list and CRUD
 	if authz == nil {
 		r.Get("/absences", h.ListAll)
+		r.Patch("/absences/{id}", h.UpdateAbsence)
 		r.Delete("/absences/{id}", h.Delete)
 		r.Post("/absences/{id}/approve", h.Approve)
 		r.Post("/absences/{id}/reject", h.Reject)
 	} else {
 		r.With(authz.RequirePermission(managePerm)).Get("/absences", h.ListAll)
+		r.With(authz.RequirePermission(managePerm)).Patch("/absences/{id}", h.UpdateAbsence)
 		r.With(authz.RequirePermission(managePerm)).Delete("/absences/{id}", h.Delete)
 		r.With(authz.RequirePermission(approvePerm)).Post("/absences/{id}/approve", h.Approve)
 		r.With(authz.RequirePermission(approvePerm)).Post("/absences/{id}/reject", h.Reject)

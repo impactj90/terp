@@ -433,6 +433,18 @@ func (h *AbsenceHandler) Approve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Audit log
+	if h.auditService != nil {
+		if tenantID, ok := middleware.TenantFromContext(r.Context()); ok {
+			h.auditService.Log(r.Context(), r, service.LogEntry{
+				TenantID:   tenantID,
+				Action:     model.AuditActionApprove,
+				EntityType: "absence",
+				EntityID:   id,
+			})
+		}
+	}
+
 	respondJSON(w, http.StatusOK, h.absenceDayToResponse(ad))
 }
 
@@ -481,6 +493,87 @@ func (h *AbsenceHandler) Reject(w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusInternalServerError, "Failed to reject absence")
 		}
 		return
+	}
+
+	// Audit log
+	if h.auditService != nil {
+		if tenantID, ok := middleware.TenantFromContext(r.Context()); ok {
+			h.auditService.Log(r.Context(), r, service.LogEntry{
+				TenantID:   tenantID,
+				Action:     model.AuditActionReject,
+				EntityType: "absence",
+				EntityID:   id,
+			})
+		}
+	}
+
+	respondJSON(w, http.StatusOK, h.absenceDayToResponse(ad))
+}
+
+// UpdateAbsence handles PATCH /absences/{id}
+func (h *AbsenceHandler) UpdateAbsence(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid absence ID")
+		return
+	}
+
+	if _, err := h.ensureAbsenceScope(r.Context(), id); err != nil {
+		if errors.Is(err, service.ErrAbsenceNotFound) {
+			respondError(w, http.StatusNotFound, "Absence not found")
+			return
+		}
+		if errors.Is(err, service.ErrEmployeeNotFound) {
+			respondError(w, http.StatusNotFound, "Employee not found")
+			return
+		}
+		if errors.Is(err, errAbsenceScopeDenied) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to verify access")
+		return
+	}
+
+	var req models.UpdateAbsenceRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	input := service.UpdateAbsenceInput{}
+	if req.Duration != 0 {
+		d := decimal.NewFromFloat(req.Duration)
+		input.Duration = &d
+	}
+	if req.Notes != "" {
+		input.Notes = &req.Notes
+	}
+
+	ad, svcErr := h.absenceService.Update(r.Context(), id, input)
+	if svcErr != nil {
+		switch svcErr {
+		case service.ErrAbsenceNotFound:
+			respondError(w, http.StatusNotFound, "Absence not found")
+		case service.ErrAbsenceNotPending:
+			respondError(w, http.StatusBadRequest, "Only pending absences can be updated")
+		default:
+			respondError(w, http.StatusInternalServerError, "Failed to update absence")
+		}
+		return
+	}
+
+	// Audit log
+	if h.auditService != nil {
+		if tenantID, ok := middleware.TenantFromContext(r.Context()); ok {
+			h.auditService.Log(r.Context(), r, service.LogEntry{
+				TenantID:   tenantID,
+				Action:     model.AuditActionUpdate,
+				EntityType: "absence",
+				EntityID:   id,
+			})
+		}
 	}
 
 	respondJSON(w, http.StatusOK, h.absenceDayToResponse(ad))
