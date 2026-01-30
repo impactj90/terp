@@ -1,0 +1,313 @@
+# Schedule schemas
+Schedule:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - name
+    - timing_type
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    name:
+      type: string
+      example: "Nightly Calculation"
+    description:
+      type: string
+      x-nullable: true
+    timing_type:
+      type: string
+      enum: [seconds, minutes, hours, daily, weekly, monthly, manual]
+    timing_config:
+      $ref: '#/TimingConfig'
+    is_enabled:
+      type: boolean
+    last_run_at:
+      type: string
+      format: date-time
+      x-nullable: true
+    next_run_at:
+      type: string
+      format: date-time
+      x-nullable: true
+    tasks:
+      type: array
+      items:
+        $ref: '#/ScheduleTask'
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+TimingConfig:
+  type: object
+  properties:
+    interval:
+      type: integer
+      description: "Interval value for seconds/minutes/hours timing types"
+      example: 30
+    time:
+      type: string
+      description: "Time of day for daily/weekly/monthly (HH:MM format)"
+      example: "02:00"
+    day_of_week:
+      type: integer
+      description: "Day of week for weekly (0=Sunday, 1=Monday, ...6=Saturday)"
+      minimum: 0
+      maximum: 6
+    day_of_month:
+      type: integer
+      description: "Day of month for monthly timing type"
+      minimum: 1
+      maximum: 31
+
+ScheduleTask:
+  type: object
+  required:
+    - id
+    - schedule_id
+    - task_type
+    - sort_order
+  properties:
+    id:
+      type: string
+      format: uuid
+    schedule_id:
+      type: string
+      format: uuid
+    task_type:
+      type: string
+      enum: [calculate_days, calculate_months, backup_database, send_notifications, export_data, alive_check]
+    sort_order:
+      type: integer
+    parameters:
+      type: object
+      additionalProperties: true
+    is_enabled:
+      type: boolean
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+ScheduleExecution:
+  type: object
+  required:
+    - id
+    - schedule_id
+    - status
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    schedule_id:
+      type: string
+      format: uuid
+    status:
+      type: string
+      enum: [pending, running, completed, failed, partial]
+    trigger_type:
+      type: string
+      enum: [scheduled, manual]
+    triggered_by:
+      type: string
+      format: uuid
+      x-nullable: true
+    started_at:
+      type: string
+      format: date-time
+      x-nullable: true
+    completed_at:
+      type: string
+      format: date-time
+      x-nullable: true
+    error_message:
+      type: string
+      x-nullable: true
+    tasks_total:
+      type: integer
+    tasks_succeeded:
+      type: integer
+    tasks_failed:
+      type: integer
+    task_executions:
+      type: array
+      items:
+        $ref: '#/ScheduleTaskExecution'
+    created_at:
+      type: string
+      format: date-time
+
+ScheduleTaskExecution:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+    execution_id:
+      type: string
+      format: uuid
+    task_type:
+      type: string
+    sort_order:
+      type: integer
+    status:
+      type: string
+      enum: [pending, running, completed, failed, skipped]
+    started_at:
+      type: string
+      format: date-time
+      x-nullable: true
+    completed_at:
+      type: string
+      format: date-time
+      x-nullable: true
+    error_message:
+      type: string
+      x-nullable: true
+    result:
+      type: object
+      additionalProperties: true
+    created_at:
+      type: string
+      format: date-time
+
+TaskCatalogEntry:
+  type: object
+  required:
+    - task_type
+    - name
+    - description
+  properties:
+    task_type:
+      type: string
+      enum: [calculate_days, calculate_months, backup_database, send_notifications, export_data, alive_check]
+    name:
+      type: string
+    description:
+      type: string
+    parameter_schema:
+      type: object
+      additionalProperties: true
+      description: "JSON schema describing the accepted parameters for this task type"
+
+CreateScheduleRequest:
+  type: object
+  required:
+    - name
+    - timing_type
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    description:
+      type: string
+    timing_type:
+      type: string
+      enum: [seconds, minutes, hours, daily, weekly, monthly, manual]
+    timing_config:
+      $ref: '#/TimingConfig'
+    is_enabled:
+      type: boolean
+    tasks:
+      type: array
+      items:
+        $ref: '#/CreateScheduleTaskRequest'
+
+UpdateScheduleRequest:
+  type: object
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    description:
+      type: string
+    timing_type:
+      type: string
+      enum: [seconds, minutes, hours, daily, weekly, monthly, manual]
+    timing_config:
+      $ref: '#/TimingConfig'
+    is_enabled:
+      type: boolean
+
+CreateScheduleTaskRequest:
+  type: object
+  required:
+    - task_type
+    - sort_order
+  properties:
+    task_type:
+      type: string
+      enum: [calculate_days, calculate_months, backup_database, send_notifications, export_data, alive_check]
+    sort_order:
+      type: integer
+    parameters:
+      type: object
+      additionalProperties: true
+    is_enabled:
+      type: boolean
+
+UpdateScheduleTaskRequest:
+  type: object
+  properties:
+    task_type:
+      type: string
+      enum: [calculate_days, calculate_months, backup_database, send_notifications, export_data, alive_check]
+    sort_order:
+      type: integer
+    parameters:
+      type: object
+      additionalProperties: true
+    is_enabled:
+      type: boolean
+
+TriggerExecutionRequest:
+  type: object
+  properties:
+    triggered_by:
+      type: string
+      format: uuid
+      description: "User ID of the person triggering the execution (optional, auto-detected from auth)"
+
+ScheduleList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/Schedule'
+
+ScheduleExecutionList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/ScheduleExecution'
+
+TaskCatalog:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/TaskCatalogEntry'

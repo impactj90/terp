@@ -1,0 +1,306 @@
+# Schedule endpoints
+/schedules:
+  get:
+    tags:
+      - Scheduler
+    summary: List schedules
+    operationId: listSchedules
+    responses:
+      200:
+        description: List of schedules
+        schema:
+          $ref: '../schemas/schedules.yaml#/ScheduleList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Scheduler
+    summary: Create schedule
+    operationId: createSchedule
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/schedules.yaml#/CreateScheduleRequest'
+    responses:
+      201:
+        description: Created schedule
+        schema:
+          $ref: '../schemas/schedules.yaml#/Schedule'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Schedule name already exists for this tenant
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/schedules/{id}:
+  get:
+    tags:
+      - Scheduler
+    summary: Get schedule by ID
+    operationId: getSchedule
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Schedule details with tasks
+        schema:
+          $ref: '../schemas/schedules.yaml#/Schedule'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Scheduler
+    summary: Update schedule
+    operationId: updateSchedule
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/schedules.yaml#/UpdateScheduleRequest'
+    responses:
+      200:
+        description: Updated schedule
+        schema:
+          $ref: '../schemas/schedules.yaml#/Schedule'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Scheduler
+    summary: Delete schedule
+    operationId: deleteSchedule
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Schedule deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/schedules/{id}/tasks:
+  get:
+    tags:
+      - Scheduler
+    summary: List tasks for a schedule
+    operationId: listScheduleTasks
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: List of tasks
+        schema:
+          type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '../schemas/schedules.yaml#/ScheduleTask'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  post:
+    tags:
+      - Scheduler
+    summary: Add task to schedule
+    operationId: addScheduleTask
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/schedules.yaml#/CreateScheduleTaskRequest'
+    responses:
+      201:
+        description: Created task
+        schema:
+          $ref: '../schemas/schedules.yaml#/ScheduleTask'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/schedules/{id}/tasks/{taskId}:
+  patch:
+    tags:
+      - Scheduler
+    summary: Update schedule task
+    operationId: updateScheduleTask
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: taskId
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/schedules.yaml#/UpdateScheduleTaskRequest'
+    responses:
+      200:
+        description: Updated task
+        schema:
+          $ref: '../schemas/schedules.yaml#/ScheduleTask'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Scheduler
+    summary: Remove task from schedule
+    operationId: removeScheduleTask
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: taskId
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Task removed
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/schedules/{id}/execute:
+  post:
+    tags:
+      - Scheduler
+    summary: Trigger manual execution of a schedule
+    operationId: triggerScheduleExecution
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        schema:
+          $ref: '../schemas/schedules.yaml#/TriggerExecutionRequest'
+    responses:
+      200:
+        description: Execution result
+        schema:
+          $ref: '../schemas/schedules.yaml#/ScheduleExecution'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/schedules/{id}/executions:
+  get:
+    tags:
+      - Scheduler
+    summary: List execution logs for a schedule
+    operationId: listScheduleExecutions
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: limit
+        in: query
+        type: integer
+        description: Max number of executions to return (default 20)
+    responses:
+      200:
+        description: Execution history
+        schema:
+          $ref: '../schemas/schedules.yaml#/ScheduleExecutionList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/schedule-executions/{id}:
+  get:
+    tags:
+      - Scheduler
+    summary: Get execution detail with task logs
+    operationId: getScheduleExecution
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Execution detail with task execution logs
+        schema:
+          $ref: '../schemas/schedules.yaml#/ScheduleExecution'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/scheduler/task-catalog:
+  get:
+    tags:
+      - Scheduler
+    summary: List available task types
+    operationId: getTaskCatalog
+    responses:
+      200:
+        description: Task catalog
+        schema:
+          $ref: '../schemas/schedules.yaml#/TaskCatalog'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
