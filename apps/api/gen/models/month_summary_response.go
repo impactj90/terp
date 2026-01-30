@@ -61,7 +61,8 @@ type MonthSummaryResponse struct {
 	FlextimeStart int64 `json:"flextime_start,omitempty"`
 
 	// Whether the month has been closed. Closed months block recalculation and new bookings.
-	IsClosed bool `json:"is_closed,omitempty"`
+	// Required: true
+	IsClosed *bool `json:"is_closed"`
 
 	// Calendar month (1-12)
 	// Maximum: 12
@@ -134,6 +135,10 @@ func (m *MonthSummaryResponse) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
+	if err := m.validateIsClosed(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateMonth(formats); err != nil {
 		res = append(res, err)
 	}
@@ -182,6 +187,15 @@ func (m *MonthSummaryResponse) validateEmployeeID(formats strfmt.Registry) error
 	}
 
 	if err := validate.FormatOf("employee_id", "body", "uuid", m.EmployeeID.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *MonthSummaryResponse) validateIsClosed(formats strfmt.Registry) error {
+
+	if err := validate.Required("is_closed", "body", m.IsClosed); err != nil {
 		return err
 	}
 

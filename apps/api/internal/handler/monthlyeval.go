@@ -16,6 +16,7 @@ import (
 	"github.com/tolga/terp/internal/middleware"
 	"github.com/tolga/terp/internal/model"
 	"github.com/tolga/terp/internal/service"
+	"github.com/tolga/terp/pkg/pointer"
 )
 
 // MonthlyEvalHandler handles monthly evaluation HTTP requests.
@@ -403,7 +404,7 @@ func (h *MonthlyEvalHandler) summaryToResponse(s *service.MonthSummary) *models.
 		OtherAbsenceDays:  int64(s.OtherAbsenceDays),
 		WorkDays:          int64(s.WorkDays),
 		DaysWithErrors:    int64(s.DaysWithErrors),
-		IsClosed:          s.IsClosed,
+		IsClosed:          pointer.Of(s.IsClosed),
 		Warnings:          s.Warnings,
 	}
 

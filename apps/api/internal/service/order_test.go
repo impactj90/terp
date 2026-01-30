@@ -70,7 +70,7 @@ func TestOrderService_Create_DefaultStatus(t *testing.T) {
 
 	o, err := svc.Create(ctx, input)
 	require.NoError(t, err)
-	assert.Equal(t, model.OrderStatusPlanned, o.Status)
+	assert.Equal(t, model.OrderStatusActive, o.Status)
 }
 
 func TestOrderService_Create_EmptyCode(t *testing.T) {

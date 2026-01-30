@@ -195,6 +195,8 @@ MonthSummaryResponse:
     Monthly summary for an employee including time totals, flextime balance,
     absence summary, closing status, and evaluation warnings. Field names
     match the Go MonthlyValue model (e.g. total_gross_time, not gross_minutes).
+  required:
+    - is_closed
   properties:
     employee_id:
       type: string
