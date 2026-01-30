@@ -1,0 +1,104 @@
+# Vacation Capping Rule Group schemas
+VacationCappingRuleGroup:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - code
+    - name
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    code:
+      type: string
+      example: "STANDARD_CAPPING"
+    name:
+      type: string
+      example: "Standard Capping Group"
+    description:
+      type: string
+      x-nullable: true
+    is_active:
+      type: boolean
+      example: true
+    capping_rules:
+      type: array
+      items:
+        $ref: '../schemas/vacation-capping-rules.yaml#/VacationCappingRuleSummary'
+      description: "Capping rules linked to this group"
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+VacationCappingRuleGroupSummary:
+  type: object
+  required:
+    - id
+    - code
+    - name
+  properties:
+    id:
+      type: string
+      format: uuid
+    code:
+      type: string
+    name:
+      type: string
+
+CreateVacationCappingRuleGroupRequest:
+  type: object
+  required:
+    - code
+    - name
+  properties:
+    code:
+      type: string
+      minLength: 1
+      maxLength: 50
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    description:
+      type: string
+    capping_rule_ids:
+      type: array
+      items:
+        type: string
+        format: uuid
+      description: "IDs of capping rules to link to this group"
+
+UpdateVacationCappingRuleGroupRequest:
+  type: object
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    description:
+      type: string
+    is_active:
+      type: boolean
+    capping_rule_ids:
+      type: array
+      items:
+        type: string
+        format: uuid
+      description: "Replace linked capping rules with this set"
+
+VacationCappingRuleGroupList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/VacationCappingRuleGroup'

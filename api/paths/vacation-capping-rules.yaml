@@ -1,0 +1,119 @@
+# Vacation Capping Rule endpoints
+/vacation-capping-rules:
+  get:
+    tags:
+      - Vacation Capping Rules
+    summary: List vacation capping rules
+    operationId: listVacationCappingRules
+    parameters:
+      - name: active_only
+        in: query
+        type: boolean
+        description: Filter to only active rules
+      - name: rule_type
+        in: query
+        type: string
+        enum: [year_end, mid_year]
+        description: Filter by rule type
+    responses:
+      200:
+        description: List of vacation capping rules
+        schema:
+          $ref: '../schemas/vacation-capping-rules.yaml#/VacationCappingRuleList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Vacation Capping Rules
+    summary: Create vacation capping rule
+    operationId: createVacationCappingRule
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/vacation-capping-rules.yaml#/CreateVacationCappingRuleRequest'
+    responses:
+      201:
+        description: Created vacation capping rule
+        schema:
+          $ref: '../schemas/vacation-capping-rules.yaml#/VacationCappingRule'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists for this tenant
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/vacation-capping-rules/{id}:
+  get:
+    tags:
+      - Vacation Capping Rules
+    summary: Get vacation capping rule by ID
+    operationId: getVacationCappingRule
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Vacation capping rule details
+        schema:
+          $ref: '../schemas/vacation-capping-rules.yaml#/VacationCappingRule'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Vacation Capping Rules
+    summary: Update vacation capping rule
+    operationId: updateVacationCappingRule
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/vacation-capping-rules.yaml#/UpdateVacationCappingRuleRequest'
+    responses:
+      200:
+        description: Updated vacation capping rule
+        schema:
+          $ref: '../schemas/vacation-capping-rules.yaml#/VacationCappingRule'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Vacation Capping Rules
+    summary: Delete vacation capping rule
+    operationId: deleteVacationCappingRule
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Vacation capping rule deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+      409:
+        description: Rule is still assigned to groups
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'

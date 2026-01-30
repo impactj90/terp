@@ -1,0 +1,145 @@
+# Employee Capping Exception endpoints
+/employee-capping-exceptions:
+  get:
+    tags:
+      - Employee Capping Exceptions
+    summary: List employee capping exceptions
+    operationId: listEmployeeCappingExceptions
+    parameters:
+      - name: employee_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by employee ID
+      - name: capping_rule_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by capping rule ID
+      - name: year
+        in: query
+        type: integer
+        description: Filter by year
+    responses:
+      200:
+        description: List of employee capping exceptions
+        schema:
+          $ref: '../schemas/employee-capping-exceptions.yaml#/EmployeeCappingExceptionList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Employee Capping Exceptions
+    summary: Create employee capping exception
+    operationId: createEmployeeCappingException
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/employee-capping-exceptions.yaml#/CreateEmployeeCappingExceptionRequest'
+    responses:
+      201:
+        description: Created employee capping exception
+        schema:
+          $ref: '../schemas/employee-capping-exceptions.yaml#/EmployeeCappingException'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Exception already exists for this employee/rule/year combination
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/employee-capping-exceptions/{id}:
+  get:
+    tags:
+      - Employee Capping Exceptions
+    summary: Get employee capping exception by ID
+    operationId: getEmployeeCappingException
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Employee capping exception details
+        schema:
+          $ref: '../schemas/employee-capping-exceptions.yaml#/EmployeeCappingException'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Employee Capping Exceptions
+    summary: Update employee capping exception
+    operationId: updateEmployeeCappingException
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/employee-capping-exceptions.yaml#/UpdateEmployeeCappingExceptionRequest'
+    responses:
+      200:
+        description: Updated employee capping exception
+        schema:
+          $ref: '../schemas/employee-capping-exceptions.yaml#/EmployeeCappingException'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Employee Capping Exceptions
+    summary: Delete employee capping exception
+    operationId: deleteEmployeeCappingException
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Employee capping exception deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/vacation-carryover/preview:
+  post:
+    tags:
+      - Vacation Capping Rules
+    summary: Preview vacation carryover calculation
+    operationId: previewVacationCarryover
+    description: Preview how carryover would be calculated for an employee/year, showing all rules applied.
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/employee-capping-exceptions.yaml#/VacationCarryoverPreviewRequest'
+    responses:
+      200:
+        description: Vacation carryover preview
+        schema:
+          $ref: '../schemas/employee-capping-exceptions.yaml#/VacationCarryoverPreview'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

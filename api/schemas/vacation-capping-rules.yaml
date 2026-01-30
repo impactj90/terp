@@ -1,0 +1,153 @@
+# Vacation Capping Rule schemas
+VacationCappingRule:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - code
+    - name
+    - rule_type
+    - cutoff_month
+    - cutoff_day
+    - cap_value
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    code:
+      type: string
+      example: "YEAR_END_10"
+    name:
+      type: string
+      example: "Year-end cap at 10 days"
+    description:
+      type: string
+      x-nullable: true
+    rule_type:
+      type: string
+      enum: [year_end, mid_year]
+      description: "year_end: limits carryover at year boundary; mid_year: forfeits prior-year carryover after cutoff"
+      example: "year_end"
+    cutoff_month:
+      type: integer
+      minimum: 1
+      maximum: 12
+      description: "Month of cutoff date (1-12)"
+      example: 12
+    cutoff_day:
+      type: integer
+      minimum: 1
+      maximum: 31
+      description: "Day of cutoff date (1-31)"
+      example: 31
+    cap_value:
+      type: number
+      format: double
+      description: "Maximum days to carry over. 0 means forfeit all."
+      example: 10.0
+    is_active:
+      type: boolean
+      example: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+VacationCappingRuleSummary:
+  type: object
+  required:
+    - id
+    - code
+    - name
+    - rule_type
+    - cap_value
+  properties:
+    id:
+      type: string
+      format: uuid
+    code:
+      type: string
+    name:
+      type: string
+    rule_type:
+      type: string
+      enum: [year_end, mid_year]
+    cap_value:
+      type: number
+      format: double
+
+CreateVacationCappingRuleRequest:
+  type: object
+  required:
+    - code
+    - name
+    - rule_type
+  properties:
+    code:
+      type: string
+      minLength: 1
+      maxLength: 50
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    description:
+      type: string
+    rule_type:
+      type: string
+      enum: [year_end, mid_year]
+    cutoff_month:
+      type: integer
+      minimum: 1
+      maximum: 12
+      default: 12
+    cutoff_day:
+      type: integer
+      minimum: 1
+      maximum: 31
+      default: 31
+    cap_value:
+      type: number
+      format: double
+      default: 0
+
+UpdateVacationCappingRuleRequest:
+  type: object
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    description:
+      type: string
+    rule_type:
+      type: string
+      enum: [year_end, mid_year]
+    cutoff_month:
+      type: integer
+      minimum: 1
+      maximum: 12
+    cutoff_day:
+      type: integer
+      minimum: 1
+      maximum: 31
+    cap_value:
+      type: number
+      format: double
+    is_active:
+      type: boolean
+
+VacationCappingRuleList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/VacationCappingRule'

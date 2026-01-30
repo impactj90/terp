@@ -156,6 +156,27 @@ func main() {
 	vacationCalcGroupService := service.NewVacationCalcGroupService(vacationCalcGroupRepo, vacationSpecialCalcRepo)
 	vacationCalcGroupHandler := handler.NewVacationCalcGroupHandler(vacationCalcGroupService)
 
+	// Initialize Vacation Capping Rule Service
+	vacationCappingRuleRepo := repository.NewVacationCappingRuleRepository(db)
+	vacationCappingRuleService := service.NewVacationCappingRuleService(vacationCappingRuleRepo)
+	vacationCappingRuleHandler := handler.NewVacationCappingRuleHandler(vacationCappingRuleService)
+
+	// Initialize Vacation Capping Rule Group Service
+	vacationCappingRuleGroupRepo := repository.NewVacationCappingRuleGroupRepository(db)
+	vacationCappingRuleGroupService := service.NewVacationCappingRuleGroupService(vacationCappingRuleGroupRepo, vacationCappingRuleRepo)
+	vacationCappingRuleGroupHandler := handler.NewVacationCappingRuleGroupHandler(vacationCappingRuleGroupService)
+
+	// Initialize Employee Capping Exception Service
+	employeeCappingExceptionRepo := repository.NewEmployeeCappingExceptionRepository(db)
+	employeeCappingExceptionService := service.NewEmployeeCappingExceptionService(employeeCappingExceptionRepo, vacationCappingRuleRepo)
+	employeeCappingExceptionHandler := handler.NewEmployeeCappingExceptionHandler(employeeCappingExceptionService)
+
+	// Initialize Vacation Carryover Service
+	vacationCarryoverService := service.NewVacationCarryoverService(
+		employeeRepo, tariffRepo, vacationBalanceRepo, vacationCappingRuleGroupRepo, employeeCappingExceptionRepo,
+	)
+	vacationCarryoverHandler := handler.NewVacationCarryoverHandler(vacationCarryoverService)
+
 	// Initialize MonthlyEvalService
 	monthlyValueRepo := repository.NewMonthlyValueRepository(db)
 	monthlyEvalService := service.NewMonthlyEvalService(monthlyValueRepo, dailyValueRepo, absenceDayRepo, employeeRepo, tariffRepo)
@@ -248,6 +269,9 @@ func main() {
 	absenceHandler.SetAuditService(auditLogService)
 	employeeHandler.SetAuditService(auditLogService)
 	calculationRuleHandler.SetAuditService(auditLogService)
+	vacationCappingRuleHandler.SetAuditService(auditLogService)
+	vacationCappingRuleGroupHandler.SetAuditService(auditLogService)
+	employeeCappingExceptionHandler.SetAuditService(auditLogService)
 
 	// Initialize tenant middleware
 	tenantMiddleware := middleware.NewTenantMiddleware(tenantService)
@@ -331,6 +355,10 @@ func main() {
 				handler.RegisterVacationSpecialCalcRoutes(r, vacationSpecialCalcHandler, authzMiddleware)
 				handler.RegisterVacationCalcGroupRoutes(r, vacationCalcGroupHandler, authzMiddleware)
 				handler.RegisterVacationEntitlementRoutes(r, vacationHandler, authzMiddleware)
+				handler.RegisterVacationCappingRuleRoutes(r, vacationCappingRuleHandler, authzMiddleware)
+				handler.RegisterVacationCappingRuleGroupRoutes(r, vacationCappingRuleGroupHandler, authzMiddleware)
+				handler.RegisterEmployeeCappingExceptionRoutes(r, employeeCappingExceptionHandler, authzMiddleware)
+				handler.RegisterVacationCarryoverRoutes(r, vacationCarryoverHandler, authzMiddleware)
 			})
 		})
 

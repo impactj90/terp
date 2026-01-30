@@ -119,6 +119,12 @@ tags:
     description: Vacation special calculation rules (age, tenure, disability bonuses)
   - name: Vacation Calculation Groups
     description: Vacation calculation groups combining basis and special calculations
+  - name: Vacation Capping Rules
+    description: Vacation capping rules (Kappungsregeln) for year-end and mid-year carryover limits
+  - name: Vacation Capping Rule Groups
+    description: Groups of vacation capping rules for assignment to tariffs
+  - name: Employee Capping Exceptions
+    description: Individual employee exceptions from vacation capping rules
 
 securityDefinitions:
   BearerAuth:
@@ -482,6 +488,28 @@ paths:
   # Vacation Entitlement Preview
   /vacation-entitlement/preview:
     $ref: 'paths/vacation-entitlement.yaml#/~1vacation-entitlement~1preview'
+
+  # Vacation Capping Rules
+  /vacation-capping-rules:
+    $ref: 'paths/vacation-capping-rules.yaml#/~1vacation-capping-rules'
+  /vacation-capping-rules/{id}:
+    $ref: 'paths/vacation-capping-rules.yaml#/~1vacation-capping-rules~1{id}'
+
+  # Vacation Capping Rule Groups
+  /vacation-capping-rule-groups:
+    $ref: 'paths/vacation-capping-rule-groups.yaml#/~1vacation-capping-rule-groups'
+  /vacation-capping-rule-groups/{id}:
+    $ref: 'paths/vacation-capping-rule-groups.yaml#/~1vacation-capping-rule-groups~1{id}'
+
+  # Employee Capping Exceptions
+  /employee-capping-exceptions:
+    $ref: 'paths/employee-capping-exceptions.yaml#/~1employee-capping-exceptions'
+  /employee-capping-exceptions/{id}:
+    $ref: 'paths/employee-capping-exceptions.yaml#/~1employee-capping-exceptions~1{id}'
+
+  # Vacation Carryover Preview
+  /vacation-carryover/preview:
+    $ref: 'paths/employee-capping-exceptions.yaml#/~1vacation-carryover~1preview'
 
 definitions:
   # Common
@@ -955,6 +983,46 @@ definitions:
     $ref: 'schemas/vacation-entitlement.yaml#/VacationEntitlementPreviewRequest'
   VacationEntitlementPreview:
     $ref: 'schemas/vacation-entitlement.yaml#/VacationEntitlementPreview'
+
+  # Vacation Capping Rules
+  VacationCappingRule:
+    $ref: 'schemas/vacation-capping-rules.yaml#/VacationCappingRule'
+  VacationCappingRuleSummary:
+    $ref: 'schemas/vacation-capping-rules.yaml#/VacationCappingRuleSummary'
+  CreateVacationCappingRuleRequest:
+    $ref: 'schemas/vacation-capping-rules.yaml#/CreateVacationCappingRuleRequest'
+  UpdateVacationCappingRuleRequest:
+    $ref: 'schemas/vacation-capping-rules.yaml#/UpdateVacationCappingRuleRequest'
+  VacationCappingRuleList:
+    $ref: 'schemas/vacation-capping-rules.yaml#/VacationCappingRuleList'
+
+  # Vacation Capping Rule Groups
+  VacationCappingRuleGroup:
+    $ref: 'schemas/vacation-capping-rule-groups.yaml#/VacationCappingRuleGroup'
+  VacationCappingRuleGroupSummary:
+    $ref: 'schemas/vacation-capping-rule-groups.yaml#/VacationCappingRuleGroupSummary'
+  CreateVacationCappingRuleGroupRequest:
+    $ref: 'schemas/vacation-capping-rule-groups.yaml#/CreateVacationCappingRuleGroupRequest'
+  UpdateVacationCappingRuleGroupRequest:
+    $ref: 'schemas/vacation-capping-rule-groups.yaml#/UpdateVacationCappingRuleGroupRequest'
+  VacationCappingRuleGroupList:
+    $ref: 'schemas/vacation-capping-rule-groups.yaml#/VacationCappingRuleGroupList'
+
+  # Employee Capping Exceptions
+  EmployeeCappingException:
+    $ref: 'schemas/employee-capping-exceptions.yaml#/EmployeeCappingException'
+  CreateEmployeeCappingExceptionRequest:
+    $ref: 'schemas/employee-capping-exceptions.yaml#/CreateEmployeeCappingExceptionRequest'
+  UpdateEmployeeCappingExceptionRequest:
+    $ref: 'schemas/employee-capping-exceptions.yaml#/UpdateEmployeeCappingExceptionRequest'
+  EmployeeCappingExceptionList:
+    $ref: 'schemas/employee-capping-exceptions.yaml#/EmployeeCappingExceptionList'
+  VacationCarryoverPreviewRequest:
+    $ref: 'schemas/employee-capping-exceptions.yaml#/VacationCarryoverPreviewRequest'
+  VacationCarryoverPreview:
+    $ref: 'schemas/employee-capping-exceptions.yaml#/VacationCarryoverPreview'
+  CappingRuleApplication:
+    $ref: 'schemas/employee-capping-exceptions.yaml#/CappingRuleApplication'
 
 responses:
   BadRequest:

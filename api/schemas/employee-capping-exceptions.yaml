@@ -1,0 +1,159 @@
+# Employee Capping Exception schemas
+EmployeeCappingException:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - employee_id
+    - capping_rule_id
+    - exemption_type
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    employee_id:
+      type: string
+      format: uuid
+    capping_rule_id:
+      type: string
+      format: uuid
+    exemption_type:
+      type: string
+      enum: [full, partial]
+      description: "full: employee keeps all vacation; partial: up to retain_days"
+    retain_days:
+      type: number
+      format: double
+      x-nullable: true
+      description: "For partial exemptions: max days to retain despite capping"
+    year:
+      type: integer
+      x-nullable: true
+      description: "Year this exception applies to. Null means all years."
+    notes:
+      type: string
+      x-nullable: true
+    is_active:
+      type: boolean
+      example: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+CreateEmployeeCappingExceptionRequest:
+  type: object
+  required:
+    - employee_id
+    - capping_rule_id
+    - exemption_type
+  properties:
+    employee_id:
+      type: string
+      format: uuid
+    capping_rule_id:
+      type: string
+      format: uuid
+    exemption_type:
+      type: string
+      enum: [full, partial]
+    retain_days:
+      type: number
+      format: double
+    year:
+      type: integer
+    notes:
+      type: string
+
+UpdateEmployeeCappingExceptionRequest:
+  type: object
+  properties:
+    exemption_type:
+      type: string
+      enum: [full, partial]
+    retain_days:
+      type: number
+      format: double
+    year:
+      type: integer
+    notes:
+      type: string
+    is_active:
+      type: boolean
+
+EmployeeCappingExceptionList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/EmployeeCappingException'
+
+VacationCarryoverPreviewRequest:
+  type: object
+  required:
+    - employee_id
+    - year
+  properties:
+    employee_id:
+      type: string
+      format: uuid
+    year:
+      type: integer
+      description: "Year to preview carryover for"
+
+VacationCarryoverPreview:
+  type: object
+  properties:
+    employee_id:
+      type: string
+      format: uuid
+    year:
+      type: integer
+    available_days:
+      type: number
+      format: double
+      description: "Days available for carryover before capping"
+    capped_carryover:
+      type: number
+      format: double
+      description: "Carryover after applying capping rules"
+    forfeited_days:
+      type: number
+      format: double
+      description: "Days lost due to capping"
+    rules_applied:
+      type: array
+      items:
+        $ref: '#/CappingRuleApplication'
+    has_exception:
+      type: boolean
+      description: "Whether employee has an active capping exception"
+
+CappingRuleApplication:
+  type: object
+  properties:
+    rule_id:
+      type: string
+      format: uuid
+    rule_name:
+      type: string
+    rule_type:
+      type: string
+      enum: [year_end, mid_year]
+    cap_value:
+      type: number
+      format: double
+    applied:
+      type: boolean
+      description: "Whether this rule actually reduced the carryover"
+    exception_active:
+      type: boolean
+      description: "Whether an employee exception overrides this rule"

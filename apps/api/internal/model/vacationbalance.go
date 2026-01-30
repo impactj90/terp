@@ -18,6 +18,8 @@ type VacationBalance struct {
 	Adjustments decimal.Decimal `gorm:"type:decimal(5,2);not null;default:0" json:"adjustments"`
 	Taken       decimal.Decimal `gorm:"type:decimal(5,2);not null;default:0" json:"taken"`
 
+	CarryoverExpiresAt *time.Time `gorm:"type:date" json:"carryover_expires_at,omitempty"`
+
 	CreatedAt time.Time `gorm:"default:now()" json:"created_at"`
 	UpdatedAt time.Time `gorm:"default:now()" json:"updated_at"`
 

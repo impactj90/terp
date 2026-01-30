@@ -804,6 +804,76 @@ func RegisterVacationCalcGroupRoutes(r chi.Router, h *VacationCalcGroupHandler, 
 	})
 }
 
+// RegisterVacationCappingRuleRoutes registers vacation capping rule routes.
+func RegisterVacationCappingRuleRoutes(r chi.Router, h *VacationCappingRuleHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("absence_types.manage").String()
+	r.Route("/vacation-capping-rules", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+	})
+}
+
+// RegisterVacationCappingRuleGroupRoutes registers vacation capping rule group routes.
+func RegisterVacationCappingRuleGroupRoutes(r chi.Router, h *VacationCappingRuleGroupHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("absence_types.manage").String()
+	r.Route("/vacation-capping-rule-groups", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+	})
+}
+
+// RegisterEmployeeCappingExceptionRoutes registers employee capping exception routes.
+func RegisterEmployeeCappingExceptionRoutes(r chi.Router, h *EmployeeCappingExceptionHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("absence_types.manage").String()
+	r.Route("/employee-capping-exceptions", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+	})
+}
+
+// RegisterVacationCarryoverRoutes registers vacation carryover preview routes.
+func RegisterVacationCarryoverRoutes(r chi.Router, h *VacationCarryoverHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("absence_types.manage").String()
+	if authz == nil {
+		r.Post("/vacation-carryover/preview", h.PreviewCarryover)
+		return
+	}
+	r.With(authz.RequirePermission(permManage)).Post("/vacation-carryover/preview", h.PreviewCarryover)
+}
+
 // RegisterVacationEntitlementRoutes registers vacation entitlement preview routes.
 func RegisterVacationEntitlementRoutes(r chi.Router, h *VacationHandler, authz *middleware.AuthorizationMiddleware) {
 	permManage := permissions.ID("absence_types.manage").String()

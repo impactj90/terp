@@ -148,6 +148,14 @@ type Tariff struct {
 	CreditType CreditType `gorm:"type:varchar(20);default:'no_evaluation'" json:"credit_type"`
 
 	// =====================================================
+	// ZMI VACATION CAPPING FIELDS (Section 20)
+	// =====================================================
+
+	// VacationCappingRuleGroupID links to the capping rule group for this tariff
+	// ZMI: Kappungsregelgruppe
+	VacationCappingRuleGroupID *uuid.UUID `gorm:"type:uuid" json:"vacation_capping_rule_group_id,omitempty"`
+
+	// =====================================================
 	// TIMESTAMPS
 	// =====================================================
 
@@ -155,10 +163,11 @@ type Tariff struct {
 	UpdatedAt time.Time `gorm:"default:now()" json:"updated_at"`
 
 	// Relations
-	WeekPlan        *WeekPlan          `gorm:"foreignKey:WeekPlanID" json:"week_plan,omitempty"`
-	Breaks          []TariffBreak      `gorm:"foreignKey:TariffID" json:"breaks,omitempty"`
-	TariffWeekPlans []TariffWeekPlan   `gorm:"foreignKey:TariffID" json:"tariff_week_plans,omitempty"`
-	TariffDayPlans  []TariffDayPlan    `gorm:"foreignKey:TariffID" json:"tariff_day_plans,omitempty"`
+	WeekPlan                *WeekPlan                 `gorm:"foreignKey:WeekPlanID" json:"week_plan,omitempty"`
+	Breaks                  []TariffBreak             `gorm:"foreignKey:TariffID" json:"breaks,omitempty"`
+	TariffWeekPlans         []TariffWeekPlan          `gorm:"foreignKey:TariffID" json:"tariff_week_plans,omitempty"`
+	TariffDayPlans          []TariffDayPlan           `gorm:"foreignKey:TariffID" json:"tariff_day_plans,omitempty"`
+	VacationCappingRuleGroup *VacationCappingRuleGroup `gorm:"foreignKey:VacationCappingRuleGroupID" json:"vacation_capping_rule_group,omitempty"`
 }
 
 // =====================================================
