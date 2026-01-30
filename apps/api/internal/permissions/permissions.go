@@ -76,6 +76,7 @@ var allPermissions = []Permission{
 	{ID: permissionID("access_control.manage"), Resource: "access_control", Action: "manage", Description: "Manage access zones, profiles, and employee assignments"},
 	{ID: permissionID("vehicle_data.manage"), Resource: "vehicle_data", Action: "manage", Description: "Manage vehicles, routes, and trip records"},
 	{ID: permissionID("travel_allowance.manage"), Resource: "travel_allowance", Action: "manage", Description: "Manage travel allowance rule sets, local and extended travel rules"},
+	{ID: permissionID("shift_planning.manage"), Resource: "shift_planning", Action: "manage", Description: "Manage shift definitions and shift assignments for the planning board"},
 }
 
 var permissionByID = func() map[string]Permission {

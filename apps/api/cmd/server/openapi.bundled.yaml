@@ -168,6 +168,10 @@ tags:
     description: Extended travel (Fernmontage) rule management for multi-day trips
   - name: Travel Allowance
     description: Travel allowance preview calculations
+  - name: Shifts
+    description: Shift definition management for the planning board / Plantafel (placeholder - requires separate Plantafel documentation)
+  - name: Shift Assignments
+    description: Employee-to-shift assignment management for the planning board (placeholder)
 securityDefinitions:
   BearerAuth:
     type: apiKey
@@ -10370,6 +10374,242 @@ paths:
             $ref: '#/definitions/TravelAllowancePreview'
         '400':
           $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+  /shifts:
+    get:
+      tags:
+        - Shifts
+      summary: List shifts
+      description: |
+        Returns all shift definitions for the tenant.
+        Placeholder - requires separate Plantafel documentation for full implementation.
+      operationId: listShifts
+      responses:
+        '200':
+          description: List of shifts
+          schema:
+            $ref: '#/definitions/ShiftList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+    post:
+      tags:
+        - Shifts
+      summary: Create shift
+      description: |
+        Creates a new shift definition with a unique code.
+        Placeholder - requires separate Plantafel documentation for full implementation.
+      operationId: createShift
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateShiftRequest'
+      responses:
+        '201':
+          description: Created shift
+          schema:
+            $ref: '#/definitions/Shift'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '409':
+          description: Code already exists
+          schema:
+            $ref: '#/definitions/ProblemDetails'
+  '/shifts/{id}':
+    get:
+      tags:
+        - Shifts
+      summary: Get shift by ID
+      description: |
+        Retrieves shift definition details.
+        Placeholder - requires separate Plantafel documentation for full implementation.
+      operationId: getShift
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Shift details
+          schema:
+            $ref: '#/definitions/Shift'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    patch:
+      tags:
+        - Shifts
+      summary: Update shift
+      description: |
+        Updates shift definition properties. Code cannot be changed.
+        Placeholder - requires separate Plantafel documentation for full implementation.
+      operationId: updateShift
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateShiftRequest'
+      responses:
+        '200':
+          description: Updated shift
+          schema:
+            $ref: '#/definitions/Shift'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    delete:
+      tags:
+        - Shifts
+      summary: Delete shift
+      description: |
+        Permanently removes a shift definition. Fails if shift assignments reference it.
+        Placeholder - requires separate Plantafel documentation for full implementation.
+      operationId: deleteShift
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Shift deleted
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+        '409':
+          description: Shift is in use by shift assignments
+          schema:
+            $ref: '#/definitions/ProblemDetails'
+  /shift-assignments:
+    get:
+      tags:
+        - Shift Assignments
+      summary: List shift assignments
+      description: |
+        Returns all shift assignments for the tenant.
+        Placeholder - requires separate Plantafel documentation for full implementation.
+      operationId: listShiftAssignments
+      responses:
+        '200':
+          description: List of shift assignments
+          schema:
+            $ref: '#/definitions/ShiftAssignmentList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+    post:
+      tags:
+        - Shift Assignments
+      summary: Create shift assignment
+      description: |
+        Assigns a shift to an employee for an optional date range.
+        Placeholder - requires separate Plantafel documentation for full implementation.
+      operationId: createShiftAssignment
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateShiftAssignmentRequest'
+      responses:
+        '201':
+          description: Created shift assignment
+          schema:
+            $ref: '#/definitions/ShiftAssignment'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+  '/shift-assignments/{id}':
+    get:
+      tags:
+        - Shift Assignments
+      summary: Get shift assignment by ID
+      description: |
+        Retrieves shift assignment details.
+        Placeholder - requires separate Plantafel documentation for full implementation.
+      operationId: getShiftAssignment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Shift assignment details
+          schema:
+            $ref: '#/definitions/ShiftAssignment'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    patch:
+      tags:
+        - Shift Assignments
+      summary: Update shift assignment
+      description: |
+        Updates shift assignment properties (date range, notes, active status).
+        Placeholder - requires separate Plantafel documentation for full implementation.
+      operationId: updateShiftAssignment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateShiftAssignmentRequest'
+      responses:
+        '200':
+          description: Updated shift assignment
+          schema:
+            $ref: '#/definitions/ShiftAssignment'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    delete:
+      tags:
+        - Shift Assignments
+      summary: Delete shift assignment
+      description: |
+        Permanently removes a shift assignment.
+        Placeholder - requires separate Plantafel documentation for full implementation.
+      operationId: deleteShiftAssignment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Shift assignment deleted
         '401':
           $ref: '#/responses/Unauthorized'
         '404':
@@ -20833,6 +21073,190 @@ definitions:
       taxable_subtotal:
         type: number
         format: double
+  Shift:
+    type: object
+    required:
+      - id
+      - tenant_id
+      - code
+      - name
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      code:
+        type: string
+        example: SHIFT-EARLY
+      name:
+        type: string
+        example: Early Shift
+      description:
+        type: string
+        x-nullable: true
+      day_plan_id:
+        type: string
+        format: uuid
+        x-nullable: true
+      color:
+        type: string
+        example: '#2196F3'
+        x-nullable: true
+      qualification:
+        type: string
+        x-nullable: true
+      is_active:
+        type: boolean
+        example: true
+      sort_order:
+        type: integer
+        example: 0
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  CreateShiftRequest:
+    type: object
+    required:
+      - code
+      - name
+    properties:
+      code:
+        type: string
+        minLength: 1
+        maxLength: 50
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      description:
+        type: string
+      day_plan_id:
+        type: string
+        format: uuid
+      color:
+        type: string
+        maxLength: 7
+      qualification:
+        type: string
+      sort_order:
+        type: integer
+  UpdateShiftRequest:
+    type: object
+    properties:
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      description:
+        type: string
+      day_plan_id:
+        type: string
+        format: uuid
+      color:
+        type: string
+        maxLength: 7
+      qualification:
+        type: string
+      is_active:
+        type: boolean
+      sort_order:
+        type: integer
+  ShiftList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/Shift'
+  ShiftAssignment:
+    type: object
+    required:
+      - id
+      - tenant_id
+      - employee_id
+      - shift_id
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      employee_id:
+        type: string
+        format: uuid
+      shift_id:
+        type: string
+        format: uuid
+      valid_from:
+        type: string
+        format: date
+        x-nullable: true
+      valid_to:
+        type: string
+        format: date
+        x-nullable: true
+      notes:
+        type: string
+        x-nullable: true
+      is_active:
+        type: boolean
+        example: true
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  CreateShiftAssignmentRequest:
+    type: object
+    required:
+      - employee_id
+      - shift_id
+    properties:
+      employee_id:
+        type: string
+        format: uuid
+      shift_id:
+        type: string
+        format: uuid
+      valid_from:
+        type: string
+        format: date
+      valid_to:
+        type: string
+        format: date
+      notes:
+        type: string
+  UpdateShiftAssignmentRequest:
+    type: object
+    properties:
+      valid_from:
+        type: string
+        format: date
+      valid_to:
+        type: string
+        format: date
+      notes:
+        type: string
+      is_active:
+        type: boolean
+  ShiftAssignmentList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/ShiftAssignment'
 responses:
   BadRequest:
     description: Invalid request

@@ -171,6 +171,10 @@ tags:
     description: Extended travel (Fernmontage) rule management for multi-day trips
   - name: Travel Allowance
     description: Travel allowance preview calculations
+  - name: Shifts
+    description: Shift definition management for the planning board / Plantafel (placeholder - requires separate Plantafel documentation)
+  - name: Shift Assignments
+    description: Employee-to-shift assignment management for the planning board (placeholder)
 
 securityDefinitions:
   BearerAuth:
@@ -740,6 +744,16 @@ paths:
   # Travel Allowance Preview
   /travel-allowance/preview:
     $ref: 'paths/travel-allowance.yaml#/~1travel-allowance~1preview'
+
+  # Shift Planning (Plantafel)
+  /shifts:
+    $ref: 'paths/shift-planning.yaml#/~1shifts'
+  /shifts/{id}:
+    $ref: 'paths/shift-planning.yaml#/~1shifts~1{id}'
+  /shift-assignments:
+    $ref: 'paths/shift-planning.yaml#/~1shift-assignments'
+  /shift-assignments/{id}:
+    $ref: 'paths/shift-planning.yaml#/~1shift-assignments~1{id}'
 
 definitions:
   # Common
@@ -1539,6 +1553,24 @@ definitions:
     $ref: 'schemas/travel-allowance.yaml#/TravelAllowancePreview'
   TravelAllowanceBreakdownItem:
     $ref: 'schemas/travel-allowance.yaml#/TravelAllowanceBreakdownItem'
+
+  # Shift Planning (Plantafel)
+  Shift:
+    $ref: 'schemas/shift-planning.yaml#/Shift'
+  CreateShiftRequest:
+    $ref: 'schemas/shift-planning.yaml#/CreateShiftRequest'
+  UpdateShiftRequest:
+    $ref: 'schemas/shift-planning.yaml#/UpdateShiftRequest'
+  ShiftList:
+    $ref: 'schemas/shift-planning.yaml#/ShiftList'
+  ShiftAssignment:
+    $ref: 'schemas/shift-planning.yaml#/ShiftAssignment'
+  CreateShiftAssignmentRequest:
+    $ref: 'schemas/shift-planning.yaml#/CreateShiftAssignmentRequest'
+  UpdateShiftAssignmentRequest:
+    $ref: 'schemas/shift-planning.yaml#/UpdateShiftAssignmentRequest'
+  ShiftAssignmentList:
+    $ref: 'schemas/shift-planning.yaml#/ShiftAssignmentList'
 
 responses:
   BadRequest:

@@ -1,0 +1,241 @@
+# Shift endpoints
+/shifts:
+  get:
+    tags:
+      - Shifts
+    summary: List shifts
+    description: |
+      Returns all shift definitions for the tenant.
+      Placeholder - requires separate Plantafel documentation for full implementation.
+    operationId: listShifts
+    responses:
+      200:
+        description: List of shifts
+        schema:
+          $ref: '../schemas/shift-planning.yaml#/ShiftList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Shifts
+    summary: Create shift
+    description: |
+      Creates a new shift definition with a unique code.
+      Placeholder - requires separate Plantafel documentation for full implementation.
+    operationId: createShift
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/shift-planning.yaml#/CreateShiftRequest'
+    responses:
+      201:
+        description: Created shift
+        schema:
+          $ref: '../schemas/shift-planning.yaml#/Shift'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/shifts/{id}:
+  get:
+    tags:
+      - Shifts
+    summary: Get shift by ID
+    description: |
+      Retrieves shift definition details.
+      Placeholder - requires separate Plantafel documentation for full implementation.
+    operationId: getShift
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Shift details
+        schema:
+          $ref: '../schemas/shift-planning.yaml#/Shift'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Shifts
+    summary: Update shift
+    description: |
+      Updates shift definition properties. Code cannot be changed.
+      Placeholder - requires separate Plantafel documentation for full implementation.
+    operationId: updateShift
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/shift-planning.yaml#/UpdateShiftRequest'
+    responses:
+      200:
+        description: Updated shift
+        schema:
+          $ref: '../schemas/shift-planning.yaml#/Shift'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Shifts
+    summary: Delete shift
+    description: |
+      Permanently removes a shift definition. Fails if shift assignments reference it.
+      Placeholder - requires separate Plantafel documentation for full implementation.
+    operationId: deleteShift
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Shift deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+      409:
+        description: Shift is in use by shift assignments
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+# Shift Assignment endpoints
+/shift-assignments:
+  get:
+    tags:
+      - Shift Assignments
+    summary: List shift assignments
+    description: |
+      Returns all shift assignments for the tenant.
+      Placeholder - requires separate Plantafel documentation for full implementation.
+    operationId: listShiftAssignments
+    responses:
+      200:
+        description: List of shift assignments
+        schema:
+          $ref: '../schemas/shift-planning.yaml#/ShiftAssignmentList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Shift Assignments
+    summary: Create shift assignment
+    description: |
+      Assigns a shift to an employee for an optional date range.
+      Placeholder - requires separate Plantafel documentation for full implementation.
+    operationId: createShiftAssignment
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/shift-planning.yaml#/CreateShiftAssignmentRequest'
+    responses:
+      201:
+        description: Created shift assignment
+        schema:
+          $ref: '../schemas/shift-planning.yaml#/ShiftAssignment'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/shift-assignments/{id}:
+  get:
+    tags:
+      - Shift Assignments
+    summary: Get shift assignment by ID
+    description: |
+      Retrieves shift assignment details.
+      Placeholder - requires separate Plantafel documentation for full implementation.
+    operationId: getShiftAssignment
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Shift assignment details
+        schema:
+          $ref: '../schemas/shift-planning.yaml#/ShiftAssignment'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Shift Assignments
+    summary: Update shift assignment
+    description: |
+      Updates shift assignment properties (date range, notes, active status).
+      Placeholder - requires separate Plantafel documentation for full implementation.
+    operationId: updateShiftAssignment
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/shift-planning.yaml#/UpdateShiftAssignmentRequest'
+    responses:
+      200:
+        description: Updated shift assignment
+        schema:
+          $ref: '../schemas/shift-planning.yaml#/ShiftAssignment'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Shift Assignments
+    summary: Delete shift assignment
+    description: |
+      Permanently removes a shift assignment.
+      Placeholder - requires separate Plantafel documentation for full implementation.
+    operationId: deleteShiftAssignment
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Shift assignment deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
