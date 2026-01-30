@@ -36,11 +36,11 @@ type carryoverBalanceRepository interface {
 
 // VacationCarryoverService handles carryover preview calculations.
 type VacationCarryoverService struct {
-	employeeRepo    carryoverEmployeeRepository
-	tariffRepo      carryoverTariffRepository
-	balanceRepo     carryoverBalanceRepository
+	employeeRepo     carryoverEmployeeRepository
+	tariffRepo       carryoverTariffRepository
+	balanceRepo      carryoverBalanceRepository
 	cappingGroupRepo vacationCappingRuleGroupRepository
-	exceptionRepo   employeeCappingExceptionRepository
+	exceptionRepo    employeeCappingExceptionRepository
 }
 
 // NewVacationCarryoverService creates a new VacationCarryoverService.
@@ -52,11 +52,11 @@ func NewVacationCarryoverService(
 	exceptionRepo employeeCappingExceptionRepository,
 ) *VacationCarryoverService {
 	return &VacationCarryoverService{
-		employeeRepo:    employeeRepo,
-		tariffRepo:      tariffRepo,
-		balanceRepo:     balanceRepo,
+		employeeRepo:     employeeRepo,
+		tariffRepo:       tariffRepo,
+		balanceRepo:      balanceRepo,
 		cappingGroupRepo: cappingGroupRepo,
-		exceptionRepo:   exceptionRepo,
+		exceptionRepo:    exceptionRepo,
 	}
 }
 

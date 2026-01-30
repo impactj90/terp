@@ -215,15 +215,15 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		DisplayName           *string  `json:"display_name"`
-		AvatarURL             *string  `json:"avatar_url"`
-		UserGroupID           *string  `json:"user_group_id"`
-		Username              *string  `json:"username"`
-		EmployeeID            *string  `json:"employee_id"`
-		SSOID                 *string  `json:"sso_id"`
-		IsActive              *bool    `json:"is_active"`
-		IsLocked              *bool    `json:"is_locked"`
-		DataScopeType         *string  `json:"data_scope_type"`
+		DisplayName            *string   `json:"display_name"`
+		AvatarURL              *string   `json:"avatar_url"`
+		UserGroupID            *string   `json:"user_group_id"`
+		Username               *string   `json:"username"`
+		EmployeeID             *string   `json:"employee_id"`
+		SSOID                  *string   `json:"sso_id"`
+		IsActive               *bool     `json:"is_active"`
+		IsLocked               *bool     `json:"is_locked"`
+		DataScopeType          *string   `json:"data_scope_type"`
 		DataScopeTenantIDs     *[]string `json:"data_scope_tenant_ids"`
 		DataScopeDepartmentIDs *[]string `json:"data_scope_department_ids"`
 		DataScopeEmployeeIDs   *[]string `json:"data_scope_employee_ids"`

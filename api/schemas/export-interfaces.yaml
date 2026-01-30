@@ -1,0 +1,157 @@
+# Export Interface schemas
+ExportInterface:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - interface_number
+    - name
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    interface_number:
+      type: integer
+      example: 1
+    name:
+      type: string
+      example: "Payroll Export DATEV"
+    mandant_number:
+      type: string
+      x-nullable: true
+      example: "12345"
+    export_script:
+      type: string
+      x-nullable: true
+      example: "export_datev.sh"
+    export_path:
+      type: string
+      x-nullable: true
+      example: "/exports/datev/"
+    output_filename:
+      type: string
+      x-nullable: true
+      example: "payroll_export.csv"
+    is_active:
+      type: boolean
+      example: true
+    accounts:
+      type: array
+      items:
+        $ref: '#/ExportInterfaceAccount'
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+ExportInterfaceSummary:
+  type: object
+  required:
+    - id
+    - interface_number
+    - name
+  properties:
+    id:
+      type: string
+      format: uuid
+    interface_number:
+      type: integer
+    name:
+      type: string
+    is_active:
+      type: boolean
+
+ExportInterfaceAccount:
+  type: object
+  required:
+    - account_id
+  properties:
+    account_id:
+      type: string
+      format: uuid
+    account_code:
+      type: string
+    account_name:
+      type: string
+    payroll_code:
+      type: string
+      x-nullable: true
+    sort_order:
+      type: integer
+
+CreateExportInterfaceRequest:
+  type: object
+  required:
+    - interface_number
+    - name
+  properties:
+    interface_number:
+      type: integer
+      minimum: 1
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    mandant_number:
+      type: string
+      maxLength: 50
+    export_script:
+      type: string
+      maxLength: 255
+    export_path:
+      type: string
+      maxLength: 500
+    output_filename:
+      type: string
+      maxLength: 255
+
+UpdateExportInterfaceRequest:
+  type: object
+  properties:
+    interface_number:
+      type: integer
+      minimum: 1
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    mandant_number:
+      type: string
+      maxLength: 50
+    export_script:
+      type: string
+      maxLength: 255
+    export_path:
+      type: string
+      maxLength: 500
+    output_filename:
+      type: string
+      maxLength: 255
+    is_active:
+      type: boolean
+
+ExportInterfaceList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/ExportInterface'
+
+SetExportInterfaceAccountsRequest:
+  type: object
+  required:
+    - account_ids
+  properties:
+    account_ids:
+      type: array
+      items:
+        type: string
+        format: uuid

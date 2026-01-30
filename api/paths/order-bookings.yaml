@@ -1,0 +1,129 @@
+# Order Booking endpoints
+/order-bookings:
+  get:
+    tags:
+      - Order Bookings
+    summary: List order bookings
+    description: |
+      Returns order bookings filtered by employee, order, and/or date range.
+      Used for order-based time tracking reports.
+    operationId: listOrderBookings
+    parameters:
+      - name: employee_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by employee ID
+      - name: order_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by order ID
+      - name: date_from
+        in: query
+        type: string
+        format: date
+        description: Filter bookings from this date (inclusive)
+      - name: date_to
+        in: query
+        type: string
+        format: date
+        description: Filter bookings to this date (inclusive)
+    responses:
+      200:
+        description: List of order bookings
+        schema:
+          $ref: '../schemas/order-bookings.yaml#/OrderBookingList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Order Bookings
+    summary: Create order booking
+    description: Creates a new time booking against an order.
+    operationId: createOrderBooking
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/order-bookings.yaml#/CreateOrderBookingRequest'
+    responses:
+      201:
+        description: Created order booking
+        schema:
+          $ref: '../schemas/order-bookings.yaml#/OrderBooking'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/order-bookings/{id}:
+  get:
+    tags:
+      - Order Bookings
+    summary: Get order booking by ID
+    description: Retrieves order booking details.
+    operationId: getOrderBooking
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Order booking details
+        schema:
+          $ref: '../schemas/order-bookings.yaml#/OrderBooking'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Order Bookings
+    summary: Update order booking
+    description: Updates order booking properties.
+    operationId: updateOrderBooking
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/order-bookings.yaml#/UpdateOrderBookingRequest'
+    responses:
+      200:
+        description: Updated order booking
+        schema:
+          $ref: '../schemas/order-bookings.yaml#/OrderBooking'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Order Bookings
+    summary: Delete order booking
+    description: Permanently removes an order booking.
+    operationId: deleteOrderBooking
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Order booking deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

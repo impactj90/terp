@@ -1,0 +1,118 @@
+# Activity endpoints
+/activities:
+  get:
+    tags:
+      - Activities
+    summary: List activities
+    description: |
+      Returns all activities for the tenant. Activities are work types
+      used in order-based time tracking (Taetigkeiten).
+    operationId: listActivities
+    parameters:
+      - name: active
+        in: query
+        type: boolean
+        description: Filter by active status
+    responses:
+      200:
+        description: List of activities
+        schema:
+          $ref: '../schemas/activities.yaml#/ActivityList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Activities
+    summary: Create activity
+    description: |
+      Creates a new activity with a unique code for use in order bookings.
+    operationId: createActivity
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/activities.yaml#/CreateActivityRequest'
+    responses:
+      201:
+        description: Created activity
+        schema:
+          $ref: '../schemas/activities.yaml#/Activity'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/activities/{id}:
+  get:
+    tags:
+      - Activities
+    summary: Get activity by ID
+    description: Retrieves activity details.
+    operationId: getActivity
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Activity details
+        schema:
+          $ref: '../schemas/activities.yaml#/Activity'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Activities
+    summary: Update activity
+    description: Updates activity properties.
+    operationId: updateActivity
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/activities.yaml#/UpdateActivityRequest'
+    responses:
+      200:
+        description: Updated activity
+        schema:
+          $ref: '../schemas/activities.yaml#/Activity'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Activities
+    summary: Delete activity
+    description: Permanently removes an activity. Consider deactivating instead.
+    operationId: deleteActivity
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Activity deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

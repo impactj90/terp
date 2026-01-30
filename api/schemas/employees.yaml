@@ -139,6 +139,15 @@ Employee:
       type: string
       format: uuid
       x-nullable: true
+    # Order-related FKs (ZMI Auftrag)
+    default_order_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    default_activity_id:
+      type: string
+      format: uuid
+      x-nullable: true
     # Tariff-related override fields (ZMI section 14.2)
     part_time_percent:
       type: number
@@ -443,6 +452,12 @@ CreateEmployeeRequest:
     activity_group_id:
       type: string
       format: uuid
+    default_order_id:
+      type: string
+      format: uuid
+    default_activity_id:
+      type: string
+      format: uuid
     part_time_percent:
       type: number
       format: decimal
@@ -555,6 +570,14 @@ UpdateEmployeeRequest:
       format: uuid
       x-nullable: true
     activity_group_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    default_order_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    default_activity_id:
       type: string
       format: uuid
       x-nullable: true

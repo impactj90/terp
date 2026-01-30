@@ -1414,7 +1414,7 @@ func TestCalculateDay_HolidayWithAbsence_PriorityPositive(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	assert.Equal(t, 480, result.TargetTime)
-	assert.Equal(t, 480, result.NetTime)        // Full credit via absence (480 * 1.0 * 1.0)
+	assert.Equal(t, 480, result.NetTime) // Full credit via absence (480 * 1.0 * 1.0)
 	assert.Equal(t, 480, result.GrossTime)
 	assert.Equal(t, 0, result.Undertime)
 	assert.Contains(t, []string(result.Warnings), "ABSENCE_ON_HOLIDAY")
@@ -1531,7 +1531,7 @@ func TestCalculateDay_HolidayWithAbsence_HalfDay(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	assert.Equal(t, 480, result.TargetTime)
-	assert.Equal(t, 240, result.NetTime)   // Half-day absence credit
+	assert.Equal(t, 240, result.NetTime) // Half-day absence credit
 	assert.Equal(t, 240, result.GrossTime)
 	assert.Equal(t, 240, result.Undertime) // Half target not covered
 	assert.Contains(t, []string(result.Warnings), "ABSENCE_ON_HOLIDAY")

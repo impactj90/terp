@@ -1,0 +1,322 @@
+# Evaluation query endpoints
+
+/evaluations/daily-values:
+  get:
+    tags:
+      - Evaluations
+    summary: List daily value evaluations
+    description: |
+      Returns one row per employee per day within the date range.
+      Shows time worked, overtime, break, balance and error status.
+      Use include_no_bookings=true to include placeholder rows for
+      dates with no daily values calculated.
+    operationId: listEvaluationDailyValues
+    parameters:
+      - name: from
+        in: query
+        required: true
+        type: string
+        format: date
+        description: Start date (YYYY-MM-DD)
+      - name: to
+        in: query
+        required: true
+        type: string
+        format: date
+        description: End date (YYYY-MM-DD)
+      - name: employee_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by employee
+      - name: department_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by department
+      - name: include_no_bookings
+        in: query
+        type: boolean
+        default: false
+        description: Include rows for dates with zero bookings
+      - name: has_errors
+        in: query
+        type: boolean
+        description: Filter by error status
+      - name: limit
+        in: query
+        type: integer
+        default: 50
+        minimum: 1
+        maximum: 1000
+      - name: page
+        in: query
+        type: integer
+        default: 1
+        minimum: 1
+    responses:
+      200:
+        description: List of daily value evaluations
+        schema:
+          $ref: '../schemas/evaluations.yaml#/EvaluationDailyValueList'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/evaluations/bookings:
+  get:
+    tags:
+      - Evaluations
+    summary: List booking evaluations
+    description: |
+      Returns one row per booking within the date range.
+      Shows time, type, source, and employee for each booking.
+    operationId: listEvaluationBookings
+    parameters:
+      - name: from
+        in: query
+        required: true
+        type: string
+        format: date
+        description: Start date (YYYY-MM-DD)
+      - name: to
+        in: query
+        required: true
+        type: string
+        format: date
+        description: End date (YYYY-MM-DD)
+      - name: employee_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by employee
+      - name: department_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by department
+      - name: booking_type_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by booking type
+      - name: source
+        in: query
+        type: string
+        enum:
+          - web
+          - terminal
+          - api
+          - import
+          - correction
+        description: Filter by booking source
+      - name: direction
+        in: query
+        type: string
+        enum:
+          - in
+          - out
+        description: Filter by booking direction
+      - name: limit
+        in: query
+        type: integer
+        default: 50
+        minimum: 1
+        maximum: 1000
+      - name: page
+        in: query
+        type: integer
+        default: 1
+        minimum: 1
+    responses:
+      200:
+        description: List of booking evaluations
+        schema:
+          $ref: '../schemas/evaluations.yaml#/EvaluationBookingList'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/evaluations/terminal-bookings:
+  get:
+    tags:
+      - Evaluations
+    summary: List terminal booking evaluations
+    description: |
+      Returns raw terminal booking transactions. Shows both original_time
+      (raw terminal value) and edited_time (corrected value) side by side.
+      Only returns bookings where source='terminal'.
+    operationId: listEvaluationTerminalBookings
+    parameters:
+      - name: from
+        in: query
+        required: true
+        type: string
+        format: date
+        description: Start date (YYYY-MM-DD)
+      - name: to
+        in: query
+        required: true
+        type: string
+        format: date
+        description: End date (YYYY-MM-DD)
+      - name: employee_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by employee
+      - name: department_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by department
+      - name: limit
+        in: query
+        type: integer
+        default: 50
+        minimum: 1
+        maximum: 1000
+      - name: page
+        in: query
+        type: integer
+        default: 1
+        minimum: 1
+    responses:
+      200:
+        description: List of terminal booking evaluations
+        schema:
+          $ref: '../schemas/evaluations.yaml#/EvaluationTerminalBookingList'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/evaluations/logs:
+  get:
+    tags:
+      - Evaluations
+    summary: List change log evaluations
+    description: |
+      Returns change log entries for bookings, absences, and monthly account
+      changes. Shows user, timestamp, and before/after values.
+    operationId: listEvaluationLogs
+    parameters:
+      - name: from
+        in: query
+        required: true
+        type: string
+        format: date
+        description: Start date (YYYY-MM-DD, filters on performed_at)
+      - name: to
+        in: query
+        required: true
+        type: string
+        format: date
+        description: End date (YYYY-MM-DD, filters on performed_at)
+      - name: employee_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by employee (matches entity IDs related to employee)
+      - name: department_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by department
+      - name: entity_type
+        in: query
+        type: string
+        description: "Filter by entity type (booking, absence, monthly_value)"
+      - name: action
+        in: query
+        type: string
+        description: "Filter by action (create, update, delete, approve, reject)"
+      - name: user_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by user who performed the action
+      - name: limit
+        in: query
+        type: integer
+        default: 50
+        minimum: 1
+        maximum: 1000
+      - name: page
+        in: query
+        type: integer
+        default: 1
+        minimum: 1
+    responses:
+      200:
+        description: List of change log entries
+        schema:
+          $ref: '../schemas/evaluations.yaml#/EvaluationLogEntryList'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/evaluations/workflow-history:
+  get:
+    tags:
+      - Evaluations
+    summary: List workflow history evaluations
+    description: |
+      Returns approval and workflow history. Composed from audit_logs
+      filtering by relevant entity types (absence, monthly_value) and
+      workflow actions (create, approve, reject, close, reopen).
+    operationId: listEvaluationWorkflowHistory
+    parameters:
+      - name: from
+        in: query
+        required: true
+        type: string
+        format: date
+        description: Start date (YYYY-MM-DD, filters on performed_at)
+      - name: to
+        in: query
+        required: true
+        type: string
+        format: date
+        description: End date (YYYY-MM-DD, filters on performed_at)
+      - name: employee_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by employee
+      - name: department_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by department
+      - name: entity_type
+        in: query
+        type: string
+        description: "Filter by entity type (absence, monthly_value)"
+      - name: action
+        in: query
+        type: string
+        description: "Filter by action (create, approve, reject, close, reopen)"
+      - name: limit
+        in: query
+        type: integer
+        default: 50
+        minimum: 1
+        maximum: 1000
+      - name: page
+        in: query
+        type: integer
+        default: 1
+        minimum: 1
+    responses:
+      200:
+        description: List of workflow history entries
+        schema:
+          $ref: '../schemas/evaluations.yaml#/EvaluationWorkflowEntryList'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'

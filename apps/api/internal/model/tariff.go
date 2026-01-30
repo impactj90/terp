@@ -163,10 +163,10 @@ type Tariff struct {
 	UpdatedAt time.Time `gorm:"default:now()" json:"updated_at"`
 
 	// Relations
-	WeekPlan                *WeekPlan                 `gorm:"foreignKey:WeekPlanID" json:"week_plan,omitempty"`
-	Breaks                  []TariffBreak             `gorm:"foreignKey:TariffID" json:"breaks,omitempty"`
-	TariffWeekPlans         []TariffWeekPlan          `gorm:"foreignKey:TariffID" json:"tariff_week_plans,omitempty"`
-	TariffDayPlans          []TariffDayPlan           `gorm:"foreignKey:TariffID" json:"tariff_day_plans,omitempty"`
+	WeekPlan                 *WeekPlan                 `gorm:"foreignKey:WeekPlanID" json:"week_plan,omitempty"`
+	Breaks                   []TariffBreak             `gorm:"foreignKey:TariffID" json:"breaks,omitempty"`
+	TariffWeekPlans          []TariffWeekPlan          `gorm:"foreignKey:TariffID" json:"tariff_week_plans,omitempty"`
+	TariffDayPlans           []TariffDayPlan           `gorm:"foreignKey:TariffID" json:"tariff_day_plans,omitempty"`
 	VacationCappingRuleGroup *VacationCappingRuleGroup `gorm:"foreignKey:VacationCappingRuleGroupID" json:"vacation_capping_rule_group,omitempty"`
 }
 
@@ -404,7 +404,7 @@ func (TariffWeekPlan) TableName() string {
 type TariffDayPlan struct {
 	ID          uuid.UUID  `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
 	TariffID    uuid.UUID  `gorm:"type:uuid;not null;index" json:"tariff_id"`
-	DayPosition int        `gorm:"type:int;not null" json:"day_position"` // 1-based position in cycle
+	DayPosition int        `gorm:"type:int;not null" json:"day_position"`  // 1-based position in cycle
 	DayPlanID   *uuid.UUID `gorm:"type:uuid" json:"day_plan_id,omitempty"` // NULL = off day
 	CreatedAt   time.Time  `gorm:"default:now()" json:"created_at"`
 

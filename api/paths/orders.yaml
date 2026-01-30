@@ -1,0 +1,128 @@
+# Order endpoints
+/orders:
+  get:
+    tags:
+      - Orders
+    summary: List orders
+    description: |
+      Returns all orders for the tenant. Orders represent projects or work
+      packages that employees can book time against.
+    operationId: listOrders
+    parameters:
+      - name: active
+        in: query
+        type: boolean
+        description: Filter by active status
+      - name: status
+        in: query
+        type: string
+        description: Filter by order status
+        enum:
+          - planned
+          - active
+          - completed
+          - cancelled
+    responses:
+      200:
+        description: List of orders
+        schema:
+          $ref: '../schemas/orders.yaml#/OrderList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Orders
+    summary: Create order
+    description: |
+      Creates a new order with a unique code. Orders can be linked to cost
+      centers and have billing rates for reporting.
+    operationId: createOrder
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/orders.yaml#/CreateOrderRequest'
+    responses:
+      201:
+        description: Created order
+        schema:
+          $ref: '../schemas/orders.yaml#/Order'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/orders/{id}:
+  get:
+    tags:
+      - Orders
+    summary: Get order by ID
+    description: Retrieves order details.
+    operationId: getOrder
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Order details
+        schema:
+          $ref: '../schemas/orders.yaml#/Order'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Orders
+    summary: Update order
+    description: Updates order properties.
+    operationId: updateOrder
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/orders.yaml#/UpdateOrderRequest'
+    responses:
+      200:
+        description: Updated order
+        schema:
+          $ref: '../schemas/orders.yaml#/Order'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Orders
+    summary: Delete order
+    description: Permanently removes an order. Consider deactivating instead.
+    operationId: deleteOrder
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Order deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

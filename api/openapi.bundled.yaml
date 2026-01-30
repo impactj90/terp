@@ -122,6 +122,20 @@ tags:
     description: Groups of vacation capping rules for assignment to tariffs
   - name: Employee Capping Exceptions
     description: Individual employee exceptions from vacation capping rules
+  - name: Export Interfaces
+    description: Data exchange interface configuration
+  - name: Employee Tariff Assignments
+    description: Date-ranged tariff assignments for employees
+  - name: Activities
+    description: Activity/work type management for orders
+  - name: Orders
+    description: Order/project management for time tracking
+  - name: Order Assignments
+    description: Employee-to-order assignments
+  - name: Order Bookings
+    description: Order-based time bookings
+  - name: Evaluations
+    description: Read-only evaluation queries (Auswertungen)
 securityDefinitions:
   BearerAuth:
     type: apiKey
@@ -1208,6 +1222,188 @@ paths:
           description: Vacation balance
           schema:
             $ref: '#/definitions/VacationBalance'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+  '/employees/{id}/tariff-assignments':
+    get:
+      tags:
+        - Employees
+      summary: List tariff assignments for employee
+      description: |
+        Returns all tariff assignments for an employee, ordered by effective_from date.
+        Each assignment represents a period where a specific tariff applies.
+      operationId: listEmployeeTariffAssignments
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+          description: Employee ID
+        - name: active
+          in: query
+          type: boolean
+          description: Filter by active status
+      responses:
+        '200':
+          description: List of tariff assignments
+          schema:
+            $ref: '#/definitions/EmployeeTariffAssignmentList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    post:
+      tags:
+        - Employees
+      summary: Assign tariff to employee with date range
+      description: |
+        Creates a new tariff assignment for the employee with an effective date range.
+        The date range must not overlap with existing active assignments.
+      operationId: createEmployeeTariffAssignment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+          description: Employee ID
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateEmployeeTariffAssignmentRequest'
+      responses:
+        '201':
+          description: Created tariff assignment
+          schema:
+            $ref: '#/definitions/EmployeeTariffAssignment'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+        '409':
+          description: Overlapping assignment exists
+          schema:
+            $ref: '#/definitions/ProblemDetails'
+  '/employees/{id}/tariff-assignments/{assignmentId}':
+    get:
+      tags:
+        - Employees
+      summary: Get tariff assignment by ID
+      operationId: getEmployeeTariffAssignment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: assignmentId
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Tariff assignment details
+          schema:
+            $ref: '#/definitions/EmployeeTariffAssignment'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    put:
+      tags:
+        - Employees
+      summary: Update tariff assignment
+      operationId: updateEmployeeTariffAssignment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: assignmentId
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateEmployeeTariffAssignmentRequest'
+      responses:
+        '200':
+          description: Updated tariff assignment
+          schema:
+            $ref: '#/definitions/EmployeeTariffAssignment'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+        '409':
+          description: Overlapping assignment exists
+          schema:
+            $ref: '#/definitions/ProblemDetails'
+    delete:
+      tags:
+        - Employees
+      summary: Delete tariff assignment
+      operationId: deleteEmployeeTariffAssignment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: assignmentId
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Assignment deleted
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+  '/employees/{id}/effective-tariff':
+    get:
+      tags:
+        - Employees
+      summary: Preview effective tariff for employee at a date
+      description: |
+        Resolves which tariff applies to the employee at the given date.
+        Resolution order: (1) active assignment covering the date, (2) employee default tariff_id, (3) none.
+      operationId: getEffectiveTariff
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+          description: Employee ID
+        - name: date
+          in: query
+          required: true
+          type: string
+          format: date
+          description: Date to resolve effective tariff for
+      responses:
+        '200':
+          description: Effective tariff for the given date
+          schema:
+            $ref: '#/definitions/EffectiveTariffResponse'
+        '400':
+          $ref: '#/responses/BadRequest'
         '401':
           $ref: '#/responses/Unauthorized'
         '404':
@@ -4566,6 +4762,177 @@ paths:
           description: Report not ready (still generating)
           schema:
             $ref: '#/definitions/ProblemDetails'
+  /export-interfaces:
+    get:
+      tags:
+        - Export Interfaces
+      summary: List export interfaces
+      operationId: listExportInterfaces
+      parameters:
+        - name: active_only
+          in: query
+          type: boolean
+          description: Filter to only active interfaces
+      responses:
+        '200':
+          description: List of export interfaces
+          schema:
+            $ref: '#/definitions/ExportInterfaceList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+    post:
+      tags:
+        - Export Interfaces
+      summary: Create export interface
+      operationId: createExportInterface
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateExportInterfaceRequest'
+      responses:
+        '201':
+          description: Created export interface
+          schema:
+            $ref: '#/definitions/ExportInterface'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '409':
+          description: Interface number already exists for this tenant
+          schema:
+            $ref: '#/definitions/ProblemDetails'
+  '/export-interfaces/{id}':
+    get:
+      tags:
+        - Export Interfaces
+      summary: Get export interface by ID
+      operationId: getExportInterface
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Export interface details
+          schema:
+            $ref: '#/definitions/ExportInterface'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    patch:
+      tags:
+        - Export Interfaces
+      summary: Update export interface
+      operationId: updateExportInterface
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateExportInterfaceRequest'
+      responses:
+        '200':
+          description: Updated export interface
+          schema:
+            $ref: '#/definitions/ExportInterface'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    delete:
+      tags:
+        - Export Interfaces
+      summary: Delete export interface
+      operationId: deleteExportInterface
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Export interface deleted
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+        '409':
+          description: Interface has generated exports
+          schema:
+            $ref: '#/definitions/ProblemDetails'
+  '/export-interfaces/{id}/accounts':
+    put:
+      tags:
+        - Export Interfaces
+      summary: Set accounts for export interface
+      description: Bulk replace all accounts for this interface
+      operationId: setExportInterfaceAccounts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/SetExportInterfaceAccountsRequest'
+      responses:
+        '200':
+          description: Accounts set successfully
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/definitions/ExportInterfaceAccount'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    get:
+      tags:
+        - Export Interfaces
+      summary: List accounts for export interface
+      operationId: listExportInterfaceAccounts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: List of accounts for this interface
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/definitions/ExportInterfaceAccount'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
   /payroll-exports:
     get:
       tags:
@@ -7143,6 +7510,832 @@ paths:
           $ref: '#/responses/Unauthorized'
         '404':
           $ref: '#/responses/NotFound'
+  /activities:
+    get:
+      tags:
+        - Activities
+      summary: List activities
+      description: |
+        Returns all activities for the tenant. Activities are work types
+        used in order-based time tracking (Taetigkeiten).
+      operationId: listActivities
+      parameters:
+        - name: active
+          in: query
+          type: boolean
+          description: Filter by active status
+      responses:
+        '200':
+          description: List of activities
+          schema:
+            $ref: '#/definitions/ActivityList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+    post:
+      tags:
+        - Activities
+      summary: Create activity
+      description: |
+        Creates a new activity with a unique code for use in order bookings.
+      operationId: createActivity
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateActivityRequest'
+      responses:
+        '201':
+          description: Created activity
+          schema:
+            $ref: '#/definitions/Activity'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '409':
+          description: Code already exists
+          schema:
+            $ref: '#/definitions/ProblemDetails'
+  '/activities/{id}':
+    get:
+      tags:
+        - Activities
+      summary: Get activity by ID
+      description: Retrieves activity details.
+      operationId: getActivity
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Activity details
+          schema:
+            $ref: '#/definitions/Activity'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    patch:
+      tags:
+        - Activities
+      summary: Update activity
+      description: Updates activity properties.
+      operationId: updateActivity
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateActivityRequest'
+      responses:
+        '200':
+          description: Updated activity
+          schema:
+            $ref: '#/definitions/Activity'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    delete:
+      tags:
+        - Activities
+      summary: Delete activity
+      description: Permanently removes an activity. Consider deactivating instead.
+      operationId: deleteActivity
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Activity deleted
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+  /orders:
+    get:
+      tags:
+        - Orders
+      summary: List orders
+      description: |
+        Returns all orders for the tenant. Orders represent projects or work
+        packages that employees can book time against.
+      operationId: listOrders
+      parameters:
+        - name: active
+          in: query
+          type: boolean
+          description: Filter by active status
+        - name: status
+          in: query
+          type: string
+          description: Filter by order status
+          enum:
+            - planned
+            - active
+            - completed
+            - cancelled
+      responses:
+        '200':
+          description: List of orders
+          schema:
+            $ref: '#/definitions/OrderList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+    post:
+      tags:
+        - Orders
+      summary: Create order
+      description: |
+        Creates a new order with a unique code. Orders can be linked to cost
+        centers and have billing rates for reporting.
+      operationId: createOrder
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateOrderRequest'
+      responses:
+        '201':
+          description: Created order
+          schema:
+            $ref: '#/definitions/Order'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '409':
+          description: Code already exists
+          schema:
+            $ref: '#/definitions/ProblemDetails'
+  '/orders/{id}':
+    get:
+      tags:
+        - Orders
+      summary: Get order by ID
+      description: Retrieves order details.
+      operationId: getOrder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Order details
+          schema:
+            $ref: '#/definitions/Order'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    patch:
+      tags:
+        - Orders
+      summary: Update order
+      description: Updates order properties.
+      operationId: updateOrder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateOrderRequest'
+      responses:
+        '200':
+          description: Updated order
+          schema:
+            $ref: '#/definitions/Order'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    delete:
+      tags:
+        - Orders
+      summary: Delete order
+      description: Permanently removes an order. Consider deactivating instead.
+      operationId: deleteOrder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Order deleted
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+  /order-assignments:
+    get:
+      tags:
+        - Order Assignments
+      summary: List order assignments
+      description: Returns all order assignments for the tenant.
+      operationId: listOrderAssignments
+      parameters:
+        - name: order_id
+          in: query
+          type: string
+          format: uuid
+          description: Filter by order ID
+        - name: employee_id
+          in: query
+          type: string
+          format: uuid
+          description: Filter by employee ID
+      responses:
+        '200':
+          description: List of order assignments
+          schema:
+            $ref: '#/definitions/OrderAssignmentList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+    post:
+      tags:
+        - Order Assignments
+      summary: Create order assignment
+      description: Assigns an employee to an order with a role.
+      operationId: createOrderAssignment
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateOrderAssignmentRequest'
+      responses:
+        '201':
+          description: Created order assignment
+          schema:
+            $ref: '#/definitions/OrderAssignment'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '409':
+          description: Assignment already exists
+          schema:
+            $ref: '#/definitions/ProblemDetails'
+  '/order-assignments/{id}':
+    get:
+      tags:
+        - Order Assignments
+      summary: Get order assignment by ID
+      description: Retrieves order assignment details.
+      operationId: getOrderAssignment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Order assignment details
+          schema:
+            $ref: '#/definitions/OrderAssignment'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    patch:
+      tags:
+        - Order Assignments
+      summary: Update order assignment
+      description: Updates order assignment properties.
+      operationId: updateOrderAssignment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateOrderAssignmentRequest'
+      responses:
+        '200':
+          description: Updated order assignment
+          schema:
+            $ref: '#/definitions/OrderAssignment'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    delete:
+      tags:
+        - Order Assignments
+      summary: Delete order assignment
+      description: Removes an employee-to-order assignment.
+      operationId: deleteOrderAssignment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Order assignment deleted
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+  '/orders/{id}/assignments':
+    get:
+      tags:
+        - Order Assignments
+      summary: List assignments for an order
+      description: Returns all employee assignments for a specific order.
+      operationId: listOrderAssignmentsByOrder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: List of order assignments
+          schema:
+            $ref: '#/definitions/OrderAssignmentList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+  /order-bookings:
+    get:
+      tags:
+        - Order Bookings
+      summary: List order bookings
+      description: |
+        Returns order bookings filtered by employee, order, and/or date range.
+        Used for order-based time tracking reports.
+      operationId: listOrderBookings
+      parameters:
+        - name: employee_id
+          in: query
+          type: string
+          format: uuid
+          description: Filter by employee ID
+        - name: order_id
+          in: query
+          type: string
+          format: uuid
+          description: Filter by order ID
+        - name: date_from
+          in: query
+          type: string
+          format: date
+          description: Filter bookings from this date (inclusive)
+        - name: date_to
+          in: query
+          type: string
+          format: date
+          description: Filter bookings to this date (inclusive)
+      responses:
+        '200':
+          description: List of order bookings
+          schema:
+            $ref: '#/definitions/OrderBookingList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+    post:
+      tags:
+        - Order Bookings
+      summary: Create order booking
+      description: Creates a new time booking against an order.
+      operationId: createOrderBooking
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateOrderBookingRequest'
+      responses:
+        '201':
+          description: Created order booking
+          schema:
+            $ref: '#/definitions/OrderBooking'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+  '/order-bookings/{id}':
+    get:
+      tags:
+        - Order Bookings
+      summary: Get order booking by ID
+      description: Retrieves order booking details.
+      operationId: getOrderBooking
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Order booking details
+          schema:
+            $ref: '#/definitions/OrderBooking'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    patch:
+      tags:
+        - Order Bookings
+      summary: Update order booking
+      description: Updates order booking properties.
+      operationId: updateOrderBooking
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateOrderBookingRequest'
+      responses:
+        '200':
+          description: Updated order booking
+          schema:
+            $ref: '#/definitions/OrderBooking'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    delete:
+      tags:
+        - Order Bookings
+      summary: Delete order booking
+      description: Permanently removes an order booking.
+      operationId: deleteOrderBooking
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Order booking deleted
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+  /evaluations/daily-values:
+    get:
+      tags:
+        - Evaluations
+      summary: List daily value evaluations
+      description: |
+        Returns one row per employee per day within the date range.
+        Shows time worked, overtime, break, balance and error status.
+        Use include_no_bookings=true to include placeholder rows for
+        dates with no daily values calculated.
+      operationId: listEvaluationDailyValues
+      parameters:
+        - name: from
+          in: query
+          required: true
+          type: string
+          format: date
+          description: Start date (YYYY-MM-DD)
+        - name: to
+          in: query
+          required: true
+          type: string
+          format: date
+          description: End date (YYYY-MM-DD)
+        - name: employee_id
+          in: query
+          type: string
+          format: uuid
+          description: Filter by employee
+        - name: department_id
+          in: query
+          type: string
+          format: uuid
+          description: Filter by department
+        - name: include_no_bookings
+          in: query
+          type: boolean
+          default: false
+          description: Include rows for dates with zero bookings
+        - name: has_errors
+          in: query
+          type: boolean
+          description: Filter by error status
+        - name: limit
+          in: query
+          type: integer
+          default: 50
+          minimum: 1
+          maximum: 1000
+        - name: page
+          in: query
+          type: integer
+          default: 1
+          minimum: 1
+      responses:
+        '200':
+          description: List of daily value evaluations
+          schema:
+            $ref: '#/definitions/EvaluationDailyValueList'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+  /evaluations/bookings:
+    get:
+      tags:
+        - Evaluations
+      summary: List booking evaluations
+      description: |
+        Returns one row per booking within the date range.
+        Shows time, type, source, and employee for each booking.
+      operationId: listEvaluationBookings
+      parameters:
+        - name: from
+          in: query
+          required: true
+          type: string
+          format: date
+          description: Start date (YYYY-MM-DD)
+        - name: to
+          in: query
+          required: true
+          type: string
+          format: date
+          description: End date (YYYY-MM-DD)
+        - name: employee_id
+          in: query
+          type: string
+          format: uuid
+          description: Filter by employee
+        - name: department_id
+          in: query
+          type: string
+          format: uuid
+          description: Filter by department
+        - name: booking_type_id
+          in: query
+          type: string
+          format: uuid
+          description: Filter by booking type
+        - name: source
+          in: query
+          type: string
+          enum:
+            - web
+            - terminal
+            - api
+            - import
+            - correction
+          description: Filter by booking source
+        - name: direction
+          in: query
+          type: string
+          enum:
+            - in
+            - out
+          description: Filter by booking direction
+        - name: limit
+          in: query
+          type: integer
+          default: 50
+          minimum: 1
+          maximum: 1000
+        - name: page
+          in: query
+          type: integer
+          default: 1
+          minimum: 1
+      responses:
+        '200':
+          description: List of booking evaluations
+          schema:
+            $ref: '#/definitions/EvaluationBookingList'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+  /evaluations/terminal-bookings:
+    get:
+      tags:
+        - Evaluations
+      summary: List terminal booking evaluations
+      description: |
+        Returns raw terminal booking transactions. Shows both original_time
+        (raw terminal value) and edited_time (corrected value) side by side.
+        Only returns bookings where source='terminal'.
+      operationId: listEvaluationTerminalBookings
+      parameters:
+        - name: from
+          in: query
+          required: true
+          type: string
+          format: date
+          description: Start date (YYYY-MM-DD)
+        - name: to
+          in: query
+          required: true
+          type: string
+          format: date
+          description: End date (YYYY-MM-DD)
+        - name: employee_id
+          in: query
+          type: string
+          format: uuid
+          description: Filter by employee
+        - name: department_id
+          in: query
+          type: string
+          format: uuid
+          description: Filter by department
+        - name: limit
+          in: query
+          type: integer
+          default: 50
+          minimum: 1
+          maximum: 1000
+        - name: page
+          in: query
+          type: integer
+          default: 1
+          minimum: 1
+      responses:
+        '200':
+          description: List of terminal booking evaluations
+          schema:
+            $ref: '#/definitions/EvaluationTerminalBookingList'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+  /evaluations/logs:
+    get:
+      tags:
+        - Evaluations
+      summary: List change log evaluations
+      description: |
+        Returns change log entries for bookings, absences, and monthly account
+        changes. Shows user, timestamp, and before/after values.
+      operationId: listEvaluationLogs
+      parameters:
+        - name: from
+          in: query
+          required: true
+          type: string
+          format: date
+          description: 'Start date (YYYY-MM-DD, filters on performed_at)'
+        - name: to
+          in: query
+          required: true
+          type: string
+          format: date
+          description: 'End date (YYYY-MM-DD, filters on performed_at)'
+        - name: employee_id
+          in: query
+          type: string
+          format: uuid
+          description: Filter by employee (matches entity IDs related to employee)
+        - name: department_id
+          in: query
+          type: string
+          format: uuid
+          description: Filter by department
+        - name: entity_type
+          in: query
+          type: string
+          description: 'Filter by entity type (booking, absence, monthly_value)'
+        - name: action
+          in: query
+          type: string
+          description: 'Filter by action (create, update, delete, approve, reject)'
+        - name: user_id
+          in: query
+          type: string
+          format: uuid
+          description: Filter by user who performed the action
+        - name: limit
+          in: query
+          type: integer
+          default: 50
+          minimum: 1
+          maximum: 1000
+        - name: page
+          in: query
+          type: integer
+          default: 1
+          minimum: 1
+      responses:
+        '200':
+          description: List of change log entries
+          schema:
+            $ref: '#/definitions/EvaluationLogEntryList'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+  /evaluations/workflow-history:
+    get:
+      tags:
+        - Evaluations
+      summary: List workflow history evaluations
+      description: |
+        Returns approval and workflow history. Composed from audit_logs
+        filtering by relevant entity types (absence, monthly_value) and
+        workflow actions (create, approve, reject, close, reopen).
+      operationId: listEvaluationWorkflowHistory
+      parameters:
+        - name: from
+          in: query
+          required: true
+          type: string
+          format: date
+          description: 'Start date (YYYY-MM-DD, filters on performed_at)'
+        - name: to
+          in: query
+          required: true
+          type: string
+          format: date
+          description: 'End date (YYYY-MM-DD, filters on performed_at)'
+        - name: employee_id
+          in: query
+          type: string
+          format: uuid
+          description: Filter by employee
+        - name: department_id
+          in: query
+          type: string
+          format: uuid
+          description: Filter by department
+        - name: entity_type
+          in: query
+          type: string
+          description: 'Filter by entity type (absence, monthly_value)'
+        - name: action
+          in: query
+          type: string
+          description: 'Filter by action (create, approve, reject, close, reopen)'
+        - name: limit
+          in: query
+          type: integer
+          default: 50
+          minimum: 1
+          maximum: 1000
+        - name: page
+          in: query
+          type: integer
+          default: 1
+          minimum: 1
+      responses:
+        '200':
+          description: List of workflow history entries
+          schema:
+            $ref: '#/definitions/EvaluationWorkflowEntryList'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
 definitions:
   UUID:
     type: string
@@ -8103,6 +9296,14 @@ definitions:
         type: string
         format: uuid
         x-nullable: true
+      default_order_id:
+        type: string
+        format: uuid
+        x-nullable: true
+      default_activity_id:
+        type: string
+        format: uuid
+        x-nullable: true
       part_time_percent:
         type: number
         format: decimal
@@ -8156,19 +9357,7 @@ definitions:
         x-nullable: true
       tariff:
         allOf:
-          - type: object
-            required:
-              - id
-              - code
-              - name
-            properties:
-              id:
-                type: string
-                format: uuid
-              code:
-                type: string
-              name:
-                type: string
+          - $ref: '#/definitions/EmployeeTariffAssignment/properties/tariff'
         x-nullable: true
       employee_group:
         allOf:
@@ -8408,6 +9597,12 @@ definitions:
       activity_group_id:
         type: string
         format: uuid
+      default_order_id:
+        type: string
+        format: uuid
+      default_activity_id:
+        type: string
+        format: uuid
       part_time_percent:
         type: number
         format: decimal
@@ -8518,6 +9713,14 @@ definitions:
         format: uuid
         x-nullable: true
       activity_group_id:
+        type: string
+        format: uuid
+        x-nullable: true
+      default_order_id:
+        type: string
+        format: uuid
+        x-nullable: true
+      default_activity_id:
         type: string
         format: uuid
         x-nullable: true
@@ -12961,6 +14164,156 @@ definitions:
           $ref: '#/definitions/Report'
       meta:
         $ref: '#/definitions/PaginationMeta'
+  ExportInterface:
+    type: object
+    required:
+      - id
+      - tenant_id
+      - interface_number
+      - name
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      interface_number:
+        type: integer
+        example: 1
+      name:
+        type: string
+        example: Payroll Export DATEV
+      mandant_number:
+        type: string
+        x-nullable: true
+        example: '12345'
+      export_script:
+        type: string
+        x-nullable: true
+        example: export_datev.sh
+      export_path:
+        type: string
+        x-nullable: true
+        example: /exports/datev/
+      output_filename:
+        type: string
+        x-nullable: true
+        example: payroll_export.csv
+      is_active:
+        type: boolean
+        example: true
+      accounts:
+        type: array
+        items:
+          $ref: '#/definitions/ExportInterfaceAccount'
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  ExportInterfaceSummary:
+    type: object
+    required:
+      - id
+      - interface_number
+      - name
+    properties:
+      id:
+        type: string
+        format: uuid
+      interface_number:
+        type: integer
+      name:
+        type: string
+      is_active:
+        type: boolean
+  ExportInterfaceAccount:
+    type: object
+    required:
+      - account_id
+    properties:
+      account_id:
+        type: string
+        format: uuid
+      account_code:
+        type: string
+      account_name:
+        type: string
+      payroll_code:
+        type: string
+        x-nullable: true
+      sort_order:
+        type: integer
+  CreateExportInterfaceRequest:
+    type: object
+    required:
+      - interface_number
+      - name
+    properties:
+      interface_number:
+        type: integer
+        minimum: 1
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      mandant_number:
+        type: string
+        maxLength: 50
+      export_script:
+        type: string
+        maxLength: 255
+      export_path:
+        type: string
+        maxLength: 500
+      output_filename:
+        type: string
+        maxLength: 255
+  UpdateExportInterfaceRequest:
+    type: object
+    properties:
+      interface_number:
+        type: integer
+        minimum: 1
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      mandant_number:
+        type: string
+        maxLength: 50
+      export_script:
+        type: string
+        maxLength: 255
+      export_path:
+        type: string
+        maxLength: 500
+      output_filename:
+        type: string
+        maxLength: 255
+      is_active:
+        type: boolean
+  ExportInterfaceList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/ExportInterface'
+  SetExportInterfaceAccountsRequest:
+    type: object
+    required:
+      - account_ids
+    properties:
+      account_ids:
+        type: array
+        items:
+          type: string
+          format: uuid
   PayrollExport:
     type: object
     required:
@@ -12976,6 +14329,11 @@ definitions:
       tenant_id:
         type: string
         format: uuid
+      export_interface_id:
+        type: string
+        format: uuid
+        x-nullable: true
+        description: Export interface used to generate this export
       year:
         type: integer
         example: 2024
@@ -13100,6 +14458,10 @@ definitions:
           - xlsx
           - xml
           - json
+      export_interface_id:
+        type: string
+        format: uuid
+        description: Interface to use (determines accounts if include_accounts not specified)
       parameters:
         type: object
         properties:
@@ -14521,6 +15883,867 @@ definitions:
       exception_active:
         type: boolean
         description: Whether an employee exception overrides this rule
+  EmployeeTariffAssignment:
+    type: object
+    required:
+      - id
+      - tenant_id
+      - employee_id
+      - tariff_id
+      - effective_from
+      - overwrite_behavior
+      - is_active
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      employee_id:
+        type: string
+        format: uuid
+      tariff_id:
+        type: string
+        format: uuid
+      effective_from:
+        type: string
+        format: date
+        description: Start date (inclusive) when this tariff assignment takes effect
+      effective_to:
+        type: string
+        format: date
+        description: End date (inclusive). NULL means open-ended
+        x-nullable: true
+      overwrite_behavior:
+        type: string
+        enum:
+          - overwrite
+          - preserve_manual
+        description: Whether to overwrite manual day plan edits when syncing
+        example: preserve_manual
+      notes:
+        type: string
+        x-nullable: true
+      is_active:
+        type: boolean
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+      tariff:
+        type: object
+        required:
+          - id
+          - code
+          - name
+        properties:
+          id:
+            type: string
+            format: uuid
+          code:
+            type: string
+          name:
+            type: string
+      employee:
+        $ref: '#/definitions/EmployeeSummary'
+  EmployeeTariffAssignmentList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/EmployeeTariffAssignment'
+  CreateEmployeeTariffAssignmentRequest:
+    type: object
+    required:
+      - tariff_id
+      - effective_from
+    properties:
+      tariff_id:
+        type: string
+        format: uuid
+      effective_from:
+        type: string
+        format: date
+      effective_to:
+        type: string
+        format: date
+      overwrite_behavior:
+        type: string
+        enum:
+          - overwrite
+          - preserve_manual
+        default: preserve_manual
+      notes:
+        type: string
+  UpdateEmployeeTariffAssignmentRequest:
+    type: object
+    properties:
+      effective_from:
+        type: string
+        format: date
+      effective_to:
+        type: string
+        format: date
+      overwrite_behavior:
+        type: string
+        enum:
+          - overwrite
+          - preserve_manual
+      notes:
+        type: string
+      is_active:
+        type: boolean
+  EffectiveTariffResponse:
+    type: object
+    required:
+      - employee_id
+      - date
+      - source
+    properties:
+      employee_id:
+        type: string
+        format: uuid
+      date:
+        type: string
+        format: date
+      source:
+        type: string
+        enum:
+          - assignment
+          - default
+          - none
+        description: '''assignment'' = from employee_tariff_assignments, ''default'' = from employee.tariff_id, ''none'' = no tariff'
+      tariff:
+        $ref: '#/definitions/Tariff'
+      assignment:
+        $ref: '#/definitions/EmployeeTariffAssignment'
+  Activity:
+    type: object
+    required:
+      - id
+      - tenant_id
+      - name
+      - code
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      code:
+        type: string
+        example: DEV
+      name:
+        type: string
+        example: Development
+      description:
+        type: string
+        x-nullable: true
+      is_active:
+        type: boolean
+        example: true
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  CreateActivityRequest:
+    type: object
+    required:
+      - name
+      - code
+    properties:
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      code:
+        type: string
+        minLength: 1
+        maxLength: 50
+      description:
+        type: string
+  UpdateActivityRequest:
+    type: object
+    properties:
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      code:
+        type: string
+        minLength: 1
+        maxLength: 50
+      description:
+        type: string
+      is_active:
+        type: boolean
+  ActivityList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/Activity'
+  Order:
+    type: object
+    required:
+      - id
+      - tenant_id
+      - name
+      - code
+      - status
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      code:
+        type: string
+        example: ORD-001
+      name:
+        type: string
+        example: Website Redesign
+      description:
+        type: string
+        x-nullable: true
+      status:
+        type: string
+        enum:
+          - planned
+          - active
+          - completed
+          - cancelled
+        example: active
+      customer:
+        type: string
+        x-nullable: true
+        example: Acme Corp
+      cost_center_id:
+        type: string
+        format: uuid
+        x-nullable: true
+      billing_rate_per_hour:
+        type: number
+        x-nullable: true
+        example: 120
+      valid_from:
+        type: string
+        format: date
+        x-nullable: true
+      valid_to:
+        type: string
+        format: date
+        x-nullable: true
+      is_active:
+        type: boolean
+        example: true
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  CreateOrderRequest:
+    type: object
+    required:
+      - name
+      - code
+    properties:
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      code:
+        type: string
+        minLength: 1
+        maxLength: 50
+      description:
+        type: string
+      status:
+        type: string
+        enum:
+          - planned
+          - active
+          - completed
+          - cancelled
+      customer:
+        type: string
+      cost_center_id:
+        type: string
+        format: uuid
+      billing_rate_per_hour:
+        type: number
+      valid_from:
+        type: string
+        format: date
+      valid_to:
+        type: string
+        format: date
+  UpdateOrderRequest:
+    type: object
+    properties:
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      code:
+        type: string
+        minLength: 1
+        maxLength: 50
+      description:
+        type: string
+      status:
+        type: string
+        enum:
+          - planned
+          - active
+          - completed
+          - cancelled
+      customer:
+        type: string
+      cost_center_id:
+        type: string
+        format: uuid
+      billing_rate_per_hour:
+        type: number
+      valid_from:
+        type: string
+        format: date
+      valid_to:
+        type: string
+        format: date
+      is_active:
+        type: boolean
+  OrderList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/Order'
+  OrderAssignment:
+    type: object
+    required:
+      - id
+      - tenant_id
+      - order_id
+      - employee_id
+      - role
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      order_id:
+        type: string
+        format: uuid
+      employee_id:
+        type: string
+        format: uuid
+      role:
+        type: string
+        enum:
+          - worker
+          - leader
+          - sales
+        example: worker
+      valid_from:
+        type: string
+        format: date
+        x-nullable: true
+      valid_to:
+        type: string
+        format: date
+        x-nullable: true
+      is_active:
+        type: boolean
+        example: true
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  CreateOrderAssignmentRequest:
+    type: object
+    required:
+      - order_id
+      - employee_id
+    properties:
+      order_id:
+        type: string
+        format: uuid
+      employee_id:
+        type: string
+        format: uuid
+      role:
+        type: string
+        enum:
+          - worker
+          - leader
+          - sales
+      valid_from:
+        type: string
+        format: date
+      valid_to:
+        type: string
+        format: date
+  UpdateOrderAssignmentRequest:
+    type: object
+    properties:
+      role:
+        type: string
+        enum:
+          - worker
+          - leader
+          - sales
+      valid_from:
+        type: string
+        format: date
+      valid_to:
+        type: string
+        format: date
+      is_active:
+        type: boolean
+  OrderAssignmentList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/OrderAssignment'
+  OrderBooking:
+    type: object
+    required:
+      - id
+      - tenant_id
+      - employee_id
+      - order_id
+      - booking_date
+      - time_minutes
+      - source
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      employee_id:
+        type: string
+        format: uuid
+      order_id:
+        type: string
+        format: uuid
+      activity_id:
+        type: string
+        format: uuid
+        x-nullable: true
+      booking_date:
+        type: string
+        format: date
+      time_minutes:
+        type: integer
+        example: 480
+      description:
+        type: string
+        x-nullable: true
+      source:
+        type: string
+        enum:
+          - manual
+          - auto
+          - import
+        example: manual
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+      created_by:
+        type: string
+        format: uuid
+        x-nullable: true
+      updated_by:
+        type: string
+        format: uuid
+        x-nullable: true
+  CreateOrderBookingRequest:
+    type: object
+    required:
+      - employee_id
+      - order_id
+      - booking_date
+      - time_minutes
+    properties:
+      employee_id:
+        type: string
+        format: uuid
+      order_id:
+        type: string
+        format: uuid
+      activity_id:
+        type: string
+        format: uuid
+      booking_date:
+        type: string
+        format: date
+      time_minutes:
+        type: integer
+        minimum: 1
+      description:
+        type: string
+  UpdateOrderBookingRequest:
+    type: object
+    properties:
+      order_id:
+        type: string
+        format: uuid
+      activity_id:
+        type: string
+        format: uuid
+      booking_date:
+        type: string
+        format: date
+      time_minutes:
+        type: integer
+        minimum: 1
+      description:
+        type: string
+  OrderBookingList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/OrderBooking'
+  EvaluationDailyValue:
+    type: object
+    required:
+      - employee_id
+      - date
+    properties:
+      id:
+        type: string
+        format: uuid
+        description: DailyValue ID (null for days-without-bookings placeholder rows)
+        x-nullable: true
+      employee_id:
+        type: string
+        format: uuid
+      date:
+        type: string
+        format: date
+      status:
+        type: string
+        enum:
+          - pending
+          - calculated
+          - error
+          - approved
+          - no_data
+        description: no_data for days without bookings placeholder rows
+      target_minutes:
+        type: integer
+      gross_minutes:
+        type: integer
+      net_minutes:
+        type: integer
+      break_minutes:
+        type: integer
+      overtime_minutes:
+        type: integer
+      undertime_minutes:
+        type: integer
+      balance_minutes:
+        type: integer
+        description: overtime - undertime
+      booking_count:
+        type: integer
+      has_errors:
+        type: boolean
+      first_come:
+        type: string
+        description: 'HH:MM or null'
+        x-nullable: true
+      last_go:
+        type: string
+        description: 'HH:MM or null'
+        x-nullable: true
+      employee:
+        $ref: '#/definitions/EmployeeSummary'
+  EvaluationDailyValueList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/EvaluationDailyValue'
+      meta:
+        $ref: '#/definitions/PaginationMeta'
+  EvaluationBooking:
+    type: object
+    required:
+      - id
+      - employee_id
+      - booking_date
+      - edited_time
+    properties:
+      id:
+        type: string
+        format: uuid
+      employee_id:
+        type: string
+        format: uuid
+      booking_date:
+        type: string
+        format: date
+      booking_type_id:
+        type: string
+        format: uuid
+      original_time:
+        type: integer
+        description: Original booking time in minutes from midnight
+      edited_time:
+        type: integer
+        description: Edited/corrected time in minutes from midnight
+      calculated_time:
+        type: integer
+        x-nullable: true
+      time_string:
+        type: string
+        description: 'Formatted time HH:MM'
+      source:
+        type: string
+        enum:
+          - web
+          - terminal
+          - api
+          - import
+          - correction
+      pair_id:
+        type: string
+        format: uuid
+        x-nullable: true
+      terminal_id:
+        type: string
+        format: uuid
+        x-nullable: true
+      notes:
+        type: string
+        x-nullable: true
+      created_at:
+        type: string
+        format: date-time
+      employee:
+        $ref: '#/definitions/EmployeeSummary'
+      booking_type:
+        $ref: '#/definitions/BookingTypeSummary'
+  EvaluationBookingList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/EvaluationBooking'
+      meta:
+        $ref: '#/definitions/PaginationMeta'
+  EvaluationTerminalBooking:
+    type: object
+    required:
+      - id
+      - employee_id
+      - booking_date
+      - original_time
+      - edited_time
+    properties:
+      id:
+        type: string
+        format: uuid
+      employee_id:
+        type: string
+        format: uuid
+      booking_date:
+        type: string
+        format: date
+      booking_type_id:
+        type: string
+        format: uuid
+      original_time:
+        type: integer
+        description: Raw terminal time (minutes from midnight)
+      original_time_string:
+        type: string
+        description: 'Raw terminal time HH:MM'
+      edited_time:
+        type: integer
+        description: Corrected time (minutes from midnight)
+      edited_time_string:
+        type: string
+        description: 'Corrected time HH:MM'
+      calculated_time:
+        type: integer
+        x-nullable: true
+      was_edited:
+        type: boolean
+        description: true when original_time != edited_time
+      terminal_id:
+        type: string
+        format: uuid
+        x-nullable: true
+      source:
+        type: string
+      created_at:
+        type: string
+        format: date-time
+      employee:
+        $ref: '#/definitions/EmployeeSummary'
+      booking_type:
+        $ref: '#/definitions/BookingTypeSummary'
+  EvaluationTerminalBookingList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/EvaluationTerminalBooking'
+      meta:
+        $ref: '#/definitions/PaginationMeta'
+  EvaluationLogEntry:
+    type: object
+    required:
+      - id
+      - action
+      - entity_type
+      - entity_id
+      - performed_at
+    properties:
+      id:
+        type: string
+        format: uuid
+      action:
+        type: string
+        enum:
+          - create
+          - update
+          - delete
+          - approve
+          - reject
+          - close
+          - reopen
+      entity_type:
+        type: string
+        description: 'booking, absence, monthly_value, etc.'
+      entity_id:
+        type: string
+        format: uuid
+      entity_name:
+        type: string
+        x-nullable: true
+      changes:
+        type: object
+        x-nullable: true
+        description: Before/after values as JSON
+      performed_at:
+        type: string
+        format: date-time
+      user_id:
+        type: string
+        format: uuid
+        x-nullable: true
+      user:
+        $ref: '#/definitions/UserSummary'
+  EvaluationLogEntryList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/EvaluationLogEntry'
+      meta:
+        $ref: '#/definitions/PaginationMeta'
+  EvaluationWorkflowEntry:
+    type: object
+    required:
+      - id
+      - action
+      - entity_type
+      - entity_id
+      - performed_at
+    properties:
+      id:
+        type: string
+        format: uuid
+      action:
+        type: string
+        enum:
+          - create
+          - approve
+          - reject
+          - close
+          - reopen
+      entity_type:
+        type: string
+        description: 'absence, monthly_value'
+      entity_id:
+        type: string
+        format: uuid
+      entity_name:
+        type: string
+        x-nullable: true
+      performed_at:
+        type: string
+        format: date-time
+      user_id:
+        type: string
+        format: uuid
+        x-nullable: true
+      user:
+        $ref: '#/definitions/UserSummary'
+      metadata:
+        type: object
+        x-nullable: true
+  EvaluationWorkflowEntryList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/EvaluationWorkflowEntry'
+      meta:
+        $ref: '#/definitions/PaginationMeta'
 responses:
   BadRequest:
     description: Invalid request

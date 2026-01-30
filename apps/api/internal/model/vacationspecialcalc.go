@@ -38,7 +38,7 @@ func IsValidVacationSpecialCalcType(t string) bool {
 type VacationSpecialCalculation struct {
 	ID          uuid.UUID               `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
 	TenantID    uuid.UUID               `gorm:"type:uuid;not null;index" json:"tenant_id"`
-	Type        VacationSpecialCalcType  `gorm:"type:varchar(20);not null" json:"type"`
+	Type        VacationSpecialCalcType `gorm:"type:varchar(20);not null" json:"type"`
 	Threshold   int                     `gorm:"type:int;not null;default:0" json:"threshold"`
 	BonusDays   decimal.Decimal         `gorm:"type:decimal(5,2);not null" json:"bonus_days"`
 	Description *string                 `gorm:"type:text" json:"description,omitempty"`

@@ -20,10 +20,10 @@ type DevTeamMember struct {
 
 // Team UUIDs for reference.
 var (
-	TeamBackendID   = uuid.MustParse("00000000-0000-0000-0000-000000000901")
-	TeamFrontendID  = uuid.MustParse("00000000-0000-0000-0000-000000000902")
-	TeamDevOpsID    = uuid.MustParse("00000000-0000-0000-0000-000000000903")
-	TeamHRCoreID    = uuid.MustParse("00000000-0000-0000-0000-000000000904")
+	TeamBackendID    = uuid.MustParse("00000000-0000-0000-0000-000000000901")
+	TeamFrontendID   = uuid.MustParse("00000000-0000-0000-0000-000000000902")
+	TeamDevOpsID     = uuid.MustParse("00000000-0000-0000-0000-000000000903")
+	TeamHRCoreID     = uuid.MustParse("00000000-0000-0000-0000-000000000904")
 	TeamAccountingID = uuid.MustParse("00000000-0000-0000-0000-000000000905")
 )
 

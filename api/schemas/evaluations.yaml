@@ -1,0 +1,321 @@
+# Evaluation-specific schemas
+
+# Response item for daily values evaluation
+EvaluationDailyValue:
+  type: object
+  required:
+    - employee_id
+    - date
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: DailyValue ID (null for days-without-bookings placeholder rows)
+      x-nullable: true
+    employee_id:
+      type: string
+      format: uuid
+    date:
+      type: string
+      format: date
+    status:
+      type: string
+      enum:
+        - pending
+        - calculated
+        - error
+        - approved
+        - no_data
+      description: "no_data for days without bookings placeholder rows"
+    target_minutes:
+      type: integer
+    gross_minutes:
+      type: integer
+    net_minutes:
+      type: integer
+    break_minutes:
+      type: integer
+    overtime_minutes:
+      type: integer
+    undertime_minutes:
+      type: integer
+    balance_minutes:
+      type: integer
+      description: overtime - undertime
+    booking_count:
+      type: integer
+    has_errors:
+      type: boolean
+    first_come:
+      type: string
+      description: "HH:MM or null"
+      x-nullable: true
+    last_go:
+      type: string
+      description: "HH:MM or null"
+      x-nullable: true
+    employee:
+      $ref: './employees.yaml#/EmployeeSummary'
+
+EvaluationDailyValueList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/EvaluationDailyValue'
+    meta:
+      $ref: './common.yaml#/PaginationMeta'
+
+# Response item for bookings evaluation
+EvaluationBooking:
+  type: object
+  required:
+    - id
+    - employee_id
+    - booking_date
+    - edited_time
+  properties:
+    id:
+      type: string
+      format: uuid
+    employee_id:
+      type: string
+      format: uuid
+    booking_date:
+      type: string
+      format: date
+    booking_type_id:
+      type: string
+      format: uuid
+    original_time:
+      type: integer
+      description: Original booking time in minutes from midnight
+    edited_time:
+      type: integer
+      description: Edited/corrected time in minutes from midnight
+    calculated_time:
+      type: integer
+      x-nullable: true
+    time_string:
+      type: string
+      description: "Formatted time HH:MM"
+    source:
+      type: string
+      enum:
+        - web
+        - terminal
+        - api
+        - import
+        - correction
+    pair_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    terminal_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    notes:
+      type: string
+      x-nullable: true
+    created_at:
+      type: string
+      format: date-time
+    employee:
+      $ref: './employees.yaml#/EmployeeSummary'
+    booking_type:
+      $ref: './booking-types.yaml#/BookingTypeSummary'
+
+EvaluationBookingList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/EvaluationBooking'
+    meta:
+      $ref: './common.yaml#/PaginationMeta'
+
+# Response item for terminal bookings evaluation
+EvaluationTerminalBooking:
+  type: object
+  required:
+    - id
+    - employee_id
+    - booking_date
+    - original_time
+    - edited_time
+  properties:
+    id:
+      type: string
+      format: uuid
+    employee_id:
+      type: string
+      format: uuid
+    booking_date:
+      type: string
+      format: date
+    booking_type_id:
+      type: string
+      format: uuid
+    original_time:
+      type: integer
+      description: Raw terminal time (minutes from midnight)
+    original_time_string:
+      type: string
+      description: "Raw terminal time HH:MM"
+    edited_time:
+      type: integer
+      description: Corrected time (minutes from midnight)
+    edited_time_string:
+      type: string
+      description: "Corrected time HH:MM"
+    calculated_time:
+      type: integer
+      x-nullable: true
+    was_edited:
+      type: boolean
+      description: "true when original_time != edited_time"
+    terminal_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    source:
+      type: string
+    created_at:
+      type: string
+      format: date-time
+    employee:
+      $ref: './employees.yaml#/EmployeeSummary'
+    booking_type:
+      $ref: './booking-types.yaml#/BookingTypeSummary'
+
+EvaluationTerminalBookingList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/EvaluationTerminalBooking'
+    meta:
+      $ref: './common.yaml#/PaginationMeta'
+
+# Response item for log entries evaluation
+EvaluationLogEntry:
+  type: object
+  required:
+    - id
+    - action
+    - entity_type
+    - entity_id
+    - performed_at
+  properties:
+    id:
+      type: string
+      format: uuid
+    action:
+      type: string
+      enum:
+        - create
+        - update
+        - delete
+        - approve
+        - reject
+        - close
+        - reopen
+    entity_type:
+      type: string
+      description: "booking, absence, monthly_value, etc."
+    entity_id:
+      type: string
+      format: uuid
+    entity_name:
+      type: string
+      x-nullable: true
+    changes:
+      type: object
+      x-nullable: true
+      description: "Before/after values as JSON"
+    performed_at:
+      type: string
+      format: date-time
+    user_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    user:
+      $ref: './users.yaml#/UserSummary'
+
+EvaluationLogEntryList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/EvaluationLogEntry'
+    meta:
+      $ref: './common.yaml#/PaginationMeta'
+
+# Response item for workflow history evaluation
+EvaluationWorkflowEntry:
+  type: object
+  required:
+    - id
+    - action
+    - entity_type
+    - entity_id
+    - performed_at
+  properties:
+    id:
+      type: string
+      format: uuid
+    action:
+      type: string
+      enum:
+        - create
+        - approve
+        - reject
+        - close
+        - reopen
+    entity_type:
+      type: string
+      description: "absence, monthly_value"
+    entity_id:
+      type: string
+      format: uuid
+    entity_name:
+      type: string
+      x-nullable: true
+    performed_at:
+      type: string
+      format: date-time
+    user_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    user:
+      $ref: './users.yaml#/UserSummary'
+    metadata:
+      type: object
+      x-nullable: true
+
+EvaluationWorkflowEntryList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/EvaluationWorkflowEntry'
+    meta:
+      $ref: './common.yaml#/PaginationMeta'

@@ -28,12 +28,12 @@ type Employee struct {
 	IsActive            bool            `gorm:"default:true" json:"is_active"`
 
 	// Extended personnel master data (ZMI-TICKET-004)
-	ExitReason   string `gorm:"type:varchar(255)" json:"exit_reason,omitempty"`
-	Notes        string `gorm:"type:text" json:"notes,omitempty"`
-	AddressStreet  string `gorm:"type:varchar(255)" json:"address_street,omitempty"`
-	AddressZip     string `gorm:"type:varchar(20)" json:"address_zip,omitempty"`
-	AddressCity    string `gorm:"type:varchar(100)" json:"address_city,omitempty"`
-	AddressCountry string `gorm:"type:varchar(100)" json:"address_country,omitempty"`
+	ExitReason     string     `gorm:"type:varchar(255)" json:"exit_reason,omitempty"`
+	Notes          string     `gorm:"type:text" json:"notes,omitempty"`
+	AddressStreet  string     `gorm:"type:varchar(255)" json:"address_street,omitempty"`
+	AddressZip     string     `gorm:"type:varchar(20)" json:"address_zip,omitempty"`
+	AddressCity    string     `gorm:"type:varchar(100)" json:"address_city,omitempty"`
+	AddressCountry string     `gorm:"type:varchar(100)" json:"address_country,omitempty"`
 	BirthDate      *time.Time `gorm:"type:date" json:"birth_date,omitempty"`
 	Gender         string     `gorm:"type:varchar(20)" json:"gender,omitempty"`
 	Nationality    string     `gorm:"type:varchar(100)" json:"nationality,omitempty"`
@@ -48,6 +48,10 @@ type Employee struct {
 	EmployeeGroupID *uuid.UUID `gorm:"type:uuid;index" json:"employee_group_id,omitempty"`
 	WorkflowGroupID *uuid.UUID `gorm:"type:uuid;index" json:"workflow_group_id,omitempty"`
 	ActivityGroupID *uuid.UUID `gorm:"type:uuid;index" json:"activity_group_id,omitempty"`
+
+	// Order-related FKs (ZMI Auftrag: Stammauftrag, Stammtaetigkeit)
+	DefaultOrderID    *uuid.UUID `gorm:"type:uuid;index" json:"default_order_id,omitempty"`
+	DefaultActivityID *uuid.UUID `gorm:"type:uuid;index" json:"default_activity_id,omitempty"`
 
 	// Tariff-related override fields (ZMI section 14.2)
 	PartTimePercent    *decimal.Decimal `gorm:"type:decimal(5,2)" json:"part_time_percent,omitempty"`
@@ -66,17 +70,19 @@ type Employee struct {
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
 
 	// Relations
-	Tenant         *Tenant           `gorm:"foreignKey:TenantID" json:"tenant,omitempty"`
-	Department     *Department       `gorm:"foreignKey:DepartmentID" json:"department,omitempty"`
-	CostCenter     *CostCenter       `gorm:"foreignKey:CostCenterID" json:"cost_center,omitempty"`
-	EmploymentType *EmploymentType   `gorm:"foreignKey:EmploymentTypeID" json:"employment_type,omitempty"`
-	Tariff         *Tariff           `gorm:"foreignKey:TariffID" json:"tariff,omitempty"`
-	EmployeeGroup  *EmployeeGroup    `gorm:"foreignKey:EmployeeGroupID" json:"employee_group,omitempty"`
-	WorkflowGroup  *WorkflowGroup    `gorm:"foreignKey:WorkflowGroupID" json:"workflow_group,omitempty"`
-	ActivityGroup  *ActivityGroup    `gorm:"foreignKey:ActivityGroupID" json:"activity_group,omitempty"`
-	Contacts       []EmployeeContact `gorm:"foreignKey:EmployeeID" json:"contacts,omitempty"`
-	Cards          []EmployeeCard    `gorm:"foreignKey:EmployeeID" json:"cards,omitempty"`
-	User           *User             `gorm:"foreignKey:EmployeeID" json:"user,omitempty"`
+	Tenant          *Tenant           `gorm:"foreignKey:TenantID" json:"tenant,omitempty"`
+	Department      *Department       `gorm:"foreignKey:DepartmentID" json:"department,omitempty"`
+	CostCenter      *CostCenter       `gorm:"foreignKey:CostCenterID" json:"cost_center,omitempty"`
+	EmploymentType  *EmploymentType   `gorm:"foreignKey:EmploymentTypeID" json:"employment_type,omitempty"`
+	Tariff          *Tariff           `gorm:"foreignKey:TariffID" json:"tariff,omitempty"`
+	EmployeeGroup   *EmployeeGroup    `gorm:"foreignKey:EmployeeGroupID" json:"employee_group,omitempty"`
+	WorkflowGroup   *WorkflowGroup    `gorm:"foreignKey:WorkflowGroupID" json:"workflow_group,omitempty"`
+	ActivityGroup   *ActivityGroup    `gorm:"foreignKey:ActivityGroupID" json:"activity_group,omitempty"`
+	DefaultOrder    *Order            `gorm:"foreignKey:DefaultOrderID" json:"default_order,omitempty"`
+	DefaultActivity *Activity         `gorm:"foreignKey:DefaultActivityID" json:"default_activity,omitempty"`
+	Contacts        []EmployeeContact `gorm:"foreignKey:EmployeeID" json:"contacts,omitempty"`
+	Cards           []EmployeeCard    `gorm:"foreignKey:EmployeeID" json:"cards,omitempty"`
+	User            *User             `gorm:"foreignKey:EmployeeID" json:"user,omitempty"`
 }
 
 func (Employee) TableName() string {

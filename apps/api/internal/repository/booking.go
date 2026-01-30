@@ -18,18 +18,20 @@ var (
 
 // BookingFilter defines filter criteria for listing bookings.
 type BookingFilter struct {
-	TenantID   uuid.UUID
-	EmployeeID *uuid.UUID
-	StartDate  *time.Time
-	EndDate    *time.Time
-	Direction  *model.BookingDirection // filter by booking type direction
-	Source     *model.BookingSource
-	HasPair    *bool // nil = all, true = only paired, false = only unpaired
+	TenantID           uuid.UUID
+	EmployeeID         *uuid.UUID
+	DepartmentID       *uuid.UUID
+	BookingTypeID      *uuid.UUID
+	StartDate          *time.Time
+	EndDate            *time.Time
+	Direction          *model.BookingDirection // filter by booking type direction
+	Source             *model.BookingSource
+	HasPair            *bool // nil = all, true = only paired, false = only unpaired
 	ScopeType          model.DataScopeType
 	ScopeDepartmentIDs []uuid.UUID
 	ScopeEmployeeIDs   []uuid.UUID
-	Offset     int
-	Limit      int
+	Offset             int
+	Limit              int
 }
 
 // BookingRepository handles booking data access.
@@ -108,6 +110,13 @@ func (r *BookingRepository) List(ctx context.Context, filter BookingFilter) ([]m
 	if filter.EmployeeID != nil {
 		query = query.Where("employee_id = ?", *filter.EmployeeID)
 	}
+	if filter.DepartmentID != nil {
+		query = query.Joins("JOIN employees AS emp_dept ON emp_dept.id = bookings.employee_id").
+			Where("emp_dept.department_id = ?", *filter.DepartmentID)
+	}
+	if filter.BookingTypeID != nil {
+		query = query.Where("booking_type_id = ?", *filter.BookingTypeID)
+	}
 	switch filter.ScopeType {
 	case model.DataScopeDepartment:
 		if len(filter.ScopeDepartmentIDs) == 0 {
@@ -157,7 +166,7 @@ func (r *BookingRepository) List(ctx context.Context, filter BookingFilter) ([]m
 		query = query.Offset(filter.Offset)
 	}
 
-	err := query.Preload("BookingType").Order("booking_date DESC, edited_time DESC").Find(&bookings).Error
+	err := query.Preload("Employee").Preload("BookingType").Order("booking_date DESC, edited_time DESC").Find(&bookings).Error
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list bookings: %w", err)
 	}

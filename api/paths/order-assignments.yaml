@@ -1,0 +1,144 @@
+# Order Assignment endpoints
+/order-assignments:
+  get:
+    tags:
+      - Order Assignments
+    summary: List order assignments
+    description: Returns all order assignments for the tenant.
+    operationId: listOrderAssignments
+    parameters:
+      - name: order_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by order ID
+      - name: employee_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by employee ID
+    responses:
+      200:
+        description: List of order assignments
+        schema:
+          $ref: '../schemas/order-assignments.yaml#/OrderAssignmentList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Order Assignments
+    summary: Create order assignment
+    description: Assigns an employee to an order with a role.
+    operationId: createOrderAssignment
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/order-assignments.yaml#/CreateOrderAssignmentRequest'
+    responses:
+      201:
+        description: Created order assignment
+        schema:
+          $ref: '../schemas/order-assignments.yaml#/OrderAssignment'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Assignment already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/order-assignments/{id}:
+  get:
+    tags:
+      - Order Assignments
+    summary: Get order assignment by ID
+    description: Retrieves order assignment details.
+    operationId: getOrderAssignment
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Order assignment details
+        schema:
+          $ref: '../schemas/order-assignments.yaml#/OrderAssignment'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Order Assignments
+    summary: Update order assignment
+    description: Updates order assignment properties.
+    operationId: updateOrderAssignment
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/order-assignments.yaml#/UpdateOrderAssignmentRequest'
+    responses:
+      200:
+        description: Updated order assignment
+        schema:
+          $ref: '../schemas/order-assignments.yaml#/OrderAssignment'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Order Assignments
+    summary: Delete order assignment
+    description: Removes an employee-to-order assignment.
+    operationId: deleteOrderAssignment
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Order assignment deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/orders/{id}/assignments:
+  get:
+    tags:
+      - Order Assignments
+    summary: List assignments for an order
+    description: Returns all employee assignments for a specific order.
+    operationId: listOrderAssignmentsByOrder
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: List of order assignments
+        schema:
+          $ref: '../schemas/order-assignments.yaml#/OrderAssignmentList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

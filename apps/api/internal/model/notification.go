@@ -18,16 +18,16 @@ const (
 
 // Notification represents a user notification.
 type Notification struct {
-	ID        uuid.UUID       `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	TenantID  uuid.UUID       `gorm:"type:uuid;not null;index" json:"tenant_id"`
-	UserID    uuid.UUID       `gorm:"type:uuid;not null;index" json:"user_id"`
+	ID        uuid.UUID        `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	TenantID  uuid.UUID        `gorm:"type:uuid;not null;index" json:"tenant_id"`
+	UserID    uuid.UUID        `gorm:"type:uuid;not null;index" json:"user_id"`
 	Type      NotificationType `gorm:"type:varchar(20);not null" json:"type"`
-	Title     string          `gorm:"type:varchar(255);not null" json:"title"`
-	Message   string          `gorm:"type:text;not null" json:"message"`
-	Link      *string         `gorm:"type:text" json:"link,omitempty"`
-	ReadAt    *time.Time      `gorm:"type:timestamptz" json:"read_at,omitempty"`
-	CreatedAt time.Time       `gorm:"default:now()" json:"created_at"`
-	UpdatedAt time.Time       `gorm:"default:now()" json:"updated_at"`
+	Title     string           `gorm:"type:varchar(255);not null" json:"title"`
+	Message   string           `gorm:"type:text;not null" json:"message"`
+	Link      *string          `gorm:"type:text" json:"link,omitempty"`
+	ReadAt    *time.Time       `gorm:"type:timestamptz" json:"read_at,omitempty"`
+	CreatedAt time.Time        `gorm:"default:now()" json:"created_at"`
+	UpdatedAt time.Time        `gorm:"default:now()" json:"updated_at"`
 }
 
 func (Notification) TableName() string {

@@ -27,11 +27,11 @@ const (
 
 // AbsenceListOptions defines filters for listing absence days across all employees.
 type AbsenceListOptions struct {
-	EmployeeID    *uuid.UUID
-	AbsenceTypeID *uuid.UUID
-	Status        *AbsenceStatus
-	From          *time.Time
-	To            *time.Time
+	EmployeeID         *uuid.UUID
+	AbsenceTypeID      *uuid.UUID
+	Status             *AbsenceStatus
+	From               *time.Time
+	To                 *time.Time
 	ScopeType          DataScopeType
 	ScopeDepartmentIDs []uuid.UUID
 	ScopeEmployeeIDs   []uuid.UUID

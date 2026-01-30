@@ -125,6 +125,20 @@ tags:
     description: Groups of vacation capping rules for assignment to tariffs
   - name: Employee Capping Exceptions
     description: Individual employee exceptions from vacation capping rules
+  - name: Export Interfaces
+    description: Data exchange interface configuration
+  - name: Employee Tariff Assignments
+    description: Date-ranged tariff assignments for employees
+  - name: Activities
+    description: Activity/work type management for orders
+  - name: Orders
+    description: Order/project management for time tracking
+  - name: Order Assignments
+    description: Employee-to-order assignments
+  - name: Order Bookings
+    description: Order-based time bookings
+  - name: Evaluations
+    description: Read-only evaluation queries (Auswertungen)
 
 securityDefinitions:
   BearerAuth:
@@ -206,6 +220,14 @@ paths:
     $ref: 'paths/employees.yaml#/~1employees~1{id}~1absences'
   /employees/{id}/vacation-balance:
     $ref: 'paths/employees.yaml#/~1employees~1{id}~1vacation-balance'
+
+  # Employee Tariff Assignments
+  /employees/{id}/tariff-assignments:
+    $ref: 'paths/employee-tariff-assignments.yaml#/~1employees~1{id}~1tariff-assignments'
+  /employees/{id}/tariff-assignments/{assignmentId}:
+    $ref: 'paths/employee-tariff-assignments.yaml#/~1employees~1{id}~1tariff-assignments~1{assignmentId}'
+  /employees/{id}/effective-tariff:
+    $ref: 'paths/employee-tariff-assignments.yaml#/~1employees~1{id}~1effective-tariff'
 
   # Departments
   /departments:
@@ -389,6 +411,14 @@ paths:
   /reports/{id}/download:
     $ref: 'paths/reports.yaml#/~1reports~1{id}~1download'
 
+  # Export Interfaces
+  /export-interfaces:
+    $ref: 'paths/export-interfaces.yaml#/~1export-interfaces'
+  /export-interfaces/{id}:
+    $ref: 'paths/export-interfaces.yaml#/~1export-interfaces~1{id}'
+  /export-interfaces/{id}/accounts:
+    $ref: 'paths/export-interfaces.yaml#/~1export-interfaces~1{id}~1accounts'
+
   # Payroll Exports
   /payroll-exports:
     $ref: 'paths/payroll-exports.yaml#/~1payroll-exports'
@@ -524,6 +554,44 @@ paths:
   # Vacation Carryover Preview
   /vacation-carryover/preview:
     $ref: 'paths/employee-capping-exceptions.yaml#/~1vacation-carryover~1preview'
+
+  # Activities
+  /activities:
+    $ref: 'paths/activities.yaml#/~1activities'
+  /activities/{id}:
+    $ref: 'paths/activities.yaml#/~1activities~1{id}'
+
+  # Orders
+  /orders:
+    $ref: 'paths/orders.yaml#/~1orders'
+  /orders/{id}:
+    $ref: 'paths/orders.yaml#/~1orders~1{id}'
+
+  # Order Assignments
+  /order-assignments:
+    $ref: 'paths/order-assignments.yaml#/~1order-assignments'
+  /order-assignments/{id}:
+    $ref: 'paths/order-assignments.yaml#/~1order-assignments~1{id}'
+  /orders/{id}/assignments:
+    $ref: 'paths/order-assignments.yaml#/~1orders~1{id}~1assignments'
+
+  # Order Bookings
+  /order-bookings:
+    $ref: 'paths/order-bookings.yaml#/~1order-bookings'
+  /order-bookings/{id}:
+    $ref: 'paths/order-bookings.yaml#/~1order-bookings~1{id}'
+
+  # Evaluations
+  /evaluations/daily-values:
+    $ref: 'paths/evaluations.yaml#/~1evaluations~1daily-values'
+  /evaluations/bookings:
+    $ref: 'paths/evaluations.yaml#/~1evaluations~1bookings'
+  /evaluations/terminal-bookings:
+    $ref: 'paths/evaluations.yaml#/~1evaluations~1terminal-bookings'
+  /evaluations/logs:
+    $ref: 'paths/evaluations.yaml#/~1evaluations~1logs'
+  /evaluations/workflow-history:
+    $ref: 'paths/evaluations.yaml#/~1evaluations~1workflow-history'
 
 definitions:
   # Common
@@ -898,6 +966,22 @@ definitions:
   ReportList:
     $ref: 'schemas/reports.yaml#/ReportList'
 
+  # Export Interfaces
+  ExportInterface:
+    $ref: 'schemas/export-interfaces.yaml#/ExportInterface'
+  ExportInterfaceSummary:
+    $ref: 'schemas/export-interfaces.yaml#/ExportInterfaceSummary'
+  ExportInterfaceAccount:
+    $ref: 'schemas/export-interfaces.yaml#/ExportInterfaceAccount'
+  CreateExportInterfaceRequest:
+    $ref: 'schemas/export-interfaces.yaml#/CreateExportInterfaceRequest'
+  UpdateExportInterfaceRequest:
+    $ref: 'schemas/export-interfaces.yaml#/UpdateExportInterfaceRequest'
+  ExportInterfaceList:
+    $ref: 'schemas/export-interfaces.yaml#/ExportInterfaceList'
+  SetExportInterfaceAccountsRequest:
+    $ref: 'schemas/export-interfaces.yaml#/SetExportInterfaceAccountsRequest'
+
   # Payroll Exports
   PayrollExport:
     $ref: 'schemas/payroll-exports.yaml#/PayrollExport'
@@ -1045,6 +1129,80 @@ definitions:
     $ref: 'schemas/employee-capping-exceptions.yaml#/VacationCarryoverPreview'
   CappingRuleApplication:
     $ref: 'schemas/employee-capping-exceptions.yaml#/CappingRuleApplication'
+
+  # Employee Tariff Assignments
+  EmployeeTariffAssignment:
+    $ref: 'schemas/employee-tariff-assignments.yaml#/EmployeeTariffAssignment'
+  EmployeeTariffAssignmentList:
+    $ref: 'schemas/employee-tariff-assignments.yaml#/EmployeeTariffAssignmentList'
+  CreateEmployeeTariffAssignmentRequest:
+    $ref: 'schemas/employee-tariff-assignments.yaml#/CreateEmployeeTariffAssignmentRequest'
+  UpdateEmployeeTariffAssignmentRequest:
+    $ref: 'schemas/employee-tariff-assignments.yaml#/UpdateEmployeeTariffAssignmentRequest'
+  EffectiveTariffResponse:
+    $ref: 'schemas/employee-tariff-assignments.yaml#/EffectiveTariffResponse'
+
+  # Activities
+  Activity:
+    $ref: 'schemas/activities.yaml#/Activity'
+  CreateActivityRequest:
+    $ref: 'schemas/activities.yaml#/CreateActivityRequest'
+  UpdateActivityRequest:
+    $ref: 'schemas/activities.yaml#/UpdateActivityRequest'
+  ActivityList:
+    $ref: 'schemas/activities.yaml#/ActivityList'
+
+  # Orders
+  Order:
+    $ref: 'schemas/orders.yaml#/Order'
+  CreateOrderRequest:
+    $ref: 'schemas/orders.yaml#/CreateOrderRequest'
+  UpdateOrderRequest:
+    $ref: 'schemas/orders.yaml#/UpdateOrderRequest'
+  OrderList:
+    $ref: 'schemas/orders.yaml#/OrderList'
+
+  # Order Assignments
+  OrderAssignment:
+    $ref: 'schemas/order-assignments.yaml#/OrderAssignment'
+  CreateOrderAssignmentRequest:
+    $ref: 'schemas/order-assignments.yaml#/CreateOrderAssignmentRequest'
+  UpdateOrderAssignmentRequest:
+    $ref: 'schemas/order-assignments.yaml#/UpdateOrderAssignmentRequest'
+  OrderAssignmentList:
+    $ref: 'schemas/order-assignments.yaml#/OrderAssignmentList'
+
+  # Order Bookings
+  OrderBooking:
+    $ref: 'schemas/order-bookings.yaml#/OrderBooking'
+  CreateOrderBookingRequest:
+    $ref: 'schemas/order-bookings.yaml#/CreateOrderBookingRequest'
+  UpdateOrderBookingRequest:
+    $ref: 'schemas/order-bookings.yaml#/UpdateOrderBookingRequest'
+  OrderBookingList:
+    $ref: 'schemas/order-bookings.yaml#/OrderBookingList'
+
+  # Evaluations
+  EvaluationDailyValue:
+    $ref: 'schemas/evaluations.yaml#/EvaluationDailyValue'
+  EvaluationDailyValueList:
+    $ref: 'schemas/evaluations.yaml#/EvaluationDailyValueList'
+  EvaluationBooking:
+    $ref: 'schemas/evaluations.yaml#/EvaluationBooking'
+  EvaluationBookingList:
+    $ref: 'schemas/evaluations.yaml#/EvaluationBookingList'
+  EvaluationTerminalBooking:
+    $ref: 'schemas/evaluations.yaml#/EvaluationTerminalBooking'
+  EvaluationTerminalBookingList:
+    $ref: 'schemas/evaluations.yaml#/EvaluationTerminalBookingList'
+  EvaluationLogEntry:
+    $ref: 'schemas/evaluations.yaml#/EvaluationLogEntry'
+  EvaluationLogEntryList:
+    $ref: 'schemas/evaluations.yaml#/EvaluationLogEntryList'
+  EvaluationWorkflowEntry:
+    $ref: 'schemas/evaluations.yaml#/EvaluationWorkflowEntry'
+  EvaluationWorkflowEntryList:
+    $ref: 'schemas/evaluations.yaml#/EvaluationWorkflowEntryList'
 
 responses:
   BadRequest:

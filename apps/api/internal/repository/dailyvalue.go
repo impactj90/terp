@@ -121,6 +121,10 @@ func (r *DailyValueRepository) ListAll(ctx context.Context, tenantID uuid.UUID, 
 	if opts.EmployeeID != nil {
 		q = q.Where("employee_id = ?", *opts.EmployeeID)
 	}
+	if opts.DepartmentID != nil {
+		q = q.Joins("JOIN employees AS emp_dept ON emp_dept.id = daily_values.employee_id").
+			Where("emp_dept.department_id = ?", *opts.DepartmentID)
+	}
 	if opts.Status != nil {
 		q = q.Where("status = ?", *opts.Status)
 	}
@@ -147,6 +151,13 @@ func (r *DailyValueRepository) ListAll(ctx context.Context, tenantID uuid.UUID, 
 		} else {
 			q = q.Where("employee_id IN ?", opts.ScopeEmployeeIDs)
 		}
+	}
+
+	if opts.Limit > 0 {
+		q = q.Limit(opts.Limit)
+	}
+	if opts.Offset > 0 {
+		q = q.Offset(opts.Offset)
 	}
 
 	err := q.Order("value_date ASC").Find(&values).Error

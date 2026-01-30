@@ -11,11 +11,11 @@ import (
 )
 
 var (
-	ErrBookingReasonNotFound    = errors.New("booking reason not found")
-	ErrBookingReasonCodeReq     = errors.New("booking reason code is required")
-	ErrBookingReasonLabelReq    = errors.New("booking reason label is required")
-	ErrBookingReasonCodeExists  = errors.New("booking reason code already exists for this booking type")
-	ErrBookingReasonTypeIDReq   = errors.New("booking type ID is required")
+	ErrBookingReasonNotFound   = errors.New("booking reason not found")
+	ErrBookingReasonCodeReq    = errors.New("booking reason code is required")
+	ErrBookingReasonLabelReq   = errors.New("booking reason label is required")
+	ErrBookingReasonCodeExists = errors.New("booking reason code already exists for this booking type")
+	ErrBookingReasonTypeIDReq  = errors.New("booking type ID is required")
 )
 
 // bookingReasonRepository defines the interface for booking reason data access.

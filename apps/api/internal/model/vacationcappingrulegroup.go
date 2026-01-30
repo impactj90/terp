@@ -19,7 +19,7 @@ type VacationCappingRuleGroup struct {
 	UpdatedAt   time.Time `gorm:"default:now()" json:"updated_at"`
 
 	// Relations
-	Tenant       *Tenant              `gorm:"foreignKey:TenantID" json:"tenant,omitempty"`
+	Tenant       *Tenant               `gorm:"foreignKey:TenantID" json:"tenant,omitempty"`
 	CappingRules []VacationCappingRule `gorm:"many2many:vacation_capping_rule_group_rules;foreignKey:ID;joinForeignKey:GroupID;References:ID;joinReferences:CappingRuleID" json:"capping_rules,omitempty"`
 }
 

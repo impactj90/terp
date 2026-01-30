@@ -1,0 +1,145 @@
+# Order-related schemas
+Order:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - name
+    - code
+    - status
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    code:
+      type: string
+      example: "ORD-001"
+    name:
+      type: string
+      example: "Website Redesign"
+    description:
+      type: string
+      x-nullable: true
+    status:
+      type: string
+      enum:
+        - planned
+        - active
+        - completed
+        - cancelled
+      example: "active"
+    customer:
+      type: string
+      x-nullable: true
+      example: "Acme Corp"
+    cost_center_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    billing_rate_per_hour:
+      type: number
+      x-nullable: true
+      example: 120.00
+    valid_from:
+      type: string
+      format: date
+      x-nullable: true
+    valid_to:
+      type: string
+      format: date
+      x-nullable: true
+    is_active:
+      type: boolean
+      example: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+CreateOrderRequest:
+  type: object
+  required:
+    - name
+    - code
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    code:
+      type: string
+      minLength: 1
+      maxLength: 50
+    description:
+      type: string
+    status:
+      type: string
+      enum:
+        - planned
+        - active
+        - completed
+        - cancelled
+    customer:
+      type: string
+    cost_center_id:
+      type: string
+      format: uuid
+    billing_rate_per_hour:
+      type: number
+    valid_from:
+      type: string
+      format: date
+    valid_to:
+      type: string
+      format: date
+
+UpdateOrderRequest:
+  type: object
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    code:
+      type: string
+      minLength: 1
+      maxLength: 50
+    description:
+      type: string
+    status:
+      type: string
+      enum:
+        - planned
+        - active
+        - completed
+        - cancelled
+    customer:
+      type: string
+    cost_center_id:
+      type: string
+      format: uuid
+    billing_rate_per_hour:
+      type: number
+    valid_from:
+      type: string
+      format: date
+    valid_to:
+      type: string
+      format: date
+    is_active:
+      type: boolean
+
+OrderList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/Order'

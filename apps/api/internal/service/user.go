@@ -14,15 +14,15 @@ import (
 )
 
 var (
-	ErrUserNotFound          = errors.New("user not found")
-	ErrPermissionDenied      = errors.New("permission denied")
-	ErrInvalidCredentials    = errors.New("invalid credentials")
-	ErrUserInactive          = errors.New("user inactive")
-	ErrUserLocked            = errors.New("user locked")
-	ErrPasswordNotSet        = errors.New("password not set")
-	ErrPasswordRequired      = errors.New("password required")
+	ErrUserNotFound           = errors.New("user not found")
+	ErrPermissionDenied       = errors.New("permission denied")
+	ErrInvalidCredentials     = errors.New("invalid credentials")
+	ErrUserInactive           = errors.New("user inactive")
+	ErrUserLocked             = errors.New("user locked")
+	ErrPasswordNotSet         = errors.New("password not set")
+	ErrPasswordRequired       = errors.New("password required")
 	ErrInvalidCurrentPassword = errors.New("invalid current password")
-	ErrInvalidDataScopeType  = errors.New("invalid data scope type")
+	ErrInvalidDataScopeType   = errors.New("invalid data scope type")
 )
 
 type UserService struct {

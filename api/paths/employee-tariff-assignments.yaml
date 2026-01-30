@@ -1,0 +1,185 @@
+# Employee Tariff Assignment endpoints
+/employees/{id}/tariff-assignments:
+  get:
+    tags:
+      - Employees
+    summary: List tariff assignments for employee
+    description: |
+      Returns all tariff assignments for an employee, ordered by effective_from date.
+      Each assignment represents a period where a specific tariff applies.
+    operationId: listEmployeeTariffAssignments
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+        description: Employee ID
+      - name: active
+        in: query
+        type: boolean
+        description: Filter by active status
+    responses:
+      200:
+        description: List of tariff assignments
+        schema:
+          $ref: '../schemas/employee-tariff-assignments.yaml#/EmployeeTariffAssignmentList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  post:
+    tags:
+      - Employees
+    summary: Assign tariff to employee with date range
+    description: |
+      Creates a new tariff assignment for the employee with an effective date range.
+      The date range must not overlap with existing active assignments.
+    operationId: createEmployeeTariffAssignment
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+        description: Employee ID
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/employee-tariff-assignments.yaml#/CreateEmployeeTariffAssignmentRequest'
+    responses:
+      201:
+        description: Created tariff assignment
+        schema:
+          $ref: '../schemas/employee-tariff-assignments.yaml#/EmployeeTariffAssignment'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+      409:
+        description: Overlapping assignment exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/employees/{id}/tariff-assignments/{assignmentId}:
+  get:
+    tags:
+      - Employees
+    summary: Get tariff assignment by ID
+    operationId: getEmployeeTariffAssignment
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: assignmentId
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Tariff assignment details
+        schema:
+          $ref: '../schemas/employee-tariff-assignments.yaml#/EmployeeTariffAssignment'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  put:
+    tags:
+      - Employees
+    summary: Update tariff assignment
+    operationId: updateEmployeeTariffAssignment
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: assignmentId
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/employee-tariff-assignments.yaml#/UpdateEmployeeTariffAssignmentRequest'
+    responses:
+      200:
+        description: Updated tariff assignment
+        schema:
+          $ref: '../schemas/employee-tariff-assignments.yaml#/EmployeeTariffAssignment'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+      409:
+        description: Overlapping assignment exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+  delete:
+    tags:
+      - Employees
+    summary: Delete tariff assignment
+    operationId: deleteEmployeeTariffAssignment
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: assignmentId
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Assignment deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/employees/{id}/effective-tariff:
+  get:
+    tags:
+      - Employees
+    summary: Preview effective tariff for employee at a date
+    description: |
+      Resolves which tariff applies to the employee at the given date.
+      Resolution order: (1) active assignment covering the date, (2) employee default tariff_id, (3) none.
+    operationId: getEffectiveTariff
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+        description: Employee ID
+      - name: date
+        in: query
+        required: true
+        type: string
+        format: date
+        description: Date to resolve effective tariff for
+    responses:
+      200:
+        description: Effective tariff for the given date
+        schema:
+          $ref: '../schemas/employee-tariff-assignments.yaml#/EffectiveTariffResponse'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

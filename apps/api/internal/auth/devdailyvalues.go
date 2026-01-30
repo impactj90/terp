@@ -53,7 +53,7 @@ func generateDevDailyValues() []DevDailyValue {
 		{time.Date(2026, 1, 3, 0, 0, 0, 0, time.UTC), toMinutes(9, 0), 45, toMinutes(8, 15), toMinutes(17, 15), false, nil, nil},
 		// Week 2 (Jan 5-9)
 		{time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC), toMinutes(9, 0), 30, toMinutes(7, 45), toMinutes(16, 45), false, nil, nil},
-		{time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC), toMinutes(9, 30), 30, toMinutes(8, 0), toMinutes(17, 30), false, nil, []string{"HIGH_OVERTIME"}},             // net=540, OT=60min
+		{time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC), toMinutes(9, 30), 30, toMinutes(8, 0), toMinutes(17, 30), false, nil, []string{"HIGH_OVERTIME"}}, // net=540, OT=60min
 		{time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC), toMinutes(8, 30), 30, toMinutes(8, 30), toMinutes(17, 0), false, nil, nil},
 		{time.Date(2026, 1, 8, 0, 0, 0, 0, time.UTC), toMinutes(8, 30), 30, toMinutes(8, 0), toMinutes(16, 30), false, nil, nil},
 		{time.Date(2026, 1, 9, 0, 0, 0, 0, time.UTC), toMinutes(9, 0), 30, toMinutes(8, 0), toMinutes(17, 0), false, nil, nil},

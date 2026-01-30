@@ -12,16 +12,16 @@ import (
 )
 
 var (
-	ErrVacationCappingRuleNotFound      = errors.New("vacation capping rule not found")
-	ErrVacationCappingRuleCodeRequired  = errors.New("vacation capping rule code is required")
-	ErrVacationCappingRuleNameRequired  = errors.New("vacation capping rule name is required")
-	ErrVacationCappingRuleTypeRequired  = errors.New("vacation capping rule type is required")
-	ErrVacationCappingRuleTypeInvalid   = errors.New("vacation capping rule type must be year_end or mid_year")
-	ErrVacationCappingRuleCodeExists    = errors.New("vacation capping rule code already exists")
-	ErrVacationCappingRuleInUse         = errors.New("vacation capping rule is assigned to groups")
-	ErrVacationCappingRuleInvalidMonth  = errors.New("cutoff month must be between 1 and 12")
-	ErrVacationCappingRuleInvalidDay    = errors.New("cutoff day must be between 1 and 31")
-	ErrVacationCappingRuleInvalidCap    = errors.New("cap value must not be negative")
+	ErrVacationCappingRuleNotFound     = errors.New("vacation capping rule not found")
+	ErrVacationCappingRuleCodeRequired = errors.New("vacation capping rule code is required")
+	ErrVacationCappingRuleNameRequired = errors.New("vacation capping rule name is required")
+	ErrVacationCappingRuleTypeRequired = errors.New("vacation capping rule type is required")
+	ErrVacationCappingRuleTypeInvalid  = errors.New("vacation capping rule type must be year_end or mid_year")
+	ErrVacationCappingRuleCodeExists   = errors.New("vacation capping rule code already exists")
+	ErrVacationCappingRuleInUse        = errors.New("vacation capping rule is assigned to groups")
+	ErrVacationCappingRuleInvalidMonth = errors.New("cutoff month must be between 1 and 12")
+	ErrVacationCappingRuleInvalidDay   = errors.New("cutoff day must be between 1 and 31")
+	ErrVacationCappingRuleInvalidCap   = errors.New("cap value must not be negative")
 )
 
 // vacationCappingRuleRepository defines the interface for vacation capping rule data access.

@@ -334,8 +334,8 @@ func generateDecember2025Values() []DevMonthlyValue {
 		Year:             2025,
 		Month:            12,
 		TotalGrossTime:   4920,
-		TotalNetTime:     4920,  // No breaks for <6h shifts
-		TotalTargetTime:  4800,  // 20 days * 4h
+		TotalNetTime:     4920, // No breaks for <6h shifts
+		TotalTargetTime:  4800, // 20 days * 4h
 		TotalOvertime:    120,
 		TotalUndertime:   0,
 		TotalBreakTime:   0,
@@ -412,8 +412,8 @@ func computeJanuary2026FromDailyValues() []DevMonthlyValue {
 
 	// Ordered list of employees and their monthly value IDs
 	employees := []struct {
-		id    uuid.UUID
-		mvID  int
+		id   uuid.UUID
+		mvID int
 	}{
 		{DevEmployeeAdminID, 5001},
 		{DevEmployeeUserID, 5003},

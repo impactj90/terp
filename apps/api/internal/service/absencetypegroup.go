@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	ErrAbsenceTypeGroupNotFound    = errors.New("absence type group not found")
+	ErrAbsenceTypeGroupNotFound     = errors.New("absence type group not found")
 	ErrAbsenceTypeGroupCodeRequired = errors.New("absence type group code is required")
 	ErrAbsenceTypeGroupNameRequired = errors.New("absence type group name is required")
 	ErrAbsenceTypeGroupCodeExists   = errors.New("absence type group code already exists for this tenant")

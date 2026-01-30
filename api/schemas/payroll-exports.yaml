@@ -14,6 +14,11 @@ PayrollExport:
     tenant_id:
       type: string
       format: uuid
+    export_interface_id:
+      type: string
+      format: uuid
+      x-nullable: true
+      description: Export interface used to generate this export
     year:
       type: integer
       example: 2024
@@ -216,6 +221,10 @@ GeneratePayrollExportRequest:
         - xlsx
         - xml
         - json
+    export_interface_id:
+      type: string
+      format: uuid
+      description: Interface to use (determines accounts if include_accounts not specified)
     parameters:
       type: object
       properties:

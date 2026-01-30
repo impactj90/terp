@@ -1,0 +1,112 @@
+# Order Booking-related schemas
+OrderBooking:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - employee_id
+    - order_id
+    - booking_date
+    - time_minutes
+    - source
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    employee_id:
+      type: string
+      format: uuid
+    order_id:
+      type: string
+      format: uuid
+    activity_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    booking_date:
+      type: string
+      format: date
+    time_minutes:
+      type: integer
+      example: 480
+    description:
+      type: string
+      x-nullable: true
+    source:
+      type: string
+      enum:
+        - manual
+        - auto
+        - import
+      example: "manual"
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+    created_by:
+      type: string
+      format: uuid
+      x-nullable: true
+    updated_by:
+      type: string
+      format: uuid
+      x-nullable: true
+
+CreateOrderBookingRequest:
+  type: object
+  required:
+    - employee_id
+    - order_id
+    - booking_date
+    - time_minutes
+  properties:
+    employee_id:
+      type: string
+      format: uuid
+    order_id:
+      type: string
+      format: uuid
+    activity_id:
+      type: string
+      format: uuid
+    booking_date:
+      type: string
+      format: date
+    time_minutes:
+      type: integer
+      minimum: 1
+    description:
+      type: string
+
+UpdateOrderBookingRequest:
+  type: object
+  properties:
+    order_id:
+      type: string
+      format: uuid
+    activity_id:
+      type: string
+      format: uuid
+    booking_date:
+      type: string
+      format: date
+    time_minutes:
+      type: integer
+      minimum: 1
+    description:
+      type: string
+
+OrderBookingList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/OrderBooking'

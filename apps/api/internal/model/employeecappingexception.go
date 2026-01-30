@@ -31,7 +31,7 @@ type EmployeeCappingException struct {
 	UpdatedAt     time.Time        `gorm:"default:now()" json:"updated_at"`
 
 	// Relations
-	Employee    *Employee           `gorm:"foreignKey:EmployeeID" json:"employee,omitempty"`
+	Employee    *Employee            `gorm:"foreignKey:EmployeeID" json:"employee,omitempty"`
 	CappingRule *VacationCappingRule `gorm:"foreignKey:CappingRuleID" json:"capping_rule,omitempty"`
 }
 

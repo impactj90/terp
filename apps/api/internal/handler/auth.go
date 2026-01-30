@@ -209,15 +209,15 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create all dev holidays (tenant-level, idempotent)
-		for _, devH := range auth.GetDevHolidays() {
-			holiday := &model.Holiday{
-				ID:           devH.ID,
-				TenantID:     devTenant.ID,
-				HolidayDate:  devH.HolidayDate,
-				Name:         devH.Name,
-				Category:     devH.Category,
-				AppliesToAll: devH.AppliesToAll,
-			}
+	for _, devH := range auth.GetDevHolidays() {
+		holiday := &model.Holiday{
+			ID:           devH.ID,
+			TenantID:     devTenant.ID,
+			HolidayDate:  devH.HolidayDate,
+			Name:         devH.Name,
+			Category:     devH.Category,
+			AppliesToAll: devH.AppliesToAll,
+		}
 		if err := h.holidayService.UpsertDevHoliday(r.Context(), holiday); err != nil {
 			respondError(w, http.StatusInternalServerError, "failed to sync dev holidays to database")
 			return

@@ -62,8 +62,8 @@ type vacationCalcGroupRepoForVacation interface {
 
 // PreviewEntitlementInput represents input for entitlement preview.
 type PreviewEntitlementInput struct {
-	EmployeeID         uuid.UUID
-	Year               int
+	EmployeeID          uuid.UUID
+	Year                int
 	CalcGroupIDOverride *uuid.UUID // Optional: override the employee's default group
 }
 

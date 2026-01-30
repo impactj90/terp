@@ -27,19 +27,19 @@ const (
 
 // User represents a user in the system.
 type User struct {
-	ID          uuid.UUID      `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	TenantID    *uuid.UUID     `gorm:"type:uuid;index" json:"tenant_id,omitempty"`
-	UserGroupID *uuid.UUID     `gorm:"type:uuid;index" json:"user_group_id,omitempty"`
-	EmployeeID  *uuid.UUID     `gorm:"type:uuid" json:"employee_id,omitempty"`
-	Email       string         `gorm:"type:varchar(255);not null" json:"email"`
-	Username    *string        `gorm:"type:varchar(100)" json:"username,omitempty"`
-	DisplayName string         `gorm:"type:varchar(255);not null" json:"display_name"`
-	AvatarURL   *string        `gorm:"type:text" json:"avatar_url,omitempty"`
-	Role        UserRole       `gorm:"type:varchar(50);not null;default:'user'" json:"role"`
-	IsActive    bool           `gorm:"default:true" json:"is_active"`
-	PasswordHash *string       `gorm:"type:varchar(255)" json:"-"`
-	SSOID        *string       `gorm:"type:varchar(255)" json:"sso_id,omitempty"`
-	IsLocked     bool          `gorm:"default:false" json:"is_locked"`
+	ID                     uuid.UUID      `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	TenantID               *uuid.UUID     `gorm:"type:uuid;index" json:"tenant_id,omitempty"`
+	UserGroupID            *uuid.UUID     `gorm:"type:uuid;index" json:"user_group_id,omitempty"`
+	EmployeeID             *uuid.UUID     `gorm:"type:uuid" json:"employee_id,omitempty"`
+	Email                  string         `gorm:"type:varchar(255);not null" json:"email"`
+	Username               *string        `gorm:"type:varchar(100)" json:"username,omitempty"`
+	DisplayName            string         `gorm:"type:varchar(255);not null" json:"display_name"`
+	AvatarURL              *string        `gorm:"type:text" json:"avatar_url,omitempty"`
+	Role                   UserRole       `gorm:"type:varchar(50);not null;default:'user'" json:"role"`
+	IsActive               bool           `gorm:"default:true" json:"is_active"`
+	PasswordHash           *string        `gorm:"type:varchar(255)" json:"-"`
+	SSOID                  *string        `gorm:"type:varchar(255)" json:"sso_id,omitempty"`
+	IsLocked               bool           `gorm:"default:false" json:"is_locked"`
 	DataScopeType          DataScopeType  `gorm:"type:varchar(20);not null;default:'all'" json:"data_scope_type"`
 	DataScopeTenantIDs     pq.StringArray `gorm:"type:uuid[];default:'{}'" json:"data_scope_tenant_ids,omitempty"`
 	DataScopeDepartmentIDs pq.StringArray `gorm:"type:uuid[];default:'{}'" json:"data_scope_department_ids,omitempty"`

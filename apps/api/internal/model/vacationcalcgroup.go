@@ -22,7 +22,7 @@ type VacationCalculationGroup struct {
 
 	// Relations
 	Tenant              *Tenant                      `gorm:"foreignKey:TenantID" json:"tenant,omitempty"`
-	SpecialCalculations []VacationSpecialCalculation  `gorm:"many2many:vacation_calc_group_special_calcs;foreignKey:ID;joinForeignKey:GroupID;References:ID;joinReferences:SpecialCalculationID" json:"special_calculations,omitempty"`
+	SpecialCalculations []VacationSpecialCalculation `gorm:"many2many:vacation_calc_group_special_calcs;foreignKey:ID;joinForeignKey:GroupID;References:ID;joinReferences:SpecialCalculationID" json:"special_calculations,omitempty"`
 }
 
 func (VacationCalculationGroup) TableName() string {

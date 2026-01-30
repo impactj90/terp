@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	ErrGroupNotFound    = errors.New("group not found")
+	ErrGroupNotFound     = errors.New("group not found")
 	ErrGroupCodeRequired = errors.New("group code is required")
 	ErrGroupNameRequired = errors.New("group name is required")
 	ErrGroupCodeExists   = errors.New("group code already exists for this tenant")

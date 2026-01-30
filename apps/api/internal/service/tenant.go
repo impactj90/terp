@@ -12,11 +12,11 @@ import (
 )
 
 var (
-	ErrTenantNotFound       = errors.New("tenant not found")
-	ErrTenantSlugExists     = errors.New("tenant slug already exists")
-	ErrInvalidTenantSlug    = errors.New("invalid tenant slug")
-	ErrInvalidTenantName    = errors.New("invalid tenant name")
-	ErrInvalidAddress       = errors.New("invalid tenant address")
+	ErrTenantNotFound             = errors.New("tenant not found")
+	ErrTenantSlugExists           = errors.New("tenant slug already exists")
+	ErrInvalidTenantSlug          = errors.New("invalid tenant slug")
+	ErrInvalidTenantName          = errors.New("invalid tenant name")
+	ErrInvalidAddress             = errors.New("invalid tenant address")
 	ErrInvalidTenantVacationBasis = errors.New("invalid tenant vacation basis")
 )
 

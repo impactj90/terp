@@ -285,8 +285,8 @@ func TestMonthlyCalcService_RecalculateFromMonth_SkipsClosedMonths(t *testing.T)
 
 	result := svc.RecalculateFromMonth(ctx, employeeID, startYear, startMonth)
 
-	assert.Equal(t, 1, result.SkippedMonths) // November skipped
-	assert.True(t, result.ProcessedMonths >= 2)       // At least Oct and Dec
+	assert.Equal(t, 1, result.SkippedMonths)    // November skipped
+	assert.True(t, result.ProcessedMonths >= 2) // At least Oct and Dec
 	assert.Equal(t, 0, result.FailedMonths)
 	assert.Empty(t, result.Errors)
 }
@@ -319,7 +319,7 @@ func TestMonthlyCalcService_RecalculateFromMonth_ContinuesOnError(t *testing.T) 
 
 	result := svc.RecalculateFromMonth(ctx, employeeID, startYear, startMonth)
 
-	assert.Equal(t, 1, result.FailedMonths)  // October failed
+	assert.Equal(t, 1, result.FailedMonths)     // October failed
 	assert.True(t, result.ProcessedMonths >= 2) // Nov and Dec succeeded
 	assert.Len(t, result.Errors, 1)
 	assert.Equal(t, 2025, result.Errors[0].Year)

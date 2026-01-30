@@ -909,3 +909,191 @@ func RegisterCorrectionAssistantRoutes(r chi.Router, h *CorrectionAssistantHandl
 		r.With(authz.RequirePermission(permViewAll)).Get("/correction-assistant", h.ListItems)
 	}
 }
+
+// RegisterEmployeeTariffAssignmentRoutes registers employee tariff assignment routes.
+func RegisterEmployeeTariffAssignmentRoutes(r chi.Router, h *EmployeeTariffAssignmentHandler, authz *middleware.AuthorizationMiddleware) {
+	permEdit := permissions.ID("employees.edit").String()
+	permView := permissions.ID("employees.view").String()
+
+	// Routes nested under /employees/{id}/tariff-assignments
+	if authz == nil {
+		r.Route("/employees/{id}/tariff-assignments", func(r chi.Router) {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{assignmentId}", h.Get)
+			r.Put("/{assignmentId}", h.Update)
+			r.Delete("/{assignmentId}", h.Delete)
+		})
+		r.Get("/employees/{id}/effective-tariff", h.GetEffectiveTariff)
+		return
+	}
+
+	r.Route("/employees/{id}/tariff-assignments", func(r chi.Router) {
+		r.With(authz.RequirePermission(permView)).Get("/", h.List)
+		r.With(authz.RequirePermission(permEdit)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permView)).Get("/{assignmentId}", h.Get)
+		r.With(authz.RequirePermission(permEdit)).Put("/{assignmentId}", h.Update)
+		r.With(authz.RequirePermission(permEdit)).Delete("/{assignmentId}", h.Delete)
+	})
+	r.With(authz.RequirePermission(permView)).Get("/employees/{id}/effective-tariff", h.GetEffectiveTariff)
+}
+
+// RegisterActivityRoutes registers activity routes.
+func RegisterActivityRoutes(r chi.Router, h *ActivityHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("activities.manage").String()
+	r.Route("/activities", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+	})
+}
+
+// RegisterOrderRoutes registers order routes.
+func RegisterOrderRoutes(r chi.Router, h *OrderHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("orders.manage").String()
+	r.Route("/orders", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+	})
+}
+
+// RegisterOrderAssignmentRoutes registers order assignment routes.
+func RegisterOrderAssignmentRoutes(r chi.Router, h *OrderAssignmentHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("order_assignments.manage").String()
+	r.Route("/order-assignments", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+	})
+
+	// Nested route: /orders/{id}/assignments
+	if authz == nil {
+		r.Get("/orders/{id}/assignments", h.ListByOrder)
+	} else {
+		r.With(authz.RequirePermission(permManage)).Get("/orders/{id}/assignments", h.ListByOrder)
+	}
+}
+
+// RegisterEvaluationRoutes registers evaluation query routes.
+func RegisterEvaluationRoutes(r chi.Router, h *EvaluationHandler, authz *middleware.AuthorizationMiddleware) {
+	permViewReports := permissions.ID("reports.view").String()
+	r.Route("/evaluations", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/daily-values", h.ListDailyValues)
+			r.Get("/bookings", h.ListBookings)
+			r.Get("/terminal-bookings", h.ListTerminalBookings)
+			r.Get("/logs", h.ListLogs)
+			r.Get("/workflow-history", h.ListWorkflowHistory)
+			return
+		}
+
+		r.With(authz.RequirePermission(permViewReports)).Get("/daily-values", h.ListDailyValues)
+		r.With(authz.RequirePermission(permViewReports)).Get("/bookings", h.ListBookings)
+		r.With(authz.RequirePermission(permViewReports)).Get("/terminal-bookings", h.ListTerminalBookings)
+		r.With(authz.RequirePermission(permViewReports)).Get("/logs", h.ListLogs)
+		r.With(authz.RequirePermission(permViewReports)).Get("/workflow-history", h.ListWorkflowHistory)
+	})
+}
+
+// RegisterExportInterfaceRoutes registers export interface routes.
+func RegisterExportInterfaceRoutes(r chi.Router, h *ExportInterfaceHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("payroll.manage").String()
+	r.Route("/export-interfaces", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			r.Put("/{id}/accounts", h.SetAccounts)
+			r.Get("/{id}/accounts", h.ListAccounts)
+			return
+		}
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+		r.With(authz.RequirePermission(permManage)).Put("/{id}/accounts", h.SetAccounts)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}/accounts", h.ListAccounts)
+	})
+}
+
+// RegisterPayrollExportRoutes registers payroll export routes.
+func RegisterPayrollExportRoutes(r chi.Router, h *PayrollExportHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("payroll.manage").String()
+	permView := permissions.ID("payroll.view").String()
+	r.Route("/payroll-exports", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Generate)
+			r.Get("/{id}", h.Get)
+			r.Delete("/{id}", h.Delete)
+			r.Get("/{id}/download", h.Download)
+			r.Get("/{id}/preview", h.Preview)
+			return
+		}
+		r.With(authz.RequirePermission(permView)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Generate)
+		r.With(authz.RequirePermission(permView)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+		r.With(authz.RequirePermission(permView)).Get("/{id}/download", h.Download)
+		r.With(authz.RequirePermission(permView)).Get("/{id}/preview", h.Preview)
+	})
+}
+
+// RegisterOrderBookingRoutes registers order booking routes.
+func RegisterOrderBookingRoutes(r chi.Router, h *OrderBookingHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("order_bookings.manage").String()
+	permView := permissions.ID("order_bookings.view").String()
+	r.Route("/order-bookings", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+
+		r.With(authz.RequirePermission(permView)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permView)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+	})
+}

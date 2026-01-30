@@ -87,6 +87,11 @@ func main() {
 	employeeGroupRepo := repository.NewEmployeeGroupRepository(db)
 	workflowGroupRepo := repository.NewWorkflowGroupRepository(db)
 	activityGroupRepo := repository.NewActivityGroupRepository(db)
+	employeeTariffAssignmentRepo := repository.NewEmployeeTariffAssignmentRepository(db)
+	activityRepo := repository.NewActivityRepository(db)
+	orderRepo := repository.NewOrderRepository(db)
+	orderAssignmentRepo := repository.NewOrderAssignmentRepository(db)
+	orderBookingRepo := repository.NewOrderBookingRepository(db)
 
 	// Initialize services
 	userService := service.NewUserService(userRepo, userGroupRepo)
@@ -107,6 +112,11 @@ func main() {
 	auditLogService := service.NewAuditLogService(auditLogRepo)
 	groupService := service.NewGroupService(employeeGroupRepo, workflowGroupRepo, activityGroupRepo)
 	edpService := service.NewEmployeeDayPlanService(empDayPlanRepo, employeeRepo, dayPlanRepo)
+	employeeTariffAssignmentService := service.NewEmployeeTariffAssignmentService(employeeTariffAssignmentRepo, employeeRepo, tariffRepo)
+	activityService := service.NewActivityService(activityRepo)
+	orderService := service.NewOrderService(orderRepo)
+	orderAssignmentService := service.NewOrderAssignmentService(orderAssignmentRepo)
+	orderBookingService := service.NewOrderBookingService(orderBookingRepo)
 	notificationStreamHub := service.NewNotificationStreamHub()
 	notificationService.SetStreamHub(notificationStreamHub)
 
@@ -237,6 +247,11 @@ func main() {
 	absenceTypeGroupHandler := handler.NewAbsenceTypeGroupHandler(absenceTypeGroupService)
 	groupHandler := handler.NewGroupHandler(groupService)
 	edpHandler := handler.NewEmployeeDayPlanHandler(edpService)
+	employeeTariffAssignmentHandler := handler.NewEmployeeTariffAssignmentHandler(employeeTariffAssignmentService)
+	activityHandler := handler.NewActivityHandler(activityService)
+	orderHandler := handler.NewOrderHandler(orderService)
+	orderAssignmentHandler := handler.NewOrderAssignmentHandler(orderAssignmentService)
+	orderBookingHandler := handler.NewOrderBookingHandler(orderBookingService)
 	calculationRuleRepo := repository.NewCalculationRuleRepository(db)
 	calculationRuleService := service.NewCalculationRuleService(calculationRuleRepo)
 	calculationRuleHandler := handler.NewCalculationRuleHandler(calculationRuleService)
@@ -244,6 +259,20 @@ func main() {
 	correctionMessageRepo := repository.NewCorrectionMessageRepository(db)
 	correctionAssistantService := service.NewCorrectionAssistantService(correctionMessageRepo, dailyValueRepo)
 	correctionAssistantHandler := handler.NewCorrectionAssistantHandler(correctionAssistantService)
+
+	// Initialize EvaluationService
+	evaluationService := service.NewEvaluationService(dailyValueRepo, bookingRepo, auditLogRepo)
+	evaluationHandler := handler.NewEvaluationHandler(evaluationService)
+
+	// Initialize Export Interface
+	exportInterfaceRepo := repository.NewExportInterfaceRepository(db)
+	exportInterfaceService := service.NewExportInterfaceService(exportInterfaceRepo)
+	exportInterfaceHandler := handler.NewExportInterfaceHandler(exportInterfaceService)
+
+	// Initialize Payroll Export
+	payrollExportRepo := repository.NewPayrollExportRepository(db)
+	payrollExportService := service.NewPayrollExportService(payrollExportRepo, monthlyValueRepo, employeeRepo, accountRepo, exportInterfaceRepo)
+	payrollExportHandler := handler.NewPayrollExportHandler(payrollExportService)
 
 	// Initialize BookingHandler
 	bookingHandler := handler.NewBookingHandler(
@@ -255,6 +284,9 @@ func main() {
 		empDayPlanRepo,
 		holidayRepo,
 	)
+
+	// Wire order booking service into daily calc for target_with_order
+	dailyCalcService.SetOrderBookingService(orderBookingService)
 
 	// Wire notification service into producers
 	absenceService.SetNotificationService(notificationService)
@@ -272,6 +304,7 @@ func main() {
 	vacationCappingRuleHandler.SetAuditService(auditLogService)
 	vacationCappingRuleGroupHandler.SetAuditService(auditLogService)
 	employeeCappingExceptionHandler.SetAuditService(auditLogService)
+	exportInterfaceHandler.SetAuditService(auditLogService)
 
 	// Initialize tenant middleware
 	tenantMiddleware := middleware.NewTenantMiddleware(tenantService)
@@ -359,6 +392,14 @@ func main() {
 				handler.RegisterVacationCappingRuleGroupRoutes(r, vacationCappingRuleGroupHandler, authzMiddleware)
 				handler.RegisterEmployeeCappingExceptionRoutes(r, employeeCappingExceptionHandler, authzMiddleware)
 				handler.RegisterVacationCarryoverRoutes(r, vacationCarryoverHandler, authzMiddleware)
+				handler.RegisterEmployeeTariffAssignmentRoutes(r, employeeTariffAssignmentHandler, authzMiddleware)
+				handler.RegisterActivityRoutes(r, activityHandler, authzMiddleware)
+				handler.RegisterOrderRoutes(r, orderHandler, authzMiddleware)
+				handler.RegisterOrderAssignmentRoutes(r, orderAssignmentHandler, authzMiddleware)
+				handler.RegisterOrderBookingRoutes(r, orderBookingHandler, authzMiddleware)
+				handler.RegisterEvaluationRoutes(r, evaluationHandler, authzMiddleware)
+				handler.RegisterExportInterfaceRoutes(r, exportInterfaceHandler, authzMiddleware)
+				handler.RegisterPayrollExportRoutes(r, payrollExportHandler, authzMiddleware)
 			})
 		})
 

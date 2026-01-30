@@ -507,7 +507,7 @@ func TestAbsenceService_CreateRange_AllowsHolidays(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Len(t, result.CreatedDays, 5) // All 5 weekdays including holiday
-	assert.Empty(t, result.SkippedDates)  // No dates skipped
+	assert.Empty(t, result.SkippedDates) // No dates skipped
 }
 
 func TestAbsenceService_CreateRange_IncludesHolidays(t *testing.T) {
@@ -1000,9 +1000,9 @@ func TestAbsenceService_Update_RejectsNonPending(t *testing.T) {
 	absenceID := uuid.New()
 	existing := &model.AbsenceDay{
 		ID: absenceID, TenantID: uuid.New(), EmployeeID: uuid.New(),
-		AbsenceDate: time.Date(2026, 2, 2, 0, 0, 0, 0, time.UTC),
+		AbsenceDate:   time.Date(2026, 2, 2, 0, 0, 0, 0, time.UTC),
 		AbsenceTypeID: uuid.New(),
-		Duration: decimal.NewFromInt(1), Status: model.AbsenceStatusApproved, // NOT pending
+		Duration:      decimal.NewFromInt(1), Status: model.AbsenceStatusApproved, // NOT pending
 	}
 
 	absenceDayRepo.On("GetByID", ctx, absenceID).Return(existing, nil)

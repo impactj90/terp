@@ -57,17 +57,24 @@ type absenceDayLookup interface {
 	GetByEmployeeDate(ctx context.Context, employeeID uuid.UUID, date time.Time) (*model.AbsenceDay, error)
 }
 
+// orderBookingCreator defines the interface for auto order booking creation used by daily calc.
+type orderBookingCreator interface {
+	CreateAutoBooking(ctx context.Context, tenantID, employeeID, orderID uuid.UUID, activityID *uuid.UUID, date time.Time, minutes int) (*model.OrderBooking, error)
+	DeleteAutoBookingsByDate(ctx context.Context, employeeID uuid.UUID, date time.Time) error
+}
+
 // DailyCalcService orchestrates daily time calculations.
 type DailyCalcService struct {
-	bookingRepo     bookingRepository
-	empDayPlanRepo  employeeDayPlanRepository
-	dayPlanRepo     dayPlanLookup
-	dailyValueRepo  dailyValueRepository
-	holidayRepo     holidayLookup
-	employeeRepo    employeeLookup
-	absenceDayRepo  absenceDayLookup
-	calc            *calculation.Calculator
-	notificationSvc *NotificationService
+	bookingRepo      bookingRepository
+	empDayPlanRepo   employeeDayPlanRepository
+	dayPlanRepo      dayPlanLookup
+	dailyValueRepo   dailyValueRepository
+	holidayRepo      holidayLookup
+	employeeRepo     employeeLookup
+	absenceDayRepo   absenceDayLookup
+	calc             *calculation.Calculator
+	notificationSvc  *NotificationService
+	orderBookingSvc  orderBookingCreator
 }
 
 // NewDailyCalcService creates a new DailyCalcService instance.
@@ -95,6 +102,11 @@ func NewDailyCalcService(
 // SetNotificationService sets the notification service for calculation events.
 func (s *DailyCalcService) SetNotificationService(notificationSvc *NotificationService) {
 	s.notificationSvc = notificationSvc
+}
+
+// SetOrderBookingService sets the order booking service for target_with_order auto-booking.
+func (s *DailyCalcService) SetOrderBookingService(orderBookingSvc orderBookingCreator) {
+	s.orderBookingSvc = orderBookingSvc
 }
 
 // TODO(ZMI-TICKET-006): Verify vacation deduction integration.
@@ -410,8 +422,33 @@ func (s *DailyCalcService) handleNoBookings(
 		}, nil
 
 	case model.NoBookingTargetWithOrder:
-		// ZMI: Sollzeit mit Auftrag — credit target to default order
-		// TODO: Create order booking entry when order module is available
+		// ZMI: Sollzeit mit Auftrag — credit target time and create auto order booking
+		warnings := pq.StringArray{"NO_BOOKINGS_CREDITED"}
+		if s.orderBookingSvc != nil && targetTime > 0 {
+			emp, empErr := s.employeeRepo.GetByID(ctx, employeeID)
+			if empErr == nil && emp != nil && emp.DefaultOrderID != nil {
+				// Delete any previous auto-bookings for this date, then create fresh
+				_ = s.orderBookingSvc.DeleteAutoBookingsByDate(ctx, employeeID, date)
+				_, obErr := s.orderBookingSvc.CreateAutoBooking(
+					ctx,
+					emp.TenantID,
+					employeeID,
+					*emp.DefaultOrderID,
+					emp.DefaultActivityID,
+					date,
+					targetTime,
+				)
+				if obErr != nil {
+					warnings = append(warnings, "ORDER_BOOKING_FAILED")
+				} else {
+					warnings = append(warnings, "ORDER_BOOKING_CREATED")
+				}
+			} else {
+				warnings = append(warnings, "NO_DEFAULT_ORDER")
+			}
+		} else if s.orderBookingSvc == nil {
+			warnings = append(warnings, "ORDER_BOOKING_NOT_IMPLEMENTED")
+		}
 		return &model.DailyValue{
 			EmployeeID:   employeeID,
 			ValueDate:    date,
@@ -419,7 +456,7 @@ func (s *DailyCalcService) handleNoBookings(
 			TargetTime:   targetTime,
 			NetTime:      targetTime,
 			GrossTime:    targetTime,
-			Warnings:     pq.StringArray{"NO_BOOKINGS_CREDITED", "ORDER_BOOKING_NOT_IMPLEMENTED"},
+			Warnings:     warnings,
 			CalculatedAt: &now,
 		}, nil
 

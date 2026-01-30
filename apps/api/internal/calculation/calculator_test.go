@@ -650,10 +650,10 @@ func TestCalculator_RoundAllBookingsFalse(t *testing.T) {
 			{ID: out2, Time: 1017, Direction: calculation.DirectionOut, Category: calculation.CategoryWork}, // 16:57
 		},
 		DayPlan: calculation.DayPlanInput{
-			RegularHours:    480,
+			RegularHours:     480,
 			RoundAllBookings: false,
-			RoundingCome:    &calculation.RoundingConfig{Type: calculation.RoundingUp, Interval: 15},
-			RoundingGo:      &calculation.RoundingConfig{Type: calculation.RoundingDown, Interval: 15},
+			RoundingCome:     &calculation.RoundingConfig{Type: calculation.RoundingUp, Interval: 15},
+			RoundingGo:       &calculation.RoundingConfig{Type: calculation.RoundingDown, Interval: 15},
 		},
 	}
 
@@ -687,10 +687,10 @@ func TestCalculator_RoundAllBookingsTrue(t *testing.T) {
 			{ID: out2, Time: 1017, Direction: calculation.DirectionOut, Category: calculation.CategoryWork}, // 16:57
 		},
 		DayPlan: calculation.DayPlanInput{
-			RegularHours:    480,
+			RegularHours:     480,
 			RoundAllBookings: true,
-			RoundingCome:    &calculation.RoundingConfig{Type: calculation.RoundingUp, Interval: 15},
-			RoundingGo:      &calculation.RoundingConfig{Type: calculation.RoundingDown, Interval: 15},
+			RoundingCome:     &calculation.RoundingConfig{Type: calculation.RoundingUp, Interval: 15},
+			RoundingGo:       &calculation.RoundingConfig{Type: calculation.RoundingDown, Interval: 15},
 		},
 	}
 

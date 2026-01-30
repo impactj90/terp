@@ -1,0 +1,134 @@
+# Employee Tariff Assignment schemas
+EmployeeTariffAssignment:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - employee_id
+    - tariff_id
+    - effective_from
+    - overwrite_behavior
+    - is_active
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    employee_id:
+      type: string
+      format: uuid
+    tariff_id:
+      type: string
+      format: uuid
+    effective_from:
+      type: string
+      format: date
+      description: "Start date (inclusive) when this tariff assignment takes effect"
+    effective_to:
+      type: string
+      format: date
+      description: "End date (inclusive). NULL means open-ended"
+      x-nullable: true
+    overwrite_behavior:
+      type: string
+      enum:
+        - overwrite
+        - preserve_manual
+      description: "Whether to overwrite manual day plan edits when syncing"
+      example: "preserve_manual"
+    notes:
+      type: string
+      x-nullable: true
+    is_active:
+      type: boolean
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+    # Expanded relations
+    tariff:
+      $ref: './tariffs.yaml#/TariffSummary'
+    employee:
+      $ref: './employees.yaml#/EmployeeSummary'
+
+EmployeeTariffAssignmentList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/EmployeeTariffAssignment'
+
+CreateEmployeeTariffAssignmentRequest:
+  type: object
+  required:
+    - tariff_id
+    - effective_from
+  properties:
+    tariff_id:
+      type: string
+      format: uuid
+    effective_from:
+      type: string
+      format: date
+    effective_to:
+      type: string
+      format: date
+    overwrite_behavior:
+      type: string
+      enum:
+        - overwrite
+        - preserve_manual
+      default: preserve_manual
+    notes:
+      type: string
+
+UpdateEmployeeTariffAssignmentRequest:
+  type: object
+  properties:
+    effective_from:
+      type: string
+      format: date
+    effective_to:
+      type: string
+      format: date
+    overwrite_behavior:
+      type: string
+      enum:
+        - overwrite
+        - preserve_manual
+    notes:
+      type: string
+    is_active:
+      type: boolean
+
+EffectiveTariffResponse:
+  type: object
+  required:
+    - employee_id
+    - date
+    - source
+  properties:
+    employee_id:
+      type: string
+      format: uuid
+    date:
+      type: string
+      format: date
+    source:
+      type: string
+      enum:
+        - assignment
+        - default
+        - none
+      description: "'assignment' = from employee_tariff_assignments, 'default' = from employee.tariff_id, 'none' = no tariff"
+    tariff:
+      $ref: './tariffs.yaml#/Tariff'
+    assignment:
+      $ref: '#/EmployeeTariffAssignment'

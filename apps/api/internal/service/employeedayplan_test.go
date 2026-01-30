@@ -282,7 +282,7 @@ func TestEmployeeDayPlanService_Update_Success(t *testing.T) {
 
 	plan, err := svc.Create(ctx, service.CreateEmployeeDayPlanInput{
 		TenantID: tenant.ID, EmployeeID: emp.ID,
-		PlanDate: time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
+		PlanDate:  time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
 		DayPlanID: &dp1.ID, Source: "manual",
 	})
 	require.NoError(t, err)
@@ -308,7 +308,7 @@ func TestEmployeeDayPlanService_Update_ClearDayPlan(t *testing.T) {
 
 	plan, err := svc.Create(ctx, service.CreateEmployeeDayPlanInput{
 		TenantID: tenant.ID, EmployeeID: emp.ID,
-		PlanDate: time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
+		PlanDate:  time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
 		DayPlanID: &dp.ID, Source: "manual",
 	})
 	require.NoError(t, err)
@@ -342,7 +342,7 @@ func TestEmployeeDayPlanService_Delete_Success(t *testing.T) {
 	plan, err := svc.Create(ctx, service.CreateEmployeeDayPlanInput{
 		TenantID: tenant.ID, EmployeeID: emp.ID,
 		PlanDate: time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
-		Source: "manual",
+		Source:   "manual",
 	})
 	require.NoError(t, err)
 

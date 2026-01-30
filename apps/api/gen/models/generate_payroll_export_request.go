@@ -22,6 +22,10 @@ import (
 // swagger:model GeneratePayrollExportRequest
 type GeneratePayrollExportRequest struct {
 
+	// Interface to use (determines accounts if include_accounts not specified)
+	// Format: uuid
+	ExportInterfaceID strfmt.UUID `json:"export_interface_id,omitempty"`
+
 	// export type
 	// Enum: ["standard","datev","sage","custom"]
 	ExportType *string `json:"export_type,omitempty"`
@@ -49,6 +53,10 @@ type GeneratePayrollExportRequest struct {
 func (m *GeneratePayrollExportRequest) Validate(formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.validateExportInterfaceID(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateExportType(formats); err != nil {
 		res = append(res, err)
 	}
@@ -72,6 +80,18 @@ func (m *GeneratePayrollExportRequest) Validate(formats strfmt.Registry) error {
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *GeneratePayrollExportRequest) validateExportInterfaceID(formats strfmt.Registry) error {
+	if swag.IsZero(m.ExportInterfaceID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("export_interface_id", "body", "uuid", m.ExportInterfaceID.String(), formats); err != nil {
+		return err
+	}
+
 	return nil
 }
 

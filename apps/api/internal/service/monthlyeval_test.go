@@ -670,9 +670,9 @@ func TestMonthlyEvalService_RecalculateMonth_CompleteCarryoverCapped(t *testing.
 	_, _, captured := setupRecalculateWithTariff(t, tariff, 0, 180)
 
 	assert.Equal(t, 0, captured.FlextimeStart)
-	assert.Equal(t, 180, captured.FlextimeChange)       // Raw overtime
-	assert.Equal(t, 120, captured.FlextimeEnd)           // Capped at 120
-	assert.Equal(t, 120, captured.FlextimeCarryover)     // Carryover = FlextimeEnd
+	assert.Equal(t, 180, captured.FlextimeChange)    // Raw overtime
+	assert.Equal(t, 120, captured.FlextimeEnd)       // Capped at 120
+	assert.Equal(t, 120, captured.FlextimeCarryover) // Carryover = FlextimeEnd
 }
 
 func TestMonthlyEvalService_RecalculateMonth_AfterThreshold(t *testing.T) {
@@ -702,7 +702,7 @@ func TestMonthlyEvalService_RecalculateMonth_NoCarryover(t *testing.T) {
 	assert.Equal(t, 60, captured.FlextimeStart)
 	assert.Equal(t, 30, captured.FlextimeChange)
 	assert.Equal(t, 0, captured.FlextimeEnd)       // Reset to 0
-	assert.Equal(t, 0, captured.FlextimeCarryover)  // Carryover = 0
+	assert.Equal(t, 0, captured.FlextimeCarryover) // Carryover = 0
 }
 
 func TestMonthlyEvalService_RecalculateMonth_TariffNotFound(t *testing.T) {

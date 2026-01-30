@@ -12,14 +12,14 @@ import (
 )
 
 var (
-	ErrEmployeeCappingExceptionNotFound   = errors.New("employee capping exception not found")
-	ErrEmployeeCappingExceptionDuplicate  = errors.New("exception already exists for this employee/rule/year combination")
-	ErrEmployeeCappingExceptionTypeReq    = errors.New("exemption type is required")
-	ErrEmployeeCappingExceptionTypeInv    = errors.New("exemption type must be full or partial")
-	ErrEmployeeCappingExceptionRetainReq  = errors.New("retain_days is required for partial exemptions")
-	ErrEmployeeCappingExceptionRetainNeg  = errors.New("retain_days must not be negative")
+	ErrEmployeeCappingExceptionNotFound    = errors.New("employee capping exception not found")
+	ErrEmployeeCappingExceptionDuplicate   = errors.New("exception already exists for this employee/rule/year combination")
+	ErrEmployeeCappingExceptionTypeReq     = errors.New("exemption type is required")
+	ErrEmployeeCappingExceptionTypeInv     = errors.New("exemption type must be full or partial")
+	ErrEmployeeCappingExceptionRetainReq   = errors.New("retain_days is required for partial exemptions")
+	ErrEmployeeCappingExceptionRetainNeg   = errors.New("retain_days must not be negative")
 	ErrEmployeeCappingExceptionEmployeeReq = errors.New("employee_id is required")
-	ErrEmployeeCappingExceptionRuleReq    = errors.New("capping_rule_id is required")
+	ErrEmployeeCappingExceptionRuleReq     = errors.New("capping_rule_id is required")
 )
 
 // employeeCappingExceptionRepository defines the interface.

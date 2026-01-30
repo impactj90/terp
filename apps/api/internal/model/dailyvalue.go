@@ -59,14 +59,17 @@ const (
 
 // DailyValueListOptions defines filters for listing daily values.
 type DailyValueListOptions struct {
-	EmployeeID *uuid.UUID
-	Status     *DailyValueStatus
-	From       *time.Time
-	To         *time.Time
-	HasErrors  *bool
+	EmployeeID         *uuid.UUID
+	DepartmentID       *uuid.UUID
+	Status             *DailyValueStatus
+	From               *time.Time
+	To                 *time.Time
+	HasErrors          *bool
 	ScopeType          DataScopeType
 	ScopeDepartmentIDs []uuid.UUID
 	ScopeEmployeeIDs   []uuid.UUID
+	Limit              int
+	Offset             int
 }
 
 // TableName returns the database table name.

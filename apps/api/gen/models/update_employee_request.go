@@ -56,6 +56,14 @@ type UpdateEmployeeRequest struct {
 	// daily target hours
 	DailyTargetHours float64 `json:"daily_target_hours,omitempty"`
 
+	// default activity id
+	// Format: uuid
+	DefaultActivityID *strfmt.UUID `json:"default_activity_id,omitempty"`
+
+	// default order id
+	// Format: uuid
+	DefaultOrderID *strfmt.UUID `json:"default_order_id,omitempty"`
+
 	// department id
 	// Format: uuid
 	DepartmentID strfmt.UUID `json:"department_id,omitempty"`
@@ -161,6 +169,14 @@ func (m *UpdateEmployeeRequest) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
+	if err := m.validateDefaultActivityID(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateDefaultOrderID(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateDepartmentID(formats); err != nil {
 		res = append(res, err)
 	}
@@ -241,6 +257,30 @@ func (m *UpdateEmployeeRequest) validateCostCenterID(formats strfmt.Registry) er
 	}
 
 	if err := validate.FormatOf("cost_center_id", "body", "uuid", m.CostCenterID.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *UpdateEmployeeRequest) validateDefaultActivityID(formats strfmt.Registry) error {
+	if swag.IsZero(m.DefaultActivityID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("default_activity_id", "body", "uuid", m.DefaultActivityID.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *UpdateEmployeeRequest) validateDefaultOrderID(formats strfmt.Registry) error {
+	if swag.IsZero(m.DefaultOrderID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("default_order_id", "body", "uuid", m.DefaultOrderID.String(), formats); err != nil {
 		return err
 	}
 

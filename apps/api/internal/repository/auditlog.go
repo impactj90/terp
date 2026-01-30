@@ -16,15 +16,19 @@ var ErrAuditLogNotFound = errors.New("audit log not found")
 
 // AuditLogFilter defines filter criteria for listing audit logs.
 type AuditLogFilter struct {
-	TenantID   uuid.UUID
-	UserID     *uuid.UUID
-	EntityType *string
-	EntityID   *uuid.UUID
-	Action     *string
-	From       *time.Time
-	To         *time.Time
-	Limit      int
-	Cursor     *uuid.UUID
+	TenantID     uuid.UUID
+	UserID       *uuid.UUID
+	EntityType   *string
+	EntityTypes  []string // filter by multiple entity types (OR)
+	EntityID     *uuid.UUID
+	Action       *string
+	Actions      []string // filter by multiple actions (OR)
+	DepartmentID *uuid.UUID
+	From         *time.Time
+	To           *time.Time
+	Limit        int
+	Offset       int
+	Cursor       *uuid.UUID
 }
 
 // AuditLogRepository handles audit log data access.
@@ -73,11 +77,17 @@ func (r *AuditLogRepository) List(ctx context.Context, filter AuditLogFilter) ([
 	if filter.EntityType != nil {
 		query = query.Where("entity_type = ?", *filter.EntityType)
 	}
+	if len(filter.EntityTypes) > 0 {
+		query = query.Where("entity_type IN ?", filter.EntityTypes)
+	}
 	if filter.EntityID != nil {
 		query = query.Where("entity_id = ?", *filter.EntityID)
 	}
 	if filter.Action != nil {
 		query = query.Where("action = ?", *filter.Action)
+	}
+	if len(filter.Actions) > 0 {
+		query = query.Where("action IN ?", filter.Actions)
 	}
 	if filter.From != nil {
 		query = query.Where("performed_at >= ?", *filter.From)
@@ -95,6 +105,9 @@ func (r *AuditLogRepository) List(ctx context.Context, filter AuditLogFilter) ([
 
 	if filter.Limit > 0 {
 		query = query.Limit(filter.Limit)
+	}
+	if filter.Offset > 0 {
+		query = query.Offset(filter.Offset)
 	}
 
 	err := query.Order("performed_at DESC").Find(&logs).Error

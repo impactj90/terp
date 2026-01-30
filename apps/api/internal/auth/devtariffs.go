@@ -7,10 +7,10 @@ import (
 
 // Week plan IDs from devweekplans.go
 var (
-	WeekPlan40HID   = uuid.MustParse("00000000-0000-0000-0000-000000000601")
-	WeekPlan38HID   = uuid.MustParse("00000000-0000-0000-0000-000000000602")
-	WeekPlanFlexID  = uuid.MustParse("00000000-0000-0000-0000-000000000603")
-	WeekPlan20HID   = uuid.MustParse("00000000-0000-0000-0000-000000000604")
+	WeekPlan40HID  = uuid.MustParse("00000000-0000-0000-0000-000000000601")
+	WeekPlan38HID  = uuid.MustParse("00000000-0000-0000-0000-000000000602")
+	WeekPlanFlexID = uuid.MustParse("00000000-0000-0000-0000-000000000603")
+	WeekPlan20HID  = uuid.MustParse("00000000-0000-0000-0000-000000000604")
 )
 
 // DevTariff represents a tariff for dev mode seeding.
@@ -107,10 +107,10 @@ var DevTariffs = []DevTariff{
 		DailyTargetHours:    decimalPtr(8),
 		WeeklyTargetHours:   decimalPtr(40),
 		MonthlyTargetHours:  decimalPtr(173.33),
-		MaxFlextimePerMonth: intPtr(1800), // 30 hours (more flexible)
-		UpperLimitAnnual:    intPtr(3600), // 60 hours
+		MaxFlextimePerMonth: intPtr(1800),  // 30 hours (more flexible)
+		UpperLimitAnnual:    intPtr(3600),  // 60 hours
 		LowerLimitAnnual:    intPtr(-1200), // -20 hours
-		FlextimeThreshold:   intPtr(30),   // 30 min threshold
+		FlextimeThreshold:   intPtr(30),    // 30 min threshold
 		CreditType:          "complete",
 		RhythmType:          "weekly",
 	},
@@ -149,7 +149,7 @@ var DevTariffs = []DevTariff{
 		DailyTargetHours:    decimalPtr(8),
 		WeeklyTargetHours:   decimalPtr(40),
 		MonthlyTargetHours:  decimalPtr(173.33),
-		MaxFlextimePerMonth: intPtr(600),  // Less flexibility
+		MaxFlextimePerMonth: intPtr(600), // Less flexibility
 		UpperLimitAnnual:    intPtr(1200),
 		LowerLimitAnnual:    intPtr(-300),
 		FlextimeThreshold:   nil,

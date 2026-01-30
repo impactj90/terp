@@ -1,0 +1,174 @@
+# Export Interface endpoints
+/export-interfaces:
+  get:
+    tags:
+      - Export Interfaces
+    summary: List export interfaces
+    operationId: listExportInterfaces
+    parameters:
+      - name: active_only
+        in: query
+        type: boolean
+        description: Filter to only active interfaces
+    responses:
+      200:
+        description: List of export interfaces
+        schema:
+          $ref: '../schemas/export-interfaces.yaml#/ExportInterfaceList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Export Interfaces
+    summary: Create export interface
+    operationId: createExportInterface
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/export-interfaces.yaml#/CreateExportInterfaceRequest'
+    responses:
+      201:
+        description: Created export interface
+        schema:
+          $ref: '../schemas/export-interfaces.yaml#/ExportInterface'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Interface number already exists for this tenant
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/export-interfaces/{id}:
+  get:
+    tags:
+      - Export Interfaces
+    summary: Get export interface by ID
+    operationId: getExportInterface
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Export interface details
+        schema:
+          $ref: '../schemas/export-interfaces.yaml#/ExportInterface'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Export Interfaces
+    summary: Update export interface
+    operationId: updateExportInterface
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/export-interfaces.yaml#/UpdateExportInterfaceRequest'
+    responses:
+      200:
+        description: Updated export interface
+        schema:
+          $ref: '../schemas/export-interfaces.yaml#/ExportInterface'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Export Interfaces
+    summary: Delete export interface
+    operationId: deleteExportInterface
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Export interface deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+      409:
+        description: Interface has generated exports
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/export-interfaces/{id}/accounts:
+  put:
+    tags:
+      - Export Interfaces
+    summary: Set accounts for export interface
+    description: Bulk replace all accounts for this interface
+    operationId: setExportInterfaceAccounts
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/export-interfaces.yaml#/SetExportInterfaceAccountsRequest'
+    responses:
+      200:
+        description: Accounts set successfully
+        schema:
+          type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '../schemas/export-interfaces.yaml#/ExportInterfaceAccount'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  get:
+    tags:
+      - Export Interfaces
+    summary: List accounts for export interface
+    operationId: listExportInterfaceAccounts
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: List of accounts for this interface
+        schema:
+          type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '../schemas/export-interfaces.yaml#/ExportInterfaceAccount'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

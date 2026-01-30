@@ -11,10 +11,10 @@ import (
 )
 
 var (
-	ErrBookingTypeGroupNotFound    = errors.New("booking type group not found")
+	ErrBookingTypeGroupNotFound     = errors.New("booking type group not found")
 	ErrBookingTypeGroupCodeRequired = errors.New("booking type group code is required")
 	ErrBookingTypeGroupNameRequired = errors.New("booking type group name is required")
-	ErrBookingTypeGroupCodeExists  = errors.New("booking type group code already exists")
+	ErrBookingTypeGroupCodeExists   = errors.New("booking type group code already exists")
 )
 
 // bookingTypeGroupRepository defines the interface for booking type group data access.

@@ -82,6 +82,14 @@ type Employee struct {
 	// daily target hours
 	DailyTargetHours *float64 `json:"daily_target_hours,omitempty"`
 
+	// default activity id
+	// Format: uuid
+	DefaultActivityID *strfmt.UUID `json:"default_activity_id,omitempty"`
+
+	// default order id
+	// Format: uuid
+	DefaultOrderID *strfmt.UUID `json:"default_order_id,omitempty"`
+
 	// department
 	Department struct {
 		Department
@@ -191,19 +199,7 @@ type Employee struct {
 
 	// tariff
 	Tariff struct {
-
-		// code
-		// Required: true
-		Code *string `json:"code"`
-
-		// id
-		// Required: true
-		// Format: uuid
-		ID *strfmt.UUID `json:"id"`
-
-		// name
-		// Required: true
-		Name *string `json:"name"`
+		EmployeeTariffAssignmentTariff
 	} `json:"tariff,omitempty"`
 
 	// tariff id
@@ -280,6 +276,14 @@ func (m *Employee) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateCreatedAt(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateDefaultActivityID(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateDefaultOrderID(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -507,6 +511,30 @@ func (m *Employee) validateCreatedAt(formats strfmt.Registry) error {
 	}
 
 	if err := validate.FormatOf("created_at", "body", "date-time", m.CreatedAt.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *Employee) validateDefaultActivityID(formats strfmt.Registry) error {
+	if swag.IsZero(m.DefaultActivityID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("default_activity_id", "body", "uuid", m.DefaultActivityID.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *Employee) validateDefaultOrderID(formats strfmt.Registry) error {
+	if swag.IsZero(m.DefaultOrderID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("default_order_id", "body", "uuid", m.DefaultOrderID.String(), formats); err != nil {
 		return err
 	}
 
@@ -766,22 +794,6 @@ func (m *Employee) validateTariff(formats strfmt.Registry) error {
 		return nil
 	}
 
-	if err := validate.Required("tariff"+"."+"code", "body", m.Tariff.Code); err != nil {
-		return err
-	}
-
-	if err := validate.Required("tariff"+"."+"id", "body", m.Tariff.ID); err != nil {
-		return err
-	}
-
-	if err := validate.FormatOf("tariff"+"."+"id", "body", "uuid", m.Tariff.ID.String(), formats); err != nil {
-		return err
-	}
-
-	if err := validate.Required("tariff"+"."+"name", "body", m.Tariff.Name); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -874,6 +886,10 @@ func (m *Employee) ContextValidate(ctx context.Context, formats strfmt.Registry)
 		res = append(res, err)
 	}
 
+	if err := m.contextValidateTariff(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.contextValidateWorkflowGroup(ctx, formats); err != nil {
 		res = append(res, err)
 	}
@@ -963,6 +979,11 @@ func (m *Employee) contextValidateEmployeeGroup(ctx context.Context, formats str
 }
 
 func (m *Employee) contextValidateEmploymentType(ctx context.Context, formats strfmt.Registry) error {
+
+	return nil
+}
+
+func (m *Employee) contextValidateTariff(ctx context.Context, formats strfmt.Registry) error {
 
 	return nil
 }

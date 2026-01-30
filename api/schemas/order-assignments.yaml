@@ -1,0 +1,99 @@
+# Order Assignment-related schemas
+OrderAssignment:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - order_id
+    - employee_id
+    - role
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    order_id:
+      type: string
+      format: uuid
+    employee_id:
+      type: string
+      format: uuid
+    role:
+      type: string
+      enum:
+        - worker
+        - leader
+        - sales
+      example: "worker"
+    valid_from:
+      type: string
+      format: date
+      x-nullable: true
+    valid_to:
+      type: string
+      format: date
+      x-nullable: true
+    is_active:
+      type: boolean
+      example: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+CreateOrderAssignmentRequest:
+  type: object
+  required:
+    - order_id
+    - employee_id
+  properties:
+    order_id:
+      type: string
+      format: uuid
+    employee_id:
+      type: string
+      format: uuid
+    role:
+      type: string
+      enum:
+        - worker
+        - leader
+        - sales
+    valid_from:
+      type: string
+      format: date
+    valid_to:
+      type: string
+      format: date
+
+UpdateOrderAssignmentRequest:
+  type: object
+  properties:
+    role:
+      type: string
+      enum:
+        - worker
+        - leader
+        - sales
+    valid_from:
+      type: string
+      format: date
+    valid_to:
+      type: string
+      format: date
+    is_active:
+      type: boolean
+
+OrderAssignmentList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/OrderAssignment'

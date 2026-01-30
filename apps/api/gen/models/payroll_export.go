@@ -41,6 +41,10 @@ type PayrollExport struct {
 	// error message
 	ErrorMessage *string `json:"error_message,omitempty"`
 
+	// Export interface used to generate this export
+	// Format: uuid
+	ExportInterfaceID *strfmt.UUID `json:"export_interface_id,omitempty"`
+
 	// export type
 	// Example: standard
 	// Enum: ["standard","datev","sage","custom"]
@@ -129,6 +133,10 @@ func (m *PayrollExport) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
+	if err := m.validateExportInterfaceID(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateExportType(formats); err != nil {
 		res = append(res, err)
 	}
@@ -213,6 +221,18 @@ func (m *PayrollExport) validateCreatedBy(formats strfmt.Registry) error {
 	}
 
 	if err := validate.FormatOf("created_by", "body", "uuid", m.CreatedBy.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *PayrollExport) validateExportInterfaceID(formats strfmt.Registry) error {
+	if swag.IsZero(m.ExportInterfaceID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("export_interface_id", "body", "uuid", m.ExportInterfaceID.String(), formats); err != nil {
 		return err
 	}
 

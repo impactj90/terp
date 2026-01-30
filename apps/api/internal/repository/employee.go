@@ -20,16 +20,16 @@ var (
 
 // EmployeeFilter defines filter criteria for listing employees.
 type EmployeeFilter struct {
-	TenantID          uuid.UUID
-	DepartmentID      *uuid.UUID
-	EmployeeGroupID   *uuid.UUID
-	WorkflowGroupID   *uuid.UUID
-	ActivityGroupID   *uuid.UUID
-	IsActive          *bool
-	HasExitDate       *bool
-	SearchQuery       string
-	Offset            int
-	Limit             int
+	TenantID           uuid.UUID
+	DepartmentID       *uuid.UUID
+	EmployeeGroupID    *uuid.UUID
+	WorkflowGroupID    *uuid.UUID
+	ActivityGroupID    *uuid.UUID
+	IsActive           *bool
+	HasExitDate        *bool
+	SearchQuery        string
+	Offset             int
+	Limit              int
 	ScopeType          model.DataScopeType
 	ScopeDepartmentIDs []uuid.UUID
 	ScopeEmployeeIDs   []uuid.UUID
