@@ -21,6 +21,7 @@ const (
 	AuditActionImport  AuditAction = "import"
 	AuditActionLogin   AuditAction = "login"
 	AuditActionLogout  AuditAction = "logout"
+	AuditActionCleanup AuditAction = "cleanup"
 )
 
 // AuditLog represents an audit trail entry.

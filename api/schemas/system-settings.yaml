@@ -1,0 +1,208 @@
+# System Settings schemas
+SystemSettings:
+  type: object
+  required:
+    - id
+    - tenant_id
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    rounding_relative_to_plan:
+      type: boolean
+      description: "When true, rounding grid anchors at planned start time instead of midnight"
+    error_list_enabled:
+      type: boolean
+    tracked_error_codes:
+      type: array
+      items:
+        type: string
+    auto_fill_order_end_bookings:
+      type: boolean
+    birthday_window_days_before:
+      type: integer
+      minimum: 0
+      maximum: 90
+    birthday_window_days_after:
+      type: integer
+      minimum: 0
+      maximum: 90
+    follow_up_entries_enabled:
+      type: boolean
+    proxy_host:
+      type: string
+      x-nullable: true
+    proxy_port:
+      type: integer
+      x-nullable: true
+    proxy_username:
+      type: string
+      x-nullable: true
+    proxy_enabled:
+      type: boolean
+    server_alive_enabled:
+      type: boolean
+    server_alive_expected_completion_time:
+      type: integer
+      x-nullable: true
+      description: "Minutes from midnight (e.g. 300 = 05:00)"
+    server_alive_threshold_minutes:
+      type: integer
+      x-nullable: true
+    server_alive_notify_admins:
+      type: boolean
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+UpdateSystemSettingsRequest:
+  type: object
+  properties:
+    rounding_relative_to_plan:
+      type: boolean
+    error_list_enabled:
+      type: boolean
+    tracked_error_codes:
+      type: array
+      items:
+        type: string
+    auto_fill_order_end_bookings:
+      type: boolean
+    birthday_window_days_before:
+      type: integer
+      minimum: 0
+      maximum: 90
+    birthday_window_days_after:
+      type: integer
+      minimum: 0
+      maximum: 90
+    follow_up_entries_enabled:
+      type: boolean
+    proxy_host:
+      type: string
+      x-nullable: true
+    proxy_port:
+      type: integer
+      x-nullable: true
+    proxy_username:
+      type: string
+      x-nullable: true
+    proxy_password:
+      type: string
+      x-nullable: true
+      description: "Write-only. Never returned in responses."
+    proxy_enabled:
+      type: boolean
+    server_alive_enabled:
+      type: boolean
+    server_alive_expected_completion_time:
+      type: integer
+      x-nullable: true
+    server_alive_threshold_minutes:
+      type: integer
+      x-nullable: true
+    server_alive_notify_admins:
+      type: boolean
+
+CleanupDeleteBookingsRequest:
+  type: object
+  required:
+    - date_from
+    - date_to
+  properties:
+    date_from:
+      type: string
+      format: date
+    date_to:
+      type: string
+      format: date
+    employee_ids:
+      type: array
+      items:
+        type: string
+        format: uuid
+      description: "Optional. If empty, applies to all employees."
+    confirm:
+      type: boolean
+      description: "Must be true to execute. False returns preview count."
+
+CleanupDeleteBookingDataRequest:
+  type: object
+  required:
+    - date_from
+    - date_to
+  properties:
+    date_from:
+      type: string
+      format: date
+    date_to:
+      type: string
+      format: date
+    employee_ids:
+      type: array
+      items:
+        type: string
+        format: uuid
+    confirm:
+      type: boolean
+
+CleanupReReadBookingsRequest:
+  type: object
+  required:
+    - date_from
+    - date_to
+  properties:
+    date_from:
+      type: string
+      format: date
+    date_to:
+      type: string
+      format: date
+    employee_ids:
+      type: array
+      items:
+        type: string
+        format: uuid
+    confirm:
+      type: boolean
+
+CleanupMarkDeleteOrdersRequest:
+  type: object
+  required:
+    - order_ids
+  properties:
+    order_ids:
+      type: array
+      items:
+        type: string
+        format: uuid
+      minItems: 1
+    confirm:
+      type: boolean
+
+CleanupResult:
+  type: object
+  required:
+    - operation
+    - affected_count
+  properties:
+    operation:
+      type: string
+      enum: [delete_bookings, delete_booking_data, re_read_bookings, mark_delete_orders]
+    affected_count:
+      type: integer
+    preview:
+      type: boolean
+      description: "True if this is a dry-run preview"
+    details:
+      type: object
+      additionalProperties: true
+    performed_at:
+      type: string
+      format: date-time

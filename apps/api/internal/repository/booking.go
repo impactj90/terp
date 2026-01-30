@@ -316,6 +316,34 @@ func (r *BookingRepository) ClearCalculatedTime(ctx context.Context, bookingID u
 	return nil
 }
 
+// DeleteByDateRange bulk deletes bookings in a date range, optionally filtered by employee IDs.
+func (r *BookingRepository) DeleteByDateRange(ctx context.Context, tenantID uuid.UUID, dateFrom, dateTo time.Time, employeeIDs []uuid.UUID) (int64, error) {
+	query := r.db.GORM.WithContext(ctx).
+		Where("tenant_id = ? AND booking_date >= ? AND booking_date <= ?", tenantID, dateFrom, dateTo)
+	if len(employeeIDs) > 0 {
+		query = query.Where("employee_id IN ?", employeeIDs)
+	}
+	result := query.Delete(&model.Booking{})
+	if result.Error != nil {
+		return 0, fmt.Errorf("failed to bulk delete bookings: %w", result.Error)
+	}
+	return result.RowsAffected, nil
+}
+
+// CountByDateRange counts bookings in a date range, optionally filtered by employee IDs.
+func (r *BookingRepository) CountByDateRange(ctx context.Context, tenantID uuid.UUID, dateFrom, dateTo time.Time, employeeIDs []uuid.UUID) (int64, error) {
+	var count int64
+	query := r.db.GORM.WithContext(ctx).Model(&model.Booking{}).
+		Where("tenant_id = ? AND booking_date >= ? AND booking_date <= ?", tenantID, dateFrom, dateTo)
+	if len(employeeIDs) > 0 {
+		query = query.Where("employee_id IN ?", employeeIDs)
+	}
+	if err := query.Count(&count).Error; err != nil {
+		return 0, fmt.Errorf("failed to count bookings by date range: %w", err)
+	}
+	return count, nil
+}
+
 // Upsert creates or updates a booking by ID.
 func (r *BookingRepository) Upsert(ctx context.Context, booking *model.Booking) error {
 	return r.db.GORM.WithContext(ctx).Save(booking).Error

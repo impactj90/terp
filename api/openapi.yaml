@@ -139,6 +139,10 @@ tags:
     description: Order-based time bookings
   - name: Evaluations
     description: Read-only evaluation queries (Auswertungen)
+  - name: Scheduler
+    description: Schedule management and automated task execution
+  - name: System Settings
+    description: System-wide settings and cleanup tools
 
 securityDefinitions:
   BearerAuth:
@@ -581,6 +585,18 @@ paths:
   /order-bookings/{id}:
     $ref: 'paths/order-bookings.yaml#/~1order-bookings~1{id}'
 
+  # System Settings
+  /system-settings:
+    $ref: 'paths/system-settings.yaml#/~1system-settings'
+  /system-settings/cleanup/delete-bookings:
+    $ref: 'paths/system-settings.yaml#/~1system-settings~1cleanup~1delete-bookings'
+  /system-settings/cleanup/delete-booking-data:
+    $ref: 'paths/system-settings.yaml#/~1system-settings~1cleanup~1delete-booking-data'
+  /system-settings/cleanup/re-read-bookings:
+    $ref: 'paths/system-settings.yaml#/~1system-settings~1cleanup~1re-read-bookings'
+  /system-settings/cleanup/mark-delete-orders:
+    $ref: 'paths/system-settings.yaml#/~1system-settings~1cleanup~1mark-delete-orders'
+
   # Evaluations
   /evaluations/daily-values:
     $ref: 'paths/evaluations.yaml#/~1evaluations~1daily-values'
@@ -592,6 +608,24 @@ paths:
     $ref: 'paths/evaluations.yaml#/~1evaluations~1logs'
   /evaluations/workflow-history:
     $ref: 'paths/evaluations.yaml#/~1evaluations~1workflow-history'
+
+  # Schedules
+  /schedules:
+    $ref: 'paths/schedules.yaml#/~1schedules'
+  /schedules/{id}:
+    $ref: 'paths/schedules.yaml#/~1schedules~1{id}'
+  /schedules/{id}/tasks:
+    $ref: 'paths/schedules.yaml#/~1schedules~1{id}~1tasks'
+  /schedules/{id}/tasks/{taskId}:
+    $ref: 'paths/schedules.yaml#/~1schedules~1{id}~1tasks~1{taskId}'
+  /schedules/{id}/execute:
+    $ref: 'paths/schedules.yaml#/~1schedules~1{id}~1execute'
+  /schedules/{id}/executions:
+    $ref: 'paths/schedules.yaml#/~1schedules~1{id}~1executions'
+  /schedule-executions/{id}:
+    $ref: 'paths/schedules.yaml#/~1schedule-executions~1{id}'
+  /scheduler/task-catalog:
+    $ref: 'paths/schedules.yaml#/~1scheduler~1task-catalog'
 
 definitions:
   # Common
@@ -1203,6 +1237,52 @@ definitions:
     $ref: 'schemas/evaluations.yaml#/EvaluationWorkflowEntry'
   EvaluationWorkflowEntryList:
     $ref: 'schemas/evaluations.yaml#/EvaluationWorkflowEntryList'
+
+  # System Settings
+  SystemSettings:
+    $ref: 'schemas/system-settings.yaml#/SystemSettings'
+  UpdateSystemSettingsRequest:
+    $ref: 'schemas/system-settings.yaml#/UpdateSystemSettingsRequest'
+  CleanupDeleteBookingsRequest:
+    $ref: 'schemas/system-settings.yaml#/CleanupDeleteBookingsRequest'
+  CleanupDeleteBookingDataRequest:
+    $ref: 'schemas/system-settings.yaml#/CleanupDeleteBookingDataRequest'
+  CleanupReReadBookingsRequest:
+    $ref: 'schemas/system-settings.yaml#/CleanupReReadBookingsRequest'
+  CleanupMarkDeleteOrdersRequest:
+    $ref: 'schemas/system-settings.yaml#/CleanupMarkDeleteOrdersRequest'
+  CleanupResult:
+    $ref: 'schemas/system-settings.yaml#/CleanupResult'
+
+  # Schedules
+  Schedule:
+    $ref: 'schemas/schedules.yaml#/Schedule'
+  TimingConfig:
+    $ref: 'schemas/schedules.yaml#/TimingConfig'
+  ScheduleTask:
+    $ref: 'schemas/schedules.yaml#/ScheduleTask'
+  ScheduleExecution:
+    $ref: 'schemas/schedules.yaml#/ScheduleExecution'
+  ScheduleTaskExecution:
+    $ref: 'schemas/schedules.yaml#/ScheduleTaskExecution'
+  TaskCatalogEntry:
+    $ref: 'schemas/schedules.yaml#/TaskCatalogEntry'
+  CreateScheduleRequest:
+    $ref: 'schemas/schedules.yaml#/CreateScheduleRequest'
+  UpdateScheduleRequest:
+    $ref: 'schemas/schedules.yaml#/UpdateScheduleRequest'
+  CreateScheduleTaskRequest:
+    $ref: 'schemas/schedules.yaml#/CreateScheduleTaskRequest'
+  UpdateScheduleTaskRequest:
+    $ref: 'schemas/schedules.yaml#/UpdateScheduleTaskRequest'
+  TriggerExecutionRequest:
+    $ref: 'schemas/schedules.yaml#/TriggerExecutionRequest'
+  ScheduleList:
+    $ref: 'schemas/schedules.yaml#/ScheduleList'
+  ScheduleExecutionList:
+    $ref: 'schemas/schedules.yaml#/ScheduleExecutionList'
+  TaskCatalog:
+    $ref: 'schemas/schedules.yaml#/TaskCatalog'
 
 responses:
   BadRequest:

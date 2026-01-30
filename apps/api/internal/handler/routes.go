@@ -1076,6 +1076,27 @@ func RegisterPayrollExportRoutes(r chi.Router, h *PayrollExportHandler, authz *m
 	})
 }
 
+// RegisterReportRoutes registers report routes.
+func RegisterReportRoutes(r chi.Router, h *ReportHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("reports.manage").String()
+	permView := permissions.ID("reports.view").String()
+	r.Route("/reports", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Generate)
+			r.Get("/{id}", h.Get)
+			r.Delete("/{id}", h.Delete)
+			r.Get("/{id}/download", h.Download)
+			return
+		}
+		r.With(authz.RequirePermission(permView)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Generate)
+		r.With(authz.RequirePermission(permView)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+		r.With(authz.RequirePermission(permView)).Get("/{id}/download", h.Download)
+	})
+}
+
 // RegisterOrderBookingRoutes registers order booking routes.
 func RegisterOrderBookingRoutes(r chi.Router, h *OrderBookingHandler, authz *middleware.AuthorizationMiddleware) {
 	permManage := permissions.ID("order_bookings.manage").String()
@@ -1095,5 +1116,86 @@ func RegisterOrderBookingRoutes(r chi.Router, h *OrderBookingHandler, authz *mid
 		r.With(authz.RequirePermission(permView)).Get("/{id}", h.Get)
 		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
 		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+	})
+}
+
+// RegisterScheduleRoutes registers schedule and scheduler routes.
+func RegisterScheduleRoutes(r chi.Router, h *ScheduleHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("schedules.manage").String()
+
+	// Schedule CRUD
+	r.Route("/schedules", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+
+			// Task management
+			r.Get("/{id}/tasks", h.ListTasks)
+			r.Post("/{id}/tasks", h.AddTask)
+			r.Patch("/{id}/tasks/{taskId}", h.UpdateTask)
+			r.Delete("/{id}/tasks/{taskId}", h.RemoveTask)
+
+			// Execution
+			r.Post("/{id}/execute", h.TriggerExecution)
+			r.Get("/{id}/executions", h.ListExecutions)
+			return
+		}
+
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+
+		// Task management
+		r.With(authz.RequirePermission(permManage)).Get("/{id}/tasks", h.ListTasks)
+		r.With(authz.RequirePermission(permManage)).Post("/{id}/tasks", h.AddTask)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}/tasks/{taskId}", h.UpdateTask)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}/tasks/{taskId}", h.RemoveTask)
+
+		// Execution
+		r.With(authz.RequirePermission(permManage)).Post("/{id}/execute", h.TriggerExecution)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}/executions", h.ListExecutions)
+	})
+
+	// Execution detail
+	if authz == nil {
+		r.Get("/schedule-executions/{id}", h.GetExecution)
+	} else {
+		r.With(authz.RequirePermission(permManage)).Get("/schedule-executions/{id}", h.GetExecution)
+	}
+
+	// Task catalog
+	if authz == nil {
+		r.Get("/scheduler/task-catalog", h.GetTaskCatalog)
+	} else {
+		r.With(authz.RequirePermission(permManage)).Get("/scheduler/task-catalog", h.GetTaskCatalog)
+	}
+}
+
+// RegisterSystemSettingsRoutes registers system settings and cleanup routes.
+func RegisterSystemSettingsRoutes(r chi.Router, h *SystemSettingsHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("system_settings.manage").String()
+
+	r.Route("/system-settings", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.GetSettings)
+			r.Put("/", h.UpdateSettings)
+			r.Post("/cleanup/delete-bookings", h.CleanupDeleteBookings)
+			r.Post("/cleanup/delete-booking-data", h.CleanupDeleteBookingData)
+			r.Post("/cleanup/re-read-bookings", h.CleanupReReadBookings)
+			r.Post("/cleanup/mark-delete-orders", h.CleanupMarkDeleteOrders)
+			return
+		}
+
+		r.With(authz.RequirePermission(permManage)).Get("/", h.GetSettings)
+		r.With(authz.RequirePermission(permManage)).Put("/", h.UpdateSettings)
+		r.With(authz.RequirePermission(permManage)).Post("/cleanup/delete-bookings", h.CleanupDeleteBookings)
+		r.With(authz.RequirePermission(permManage)).Post("/cleanup/delete-booking-data", h.CleanupDeleteBookingData)
+		r.With(authz.RequirePermission(permManage)).Post("/cleanup/re-read-bookings", h.CleanupReReadBookings)
+		r.With(authz.RequirePermission(permManage)).Post("/cleanup/mark-delete-orders", h.CleanupMarkDeleteOrders)
 	})
 }

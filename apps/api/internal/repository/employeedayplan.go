@@ -154,6 +154,20 @@ func (r *EmployeeDayPlanRepository) DeleteRange(ctx context.Context, employeeID 
 	return nil
 }
 
+// DeleteByDateRange bulk deletes employee day plans in a date range, optionally filtered by employee IDs.
+func (r *EmployeeDayPlanRepository) DeleteByDateRange(ctx context.Context, tenantID uuid.UUID, dateFrom, dateTo time.Time, employeeIDs []uuid.UUID) (int64, error) {
+	query := r.db.GORM.WithContext(ctx).
+		Where("tenant_id = ? AND plan_date >= ? AND plan_date <= ?", tenantID, dateFrom, dateTo)
+	if len(employeeIDs) > 0 {
+		query = query.Where("employee_id IN ?", employeeIDs)
+	}
+	result := query.Delete(&model.EmployeeDayPlan{})
+	if result.Error != nil {
+		return 0, fmt.Errorf("failed to bulk delete employee day plans: %w", result.Error)
+	}
+	return result.RowsAffected, nil
+}
+
 // DeleteRangeBySource deletes employee day plans for an employee within a date range filtered by source.
 func (r *EmployeeDayPlanRepository) DeleteRangeBySource(
 	ctx context.Context,

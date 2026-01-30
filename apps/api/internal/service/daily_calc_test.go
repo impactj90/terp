@@ -969,7 +969,7 @@ func TestBuildCalcInput_WithBreaks(t *testing.T) {
 		},
 	}
 
-	input := svc.buildCalcInput(ctx, employeeID, date, empDayPlan, bookings)
+	input := svc.buildCalcInput(ctx, tenantID, employeeID, date, empDayPlan, bookings)
 
 	assert.Equal(t, employeeID, input.EmployeeID)
 	assert.Equal(t, date, input.Date)
@@ -981,6 +981,7 @@ func TestBuildCalcInput_WithBreaks(t *testing.T) {
 
 func TestBuildCalcInput_BreakBookings(t *testing.T) {
 	ctx := context.Background()
+	tenantID := uuid.New()
 	employeeID := uuid.New()
 	date := testDate(2026, 1, 20)
 
@@ -1009,7 +1010,7 @@ func TestBuildCalcInput_BreakBookings(t *testing.T) {
 		},
 	}
 
-	input := svc.buildCalcInput(ctx, employeeID, date, nil, bookings)
+	input := svc.buildCalcInput(ctx, tenantID, employeeID, date, nil, bookings)
 
 	assert.Len(t, input.Bookings, 2)
 	assert.Equal(t, "break", string(input.Bookings[0].Category))

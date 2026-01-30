@@ -518,6 +518,9 @@ func (m *Report) UnmarshalBinary(b []byte) error {
 // swagger:model ReportParameters
 type ReportParameters struct {
 
+	// cost center ids
+	CostCenterIds []strfmt.UUID `json:"cost_center_ids"`
+
 	// department ids
 	DepartmentIds []strfmt.UUID `json:"department_ids"`
 
@@ -528,6 +531,9 @@ type ReportParameters struct {
 	// Format: date
 	FromDate strfmt.Date `json:"from_date,omitempty"`
 
+	// team ids
+	TeamIds []strfmt.UUID `json:"team_ids"`
+
 	// to date
 	// Format: date
 	ToDate strfmt.Date `json:"to_date,omitempty"`
@@ -536,6 +542,10 @@ type ReportParameters struct {
 // Validate validates this report parameters
 func (m *ReportParameters) Validate(formats strfmt.Registry) error {
 	var res []error
+
+	if err := m.validateCostCenterIds(formats); err != nil {
+		res = append(res, err)
+	}
 
 	if err := m.validateDepartmentIds(formats); err != nil {
 		res = append(res, err)
@@ -549,6 +559,10 @@ func (m *ReportParameters) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
+	if err := m.validateTeamIds(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateToDate(formats); err != nil {
 		res = append(res, err)
 	}
@@ -556,6 +570,22 @@ func (m *ReportParameters) Validate(formats strfmt.Registry) error {
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *ReportParameters) validateCostCenterIds(formats strfmt.Registry) error {
+	if swag.IsZero(m.CostCenterIds) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.CostCenterIds); i++ {
+
+		if err := validate.FormatOf("parameters"+"."+"cost_center_ids"+"."+strconv.Itoa(i), "body", "uuid", m.CostCenterIds[i].String(), formats); err != nil {
+			return err
+		}
+
+	}
+
 	return nil
 }
 
@@ -598,6 +628,22 @@ func (m *ReportParameters) validateFromDate(formats strfmt.Registry) error {
 
 	if err := validate.FormatOf("parameters"+"."+"from_date", "body", "date", m.FromDate.String(), formats); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (m *ReportParameters) validateTeamIds(formats strfmt.Registry) error {
+	if swag.IsZero(m.TeamIds) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.TeamIds); i++ {
+
+		if err := validate.FormatOf("parameters"+"."+"team_ids"+"."+strconv.Itoa(i), "body", "uuid", m.TeamIds[i].String(), formats); err != nil {
+			return err
+		}
+
 	}
 
 	return nil

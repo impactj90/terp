@@ -267,3 +267,164 @@ func TestRoundTime_IntervalIgnoresAddValue(t *testing.T) {
 		})
 	}
 }
+
+// --- Anchored Rounding Tests (ZMI-TICKET-023: Relative-to-plan rounding) ---
+
+func TestRoundTime_AnchoredRoundUp(t *testing.T) {
+	// Anchor at 07:03 (423 min), interval=5
+	// Grid: ...418, 423, 428, 433, 438...
+	anchor := 423
+	config := &calculation.RoundingConfig{
+		Type:       calculation.RoundingUp,
+		Interval:   5,
+		AnchorTime: &anchor,
+	}
+
+	tests := []struct {
+		name     string
+		input    int
+		expected int
+	}{
+		{"exactly on anchor", 423, 423},
+		{"one above anchor", 424, 428},
+		{"two below anchor", 421, 423},
+		{"on grid point above", 428, 428},
+		{"between grid points", 425, 428},
+		{"far below anchor", 420, 423},
+		{"well above anchor", 430, 433},
+		{"at grid point below anchor", 418, 418},
+		{"one below grid point", 417, 418},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := calculation.RoundTime(tt.input, config)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestRoundTime_AnchoredRoundDown(t *testing.T) {
+	// Anchor at 07:03 (423 min), interval=5
+	// Grid: ...418, 423, 428, 433...
+	anchor := 423
+	config := &calculation.RoundingConfig{
+		Type:       calculation.RoundingDown,
+		Interval:   5,
+		AnchorTime: &anchor,
+	}
+
+	tests := []struct {
+		name     string
+		input    int
+		expected int
+	}{
+		{"exactly on anchor", 423, 423},
+		{"one above anchor", 424, 423},
+		{"four above anchor", 427, 423},
+		{"one below anchor", 422, 418},
+		{"on grid point above", 428, 428},
+		{"between grid points above", 430, 428},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := calculation.RoundTime(tt.input, config)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestRoundTime_AnchoredRoundNearest(t *testing.T) {
+	// Anchor at 07:03 (423 min), interval=5
+	// Grid: ...418, 423, 428, 433...
+	anchor := 423
+	config := &calculation.RoundingConfig{
+		Type:       calculation.RoundingNearest,
+		Interval:   5,
+		AnchorTime: &anchor,
+	}
+
+	tests := []struct {
+		name     string
+		input    int
+		expected int
+	}{
+		{"exactly on anchor", 423, 423},
+		{"round down offset 1", 424, 423},
+		{"round down offset 2", 425, 423},
+		{"round up offset 3", 426, 428},
+		{"round up offset 4", 427, 428},
+		{"on grid point above", 428, 428},
+		{"one below anchor", 422, 423},
+		{"two below anchor", 421, 423},
+		{"three below anchor", 420, 418},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := calculation.RoundTime(tt.input, config)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestRoundTime_AnchoredNilFallsBackToStandard(t *testing.T) {
+	// When AnchorTime is nil, anchored rounding should fall back to standard
+	config := &calculation.RoundingConfig{
+		Type:       calculation.RoundingUp,
+		Interval:   5,
+		AnchorTime: nil,
+	}
+	result := calculation.RoundTime(482, config)
+	assert.Equal(t, 485, result)
+}
+
+func TestRoundTime_AnchoredLargerInterval(t *testing.T) {
+	// Anchor at 08:00 (480 min), interval=15
+	// Grid: ...465, 480, 495, 510...
+	anchor := 480
+	config := &calculation.RoundingConfig{
+		Type:       calculation.RoundingUp,
+		Interval:   15,
+		AnchorTime: &anchor,
+	}
+
+	tests := []struct {
+		name     string
+		input    int
+		expected int
+	}{
+		{"exactly on anchor", 480, 480},
+		{"1 min after", 481, 495},
+		{"14 min after", 494, 495},
+		{"1 min before anchor", 479, 480},
+		{"14 min before anchor", 466, 480},
+		{"on grid below", 465, 465},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := calculation.RoundTime(tt.input, config)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestRoundTime_AnchoredAddSubtractIgnoresAnchor(t *testing.T) {
+	// Add/Subtract rounding should not be affected by AnchorTime
+	anchor := 480
+	configAdd := &calculation.RoundingConfig{
+		Type:       calculation.RoundingAdd,
+		AddValue:   10,
+		AnchorTime: &anchor,
+	}
+	configSub := &calculation.RoundingConfig{
+		Type:       calculation.RoundingSubtract,
+		AddValue:   10,
+		AnchorTime: &anchor,
+	}
+
+	assert.Equal(t, 490, calculation.RoundTime(480, configAdd))
+	assert.Equal(t, 470, calculation.RoundTime(480, configSub))
+}

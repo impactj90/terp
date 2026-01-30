@@ -136,6 +136,10 @@ tags:
     description: Order-based time bookings
   - name: Evaluations
     description: Read-only evaluation queries (Auswertungen)
+  - name: Scheduler
+    description: Schedule management and automated task execution
+  - name: System Settings
+    description: System-wide settings and cleanup tools
 securityDefinitions:
   BearerAuth:
     type: apiKey
@@ -8020,6 +8024,128 @@ paths:
           $ref: '#/responses/Unauthorized'
         '404':
           $ref: '#/responses/NotFound'
+  /system-settings:
+    get:
+      tags:
+        - System Settings
+      summary: Get system settings
+      description: Returns the current system settings for the tenant. Creates default settings if none exist.
+      operationId: getSystemSettings
+      responses:
+        '200':
+          description: System settings
+          schema:
+            $ref: '#/definitions/SystemSettings'
+        '401':
+          $ref: '#/responses/Unauthorized'
+    put:
+      tags:
+        - System Settings
+      summary: Update system settings
+      operationId: updateSystemSettings
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateSystemSettingsRequest'
+      responses:
+        '200':
+          description: Updated system settings
+          schema:
+            $ref: '#/definitions/SystemSettings'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+  /system-settings/cleanup/delete-bookings:
+    post:
+      tags:
+        - System Settings
+      summary: Delete bookings in date range
+      description: Deletes bookings in the specified date range. Set confirm=false for a preview count.
+      operationId: cleanupDeleteBookings
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CleanupDeleteBookingsRequest'
+      responses:
+        '200':
+          description: Cleanup result
+          schema:
+            $ref: '#/definitions/CleanupResult'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+  /system-settings/cleanup/delete-booking-data:
+    post:
+      tags:
+        - System Settings
+      summary: Delete booking data in date range
+      description: 'Deletes bookings, daily values, and employee day plans in the specified date range. Set confirm=false for a preview count.'
+      operationId: cleanupDeleteBookingData
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CleanupDeleteBookingDataRequest'
+      responses:
+        '200':
+          description: Cleanup result
+          schema:
+            $ref: '#/definitions/CleanupResult'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+  /system-settings/cleanup/re-read-bookings:
+    post:
+      tags:
+        - System Settings
+      summary: Re-read bookings in date range
+      description: Re-triggers calculation for all bookings in the specified date range. Set confirm=false for a preview count.
+      operationId: cleanupReReadBookings
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CleanupReReadBookingsRequest'
+      responses:
+        '200':
+          description: Cleanup result
+          schema:
+            $ref: '#/definitions/CleanupResult'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+  /system-settings/cleanup/mark-delete-orders:
+    post:
+      tags:
+        - System Settings
+      summary: Mark and delete orders
+      description: Deletes the specified orders. Set confirm=false for a preview count.
+      operationId: cleanupMarkDeleteOrders
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CleanupMarkDeleteOrdersRequest'
+      responses:
+        '200':
+          description: Cleanup result
+          schema:
+            $ref: '#/definitions/CleanupResult'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
   /evaluations/daily-values:
     get:
       tags:
@@ -8334,6 +8460,304 @@ paths:
             $ref: '#/definitions/EvaluationWorkflowEntryList'
         '400':
           $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+  /schedules:
+    get:
+      tags:
+        - Scheduler
+      summary: List schedules
+      operationId: listSchedules
+      responses:
+        '200':
+          description: List of schedules
+          schema:
+            $ref: '#/definitions/ScheduleList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+    post:
+      tags:
+        - Scheduler
+      summary: Create schedule
+      operationId: createSchedule
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateScheduleRequest'
+      responses:
+        '201':
+          description: Created schedule
+          schema:
+            $ref: '#/definitions/Schedule'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '409':
+          description: Schedule name already exists for this tenant
+          schema:
+            $ref: '#/definitions/ProblemDetails'
+  '/schedules/{id}':
+    get:
+      tags:
+        - Scheduler
+      summary: Get schedule by ID
+      operationId: getSchedule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Schedule details with tasks
+          schema:
+            $ref: '#/definitions/Schedule'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    patch:
+      tags:
+        - Scheduler
+      summary: Update schedule
+      operationId: updateSchedule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateScheduleRequest'
+      responses:
+        '200':
+          description: Updated schedule
+          schema:
+            $ref: '#/definitions/Schedule'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    delete:
+      tags:
+        - Scheduler
+      summary: Delete schedule
+      operationId: deleteSchedule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Schedule deleted
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+  '/schedules/{id}/tasks':
+    get:
+      tags:
+        - Scheduler
+      summary: List tasks for a schedule
+      operationId: listScheduleTasks
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: List of tasks
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/definitions/ScheduleTask'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    post:
+      tags:
+        - Scheduler
+      summary: Add task to schedule
+      operationId: addScheduleTask
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateScheduleTaskRequest'
+      responses:
+        '201':
+          description: Created task
+          schema:
+            $ref: '#/definitions/ScheduleTask'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+  '/schedules/{id}/tasks/{taskId}':
+    patch:
+      tags:
+        - Scheduler
+      summary: Update schedule task
+      operationId: updateScheduleTask
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: taskId
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateScheduleTaskRequest'
+      responses:
+        '200':
+          description: Updated task
+          schema:
+            $ref: '#/definitions/ScheduleTask'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    delete:
+      tags:
+        - Scheduler
+      summary: Remove task from schedule
+      operationId: removeScheduleTask
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: taskId
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Task removed
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+  '/schedules/{id}/execute':
+    post:
+      tags:
+        - Scheduler
+      summary: Trigger manual execution of a schedule
+      operationId: triggerScheduleExecution
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          schema:
+            $ref: '#/definitions/TriggerExecutionRequest'
+      responses:
+        '200':
+          description: Execution result
+          schema:
+            $ref: '#/definitions/ScheduleExecution'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+  '/schedules/{id}/executions':
+    get:
+      tags:
+        - Scheduler
+      summary: List execution logs for a schedule
+      operationId: listScheduleExecutions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: limit
+          in: query
+          type: integer
+          description: Max number of executions to return (default 20)
+      responses:
+        '200':
+          description: Execution history
+          schema:
+            $ref: '#/definitions/ScheduleExecutionList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+  '/schedule-executions/{id}':
+    get:
+      tags:
+        - Scheduler
+      summary: Get execution detail with task logs
+      operationId: getScheduleExecution
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Execution detail with task execution logs
+          schema:
+            $ref: '#/definitions/ScheduleExecution'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+  /scheduler/task-catalog:
+    get:
+      tags:
+        - Scheduler
+      summary: List available task types
+      operationId: getTaskCatalog
+      responses:
+        '200':
+          description: Task catalog
+          schema:
+            $ref: '#/definitions/TaskCatalog'
         '401':
           $ref: '#/responses/Unauthorized'
 definitions:
@@ -13703,6 +14127,8 @@ definitions:
       Monthly summary for an employee including time totals, flextime balance,
       absence summary, closing status, and evaluation warnings. Field names
       match the Go MonthlyValue model (e.g. total_gross_time, not gross_minutes).
+    required:
+      - is_closed
     properties:
       employee_id:
         type: string
@@ -14059,6 +14485,16 @@ definitions:
             items:
               type: string
               format: uuid
+          cost_center_ids:
+            type: array
+            items:
+              type: string
+              format: uuid
+          team_ids:
+            type: array
+            items:
+              type: string
+              format: uuid
       format:
         type: string
         enum:
@@ -14148,6 +14584,16 @@ definitions:
               type: string
               format: uuid
           department_ids:
+            type: array
+            items:
+              type: string
+              format: uuid
+          cost_center_ids:
+            type: array
+            items:
+              type: string
+              format: uuid
+          team_ids:
             type: array
             items:
               type: string
@@ -16744,6 +17190,567 @@ definitions:
           $ref: '#/definitions/EvaluationWorkflowEntry'
       meta:
         $ref: '#/definitions/PaginationMeta'
+  SystemSettings:
+    type: object
+    required:
+      - id
+      - tenant_id
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      rounding_relative_to_plan:
+        type: boolean
+        description: 'When true, rounding grid anchors at planned start time instead of midnight'
+      error_list_enabled:
+        type: boolean
+      tracked_error_codes:
+        type: array
+        items:
+          type: string
+      auto_fill_order_end_bookings:
+        type: boolean
+      birthday_window_days_before:
+        type: integer
+        minimum: 0
+        maximum: 90
+      birthday_window_days_after:
+        type: integer
+        minimum: 0
+        maximum: 90
+      follow_up_entries_enabled:
+        type: boolean
+      proxy_host:
+        type: string
+        x-nullable: true
+      proxy_port:
+        type: integer
+        x-nullable: true
+      proxy_username:
+        type: string
+        x-nullable: true
+      proxy_enabled:
+        type: boolean
+      server_alive_enabled:
+        type: boolean
+      server_alive_expected_completion_time:
+        type: integer
+        x-nullable: true
+        description: 'Minutes from midnight (e.g. 300 = 05:00)'
+      server_alive_threshold_minutes:
+        type: integer
+        x-nullable: true
+      server_alive_notify_admins:
+        type: boolean
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  UpdateSystemSettingsRequest:
+    type: object
+    properties:
+      rounding_relative_to_plan:
+        type: boolean
+      error_list_enabled:
+        type: boolean
+      tracked_error_codes:
+        type: array
+        items:
+          type: string
+      auto_fill_order_end_bookings:
+        type: boolean
+      birthday_window_days_before:
+        type: integer
+        minimum: 0
+        maximum: 90
+      birthday_window_days_after:
+        type: integer
+        minimum: 0
+        maximum: 90
+      follow_up_entries_enabled:
+        type: boolean
+      proxy_host:
+        type: string
+        x-nullable: true
+      proxy_port:
+        type: integer
+        x-nullable: true
+      proxy_username:
+        type: string
+        x-nullable: true
+      proxy_password:
+        type: string
+        x-nullable: true
+        description: Write-only. Never returned in responses.
+      proxy_enabled:
+        type: boolean
+      server_alive_enabled:
+        type: boolean
+      server_alive_expected_completion_time:
+        type: integer
+        x-nullable: true
+      server_alive_threshold_minutes:
+        type: integer
+        x-nullable: true
+      server_alive_notify_admins:
+        type: boolean
+  CleanupDeleteBookingsRequest:
+    type: object
+    required:
+      - date_from
+      - date_to
+    properties:
+      date_from:
+        type: string
+        format: date
+      date_to:
+        type: string
+        format: date
+      employee_ids:
+        type: array
+        items:
+          type: string
+          format: uuid
+        description: 'Optional. If empty, applies to all employees.'
+      confirm:
+        type: boolean
+        description: Must be true to execute. False returns preview count.
+  CleanupDeleteBookingDataRequest:
+    type: object
+    required:
+      - date_from
+      - date_to
+    properties:
+      date_from:
+        type: string
+        format: date
+      date_to:
+        type: string
+        format: date
+      employee_ids:
+        type: array
+        items:
+          type: string
+          format: uuid
+      confirm:
+        type: boolean
+  CleanupReReadBookingsRequest:
+    type: object
+    required:
+      - date_from
+      - date_to
+    properties:
+      date_from:
+        type: string
+        format: date
+      date_to:
+        type: string
+        format: date
+      employee_ids:
+        type: array
+        items:
+          type: string
+          format: uuid
+      confirm:
+        type: boolean
+  CleanupMarkDeleteOrdersRequest:
+    type: object
+    required:
+      - order_ids
+    properties:
+      order_ids:
+        type: array
+        items:
+          type: string
+          format: uuid
+        minItems: 1
+      confirm:
+        type: boolean
+  CleanupResult:
+    type: object
+    required:
+      - operation
+      - affected_count
+    properties:
+      operation:
+        type: string
+        enum:
+          - delete_bookings
+          - delete_booking_data
+          - re_read_bookings
+          - mark_delete_orders
+      affected_count:
+        type: integer
+      preview:
+        type: boolean
+        description: True if this is a dry-run preview
+      details:
+        type: object
+        additionalProperties: true
+      performed_at:
+        type: string
+        format: date-time
+  Schedule:
+    type: object
+    required:
+      - id
+      - tenant_id
+      - name
+      - timing_type
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      name:
+        type: string
+        example: Nightly Calculation
+      description:
+        type: string
+        x-nullable: true
+      timing_type:
+        type: string
+        enum:
+          - seconds
+          - minutes
+          - hours
+          - daily
+          - weekly
+          - monthly
+          - manual
+      timing_config:
+        $ref: '#/definitions/TimingConfig'
+      is_enabled:
+        type: boolean
+      last_run_at:
+        type: string
+        format: date-time
+        x-nullable: true
+      next_run_at:
+        type: string
+        format: date-time
+        x-nullable: true
+      tasks:
+        type: array
+        items:
+          $ref: '#/definitions/ScheduleTask'
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  TimingConfig:
+    type: object
+    properties:
+      interval:
+        type: integer
+        description: Interval value for seconds/minutes/hours timing types
+        example: 30
+      time:
+        type: string
+        description: 'Time of day for daily/weekly/monthly (HH:MM format)'
+        example: '02:00'
+      day_of_week:
+        type: integer
+        description: 'Day of week for weekly (0=Sunday, 1=Monday, ...6=Saturday)'
+        minimum: 0
+        maximum: 6
+      day_of_month:
+        type: integer
+        description: Day of month for monthly timing type
+        minimum: 1
+        maximum: 31
+  ScheduleTask:
+    type: object
+    required:
+      - id
+      - schedule_id
+      - task_type
+      - sort_order
+    properties:
+      id:
+        type: string
+        format: uuid
+      schedule_id:
+        type: string
+        format: uuid
+      task_type:
+        type: string
+        enum:
+          - calculate_days
+          - calculate_months
+          - backup_database
+          - send_notifications
+          - export_data
+          - alive_check
+      sort_order:
+        type: integer
+      parameters:
+        type: object
+        additionalProperties: true
+      is_enabled:
+        type: boolean
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  ScheduleExecution:
+    type: object
+    required:
+      - id
+      - schedule_id
+      - status
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      schedule_id:
+        type: string
+        format: uuid
+      status:
+        type: string
+        enum:
+          - pending
+          - running
+          - completed
+          - failed
+          - partial
+      trigger_type:
+        type: string
+        enum:
+          - scheduled
+          - manual
+      triggered_by:
+        type: string
+        format: uuid
+        x-nullable: true
+      started_at:
+        type: string
+        format: date-time
+        x-nullable: true
+      completed_at:
+        type: string
+        format: date-time
+        x-nullable: true
+      error_message:
+        type: string
+        x-nullable: true
+      tasks_total:
+        type: integer
+      tasks_succeeded:
+        type: integer
+      tasks_failed:
+        type: integer
+      task_executions:
+        type: array
+        items:
+          $ref: '#/definitions/ScheduleTaskExecution'
+      created_at:
+        type: string
+        format: date-time
+  ScheduleTaskExecution:
+    type: object
+    properties:
+      id:
+        type: string
+        format: uuid
+      execution_id:
+        type: string
+        format: uuid
+      task_type:
+        type: string
+      sort_order:
+        type: integer
+      status:
+        type: string
+        enum:
+          - pending
+          - running
+          - completed
+          - failed
+          - skipped
+      started_at:
+        type: string
+        format: date-time
+        x-nullable: true
+      completed_at:
+        type: string
+        format: date-time
+        x-nullable: true
+      error_message:
+        type: string
+        x-nullable: true
+      result:
+        type: object
+        additionalProperties: true
+      created_at:
+        type: string
+        format: date-time
+  TaskCatalogEntry:
+    type: object
+    required:
+      - task_type
+      - name
+      - description
+    properties:
+      task_type:
+        type: string
+        enum:
+          - calculate_days
+          - calculate_months
+          - backup_database
+          - send_notifications
+          - export_data
+          - alive_check
+      name:
+        type: string
+      description:
+        type: string
+      parameter_schema:
+        type: object
+        additionalProperties: true
+        description: JSON schema describing the accepted parameters for this task type
+  CreateScheduleRequest:
+    type: object
+    required:
+      - name
+      - timing_type
+    properties:
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      description:
+        type: string
+      timing_type:
+        type: string
+        enum:
+          - seconds
+          - minutes
+          - hours
+          - daily
+          - weekly
+          - monthly
+          - manual
+      timing_config:
+        $ref: '#/definitions/TimingConfig'
+      is_enabled:
+        type: boolean
+      tasks:
+        type: array
+        items:
+          $ref: '#/definitions/CreateScheduleTaskRequest'
+  UpdateScheduleRequest:
+    type: object
+    properties:
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      description:
+        type: string
+      timing_type:
+        type: string
+        enum:
+          - seconds
+          - minutes
+          - hours
+          - daily
+          - weekly
+          - monthly
+          - manual
+      timing_config:
+        $ref: '#/definitions/TimingConfig'
+      is_enabled:
+        type: boolean
+  CreateScheduleTaskRequest:
+    type: object
+    required:
+      - task_type
+      - sort_order
+    properties:
+      task_type:
+        type: string
+        enum:
+          - calculate_days
+          - calculate_months
+          - backup_database
+          - send_notifications
+          - export_data
+          - alive_check
+      sort_order:
+        type: integer
+      parameters:
+        type: object
+        additionalProperties: true
+      is_enabled:
+        type: boolean
+  UpdateScheduleTaskRequest:
+    type: object
+    properties:
+      task_type:
+        type: string
+        enum:
+          - calculate_days
+          - calculate_months
+          - backup_database
+          - send_notifications
+          - export_data
+          - alive_check
+      sort_order:
+        type: integer
+      parameters:
+        type: object
+        additionalProperties: true
+      is_enabled:
+        type: boolean
+  TriggerExecutionRequest:
+    type: object
+    properties:
+      triggered_by:
+        type: string
+        format: uuid
+        description: 'User ID of the person triggering the execution (optional, auto-detected from auth)'
+  ScheduleList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/Schedule'
+  ScheduleExecutionList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/ScheduleExecution'
+  TaskCatalog:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/TaskCatalogEntry'
 responses:
   BadRequest:
     description: Invalid request

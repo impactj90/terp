@@ -63,18 +63,24 @@ type orderBookingCreator interface {
 	DeleteAutoBookingsByDate(ctx context.Context, employeeID uuid.UUID, date time.Time) error
 }
 
+// settingsLookup provides read-only access to system settings for calculation.
+type settingsLookup interface {
+	IsRoundingRelativeToPlan(ctx context.Context, tenantID uuid.UUID) (bool, error)
+}
+
 // DailyCalcService orchestrates daily time calculations.
 type DailyCalcService struct {
-	bookingRepo      bookingRepository
-	empDayPlanRepo   employeeDayPlanRepository
-	dayPlanRepo      dayPlanLookup
-	dailyValueRepo   dailyValueRepository
-	holidayRepo      holidayLookup
-	employeeRepo     employeeLookup
-	absenceDayRepo   absenceDayLookup
-	calc             *calculation.Calculator
-	notificationSvc  *NotificationService
-	orderBookingSvc  orderBookingCreator
+	bookingRepo     bookingRepository
+	empDayPlanRepo  employeeDayPlanRepository
+	dayPlanRepo     dayPlanLookup
+	dailyValueRepo  dailyValueRepository
+	holidayRepo     holidayLookup
+	employeeRepo    employeeLookup
+	absenceDayRepo  absenceDayLookup
+	calc            *calculation.Calculator
+	notificationSvc *NotificationService
+	orderBookingSvc orderBookingCreator
+	settingsLookup  settingsLookup
 }
 
 // NewDailyCalcService creates a new DailyCalcService instance.
@@ -107,6 +113,11 @@ func (s *DailyCalcService) SetNotificationService(notificationSvc *NotificationS
 // SetOrderBookingService sets the order booking service for target_with_order auto-booking.
 func (s *DailyCalcService) SetOrderBookingService(orderBookingSvc orderBookingCreator) {
 	s.orderBookingSvc = orderBookingSvc
+}
+
+// SetSettingsLookup sets the system settings lookup for calculation behavior (e.g., relative rounding).
+func (s *DailyCalcService) SetSettingsLookup(lookup settingsLookup) {
+	s.settingsLookup = lookup
 }
 
 // TODO(ZMI-TICKET-006): Verify vacation deduction integration.
@@ -192,7 +203,7 @@ func (s *DailyCalcService) CalculateDay(ctx context.Context, tenantID, employeeI
 		}
 	} else {
 		// Normal calculation with bookings
-		dailyValue, err = s.calculateWithBookings(ctx, employeeID, date, empDayPlan, bookings, isHoliday)
+		dailyValue, err = s.calculateWithBookings(ctx, tenantID, employeeID, date, empDayPlan, bookings, isHoliday)
 		if err != nil {
 			return nil, err
 		}
@@ -824,6 +835,7 @@ func findFirstLastWorkBookings(bookings []model.Booking) (firstCome, lastGo *int
 
 func (s *DailyCalcService) calculateWithBookings(
 	ctx context.Context,
+	tenantID uuid.UUID,
 	employeeID uuid.UUID,
 	date time.Time,
 	empDayPlan *model.EmployeeDayPlan,
@@ -864,7 +876,7 @@ func (s *DailyCalcService) calculateWithBookings(
 	}
 
 	// Build calculation input
-	input := s.buildCalcInput(ctx, employeeID, date, empDayPlan, bookings)
+	input := s.buildCalcInput(ctx, tenantID, employeeID, date, empDayPlan, bookings)
 
 	// Run calculation
 	result := s.calc.Calculate(input)
@@ -895,6 +907,7 @@ func (s *DailyCalcService) calculateWithBookings(
 
 func (s *DailyCalcService) buildCalcInput(
 	ctx context.Context,
+	tenantID uuid.UUID,
 	employeeID uuid.UUID,
 	date time.Time,
 	empDayPlan *model.EmployeeDayPlan,
@@ -933,20 +946,29 @@ func (s *DailyCalcService) buildCalcInput(
 		// Resolve target hours using ZMI priority chain
 		regularHours := s.resolveTargetHours(ctx, employeeID, date, dp)
 
+		// Check system setting for relative rounding
+		roundRelativeToPlan := false
+		if s.settingsLookup != nil {
+			if relRounding, err := s.settingsLookup.IsRoundingRelativeToPlan(ctx, tenantID); err == nil {
+				roundRelativeToPlan = relRounding
+			}
+		}
+
 		input.DayPlan = calculation.DayPlanInput{
-			PlanType:         dp.PlanType,
-			RegularHours:     regularHours,
-			ComeFrom:         dp.ComeFrom,
-			ComeTo:           dp.ComeTo,
-			GoFrom:           dp.GoFrom,
-			GoTo:             dp.GoTo,
-			CoreStart:        dp.CoreStart,
-			CoreEnd:          dp.CoreEnd,
-			MinWorkTime:      dp.MinWorkTime,
-			MaxNetWorkTime:   dp.MaxNetWorkTime,
-			VariableWorkTime: variableWorkTime,
-			RoundAllBookings: dp.RoundAllBookings,
-			Tolerance:        tolerance,
+			PlanType:            dp.PlanType,
+			RegularHours:        regularHours,
+			ComeFrom:            dp.ComeFrom,
+			ComeTo:              dp.ComeTo,
+			GoFrom:              dp.GoFrom,
+			GoTo:                dp.GoTo,
+			CoreStart:           dp.CoreStart,
+			CoreEnd:             dp.CoreEnd,
+			MinWorkTime:         dp.MinWorkTime,
+			MaxNetWorkTime:      dp.MaxNetWorkTime,
+			VariableWorkTime:    variableWorkTime,
+			RoundAllBookings:    dp.RoundAllBookings,
+			RoundRelativeToPlan: roundRelativeToPlan,
+			Tolerance:           tolerance,
 		}
 
 		// Rounding - come

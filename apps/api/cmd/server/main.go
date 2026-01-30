@@ -20,6 +20,7 @@ import (
 	"github.com/tolga/terp/internal/config"
 	"github.com/tolga/terp/internal/handler"
 	"github.com/tolga/terp/internal/middleware"
+	"github.com/tolga/terp/internal/model"
 	"github.com/tolga/terp/internal/repository"
 	"github.com/tolga/terp/internal/service"
 )
@@ -125,12 +126,17 @@ func main() {
 	accountGroupRepo := repository.NewAccountGroupRepository(db)
 	absenceTypeGroupRepo := repository.NewAbsenceTypeGroupRepository(db)
 
+	// Initialize system settings
+	systemSettingsRepo := repository.NewSystemSettingsRepository(db)
+
 	// Initialize calculation services
 	bookingRepo := repository.NewBookingRepository(db)
 	dailyValueRepo := repository.NewDailyValueRepository(db)
 	absenceDayRepo := repository.NewAbsenceDayRepository(db)
 	dailyCalcService := service.NewDailyCalcService(bookingRepo, empDayPlanRepo, dayPlanRepo, dailyValueRepo, holidayRepo, employeeRepo, absenceDayRepo)
 	recalcService := service.NewRecalcService(dailyCalcService, employeeRepo)
+	systemSettingsService := service.NewSystemSettingsService(systemSettingsRepo, bookingRepo, dailyValueRepo, empDayPlanRepo, orderRepo, recalcService)
+	dailyCalcService.SetSettingsLookup(systemSettingsService)
 	dailyValueService := service.NewDailyValueService(dailyValueRepo)
 
 	// Initialize BookingService
@@ -256,6 +262,8 @@ func main() {
 	calculationRuleService := service.NewCalculationRuleService(calculationRuleRepo)
 	calculationRuleHandler := handler.NewCalculationRuleHandler(calculationRuleService)
 
+	systemSettingsHandler := handler.NewSystemSettingsHandler(systemSettingsService)
+
 	correctionMessageRepo := repository.NewCorrectionMessageRepository(db)
 	correctionAssistantService := service.NewCorrectionAssistantService(correctionMessageRepo, dailyValueRepo)
 	correctionAssistantHandler := handler.NewCorrectionAssistantHandler(correctionAssistantService)
@@ -273,6 +281,31 @@ func main() {
 	payrollExportRepo := repository.NewPayrollExportRepository(db)
 	payrollExportService := service.NewPayrollExportService(payrollExportRepo, monthlyValueRepo, employeeRepo, accountRepo, exportInterfaceRepo)
 	payrollExportHandler := handler.NewPayrollExportHandler(payrollExportService)
+
+	// Initialize Report
+	reportRepo := repository.NewReportRepository(db)
+	reportService := service.NewReportService(reportRepo, employeeRepo, dailyValueRepo, monthlyValueRepo, absenceDayRepo, vacationBalanceRepo, teamRepo)
+	reportHandler := handler.NewReportHandler(reportService)
+
+	// Initialize Scheduler
+	scheduleRepo := repository.NewScheduleRepository(db)
+	scheduleService := service.NewScheduleService(scheduleRepo)
+	schedulerExecutor := service.NewSchedulerExecutor(scheduleRepo)
+
+	// Register task handlers
+	schedulerExecutor.RegisterHandler(model.TaskTypeAliveCheck, service.NewAliveCheckTaskHandler())
+	schedulerExecutor.RegisterHandler(model.TaskTypeCalculateDays, service.NewCalculateDaysTaskHandler(recalcService))
+	schedulerExecutor.RegisterHandler(model.TaskTypeCalculateMonths, service.NewCalculateMonthsTaskHandler(monthlyCalcService, employeeRepo))
+	schedulerExecutor.RegisterHandler(model.TaskTypeBackupDatabase, service.NewPlaceholderTaskHandler("backup_database"))
+	schedulerExecutor.RegisterHandler(model.TaskTypeSendNotifications, service.NewPlaceholderTaskHandler("send_notifications"))
+	schedulerExecutor.RegisterHandler(model.TaskTypeExportData, service.NewPlaceholderTaskHandler("export_data"))
+
+	scheduleHandler := handler.NewScheduleHandler(scheduleService, schedulerExecutor)
+
+	// Start scheduler engine (checks for due schedules every 30 seconds)
+	schedulerEngine := service.NewSchedulerEngine(schedulerExecutor, 30*time.Second)
+	schedulerEngine.Start()
+	defer schedulerEngine.Stop()
 
 	// Initialize BookingHandler
 	bookingHandler := handler.NewBookingHandler(
@@ -305,6 +338,7 @@ func main() {
 	vacationCappingRuleGroupHandler.SetAuditService(auditLogService)
 	employeeCappingExceptionHandler.SetAuditService(auditLogService)
 	exportInterfaceHandler.SetAuditService(auditLogService)
+	systemSettingsHandler.SetAuditService(auditLogService)
 
 	// Initialize tenant middleware
 	tenantMiddleware := middleware.NewTenantMiddleware(tenantService)
@@ -400,6 +434,9 @@ func main() {
 				handler.RegisterEvaluationRoutes(r, evaluationHandler, authzMiddleware)
 				handler.RegisterExportInterfaceRoutes(r, exportInterfaceHandler, authzMiddleware)
 				handler.RegisterPayrollExportRoutes(r, payrollExportHandler, authzMiddleware)
+				handler.RegisterReportRoutes(r, reportHandler, authzMiddleware)
+				handler.RegisterScheduleRoutes(r, scheduleHandler, authzMiddleware)
+				handler.RegisterSystemSettingsRoutes(r, systemSettingsHandler, authzMiddleware)
 			})
 		})
 

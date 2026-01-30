@@ -62,6 +62,16 @@ Report:
           items:
             type: string
             format: uuid
+        cost_center_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        team_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
     # Output
     format:
       type: string
@@ -180,6 +190,16 @@ GenerateReportRequest:
             type: string
             format: uuid
         department_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        cost_center_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        team_ids:
           type: array
           items:
             type: string

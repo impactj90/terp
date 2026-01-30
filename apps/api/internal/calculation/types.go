@@ -75,9 +75,10 @@ const (
 
 // RoundingConfig defines rounding rules.
 type RoundingConfig struct {
-	Type     RoundingType
-	Interval int // Rounding interval in minutes for up/down/nearest modes
-	AddValue int // Fixed value to add/subtract for add/subtract modes
+	Type       RoundingType
+	Interval   int  // Rounding interval in minutes for up/down/nearest modes
+	AddValue   int  // Fixed value to add/subtract for add/subtract modes
+	AnchorTime *int // Optional: anchor point for relative rounding (minutes from midnight)
 }
 
 // ToleranceConfig defines tolerance/grace period rules.
@@ -120,6 +121,10 @@ type DayPlanInput struct {
 	// When false (default), only the first arrival and last departure are rounded.
 	// ZMI: Alle Buchungen runden
 	RoundAllBookings bool
+
+	// RoundRelativeToPlan anchors rounding grid at ComeFrom/GoFrom instead of midnight.
+	// ZMI: "Abgleich relativ zur Kommt-/Gehtzeit" (Section 7.8)
+	RoundRelativeToPlan bool
 }
 
 // CalculationInput contains all data needed for a day's calculation.

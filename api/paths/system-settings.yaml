@@ -1,0 +1,127 @@
+# System Settings endpoints
+/system-settings:
+  get:
+    tags:
+      - System Settings
+    summary: Get system settings
+    description: Returns the current system settings for the tenant. Creates default settings if none exist.
+    operationId: getSystemSettings
+    responses:
+      200:
+        description: System settings
+        schema:
+          $ref: '../schemas/system-settings.yaml#/SystemSettings'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  put:
+    tags:
+      - System Settings
+    summary: Update system settings
+    operationId: updateSystemSettings
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/system-settings.yaml#/UpdateSystemSettingsRequest'
+    responses:
+      200:
+        description: Updated system settings
+        schema:
+          $ref: '../schemas/system-settings.yaml#/SystemSettings'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/system-settings/cleanup/delete-bookings:
+  post:
+    tags:
+      - System Settings
+    summary: Delete bookings in date range
+    description: Deletes bookings in the specified date range. Set confirm=false for a preview count.
+    operationId: cleanupDeleteBookings
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/system-settings.yaml#/CleanupDeleteBookingsRequest'
+    responses:
+      200:
+        description: Cleanup result
+        schema:
+          $ref: '../schemas/system-settings.yaml#/CleanupResult'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/system-settings/cleanup/delete-booking-data:
+  post:
+    tags:
+      - System Settings
+    summary: Delete booking data in date range
+    description: Deletes bookings, daily values, and employee day plans in the specified date range. Set confirm=false for a preview count.
+    operationId: cleanupDeleteBookingData
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/system-settings.yaml#/CleanupDeleteBookingDataRequest'
+    responses:
+      200:
+        description: Cleanup result
+        schema:
+          $ref: '../schemas/system-settings.yaml#/CleanupResult'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/system-settings/cleanup/re-read-bookings:
+  post:
+    tags:
+      - System Settings
+    summary: Re-read bookings in date range
+    description: Re-triggers calculation for all bookings in the specified date range. Set confirm=false for a preview count.
+    operationId: cleanupReReadBookings
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/system-settings.yaml#/CleanupReReadBookingsRequest'
+    responses:
+      200:
+        description: Cleanup result
+        schema:
+          $ref: '../schemas/system-settings.yaml#/CleanupResult'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/system-settings/cleanup/mark-delete-orders:
+  post:
+    tags:
+      - System Settings
+    summary: Mark and delete orders
+    description: Deletes the specified orders. Set confirm=false for a preview count.
+    operationId: cleanupMarkDeleteOrders
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/system-settings.yaml#/CleanupMarkDeleteOrdersRequest'
+    responses:
+      200:
+        description: Cleanup result
+        schema:
+          $ref: '../schemas/system-settings.yaml#/CleanupResult'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'

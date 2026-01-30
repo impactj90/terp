@@ -111,6 +111,35 @@ func (r *OrderRepository) ListActive(ctx context.Context, tenantID uuid.UUID) ([
 	return orders, nil
 }
 
+// BulkDelete deletes multiple orders by IDs within a tenant.
+func (r *OrderRepository) BulkDelete(ctx context.Context, tenantID uuid.UUID, orderIDs []uuid.UUID) (int64, error) {
+	if len(orderIDs) == 0 {
+		return 0, nil
+	}
+	result := r.db.GORM.WithContext(ctx).
+		Where("tenant_id = ? AND id IN ?", tenantID, orderIDs).
+		Delete(&model.Order{})
+	if result.Error != nil {
+		return 0, fmt.Errorf("failed to bulk delete orders: %w", result.Error)
+	}
+	return result.RowsAffected, nil
+}
+
+// CountByIDs counts how many of the specified order IDs exist for a tenant.
+func (r *OrderRepository) CountByIDs(ctx context.Context, tenantID uuid.UUID, orderIDs []uuid.UUID) (int64, error) {
+	if len(orderIDs) == 0 {
+		return 0, nil
+	}
+	var count int64
+	err := r.db.GORM.WithContext(ctx).Model(&model.Order{}).
+		Where("tenant_id = ? AND id IN ?", tenantID, orderIDs).
+		Count(&count).Error
+	if err != nil {
+		return 0, fmt.Errorf("failed to count orders by IDs: %w", err)
+	}
+	return count, nil
+}
+
 // ListByStatus retrieves orders for a tenant filtered by status.
 func (r *OrderRepository) ListByStatus(ctx context.Context, tenantID uuid.UUID, status model.OrderStatus) ([]model.Order, error) {
 	var orders []model.Order

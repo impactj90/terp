@@ -146,6 +146,30 @@ func (c *Calculator) processBookings(
 		}
 	}
 
+	// Prepare rounding configs, injecting anchor times when relative rounding is enabled
+	effectiveRoundingCome := dayPlan.RoundingCome
+	effectiveRoundingGo := dayPlan.RoundingGo
+	if dayPlan.RoundRelativeToPlan {
+		if effectiveRoundingCome != nil && dayPlan.ComeFrom != nil {
+			// Copy to avoid mutating original config
+			comeConfig := *effectiveRoundingCome
+			comeConfig.AnchorTime = dayPlan.ComeFrom
+			effectiveRoundingCome = &comeConfig
+		}
+		if effectiveRoundingGo != nil {
+			// Use GoFrom as anchor for go rounding, fallback to GoTo
+			anchor := dayPlan.GoFrom
+			if anchor == nil {
+				anchor = dayPlan.GoTo
+			}
+			if anchor != nil {
+				goConfig := *effectiveRoundingGo
+				goConfig.AnchorTime = anchor
+				effectiveRoundingGo = &goConfig
+			}
+		}
+	}
+
 	for i, b := range bookings {
 		processed[i] = b
 		validation[i] = b
@@ -157,7 +181,7 @@ func (c *Calculator) processBookings(
 				calculatedTime = ApplyComeTolerance(b.Time, dayPlan.ComeFrom, dayPlan.Tolerance)
 				// Apply come rounding (only first-in unless RoundAllBookings)
 				if dayPlan.RoundAllBookings || i == firstInIdx {
-					calculatedTime = RoundComeTime(calculatedTime, dayPlan.RoundingCome)
+					calculatedTime = RoundComeTime(calculatedTime, effectiveRoundingCome)
 				}
 			} else {
 				// Apply go tolerance using Gehen bis (fallback to Gehen von)
@@ -168,7 +192,7 @@ func (c *Calculator) processBookings(
 				calculatedTime = ApplyGoTolerance(b.Time, expectedGo, dayPlan.Tolerance)
 				// Apply go rounding (only last-out unless RoundAllBookings)
 				if dayPlan.RoundAllBookings || i == lastOutIdx {
-					calculatedTime = RoundGoTime(calculatedTime, dayPlan.RoundingGo)
+					calculatedTime = RoundGoTime(calculatedTime, effectiveRoundingGo)
 				}
 			}
 		}

@@ -258,6 +258,34 @@ func (r *DailyValueRepository) SumForMonth(ctx context.Context, employeeID uuid.
 	return &sum, nil
 }
 
+// DeleteByDateRange bulk deletes daily values in a date range, optionally filtered by employee IDs.
+func (r *DailyValueRepository) DeleteByDateRange(ctx context.Context, tenantID uuid.UUID, dateFrom, dateTo time.Time, employeeIDs []uuid.UUID) (int64, error) {
+	query := r.db.GORM.WithContext(ctx).
+		Where("tenant_id = ? AND value_date >= ? AND value_date <= ?", tenantID, dateFrom, dateTo)
+	if len(employeeIDs) > 0 {
+		query = query.Where("employee_id IN ?", employeeIDs)
+	}
+	result := query.Delete(&model.DailyValue{})
+	if result.Error != nil {
+		return 0, fmt.Errorf("failed to bulk delete daily values: %w", result.Error)
+	}
+	return result.RowsAffected, nil
+}
+
+// CountByDateRange counts daily values in a date range, optionally filtered by employee IDs.
+func (r *DailyValueRepository) CountByDateRange(ctx context.Context, tenantID uuid.UUID, dateFrom, dateTo time.Time, employeeIDs []uuid.UUID) (int64, error) {
+	var count int64
+	query := r.db.GORM.WithContext(ctx).Model(&model.DailyValue{}).
+		Where("tenant_id = ? AND value_date >= ? AND value_date <= ?", tenantID, dateFrom, dateTo)
+	if len(employeeIDs) > 0 {
+		query = query.Where("employee_id IN ?", employeeIDs)
+	}
+	if err := query.Count(&count).Error; err != nil {
+		return 0, fmt.Errorf("failed to count daily values by date range: %w", err)
+	}
+	return count, nil
+}
+
 // DeleteRange deletes all daily values for an employee within a date range.
 func (r *DailyValueRepository) DeleteRange(ctx context.Context, employeeID uuid.UUID, from, to time.Time) error {
 	result := r.db.GORM.WithContext(ctx).

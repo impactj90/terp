@@ -58,6 +58,7 @@ var allPermissions = []Permission{
 	{ID: permissionID("notifications.manage"), Resource: "notifications", Action: "manage", Description: "Manage notifications"},
 	{ID: permissionID("groups.manage"), Resource: "groups", Action: "manage", Description: "Manage employee, workflow, and activity groups"},
 	{ID: permissionID("reports.view"), Resource: "reports", Action: "read", Description: "View reports"},
+	{ID: permissionID("reports.manage"), Resource: "reports", Action: "manage", Description: "Generate and manage reports"},
 	{ID: permissionID("users.manage"), Resource: "users", Action: "manage", Description: "Manage users"},
 	{ID: permissionID("tenants.manage"), Resource: "tenants", Action: "manage", Description: "Manage tenants"},
 	{ID: permissionID("settings.manage"), Resource: "settings", Action: "manage", Description: "Manage settings"},
@@ -69,6 +70,7 @@ var allPermissions = []Permission{
 	{ID: permissionID("order_bookings.view"), Resource: "order_bookings", Action: "read", Description: "View order bookings"},
 	{ID: permissionID("payroll.manage"), Resource: "payroll", Action: "manage", Description: "Manage payroll exports and interfaces"},
 	{ID: permissionID("payroll.view"), Resource: "payroll", Action: "read", Description: "View payroll exports"},
+	{ID: permissionID("schedules.manage"), Resource: "schedules", Action: "manage", Description: "Manage schedules and execute scheduled tasks"},
 }
 
 var permissionByID = func() map[string]Permission {
