@@ -7,6 +7,7 @@ package models
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -19,6 +20,10 @@ import (
 // swagger:model UpdateBookingReasonRequest
 type UpdateBookingReasonRequest struct {
 
+	// adjustment booking type id
+	// Format: uuid
+	AdjustmentBookingTypeID *strfmt.UUID `json:"adjustment_booking_type_id,omitempty"`
+
 	// is active
 	IsActive bool `json:"is_active,omitempty"`
 
@@ -26,6 +31,13 @@ type UpdateBookingReasonRequest struct {
 	// Max Length: 255
 	// Min Length: 1
 	Label string `json:"label,omitempty"`
+
+	// offset minutes
+	OffsetMinutes *int64 `json:"offset_minutes,omitempty"`
+
+	// reference time
+	// Enum: ["plan_start","plan_end","booking_time"]
+	ReferenceTime *string `json:"reference_time,omitempty"`
 
 	// sort order
 	SortOrder int64 `json:"sort_order,omitempty"`
@@ -35,13 +47,33 @@ type UpdateBookingReasonRequest struct {
 func (m *UpdateBookingReasonRequest) Validate(formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.validateAdjustmentBookingTypeID(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateLabel(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateReferenceTime(formats); err != nil {
 		res = append(res, err)
 	}
 
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *UpdateBookingReasonRequest) validateAdjustmentBookingTypeID(formats strfmt.Registry) error {
+	if swag.IsZero(m.AdjustmentBookingTypeID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("adjustment_booking_type_id", "body", "uuid", m.AdjustmentBookingTypeID.String(), formats); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -55,6 +87,51 @@ func (m *UpdateBookingReasonRequest) validateLabel(formats strfmt.Registry) erro
 	}
 
 	if err := validate.MaxLength("label", "body", m.Label, 255); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var updateBookingReasonRequestTypeReferenceTimePropEnum []any
+
+func init() {
+	var res []string
+	if err := json.Unmarshal([]byte(`["plan_start","plan_end","booking_time"]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		updateBookingReasonRequestTypeReferenceTimePropEnum = append(updateBookingReasonRequestTypeReferenceTimePropEnum, v)
+	}
+}
+
+const (
+
+	// UpdateBookingReasonRequestReferenceTimePlanStart captures enum value "plan_start"
+	UpdateBookingReasonRequestReferenceTimePlanStart string = "plan_start"
+
+	// UpdateBookingReasonRequestReferenceTimePlanEnd captures enum value "plan_end"
+	UpdateBookingReasonRequestReferenceTimePlanEnd string = "plan_end"
+
+	// UpdateBookingReasonRequestReferenceTimeBookingTime captures enum value "booking_time"
+	UpdateBookingReasonRequestReferenceTimeBookingTime string = "booking_time"
+)
+
+// prop value enum
+func (m *UpdateBookingReasonRequest) validateReferenceTimeEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, updateBookingReasonRequestTypeReferenceTimePropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *UpdateBookingReasonRequest) validateReferenceTime(formats strfmt.Registry) error {
+	if swag.IsZero(m.ReferenceTime) { // not required
+		return nil
+	}
+
+	// value enum
+	if err := m.validateReferenceTimeEnum("reference_time", "body", *m.ReferenceTime); err != nil {
 		return err
 	}
 

@@ -141,6 +141,8 @@ func main() {
 
 	// Initialize BookingService
 	bookingService := service.NewBookingService(bookingRepo, bookingTypeRepo, recalcService, nil)
+	bookingService.SetReasonRepo(bookingReasonRepo)
+	bookingService.SetDayPlanRepo(empDayPlanRepo)
 
 	// Initialize AbsenceService
 	absenceTypeRepo := repository.NewAbsenceTypeRepository(db)

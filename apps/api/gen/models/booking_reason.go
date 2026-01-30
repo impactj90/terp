@@ -7,6 +7,7 @@ package models
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -18,6 +19,11 @@ import (
 //
 // swagger:model BookingReason
 type BookingReason struct {
+
+	// Booking type to use for the derived booking. If not set, the system uses the opposite direction of the original booking type.
+	//
+	// Format: uuid
+	AdjustmentBookingTypeID *strfmt.UUID `json:"adjustment_booking_type_id,omitempty"`
 
 	// booking type id
 	// Required: true
@@ -47,6 +53,15 @@ type BookingReason struct {
 	// Required: true
 	Label *string `json:"label"`
 
+	// Signed offset in minutes from the reference time. Positive = later, negative = earlier. Example: -30 with plan_start=07:00 creates a derived booking at 06:30.
+	//
+	OffsetMinutes *int64 `json:"offset_minutes,omitempty"`
+
+	// Reference point for automatic time adjustment. When set along with offset_minutes, a derived booking is automatically created when bookings use this reason.
+	//
+	// Enum: ["plan_start","plan_end","booking_time"]
+	ReferenceTime *string `json:"reference_time,omitempty"`
+
 	// sort order
 	// Example: 0
 	SortOrder int64 `json:"sort_order,omitempty"`
@@ -64,6 +79,10 @@ type BookingReason struct {
 // Validate validates this booking reason
 func (m *BookingReason) Validate(formats strfmt.Registry) error {
 	var res []error
+
+	if err := m.validateAdjustmentBookingTypeID(formats); err != nil {
+		res = append(res, err)
+	}
 
 	if err := m.validateBookingTypeID(formats); err != nil {
 		res = append(res, err)
@@ -85,6 +104,10 @@ func (m *BookingReason) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
+	if err := m.validateReferenceTime(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateTenantID(formats); err != nil {
 		res = append(res, err)
 	}
@@ -96,6 +119,18 @@ func (m *BookingReason) Validate(formats strfmt.Registry) error {
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *BookingReason) validateAdjustmentBookingTypeID(formats strfmt.Registry) error {
+	if swag.IsZero(m.AdjustmentBookingTypeID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("adjustment_booking_type_id", "body", "uuid", m.AdjustmentBookingTypeID.String(), formats); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -149,6 +184,51 @@ func (m *BookingReason) validateID(formats strfmt.Registry) error {
 func (m *BookingReason) validateLabel(formats strfmt.Registry) error {
 
 	if err := validate.Required("label", "body", m.Label); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var bookingReasonTypeReferenceTimePropEnum []any
+
+func init() {
+	var res []string
+	if err := json.Unmarshal([]byte(`["plan_start","plan_end","booking_time"]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		bookingReasonTypeReferenceTimePropEnum = append(bookingReasonTypeReferenceTimePropEnum, v)
+	}
+}
+
+const (
+
+	// BookingReasonReferenceTimePlanStart captures enum value "plan_start"
+	BookingReasonReferenceTimePlanStart string = "plan_start"
+
+	// BookingReasonReferenceTimePlanEnd captures enum value "plan_end"
+	BookingReasonReferenceTimePlanEnd string = "plan_end"
+
+	// BookingReasonReferenceTimeBookingTime captures enum value "booking_time"
+	BookingReasonReferenceTimeBookingTime string = "booking_time"
+)
+
+// prop value enum
+func (m *BookingReason) validateReferenceTimeEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, bookingReasonTypeReferenceTimePropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *BookingReason) validateReferenceTime(formats strfmt.Registry) error {
+	if swag.IsZero(m.ReferenceTime) { // not required
+		return nil
+	}
+
+	// value enum
+	if err := m.validateReferenceTimeEnum("reference_time", "body", *m.ReferenceTime); err != nil {
 		return err
 	}
 

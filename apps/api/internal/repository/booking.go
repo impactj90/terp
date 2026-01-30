@@ -71,6 +71,7 @@ func (r *BookingRepository) GetWithDetails(ctx context.Context, id uuid.UUID) (*
 		Preload("Employee").
 		Preload("BookingType").
 		Preload("Pair").
+		Preload("BookingReason").
 		Where("id = ?", id).
 		First(&booking).Error
 
@@ -166,7 +167,7 @@ func (r *BookingRepository) List(ctx context.Context, filter BookingFilter) ([]m
 		query = query.Offset(filter.Offset)
 	}
 
-	err := query.Preload("Employee").Preload("BookingType").Order("booking_date DESC, edited_time DESC").Find(&bookings).Error
+	err := query.Preload("Employee").Preload("BookingType").Preload("BookingReason").Order("booking_date DESC, edited_time DESC").Find(&bookings).Error
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list bookings: %w", err)
 	}
@@ -347,4 +348,49 @@ func (r *BookingRepository) CountByDateRange(ctx context.Context, tenantID uuid.
 // Upsert creates or updates a booking by ID.
 func (r *BookingRepository) Upsert(ctx context.Context, booking *model.Booking) error {
 	return r.db.GORM.WithContext(ctx).Save(booking).Error
+}
+
+// GetDerivedByOriginalID finds the auto-generated booking that was derived from a given original booking.
+func (r *BookingRepository) GetDerivedByOriginalID(ctx context.Context, originalBookingID uuid.UUID) (*model.Booking, error) {
+	var booking model.Booking
+	err := r.db.GORM.WithContext(ctx).
+		Where("original_booking_id = ? AND is_auto_generated = ?", originalBookingID, true).
+		First(&booking).Error
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil // no derived booking yet
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get derived booking: %w", err)
+	}
+	return &booking, nil
+}
+
+// DeleteDerivedByOriginalID removes the auto-generated booking that was derived from a given original booking.
+func (r *BookingRepository) DeleteDerivedByOriginalID(ctx context.Context, originalBookingID uuid.UUID) error {
+	result := r.db.GORM.WithContext(ctx).
+		Where("original_booking_id = ? AND is_auto_generated = ?", originalBookingID, true).
+		Delete(&model.Booking{})
+	if result.Error != nil {
+		return fmt.Errorf("failed to delete derived booking: %w", result.Error)
+	}
+	return nil
+}
+
+// GetWithBookingReason retrieves a booking by ID with its BookingReason preloaded.
+func (r *BookingRepository) GetWithBookingReason(ctx context.Context, id uuid.UUID) (*model.Booking, error) {
+	var booking model.Booking
+	err := r.db.GORM.WithContext(ctx).
+		Preload("BookingReason").
+		Preload("BookingType").
+		Where("id = ?", id).
+		First(&booking).Error
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrBookingNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get booking with reason: %w", err)
+	}
+	return &booking, nil
 }

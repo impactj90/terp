@@ -11,11 +11,14 @@ import (
 )
 
 var (
-	ErrBookingReasonNotFound   = errors.New("booking reason not found")
-	ErrBookingReasonCodeReq    = errors.New("booking reason code is required")
-	ErrBookingReasonLabelReq   = errors.New("booking reason label is required")
-	ErrBookingReasonCodeExists = errors.New("booking reason code already exists for this booking type")
-	ErrBookingReasonTypeIDReq  = errors.New("booking type ID is required")
+	ErrBookingReasonNotFound          = errors.New("booking reason not found")
+	ErrBookingReasonCodeReq           = errors.New("booking reason code is required")
+	ErrBookingReasonLabelReq          = errors.New("booking reason label is required")
+	ErrBookingReasonCodeExists        = errors.New("booking reason code already exists for this booking type")
+	ErrBookingReasonTypeIDReq         = errors.New("booking type ID is required")
+	ErrBookingReasonInvalidRefTime    = errors.New("invalid reference_time: must be plan_start, plan_end, or booking_time")
+	ErrBookingReasonOffsetWithoutRef  = errors.New("offset_minutes requires reference_time to be set")
+	ErrBookingReasonRefWithoutOffset  = errors.New("reference_time requires offset_minutes to be set")
 )
 
 // bookingReasonRepository defines the interface for booking reason data access.
@@ -39,11 +42,14 @@ func NewBookingReasonService(repo bookingReasonRepository) *BookingReasonService
 
 // CreateBookingReasonInput represents the input for creating a booking reason.
 type CreateBookingReasonInput struct {
-	TenantID      uuid.UUID
-	BookingTypeID uuid.UUID
-	Code          string
-	Label         string
-	SortOrder     *int
+	TenantID                uuid.UUID
+	BookingTypeID           uuid.UUID
+	Code                    string
+	Label                   string
+	SortOrder               *int
+	ReferenceTime           *string
+	OffsetMinutes           *int
+	AdjustmentBookingTypeID *uuid.UUID
 }
 
 // Create creates a new booking reason with validation.
@@ -66,12 +72,20 @@ func (s *BookingReasonService) Create(ctx context.Context, input CreateBookingRe
 		return nil, ErrBookingReasonCodeExists
 	}
 
+	// Validate adjustment config consistency
+	if err := validateAdjustmentConfig(input.ReferenceTime, input.OffsetMinutes); err != nil {
+		return nil, err
+	}
+
 	br := &model.BookingReason{
-		TenantID:      input.TenantID,
-		BookingTypeID: input.BookingTypeID,
-		Code:          code,
-		Label:         label,
-		IsActive:      true,
+		TenantID:                input.TenantID,
+		BookingTypeID:           input.BookingTypeID,
+		Code:                    code,
+		Label:                   label,
+		IsActive:                true,
+		ReferenceTime:           input.ReferenceTime,
+		OffsetMinutes:           input.OffsetMinutes,
+		AdjustmentBookingTypeID: input.AdjustmentBookingTypeID,
 	}
 	if input.SortOrder != nil {
 		br.SortOrder = *input.SortOrder
@@ -94,9 +108,14 @@ func (s *BookingReasonService) GetByID(ctx context.Context, id uuid.UUID) (*mode
 
 // UpdateBookingReasonInput represents the input for updating a booking reason.
 type UpdateBookingReasonInput struct {
-	Label     *string
-	IsActive  *bool
-	SortOrder *int
+	Label                   *string
+	IsActive                *bool
+	SortOrder               *int
+	ReferenceTime           *string
+	OffsetMinutes           *int
+	AdjustmentBookingTypeID *uuid.UUID
+	// ClearAdjustment signals that adjustment config should be removed entirely.
+	ClearAdjustment bool
 }
 
 // Update updates a booking reason.
@@ -118,6 +137,27 @@ func (s *BookingReasonService) Update(ctx context.Context, id uuid.UUID, input U
 	}
 	if input.SortOrder != nil {
 		br.SortOrder = *input.SortOrder
+	}
+
+	// Handle adjustment config updates
+	if input.ClearAdjustment {
+		br.ReferenceTime = nil
+		br.OffsetMinutes = nil
+		br.AdjustmentBookingTypeID = nil
+	} else {
+		if input.ReferenceTime != nil {
+			br.ReferenceTime = input.ReferenceTime
+		}
+		if input.OffsetMinutes != nil {
+			br.OffsetMinutes = input.OffsetMinutes
+		}
+		if input.AdjustmentBookingTypeID != nil {
+			br.AdjustmentBookingTypeID = input.AdjustmentBookingTypeID
+		}
+		// Validate final state consistency
+		if err := validateAdjustmentConfig(br.ReferenceTime, br.OffsetMinutes); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := s.repo.Update(ctx, br); err != nil {
@@ -143,4 +183,24 @@ func (s *BookingReasonService) List(ctx context.Context, tenantID uuid.UUID) ([]
 // ListByBookingType retrieves booking reasons for a specific booking type.
 func (s *BookingReasonService) ListByBookingType(ctx context.Context, tenantID uuid.UUID, bookingTypeID uuid.UUID) ([]model.BookingReason, error) {
 	return s.repo.ListByBookingType(ctx, tenantID, bookingTypeID)
+}
+
+// validateAdjustmentConfig checks that reference_time and offset_minutes are consistent.
+// Both must be set together, or both must be nil.
+func validateAdjustmentConfig(referenceTime *string, offsetMinutes *int) error {
+	if referenceTime != nil && offsetMinutes == nil {
+		return ErrBookingReasonRefWithoutOffset
+	}
+	if offsetMinutes != nil && referenceTime == nil {
+		return ErrBookingReasonOffsetWithoutRef
+	}
+	if referenceTime != nil {
+		switch *referenceTime {
+		case model.ReferenceTimePlanStart, model.ReferenceTimePlanEnd, model.ReferenceTimeBookingTime:
+			// valid
+		default:
+			return ErrBookingReasonInvalidRefTime
+		}
+	}
+	return nil
 }

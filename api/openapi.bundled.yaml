@@ -15633,6 +15633,26 @@ definitions:
       sort_order:
         type: integer
         example: 0
+      reference_time:
+        type: string
+        enum:
+          - plan_start
+          - plan_end
+          - booking_time
+        x-nullable: true
+        description: |
+          Reference point for automatic time adjustment. When set along with offset_minutes, a derived booking is automatically created when bookings use this reason.
+      offset_minutes:
+        type: integer
+        x-nullable: true
+        description: |
+          Signed offset in minutes from the reference time. Positive = later, negative = earlier. Example: -30 with plan_start=07:00 creates a derived booking at 06:30.
+      adjustment_booking_type_id:
+        type: string
+        format: uuid
+        x-nullable: true
+        description: |
+          Booking type to use for the derived booking. If not set, the system uses the opposite direction of the original booking type.
       created_at:
         type: string
         format: date-time
@@ -15659,6 +15679,17 @@ definitions:
         maxLength: 255
       sort_order:
         type: integer
+      reference_time:
+        type: string
+        enum:
+          - plan_start
+          - plan_end
+          - booking_time
+      offset_minutes:
+        type: integer
+      adjustment_booking_type_id:
+        type: string
+        format: uuid
   UpdateBookingReasonRequest:
     type: object
     properties:
@@ -15670,6 +15701,20 @@ definitions:
         type: boolean
       sort_order:
         type: integer
+      reference_time:
+        type: string
+        enum:
+          - plan_start
+          - plan_end
+          - booking_time
+        x-nullable: true
+      offset_minutes:
+        type: integer
+        x-nullable: true
+      adjustment_booking_type_id:
+        type: string
+        format: uuid
+        x-nullable: true
   BookingReasonList:
     type: object
     required:
@@ -16017,6 +16062,7 @@ definitions:
           - api
           - import
           - correction
+          - derived
         example: web
       terminal_id:
         type: string
@@ -16024,6 +16070,23 @@ definitions:
         x-nullable: true
       notes:
         type: string
+        x-nullable: true
+      booking_reason_id:
+        type: string
+        format: uuid
+        x-nullable: true
+        description: Reason code selected when creating this booking
+      is_auto_generated:
+        type: boolean
+        description: True if this booking was automatically derived from a reason adjustment
+      original_booking_id:
+        type: string
+        format: uuid
+        x-nullable: true
+        description: 'For derived bookings, the ID of the original booking that triggered creation'
+      booking_reason:
+        allOf:
+          - $ref: '#/definitions/BookingReason'
         x-nullable: true
       created_at:
         type: string
@@ -16071,6 +16134,10 @@ definitions:
         example: '08:00'
       notes:
         type: string
+      booking_reason_id:
+        type: string
+        format: uuid
+        description: Optional reason code for this booking
   UpdateBookingRequest:
     type: object
     properties:

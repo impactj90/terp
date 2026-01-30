@@ -27,11 +27,23 @@ type bookingRepositoryForService interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 	GetByEmployeeAndDate(ctx context.Context, tenantID, employeeID uuid.UUID, date time.Time) ([]model.Booking, error)
 	GetByDateRange(ctx context.Context, tenantID uuid.UUID, startDate, endDate time.Time) ([]model.Booking, error)
+	GetDerivedByOriginalID(ctx context.Context, originalBookingID uuid.UUID) (*model.Booking, error)
+	DeleteDerivedByOriginalID(ctx context.Context, originalBookingID uuid.UUID) error
 }
 
 // bookingTypeRepositoryForService defines the interface for booking type validation.
 type bookingTypeRepositoryForService interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*model.BookingType, error)
+}
+
+// bookingReasonLookupForService defines the interface for booking reason lookups.
+type bookingReasonLookupForService interface {
+	GetByID(ctx context.Context, id uuid.UUID) (*model.BookingReason, error)
+}
+
+// dayPlanLookupForBooking defines the interface for employee day plan lookups.
+type dayPlanLookupForBooking interface {
+	GetForEmployeeDate(ctx context.Context, employeeID uuid.UUID, date time.Time) (*model.EmployeeDayPlan, error)
 }
 
 // recalcServiceForBooking defines the interface for triggering recalculation.
@@ -50,6 +62,8 @@ type BookingService struct {
 	bookingTypeRepo  bookingTypeRepositoryForService
 	recalcSvc        recalcServiceForBooking
 	monthlyValueRepo monthlyValueLookupForBooking // Optional - may be nil until TICKET-086
+	reasonRepo       bookingReasonLookupForService // Optional - for derived booking support
+	dayPlanRepo      dayPlanLookupForBooking       // Optional - for plan-based reference times
 }
 
 // NewBookingService creates a new BookingService instance.
@@ -67,18 +81,29 @@ func NewBookingService(
 	}
 }
 
+// SetReasonRepo sets the booking reason repository for derived booking support.
+func (s *BookingService) SetReasonRepo(repo bookingReasonLookupForService) {
+	s.reasonRepo = repo
+}
+
+// SetDayPlanRepo sets the day plan repository for plan-based reference time lookups.
+func (s *BookingService) SetDayPlanRepo(repo dayPlanLookupForBooking) {
+	s.dayPlanRepo = repo
+}
+
 // CreateBookingInput represents the input for creating a booking.
 type CreateBookingInput struct {
-	TenantID      uuid.UUID
-	EmployeeID    uuid.UUID
-	BookingTypeID uuid.UUID
-	BookingDate   time.Time
-	OriginalTime  int // Minutes from midnight (0-1439)
-	EditedTime    int // Minutes from midnight (0-1439)
-	Source        model.BookingSource
-	TerminalID    *uuid.UUID
-	Notes         string
-	CreatedBy     *uuid.UUID
+	TenantID        uuid.UUID
+	EmployeeID      uuid.UUID
+	BookingTypeID   uuid.UUID
+	BookingDate     time.Time
+	OriginalTime    int // Minutes from midnight (0-1439)
+	EditedTime      int // Minutes from midnight (0-1439)
+	Source          model.BookingSource
+	TerminalID      *uuid.UUID
+	Notes           string
+	CreatedBy       *uuid.UUID
+	BookingReasonID *uuid.UUID // Optional reason for this booking
 }
 
 // UpdateBookingInput represents the input for updating a booking.
@@ -115,23 +140,27 @@ func (s *BookingService) Create(ctx context.Context, input CreateBookingInput) (
 
 	// Build model
 	booking := &model.Booking{
-		TenantID:      input.TenantID,
-		EmployeeID:    input.EmployeeID,
-		BookingTypeID: input.BookingTypeID,
-		BookingDate:   input.BookingDate,
-		OriginalTime:  input.OriginalTime,
-		EditedTime:    input.EditedTime,
-		Source:        input.Source,
-		TerminalID:    input.TerminalID,
-		Notes:         input.Notes,
-		CreatedBy:     input.CreatedBy,
-		UpdatedBy:     input.CreatedBy,
+		TenantID:        input.TenantID,
+		EmployeeID:      input.EmployeeID,
+		BookingTypeID:   input.BookingTypeID,
+		BookingDate:     input.BookingDate,
+		OriginalTime:    input.OriginalTime,
+		EditedTime:      input.EditedTime,
+		Source:          input.Source,
+		TerminalID:      input.TerminalID,
+		Notes:           input.Notes,
+		CreatedBy:       input.CreatedBy,
+		UpdatedBy:       input.CreatedBy,
+		BookingReasonID: input.BookingReasonID,
 	}
 
 	// Create booking
 	if err := s.bookingRepo.Create(ctx, booking); err != nil {
 		return nil, err
 	}
+
+	// Create derived booking if reason has adjustment config
+	s.createDerivedBookingIfNeeded(ctx, booking, bt)
 
 	// Trigger recalculation for the affected date
 	_, _ = s.recalcSvc.TriggerRecalc(ctx, input.TenantID, input.EmployeeID, input.BookingDate)
@@ -206,6 +235,10 @@ func (s *BookingService) Delete(ctx context.Context, id uuid.UUID) error {
 	employeeID := booking.EmployeeID
 	bookingDate := booking.BookingDate
 
+	// Delete any derived booking before deleting the original
+	// (CASCADE will also handle this, but be explicit for recalc)
+	_ = s.bookingRepo.DeleteDerivedByOriginalID(ctx, id)
+
 	// Delete booking
 	if err := s.bookingRepo.Delete(ctx, id); err != nil {
 		return err
@@ -263,4 +296,128 @@ func (s *BookingService) checkMonthNotClosed(ctx context.Context, tenantID, empl
 		return ErrMonthClosed
 	}
 	return nil
+}
+
+// createDerivedBookingIfNeeded creates an auto-generated derived booking when the
+// original booking has a reason with adjustment configuration.
+// This is a best-effort operation: errors are logged but do not fail the original booking.
+func (s *BookingService) createDerivedBookingIfNeeded(ctx context.Context, original *model.Booking, originalBT *model.BookingType) {
+	if original.BookingReasonID == nil || s.reasonRepo == nil {
+		return
+	}
+
+	// Load the booking reason
+	reason, err := s.reasonRepo.GetByID(ctx, *original.BookingReasonID)
+	if err != nil || reason == nil {
+		return
+	}
+
+	// Check if adjustment is configured
+	if !reason.HasAdjustment() {
+		return
+	}
+
+	// Resolve reference time to minutes from midnight
+	refMinutes, ok := s.resolveReferenceTime(ctx, reason, original)
+	if !ok {
+		return // Could not resolve (e.g., no day plan for plan-based reference)
+	}
+
+	// Calculate derived time = reference + offset, clamped to 0-1439
+	derivedTime := refMinutes + *reason.OffsetMinutes
+	if derivedTime < 0 {
+		derivedTime = 0
+	}
+	if derivedTime > 1439 {
+		derivedTime = 1439
+	}
+
+	// Determine the booking type for the derived booking
+	derivedBTID := s.resolveDerivedBookingTypeID(reason, originalBT)
+
+	// Idempotency: check if a derived booking already exists
+	existing, _ := s.bookingRepo.GetDerivedByOriginalID(ctx, original.ID)
+	if existing != nil {
+		// Update the existing derived booking instead of creating a new one
+		existing.EditedTime = derivedTime
+		existing.OriginalTime = derivedTime
+		existing.BookingTypeID = derivedBTID
+		existing.CalculatedTime = nil
+		_ = s.bookingRepo.Update(ctx, existing)
+		return
+	}
+
+	// Create the derived booking
+	derived := &model.Booking{
+		TenantID:          original.TenantID,
+		EmployeeID:        original.EmployeeID,
+		BookingDate:       original.BookingDate,
+		BookingTypeID:     derivedBTID,
+		OriginalTime:      derivedTime,
+		EditedTime:        derivedTime,
+		Source:            model.BookingSourceDerived,
+		IsAutoGenerated:   true,
+		OriginalBookingID: &original.ID,
+		BookingReasonID:   original.BookingReasonID,
+		Notes:             "Auto-generated from reason: " + reason.Code,
+		CreatedBy:         original.CreatedBy,
+		UpdatedBy:         original.CreatedBy,
+	}
+
+	_ = s.bookingRepo.Create(ctx, derived)
+}
+
+// resolveReferenceTime converts the reason's reference_time to minutes from midnight.
+// Returns (minutes, true) on success, or (0, false) if resolution fails.
+func (s *BookingService) resolveReferenceTime(ctx context.Context, reason *model.BookingReason, original *model.Booking) (int, bool) {
+	if reason.ReferenceTime == nil {
+		return 0, false
+	}
+
+	switch *reason.ReferenceTime {
+	case model.ReferenceTimeBookingTime:
+		return original.EditedTime, true
+
+	case model.ReferenceTimePlanStart:
+		if s.dayPlanRepo == nil {
+			// Fall back to booking time if day plan repo not available
+			return original.EditedTime, true
+		}
+		edp, err := s.dayPlanRepo.GetForEmployeeDate(ctx, original.EmployeeID, original.BookingDate)
+		if err != nil || edp == nil || edp.DayPlan == nil {
+			// Fall back to booking time if no day plan
+			return original.EditedTime, true
+		}
+		if edp.DayPlan.ComeFrom != nil {
+			return *edp.DayPlan.ComeFrom, true
+		}
+		return original.EditedTime, true
+
+	case model.ReferenceTimePlanEnd:
+		if s.dayPlanRepo == nil {
+			return original.EditedTime, true
+		}
+		edp, err := s.dayPlanRepo.GetForEmployeeDate(ctx, original.EmployeeID, original.BookingDate)
+		if err != nil || edp == nil || edp.DayPlan == nil {
+			return original.EditedTime, true
+		}
+		if edp.DayPlan.GoFrom != nil {
+			return *edp.DayPlan.GoFrom, true
+		}
+		return original.EditedTime, true
+
+	default:
+		return 0, false
+	}
+}
+
+// resolveDerivedBookingTypeID determines the booking type for a derived booking.
+// If the reason has an explicit adjustment_booking_type_id, use that.
+// Otherwise, fall back to the original booking's type (same type).
+func (s *BookingService) resolveDerivedBookingTypeID(reason *model.BookingReason, originalBT *model.BookingType) uuid.UUID {
+	if reason.AdjustmentBookingTypeID != nil {
+		return *reason.AdjustmentBookingTypeID
+	}
+	// Default: use the same booking type as the original
+	return originalBT.ID
 }

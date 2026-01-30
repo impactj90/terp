@@ -24,6 +24,10 @@ type CreateBookingRequest struct {
 	// Format: date
 	BookingDate *strfmt.Date `json:"booking_date"`
 
+	// Optional reason code for this booking
+	// Format: uuid
+	BookingReasonID strfmt.UUID `json:"booking_reason_id,omitempty"`
+
 	// booking type id
 	// Required: true
 	// Format: uuid
@@ -48,6 +52,10 @@ func (m *CreateBookingRequest) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.validateBookingDate(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateBookingReasonID(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -76,6 +84,18 @@ func (m *CreateBookingRequest) validateBookingDate(formats strfmt.Registry) erro
 	}
 
 	if err := validate.FormatOf("booking_date", "body", "date", m.BookingDate.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *CreateBookingRequest) validateBookingReasonID(formats strfmt.Registry) error {
+	if swag.IsZero(m.BookingReasonID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("booking_reason_id", "body", "uuid", m.BookingReasonID.String(), formats); err != nil {
 		return err
 	}
 

@@ -70,6 +70,7 @@ Booking:
         - api
         - import
         - correction
+        - derived
       example: "web"
     terminal_id:
       type: string
@@ -77,6 +78,23 @@ Booking:
       x-nullable: true
     notes:
       type: string
+      x-nullable: true
+    booking_reason_id:
+      type: string
+      format: uuid
+      x-nullable: true
+      description: Reason code selected when creating this booking
+    is_auto_generated:
+      type: boolean
+      description: True if this booking was automatically derived from a reason adjustment
+    original_booking_id:
+      type: string
+      format: uuid
+      x-nullable: true
+      description: For derived bookings, the ID of the original booking that triggered creation
+    booking_reason:
+      allOf:
+        - $ref: './booking-reasons.yaml#/BookingReason'
       x-nullable: true
     created_at:
       type: string
@@ -146,6 +164,10 @@ CreateBookingRequest:
       example: "08:00"
     notes:
       type: string
+    booking_reason_id:
+      type: string
+      format: uuid
+      description: Optional reason code for this booking
 
 UpdateBookingRequest:
   type: object

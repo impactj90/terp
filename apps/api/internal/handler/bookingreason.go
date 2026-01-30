@@ -102,6 +102,19 @@ func (h *BookingReasonHandler) Create(w http.ResponseWriter, r *http.Request) {
 		so := int(req.SortOrder)
 		input.SortOrder = &so
 	}
+	if req.ReferenceTime != "" {
+		input.ReferenceTime = &req.ReferenceTime
+	}
+	if req.OffsetMinutes != 0 {
+		om := int(req.OffsetMinutes)
+		input.OffsetMinutes = &om
+	}
+	if req.AdjustmentBookingTypeID.String() != "" && req.AdjustmentBookingTypeID.String() != "00000000-0000-0000-0000-000000000000" {
+		adjBTID, err := uuid.Parse(req.AdjustmentBookingTypeID.String())
+		if err == nil {
+			input.AdjustmentBookingTypeID = &adjBTID
+		}
+	}
 
 	br, err := h.svc.Create(r.Context(), input)
 	if err != nil {
@@ -138,6 +151,19 @@ func (h *BookingReasonHandler) Update(w http.ResponseWriter, r *http.Request) {
 		so := int(req.SortOrder)
 		input.SortOrder = &so
 	}
+	if req.ReferenceTime != nil && *req.ReferenceTime != "" {
+		input.ReferenceTime = req.ReferenceTime
+	}
+	if req.OffsetMinutes != nil {
+		om := int(*req.OffsetMinutes)
+		input.OffsetMinutes = &om
+	}
+	if req.AdjustmentBookingTypeID != nil {
+		adjBTID, err := uuid.Parse(req.AdjustmentBookingTypeID.String())
+		if err == nil {
+			input.AdjustmentBookingTypeID = &adjBTID
+		}
+	}
 
 	br, err := h.svc.Update(r.Context(), id, input)
 	if err != nil {
@@ -168,7 +194,7 @@ func bookingReasonToResponse(br *model.BookingReason) *models.BookingReason {
 	tenantID := strfmt.UUID(br.TenantID.String())
 	btID := strfmt.UUID(br.BookingTypeID.String())
 
-	return &models.BookingReason{
+	resp := &models.BookingReason{
 		ID:            &id,
 		TenantID:      &tenantID,
 		BookingTypeID: &btID,
@@ -179,6 +205,21 @@ func bookingReasonToResponse(br *model.BookingReason) *models.BookingReason {
 		CreatedAt:     strfmt.DateTime(br.CreatedAt),
 		UpdatedAt:     strfmt.DateTime(br.UpdatedAt),
 	}
+
+	// Adjustment fields
+	if br.ReferenceTime != nil {
+		resp.ReferenceTime = br.ReferenceTime
+	}
+	if br.OffsetMinutes != nil {
+		om := int64(*br.OffsetMinutes)
+		resp.OffsetMinutes = &om
+	}
+	if br.AdjustmentBookingTypeID != nil {
+		adjID := strfmt.UUID(br.AdjustmentBookingTypeID.String())
+		resp.AdjustmentBookingTypeID = &adjID
+	}
+
+	return resp
 }
 
 func bookingReasonListToResponse(reasons []model.BookingReason) models.BookingReasonList {
@@ -201,6 +242,12 @@ func handleBookingReasonError(w http.ResponseWriter, err error) {
 		respondError(w, http.StatusConflict, "A booking reason with this code already exists for this booking type")
 	case service.ErrBookingReasonTypeIDReq:
 		respondError(w, http.StatusBadRequest, "Booking type ID is required")
+	case service.ErrBookingReasonInvalidRefTime:
+		respondError(w, http.StatusBadRequest, "Invalid reference_time: must be plan_start, plan_end, or booking_time")
+	case service.ErrBookingReasonOffsetWithoutRef:
+		respondError(w, http.StatusBadRequest, "offset_minutes requires reference_time to be set")
+	case service.ErrBookingReasonRefWithoutOffset:
+		respondError(w, http.StatusBadRequest, "reference_time requires offset_minutes to be set")
 	default:
 		respondError(w, http.StatusInternalServerError, "Internal server error")
 	}

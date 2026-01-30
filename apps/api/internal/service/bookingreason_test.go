@@ -290,6 +290,151 @@ func TestBookingReasonService_List(t *testing.T) {
 	assert.Len(t, reasons, 3)
 }
 
+func TestBookingReasonService_Create_WithAdjustmentConfig(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	svc := newBookingReasonService(db)
+	ctx := context.Background()
+	tenant := createTestTenantForBRService(t, db)
+	bt := createTestBookingTypeForBRService(t, db, tenant.ID)
+
+	refTime := "plan_start"
+	offset := -30
+
+	br, err := svc.Create(ctx, service.CreateBookingReasonInput{
+		TenantID:      tenant.ID,
+		BookingTypeID: bt.ID,
+		Code:          "ADJ01",
+		Label:         "Early Start",
+		ReferenceTime: &refTime,
+		OffsetMinutes: &offset,
+	})
+	require.NoError(t, err)
+	assert.NotNil(t, br.ReferenceTime)
+	assert.Equal(t, "plan_start", *br.ReferenceTime)
+	assert.NotNil(t, br.OffsetMinutes)
+	assert.Equal(t, -30, *br.OffsetMinutes)
+}
+
+func TestBookingReasonService_Create_InvalidReferenceTime(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	svc := newBookingReasonService(db)
+	ctx := context.Background()
+	tenant := createTestTenantForBRService(t, db)
+	bt := createTestBookingTypeForBRService(t, db, tenant.ID)
+
+	refTime := "invalid_value"
+	offset := -30
+
+	_, err := svc.Create(ctx, service.CreateBookingReasonInput{
+		TenantID:      tenant.ID,
+		BookingTypeID: bt.ID,
+		Code:          "BAD01",
+		Label:         "Bad Ref",
+		ReferenceTime: &refTime,
+		OffsetMinutes: &offset,
+	})
+	assert.ErrorIs(t, err, service.ErrBookingReasonInvalidRefTime)
+}
+
+func TestBookingReasonService_Create_RefWithoutOffset(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	svc := newBookingReasonService(db)
+	ctx := context.Background()
+	tenant := createTestTenantForBRService(t, db)
+	bt := createTestBookingTypeForBRService(t, db, tenant.ID)
+
+	refTime := "plan_start"
+
+	_, err := svc.Create(ctx, service.CreateBookingReasonInput{
+		TenantID:      tenant.ID,
+		BookingTypeID: bt.ID,
+		Code:          "BAD02",
+		Label:         "Missing Offset",
+		ReferenceTime: &refTime,
+	})
+	assert.ErrorIs(t, err, service.ErrBookingReasonRefWithoutOffset)
+}
+
+func TestBookingReasonService_Create_OffsetWithoutRef(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	svc := newBookingReasonService(db)
+	ctx := context.Background()
+	tenant := createTestTenantForBRService(t, db)
+	bt := createTestBookingTypeForBRService(t, db, tenant.ID)
+
+	offset := -30
+
+	_, err := svc.Create(ctx, service.CreateBookingReasonInput{
+		TenantID:      tenant.ID,
+		BookingTypeID: bt.ID,
+		Code:          "BAD03",
+		Label:         "Missing Ref",
+		OffsetMinutes: &offset,
+	})
+	assert.ErrorIs(t, err, service.ErrBookingReasonOffsetWithoutRef)
+}
+
+func TestBookingReasonService_Update_WithAdjustmentConfig(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	svc := newBookingReasonService(db)
+	ctx := context.Background()
+	tenant := createTestTenantForBRService(t, db)
+	bt := createTestBookingTypeForBRService(t, db, tenant.ID)
+
+	br, err := svc.Create(ctx, service.CreateBookingReasonInput{
+		TenantID:      tenant.ID,
+		BookingTypeID: bt.ID,
+		Code:          "UPDADJ",
+		Label:         "Update Adj Test",
+	})
+	require.NoError(t, err)
+	assert.Nil(t, br.ReferenceTime)
+	assert.Nil(t, br.OffsetMinutes)
+
+	// Add adjustment config via update
+	refTime := "booking_time"
+	offset := 15
+	updated, err := svc.Update(ctx, br.ID, service.UpdateBookingReasonInput{
+		ReferenceTime: &refTime,
+		OffsetMinutes: &offset,
+	})
+	require.NoError(t, err)
+	assert.NotNil(t, updated.ReferenceTime)
+	assert.Equal(t, "booking_time", *updated.ReferenceTime)
+	assert.NotNil(t, updated.OffsetMinutes)
+	assert.Equal(t, 15, *updated.OffsetMinutes)
+}
+
+func TestBookingReasonService_Update_ClearAdjustment(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	svc := newBookingReasonService(db)
+	ctx := context.Background()
+	tenant := createTestTenantForBRService(t, db)
+	bt := createTestBookingTypeForBRService(t, db, tenant.ID)
+
+	refTime := "plan_end"
+	offset := 30
+	br, err := svc.Create(ctx, service.CreateBookingReasonInput{
+		TenantID:      tenant.ID,
+		BookingTypeID: bt.ID,
+		Code:          "CLRADJ",
+		Label:         "Clear Adj Test",
+		ReferenceTime: &refTime,
+		OffsetMinutes: &offset,
+	})
+	require.NoError(t, err)
+	assert.NotNil(t, br.ReferenceTime)
+
+	// Clear adjustment config
+	updated, err := svc.Update(ctx, br.ID, service.UpdateBookingReasonInput{
+		ClearAdjustment: true,
+	})
+	require.NoError(t, err)
+	assert.Nil(t, updated.ReferenceTime)
+	assert.Nil(t, updated.OffsetMinutes)
+	assert.Nil(t, updated.AdjustmentBookingTypeID)
+}
+
 func TestBookingReasonService_ListByBookingType(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	svc := newBookingReasonService(db)
