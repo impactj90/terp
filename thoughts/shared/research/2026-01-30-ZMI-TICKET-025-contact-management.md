@@ -1,0 +1,949 @@
+# Research: ZMI-TICKET-025 Contact Management (Kontaktmanagement)
+
+**Date:** 2026-01-30
+**Ticket:** ZMI-TICKET-025
+**Researcher:** Claude Code
+**Status:** Complete
+
+## Summary
+
+This document records existing codebase patterns relevant to implementing the Contact Management feature (contact types, contact kinds, and employee contact data). The research covers:
+
+1. How existing CRUD modules are structured across all layers
+2. How the employee/personnel module is structured (since contact data belongs to employees)
+3. How OpenAPI specs are defined for similar entities
+4. How validation is handled
+5. How multi-tenancy works
+6. How migrations are structured
+7. Existing contact-related code already in the codebase
+
+---
+
+## 1. Existing Contact-Related Code
+
+The codebase already has a basic employee contact system. This is the code that will need to be extended/refactored for the configurable contact type/kind system.
+
+### 1.1 Existing Employee Contact Model
+
+**File:** `/home/tolga/projects/terp/apps/api/internal/model/employee.go` (lines 105-118)
+
+```go
+type EmployeeContact struct {
+    ID          uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+    EmployeeID  uuid.UUID `gorm:"type:uuid;not null;index" json:"employee_id"`
+    ContactType string    `gorm:"type:varchar(50);not null" json:"contact_type"`
+    Value       string    `gorm:"type:varchar(255);not null" json:"value"`
+    Label       string    `gorm:"type:varchar(100)" json:"label,omitempty"`
+    IsPrimary   bool      `gorm:"default:false" json:"is_primary"`
+    CreatedAt   time.Time `gorm:"default:now()" json:"created_at"`
+    UpdatedAt   time.Time `gorm:"default:now()" json:"updated_at"`
+}
+```
+
+Key observations:
+- `ContactType` is a free-text `varchar(50)` field -- currently hardcoded enum values: `email`, `phone`, `mobile`, `emergency`
+- No `tenant_id` on the contact itself (inherits through employee)
+- No foreign key to a configurable contact type/kind table
+- The `Employee` model (line 83) has `Contacts []EmployeeContact` as a GORM relation
+
+### 1.2 Existing Contact Migration
+
+**File:** `/home/tolga/projects/terp/db/migrations/000012_create_employee_contacts.up.sql`
+
+```sql
+CREATE TABLE employee_contacts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    contact_type VARCHAR(50) NOT NULL,
+    value VARCHAR(255) NOT NULL,
+    label VARCHAR(100),
+    is_primary BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_employee_contacts_employee ON employee_contacts(employee_id);
+CREATE INDEX idx_employee_contacts_type ON employee_contacts(employee_id, contact_type);
+```
+
+### 1.3 Existing Contact Repository Methods
+
+**File:** `/home/tolga/projects/terp/apps/api/internal/repository/employee.go` (lines 268-311)
+
+Methods on `EmployeeRepository`:
+- `CreateContact(ctx, *model.EmployeeContact) error` (line 269)
+- `GetContactByID(ctx, uuid.UUID) (*model.EmployeeContact, error)` (line 274)
+- `DeleteContact(ctx, uuid.UUID) error` (line 288)
+- `ListContacts(ctx, employeeID uuid.UUID) ([]model.EmployeeContact, error)` (line 300)
+
+Contacts are also preloaded in `GetWithDetails` (line 216): `Preload("Contacts")`
+
+### 1.4 Existing Contact Handler Endpoints
+
+**File:** `/home/tolga/projects/terp/apps/api/internal/handler/routes.go` (lines 276-294)
+
+Registered under employee routes:
+```go
+r.Get("/{id}/contacts", h.ListContacts)
+r.Post("/{id}/contacts", h.AddContact)
+r.Delete("/{id}/contacts/{contactId}", h.RemoveContact)
+```
+
+### 1.5 Existing Contact OpenAPI Spec
+
+**File:** `/home/tolga/projects/terp/api/schemas/employees.yaml` (lines 257-294)
+
+```yaml
+EmployeeContact:
+  type: object
+  required:
+    - id
+    - employee_id
+    - contact_type
+    - value
+  properties:
+    contact_type:
+      type: string
+      enum:
+        - email
+        - phone
+        - mobile
+        - emergency
+```
+
+**File:** `/home/tolga/projects/terp/api/schemas/employees.yaml` (lines 605-627)
+
+```yaml
+CreateEmployeeContactRequest:
+  type: object
+  required:
+    - contact_type
+    - value
+  properties:
+    contact_type:
+      type: string
+      enum:
+        - email
+        - phone
+        - mobile
+        - emergency
+    value:
+      type: string
+      minLength: 1
+      maxLength: 255
+    label:
+      type: string
+      maxLength: 100
+    is_primary:
+      type: boolean
+      default: false
+```
+
+**File:** `/home/tolga/projects/terp/api/paths/employees.yaml` (lines 198-274)
+
+Endpoints:
+- `GET /employees/{id}/contacts` (listEmployeeContacts)
+- `POST /employees/{id}/contacts` (createEmployeeContact)
+- `DELETE /employees/{id}/contacts/{contactId}` (deleteEmployeeContact)
+
+### 1.6 Generated Contact Models
+
+**File:** `/home/tolga/projects/terp/apps/api/gen/models/create_employee_contact_request.go`
+
+Generated by go-swagger. Contains `Validate()` method with enum validation for `ContactType` and min/max length for `Value`.
+
+---
+
+## 2. Data Model Patterns
+
+### 2.1 Base Model
+
+**File:** `/home/tolga/projects/terp/apps/api/internal/model/base.go`
+
+```go
+type BaseModel struct {
+    ID        uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
+    CreatedAt time.Time `gorm:"not null;default:now()"`
+    UpdatedAt time.Time `gorm:"not null;default:now()"`
+}
+```
+
+Note: `BaseModel` exists but is NOT consistently used. Most models (Employee, Activity, BookingReason, EmployeeContact) define `ID`, `CreatedAt`, `UpdatedAt` directly on the struct. The pattern is to declare fields directly.
+
+### 2.2 Simple CRUD Entity Pattern (Activity)
+
+**File:** `/home/tolga/projects/terp/apps/api/internal/model/activity.go`
+
+```go
+type Activity struct {
+    ID          uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+    TenantID    uuid.UUID `gorm:"type:uuid;not null;index" json:"tenant_id"`
+    Code        string    `gorm:"type:varchar(50);not null" json:"code"`
+    Name        string    `gorm:"type:varchar(255);not null" json:"name"`
+    Description string    `gorm:"type:text" json:"description,omitempty"`
+    IsActive    bool      `gorm:"default:true" json:"is_active"`
+    CreatedAt   time.Time `gorm:"default:now()" json:"created_at"`
+    UpdatedAt   time.Time `gorm:"default:now()" json:"updated_at"`
+}
+
+func (Activity) TableName() string {
+    return "activities"
+}
+```
+
+Pattern observations:
+- UUID primary key with `gen_random_uuid()` default
+- `TenantID` as `uuid.UUID` with `not null;index` -- all tenant-scoped entities have this
+- Explicit `TableName()` method
+- GORM struct tags use quoted tag values: `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+- JSON tags with `omitempty` for optional fields
+- `IsActive` flag with `default:true`
+- `CreatedAt` and `UpdatedAt` with `default:now()`
+
+### 2.3 Linked Entity Pattern (BookingReason - links to BookingType)
+
+**File:** `/home/tolga/projects/terp/apps/api/internal/model/bookingreason.go`
+
+```go
+type BookingReason struct {
+    ID            uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+    TenantID      uuid.UUID `gorm:"type:uuid;not null;index" json:"tenant_id"`
+    BookingTypeID uuid.UUID `gorm:"type:uuid;not null;index" json:"booking_type_id"`
+    Code          string    `gorm:"type:varchar(50);not null" json:"code"`
+    Label         string    `gorm:"type:varchar(255);not null" json:"label"`
+    IsActive      bool      `gorm:"default:true" json:"is_active"`
+    SortOrder     int       `gorm:"default:0" json:"sort_order"`
+    CreatedAt     time.Time `gorm:"default:now()" json:"created_at"`
+    UpdatedAt     time.Time `gorm:"default:now()" json:"updated_at"`
+}
+```
+
+This is a good analog for Contact Kind (which links to a Contact Type).
+
+---
+
+## 3. Handler Patterns
+
+### 3.1 Handler Struct and Constructor
+
+**File:** `/home/tolga/projects/terp/apps/api/internal/handler/bookingreason.go` (lines 17-23)
+
+```go
+type BookingReasonHandler struct {
+    svc *service.BookingReasonService
+}
+
+func NewBookingReasonHandler(svc *service.BookingReasonService) *BookingReasonHandler {
+    return &BookingReasonHandler{svc: svc}
+}
+```
+
+Pattern: Handler holds a reference to its service. Constructor takes service as parameter.
+
+### 3.2 Request Parsing Pattern
+
+**File:** `/home/tolga/projects/terp/apps/api/internal/handler/bookingreason.go` (lines 72-113)
+
+```go
+func (h *BookingReasonHandler) Create(w http.ResponseWriter, r *http.Request) {
+    // 1. Extract tenant ID from context
+    tenantID, ok := middleware.TenantFromContext(r.Context())
+    if !ok {
+        respondError(w, http.StatusUnauthorized, "Tenant required")
+        return
+    }
+
+    // 2. Decode request body using generated model
+    var req models.CreateBookingReasonRequest
+    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+        respondError(w, http.StatusBadRequest, "Invalid request body")
+        return
+    }
+
+    // 3. Validate using generated model's Validate method
+    if err := req.Validate(nil); err != nil {
+        respondError(w, http.StatusBadRequest, err.Error())
+        return
+    }
+
+    // 4. Map to service input struct
+    input := service.CreateBookingReasonInput{
+        TenantID:      tenantID,
+        BookingTypeID: btID,
+        Code:          *req.Code,
+        Label:         *req.Label,
+    }
+
+    // 5. Call service
+    br, err := h.svc.Create(r.Context(), input)
+    if err != nil {
+        handleBookingReasonError(w, err)
+        return
+    }
+
+    // 6. Map to response using generated model
+    respondJSON(w, http.StatusCreated, bookingReasonToResponse(br))
+}
+```
+
+### 3.3 Response Mapping Pattern
+
+**File:** `/home/tolga/projects/terp/apps/api/internal/handler/bookingreason.go` (lines 166-190)
+
+```go
+func bookingReasonToResponse(br *model.BookingReason) *models.BookingReason {
+    id := strfmt.UUID(br.ID.String())
+    tenantID := strfmt.UUID(br.TenantID.String())
+    btID := strfmt.UUID(br.BookingTypeID.String())
+
+    return &models.BookingReason{
+        ID:            &id,
+        TenantID:      &tenantID,
+        BookingTypeID: &btID,
+        Code:          &br.Code,
+        Label:         &br.Label,
+        IsActive:      br.IsActive,
+        SortOrder:     int64(br.SortOrder),
+        CreatedAt:     strfmt.DateTime(br.CreatedAt),
+        UpdatedAt:     strfmt.DateTime(br.UpdatedAt),
+    }
+}
+
+func bookingReasonListToResponse(reasons []model.BookingReason) models.BookingReasonList {
+    data := make([]*models.BookingReason, 0, len(reasons))
+    for i := range reasons {
+        data = append(data, bookingReasonToResponse(&reasons[i]))
+    }
+    return models.BookingReasonList{Data: data}
+}
+```
+
+Pattern: Handlers use `strfmt.UUID()` and `strfmt.DateTime()` to convert domain model fields to generated model fields. UUIDs are converted to `strfmt.UUID` (string type). Required fields use pointers. List responses wrap data in a `{Data: [...]}` wrapper.
+
+### 3.4 Error Handling Pattern
+
+**File:** `/home/tolga/projects/terp/apps/api/internal/handler/bookingreason.go` (lines 192-207)
+
+```go
+func handleBookingReasonError(w http.ResponseWriter, err error) {
+    switch err {
+    case service.ErrBookingReasonNotFound:
+        respondError(w, http.StatusNotFound, "Booking reason not found")
+    case service.ErrBookingReasonCodeReq:
+        respondError(w, http.StatusBadRequest, "Booking reason code is required")
+    // ... more cases
+    default:
+        respondError(w, http.StatusInternalServerError, "Internal server error")
+    }
+}
+```
+
+Pattern: Each handler file defines its own error mapping function using a `switch` on service-level sentinel errors.
+
+### 3.5 Common Response Helpers
+
+**File:** `/home/tolga/projects/terp/apps/api/internal/handler/response.go` (lines 14-26)
+
+```go
+func respondJSON(w http.ResponseWriter, status int, data any) {
+    w.Header().Set("Content-Type", "application/json")
+    w.WriteHeader(status)
+    _ = json.NewEncoder(w).Encode(data)
+}
+
+func respondError(w http.ResponseWriter, status int, message string) {
+    respondJSON(w, status, map[string]any{
+        "error":   http.StatusText(status),
+        "message": message,
+        "status":  status,
+    })
+}
+```
+
+---
+
+## 4. Service Patterns
+
+### 4.1 Service Struct with Interface-based Repository
+
+**File:** `/home/tolga/projects/terp/apps/api/internal/service/bookingreason.go` (lines 22-38)
+
+```go
+type bookingReasonRepository interface {
+    Create(ctx context.Context, br *model.BookingReason) error
+    GetByID(ctx context.Context, id uuid.UUID) (*model.BookingReason, error)
+    GetByCode(ctx context.Context, tenantID uuid.UUID, bookingTypeID uuid.UUID, code string) (*model.BookingReason, error)
+    List(ctx context.Context, tenantID uuid.UUID) ([]model.BookingReason, error)
+    ListByBookingType(ctx context.Context, tenantID uuid.UUID, bookingTypeID uuid.UUID) ([]model.BookingReason, error)
+    Update(ctx context.Context, br *model.BookingReason) error
+    Delete(ctx context.Context, id uuid.UUID) error
+}
+
+type BookingReasonService struct {
+    repo bookingReasonRepository
+}
+
+func NewBookingReasonService(repo bookingReasonRepository) *BookingReasonService {
+    return &BookingReasonService{repo: repo}
+}
+```
+
+Pattern: Services define a private interface for the repository they depend on. The interface is unexported (lowercase). Constructor takes the concrete repository (which satisfies the interface).
+
+### 4.2 Service Input Structs
+
+**File:** `/home/tolga/projects/terp/apps/api/internal/service/bookingreason.go` (lines 41-47)
+
+```go
+type CreateBookingReasonInput struct {
+    TenantID      uuid.UUID
+    BookingTypeID uuid.UUID
+    Code          string
+    Label         string
+    SortOrder     *int
+}
+```
+
+Pattern: Services define their own input structs (separate from generated models). Optional fields use pointers.
+
+### 4.3 Service Validation Pattern
+
+**File:** `/home/tolga/projects/terp/apps/api/internal/service/bookingreason.go` (lines 50-84)
+
+```go
+func (s *BookingReasonService) Create(ctx context.Context, input CreateBookingReasonInput) (*model.BookingReason, error) {
+    code := strings.TrimSpace(input.Code)
+    if code == "" {
+        return nil, ErrBookingReasonCodeReq
+    }
+    label := strings.TrimSpace(input.Label)
+    if label == "" {
+        return nil, ErrBookingReasonLabelReq
+    }
+    if input.BookingTypeID == uuid.Nil {
+        return nil, ErrBookingReasonTypeIDReq
+    }
+
+    // Check uniqueness
+    existing, err := s.repo.GetByCode(ctx, input.TenantID, input.BookingTypeID, code)
+    if err == nil && existing != nil {
+        return nil, ErrBookingReasonCodeExists
+    }
+
+    br := &model.BookingReason{...}
+    if err := s.repo.Create(ctx, br); err != nil {
+        return nil, err
+    }
+    return br, nil
+}
+```
+
+Pattern: Validation happens in the service layer. Uses sentinel errors (package-level `var` declarations). Uniqueness checks query the repository. Strings are trimmed before validation.
+
+### 4.4 Sentinel Error Pattern
+
+**File:** `/home/tolga/projects/terp/apps/api/internal/service/bookingreason.go` (lines 13-18)
+
+```go
+var (
+    ErrBookingReasonNotFound   = errors.New("booking reason not found")
+    ErrBookingReasonCodeReq    = errors.New("booking reason code is required")
+    ErrBookingReasonLabelReq   = errors.New("booking reason label is required")
+    ErrBookingReasonCodeExists = errors.New("booking reason code already exists for this booking type")
+    ErrBookingReasonTypeIDReq  = errors.New("booking type ID is required")
+)
+```
+
+### 4.5 Activity Service Validation (with is_active filter)
+
+**File:** `/home/tolga/projects/terp/apps/api/internal/service/activity.go`
+
+```go
+var (
+    ErrActivityCodeRequired = errors.New("activity code is required")
+    ErrActivityNameRequired = errors.New("activity name is required")
+    ErrActivityCodeExists   = errors.New("activity with this code already exists")
+    ErrActivityNotFound     = errors.New("activity not found")
+)
+```
+
+The Activity service `List` method supports an `activeOnly *bool` filter parameter.
+
+---
+
+## 5. Repository Patterns
+
+### 5.1 Repository Struct and Constructor
+
+**File:** `/home/tolga/projects/terp/apps/api/internal/repository/bookingreason.go` (lines 16-22)
+
+```go
+type BookingReasonRepository struct {
+    db *DB
+}
+
+func NewBookingReasonRepository(db *DB) *BookingReasonRepository {
+    return &BookingReasonRepository{db: db}
+}
+```
+
+### 5.2 CRUD Operations
+
+Create:
+```go
+func (r *BookingReasonRepository) Create(ctx context.Context, br *model.BookingReason) error {
+    return r.db.GORM.WithContext(ctx).Create(br).Error
+}
+```
+
+GetByID:
+```go
+func (r *BookingReasonRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.BookingReason, error) {
+    var br model.BookingReason
+    err := r.db.GORM.WithContext(ctx).First(&br, "id = ?", id).Error
+    if errors.Is(err, gorm.ErrRecordNotFound) {
+        return nil, ErrBookingReasonNotFound
+    }
+    if err != nil {
+        return nil, fmt.Errorf("failed to get booking reason: %w", err)
+    }
+    return &br, nil
+}
+```
+
+List (tenant-scoped):
+```go
+func (r *BookingReasonRepository) List(ctx context.Context, tenantID uuid.UUID) ([]model.BookingReason, error) {
+    var reasons []model.BookingReason
+    err := r.db.GORM.WithContext(ctx).
+        Where("tenant_id = ?", tenantID).
+        Order("sort_order ASC, code ASC").
+        Find(&reasons).Error
+    // ...
+}
+```
+
+Delete:
+```go
+func (r *BookingReasonRepository) Delete(ctx context.Context, id uuid.UUID) error {
+    result := r.db.GORM.WithContext(ctx).Delete(&model.BookingReason{}, "id = ?", id)
+    if result.Error != nil {
+        return fmt.Errorf("failed to delete booking reason: %w", result.Error)
+    }
+    if result.RowsAffected == 0 {
+        return ErrBookingReasonNotFound
+    }
+    return nil
+}
+```
+
+Pattern: Always use `.WithContext(ctx)`. Check `gorm.ErrRecordNotFound` for GetByID. Check `RowsAffected == 0` for Delete. Wrap errors with `fmt.Errorf`. Define sentinel errors at package level.
+
+### 5.3 DB Wrapper
+
+**File:** `/home/tolga/projects/terp/apps/api/internal/repository/db.go`
+
+```go
+type DB struct {
+    GORM *gorm.DB
+    Pool *pgxpool.Pool
+}
+```
+
+Provides `WithTransaction` method for transactional operations. All repositories take `*DB` in constructor.
+
+---
+
+## 6. Route Registration Patterns
+
+### 6.1 Simple CRUD Route Registration
+
+**File:** `/home/tolga/projects/terp/apps/api/internal/handler/routes.go` (lines 672-690)
+
+```go
+func RegisterBookingReasonRoutes(r chi.Router, h *BookingReasonHandler, authz *middleware.AuthorizationMiddleware) {
+    permManage := permissions.ID("booking_types.manage").String()
+    r.Route("/booking-reasons", func(r chi.Router) {
+        if authz == nil {
+            r.Get("/", h.List)
+            r.Post("/", h.Create)
+            r.Get("/{id}", h.Get)
+            r.Patch("/{id}", h.Update)
+            r.Delete("/{id}", h.Delete)
+            return
+        }
+        r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+        r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+        r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+        r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+        r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+    })
+}
+```
+
+Pattern:
+- Permission ID is obtained via `permissions.ID("resource.action").String()`
+- Routes have two code paths: `authz == nil` (tests/dev) and with `authz.RequirePermission()`
+- Uses `chi.Router.Route()` for nested route groups
+- CRUD operations: GET list, POST create, GET by ID, PATCH update, DELETE
+
+### 6.2 Employee Nested Routes (contacts/cards)
+
+**File:** `/home/tolga/projects/terp/apps/api/internal/handler/routes.go` (lines 261-298)
+
+Employee contacts are registered inside `RegisterEmployeeRoutes`:
+```go
+r.Get("/{id}/contacts", h.ListContacts)
+r.Post("/{id}/contacts", h.AddContact)
+r.Delete("/{id}/contacts/{contactId}", h.RemoveContact)
+```
+
+### 6.3 Main Server Wiring
+
+**File:** `/home/tolga/projects/terp/apps/api/cmd/server/main.go`
+
+Pattern for adding a new module:
+1. Create repository: `xyzRepo := repository.NewXyzRepository(db)` (line ~70-96)
+2. Create service: `xyzService := service.NewXyzService(xyzRepo)` (line ~98-121)
+3. Create handler: `xyzHandler := handler.NewXyzHandler(xyzService)` (line ~228-265)
+4. Register routes in tenant-scoped group: `handler.RegisterXyzRoutes(r, xyzHandler, authzMiddleware)` (line ~394-439)
+
+All tenant-scoped routes are registered inside the `r.Group` that uses `tenantMiddleware.RequireTenant`.
+
+---
+
+## 7. OpenAPI Spec Patterns
+
+### 7.1 Schema File Structure
+
+**File:** `/home/tolga/projects/terp/api/schemas/activities.yaml`
+
+Each entity has four schema definitions:
+1. `Activity` -- full response object with all fields
+2. `CreateActivityRequest` -- required fields for creation
+3. `UpdateActivityRequest` -- optional fields for update (all optional)
+4. `ActivityList` -- list wrapper: `{ data: Activity[] }`
+
+Pattern for fields:
+- `type: string`, `format: uuid` for UUIDs
+- `x-nullable: true` for optional/nullable fields
+- `minLength`/`maxLength` for string validation
+- `enum` for constrained values
+- Response objects have `required` array listing required response fields
+
+### 7.2 Path File Structure
+
+**File:** `/home/tolga/projects/terp/api/paths/activities.yaml`
+
+```yaml
+/activities:
+  get:
+    tags: [Activities]
+    summary: List activities
+    operationId: listActivities
+    parameters: [...]
+    responses:
+      200:
+        schema:
+          $ref: '../schemas/activities.yaml#/ActivityList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags: [Activities]
+    summary: Create activity
+    operationId: createActivity
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/activities.yaml#/CreateActivityRequest'
+    responses:
+      201: ...
+      400: ...
+      401: ...
+      409: ...
+```
+
+### 7.3 Root openapi.yaml Registration
+
+**File:** `/home/tolga/projects/terp/api/openapi.yaml`
+
+New paths must be added in the `paths:` section (line ~157):
+```yaml
+  /contact-types:
+    $ref: 'paths/contact-types.yaml#/~1contact-types'
+```
+
+New definitions must be added in the `definitions:` section (line ~630):
+```yaml
+  ContactType:
+    $ref: 'schemas/contact-types.yaml#/ContactType'
+```
+
+New tags should be added in the `tags:` section (line ~43).
+
+### 7.4 Error Responses
+
+**File:** `/home/tolga/projects/terp/api/responses/errors.yaml`
+
+Standard error references:
+- `'../responses/errors.yaml#/BadRequest'` (400)
+- `'../responses/errors.yaml#/Unauthorized'` (401)
+- `'../responses/errors.yaml#/Forbidden'` (403)
+- `'../responses/errors.yaml#/NotFound'` (404)
+
+All use `ProblemDetails` schema (RFC 7807).
+
+---
+
+## 8. Migration Patterns
+
+### 8.1 Naming Convention
+
+Format: `{sequence}_create_{table_name}.{up|down}.sql`
+
+Examples:
+- `000012_create_employee_contacts.up.sql`
+- `000053_create_activities.up.sql`
+
+Latest migration number: **000067** (system_settings)
+
+### 8.2 Up Migration Structure
+
+**File:** `/home/tolga/projects/terp/db/migrations/000053_create_activities.up.sql`
+
+```sql
+CREATE TABLE activities (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    code VARCHAR(50) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(tenant_id, code)
+);
+
+CREATE INDEX idx_activities_tenant ON activities(tenant_id);
+CREATE INDEX idx_activities_tenant_active ON activities(tenant_id, is_active);
+
+CREATE TRIGGER update_activities_updated_at
+    BEFORE UPDATE ON activities
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+COMMENT ON TABLE activities IS 'Activity/work types for order-based time tracking.';
+```
+
+Pattern:
+- UUID primary key with `gen_random_uuid()` default
+- `tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE`
+- Timestamps: `TIMESTAMPTZ DEFAULT NOW()`
+- `UNIQUE(tenant_id, code)` for tenant-scoped unique constraints
+- Indexes on `tenant_id` and commonly queried combinations
+- `update_updated_at_column()` trigger for auto-updating `updated_at`
+- Table comments
+
+### 8.3 Down Migration Structure
+
+```sql
+DROP TABLE IF EXISTS activities;
+```
+
+---
+
+## 9. Multi-Tenancy Pattern
+
+### 9.1 Tenant Context Middleware
+
+**File:** `/home/tolga/projects/terp/apps/api/internal/middleware/tenant.go`
+
+```go
+const TenantContextKey contextKey = "tenant_id"
+
+func TenantFromContext(ctx context.Context) (uuid.UUID, bool) {
+    tenantID, ok := ctx.Value(TenantContextKey).(uuid.UUID)
+    return tenantID, ok
+}
+```
+
+The `RequireTenant` middleware:
+1. Reads `X-Tenant-ID` header
+2. Parses as UUID
+3. Verifies tenant exists and is active via `TenantService.GetByID()`
+4. Adds tenant ID to context
+
+### 9.2 Tenant ID Usage in Handlers
+
+All handlers extract tenant ID from context:
+```go
+tenantID, ok := middleware.TenantFromContext(r.Context())
+if !ok {
+    respondError(w, http.StatusUnauthorized, "Tenant required")
+    return
+}
+```
+
+### 9.3 Tenant Scoping in Repository
+
+All queries include tenant_id filtering:
+```go
+r.db.GORM.WithContext(ctx).Where("tenant_id = ?", tenantID).Find(&results).Error
+```
+
+---
+
+## 10. Validation Patterns
+
+### 10.1 Two-Layer Validation
+
+1. **OpenAPI/generated model validation** (handler layer): Structural validation (required fields, enum values, min/max lengths) via `req.Validate(nil)` on generated models
+2. **Business validation** (service layer): Semantic validation (uniqueness, business rules, cross-entity checks) using sentinel errors
+
+### 10.2 Generated Model Validation
+
+**File:** `/home/tolga/projects/terp/apps/api/gen/models/create_employee_contact_request.go`
+
+The generated models have `Validate(formats strfmt.Registry) error` methods that check:
+- Required fields (`validate.Required`)
+- Enum values (`validate.EnumCase`)
+- String lengths (`validate.MinLength`, `validate.MaxLength`)
+
+Called in handlers as:
+```go
+if err := req.Validate(nil); err != nil {
+    respondError(w, http.StatusBadRequest, err.Error())
+    return
+}
+```
+
+### 10.3 Service-Level Validation
+
+Business rules are validated in service methods using sentinel errors:
+```go
+if code == "" {
+    return nil, ErrActivityCodeRequired
+}
+// Check uniqueness
+existing, err := s.repo.GetByCode(ctx, input.TenantID, code)
+if err == nil && existing != nil {
+    return nil, ErrActivityCodeExists
+}
+```
+
+---
+
+## 11. Permission Patterns
+
+**File:** `/home/tolga/projects/terp/apps/api/internal/permissions/permissions.go`
+
+Permissions are defined as a static list with deterministic UUIDs:
+```go
+{ID: permissionID("activities.manage"), Resource: "activities", Action: "manage", Description: "Manage activities for orders"},
+```
+
+Permission IDs are generated using `uuid.NewSHA1(ns, []byte(key))` with a fixed namespace.
+
+Used in route registration:
+```go
+permManage := permissions.ID("activities.manage").String()
+r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+```
+
+---
+
+## 12. Test Patterns
+
+### 12.1 Test Database Setup
+
+**File:** `/home/tolga/projects/terp/apps/api/internal/testutil/db.go`
+
+```go
+func SetupTestDB(t *testing.T) *repository.DB {
+    // Shared DB connection with lazy init
+    // Each test runs in a transaction that gets rolled back
+    tx := baseDB.Begin()
+    db := &repository.DB{GORM: tx}
+    t.Cleanup(func() { tx.Rollback() })
+    return db
+}
+```
+
+Pattern: Uses shared connection pool. Each test runs in a transaction. Cleanup rolls back transaction.
+
+### 12.2 Service Test Pattern
+
+**File:** `/home/tolga/projects/terp/apps/api/internal/service/activity_test.go`
+
+```go
+func TestActivityService_Create_Success(t *testing.T) {
+    db := testutil.SetupTestDB(t)
+    repo := repository.NewActivityRepository(db)
+    svc := service.NewActivityService(repo)
+    ctx := context.Background()
+
+    tenant := createTestTenantForActivityService(t, db)
+
+    input := service.CreateActivityInput{...}
+    a, err := svc.Create(ctx, input)
+    require.NoError(t, err)
+    assert.Equal(t, "ACT001", a.Code)
+}
+```
+
+Pattern: Uses `testify/assert` and `testify/require`. Creates test tenant first. Tests both success and error cases. Each test creates fresh service/repo instances.
+
+---
+
+## 13. Generated Model Usage Pattern
+
+The codebase uses generated models from `apps/api/gen/models/` for API request/response payloads. Domain models from `apps/api/internal/model/` are used internally. Handler functions map between the two.
+
+**Import pattern in handlers:**
+```go
+import (
+    "github.com/tolga/terp/gen/models"       // Generated API models
+    "github.com/tolga/terp/internal/model"    // Domain models
+)
+```
+
+Response mapping uses `strfmt` types from `go-openapi`:
+```go
+import "github.com/go-openapi/strfmt"
+
+id := strfmt.UUID(br.ID.String())
+createdAt := strfmt.DateTime(br.CreatedAt)
+```
+
+---
+
+## Summary of Patterns for Contact Management Implementation
+
+To implement contact types, contact kinds, and configurable employee contact data:
+
+**New files needed:**
+- `apps/api/internal/model/contacttype.go` -- ContactType and ContactKind domain models
+- `apps/api/internal/repository/contacttype.go` -- Repository for contact types and kinds
+- `apps/api/internal/service/contacttype.go` -- Service with validation logic
+- `apps/api/internal/handler/contacttype.go` -- Handler with request/response mapping
+- `api/schemas/contact-types.yaml` -- OpenAPI schemas
+- `api/paths/contact-types.yaml` -- OpenAPI path definitions
+- `db/migrations/000068_create_contact_types.up.sql` -- Migration (next sequence: 068)
+- `db/migrations/000068_create_contact_types.down.sql`
+
+**Files to modify:**
+- `apps/api/internal/handler/routes.go` -- Add `RegisterContactTypeRoutes`
+- `apps/api/cmd/server/main.go` -- Wire up repo/service/handler
+- `api/openapi.yaml` -- Register paths, definitions, and tags
+- `apps/api/internal/permissions/permissions.go` -- Add `contact_types.manage` permission
+- `apps/api/internal/model/employee.go` -- Modify `EmployeeContact` to reference `ContactKind` FK
+- `apps/api/internal/repository/employee.go` -- Update contact validation queries
+- `api/schemas/employees.yaml` -- Update `EmployeeContact` schema to reference contact kind
+- `db/migrations/000069_alter_employee_contacts.up.sql` -- Add FK to contact_kinds table
+
+**Existing code to be aware of:**
+- The `employee_contacts` table already exists (migration 000012)
+- Contact CRUD already exists in `EmployeeRepository` and `EmployeeHandler`
+- The existing `contact_type` field is a hardcoded enum (`email`, `phone`, `mobile`, `emergency`)
+- The generated models in `gen/models/` include `CreateEmployeeContactRequest` with the enum
