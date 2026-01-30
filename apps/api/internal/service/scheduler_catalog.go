@@ -109,5 +109,20 @@ func GetTaskCatalog() []TaskCatalogItem {
 				"properties": map[string]interface{}{},
 			},
 		},
+		{
+			TaskType:    model.TaskTypeExecuteMacros,
+			Name:        "Execute Macros",
+			Description: "Executes all due weekly and monthly macros for the current date. Runs after daily calculation.",
+			ParameterSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"date": map[string]interface{}{
+						"type":        "string",
+						"format":      "date",
+						"description": "Target date (YYYY-MM-DD). Default: today.",
+					},
+				},
+			},
+		},
 	}
 }

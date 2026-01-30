@@ -358,6 +358,11 @@ func main() {
 	shiftAssignmentService := service.NewShiftAssignmentService(shiftAssignmentRepo)
 	shiftAssignmentHandler := handler.NewShiftAssignmentHandler(shiftAssignmentService)
 
+	// Initialize Macros
+	macroRepo := repository.NewMacroRepository(db)
+	macroService := service.NewMacroService(macroRepo)
+	macroHandler := handler.NewMacroHandler(macroService)
+
 	// Initialize Scheduler
 	scheduleRepo := repository.NewScheduleRepository(db)
 	scheduleService := service.NewScheduleService(scheduleRepo)
@@ -372,6 +377,7 @@ func main() {
 	schedulerExecutor.RegisterHandler(model.TaskTypeExportData, service.NewPlaceholderTaskHandler("export_data"))
 	schedulerExecutor.RegisterHandler(model.TaskTypeTerminalSync, service.NewPlaceholderTaskHandler("terminal_sync"))
 	schedulerExecutor.RegisterHandler(model.TaskTypeTerminalImport, service.NewTerminalImportTaskHandler(terminalService))
+	schedulerExecutor.RegisterHandler(model.TaskTypeExecuteMacros, service.NewExecuteMacrosTaskHandler(macroService))
 
 	scheduleHandler := handler.NewScheduleHandler(scheduleService, schedulerExecutor)
 
@@ -526,6 +532,7 @@ func main() {
 				handler.RegisterTravelAllowancePreviewRoutes(r, travelAllowancePreviewHandler, authzMiddleware)
 				handler.RegisterShiftRoutes(r, shiftHandler, authzMiddleware)
 				handler.RegisterShiftAssignmentRoutes(r, shiftAssignmentHandler, authzMiddleware)
+				handler.RegisterMacroRoutes(r, macroHandler, authzMiddleware)
 			})
 		})
 

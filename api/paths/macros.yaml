@@ -1,0 +1,289 @@
+# Macro endpoints
+/macros:
+  get:
+    tags:
+      - Macros
+    summary: List macros
+    operationId: listMacros
+    responses:
+      200:
+        description: List of macros
+        schema:
+          $ref: '../schemas/macros.yaml#/MacroList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Macros
+    summary: Create macro
+    operationId: createMacro
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/macros.yaml#/CreateMacroRequest'
+    responses:
+      201:
+        description: Created macro
+        schema:
+          $ref: '../schemas/macros.yaml#/Macro'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Macro name already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/macros/{id}:
+  get:
+    tags:
+      - Macros
+    summary: Get macro by ID
+    operationId: getMacro
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Macro details
+        schema:
+          $ref: '../schemas/macros.yaml#/Macro'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Macros
+    summary: Update macro
+    operationId: updateMacro
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/macros.yaml#/UpdateMacroRequest'
+    responses:
+      200:
+        description: Updated macro
+        schema:
+          $ref: '../schemas/macros.yaml#/Macro'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Macros
+    summary: Delete macro
+    operationId: deleteMacro
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Macro deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/macros/{id}/assignments:
+  get:
+    tags:
+      - Macros
+    summary: List macro assignments
+    operationId: listMacroAssignments
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: List of assignments
+        schema:
+          $ref: '../schemas/macros.yaml#/MacroAssignmentList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  post:
+    tags:
+      - Macros
+    summary: Create macro assignment
+    operationId: createMacroAssignment
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/macros.yaml#/CreateMacroAssignmentRequest'
+    responses:
+      201:
+        description: Created assignment
+        schema:
+          $ref: '../schemas/macros.yaml#/MacroAssignment'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/macros/{id}/assignments/{assignmentId}:
+  patch:
+    tags:
+      - Macros
+    summary: Update macro assignment
+    operationId: updateMacroAssignment
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: assignmentId
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/macros.yaml#/UpdateMacroAssignmentRequest'
+    responses:
+      200:
+        description: Updated assignment
+        schema:
+          $ref: '../schemas/macros.yaml#/MacroAssignment'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Macros
+    summary: Delete macro assignment
+    operationId: deleteMacroAssignment
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: assignmentId
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Assignment deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/macros/{id}/execute:
+  post:
+    tags:
+      - Macros
+    summary: Trigger macro execution
+    operationId: triggerMacroExecution
+    description: |
+      Manually triggers execution of a macro. The macro must be active.
+      Weekly macros execute on their configured weekday (0=Sunday..6=Saturday).
+      Monthly macros execute on their configured day of month (1-31).
+      If a monthly macro is configured for day 31 but the month has fewer days,
+      execution falls back to the last day of the month.
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Execution result
+        schema:
+          $ref: '../schemas/macros.yaml#/MacroExecution'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/macros/{id}/executions:
+  get:
+    tags:
+      - Macros
+    summary: List macro executions
+    operationId: listMacroExecutions
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: limit
+        in: query
+        type: integer
+        default: 20
+    responses:
+      200:
+        description: List of executions
+        schema:
+          $ref: '../schemas/macros.yaml#/MacroExecutionList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/macro-executions/{id}:
+  get:
+    tags:
+      - Macros
+    summary: Get macro execution by ID
+    operationId: getMacroExecution
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Execution details
+        schema:
+          $ref: '../schemas/macros.yaml#/MacroExecution'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

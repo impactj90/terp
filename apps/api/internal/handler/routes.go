@@ -1523,3 +1523,53 @@ func RegisterShiftAssignmentRoutes(r chi.Router, h *ShiftAssignmentHandler, auth
 		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
 	})
 }
+
+// RegisterMacroRoutes registers macro routes.
+func RegisterMacroRoutes(r chi.Router, h *MacroHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("macros.manage").String()
+
+	// Macro CRUD
+	r.Route("/macros", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+
+			// Assignment management
+			r.Get("/{id}/assignments", h.ListAssignments)
+			r.Post("/{id}/assignments", h.CreateAssignment)
+			r.Patch("/{id}/assignments/{assignmentId}", h.UpdateAssignment)
+			r.Delete("/{id}/assignments/{assignmentId}", h.DeleteAssignment)
+
+			// Execution
+			r.Post("/{id}/execute", h.TriggerExecution)
+			r.Get("/{id}/executions", h.ListExecutions)
+			return
+		}
+
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+
+		// Assignment management
+		r.With(authz.RequirePermission(permManage)).Get("/{id}/assignments", h.ListAssignments)
+		r.With(authz.RequirePermission(permManage)).Post("/{id}/assignments", h.CreateAssignment)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}/assignments/{assignmentId}", h.UpdateAssignment)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}/assignments/{assignmentId}", h.DeleteAssignment)
+
+		// Execution
+		r.With(authz.RequirePermission(permManage)).Post("/{id}/execute", h.TriggerExecution)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}/executions", h.ListExecutions)
+	})
+
+	// Execution detail
+	if authz == nil {
+		r.Get("/macro-executions/{id}", h.GetExecution)
+	} else {
+		r.With(authz.RequirePermission(permManage)).Get("/macro-executions/{id}", h.GetExecution)
+	}
+}

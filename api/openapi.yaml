@@ -175,6 +175,8 @@ tags:
     description: Shift definition management for the planning board / Plantafel (placeholder - requires separate Plantafel documentation)
   - name: Shift Assignments
     description: Employee-to-shift assignment management for the planning board (placeholder)
+  - name: Macros
+    description: Weekly and monthly macro definitions, assignments, and execution
 
 securityDefinitions:
   BearerAuth:
@@ -754,6 +756,22 @@ paths:
     $ref: 'paths/shift-planning.yaml#/~1shift-assignments'
   /shift-assignments/{id}:
     $ref: 'paths/shift-planning.yaml#/~1shift-assignments~1{id}'
+
+  # Macros
+  /macros:
+    $ref: 'paths/macros.yaml#/~1macros'
+  /macros/{id}:
+    $ref: 'paths/macros.yaml#/~1macros~1{id}'
+  /macros/{id}/assignments:
+    $ref: 'paths/macros.yaml#/~1macros~1{id}~1assignments'
+  /macros/{id}/assignments/{assignmentId}:
+    $ref: 'paths/macros.yaml#/~1macros~1{id}~1assignments~1{assignmentId}'
+  /macros/{id}/execute:
+    $ref: 'paths/macros.yaml#/~1macros~1{id}~1execute'
+  /macros/{id}/executions:
+    $ref: 'paths/macros.yaml#/~1macros~1{id}~1executions'
+  /macro-executions/{id}:
+    $ref: 'paths/macros.yaml#/~1macro-executions~1{id}'
 
 definitions:
   # Common

@@ -1,0 +1,219 @@
+# Macro schemas
+Macro:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - name
+    - macro_type
+    - action_type
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    name:
+      type: string
+      example: "Weekly Target Hours Reset"
+    description:
+      type: string
+      x-nullable: true
+    macro_type:
+      type: string
+      enum: [weekly, monthly]
+      description: "weekly = executes on a specific weekday; monthly = executes on a specific day of month"
+    action_type:
+      type: string
+      enum: [log_message, recalculate_target_hours, reset_flextime, carry_forward_balance]
+    action_params:
+      type: object
+      description: "Action-specific configuration parameters"
+    is_active:
+      type: boolean
+    assignments:
+      type: array
+      items:
+        $ref: '#/MacroAssignment'
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+MacroAssignment:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - macro_id
+    - execution_day
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    macro_id:
+      type: string
+      format: uuid
+    tariff_id:
+      type: string
+      format: uuid
+      x-nullable: true
+      description: "Tariff this macro is assigned to (mutually exclusive with employee_id)"
+    employee_id:
+      type: string
+      format: uuid
+      x-nullable: true
+      description: "Employee this macro is assigned to (mutually exclusive with tariff_id)"
+    execution_day:
+      type: integer
+      description: "For weekly macros: 0=Sunday..6=Saturday. For monthly macros: 1-31 (falls back to last day of month if exceeds month length)"
+    is_active:
+      type: boolean
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+MacroExecution:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - macro_id
+    - status
+    - trigger_type
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    macro_id:
+      type: string
+      format: uuid
+    assignment_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    status:
+      type: string
+      enum: [pending, running, completed, failed]
+    trigger_type:
+      type: string
+      enum: [scheduled, manual]
+    triggered_by:
+      type: string
+      format: uuid
+      x-nullable: true
+    started_at:
+      type: string
+      format: date-time
+      x-nullable: true
+    completed_at:
+      type: string
+      format: date-time
+      x-nullable: true
+    result:
+      type: object
+    error_message:
+      type: string
+      x-nullable: true
+    created_at:
+      type: string
+      format: date-time
+
+MacroList:
+  type: object
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/Macro'
+
+MacroAssignmentList:
+  type: object
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/MacroAssignment'
+
+MacroExecutionList:
+  type: object
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/MacroExecution'
+
+CreateMacroRequest:
+  type: object
+  required:
+    - name
+    - macro_type
+    - action_type
+  properties:
+    name:
+      type: string
+    description:
+      type: string
+    macro_type:
+      type: string
+      enum: [weekly, monthly]
+    action_type:
+      type: string
+      enum: [log_message, recalculate_target_hours, reset_flextime, carry_forward_balance]
+    action_params:
+      type: object
+
+UpdateMacroRequest:
+  type: object
+  properties:
+    name:
+      type: string
+    description:
+      type: string
+    macro_type:
+      type: string
+      enum: [weekly, monthly]
+    action_type:
+      type: string
+      enum: [log_message, recalculate_target_hours, reset_flextime, carry_forward_balance]
+    action_params:
+      type: object
+    is_active:
+      type: boolean
+
+CreateMacroAssignmentRequest:
+  type: object
+  required:
+    - execution_day
+  properties:
+    tariff_id:
+      type: string
+      format: uuid
+      description: "Mutually exclusive with employee_id"
+    employee_id:
+      type: string
+      format: uuid
+      description: "Mutually exclusive with tariff_id"
+    execution_day:
+      type: integer
+      description: "For weekly: 0-6 (Sun-Sat). For monthly: 1-31."
+
+UpdateMacroAssignmentRequest:
+  type: object
+  properties:
+    execution_day:
+      type: integer
+    is_active:
+      type: boolean

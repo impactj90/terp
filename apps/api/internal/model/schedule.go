@@ -19,6 +19,7 @@ const (
 	TaskTypeAliveCheck        TaskType = "alive_check"
 	TaskTypeTerminalSync      TaskType = "terminal_sync"
 	TaskTypeTerminalImport    TaskType = "terminal_import"
+	TaskTypeExecuteMacros     TaskType = "execute_macros"
 )
 
 // TimingType represents a schedule timing type.

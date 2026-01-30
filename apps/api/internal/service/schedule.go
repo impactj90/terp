@@ -109,6 +109,8 @@ var validTaskTypes = map[string]bool{
 	"calculate_days": true, "calculate_months": true,
 	"backup_database": true, "send_notifications": true,
 	"export_data": true, "alive_check": true,
+	"terminal_sync": true, "terminal_import": true,
+	"execute_macros": true,
 }
 
 // Create creates a new schedule with optional tasks.
