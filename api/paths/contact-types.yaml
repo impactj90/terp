@@ -1,0 +1,247 @@
+# Contact Type endpoints
+/contact-types:
+  get:
+    tags:
+      - Contact Types
+    summary: List contact types
+    description: |
+      Returns all contact types for the tenant. Contact types define data
+      validation formats (email, phone, text, url) for contact fields.
+    operationId: listContactTypes
+    parameters:
+      - name: active
+        in: query
+        type: boolean
+        description: Filter by active status
+    responses:
+      200:
+        description: List of contact types
+        schema:
+          $ref: '../schemas/contact-types.yaml#/ContactTypeList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Contact Types
+    summary: Create contact type
+    description: |
+      Creates a new contact type with a unique code and data format.
+    operationId: createContactType
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/contact-types.yaml#/CreateContactTypeRequest'
+    responses:
+      201:
+        description: Created contact type
+        schema:
+          $ref: '../schemas/contact-types.yaml#/ContactType'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/contact-types/{id}:
+  get:
+    tags:
+      - Contact Types
+    summary: Get contact type by ID
+    description: Retrieves contact type details.
+    operationId: getContactType
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Contact type details
+        schema:
+          $ref: '../schemas/contact-types.yaml#/ContactType'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Contact Types
+    summary: Update contact type
+    description: Updates contact type properties. Code and data_type cannot be changed.
+    operationId: updateContactType
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/contact-types.yaml#/UpdateContactTypeRequest'
+    responses:
+      200:
+        description: Updated contact type
+        schema:
+          $ref: '../schemas/contact-types.yaml#/ContactType'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Contact Types
+    summary: Delete contact type
+    description: |
+      Permanently removes a contact type. Fails if contact kinds reference it.
+      Consider deactivating instead.
+    operationId: deleteContactType
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Contact type deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+      409:
+        description: Contact type is in use by contact kinds
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+# Contact Kind endpoints
+/contact-kinds:
+  get:
+    tags:
+      - Contact Kinds
+    summary: List contact kinds
+    description: |
+      Returns contact kinds for the tenant. Optionally filter by contact type or active status.
+    operationId: listContactKinds
+    parameters:
+      - name: contact_type_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by contact type ID
+      - name: active
+        in: query
+        type: boolean
+        description: Filter by active status
+    responses:
+      200:
+        description: List of contact kinds
+        schema:
+          $ref: '../schemas/contact-types.yaml#/ContactKindList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Contact Kinds
+    summary: Create contact kind
+    description: |
+      Creates a new contact kind linked to a contact type.
+    operationId: createContactKind
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/contact-types.yaml#/CreateContactKindRequest'
+    responses:
+      201:
+        description: Created contact kind
+        schema:
+          $ref: '../schemas/contact-types.yaml#/ContactKind'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/contact-kinds/{id}:
+  get:
+    tags:
+      - Contact Kinds
+    summary: Get contact kind by ID
+    description: Retrieves contact kind details.
+    operationId: getContactKind
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Contact kind details
+        schema:
+          $ref: '../schemas/contact-types.yaml#/ContactKind'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Contact Kinds
+    summary: Update contact kind
+    description: Updates contact kind properties. Code and contact_type_id cannot be changed.
+    operationId: updateContactKind
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/contact-types.yaml#/UpdateContactKindRequest'
+    responses:
+      200:
+        description: Updated contact kind
+        schema:
+          $ref: '../schemas/contact-types.yaml#/ContactKind'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Contact Kinds
+    summary: Delete contact kind
+    description: Permanently removes a contact kind. Consider deactivating instead.
+    operationId: deleteContactKind
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Contact kind deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

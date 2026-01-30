@@ -61,7 +61,7 @@ func GetTaskCatalog() []TaskCatalogItem {
 		{
 			TaskType:    model.TaskTypeSendNotifications,
 			Name:        "Send Notifications",
-			Description: "Sends pending notifications (placeholder - logs execution only).",
+			Description: "Processes all pending employee message recipients and delivers notifications.",
 			ParameterSchema: map[string]interface{}{
 				"type":       "object",
 				"properties": map[string]interface{}{},
@@ -86,6 +86,24 @@ func GetTaskCatalog() []TaskCatalogItem {
 			TaskType:    model.TaskTypeAliveCheck,
 			Name:        "Alive Check",
 			Description: "Simple heartbeat task that confirms the scheduler is running.",
+			ParameterSchema: map[string]interface{}{
+				"type":       "object",
+				"properties": map[string]interface{}{},
+			},
+		},
+		{
+			TaskType:    model.TaskTypeTerminalSync,
+			Name:        "Terminal Sync",
+			Description: "Placeholder for syncing data from physical terminals (not yet implemented).",
+			ParameterSchema: map[string]interface{}{
+				"type":       "object",
+				"properties": map[string]interface{}{},
+			},
+		},
+		{
+			TaskType:    model.TaskTypeTerminalImport,
+			Name:        "Terminal Import",
+			Description: "Processes pending raw terminal bookings and creates booking records.",
 			ParameterSchema: map[string]interface{}{
 				"type":       "object",
 				"properties": map[string]interface{}{},

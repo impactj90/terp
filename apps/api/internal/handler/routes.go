@@ -1199,3 +1199,97 @@ func RegisterSystemSettingsRoutes(r chi.Router, h *SystemSettingsHandler, authz 
 		r.With(authz.RequirePermission(permManage)).Post("/cleanup/mark-delete-orders", h.CleanupMarkDeleteOrders)
 	})
 }
+
+// RegisterEmployeeMessageRoutes registers employee message routes.
+func RegisterEmployeeMessageRoutes(r chi.Router, h *EmployeeMessageHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("notifications.manage").String()
+
+	r.Route("/employee-messages", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Post("/{id}/send", h.Send)
+			return
+		}
+
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Post("/{id}/send", h.Send)
+	})
+
+	// Employee-nested route: /employees/{id}/messages
+	if authz == nil {
+		r.Get("/employees/{id}/messages", h.ListForEmployee)
+	} else {
+		r.With(authz.RequirePermission(permManage)).Get("/employees/{id}/messages", h.ListForEmployee)
+	}
+}
+
+// RegisterContactTypeRoutes registers contact type routes.
+func RegisterContactTypeRoutes(r chi.Router, h *ContactTypeHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("contact_management.manage").String()
+	r.Route("/contact-types", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+	})
+}
+
+// RegisterTerminalBookingRoutes registers terminal booking and import batch routes.
+func RegisterTerminalBookingRoutes(r chi.Router, h *TerminalHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("terminal_bookings.manage").String()
+
+	r.Route("/terminal-bookings", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.ListRawBookings)
+			r.Post("/import", h.TriggerImport)
+			return
+		}
+
+		r.With(authz.RequirePermission(permManage)).Get("/", h.ListRawBookings)
+		r.With(authz.RequirePermission(permManage)).Post("/import", h.TriggerImport)
+	})
+
+	r.Route("/import-batches", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.ListImportBatches)
+			r.Get("/{id}", h.GetImportBatch)
+			return
+		}
+
+		r.With(authz.RequirePermission(permManage)).Get("/", h.ListImportBatches)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.GetImportBatch)
+	})
+}
+
+// RegisterContactKindRoutes registers contact kind routes.
+func RegisterContactKindRoutes(r chi.Router, h *ContactKindHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("contact_management.manage").String()
+	r.Route("/contact-kinds", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+	})
+}

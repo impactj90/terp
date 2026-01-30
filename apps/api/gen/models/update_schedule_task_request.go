@@ -30,7 +30,7 @@ type UpdateScheduleTaskRequest struct {
 	SortOrder int64 `json:"sort_order,omitempty"`
 
 	// task type
-	// Enum: ["calculate_days","calculate_months","backup_database","send_notifications","export_data","alive_check"]
+	// Enum: ["calculate_days","calculate_months","backup_database","send_notifications","export_data","alive_check","terminal_sync","terminal_import"]
 	TaskType string `json:"task_type,omitempty"`
 }
 
@@ -52,7 +52,7 @@ var updateScheduleTaskRequestTypeTaskTypePropEnum []any
 
 func init() {
 	var res []string
-	if err := json.Unmarshal([]byte(`["calculate_days","calculate_months","backup_database","send_notifications","export_data","alive_check"]`), &res); err != nil {
+	if err := json.Unmarshal([]byte(`["calculate_days","calculate_months","backup_database","send_notifications","export_data","alive_check","terminal_sync","terminal_import"]`), &res); err != nil {
 		panic(err)
 	}
 	for _, v := range res {
@@ -79,6 +79,12 @@ const (
 
 	// UpdateScheduleTaskRequestTaskTypeAliveCheck captures enum value "alive_check"
 	UpdateScheduleTaskRequestTaskTypeAliveCheck string = "alive_check"
+
+	// UpdateScheduleTaskRequestTaskTypeTerminalSync captures enum value "terminal_sync"
+	UpdateScheduleTaskRequestTaskTypeTerminalSync string = "terminal_sync"
+
+	// UpdateScheduleTaskRequestTaskTypeTerminalImport captures enum value "terminal_import"
+	UpdateScheduleTaskRequestTaskTypeTerminalImport string = "terminal_import"
 )
 
 // prop value enum

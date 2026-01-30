@@ -140,6 +140,14 @@ tags:
     description: Schedule management and automated task execution
   - name: System Settings
     description: System-wide settings and cleanup tools
+  - name: Employee Messages
+    description: Employee message creation and delivery
+  - name: Contact Types
+    description: Contact type and kind management (Kontaktmanagement)
+  - name: Contact Kinds
+    description: Contact kind management linked to contact types
+  - name: Terminal Bookings
+    description: Raw terminal booking data and import batch management
 securityDefinitions:
   BearerAuth:
     type: apiKey
@@ -8760,6 +8768,547 @@ paths:
             $ref: '#/definitions/TaskCatalog'
         '401':
           $ref: '#/responses/Unauthorized'
+  /employee-messages:
+    get:
+      tags:
+        - Employee Messages
+      summary: List employee messages
+      operationId: listEmployeeMessages
+      parameters:
+        - name: status
+          in: query
+          type: string
+          enum:
+            - pending
+            - sent
+            - failed
+          description: Filter by recipient status (returns messages that have at least one recipient with this status)
+        - name: limit
+          in: query
+          type: integer
+          default: 20
+          minimum: 1
+          maximum: 100
+        - name: offset
+          in: query
+          type: integer
+          minimum: 0
+          default: 0
+      responses:
+        '200':
+          description: List of employee messages
+          schema:
+            $ref: '#/definitions/EmployeeMessageList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '403':
+          $ref: '#/responses/Forbidden'
+    post:
+      tags:
+        - Employee Messages
+      summary: Create a new employee message
+      operationId: createEmployeeMessage
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateEmployeeMessageRequest'
+      responses:
+        '201':
+          description: Created employee message
+          schema:
+            $ref: '#/definitions/EmployeeMessage'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '403':
+          $ref: '#/responses/Forbidden'
+  '/employee-messages/{id}':
+    get:
+      tags:
+        - Employee Messages
+      summary: Get an employee message by ID
+      operationId: getEmployeeMessage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Employee message
+          schema:
+            $ref: '#/definitions/EmployeeMessage'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '403':
+          $ref: '#/responses/Forbidden'
+        '404':
+          $ref: '#/responses/NotFound'
+  '/employee-messages/{id}/send':
+    post:
+      tags:
+        - Employee Messages
+      summary: Send an employee message (deliver to all pending recipients)
+      operationId: sendEmployeeMessage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Send result
+          schema:
+            $ref: '#/definitions/SendEmployeeMessageResponse'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '403':
+          $ref: '#/responses/Forbidden'
+        '404':
+          $ref: '#/responses/NotFound'
+  '/employees/{id}/messages':
+    get:
+      tags:
+        - Employee Messages
+      summary: List messages for a specific employee
+      operationId: listEmployeeMessagesForEmployee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+          description: Employee ID
+        - name: limit
+          in: query
+          type: integer
+          default: 20
+          minimum: 1
+          maximum: 100
+        - name: offset
+          in: query
+          type: integer
+          minimum: 0
+          default: 0
+      responses:
+        '200':
+          description: List of messages for the employee
+          schema:
+            $ref: '#/definitions/EmployeeMessageList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '403':
+          $ref: '#/responses/Forbidden'
+  /contact-types:
+    get:
+      tags:
+        - Contact Types
+      summary: List contact types
+      description: |
+        Returns all contact types for the tenant. Contact types define data
+        validation formats (email, phone, text, url) for contact fields.
+      operationId: listContactTypes
+      parameters:
+        - name: active
+          in: query
+          type: boolean
+          description: Filter by active status
+      responses:
+        '200':
+          description: List of contact types
+          schema:
+            $ref: '#/definitions/ContactTypeList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+    post:
+      tags:
+        - Contact Types
+      summary: Create contact type
+      description: |
+        Creates a new contact type with a unique code and data format.
+      operationId: createContactType
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateContactTypeRequest'
+      responses:
+        '201':
+          description: Created contact type
+          schema:
+            $ref: '#/definitions/ContactType'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '409':
+          description: Code already exists
+          schema:
+            $ref: '#/definitions/ProblemDetails'
+  '/contact-types/{id}':
+    get:
+      tags:
+        - Contact Types
+      summary: Get contact type by ID
+      description: Retrieves contact type details.
+      operationId: getContactType
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Contact type details
+          schema:
+            $ref: '#/definitions/ContactType'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    patch:
+      tags:
+        - Contact Types
+      summary: Update contact type
+      description: Updates contact type properties. Code and data_type cannot be changed.
+      operationId: updateContactType
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateContactTypeRequest'
+      responses:
+        '200':
+          description: Updated contact type
+          schema:
+            $ref: '#/definitions/ContactType'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    delete:
+      tags:
+        - Contact Types
+      summary: Delete contact type
+      description: |
+        Permanently removes a contact type. Fails if contact kinds reference it.
+        Consider deactivating instead.
+      operationId: deleteContactType
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Contact type deleted
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+        '409':
+          description: Contact type is in use by contact kinds
+          schema:
+            $ref: '#/definitions/ProblemDetails'
+  /contact-kinds:
+    get:
+      tags:
+        - Contact Kinds
+      summary: List contact kinds
+      description: |
+        Returns contact kinds for the tenant. Optionally filter by contact type or active status.
+      operationId: listContactKinds
+      parameters:
+        - name: contact_type_id
+          in: query
+          type: string
+          format: uuid
+          description: Filter by contact type ID
+        - name: active
+          in: query
+          type: boolean
+          description: Filter by active status
+      responses:
+        '200':
+          description: List of contact kinds
+          schema:
+            $ref: '#/definitions/ContactKindList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+    post:
+      tags:
+        - Contact Kinds
+      summary: Create contact kind
+      description: |
+        Creates a new contact kind linked to a contact type.
+      operationId: createContactKind
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateContactKindRequest'
+      responses:
+        '201':
+          description: Created contact kind
+          schema:
+            $ref: '#/definitions/ContactKind'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '409':
+          description: Code already exists
+          schema:
+            $ref: '#/definitions/ProblemDetails'
+  '/contact-kinds/{id}':
+    get:
+      tags:
+        - Contact Kinds
+      summary: Get contact kind by ID
+      description: Retrieves contact kind details.
+      operationId: getContactKind
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Contact kind details
+          schema:
+            $ref: '#/definitions/ContactKind'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    patch:
+      tags:
+        - Contact Kinds
+      summary: Update contact kind
+      description: Updates contact kind properties. Code and contact_type_id cannot be changed.
+      operationId: updateContactKind
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateContactKindRequest'
+      responses:
+        '200':
+          description: Updated contact kind
+          schema:
+            $ref: '#/definitions/ContactKind'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    delete:
+      tags:
+        - Contact Kinds
+      summary: Delete contact kind
+      description: Permanently removes a contact kind. Consider deactivating instead.
+      operationId: deleteContactKind
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Contact kind deleted
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+  /terminal-bookings:
+    get:
+      summary: List raw terminal bookings
+      description: List raw terminal bookings filtered by date range and optional terminal ID.
+      operationId: listRawTerminalBookings
+      tags:
+        - Terminal Bookings
+      parameters:
+        - name: X-Tenant-ID
+          in: header
+          required: true
+          type: string
+          format: uuid
+        - name: from
+          in: query
+          required: true
+          type: string
+          format: date
+          description: Start date (inclusive)
+        - name: to
+          in: query
+          required: true
+          type: string
+          format: date
+          description: End date (inclusive)
+        - name: terminal_id
+          in: query
+          type: string
+          description: Filter by terminal device ID
+        - name: employee_id
+          in: query
+          type: string
+          format: uuid
+          description: Filter by employee ID
+        - name: status
+          in: query
+          type: string
+          enum:
+            - pending
+            - processed
+            - failed
+            - skipped
+          description: Filter by processing status
+        - name: import_batch_id
+          in: query
+          type: string
+          format: uuid
+          description: Filter by import batch
+        - name: limit
+          in: query
+          type: integer
+          default: 50
+        - name: page
+          in: query
+          type: integer
+          default: 1
+      responses:
+        '200':
+          description: List of raw terminal bookings
+          schema:
+            $ref: '#/definitions/RawTerminalBookingList'
+        '400':
+          description: Invalid request parameters
+          schema:
+            $ref: '#/definitions/ProblemDetails'
+  /terminal-bookings/import:
+    post:
+      summary: Trigger terminal booking import
+      description: |
+        Import raw bookings from a terminal. The import is idempotent per batch_reference:
+        if the same batch_reference has already been imported for this tenant, the request
+        returns the existing batch without re-importing.
+      operationId: triggerTerminalImport
+      tags:
+        - Terminal Bookings
+      parameters:
+        - name: X-Tenant-ID
+          in: header
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/TriggerTerminalImportRequest'
+      responses:
+        '200':
+          description: Import triggered (or duplicate batch returned)
+          schema:
+            $ref: '#/definitions/TriggerTerminalImportResponse'
+        '400':
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/ProblemDetails'
+        '409':
+          description: Batch already imported (idempotent - returns existing batch)
+          schema:
+            $ref: '#/definitions/TriggerTerminalImportResponse'
+  /import-batches:
+    get:
+      summary: List import batches
+      description: List terminal import batches with optional filters.
+      operationId: listImportBatches
+      tags:
+        - Terminal Bookings
+      parameters:
+        - name: X-Tenant-ID
+          in: header
+          required: true
+          type: string
+          format: uuid
+        - name: status
+          in: query
+          type: string
+          enum:
+            - pending
+            - processing
+            - completed
+            - failed
+        - name: terminal_id
+          in: query
+          type: string
+        - name: limit
+          in: query
+          type: integer
+          default: 50
+        - name: page
+          in: query
+          type: integer
+          default: 1
+      responses:
+        '200':
+          description: List of import batches
+          schema:
+            $ref: '#/definitions/ImportBatchList'
+  '/import-batches/{id}':
+    get:
+      summary: Get import batch by ID
+      description: Get a single import batch with its summary.
+      operationId: getImportBatch
+      tags:
+        - Terminal Bookings
+      parameters:
+        - name: X-Tenant-ID
+          in: header
+          required: true
+          type: string
+          format: uuid
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Import batch details
+          schema:
+            $ref: '#/definitions/ImportBatch'
+        '404':
+          description: Batch not found
+          schema:
+            $ref: '#/definitions/ProblemDetails'
 definitions:
   UUID:
     type: string
@@ -9819,6 +10368,12 @@ definitions:
                 - mobile
                 - emergency
               example: email
+              description: 'Deprecated: Use contact_kind_id instead'
+            contact_kind_id:
+              type: string
+              format: uuid
+              x-nullable: true
+              description: Reference to configurable contact kind. Replaces contact_type.
             value:
               type: string
               example: john.doe@example.com
@@ -10181,6 +10736,11 @@ definitions:
           - phone
           - mobile
           - emergency
+        description: 'Deprecated: Use contact_kind_id instead'
+      contact_kind_id:
+        type: string
+        format: uuid
+        description: Reference to configurable contact kind. Replaces contact_type.
       value:
         type: string
         minLength: 1
@@ -17491,6 +18051,8 @@ definitions:
           - send_notifications
           - export_data
           - alive_check
+          - terminal_sync
+          - terminal_import
       sort_order:
         type: integer
       parameters:
@@ -17615,6 +18177,8 @@ definitions:
           - send_notifications
           - export_data
           - alive_check
+          - terminal_sync
+          - terminal_import
       name:
         type: string
       description:
@@ -17691,6 +18255,8 @@ definitions:
           - send_notifications
           - export_data
           - alive_check
+          - terminal_sync
+          - terminal_import
       sort_order:
         type: integer
       parameters:
@@ -17710,6 +18276,8 @@ definitions:
           - send_notifications
           - export_data
           - alive_check
+          - terminal_sync
+          - terminal_import
       sort_order:
         type: integer
       parameters:
@@ -17751,6 +18319,496 @@ definitions:
         type: array
         items:
           $ref: '#/definitions/TaskCatalogEntry'
+  EmployeeMessage:
+    type: object
+    required:
+      - id
+      - tenant_id
+      - sender_id
+      - subject
+      - body
+      - created_at
+      - updated_at
+      - recipients
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      sender_id:
+        type: string
+        format: uuid
+      subject:
+        type: string
+        example: Schedule change notification
+      body:
+        type: string
+        example: Your shift has been updated for next week.
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+      recipients:
+        type: array
+        items:
+          $ref: '#/definitions/EmployeeMessageRecipient'
+  EmployeeMessageRecipient:
+    type: object
+    required:
+      - id
+      - message_id
+      - employee_id
+      - status
+      - created_at
+      - updated_at
+    properties:
+      id:
+        type: string
+        format: uuid
+      message_id:
+        type: string
+        format: uuid
+      employee_id:
+        type: string
+        format: uuid
+      status:
+        type: string
+        enum:
+          - pending
+          - sent
+          - failed
+      sent_at:
+        type: string
+        format: date-time
+        x-nullable: true
+      error_message:
+        type: string
+        x-nullable: true
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  EmployeeMessageList:
+    type: object
+    required:
+      - data
+      - total
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/EmployeeMessage'
+      total:
+        type: integer
+        format: int64
+  CreateEmployeeMessageRequest:
+    type: object
+    required:
+      - subject
+      - body
+      - employee_ids
+    properties:
+      subject:
+        type: string
+        minLength: 1
+        maxLength: 255
+      body:
+        type: string
+        minLength: 1
+      employee_ids:
+        type: array
+        items:
+          type: string
+          format: uuid
+        minItems: 1
+  SendEmployeeMessageResponse:
+    type: object
+    required:
+      - message_id
+      - sent
+      - failed
+    properties:
+      message_id:
+        type: string
+        format: uuid
+      sent:
+        type: integer
+        format: int64
+        description: Number of recipients successfully sent
+      failed:
+        type: integer
+        format: int64
+        description: Number of recipients that failed
+  ContactType:
+    type: object
+    required:
+      - id
+      - tenant_id
+      - code
+      - name
+      - data_type
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      code:
+        type: string
+        example: EMAIL
+      name:
+        type: string
+        example: Email Address
+      data_type:
+        type: string
+        enum:
+          - text
+          - email
+          - phone
+          - url
+        example: email
+        description: Validation format for contact values
+      description:
+        type: string
+        x-nullable: true
+      is_active:
+        type: boolean
+        example: true
+      sort_order:
+        type: integer
+        example: 0
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  CreateContactTypeRequest:
+    type: object
+    required:
+      - code
+      - name
+      - data_type
+    properties:
+      code:
+        type: string
+        minLength: 1
+        maxLength: 50
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      data_type:
+        type: string
+        enum:
+          - text
+          - email
+          - phone
+          - url
+      description:
+        type: string
+      sort_order:
+        type: integer
+  UpdateContactTypeRequest:
+    type: object
+    properties:
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      description:
+        type: string
+      is_active:
+        type: boolean
+      sort_order:
+        type: integer
+  ContactTypeList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/ContactType'
+  ContactKind:
+    type: object
+    required:
+      - id
+      - tenant_id
+      - contact_type_id
+      - code
+      - label
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      contact_type_id:
+        type: string
+        format: uuid
+      code:
+        type: string
+        example: WORK_EMAIL
+      label:
+        type: string
+        example: Work Email
+      is_active:
+        type: boolean
+        example: true
+      sort_order:
+        type: integer
+        example: 0
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  CreateContactKindRequest:
+    type: object
+    required:
+      - contact_type_id
+      - code
+      - label
+    properties:
+      contact_type_id:
+        type: string
+        format: uuid
+      code:
+        type: string
+        minLength: 1
+        maxLength: 50
+      label:
+        type: string
+        minLength: 1
+        maxLength: 255
+      sort_order:
+        type: integer
+  UpdateContactKindRequest:
+    type: object
+    properties:
+      label:
+        type: string
+        minLength: 1
+        maxLength: 255
+      is_active:
+        type: boolean
+      sort_order:
+        type: integer
+  ContactKindList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/ContactKind'
+  RawTerminalBooking:
+    type: object
+    required:
+      - id
+      - tenant_id
+      - import_batch_id
+      - terminal_id
+      - employee_pin
+      - raw_timestamp
+      - raw_booking_code
+      - booking_date
+      - status
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      import_batch_id:
+        type: string
+        format: uuid
+      terminal_id:
+        type: string
+      employee_pin:
+        type: string
+      employee_id:
+        type: string
+        format: uuid
+        x-nullable: true
+      raw_timestamp:
+        type: string
+        format: date-time
+      raw_booking_code:
+        type: string
+        description: 'Raw booking code from terminal (e.g. A1, A2, P1, P2, D1, D2)'
+      booking_date:
+        type: string
+        format: date
+      booking_type_id:
+        type: string
+        format: uuid
+        x-nullable: true
+      processed_booking_id:
+        type: string
+        format: uuid
+        x-nullable: true
+      status:
+        type: string
+        enum:
+          - pending
+          - processed
+          - failed
+          - skipped
+      error_message:
+        type: string
+        x-nullable: true
+      employee:
+        $ref: '#/definitions/EmployeeSummary'
+      booking_type:
+        $ref: '#/definitions/BookingTypeSummary'
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  RawTerminalBookingList:
+    type: object
+    required:
+      - data
+      - meta
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/RawTerminalBooking'
+      meta:
+        $ref: '#/definitions/PaginationMeta'
+  ImportBatch:
+    type: object
+    required:
+      - id
+      - tenant_id
+      - batch_reference
+      - source
+      - status
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      batch_reference:
+        type: string
+      source:
+        type: string
+      terminal_id:
+        type: string
+        x-nullable: true
+      status:
+        type: string
+        enum:
+          - pending
+          - processing
+          - completed
+          - failed
+      records_total:
+        type: integer
+      records_imported:
+        type: integer
+      records_failed:
+        type: integer
+      error_message:
+        type: string
+        x-nullable: true
+      started_at:
+        type: string
+        format: date-time
+        x-nullable: true
+      completed_at:
+        type: string
+        format: date-time
+        x-nullable: true
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  ImportBatchList:
+    type: object
+    required:
+      - data
+      - meta
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/ImportBatch'
+      meta:
+        $ref: '#/definitions/PaginationMeta'
+  TriggerTerminalImportRequest:
+    type: object
+    required:
+      - batch_reference
+      - terminal_id
+      - bookings
+    properties:
+      batch_reference:
+        type: string
+        minLength: 1
+        maxLength: 255
+        description: Unique batch identifier for idempotent import
+      terminal_id:
+        type: string
+        minLength: 1
+        maxLength: 100
+      bookings:
+        type: array
+        items:
+          $ref: '#/definitions/RawTerminalBookingInput'
+  TriggerTerminalImportResponse:
+    type: object
+    required:
+      - batch
+    properties:
+      batch:
+        $ref: '#/definitions/ImportBatch'
+      message:
+        type: string
+        description: Human-readable result message
+      was_duplicate:
+        type: boolean
+        description: True if this batch_reference was already imported (idempotent)
+  RawTerminalBookingInput:
+    type: object
+    required:
+      - employee_pin
+      - raw_timestamp
+      - raw_booking_code
+    properties:
+      employee_pin:
+        type: string
+        minLength: 1
+        maxLength: 20
+      raw_timestamp:
+        type: string
+        format: date-time
+      raw_booking_code:
+        type: string
+        minLength: 1
+        maxLength: 20
+        description: 'Booking code (e.g. A1, A2, P1, P2, D1, D2)'
 responses:
   BadRequest:
     description: Invalid request

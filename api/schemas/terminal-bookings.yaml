@@ -1,0 +1,195 @@
+# Terminal Booking schemas
+
+RawTerminalBooking:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - import_batch_id
+    - terminal_id
+    - employee_pin
+    - raw_timestamp
+    - raw_booking_code
+    - booking_date
+    - status
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    import_batch_id:
+      type: string
+      format: uuid
+    terminal_id:
+      type: string
+    employee_pin:
+      type: string
+    employee_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    raw_timestamp:
+      type: string
+      format: date-time
+    raw_booking_code:
+      type: string
+      description: "Raw booking code from terminal (e.g. A1, A2, P1, P2, D1, D2)"
+    booking_date:
+      type: string
+      format: date
+    booking_type_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    processed_booking_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    status:
+      type: string
+      enum: [pending, processed, failed, skipped]
+    error_message:
+      type: string
+      x-nullable: true
+    employee:
+      $ref: './employees.yaml#/EmployeeSummary'
+    booking_type:
+      $ref: './booking-types.yaml#/BookingTypeSummary'
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+RawTerminalBookingList:
+  type: object
+  required:
+    - data
+    - meta
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/RawTerminalBooking'
+    meta:
+      $ref: './common.yaml#/PaginationMeta'
+
+ImportBatch:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - batch_reference
+    - source
+    - status
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    batch_reference:
+      type: string
+    source:
+      type: string
+    terminal_id:
+      type: string
+      x-nullable: true
+    status:
+      type: string
+      enum: [pending, processing, completed, failed]
+    records_total:
+      type: integer
+    records_imported:
+      type: integer
+    records_failed:
+      type: integer
+    error_message:
+      type: string
+      x-nullable: true
+    started_at:
+      type: string
+      format: date-time
+      x-nullable: true
+    completed_at:
+      type: string
+      format: date-time
+      x-nullable: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+ImportBatchList:
+  type: object
+  required:
+    - data
+    - meta
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/ImportBatch'
+    meta:
+      $ref: './common.yaml#/PaginationMeta'
+
+TriggerTerminalImportRequest:
+  type: object
+  required:
+    - batch_reference
+    - terminal_id
+    - bookings
+  properties:
+    batch_reference:
+      type: string
+      minLength: 1
+      maxLength: 255
+      description: "Unique batch identifier for idempotent import"
+    terminal_id:
+      type: string
+      minLength: 1
+      maxLength: 100
+    bookings:
+      type: array
+      items:
+        $ref: '#/RawTerminalBookingInput'
+
+RawTerminalBookingInput:
+  type: object
+  required:
+    - employee_pin
+    - raw_timestamp
+    - raw_booking_code
+  properties:
+    employee_pin:
+      type: string
+      minLength: 1
+      maxLength: 20
+    raw_timestamp:
+      type: string
+      format: date-time
+    raw_booking_code:
+      type: string
+      minLength: 1
+      maxLength: 20
+      description: "Booking code (e.g. A1, A2, P1, P2, D1, D2)"
+
+TriggerTerminalImportResponse:
+  type: object
+  required:
+    - batch
+  properties:
+    batch:
+      $ref: '#/ImportBatch'
+    message:
+      type: string
+      description: "Human-readable result message"
+    was_duplicate:
+      type: boolean
+      description: "True if this batch_reference was already imported (idempotent)"

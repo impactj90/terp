@@ -20,7 +20,11 @@ import (
 // swagger:model employeeContactsItems
 type EmployeeContactsItems struct {
 
-	// contact type
+	// Reference to configurable contact kind. Replaces contact_type.
+	// Format: uuid
+	ContactKindID *strfmt.UUID `json:"contact_kind_id,omitempty"`
+
+	// Deprecated: Use contact_kind_id instead
 	// Example: email
 	// Required: true
 	// Enum: ["email","phone","mobile","emergency"]
@@ -62,6 +66,10 @@ type EmployeeContactsItems struct {
 func (m *EmployeeContactsItems) Validate(formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.validateContactKindID(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateContactType(formats); err != nil {
 		res = append(res, err)
 	}
@@ -89,6 +97,18 @@ func (m *EmployeeContactsItems) Validate(formats strfmt.Registry) error {
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *EmployeeContactsItems) validateContactKindID(formats strfmt.Registry) error {
+	if swag.IsZero(m.ContactKindID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("contact_kind_id", "body", "uuid", m.ContactKindID.String(), formats); err != nil {
+		return err
+	}
+
 	return nil
 }
 

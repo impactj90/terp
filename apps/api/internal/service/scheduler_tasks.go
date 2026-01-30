@@ -187,6 +187,83 @@ func (h *CalculateMonthsTaskHandler) Execute(ctx context.Context, tenantID uuid.
 	return data, nil
 }
 
+// --- Send Notifications Task ---
+
+// sendNotificationsServiceForScheduler defines the interface for the employee message service.
+type sendNotificationsServiceForScheduler interface {
+	ProcessPendingNotifications(ctx context.Context) (*SendResult, error)
+}
+
+// SendNotificationsTaskHandler handles the send_notifications task type.
+type SendNotificationsTaskHandler struct {
+	employeeMessageService sendNotificationsServiceForScheduler
+}
+
+// NewSendNotificationsTaskHandler creates a new SendNotificationsTaskHandler.
+func NewSendNotificationsTaskHandler(employeeMessageService sendNotificationsServiceForScheduler) *SendNotificationsTaskHandler {
+	return &SendNotificationsTaskHandler{employeeMessageService: employeeMessageService}
+}
+
+// Execute runs the send_notifications task - processes all pending employee message recipients.
+func (h *SendNotificationsTaskHandler) Execute(ctx context.Context, tenantID uuid.UUID, _ json.RawMessage) (json.RawMessage, error) {
+	log.Info().
+		Str("tenant_id", tenantID.String()).
+		Msg("executing send_notifications task")
+
+	result, err := h.employeeMessageService.ProcessPendingNotifications(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("send_notifications failed: %w", err)
+	}
+
+	data, _ := json.Marshal(map[string]interface{}{
+		"sent":   result.Sent,
+		"failed": result.Failed,
+	})
+	return data, nil
+}
+
+// --- Terminal Import Task ---
+
+// terminalImportServiceForScheduler defines the interface for the terminal import service.
+type terminalImportServiceForScheduler interface {
+	ListRawBookings(ctx context.Context, filter ListRawBookingsFilter) ([]model.RawTerminalBooking, int64, error)
+}
+
+// TerminalImportTaskHandler handles the terminal_import task type.
+type TerminalImportTaskHandler struct {
+	terminalService terminalImportServiceForScheduler
+}
+
+// NewTerminalImportTaskHandler creates a new TerminalImportTaskHandler.
+func NewTerminalImportTaskHandler(terminalService terminalImportServiceForScheduler) *TerminalImportTaskHandler {
+	return &TerminalImportTaskHandler{terminalService: terminalService}
+}
+
+// Execute runs the terminal_import task - processes pending raw terminal bookings.
+func (h *TerminalImportTaskHandler) Execute(ctx context.Context, tenantID uuid.UUID, _ json.RawMessage) (json.RawMessage, error) {
+	log.Info().
+		Str("tenant_id", tenantID.String()).
+		Msg("executing terminal_import task")
+
+	pending := model.RawBookingStatusPending
+	bookings, total, err := h.terminalService.ListRawBookings(ctx, ListRawBookingsFilter{
+		TenantID: tenantID,
+		Status:   &pending,
+		Limit:    1000,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("terminal_import: failed to list pending bookings: %w", err)
+	}
+
+	data, _ := json.Marshal(map[string]interface{}{
+		"status":          "completed",
+		"pending_total":   total,
+		"fetched":         len(bookings),
+		"message":         "Terminal import task executed (processing placeholder)",
+	})
+	return data, nil
+}
+
 // --- Placeholder Task Handlers ---
 
 // PlaceholderTaskHandler is a no-op handler for not-yet-implemented tasks.

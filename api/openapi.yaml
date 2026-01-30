@@ -143,6 +143,14 @@ tags:
     description: Schedule management and automated task execution
   - name: System Settings
     description: System-wide settings and cleanup tools
+  - name: Employee Messages
+    description: Employee message creation and delivery
+  - name: Contact Types
+    description: Contact type and kind management (Kontaktmanagement)
+  - name: Contact Kinds
+    description: Contact kind management linked to contact types
+  - name: Terminal Bookings
+    description: Raw terminal booking data and import batch management
 
 securityDefinitions:
   BearerAuth:
@@ -626,6 +634,38 @@ paths:
     $ref: 'paths/schedules.yaml#/~1schedule-executions~1{id}'
   /scheduler/task-catalog:
     $ref: 'paths/schedules.yaml#/~1scheduler~1task-catalog'
+
+  # Employee Messages
+  /employee-messages:
+    $ref: 'paths/employee-messages.yaml#/~1employee-messages'
+  /employee-messages/{id}:
+    $ref: 'paths/employee-messages.yaml#/~1employee-messages~1{id}'
+  /employee-messages/{id}/send:
+    $ref: 'paths/employee-messages.yaml#/~1employee-messages~1{id}~1send'
+  /employees/{id}/messages:
+    $ref: 'paths/employee-messages.yaml#/~1employees~1{id}~1messages'
+
+  # Contact Types
+  /contact-types:
+    $ref: 'paths/contact-types.yaml#/~1contact-types'
+  /contact-types/{id}:
+    $ref: 'paths/contact-types.yaml#/~1contact-types~1{id}'
+
+  # Contact Kinds
+  /contact-kinds:
+    $ref: 'paths/contact-types.yaml#/~1contact-kinds'
+  /contact-kinds/{id}:
+    $ref: 'paths/contact-types.yaml#/~1contact-kinds~1{id}'
+
+  # Terminal Bookings
+  /terminal-bookings:
+    $ref: 'paths/terminal-bookings.yaml#/~1terminal-bookings'
+  /terminal-bookings/import:
+    $ref: 'paths/terminal-bookings.yaml#/~1terminal-bookings~1import'
+  /import-batches:
+    $ref: 'paths/terminal-bookings.yaml#/~1import-batches'
+  /import-batches/{id}:
+    $ref: 'paths/terminal-bookings.yaml#/~1import-batches~1{id}'
 
 definitions:
   # Common
@@ -1283,6 +1323,54 @@ definitions:
     $ref: 'schemas/schedules.yaml#/ScheduleExecutionList'
   TaskCatalog:
     $ref: 'schemas/schedules.yaml#/TaskCatalog'
+
+  # Employee Messages
+  EmployeeMessage:
+    $ref: 'schemas/employee-messages.yaml#/EmployeeMessage'
+  EmployeeMessageRecipient:
+    $ref: 'schemas/employee-messages.yaml#/EmployeeMessageRecipient'
+  EmployeeMessageList:
+    $ref: 'schemas/employee-messages.yaml#/EmployeeMessageList'
+  CreateEmployeeMessageRequest:
+    $ref: 'schemas/employee-messages.yaml#/CreateEmployeeMessageRequest'
+  SendEmployeeMessageResponse:
+    $ref: 'schemas/employee-messages.yaml#/SendEmployeeMessageResponse'
+
+  # Contact Types
+  ContactType:
+    $ref: 'schemas/contact-types.yaml#/ContactType'
+  CreateContactTypeRequest:
+    $ref: 'schemas/contact-types.yaml#/CreateContactTypeRequest'
+  UpdateContactTypeRequest:
+    $ref: 'schemas/contact-types.yaml#/UpdateContactTypeRequest'
+  ContactTypeList:
+    $ref: 'schemas/contact-types.yaml#/ContactTypeList'
+
+  # Contact Kinds
+  ContactKind:
+    $ref: 'schemas/contact-types.yaml#/ContactKind'
+  CreateContactKindRequest:
+    $ref: 'schemas/contact-types.yaml#/CreateContactKindRequest'
+  UpdateContactKindRequest:
+    $ref: 'schemas/contact-types.yaml#/UpdateContactKindRequest'
+  ContactKindList:
+    $ref: 'schemas/contact-types.yaml#/ContactKindList'
+
+  # Terminal Bookings
+  RawTerminalBooking:
+    $ref: 'schemas/terminal-bookings.yaml#/RawTerminalBooking'
+  RawTerminalBookingList:
+    $ref: 'schemas/terminal-bookings.yaml#/RawTerminalBookingList'
+  ImportBatch:
+    $ref: 'schemas/terminal-bookings.yaml#/ImportBatch'
+  ImportBatchList:
+    $ref: 'schemas/terminal-bookings.yaml#/ImportBatchList'
+  TriggerTerminalImportRequest:
+    $ref: 'schemas/terminal-bookings.yaml#/TriggerTerminalImportRequest'
+  TriggerTerminalImportResponse:
+    $ref: 'schemas/terminal-bookings.yaml#/TriggerTerminalImportResponse'
+  RawTerminalBookingInput:
+    $ref: 'schemas/terminal-bookings.yaml#/RawTerminalBookingInput'
 
 responses:
   BadRequest:

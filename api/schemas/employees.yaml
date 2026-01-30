@@ -276,6 +276,12 @@ EmployeeContact:
         - mobile
         - emergency
       example: "email"
+      description: "Deprecated: Use contact_kind_id instead"
+    contact_kind_id:
+      type: string
+      format: uuid
+      x-nullable: true
+      description: "Reference to configurable contact kind. Replaces contact_type."
     value:
       type: string
       example: "john.doe@example.com"
@@ -615,6 +621,11 @@ CreateEmployeeContactRequest:
         - phone
         - mobile
         - emergency
+      description: "Deprecated: Use contact_kind_id instead"
+    contact_kind_id:
+      type: string
+      format: uuid
+      description: "Reference to configurable contact kind. Replaces contact_type."
     value:
       type: string
       minLength: 1

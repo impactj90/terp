@@ -287,6 +287,26 @@ func main() {
 	reportService := service.NewReportService(reportRepo, employeeRepo, dailyValueRepo, monthlyValueRepo, absenceDayRepo, vacationBalanceRepo, teamRepo)
 	reportHandler := handler.NewReportHandler(reportService)
 
+	// Initialize Employee Messages
+	employeeMessageRepo := repository.NewEmployeeMessageRepository(db)
+	employeeMessageService := service.NewEmployeeMessageService(employeeMessageRepo, notificationService)
+	employeeMessageHandler := handler.NewEmployeeMessageHandler(employeeMessageService)
+
+	// Initialize Contact Types & Kinds
+	contactTypeRepo := repository.NewContactTypeRepository(db)
+	contactTypeService := service.NewContactTypeService(contactTypeRepo)
+	contactTypeHandler := handler.NewContactTypeHandler(contactTypeService)
+
+	contactKindRepo := repository.NewContactKindRepository(db)
+	contactKindService := service.NewContactKindService(contactKindRepo, contactTypeRepo)
+	contactKindHandler := handler.NewContactKindHandler(contactKindService)
+
+	// Initialize Terminal Integration
+	importBatchRepo := repository.NewImportBatchRepository(db)
+	rawTerminalBookingRepo := repository.NewRawTerminalBookingRepository(db)
+	terminalService := service.NewTerminalService(importBatchRepo, rawTerminalBookingRepo, employeeRepo, bookingTypeRepo)
+	terminalHandler := handler.NewTerminalHandler(terminalService)
+
 	// Initialize Scheduler
 	scheduleRepo := repository.NewScheduleRepository(db)
 	scheduleService := service.NewScheduleService(scheduleRepo)
@@ -297,8 +317,10 @@ func main() {
 	schedulerExecutor.RegisterHandler(model.TaskTypeCalculateDays, service.NewCalculateDaysTaskHandler(recalcService))
 	schedulerExecutor.RegisterHandler(model.TaskTypeCalculateMonths, service.NewCalculateMonthsTaskHandler(monthlyCalcService, employeeRepo))
 	schedulerExecutor.RegisterHandler(model.TaskTypeBackupDatabase, service.NewPlaceholderTaskHandler("backup_database"))
-	schedulerExecutor.RegisterHandler(model.TaskTypeSendNotifications, service.NewPlaceholderTaskHandler("send_notifications"))
+	schedulerExecutor.RegisterHandler(model.TaskTypeSendNotifications, service.NewSendNotificationsTaskHandler(employeeMessageService))
 	schedulerExecutor.RegisterHandler(model.TaskTypeExportData, service.NewPlaceholderTaskHandler("export_data"))
+	schedulerExecutor.RegisterHandler(model.TaskTypeTerminalSync, service.NewPlaceholderTaskHandler("terminal_sync"))
+	schedulerExecutor.RegisterHandler(model.TaskTypeTerminalImport, service.NewTerminalImportTaskHandler(terminalService))
 
 	scheduleHandler := handler.NewScheduleHandler(scheduleService, schedulerExecutor)
 
@@ -437,6 +459,10 @@ func main() {
 				handler.RegisterReportRoutes(r, reportHandler, authzMiddleware)
 				handler.RegisterScheduleRoutes(r, scheduleHandler, authzMiddleware)
 				handler.RegisterSystemSettingsRoutes(r, systemSettingsHandler, authzMiddleware)
+				handler.RegisterEmployeeMessageRoutes(r, employeeMessageHandler, authzMiddleware)
+				handler.RegisterContactTypeRoutes(r, contactTypeHandler, authzMiddleware)
+				handler.RegisterContactKindRoutes(r, contactKindHandler, authzMiddleware)
+				handler.RegisterTerminalBookingRoutes(r, terminalHandler, authzMiddleware)
 			})
 		})
 

@@ -17,6 +17,8 @@ const (
 	TaskTypeSendNotifications TaskType = "send_notifications"
 	TaskTypeExportData        TaskType = "export_data"
 	TaskTypeAliveCheck        TaskType = "alive_check"
+	TaskTypeTerminalSync      TaskType = "terminal_sync"
+	TaskTypeTerminalImport    TaskType = "terminal_import"
 )
 
 // TimingType represents a schedule timing type.

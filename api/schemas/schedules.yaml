@@ -83,7 +83,7 @@ ScheduleTask:
       format: uuid
     task_type:
       type: string
-      enum: [calculate_days, calculate_months, backup_database, send_notifications, export_data, alive_check]
+      enum: [calculate_days, calculate_months, backup_database, send_notifications, export_data, alive_check, terminal_sync, terminal_import]
     sort_order:
       type: integer
     parameters:
@@ -192,7 +192,7 @@ TaskCatalogEntry:
   properties:
     task_type:
       type: string
-      enum: [calculate_days, calculate_months, backup_database, send_notifications, export_data, alive_check]
+      enum: [calculate_days, calculate_months, backup_database, send_notifications, export_data, alive_check, terminal_sync, terminal_import]
     name:
       type: string
     description:
@@ -251,7 +251,7 @@ CreateScheduleTaskRequest:
   properties:
     task_type:
       type: string
-      enum: [calculate_days, calculate_months, backup_database, send_notifications, export_data, alive_check]
+      enum: [calculate_days, calculate_months, backup_database, send_notifications, export_data, alive_check, terminal_sync, terminal_import]
     sort_order:
       type: integer
     parameters:
@@ -265,7 +265,7 @@ UpdateScheduleTaskRequest:
   properties:
     task_type:
       type: string
-      enum: [calculate_days, calculate_months, backup_database, send_notifications, export_data, alive_check]
+      enum: [calculate_days, calculate_months, backup_database, send_notifications, export_data, alive_check, terminal_sync, terminal_import]
     sort_order:
       type: integer
     parameters:

@@ -1,0 +1,160 @@
+# Terminal booking paths
+
+/terminal-bookings:
+  get:
+    summary: List raw terminal bookings
+    description: List raw terminal bookings filtered by date range and optional terminal ID.
+    operationId: listRawTerminalBookings
+    tags:
+      - Terminal Bookings
+    parameters:
+      - name: X-Tenant-ID
+        in: header
+        required: true
+        type: string
+        format: uuid
+      - name: from
+        in: query
+        required: true
+        type: string
+        format: date
+        description: Start date (inclusive)
+      - name: to
+        in: query
+        required: true
+        type: string
+        format: date
+        description: End date (inclusive)
+      - name: terminal_id
+        in: query
+        type: string
+        description: Filter by terminal device ID
+      - name: employee_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by employee ID
+      - name: status
+        in: query
+        type: string
+        enum: [pending, processed, failed, skipped]
+        description: Filter by processing status
+      - name: import_batch_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by import batch
+      - name: limit
+        in: query
+        type: integer
+        default: 50
+      - name: page
+        in: query
+        type: integer
+        default: 1
+    responses:
+      200:
+        description: List of raw terminal bookings
+        schema:
+          $ref: '../schemas/terminal-bookings.yaml#/RawTerminalBookingList'
+      400:
+        description: Invalid request parameters
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/terminal-bookings/import:
+  post:
+    summary: Trigger terminal booking import
+    description: |
+      Import raw bookings from a terminal. The import is idempotent per batch_reference:
+      if the same batch_reference has already been imported for this tenant, the request
+      returns the existing batch without re-importing.
+    operationId: triggerTerminalImport
+    tags:
+      - Terminal Bookings
+    parameters:
+      - name: X-Tenant-ID
+        in: header
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/terminal-bookings.yaml#/TriggerTerminalImportRequest'
+    responses:
+      200:
+        description: Import triggered (or duplicate batch returned)
+        schema:
+          $ref: '../schemas/terminal-bookings.yaml#/TriggerTerminalImportResponse'
+      400:
+        description: Invalid request
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+      409:
+        description: Batch already imported (idempotent - returns existing batch)
+        schema:
+          $ref: '../schemas/terminal-bookings.yaml#/TriggerTerminalImportResponse'
+
+/import-batches:
+  get:
+    summary: List import batches
+    description: List terminal import batches with optional filters.
+    operationId: listImportBatches
+    tags:
+      - Terminal Bookings
+    parameters:
+      - name: X-Tenant-ID
+        in: header
+        required: true
+        type: string
+        format: uuid
+      - name: status
+        in: query
+        type: string
+        enum: [pending, processing, completed, failed]
+      - name: terminal_id
+        in: query
+        type: string
+      - name: limit
+        in: query
+        type: integer
+        default: 50
+      - name: page
+        in: query
+        type: integer
+        default: 1
+    responses:
+      200:
+        description: List of import batches
+        schema:
+          $ref: '../schemas/terminal-bookings.yaml#/ImportBatchList'
+
+/import-batches/{id}:
+  get:
+    summary: Get import batch by ID
+    description: Get a single import batch with its summary.
+    operationId: getImportBatch
+    tags:
+      - Terminal Bookings
+    parameters:
+      - name: X-Tenant-ID
+        in: header
+        required: true
+        type: string
+        format: uuid
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Import batch details
+        schema:
+          $ref: '../schemas/terminal-bookings.yaml#/ImportBatch'
+      404:
+        description: Batch not found
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'

@@ -103,14 +103,18 @@ func (e *Employee) IsEmployed() bool {
 }
 
 type EmployeeContact struct {
-	ID          uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	EmployeeID  uuid.UUID `gorm:"type:uuid;not null;index" json:"employee_id"`
-	ContactType string    `gorm:"type:varchar(50);not null" json:"contact_type"`
-	Value       string    `gorm:"type:varchar(255);not null" json:"value"`
-	Label       string    `gorm:"type:varchar(100)" json:"label,omitempty"`
-	IsPrimary   bool      `gorm:"default:false" json:"is_primary"`
-	CreatedAt   time.Time `gorm:"default:now()" json:"created_at"`
-	UpdatedAt   time.Time `gorm:"default:now()" json:"updated_at"`
+	ID            uuid.UUID  `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	EmployeeID    uuid.UUID  `gorm:"type:uuid;not null;index" json:"employee_id"`
+	ContactType   string     `gorm:"type:varchar(50);not null" json:"contact_type"`
+	ContactKindID *uuid.UUID `gorm:"type:uuid;index" json:"contact_kind_id,omitempty"`
+	Value         string     `gorm:"type:varchar(255);not null" json:"value"`
+	Label         string     `gorm:"type:varchar(100)" json:"label,omitempty"`
+	IsPrimary     bool       `gorm:"default:false" json:"is_primary"`
+	CreatedAt     time.Time  `gorm:"default:now()" json:"created_at"`
+	UpdatedAt     time.Time  `gorm:"default:now()" json:"updated_at"`
+
+	// Relations
+	ContactKind *ContactKind `gorm:"foreignKey:ContactKindID" json:"contact_kind,omitempty"`
 }
 
 func (EmployeeContact) TableName() string {

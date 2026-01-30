@@ -33,7 +33,7 @@ type TaskCatalogEntry struct {
 
 	// task type
 	// Required: true
-	// Enum: ["calculate_days","calculate_months","backup_database","send_notifications","export_data","alive_check"]
+	// Enum: ["calculate_days","calculate_months","backup_database","send_notifications","export_data","alive_check","terminal_sync","terminal_import"]
 	TaskType *string `json:"task_type"`
 }
 
@@ -81,7 +81,7 @@ var taskCatalogEntryTypeTaskTypePropEnum []any
 
 func init() {
 	var res []string
-	if err := json.Unmarshal([]byte(`["calculate_days","calculate_months","backup_database","send_notifications","export_data","alive_check"]`), &res); err != nil {
+	if err := json.Unmarshal([]byte(`["calculate_days","calculate_months","backup_database","send_notifications","export_data","alive_check","terminal_sync","terminal_import"]`), &res); err != nil {
 		panic(err)
 	}
 	for _, v := range res {
@@ -108,6 +108,12 @@ const (
 
 	// TaskCatalogEntryTaskTypeAliveCheck captures enum value "alive_check"
 	TaskCatalogEntryTaskTypeAliveCheck string = "alive_check"
+
+	// TaskCatalogEntryTaskTypeTerminalSync captures enum value "terminal_sync"
+	TaskCatalogEntryTaskTypeTerminalSync string = "terminal_sync"
+
+	// TaskCatalogEntryTaskTypeTerminalImport captures enum value "terminal_import"
+	TaskCatalogEntryTaskTypeTerminalImport string = "terminal_import"
 )
 
 // prop value enum

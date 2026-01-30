@@ -1061,7 +1061,7 @@ func TestParseTimeOfDay_Specific(t *testing.T) {
 
 func TestGetTaskCatalog(t *testing.T) {
 	catalog := GetTaskCatalog()
-	assert.Len(t, catalog, 6)
+	assert.Len(t, catalog, 8)
 
 	// Verify expected task types are present
 	types := make(map[model.TaskType]bool)
@@ -1078,6 +1078,8 @@ func TestGetTaskCatalog(t *testing.T) {
 	assert.True(t, types[model.TaskTypeSendNotifications])
 	assert.True(t, types[model.TaskTypeExportData])
 	assert.True(t, types[model.TaskTypeAliveCheck])
+	assert.True(t, types[model.TaskTypeTerminalSync])
+	assert.True(t, types[model.TaskTypeTerminalImport])
 }
 
 // =============================================================================
