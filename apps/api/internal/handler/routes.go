@@ -1353,3 +1353,133 @@ func RegisterContactKindRoutes(r chi.Router, h *ContactKindHandler, authz *middl
 		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
 	})
 }
+
+// RegisterVehicleRoutes registers vehicle routes.
+func RegisterVehicleRoutes(r chi.Router, h *VehicleHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("vehicle_data.manage").String()
+	r.Route("/vehicles", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+	})
+}
+
+// RegisterVehicleRouteRoutes registers vehicle route routes.
+func RegisterVehicleRouteRoutes(r chi.Router, h *VehicleRouteHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("vehicle_data.manage").String()
+	r.Route("/vehicle-routes", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+	})
+}
+
+// RegisterTripRecordRoutes registers trip record routes.
+func RegisterTripRecordRoutes(r chi.Router, h *TripRecordHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("vehicle_data.manage").String()
+	r.Route("/trip-records", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+	})
+}
+
+// RegisterTravelAllowanceRuleSetRoutes registers travel allowance rule set routes.
+func RegisterTravelAllowanceRuleSetRoutes(r chi.Router, h *TravelAllowanceRuleSetHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("travel_allowance.manage").String()
+	r.Route("/travel-allowance-rule-sets", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+	})
+}
+
+// RegisterLocalTravelRuleRoutes registers local travel rule routes.
+func RegisterLocalTravelRuleRoutes(r chi.Router, h *LocalTravelRuleHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("travel_allowance.manage").String()
+	r.Route("/local-travel-rules", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+	})
+}
+
+// RegisterExtendedTravelRuleRoutes registers extended travel rule routes.
+func RegisterExtendedTravelRuleRoutes(r chi.Router, h *ExtendedTravelRuleHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("travel_allowance.manage").String()
+	r.Route("/extended-travel-rules", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+	})
+}
+
+// RegisterTravelAllowancePreviewRoutes registers travel allowance preview routes.
+func RegisterTravelAllowancePreviewRoutes(r chi.Router, h *TravelAllowancePreviewHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("travel_allowance.manage").String()
+	if authz == nil {
+		r.Post("/travel-allowance/preview", h.Preview)
+		return
+	}
+	r.With(authz.RequirePermission(permManage)).Post("/travel-allowance/preview", h.Preview)
+}

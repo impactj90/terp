@@ -1,0 +1,367 @@
+# Travel Allowance Rule Set endpoints
+/travel-allowance-rule-sets:
+  get:
+    tags:
+      - Travel Allowance Rule Sets
+    summary: List travel allowance rule sets
+    description: |
+      Returns all travel allowance rule sets for the tenant.
+    operationId: listTravelAllowanceRuleSets
+    responses:
+      200:
+        description: List of travel allowance rule sets
+        schema:
+          $ref: '../schemas/travel-allowance.yaml#/TravelAllowanceRuleSetList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Travel Allowance Rule Sets
+    summary: Create travel allowance rule set
+    description: |
+      Creates a new travel allowance rule set with a unique code.
+    operationId: createTravelAllowanceRuleSet
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/travel-allowance.yaml#/CreateTravelAllowanceRuleSetRequest'
+    responses:
+      201:
+        description: Created travel allowance rule set
+        schema:
+          $ref: '../schemas/travel-allowance.yaml#/TravelAllowanceRuleSet'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/travel-allowance-rule-sets/{id}:
+  get:
+    tags:
+      - Travel Allowance Rule Sets
+    summary: Get travel allowance rule set by ID
+    description: |
+      Retrieves travel allowance rule set details.
+    operationId: getTravelAllowanceRuleSet
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Travel allowance rule set details
+        schema:
+          $ref: '../schemas/travel-allowance.yaml#/TravelAllowanceRuleSet'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Travel Allowance Rule Sets
+    summary: Update travel allowance rule set
+    description: |
+      Updates travel allowance rule set properties. Code cannot be changed.
+    operationId: updateTravelAllowanceRuleSet
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/travel-allowance.yaml#/UpdateTravelAllowanceRuleSetRequest'
+    responses:
+      200:
+        description: Updated travel allowance rule set
+        schema:
+          $ref: '../schemas/travel-allowance.yaml#/TravelAllowanceRuleSet'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Travel Allowance Rule Sets
+    summary: Delete travel allowance rule set
+    description: |
+      Permanently removes a travel allowance rule set.
+    operationId: deleteTravelAllowanceRuleSet
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Travel allowance rule set deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+# Local Travel Rule endpoints
+/local-travel-rules:
+  get:
+    tags:
+      - Local Travel Rules
+    summary: List local travel rules
+    description: |
+      Returns all local travel rules for the tenant.
+    operationId: listLocalTravelRules
+    responses:
+      200:
+        description: List of local travel rules
+        schema:
+          $ref: '../schemas/travel-allowance.yaml#/LocalTravelRuleList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Local Travel Rules
+    summary: Create local travel rule
+    description: |
+      Creates a new local travel rule within a rule set.
+    operationId: createLocalTravelRule
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/travel-allowance.yaml#/CreateLocalTravelRuleRequest'
+    responses:
+      201:
+        description: Created local travel rule
+        schema:
+          $ref: '../schemas/travel-allowance.yaml#/LocalTravelRule'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/local-travel-rules/{id}:
+  get:
+    tags:
+      - Local Travel Rules
+    summary: Get local travel rule by ID
+    description: |
+      Retrieves local travel rule details.
+    operationId: getLocalTravelRule
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Local travel rule details
+        schema:
+          $ref: '../schemas/travel-allowance.yaml#/LocalTravelRule'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Local Travel Rules
+    summary: Update local travel rule
+    description: |
+      Updates local travel rule properties.
+    operationId: updateLocalTravelRule
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/travel-allowance.yaml#/UpdateLocalTravelRuleRequest'
+    responses:
+      200:
+        description: Updated local travel rule
+        schema:
+          $ref: '../schemas/travel-allowance.yaml#/LocalTravelRule'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Local Travel Rules
+    summary: Delete local travel rule
+    description: |
+      Permanently removes a local travel rule.
+    operationId: deleteLocalTravelRule
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Local travel rule deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+# Extended Travel Rule endpoints
+/extended-travel-rules:
+  get:
+    tags:
+      - Extended Travel Rules
+    summary: List extended travel rules
+    description: |
+      Returns all extended travel rules for the tenant.
+    operationId: listExtendedTravelRules
+    responses:
+      200:
+        description: List of extended travel rules
+        schema:
+          $ref: '../schemas/travel-allowance.yaml#/ExtendedTravelRuleList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Extended Travel Rules
+    summary: Create extended travel rule
+    description: |
+      Creates a new extended travel rule within a rule set.
+    operationId: createExtendedTravelRule
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/travel-allowance.yaml#/CreateExtendedTravelRuleRequest'
+    responses:
+      201:
+        description: Created extended travel rule
+        schema:
+          $ref: '../schemas/travel-allowance.yaml#/ExtendedTravelRule'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/extended-travel-rules/{id}:
+  get:
+    tags:
+      - Extended Travel Rules
+    summary: Get extended travel rule by ID
+    description: |
+      Retrieves extended travel rule details.
+    operationId: getExtendedTravelRule
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Extended travel rule details
+        schema:
+          $ref: '../schemas/travel-allowance.yaml#/ExtendedTravelRule'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Extended Travel Rules
+    summary: Update extended travel rule
+    description: |
+      Updates extended travel rule properties.
+    operationId: updateExtendedTravelRule
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/travel-allowance.yaml#/UpdateExtendedTravelRuleRequest'
+    responses:
+      200:
+        description: Updated extended travel rule
+        schema:
+          $ref: '../schemas/travel-allowance.yaml#/ExtendedTravelRule'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Extended Travel Rules
+    summary: Delete extended travel rule
+    description: |
+      Permanently removes an extended travel rule.
+    operationId: deleteExtendedTravelRule
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Extended travel rule deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+# Travel Allowance Preview endpoint
+/travel-allowance/preview:
+  post:
+    tags:
+      - Travel Allowance
+    summary: Preview travel allowance calculation
+    description: |
+      Calculates a travel allowance preview based on the given trip parameters and rule set.
+      Returns a breakdown of tax-free and taxable amounts.
+    operationId: previewTravelAllowance
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/travel-allowance.yaml#/TravelAllowancePreviewRequest'
+    responses:
+      200:
+        description: Travel allowance preview result
+        schema:
+          $ref: '../schemas/travel-allowance.yaml#/TravelAllowancePreview'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

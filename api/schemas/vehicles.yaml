@@ -1,0 +1,286 @@
+# Vehicle schemas
+Vehicle:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - code
+    - name
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    code:
+      type: string
+      example: "VH-001"
+    name:
+      type: string
+      example: "Company Van 1"
+    description:
+      type: string
+      x-nullable: true
+    license_plate:
+      type: string
+      example: "M-AB 1234"
+      x-nullable: true
+    is_active:
+      type: boolean
+      example: true
+    sort_order:
+      type: integer
+      example: 0
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+CreateVehicleRequest:
+  type: object
+  required:
+    - code
+    - name
+  properties:
+    code:
+      type: string
+      minLength: 1
+      maxLength: 50
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    description:
+      type: string
+    license_plate:
+      type: string
+      maxLength: 20
+    sort_order:
+      type: integer
+
+UpdateVehicleRequest:
+  type: object
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    description:
+      type: string
+    license_plate:
+      type: string
+      maxLength: 20
+    is_active:
+      type: boolean
+    sort_order:
+      type: integer
+
+VehicleList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/Vehicle'
+
+# Vehicle Route schemas
+VehicleRoute:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - code
+    - name
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    code:
+      type: string
+      example: "RT-001"
+    name:
+      type: string
+      example: "Office to Warehouse"
+    description:
+      type: string
+      x-nullable: true
+    distance_km:
+      type: number
+      format: double
+      example: 15.5
+      x-nullable: true
+    is_active:
+      type: boolean
+      example: true
+    sort_order:
+      type: integer
+      example: 0
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+CreateVehicleRouteRequest:
+  type: object
+  required:
+    - code
+    - name
+  properties:
+    code:
+      type: string
+      minLength: 1
+      maxLength: 50
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    description:
+      type: string
+    distance_km:
+      type: number
+      format: double
+    sort_order:
+      type: integer
+
+UpdateVehicleRouteRequest:
+  type: object
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    description:
+      type: string
+    distance_km:
+      type: number
+      format: double
+    is_active:
+      type: boolean
+    sort_order:
+      type: integer
+
+VehicleRouteList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/VehicleRoute'
+
+# Trip Record schemas
+TripRecord:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - vehicle_id
+    - trip_date
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    vehicle_id:
+      type: string
+      format: uuid
+    route_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    trip_date:
+      type: string
+      format: date
+      example: "2026-01-30"
+    start_mileage:
+      type: number
+      format: double
+      x-nullable: true
+    end_mileage:
+      type: number
+      format: double
+      x-nullable: true
+    distance_km:
+      type: number
+      format: double
+      x-nullable: true
+    notes:
+      type: string
+      x-nullable: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+CreateTripRecordRequest:
+  type: object
+  required:
+    - vehicle_id
+    - trip_date
+  properties:
+    vehicle_id:
+      type: string
+      format: uuid
+    route_id:
+      type: string
+      format: uuid
+    trip_date:
+      type: string
+      format: date
+    start_mileage:
+      type: number
+      format: double
+    end_mileage:
+      type: number
+      format: double
+    distance_km:
+      type: number
+      format: double
+    notes:
+      type: string
+
+UpdateTripRecordRequest:
+  type: object
+  properties:
+    route_id:
+      type: string
+      format: uuid
+    trip_date:
+      type: string
+      format: date
+    start_mileage:
+      type: number
+      format: double
+    end_mileage:
+      type: number
+      format: double
+    distance_km:
+      type: number
+      format: double
+    notes:
+      type: string
+
+TripRecordList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/TripRecord'

@@ -320,6 +320,35 @@ func main() {
 	employeeAccessAssignmentService := service.NewEmployeeAccessAssignmentService(employeeAccessAssignmentRepo)
 	employeeAccessAssignmentHandler := handler.NewEmployeeAccessAssignmentHandler(employeeAccessAssignmentService)
 
+	// Initialize Vehicle Data (Fahrzeugdaten placeholder)
+	vehicleRepo := repository.NewVehicleRepository(db)
+	vehicleService := service.NewVehicleService(vehicleRepo)
+	vehicleHandler := handler.NewVehicleHandler(vehicleService)
+
+	vehicleRouteRepo := repository.NewVehicleRouteRepository(db)
+	vehicleRouteService := service.NewVehicleRouteService(vehicleRouteRepo)
+	vehicleRouteHandler := handler.NewVehicleRouteHandler(vehicleRouteService)
+
+	tripRecordRepo := repository.NewTripRecordRepository(db)
+	tripRecordService := service.NewTripRecordService(tripRecordRepo)
+	tripRecordHandler := handler.NewTripRecordHandler(tripRecordService)
+
+	// Initialize Travel Allowance (Ausloese)
+	travelAllowanceRuleSetRepo := repository.NewTravelAllowanceRuleSetRepository(db)
+	travelAllowanceRuleSetService := service.NewTravelAllowanceRuleSetService(travelAllowanceRuleSetRepo)
+	travelAllowanceRuleSetHandler := handler.NewTravelAllowanceRuleSetHandler(travelAllowanceRuleSetService)
+
+	localTravelRuleRepo := repository.NewLocalTravelRuleRepository(db)
+	localTravelRuleService := service.NewLocalTravelRuleService(localTravelRuleRepo)
+	localTravelRuleHandler := handler.NewLocalTravelRuleHandler(localTravelRuleService)
+
+	extendedTravelRuleRepo := repository.NewExtendedTravelRuleRepository(db)
+	extendedTravelRuleService := service.NewExtendedTravelRuleService(extendedTravelRuleRepo)
+	extendedTravelRuleHandler := handler.NewExtendedTravelRuleHandler(extendedTravelRuleService)
+
+	travelAllowancePreviewService := service.NewTravelAllowancePreviewService(travelAllowanceRuleSetRepo, localTravelRuleRepo, extendedTravelRuleRepo)
+	travelAllowancePreviewHandler := handler.NewTravelAllowancePreviewHandler(travelAllowancePreviewService)
+
 	// Initialize Scheduler
 	scheduleRepo := repository.NewScheduleRepository(db)
 	scheduleService := service.NewScheduleService(scheduleRepo)
@@ -479,6 +508,13 @@ func main() {
 				handler.RegisterAccessZoneRoutes(r, accessZoneHandler, authzMiddleware)
 				handler.RegisterAccessProfileRoutes(r, accessProfileHandler, authzMiddleware)
 				handler.RegisterEmployeeAccessAssignmentRoutes(r, employeeAccessAssignmentHandler, authzMiddleware)
+				handler.RegisterVehicleRoutes(r, vehicleHandler, authzMiddleware)
+				handler.RegisterVehicleRouteRoutes(r, vehicleRouteHandler, authzMiddleware)
+				handler.RegisterTripRecordRoutes(r, tripRecordHandler, authzMiddleware)
+				handler.RegisterTravelAllowanceRuleSetRoutes(r, travelAllowanceRuleSetHandler, authzMiddleware)
+				handler.RegisterLocalTravelRuleRoutes(r, localTravelRuleHandler, authzMiddleware)
+				handler.RegisterExtendedTravelRuleRoutes(r, extendedTravelRuleHandler, authzMiddleware)
+				handler.RegisterTravelAllowancePreviewRoutes(r, travelAllowancePreviewHandler, authzMiddleware)
 			})
 		})
 

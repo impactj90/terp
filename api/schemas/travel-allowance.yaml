@@ -1,0 +1,465 @@
+# Travel Allowance Rule Set schemas
+TravelAllowanceRuleSet:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - code
+    - name
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    code:
+      type: string
+      example: "TA-2026"
+    name:
+      type: string
+      example: "Standard Travel Allowance 2026"
+    description:
+      type: string
+      x-nullable: true
+    valid_from:
+      type: string
+      format: date
+      x-nullable: true
+    valid_to:
+      type: string
+      format: date
+      x-nullable: true
+    calculation_basis:
+      type: string
+      enum: [per_day, per_booking]
+      example: "per_day"
+    distance_rule:
+      type: string
+      enum: [longest, shortest, first, last]
+      example: "longest"
+    is_active:
+      type: boolean
+      example: true
+    sort_order:
+      type: integer
+      example: 0
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+CreateTravelAllowanceRuleSetRequest:
+  type: object
+  required:
+    - code
+    - name
+  properties:
+    code:
+      type: string
+      minLength: 1
+      maxLength: 50
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    description:
+      type: string
+    valid_from:
+      type: string
+      format: date
+    valid_to:
+      type: string
+      format: date
+    calculation_basis:
+      type: string
+      enum: [per_day, per_booking]
+    distance_rule:
+      type: string
+      enum: [longest, shortest, first, last]
+    sort_order:
+      type: integer
+
+UpdateTravelAllowanceRuleSetRequest:
+  type: object
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    description:
+      type: string
+    valid_from:
+      type: string
+      format: date
+    valid_to:
+      type: string
+      format: date
+    calculation_basis:
+      type: string
+      enum: [per_day, per_booking]
+    distance_rule:
+      type: string
+      enum: [longest, shortest, first, last]
+    is_active:
+      type: boolean
+    sort_order:
+      type: integer
+
+TravelAllowanceRuleSetList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/TravelAllowanceRuleSet'
+
+# Local Travel Rule schemas (Nahmontage)
+LocalTravelRule:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - rule_set_id
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    rule_set_id:
+      type: string
+      format: uuid
+    min_distance_km:
+      type: number
+      format: double
+      example: 0
+    max_distance_km:
+      type: number
+      format: double
+      x-nullable: true
+      example: 50
+    min_duration_minutes:
+      type: integer
+      example: 0
+    max_duration_minutes:
+      type: integer
+      x-nullable: true
+      example: 480
+    tax_free_amount:
+      type: number
+      format: double
+      example: 14.00
+    taxable_amount:
+      type: number
+      format: double
+      example: 6.00
+    is_active:
+      type: boolean
+      example: true
+    sort_order:
+      type: integer
+      example: 0
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+CreateLocalTravelRuleRequest:
+  type: object
+  required:
+    - rule_set_id
+  properties:
+    rule_set_id:
+      type: string
+      format: uuid
+    min_distance_km:
+      type: number
+      format: double
+    max_distance_km:
+      type: number
+      format: double
+    min_duration_minutes:
+      type: integer
+    max_duration_minutes:
+      type: integer
+    tax_free_amount:
+      type: number
+      format: double
+    taxable_amount:
+      type: number
+      format: double
+    sort_order:
+      type: integer
+
+UpdateLocalTravelRuleRequest:
+  type: object
+  properties:
+    min_distance_km:
+      type: number
+      format: double
+    max_distance_km:
+      type: number
+      format: double
+    min_duration_minutes:
+      type: integer
+    max_duration_minutes:
+      type: integer
+    tax_free_amount:
+      type: number
+      format: double
+    taxable_amount:
+      type: number
+      format: double
+    is_active:
+      type: boolean
+    sort_order:
+      type: integer
+
+LocalTravelRuleList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/LocalTravelRule'
+
+# Extended Travel Rule schemas (Fernmontage)
+ExtendedTravelRule:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - rule_set_id
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    rule_set_id:
+      type: string
+      format: uuid
+    arrival_day_tax_free:
+      type: number
+      format: double
+      example: 14.00
+    arrival_day_taxable:
+      type: number
+      format: double
+      example: 6.00
+    departure_day_tax_free:
+      type: number
+      format: double
+      example: 14.00
+    departure_day_taxable:
+      type: number
+      format: double
+      example: 6.00
+    intermediate_day_tax_free:
+      type: number
+      format: double
+      example: 28.00
+    intermediate_day_taxable:
+      type: number
+      format: double
+      example: 12.00
+    three_month_enabled:
+      type: boolean
+      example: false
+    three_month_tax_free:
+      type: number
+      format: double
+      example: 14.00
+    three_month_taxable:
+      type: number
+      format: double
+      example: 6.00
+    is_active:
+      type: boolean
+      example: true
+    sort_order:
+      type: integer
+      example: 0
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+CreateExtendedTravelRuleRequest:
+  type: object
+  required:
+    - rule_set_id
+  properties:
+    rule_set_id:
+      type: string
+      format: uuid
+    arrival_day_tax_free:
+      type: number
+      format: double
+    arrival_day_taxable:
+      type: number
+      format: double
+    departure_day_tax_free:
+      type: number
+      format: double
+    departure_day_taxable:
+      type: number
+      format: double
+    intermediate_day_tax_free:
+      type: number
+      format: double
+    intermediate_day_taxable:
+      type: number
+      format: double
+    three_month_enabled:
+      type: boolean
+    three_month_tax_free:
+      type: number
+      format: double
+    three_month_taxable:
+      type: number
+      format: double
+    sort_order:
+      type: integer
+
+UpdateExtendedTravelRuleRequest:
+  type: object
+  properties:
+    arrival_day_tax_free:
+      type: number
+      format: double
+    arrival_day_taxable:
+      type: number
+      format: double
+    departure_day_tax_free:
+      type: number
+      format: double
+    departure_day_taxable:
+      type: number
+      format: double
+    intermediate_day_tax_free:
+      type: number
+      format: double
+    intermediate_day_taxable:
+      type: number
+      format: double
+    three_month_enabled:
+      type: boolean
+    three_month_tax_free:
+      type: number
+      format: double
+    three_month_taxable:
+      type: number
+      format: double
+    is_active:
+      type: boolean
+    sort_order:
+      type: integer
+
+ExtendedTravelRuleList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/ExtendedTravelRule'
+
+# Travel Allowance Preview schemas
+TravelAllowancePreviewRequest:
+  type: object
+  required:
+    - rule_set_id
+    - trip_type
+  properties:
+    rule_set_id:
+      type: string
+      format: uuid
+      description: "Rule set to apply for the calculation"
+    trip_type:
+      type: string
+      enum: [local, extended]
+      description: "Type of trip: local (Nahmontage) or extended (Fernmontage)"
+    distance_km:
+      type: number
+      format: double
+      description: "Trip distance in kilometers (required for local trips)"
+    duration_minutes:
+      type: integer
+      description: "Trip duration in minutes (required for local trips)"
+    start_date:
+      type: string
+      format: date
+      description: "Trip start date (required for extended trips)"
+    end_date:
+      type: string
+      format: date
+      description: "Trip end date (required for extended trips)"
+    three_month_active:
+      type: boolean
+      description: "Whether three-month rule is currently active for extended trips"
+      default: false
+
+TravelAllowancePreview:
+  type: object
+  properties:
+    trip_type:
+      type: string
+      enum: [local, extended]
+    rule_set_id:
+      type: string
+      format: uuid
+    rule_set_name:
+      type: string
+    tax_free_total:
+      type: number
+      format: double
+      description: "Total tax-free amount"
+    taxable_total:
+      type: number
+      format: double
+      description: "Total taxable amount"
+    total_allowance:
+      type: number
+      format: double
+      description: "Combined total allowance (tax_free + taxable)"
+    breakdown:
+      type: array
+      items:
+        $ref: '#/TravelAllowanceBreakdownItem'
+
+TravelAllowanceBreakdownItem:
+  type: object
+  properties:
+    description:
+      type: string
+      description: "Description of the line item (e.g. 'Arrival day', 'Intermediate day x3')"
+    days:
+      type: integer
+      description: "Number of days this line applies to"
+    tax_free_amount:
+      type: number
+      format: double
+    taxable_amount:
+      type: number
+      format: double
+    tax_free_subtotal:
+      type: number
+      format: double
+    taxable_subtotal:
+      type: number
+      format: double

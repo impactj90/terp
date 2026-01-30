@@ -154,6 +154,20 @@ tags:
     description: Access control profile management (placeholder - requires separate ZMI Zutritt documentation)
   - name: Employee Access Assignments
     description: Employee-to-access-profile assignment management (placeholder)
+  - name: Vehicles
+    description: Vehicle data management (placeholder - requires separate vehicle documentation)
+  - name: Vehicle Routes
+    description: Vehicle route management (placeholder - requires separate vehicle documentation)
+  - name: Trip Records
+    description: Trip record management (placeholder - requires separate vehicle documentation)
+  - name: Travel Allowance Rule Sets
+    description: Travel allowance (Ausloese) rule set configuration
+  - name: Local Travel Rules
+    description: Local travel (Nahmontage) rule management for same-day trips
+  - name: Extended Travel Rules
+    description: Extended travel (Fernmontage) rule management for multi-day trips
+  - name: Travel Allowance
+    description: Travel allowance preview calculations
 securityDefinitions:
   BearerAuth:
     type: apiKey
@@ -9649,6 +9663,713 @@ paths:
       responses:
         '204':
           description: Employee access assignment deleted
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+  /vehicles:
+    get:
+      tags:
+        - Vehicles
+      summary: List vehicles
+      description: |
+        Returns all vehicles for the tenant.
+        Placeholder - requires separate vehicle documentation for full implementation.
+      operationId: listVehicles
+      responses:
+        '200':
+          description: List of vehicles
+          schema:
+            $ref: '#/definitions/VehicleList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+    post:
+      tags:
+        - Vehicles
+      summary: Create vehicle
+      description: |
+        Creates a new vehicle with a unique code.
+        Placeholder - requires separate vehicle documentation for full implementation.
+      operationId: createVehicle
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateVehicleRequest'
+      responses:
+        '201':
+          description: Created vehicle
+          schema:
+            $ref: '#/definitions/Vehicle'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '409':
+          description: Code already exists
+          schema:
+            $ref: '#/definitions/ProblemDetails'
+  '/vehicles/{id}':
+    get:
+      tags:
+        - Vehicles
+      summary: Get vehicle by ID
+      description: |
+        Retrieves vehicle details.
+        Placeholder - requires separate vehicle documentation for full implementation.
+      operationId: getVehicle
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Vehicle details
+          schema:
+            $ref: '#/definitions/Vehicle'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    patch:
+      tags:
+        - Vehicles
+      summary: Update vehicle
+      description: |
+        Updates vehicle properties. Code cannot be changed.
+        Placeholder - requires separate vehicle documentation for full implementation.
+      operationId: updateVehicle
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateVehicleRequest'
+      responses:
+        '200':
+          description: Updated vehicle
+          schema:
+            $ref: '#/definitions/Vehicle'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    delete:
+      tags:
+        - Vehicles
+      summary: Delete vehicle
+      description: |
+        Permanently removes a vehicle.
+        Placeholder - requires separate vehicle documentation for full implementation.
+      operationId: deleteVehicle
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Vehicle deleted
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+  /vehicle-routes:
+    get:
+      tags:
+        - Vehicle Routes
+      summary: List vehicle routes
+      description: |
+        Returns all vehicle routes for the tenant.
+        Placeholder - requires separate vehicle documentation for full implementation.
+      operationId: listVehicleRoutes
+      responses:
+        '200':
+          description: List of vehicle routes
+          schema:
+            $ref: '#/definitions/VehicleRouteList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+    post:
+      tags:
+        - Vehicle Routes
+      summary: Create vehicle route
+      description: |
+        Creates a new vehicle route with a unique code.
+        Placeholder - requires separate vehicle documentation for full implementation.
+      operationId: createVehicleRoute
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateVehicleRouteRequest'
+      responses:
+        '201':
+          description: Created vehicle route
+          schema:
+            $ref: '#/definitions/VehicleRoute'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '409':
+          description: Code already exists
+          schema:
+            $ref: '#/definitions/ProblemDetails'
+  '/vehicle-routes/{id}':
+    get:
+      tags:
+        - Vehicle Routes
+      summary: Get vehicle route by ID
+      description: |
+        Retrieves vehicle route details.
+        Placeholder - requires separate vehicle documentation for full implementation.
+      operationId: getVehicleRoute
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Vehicle route details
+          schema:
+            $ref: '#/definitions/VehicleRoute'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    patch:
+      tags:
+        - Vehicle Routes
+      summary: Update vehicle route
+      description: |
+        Updates vehicle route properties. Code cannot be changed.
+        Placeholder - requires separate vehicle documentation for full implementation.
+      operationId: updateVehicleRoute
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateVehicleRouteRequest'
+      responses:
+        '200':
+          description: Updated vehicle route
+          schema:
+            $ref: '#/definitions/VehicleRoute'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    delete:
+      tags:
+        - Vehicle Routes
+      summary: Delete vehicle route
+      description: |
+        Permanently removes a vehicle route.
+        Placeholder - requires separate vehicle documentation for full implementation.
+      operationId: deleteVehicleRoute
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Vehicle route deleted
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+  /trip-records:
+    get:
+      tags:
+        - Trip Records
+      summary: List trip records
+      description: |
+        Returns all trip records for the tenant.
+        Placeholder - requires separate vehicle documentation for full implementation.
+      operationId: listTripRecords
+      responses:
+        '200':
+          description: List of trip records
+          schema:
+            $ref: '#/definitions/TripRecordList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+    post:
+      tags:
+        - Trip Records
+      summary: Create trip record
+      description: |
+        Creates a new trip record.
+        Placeholder - requires separate vehicle documentation for full implementation.
+      operationId: createTripRecord
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateTripRecordRequest'
+      responses:
+        '201':
+          description: Created trip record
+          schema:
+            $ref: '#/definitions/TripRecord'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+  '/trip-records/{id}':
+    get:
+      tags:
+        - Trip Records
+      summary: Get trip record by ID
+      description: |
+        Retrieves trip record details.
+        Placeholder - requires separate vehicle documentation for full implementation.
+      operationId: getTripRecord
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Trip record details
+          schema:
+            $ref: '#/definitions/TripRecord'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    patch:
+      tags:
+        - Trip Records
+      summary: Update trip record
+      description: |
+        Updates trip record properties.
+        Placeholder - requires separate vehicle documentation for full implementation.
+      operationId: updateTripRecord
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateTripRecordRequest'
+      responses:
+        '200':
+          description: Updated trip record
+          schema:
+            $ref: '#/definitions/TripRecord'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    delete:
+      tags:
+        - Trip Records
+      summary: Delete trip record
+      description: |
+        Permanently removes a trip record.
+        Placeholder - requires separate vehicle documentation for full implementation.
+      operationId: deleteTripRecord
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Trip record deleted
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+  /travel-allowance-rule-sets:
+    get:
+      tags:
+        - Travel Allowance Rule Sets
+      summary: List travel allowance rule sets
+      description: |
+        Returns all travel allowance rule sets for the tenant.
+      operationId: listTravelAllowanceRuleSets
+      responses:
+        '200':
+          description: List of travel allowance rule sets
+          schema:
+            $ref: '#/definitions/TravelAllowanceRuleSetList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+    post:
+      tags:
+        - Travel Allowance Rule Sets
+      summary: Create travel allowance rule set
+      description: |
+        Creates a new travel allowance rule set with a unique code.
+      operationId: createTravelAllowanceRuleSet
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateTravelAllowanceRuleSetRequest'
+      responses:
+        '201':
+          description: Created travel allowance rule set
+          schema:
+            $ref: '#/definitions/TravelAllowanceRuleSet'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '409':
+          description: Code already exists
+          schema:
+            $ref: '#/definitions/ProblemDetails'
+  '/travel-allowance-rule-sets/{id}':
+    get:
+      tags:
+        - Travel Allowance Rule Sets
+      summary: Get travel allowance rule set by ID
+      description: |
+        Retrieves travel allowance rule set details.
+      operationId: getTravelAllowanceRuleSet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Travel allowance rule set details
+          schema:
+            $ref: '#/definitions/TravelAllowanceRuleSet'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    patch:
+      tags:
+        - Travel Allowance Rule Sets
+      summary: Update travel allowance rule set
+      description: |
+        Updates travel allowance rule set properties. Code cannot be changed.
+      operationId: updateTravelAllowanceRuleSet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateTravelAllowanceRuleSetRequest'
+      responses:
+        '200':
+          description: Updated travel allowance rule set
+          schema:
+            $ref: '#/definitions/TravelAllowanceRuleSet'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    delete:
+      tags:
+        - Travel Allowance Rule Sets
+      summary: Delete travel allowance rule set
+      description: |
+        Permanently removes a travel allowance rule set.
+      operationId: deleteTravelAllowanceRuleSet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Travel allowance rule set deleted
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+  /local-travel-rules:
+    get:
+      tags:
+        - Local Travel Rules
+      summary: List local travel rules
+      description: |
+        Returns all local travel rules for the tenant.
+      operationId: listLocalTravelRules
+      responses:
+        '200':
+          description: List of local travel rules
+          schema:
+            $ref: '#/definitions/LocalTravelRuleList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+    post:
+      tags:
+        - Local Travel Rules
+      summary: Create local travel rule
+      description: |
+        Creates a new local travel rule within a rule set.
+      operationId: createLocalTravelRule
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateLocalTravelRuleRequest'
+      responses:
+        '201':
+          description: Created local travel rule
+          schema:
+            $ref: '#/definitions/LocalTravelRule'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+  '/local-travel-rules/{id}':
+    get:
+      tags:
+        - Local Travel Rules
+      summary: Get local travel rule by ID
+      description: |
+        Retrieves local travel rule details.
+      operationId: getLocalTravelRule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Local travel rule details
+          schema:
+            $ref: '#/definitions/LocalTravelRule'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    patch:
+      tags:
+        - Local Travel Rules
+      summary: Update local travel rule
+      description: |
+        Updates local travel rule properties.
+      operationId: updateLocalTravelRule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateLocalTravelRuleRequest'
+      responses:
+        '200':
+          description: Updated local travel rule
+          schema:
+            $ref: '#/definitions/LocalTravelRule'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    delete:
+      tags:
+        - Local Travel Rules
+      summary: Delete local travel rule
+      description: |
+        Permanently removes a local travel rule.
+      operationId: deleteLocalTravelRule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Local travel rule deleted
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+  /extended-travel-rules:
+    get:
+      tags:
+        - Extended Travel Rules
+      summary: List extended travel rules
+      description: |
+        Returns all extended travel rules for the tenant.
+      operationId: listExtendedTravelRules
+      responses:
+        '200':
+          description: List of extended travel rules
+          schema:
+            $ref: '#/definitions/ExtendedTravelRuleList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+    post:
+      tags:
+        - Extended Travel Rules
+      summary: Create extended travel rule
+      description: |
+        Creates a new extended travel rule within a rule set.
+      operationId: createExtendedTravelRule
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateExtendedTravelRuleRequest'
+      responses:
+        '201':
+          description: Created extended travel rule
+          schema:
+            $ref: '#/definitions/ExtendedTravelRule'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+  '/extended-travel-rules/{id}':
+    get:
+      tags:
+        - Extended Travel Rules
+      summary: Get extended travel rule by ID
+      description: |
+        Retrieves extended travel rule details.
+      operationId: getExtendedTravelRule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Extended travel rule details
+          schema:
+            $ref: '#/definitions/ExtendedTravelRule'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    patch:
+      tags:
+        - Extended Travel Rules
+      summary: Update extended travel rule
+      description: |
+        Updates extended travel rule properties.
+      operationId: updateExtendedTravelRule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateExtendedTravelRuleRequest'
+      responses:
+        '200':
+          description: Updated extended travel rule
+          schema:
+            $ref: '#/definitions/ExtendedTravelRule'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    delete:
+      tags:
+        - Extended Travel Rules
+      summary: Delete extended travel rule
+      description: |
+        Permanently removes an extended travel rule.
+      operationId: deleteExtendedTravelRule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Extended travel rule deleted
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+  /travel-allowance/preview:
+    post:
+      tags:
+        - Travel Allowance
+      summary: Preview travel allowance calculation
+      description: |
+        Calculates a travel allowance preview based on the given trip parameters and rule set.
+        Returns a breakdown of tax-free and taxable amounts.
+      operationId: previewTravelAllowance
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/TravelAllowancePreviewRequest'
+      responses:
+        '200':
+          description: Travel allowance preview result
+          schema:
+            $ref: '#/definitions/TravelAllowancePreview'
+        '400':
+          $ref: '#/responses/BadRequest'
         '401':
           $ref: '#/responses/Unauthorized'
         '404':
@@ -19371,6 +20092,747 @@ definitions:
         type: array
         items:
           $ref: '#/definitions/EmployeeAccessAssignment'
+  Vehicle:
+    type: object
+    required:
+      - id
+      - tenant_id
+      - code
+      - name
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      code:
+        type: string
+        example: VH-001
+      name:
+        type: string
+        example: Company Van 1
+      description:
+        type: string
+        x-nullable: true
+      license_plate:
+        type: string
+        example: M-AB 1234
+        x-nullable: true
+      is_active:
+        type: boolean
+        example: true
+      sort_order:
+        type: integer
+        example: 0
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  CreateVehicleRequest:
+    type: object
+    required:
+      - code
+      - name
+    properties:
+      code:
+        type: string
+        minLength: 1
+        maxLength: 50
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      description:
+        type: string
+      license_plate:
+        type: string
+        maxLength: 20
+      sort_order:
+        type: integer
+  UpdateVehicleRequest:
+    type: object
+    properties:
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      description:
+        type: string
+      license_plate:
+        type: string
+        maxLength: 20
+      is_active:
+        type: boolean
+      sort_order:
+        type: integer
+  VehicleList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/Vehicle'
+  VehicleRoute:
+    type: object
+    required:
+      - id
+      - tenant_id
+      - code
+      - name
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      code:
+        type: string
+        example: RT-001
+      name:
+        type: string
+        example: Office to Warehouse
+      description:
+        type: string
+        x-nullable: true
+      distance_km:
+        type: number
+        format: double
+        example: 15.5
+        x-nullable: true
+      is_active:
+        type: boolean
+        example: true
+      sort_order:
+        type: integer
+        example: 0
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  CreateVehicleRouteRequest:
+    type: object
+    required:
+      - code
+      - name
+    properties:
+      code:
+        type: string
+        minLength: 1
+        maxLength: 50
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      description:
+        type: string
+      distance_km:
+        type: number
+        format: double
+      sort_order:
+        type: integer
+  UpdateVehicleRouteRequest:
+    type: object
+    properties:
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      description:
+        type: string
+      distance_km:
+        type: number
+        format: double
+      is_active:
+        type: boolean
+      sort_order:
+        type: integer
+  VehicleRouteList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/VehicleRoute'
+  TripRecord:
+    type: object
+    required:
+      - id
+      - tenant_id
+      - vehicle_id
+      - trip_date
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      vehicle_id:
+        type: string
+        format: uuid
+      route_id:
+        type: string
+        format: uuid
+        x-nullable: true
+      trip_date:
+        type: string
+        format: date
+        example: '2026-01-30'
+      start_mileage:
+        type: number
+        format: double
+        x-nullable: true
+      end_mileage:
+        type: number
+        format: double
+        x-nullable: true
+      distance_km:
+        type: number
+        format: double
+        x-nullable: true
+      notes:
+        type: string
+        x-nullable: true
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  CreateTripRecordRequest:
+    type: object
+    required:
+      - vehicle_id
+      - trip_date
+    properties:
+      vehicle_id:
+        type: string
+        format: uuid
+      route_id:
+        type: string
+        format: uuid
+      trip_date:
+        type: string
+        format: date
+      start_mileage:
+        type: number
+        format: double
+      end_mileage:
+        type: number
+        format: double
+      distance_km:
+        type: number
+        format: double
+      notes:
+        type: string
+  UpdateTripRecordRequest:
+    type: object
+    properties:
+      route_id:
+        type: string
+        format: uuid
+      trip_date:
+        type: string
+        format: date
+      start_mileage:
+        type: number
+        format: double
+      end_mileage:
+        type: number
+        format: double
+      distance_km:
+        type: number
+        format: double
+      notes:
+        type: string
+  TripRecordList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/TripRecord'
+  TravelAllowanceRuleSet:
+    type: object
+    required:
+      - id
+      - tenant_id
+      - code
+      - name
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      code:
+        type: string
+        example: TA-2026
+      name:
+        type: string
+        example: Standard Travel Allowance 2026
+      description:
+        type: string
+        x-nullable: true
+      valid_from:
+        type: string
+        format: date
+        x-nullable: true
+      valid_to:
+        type: string
+        format: date
+        x-nullable: true
+      calculation_basis:
+        type: string
+        enum:
+          - per_day
+          - per_booking
+        example: per_day
+      distance_rule:
+        type: string
+        enum:
+          - longest
+          - shortest
+          - first
+          - last
+        example: longest
+      is_active:
+        type: boolean
+        example: true
+      sort_order:
+        type: integer
+        example: 0
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  CreateTravelAllowanceRuleSetRequest:
+    type: object
+    required:
+      - code
+      - name
+    properties:
+      code:
+        type: string
+        minLength: 1
+        maxLength: 50
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      description:
+        type: string
+      valid_from:
+        type: string
+        format: date
+      valid_to:
+        type: string
+        format: date
+      calculation_basis:
+        type: string
+        enum:
+          - per_day
+          - per_booking
+      distance_rule:
+        type: string
+        enum:
+          - longest
+          - shortest
+          - first
+          - last
+      sort_order:
+        type: integer
+  UpdateTravelAllowanceRuleSetRequest:
+    type: object
+    properties:
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      description:
+        type: string
+      valid_from:
+        type: string
+        format: date
+      valid_to:
+        type: string
+        format: date
+      calculation_basis:
+        type: string
+        enum:
+          - per_day
+          - per_booking
+      distance_rule:
+        type: string
+        enum:
+          - longest
+          - shortest
+          - first
+          - last
+      is_active:
+        type: boolean
+      sort_order:
+        type: integer
+  TravelAllowanceRuleSetList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/TravelAllowanceRuleSet'
+  LocalTravelRule:
+    type: object
+    required:
+      - id
+      - tenant_id
+      - rule_set_id
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      rule_set_id:
+        type: string
+        format: uuid
+      min_distance_km:
+        type: number
+        format: double
+        example: 0
+      max_distance_km:
+        type: number
+        format: double
+        x-nullable: true
+        example: 50
+      min_duration_minutes:
+        type: integer
+        example: 0
+      max_duration_minutes:
+        type: integer
+        x-nullable: true
+        example: 480
+      tax_free_amount:
+        type: number
+        format: double
+        example: 14
+      taxable_amount:
+        type: number
+        format: double
+        example: 6
+      is_active:
+        type: boolean
+        example: true
+      sort_order:
+        type: integer
+        example: 0
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  CreateLocalTravelRuleRequest:
+    type: object
+    required:
+      - rule_set_id
+    properties:
+      rule_set_id:
+        type: string
+        format: uuid
+      min_distance_km:
+        type: number
+        format: double
+      max_distance_km:
+        type: number
+        format: double
+      min_duration_minutes:
+        type: integer
+      max_duration_minutes:
+        type: integer
+      tax_free_amount:
+        type: number
+        format: double
+      taxable_amount:
+        type: number
+        format: double
+      sort_order:
+        type: integer
+  UpdateLocalTravelRuleRequest:
+    type: object
+    properties:
+      min_distance_km:
+        type: number
+        format: double
+      max_distance_km:
+        type: number
+        format: double
+      min_duration_minutes:
+        type: integer
+      max_duration_minutes:
+        type: integer
+      tax_free_amount:
+        type: number
+        format: double
+      taxable_amount:
+        type: number
+        format: double
+      is_active:
+        type: boolean
+      sort_order:
+        type: integer
+  LocalTravelRuleList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/LocalTravelRule'
+  ExtendedTravelRule:
+    type: object
+    required:
+      - id
+      - tenant_id
+      - rule_set_id
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      rule_set_id:
+        type: string
+        format: uuid
+      arrival_day_tax_free:
+        type: number
+        format: double
+        example: 14
+      arrival_day_taxable:
+        type: number
+        format: double
+        example: 6
+      departure_day_tax_free:
+        type: number
+        format: double
+        example: 14
+      departure_day_taxable:
+        type: number
+        format: double
+        example: 6
+      intermediate_day_tax_free:
+        type: number
+        format: double
+        example: 28
+      intermediate_day_taxable:
+        type: number
+        format: double
+        example: 12
+      three_month_enabled:
+        type: boolean
+        example: false
+      three_month_tax_free:
+        type: number
+        format: double
+        example: 14
+      three_month_taxable:
+        type: number
+        format: double
+        example: 6
+      is_active:
+        type: boolean
+        example: true
+      sort_order:
+        type: integer
+        example: 0
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  CreateExtendedTravelRuleRequest:
+    type: object
+    required:
+      - rule_set_id
+    properties:
+      rule_set_id:
+        type: string
+        format: uuid
+      arrival_day_tax_free:
+        type: number
+        format: double
+      arrival_day_taxable:
+        type: number
+        format: double
+      departure_day_tax_free:
+        type: number
+        format: double
+      departure_day_taxable:
+        type: number
+        format: double
+      intermediate_day_tax_free:
+        type: number
+        format: double
+      intermediate_day_taxable:
+        type: number
+        format: double
+      three_month_enabled:
+        type: boolean
+      three_month_tax_free:
+        type: number
+        format: double
+      three_month_taxable:
+        type: number
+        format: double
+      sort_order:
+        type: integer
+  UpdateExtendedTravelRuleRequest:
+    type: object
+    properties:
+      arrival_day_tax_free:
+        type: number
+        format: double
+      arrival_day_taxable:
+        type: number
+        format: double
+      departure_day_tax_free:
+        type: number
+        format: double
+      departure_day_taxable:
+        type: number
+        format: double
+      intermediate_day_tax_free:
+        type: number
+        format: double
+      intermediate_day_taxable:
+        type: number
+        format: double
+      three_month_enabled:
+        type: boolean
+      three_month_tax_free:
+        type: number
+        format: double
+      three_month_taxable:
+        type: number
+        format: double
+      is_active:
+        type: boolean
+      sort_order:
+        type: integer
+  ExtendedTravelRuleList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/ExtendedTravelRule'
+  TravelAllowancePreviewRequest:
+    type: object
+    required:
+      - rule_set_id
+      - trip_type
+    properties:
+      rule_set_id:
+        type: string
+        format: uuid
+        description: Rule set to apply for the calculation
+      trip_type:
+        type: string
+        enum:
+          - local
+          - extended
+        description: 'Type of trip: local (Nahmontage) or extended (Fernmontage)'
+      distance_km:
+        type: number
+        format: double
+        description: Trip distance in kilometers (required for local trips)
+      duration_minutes:
+        type: integer
+        description: Trip duration in minutes (required for local trips)
+      start_date:
+        type: string
+        format: date
+        description: Trip start date (required for extended trips)
+      end_date:
+        type: string
+        format: date
+        description: Trip end date (required for extended trips)
+      three_month_active:
+        type: boolean
+        description: Whether three-month rule is currently active for extended trips
+        default: false
+  TravelAllowancePreview:
+    type: object
+    properties:
+      trip_type:
+        type: string
+        enum:
+          - local
+          - extended
+      rule_set_id:
+        type: string
+        format: uuid
+      rule_set_name:
+        type: string
+      tax_free_total:
+        type: number
+        format: double
+        description: Total tax-free amount
+      taxable_total:
+        type: number
+        format: double
+        description: Total taxable amount
+      total_allowance:
+        type: number
+        format: double
+        description: Combined total allowance (tax_free + taxable)
+      breakdown:
+        type: array
+        items:
+          $ref: '#/definitions/TravelAllowanceBreakdownItem'
+  TravelAllowanceBreakdownItem:
+    type: object
+    properties:
+      description:
+        type: string
+        description: 'Description of the line item (e.g. ''Arrival day'', ''Intermediate day x3'')'
+      days:
+        type: integer
+        description: Number of days this line applies to
+      tax_free_amount:
+        type: number
+        format: double
+      taxable_amount:
+        type: number
+        format: double
+      tax_free_subtotal:
+        type: number
+        format: double
+      taxable_subtotal:
+        type: number
+        format: double
 responses:
   BadRequest:
     description: Invalid request

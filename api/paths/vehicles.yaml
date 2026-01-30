@@ -1,0 +1,358 @@
+# Vehicle endpoints
+/vehicles:
+  get:
+    tags:
+      - Vehicles
+    summary: List vehicles
+    description: |
+      Returns all vehicles for the tenant.
+      Placeholder - requires separate vehicle documentation for full implementation.
+    operationId: listVehicles
+    responses:
+      200:
+        description: List of vehicles
+        schema:
+          $ref: '../schemas/vehicles.yaml#/VehicleList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Vehicles
+    summary: Create vehicle
+    description: |
+      Creates a new vehicle with a unique code.
+      Placeholder - requires separate vehicle documentation for full implementation.
+    operationId: createVehicle
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/vehicles.yaml#/CreateVehicleRequest'
+    responses:
+      201:
+        description: Created vehicle
+        schema:
+          $ref: '../schemas/vehicles.yaml#/Vehicle'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/vehicles/{id}:
+  get:
+    tags:
+      - Vehicles
+    summary: Get vehicle by ID
+    description: |
+      Retrieves vehicle details.
+      Placeholder - requires separate vehicle documentation for full implementation.
+    operationId: getVehicle
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Vehicle details
+        schema:
+          $ref: '../schemas/vehicles.yaml#/Vehicle'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Vehicles
+    summary: Update vehicle
+    description: |
+      Updates vehicle properties. Code cannot be changed.
+      Placeholder - requires separate vehicle documentation for full implementation.
+    operationId: updateVehicle
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/vehicles.yaml#/UpdateVehicleRequest'
+    responses:
+      200:
+        description: Updated vehicle
+        schema:
+          $ref: '../schemas/vehicles.yaml#/Vehicle'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Vehicles
+    summary: Delete vehicle
+    description: |
+      Permanently removes a vehicle.
+      Placeholder - requires separate vehicle documentation for full implementation.
+    operationId: deleteVehicle
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Vehicle deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+# Vehicle Route endpoints
+/vehicle-routes:
+  get:
+    tags:
+      - Vehicle Routes
+    summary: List vehicle routes
+    description: |
+      Returns all vehicle routes for the tenant.
+      Placeholder - requires separate vehicle documentation for full implementation.
+    operationId: listVehicleRoutes
+    responses:
+      200:
+        description: List of vehicle routes
+        schema:
+          $ref: '../schemas/vehicles.yaml#/VehicleRouteList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Vehicle Routes
+    summary: Create vehicle route
+    description: |
+      Creates a new vehicle route with a unique code.
+      Placeholder - requires separate vehicle documentation for full implementation.
+    operationId: createVehicleRoute
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/vehicles.yaml#/CreateVehicleRouteRequest'
+    responses:
+      201:
+        description: Created vehicle route
+        schema:
+          $ref: '../schemas/vehicles.yaml#/VehicleRoute'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/vehicle-routes/{id}:
+  get:
+    tags:
+      - Vehicle Routes
+    summary: Get vehicle route by ID
+    description: |
+      Retrieves vehicle route details.
+      Placeholder - requires separate vehicle documentation for full implementation.
+    operationId: getVehicleRoute
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Vehicle route details
+        schema:
+          $ref: '../schemas/vehicles.yaml#/VehicleRoute'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Vehicle Routes
+    summary: Update vehicle route
+    description: |
+      Updates vehicle route properties. Code cannot be changed.
+      Placeholder - requires separate vehicle documentation for full implementation.
+    operationId: updateVehicleRoute
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/vehicles.yaml#/UpdateVehicleRouteRequest'
+    responses:
+      200:
+        description: Updated vehicle route
+        schema:
+          $ref: '../schemas/vehicles.yaml#/VehicleRoute'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Vehicle Routes
+    summary: Delete vehicle route
+    description: |
+      Permanently removes a vehicle route.
+      Placeholder - requires separate vehicle documentation for full implementation.
+    operationId: deleteVehicleRoute
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Vehicle route deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+# Trip Record endpoints
+/trip-records:
+  get:
+    tags:
+      - Trip Records
+    summary: List trip records
+    description: |
+      Returns all trip records for the tenant.
+      Placeholder - requires separate vehicle documentation for full implementation.
+    operationId: listTripRecords
+    responses:
+      200:
+        description: List of trip records
+        schema:
+          $ref: '../schemas/vehicles.yaml#/TripRecordList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Trip Records
+    summary: Create trip record
+    description: |
+      Creates a new trip record.
+      Placeholder - requires separate vehicle documentation for full implementation.
+    operationId: createTripRecord
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/vehicles.yaml#/CreateTripRecordRequest'
+    responses:
+      201:
+        description: Created trip record
+        schema:
+          $ref: '../schemas/vehicles.yaml#/TripRecord'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/trip-records/{id}:
+  get:
+    tags:
+      - Trip Records
+    summary: Get trip record by ID
+    description: |
+      Retrieves trip record details.
+      Placeholder - requires separate vehicle documentation for full implementation.
+    operationId: getTripRecord
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Trip record details
+        schema:
+          $ref: '../schemas/vehicles.yaml#/TripRecord'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Trip Records
+    summary: Update trip record
+    description: |
+      Updates trip record properties.
+      Placeholder - requires separate vehicle documentation for full implementation.
+    operationId: updateTripRecord
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/vehicles.yaml#/UpdateTripRecordRequest'
+    responses:
+      200:
+        description: Updated trip record
+        schema:
+          $ref: '../schemas/vehicles.yaml#/TripRecord'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Trip Records
+    summary: Delete trip record
+    description: |
+      Permanently removes a trip record.
+      Placeholder - requires separate vehicle documentation for full implementation.
+    operationId: deleteTripRecord
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Trip record deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
