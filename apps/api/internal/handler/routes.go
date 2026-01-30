@@ -1274,6 +1274,66 @@ func RegisterTerminalBookingRoutes(r chi.Router, h *TerminalHandler, authz *midd
 	})
 }
 
+// RegisterAccessZoneRoutes registers access zone routes.
+func RegisterAccessZoneRoutes(r chi.Router, h *AccessZoneHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("access_control.manage").String()
+	r.Route("/access-zones", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+	})
+}
+
+// RegisterAccessProfileRoutes registers access profile routes.
+func RegisterAccessProfileRoutes(r chi.Router, h *AccessProfileHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("access_control.manage").String()
+	r.Route("/access-profiles", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+	})
+}
+
+// RegisterEmployeeAccessAssignmentRoutes registers employee access assignment routes.
+func RegisterEmployeeAccessAssignmentRoutes(r chi.Router, h *EmployeeAccessAssignmentHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("access_control.manage").String()
+	r.Route("/employee-access-assignments", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+	})
+}
+
 // RegisterContactKindRoutes registers contact kind routes.
 func RegisterContactKindRoutes(r chi.Router, h *ContactKindHandler, authz *middleware.AuthorizationMiddleware) {
 	permManage := permissions.ID("contact_management.manage").String()

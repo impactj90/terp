@@ -307,6 +307,19 @@ func main() {
 	terminalService := service.NewTerminalService(importBatchRepo, rawTerminalBookingRepo, employeeRepo, bookingTypeRepo)
 	terminalHandler := handler.NewTerminalHandler(terminalService)
 
+	// Initialize Access Control (Zutritt placeholder)
+	accessZoneRepo := repository.NewAccessZoneRepository(db)
+	accessZoneService := service.NewAccessZoneService(accessZoneRepo)
+	accessZoneHandler := handler.NewAccessZoneHandler(accessZoneService)
+
+	accessProfileRepo := repository.NewAccessProfileRepository(db)
+	accessProfileService := service.NewAccessProfileService(accessProfileRepo)
+	accessProfileHandler := handler.NewAccessProfileHandler(accessProfileService)
+
+	employeeAccessAssignmentRepo := repository.NewEmployeeAccessAssignmentRepository(db)
+	employeeAccessAssignmentService := service.NewEmployeeAccessAssignmentService(employeeAccessAssignmentRepo)
+	employeeAccessAssignmentHandler := handler.NewEmployeeAccessAssignmentHandler(employeeAccessAssignmentService)
+
 	// Initialize Scheduler
 	scheduleRepo := repository.NewScheduleRepository(db)
 	scheduleService := service.NewScheduleService(scheduleRepo)
@@ -463,6 +476,9 @@ func main() {
 				handler.RegisterContactTypeRoutes(r, contactTypeHandler, authzMiddleware)
 				handler.RegisterContactKindRoutes(r, contactKindHandler, authzMiddleware)
 				handler.RegisterTerminalBookingRoutes(r, terminalHandler, authzMiddleware)
+				handler.RegisterAccessZoneRoutes(r, accessZoneHandler, authzMiddleware)
+				handler.RegisterAccessProfileRoutes(r, accessProfileHandler, authzMiddleware)
+				handler.RegisterEmployeeAccessAssignmentRoutes(r, employeeAccessAssignmentHandler, authzMiddleware)
 			})
 		})
 

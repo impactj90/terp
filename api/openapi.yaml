@@ -151,6 +151,12 @@ tags:
     description: Contact kind management linked to contact types
   - name: Terminal Bookings
     description: Raw terminal booking data and import batch management
+  - name: Access Zones
+    description: Access control zone management (placeholder - requires separate ZMI Zutritt documentation)
+  - name: Access Profiles
+    description: Access control profile management (placeholder - requires separate ZMI Zutritt documentation)
+  - name: Employee Access Assignments
+    description: Employee-to-access-profile assignment management (placeholder)
 
 securityDefinitions:
   BearerAuth:
@@ -666,6 +672,20 @@ paths:
     $ref: 'paths/terminal-bookings.yaml#/~1import-batches'
   /import-batches/{id}:
     $ref: 'paths/terminal-bookings.yaml#/~1import-batches~1{id}'
+
+  # Access Control
+  /access-zones:
+    $ref: 'paths/access-control.yaml#/~1access-zones'
+  /access-zones/{id}:
+    $ref: 'paths/access-control.yaml#/~1access-zones~1{id}'
+  /access-profiles:
+    $ref: 'paths/access-control.yaml#/~1access-profiles'
+  /access-profiles/{id}:
+    $ref: 'paths/access-control.yaml#/~1access-profiles~1{id}'
+  /employee-access-assignments:
+    $ref: 'paths/access-control.yaml#/~1employee-access-assignments'
+  /employee-access-assignments/{id}:
+    $ref: 'paths/access-control.yaml#/~1employee-access-assignments~1{id}'
 
 definitions:
   # Common
@@ -1371,6 +1391,32 @@ definitions:
     $ref: 'schemas/terminal-bookings.yaml#/TriggerTerminalImportResponse'
   RawTerminalBookingInput:
     $ref: 'schemas/terminal-bookings.yaml#/RawTerminalBookingInput'
+
+  # Access Control
+  AccessZone:
+    $ref: 'schemas/access-control.yaml#/AccessZone'
+  CreateAccessZoneRequest:
+    $ref: 'schemas/access-control.yaml#/CreateAccessZoneRequest'
+  UpdateAccessZoneRequest:
+    $ref: 'schemas/access-control.yaml#/UpdateAccessZoneRequest'
+  AccessZoneList:
+    $ref: 'schemas/access-control.yaml#/AccessZoneList'
+  AccessProfile:
+    $ref: 'schemas/access-control.yaml#/AccessProfile'
+  CreateAccessProfileRequest:
+    $ref: 'schemas/access-control.yaml#/CreateAccessProfileRequest'
+  UpdateAccessProfileRequest:
+    $ref: 'schemas/access-control.yaml#/UpdateAccessProfileRequest'
+  AccessProfileList:
+    $ref: 'schemas/access-control.yaml#/AccessProfileList'
+  EmployeeAccessAssignment:
+    $ref: 'schemas/access-control.yaml#/EmployeeAccessAssignment'
+  CreateEmployeeAccessAssignmentRequest:
+    $ref: 'schemas/access-control.yaml#/CreateEmployeeAccessAssignmentRequest'
+  UpdateEmployeeAccessAssignmentRequest:
+    $ref: 'schemas/access-control.yaml#/UpdateEmployeeAccessAssignmentRequest'
+  EmployeeAccessAssignmentList:
+    $ref: 'schemas/access-control.yaml#/EmployeeAccessAssignmentList'
 
 responses:
   BadRequest:

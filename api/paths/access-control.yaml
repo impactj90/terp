@@ -1,0 +1,346 @@
+# Access Zone endpoints
+/access-zones:
+  get:
+    tags:
+      - Access Zones
+    summary: List access zones
+    description: |
+      Returns all access zones for the tenant.
+      Placeholder - requires separate ZMI Zutritt documentation for full implementation.
+    operationId: listAccessZones
+    responses:
+      200:
+        description: List of access zones
+        schema:
+          $ref: '../schemas/access-control.yaml#/AccessZoneList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Access Zones
+    summary: Create access zone
+    description: |
+      Creates a new access zone with a unique code.
+      Placeholder - requires separate ZMI Zutritt documentation for full implementation.
+    operationId: createAccessZone
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/access-control.yaml#/CreateAccessZoneRequest'
+    responses:
+      201:
+        description: Created access zone
+        schema:
+          $ref: '../schemas/access-control.yaml#/AccessZone'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/access-zones/{id}:
+  get:
+    tags:
+      - Access Zones
+    summary: Get access zone by ID
+    description: Retrieves access zone details.
+    operationId: getAccessZone
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Access zone details
+        schema:
+          $ref: '../schemas/access-control.yaml#/AccessZone'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Access Zones
+    summary: Update access zone
+    description: Updates access zone properties. Code cannot be changed.
+    operationId: updateAccessZone
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/access-control.yaml#/UpdateAccessZoneRequest'
+    responses:
+      200:
+        description: Updated access zone
+        schema:
+          $ref: '../schemas/access-control.yaml#/AccessZone'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Access Zones
+    summary: Delete access zone
+    description: Permanently removes an access zone.
+    operationId: deleteAccessZone
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Access zone deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+# Access Profile endpoints
+/access-profiles:
+  get:
+    tags:
+      - Access Profiles
+    summary: List access profiles
+    description: |
+      Returns all access profiles for the tenant.
+      Placeholder - requires separate ZMI Zutritt documentation for full implementation.
+    operationId: listAccessProfiles
+    responses:
+      200:
+        description: List of access profiles
+        schema:
+          $ref: '../schemas/access-control.yaml#/AccessProfileList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Access Profiles
+    summary: Create access profile
+    description: |
+      Creates a new access profile with a unique code.
+      Placeholder - requires separate ZMI Zutritt documentation for full implementation.
+    operationId: createAccessProfile
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/access-control.yaml#/CreateAccessProfileRequest'
+    responses:
+      201:
+        description: Created access profile
+        schema:
+          $ref: '../schemas/access-control.yaml#/AccessProfile'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      409:
+        description: Code already exists
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+/access-profiles/{id}:
+  get:
+    tags:
+      - Access Profiles
+    summary: Get access profile by ID
+    description: Retrieves access profile details.
+    operationId: getAccessProfile
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Access profile details
+        schema:
+          $ref: '../schemas/access-control.yaml#/AccessProfile'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Access Profiles
+    summary: Update access profile
+    description: Updates access profile properties. Code cannot be changed.
+    operationId: updateAccessProfile
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/access-control.yaml#/UpdateAccessProfileRequest'
+    responses:
+      200:
+        description: Updated access profile
+        schema:
+          $ref: '../schemas/access-control.yaml#/AccessProfile'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Access Profiles
+    summary: Delete access profile
+    description: |
+      Permanently removes an access profile. Fails if employee assignments reference it.
+      Consider deactivating instead.
+    operationId: deleteAccessProfile
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Access profile deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+      409:
+        description: Access profile is in use by employee assignments
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+
+# Employee Access Assignment endpoints
+/employee-access-assignments:
+  get:
+    tags:
+      - Employee Access Assignments
+    summary: List employee access assignments
+    description: |
+      Returns all employee access assignments for the tenant.
+      Placeholder - requires separate ZMI Zutritt documentation for full implementation.
+    operationId: listEmployeeAccessAssignments
+    responses:
+      200:
+        description: List of employee access assignments
+        schema:
+          $ref: '../schemas/access-control.yaml#/EmployeeAccessAssignmentList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+  post:
+    tags:
+      - Employee Access Assignments
+    summary: Create employee access assignment
+    description: |
+      Assigns an access profile to an employee.
+      Placeholder - requires separate ZMI Zutritt documentation for full implementation.
+    operationId: createEmployeeAccessAssignment
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/access-control.yaml#/CreateEmployeeAccessAssignmentRequest'
+    responses:
+      201:
+        description: Created employee access assignment
+        schema:
+          $ref: '../schemas/access-control.yaml#/EmployeeAccessAssignment'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
+/employee-access-assignments/{id}:
+  get:
+    tags:
+      - Employee Access Assignments
+    summary: Get employee access assignment by ID
+    description: Retrieves employee access assignment details.
+    operationId: getEmployeeAccessAssignment
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      200:
+        description: Employee access assignment details
+        schema:
+          $ref: '../schemas/access-control.yaml#/EmployeeAccessAssignment'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  patch:
+    tags:
+      - Employee Access Assignments
+    summary: Update employee access assignment
+    description: Updates employee access assignment properties.
+    operationId: updateEmployeeAccessAssignment
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/access-control.yaml#/UpdateEmployeeAccessAssignmentRequest'
+    responses:
+      200:
+        description: Updated employee access assignment
+        schema:
+          $ref: '../schemas/access-control.yaml#/EmployeeAccessAssignment'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+  delete:
+    tags:
+      - Employee Access Assignments
+    summary: Delete employee access assignment
+    description: Permanently removes an employee access assignment.
+    operationId: deleteEmployeeAccessAssignment
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+    responses:
+      204:
+        description: Employee access assignment deleted
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

@@ -148,6 +148,12 @@ tags:
     description: Contact kind management linked to contact types
   - name: Terminal Bookings
     description: Raw terminal booking data and import batch management
+  - name: Access Zones
+    description: Access control zone management (placeholder - requires separate ZMI Zutritt documentation)
+  - name: Access Profiles
+    description: Access control profile management (placeholder - requires separate ZMI Zutritt documentation)
+  - name: Employee Access Assignments
+    description: Employee-to-access-profile assignment management (placeholder)
 securityDefinitions:
   BearerAuth:
     type: apiKey
@@ -9309,6 +9315,344 @@ paths:
           description: Batch not found
           schema:
             $ref: '#/definitions/ProblemDetails'
+  /access-zones:
+    get:
+      tags:
+        - Access Zones
+      summary: List access zones
+      description: |
+        Returns all access zones for the tenant.
+        Placeholder - requires separate ZMI Zutritt documentation for full implementation.
+      operationId: listAccessZones
+      responses:
+        '200':
+          description: List of access zones
+          schema:
+            $ref: '#/definitions/AccessZoneList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+    post:
+      tags:
+        - Access Zones
+      summary: Create access zone
+      description: |
+        Creates a new access zone with a unique code.
+        Placeholder - requires separate ZMI Zutritt documentation for full implementation.
+      operationId: createAccessZone
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateAccessZoneRequest'
+      responses:
+        '201':
+          description: Created access zone
+          schema:
+            $ref: '#/definitions/AccessZone'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '409':
+          description: Code already exists
+          schema:
+            $ref: '#/definitions/ProblemDetails'
+  '/access-zones/{id}':
+    get:
+      tags:
+        - Access Zones
+      summary: Get access zone by ID
+      description: Retrieves access zone details.
+      operationId: getAccessZone
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Access zone details
+          schema:
+            $ref: '#/definitions/AccessZone'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    patch:
+      tags:
+        - Access Zones
+      summary: Update access zone
+      description: Updates access zone properties. Code cannot be changed.
+      operationId: updateAccessZone
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateAccessZoneRequest'
+      responses:
+        '200':
+          description: Updated access zone
+          schema:
+            $ref: '#/definitions/AccessZone'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    delete:
+      tags:
+        - Access Zones
+      summary: Delete access zone
+      description: Permanently removes an access zone.
+      operationId: deleteAccessZone
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Access zone deleted
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+  /access-profiles:
+    get:
+      tags:
+        - Access Profiles
+      summary: List access profiles
+      description: |
+        Returns all access profiles for the tenant.
+        Placeholder - requires separate ZMI Zutritt documentation for full implementation.
+      operationId: listAccessProfiles
+      responses:
+        '200':
+          description: List of access profiles
+          schema:
+            $ref: '#/definitions/AccessProfileList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+    post:
+      tags:
+        - Access Profiles
+      summary: Create access profile
+      description: |
+        Creates a new access profile with a unique code.
+        Placeholder - requires separate ZMI Zutritt documentation for full implementation.
+      operationId: createAccessProfile
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateAccessProfileRequest'
+      responses:
+        '201':
+          description: Created access profile
+          schema:
+            $ref: '#/definitions/AccessProfile'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '409':
+          description: Code already exists
+          schema:
+            $ref: '#/definitions/ProblemDetails'
+  '/access-profiles/{id}':
+    get:
+      tags:
+        - Access Profiles
+      summary: Get access profile by ID
+      description: Retrieves access profile details.
+      operationId: getAccessProfile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Access profile details
+          schema:
+            $ref: '#/definitions/AccessProfile'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    patch:
+      tags:
+        - Access Profiles
+      summary: Update access profile
+      description: Updates access profile properties. Code cannot be changed.
+      operationId: updateAccessProfile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateAccessProfileRequest'
+      responses:
+        '200':
+          description: Updated access profile
+          schema:
+            $ref: '#/definitions/AccessProfile'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    delete:
+      tags:
+        - Access Profiles
+      summary: Delete access profile
+      description: |
+        Permanently removes an access profile. Fails if employee assignments reference it.
+        Consider deactivating instead.
+      operationId: deleteAccessProfile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Access profile deleted
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+        '409':
+          description: Access profile is in use by employee assignments
+          schema:
+            $ref: '#/definitions/ProblemDetails'
+  /employee-access-assignments:
+    get:
+      tags:
+        - Employee Access Assignments
+      summary: List employee access assignments
+      description: |
+        Returns all employee access assignments for the tenant.
+        Placeholder - requires separate ZMI Zutritt documentation for full implementation.
+      operationId: listEmployeeAccessAssignments
+      responses:
+        '200':
+          description: List of employee access assignments
+          schema:
+            $ref: '#/definitions/EmployeeAccessAssignmentList'
+        '401':
+          $ref: '#/responses/Unauthorized'
+    post:
+      tags:
+        - Employee Access Assignments
+      summary: Create employee access assignment
+      description: |
+        Assigns an access profile to an employee.
+        Placeholder - requires separate ZMI Zutritt documentation for full implementation.
+      operationId: createEmployeeAccessAssignment
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateEmployeeAccessAssignmentRequest'
+      responses:
+        '201':
+          description: Created employee access assignment
+          schema:
+            $ref: '#/definitions/EmployeeAccessAssignment'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+  '/employee-access-assignments/{id}':
+    get:
+      tags:
+        - Employee Access Assignments
+      summary: Get employee access assignment by ID
+      description: Retrieves employee access assignment details.
+      operationId: getEmployeeAccessAssignment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Employee access assignment details
+          schema:
+            $ref: '#/definitions/EmployeeAccessAssignment'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    patch:
+      tags:
+        - Employee Access Assignments
+      summary: Update employee access assignment
+      description: Updates employee access assignment properties.
+      operationId: updateEmployeeAccessAssignment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateEmployeeAccessAssignmentRequest'
+      responses:
+        '200':
+          description: Updated employee access assignment
+          schema:
+            $ref: '#/definitions/EmployeeAccessAssignment'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
+    delete:
+      tags:
+        - Employee Access Assignments
+      summary: Delete employee access assignment
+      description: Permanently removes an employee access assignment.
+      operationId: deleteEmployeeAccessAssignment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Employee access assignment deleted
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          $ref: '#/responses/NotFound'
 definitions:
   UUID:
     type: string
@@ -18809,6 +19153,224 @@ definitions:
         minLength: 1
         maxLength: 20
         description: 'Booking code (e.g. A1, A2, P1, P2, D1, D2)'
+  AccessZone:
+    type: object
+    required:
+      - id
+      - tenant_id
+      - code
+      - name
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      code:
+        type: string
+        example: ZONE_A
+      name:
+        type: string
+        example: Building A Entrance
+      description:
+        type: string
+        x-nullable: true
+      is_active:
+        type: boolean
+        example: true
+      sort_order:
+        type: integer
+        example: 0
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  CreateAccessZoneRequest:
+    type: object
+    required:
+      - code
+      - name
+    properties:
+      code:
+        type: string
+        minLength: 1
+        maxLength: 50
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      description:
+        type: string
+      sort_order:
+        type: integer
+  UpdateAccessZoneRequest:
+    type: object
+    properties:
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      description:
+        type: string
+      is_active:
+        type: boolean
+      sort_order:
+        type: integer
+  AccessZoneList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/AccessZone'
+  AccessProfile:
+    type: object
+    required:
+      - id
+      - tenant_id
+      - code
+      - name
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      code:
+        type: string
+        example: PROFILE_STANDARD
+      name:
+        type: string
+        example: Standard Access
+      description:
+        type: string
+        x-nullable: true
+      is_active:
+        type: boolean
+        example: true
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  CreateAccessProfileRequest:
+    type: object
+    required:
+      - code
+      - name
+    properties:
+      code:
+        type: string
+        minLength: 1
+        maxLength: 50
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      description:
+        type: string
+  UpdateAccessProfileRequest:
+    type: object
+    properties:
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      description:
+        type: string
+      is_active:
+        type: boolean
+  AccessProfileList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/AccessProfile'
+  EmployeeAccessAssignment:
+    type: object
+    required:
+      - id
+      - tenant_id
+      - employee_id
+      - access_profile_id
+    properties:
+      id:
+        type: string
+        format: uuid
+      tenant_id:
+        type: string
+        format: uuid
+      employee_id:
+        type: string
+        format: uuid
+      access_profile_id:
+        type: string
+        format: uuid
+      valid_from:
+        type: string
+        format: date
+        x-nullable: true
+      valid_to:
+        type: string
+        format: date
+        x-nullable: true
+      is_active:
+        type: boolean
+        example: true
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+  CreateEmployeeAccessAssignmentRequest:
+    type: object
+    required:
+      - employee_id
+      - access_profile_id
+    properties:
+      employee_id:
+        type: string
+        format: uuid
+      access_profile_id:
+        type: string
+        format: uuid
+      valid_from:
+        type: string
+        format: date
+      valid_to:
+        type: string
+        format: date
+  UpdateEmployeeAccessAssignmentRequest:
+    type: object
+    properties:
+      valid_from:
+        type: string
+        format: date
+      valid_to:
+        type: string
+        format: date
+      is_active:
+        type: boolean
+  EmployeeAccessAssignmentList:
+    type: object
+    required:
+      - data
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/EmployeeAccessAssignment'
 responses:
   BadRequest:
     description: Invalid request
