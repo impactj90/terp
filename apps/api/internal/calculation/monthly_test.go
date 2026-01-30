@@ -803,3 +803,48 @@ func TestCalculateMonth_Caps_BothCapsNil(t *testing.T) {
 	assert.Equal(t, 0, output.FlextimeForfeited)
 	assert.Empty(t, output.Warnings)
 }
+
+// --- Ticket Test Case Pack ---
+
+func TestCalculateMonth_TicketCase1_CompleteCarryover(t *testing.T) {
+	// Ticket: overtime=600min (10hrs), monthly_cap=480min (8hrs)
+	// Expected: credited=480, forfeited=120
+	input := calculation.MonthlyCalcInput{
+		DailyValues: []calculation.DailyValueInput{
+			{Date: "2025-01-01", GrossTime: 1080, NetTime: 1080, TargetTime: 480, Overtime: 600, Undertime: 0},
+		},
+		PreviousCarryover: 0,
+		EvaluationRules: &calculation.MonthlyEvaluationInput{
+			CreditType:          calculation.CreditTypeCompleteCarryover,
+			MaxFlextimePerMonth: intPtr(480),
+		},
+	}
+
+	output := calculation.CalculateMonth(input)
+
+	assert.Equal(t, 480, output.FlextimeCredited)
+	assert.Equal(t, 120, output.FlextimeForfeited)
+	assert.Equal(t, 480, output.FlextimeEnd)
+	assert.Contains(t, output.Warnings, calculation.WarnCodeMonthlyCap)
+}
+
+func TestCalculateMonth_TicketCase2_AfterThreshold(t *testing.T) {
+	// Ticket: overtime=300min (5hrs), threshold=120min (2hrs)
+	// Expected: credited=180, forfeited=120
+	input := calculation.MonthlyCalcInput{
+		DailyValues: []calculation.DailyValueInput{
+			{Date: "2025-01-01", GrossTime: 780, NetTime: 780, TargetTime: 480, Overtime: 300, Undertime: 0},
+		},
+		PreviousCarryover: 0,
+		EvaluationRules: &calculation.MonthlyEvaluationInput{
+			CreditType:        calculation.CreditTypeAfterThreshold,
+			FlextimeThreshold: intPtr(120),
+		},
+	}
+
+	output := calculation.CalculateMonth(input)
+
+	assert.Equal(t, 180, output.FlextimeCredited)
+	assert.Equal(t, 120, output.FlextimeForfeited) // threshold amount
+	assert.Equal(t, 180, output.FlextimeEnd)
+}

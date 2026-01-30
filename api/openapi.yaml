@@ -341,6 +341,20 @@ paths:
   /monthly-values/recalculate:
     $ref: 'paths/monthly-values.yaml#/~1monthly-values~1recalculate'
 
+  # Employee Monthly Values (employee-nested routes)
+  /employees/{id}/months/{year}:
+    $ref: 'paths/employee-monthly.yaml#/~1employees~1{id}~1months~1{year}'
+  /employees/{id}/months/{year}/{month}:
+    $ref: 'paths/employee-monthly.yaml#/~1employees~1{id}~1months~1{year}~1{month}'
+  /employees/{id}/months/{year}/{month}/days:
+    $ref: 'paths/employee-monthly.yaml#/~1employees~1{id}~1months~1{year}~1{month}~1days'
+  /employees/{id}/months/{year}/{month}/close:
+    $ref: 'paths/employee-monthly.yaml#/~1employees~1{id}~1months~1{year}~1{month}~1close'
+  /employees/{id}/months/{year}/{month}/reopen:
+    $ref: 'paths/employee-monthly.yaml#/~1employees~1{id}~1months~1{year}~1{month}~1reopen'
+  /employees/{id}/months/{year}/{month}/recalculate:
+    $ref: 'paths/employee-monthly.yaml#/~1employees~1{id}~1months~1{year}~1{month}~1recalculate'
+
   # Corrections
   /corrections:
     $ref: 'paths/corrections.yaml#/~1corrections'
@@ -859,6 +873,14 @@ definitions:
     $ref: 'schemas/monthly-values.yaml#/MonthlyValue'
   MonthlyValueList:
     $ref: 'schemas/monthly-values.yaml#/MonthlyValueList'
+  MonthSummaryResponse:
+    $ref: 'schemas/monthly-values.yaml#/MonthSummaryResponse'
+  YearOverviewResponse:
+    $ref: 'schemas/monthly-values.yaml#/YearOverviewResponse'
+  DailyBreakdownResponse:
+    $ref: 'schemas/monthly-values.yaml#/DailyBreakdownResponse'
+  DailyBreakdownItem:
+    $ref: 'schemas/monthly-values.yaml#/DailyBreakdownItem'
 
   # Corrections
   Correction:

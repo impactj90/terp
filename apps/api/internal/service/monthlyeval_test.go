@@ -778,3 +778,56 @@ func TestBuildEvaluationRules_EmptyCreditType(t *testing.T) {
 	result := buildEvaluationRules(tariff)
 	assert.Nil(t, result, "empty credit type defaults to no_evaluation = nil rules")
 }
+
+// --- Ticket Test Case Pack ---
+
+func TestMonthlyEvalService_CloseReopenRecalculate_TicketCase3(t *testing.T) {
+	// Ticket: close month then recalc -> blocked; reopen then recalc -> allowed
+	ctx := context.Background()
+	svc, monthlyValueRepo, dailyValueRepo, absenceDayRepo, employeeRepo, _ := newTestMonthlyEvalService()
+
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	reopenedBy := uuid.New()
+
+	employee := &model.Employee{ID: employeeID, TenantID: tenantID}
+	employeeRepo.On("GetByID", ctx, employeeID).Return(employee, nil)
+
+	// Step 1: Month is closed -> recalculate should fail
+	closedMV := &model.MonthlyValue{
+		EmployeeID: employeeID,
+		Year:       2026,
+		Month:      1,
+		IsClosed:   true,
+	}
+	monthlyValueRepo.On("GetByEmployeeMonth", ctx, employeeID, 2026, 1).Return(closedMV, nil).Once()
+
+	err := svc.RecalculateMonth(ctx, employeeID, 2026, 1)
+	assert.ErrorIs(t, err, ErrMonthClosed)
+
+	// Step 2: Reopen the month
+	monthlyValueRepo.On("GetByEmployeeMonth", ctx, employeeID, 2026, 1).Return(closedMV, nil).Once()
+	monthlyValueRepo.On("ReopenMonth", ctx, employeeID, 2026, 1, reopenedBy).Return(nil)
+
+	err = svc.ReopenMonth(ctx, employeeID, 2026, 1, reopenedBy)
+	require.NoError(t, err)
+
+	// Step 3: Recalculate should now succeed (month is open)
+	openMV := &model.MonthlyValue{
+		EmployeeID: employeeID,
+		Year:       2026,
+		Month:      1,
+		IsClosed:   false,
+	}
+	monthlyValueRepo.On("GetByEmployeeMonth", ctx, employeeID, 2026, 1).Return(openMV, nil).Once()
+	monthlyValueRepo.On("GetPreviousMonth", ctx, employeeID, 2026, 1).Return(nil, nil)
+
+	from := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 1, 31, 0, 0, 0, 0, time.UTC)
+	dailyValueRepo.On("GetByEmployeeDateRange", ctx, employeeID, from, to).Return([]model.DailyValue{}, nil)
+	absenceDayRepo.On("GetByEmployeeDateRange", ctx, employeeID, from, to).Return([]model.AbsenceDay{}, nil)
+	monthlyValueRepo.On("Upsert", ctx, mock.AnythingOfType("*model.MonthlyValue")).Return(nil)
+
+	err = svc.RecalculateMonth(ctx, employeeID, 2026, 1)
+	require.NoError(t, err)
+}

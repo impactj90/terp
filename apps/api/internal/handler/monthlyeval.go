@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/google/uuid"
 
+	"github.com/tolga/terp/gen/models"
 	"github.com/tolga/terp/internal/auth"
 	"github.com/tolga/terp/internal/middleware"
 	"github.com/tolga/terp/internal/model"
@@ -46,66 +48,6 @@ func (h *MonthlyEvalHandler) GetMonthSummary(w http.ResponseWriter, r *http.Requ
 	employeeID, err := uuid.Parse(employeeIDStr)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid employee ID")
-		return
-	}
-	if err := h.ensureEmployeeScope(r.Context(), employeeID); err != nil {
-		if errors.Is(err, service.ErrEmployeeNotFound) {
-			respondError(w, http.StatusNotFound, "Employee not found")
-			return
-		}
-		if errors.Is(err, errMonthlyEvalScopeDenied) {
-			respondError(w, http.StatusForbidden, "Permission denied")
-			return
-		}
-		respondError(w, http.StatusInternalServerError, "Failed to verify access")
-		return
-	}
-	if err := h.ensureEmployeeScope(r.Context(), employeeID); err != nil {
-		if errors.Is(err, service.ErrEmployeeNotFound) {
-			respondError(w, http.StatusNotFound, "Employee not found")
-			return
-		}
-		if errors.Is(err, errMonthlyEvalScopeDenied) {
-			respondError(w, http.StatusForbidden, "Permission denied")
-			return
-		}
-		respondError(w, http.StatusInternalServerError, "Failed to verify access")
-		return
-	}
-	if err := h.ensureEmployeeScope(r.Context(), employeeID); err != nil {
-		if errors.Is(err, service.ErrEmployeeNotFound) {
-			respondError(w, http.StatusNotFound, "Employee not found")
-			return
-		}
-		if errors.Is(err, errMonthlyEvalScopeDenied) {
-			respondError(w, http.StatusForbidden, "Permission denied")
-			return
-		}
-		respondError(w, http.StatusInternalServerError, "Failed to verify access")
-		return
-	}
-	if err := h.ensureEmployeeScope(r.Context(), employeeID); err != nil {
-		if errors.Is(err, service.ErrEmployeeNotFound) {
-			respondError(w, http.StatusNotFound, "Employee not found")
-			return
-		}
-		if errors.Is(err, errMonthlyEvalScopeDenied) {
-			respondError(w, http.StatusForbidden, "Permission denied")
-			return
-		}
-		respondError(w, http.StatusInternalServerError, "Failed to verify access")
-		return
-	}
-	if err := h.ensureEmployeeScope(r.Context(), employeeID); err != nil {
-		if errors.Is(err, service.ErrEmployeeNotFound) {
-			respondError(w, http.StatusNotFound, "Employee not found")
-			return
-		}
-		if errors.Is(err, errMonthlyEvalScopeDenied) {
-			respondError(w, http.StatusForbidden, "Permission denied")
-			return
-		}
-		respondError(w, http.StatusInternalServerError, "Failed to verify access")
 		return
 	}
 	if err := h.ensureEmployeeScope(r.Context(), employeeID); err != nil {
@@ -177,14 +119,14 @@ func (h *MonthlyEvalHandler) GetYearOverview(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	response := make([]map[string]interface{}, 0, len(summaries))
+	data := make([]*models.MonthSummaryResponse, 0, len(summaries))
 	for i := range summaries {
-		response = append(response, h.summaryToResponse(&summaries[i]))
+		data = append(data, h.summaryToResponse(&summaries[i]))
 	}
 
-	respondJSON(w, http.StatusOK, map[string]interface{}{
-		"year": year,
-		"data": response,
+	respondJSON(w, http.StatusOK, &models.YearOverviewResponse{
+		Year: int64(year),
+		Data: data,
 	})
 }
 
@@ -339,13 +281,13 @@ func (h *MonthlyEvalHandler) GetDailyBreakdown(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	response := make([]map[string]interface{}, 0, len(dailyValues))
+	data := make([]*models.DailyBreakdownItem, 0, len(dailyValues))
 	for _, dv := range dailyValues {
-		response = append(response, h.dailyValueToResponse(&dv))
+		data = append(data, h.dailyValueToResponse(&dv))
 	}
 
-	respondJSON(w, http.StatusOK, map[string]interface{}{
-		"data": response,
+	respondJSON(w, http.StatusOK, &models.DailyBreakdownResponse{
+		Data: data,
 	})
 }
 
@@ -418,72 +360,82 @@ func (h *MonthlyEvalHandler) handleServiceError(w http.ResponseWriter, err error
 	}
 }
 
-// dailyValueToResponse converts model.DailyValue to API response map.
-func (h *MonthlyEvalHandler) dailyValueToResponse(dv *model.DailyValue) map[string]interface{} {
-	response := map[string]interface{}{
-		"id":            dv.ID.String(),
-		"employee_id":   dv.EmployeeID.String(),
-		"value_date":    dv.ValueDate.Format("2006-01-02"),
-		"gross_time":    dv.GrossTime,
-		"net_time":      dv.NetTime,
-		"target_time":   dv.TargetTime,
-		"overtime":      dv.Overtime,
-		"undertime":     dv.Undertime,
-		"break_time":    dv.BreakTime,
-		"has_error":     dv.HasError,
-		"error_codes":   dv.ErrorCodes,
-		"warnings":      dv.Warnings,
-		"booking_count": dv.BookingCount,
+// dailyValueToResponse converts model.DailyValue to generated API response model.
+func (h *MonthlyEvalHandler) dailyValueToResponse(dv *model.DailyValue) *models.DailyBreakdownItem {
+	item := &models.DailyBreakdownItem{
+		ID:           strfmt.UUID(dv.ID.String()),
+		EmployeeID:   strfmt.UUID(dv.EmployeeID.String()),
+		ValueDate:    strfmt.Date(dv.ValueDate),
+		GrossTime:    int64(dv.GrossTime),
+		NetTime:      int64(dv.NetTime),
+		TargetTime:   int64(dv.TargetTime),
+		Overtime:     int64(dv.Overtime),
+		Undertime:    int64(dv.Undertime),
+		BreakTime:    int64(dv.BreakTime),
+		HasError:     dv.HasError,
+		ErrorCodes:   dv.ErrorCodes,
+		Warnings:     dv.Warnings,
+		BookingCount: int64(dv.BookingCount),
+		FirstCome:    minutesToHHMM(dv.FirstCome),
+		LastGo:       minutesToHHMM(dv.LastGo),
 	}
-	if dv.FirstCome != nil {
-		response["first_come"] = *dv.FirstCome
-	}
-	if dv.LastGo != nil {
-		response["last_go"] = *dv.LastGo
-	}
-	return response
+	return item
 }
 
-// summaryToResponse converts service.MonthSummary to API response map.
-func (h *MonthlyEvalHandler) summaryToResponse(s *service.MonthSummary) map[string]interface{} {
-	response := map[string]interface{}{
-		"employee_id":        s.EmployeeID.String(),
-		"year":               s.Year,
-		"month":              s.Month,
-		"total_gross_time":   s.TotalGrossTime,
-		"total_net_time":     s.TotalNetTime,
-		"total_target_time":  s.TotalTargetTime,
-		"total_overtime":     s.TotalOvertime,
-		"total_undertime":    s.TotalUndertime,
-		"total_break_time":   s.TotalBreakTime,
-		"flextime_start":     s.FlextimeStart,
-		"flextime_change":    s.FlextimeChange,
-		"flextime_end":       s.FlextimeEnd,
-		"flextime_carryover": s.FlextimeCarryover,
-		"vacation_taken":     s.VacationTaken.InexactFloat64(),
-		"sick_days":          s.SickDays,
-		"other_absence_days": s.OtherAbsenceDays,
-		"work_days":          s.WorkDays,
-		"days_with_errors":   s.DaysWithErrors,
-		"is_closed":          s.IsClosed,
-		"warnings":           s.Warnings,
+// summaryToResponse converts service.MonthSummary to generated API response model.
+func (h *MonthlyEvalHandler) summaryToResponse(s *service.MonthSummary) *models.MonthSummaryResponse {
+	resp := &models.MonthSummaryResponse{
+		EmployeeID:        strfmt.UUID(s.EmployeeID.String()),
+		Year:              int64(s.Year),
+		Month:             int64(s.Month),
+		TotalGrossTime:    int64(s.TotalGrossTime),
+		TotalNetTime:      int64(s.TotalNetTime),
+		TotalTargetTime:   int64(s.TotalTargetTime),
+		TotalOvertime:     int64(s.TotalOvertime),
+		TotalUndertime:    int64(s.TotalUndertime),
+		TotalBreakTime:    int64(s.TotalBreakTime),
+		FlextimeStart:     int64(s.FlextimeStart),
+		FlextimeChange:    int64(s.FlextimeChange),
+		FlextimeEnd:       int64(s.FlextimeEnd),
+		FlextimeCarryover: int64(s.FlextimeCarryover),
+		VacationTaken:     s.VacationTaken.InexactFloat64(),
+		SickDays:          int64(s.SickDays),
+		OtherAbsenceDays:  int64(s.OtherAbsenceDays),
+		WorkDays:          int64(s.WorkDays),
+		DaysWithErrors:    int64(s.DaysWithErrors),
+		IsClosed:          s.IsClosed,
+		Warnings:          s.Warnings,
 	}
 
 	// Optional fields
 	if s.ClosedAt != nil {
-		response["closed_at"] = strfmt.DateTime(*s.ClosedAt)
+		dt := strfmt.DateTime(*s.ClosedAt)
+		resp.ClosedAt = &dt
 	}
 	if s.ClosedBy != nil {
-		response["closed_by"] = s.ClosedBy.String()
+		uid := strfmt.UUID(s.ClosedBy.String())
+		resp.ClosedBy = &uid
 	}
 	if s.ReopenedAt != nil {
-		response["reopened_at"] = strfmt.DateTime(*s.ReopenedAt)
+		dt := strfmt.DateTime(*s.ReopenedAt)
+		resp.ReopenedAt = &dt
 	}
 	if s.ReopenedBy != nil {
-		response["reopened_by"] = s.ReopenedBy.String()
+		uid := strfmt.UUID(s.ReopenedBy.String())
+		resp.ReopenedBy = &uid
 	}
 
-	return response
+	return resp
+}
+
+// minutesToHHMM converts a minutes-from-midnight value to HH:MM string.
+// Returns nil if the input is nil.
+func minutesToHHMM(minutes *int) *string {
+	if minutes == nil {
+		return nil
+	}
+	s := fmt.Sprintf("%02d:%02d", *minutes/60, *minutes%60)
+	return &s
 }
 
 func (h *MonthlyEvalHandler) ensureEmployeeScope(ctx context.Context, employeeID uuid.UUID) error {

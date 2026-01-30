@@ -1,0 +1,252 @@
+# Employee Monthly Value endpoints (employee-nested routes)
+# These document the actual handler routes served by MonthlyEvalHandler
+
+/employees/{id}/months/{year}:
+  get:
+    tags:
+      - Monthly Values
+    summary: Get year overview
+    description: Returns all monthly summaries for an employee in a given year
+    operationId: getYearOverview
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+        description: Employee ID
+      - name: year
+        in: path
+        required: true
+        type: integer
+        description: Calendar year
+    responses:
+      200:
+        description: Year overview with monthly summaries
+        schema:
+          $ref: '../schemas/monthly-values.yaml#/YearOverviewResponse'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/employees/{id}/months/{year}/{month}:
+  get:
+    tags:
+      - Monthly Values
+    summary: Get month summary
+    description: |
+      Returns the monthly summary for an employee including time totals,
+      flextime balance, absence summary, closing status, and warnings.
+      The response includes flextime tracking fields showing the evaluation
+      chain: flextime_start -> flextime_change -> flextime_end -> flextime_carryover.
+    operationId: getMonthSummary
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+        description: Employee ID
+      - name: year
+        in: path
+        required: true
+        type: integer
+        description: Calendar year
+      - name: month
+        in: path
+        required: true
+        type: integer
+        minimum: 1
+        maximum: 12
+        description: Calendar month (1-12)
+    responses:
+      200:
+        description: Monthly summary
+        schema:
+          $ref: '../schemas/monthly-values.yaml#/MonthSummaryResponse'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/employees/{id}/months/{year}/{month}/days:
+  get:
+    tags:
+      - Monthly Values
+    summary: Get daily breakdown
+    description: Returns the daily values for a specific month
+    operationId: getDailyBreakdown
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+        description: Employee ID
+      - name: year
+        in: path
+        required: true
+        type: integer
+        description: Calendar year
+      - name: month
+        in: path
+        required: true
+        type: integer
+        minimum: 1
+        maximum: 12
+        description: Calendar month (1-12)
+    responses:
+      200:
+        description: Daily breakdown for the month
+        schema:
+          $ref: '../schemas/monthly-values.yaml#/DailyBreakdownResponse'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/employees/{id}/months/{year}/{month}/close:
+  post:
+    tags:
+      - Monthly Values
+    summary: Close month
+    description: |
+      Closes the month, preventing further modifications and recalculations.
+      Requires the month to have been calculated (monthly value exists).
+      Records closed_at timestamp and closed_by user for audit trail.
+    operationId: closeEmployeeMonth
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+        description: Employee ID
+      - name: year
+        in: path
+        required: true
+        type: integer
+        description: Calendar year
+      - name: month
+        in: path
+        required: true
+        type: integer
+        minimum: 1
+        maximum: 12
+        description: Calendar month (1-12)
+    responses:
+      200:
+        description: Month closed successfully, returns updated summary
+        schema:
+          $ref: '../schemas/monthly-values.yaml#/MonthSummaryResponse'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      403:
+        description: Month is already closed
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/employees/{id}/months/{year}/{month}/reopen:
+  post:
+    tags:
+      - Monthly Values
+    summary: Reopen month
+    description: |
+      Reopens a closed month, allowing modifications and recalculations.
+      Records reopened_at timestamp and reopened_by user for audit trail.
+    operationId: reopenEmployeeMonth
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+        description: Employee ID
+      - name: year
+        in: path
+        required: true
+        type: integer
+        description: Calendar year
+      - name: month
+        in: path
+        required: true
+        type: integer
+        minimum: 1
+        maximum: 12
+        description: Calendar month (1-12)
+    responses:
+      200:
+        description: Month reopened successfully, returns updated summary
+        schema:
+          $ref: '../schemas/monthly-values.yaml#/MonthSummaryResponse'
+      400:
+        description: Month is not closed
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'
+
+/employees/{id}/months/{year}/{month}/recalculate:
+  post:
+    tags:
+      - Monthly Values
+    summary: Recalculate month
+    description: |
+      Recalculates the monthly aggregation from daily values.
+      Applies credit type rules from the employee's tariff configuration:
+      - no_evaluation: Direct 1:1 transfer of overtime/undertime
+      - complete_carryover: Full transfer with monthly cap and annual balance limits
+      - after_threshold: Credit only overtime exceeding the configured threshold
+      - no_carryover: Reset balance to zero
+
+      Monthly cap (max_flextime_per_month), positive cap (upper_limit_annual),
+      and negative cap (lower_limit_annual) are applied in sequence.
+      Returns error if the month is closed.
+    operationId: recalculateEmployeeMonth
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+        format: uuid
+        description: Employee ID
+      - name: year
+        in: path
+        required: true
+        type: integer
+        description: Calendar year
+      - name: month
+        in: path
+        required: true
+        type: integer
+        minimum: 1
+        maximum: 12
+        description: Calendar month (1-12)
+    responses:
+      200:
+        description: Month recalculated successfully, returns updated summary
+        schema:
+          $ref: '../schemas/monthly-values.yaml#/MonthSummaryResponse'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      403:
+        description: Month is closed, recalculation blocked
+        schema:
+          $ref: '../schemas/common.yaml#/ProblemDetails'
+      404:
+        $ref: '../responses/errors.yaml#/NotFound'

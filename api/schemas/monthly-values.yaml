@@ -186,6 +186,201 @@ MonthlyEvaluation:
       type: string
       format: date-time
 
+# --- Employee-nested monthly endpoint response types ---
+# These match the handler's summaryToResponse() output
+
+MonthSummaryResponse:
+  type: object
+  description: |
+    Monthly summary for an employee including time totals, flextime balance,
+    absence summary, closing status, and evaluation warnings. Field names
+    match the Go MonthlyValue model (e.g. total_gross_time, not gross_minutes).
+  properties:
+    employee_id:
+      type: string
+      format: uuid
+      description: Employee ID
+    year:
+      type: integer
+      description: Calendar year
+    month:
+      type: integer
+      description: Calendar month (1-12)
+      minimum: 1
+      maximum: 12
+    # Aggregated time totals (all in minutes)
+    total_gross_time:
+      type: integer
+      description: Total gross work time for the month (minutes)
+    total_net_time:
+      type: integer
+      description: Total net work time for the month (minutes)
+    total_target_time:
+      type: integer
+      description: Total target work time for the month (minutes)
+    total_overtime:
+      type: integer
+      description: Total overtime for the month (minutes)
+    total_undertime:
+      type: integer
+      description: Total undertime for the month (minutes)
+    total_break_time:
+      type: integer
+      description: Total break time for the month (minutes)
+    # Flextime balance (all in minutes)
+    flextime_start:
+      type: integer
+      description: |
+        Flextime balance at start of month (carried over from previous month's flextime_end).
+        For January of a new year, this is the annual carryover value.
+    flextime_change:
+      type: integer
+      description: |
+        Net flextime change for the month (total_overtime - total_undertime).
+        Can be negative if undertime exceeds overtime.
+    flextime_end:
+      type: integer
+      description: |
+        Flextime balance at end of month after applying credit type rules and caps.
+        This is the value that carries over to the next month's flextime_start.
+        For credit_type "no_evaluation": flextime_start + flextime_change.
+        For credit_type "complete_carryover": flextime_start + credited (after monthly/balance caps).
+        For credit_type "after_threshold": flextime_start + credited (overtime above threshold, after caps).
+        For credit_type "no_carryover": always 0.
+    flextime_carryover:
+      type: integer
+      description: |
+        Flextime carryover to next month. Equal to flextime_end.
+        The next month's recalculation reads this as its flextime_start.
+    # Absence summary
+    vacation_taken:
+      type: number
+      format: double
+      description: Vacation days taken this month (supports half-day, e.g. 2.5)
+    sick_days:
+      type: integer
+      description: Number of sick days this month
+    other_absence_days:
+      type: integer
+      description: Number of other absence days (special leave, etc.)
+    # Work summary
+    work_days:
+      type: integer
+      description: Number of days with recorded work time (gross_time > 0 or net_time > 0)
+    days_with_errors:
+      type: integer
+      description: Number of days with calculation errors
+    # Month closing
+    is_closed:
+      type: boolean
+      description: Whether the month has been closed. Closed months block recalculation and new bookings.
+    closed_at:
+      type: string
+      format: date-time
+      x-nullable: true
+      description: Timestamp when the month was closed
+    closed_by:
+      type: string
+      format: uuid
+      x-nullable: true
+      description: User ID who closed the month
+    reopened_at:
+      type: string
+      format: date-time
+      x-nullable: true
+      description: Timestamp when the month was last reopened
+    reopened_by:
+      type: string
+      format: uuid
+      x-nullable: true
+      description: User ID who last reopened the month
+    # Evaluation warnings
+    warnings:
+      type: array
+      description: |
+        Warning codes from monthly evaluation. Possible values:
+        - MONTHLY_CAP_REACHED: Credited flextime was capped at the monthly maximum (max_flextime_per_month)
+        - FLEXTIME_CAPPED: End balance hit the positive or negative annual cap (upper_limit_annual / lower_limit_annual)
+        - BELOW_THRESHOLD: Overtime was below the flextime threshold and was forfeited (after_threshold credit type)
+        - NO_CARRYOVER: Credit type is no_carryover, balance reset to zero
+      items:
+        type: string
+
+YearOverviewResponse:
+  type: object
+  description: Year overview containing all monthly summaries for an employee in a given year
+  properties:
+    year:
+      type: integer
+      description: Calendar year
+    data:
+      type: array
+      description: Monthly summaries ordered by month
+      items:
+        $ref: '#/MonthSummaryResponse'
+
+DailyBreakdownResponse:
+  type: object
+  description: Daily values for a specific month
+  properties:
+    data:
+      type: array
+      description: Daily value entries for the month
+      items:
+        $ref: '#/DailyBreakdownItem'
+
+DailyBreakdownItem:
+  type: object
+  description: A single daily value entry within a monthly breakdown
+  properties:
+    id:
+      type: string
+      format: uuid
+    employee_id:
+      type: string
+      format: uuid
+    value_date:
+      type: string
+      format: date
+    gross_time:
+      type: integer
+      description: Gross work time in minutes
+    net_time:
+      type: integer
+      description: Net work time in minutes
+    target_time:
+      type: integer
+      description: Target work time in minutes
+    overtime:
+      type: integer
+      description: Overtime in minutes
+    undertime:
+      type: integer
+      description: Undertime in minutes
+    break_time:
+      type: integer
+      description: Break time in minutes
+    has_error:
+      type: boolean
+    error_codes:
+      type: array
+      items:
+        type: string
+    warnings:
+      type: array
+      items:
+        type: string
+    booking_count:
+      type: integer
+    first_come:
+      type: string
+      x-nullable: true
+      description: First clock-in time (HH:MM)
+    last_go:
+      type: string
+      x-nullable: true
+      description: Last clock-out time (HH:MM)
+
 CloseMonthRequest:
   type: object
   properties:
