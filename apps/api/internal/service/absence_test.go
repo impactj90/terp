@@ -1025,3 +1025,190 @@ func TestAbsenceService_Update_NotFound(t *testing.T) {
 
 	assert.ErrorIs(t, err, ErrAbsenceNotFound)
 }
+
+// --- Approve Tests ---
+
+type mockVacationRecalcForAbsence struct {
+	mock.Mock
+}
+
+func (m *mockVacationRecalcForAbsence) RecalculateTaken(ctx context.Context, employeeID uuid.UUID, year int) error {
+	args := m.Called(ctx, employeeID, year)
+	return args.Error(0)
+}
+
+func TestAbsenceService_Approve_TriggersVacationRecalc(t *testing.T) {
+	ctx := context.Background()
+	svc, absenceDayRepo, _, _, _, recalcSvc := newTestAbsenceService()
+
+	vacRecalc := new(mockVacationRecalcForAbsence)
+	svc.SetVacationService(vacRecalc)
+
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	approvedBy := uuid.New()
+	id := uuid.New()
+	date := time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC)
+
+	existing := &model.AbsenceDay{
+		ID:          id,
+		TenantID:    tenantID,
+		EmployeeID:  employeeID,
+		AbsenceDate: date,
+		Status:      model.AbsenceStatusPending,
+	}
+
+	absenceDayRepo.On("GetByID", ctx, id).Return(existing, nil)
+	absenceDayRepo.On("Update", ctx, mock.Anything).Return(nil)
+	recalcSvc.On("TriggerRecalc", ctx, tenantID, employeeID, date).Return(&RecalcResult{ProcessedDays: 1}, nil)
+	vacRecalc.On("RecalculateTaken", ctx, employeeID, 2026).Return(nil)
+
+	ad, err := svc.Approve(ctx, id, approvedBy)
+
+	require.NoError(t, err)
+	assert.Equal(t, model.AbsenceStatusApproved, ad.Status)
+	vacRecalc.AssertCalled(t, "RecalculateTaken", ctx, employeeID, 2026)
+}
+
+func TestAbsenceService_Approve_NotPending(t *testing.T) {
+	ctx := context.Background()
+	svc, absenceDayRepo, _, _, _, _ := newTestAbsenceService()
+
+	id := uuid.New()
+	existing := &model.AbsenceDay{
+		ID:     id,
+		Status: model.AbsenceStatusApproved,
+	}
+
+	absenceDayRepo.On("GetByID", ctx, id).Return(existing, nil)
+
+	_, err := svc.Approve(ctx, id, uuid.New())
+
+	assert.ErrorIs(t, err, ErrAbsenceNotPending)
+}
+
+// --- Cancel Tests ---
+
+func TestAbsenceService_Cancel_Success(t *testing.T) {
+	ctx := context.Background()
+	svc, absenceDayRepo, _, _, _, recalcSvc := newTestAbsenceService()
+
+	vacRecalc := new(mockVacationRecalcForAbsence)
+	svc.SetVacationService(vacRecalc)
+
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	id := uuid.New()
+	date := time.Date(2026, 5, 20, 0, 0, 0, 0, time.UTC)
+
+	existing := &model.AbsenceDay{
+		ID:          id,
+		TenantID:    tenantID,
+		EmployeeID:  employeeID,
+		AbsenceDate: date,
+		Status:      model.AbsenceStatusApproved,
+	}
+
+	absenceDayRepo.On("GetByID", ctx, id).Return(existing, nil)
+	absenceDayRepo.On("Update", ctx, mock.Anything).Return(nil)
+	recalcSvc.On("TriggerRecalc", ctx, tenantID, employeeID, date).Return(&RecalcResult{ProcessedDays: 1}, nil)
+	vacRecalc.On("RecalculateTaken", ctx, employeeID, 2026).Return(nil)
+
+	ad, err := svc.Cancel(ctx, id)
+
+	require.NoError(t, err)
+	assert.Equal(t, model.AbsenceStatusCancelled, ad.Status)
+	vacRecalc.AssertCalled(t, "RecalculateTaken", ctx, employeeID, 2026)
+}
+
+func TestAbsenceService_Cancel_NotApproved(t *testing.T) {
+	ctx := context.Background()
+	svc, absenceDayRepo, _, _, _, _ := newTestAbsenceService()
+
+	id := uuid.New()
+	existing := &model.AbsenceDay{
+		ID:     id,
+		Status: model.AbsenceStatusPending,
+	}
+
+	absenceDayRepo.On("GetByID", ctx, id).Return(existing, nil)
+
+	_, err := svc.Cancel(ctx, id)
+
+	assert.ErrorIs(t, err, ErrAbsenceNotApproved)
+}
+
+func TestAbsenceService_Cancel_NotFound(t *testing.T) {
+	ctx := context.Background()
+	svc, absenceDayRepo, _, _, _, _ := newTestAbsenceService()
+
+	id := uuid.New()
+	absenceDayRepo.On("GetByID", ctx, id).Return(nil, errors.New("not found"))
+
+	_, err := svc.Cancel(ctx, id)
+
+	assert.ErrorIs(t, err, ErrAbsenceNotFound)
+}
+
+// --- Delete with Vacation Recalc Tests ---
+
+func TestAbsenceService_Delete_ApprovedTriggersVacationRecalc(t *testing.T) {
+	ctx := context.Background()
+	svc, absenceDayRepo, _, _, _, recalcSvc := newTestAbsenceService()
+
+	vacRecalc := new(mockVacationRecalcForAbsence)
+	svc.SetVacationService(vacRecalc)
+
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	id := uuid.New()
+	date := time.Date(2026, 4, 15, 0, 0, 0, 0, time.UTC)
+
+	existing := &model.AbsenceDay{
+		ID:          id,
+		TenantID:    tenantID,
+		EmployeeID:  employeeID,
+		AbsenceDate: date,
+		Status:      model.AbsenceStatusApproved,
+	}
+
+	absenceDayRepo.On("GetByID", ctx, id).Return(existing, nil)
+	absenceDayRepo.On("Delete", ctx, id).Return(nil)
+	recalcSvc.On("TriggerRecalc", ctx, tenantID, employeeID, date).Return(&RecalcResult{ProcessedDays: 1}, nil)
+	vacRecalc.On("RecalculateTaken", ctx, employeeID, 2026).Return(nil)
+
+	err := svc.Delete(ctx, id)
+
+	require.NoError(t, err)
+	vacRecalc.AssertCalled(t, "RecalculateTaken", ctx, employeeID, 2026)
+}
+
+func TestAbsenceService_Delete_PendingSkipsVacationRecalc(t *testing.T) {
+	ctx := context.Background()
+	svc, absenceDayRepo, _, _, _, recalcSvc := newTestAbsenceService()
+
+	vacRecalc := new(mockVacationRecalcForAbsence)
+	svc.SetVacationService(vacRecalc)
+
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	id := uuid.New()
+	date := time.Date(2026, 4, 15, 0, 0, 0, 0, time.UTC)
+
+	existing := &model.AbsenceDay{
+		ID:          id,
+		TenantID:    tenantID,
+		EmployeeID:  employeeID,
+		AbsenceDate: date,
+		Status:      model.AbsenceStatusPending,
+	}
+
+	absenceDayRepo.On("GetByID", ctx, id).Return(existing, nil)
+	absenceDayRepo.On("Delete", ctx, id).Return(nil)
+	recalcSvc.On("TriggerRecalc", ctx, tenantID, employeeID, date).Return(&RecalcResult{ProcessedDays: 1}, nil)
+
+	err := svc.Delete(ctx, id)
+
+	require.NoError(t, err)
+	vacRecalc.AssertNotCalled(t, "RecalculateTaken")
+}

@@ -448,6 +448,60 @@ func (h *AbsenceHandler) Approve(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, h.absenceDayToResponse(ad))
 }
 
+// Cancel handles POST /absences/{id}/cancel
+func (h *AbsenceHandler) Cancel(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid absence ID")
+		return
+	}
+
+	if _, err := h.ensureAbsenceScope(r.Context(), id); err != nil {
+		if errors.Is(err, service.ErrAbsenceNotFound) {
+			respondError(w, http.StatusNotFound, "Absence not found")
+			return
+		}
+		if errors.Is(err, service.ErrEmployeeNotFound) {
+			respondError(w, http.StatusNotFound, "Employee not found")
+			return
+		}
+		if errors.Is(err, errAbsenceScopeDenied) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to verify access")
+		return
+	}
+
+	ad, svcErr := h.absenceService.Cancel(r.Context(), id)
+	if svcErr != nil {
+		switch svcErr {
+		case service.ErrAbsenceNotFound:
+			respondError(w, http.StatusNotFound, "Absence not found")
+		case service.ErrAbsenceNotApproved:
+			respondError(w, http.StatusBadRequest, "Absence is not in approved status")
+		default:
+			respondError(w, http.StatusInternalServerError, "Failed to cancel absence")
+		}
+		return
+	}
+
+	// Audit log
+	if h.auditService != nil {
+		if tenantID, ok := middleware.TenantFromContext(r.Context()); ok {
+			h.auditService.Log(r.Context(), r, service.LogEntry{
+				TenantID:   tenantID,
+				Action:     model.AuditActionUpdate,
+				EntityType: "absence",
+				EntityID:   id,
+			})
+		}
+	}
+
+	respondJSON(w, http.StatusOK, h.absenceDayToResponse(ad))
+}
+
 // Reject handles POST /absences/{id}/reject
 func (h *AbsenceHandler) Reject(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")

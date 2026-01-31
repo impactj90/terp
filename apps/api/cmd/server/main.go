@@ -167,6 +167,7 @@ func main() {
 		vacationCalcGroupRepo,
 		decimal.Zero,
 	)
+	vacationService.SetEmpDayPlanRepo(empDayPlanRepo)
 	vacationHandler := handler.NewVacationHandler(vacationService)
 
 	// Initialize Vacation Special Calc Service
@@ -405,6 +406,9 @@ func main() {
 
 	// Wire order booking service into daily calc for target_with_order
 	dailyCalcService.SetOrderBookingService(orderBookingService)
+
+	// Wire vacation recalculation into absence service
+	absenceService.SetVacationService(vacationService)
 
 	// Wire notification service into producers
 	absenceService.SetNotificationService(notificationService)

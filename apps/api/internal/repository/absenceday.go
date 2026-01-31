@@ -188,6 +188,23 @@ func (r *AbsenceDayRepository) Upsert(ctx context.Context, ad *model.AbsenceDay)
 	return r.db.GORM.WithContext(ctx).Save(ad).Error
 }
 
+// ListApprovedByTypeInRange returns individual approved absence days for an employee
+// of a specific type within a date range. Unlike CountByTypeInRange which returns a SUM,
+// this returns individual records so callers can compute weighted deductions per date.
+func (r *AbsenceDayRepository) ListApprovedByTypeInRange(ctx context.Context, employeeID, typeID uuid.UUID, from, to time.Time) ([]model.AbsenceDay, error) {
+	var days []model.AbsenceDay
+	err := r.db.GORM.WithContext(ctx).
+		Where("employee_id = ? AND absence_type_id = ? AND absence_date >= ? AND absence_date <= ? AND status = ?",
+			employeeID, typeID, from, to, model.AbsenceStatusApproved).
+		Order("absence_date ASC").
+		Find(&days).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to list approved absence days by type: %w", err)
+	}
+	return days, nil
+}
+
 // CountByTypeInRange sums the duration of approved absences for an employee
 // of a specific type within a date range. Returns decimal (e.g. 1.5 for full + half day).
 // Only counts status = 'approved'.

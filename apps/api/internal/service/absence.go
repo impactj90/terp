@@ -27,6 +27,7 @@ var (
 	ErrAbsenceCodeExists    = errors.New("absence type code already exists")
 	ErrInvalidCodePrefix    = errors.New("code prefix must match category: U for vacation, K for illness, S for special")
 	ErrInvalidPortion       = errors.New("portion must be 0 (none), 1 (full), or 2 (half)")
+	ErrAbsenceNotApproved   = errors.New("absence is not in approved status")
 )
 
 // absenceDayRepositoryForService defines the interface for absence day data access.
@@ -70,6 +71,11 @@ type recalcServiceForAbsence interface {
 	TriggerRecalcRange(ctx context.Context, tenantID, employeeID uuid.UUID, from, to time.Time) (*RecalcResult, error)
 }
 
+// vacationRecalculator defines the interface for recalculating vacation taken.
+type vacationRecalculator interface {
+	RecalculateTaken(ctx context.Context, employeeID uuid.UUID, year int) error
+}
+
 // AbsenceService handles absence business logic.
 type AbsenceService struct {
 	absenceDayRepo  absenceDayRepositoryForService
@@ -78,6 +84,7 @@ type AbsenceService struct {
 	empDayPlanRepo  empDayPlanRepositoryForAbsence
 	recalcSvc       recalcServiceForAbsence
 	notificationSvc *NotificationService
+	vacationSvc     vacationRecalculator
 }
 
 // NewAbsenceService creates a new AbsenceService instance.
@@ -100,6 +107,11 @@ func NewAbsenceService(
 // SetNotificationService sets the notification service for absence events.
 func (s *AbsenceService) SetNotificationService(notificationSvc *NotificationService) {
 	s.notificationSvc = notificationSvc
+}
+
+// SetVacationService sets the vacation service for recalculating taken vacation.
+func (s *AbsenceService) SetVacationService(vacSvc vacationRecalculator) {
+	s.vacationSvc = vacSvc
 }
 
 // CreateAbsenceRangeInput represents the input for creating absences over a date range.
@@ -154,9 +166,17 @@ func (s *AbsenceService) ListAll(ctx context.Context, tenantID uuid.UUID, opts m
 	return s.absenceDayRepo.ListAll(ctx, tenantID, opts)
 }
 
+// triggerVacationRecalc triggers vacation balance recalculation for the year of the given date.
+func (s *AbsenceService) triggerVacationRecalc(ctx context.Context, employeeID uuid.UUID, date time.Time) {
+	if s.vacationSvc == nil {
+		return
+	}
+	_ = s.vacationSvc.RecalculateTaken(ctx, employeeID, date.Year())
+}
+
 // Approve transitions an absence from pending to approved.
 // Sets status=approved, approved_by, approved_at=now.
-// Triggers recalculation for the affected date.
+// Triggers recalculation for the affected date and vacation balance.
 func (s *AbsenceService) Approve(ctx context.Context, id, approvedBy uuid.UUID) (*model.AbsenceDay, error) {
 	ad, err := s.absenceDayRepo.GetByID(ctx, id)
 	if err != nil {
@@ -179,8 +199,39 @@ func (s *AbsenceService) Approve(ctx context.Context, id, approvedBy uuid.UUID) 
 	// Trigger recalculation for the affected date
 	_, _ = s.recalcSvc.TriggerRecalc(ctx, ad.TenantID, ad.EmployeeID, ad.AbsenceDate)
 
+	// Recalculate vacation taken (weighted by day plan)
+	s.triggerVacationRecalc(ctx, ad.EmployeeID, ad.AbsenceDate)
+
 	// Notify employee about approval
 	s.notifyAbsenceDecision(ctx, ad, model.AbsenceStatusApproved)
+
+	return ad, nil
+}
+
+// Cancel transitions an absence from approved to cancelled.
+// This is the reverse of Approve: it removes the absence from vacation calculations.
+// Triggers recalculation for the affected date and vacation balance.
+func (s *AbsenceService) Cancel(ctx context.Context, id uuid.UUID) (*model.AbsenceDay, error) {
+	ad, err := s.absenceDayRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, ErrAbsenceNotFound
+	}
+
+	if ad.Status != model.AbsenceStatusApproved {
+		return nil, ErrAbsenceNotApproved
+	}
+
+	ad.Status = model.AbsenceStatusCancelled
+
+	if err := s.absenceDayRepo.Update(ctx, ad); err != nil {
+		return nil, err
+	}
+
+	// Trigger recalculation for the affected date
+	_, _ = s.recalcSvc.TriggerRecalc(ctx, ad.TenantID, ad.EmployeeID, ad.AbsenceDate)
+
+	// Recalculate vacation taken (absence removed from approved set)
+	s.triggerVacationRecalc(ctx, ad.EmployeeID, ad.AbsenceDate)
 
 	return ad, nil
 }
@@ -217,6 +268,7 @@ func (s *AbsenceService) Reject(ctx context.Context, id uuid.UUID, reason string
 }
 
 // Delete deletes a single absence day by ID and triggers recalculation.
+// If the deleted absence was approved, also triggers vacation balance recalculation.
 func (s *AbsenceService) Delete(ctx context.Context, id uuid.UUID) error {
 	// Get the absence to know the employee/date for recalc
 	ad, err := s.absenceDayRepo.GetByID(ctx, id)
@@ -228,6 +280,7 @@ func (s *AbsenceService) Delete(ctx context.Context, id uuid.UUID) error {
 	tenantID := ad.TenantID
 	employeeID := ad.EmployeeID
 	absenceDate := ad.AbsenceDate
+	wasApproved := ad.Status == model.AbsenceStatusApproved
 
 	// Delete the absence day
 	if err := s.absenceDayRepo.Delete(ctx, id); err != nil {
@@ -236,6 +289,11 @@ func (s *AbsenceService) Delete(ctx context.Context, id uuid.UUID) error {
 
 	// Trigger recalculation for the affected date
 	_, _ = s.recalcSvc.TriggerRecalc(ctx, tenantID, employeeID, absenceDate)
+
+	// If the deleted absence was approved, recalculate vacation balance
+	if wasApproved {
+		s.triggerVacationRecalc(ctx, employeeID, absenceDate)
+	}
 
 	return nil
 }

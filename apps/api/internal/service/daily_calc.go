@@ -132,11 +132,6 @@ func (s *DailyCalcService) SetDailyAccountValueRepo(repo dailyAccountValueWriter
 	s.dailyAccountValRepo = repo
 }
 
-// TODO(ZMI-TICKET-006): Verify vacation deduction integration.
-// The VacationDeduction field on the day plan should be used by the absence
-// service when deducting vacation balance. Verify this integration when
-// absence workflow tickets are implemented.
-
 // resolveTargetHours resolves the effective target hours for a day using the ZMI priority chain:
 // 1. Employee master (DailyTargetHours) if day plan has FromEmployeeMaster=true
 // 2. RegularHours2 if the day is an absence day

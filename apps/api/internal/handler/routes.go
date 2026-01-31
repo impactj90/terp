@@ -545,12 +545,14 @@ func RegisterAbsenceRoutes(r chi.Router, h *AbsenceHandler, authz *middleware.Au
 		r.Delete("/absences/{id}", h.Delete)
 		r.Post("/absences/{id}/approve", h.Approve)
 		r.Post("/absences/{id}/reject", h.Reject)
+		r.Post("/absences/{id}/cancel", h.Cancel)
 	} else {
 		r.With(authz.RequirePermission(managePerm)).Get("/absences", h.ListAll)
 		r.With(authz.RequirePermission(managePerm)).Patch("/absences/{id}", h.UpdateAbsence)
 		r.With(authz.RequirePermission(managePerm)).Delete("/absences/{id}", h.Delete)
 		r.With(authz.RequirePermission(approvePerm)).Post("/absences/{id}/approve", h.Approve)
 		r.With(authz.RequirePermission(approvePerm)).Post("/absences/{id}/reject", h.Reject)
+		r.With(authz.RequirePermission(approvePerm)).Post("/absences/{id}/cancel", h.Cancel)
 	}
 }
 

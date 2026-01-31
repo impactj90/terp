@@ -28,6 +28,7 @@ type vacationBalanceRepoForVacation interface {
 // absenceDayRepoForVacation defines the interface for absence day counting.
 type absenceDayRepoForVacation interface {
 	CountByTypeInRange(ctx context.Context, employeeID, typeID uuid.UUID, from, to time.Time) (decimal.Decimal, error)
+	ListApprovedByTypeInRange(ctx context.Context, employeeID, typeID uuid.UUID, from, to time.Time) ([]model.AbsenceDay, error)
 }
 
 // absenceTypeRepoForVacation defines the interface for absence type lookups.
@@ -58,6 +59,11 @@ type employmentTypeRepoForVacation interface {
 // vacationCalcGroupRepoForVacation defines the interface for vacation calc group data.
 type vacationCalcGroupRepoForVacation interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*model.VacationCalculationGroup, error)
+}
+
+// empDayPlanRepoForVacation provides day plan lookup for vacation deduction weighting.
+type empDayPlanRepoForVacation interface {
+	GetForEmployeeDateRange(ctx context.Context, employeeID uuid.UUID, from, to time.Time) ([]model.EmployeeDayPlan, error)
 }
 
 // PreviewEntitlementInput represents input for entitlement preview.
@@ -91,6 +97,7 @@ type VacationService struct {
 	tariffRepo            tariffRepoForVacation
 	employmentTypeRepo    employmentTypeRepoForVacation
 	vacationCalcGroupRepo vacationCalcGroupRepoForVacation
+	empDayPlanRepo        empDayPlanRepoForVacation
 	defaultMaxCarryover   decimal.Decimal // 0 = unlimited
 }
 
@@ -117,6 +124,11 @@ func NewVacationService(
 		vacationCalcGroupRepo: vacationCalcGroupRepo,
 		defaultMaxCarryover:   defaultMaxCarryover,
 	}
+}
+
+// SetEmpDayPlanRepo sets the employee day plan repository for vacation deduction weighting.
+func (s *VacationService) SetEmpDayPlanRepo(repo empDayPlanRepoForVacation) {
+	s.empDayPlanRepo = repo
 }
 
 // GetBalance retrieves the vacation balance for an employee and year.
@@ -352,7 +364,9 @@ func (s *VacationService) resolveVacationBasis(ctx context.Context, employee *mo
 }
 
 // RecalculateTaken recalculates the vacation days taken for an employee in a year.
-// It sums approved absence days from all absence types where DeductsVacation = true.
+// It sums day-plan-weighted deductions from all approved absence days of vacation-deducting types.
+// For each absence day: deduction = day_plan.vacation_deduction * absence.duration.
+// If no day plan exists for a date, defaults to 1.0 * duration.
 func (s *VacationService) RecalculateTaken(ctx context.Context, employeeID uuid.UUID, year int) error {
 	if year < 1900 || year > 2200 {
 		return ErrInvalidYear
@@ -378,17 +392,41 @@ func (s *VacationService) RecalculateTaken(ctx context.Context, employeeID uuid.
 		}
 	}
 
-	// Sum vacation days taken across all vacation-deducting types for the year
+	// Sum weighted vacation deductions across all vacation-deducting types for the year
 	yearStart := time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
 	yearEnd := time.Date(year, 12, 31, 0, 0, 0, 0, time.UTC)
 
+	// Batch-fetch day plans for the year to avoid N+1 queries
+	dayPlanMap := make(map[time.Time]decimal.Decimal) // date -> vacation_deduction
+	if s.empDayPlanRepo != nil {
+		plans, err := s.empDayPlanRepo.GetForEmployeeDateRange(ctx, employeeID, yearStart, yearEnd)
+		if err == nil {
+			for _, edp := range plans {
+				date := time.Date(edp.PlanDate.Year(), edp.PlanDate.Month(), edp.PlanDate.Day(), 0, 0, 0, 0, time.UTC)
+				if edp.DayPlan != nil {
+					dayPlanMap[date] = edp.DayPlan.VacationDeduction
+				}
+			}
+		}
+	}
+
 	totalTaken := decimal.Zero
+	defaultDeduction := decimal.NewFromInt(1) // default when no day plan
+
 	for _, vt := range vacationTypes {
-		count, err := s.absenceDayRepo.CountByTypeInRange(ctx, employeeID, vt.ID, yearStart, yearEnd)
+		days, err := s.absenceDayRepo.ListApprovedByTypeInRange(ctx, employeeID, vt.ID, yearStart, yearEnd)
 		if err != nil {
 			return err
 		}
-		totalTaken = totalTaken.Add(count)
+		for _, day := range days {
+			date := time.Date(day.AbsenceDate.Year(), day.AbsenceDate.Month(), day.AbsenceDate.Day(), 0, 0, 0, 0, time.UTC)
+			vacDeduction := defaultDeduction
+			if vd, ok := dayPlanMap[date]; ok {
+				vacDeduction = vd
+			}
+			// deduction = vacation_deduction * duration
+			totalTaken = totalTaken.Add(vacDeduction.Mul(day.Duration))
+		}
 	}
 
 	// Update the taken value
