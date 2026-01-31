@@ -28,6 +28,10 @@ type DayPlan struct {
 	// breaks
 	Breaks []*DayPlanBreak `json:"breaks"`
 
+	// Account for posting capped minutes
+	// Format: uuid
+	CapAccountID *strfmt.UUID `json:"cap_account_id,omitempty"`
+
 	// code
 	// Example: PLAN-001
 	// Required: true
@@ -99,6 +103,10 @@ type DayPlan struct {
 	// Example: Standard Day
 	// Required: true
 	Name *string `json:"name"`
+
+	// Account for posting daily net time
+	// Format: uuid
+	NetAccountID *strfmt.UUID `json:"net_account_id,omitempty"`
 
 	// Behavior when no bookings recorded
 	// Enum: ["error","deduct_target","vocational_school","adopt_target","target_with_order"]
@@ -221,6 +229,10 @@ func (m *DayPlan) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
+	if err := m.validateCapAccountID(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateCode(formats); err != nil {
 		res = append(res, err)
 	}
@@ -238,6 +250,10 @@ func (m *DayPlan) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateName(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateNetAccountID(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -359,6 +375,18 @@ func (m *DayPlan) validateBreaks(formats strfmt.Registry) error {
 	return nil
 }
 
+func (m *DayPlan) validateCapAccountID(formats strfmt.Registry) error {
+	if swag.IsZero(m.CapAccountID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("cap_account_id", "body", "uuid", m.CapAccountID.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (m *DayPlan) validateCode(formats strfmt.Registry) error {
 
 	if err := validate.Required("code", "body", m.Code); err != nil {
@@ -444,6 +472,18 @@ func (m *DayPlan) validateID(formats strfmt.Registry) error {
 func (m *DayPlan) validateName(formats strfmt.Registry) error {
 
 	if err := validate.Required("name", "body", m.Name); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *DayPlan) validateNetAccountID(formats strfmt.Registry) error {
+	if swag.IsZero(m.NetAccountID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("net_account_id", "body", "uuid", m.NetAccountID.String(), formats); err != nil {
 		return err
 	}
 

@@ -314,3 +314,64 @@ AccountUsage:
       type: array
       items:
         $ref: '#/AccountUsageDayPlan'
+
+DailyAccountValue:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - employee_id
+    - account_id
+    - value_date
+    - value_minutes
+    - source
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    employee_id:
+      type: string
+      format: uuid
+    account_id:
+      type: string
+      format: uuid
+    value_date:
+      type: string
+      format: date
+    value_minutes:
+      type: integer
+      example: 480
+    source:
+      type: string
+      enum:
+        - net_time
+        - capped_time
+      example: "net_time"
+    day_plan_id:
+      type: string
+      format: uuid
+      x-nullable: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+    # Expanded relations
+    account:
+      allOf:
+        - $ref: '#/AccountSummary'
+      x-nullable: true
+
+DailyAccountValueList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/DailyAccountValue'

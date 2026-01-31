@@ -68,19 +68,26 @@ type settingsLookup interface {
 	IsRoundingRelativeToPlan(ctx context.Context, tenantID uuid.UUID) (bool, error)
 }
 
+// dailyAccountValueWriter defines the interface for writing daily account value postings.
+type dailyAccountValueWriter interface {
+	Upsert(ctx context.Context, dav *model.DailyAccountValue) error
+	DeleteByEmployeeDate(ctx context.Context, employeeID uuid.UUID, date time.Time) error
+}
+
 // DailyCalcService orchestrates daily time calculations.
 type DailyCalcService struct {
-	bookingRepo     bookingRepository
-	empDayPlanRepo  employeeDayPlanRepository
-	dayPlanRepo     dayPlanLookup
-	dailyValueRepo  dailyValueRepository
-	holidayRepo     holidayLookup
-	employeeRepo    employeeLookup
-	absenceDayRepo  absenceDayLookup
-	calc            *calculation.Calculator
-	notificationSvc *NotificationService
-	orderBookingSvc orderBookingCreator
-	settingsLookup  settingsLookup
+	bookingRepo         bookingRepository
+	empDayPlanRepo      employeeDayPlanRepository
+	dayPlanRepo         dayPlanLookup
+	dailyValueRepo      dailyValueRepository
+	holidayRepo         holidayLookup
+	employeeRepo        employeeLookup
+	absenceDayRepo      absenceDayLookup
+	calc                *calculation.Calculator
+	notificationSvc     *NotificationService
+	orderBookingSvc     orderBookingCreator
+	settingsLookup      settingsLookup
+	dailyAccountValRepo dailyAccountValueWriter
 }
 
 // NewDailyCalcService creates a new DailyCalcService instance.
@@ -118,6 +125,11 @@ func (s *DailyCalcService) SetOrderBookingService(orderBookingSvc orderBookingCr
 // SetSettingsLookup sets the system settings lookup for calculation behavior (e.g., relative rounding).
 func (s *DailyCalcService) SetSettingsLookup(lookup settingsLookup) {
 	s.settingsLookup = lookup
+}
+
+// SetDailyAccountValueRepo sets the daily account value repository for net/cap account postings.
+func (s *DailyCalcService) SetDailyAccountValueRepo(repo dailyAccountValueWriter) {
+	s.dailyAccountValRepo = repo
 }
 
 // TODO(ZMI-TICKET-006): Verify vacation deduction integration.
@@ -216,6 +228,9 @@ func (s *DailyCalcService) CalculateDay(ctx context.Context, tenantID, employeeI
 		return nil, err
 	}
 
+	// 6. Post daily account values (net/cap) based on the day plan
+	s.postDailyAccountValues(ctx, tenantID, employeeID, date, empDayPlan, dailyValue)
+
 	// Notify on newly detected errors
 	s.notifyDailyCalcError(ctx, tenantID, employeeID, date, previousValue, dailyValue)
 
@@ -248,6 +263,66 @@ func (s *DailyCalcService) notifyDailyCalcError(
 		Message: fmt.Sprintf("Calculation error detected on %s.", dateLabel),
 		Link:    &link,
 	})
+}
+
+// postDailyAccountValues posts net time and/or capped time to the configured accounts
+// on the day plan. If the day plan has a net_account_id, the daily net time is posted.
+// If it has a cap_account_id and a max_net_work_time, any capped minutes are posted.
+func (s *DailyCalcService) postDailyAccountValues(
+	ctx context.Context,
+	tenantID, employeeID uuid.UUID,
+	date time.Time,
+	empDayPlan *model.EmployeeDayPlan,
+	dailyValue *model.DailyValue,
+) {
+	if s.dailyAccountValRepo == nil {
+		return
+	}
+	if dailyValue == nil {
+		return
+	}
+
+	var dayPlan *model.DayPlan
+	if empDayPlan != nil {
+		dayPlan = empDayPlan.DayPlan
+	}
+	if dayPlan == nil {
+		// No day plan -- clean up any previous postings for this date
+		_ = s.dailyAccountValRepo.DeleteByEmployeeDate(ctx, employeeID, date)
+		return
+	}
+
+	// Post net time to net account
+	if dayPlan.NetAccountID != nil {
+		dav := &model.DailyAccountValue{
+			TenantID:     tenantID,
+			EmployeeID:   employeeID,
+			AccountID:    *dayPlan.NetAccountID,
+			ValueDate:    date,
+			ValueMinutes: dailyValue.NetTime,
+			Source:       model.DailyAccountValueSourceNetTime,
+			DayPlanID:    &dayPlan.ID,
+		}
+		_ = s.dailyAccountValRepo.Upsert(ctx, dav)
+	}
+
+	// Post capped minutes to cap account
+	if dayPlan.CapAccountID != nil && dayPlan.MaxNetWorkTime != nil {
+		cappedMinutes := 0
+		if dailyValue.GrossTime > *dayPlan.MaxNetWorkTime {
+			cappedMinutes = dailyValue.GrossTime - *dayPlan.MaxNetWorkTime
+		}
+		dav := &model.DailyAccountValue{
+			TenantID:     tenantID,
+			EmployeeID:   employeeID,
+			AccountID:    *dayPlan.CapAccountID,
+			ValueDate:    date,
+			ValueMinutes: cappedMinutes,
+			Source:       model.DailyAccountValueSourceCappedTime,
+			DayPlanID:    &dayPlan.ID,
+		}
+		_ = s.dailyAccountValRepo.Upsert(ctx, dav)
+	}
 }
 
 func (s *DailyCalcService) loadBookingsForCalculation(

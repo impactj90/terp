@@ -167,18 +167,28 @@ func (r *AccountRepository) ListActive(ctx context.Context, tenantID uuid.UUID) 
 }
 
 // ListFiltered retrieves accounts with optional filters for system, active, and type.
+// Usage count includes bonus references AND net/cap account references from day plans.
 func (r *AccountRepository) ListFiltered(ctx context.Context, tenantID uuid.UUID, includeSystem bool, active *bool, accountType *model.AccountType, payrollRelevant *bool) ([]model.Account, error) {
 	var accounts []model.Account
-	usageSubquery := r.db.GORM.WithContext(ctx).
+	// Count bonus references
+	bonusUsage := r.db.GORM.WithContext(ctx).
 		Table("day_plan_bonuses").
 		Select("day_plan_bonuses.account_id AS account_id, COUNT(DISTINCT day_plan_bonuses.day_plan_id) AS usage_count").
 		Joins("JOIN day_plans ON day_plans.id = day_plan_bonuses.day_plan_id").
 		Where("day_plans.tenant_id = ?", tenantID).
 		Group("day_plan_bonuses.account_id")
+	// Count net/cap account references
+	netCapUsage := r.db.GORM.WithContext(ctx).
+		Raw(`SELECT account_id, COUNT(*) AS usage_count FROM (
+			SELECT net_account_id AS account_id FROM day_plans WHERE tenant_id = ? AND net_account_id IS NOT NULL
+			UNION ALL
+			SELECT cap_account_id AS account_id FROM day_plans WHERE tenant_id = ? AND cap_account_id IS NOT NULL
+		) sub GROUP BY account_id`, tenantID, tenantID)
 	query := r.db.GORM.WithContext(ctx).
 		Table("accounts").
-		Select("accounts.*, COALESCE(usage.usage_count, 0) AS usage_count").
-		Joins("LEFT JOIN (?) AS usage ON usage.account_id = accounts.id", usageSubquery)
+		Select("accounts.*, COALESCE(bonus_usage.usage_count, 0) + COALESCE(netcap_usage.usage_count, 0) AS usage_count").
+		Joins("LEFT JOIN (?) AS bonus_usage ON bonus_usage.account_id = accounts.id", bonusUsage).
+		Joins("LEFT JOIN (?) AS netcap_usage ON netcap_usage.account_id = accounts.id", netCapUsage)
 	if includeSystem {
 		query = query.Where("tenant_id = ? OR tenant_id IS NULL", tenantID)
 	} else {
@@ -200,16 +210,19 @@ func (r *AccountRepository) ListFiltered(ctx context.Context, tenantID uuid.UUID
 	return accounts, nil
 }
 
-// ListDayPlansUsingAccount returns day plans that reference the account via bonuses.
+// ListDayPlansUsingAccount returns day plans that reference the account via bonuses or net/cap account fields.
 func (r *AccountRepository) ListDayPlansUsingAccount(ctx context.Context, tenantID uuid.UUID, accountID uuid.UUID) ([]model.AccountUsageDayPlan, error) {
 	var plans []model.AccountUsageDayPlan
 	err := r.db.GORM.WithContext(ctx).
-		Table("day_plan_bonuses").
-		Select("day_plans.id, day_plans.code, day_plans.name").
-		Joins("JOIN day_plans ON day_plans.id = day_plan_bonuses.day_plan_id").
-		Where("day_plan_bonuses.account_id = ? AND day_plans.tenant_id = ?", accountID, tenantID).
-		Group("day_plans.id, day_plans.code, day_plans.name").
-		Order("day_plans.code ASC").
+		Raw(`SELECT DISTINCT dp.id, dp.code, dp.name
+		FROM day_plans dp
+		WHERE dp.tenant_id = ?
+		AND (
+			dp.id IN (SELECT day_plan_id FROM day_plan_bonuses WHERE account_id = ?)
+			OR dp.net_account_id = ?
+			OR dp.cap_account_id = ?
+		)
+		ORDER BY dp.code ASC`, tenantID, accountID, accountID, accountID).
 		Scan(&plans).Error
 	if err != nil {
 		return nil, fmt.Errorf("failed to list day plans for account: %w", err)

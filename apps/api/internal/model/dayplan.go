@@ -123,6 +123,11 @@ type DayPlan struct {
 	ShiftAltPlan5 *uuid.UUID `gorm:"column:shift_alt_plan_5;type:uuid" json:"shift_alt_plan_5,omitempty"`
 	ShiftAltPlan6 *uuid.UUID `gorm:"column:shift_alt_plan_6;type:uuid" json:"shift_alt_plan_6,omitempty"`
 
+	// ZMI: Tagesnetto-Konto - account for posting daily net time
+	NetAccountID *uuid.UUID `gorm:"column:net_account_id;type:uuid" json:"net_account_id,omitempty"`
+	// ZMI: Kappungskonto - account for posting capped minutes
+	CapAccountID *uuid.UUID `gorm:"column:cap_account_id;type:uuid" json:"cap_account_id,omitempty"`
+
 	IsActive  bool      `json:"is_active"`
 	CreatedAt time.Time `gorm:"default:now()" json:"created_at"`
 	UpdatedAt time.Time `gorm:"default:now()" json:"updated_at"`

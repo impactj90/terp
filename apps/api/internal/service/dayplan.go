@@ -77,6 +77,8 @@ type CreateDayPlanInput struct {
 	RoundingGoInterval   *int
 	MinWorkTime          *int
 	MaxNetWorkTime       *int
+	NetAccountID         *uuid.UUID
+	CapAccountID         *uuid.UUID
 }
 
 // Create creates a new day plan with validation.
@@ -137,6 +139,8 @@ func (s *DayPlanService) Create(ctx context.Context, input CreateDayPlanInput) (
 		RoundingGoInterval:   input.RoundingGoInterval,
 		MinWorkTime:          input.MinWorkTime,
 		MaxNetWorkTime:       input.MaxNetWorkTime,
+		NetAccountID:         input.NetAccountID,
+		CapAccountID:         input.CapAccountID,
 		IsActive:             true,
 	}
 
@@ -218,6 +222,10 @@ type UpdateDayPlanInput struct {
 	RoundingGoInterval   *int
 	MinWorkTime          *int
 	MaxNetWorkTime       *int
+	NetAccountID         *uuid.UUID
+	CapAccountID         *uuid.UUID
+	SetNetAccountID      bool // true means the field was explicitly set (even to nil)
+	SetCapAccountID      bool // true means the field was explicitly set (even to nil)
 	IsActive             *bool
 }
 
@@ -294,6 +302,12 @@ func (s *DayPlanService) Update(ctx context.Context, id uuid.UUID, input UpdateD
 	}
 	if input.MaxNetWorkTime != nil {
 		plan.MaxNetWorkTime = input.MaxNetWorkTime
+	}
+	if input.SetNetAccountID {
+		plan.NetAccountID = input.NetAccountID
+	}
+	if input.SetCapAccountID {
+		plan.CapAccountID = input.CapAccountID
 	}
 	if input.IsActive != nil {
 		plan.IsActive = *input.IsActive
@@ -385,6 +399,8 @@ func (s *DayPlanService) Copy(ctx context.Context, id uuid.UUID, newCode, newNam
 		RoundingGoInterval:   original.RoundingGoInterval,
 		MinWorkTime:          original.MinWorkTime,
 		MaxNetWorkTime:       original.MaxNetWorkTime,
+		NetAccountID:         original.NetAccountID,
+		CapAccountID:         original.CapAccountID,
 		IsActive:             true,
 	}
 

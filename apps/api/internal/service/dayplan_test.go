@@ -960,3 +960,104 @@ func TestDayPlanService_AddBreak_MinimumBreak(t *testing.T) {
 	assert.Equal(t, model.BreakTypeMinimum, b.BreakType)
 	assert.Equal(t, &afterWork, b.AfterWorkMinutes)
 }
+
+func TestDayPlanService_Create_WithNetCapAccounts(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewDayPlanRepository(db)
+	svc := service.NewDayPlanService(repo)
+	ctx := context.Background()
+
+	tenant := createTestTenantForDayPlanService(t, db)
+	netAccount := createTestAccountForDayPlanService(t, db, tenant.ID)
+	capAccount := createTestAccountForDayPlanService(t, db, tenant.ID)
+
+	input := service.CreateDayPlanInput{
+		TenantID:     tenant.ID,
+		Code:         "NETCAP",
+		Name:         "Day Plan with Net/Cap",
+		PlanType:     model.PlanTypeFixed,
+		RegularHours: 480,
+		NetAccountID: &netAccount.ID,
+		CapAccountID: &capAccount.ID,
+	}
+
+	plan, err := svc.Create(ctx, input)
+	require.NoError(t, err)
+	assert.Equal(t, "NETCAP", plan.Code)
+	require.NotNil(t, plan.NetAccountID)
+	assert.Equal(t, netAccount.ID, *plan.NetAccountID)
+	require.NotNil(t, plan.CapAccountID)
+	assert.Equal(t, capAccount.ID, *plan.CapAccountID)
+}
+
+func TestDayPlanService_Update_NetCapAccounts(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewDayPlanRepository(db)
+	svc := service.NewDayPlanService(repo)
+	ctx := context.Background()
+
+	tenant := createTestTenantForDayPlanService(t, db)
+
+	// Create plan without net/cap accounts
+	input := service.CreateDayPlanInput{
+		TenantID:     tenant.ID,
+		Code:         "UPNETCAP",
+		Name:         "Update Net/Cap",
+		PlanType:     model.PlanTypeFixed,
+		RegularHours: 480,
+	}
+	plan, err := svc.Create(ctx, input)
+	require.NoError(t, err)
+	assert.Nil(t, plan.NetAccountID)
+	assert.Nil(t, plan.CapAccountID)
+
+	// Create accounts
+	netAccount := createTestAccountForDayPlanService(t, db, tenant.ID)
+	capAccount := createTestAccountForDayPlanService(t, db, tenant.ID)
+
+	// Update with net/cap account IDs
+	updateInput := service.UpdateDayPlanInput{
+		NetAccountID:    &netAccount.ID,
+		SetNetAccountID: true,
+		CapAccountID:    &capAccount.ID,
+		SetCapAccountID: true,
+	}
+	updated, err := svc.Update(ctx, plan.ID, updateInput)
+	require.NoError(t, err)
+	require.NotNil(t, updated.NetAccountID)
+	assert.Equal(t, netAccount.ID, *updated.NetAccountID)
+	require.NotNil(t, updated.CapAccountID)
+	assert.Equal(t, capAccount.ID, *updated.CapAccountID)
+}
+
+func TestDayPlanService_Copy_PreservesNetCapAccounts(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewDayPlanRepository(db)
+	svc := service.NewDayPlanService(repo)
+	ctx := context.Background()
+
+	tenant := createTestTenantForDayPlanService(t, db)
+	netAccount := createTestAccountForDayPlanService(t, db, tenant.ID)
+	capAccount := createTestAccountForDayPlanService(t, db, tenant.ID)
+
+	// Create plan with net/cap accounts
+	input := service.CreateDayPlanInput{
+		TenantID:     tenant.ID,
+		Code:         "CPYNETCAP",
+		Name:         "Copy Net/Cap",
+		PlanType:     model.PlanTypeFixed,
+		RegularHours: 480,
+		NetAccountID: &netAccount.ID,
+		CapAccountID: &capAccount.ID,
+	}
+	plan, err := svc.Create(ctx, input)
+	require.NoError(t, err)
+
+	// Copy the plan
+	copied, err := svc.Copy(ctx, plan.ID, "CPYNETCAP2", "Copy Net/Cap 2")
+	require.NoError(t, err)
+	require.NotNil(t, copied.NetAccountID)
+	assert.Equal(t, netAccount.ID, *copied.NetAccountID)
+	require.NotNil(t, copied.CapAccountID)
+	assert.Equal(t, capAccount.ID, *copied.CapAccountID)
+}

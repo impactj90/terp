@@ -30,7 +30,7 @@ func NewDayPlanRepository(db *DB) *DayPlanRepository {
 // Create creates a new day plan.
 func (r *DayPlanRepository) Create(ctx context.Context, plan *model.DayPlan) error {
 	return r.db.GORM.WithContext(ctx).
-		Select("TenantID", "Code", "Name", "Description", "PlanType", "ComeFrom", "ComeTo", "GoFrom", "GoTo", "CoreStart", "CoreEnd", "RegularHours", "ToleranceComePlus", "ToleranceComeMinus", "ToleranceGoPlus", "ToleranceGoMinus", "RoundingComeType", "RoundingComeInterval", "RoundingGoType", "RoundingGoInterval", "MinWorkTime", "MaxNetWorkTime", "IsActive").
+		Select("TenantID", "Code", "Name", "Description", "PlanType", "ComeFrom", "ComeTo", "GoFrom", "GoTo", "CoreStart", "CoreEnd", "RegularHours", "ToleranceComePlus", "ToleranceComeMinus", "ToleranceGoPlus", "ToleranceGoMinus", "RoundingComeType", "RoundingComeInterval", "RoundingGoType", "RoundingGoInterval", "MinWorkTime", "MaxNetWorkTime", "NetAccountID", "CapAccountID", "IsActive").
 		Create(plan).Error
 }
 

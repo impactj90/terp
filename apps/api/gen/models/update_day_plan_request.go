@@ -20,6 +20,10 @@ import (
 // swagger:model UpdateDayPlanRequest
 type UpdateDayPlanRequest struct {
 
+	// cap account id
+	// Format: uuid
+	CapAccountID strfmt.UUID `json:"cap_account_id,omitempty"`
+
 	// come from
 	ComeFrom int64 `json:"come_from,omitempty"`
 
@@ -70,6 +74,10 @@ type UpdateDayPlanRequest struct {
 	// Max Length: 255
 	// Min Length: 1
 	Name string `json:"name,omitempty"`
+
+	// net account id
+	// Format: uuid
+	NetAccountID strfmt.UUID `json:"net_account_id,omitempty"`
 
 	// no booking behavior
 	// Enum: ["error","deduct_target","vocational_school","adopt_target","target_with_order"]
@@ -167,11 +175,19 @@ type UpdateDayPlanRequest struct {
 func (m *UpdateDayPlanRequest) Validate(formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.validateCapAccountID(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateDayChangeBehavior(formats); err != nil {
 		res = append(res, err)
 	}
 
 	if err := m.validateName(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateNetAccountID(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -218,6 +234,18 @@ func (m *UpdateDayPlanRequest) Validate(formats strfmt.Registry) error {
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *UpdateDayPlanRequest) validateCapAccountID(formats strfmt.Registry) error {
+	if swag.IsZero(m.CapAccountID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("cap_account_id", "body", "uuid", m.CapAccountID.String(), formats); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -279,6 +307,18 @@ func (m *UpdateDayPlanRequest) validateName(formats strfmt.Registry) error {
 	}
 
 	if err := validate.MaxLength("name", "body", m.Name, 255); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *UpdateDayPlanRequest) validateNetAccountID(formats strfmt.Registry) error {
+	if swag.IsZero(m.NetAccountID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("net_account_id", "body", "uuid", m.NetAccountID.String(), formats); err != nil {
 		return err
 	}
 

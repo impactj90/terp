@@ -149,6 +149,18 @@ func (h *DayPlanHandler) Create(w http.ResponseWriter, r *http.Request) {
 		v := int(req.MaxNetWorkTime)
 		input.MaxNetWorkTime = &v
 	}
+	if req.NetAccountID.String() != "" && req.NetAccountID.String() != "00000000-0000-0000-0000-000000000000" {
+		id, err := uuid.Parse(req.NetAccountID.String())
+		if err == nil {
+			input.NetAccountID = &id
+		}
+	}
+	if req.CapAccountID.String() != "" && req.CapAccountID.String() != "00000000-0000-0000-0000-000000000000" {
+		id, err := uuid.Parse(req.CapAccountID.String())
+		if err == nil {
+			input.CapAccountID = &id
+		}
+	}
 
 	plan, err := h.dayPlanService.Create(r.Context(), input)
 	if err != nil {
@@ -272,6 +284,20 @@ func (h *DayPlanHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if req.MaxNetWorkTime != 0 {
 		v := int(req.MaxNetWorkTime)
 		input.MaxNetWorkTime = &v
+	}
+	if req.NetAccountID.String() != "" && req.NetAccountID.String() != "00000000-0000-0000-0000-000000000000" {
+		id, err := uuid.Parse(req.NetAccountID.String())
+		if err == nil {
+			input.NetAccountID = &id
+			input.SetNetAccountID = true
+		}
+	}
+	if req.CapAccountID.String() != "" && req.CapAccountID.String() != "00000000-0000-0000-0000-000000000000" {
+		id, err := uuid.Parse(req.CapAccountID.String())
+		if err == nil {
+			input.CapAccountID = &id
+			input.SetCapAccountID = true
+		}
 	}
 	// IsActive needs special handling - we always pass it since it's a boolean
 	input.IsActive = &req.IsActive

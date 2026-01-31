@@ -193,3 +193,48 @@
           $ref: '../schemas/accounts.yaml#/AccountValueList'
       401:
         $ref: '../responses/errors.yaml#/Unauthorized'
+
+/daily-account-values:
+  get:
+    tags:
+      - Accounts
+    summary: List daily account values
+    description: |
+      Returns daily account value postings from day calculation (net time, capped time).
+      Filter by employee, account, date range, or source type.
+    operationId: listDailyAccountValues
+    parameters:
+      - name: employee_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by employee
+      - name: account_id
+        in: query
+        type: string
+        format: uuid
+        description: Filter by account
+      - name: from
+        in: query
+        type: string
+        format: date
+        description: Start date filter
+      - name: to
+        in: query
+        type: string
+        format: date
+        description: End date filter
+      - name: source
+        in: query
+        type: string
+        enum:
+          - net_time
+          - capped_time
+        description: Filter by source type
+    responses:
+      200:
+        description: List of daily account values
+        schema:
+          $ref: '../schemas/accounts.yaml#/DailyAccountValueList'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'

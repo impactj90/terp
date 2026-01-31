@@ -4563,6 +4563,104 @@ paths:
             $ref: '#/definitions/AccountValueList'
         '401':
           $ref: '#/responses/Unauthorized'
+  /daily-account-values:
+    get:
+      tags:
+        - Accounts
+      summary: List daily account values
+      description: |
+        Returns daily account value postings from day calculation (net time, capped time).
+        Filter by employee, account, date range, or source type.
+      operationId: listDailyAccountValues
+      parameters:
+        - name: employee_id
+          in: query
+          type: string
+          format: uuid
+          description: Filter by employee
+        - name: account_id
+          in: query
+          type: string
+          format: uuid
+          description: Filter by account
+        - name: from
+          in: query
+          type: string
+          format: date
+          description: Start date filter
+        - name: to
+          in: query
+          type: string
+          format: date
+          description: End date filter
+        - name: source
+          in: query
+          type: string
+          enum:
+            - net_time
+            - capped_time
+          description: Filter by source type
+      responses:
+        '200':
+          description: List of daily account values
+          schema:
+            type: object
+            required:
+              - data
+            properties:
+              data:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - id
+                    - tenant_id
+                    - employee_id
+                    - account_id
+                    - value_date
+                    - value_minutes
+                    - source
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    tenant_id:
+                      type: string
+                      format: uuid
+                    employee_id:
+                      type: string
+                      format: uuid
+                    account_id:
+                      type: string
+                      format: uuid
+                    value_date:
+                      type: string
+                      format: date
+                    value_minutes:
+                      type: integer
+                      example: 480
+                    source:
+                      type: string
+                      enum:
+                        - net_time
+                        - capped_time
+                      example: net_time
+                    day_plan_id:
+                      type: string
+                      format: uuid
+                      x-nullable: true
+                    created_at:
+                      type: string
+                      format: date-time
+                    updated_at:
+                      type: string
+                      format: date-time
+                    account:
+                      allOf:
+                        - $ref: '#/definitions/AccountSummary'
+                      x-nullable: true
+        '401':
+          $ref: '#/responses/Unauthorized'
   /audit-logs:
     get:
       tags:
@@ -12954,6 +13052,16 @@ definitions:
         type: string
         format: uuid
         x-nullable: true
+      net_account_id:
+        type: string
+        format: uuid
+        x-nullable: true
+        description: Account for posting daily net time
+      cap_account_id:
+        type: string
+        format: uuid
+        x-nullable: true
+        description: Account for posting capped minutes
       is_active:
         type: boolean
         example: true
@@ -13237,6 +13345,12 @@ definitions:
       shift_alt_plan_6:
         type: string
         format: uuid
+      net_account_id:
+        type: string
+        format: uuid
+      cap_account_id:
+        type: string
+        format: uuid
       is_active:
         type: boolean
   UpdateDayPlanRequest:
@@ -13361,6 +13475,12 @@ definitions:
         type: string
         format: uuid
       shift_alt_plan_6:
+        type: string
+        format: uuid
+      net_account_id:
+        type: string
+        format: uuid
+      cap_account_id:
         type: string
         format: uuid
       is_active:

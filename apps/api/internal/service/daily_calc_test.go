@@ -1547,3 +1547,226 @@ func containsString(arr pq.StringArray, val string) bool {
 	}
 	return false
 }
+
+// mockDailyAccountValueWriter implements dailyAccountValueWriter for testing.
+type mockDailyAccountValueWriter struct {
+	mock.Mock
+	upsertedValues []*model.DailyAccountValue
+}
+
+func (m *mockDailyAccountValueWriter) Upsert(ctx context.Context, dav *model.DailyAccountValue) error {
+	m.upsertedValues = append(m.upsertedValues, dav)
+	args := m.Called(ctx, dav)
+	return args.Error(0)
+}
+
+func (m *mockDailyAccountValueWriter) DeleteByEmployeeDate(ctx context.Context, employeeID uuid.UUID, date time.Time) error {
+	args := m.Called(ctx, employeeID, date)
+	return args.Error(0)
+}
+
+func TestPostDailyAccountValues_NetAccountPosting(t *testing.T) {
+	ctx := context.Background()
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	date := testDate(2026, 1, 20)
+	netAccountID := uuid.New()
+
+	davRepo := new(mockDailyAccountValueWriter)
+	davRepo.On("Upsert", mock.Anything, mock.Anything).Return(nil)
+
+	svc := newTestService(nil, nil, nil, nil, nil)
+	svc.SetDailyAccountValueRepo(davRepo)
+
+	dayPlanID := uuid.New()
+	dayPlan := &model.DayPlan{
+		ID:           dayPlanID,
+		TenantID:     tenantID,
+		RegularHours: 480,
+		NetAccountID: &netAccountID,
+	}
+	empDayPlan := &model.EmployeeDayPlan{
+		DayPlan: dayPlan,
+	}
+	dailyValue := &model.DailyValue{
+		EmployeeID: employeeID,
+		ValueDate:  date,
+		NetTime:    450,
+		GrossTime:  510,
+	}
+
+	svc.postDailyAccountValues(ctx, tenantID, employeeID, date, empDayPlan, dailyValue)
+
+	require.Len(t, davRepo.upsertedValues, 1)
+	assert.Equal(t, netAccountID, davRepo.upsertedValues[0].AccountID)
+	assert.Equal(t, 450, davRepo.upsertedValues[0].ValueMinutes)
+	assert.Equal(t, model.DailyAccountValueSourceNetTime, davRepo.upsertedValues[0].Source)
+}
+
+func TestPostDailyAccountValues_CapAccountPosting(t *testing.T) {
+	ctx := context.Background()
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	date := testDate(2026, 1, 20)
+	capAccountID := uuid.New()
+	maxNet := 480
+
+	davRepo := new(mockDailyAccountValueWriter)
+	davRepo.On("Upsert", mock.Anything, mock.Anything).Return(nil)
+
+	svc := newTestService(nil, nil, nil, nil, nil)
+	svc.SetDailyAccountValueRepo(davRepo)
+
+	dayPlanID := uuid.New()
+	dayPlan := &model.DayPlan{
+		ID:             dayPlanID,
+		TenantID:       tenantID,
+		RegularHours:   480,
+		MaxNetWorkTime: &maxNet,
+		CapAccountID:   &capAccountID,
+	}
+	empDayPlan := &model.EmployeeDayPlan{
+		DayPlan: dayPlan,
+	}
+	dailyValue := &model.DailyValue{
+		EmployeeID: employeeID,
+		ValueDate:  date,
+		NetTime:    480,
+		GrossTime:  540, // 60 minutes over cap
+	}
+
+	svc.postDailyAccountValues(ctx, tenantID, employeeID, date, empDayPlan, dailyValue)
+
+	require.Len(t, davRepo.upsertedValues, 1)
+	assert.Equal(t, capAccountID, davRepo.upsertedValues[0].AccountID)
+	assert.Equal(t, 60, davRepo.upsertedValues[0].ValueMinutes)
+	assert.Equal(t, model.DailyAccountValueSourceCappedTime, davRepo.upsertedValues[0].Source)
+}
+
+func TestPostDailyAccountValues_BothNetAndCapPosting(t *testing.T) {
+	ctx := context.Background()
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	date := testDate(2026, 1, 20)
+	netAccountID := uuid.New()
+	capAccountID := uuid.New()
+	maxNet := 480
+
+	davRepo := new(mockDailyAccountValueWriter)
+	davRepo.On("Upsert", mock.Anything, mock.Anything).Return(nil)
+
+	svc := newTestService(nil, nil, nil, nil, nil)
+	svc.SetDailyAccountValueRepo(davRepo)
+
+	dayPlanID := uuid.New()
+	dayPlan := &model.DayPlan{
+		ID:             dayPlanID,
+		TenantID:       tenantID,
+		RegularHours:   480,
+		MaxNetWorkTime: &maxNet,
+		NetAccountID:   &netAccountID,
+		CapAccountID:   &capAccountID,
+	}
+	empDayPlan := &model.EmployeeDayPlan{
+		DayPlan: dayPlan,
+	}
+	dailyValue := &model.DailyValue{
+		EmployeeID: employeeID,
+		ValueDate:  date,
+		NetTime:    480,
+		GrossTime:  540,
+	}
+
+	svc.postDailyAccountValues(ctx, tenantID, employeeID, date, empDayPlan, dailyValue)
+
+	require.Len(t, davRepo.upsertedValues, 2)
+
+	// First: net time posting
+	assert.Equal(t, netAccountID, davRepo.upsertedValues[0].AccountID)
+	assert.Equal(t, 480, davRepo.upsertedValues[0].ValueMinutes)
+	assert.Equal(t, model.DailyAccountValueSourceNetTime, davRepo.upsertedValues[0].Source)
+
+	// Second: capped time posting
+	assert.Equal(t, capAccountID, davRepo.upsertedValues[1].AccountID)
+	assert.Equal(t, 60, davRepo.upsertedValues[1].ValueMinutes)
+	assert.Equal(t, model.DailyAccountValueSourceCappedTime, davRepo.upsertedValues[1].Source)
+}
+
+func TestPostDailyAccountValues_NoDayPlan_Cleanup(t *testing.T) {
+	ctx := context.Background()
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	date := testDate(2026, 1, 20)
+
+	davRepo := new(mockDailyAccountValueWriter)
+	davRepo.On("DeleteByEmployeeDate", mock.Anything, employeeID, date).Return(nil)
+
+	svc := newTestService(nil, nil, nil, nil, nil)
+	svc.SetDailyAccountValueRepo(davRepo)
+
+	dailyValue := &model.DailyValue{
+		EmployeeID: employeeID,
+		ValueDate:  date,
+	}
+
+	svc.postDailyAccountValues(ctx, tenantID, employeeID, date, nil, dailyValue)
+
+	davRepo.AssertCalled(t, "DeleteByEmployeeDate", mock.Anything, employeeID, date)
+}
+
+func TestPostDailyAccountValues_NilRepo_NoOp(t *testing.T) {
+	ctx := context.Background()
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	date := testDate(2026, 1, 20)
+
+	svc := newTestService(nil, nil, nil, nil, nil)
+	// Do not set dailyAccountValRepo
+
+	dailyValue := &model.DailyValue{
+		EmployeeID: employeeID,
+		ValueDate:  date,
+	}
+
+	// Should not panic
+	svc.postDailyAccountValues(ctx, tenantID, employeeID, date, nil, dailyValue)
+}
+
+func TestPostDailyAccountValues_CapZeroWhenUnderCap(t *testing.T) {
+	ctx := context.Background()
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	date := testDate(2026, 1, 20)
+	capAccountID := uuid.New()
+	maxNet := 600
+
+	davRepo := new(mockDailyAccountValueWriter)
+	davRepo.On("Upsert", mock.Anything, mock.Anything).Return(nil)
+
+	svc := newTestService(nil, nil, nil, nil, nil)
+	svc.SetDailyAccountValueRepo(davRepo)
+
+	dayPlanID := uuid.New()
+	dayPlan := &model.DayPlan{
+		ID:             dayPlanID,
+		TenantID:       tenantID,
+		RegularHours:   480,
+		MaxNetWorkTime: &maxNet,
+		CapAccountID:   &capAccountID,
+	}
+	empDayPlan := &model.EmployeeDayPlan{
+		DayPlan: dayPlan,
+	}
+	dailyValue := &model.DailyValue{
+		EmployeeID: employeeID,
+		ValueDate:  date,
+		NetTime:    480,
+		GrossTime:  500, // Under the 600 cap
+	}
+
+	svc.postDailyAccountValues(ctx, tenantID, employeeID, date, empDayPlan, dailyValue)
+
+	require.Len(t, davRepo.upsertedValues, 1)
+	assert.Equal(t, 0, davRepo.upsertedValues[0].ValueMinutes)
+	assert.Equal(t, model.DailyAccountValueSourceCappedTime, davRepo.upsertedValues[0].Source)
+}

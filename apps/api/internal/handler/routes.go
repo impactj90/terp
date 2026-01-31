@@ -495,6 +495,16 @@ func RegisterDailyValueRoutes(r chi.Router, h *DailyValueHandler, authz *middlew
 	r.With(authz.RequirePermission(approve)).Post("/daily-values/{id}/approve", h.Approve)
 }
 
+// RegisterDailyAccountValueRoutes registers daily account value routes.
+func RegisterDailyAccountValueRoutes(r chi.Router, h *DailyAccountValueHandler, authz *middleware.AuthorizationMiddleware) {
+	permView := permissions.ID("accounts.manage").String()
+	if authz == nil {
+		r.Get("/daily-account-values", h.List)
+		return
+	}
+	r.With(authz.RequirePermission(permView)).Get("/daily-account-values", h.List)
+}
+
 // RegisterAbsenceRoutes registers absence routes.
 func RegisterAbsenceRoutes(r chi.Router, h *AbsenceHandler, authz *middleware.AuthorizationMiddleware) {
 	requestPerm := permissions.ID("absences.request").String()

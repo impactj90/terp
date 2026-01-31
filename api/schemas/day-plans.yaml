@@ -220,6 +220,17 @@ DayPlan:
       type: string
       format: uuid
       x-nullable: true
+    # Account references for daily net/cap postings
+    net_account_id:
+      type: string
+      format: uuid
+      x-nullable: true
+      description: Account for posting daily net time
+    cap_account_id:
+      type: string
+      format: uuid
+      x-nullable: true
+      description: Account for posting capped minutes
     is_active:
       type: boolean
       example: true
@@ -509,6 +520,12 @@ CreateDayPlanRequest:
     shift_alt_plan_6:
       type: string
       format: uuid
+    net_account_id:
+      type: string
+      format: uuid
+    cap_account_id:
+      type: string
+      format: uuid
     is_active:
       type: boolean
 
@@ -634,6 +651,12 @@ UpdateDayPlanRequest:
       type: string
       format: uuid
     shift_alt_plan_6:
+      type: string
+      format: uuid
+    net_account_id:
+      type: string
+      format: uuid
+    cap_account_id:
       type: string
       format: uuid
     is_active:

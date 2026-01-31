@@ -434,6 +434,8 @@ paths:
     $ref: 'paths/accounts.yaml#/~1accounts~1{id}~1usage'
   /account-values:
     $ref: 'paths/accounts.yaml#/~1account-values'
+  /daily-account-values:
+    $ref: 'paths/accounts.yaml#/~1daily-account-values'
 
   # Audit Logs
   /audit-logs:
