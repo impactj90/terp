@@ -243,6 +243,36 @@ func (h *AbsenceHandler) CreateRange(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusCreated, response)
 }
 
+// GetAbsence handles GET /absences/{id}
+func (h *AbsenceHandler) GetAbsence(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid absence ID")
+		return
+	}
+
+	ad, err := h.ensureAbsenceScope(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, service.ErrAbsenceNotFound) {
+			respondError(w, http.StatusNotFound, "Absence not found")
+			return
+		}
+		if errors.Is(err, service.ErrEmployeeNotFound) {
+			respondError(w, http.StatusNotFound, "Employee not found")
+			return
+		}
+		if errors.Is(err, errAbsenceScopeDenied) {
+			respondError(w, http.StatusForbidden, "Permission denied")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to verify access")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, h.absenceDayToResponse(ad))
+}
+
 // Delete handles DELETE /absences/{id}
 func (h *AbsenceHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")

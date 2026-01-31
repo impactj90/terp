@@ -483,14 +483,17 @@ func RegisterBookingRoutes(r chi.Router, h *BookingHandler, authz *middleware.Au
 func RegisterDailyValueRoutes(r chi.Router, h *DailyValueHandler, authz *middleware.AuthorizationMiddleware) {
 	viewAll := permissions.ID("time_tracking.view_all").String()
 	approve := permissions.ID("time_tracking.approve").String()
+	permCalculateDay := permissions.ID("booking_overview.calculate_day").String()
 	if authz == nil {
 		r.Get("/daily-values", h.ListAll)
+		r.Post("/daily-values/recalculate", h.Recalculate)
 		r.Get("/daily-values/{id}", h.Get)
 		r.Post("/daily-values/{id}/approve", h.Approve)
 		return
 	}
 
 	r.With(authz.RequirePermission(viewAll)).Get("/daily-values", h.ListAll)
+	r.With(authz.RequirePermission(permCalculateDay)).Post("/daily-values/recalculate", h.Recalculate)
 	r.With(authz.RequirePermission(viewAll)).Get("/daily-values/{id}", h.Get)
 	r.With(authz.RequirePermission(approve)).Post("/daily-values/{id}/approve", h.Approve)
 }
@@ -541,6 +544,7 @@ func RegisterAbsenceRoutes(r chi.Router, h *AbsenceHandler, authz *middleware.Au
 	// Absence list and CRUD
 	if authz == nil {
 		r.Get("/absences", h.ListAll)
+		r.Get("/absences/{id}", h.GetAbsence)
 		r.Patch("/absences/{id}", h.UpdateAbsence)
 		r.Delete("/absences/{id}", h.Delete)
 		r.Post("/absences/{id}/approve", h.Approve)
@@ -548,6 +552,7 @@ func RegisterAbsenceRoutes(r chi.Router, h *AbsenceHandler, authz *middleware.Au
 		r.Post("/absences/{id}/cancel", h.Cancel)
 	} else {
 		r.With(authz.RequirePermission(managePerm)).Get("/absences", h.ListAll)
+		r.With(authz.RequirePermission(managePerm)).Get("/absences/{id}", h.GetAbsence)
 		r.With(authz.RequirePermission(managePerm)).Patch("/absences/{id}", h.UpdateAbsence)
 		r.With(authz.RequirePermission(managePerm)).Delete("/absences/{id}", h.Delete)
 		r.With(authz.RequirePermission(approvePerm)).Post("/absences/{id}/approve", h.Approve)
@@ -1584,4 +1589,116 @@ func RegisterMacroRoutes(r chi.Router, h *MacroHandler, authz *middleware.Author
 	} else {
 		r.With(authz.RequirePermission(permManage)).Get("/macro-executions/{id}", h.GetExecution)
 	}
+}
+
+// RegisterVacationBalanceRoutes registers vacation balance CRUD routes.
+func RegisterVacationBalanceRoutes(r chi.Router, h *VacationBalanceHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("absences.manage").String()
+	if authz == nil {
+		r.Get("/vacation-balances", h.List)
+		r.Post("/vacation-balances", h.Create)
+		r.Post("/vacation-balances/initialize", h.Initialize)
+		r.Get("/vacation-balances/{id}", h.Get)
+		r.Patch("/vacation-balances/{id}", h.Update)
+		return
+	}
+
+	r.With(authz.RequirePermission(permManage)).Get("/vacation-balances", h.List)
+	r.With(authz.RequirePermission(permManage)).Post("/vacation-balances", h.Create)
+	r.With(authz.RequirePermission(permManage)).Post("/vacation-balances/initialize", h.Initialize)
+	r.With(authz.RequirePermission(permManage)).Get("/vacation-balances/{id}", h.Get)
+	r.With(authz.RequirePermission(permManage)).Patch("/vacation-balances/{id}", h.Update)
+}
+
+// RegisterCorrectionRoutes registers correction routes.
+func RegisterCorrectionRoutes(r chi.Router, h *CorrectionHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("corrections.manage").String()
+	r.Route("/corrections", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			r.Post("/{id}/approve", h.Approve)
+			r.Post("/{id}/reject", h.Reject)
+			return
+		}
+
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+		r.With(authz.RequirePermission(permManage)).Post("/{id}/approve", h.Approve)
+		r.With(authz.RequirePermission(permManage)).Post("/{id}/reject", h.Reject)
+	})
+}
+
+// RegisterLocationRoutes registers location routes.
+func RegisterLocationRoutes(r chi.Router, h *LocationHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("locations.manage").String()
+	r.Route("/locations", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/{id}", h.Get)
+			r.Patch("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			return
+		}
+
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+	})
+}
+
+// RegisterMonthlyValueRoutes registers flat monthly value routes.
+func RegisterMonthlyValueRoutes(r chi.Router, h *MonthlyValueHandler, authz *middleware.AuthorizationMiddleware) {
+	permViewReports := permissions.ID("reports.view").String()
+	permCalculateMonth := permissions.ID("booking_overview.calculate_month").String()
+	if authz == nil {
+		r.Get("/monthly-values", h.List)
+		r.Post("/monthly-values/close-batch", h.CloseBatch)
+		r.Post("/monthly-values/recalculate", h.Recalculate)
+		r.Get("/monthly-values/{id}", h.Get)
+		r.Post("/monthly-values/{id}/close", h.Close)
+		r.Post("/monthly-values/{id}/reopen", h.Reopen)
+		return
+	}
+
+	r.With(authz.RequirePermission(permViewReports)).Get("/monthly-values", h.List)
+	r.With(authz.RequirePermission(permViewReports)).Post("/monthly-values/close-batch", h.CloseBatch)
+	r.With(authz.RequirePermission(permCalculateMonth)).Post("/monthly-values/recalculate", h.Recalculate)
+	r.With(authz.RequirePermission(permViewReports)).Get("/monthly-values/{id}", h.Get)
+	r.With(authz.RequirePermission(permViewReports)).Post("/monthly-values/{id}/close", h.Close)
+	r.With(authz.RequirePermission(permViewReports)).Post("/monthly-values/{id}/reopen", h.Reopen)
+}
+
+// RegisterMonthlyEvalTemplateRoutes registers monthly evaluation template routes.
+func RegisterMonthlyEvalTemplateRoutes(r chi.Router, h *MonthlyEvalTemplateHandler, authz *middleware.AuthorizationMiddleware) {
+	permManage := permissions.ID("monthly_evaluations.manage").String()
+	r.Route("/monthly-evaluations", func(r chi.Router) {
+		if authz == nil {
+			r.Get("/", h.List)
+			r.Post("/", h.Create)
+			r.Get("/default", h.GetDefault)
+			r.Get("/{id}", h.Get)
+			r.Put("/{id}", h.Update)
+			r.Delete("/{id}", h.Delete)
+			r.Post("/{id}/set-default", h.SetDefault)
+			return
+		}
+
+		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
+		r.With(authz.RequirePermission(permManage)).Get("/default", h.GetDefault)
+		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
+		r.With(authz.RequirePermission(permManage)).Put("/{id}", h.Update)
+		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
+		r.With(authz.RequirePermission(permManage)).Post("/{id}/set-default", h.SetDefault)
+	})
 }

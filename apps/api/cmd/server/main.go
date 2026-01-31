@@ -169,6 +169,8 @@ func main() {
 	)
 	vacationService.SetEmpDayPlanRepo(empDayPlanRepo)
 	vacationHandler := handler.NewVacationHandler(vacationService)
+	vacationBalanceService := service.NewVacationBalanceService(vacationBalanceRepo)
+	vacationBalanceHandler := handler.NewVacationBalanceHandler(vacationBalanceService, vacationService, employeeService)
 
 	// Initialize Vacation Special Calc Service
 	vacationSpecialCalcService := service.NewVacationSpecialCalcService(vacationSpecialCalcRepo)
@@ -203,9 +205,23 @@ func main() {
 	monthlyValueRepo := repository.NewMonthlyValueRepository(db)
 	monthlyEvalService := service.NewMonthlyEvalService(monthlyValueRepo, dailyValueRepo, absenceDayRepo, employeeRepo, tariffRepo)
 	monthlyEvalHandler := handler.NewMonthlyEvalHandler(monthlyEvalService, employeeService)
+	monthlyEvalTemplateRepo := repository.NewMonthlyEvalTemplateRepository(db)
+	monthlyEvalTemplateService := service.NewMonthlyEvalTemplateService(monthlyEvalTemplateRepo)
+	monthlyEvalTemplateHandler := handler.NewMonthlyEvalTemplateHandler(monthlyEvalTemplateService)
+
+	correctionRepo := repository.NewCorrectionRepository(db)
+	correctionService := service.NewCorrectionService(correctionRepo)
+	correctionHandler := handler.NewCorrectionHandler(correctionService)
+
+	locationRepo := repository.NewLocationRepository(db)
+	locationService := service.NewLocationService(locationRepo)
+	locationHandler := handler.NewLocationHandler(locationService)
+
+	monthlyValueService := service.NewMonthlyValueService(monthlyValueRepo)
 
 	// Initialize MonthlyCalcService
 	monthlyCalcService := service.NewMonthlyCalcService(monthlyEvalService, monthlyValueRepo)
+	monthlyValueHandler := handler.NewMonthlyValueHandler(monthlyValueService, monthlyCalcService, employeeService)
 	holidayService.SetRecalcServices(recalcService, monthlyCalcService, employeeRepo)
 
 	// Initialize handlers
@@ -246,6 +262,7 @@ func main() {
 	tariffHandler := handler.NewTariffHandler(tariffService)
 	bookingTypeHandler := handler.NewBookingTypeHandler(bookingTypeService)
 	dailyValueHandler := handler.NewDailyValueHandler(dailyValueService, employeeService)
+	dailyValueHandler.SetRecalcService(recalcService)
 	dailyAccountValueHandler := handler.NewDailyAccountValueHandler(dailyAccountValueService)
 	notificationHandler := handler.NewNotificationHandler(notificationService, notificationStreamHub)
 	permissionHandler := handler.NewPermissionHandler()
@@ -502,7 +519,9 @@ func main() {
 				handler.RegisterAbsenceRoutes(r, absenceHandler, authzMiddleware)
 				handler.RegisterAbsenceTypeGroupRoutes(r, absenceTypeGroupHandler, authzMiddleware)
 				handler.RegisterVacationRoutes(r, vacationHandler)
+				handler.RegisterVacationBalanceRoutes(r, vacationBalanceHandler, authzMiddleware)
 				handler.RegisterMonthlyEvalRoutes(r, monthlyEvalHandler, authzMiddleware)
+				handler.RegisterMonthlyValueRoutes(r, monthlyValueHandler, authzMiddleware)
 				handler.RegisterNotificationRoutes(r, notificationHandler, authzMiddleware)
 				handler.RegisterAuditLogRoutes(r, auditLogHandler, authzMiddleware)
 				handler.RegisterGroupRoutes(r, groupHandler, authzMiddleware)
@@ -544,6 +563,9 @@ func main() {
 				handler.RegisterShiftRoutes(r, shiftHandler, authzMiddleware)
 				handler.RegisterShiftAssignmentRoutes(r, shiftAssignmentHandler, authzMiddleware)
 				handler.RegisterMacroRoutes(r, macroHandler, authzMiddleware)
+				handler.RegisterLocationRoutes(r, locationHandler, authzMiddleware)
+				handler.RegisterCorrectionRoutes(r, correctionHandler, authzMiddleware)
+				handler.RegisterMonthlyEvalTemplateRoutes(r, monthlyEvalTemplateHandler, authzMiddleware)
 			})
 		})
 

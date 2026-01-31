@@ -110,6 +110,46 @@ func (r *MonthlyValueRepository) Upsert(ctx context.Context, mv *model.MonthlyVa
 		Create(mv).Error
 }
 
+// MonthlyValueFilter provides filter options for listing monthly values.
+type MonthlyValueFilter struct {
+	TenantID     uuid.UUID
+	EmployeeID   *uuid.UUID
+	Year         *int
+	Month        *int
+	IsClosed     *bool
+	DepartmentID *uuid.UUID
+}
+
+// ListAll returns monthly values matching the given filter.
+func (r *MonthlyValueRepository) ListAll(ctx context.Context, filter MonthlyValueFilter) ([]model.MonthlyValue, error) {
+	q := r.db.GORM.WithContext(ctx).
+		Where("monthly_values.tenant_id = ?", filter.TenantID)
+
+	if filter.EmployeeID != nil {
+		q = q.Where("monthly_values.employee_id = ?", *filter.EmployeeID)
+	}
+	if filter.Year != nil {
+		q = q.Where("monthly_values.year = ?", *filter.Year)
+	}
+	if filter.Month != nil {
+		q = q.Where("monthly_values.month = ?", *filter.Month)
+	}
+	if filter.IsClosed != nil {
+		q = q.Where("monthly_values.is_closed = ?", *filter.IsClosed)
+	}
+	if filter.DepartmentID != nil {
+		q = q.Joins("JOIN employees ON employees.id = monthly_values.employee_id").
+			Where("employees.department_id = ?", *filter.DepartmentID)
+	}
+
+	var values []model.MonthlyValue
+	err := q.Order("monthly_values.year DESC, monthly_values.month DESC").Find(&values).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to list monthly values: %w", err)
+	}
+	return values, nil
+}
+
 // ListByEmployee retrieves all monthly values for an employee ordered by year, month.
 func (r *MonthlyValueRepository) ListByEmployee(ctx context.Context, employeeID uuid.UUID) ([]model.MonthlyValue, error) {
 	var values []model.MonthlyValue

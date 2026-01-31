@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -21,6 +22,12 @@ import (
 type DailyValueHandler struct {
 	dailyValueService *service.DailyValueService
 	employeeService   *service.EmployeeService
+	recalcService     *service.RecalcService
+}
+
+// SetRecalcService sets the recalculation service for daily value recalculation.
+func (h *DailyValueHandler) SetRecalcService(s *service.RecalcService) {
+	h.recalcService = s
 }
 
 var errDailyValueScopeDenied = errors.New("employee access denied by scope")
@@ -228,6 +235,68 @@ func (h *DailyValueHandler) Approve(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondJSON(w, http.StatusOK, h.dailyValueToResponse(dv))
+}
+
+// Recalculate handles POST /daily-values/recalculate
+func (h *DailyValueHandler) Recalculate(w http.ResponseWriter, r *http.Request) {
+	tenantID, ok := middleware.TenantFromContext(r.Context())
+	if !ok {
+		respondError(w, http.StatusUnauthorized, "Tenant required")
+		return
+	}
+
+	var req struct {
+		From       string `json:"from"`
+		To         string `json:"to"`
+		EmployeeID string `json:"employee_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if req.From == "" || req.To == "" {
+		respondError(w, http.StatusBadRequest, "from and to are required")
+		return
+	}
+
+	from, err := time.Parse("2006-01-02", req.From)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid from date format, expected YYYY-MM-DD")
+		return
+	}
+	to, err := time.Parse("2006-01-02", req.To)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid to date format, expected YYYY-MM-DD")
+		return
+	}
+
+	if from.After(to) {
+		respondError(w, http.StatusBadRequest, "from must be before or equal to to")
+		return
+	}
+
+	var result *service.RecalcResult
+	if req.EmployeeID != "" {
+		empID, parseErr := uuid.Parse(req.EmployeeID)
+		if parseErr != nil {
+			respondError(w, http.StatusBadRequest, "Invalid employee_id")
+			return
+		}
+		result, _ = h.recalcService.TriggerRecalcRange(r.Context(), tenantID, empID, from, to)
+	} else {
+		var recalcErr error
+		result, recalcErr = h.recalcService.TriggerRecalcAll(r.Context(), tenantID, from, to)
+		if recalcErr != nil {
+			respondError(w, http.StatusInternalServerError, "Failed to start recalculation")
+			return
+		}
+	}
+
+	respondJSON(w, http.StatusAccepted, map[string]interface{}{
+		"message":       "Recalculation started",
+		"affected_days": result.ProcessedDays,
+	})
 }
 
 func (h *DailyValueHandler) dailyValueToResponse(dv *model.DailyValue) *models.DailyValue {

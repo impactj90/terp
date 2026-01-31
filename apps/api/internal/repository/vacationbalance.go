@@ -103,6 +103,38 @@ func (r *VacationBalanceRepository) IncrementTaken(ctx context.Context, employee
 	return nil
 }
 
+// VacationBalanceFilter provides filter options for listing vacation balances.
+type VacationBalanceFilter struct {
+	TenantID     uuid.UUID
+	EmployeeID   *uuid.UUID
+	Year         *int
+	DepartmentID *uuid.UUID
+}
+
+// ListAll returns vacation balances matching the given filter.
+func (r *VacationBalanceRepository) ListAll(ctx context.Context, filter VacationBalanceFilter) ([]model.VacationBalance, error) {
+	q := r.db.GORM.WithContext(ctx).
+		Where("vacation_balances.tenant_id = ?", filter.TenantID)
+
+	if filter.EmployeeID != nil {
+		q = q.Where("vacation_balances.employee_id = ?", *filter.EmployeeID)
+	}
+	if filter.Year != nil {
+		q = q.Where("vacation_balances.year = ?", *filter.Year)
+	}
+	if filter.DepartmentID != nil {
+		q = q.Joins("JOIN employees ON employees.id = vacation_balances.employee_id").
+			Where("employees.department_id = ?", *filter.DepartmentID)
+	}
+
+	var balances []model.VacationBalance
+	err := q.Order("vacation_balances.year DESC").Find(&balances).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to list vacation balances: %w", err)
+	}
+	return balances, nil
+}
+
 func (r *VacationBalanceRepository) ListByEmployee(ctx context.Context, employeeID uuid.UUID) ([]model.VacationBalance, error) {
 	var balances []model.VacationBalance
 	err := r.db.GORM.WithContext(ctx).
