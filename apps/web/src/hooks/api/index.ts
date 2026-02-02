@@ -195,3 +195,17 @@ export {
 // Team Overview
 export { useTeamDayViews } from './use-team-day-views'
 export { useTeamDailyValues } from './use-team-daily-values'
+
+// Correction Assistant
+export {
+  useCorrectionAssistantItems,
+  useCorrectionMessages,
+  useCorrectionMessage,
+  useUpdateCorrectionMessage,
+  type CorrectionAssistantItem,
+  type CorrectionAssistantError,
+  type CorrectionAssistantList,
+  type CorrectionMessage,
+  type CorrectionMessageList,
+  type UpdateCorrectionMessageRequest,
+} from './use-correction-assistant'

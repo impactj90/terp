@@ -80,7 +80,8 @@
     "reports": "Reports",
     "settings": "Settings",
     "tenants": "Tenants",
-    "time": "Time"
+    "time": "Time",
+    "correctionAssistant": "Correction Assistant"
   },
   "sidebar": {
     "collapse": "Collapse",
@@ -170,7 +171,8 @@
     "vacation": "Vacation",
     "monthlyEvaluation": "Monthly Evaluation",
     "yearOverview": "Year Overview",
-    "teamOverview": "Team Overview"
+    "teamOverview": "Team Overview",
+    "correctionAssistant": "Correction Assistant"
   },
   "time": {
     "today": "Today",
@@ -2021,5 +2023,88 @@
     "toastBulkApprovedPartial": "Approved {approved} of {total} items",
     "toastTimesheetApproved": "Timesheet approved",
     "bulkApprove": "Bulk Approve"
+  },
+  "correctionAssistant": {
+    "page": {
+      "title": "Correction Assistant",
+      "description": "View calculation errors and hints, manage error message catalog",
+      "tabCorrections": "Corrections",
+      "tabMessages": "Message Catalog"
+    },
+    "table": {
+      "employee": "Employee",
+      "department": "Department",
+      "date": "Date",
+      "errorCode": "Error Code",
+      "severity": "Severity",
+      "message": "Message"
+    },
+    "filters": {
+      "dateRange": "Date Range",
+      "department": "Department",
+      "allDepartments": "All Departments",
+      "severity": "Severity",
+      "allSeverities": "All",
+      "error": "Error",
+      "hint": "Hint",
+      "errorCode": "Error Code",
+      "errorCodePlaceholder": "Filter by error code...",
+      "employeeSearch": "Employee",
+      "employeeSearchPlaceholder": "Search by employee name...",
+      "clearFilters": "Clear filters"
+    },
+    "detail": {
+      "title": "Correction Details",
+      "description": "All errors and hints for this employee on this date",
+      "employee": "Employee",
+      "department": "Department",
+      "date": "Date",
+      "errorsTitle": "Errors & Hints",
+      "errorType": "Type",
+      "close": "Close",
+      "goToEmployee": "Go to Employee"
+    },
+    "messages": {
+      "columnCode": "Code",
+      "columnDefaultText": "Default Text",
+      "columnCustomText": "Custom Text",
+      "columnEffectiveText": "Effective Text",
+      "columnSeverity": "Severity",
+      "columnActive": "Active",
+      "clickToCustomize": "Click to customize...",
+      "editMessage": "Edit Message",
+      "editMessageDescription": "Customize the error message text, severity, and active status",
+      "customText": "Custom Text",
+      "customTextPlaceholder": "Enter custom message text...",
+      "customTextHint": "Leave empty to use the default text",
+      "severityLabel": "Severity",
+      "activeLabel": "Active",
+      "activeDescription": "Inactive messages will not appear in correction results",
+      "resetToDefault": "Reset to Default",
+      "cancel": "Cancel",
+      "saveChanges": "Save Changes",
+      "saving": "Saving...",
+      "edit": "Edit",
+      "actions": "Actions"
+    },
+    "empty": {
+      "title": "No errors or hints found",
+      "description": "No errors or hints found for the selected period",
+      "messagesTitle": "No messages found",
+      "messagesDescription": "No correction messages match the current filter"
+    },
+    "count": {
+      "items": "{count} items",
+      "item": "{count} item"
+    },
+    "severity": {
+      "error": "Error",
+      "hint": "Hint"
+    },
+    "toast": {
+      "updateSuccess": "Message updated",
+      "updateFailed": "Failed to update message",
+      "resetSuccess": "Message reset to default"
+    }
   }
 }

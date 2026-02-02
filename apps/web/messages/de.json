@@ -80,7 +80,8 @@
     "reports": "Berichte",
     "settings": "Einstellungen",
     "tenants": "Mandanten",
-    "time": "Stempeluhr"
+    "time": "Stempeluhr",
+    "correctionAssistant": "Korrekturassistent"
   },
   "sidebar": {
     "collapse": "Einklappen",
@@ -170,7 +171,8 @@
     "vacation": "Urlaub",
     "monthlyEvaluation": "Monatsauswertung",
     "yearOverview": "Jahresübersicht",
-    "teamOverview": "Teamübersicht"
+    "teamOverview": "Teamübersicht",
+    "correctionAssistant": "Korrekturassistent"
   },
   "time": {
     "today": "Heute",
@@ -2021,5 +2023,88 @@
     "toastBulkApprovedPartial": "{approved} von {total} Einträgen genehmigt",
     "toastTimesheetApproved": "Stundenzettel genehmigt",
     "bulkApprove": "Sammelgenehmigung"
+  },
+  "correctionAssistant": {
+    "page": {
+      "title": "Korrekturassistent",
+      "description": "Berechnungsfehler und Hinweise anzeigen, Fehlermeldungskatalog verwalten",
+      "tabCorrections": "Korrekturen",
+      "tabMessages": "Meldungskatalog"
+    },
+    "table": {
+      "employee": "Mitarbeiter",
+      "department": "Abteilung",
+      "date": "Datum",
+      "errorCode": "Fehlercode",
+      "severity": "Schweregrad",
+      "message": "Meldung"
+    },
+    "filters": {
+      "dateRange": "Zeitraum",
+      "department": "Abteilung",
+      "allDepartments": "Alle Abteilungen",
+      "severity": "Schweregrad",
+      "allSeverities": "Alle",
+      "error": "Fehler",
+      "hint": "Hinweis",
+      "errorCode": "Fehlercode",
+      "errorCodePlaceholder": "Nach Fehlercode filtern...",
+      "employeeSearch": "Mitarbeiter",
+      "employeeSearchPlaceholder": "Nach Mitarbeitername suchen...",
+      "clearFilters": "Filter zurücksetzen"
+    },
+    "detail": {
+      "title": "Korrekturdetails",
+      "description": "Alle Fehler und Hinweise für diesen Mitarbeiter an diesem Datum",
+      "employee": "Mitarbeiter",
+      "department": "Abteilung",
+      "date": "Datum",
+      "errorsTitle": "Fehler & Hinweise",
+      "errorType": "Typ",
+      "close": "Schließen",
+      "goToEmployee": "Zum Mitarbeiter"
+    },
+    "messages": {
+      "columnCode": "Code",
+      "columnDefaultText": "Standardtext",
+      "columnCustomText": "Benutzerdefinierter Text",
+      "columnEffectiveText": "Effektiver Text",
+      "columnSeverity": "Schweregrad",
+      "columnActive": "Aktiv",
+      "clickToCustomize": "Klicken zum Anpassen...",
+      "editMessage": "Meldung bearbeiten",
+      "editMessageDescription": "Meldungstext, Schweregrad und Aktivstatus anpassen",
+      "customText": "Benutzerdefinierter Text",
+      "customTextPlaceholder": "Benutzerdefinierten Meldungstext eingeben...",
+      "customTextHint": "Leer lassen, um den Standardtext zu verwenden",
+      "severityLabel": "Schweregrad",
+      "activeLabel": "Aktiv",
+      "activeDescription": "Inaktive Meldungen erscheinen nicht in Korrekturergebnissen",
+      "resetToDefault": "Auf Standard zurücksetzen",
+      "cancel": "Abbrechen",
+      "saveChanges": "Änderungen speichern",
+      "saving": "Speichern...",
+      "edit": "Bearbeiten",
+      "actions": "Aktionen"
+    },
+    "empty": {
+      "title": "Keine Fehler oder Hinweise gefunden",
+      "description": "Keine Fehler oder Hinweise für den gewählten Zeitraum gefunden",
+      "messagesTitle": "Keine Meldungen gefunden",
+      "messagesDescription": "Keine Korrekturmeldungen entsprechen dem aktuellen Filter"
+    },
+    "count": {
+      "items": "{count} Einträge",
+      "item": "{count} Eintrag"
+    },
+    "severity": {
+      "error": "Fehler",
+      "hint": "Hinweis"
+    },
+    "toast": {
+      "updateSuccess": "Meldung aktualisiert",
+      "updateFailed": "Meldung konnte nicht aktualisiert werden",
+      "resetSuccess": "Meldung auf Standard zurückgesetzt"
+    }
   }
 }

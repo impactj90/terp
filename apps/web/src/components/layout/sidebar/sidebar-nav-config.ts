@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   ScrollText,
   Wallet,
+  AlertTriangle,
 } from 'lucide-react'
 import type { UserRole } from '@/hooks/use-has-role'
 
@@ -175,6 +176,12 @@ export const navConfig: NavSection[] = [
         titleKey: 'accounts',
         href: '/admin/accounts',
         icon: Wallet,
+        roles: ['admin'],
+      },
+      {
+        titleKey: 'correctionAssistant',
+        href: '/admin/correction-assistant',
+        icon: AlertTriangle,
         roles: ['admin'],
       },
     ],
