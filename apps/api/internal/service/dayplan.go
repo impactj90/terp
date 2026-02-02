@@ -71,6 +71,7 @@ type CreateDayPlanInput struct {
 	ToleranceComeMinus   int
 	ToleranceGoPlus      int
 	ToleranceGoMinus     int
+	VariableWorkTime     bool
 	RoundingComeType     *model.RoundingType
 	RoundingComeInterval *int
 	RoundingGoType       *model.RoundingType
@@ -79,6 +80,17 @@ type CreateDayPlanInput struct {
 	MaxNetWorkTime       *int
 	NetAccountID         *uuid.UUID
 	CapAccountID         *uuid.UUID
+}
+
+// normalizeFlextimeFields zeroes out tolerance and variable work time fields
+// that have no meaning for flextime plans per ZMI Section 6.2.
+func (s *DayPlanService) normalizeFlextimeFields(plan *model.DayPlan) {
+	if plan.PlanType != model.PlanTypeFlextime {
+		return
+	}
+	plan.ToleranceComePlus = 0
+	plan.ToleranceGoMinus = 0
+	plan.VariableWorkTime = false
 }
 
 // Create creates a new day plan with validation.
@@ -133,6 +145,7 @@ func (s *DayPlanService) Create(ctx context.Context, input CreateDayPlanInput) (
 		ToleranceComeMinus:   input.ToleranceComeMinus,
 		ToleranceGoPlus:      input.ToleranceGoPlus,
 		ToleranceGoMinus:     input.ToleranceGoMinus,
+		VariableWorkTime:     input.VariableWorkTime,
 		RoundingComeType:     input.RoundingComeType,
 		RoundingComeInterval: input.RoundingComeInterval,
 		RoundingGoType:       input.RoundingGoType,
@@ -143,6 +156,9 @@ func (s *DayPlanService) Create(ctx context.Context, input CreateDayPlanInput) (
 		CapAccountID:         input.CapAccountID,
 		IsActive:             true,
 	}
+
+	// ZMI Section 6.2: normalize fields that have no meaning for flextime
+	s.normalizeFlextimeFields(plan)
 
 	if err := s.dayPlanRepo.Create(ctx, plan); err != nil {
 		return nil, err
@@ -216,6 +232,7 @@ type UpdateDayPlanInput struct {
 	ToleranceComeMinus   *int
 	ToleranceGoPlus      *int
 	ToleranceGoMinus     *int
+	VariableWorkTime     *bool
 	RoundingComeType     *model.RoundingType
 	RoundingComeInterval *int
 	RoundingGoType       *model.RoundingType
@@ -285,6 +302,9 @@ func (s *DayPlanService) Update(ctx context.Context, id uuid.UUID, input UpdateD
 	if input.ToleranceGoMinus != nil {
 		plan.ToleranceGoMinus = *input.ToleranceGoMinus
 	}
+	if input.VariableWorkTime != nil {
+		plan.VariableWorkTime = *input.VariableWorkTime
+	}
 	if input.RoundingComeType != nil {
 		plan.RoundingComeType = input.RoundingComeType
 	}
@@ -312,6 +332,9 @@ func (s *DayPlanService) Update(ctx context.Context, id uuid.UUID, input UpdateD
 	if input.IsActive != nil {
 		plan.IsActive = *input.IsActive
 	}
+
+	// ZMI Section 6.2: normalize fields that have no meaning for flextime
+	s.normalizeFlextimeFields(plan)
 
 	// Validate time ranges after update
 	if err := s.validateTimeRanges(plan.ComeFrom, plan.ComeTo, plan.GoFrom, plan.GoTo, plan.CoreStart, plan.CoreEnd); err != nil {
@@ -403,6 +426,9 @@ func (s *DayPlanService) Copy(ctx context.Context, id uuid.UUID, newCode, newNam
 		CapAccountID:         original.CapAccountID,
 		IsActive:             true,
 	}
+
+	// ZMI Section 6.2: normalize fields that have no meaning for flextime
+	s.normalizeFlextimeFields(newPlan)
 
 	if err := s.dayPlanRepo.Create(ctx, newPlan); err != nil {
 		return nil, err

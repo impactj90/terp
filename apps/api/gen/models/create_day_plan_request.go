@@ -164,10 +164,10 @@ type CreateDayPlanRequest struct {
 	// tolerance come minus
 	ToleranceComeMinus int64 `json:"tolerance_come_minus,omitempty"`
 
-	// tolerance come plus
+	// Tolerance for late arrival (minutes). Ignored and normalized to 0 for flextime plans.
 	ToleranceComePlus int64 `json:"tolerance_come_plus,omitempty"`
 
-	// tolerance go minus
+	// Tolerance for early departure (minutes). Ignored and normalized to 0 for flextime plans.
 	ToleranceGoMinus int64 `json:"tolerance_go_minus,omitempty"`
 
 	// tolerance go plus
@@ -176,7 +176,7 @@ type CreateDayPlanRequest struct {
 	// vacation deduction
 	VacationDeduction float32 `json:"vacation_deduction,omitempty"`
 
-	// variable work time
+	// Enable tolerance_come_minus for fixed plans. Ignored and normalized to false for flextime plans.
 	VariableWorkTime bool `json:"variable_work_time,omitempty"`
 }
 

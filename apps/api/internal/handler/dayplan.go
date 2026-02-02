@@ -95,6 +95,7 @@ func (h *DayPlanHandler) Create(w http.ResponseWriter, r *http.Request) {
 		ToleranceComeMinus: int(req.ToleranceComeMinus),
 		ToleranceGoPlus:    int(req.ToleranceGoPlus),
 		ToleranceGoMinus:   int(req.ToleranceGoMinus),
+		VariableWorkTime:   req.VariableWorkTime,
 	}
 
 	// Handle optional fields
@@ -299,6 +300,8 @@ func (h *DayPlanHandler) Update(w http.ResponseWriter, r *http.Request) {
 			input.SetCapAccountID = true
 		}
 	}
+	// VariableWorkTime - always pass since it's a boolean
+	input.VariableWorkTime = &req.VariableWorkTime
 	// IsActive needs special handling - we always pass it since it's a boolean
 	input.IsActive = &req.IsActive
 

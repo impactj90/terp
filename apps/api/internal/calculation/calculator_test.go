@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/tolga/terp/internal/calculation"
+	"github.com/tolga/terp/internal/model"
 )
 
 func TestCalculator_EmptyBookings(t *testing.T) {
@@ -741,4 +742,152 @@ func TestCalculator_RoundAllBookingsDefault(t *testing.T) {
 	assert.Equal(t, 757, result.CalculatedTimes[in2])
 	// Last-out (16:53) rounded down to 16:45 = 1005
 	assert.Equal(t, 1005, result.CalculatedTimes[out2])
+}
+
+// --- ZMI-TICKET-039: Flextime tolerance defense-in-depth tests ---
+
+func TestCalculator_FlextimeIgnoresComePlusAndGoMinus(t *testing.T) {
+	// The tolerance module is plan-type-agnostic: it applies whatever values
+	// it receives. The defense-in-depth for flextime is in buildCalcInput
+	// (service layer), which zeroes ComePlus/GoMinus before the calculator.
+	//
+	// This test verifies that a properly-normalized flextime plan (tolerance=0,
+	// as buildCalcInput would set) gives correct results: no snapping occurs,
+	// and the actual arrival/departure times are used as-is.
+	calc := calculation.NewCalculator()
+	comeFrom := 480 // 08:00
+	goTo := 1020    // 17:00
+
+	comeID := uuid.New()
+	goID := uuid.New()
+
+	// Bookings: arrive 3 min late, leave 3 min early
+	bookings := []calculation.BookingInput{
+		{ID: comeID, Time: 483, Direction: calculation.DirectionIn, Category: calculation.CategoryWork},
+		{ID: goID, Time: 1017, Direction: calculation.DirectionOut, Category: calculation.CategoryWork},
+	}
+
+	// Properly normalized flextime plan (as buildCalcInput would produce)
+	plan := calculation.DayPlanInput{
+		PlanType:     model.PlanTypeFlextime,
+		RegularHours: 480,
+		ComeFrom:     &comeFrom,
+		GoTo:         &goTo,
+		Tolerance:    calculation.ToleranceConfig{}, // zeroed by buildCalcInput
+	}
+
+	result := calc.Calculate(calculation.CalculationInput{
+		EmployeeID: uuid.New(),
+		Date:       time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
+		Bookings:   bookings,
+		DayPlan:    plan,
+	})
+
+	// With zeroed tolerance, no snapping should occur:
+	// Arrival at 483 stays at 483, departure at 1017 stays at 1017
+	assert.Equal(t, 483, result.CalculatedTimes[comeID],
+		"Flextime with zeroed ComePlus should NOT snap late arrival to ComeFrom")
+	assert.Equal(t, 1017, result.CalculatedTimes[goID],
+		"Flextime with zeroed GoMinus should NOT snap early departure to GoTo")
+	assert.Equal(t, 534, result.GrossTime,
+		"GrossTime should reflect actual times (1017-483=534)")
+}
+
+func TestCalculator_FlextimeVariableWorkTimeHasNoEffect(t *testing.T) {
+	// Even if VariableWorkTime is true for a flextime plan,
+	// behavior should be identical to VariableWorkTime=false
+	// because flextime always allows early arrivals.
+	calc := calculation.NewCalculator()
+	comeFrom := 480 // 08:00
+	goTo := 1020    // 17:00
+
+	comeID1 := uuid.New()
+	goID1 := uuid.New()
+	comeID2 := uuid.New()
+	goID2 := uuid.New()
+
+	bookings1 := []calculation.BookingInput{
+		{ID: comeID1, Time: 460, Direction: calculation.DirectionIn, Category: calculation.CategoryWork}, // 07:40 (early)
+		{ID: goID1, Time: 1000, Direction: calculation.DirectionOut, Category: calculation.CategoryWork},
+	}
+	bookings2 := []calculation.BookingInput{
+		{ID: comeID2, Time: 460, Direction: calculation.DirectionIn, Category: calculation.CategoryWork}, // 07:40 (early)
+		{ID: goID2, Time: 1000, Direction: calculation.DirectionOut, Category: calculation.CategoryWork},
+	}
+
+	planWithVWT := calculation.DayPlanInput{
+		PlanType:         model.PlanTypeFlextime,
+		RegularHours:     480,
+		ComeFrom:         &comeFrom,
+		GoTo:             &goTo,
+		VariableWorkTime: true,
+	}
+
+	planWithoutVWT := calculation.DayPlanInput{
+		PlanType:     model.PlanTypeFlextime,
+		RegularHours: 480,
+		ComeFrom:     &comeFrom,
+		GoTo:         &goTo,
+	}
+
+	resultWith := calc.Calculate(calculation.CalculationInput{
+		EmployeeID: uuid.New(),
+		Date:       time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
+		Bookings:   bookings1,
+		DayPlan:    planWithVWT,
+	})
+	resultWithout := calc.Calculate(calculation.CalculationInput{
+		EmployeeID: uuid.New(),
+		Date:       time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
+		Bookings:   bookings2,
+		DayPlan:    planWithoutVWT,
+	})
+
+	assert.Equal(t, resultWithout.GrossTime, resultWith.GrossTime,
+		"Flextime GrossTime should be identical regardless of VariableWorkTime")
+	assert.Equal(t, resultWithout.NetTime, resultWith.NetTime,
+		"Flextime NetTime should be identical regardless of VariableWorkTime")
+	assert.Equal(t, resultWithout.CappedTime, resultWith.CappedTime,
+		"Flextime CappedTime should be identical regardless of VariableWorkTime")
+}
+
+func TestCalculator_FixedPlan_ComeMinus_RequiresVariableWorkTime(t *testing.T) {
+	// For fixed plans, ComeMinus tolerance should only apply when
+	// VariableWorkTime is enabled (ZMI Section 6.3).
+	// When ComeMinus=0 (as buildCalcInput would set for fixed without VWT),
+	// early arrivals should be capped to ComeFrom, not snapped via tolerance.
+	// The validator will flag an EARLY_COME warning since the pre-capped
+	// time is before the allowed window.
+	calc := calculation.NewCalculator()
+	comeFrom := 480 // 08:00
+	comeID := uuid.New()
+	goID := uuid.New()
+
+	bookings := []calculation.BookingInput{
+		{ID: comeID, Time: 477, Direction: calculation.DirectionIn, Category: calculation.CategoryWork}, // 07:57
+		{ID: goID, Time: 1020, Direction: calculation.DirectionOut, Category: calculation.CategoryWork},
+	}
+
+	// ComeMinus=0 means no early arrival tolerance
+	plan := calculation.DayPlanInput{
+		PlanType:     model.PlanTypeFixed,
+		RegularHours: 480,
+		ComeFrom:     &comeFrom,
+		Tolerance:    calculation.ToleranceConfig{ComeMinus: 0},
+	}
+
+	result := calc.Calculate(calculation.CalculationInput{
+		EmployeeID: uuid.New(),
+		Date:       time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
+		Bookings:   bookings,
+		DayPlan:    plan,
+	})
+
+	// 07:57 should be capped to 08:00 (no ComeMinus tolerance)
+	assert.Equal(t, 480, result.CalculatedTimes[comeID],
+		"Early arrival without ComeMinus tolerance should be capped to ComeFrom")
+
+	// The validator flags early arrival since pre-capped time (477) is before ComeFrom (480)
+	assert.Contains(t, result.ErrorCodes, calculation.ErrCodeEarlyCome,
+		"Validator should flag early arrival for fixed plan without ComeMinus tolerance")
 }

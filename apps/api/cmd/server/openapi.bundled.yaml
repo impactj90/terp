@@ -12915,7 +12915,7 @@ definitions:
         description: Get target hours from employee master data
       tolerance_come_plus:
         type: integer
-        description: Tolerance for late arrival (minutes)
+        description: Tolerance for late arrival (minutes). Ignored for flextime plans (always treated as 0).
         example: 0
       tolerance_come_minus:
         type: integer
@@ -12927,11 +12927,11 @@ definitions:
         example: 0
       tolerance_go_minus:
         type: integer
-        description: Tolerance for early departure (minutes)
+        description: Tolerance for early departure (minutes). Ignored for flextime plans (always treated as 0).
         example: 0
       variable_work_time:
         type: boolean
-        description: Enable tolerance_come_minus for fixed working time plans
+        description: Enable tolerance_come_minus for fixed working time plans. Has no effect for flextime plans (always treated as false).
       rounding_come_type:
         type: string
         enum:
@@ -13255,14 +13255,17 @@ definitions:
         type: boolean
       tolerance_come_plus:
         type: integer
+        description: Tolerance for late arrival (minutes). Ignored and normalized to 0 for flextime plans.
       tolerance_come_minus:
         type: integer
       tolerance_go_plus:
         type: integer
       tolerance_go_minus:
         type: integer
+        description: Tolerance for early departure (minutes). Ignored and normalized to 0 for flextime plans.
       variable_work_time:
         type: boolean
+        description: Enable tolerance_come_minus for fixed plans. Ignored and normalized to false for flextime plans.
       rounding_come_type:
         type: string
         enum:
@@ -13387,14 +13390,17 @@ definitions:
         type: boolean
       tolerance_come_plus:
         type: integer
+        description: Tolerance for late arrival (minutes). Ignored and normalized to 0 for flextime plans.
       tolerance_come_minus:
         type: integer
       tolerance_go_plus:
         type: integer
       tolerance_go_minus:
         type: integer
+        description: Tolerance for early departure (minutes). Ignored and normalized to 0 for flextime plans.
       variable_work_time:
         type: boolean
+        description: Enable tolerance_come_minus for fixed plans. Ignored and normalized to false for flextime plans.
       rounding_come_type:
         type: string
         enum:

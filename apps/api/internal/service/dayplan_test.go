@@ -1061,3 +1061,198 @@ func TestDayPlanService_Copy_PreservesNetCapAccounts(t *testing.T) {
 	require.NotNil(t, copied.CapAccountID)
 	assert.Equal(t, capAccount.ID, *copied.CapAccountID)
 }
+
+// --- ZMI-TICKET-039: Flextime tolerance normalization tests ---
+
+func TestDayPlanService_Create_FlextimeNormalizesTolerance(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewDayPlanRepository(db)
+	svc := service.NewDayPlanService(repo)
+	ctx := context.Background()
+
+	tenant := createTestTenantForDayPlanService(t, db)
+
+	comeFrom := 420
+	goTo := 1020
+	input := service.CreateDayPlanInput{
+		TenantID:           tenant.ID,
+		Code:               "FLEX-TOL",
+		Name:               "Flextime With Tolerance",
+		PlanType:           model.PlanTypeFlextime,
+		ComeFrom:           &comeFrom,
+		GoTo:               &goTo,
+		RegularHours:       480,
+		ToleranceComePlus:  5,
+		ToleranceComeMinus: 10,
+		ToleranceGoPlus:    10,
+		ToleranceGoMinus:   5,
+		VariableWorkTime:   true,
+	}
+
+	plan, err := svc.Create(ctx, input)
+	require.NoError(t, err)
+
+	// ZMI Section 6.2: These fields have no meaning for flextime
+	assert.Equal(t, 0, plan.ToleranceComePlus, "ComePlus should be normalized to 0 for flextime")
+	assert.Equal(t, 0, plan.ToleranceGoMinus, "GoMinus should be normalized to 0 for flextime")
+	assert.False(t, plan.VariableWorkTime, "VariableWorkTime should be normalized to false for flextime")
+
+	// These fields ARE valid for flextime and should be preserved
+	assert.Equal(t, 10, plan.ToleranceComeMinus, "ComeMinus should be preserved for flextime")
+	assert.Equal(t, 10, plan.ToleranceGoPlus, "GoPlus should be preserved for flextime")
+}
+
+func TestDayPlanService_Create_FixedPreservesTolerance(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewDayPlanRepository(db)
+	svc := service.NewDayPlanService(repo)
+	ctx := context.Background()
+
+	tenant := createTestTenantForDayPlanService(t, db)
+
+	input := service.CreateDayPlanInput{
+		TenantID:           tenant.ID,
+		Code:               "FIXED-TOL",
+		Name:               "Fixed With Tolerance",
+		PlanType:           model.PlanTypeFixed,
+		RegularHours:       480,
+		ToleranceComePlus:  5,
+		ToleranceComeMinus: 10,
+		ToleranceGoPlus:    10,
+		ToleranceGoMinus:   5,
+		VariableWorkTime:   true,
+	}
+
+	plan, err := svc.Create(ctx, input)
+	require.NoError(t, err)
+
+	// Fixed plans should preserve all tolerance values
+	assert.Equal(t, 5, plan.ToleranceComePlus, "ComePlus should be preserved for fixed")
+	assert.Equal(t, 10, plan.ToleranceComeMinus, "ComeMinus should be preserved for fixed")
+	assert.Equal(t, 10, plan.ToleranceGoPlus, "GoPlus should be preserved for fixed")
+	assert.Equal(t, 5, plan.ToleranceGoMinus, "GoMinus should be preserved for fixed")
+	assert.True(t, plan.VariableWorkTime, "VariableWorkTime should be preserved for fixed")
+}
+
+func TestDayPlanService_Update_ChangeToFlextimeNormalizesTolerance(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewDayPlanRepository(db)
+	svc := service.NewDayPlanService(repo)
+	ctx := context.Background()
+
+	tenant := createTestTenantForDayPlanService(t, db)
+
+	// Create a fixed plan with tolerance values
+	input := service.CreateDayPlanInput{
+		TenantID:           tenant.ID,
+		Code:               "FIX2FLEX",
+		Name:               "Fixed to Flextime",
+		PlanType:           model.PlanTypeFixed,
+		RegularHours:       480,
+		ToleranceComePlus:  5,
+		ToleranceComeMinus: 10,
+		ToleranceGoPlus:    10,
+		ToleranceGoMinus:   5,
+		VariableWorkTime:   true,
+	}
+	created, err := svc.Create(ctx, input)
+	require.NoError(t, err)
+
+	// Verify fixed plan preserved values
+	assert.Equal(t, 5, created.ToleranceComePlus)
+	assert.Equal(t, 5, created.ToleranceGoMinus)
+	assert.True(t, created.VariableWorkTime)
+
+	// Update plan_type to flextime
+	flextimePT := model.PlanTypeFlextime
+	updated, err := svc.Update(ctx, created.ID, service.UpdateDayPlanInput{
+		PlanType: &flextimePT,
+	})
+	require.NoError(t, err)
+
+	// ZMI Section 6.2: After switching to flextime, fields should be normalized
+	assert.Equal(t, 0, updated.ToleranceComePlus, "ComePlus should be normalized to 0 after switch to flextime")
+	assert.Equal(t, 0, updated.ToleranceGoMinus, "GoMinus should be normalized to 0 after switch to flextime")
+	assert.False(t, updated.VariableWorkTime, "VariableWorkTime should be normalized to false after switch to flextime")
+
+	// ComeMinus and GoPlus should be preserved
+	assert.Equal(t, 10, updated.ToleranceComeMinus, "ComeMinus should be preserved for flextime")
+	assert.Equal(t, 10, updated.ToleranceGoPlus, "GoPlus should be preserved for flextime")
+}
+
+func TestDayPlanService_Update_FlextimeToleranceSetToNonZeroNormalized(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewDayPlanRepository(db)
+	svc := service.NewDayPlanService(repo)
+	ctx := context.Background()
+
+	tenant := createTestTenantForDayPlanService(t, db)
+
+	// Create a flextime plan (tolerance fields already normalized to 0)
+	comeFrom := 420
+	goTo := 1020
+	input := service.CreateDayPlanInput{
+		TenantID:     tenant.ID,
+		Code:         "FLEX-UPD",
+		Name:         "Flextime Update Test",
+		PlanType:     model.PlanTypeFlextime,
+		ComeFrom:     &comeFrom,
+		GoTo:         &goTo,
+		RegularHours: 480,
+	}
+	created, err := svc.Create(ctx, input)
+	require.NoError(t, err)
+	assert.Equal(t, 0, created.ToleranceComePlus)
+
+	// Try to update with non-zero ComePlus
+	comePlus := 5
+	updated, err := svc.Update(ctx, created.ID, service.UpdateDayPlanInput{
+		ToleranceComePlus: &comePlus,
+	})
+	require.NoError(t, err)
+
+	// Should still be 0 after normalization
+	assert.Equal(t, 0, updated.ToleranceComePlus, "ComePlus should be normalized to 0 even when explicitly set for flextime")
+}
+
+func TestDayPlanService_Copy_FlextimeNormalizesTolerance(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewDayPlanRepository(db)
+	svc := service.NewDayPlanService(repo)
+	ctx := context.Background()
+
+	tenant := createTestTenantForDayPlanService(t, db)
+
+	// Create a fixed plan with tolerance values
+	input := service.CreateDayPlanInput{
+		TenantID:           tenant.ID,
+		Code:               "ORIG-CPY",
+		Name:               "Original For Copy",
+		PlanType:           model.PlanTypeFixed,
+		RegularHours:       480,
+		ToleranceComePlus:  5,
+		ToleranceComeMinus: 10,
+		ToleranceGoPlus:    10,
+		ToleranceGoMinus:   5,
+		VariableWorkTime:   true,
+	}
+	original, err := svc.Create(ctx, input)
+	require.NoError(t, err)
+
+	// Switch original to flextime
+	flextimePT := model.PlanTypeFlextime
+	original, err = svc.Update(ctx, original.ID, service.UpdateDayPlanInput{
+		PlanType: &flextimePT,
+	})
+	require.NoError(t, err)
+
+	// Copy the flextime plan
+	copied, err := svc.Copy(ctx, original.ID, "COPY-FLEX", "Copied Flextime")
+	require.NoError(t, err)
+
+	// Copy should also be normalized
+	assert.Equal(t, model.PlanTypeFlextime, copied.PlanType)
+	assert.Equal(t, 0, copied.ToleranceComePlus, "ComePlus should be normalized to 0 in copied flextime plan")
+	assert.Equal(t, 0, copied.ToleranceGoMinus, "GoMinus should be normalized to 0 in copied flextime plan")
+	assert.False(t, copied.VariableWorkTime, "VariableWorkTime should be normalized to false in copied flextime plan")
+}
