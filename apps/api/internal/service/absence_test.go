@@ -1212,3 +1212,88 @@ func TestAbsenceService_Delete_PendingSkipsVacationRecalc(t *testing.T) {
 	require.NoError(t, err)
 	vacRecalc.AssertNotCalled(t, "RecalculateTaken")
 }
+
+// --- CreateAutoAbsenceByCode Tests ---
+
+func TestAbsenceService_CreateAutoAbsenceByCode_Success(t *testing.T) {
+	ctx := context.Background()
+	svc, absenceDayRepo, absenceTypeRepo, _, _, _ := newTestAbsenceService()
+
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	date := time.Date(2026, 1, 20, 0, 0, 0, 0, time.UTC)
+	absenceTypeID := uuid.New()
+
+	absenceType := &model.AbsenceType{
+		ID:       absenceTypeID,
+		Code:     "SB",
+		Name:     "Berufsschule",
+		IsActive: true,
+	}
+
+	// No existing absence
+	absenceDayRepo.On("GetByEmployeeDate", ctx, employeeID, date).Return(nil, nil)
+	absenceTypeRepo.On("GetByCode", ctx, tenantID, "SB").Return(absenceType, nil)
+	absenceDayRepo.On("Create", ctx, mock.MatchedBy(func(ad *model.AbsenceDay) bool {
+		return ad.TenantID == tenantID &&
+			ad.EmployeeID == employeeID &&
+			ad.AbsenceDate.Equal(date) &&
+			ad.AbsenceTypeID == absenceTypeID &&
+			ad.Status == model.AbsenceStatusApproved &&
+			ad.Duration.Equal(decimal.NewFromInt(1)) &&
+			ad.ApprovedAt != nil &&
+			ad.Notes != nil
+	})).Return(nil)
+
+	result, err := svc.CreateAutoAbsenceByCode(ctx, tenantID, employeeID, date, "SB")
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Equal(t, tenantID, result.TenantID)
+	assert.Equal(t, employeeID, result.EmployeeID)
+	assert.Equal(t, absenceTypeID, result.AbsenceTypeID)
+	assert.Equal(t, model.AbsenceStatusApproved, result.Status)
+	assert.NotNil(t, result.AbsenceType)
+	assert.Equal(t, "SB", result.AbsenceType.Code)
+	absenceDayRepo.AssertExpectations(t)
+}
+
+func TestAbsenceService_CreateAutoAbsenceByCode_Idempotent(t *testing.T) {
+	ctx := context.Background()
+	svc, absenceDayRepo, _, _, _, _ := newTestAbsenceService()
+
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	date := time.Date(2026, 1, 20, 0, 0, 0, 0, time.UTC)
+
+	existing := &model.AbsenceDay{
+		ID:         uuid.New(),
+		TenantID:   tenantID,
+		EmployeeID: employeeID,
+	}
+
+	absenceDayRepo.On("GetByEmployeeDate", ctx, employeeID, date).Return(existing, nil)
+
+	result, err := svc.CreateAutoAbsenceByCode(ctx, tenantID, employeeID, date, "SB")
+
+	require.NoError(t, err)
+	assert.Equal(t, existing.ID, result.ID) // Returns existing
+	absenceDayRepo.AssertNotCalled(t, "Create", mock.Anything, mock.Anything)
+}
+
+func TestAbsenceService_CreateAutoAbsenceByCode_TypeNotFound(t *testing.T) {
+	ctx := context.Background()
+	svc, absenceDayRepo, absenceTypeRepo, _, _, _ := newTestAbsenceService()
+
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	date := time.Date(2026, 1, 20, 0, 0, 0, 0, time.UTC)
+
+	absenceDayRepo.On("GetByEmployeeDate", ctx, employeeID, date).Return(nil, nil)
+	absenceTypeRepo.On("GetByCode", ctx, tenantID, "SB").Return(nil, errors.New("not found"))
+
+	_, err := svc.CreateAutoAbsenceByCode(ctx, tenantID, employeeID, date, "SB")
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "SB")
+}

@@ -582,6 +582,47 @@ func (s *AbsenceService) shouldSkipDate(
 	return false, ""
 }
 
+// CreateAutoAbsenceByCode creates an absence day automatically by looking up the absence type by code.
+// Used by daily calculation for vocational school auto-absence creation.
+// Idempotent: returns the existing absence if one already exists for the date.
+func (s *AbsenceService) CreateAutoAbsenceByCode(ctx context.Context, tenantID, employeeID uuid.UUID, date time.Time, absenceTypeCode string) (*model.AbsenceDay, error) {
+	// 1. Idempotency check: return existing absence if present
+	existing, err := s.absenceDayRepo.GetByEmployeeDate(ctx, employeeID, date)
+	if err != nil {
+		return nil, fmt.Errorf("check existing absence: %w", err)
+	}
+	if existing != nil {
+		return existing, nil
+	}
+
+	// 2. Look up absence type by code
+	absenceType, err := s.absenceTypeRepo.GetByCode(ctx, tenantID, absenceTypeCode)
+	if err != nil {
+		return nil, fmt.Errorf("absence type %q not found: %w", absenceTypeCode, err)
+	}
+
+	// 3. Create the absence day with approved status
+	now := time.Now()
+	notes := "Auto-created by vocational school day plan"
+	ad := &model.AbsenceDay{
+		TenantID:      tenantID,
+		EmployeeID:    employeeID,
+		AbsenceDate:   normalizeDate(date),
+		AbsenceTypeID: absenceType.ID,
+		Duration:      decimal.NewFromInt(1),
+		Status:        model.AbsenceStatusApproved,
+		ApprovedAt:    &now,
+		Notes:         &notes,
+	}
+
+	if err := s.absenceDayRepo.Create(ctx, ad); err != nil {
+		return nil, fmt.Errorf("create auto absence: %w", err)
+	}
+
+	ad.AbsenceType = absenceType
+	return ad, nil
+}
+
 // normalizeDate strips time components, keeping only the date at midnight UTC.
 func normalizeDate(d time.Time) time.Time {
 	return time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, time.UTC)

@@ -90,7 +90,7 @@ var DevAbsenceTypes = []DevAbsenceType{
 	},
 	{
 		ID:              uuid.MustParse("00000000-0000-0000-0000-000000000307"),
-		Code:            "BS",
+		Code:            "SB",
 		Name:            "Berufsschule",
 		Description:     "Vocational school",
 		Category:        "special",

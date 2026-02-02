@@ -57,6 +57,11 @@ type absenceDayLookup interface {
 	GetByEmployeeDate(ctx context.Context, employeeID uuid.UUID, date time.Time) (*model.AbsenceDay, error)
 }
 
+// absenceDayAutoCreator creates absence days automatically during daily calculation.
+type absenceDayAutoCreator interface {
+	CreateAutoAbsenceByCode(ctx context.Context, tenantID, employeeID uuid.UUID, date time.Time, absenceTypeCode string) (*model.AbsenceDay, error)
+}
+
 // orderBookingCreator defines the interface for auto order booking creation used by daily calc.
 type orderBookingCreator interface {
 	CreateAutoBooking(ctx context.Context, tenantID, employeeID, orderID uuid.UUID, activityID *uuid.UUID, date time.Time, minutes int) (*model.OrderBooking, error)
@@ -83,6 +88,7 @@ type DailyCalcService struct {
 	holidayRepo         holidayLookup
 	employeeRepo        employeeLookup
 	absenceDayRepo      absenceDayLookup
+	absenceDayCreator   absenceDayAutoCreator
 	calc                *calculation.Calculator
 	notificationSvc     *NotificationService
 	orderBookingSvc     orderBookingCreator
@@ -130,6 +136,11 @@ func (s *DailyCalcService) SetSettingsLookup(lookup settingsLookup) {
 // SetDailyAccountValueRepo sets the daily account value repository for net/cap account postings.
 func (s *DailyCalcService) SetDailyAccountValueRepo(repo dailyAccountValueWriter) {
 	s.dailyAccountValRepo = repo
+}
+
+// SetAbsenceDayCreator sets the absence day creator for vocational school auto-absence creation.
+func (s *DailyCalcService) SetAbsenceDayCreator(creator absenceDayAutoCreator) {
+	s.absenceDayCreator = creator
 }
 
 // resolveTargetHours resolves the effective target hours for a day using the ZMI priority chain:
@@ -488,9 +499,28 @@ func (s *DailyCalcService) handleNoBookings(
 		}, nil
 
 	case model.NoBookingVocationalSchool:
-		// ZMI: Berufsschule — auto-create absence for past dates
-		// TODO: Create absence day of configured type when absence workflow is integrated
-		// For now, credit target time (vocational school days count as worked)
+		// ZMI: Berufsschule -- auto-create absence for past dates with no bookings
+		warnings := pq.StringArray{"VOCATIONAL_SCHOOL"}
+
+		// Only create absence for past dates (before today)
+		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+		if s.absenceDayCreator != nil && date.Before(today) {
+			// Check if absence already exists (idempotency)
+			existing, _ := s.absenceDayRepo.GetByEmployeeDate(ctx, employeeID, date)
+			if existing == nil {
+				_, createErr := s.absenceDayCreator.CreateAutoAbsenceByCode(
+					ctx, empDayPlan.TenantID, employeeID, date, "SB",
+				)
+				if createErr != nil {
+					warnings = append(warnings, "ABSENCE_CREATION_FAILED")
+				} else {
+					warnings = append(warnings, "ABSENCE_CREATED")
+				}
+			}
+		} else if s.absenceDayCreator == nil {
+			warnings = append(warnings, "ABSENCE_CREATION_NOT_CONFIGURED")
+		}
+
 		return &model.DailyValue{
 			EmployeeID:   employeeID,
 			ValueDate:    date,
@@ -498,7 +528,7 @@ func (s *DailyCalcService) handleNoBookings(
 			TargetTime:   targetTime,
 			NetTime:      targetTime,
 			GrossTime:    targetTime,
-			Warnings:     pq.StringArray{"VOCATIONAL_SCHOOL", "ABSENCE_CREATION_NOT_IMPLEMENTED"},
+			Warnings:     warnings,
 			CalculatedAt: &now,
 		}, nil
 

@@ -150,6 +150,8 @@ func main() {
 	// Initialize AbsenceService
 	absenceTypeRepo := repository.NewAbsenceTypeRepository(db)
 	absenceService := service.NewAbsenceService(absenceDayRepo, absenceTypeRepo, holidayRepo, empDayPlanRepo, recalcService)
+	// Wire absence day creator into daily calc for vocational school auto-absence
+	dailyCalcService.SetAbsenceDayCreator(absenceService)
 	absenceHandler := handler.NewAbsenceHandler(absenceService, employeeService)
 
 	// Initialize VacationService

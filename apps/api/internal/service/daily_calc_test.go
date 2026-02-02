@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -132,6 +133,19 @@ type mockAbsenceDayLookup struct {
 
 func (m *mockAbsenceDayLookup) GetByEmployeeDate(ctx context.Context, employeeID uuid.UUID, date time.Time) (*model.AbsenceDay, error) {
 	args := m.Called(ctx, employeeID, date)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.AbsenceDay), args.Error(1)
+}
+
+// mockAbsenceDayAutoCreator implements absenceDayAutoCreator for testing.
+type mockAbsenceDayAutoCreator struct {
+	mock.Mock
+}
+
+func (m *mockAbsenceDayAutoCreator) CreateAutoAbsenceByCode(ctx context.Context, tenantID, employeeID uuid.UUID, date time.Time, code string) (*model.AbsenceDay, error) {
+	args := m.Called(ctx, tenantID, employeeID, date, code)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -720,33 +734,195 @@ func TestHandleHolidayCredit_Category1_WithCredit(t *testing.T) {
 }
 
 func TestHandleNoBookings_VocationalSchool(t *testing.T) {
-	ctx := context.Background()
+	tenantID := uuid.New()
 	employeeID := uuid.New()
-	date := testDate(2026, 1, 20)
+	pastDate := testDate(2025, 6, 15)   // Past date
+	futureDate := testDate(2099, 6, 15) // Future date
+	absenceTypeID := uuid.New()
 
-	absenceDayRepo := new(mockAbsenceDayLookup)
-	absenceDayRepo.On("GetByEmployeeDate", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
-	svc := &DailyCalcService{
-		employeeRepo:   new(mockEmployeeLookup),
-		absenceDayRepo: absenceDayRepo,
+	sbAbsenceDay := &model.AbsenceDay{
+		ID:            uuid.New(),
+		TenantID:      tenantID,
+		EmployeeID:    employeeID,
+		AbsenceDate:   pastDate,
+		AbsenceTypeID: absenceTypeID,
+		Duration:      decimal.NewFromInt(1),
+		Status:        model.AbsenceStatusApproved,
 	}
 
-	dayPlan := createStandardDayPlan(uuid.New())
-	dayPlan.NoBookingBehavior = model.NoBookingVocationalSchool
-	dayPlanID := dayPlan.ID
-	empDayPlan := &model.EmployeeDayPlan{
-		DayPlanID: &dayPlanID,
-		DayPlan:   dayPlan,
-	}
+	t.Run("past date creates absence", func(t *testing.T) {
+		ctx := context.Background()
 
-	result, err := svc.handleNoBookings(ctx, employeeID, date, empDayPlan)
+		absenceDayRepo := new(mockAbsenceDayLookup)
+		absenceDayRepo.On("GetByEmployeeDate", mock.Anything, employeeID, pastDate).Return(nil, nil)
 
-	require.NoError(t, err)
-	require.NotNil(t, result)
-	assert.Equal(t, 480, result.TargetTime)
-	assert.Equal(t, 480, result.NetTime)
-	assert.Equal(t, 480, result.GrossTime)
-	assert.Contains(t, []string(result.Warnings), "VOCATIONAL_SCHOOL")
+		creator := new(mockAbsenceDayAutoCreator)
+		creator.On("CreateAutoAbsenceByCode", mock.Anything, tenantID, employeeID, pastDate, "SB").Return(sbAbsenceDay, nil)
+
+		svc := &DailyCalcService{
+			employeeRepo:      new(mockEmployeeLookup),
+			absenceDayRepo:    absenceDayRepo,
+			absenceDayCreator: creator,
+		}
+
+		dayPlan := createStandardDayPlan(tenantID)
+		dayPlan.NoBookingBehavior = model.NoBookingVocationalSchool
+		dayPlanID := dayPlan.ID
+		empDayPlan := &model.EmployeeDayPlan{
+			TenantID:  tenantID,
+			DayPlanID: &dayPlanID,
+			DayPlan:   dayPlan,
+		}
+
+		result, err := svc.handleNoBookings(ctx, employeeID, pastDate, empDayPlan)
+
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		assert.Equal(t, 480, result.TargetTime)
+		assert.Equal(t, 480, result.NetTime)
+		assert.Equal(t, 480, result.GrossTime)
+		assert.Contains(t, []string(result.Warnings), "VOCATIONAL_SCHOOL")
+		assert.Contains(t, []string(result.Warnings), "ABSENCE_CREATED")
+		assert.NotContains(t, []string(result.Warnings), "ABSENCE_CREATION_NOT_IMPLEMENTED")
+		creator.AssertExpectations(t)
+	})
+
+	t.Run("past date with existing absence is idempotent", func(t *testing.T) {
+		ctx := context.Background()
+
+		absenceDayRepo := new(mockAbsenceDayLookup)
+		absenceDayRepo.On("GetByEmployeeDate", mock.Anything, employeeID, pastDate).Return(sbAbsenceDay, nil)
+
+		creator := new(mockAbsenceDayAutoCreator)
+		// CreateAutoAbsenceByCode should NOT be called
+
+		svc := &DailyCalcService{
+			employeeRepo:      new(mockEmployeeLookup),
+			absenceDayRepo:    absenceDayRepo,
+			absenceDayCreator: creator,
+		}
+
+		dayPlan := createStandardDayPlan(tenantID)
+		dayPlan.NoBookingBehavior = model.NoBookingVocationalSchool
+		dayPlanID := dayPlan.ID
+		empDayPlan := &model.EmployeeDayPlan{
+			TenantID:  tenantID,
+			DayPlanID: &dayPlanID,
+			DayPlan:   dayPlan,
+		}
+
+		result, err := svc.handleNoBookings(ctx, employeeID, pastDate, empDayPlan)
+
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		assert.Equal(t, 480, result.TargetTime)
+		assert.Contains(t, []string(result.Warnings), "VOCATIONAL_SCHOOL")
+		assert.NotContains(t, []string(result.Warnings), "ABSENCE_CREATED")
+		assert.NotContains(t, []string(result.Warnings), "ABSENCE_CREATION_NOT_IMPLEMENTED")
+		creator.AssertNotCalled(t, "CreateAutoAbsenceByCode", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	})
+
+	t.Run("future date does not create absence", func(t *testing.T) {
+		ctx := context.Background()
+
+		absenceDayRepo := new(mockAbsenceDayLookup)
+		absenceDayRepo.On("GetByEmployeeDate", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
+
+		creator := new(mockAbsenceDayAutoCreator)
+		// CreateAutoAbsenceByCode should NOT be called
+
+		svc := &DailyCalcService{
+			employeeRepo:      new(mockEmployeeLookup),
+			absenceDayRepo:    absenceDayRepo,
+			absenceDayCreator: creator,
+		}
+
+		dayPlan := createStandardDayPlan(tenantID)
+		dayPlan.NoBookingBehavior = model.NoBookingVocationalSchool
+		dayPlanID := dayPlan.ID
+		empDayPlan := &model.EmployeeDayPlan{
+			TenantID:  tenantID,
+			DayPlanID: &dayPlanID,
+			DayPlan:   dayPlan,
+		}
+
+		result, err := svc.handleNoBookings(ctx, employeeID, futureDate, empDayPlan)
+
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		assert.Equal(t, 480, result.TargetTime)
+		assert.Equal(t, 480, result.NetTime)
+		assert.Equal(t, 480, result.GrossTime)
+		assert.Contains(t, []string(result.Warnings), "VOCATIONAL_SCHOOL")
+		assert.NotContains(t, []string(result.Warnings), "ABSENCE_CREATED")
+		assert.NotContains(t, []string(result.Warnings), "ABSENCE_CREATION_NOT_IMPLEMENTED")
+		creator.AssertNotCalled(t, "CreateAutoAbsenceByCode", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	})
+
+	t.Run("nil creator emits not configured warning", func(t *testing.T) {
+		ctx := context.Background()
+
+		absenceDayRepo := new(mockAbsenceDayLookup)
+		absenceDayRepo.On("GetByEmployeeDate", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
+
+		svc := &DailyCalcService{
+			employeeRepo:      new(mockEmployeeLookup),
+			absenceDayRepo:    absenceDayRepo,
+			absenceDayCreator: nil, // not configured
+		}
+
+		dayPlan := createStandardDayPlan(tenantID)
+		dayPlan.NoBookingBehavior = model.NoBookingVocationalSchool
+		dayPlanID := dayPlan.ID
+		empDayPlan := &model.EmployeeDayPlan{
+			TenantID:  tenantID,
+			DayPlanID: &dayPlanID,
+			DayPlan:   dayPlan,
+		}
+
+		result, err := svc.handleNoBookings(ctx, employeeID, pastDate, empDayPlan)
+
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		assert.Equal(t, 480, result.TargetTime)
+		assert.Contains(t, []string(result.Warnings), "VOCATIONAL_SCHOOL")
+		assert.Contains(t, []string(result.Warnings), "ABSENCE_CREATION_NOT_CONFIGURED")
+	})
+
+	t.Run("creation failure emits warning but does not error", func(t *testing.T) {
+		ctx := context.Background()
+
+		absenceDayRepo := new(mockAbsenceDayLookup)
+		absenceDayRepo.On("GetByEmployeeDate", mock.Anything, employeeID, pastDate).Return(nil, nil)
+
+		creator := new(mockAbsenceDayAutoCreator)
+		creator.On("CreateAutoAbsenceByCode", mock.Anything, tenantID, employeeID, pastDate, "SB").
+			Return(nil, errors.New("db error"))
+
+		svc := &DailyCalcService{
+			employeeRepo:      new(mockEmployeeLookup),
+			absenceDayRepo:    absenceDayRepo,
+			absenceDayCreator: creator,
+		}
+
+		dayPlan := createStandardDayPlan(tenantID)
+		dayPlan.NoBookingBehavior = model.NoBookingVocationalSchool
+		dayPlanID := dayPlan.ID
+		empDayPlan := &model.EmployeeDayPlan{
+			TenantID:  tenantID,
+			DayPlanID: &dayPlanID,
+			DayPlan:   dayPlan,
+		}
+
+		result, err := svc.handleNoBookings(ctx, employeeID, pastDate, empDayPlan)
+
+		require.NoError(t, err) // does not bubble up as error
+		require.NotNil(t, result)
+		assert.Equal(t, 480, result.TargetTime)
+		assert.Equal(t, 480, result.NetTime)
+		assert.Contains(t, []string(result.Warnings), "VOCATIONAL_SCHOOL")
+		assert.Contains(t, []string(result.Warnings), "ABSENCE_CREATION_FAILED")
+	})
 }
 
 func TestHandleNoBookings_TargetWithOrder(t *testing.T) {
