@@ -118,7 +118,8 @@ export function useDeleteHoliday() {
  * ```
  */
 export function useGenerateHolidays() {
-  return useApiMutation('/holidays/generate', 'post', {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return useApiMutation('/holidays/generate' as any, 'post', {
     invalidateKeys: [['/holidays']],
   })
 }
@@ -135,7 +136,8 @@ export function useGenerateHolidays() {
  * ```
  */
 export function useCopyHolidays() {
-  return useApiMutation('/holidays/copy', 'post', {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return useApiMutation('/holidays/copy' as any, 'post', {
     invalidateKeys: [['/holidays']],
   })
 }

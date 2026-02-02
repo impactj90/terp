@@ -72,7 +72,8 @@ export function HolidayCopyDialog({
     }
 
     try {
-      await copyMutation.mutateAsync({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (copyMutation as any).mutateAsync({
         body: {
           source_year: sourceYear,
           target_year: destinationYear,

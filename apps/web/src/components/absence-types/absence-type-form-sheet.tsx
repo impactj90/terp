@@ -148,6 +148,10 @@ export function AbsenceTypeFormSheet({
             is_paid: form.isPaid,
             affects_vacation_balance: form.affectsVacationBalance,
             requires_approval: form.requiresApproval,
+            portion: 1,
+            priority: 0,
+            sort_order: 0,
+            requires_document: false,
           },
         })
       }

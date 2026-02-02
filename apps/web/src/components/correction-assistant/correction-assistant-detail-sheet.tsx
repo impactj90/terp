@@ -3,6 +3,8 @@
 import * as React from 'react'
 
 import { useTranslations } from 'next-intl'
+import { useRouter } from 'next/navigation'
+import { User } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -34,6 +36,14 @@ export function CorrectionAssistantDetailSheet({
   onOpenChange,
 }: CorrectionAssistantDetailSheetProps) {
   const t = useTranslations('correctionAssistant')
+  const router = useRouter()
+
+  const handleGoToEmployee = () => {
+    if (item) {
+      router.push(`/admin/employees/${item.employee_id}`)
+      onOpenChange(false)
+    }
+  }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -103,6 +113,10 @@ export function CorrectionAssistantDetailSheet({
         <SheetFooter className="flex-row gap-2 border-t pt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
             {t('detail.close')}
+          </Button>
+          <Button onClick={handleGoToEmployee} disabled={!item} className="flex-1">
+            <User className="mr-2 h-4 w-4" />
+            {t('detail.goToEmployee')}
           </Button>
         </SheetFooter>
       </SheetContent>

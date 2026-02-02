@@ -149,7 +149,7 @@ export function AccountFormSheet({
             code: form.code.trim(),
             name: form.name.trim(),
             description: form.description.trim() || undefined,
-            account_type: form.accountType as 'bonus' | 'tracking' | 'balance',
+            account_type: form.accountType as 'bonus' | 'day' | 'month',
             is_payroll_relevant: form.isPayrollRelevant,
             payroll_code: form.payrollCode.trim() || undefined,
             sort_order: form.sortOrder,

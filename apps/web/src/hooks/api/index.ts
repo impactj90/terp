@@ -192,6 +192,16 @@ export {
   useDeleteTariffBreak,
 } from './use-tariffs'
 
+// Employee Tariff Assignments
+export {
+  useEmployeeTariffAssignments,
+  useEmployeeTariffAssignment,
+  useCreateEmployeeTariffAssignment,
+  useUpdateEmployeeTariffAssignment,
+  useDeleteEmployeeTariffAssignment,
+  useEffectiveTariff,
+} from './use-employee-tariff-assignments'
+
 // Team Overview
 export { useTeamDayViews } from './use-team-day-views'
 export { useTeamDailyValues } from './use-team-daily-values'

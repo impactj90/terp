@@ -184,7 +184,12 @@ export interface paths {
          */
         get: operations["listUsers"];
         put?: never;
-        post?: never;
+        /**
+         * Create user
+         * @description Creates a new user account and optionally assigns a user group and data scope.
+         *     Requires users.manage permission.
+         */
+        post: operations["createUser"];
         delete?: never;
         options?: never;
         head?: never;
@@ -206,7 +211,11 @@ export interface paths {
         get: operations["getUser"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete user
+         * @description Deletes a user account. Admin only.
+         */
+        delete: operations["deleteUser"];
         options?: never;
         head?: never;
         /**
@@ -615,6 +624,72 @@ export interface paths {
         };
         /** Get employee vacation balance */
         get: operations["getEmployeeVacationBalance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/employees/{id}/tariff-assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List tariff assignments for employee
+         * @description Returns all tariff assignments for an employee, ordered by effective_from date.
+         *     Each assignment represents a period where a specific tariff applies.
+         */
+        get: operations["listEmployeeTariffAssignments"];
+        put?: never;
+        /**
+         * Assign tariff to employee with date range
+         * @description Creates a new tariff assignment for the employee with an effective date range.
+         *     The date range must not overlap with existing active assignments.
+         */
+        post: operations["createEmployeeTariffAssignment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/employees/{id}/tariff-assignments/{assignmentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get tariff assignment by ID */
+        get: operations["getEmployeeTariffAssignment"];
+        /** Update tariff assignment */
+        put: operations["updateEmployeeTariffAssignment"];
+        post?: never;
+        /** Delete tariff assignment */
+        delete: operations["deleteEmployeeTariffAssignment"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/employees/{id}/effective-tariff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview effective tariff for employee at a date
+         * @description Resolves which tariff applies to the employee at the given date.
+         *     Resolution order: (1) active assignment covering the date, (2) employee default tariff_id, (3) none.
+         */
+        get: operations["getEffectiveTariff"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1265,6 +1340,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/bookings/{id}/logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get booking audit logs
+         * @description Returns audit trail for a specific booking. Shows all create, update,
+         *     and delete operations with before/after values, user identity, and timestamps.
+         */
+        get: operations["getBookingLogs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/daily-values": {
         parameters: {
             query?: never;
@@ -1699,6 +1795,141 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/employees/{id}/months/{year}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get year overview
+         * @description Returns all monthly summaries for an employee in a given year
+         */
+        get: operations["getYearOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/employees/{id}/months/{year}/{month}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get month summary
+         * @description Returns the monthly summary for an employee including time totals,
+         *     flextime balance, absence summary, closing status, and warnings.
+         *     The response includes flextime tracking fields showing the evaluation
+         *     chain: flextime_start -> flextime_change -> flextime_end -> flextime_carryover.
+         */
+        get: operations["getMonthSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/employees/{id}/months/{year}/{month}/days": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get daily breakdown
+         * @description Returns the daily values for a specific month
+         */
+        get: operations["getDailyBreakdown"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/employees/{id}/months/{year}/{month}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Close month
+         * @description Closes the month, preventing further modifications and recalculations.
+         *     Requires the month to have been calculated (monthly value exists).
+         *     Records closed_at timestamp and closed_by user for audit trail.
+         */
+        post: operations["closeEmployeeMonth"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/employees/{id}/months/{year}/{month}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reopen month
+         * @description Reopens a closed month, allowing modifications and recalculations.
+         *     Records reopened_at timestamp and reopened_by user for audit trail.
+         */
+        post: operations["reopenEmployeeMonth"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/employees/{id}/months/{year}/{month}/recalculate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recalculate month
+         * @description Recalculates the monthly aggregation from daily values.
+         *     Applies credit type rules from the employee's tariff configuration:
+         *     - no_evaluation: Direct 1:1 transfer of overtime/undertime
+         *     - complete_carryover: Full transfer with monthly cap and annual balance limits
+         *     - after_threshold: Credit only overtime exceeding the configured threshold
+         *     - no_carryover: Reset balance to zero
+         *
+         *     Monthly cap (max_flextime_per_month), positive cap (upper_limit_annual),
+         *     and negative cap (lower_limit_annual) are applied in sequence.
+         *     Returns error if the month is closed.
+         */
+        post: operations["recalculateEmployeeMonth"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/corrections": {
         parameters: {
             query?: never;
@@ -1851,6 +2082,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/daily-account-values": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List daily account values
+         * @description Returns daily account value postings from day calculation (net time, capped time).
+         *     Filter by employee, account, date range, or source type.
+         */
+        get: operations["listDailyAccountValues"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/audit-logs": {
         parameters: {
             query?: never;
@@ -1944,6 +2196,64 @@ export interface paths {
         /** Download report file */
         get: operations["downloadReport"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/export-interfaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List export interfaces */
+        get: operations["listExportInterfaces"];
+        put?: never;
+        /** Create export interface */
+        post: operations["createExportInterface"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/export-interfaces/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get export interface by ID */
+        get: operations["getExportInterface"];
+        put?: never;
+        post?: never;
+        /** Delete export interface */
+        delete: operations["deleteExportInterface"];
+        options?: never;
+        head?: never;
+        /** Update export interface */
+        patch: operations["updateExportInterface"];
+        trace?: never;
+    };
+    "/export-interfaces/{id}/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List accounts for export interface */
+        get: operations["listExportInterfaceAccounts"];
+        /**
+         * Set accounts for export interface
+         * @description Bulk replace all accounts for this interface
+         */
+        put: operations["setExportInterfaceAccounts"];
         post?: never;
         delete?: never;
         options?: never;
@@ -2314,6 +2624,2213 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/absence-type-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List absence type groups */
+        get: operations["listAbsenceTypeGroups"];
+        put?: never;
+        /** Create absence type group */
+        post: operations["createAbsenceTypeGroup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/absence-type-groups/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get absence type group by ID */
+        get: operations["getAbsenceTypeGroup"];
+        put?: never;
+        post?: never;
+        /** Delete absence type group */
+        delete: operations["deleteAbsenceTypeGroup"];
+        options?: never;
+        head?: never;
+        /** Update absence type group */
+        patch: operations["updateAbsenceTypeGroup"];
+        trace?: never;
+    };
+    "/account-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List account groups */
+        get: operations["listAccountGroups"];
+        put?: never;
+        /** Create account group */
+        post: operations["createAccountGroup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/account-groups/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get account group by ID */
+        get: operations["getAccountGroup"];
+        put?: never;
+        post?: never;
+        /** Delete account group */
+        delete: operations["deleteAccountGroup"];
+        options?: never;
+        head?: never;
+        /** Update account group */
+        patch: operations["updateAccountGroup"];
+        trace?: never;
+    };
+    "/booking-reasons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List booking reasons */
+        get: operations["listBookingReasons"];
+        put?: never;
+        /** Create booking reason */
+        post: operations["createBookingReason"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/booking-reasons/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get booking reason by ID */
+        get: operations["getBookingReason"];
+        put?: never;
+        post?: never;
+        /** Delete booking reason */
+        delete: operations["deleteBookingReason"];
+        options?: never;
+        head?: never;
+        /** Update booking reason */
+        patch: operations["updateBookingReason"];
+        trace?: never;
+    };
+    "/booking-type-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List booking type groups */
+        get: operations["listBookingTypeGroups"];
+        put?: never;
+        /** Create booking type group */
+        post: operations["createBookingTypeGroup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/booking-type-groups/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get booking type group by ID */
+        get: operations["getBookingTypeGroup"];
+        put?: never;
+        post?: never;
+        /** Delete booking type group */
+        delete: operations["deleteBookingTypeGroup"];
+        options?: never;
+        head?: never;
+        /** Update booking type group */
+        patch: operations["updateBookingTypeGroup"];
+        trace?: never;
+    };
+    "/employee-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List employee groups
+         * @description Returns all employee groups for the tenant.
+         */
+        get: operations["listEmployeeGroups"];
+        put?: never;
+        /**
+         * Create employee group
+         * @description Creates a new employee group with a unique code.
+         */
+        post: operations["createEmployeeGroup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/employee-groups/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get employee group by ID */
+        get: operations["getEmployeeGroup"];
+        put?: never;
+        post?: never;
+        /** Delete employee group */
+        delete: operations["deleteEmployeeGroup"];
+        options?: never;
+        head?: never;
+        /** Update employee group */
+        patch: operations["updateEmployeeGroup"];
+        trace?: never;
+    };
+    "/workflow-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List workflow groups
+         * @description Returns all workflow groups for the tenant.
+         */
+        get: operations["listWorkflowGroups"];
+        put?: never;
+        /**
+         * Create workflow group
+         * @description Creates a new workflow group with a unique code.
+         */
+        post: operations["createWorkflowGroup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workflow-groups/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get workflow group by ID */
+        get: operations["getWorkflowGroup"];
+        put?: never;
+        post?: never;
+        /** Delete workflow group */
+        delete: operations["deleteWorkflowGroup"];
+        options?: never;
+        head?: never;
+        /** Update workflow group */
+        patch: operations["updateWorkflowGroup"];
+        trace?: never;
+    };
+    "/activity-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List activity groups
+         * @description Returns all activity groups for the tenant.
+         */
+        get: operations["listActivityGroups"];
+        put?: never;
+        /**
+         * Create activity group
+         * @description Creates a new activity group with a unique code.
+         */
+        post: operations["createActivityGroup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/activity-groups/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get activity group by ID */
+        get: operations["getActivityGroup"];
+        put?: never;
+        post?: never;
+        /** Delete activity group */
+        delete: operations["deleteActivityGroup"];
+        options?: never;
+        head?: never;
+        /** Update activity group */
+        patch: operations["updateActivityGroup"];
+        trace?: never;
+    };
+    "/calculation-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List calculation rules */
+        get: operations["listCalculationRules"];
+        put?: never;
+        /** Create calculation rule */
+        post: operations["createCalculationRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/calculation-rules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get calculation rule by ID */
+        get: operations["getCalculationRule"];
+        put?: never;
+        post?: never;
+        /** Delete calculation rule */
+        delete: operations["deleteCalculationRule"];
+        options?: never;
+        head?: never;
+        /** Update calculation rule */
+        patch: operations["updateCalculationRule"];
+        trace?: never;
+    };
+    "/correction-messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List correction messages
+         * @description Returns the error/hint message catalog for the tenant. Each entry maps
+         *     an error code to human-readable text with optional custom overrides.
+         */
+        get: operations["listCorrectionMessages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/correction-messages/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get correction message by ID */
+        get: operations["getCorrectionMessage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update correction message
+         * @description Update custom text, severity, or active status for a correction message.
+         *     Set custom_text to override the default text in correction assistant outputs.
+         *     Set custom_text to null to revert to the default text.
+         */
+        patch: operations["updateCorrectionMessage"];
+        trace?: never;
+    };
+    "/correction-assistant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List correction assistant items
+         * @description Returns daily calculation errors and hints for the correction assistant view.
+         *     Each item represents one employee-date with one or more errors/hints,
+         *     with messages resolved from the correction message catalog.
+         *
+         *     **Default date range**: When no from/to parameters are provided, returns
+         *     items from the first day of the previous month through the last day of
+         *     the current month.
+         */
+        get: operations["listCorrectionAssistantItems"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vacation-special-calculations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List vacation special calculations */
+        get: operations["listVacationSpecialCalculations"];
+        put?: never;
+        /** Create vacation special calculation */
+        post: operations["createVacationSpecialCalculation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vacation-special-calculations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get vacation special calculation by ID */
+        get: operations["getVacationSpecialCalculation"];
+        put?: never;
+        post?: never;
+        /** Delete vacation special calculation */
+        delete: operations["deleteVacationSpecialCalculation"];
+        options?: never;
+        head?: never;
+        /** Update vacation special calculation */
+        patch: operations["updateVacationSpecialCalculation"];
+        trace?: never;
+    };
+    "/vacation-calculation-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List vacation calculation groups */
+        get: operations["listVacationCalculationGroups"];
+        put?: never;
+        /** Create vacation calculation group */
+        post: operations["createVacationCalculationGroup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vacation-calculation-groups/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get vacation calculation group by ID */
+        get: operations["getVacationCalculationGroup"];
+        put?: never;
+        post?: never;
+        /** Delete vacation calculation group */
+        delete: operations["deleteVacationCalculationGroup"];
+        options?: never;
+        head?: never;
+        /** Update vacation calculation group */
+        patch: operations["updateVacationCalculationGroup"];
+        trace?: never;
+    };
+    "/vacation-entitlement/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview vacation entitlement for an employee
+         * @description Calculates and returns a detailed breakdown of vacation entitlement for an employee in a given year.
+         *     Uses the employee's employment type to resolve the calculation group, or accepts an optional override.
+         *     Does NOT persist the result -- use /vacation-balances/initialize for that.
+         */
+        post: operations["previewVacationEntitlement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vacation-capping-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List vacation capping rules */
+        get: operations["listVacationCappingRules"];
+        put?: never;
+        /** Create vacation capping rule */
+        post: operations["createVacationCappingRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vacation-capping-rules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get vacation capping rule by ID */
+        get: operations["getVacationCappingRule"];
+        put?: never;
+        post?: never;
+        /** Delete vacation capping rule */
+        delete: operations["deleteVacationCappingRule"];
+        options?: never;
+        head?: never;
+        /** Update vacation capping rule */
+        patch: operations["updateVacationCappingRule"];
+        trace?: never;
+    };
+    "/vacation-capping-rule-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List vacation capping rule groups */
+        get: operations["listVacationCappingRuleGroups"];
+        put?: never;
+        /** Create vacation capping rule group */
+        post: operations["createVacationCappingRuleGroup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vacation-capping-rule-groups/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get vacation capping rule group by ID */
+        get: operations["getVacationCappingRuleGroup"];
+        put?: never;
+        post?: never;
+        /** Delete vacation capping rule group */
+        delete: operations["deleteVacationCappingRuleGroup"];
+        options?: never;
+        head?: never;
+        /** Update vacation capping rule group */
+        patch: operations["updateVacationCappingRuleGroup"];
+        trace?: never;
+    };
+    "/employee-capping-exceptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List employee capping exceptions */
+        get: operations["listEmployeeCappingExceptions"];
+        put?: never;
+        /** Create employee capping exception */
+        post: operations["createEmployeeCappingException"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/employee-capping-exceptions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get employee capping exception by ID */
+        get: operations["getEmployeeCappingException"];
+        put?: never;
+        post?: never;
+        /** Delete employee capping exception */
+        delete: operations["deleteEmployeeCappingException"];
+        options?: never;
+        head?: never;
+        /** Update employee capping exception */
+        patch: operations["updateEmployeeCappingException"];
+        trace?: never;
+    };
+    "/vacation-carryover/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview vacation carryover calculation
+         * @description Preview how carryover would be calculated for an employee/year, showing all rules applied.
+         */
+        post: operations["previewVacationCarryover"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/activities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List activities
+         * @description Returns all activities for the tenant. Activities are work types
+         *     used in order-based time tracking (Taetigkeiten).
+         */
+        get: operations["listActivities"];
+        put?: never;
+        /**
+         * Create activity
+         * @description Creates a new activity with a unique code for use in order bookings.
+         */
+        post: operations["createActivity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/activities/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get activity by ID
+         * @description Retrieves activity details.
+         */
+        get: operations["getActivity"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete activity
+         * @description Permanently removes an activity. Consider deactivating instead.
+         */
+        delete: operations["deleteActivity"];
+        options?: never;
+        head?: never;
+        /**
+         * Update activity
+         * @description Updates activity properties.
+         */
+        patch: operations["updateActivity"];
+        trace?: never;
+    };
+    "/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List orders
+         * @description Returns all orders for the tenant. Orders represent projects or work
+         *     packages that employees can book time against.
+         */
+        get: operations["listOrders"];
+        put?: never;
+        /**
+         * Create order
+         * @description Creates a new order with a unique code. Orders can be linked to cost
+         *     centers and have billing rates for reporting.
+         */
+        post: operations["createOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get order by ID
+         * @description Retrieves order details.
+         */
+        get: operations["getOrder"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete order
+         * @description Permanently removes an order. Consider deactivating instead.
+         */
+        delete: operations["deleteOrder"];
+        options?: never;
+        head?: never;
+        /**
+         * Update order
+         * @description Updates order properties.
+         */
+        patch: operations["updateOrder"];
+        trace?: never;
+    };
+    "/order-assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List order assignments
+         * @description Returns all order assignments for the tenant.
+         */
+        get: operations["listOrderAssignments"];
+        put?: never;
+        /**
+         * Create order assignment
+         * @description Assigns an employee to an order with a role.
+         */
+        post: operations["createOrderAssignment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/order-assignments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get order assignment by ID
+         * @description Retrieves order assignment details.
+         */
+        get: operations["getOrderAssignment"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete order assignment
+         * @description Removes an employee-to-order assignment.
+         */
+        delete: operations["deleteOrderAssignment"];
+        options?: never;
+        head?: never;
+        /**
+         * Update order assignment
+         * @description Updates order assignment properties.
+         */
+        patch: operations["updateOrderAssignment"];
+        trace?: never;
+    };
+    "/orders/{id}/assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List assignments for an order
+         * @description Returns all employee assignments for a specific order.
+         */
+        get: operations["listOrderAssignmentsByOrder"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/order-bookings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List order bookings
+         * @description Returns order bookings filtered by employee, order, and/or date range.
+         *     Used for order-based time tracking reports.
+         */
+        get: operations["listOrderBookings"];
+        put?: never;
+        /**
+         * Create order booking
+         * @description Creates a new time booking against an order.
+         */
+        post: operations["createOrderBooking"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/order-bookings/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get order booking by ID
+         * @description Retrieves order booking details.
+         */
+        get: operations["getOrderBooking"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete order booking
+         * @description Permanently removes an order booking.
+         */
+        delete: operations["deleteOrderBooking"];
+        options?: never;
+        head?: never;
+        /**
+         * Update order booking
+         * @description Updates order booking properties.
+         */
+        patch: operations["updateOrderBooking"];
+        trace?: never;
+    };
+    "/system-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get system settings
+         * @description Returns the current system settings for the tenant. Creates default settings if none exist.
+         */
+        get: operations["getSystemSettings"];
+        /** Update system settings */
+        put: operations["updateSystemSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/system-settings/cleanup/delete-bookings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete bookings in date range
+         * @description Deletes bookings in the specified date range. Set confirm=false for a preview count.
+         */
+        post: operations["cleanupDeleteBookings"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/system-settings/cleanup/delete-booking-data": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete booking data in date range
+         * @description Deletes bookings, daily values, and employee day plans in the specified date range. Set confirm=false for a preview count.
+         */
+        post: operations["cleanupDeleteBookingData"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/system-settings/cleanup/re-read-bookings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Re-read bookings in date range
+         * @description Re-triggers calculation for all bookings in the specified date range. Set confirm=false for a preview count.
+         */
+        post: operations["cleanupReReadBookings"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/system-settings/cleanup/mark-delete-orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark and delete orders
+         * @description Deletes the specified orders. Set confirm=false for a preview count.
+         */
+        post: operations["cleanupMarkDeleteOrders"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/evaluations/daily-values": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List daily value evaluations
+         * @description Returns one row per employee per day within the date range.
+         *     Shows time worked, overtime, break, balance and error status.
+         *     Use include_no_bookings=true to include placeholder rows for
+         *     dates with no daily values calculated.
+         */
+        get: operations["listEvaluationDailyValues"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/evaluations/bookings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List booking evaluations
+         * @description Returns one row per booking within the date range.
+         *     Shows time, type, source, and employee for each booking.
+         */
+        get: operations["listEvaluationBookings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/evaluations/terminal-bookings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List terminal booking evaluations
+         * @description Returns raw terminal booking transactions. Shows both original_time
+         *     (raw terminal value) and edited_time (corrected value) side by side.
+         *     Only returns bookings where source='terminal'.
+         */
+        get: operations["listEvaluationTerminalBookings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/evaluations/logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List change log evaluations
+         * @description Returns change log entries for bookings, absences, and monthly account
+         *     changes. Shows user, timestamp, and before/after values.
+         */
+        get: operations["listEvaluationLogs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/evaluations/workflow-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List workflow history evaluations
+         * @description Returns approval and workflow history. Composed from audit_logs
+         *     filtering by relevant entity types (absence, monthly_value) and
+         *     workflow actions (create, approve, reject, close, reopen).
+         */
+        get: operations["listEvaluationWorkflowHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/schedules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List schedules */
+        get: operations["listSchedules"];
+        put?: never;
+        /** Create schedule */
+        post: operations["createSchedule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/schedules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get schedule by ID */
+        get: operations["getSchedule"];
+        put?: never;
+        post?: never;
+        /** Delete schedule */
+        delete: operations["deleteSchedule"];
+        options?: never;
+        head?: never;
+        /** Update schedule */
+        patch: operations["updateSchedule"];
+        trace?: never;
+    };
+    "/schedules/{id}/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List tasks for a schedule */
+        get: operations["listScheduleTasks"];
+        put?: never;
+        /** Add task to schedule */
+        post: operations["addScheduleTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/schedules/{id}/tasks/{taskId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove task from schedule */
+        delete: operations["removeScheduleTask"];
+        options?: never;
+        head?: never;
+        /** Update schedule task */
+        patch: operations["updateScheduleTask"];
+        trace?: never;
+    };
+    "/schedules/{id}/execute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Trigger manual execution of a schedule */
+        post: operations["triggerScheduleExecution"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/schedules/{id}/executions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List execution logs for a schedule */
+        get: operations["listScheduleExecutions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/schedule-executions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get execution detail with task logs */
+        get: operations["getScheduleExecution"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduler/task-catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List available task types */
+        get: operations["getTaskCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/employee-messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List employee messages */
+        get: operations["listEmployeeMessages"];
+        put?: never;
+        /** Create a new employee message */
+        post: operations["createEmployeeMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/employee-messages/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get an employee message by ID */
+        get: operations["getEmployeeMessage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/employee-messages/{id}/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send an employee message (deliver to all pending recipients) */
+        post: operations["sendEmployeeMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/employees/{id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List messages for a specific employee */
+        get: operations["listEmployeeMessagesForEmployee"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contact-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List contact types
+         * @description Returns all contact types for the tenant. Contact types define data
+         *     validation formats (email, phone, text, url) for contact fields.
+         */
+        get: operations["listContactTypes"];
+        put?: never;
+        /**
+         * Create contact type
+         * @description Creates a new contact type with a unique code and data format.
+         */
+        post: operations["createContactType"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contact-types/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get contact type by ID
+         * @description Retrieves contact type details.
+         */
+        get: operations["getContactType"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete contact type
+         * @description Permanently removes a contact type. Fails if contact kinds reference it.
+         *     Consider deactivating instead.
+         */
+        delete: operations["deleteContactType"];
+        options?: never;
+        head?: never;
+        /**
+         * Update contact type
+         * @description Updates contact type properties. Code and data_type cannot be changed.
+         */
+        patch: operations["updateContactType"];
+        trace?: never;
+    };
+    "/contact-kinds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List contact kinds
+         * @description Returns contact kinds for the tenant. Optionally filter by contact type or active status.
+         */
+        get: operations["listContactKinds"];
+        put?: never;
+        /**
+         * Create contact kind
+         * @description Creates a new contact kind linked to a contact type.
+         */
+        post: operations["createContactKind"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contact-kinds/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get contact kind by ID
+         * @description Retrieves contact kind details.
+         */
+        get: operations["getContactKind"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete contact kind
+         * @description Permanently removes a contact kind. Consider deactivating instead.
+         */
+        delete: operations["deleteContactKind"];
+        options?: never;
+        head?: never;
+        /**
+         * Update contact kind
+         * @description Updates contact kind properties. Code and contact_type_id cannot be changed.
+         */
+        patch: operations["updateContactKind"];
+        trace?: never;
+    };
+    "/terminal-bookings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List raw terminal bookings
+         * @description List raw terminal bookings filtered by date range and optional terminal ID.
+         */
+        get: operations["listRawTerminalBookings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/terminal-bookings/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Trigger terminal booking import
+         * @description Import raw bookings from a terminal. The import is idempotent per batch_reference:
+         *     if the same batch_reference has already been imported for this tenant, the request
+         *     returns the existing batch without re-importing.
+         */
+        post: operations["triggerTerminalImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/import-batches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List import batches
+         * @description List terminal import batches with optional filters.
+         */
+        get: operations["listImportBatches"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/import-batches/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get import batch by ID
+         * @description Get a single import batch with its summary.
+         */
+        get: operations["getImportBatch"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/access-zones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List access zones
+         * @description Returns all access zones for the tenant.
+         *     Placeholder - requires separate ZMI Zutritt documentation for full implementation.
+         */
+        get: operations["listAccessZones"];
+        put?: never;
+        /**
+         * Create access zone
+         * @description Creates a new access zone with a unique code.
+         *     Placeholder - requires separate ZMI Zutritt documentation for full implementation.
+         */
+        post: operations["createAccessZone"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/access-zones/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get access zone by ID
+         * @description Retrieves access zone details.
+         */
+        get: operations["getAccessZone"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete access zone
+         * @description Permanently removes an access zone.
+         */
+        delete: operations["deleteAccessZone"];
+        options?: never;
+        head?: never;
+        /**
+         * Update access zone
+         * @description Updates access zone properties. Code cannot be changed.
+         */
+        patch: operations["updateAccessZone"];
+        trace?: never;
+    };
+    "/access-profiles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List access profiles
+         * @description Returns all access profiles for the tenant.
+         *     Placeholder - requires separate ZMI Zutritt documentation for full implementation.
+         */
+        get: operations["listAccessProfiles"];
+        put?: never;
+        /**
+         * Create access profile
+         * @description Creates a new access profile with a unique code.
+         *     Placeholder - requires separate ZMI Zutritt documentation for full implementation.
+         */
+        post: operations["createAccessProfile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/access-profiles/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get access profile by ID
+         * @description Retrieves access profile details.
+         */
+        get: operations["getAccessProfile"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete access profile
+         * @description Permanently removes an access profile. Fails if employee assignments reference it.
+         *     Consider deactivating instead.
+         */
+        delete: operations["deleteAccessProfile"];
+        options?: never;
+        head?: never;
+        /**
+         * Update access profile
+         * @description Updates access profile properties. Code cannot be changed.
+         */
+        patch: operations["updateAccessProfile"];
+        trace?: never;
+    };
+    "/employee-access-assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List employee access assignments
+         * @description Returns all employee access assignments for the tenant.
+         *     Placeholder - requires separate ZMI Zutritt documentation for full implementation.
+         */
+        get: operations["listEmployeeAccessAssignments"];
+        put?: never;
+        /**
+         * Create employee access assignment
+         * @description Assigns an access profile to an employee.
+         *     Placeholder - requires separate ZMI Zutritt documentation for full implementation.
+         */
+        post: operations["createEmployeeAccessAssignment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/employee-access-assignments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get employee access assignment by ID
+         * @description Retrieves employee access assignment details.
+         */
+        get: operations["getEmployeeAccessAssignment"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete employee access assignment
+         * @description Permanently removes an employee access assignment.
+         */
+        delete: operations["deleteEmployeeAccessAssignment"];
+        options?: never;
+        head?: never;
+        /**
+         * Update employee access assignment
+         * @description Updates employee access assignment properties.
+         */
+        patch: operations["updateEmployeeAccessAssignment"];
+        trace?: never;
+    };
+    "/vehicles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List vehicles
+         * @description Returns all vehicles for the tenant.
+         *     Placeholder - requires separate vehicle documentation for full implementation.
+         */
+        get: operations["listVehicles"];
+        put?: never;
+        /**
+         * Create vehicle
+         * @description Creates a new vehicle with a unique code.
+         *     Placeholder - requires separate vehicle documentation for full implementation.
+         */
+        post: operations["createVehicle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vehicles/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get vehicle by ID
+         * @description Retrieves vehicle details.
+         *     Placeholder - requires separate vehicle documentation for full implementation.
+         */
+        get: operations["getVehicle"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete vehicle
+         * @description Permanently removes a vehicle.
+         *     Placeholder - requires separate vehicle documentation for full implementation.
+         */
+        delete: operations["deleteVehicle"];
+        options?: never;
+        head?: never;
+        /**
+         * Update vehicle
+         * @description Updates vehicle properties. Code cannot be changed.
+         *     Placeholder - requires separate vehicle documentation for full implementation.
+         */
+        patch: operations["updateVehicle"];
+        trace?: never;
+    };
+    "/vehicle-routes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List vehicle routes
+         * @description Returns all vehicle routes for the tenant.
+         *     Placeholder - requires separate vehicle documentation for full implementation.
+         */
+        get: operations["listVehicleRoutes"];
+        put?: never;
+        /**
+         * Create vehicle route
+         * @description Creates a new vehicle route with a unique code.
+         *     Placeholder - requires separate vehicle documentation for full implementation.
+         */
+        post: operations["createVehicleRoute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vehicle-routes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get vehicle route by ID
+         * @description Retrieves vehicle route details.
+         *     Placeholder - requires separate vehicle documentation for full implementation.
+         */
+        get: operations["getVehicleRoute"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete vehicle route
+         * @description Permanently removes a vehicle route.
+         *     Placeholder - requires separate vehicle documentation for full implementation.
+         */
+        delete: operations["deleteVehicleRoute"];
+        options?: never;
+        head?: never;
+        /**
+         * Update vehicle route
+         * @description Updates vehicle route properties. Code cannot be changed.
+         *     Placeholder - requires separate vehicle documentation for full implementation.
+         */
+        patch: operations["updateVehicleRoute"];
+        trace?: never;
+    };
+    "/trip-records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List trip records
+         * @description Returns all trip records for the tenant.
+         *     Placeholder - requires separate vehicle documentation for full implementation.
+         */
+        get: operations["listTripRecords"];
+        put?: never;
+        /**
+         * Create trip record
+         * @description Creates a new trip record.
+         *     Placeholder - requires separate vehicle documentation for full implementation.
+         */
+        post: operations["createTripRecord"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trip-records/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get trip record by ID
+         * @description Retrieves trip record details.
+         *     Placeholder - requires separate vehicle documentation for full implementation.
+         */
+        get: operations["getTripRecord"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete trip record
+         * @description Permanently removes a trip record.
+         *     Placeholder - requires separate vehicle documentation for full implementation.
+         */
+        delete: operations["deleteTripRecord"];
+        options?: never;
+        head?: never;
+        /**
+         * Update trip record
+         * @description Updates trip record properties.
+         *     Placeholder - requires separate vehicle documentation for full implementation.
+         */
+        patch: operations["updateTripRecord"];
+        trace?: never;
+    };
+    "/travel-allowance-rule-sets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List travel allowance rule sets
+         * @description Returns all travel allowance rule sets for the tenant.
+         */
+        get: operations["listTravelAllowanceRuleSets"];
+        put?: never;
+        /**
+         * Create travel allowance rule set
+         * @description Creates a new travel allowance rule set with a unique code.
+         */
+        post: operations["createTravelAllowanceRuleSet"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/travel-allowance-rule-sets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get travel allowance rule set by ID
+         * @description Retrieves travel allowance rule set details.
+         */
+        get: operations["getTravelAllowanceRuleSet"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete travel allowance rule set
+         * @description Permanently removes a travel allowance rule set.
+         */
+        delete: operations["deleteTravelAllowanceRuleSet"];
+        options?: never;
+        head?: never;
+        /**
+         * Update travel allowance rule set
+         * @description Updates travel allowance rule set properties. Code cannot be changed.
+         */
+        patch: operations["updateTravelAllowanceRuleSet"];
+        trace?: never;
+    };
+    "/local-travel-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List local travel rules
+         * @description Returns all local travel rules for the tenant.
+         */
+        get: operations["listLocalTravelRules"];
+        put?: never;
+        /**
+         * Create local travel rule
+         * @description Creates a new local travel rule within a rule set.
+         */
+        post: operations["createLocalTravelRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/local-travel-rules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get local travel rule by ID
+         * @description Retrieves local travel rule details.
+         */
+        get: operations["getLocalTravelRule"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete local travel rule
+         * @description Permanently removes a local travel rule.
+         */
+        delete: operations["deleteLocalTravelRule"];
+        options?: never;
+        head?: never;
+        /**
+         * Update local travel rule
+         * @description Updates local travel rule properties.
+         */
+        patch: operations["updateLocalTravelRule"];
+        trace?: never;
+    };
+    "/extended-travel-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List extended travel rules
+         * @description Returns all extended travel rules for the tenant.
+         */
+        get: operations["listExtendedTravelRules"];
+        put?: never;
+        /**
+         * Create extended travel rule
+         * @description Creates a new extended travel rule within a rule set.
+         */
+        post: operations["createExtendedTravelRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/extended-travel-rules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get extended travel rule by ID
+         * @description Retrieves extended travel rule details.
+         */
+        get: operations["getExtendedTravelRule"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete extended travel rule
+         * @description Permanently removes an extended travel rule.
+         */
+        delete: operations["deleteExtendedTravelRule"];
+        options?: never;
+        head?: never;
+        /**
+         * Update extended travel rule
+         * @description Updates extended travel rule properties.
+         */
+        patch: operations["updateExtendedTravelRule"];
+        trace?: never;
+    };
+    "/travel-allowance/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview travel allowance calculation
+         * @description Calculates a travel allowance preview based on the given trip parameters and rule set.
+         *     Returns a breakdown of tax-free and taxable amounts.
+         */
+        post: operations["previewTravelAllowance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shifts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List shifts
+         * @description Returns all shift definitions for the tenant.
+         *     Placeholder - requires separate Plantafel documentation for full implementation.
+         */
+        get: operations["listShifts"];
+        put?: never;
+        /**
+         * Create shift
+         * @description Creates a new shift definition with a unique code.
+         *     Placeholder - requires separate Plantafel documentation for full implementation.
+         */
+        post: operations["createShift"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shifts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get shift by ID
+         * @description Retrieves shift definition details.
+         *     Placeholder - requires separate Plantafel documentation for full implementation.
+         */
+        get: operations["getShift"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete shift
+         * @description Permanently removes a shift definition. Fails if shift assignments reference it.
+         *     Placeholder - requires separate Plantafel documentation for full implementation.
+         */
+        delete: operations["deleteShift"];
+        options?: never;
+        head?: never;
+        /**
+         * Update shift
+         * @description Updates shift definition properties. Code cannot be changed.
+         *     Placeholder - requires separate Plantafel documentation for full implementation.
+         */
+        patch: operations["updateShift"];
+        trace?: never;
+    };
+    "/shift-assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List shift assignments
+         * @description Returns all shift assignments for the tenant.
+         *     Placeholder - requires separate Plantafel documentation for full implementation.
+         */
+        get: operations["listShiftAssignments"];
+        put?: never;
+        /**
+         * Create shift assignment
+         * @description Assigns a shift to an employee for an optional date range.
+         *     Placeholder - requires separate Plantafel documentation for full implementation.
+         */
+        post: operations["createShiftAssignment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shift-assignments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get shift assignment by ID
+         * @description Retrieves shift assignment details.
+         *     Placeholder - requires separate Plantafel documentation for full implementation.
+         */
+        get: operations["getShiftAssignment"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete shift assignment
+         * @description Permanently removes a shift assignment.
+         *     Placeholder - requires separate Plantafel documentation for full implementation.
+         */
+        delete: operations["deleteShiftAssignment"];
+        options?: never;
+        head?: never;
+        /**
+         * Update shift assignment
+         * @description Updates shift assignment properties (date range, notes, active status).
+         *     Placeholder - requires separate Plantafel documentation for full implementation.
+         */
+        patch: operations["updateShiftAssignment"];
+        trace?: never;
+    };
+    "/macros": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List macros */
+        get: operations["listMacros"];
+        put?: never;
+        /** Create macro */
+        post: operations["createMacro"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/macros/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get macro by ID */
+        get: operations["getMacro"];
+        put?: never;
+        post?: never;
+        /** Delete macro */
+        delete: operations["deleteMacro"];
+        options?: never;
+        head?: never;
+        /** Update macro */
+        patch: operations["updateMacro"];
+        trace?: never;
+    };
+    "/macros/{id}/assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List macro assignments */
+        get: operations["listMacroAssignments"];
+        put?: never;
+        /** Create macro assignment */
+        post: operations["createMacroAssignment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/macros/{id}/assignments/{assignmentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete macro assignment */
+        delete: operations["deleteMacroAssignment"];
+        options?: never;
+        head?: never;
+        /** Update macro assignment */
+        patch: operations["updateMacroAssignment"];
+        trace?: never;
+    };
+    "/macros/{id}/execute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Trigger macro execution
+         * @description Manually triggers execution of a macro. The macro must be active.
+         *     Weekly macros execute on their configured weekday (0=Sunday..6=Saturday).
+         *     Monthly macros execute on their configured day of month (1-31).
+         *     If a monthly macro is configured for day 31 but the month has fewer days,
+         *     execution falls back to the last day of the month.
+         */
+        post: operations["triggerMacroExecution"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/macros/{id}/executions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List macro executions */
+        get: operations["listMacroExecutions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/macro-executions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get macro execution by ID */
+        get: operations["getMacroExecution"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2388,11 +4905,15 @@ export interface components {
         User: {
             /** Format: uuid */
             id: string;
+            /** Format: uuid */
+            tenant_id?: string | null;
             /**
              * Format: email
              * @example user@example.com
              */
             email: string;
+            /** @example jdoe */
+            username?: string | null;
             /** @example John Doe */
             display_name: string;
             /**
@@ -2405,6 +4926,19 @@ export interface components {
              * @enum {string}
              */
             role: "user" | "admin";
+            sso_id?: string | null;
+            /** @example true */
+            is_active?: boolean;
+            /** @example false */
+            is_locked?: boolean;
+            /**
+             * @example all
+             * @enum {string}
+             */
+            data_scope_type?: "all" | "tenant" | "department" | "employee";
+            data_scope_tenant_ids?: string[];
+            data_scope_department_ids?: string[];
+            data_scope_employee_ids?: string[];
             /**
              * Format: uuid
              * @description ID of the linked employee record, if any
@@ -2434,6 +4968,49 @@ export interface components {
             avatar_url?: string;
             /** Format: uuid */
             user_group_id?: string | null;
+            username?: string | null;
+            /** Format: uuid */
+            employee_id?: string | null;
+            sso_id?: string | null;
+            is_active?: boolean;
+            is_locked?: boolean;
+            /** @enum {string} */
+            data_scope_type?: "all" | "tenant" | "department" | "employee";
+            data_scope_tenant_ids?: string[];
+            data_scope_department_ids?: string[];
+            data_scope_employee_ids?: string[];
+        };
+        CreateUserRequest: {
+            /** Format: uuid */
+            tenant_id?: string | null;
+            /**
+             * Format: email
+             * @example user@example.com
+             */
+            email: string;
+            username?: string | null;
+            /** @example John Doe */
+            display_name: string;
+            /** Format: password */
+            password?: string;
+            sso_id?: string | null;
+            /** Format: uuid */
+            user_group_id?: string | null;
+            /** Format: uuid */
+            employee_id?: string | null;
+            is_active?: boolean;
+            is_locked?: boolean;
+            /** @enum {string} */
+            data_scope_type?: "all" | "tenant" | "department" | "employee";
+            data_scope_tenant_ids?: string[];
+            data_scope_department_ids?: string[];
+            data_scope_employee_ids?: string[];
+        };
+        ChangePasswordRequest: {
+            /** Format: password */
+            current_password?: string;
+            /** Format: password */
+            new_password: string;
         };
         UserList: {
             data: components["schemas"]["User"][];
@@ -2740,6 +5317,51 @@ export interface components {
             vacation_days_per_year?: number;
             /** @example true */
             is_active: boolean;
+            exit_reason?: string | null;
+            notes?: string | null;
+            address_street?: string | null;
+            address_zip?: string | null;
+            address_city?: string | null;
+            address_country?: string | null;
+            /** Format: date */
+            birth_date?: string | null;
+            /** @enum {string|null} */
+            gender?: "male" | "female" | "diverse" | "not_specified" | null;
+            nationality?: string | null;
+            religion?: string | null;
+            /** @enum {string|null} */
+            marital_status?: "single" | "married" | "divorced" | "widowed" | "registered_partnership" | "not_specified" | null;
+            birth_place?: string | null;
+            birth_country?: string | null;
+            room_number?: string | null;
+            photo_url?: string | null;
+            /** Format: uuid */
+            employee_group_id?: string | null;
+            /** Format: uuid */
+            workflow_group_id?: string | null;
+            /** Format: uuid */
+            activity_group_id?: string | null;
+            /** Format: uuid */
+            default_order_id?: string | null;
+            /** Format: uuid */
+            default_activity_id?: string | null;
+            /** Format: decimal */
+            part_time_percent?: number | null;
+            disability_flag?: boolean;
+            /** Format: decimal */
+            daily_target_hours?: number | null;
+            /** Format: decimal */
+            weekly_target_hours?: number | null;
+            /** Format: decimal */
+            monthly_target_hours?: number | null;
+            /** Format: decimal */
+            annual_target_hours?: number | null;
+            /** Format: decimal */
+            work_days_per_week?: number | null;
+            /** Format: date */
+            calculation_start_date?: string | null;
+            /** @description Employee PIN (included in detail view only) */
+            pin?: string;
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */
@@ -2747,22 +5369,26 @@ export interface components {
             department?: components["schemas"]["Department"] | null;
             cost_center?: components["schemas"]["CostCenter"] | null;
             employment_type?: components["schemas"]["EmploymentType"] | null;
-            tariff?: {
-                /** Format: uuid */
-                id: string;
-                code: string;
-                name: string;
-            } | null;
+            tariff?: components["schemas"]["EmployeeTariffAssignment"]["tariff"] | null;
+            employee_group?: components["schemas"]["EmployeeGroup"] | null;
+            workflow_group?: components["schemas"]["WorkflowGroup"] | null;
+            activity_group?: components["schemas"]["ActivityGroup"] | null;
             contacts?: {
                 /** Format: uuid */
                 id: string;
                 /** Format: uuid */
                 employee_id: string;
                 /**
+                 * @description Deprecated: Use contact_kind_id instead
                  * @example email
                  * @enum {string}
                  */
                 contact_type: "email" | "phone" | "mobile" | "emergency";
+                /**
+                 * Format: uuid
+                 * @description Reference to configurable contact kind. Replaces contact_type.
+                 */
+                contact_kind_id?: string | null;
                 /** @example john.doe@example.com */
                 value: string;
                 /** @example Work */
@@ -2817,7 +5443,8 @@ export interface components {
         };
         CreateEmployeeRequest: {
             personnel_number: string;
-            pin: string;
+            /** @description Optional PIN. If not provided, auto-assigned as next available integer. */
+            pin?: string;
             first_name: string;
             last_name: string;
             /** Format: email */
@@ -2825,6 +5452,8 @@ export interface components {
             phone?: string;
             /** Format: date */
             entry_date: string;
+            /** Format: date */
+            exit_date?: string;
             /** Format: uuid */
             department_id?: string;
             /** Format: uuid */
@@ -2837,6 +5466,47 @@ export interface components {
             weekly_hours?: number;
             /** Format: decimal */
             vacation_days_per_year?: number;
+            exit_reason?: string;
+            notes?: string;
+            address_street?: string;
+            address_zip?: string;
+            address_city?: string;
+            address_country?: string;
+            /** Format: date */
+            birth_date?: string;
+            /** @enum {string} */
+            gender?: "male" | "female" | "diverse" | "not_specified";
+            nationality?: string;
+            religion?: string;
+            /** @enum {string} */
+            marital_status?: "single" | "married" | "divorced" | "widowed" | "registered_partnership" | "not_specified";
+            birth_place?: string;
+            birth_country?: string;
+            room_number?: string;
+            photo_url?: string;
+            /** Format: uuid */
+            employee_group_id?: string;
+            /** Format: uuid */
+            workflow_group_id?: string;
+            /** Format: uuid */
+            activity_group_id?: string;
+            /** Format: uuid */
+            default_order_id?: string;
+            /** Format: uuid */
+            default_activity_id?: string;
+            /** Format: decimal */
+            part_time_percent?: number;
+            disability_flag?: boolean;
+            /** Format: decimal */
+            daily_target_hours?: number;
+            /** Format: decimal */
+            weekly_target_hours?: number;
+            /** Format: decimal */
+            monthly_target_hours?: number;
+            /** Format: decimal */
+            annual_target_hours?: number;
+            /** Format: decimal */
+            work_days_per_week?: number;
         };
         UpdateEmployeeRequest: {
             first_name?: string;
@@ -2858,10 +5528,59 @@ export interface components {
             weekly_hours?: number;
             /** Format: decimal */
             vacation_days_per_year?: number;
+            exit_reason?: string;
+            notes?: string;
+            address_street?: string;
+            address_zip?: string;
+            address_city?: string;
+            address_country?: string;
+            /** Format: date */
+            birth_date?: string;
+            /** @enum {string} */
+            gender?: "male" | "female" | "diverse" | "not_specified";
+            nationality?: string;
+            religion?: string;
+            /** @enum {string} */
+            marital_status?: "single" | "married" | "divorced" | "widowed" | "registered_partnership" | "not_specified";
+            birth_place?: string;
+            birth_country?: string;
+            room_number?: string;
+            photo_url?: string;
+            /** Format: uuid */
+            employee_group_id?: string | null;
+            /** Format: uuid */
+            workflow_group_id?: string | null;
+            /** Format: uuid */
+            activity_group_id?: string | null;
+            /** Format: uuid */
+            default_order_id?: string | null;
+            /** Format: uuid */
+            default_activity_id?: string | null;
+            /** Format: decimal */
+            part_time_percent?: number;
+            disability_flag?: boolean;
+            /** Format: decimal */
+            daily_target_hours?: number;
+            /** Format: decimal */
+            weekly_target_hours?: number;
+            /** Format: decimal */
+            monthly_target_hours?: number;
+            /** Format: decimal */
+            annual_target_hours?: number;
+            /** Format: decimal */
+            work_days_per_week?: number;
         };
         CreateEmployeeContactRequest: {
-            /** @enum {string} */
+            /**
+             * @description Deprecated: Use contact_kind_id instead
+             * @enum {string}
+             */
             contact_type: "email" | "phone" | "mobile" | "emergency";
+            /**
+             * Format: uuid
+             * @description Reference to configurable contact kind. Replaces contact_type.
+             */
+            contact_kind_id?: string;
             value: string;
             label?: string;
             /** @default false */
@@ -3014,7 +5733,7 @@ export interface components {
             /** @description Get target hours from employee master data */
             from_employee_master?: boolean;
             /**
-             * @description Tolerance for late arrival (minutes)
+             * @description Tolerance for late arrival (minutes). Ignored for flextime plans (always treated as 0).
              * @example 0
              */
             tolerance_come_plus?: number;
@@ -3029,11 +5748,11 @@ export interface components {
              */
             tolerance_go_plus?: number;
             /**
-             * @description Tolerance for early departure (minutes)
+             * @description Tolerance for early departure (minutes). Ignored for flextime plans (always treated as 0).
              * @example 0
              */
             tolerance_go_minus?: number;
-            /** @description Enable tolerance_come_minus for fixed working time plans */
+            /** @description Enable tolerance_come_minus for fixed working time plans. Has no effect for flextime plans (always treated as false). */
             variable_work_time?: boolean;
             /** @enum {string|null} */
             rounding_come_type?: "none" | "up" | "down" | "nearest" | "add" | "subtract" | null;
@@ -3094,6 +5813,16 @@ export interface components {
             shift_alt_plan_5?: string | null;
             /** Format: uuid */
             shift_alt_plan_6?: string | null;
+            /**
+             * Format: uuid
+             * @description Account for posting daily net time
+             */
+            net_account_id?: string | null;
+            /**
+             * Format: uuid
+             * @description Account for posting capped minutes
+             */
+            cap_account_id?: string | null;
             /** @example true */
             is_active?: boolean;
             /** Format: date-time */
@@ -3204,10 +5933,13 @@ export interface components {
             regular_hours: number;
             regular_hours_2?: number;
             from_employee_master?: boolean;
+            /** @description Tolerance for late arrival (minutes). Ignored and normalized to 0 for flextime plans. */
             tolerance_come_plus?: number;
             tolerance_come_minus?: number;
             tolerance_go_plus?: number;
+            /** @description Tolerance for early departure (minutes). Ignored and normalized to 0 for flextime plans. */
             tolerance_go_minus?: number;
+            /** @description Enable tolerance_come_minus for fixed plans. Ignored and normalized to false for flextime plans. */
             variable_work_time?: boolean;
             /** @enum {string} */
             rounding_come_type?: "none" | "up" | "down" | "nearest" | "add" | "subtract";
@@ -3245,6 +5977,10 @@ export interface components {
             shift_alt_plan_5?: string;
             /** Format: uuid */
             shift_alt_plan_6?: string;
+            /** Format: uuid */
+            net_account_id?: string;
+            /** Format: uuid */
+            cap_account_id?: string;
             is_active?: boolean;
         };
         UpdateDayPlanRequest: {
@@ -3261,10 +5997,13 @@ export interface components {
             regular_hours?: number;
             regular_hours_2?: number;
             from_employee_master?: boolean;
+            /** @description Tolerance for late arrival (minutes). Ignored and normalized to 0 for flextime plans. */
             tolerance_come_plus?: number;
             tolerance_come_minus?: number;
             tolerance_go_plus?: number;
+            /** @description Tolerance for early departure (minutes). Ignored and normalized to 0 for flextime plans. */
             tolerance_go_minus?: number;
+            /** @description Enable tolerance_come_minus for fixed plans. Ignored and normalized to false for flextime plans. */
             variable_work_time?: boolean;
             /** @enum {string} */
             rounding_come_type?: "none" | "up" | "down" | "nearest" | "add" | "subtract";
@@ -3302,6 +6041,10 @@ export interface components {
             shift_alt_plan_5?: string;
             /** Format: uuid */
             shift_alt_plan_6?: string;
+            /** Format: uuid */
+            net_account_id?: string;
+            /** Format: uuid */
+            cap_account_id?: string;
             is_active?: boolean;
         };
         CopyDayPlanRequest: {
@@ -3354,12 +6097,29 @@ export interface components {
              * @example bonus
              * @enum {string}
              */
-            account_type: "bonus" | "tracking" | "balance";
+            account_type: "bonus" | "day" | "month";
             /**
              * @example minutes
              * @enum {string}
              */
             unit?: "minutes" | "hours" | "days";
+            /**
+             * @description Display format for account values
+             * @example decimal
+             * @enum {string}
+             */
+            display_format?: "decimal" | "hh_mm";
+            /**
+             * Format: double
+             * @description Multiplier for bonus calculations (e.g. 1.5 for 150%)
+             * @example 1.5
+             */
+            bonus_factor?: number | null;
+            /**
+             * Format: uuid
+             * @description ID of the account group this account belongs to
+             */
+            account_group_id?: string | null;
             /**
              * @description System accounts cannot be deleted
              * @example false
@@ -3445,9 +6205,24 @@ export interface components {
             name: string;
             description?: string;
             /** @enum {string} */
-            account_type: "bonus" | "tracking" | "balance";
+            account_type: "bonus" | "day" | "month";
             /** @enum {string} */
             unit?: "minutes" | "hours" | "days";
+            /**
+             * @description Display format for account values
+             * @enum {string}
+             */
+            display_format?: "decimal" | "hh_mm";
+            /**
+             * Format: double
+             * @description Multiplier for bonus calculations (e.g. 1.5 for 150%)
+             */
+            bonus_factor?: number | null;
+            /**
+             * Format: uuid
+             * @description ID of the account group this account belongs to
+             */
+            account_group_id?: string | null;
             year_carryover?: boolean;
             /** @default false */
             is_payroll_relevant: boolean;
@@ -3459,6 +6234,21 @@ export interface components {
             description?: string;
             /** @enum {string} */
             unit?: "minutes" | "hours" | "days";
+            /**
+             * @description Display format for account values
+             * @enum {string}
+             */
+            display_format?: "decimal" | "hh_mm";
+            /**
+             * Format: double
+             * @description Multiplier for bonus calculations (e.g. 1.5 for 150%)
+             */
+            bonus_factor?: number | null;
+            /**
+             * Format: uuid
+             * @description ID of the account group this account belongs to
+             */
+            account_group_id?: string | null;
             is_payroll_relevant?: boolean;
             payroll_code?: string;
             sort_order?: number;
@@ -3986,6 +6776,22 @@ export interface components {
              */
             direction: "in" | "out";
             /**
+             * @description Functional category of the booking type
+             * @example work
+             * @enum {string}
+             */
+            category: "work" | "break" | "business_trip" | "other";
+            /**
+             * Format: uuid
+             * @description Optional linked account for time calculations
+             */
+            account_id?: string | null;
+            /**
+             * @description Whether bookings of this type must include a reason code
+             * @example false
+             */
+            requires_reason?: boolean;
+            /**
              * @description System types cannot be deleted
              * @example true
              */
@@ -4011,11 +6817,24 @@ export interface components {
             description?: string;
             /** @enum {string} */
             direction: "in" | "out";
+            /**
+             * @description Defaults to 'work' if not specified
+             * @enum {string}
+             */
+            category?: "work" | "break" | "business_trip" | "other";
+            /** Format: uuid */
+            account_id?: string | null;
+            requires_reason?: boolean;
         };
         UpdateBookingTypeRequest: {
             name?: string;
             description?: string;
             is_active?: boolean;
+            /** @enum {string} */
+            category?: "work" | "break" | "business_trip" | "other";
+            /** Format: uuid */
+            account_id?: string | null;
+            requires_reason?: boolean;
         };
         BookingTypeList: {
             data: components["schemas"]["BookingType"][];
@@ -4047,6 +6866,42 @@ export interface components {
             affects_vacation_balance?: boolean;
             /** @example true */
             requires_approval?: boolean;
+            /**
+             * @description ZMI Anteil: portion of regular hours credited (0=none, 1=full, 2=half)
+             * @example 1
+             * @enum {integer}
+             */
+            portion?: 0 | 1 | 2;
+            /**
+             * @description ZMI Kürzel am Feiertag: alternative code used on holidays
+             * @example UH
+             */
+            holiday_code?: string | null;
+            /**
+             * @description ZMI Priorität: higher value wins when holiday and absence overlap
+             * @example 0
+             */
+            priority?: number;
+            /**
+             * @description Display ordering
+             * @example 0
+             */
+            sort_order?: number;
+            /**
+             * @description Whether this absence type requires a medical certificate or document
+             * @example false
+             */
+            requires_document?: boolean;
+            /**
+             * Format: uuid
+             * @description Group this absence type belongs to
+             */
+            absence_type_group_id?: string | null;
+            /**
+             * Format: uuid
+             * @description Calculation rule that determines account value for this absence type
+             */
+            calculation_rule_id?: string | null;
             /**
              * @description Hex color for UI display
              * @example #4CAF50
@@ -4085,6 +6940,27 @@ export interface components {
             /** @default true */
             requires_approval: boolean;
             color?: string;
+            /**
+             * @description ZMI Anteil: 0=none, 1=full, 2=half
+             * @default 1
+             * @enum {integer}
+             */
+            portion: 0 | 1 | 2;
+            /** @description Alternative code on holidays */
+            holiday_code?: string;
+            /**
+             * @description Priority when holiday+absence overlap
+             * @default 0
+             */
+            priority: number;
+            /** @default 0 */
+            sort_order: number;
+            /** @default false */
+            requires_document: boolean;
+            /** Format: uuid */
+            absence_type_group_id?: string;
+            /** Format: uuid */
+            calculation_rule_id?: string;
         };
         UpdateAbsenceTypeRequest: {
             name?: string;
@@ -4096,9 +6972,84 @@ export interface components {
             requires_approval?: boolean;
             color?: string;
             is_active?: boolean;
+            /**
+             * @description ZMI Anteil: 0=none, 1=full, 2=half
+             * @enum {integer}
+             */
+            portion?: 0 | 1 | 2;
+            holiday_code?: string;
+            priority?: number;
+            sort_order?: number;
+            requires_document?: boolean;
+            /** Format: uuid */
+            absence_type_group_id?: string;
+            /** Format: uuid */
+            calculation_rule_id?: string;
         };
         AbsenceTypeList: {
             data: components["schemas"]["AbsenceType"][];
+        };
+        AbsenceTypeGroup: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id?: string;
+            code: string;
+            name: string;
+            description?: string | null;
+            /** @example true */
+            is_active?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        CreateAbsenceTypeGroupRequest: {
+            code: string;
+            name: string;
+            description?: string;
+        };
+        UpdateAbsenceTypeGroupRequest: {
+            code?: string;
+            name?: string;
+            description?: string;
+            is_active?: boolean;
+        };
+        AbsenceTypeGroupList: {
+            data: components["schemas"]["AbsenceTypeGroup"][];
+        };
+        AccountGroup: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id?: string;
+            code: string;
+            name: string;
+            description?: string | null;
+            /** @example 0 */
+            sort_order?: number;
+            /** @example true */
+            is_active?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        CreateAccountGroupRequest: {
+            code: string;
+            name: string;
+            description?: string;
+            sort_order?: number;
+        };
+        UpdateAccountGroupRequest: {
+            code?: string;
+            name?: string;
+            description?: string;
+            sort_order?: number;
+            is_active?: boolean;
+        };
+        AccountGroupList: {
+            data: components["schemas"]["AccountGroup"][];
         };
         VacationBalance: {
             /** Format: uuid */
@@ -4328,6 +7279,159 @@ export interface components {
             name: string;
             code: string;
         };
+        BookingReason: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** Format: uuid */
+            booking_type_id: string;
+            /** @example ERRAND */
+            code: string;
+            /** @example Work Errand */
+            label: string;
+            /** @example true */
+            is_active?: boolean;
+            /** @example 0 */
+            sort_order?: number;
+            /**
+             * @description Reference point for automatic time adjustment. When set along with offset_minutes, a derived booking is automatically created when bookings use this reason.
+             * @enum {string|null}
+             */
+            reference_time?: "plan_start" | "plan_end" | "booking_time" | null;
+            /** @description Signed offset in minutes from the reference time. Positive = later, negative = earlier. Example: -30 with plan_start=07:00 creates a derived booking at 06:30. */
+            offset_minutes?: number | null;
+            /**
+             * Format: uuid
+             * @description Booking type to use for the derived booking. If not set, the system uses the opposite direction of the original booking type.
+             */
+            adjustment_booking_type_id?: string | null;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        CreateBookingReasonRequest: {
+            /** Format: uuid */
+            booking_type_id: string;
+            code: string;
+            label: string;
+            sort_order?: number;
+            /** @enum {string} */
+            reference_time?: "plan_start" | "plan_end" | "booking_time";
+            offset_minutes?: number;
+            /** Format: uuid */
+            adjustment_booking_type_id?: string;
+        };
+        UpdateBookingReasonRequest: {
+            label?: string;
+            is_active?: boolean;
+            sort_order?: number;
+            /** @enum {string|null} */
+            reference_time?: "plan_start" | "plan_end" | "booking_time" | null;
+            offset_minutes?: number | null;
+            /** Format: uuid */
+            adjustment_booking_type_id?: string | null;
+        };
+        BookingReasonList: {
+            data: components["schemas"]["BookingReason"][];
+        };
+        BookingTypeGroup: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id?: string;
+            code: string;
+            name: string;
+            description?: string | null;
+            /** @example true */
+            is_active?: boolean;
+            /** @description IDs of booking types in this group */
+            booking_type_ids?: string[];
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        CreateBookingTypeGroupRequest: {
+            code: string;
+            name: string;
+            description?: string;
+            /** @description IDs of booking types to add as members */
+            booking_type_ids?: string[];
+        };
+        UpdateBookingTypeGroupRequest: {
+            name?: string;
+            description?: string;
+            is_active?: boolean;
+            /** @description Replace group members with these booking type IDs */
+            booking_type_ids?: string[];
+        };
+        BookingTypeGroupList: {
+            data: components["schemas"]["BookingTypeGroup"][];
+        };
+        EmployeeGroup: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** @example GRP-001 */
+            code: string;
+            /** @example Production Workers */
+            name: string;
+            description?: string | null;
+            /** @example true */
+            is_active?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        WorkflowGroup: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** @example WF-001 */
+            code: string;
+            /** @example Standard Workflow */
+            name: string;
+            description?: string | null;
+            /** @example true */
+            is_active?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        ActivityGroup: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** @example ACT-001 */
+            code: string;
+            /** @example Office Activities */
+            name: string;
+            description?: string | null;
+            /** @example true */
+            is_active?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        CreateGroupRequest: {
+            code: string;
+            name: string;
+            description?: string;
+        };
+        UpdateGroupRequest: {
+            code?: string;
+            name?: string;
+            description?: string;
+            is_active?: boolean;
+        };
         DailyValueSummary: {
             /** Format: uuid */
             id: string;
@@ -4378,16 +7482,16 @@ export interface components {
             /** Format: uuid */
             booking_type_id: string;
             /**
-             * @description Original booking time (minutes from midnight)
+             * @description Original booking time (minutes from midnight). This value is set once during creation and is immutable -- it cannot be changed by any update operation. Represents the raw terminal or manual ingest time.
              * @example 480
              */
-            original_time: number;
+            readonly original_time: number;
             /**
-             * @description Edited/corrected time (minutes from midnight)
+             * @description Edited/corrected time (minutes from midnight). Defaults to original_time on creation. Can be changed by the user via PUT /bookings/{id}. When changed, calculated_time is cleared and recalculated on next day calculation.
              * @example 480
              */
             edited_time: number;
-            /** @description Time after tolerance/rounding (minutes from midnight) */
+            /** @description Time after tolerance/rounding applied (minutes from midnight). Derived automatically during day calculation based on day plan settings. Cleared when edited_time changes. This is the value used in final time calculations. */
             calculated_time?: number | null;
             /**
              * @description Formatted time as HH:MM (read-only)
@@ -4403,10 +7507,23 @@ export interface components {
              * @example web
              * @enum {string}
              */
-            source: "web" | "terminal" | "api" | "import" | "correction";
+            source: "web" | "terminal" | "api" | "import" | "correction" | "derived";
             /** Format: uuid */
             terminal_id?: string | null;
             notes?: string | null;
+            /**
+             * Format: uuid
+             * @description Reason code selected when creating this booking
+             */
+            booking_reason_id?: string | null;
+            /** @description True if this booking was automatically derived from a reason adjustment */
+            is_auto_generated?: boolean;
+            /**
+             * Format: uuid
+             * @description For derived bookings, the ID of the original booking that triggered creation
+             */
+            original_booking_id?: string | null;
+            booking_reason?: components["schemas"]["BookingReason"] | null;
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */
@@ -4434,6 +7551,11 @@ export interface components {
              */
             time: string;
             notes?: string;
+            /**
+             * Format: uuid
+             * @description Optional reason code for this booking
+             */
+            booking_reason_id?: string;
         };
         UpdateBookingRequest: {
             /**
@@ -4605,6 +7727,13 @@ export interface components {
             duration: number;
             notes?: string;
         };
+        UpdateAbsenceRequest: {
+            /** Format: decimal */
+            duration?: number;
+            notes?: string;
+            /** @enum {string} */
+            status?: "pending" | "approved" | "rejected" | "cancelled";
+        };
         AbsenceList: {
             data: components["schemas"]["Absence"][];
         };
@@ -4698,6 +7827,142 @@ export interface components {
         };
         MonthlyValueList: {
             data: components["schemas"]["MonthlyValue"][];
+        };
+        /**
+         * @description Monthly summary for an employee including time totals, flextime balance,
+         *     absence summary, closing status, and evaluation warnings. Field names
+         *     match the Go MonthlyValue model (e.g. total_gross_time, not gross_minutes).
+         */
+        MonthSummaryResponse: {
+            /**
+             * Format: uuid
+             * @description Employee ID
+             */
+            employee_id?: string;
+            /** @description Calendar year */
+            year?: number;
+            /** @description Calendar month (1-12) */
+            month?: number;
+            /** @description Total gross work time for the month (minutes) */
+            total_gross_time?: number;
+            /** @description Total net work time for the month (minutes) */
+            total_net_time?: number;
+            /** @description Total target work time for the month (minutes) */
+            total_target_time?: number;
+            /** @description Total overtime for the month (minutes) */
+            total_overtime?: number;
+            /** @description Total undertime for the month (minutes) */
+            total_undertime?: number;
+            /** @description Total break time for the month (minutes) */
+            total_break_time?: number;
+            /**
+             * @description Flextime balance at start of month (carried over from previous month's flextime_end).
+             *     For January of a new year, this is the annual carryover value.
+             */
+            flextime_start?: number;
+            /**
+             * @description Net flextime change for the month (total_overtime - total_undertime).
+             *     Can be negative if undertime exceeds overtime.
+             */
+            flextime_change?: number;
+            /**
+             * @description Flextime balance at end of month after applying credit type rules and caps.
+             *     This is the value that carries over to the next month's flextime_start.
+             *     For credit_type "no_evaluation": flextime_start + flextime_change.
+             *     For credit_type "complete_carryover": flextime_start + credited (after monthly/balance caps).
+             *     For credit_type "after_threshold": flextime_start + credited (overtime above threshold, after caps).
+             *     For credit_type "no_carryover": always 0.
+             */
+            flextime_end?: number;
+            /**
+             * @description Flextime carryover to next month. Equal to flextime_end.
+             *     The next month's recalculation reads this as its flextime_start.
+             */
+            flextime_carryover?: number;
+            /**
+             * Format: double
+             * @description Vacation days taken this month (supports half-day, e.g. 2.5)
+             */
+            vacation_taken?: number;
+            /** @description Number of sick days this month */
+            sick_days?: number;
+            /** @description Number of other absence days (special leave, etc.) */
+            other_absence_days?: number;
+            /** @description Number of days with recorded work time (gross_time > 0 or net_time > 0) */
+            work_days?: number;
+            /** @description Number of days with calculation errors */
+            days_with_errors?: number;
+            /** @description Whether the month has been closed. Closed months block recalculation and new bookings. */
+            is_closed: boolean;
+            /**
+             * Format: date-time
+             * @description Timestamp when the month was closed
+             */
+            closed_at?: string | null;
+            /**
+             * Format: uuid
+             * @description User ID who closed the month
+             */
+            closed_by?: string | null;
+            /**
+             * Format: date-time
+             * @description Timestamp when the month was last reopened
+             */
+            reopened_at?: string | null;
+            /**
+             * Format: uuid
+             * @description User ID who last reopened the month
+             */
+            reopened_by?: string | null;
+            /**
+             * @description Warning codes from monthly evaluation. Possible values:
+             *     - MONTHLY_CAP_REACHED: Credited flextime was capped at the monthly maximum (max_flextime_per_month)
+             *     - FLEXTIME_CAPPED: End balance hit the positive or negative annual cap (upper_limit_annual / lower_limit_annual)
+             *     - BELOW_THRESHOLD: Overtime was below the flextime threshold and was forfeited (after_threshold credit type)
+             *     - NO_CARRYOVER: Credit type is no_carryover, balance reset to zero
+             */
+            warnings?: string[];
+        };
+        /** @description Year overview containing all monthly summaries for an employee in a given year */
+        YearOverviewResponse: {
+            /** @description Calendar year */
+            year?: number;
+            /** @description Monthly summaries ordered by month */
+            data?: components["schemas"]["MonthSummaryResponse"][];
+        };
+        /** @description Daily values for a specific month */
+        DailyBreakdownResponse: {
+            /** @description Daily value entries for the month */
+            data?: components["schemas"]["DailyBreakdownItem"][];
+        };
+        /** @description A single daily value entry within a monthly breakdown */
+        DailyBreakdownItem: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            employee_id?: string;
+            /** Format: date */
+            value_date?: string;
+            /** @description Gross work time in minutes */
+            gross_time?: number;
+            /** @description Net work time in minutes */
+            net_time?: number;
+            /** @description Target work time in minutes */
+            target_time?: number;
+            /** @description Overtime in minutes */
+            overtime?: number;
+            /** @description Undertime in minutes */
+            undertime?: number;
+            /** @description Break time in minutes */
+            break_time?: number;
+            has_error?: boolean;
+            error_codes?: string[];
+            warnings?: string[];
+            booking_count?: number;
+            /** @description First clock-in time (HH:MM) */
+            first_come?: string | null;
+            /** @description Last clock-out time (HH:MM) */
+            last_go?: string | null;
         };
         Correction: {
             /** Format: uuid */
@@ -4793,6 +8058,8 @@ export interface components {
                 to_date?: string;
                 employee_ids?: string[];
                 department_ids?: string[];
+                cost_center_ids?: string[];
+                team_ids?: string[];
             };
             /**
              * @example xlsx
@@ -4835,17 +8102,87 @@ export interface components {
                 to_date?: string;
                 employee_ids?: string[];
                 department_ids?: string[];
+                cost_center_ids?: string[];
+                team_ids?: string[];
             };
         };
         ReportList: {
             data: components["schemas"]["Report"][];
             meta: components["schemas"]["PaginationMeta"];
         };
+        ExportInterface: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** @example 1 */
+            interface_number: number;
+            /** @example Payroll Export DATEV */
+            name: string;
+            /** @example 12345 */
+            mandant_number?: string | null;
+            /** @example export_datev.sh */
+            export_script?: string | null;
+            /** @example /exports/datev/ */
+            export_path?: string | null;
+            /** @example payroll_export.csv */
+            output_filename?: string | null;
+            /** @example true */
+            is_active?: boolean;
+            accounts?: components["schemas"]["ExportInterfaceAccount"][];
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        ExportInterfaceSummary: {
+            /** Format: uuid */
+            id: string;
+            interface_number: number;
+            name: string;
+            is_active?: boolean;
+        };
+        ExportInterfaceAccount: {
+            /** Format: uuid */
+            account_id: string;
+            account_code?: string;
+            account_name?: string;
+            payroll_code?: string | null;
+            sort_order?: number;
+        };
+        CreateExportInterfaceRequest: {
+            interface_number: number;
+            name: string;
+            mandant_number?: string;
+            export_script?: string;
+            export_path?: string;
+            output_filename?: string;
+        };
+        UpdateExportInterfaceRequest: {
+            interface_number?: number;
+            name?: string;
+            mandant_number?: string;
+            export_script?: string;
+            export_path?: string;
+            output_filename?: string;
+            is_active?: boolean;
+        };
+        ExportInterfaceList: {
+            data: components["schemas"]["ExportInterface"][];
+        };
+        SetExportInterfaceAccountsRequest: {
+            account_ids: string[];
+        };
         PayrollExport: {
             /** Format: uuid */
             id: string;
             /** Format: uuid */
             tenant_id: string;
+            /**
+             * Format: uuid
+             * @description Export interface used to generate this export
+             */
+            export_interface_id?: string | null;
             /** @example 2024 */
             year: number;
             /** @example 1 */
@@ -4911,6 +8248,11 @@ export interface components {
             export_type: "standard" | "datev" | "sage" | "custom";
             /** @enum {string} */
             format: "csv" | "xlsx" | "xml" | "json";
+            /**
+             * Format: uuid
+             * @description Interface to use (determines accounts if include_accounts not specified)
+             */
+            export_interface_id?: string;
             parameters?: {
                 employee_ids?: string[];
                 department_ids?: string[];
@@ -4997,8 +8339,7 @@ export interface components {
             plan_date: string;
             /** Format: uuid */
             day_plan_id?: string;
-            /** @enum {string} */
-            source: "tariff" | "manual" | "holiday";
+            source: components["schemas"]["EmployeeDayPlanSource"];
             notes?: string;
             /** Format: date-time */
             created_at?: string;
@@ -5016,7 +8357,7 @@ export interface components {
              * @description If null, marks the day as an off day
              */
             day_plan_id?: string;
-            source?: components["schemas"]["EmployeeDayPlan"]["source"];
+            source?: components["schemas"]["EmployeeDayPlanSource"];
             notes?: string;
         };
         UpdateEmployeeDayPlanRequest: {
@@ -5025,13 +8366,35 @@ export interface components {
              * @description If null, marks the day as an off day
              */
             day_plan_id?: string;
-            source?: components["schemas"]["EmployeeDayPlan"]["source"];
+            source?: components["schemas"]["EmployeeDayPlanSource"];
             notes?: string;
         };
         EmployeeDayPlanList: {
             items: components["schemas"]["EmployeeDayPlan"][];
             next_cursor?: string;
         };
+        BulkCreateEmployeeDayPlanRequest: {
+            plans: {
+                /** Format: uuid */
+                employee_id: string;
+                /** Format: date */
+                plan_date: string;
+                /** Format: uuid */
+                day_plan_id?: string;
+                source?: components["schemas"]["EmployeeDayPlanSource"];
+                notes?: string;
+            }[];
+        };
+        DeleteRangeRequest: {
+            /** Format: uuid */
+            employee_id: string;
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+        };
+        /** @enum {string} */
+        EmployeeDayPlanSource: "tariff" | "manual" | "holiday";
         MonthlyEvaluation: {
             /** Format: uuid */
             id: string;
@@ -5091,6 +8454,2191 @@ export interface components {
             items: components["schemas"]["MonthlyEvaluation"][];
             next_cursor?: string;
         };
+        CalculationRule: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** @example FULL_DAY */
+            code: string;
+            /** @example Full Day Absence */
+            name: string;
+            description?: string | null;
+            /**
+             * Format: uuid
+             * @description Linked account for writing calculated values
+             */
+            account_id?: string | null;
+            /**
+             * @description Value in minutes. 0 means use daily target time from employee time plan
+             * @example 0
+             */
+            value: number;
+            /**
+             * Format: double
+             * @description Multiplier applied to value or daily target time (e.g. 1.0 = full, 0.5 = half)
+             * @example 1
+             */
+            factor: number;
+            /** @example true */
+            is_active?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        CalculationRuleSummary: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            name: string;
+        };
+        CreateCalculationRuleRequest: {
+            code: string;
+            name: string;
+            description?: string;
+            /** Format: uuid */
+            account_id?: string;
+            /**
+             * @description Value in minutes. 0 = use daily target time
+             * @default 0
+             */
+            value: number;
+            /**
+             * Format: double
+             * @description Multiplier (e.g. 1.0 = full, 0.5 = half)
+             * @default 1
+             */
+            factor: number;
+        };
+        UpdateCalculationRuleRequest: {
+            name?: string;
+            description?: string;
+            /** Format: uuid */
+            account_id?: string | null;
+            /** @description Value in minutes. 0 = use daily target time */
+            value?: number;
+            /**
+             * Format: double
+             * @description Multiplier (e.g. 1.0 = full, 0.5 = half)
+             */
+            factor?: number;
+            is_active?: boolean;
+        };
+        CalculationRuleList: {
+            data: components["schemas"]["CalculationRule"][];
+        };
+        CorrectionMessage: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /**
+             * @description Error/warning code matching calculation engine constants
+             * @example MISSING_COME
+             */
+            code: string;
+            /**
+             * @description System-provided default message text
+             * @example Missing arrival booking
+             */
+            default_text: string;
+            /** @description Tenant-specific override text. When set, replaces default_text in outputs */
+            custom_text?: string | null;
+            /** @description Resolved text (custom_text if set, otherwise default_text) */
+            readonly effective_text?: string;
+            /**
+             * @description Classification: error or hint
+             * @example error
+             * @enum {string}
+             */
+            severity: "error" | "hint";
+            /** @description Internal description of when this error/hint occurs */
+            description?: string | null;
+            /**
+             * @description Whether this message is active
+             * @default true
+             */
+            is_active: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        UpdateCorrectionMessageRequest: {
+            /** @description Set to override default text, or null to clear override */
+            custom_text?: string | null;
+            /** @enum {string} */
+            severity?: "error" | "hint";
+            is_active?: boolean;
+        };
+        CorrectionMessageList: {
+            data: components["schemas"]["CorrectionMessage"][];
+            meta?: components["schemas"]["PaginationMeta"];
+        };
+        CorrectionAssistantItem: {
+            /** Format: uuid */
+            daily_value_id: string;
+            /** Format: uuid */
+            employee_id: string;
+            /** @example Max Mustermann */
+            employee_name?: string;
+            /** Format: uuid */
+            department_id?: string | null;
+            department_name?: string | null;
+            /**
+             * Format: date
+             * @example 2026-01-15
+             */
+            value_date: string;
+            errors: components["schemas"]["CorrectionAssistantError"][];
+        };
+        CorrectionAssistantError: {
+            /**
+             * @description Error/warning code
+             * @example MISSING_GO
+             */
+            code: string;
+            /**
+             * @example error
+             * @enum {string}
+             */
+            severity: "error" | "hint";
+            /**
+             * @description Resolved message text (custom override or default)
+             * @example Missing departure booking
+             */
+            message: string;
+            /**
+             * @description Categorized error type
+             * @enum {string}
+             */
+            error_type?: "missing_booking" | "unpaired_booking" | "overlapping_bookings" | "core_time_violation" | "exceeds_max_hours" | "below_min_hours" | "break_violation" | "invalid_sequence";
+        };
+        CorrectionAssistantList: {
+            data: components["schemas"]["CorrectionAssistantItem"][];
+            meta: components["schemas"]["PaginationMeta"];
+        };
+        VacationSpecialCalculation: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /**
+             * @description Type of special calculation: age (Alter), tenure (Betriebszugehoerigkeit), or disability (Behinderung)
+             * @example age
+             * @enum {string}
+             */
+            type: "age" | "tenure" | "disability";
+            /**
+             * @description Age in years (age), tenure in years (tenure), 0 for disability
+             * @example 50
+             */
+            threshold: number;
+            /**
+             * Format: double
+             * @description Additional vacation days when threshold is met
+             * @example 2
+             */
+            bonus_days: number;
+            description?: string | null;
+            /** @example true */
+            is_active?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        VacationSpecialCalculationSummary: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            type: "age" | "tenure" | "disability";
+            threshold: number;
+            /** Format: double */
+            bonus_days: number;
+        };
+        CreateVacationSpecialCalculationRequest: {
+            /** @enum {string} */
+            type: "age" | "tenure" | "disability";
+            /**
+             * @description Age or tenure threshold in years. Must be 0 for disability type.
+             * @default 0
+             */
+            threshold: number;
+            /**
+             * Format: double
+             * @description Additional vacation days
+             */
+            bonus_days: number;
+            description?: string;
+        };
+        UpdateVacationSpecialCalculationRequest: {
+            threshold?: number;
+            /** Format: double */
+            bonus_days?: number;
+            description?: string;
+            is_active?: boolean;
+        };
+        VacationSpecialCalculationList: {
+            data: components["schemas"]["VacationSpecialCalculation"][];
+        };
+        VacationCalculationGroup: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** @example STANDARD */
+            code: string;
+            /** @example Standard Vacation Group */
+            name: string;
+            description?: string | null;
+            /**
+             * @description Vacation year basis: calendar_year (Jan-Dec) or entry_date (hire anniversary)
+             * @example calendar_year
+             * @enum {string}
+             */
+            basis: "calendar_year" | "entry_date";
+            /** @example true */
+            is_active?: boolean;
+            /** @description Special calculations linked to this group */
+            special_calculations?: components["schemas"]["VacationSpecialCalculationSummary"][];
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        VacationCalculationGroupSummary: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            name: string;
+            /** @enum {string} */
+            basis: "calendar_year" | "entry_date";
+        };
+        CreateVacationCalculationGroupRequest: {
+            code: string;
+            name: string;
+            description?: string;
+            /**
+             * @default calendar_year
+             * @enum {string}
+             */
+            basis: "calendar_year" | "entry_date";
+            /** @description IDs of special calculations to link to this group */
+            special_calculation_ids?: string[];
+        };
+        UpdateVacationCalculationGroupRequest: {
+            name?: string;
+            description?: string;
+            /** @enum {string} */
+            basis?: "calendar_year" | "entry_date";
+            is_active?: boolean;
+            /** @description Replace linked special calculations with this set */
+            special_calculation_ids?: string[];
+        };
+        VacationCalculationGroupList: {
+            data: components["schemas"]["VacationCalculationGroup"][];
+        };
+        VacationEntitlementPreviewRequest: {
+            /** Format: uuid */
+            employee_id: string;
+            /** @example 2026 */
+            year: number;
+            /**
+             * Format: uuid
+             * @description Optional override: use this group instead of the employee's employment type group
+             */
+            calculation_group_id?: string;
+        };
+        VacationEntitlementPreview: {
+            /** Format: uuid */
+            employee_id: string;
+            /** @description Employee display name for convenience */
+            employee_name?: string;
+            year: number;
+            /** @enum {string} */
+            basis?: "calendar_year" | "entry_date";
+            /** Format: uuid */
+            calculation_group_id?: string | null;
+            calculation_group_name?: string | null;
+            /**
+             * Format: double
+             * @description Full-year base vacation days from tariff/employee
+             */
+            base_entitlement?: number;
+            /**
+             * Format: double
+             * @description After pro-rating for months employed
+             */
+            pro_rated_entitlement?: number;
+            /**
+             * Format: double
+             * @description After part-time factor adjustment
+             */
+            part_time_adjustment?: number;
+            /**
+             * Format: double
+             * @description Bonus days from age special calculations
+             */
+            age_bonus?: number;
+            /**
+             * Format: double
+             * @description Bonus days from tenure special calculations
+             */
+            tenure_bonus?: number;
+            /**
+             * Format: double
+             * @description Bonus days from disability special calculations
+             */
+            disability_bonus?: number;
+            /**
+             * Format: double
+             * @description Final entitlement (rounded to nearest 0.5)
+             */
+            total_entitlement?: number;
+            /** @description Number of months employed in the year */
+            months_employed?: number;
+            /** @description Employee age at reference date */
+            age_at_reference?: number;
+            /** @description Years of service at reference date */
+            tenure_years?: number;
+            /**
+             * Format: double
+             * @description Employee weekly hours
+             */
+            weekly_hours?: number;
+            /**
+             * Format: double
+             * @description Standard full-time weekly hours
+             */
+            standard_weekly_hours?: number;
+            /**
+             * Format: double
+             * @description Part-time factor (weekly_hours / standard_weekly_hours)
+             */
+            part_time_factor?: number;
+        };
+        VacationCappingRule: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** @example YEAR_END_10 */
+            code: string;
+            /** @example Year-end cap at 10 days */
+            name: string;
+            description?: string | null;
+            /**
+             * @description year_end: limits carryover at year boundary; mid_year: forfeits prior-year carryover after cutoff
+             * @example year_end
+             * @enum {string}
+             */
+            rule_type: "year_end" | "mid_year";
+            /**
+             * @description Month of cutoff date (1-12)
+             * @example 12
+             */
+            cutoff_month: number;
+            /**
+             * @description Day of cutoff date (1-31)
+             * @example 31
+             */
+            cutoff_day: number;
+            /**
+             * Format: double
+             * @description Maximum days to carry over. 0 means forfeit all.
+             * @example 10
+             */
+            cap_value: number;
+            /** @example true */
+            is_active?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        VacationCappingRuleSummary: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            name: string;
+            /** @enum {string} */
+            rule_type: "year_end" | "mid_year";
+            /** Format: double */
+            cap_value: number;
+        };
+        CreateVacationCappingRuleRequest: {
+            code: string;
+            name: string;
+            description?: string;
+            /** @enum {string} */
+            rule_type: "year_end" | "mid_year";
+            /** @default 12 */
+            cutoff_month: number;
+            /** @default 31 */
+            cutoff_day: number;
+            /**
+             * Format: double
+             * @default 0
+             */
+            cap_value: number;
+        };
+        UpdateVacationCappingRuleRequest: {
+            name?: string;
+            description?: string;
+            /** @enum {string} */
+            rule_type?: "year_end" | "mid_year";
+            cutoff_month?: number;
+            cutoff_day?: number;
+            /** Format: double */
+            cap_value?: number;
+            is_active?: boolean;
+        };
+        VacationCappingRuleList: {
+            data: components["schemas"]["VacationCappingRule"][];
+        };
+        VacationCappingRuleGroup: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** @example STANDARD_CAPPING */
+            code: string;
+            /** @example Standard Capping Group */
+            name: string;
+            description?: string | null;
+            /** @example true */
+            is_active?: boolean;
+            /** @description Capping rules linked to this group */
+            capping_rules?: components["schemas"]["VacationCappingRuleSummary"][];
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        VacationCappingRuleGroupSummary: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            name: string;
+        };
+        CreateVacationCappingRuleGroupRequest: {
+            code: string;
+            name: string;
+            description?: string;
+            /** @description IDs of capping rules to link to this group */
+            capping_rule_ids?: string[];
+        };
+        UpdateVacationCappingRuleGroupRequest: {
+            name?: string;
+            description?: string;
+            is_active?: boolean;
+            /** @description Replace linked capping rules with this set */
+            capping_rule_ids?: string[];
+        };
+        VacationCappingRuleGroupList: {
+            data: components["schemas"]["VacationCappingRuleGroup"][];
+        };
+        EmployeeCappingException: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** Format: uuid */
+            employee_id: string;
+            /** Format: uuid */
+            capping_rule_id: string;
+            /**
+             * @description full: employee keeps all vacation; partial: up to retain_days
+             * @enum {string}
+             */
+            exemption_type: "full" | "partial";
+            /**
+             * Format: double
+             * @description For partial exemptions: max days to retain despite capping
+             */
+            retain_days?: number | null;
+            /** @description Year this exception applies to. Null means all years. */
+            year?: number | null;
+            notes?: string | null;
+            /** @example true */
+            is_active?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        CreateEmployeeCappingExceptionRequest: {
+            /** Format: uuid */
+            employee_id: string;
+            /** Format: uuid */
+            capping_rule_id: string;
+            /** @enum {string} */
+            exemption_type: "full" | "partial";
+            /** Format: double */
+            retain_days?: number;
+            year?: number;
+            notes?: string;
+        };
+        UpdateEmployeeCappingExceptionRequest: {
+            /** @enum {string} */
+            exemption_type?: "full" | "partial";
+            /** Format: double */
+            retain_days?: number;
+            year?: number;
+            notes?: string;
+            is_active?: boolean;
+        };
+        EmployeeCappingExceptionList: {
+            data: components["schemas"]["EmployeeCappingException"][];
+        };
+        VacationCarryoverPreviewRequest: {
+            /** Format: uuid */
+            employee_id: string;
+            /** @description Year to preview carryover for */
+            year: number;
+        };
+        VacationCarryoverPreview: {
+            /** Format: uuid */
+            employee_id?: string;
+            year?: number;
+            /**
+             * Format: double
+             * @description Days available for carryover before capping
+             */
+            available_days?: number;
+            /**
+             * Format: double
+             * @description Carryover after applying capping rules
+             */
+            capped_carryover?: number;
+            /**
+             * Format: double
+             * @description Days lost due to capping
+             */
+            forfeited_days?: number;
+            rules_applied?: components["schemas"]["CappingRuleApplication"][];
+            /** @description Whether employee has an active capping exception */
+            has_exception?: boolean;
+        };
+        CappingRuleApplication: {
+            /** Format: uuid */
+            rule_id?: string;
+            rule_name?: string;
+            /** @enum {string} */
+            rule_type?: "year_end" | "mid_year";
+            /** Format: double */
+            cap_value?: number;
+            /** @description Whether this rule actually reduced the carryover */
+            applied?: boolean;
+            /** @description Whether an employee exception overrides this rule */
+            exception_active?: boolean;
+        };
+        EmployeeTariffAssignment: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** Format: uuid */
+            employee_id: string;
+            /** Format: uuid */
+            tariff_id: string;
+            /**
+             * Format: date
+             * @description Start date (inclusive) when this tariff assignment takes effect
+             */
+            effective_from: string;
+            /**
+             * Format: date
+             * @description End date (inclusive). NULL means open-ended
+             */
+            effective_to?: string | null;
+            /**
+             * @description Whether to overwrite manual day plan edits when syncing
+             * @example preserve_manual
+             * @enum {string}
+             */
+            overwrite_behavior: "overwrite" | "preserve_manual";
+            notes?: string | null;
+            is_active: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+            tariff?: {
+                /** Format: uuid */
+                id: string;
+                code: string;
+                name: string;
+            };
+            employee?: components["schemas"]["EmployeeSummary"];
+        };
+        EmployeeTariffAssignmentList: {
+            data: components["schemas"]["EmployeeTariffAssignment"][];
+        };
+        CreateEmployeeTariffAssignmentRequest: {
+            /** Format: uuid */
+            tariff_id: string;
+            /** Format: date */
+            effective_from: string;
+            /** Format: date */
+            effective_to?: string;
+            /**
+             * @default preserve_manual
+             * @enum {string}
+             */
+            overwrite_behavior: "overwrite" | "preserve_manual";
+            notes?: string;
+        };
+        UpdateEmployeeTariffAssignmentRequest: {
+            /** Format: date */
+            effective_from?: string;
+            /** Format: date */
+            effective_to?: string;
+            /** @enum {string} */
+            overwrite_behavior?: "overwrite" | "preserve_manual";
+            notes?: string;
+            is_active?: boolean;
+        };
+        EffectiveTariffResponse: {
+            /** Format: uuid */
+            employee_id: string;
+            /** Format: date */
+            date: string;
+            /**
+             * @description 'assignment' = from employee_tariff_assignments, 'default' = from employee.tariff_id, 'none' = no tariff
+             * @enum {string}
+             */
+            source: "assignment" | "default" | "none";
+            tariff?: components["schemas"]["Tariff"];
+            assignment?: components["schemas"]["EmployeeTariffAssignment"];
+        };
+        Activity: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** @example DEV */
+            code: string;
+            /** @example Development */
+            name: string;
+            description?: string | null;
+            /** @example true */
+            is_active?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        CreateActivityRequest: {
+            name: string;
+            code: string;
+            description?: string;
+        };
+        UpdateActivityRequest: {
+            name?: string;
+            code?: string;
+            description?: string;
+            is_active?: boolean;
+        };
+        ActivityList: {
+            data: components["schemas"]["Activity"][];
+        };
+        Order: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** @example ORD-001 */
+            code: string;
+            /** @example Website Redesign */
+            name: string;
+            description?: string | null;
+            /**
+             * @example active
+             * @enum {string}
+             */
+            status: "planned" | "active" | "completed" | "cancelled";
+            /** @example Acme Corp */
+            customer?: string | null;
+            /** Format: uuid */
+            cost_center_id?: string | null;
+            /** @example 120 */
+            billing_rate_per_hour?: number | null;
+            /** Format: date */
+            valid_from?: string | null;
+            /** Format: date */
+            valid_to?: string | null;
+            /** @example true */
+            is_active?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        CreateOrderRequest: {
+            name: string;
+            code: string;
+            description?: string;
+            /** @enum {string} */
+            status?: "planned" | "active" | "completed" | "cancelled";
+            customer?: string;
+            /** Format: uuid */
+            cost_center_id?: string;
+            billing_rate_per_hour?: number;
+            /** Format: date */
+            valid_from?: string;
+            /** Format: date */
+            valid_to?: string;
+        };
+        UpdateOrderRequest: {
+            name?: string;
+            code?: string;
+            description?: string;
+            /** @enum {string} */
+            status?: "planned" | "active" | "completed" | "cancelled";
+            customer?: string;
+            /** Format: uuid */
+            cost_center_id?: string;
+            billing_rate_per_hour?: number;
+            /** Format: date */
+            valid_from?: string;
+            /** Format: date */
+            valid_to?: string;
+            is_active?: boolean;
+        };
+        OrderList: {
+            data: components["schemas"]["Order"][];
+        };
+        OrderAssignment: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** Format: uuid */
+            order_id: string;
+            /** Format: uuid */
+            employee_id: string;
+            /**
+             * @example worker
+             * @enum {string}
+             */
+            role: "worker" | "leader" | "sales";
+            /** Format: date */
+            valid_from?: string | null;
+            /** Format: date */
+            valid_to?: string | null;
+            /** @example true */
+            is_active?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        CreateOrderAssignmentRequest: {
+            /** Format: uuid */
+            order_id: string;
+            /** Format: uuid */
+            employee_id: string;
+            /** @enum {string} */
+            role?: "worker" | "leader" | "sales";
+            /** Format: date */
+            valid_from?: string;
+            /** Format: date */
+            valid_to?: string;
+        };
+        UpdateOrderAssignmentRequest: {
+            /** @enum {string} */
+            role?: "worker" | "leader" | "sales";
+            /** Format: date */
+            valid_from?: string;
+            /** Format: date */
+            valid_to?: string;
+            is_active?: boolean;
+        };
+        OrderAssignmentList: {
+            data: components["schemas"]["OrderAssignment"][];
+        };
+        OrderBooking: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** Format: uuid */
+            employee_id: string;
+            /** Format: uuid */
+            order_id: string;
+            /** Format: uuid */
+            activity_id?: string | null;
+            /** Format: date */
+            booking_date: string;
+            /** @example 480 */
+            time_minutes: number;
+            description?: string | null;
+            /**
+             * @example manual
+             * @enum {string}
+             */
+            source: "manual" | "auto" | "import";
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+            /** Format: uuid */
+            created_by?: string | null;
+            /** Format: uuid */
+            updated_by?: string | null;
+        };
+        CreateOrderBookingRequest: {
+            /** Format: uuid */
+            employee_id: string;
+            /** Format: uuid */
+            order_id: string;
+            /** Format: uuid */
+            activity_id?: string;
+            /** Format: date */
+            booking_date: string;
+            time_minutes: number;
+            description?: string;
+        };
+        UpdateOrderBookingRequest: {
+            /** Format: uuid */
+            order_id?: string;
+            /** Format: uuid */
+            activity_id?: string;
+            /** Format: date */
+            booking_date?: string;
+            time_minutes?: number;
+            description?: string;
+        };
+        OrderBookingList: {
+            data: components["schemas"]["OrderBooking"][];
+        };
+        EvaluationDailyValue: {
+            /**
+             * Format: uuid
+             * @description DailyValue ID (null for days-without-bookings placeholder rows)
+             */
+            id?: string | null;
+            /** Format: uuid */
+            employee_id: string;
+            /** Format: date */
+            date: string;
+            /**
+             * @description no_data for days without bookings placeholder rows
+             * @enum {string}
+             */
+            status?: "pending" | "calculated" | "error" | "approved" | "no_data";
+            target_minutes?: number;
+            gross_minutes?: number;
+            net_minutes?: number;
+            break_minutes?: number;
+            overtime_minutes?: number;
+            undertime_minutes?: number;
+            /** @description overtime - undertime */
+            balance_minutes?: number;
+            booking_count?: number;
+            has_errors?: boolean;
+            /** @description HH:MM or null */
+            first_come?: string | null;
+            /** @description HH:MM or null */
+            last_go?: string | null;
+            employee?: components["schemas"]["EmployeeSummary"];
+        };
+        EvaluationDailyValueList: {
+            data: components["schemas"]["EvaluationDailyValue"][];
+            meta?: components["schemas"]["PaginationMeta"];
+        };
+        EvaluationBooking: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            employee_id: string;
+            /** Format: date */
+            booking_date: string;
+            /** Format: uuid */
+            booking_type_id?: string;
+            /** @description Original booking time in minutes from midnight */
+            original_time?: number;
+            /** @description Edited/corrected time in minutes from midnight */
+            edited_time: number;
+            calculated_time?: number | null;
+            /** @description Formatted time HH:MM */
+            time_string?: string;
+            /** @enum {string} */
+            source?: "web" | "terminal" | "api" | "import" | "correction";
+            /** Format: uuid */
+            pair_id?: string | null;
+            /** Format: uuid */
+            terminal_id?: string | null;
+            notes?: string | null;
+            /** Format: date-time */
+            created_at?: string;
+            employee?: components["schemas"]["EmployeeSummary"];
+            booking_type?: components["schemas"]["BookingTypeSummary"];
+        };
+        EvaluationBookingList: {
+            data: components["schemas"]["EvaluationBooking"][];
+            meta?: components["schemas"]["PaginationMeta"];
+        };
+        EvaluationTerminalBooking: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            employee_id: string;
+            /** Format: date */
+            booking_date: string;
+            /** Format: uuid */
+            booking_type_id?: string;
+            /** @description Raw terminal time (minutes from midnight) */
+            original_time: number;
+            /** @description Raw terminal time HH:MM */
+            original_time_string?: string;
+            /** @description Corrected time (minutes from midnight) */
+            edited_time: number;
+            /** @description Corrected time HH:MM */
+            edited_time_string?: string;
+            calculated_time?: number | null;
+            /** @description true when original_time != edited_time */
+            was_edited?: boolean;
+            /** Format: uuid */
+            terminal_id?: string | null;
+            source?: string;
+            /** Format: date-time */
+            created_at?: string;
+            employee?: components["schemas"]["EmployeeSummary"];
+            booking_type?: components["schemas"]["BookingTypeSummary"];
+        };
+        EvaluationTerminalBookingList: {
+            data: components["schemas"]["EvaluationTerminalBooking"][];
+            meta?: components["schemas"]["PaginationMeta"];
+        };
+        EvaluationLogEntry: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            action: "create" | "update" | "delete" | "approve" | "reject" | "close" | "reopen";
+            /** @description booking, absence, monthly_value, etc. */
+            entity_type: string;
+            /** Format: uuid */
+            entity_id: string;
+            entity_name?: string | null;
+            /** @description Before/after values as JSON */
+            changes?: Record<string, never> | null;
+            /** Format: date-time */
+            performed_at: string;
+            /** Format: uuid */
+            user_id?: string | null;
+            user?: components["schemas"]["UserSummary"];
+        };
+        EvaluationLogEntryList: {
+            data: components["schemas"]["EvaluationLogEntry"][];
+            meta?: components["schemas"]["PaginationMeta"];
+        };
+        EvaluationWorkflowEntry: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            action: "create" | "approve" | "reject" | "close" | "reopen";
+            /** @description absence, monthly_value */
+            entity_type: string;
+            /** Format: uuid */
+            entity_id: string;
+            entity_name?: string | null;
+            /** Format: date-time */
+            performed_at: string;
+            /** Format: uuid */
+            user_id?: string | null;
+            user?: components["schemas"]["UserSummary"];
+            metadata?: Record<string, never> | null;
+        };
+        EvaluationWorkflowEntryList: {
+            data: components["schemas"]["EvaluationWorkflowEntry"][];
+            meta?: components["schemas"]["PaginationMeta"];
+        };
+        SystemSettings: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** @description When true, rounding grid anchors at planned start time instead of midnight */
+            rounding_relative_to_plan?: boolean;
+            error_list_enabled?: boolean;
+            tracked_error_codes?: string[];
+            auto_fill_order_end_bookings?: boolean;
+            birthday_window_days_before?: number;
+            birthday_window_days_after?: number;
+            follow_up_entries_enabled?: boolean;
+            proxy_host?: string | null;
+            proxy_port?: number | null;
+            proxy_username?: string | null;
+            proxy_enabled?: boolean;
+            server_alive_enabled?: boolean;
+            /** @description Minutes from midnight (e.g. 300 = 05:00) */
+            server_alive_expected_completion_time?: number | null;
+            server_alive_threshold_minutes?: number | null;
+            server_alive_notify_admins?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        UpdateSystemSettingsRequest: {
+            rounding_relative_to_plan?: boolean;
+            error_list_enabled?: boolean;
+            tracked_error_codes?: string[];
+            auto_fill_order_end_bookings?: boolean;
+            birthday_window_days_before?: number;
+            birthday_window_days_after?: number;
+            follow_up_entries_enabled?: boolean;
+            proxy_host?: string | null;
+            proxy_port?: number | null;
+            proxy_username?: string | null;
+            /** @description Write-only. Never returned in responses. */
+            proxy_password?: string | null;
+            proxy_enabled?: boolean;
+            server_alive_enabled?: boolean;
+            server_alive_expected_completion_time?: number | null;
+            server_alive_threshold_minutes?: number | null;
+            server_alive_notify_admins?: boolean;
+        };
+        CleanupDeleteBookingsRequest: {
+            /** Format: date */
+            date_from: string;
+            /** Format: date */
+            date_to: string;
+            /** @description Optional. If empty, applies to all employees. */
+            employee_ids?: string[];
+            /** @description Must be true to execute. False returns preview count. */
+            confirm?: boolean;
+        };
+        CleanupDeleteBookingDataRequest: {
+            /** Format: date */
+            date_from: string;
+            /** Format: date */
+            date_to: string;
+            employee_ids?: string[];
+            confirm?: boolean;
+        };
+        CleanupReReadBookingsRequest: {
+            /** Format: date */
+            date_from: string;
+            /** Format: date */
+            date_to: string;
+            employee_ids?: string[];
+            confirm?: boolean;
+        };
+        CleanupMarkDeleteOrdersRequest: {
+            order_ids: string[];
+            confirm?: boolean;
+        };
+        CleanupResult: {
+            /** @enum {string} */
+            operation: "delete_bookings" | "delete_booking_data" | "re_read_bookings" | "mark_delete_orders";
+            affected_count: number;
+            /** @description True if this is a dry-run preview */
+            preview?: boolean;
+            details?: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            performed_at?: string;
+        };
+        Schedule: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** @example Nightly Calculation */
+            name: string;
+            description?: string | null;
+            /** @enum {string} */
+            timing_type: "seconds" | "minutes" | "hours" | "daily" | "weekly" | "monthly" | "manual";
+            timing_config?: components["schemas"]["TimingConfig"];
+            is_enabled?: boolean;
+            /** Format: date-time */
+            last_run_at?: string | null;
+            /** Format: date-time */
+            next_run_at?: string | null;
+            tasks?: components["schemas"]["ScheduleTask"][];
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        TimingConfig: {
+            /**
+             * @description Interval value for seconds/minutes/hours timing types
+             * @example 30
+             */
+            interval?: number;
+            /**
+             * @description Time of day for daily/weekly/monthly (HH:MM format)
+             * @example 02:00
+             */
+            time?: string;
+            /** @description Day of week for weekly (0=Sunday, 1=Monday, ...6=Saturday) */
+            day_of_week?: number;
+            /** @description Day of month for monthly timing type */
+            day_of_month?: number;
+        };
+        ScheduleTask: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            schedule_id: string;
+            /** @enum {string} */
+            task_type: "calculate_days" | "calculate_months" | "backup_database" | "send_notifications" | "export_data" | "alive_check" | "terminal_sync" | "terminal_import";
+            sort_order: number;
+            parameters?: {
+                [key: string]: unknown;
+            };
+            is_enabled?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        ScheduleExecution: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id?: string;
+            /** Format: uuid */
+            schedule_id: string;
+            /** @enum {string} */
+            status: "pending" | "running" | "completed" | "failed" | "partial";
+            /** @enum {string} */
+            trigger_type?: "scheduled" | "manual";
+            /** Format: uuid */
+            triggered_by?: string | null;
+            /** Format: date-time */
+            started_at?: string | null;
+            /** Format: date-time */
+            completed_at?: string | null;
+            error_message?: string | null;
+            tasks_total?: number;
+            tasks_succeeded?: number;
+            tasks_failed?: number;
+            task_executions?: components["schemas"]["ScheduleTaskExecution"][];
+            /** Format: date-time */
+            created_at?: string;
+        };
+        ScheduleTaskExecution: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            execution_id?: string;
+            task_type?: string;
+            sort_order?: number;
+            /** @enum {string} */
+            status?: "pending" | "running" | "completed" | "failed" | "skipped";
+            /** Format: date-time */
+            started_at?: string | null;
+            /** Format: date-time */
+            completed_at?: string | null;
+            error_message?: string | null;
+            result?: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            created_at?: string;
+        };
+        TaskCatalogEntry: {
+            /** @enum {string} */
+            task_type: "calculate_days" | "calculate_months" | "backup_database" | "send_notifications" | "export_data" | "alive_check" | "terminal_sync" | "terminal_import";
+            name: string;
+            description: string;
+            /** @description JSON schema describing the accepted parameters for this task type */
+            parameter_schema?: {
+                [key: string]: unknown;
+            };
+        };
+        CreateScheduleRequest: {
+            name: string;
+            description?: string;
+            /** @enum {string} */
+            timing_type: "seconds" | "minutes" | "hours" | "daily" | "weekly" | "monthly" | "manual";
+            timing_config?: components["schemas"]["TimingConfig"];
+            is_enabled?: boolean;
+            tasks?: components["schemas"]["CreateScheduleTaskRequest"][];
+        };
+        UpdateScheduleRequest: {
+            name?: string;
+            description?: string;
+            /** @enum {string} */
+            timing_type?: "seconds" | "minutes" | "hours" | "daily" | "weekly" | "monthly" | "manual";
+            timing_config?: components["schemas"]["TimingConfig"];
+            is_enabled?: boolean;
+        };
+        CreateScheduleTaskRequest: {
+            /** @enum {string} */
+            task_type: "calculate_days" | "calculate_months" | "backup_database" | "send_notifications" | "export_data" | "alive_check" | "terminal_sync" | "terminal_import";
+            sort_order: number;
+            parameters?: {
+                [key: string]: unknown;
+            };
+            is_enabled?: boolean;
+        };
+        UpdateScheduleTaskRequest: {
+            /** @enum {string} */
+            task_type?: "calculate_days" | "calculate_months" | "backup_database" | "send_notifications" | "export_data" | "alive_check" | "terminal_sync" | "terminal_import";
+            sort_order?: number;
+            parameters?: {
+                [key: string]: unknown;
+            };
+            is_enabled?: boolean;
+        };
+        TriggerExecutionRequest: {
+            /**
+             * Format: uuid
+             * @description User ID of the person triggering the execution (optional, auto-detected from auth)
+             */
+            triggered_by?: string;
+        };
+        ScheduleList: {
+            data: components["schemas"]["Schedule"][];
+        };
+        ScheduleExecutionList: {
+            data: components["schemas"]["ScheduleExecution"][];
+        };
+        TaskCatalog: {
+            data: components["schemas"]["TaskCatalogEntry"][];
+        };
+        EmployeeMessage: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** Format: uuid */
+            sender_id: string;
+            /** @example Schedule change notification */
+            subject: string;
+            /** @example Your shift has been updated for next week. */
+            body: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            recipients: components["schemas"]["EmployeeMessageRecipient"][];
+        };
+        EmployeeMessageRecipient: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            message_id: string;
+            /** Format: uuid */
+            employee_id: string;
+            /** @enum {string} */
+            status: "pending" | "sent" | "failed";
+            /** Format: date-time */
+            sent_at?: string | null;
+            error_message?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        EmployeeMessageList: {
+            data: components["schemas"]["EmployeeMessage"][];
+            /** Format: int64 */
+            total: number;
+        };
+        CreateEmployeeMessageRequest: {
+            subject: string;
+            body: string;
+            employee_ids: string[];
+        };
+        SendEmployeeMessageResponse: {
+            /** Format: uuid */
+            message_id: string;
+            /**
+             * Format: int64
+             * @description Number of recipients successfully sent
+             */
+            sent: number;
+            /**
+             * Format: int64
+             * @description Number of recipients that failed
+             */
+            failed: number;
+        };
+        ContactType: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** @example EMAIL */
+            code: string;
+            /** @example Email Address */
+            name: string;
+            /**
+             * @description Validation format for contact values
+             * @example email
+             * @enum {string}
+             */
+            data_type: "text" | "email" | "phone" | "url";
+            description?: string | null;
+            /** @example true */
+            is_active?: boolean;
+            /** @example 0 */
+            sort_order?: number;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        CreateContactTypeRequest: {
+            code: string;
+            name: string;
+            /** @enum {string} */
+            data_type: "text" | "email" | "phone" | "url";
+            description?: string;
+            sort_order?: number;
+        };
+        UpdateContactTypeRequest: {
+            name?: string;
+            description?: string;
+            is_active?: boolean;
+            sort_order?: number;
+        };
+        ContactTypeList: {
+            data: components["schemas"]["ContactType"][];
+        };
+        ContactKind: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** Format: uuid */
+            contact_type_id: string;
+            /** @example WORK_EMAIL */
+            code: string;
+            /** @example Work Email */
+            label: string;
+            /** @example true */
+            is_active?: boolean;
+            /** @example 0 */
+            sort_order?: number;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        CreateContactKindRequest: {
+            /** Format: uuid */
+            contact_type_id: string;
+            code: string;
+            label: string;
+            sort_order?: number;
+        };
+        UpdateContactKindRequest: {
+            label?: string;
+            is_active?: boolean;
+            sort_order?: number;
+        };
+        ContactKindList: {
+            data: components["schemas"]["ContactKind"][];
+        };
+        RawTerminalBooking: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** Format: uuid */
+            import_batch_id: string;
+            terminal_id: string;
+            employee_pin: string;
+            /** Format: uuid */
+            employee_id?: string | null;
+            /** Format: date-time */
+            raw_timestamp: string;
+            /** @description Raw booking code from terminal (e.g. A1, A2, P1, P2, D1, D2) */
+            raw_booking_code: string;
+            /** Format: date */
+            booking_date: string;
+            /** Format: uuid */
+            booking_type_id?: string | null;
+            /** Format: uuid */
+            processed_booking_id?: string | null;
+            /** @enum {string} */
+            status: "pending" | "processed" | "failed" | "skipped";
+            error_message?: string | null;
+            employee?: components["schemas"]["EmployeeSummary"];
+            booking_type?: components["schemas"]["BookingTypeSummary"];
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        RawTerminalBookingList: {
+            data: components["schemas"]["RawTerminalBooking"][];
+            meta: components["schemas"]["PaginationMeta"];
+        };
+        ImportBatch: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            batch_reference: string;
+            source: string;
+            terminal_id?: string | null;
+            /** @enum {string} */
+            status: "pending" | "processing" | "completed" | "failed";
+            records_total?: number;
+            records_imported?: number;
+            records_failed?: number;
+            error_message?: string | null;
+            /** Format: date-time */
+            started_at?: string | null;
+            /** Format: date-time */
+            completed_at?: string | null;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        ImportBatchList: {
+            data: components["schemas"]["ImportBatch"][];
+            meta: components["schemas"]["PaginationMeta"];
+        };
+        TriggerTerminalImportRequest: {
+            /** @description Unique batch identifier for idempotent import */
+            batch_reference: string;
+            terminal_id: string;
+            bookings: components["schemas"]["RawTerminalBookingInput"][];
+        };
+        TriggerTerminalImportResponse: {
+            batch: components["schemas"]["ImportBatch"];
+            /** @description Human-readable result message */
+            message?: string;
+            /** @description True if this batch_reference was already imported (idempotent) */
+            was_duplicate?: boolean;
+        };
+        RawTerminalBookingInput: {
+            employee_pin: string;
+            /** Format: date-time */
+            raw_timestamp: string;
+            /** @description Booking code (e.g. A1, A2, P1, P2, D1, D2) */
+            raw_booking_code: string;
+        };
+        AccessZone: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** @example ZONE_A */
+            code: string;
+            /** @example Building A Entrance */
+            name: string;
+            description?: string | null;
+            /** @example true */
+            is_active?: boolean;
+            /** @example 0 */
+            sort_order?: number;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        CreateAccessZoneRequest: {
+            code: string;
+            name: string;
+            description?: string;
+            sort_order?: number;
+        };
+        UpdateAccessZoneRequest: {
+            name?: string;
+            description?: string;
+            is_active?: boolean;
+            sort_order?: number;
+        };
+        AccessZoneList: {
+            data: components["schemas"]["AccessZone"][];
+        };
+        AccessProfile: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** @example PROFILE_STANDARD */
+            code: string;
+            /** @example Standard Access */
+            name: string;
+            description?: string | null;
+            /** @example true */
+            is_active?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        CreateAccessProfileRequest: {
+            code: string;
+            name: string;
+            description?: string;
+        };
+        UpdateAccessProfileRequest: {
+            name?: string;
+            description?: string;
+            is_active?: boolean;
+        };
+        AccessProfileList: {
+            data: components["schemas"]["AccessProfile"][];
+        };
+        EmployeeAccessAssignment: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** Format: uuid */
+            employee_id: string;
+            /** Format: uuid */
+            access_profile_id: string;
+            /** Format: date */
+            valid_from?: string | null;
+            /** Format: date */
+            valid_to?: string | null;
+            /** @example true */
+            is_active?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        CreateEmployeeAccessAssignmentRequest: {
+            /** Format: uuid */
+            employee_id: string;
+            /** Format: uuid */
+            access_profile_id: string;
+            /** Format: date */
+            valid_from?: string;
+            /** Format: date */
+            valid_to?: string;
+        };
+        UpdateEmployeeAccessAssignmentRequest: {
+            /** Format: date */
+            valid_from?: string;
+            /** Format: date */
+            valid_to?: string;
+            is_active?: boolean;
+        };
+        EmployeeAccessAssignmentList: {
+            data: components["schemas"]["EmployeeAccessAssignment"][];
+        };
+        Vehicle: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** @example VH-001 */
+            code: string;
+            /** @example Company Van 1 */
+            name: string;
+            description?: string | null;
+            /** @example M-AB 1234 */
+            license_plate?: string | null;
+            /** @example true */
+            is_active?: boolean;
+            /** @example 0 */
+            sort_order?: number;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        CreateVehicleRequest: {
+            code: string;
+            name: string;
+            description?: string;
+            license_plate?: string;
+            sort_order?: number;
+        };
+        UpdateVehicleRequest: {
+            name?: string;
+            description?: string;
+            license_plate?: string;
+            is_active?: boolean;
+            sort_order?: number;
+        };
+        VehicleList: {
+            data: components["schemas"]["Vehicle"][];
+        };
+        VehicleRoute: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** @example RT-001 */
+            code: string;
+            /** @example Office to Warehouse */
+            name: string;
+            description?: string | null;
+            /**
+             * Format: double
+             * @example 15.5
+             */
+            distance_km?: number | null;
+            /** @example true */
+            is_active?: boolean;
+            /** @example 0 */
+            sort_order?: number;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        CreateVehicleRouteRequest: {
+            code: string;
+            name: string;
+            description?: string;
+            /** Format: double */
+            distance_km?: number;
+            sort_order?: number;
+        };
+        UpdateVehicleRouteRequest: {
+            name?: string;
+            description?: string;
+            /** Format: double */
+            distance_km?: number;
+            is_active?: boolean;
+            sort_order?: number;
+        };
+        VehicleRouteList: {
+            data: components["schemas"]["VehicleRoute"][];
+        };
+        TripRecord: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** Format: uuid */
+            vehicle_id: string;
+            /** Format: uuid */
+            route_id?: string | null;
+            /**
+             * Format: date
+             * @example 2026-01-30
+             */
+            trip_date: string;
+            /** Format: double */
+            start_mileage?: number | null;
+            /** Format: double */
+            end_mileage?: number | null;
+            /** Format: double */
+            distance_km?: number | null;
+            notes?: string | null;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        CreateTripRecordRequest: {
+            /** Format: uuid */
+            vehicle_id: string;
+            /** Format: uuid */
+            route_id?: string;
+            /** Format: date */
+            trip_date: string;
+            /** Format: double */
+            start_mileage?: number;
+            /** Format: double */
+            end_mileage?: number;
+            /** Format: double */
+            distance_km?: number;
+            notes?: string;
+        };
+        UpdateTripRecordRequest: {
+            /** Format: uuid */
+            route_id?: string;
+            /** Format: date */
+            trip_date?: string;
+            /** Format: double */
+            start_mileage?: number;
+            /** Format: double */
+            end_mileage?: number;
+            /** Format: double */
+            distance_km?: number;
+            notes?: string;
+        };
+        TripRecordList: {
+            data: components["schemas"]["TripRecord"][];
+        };
+        TravelAllowanceRuleSet: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** @example TA-2026 */
+            code: string;
+            /** @example Standard Travel Allowance 2026 */
+            name: string;
+            description?: string | null;
+            /** Format: date */
+            valid_from?: string | null;
+            /** Format: date */
+            valid_to?: string | null;
+            /**
+             * @example per_day
+             * @enum {string}
+             */
+            calculation_basis?: "per_day" | "per_booking";
+            /**
+             * @example longest
+             * @enum {string}
+             */
+            distance_rule?: "longest" | "shortest" | "first" | "last";
+            /** @example true */
+            is_active?: boolean;
+            /** @example 0 */
+            sort_order?: number;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        CreateTravelAllowanceRuleSetRequest: {
+            code: string;
+            name: string;
+            description?: string;
+            /** Format: date */
+            valid_from?: string;
+            /** Format: date */
+            valid_to?: string;
+            /** @enum {string} */
+            calculation_basis?: "per_day" | "per_booking";
+            /** @enum {string} */
+            distance_rule?: "longest" | "shortest" | "first" | "last";
+            sort_order?: number;
+        };
+        UpdateTravelAllowanceRuleSetRequest: {
+            name?: string;
+            description?: string;
+            /** Format: date */
+            valid_from?: string;
+            /** Format: date */
+            valid_to?: string;
+            /** @enum {string} */
+            calculation_basis?: "per_day" | "per_booking";
+            /** @enum {string} */
+            distance_rule?: "longest" | "shortest" | "first" | "last";
+            is_active?: boolean;
+            sort_order?: number;
+        };
+        TravelAllowanceRuleSetList: {
+            data: components["schemas"]["TravelAllowanceRuleSet"][];
+        };
+        LocalTravelRule: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** Format: uuid */
+            rule_set_id: string;
+            /**
+             * Format: double
+             * @example 0
+             */
+            min_distance_km?: number;
+            /**
+             * Format: double
+             * @example 50
+             */
+            max_distance_km?: number | null;
+            /** @example 0 */
+            min_duration_minutes?: number;
+            /** @example 480 */
+            max_duration_minutes?: number | null;
+            /**
+             * Format: double
+             * @example 14
+             */
+            tax_free_amount?: number;
+            /**
+             * Format: double
+             * @example 6
+             */
+            taxable_amount?: number;
+            /** @example true */
+            is_active?: boolean;
+            /** @example 0 */
+            sort_order?: number;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        CreateLocalTravelRuleRequest: {
+            /** Format: uuid */
+            rule_set_id: string;
+            /** Format: double */
+            min_distance_km?: number;
+            /** Format: double */
+            max_distance_km?: number;
+            min_duration_minutes?: number;
+            max_duration_minutes?: number;
+            /** Format: double */
+            tax_free_amount?: number;
+            /** Format: double */
+            taxable_amount?: number;
+            sort_order?: number;
+        };
+        UpdateLocalTravelRuleRequest: {
+            /** Format: double */
+            min_distance_km?: number;
+            /** Format: double */
+            max_distance_km?: number;
+            min_duration_minutes?: number;
+            max_duration_minutes?: number;
+            /** Format: double */
+            tax_free_amount?: number;
+            /** Format: double */
+            taxable_amount?: number;
+            is_active?: boolean;
+            sort_order?: number;
+        };
+        LocalTravelRuleList: {
+            data: components["schemas"]["LocalTravelRule"][];
+        };
+        ExtendedTravelRule: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** Format: uuid */
+            rule_set_id: string;
+            /**
+             * Format: double
+             * @example 14
+             */
+            arrival_day_tax_free?: number;
+            /**
+             * Format: double
+             * @example 6
+             */
+            arrival_day_taxable?: number;
+            /**
+             * Format: double
+             * @example 14
+             */
+            departure_day_tax_free?: number;
+            /**
+             * Format: double
+             * @example 6
+             */
+            departure_day_taxable?: number;
+            /**
+             * Format: double
+             * @example 28
+             */
+            intermediate_day_tax_free?: number;
+            /**
+             * Format: double
+             * @example 12
+             */
+            intermediate_day_taxable?: number;
+            /** @example false */
+            three_month_enabled?: boolean;
+            /**
+             * Format: double
+             * @example 14
+             */
+            three_month_tax_free?: number;
+            /**
+             * Format: double
+             * @example 6
+             */
+            three_month_taxable?: number;
+            /** @example true */
+            is_active?: boolean;
+            /** @example 0 */
+            sort_order?: number;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        CreateExtendedTravelRuleRequest: {
+            /** Format: uuid */
+            rule_set_id: string;
+            /** Format: double */
+            arrival_day_tax_free?: number;
+            /** Format: double */
+            arrival_day_taxable?: number;
+            /** Format: double */
+            departure_day_tax_free?: number;
+            /** Format: double */
+            departure_day_taxable?: number;
+            /** Format: double */
+            intermediate_day_tax_free?: number;
+            /** Format: double */
+            intermediate_day_taxable?: number;
+            three_month_enabled?: boolean;
+            /** Format: double */
+            three_month_tax_free?: number;
+            /** Format: double */
+            three_month_taxable?: number;
+            sort_order?: number;
+        };
+        UpdateExtendedTravelRuleRequest: {
+            /** Format: double */
+            arrival_day_tax_free?: number;
+            /** Format: double */
+            arrival_day_taxable?: number;
+            /** Format: double */
+            departure_day_tax_free?: number;
+            /** Format: double */
+            departure_day_taxable?: number;
+            /** Format: double */
+            intermediate_day_tax_free?: number;
+            /** Format: double */
+            intermediate_day_taxable?: number;
+            three_month_enabled?: boolean;
+            /** Format: double */
+            three_month_tax_free?: number;
+            /** Format: double */
+            three_month_taxable?: number;
+            is_active?: boolean;
+            sort_order?: number;
+        };
+        ExtendedTravelRuleList: {
+            data: components["schemas"]["ExtendedTravelRule"][];
+        };
+        TravelAllowancePreviewRequest: {
+            /**
+             * Format: uuid
+             * @description Rule set to apply for the calculation
+             */
+            rule_set_id: string;
+            /**
+             * @description Type of trip: local (Nahmontage) or extended (Fernmontage)
+             * @enum {string}
+             */
+            trip_type: "local" | "extended";
+            /**
+             * Format: double
+             * @description Trip distance in kilometers (required for local trips)
+             */
+            distance_km?: number;
+            /** @description Trip duration in minutes (required for local trips) */
+            duration_minutes?: number;
+            /**
+             * Format: date
+             * @description Trip start date (required for extended trips)
+             */
+            start_date?: string;
+            /**
+             * Format: date
+             * @description Trip end date (required for extended trips)
+             */
+            end_date?: string;
+            /**
+             * @description Whether three-month rule is currently active for extended trips
+             * @default false
+             */
+            three_month_active: boolean;
+        };
+        TravelAllowancePreview: {
+            /** @enum {string} */
+            trip_type?: "local" | "extended";
+            /** Format: uuid */
+            rule_set_id?: string;
+            rule_set_name?: string;
+            /**
+             * Format: double
+             * @description Total tax-free amount
+             */
+            tax_free_total?: number;
+            /**
+             * Format: double
+             * @description Total taxable amount
+             */
+            taxable_total?: number;
+            /**
+             * Format: double
+             * @description Combined total allowance (tax_free + taxable)
+             */
+            total_allowance?: number;
+            breakdown?: components["schemas"]["TravelAllowanceBreakdownItem"][];
+        };
+        TravelAllowanceBreakdownItem: {
+            /** @description Description of the line item (e.g. 'Arrival day', 'Intermediate day x3') */
+            description?: string;
+            /** @description Number of days this line applies to */
+            days?: number;
+            /** Format: double */
+            tax_free_amount?: number;
+            /** Format: double */
+            taxable_amount?: number;
+            /** Format: double */
+            tax_free_subtotal?: number;
+            /** Format: double */
+            taxable_subtotal?: number;
+        };
+        Shift: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** @example SHIFT-EARLY */
+            code: string;
+            /** @example Early Shift */
+            name: string;
+            description?: string | null;
+            /** Format: uuid */
+            day_plan_id?: string | null;
+            /** @example #2196F3 */
+            color?: string | null;
+            qualification?: string | null;
+            /** @example true */
+            is_active?: boolean;
+            /** @example 0 */
+            sort_order?: number;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        CreateShiftRequest: {
+            code: string;
+            name: string;
+            description?: string;
+            /** Format: uuid */
+            day_plan_id?: string;
+            color?: string;
+            qualification?: string;
+            sort_order?: number;
+        };
+        UpdateShiftRequest: {
+            name?: string;
+            description?: string;
+            /** Format: uuid */
+            day_plan_id?: string;
+            color?: string;
+            qualification?: string;
+            is_active?: boolean;
+            sort_order?: number;
+        };
+        ShiftList: {
+            data: components["schemas"]["Shift"][];
+        };
+        ShiftAssignment: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** Format: uuid */
+            employee_id: string;
+            /** Format: uuid */
+            shift_id: string;
+            /** Format: date */
+            valid_from?: string | null;
+            /** Format: date */
+            valid_to?: string | null;
+            notes?: string | null;
+            /** @example true */
+            is_active?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        CreateShiftAssignmentRequest: {
+            /** Format: uuid */
+            employee_id: string;
+            /** Format: uuid */
+            shift_id: string;
+            /** Format: date */
+            valid_from?: string;
+            /** Format: date */
+            valid_to?: string;
+            notes?: string;
+        };
+        UpdateShiftAssignmentRequest: {
+            /** Format: date */
+            valid_from?: string;
+            /** Format: date */
+            valid_to?: string;
+            notes?: string;
+            is_active?: boolean;
+        };
+        ShiftAssignmentList: {
+            data: components["schemas"]["ShiftAssignment"][];
+        };
+        schema1: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** @example Weekly Target Hours Reset */
+            name: string;
+            description?: string | null;
+            /**
+             * @description weekly = executes on a specific weekday; monthly = executes on a specific day of month
+             * @enum {string}
+             */
+            macro_type: "weekly" | "monthly";
+            /** @enum {string} */
+            action_type: "log_message" | "recalculate_target_hours" | "reset_flextime" | "carry_forward_balance";
+            /** @description Action-specific configuration parameters */
+            action_params?: Record<string, never>;
+            is_active?: boolean;
+            assignments?: components["schemas"]["schema2"][];
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        schema2: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** Format: uuid */
+            macro_id: string;
+            /**
+             * Format: uuid
+             * @description Tariff this macro is assigned to (mutually exclusive with employee_id)
+             */
+            tariff_id?: string | null;
+            /**
+             * Format: uuid
+             * @description Employee this macro is assigned to (mutually exclusive with tariff_id)
+             */
+            employee_id?: string | null;
+            /** @description For weekly macros: 0=Sunday..6=Saturday. For monthly macros: 1-31 (falls back to last day of month if exceeds month length) */
+            execution_day: number;
+            is_active?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        schema3: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** Format: uuid */
+            macro_id: string;
+            /** Format: uuid */
+            assignment_id?: string | null;
+            /** @enum {string} */
+            status: "pending" | "running" | "completed" | "failed";
+            /** @enum {string} */
+            trigger_type: "scheduled" | "manual";
+            /** Format: uuid */
+            triggered_by?: string | null;
+            /** Format: date-time */
+            started_at?: string | null;
+            /** Format: date-time */
+            completed_at?: string | null;
+            result?: Record<string, never>;
+            error_message?: string | null;
+            /** Format: date-time */
+            created_at?: string;
+        };
     };
     responses: {
         /** @description Invalid request */
@@ -5144,6 +10692,16 @@ export interface components {
         UpdateEmployeeDayPlanRequest: {
             content: {
                 "application/json": components["schemas"]["UpdateEmployeeDayPlanRequest"];
+            };
+        };
+        CreateGroupRequest: {
+            content: {
+                "application/json": components["schemas"]["CreateGroupRequest"];
+            };
+        };
+        UpdateGroupRequest: {
+            content: {
+                "application/json": components["schemas"]["UpdateGroupRequest"];
             };
         };
     };
@@ -5382,6 +10940,33 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
         };
     };
+    createUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateUserRequest"];
+            };
+        };
+        responses: {
+            /** @description Created user */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     getUser: {
         parameters: {
             query?: never;
@@ -5403,6 +10988,29 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description User deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -6190,6 +11798,189 @@ export interface operations {
                     "application/json": components["schemas"]["VacationBalance"];
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listEmployeeTariffAssignments: {
+        parameters: {
+            query?: {
+                /** @description Filter by active status */
+                active?: boolean;
+            };
+            header?: never;
+            path: {
+                /** @description Employee ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of tariff assignments */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeTariffAssignmentList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createEmployeeTariffAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Employee ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateEmployeeTariffAssignmentRequest"];
+            };
+        };
+        responses: {
+            /** @description Created tariff assignment */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeTariffAssignment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            /** @description Overlapping assignment exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getEmployeeTariffAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                assignmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tariff assignment details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeTariffAssignment"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateEmployeeTariffAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                assignmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateEmployeeTariffAssignmentRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated tariff assignment */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeTariffAssignment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            /** @description Overlapping assignment exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    deleteEmployeeTariffAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                assignmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Assignment deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getEffectiveTariff: {
+        parameters: {
+            query: {
+                /** @description Date to resolve effective tariff for */
+                date: string;
+            };
+            header?: never;
+            path: {
+                /** @description Employee ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Effective tariff for the given date */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EffectiveTariffResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
         };
@@ -7845,6 +13636,34 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    getBookingLogs: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Booking ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Audit logs for this booking */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditLogList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     listDailyValues: {
         parameters: {
             query?: {
@@ -8351,13 +14170,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
-                    /** Format: decimal */
-                    duration?: number;
-                    notes?: string;
-                    /** @enum {string} */
-                    status?: "pending" | "approved" | "rejected" | "cancelled";
-                };
+                "application/json": components["schemas"]["UpdateAbsenceRequest"];
             };
         };
         responses: {
@@ -8824,6 +14637,210 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
         };
     };
+    getYearOverview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Employee ID */
+                id: string;
+                /** @description Calendar year */
+                year: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Year overview with monthly summaries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["YearOverviewResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getMonthSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Employee ID */
+                id: string;
+                /** @description Calendar year */
+                year: number;
+                /** @description Calendar month (1-12) */
+                month: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Monthly summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonthSummaryResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getDailyBreakdown: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Employee ID */
+                id: string;
+                /** @description Calendar year */
+                year: number;
+                /** @description Calendar month (1-12) */
+                month: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Daily breakdown for the month */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyBreakdownResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    closeEmployeeMonth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Employee ID */
+                id: string;
+                /** @description Calendar year */
+                year: number;
+                /** @description Calendar month (1-12) */
+                month: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Month closed successfully, returns updated summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonthSummaryResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Month is already closed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    reopenEmployeeMonth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Employee ID */
+                id: string;
+                /** @description Calendar year */
+                year: number;
+                /** @description Calendar month (1-12) */
+                month: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Month reopened successfully, returns updated summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonthSummaryResponse"];
+                };
+            };
+            /** @description Month is not closed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    recalculateEmployeeMonth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Employee ID */
+                id: string;
+                /** @description Calendar year */
+                year: number;
+                /** @description Calendar month (1-12) */
+                month: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Month recalculated successfully, returns updated summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonthSummaryResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Month is closed, recalculation blocked */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
     listCorrections: {
         parameters: {
             query?: {
@@ -9052,7 +15069,7 @@ export interface operations {
                 /** @description Filter by active status */
                 active?: boolean;
                 /** @description Filter by account type */
-                account_type?: "bonus" | "tracking" | "balance";
+                account_type?: "bonus" | "day" | "month";
                 /** @description Include system accounts in results */
                 include_system?: boolean;
                 /** @description Filter by payroll relevance */
@@ -9253,6 +15270,65 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AccountValueList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    listDailyAccountValues: {
+        parameters: {
+            query?: {
+                /** @description Filter by employee */
+                employee_id?: string;
+                /** @description Filter by account */
+                account_id?: string;
+                /** @description Start date filter */
+                from?: string;
+                /** @description End date filter */
+                to?: string;
+                /** @description Filter by source type */
+                source?: "net_time" | "capped_time";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of daily account values */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            tenant_id: string;
+                            /** Format: uuid */
+                            employee_id: string;
+                            /** Format: uuid */
+                            account_id: string;
+                            /** Format: date */
+                            value_date: string;
+                            /** @example 480 */
+                            value_minutes: number;
+                            /**
+                             * @example net_time
+                             * @enum {string}
+                             */
+                            source: "net_time" | "capped_time";
+                            /** Format: uuid */
+                            day_plan_id?: string | null;
+                            /** Format: date-time */
+                            created_at?: string;
+                            /** Format: date-time */
+                            updated_at?: string;
+                            account?: components["schemas"]["AccountSummary"] | null;
+                        }[];
+                    };
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -9459,6 +15535,206 @@ export interface operations {
                     "application/pdf": components["schemas"]["ProblemDetails"];
                 };
             };
+        };
+    };
+    listExportInterfaces: {
+        parameters: {
+            query?: {
+                /** @description Filter to only active interfaces */
+                active_only?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of export interfaces */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportInterfaceList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createExportInterface: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateExportInterfaceRequest"];
+            };
+        };
+        responses: {
+            /** @description Created export interface */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportInterface"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Interface number already exists for this tenant */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getExportInterface: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Export interface details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportInterface"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteExportInterface: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Export interface deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            /** @description Interface has generated exports */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateExportInterface: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateExportInterfaceRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated export interface */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportInterface"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listExportInterfaceAccounts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of accounts for this interface */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["ExportInterfaceAccount"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    setExportInterfaceAccounts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetExportInterfaceAccountsRequest"];
+            };
+        };
+        responses: {
+            /** @description Accounts set successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["ExportInterfaceAccount"][];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
         };
     };
     listPayrollExports: {
@@ -10028,18 +16304,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
-                    plans: {
-                        /** Format: uuid */
-                        employee_id: string;
-                        /** Format: date */
-                        plan_date: string;
-                        /** Format: uuid */
-                        day_plan_id?: string;
-                        source?: components["schemas"]["EmployeeDayPlan"]["source"];
-                        notes?: string;
-                    }[];
-                };
+                "application/json": components["schemas"]["BulkCreateEmployeeDayPlanRequest"];
             };
         };
         responses: {
@@ -10068,14 +16333,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
-                    /** Format: uuid */
-                    employee_id: string;
-                    /** Format: date */
-                    from: string;
-                    /** Format: date */
-                    to: string;
-                };
+                "application/json": components["schemas"]["DeleteRangeRequest"];
             };
         };
         responses: {
@@ -10428,6 +16686,5539 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MonthlyEvaluation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listAbsenceTypeGroups: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of absence type groups */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AbsenceTypeGroupList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createAbsenceTypeGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAbsenceTypeGroupRequest"];
+            };
+        };
+        responses: {
+            /** @description Created absence type group */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AbsenceTypeGroup"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Code already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getAbsenceTypeGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Absence type group details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AbsenceTypeGroup"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteAbsenceTypeGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Absence type group deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateAbsenceTypeGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAbsenceTypeGroupRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated absence type group */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AbsenceTypeGroup"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listAccountGroups: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of account groups */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountGroupList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createAccountGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAccountGroupRequest"];
+            };
+        };
+        responses: {
+            /** @description Created account group */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountGroup"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Code already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getAccountGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Account group details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountGroup"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteAccountGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Account group deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateAccountGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAccountGroupRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated account group */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountGroup"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listBookingReasons: {
+        parameters: {
+            query?: {
+                /** @description Filter by booking type ID */
+                booking_type_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of booking reasons */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingReasonList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createBookingReason: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateBookingReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description Created booking reason */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingReason"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Code already exists for this booking type */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getBookingReason: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Booking reason details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingReason"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteBookingReason: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Booking reason deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateBookingReason: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateBookingReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated booking reason */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingReason"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listBookingTypeGroups: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of booking type groups */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingTypeGroupList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createBookingTypeGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateBookingTypeGroupRequest"];
+            };
+        };
+        responses: {
+            /** @description Created booking type group */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingTypeGroup"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Code already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getBookingTypeGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Booking type group details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingTypeGroup"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteBookingTypeGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Booking type group deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateBookingTypeGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateBookingTypeGroupRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated booking type group */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingTypeGroup"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listEmployeeGroups: {
+        parameters: {
+            query?: {
+                /** @description Filter by active status */
+                active_only?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of employee groups */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeGroup"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createEmployeeGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["CreateGroupRequest"];
+        responses: {
+            /** @description Created employee group */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeGroup"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Code already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getEmployeeGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Employee group details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeGroup"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteEmployeeGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Employee group deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateEmployeeGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["UpdateGroupRequest"];
+        responses: {
+            /** @description Updated employee group */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeGroup"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listWorkflowGroups: {
+        parameters: {
+            query?: {
+                /** @description Filter by active status */
+                active_only?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of workflow groups */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowGroup"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createWorkflowGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["CreateGroupRequest"];
+        responses: {
+            /** @description Created workflow group */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowGroup"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Code already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getWorkflowGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Workflow group details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowGroup"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteWorkflowGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Workflow group deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateWorkflowGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["UpdateGroupRequest"];
+        responses: {
+            /** @description Updated workflow group */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowGroup"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listActivityGroups: {
+        parameters: {
+            query?: {
+                /** @description Filter by active status */
+                active_only?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of activity groups */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityGroup"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createActivityGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["CreateGroupRequest"];
+        responses: {
+            /** @description Created activity group */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityGroup"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Code already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getActivityGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Activity group details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityGroup"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteActivityGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Activity group deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateActivityGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["UpdateGroupRequest"];
+        responses: {
+            /** @description Updated activity group */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityGroup"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listCalculationRules: {
+        parameters: {
+            query?: {
+                /** @description Filter to only active rules */
+                active_only?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of calculation rules */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalculationRuleList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createCalculationRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCalculationRuleRequest"];
+            };
+        };
+        responses: {
+            /** @description Created calculation rule */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalculationRule"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Code already exists for this tenant */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getCalculationRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Calculation rule details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalculationRule"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteCalculationRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Calculation rule deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            /** @description Rule is still assigned to absence types */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateCalculationRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCalculationRuleRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated calculation rule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalculationRule"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listCorrectionMessages: {
+        parameters: {
+            query?: {
+                /** @description Filter by severity */
+                severity?: "error" | "hint";
+                /** @description Filter by active status */
+                is_active?: boolean;
+                /** @description Filter by error code */
+                code?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of correction messages */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CorrectionMessageList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getCorrectionMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Correction message details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CorrectionMessage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateCorrectionMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCorrectionMessageRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated correction message */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CorrectionMessage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listCorrectionAssistantItems: {
+        parameters: {
+            query?: {
+                /** @description Start date filter (inclusive). Defaults to first day of previous month. */
+                from?: string;
+                /** @description End date filter (inclusive). Defaults to last day of current month. */
+                to?: string;
+                /** @description Filter by employee */
+                employee_id?: string;
+                /** @description Filter by department (includes all employees in department) */
+                department_id?: string;
+                /** @description Filter by error severity */
+                severity?: "error" | "hint";
+                /** @description Filter by specific error code */
+                error_code?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of correction assistant items */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CorrectionAssistantList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listVacationSpecialCalculations: {
+        parameters: {
+            query?: {
+                /** @description Filter to only active special calculations */
+                active_only?: boolean;
+                /** @description Filter by special calculation type */
+                type?: "age" | "tenure" | "disability";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of vacation special calculations */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VacationSpecialCalculationList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createVacationSpecialCalculation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateVacationSpecialCalculationRequest"];
+            };
+        };
+        responses: {
+            /** @description Created vacation special calculation */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VacationSpecialCalculation"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Duplicate type+threshold combination for this tenant */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getVacationSpecialCalculation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Vacation special calculation details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VacationSpecialCalculation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteVacationSpecialCalculation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Vacation special calculation deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            /** @description Special calculation is still assigned to calculation groups */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateVacationSpecialCalculation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateVacationSpecialCalculationRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated vacation special calculation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VacationSpecialCalculation"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listVacationCalculationGroups: {
+        parameters: {
+            query?: {
+                /** @description Filter to only active groups */
+                active_only?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of vacation calculation groups */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VacationCalculationGroupList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createVacationCalculationGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateVacationCalculationGroupRequest"];
+            };
+        };
+        responses: {
+            /** @description Created vacation calculation group */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VacationCalculationGroup"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Code already exists for this tenant */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getVacationCalculationGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Vacation calculation group details (includes linked special calculations) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VacationCalculationGroup"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteVacationCalculationGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Vacation calculation group deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            /** @description Group is still assigned to employment types */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateVacationCalculationGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateVacationCalculationGroupRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated vacation calculation group */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VacationCalculationGroup"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    previewVacationEntitlement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VacationEntitlementPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Vacation entitlement breakdown */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VacationEntitlementPreview"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Employee not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    listVacationCappingRules: {
+        parameters: {
+            query?: {
+                /** @description Filter to only active rules */
+                active_only?: boolean;
+                /** @description Filter by rule type */
+                rule_type?: "year_end" | "mid_year";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of vacation capping rules */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VacationCappingRuleList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createVacationCappingRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateVacationCappingRuleRequest"];
+            };
+        };
+        responses: {
+            /** @description Created vacation capping rule */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VacationCappingRule"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Code already exists for this tenant */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getVacationCappingRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Vacation capping rule details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VacationCappingRule"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteVacationCappingRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Vacation capping rule deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            /** @description Rule is still assigned to groups */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateVacationCappingRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateVacationCappingRuleRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated vacation capping rule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VacationCappingRule"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listVacationCappingRuleGroups: {
+        parameters: {
+            query?: {
+                /** @description Filter to only active groups */
+                active_only?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of vacation capping rule groups */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VacationCappingRuleGroupList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createVacationCappingRuleGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateVacationCappingRuleGroupRequest"];
+            };
+        };
+        responses: {
+            /** @description Created vacation capping rule group */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VacationCappingRuleGroup"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Code already exists for this tenant */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getVacationCappingRuleGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Vacation capping rule group details (includes linked capping rules) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VacationCappingRuleGroup"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteVacationCappingRuleGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Vacation capping rule group deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            /** @description Group is still assigned to tariffs */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateVacationCappingRuleGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateVacationCappingRuleGroupRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated vacation capping rule group */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VacationCappingRuleGroup"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listEmployeeCappingExceptions: {
+        parameters: {
+            query?: {
+                /** @description Filter by employee ID */
+                employee_id?: string;
+                /** @description Filter by capping rule ID */
+                capping_rule_id?: string;
+                /** @description Filter by year */
+                year?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of employee capping exceptions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeCappingExceptionList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createEmployeeCappingException: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateEmployeeCappingExceptionRequest"];
+            };
+        };
+        responses: {
+            /** @description Created employee capping exception */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeCappingException"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Exception already exists for this employee/rule/year combination */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getEmployeeCappingException: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Employee capping exception details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeCappingException"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteEmployeeCappingException: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Employee capping exception deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateEmployeeCappingException: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateEmployeeCappingExceptionRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated employee capping exception */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeCappingException"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    previewVacationCarryover: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VacationCarryoverPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Vacation carryover preview */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VacationCarryoverPreview"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listActivities: {
+        parameters: {
+            query?: {
+                /** @description Filter by active status */
+                active?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of activities */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateActivityRequest"];
+            };
+        };
+        responses: {
+            /** @description Created activity */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Activity"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Code already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Activity details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Activity"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Activity deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateActivityRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated activity */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Activity"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listOrders: {
+        parameters: {
+            query?: {
+                /** @description Filter by active status */
+                active?: boolean;
+                /** @description Filter by order status */
+                status?: "planned" | "active" | "completed" | "cancelled";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of orders */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description Created order */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Order"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Code already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Order details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Order"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Order deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Order"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listOrderAssignments: {
+        parameters: {
+            query?: {
+                /** @description Filter by order ID */
+                order_id?: string;
+                /** @description Filter by employee ID */
+                employee_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of order assignments */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderAssignmentList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createOrderAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateOrderAssignmentRequest"];
+            };
+        };
+        responses: {
+            /** @description Created order assignment */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderAssignment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Assignment already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getOrderAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Order assignment details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderAssignment"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteOrderAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Order assignment deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateOrderAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateOrderAssignmentRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated order assignment */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderAssignment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listOrderAssignmentsByOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of order assignments */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderAssignmentList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listOrderBookings: {
+        parameters: {
+            query?: {
+                /** @description Filter by employee ID */
+                employee_id?: string;
+                /** @description Filter by order ID */
+                order_id?: string;
+                /** @description Filter bookings from this date (inclusive) */
+                date_from?: string;
+                /** @description Filter bookings to this date (inclusive) */
+                date_to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of order bookings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderBookingList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createOrderBooking: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateOrderBookingRequest"];
+            };
+        };
+        responses: {
+            /** @description Created order booking */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderBooking"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    getOrderBooking: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Order booking details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderBooking"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteOrderBooking: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Order booking deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateOrderBooking: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateOrderBookingRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated order booking */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderBooking"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getSystemSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description System settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemSettings"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    updateSystemSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSystemSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated system settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemSettings"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    cleanupDeleteBookings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CleanupDeleteBookingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Cleanup result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CleanupResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    cleanupDeleteBookingData: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CleanupDeleteBookingDataRequest"];
+            };
+        };
+        responses: {
+            /** @description Cleanup result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CleanupResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    cleanupReReadBookings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CleanupReReadBookingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Cleanup result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CleanupResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    cleanupMarkDeleteOrders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CleanupMarkDeleteOrdersRequest"];
+            };
+        };
+        responses: {
+            /** @description Cleanup result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CleanupResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    listEvaluationDailyValues: {
+        parameters: {
+            query: {
+                /** @description Start date (YYYY-MM-DD) */
+                from: string;
+                /** @description End date (YYYY-MM-DD) */
+                to: string;
+                /** @description Filter by employee */
+                employee_id?: string;
+                /** @description Filter by department */
+                department_id?: string;
+                /** @description Include rows for dates with zero bookings */
+                include_no_bookings?: boolean;
+                /** @description Filter by error status */
+                has_errors?: boolean;
+                limit?: number;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of daily value evaluations */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationDailyValueList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    listEvaluationBookings: {
+        parameters: {
+            query: {
+                /** @description Start date (YYYY-MM-DD) */
+                from: string;
+                /** @description End date (YYYY-MM-DD) */
+                to: string;
+                /** @description Filter by employee */
+                employee_id?: string;
+                /** @description Filter by department */
+                department_id?: string;
+                /** @description Filter by booking type */
+                booking_type_id?: string;
+                /** @description Filter by booking source */
+                source?: "web" | "terminal" | "api" | "import" | "correction";
+                /** @description Filter by booking direction */
+                direction?: "in" | "out";
+                limit?: number;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of booking evaluations */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationBookingList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    listEvaluationTerminalBookings: {
+        parameters: {
+            query: {
+                /** @description Start date (YYYY-MM-DD) */
+                from: string;
+                /** @description End date (YYYY-MM-DD) */
+                to: string;
+                /** @description Filter by employee */
+                employee_id?: string;
+                /** @description Filter by department */
+                department_id?: string;
+                limit?: number;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of terminal booking evaluations */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationTerminalBookingList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    listEvaluationLogs: {
+        parameters: {
+            query: {
+                /** @description Start date (YYYY-MM-DD, filters on performed_at) */
+                from: string;
+                /** @description End date (YYYY-MM-DD, filters on performed_at) */
+                to: string;
+                /** @description Filter by employee (matches entity IDs related to employee) */
+                employee_id?: string;
+                /** @description Filter by department */
+                department_id?: string;
+                /** @description Filter by entity type (booking, absence, monthly_value) */
+                entity_type?: string;
+                /** @description Filter by action (create, update, delete, approve, reject) */
+                action?: string;
+                /** @description Filter by user who performed the action */
+                user_id?: string;
+                limit?: number;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of change log entries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationLogEntryList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    listEvaluationWorkflowHistory: {
+        parameters: {
+            query: {
+                /** @description Start date (YYYY-MM-DD, filters on performed_at) */
+                from: string;
+                /** @description End date (YYYY-MM-DD, filters on performed_at) */
+                to: string;
+                /** @description Filter by employee */
+                employee_id?: string;
+                /** @description Filter by department */
+                department_id?: string;
+                /** @description Filter by entity type (absence, monthly_value) */
+                entity_type?: string;
+                /** @description Filter by action (create, approve, reject, close, reopen) */
+                action?: string;
+                limit?: number;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of workflow history entries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationWorkflowEntryList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    listSchedules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of schedules */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateScheduleRequest"];
+            };
+        };
+        responses: {
+            /** @description Created schedule */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Schedule"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Schedule name already exists for this tenant */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Schedule details with tasks */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Schedule"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Schedule deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateScheduleRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated schedule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Schedule"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listScheduleTasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of tasks */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["ScheduleTask"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    addScheduleTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateScheduleTaskRequest"];
+            };
+        };
+        responses: {
+            /** @description Created task */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleTask"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    removeScheduleTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Task removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateScheduleTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateScheduleTaskRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated task */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleTask"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    triggerScheduleExecution: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["TriggerExecutionRequest"];
+            };
+        };
+        responses: {
+            /** @description Execution result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleExecution"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listScheduleExecutions: {
+        parameters: {
+            query?: {
+                /** @description Max number of executions to return (default 20) */
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Execution history */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleExecutionList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getScheduleExecution: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Execution detail with task execution logs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleExecution"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getTaskCatalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Task catalog */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskCatalog"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    listEmployeeMessages: {
+        parameters: {
+            query?: {
+                /** @description Filter by recipient status (returns messages that have at least one recipient with this status) */
+                status?: "pending" | "sent" | "failed";
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of employee messages */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeMessageList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createEmployeeMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateEmployeeMessageRequest"];
+            };
+        };
+        responses: {
+            /** @description Created employee message */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeMessage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getEmployeeMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Employee message */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeMessage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    sendEmployeeMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Send result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SendEmployeeMessageResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listEmployeeMessagesForEmployee: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Employee ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of messages for the employee */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeMessageList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listContactTypes: {
+        parameters: {
+            query?: {
+                /** @description Filter by active status */
+                active?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of contact types */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactTypeList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createContactType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateContactTypeRequest"];
+            };
+        };
+        responses: {
+            /** @description Created contact type */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactType"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Code already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getContactType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Contact type details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactType"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteContactType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Contact type deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            /** @description Contact type is in use by contact kinds */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateContactType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateContactTypeRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated contact type */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactType"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listContactKinds: {
+        parameters: {
+            query?: {
+                /** @description Filter by contact type ID */
+                contact_type_id?: string;
+                /** @description Filter by active status */
+                active?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of contact kinds */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactKindList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createContactKind: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateContactKindRequest"];
+            };
+        };
+        responses: {
+            /** @description Created contact kind */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactKind"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Code already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getContactKind: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Contact kind details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactKind"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteContactKind: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Contact kind deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateContactKind: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateContactKindRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated contact kind */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactKind"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listRawTerminalBookings: {
+        parameters: {
+            query: {
+                /** @description Start date (inclusive) */
+                from: string;
+                /** @description End date (inclusive) */
+                to: string;
+                /** @description Filter by terminal device ID */
+                terminal_id?: string;
+                /** @description Filter by employee ID */
+                employee_id?: string;
+                /** @description Filter by processing status */
+                status?: "pending" | "processed" | "failed" | "skipped";
+                /** @description Filter by import batch */
+                import_batch_id?: string;
+                limit?: number;
+                page?: number;
+            };
+            header: {
+                "X-Tenant-ID": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of raw terminal bookings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RawTerminalBookingList"];
+                };
+            };
+            /** @description Invalid request parameters */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    triggerTerminalImport: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Tenant-ID": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TriggerTerminalImportRequest"];
+            };
+        };
+        responses: {
+            /** @description Import triggered (or duplicate batch returned) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TriggerTerminalImportResponse"];
+                };
+            };
+            /** @description Invalid request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Batch already imported (idempotent - returns existing batch) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TriggerTerminalImportResponse"];
+                };
+            };
+        };
+    };
+    listImportBatches: {
+        parameters: {
+            query?: {
+                status?: "pending" | "processing" | "completed" | "failed";
+                terminal_id?: string;
+                limit?: number;
+                page?: number;
+            };
+            header: {
+                "X-Tenant-ID": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of import batches */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportBatchList"];
+                };
+            };
+        };
+    };
+    getImportBatch: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Tenant-ID": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Import batch details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportBatch"];
+                };
+            };
+            /** @description Batch not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    listAccessZones: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of access zones */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessZoneList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createAccessZone: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAccessZoneRequest"];
+            };
+        };
+        responses: {
+            /** @description Created access zone */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessZone"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Code already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getAccessZone: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Access zone details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessZone"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteAccessZone: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Access zone deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateAccessZone: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAccessZoneRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated access zone */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessZone"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listAccessProfiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of access profiles */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProfileList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createAccessProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAccessProfileRequest"];
+            };
+        };
+        responses: {
+            /** @description Created access profile */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProfile"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Code already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getAccessProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Access profile details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProfile"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteAccessProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Access profile deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            /** @description Access profile is in use by employee assignments */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateAccessProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAccessProfileRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated access profile */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProfile"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listEmployeeAccessAssignments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of employee access assignments */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeAccessAssignmentList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createEmployeeAccessAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateEmployeeAccessAssignmentRequest"];
+            };
+        };
+        responses: {
+            /** @description Created employee access assignment */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeAccessAssignment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    getEmployeeAccessAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Employee access assignment details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeAccessAssignment"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteEmployeeAccessAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Employee access assignment deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateEmployeeAccessAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateEmployeeAccessAssignmentRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated employee access assignment */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeAccessAssignment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listVehicles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of vehicles */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createVehicle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateVehicleRequest"];
+            };
+        };
+        responses: {
+            /** @description Created vehicle */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Vehicle"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Code already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getVehicle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Vehicle details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Vehicle"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteVehicle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Vehicle deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateVehicle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateVehicleRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated vehicle */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Vehicle"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listVehicleRoutes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of vehicle routes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleRouteList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createVehicleRoute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateVehicleRouteRequest"];
+            };
+        };
+        responses: {
+            /** @description Created vehicle route */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleRoute"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Code already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getVehicleRoute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Vehicle route details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleRoute"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteVehicleRoute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Vehicle route deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateVehicleRoute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateVehicleRouteRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated vehicle route */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleRoute"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listTripRecords: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of trip records */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TripRecordList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createTripRecord: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTripRecordRequest"];
+            };
+        };
+        responses: {
+            /** @description Created trip record */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TripRecord"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    getTripRecord: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Trip record details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TripRecord"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteTripRecord: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Trip record deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateTripRecord: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTripRecordRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated trip record */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TripRecord"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listTravelAllowanceRuleSets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of travel allowance rule sets */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TravelAllowanceRuleSetList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createTravelAllowanceRuleSet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTravelAllowanceRuleSetRequest"];
+            };
+        };
+        responses: {
+            /** @description Created travel allowance rule set */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TravelAllowanceRuleSet"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Code already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getTravelAllowanceRuleSet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Travel allowance rule set details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TravelAllowanceRuleSet"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteTravelAllowanceRuleSet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Travel allowance rule set deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateTravelAllowanceRuleSet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTravelAllowanceRuleSetRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated travel allowance rule set */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TravelAllowanceRuleSet"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listLocalTravelRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of local travel rules */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocalTravelRuleList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createLocalTravelRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateLocalTravelRuleRequest"];
+            };
+        };
+        responses: {
+            /** @description Created local travel rule */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocalTravelRule"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    getLocalTravelRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Local travel rule details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocalTravelRule"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteLocalTravelRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Local travel rule deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateLocalTravelRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateLocalTravelRuleRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated local travel rule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocalTravelRule"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listExtendedTravelRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of extended travel rules */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExtendedTravelRuleList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createExtendedTravelRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateExtendedTravelRuleRequest"];
+            };
+        };
+        responses: {
+            /** @description Created extended travel rule */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExtendedTravelRule"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    getExtendedTravelRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Extended travel rule details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExtendedTravelRule"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteExtendedTravelRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Extended travel rule deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateExtendedTravelRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateExtendedTravelRuleRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated extended travel rule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExtendedTravelRule"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    previewTravelAllowance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TravelAllowancePreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Travel allowance preview result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TravelAllowancePreview"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listShifts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of shifts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShiftList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createShift: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateShiftRequest"];
+            };
+        };
+        responses: {
+            /** @description Created shift */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Shift"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Code already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getShift: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Shift details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Shift"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteShift: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Shift deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            /** @description Shift is in use by shift assignments */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateShift: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateShiftRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated shift */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Shift"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listShiftAssignments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of shift assignments */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShiftAssignmentList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createShiftAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateShiftAssignmentRequest"];
+            };
+        };
+        responses: {
+            /** @description Created shift assignment */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShiftAssignment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    getShiftAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Shift assignment details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShiftAssignment"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteShiftAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Shift assignment deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateShiftAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateShiftAssignmentRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated shift assignment */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShiftAssignment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listMacros: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of macros */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["schema1"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createMacro: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    description?: string;
+                    /** @enum {string} */
+                    macro_type: "weekly" | "monthly";
+                    /** @enum {string} */
+                    action_type: "log_message" | "recalculate_target_hours" | "reset_flextime" | "carry_forward_balance";
+                    action_params?: Record<string, never>;
+                };
+            };
+        };
+        responses: {
+            /** @description Created macro */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema1"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Macro name already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getMacro: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Macro details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema1"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteMacro: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Macro deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateMacro: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    description?: string;
+                    /** @enum {string} */
+                    macro_type?: "weekly" | "monthly";
+                    /** @enum {string} */
+                    action_type?: "log_message" | "recalculate_target_hours" | "reset_flextime" | "carry_forward_balance";
+                    action_params?: Record<string, never>;
+                    is_active?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated macro */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema1"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listMacroAssignments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of assignments */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["schema2"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createMacroAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: uuid
+                     * @description Mutually exclusive with employee_id
+                     */
+                    tariff_id?: string;
+                    /**
+                     * Format: uuid
+                     * @description Mutually exclusive with tariff_id
+                     */
+                    employee_id?: string;
+                    /** @description For weekly: 0-6 (Sun-Sat). For monthly: 1-31. */
+                    execution_day: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Created assignment */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema2"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteMacroAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                assignmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Assignment deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateMacroAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                assignmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    execution_day?: number;
+                    is_active?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated assignment */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema2"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    triggerMacroExecution: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Execution result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema3"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listMacroExecutions: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of executions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["schema3"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getMacroExecution: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Execution details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema3"];
                 };
             };
             401: components["responses"]["Unauthorized"];

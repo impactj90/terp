@@ -86,7 +86,7 @@ export default function EmployeesPage() {
   }
 
   const handleView = (employee: Employee) => {
-    setViewEmployee(employee)
+    router.push(`/admin/employees/${employee.id}`)
   }
 
   const handleEdit = (employee: Employee) => {

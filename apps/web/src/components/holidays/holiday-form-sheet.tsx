@@ -138,7 +138,7 @@ export function HolidayFormSheet({
           body: {
             holiday_date: formatDate(form.holidayDate!),
             name: form.name.trim(),
-            category: form.category,
+            category: form.category as 1 | 2 | 3,
             applies_to_all: form.appliesToAll,
             department_id: form.appliesToAll ? undefined : form.departmentId || undefined,
           },
@@ -148,7 +148,7 @@ export function HolidayFormSheet({
           body: {
             holiday_date: formatDate(form.holidayDate!),
             name: form.name.trim(),
-            category: form.category,
+            category: form.category as 1 | 2 | 3,
             applies_to_all: form.appliesToAll,
             department_id: form.appliesToAll ? undefined : form.departmentId || undefined,
           },
