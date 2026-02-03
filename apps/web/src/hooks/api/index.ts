@@ -264,3 +264,14 @@ export {
   useDeleteExportInterface,
   useSetExportInterfaceAccounts,
 } from './use-export-interfaces'
+
+// Monthly Evaluation Templates (admin CRUD)
+export {
+  useMonthlyEvaluations,
+  useMonthlyEvaluation,
+  useDefaultMonthlyEvaluation,
+  useCreateMonthlyEvaluation,
+  useUpdateMonthlyEvaluation,
+  useDeleteMonthlyEvaluation,
+  useSetDefaultMonthlyEvaluation,
+} from './use-monthly-evaluations'

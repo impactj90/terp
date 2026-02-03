@@ -85,7 +85,8 @@
     "employeeDayPlans": "Mitarbeiter-Tagespläne",
     "monthlyValues": "Monatswerte",
     "payrollExports": "Lohnexporte",
-    "exportInterfaces": "Exportschnittstellen"
+    "exportInterfaces": "Exportschnittstellen",
+    "monthlyEvaluations": "Auswertungsvorlagen"
   },
   "sidebar": {
     "collapse": "Einklappen",
@@ -180,7 +181,8 @@
     "employeeDayPlans": "Mitarbeiter-Tagespläne",
     "monthlyValues": "Monatswerte",
     "payrollExports": "Lohnexporte",
-    "exportInterfaces": "Exportschnittstellen"
+    "exportInterfaces": "Exportschnittstellen",
+    "monthlyEvaluations": "Auswertungsvorlagen"
   },
   "time": {
     "today": "Heute",
@@ -2574,5 +2576,93 @@
 
     "statusActive": "Aktiv",
     "statusInactive": "Inaktiv"
+  },
+  "adminMonthlyEvaluations": {
+    "title": "Auswertungsvorlagen",
+    "subtitle": "Monatliche Auswertungsvorlagen mit Gleitzeitkappen, \u00dcberstundenschwellen und Urlaubs\u00fcbertragungslimits konfigurieren",
+    "newTemplate": "Neue Vorlage",
+    "searchPlaceholder": "Nach Name oder Beschreibung suchen...",
+    "allStatuses": "Alle Status",
+    "active": "Aktiv",
+    "inactive": "Inaktiv",
+    "clearFilters": "Filter zur\u00fccksetzen",
+    "templateCount": "{count} Vorlage",
+    "templatesCount": "{count} Vorlagen",
+    "emptyTitle": "Keine Auswertungsvorlagen konfiguriert",
+    "emptyFilterHint": "Versuchen Sie, Ihre Filter anzupassen",
+    "emptyGetStarted": "Erstellen Sie Ihre erste Auswertungsvorlage, um monatliche Auswertungsregeln zu definieren",
+    "addTemplate": "Vorlage hinzuf\u00fcgen",
+    "actions": "Aktionen",
+    "cancel": "Abbrechen",
+    "close": "Schlie\u00dfen",
+
+    "columnName": "Name",
+    "columnDescription": "Beschreibung",
+    "columnFlextimePositive": "Gleitzeitkappe (+)",
+    "columnFlextimeNegative": "Gleitzeitkappe (\u2212)",
+    "columnOvertimeThreshold": "\u00dcberstundenschwelle",
+    "columnMaxCarryover": "Max. Urlaubs\u00fcbertragung",
+    "columnDefault": "Standard",
+    "columnStatus": "Status",
+
+    "templateDetails": "Vorlagendetails",
+    "viewTemplateInfo": "Auswertungsvorlage-Konfiguration anzeigen",
+    "sectionBasicInfo": "Grundinformationen",
+    "sectionTimeConfig": "Zeitkonfiguration",
+    "sectionVacationConfig": "Urlaubskonfiguration",
+    "sectionSettings": "Einstellungen",
+    "sectionTimestamps": "Zeitstempel",
+    "fieldName": "Name",
+    "fieldDescription": "Beschreibung",
+    "fieldFlextimePositive": "Gleitzeitkappe (Positiv)",
+    "fieldFlextimeNegative": "Gleitzeitkappe (Negativ)",
+    "fieldOvertimeThreshold": "\u00dcberstundenschwelle",
+    "fieldMaxCarryover": "Max. Urlaubs\u00fcbertragung",
+    "fieldIsDefault": "Standardvorlage",
+    "fieldIsActive": "Aktiv",
+    "fieldActiveDescription": "Inaktive Vorlagen stehen nicht zur Zuweisung zur Verf\u00fcgung",
+    "labelCreated": "Erstellt",
+    "labelLastUpdated": "Zuletzt aktualisiert",
+    "labelYes": "Ja",
+    "labelNo": "Nein",
+    "labelDays": "{value} Tage",
+
+    "create": "Erstellen",
+    "createTitle": "Neue Auswertungsvorlage",
+    "createDescription": "Erstellen Sie eine neue monatliche Auswertungsvorlage mit Gleitzeit- und \u00dcberstundenregeln.",
+    "edit": "Bearbeiten",
+    "editTitle": "Auswertungsvorlage bearbeiten",
+    "editDescription": "Ausgew\u00e4hlte Auswertungsvorlage \u00e4ndern.",
+    "saveChanges": "\u00c4nderungen speichern",
+    "saving": "Speichern...",
+    "failedCreate": "Auswertungsvorlage konnte nicht erstellt werden",
+    "failedUpdate": "Auswertungsvorlage konnte nicht aktualisiert werden",
+    "viewDetails": "Details anzeigen",
+
+    "namePlaceholder": "z.B. Standardvorlage",
+    "descriptionPlaceholder": "Optionale Beschreibung des Zwecks dieser Vorlage...",
+    "minutesPlaceholder": "Minuten (z.B. 600)",
+    "daysPlaceholder": "Tage (z.B. 5,0)",
+
+    "validationNameRequired": "Name ist erforderlich",
+    "validationNameMaxLength": "Name darf maximal 100 Zeichen lang sein",
+    "validationMinZero": "Wert muss 0 oder gr\u00f6\u00dfer sein",
+
+    "defaultWarning": "Das Setzen als Standard hebt die aktuelle Standardvorlage auf",
+
+    "deleteTitle": "Auswertungsvorlage l\u00f6schen",
+    "deleteDescription": "M\u00f6chten Sie \"{name}\" wirklich l\u00f6schen? Diese Aktion kann nicht r\u00fcckg\u00e4ngig gemacht werden.",
+    "deleteDefaultError": "Die Standardvorlage kann nicht gel\u00f6scht werden. Setzen Sie zuerst eine andere Vorlage als Standard.",
+    "delete": "L\u00f6schen",
+    "failedDelete": "Auswertungsvorlage konnte nicht gel\u00f6scht werden",
+
+    "setDefaultTitle": "Als Standardvorlage festlegen",
+    "setDefaultDescription": "\"{name}\" als Standardvorlage festlegen? Dies hebt die aktuelle Standardvorlage auf.",
+    "setDefault": "Als Standard festlegen",
+    "failedSetDefault": "Vorlage konnte nicht als Standard festgelegt werden",
+
+    "statusActive": "Aktiv",
+    "statusInactive": "Inaktiv",
+    "defaultBadge": "Standard"
   }
 }

@@ -85,7 +85,8 @@
     "employeeDayPlans": "Employee Day Plans",
     "monthlyValues": "Monthly Values",
     "payrollExports": "Payroll Exports",
-    "exportInterfaces": "Export Interfaces"
+    "exportInterfaces": "Export Interfaces",
+    "monthlyEvaluations": "Evaluation Templates"
   },
   "sidebar": {
     "collapse": "Collapse",
@@ -180,7 +181,8 @@
     "employeeDayPlans": "Employee Day Plans",
     "monthlyValues": "Monthly Values",
     "payrollExports": "Payroll Exports",
-    "exportInterfaces": "Export Interfaces"
+    "exportInterfaces": "Export Interfaces",
+    "monthlyEvaluations": "Evaluation Templates"
   },
   "time": {
     "today": "Today",
@@ -2574,5 +2576,93 @@
 
     "statusActive": "Active",
     "statusInactive": "Inactive"
+  },
+  "adminMonthlyEvaluations": {
+    "title": "Evaluation Templates",
+    "subtitle": "Configure monthly evaluation templates with flextime caps, overtime thresholds, and vacation carryover limits",
+    "newTemplate": "New Template",
+    "searchPlaceholder": "Search by name or description...",
+    "allStatuses": "All Statuses",
+    "active": "Active",
+    "inactive": "Inactive",
+    "clearFilters": "Clear filters",
+    "templateCount": "{count} template",
+    "templatesCount": "{count} templates",
+    "emptyTitle": "No evaluation templates configured",
+    "emptyFilterHint": "Try adjusting your filters",
+    "emptyGetStarted": "Get started by creating your first evaluation template to define monthly evaluation rules",
+    "addTemplate": "Add Template",
+    "actions": "Actions",
+    "cancel": "Cancel",
+    "close": "Close",
+
+    "columnName": "Name",
+    "columnDescription": "Description",
+    "columnFlextimePositive": "Flextime Cap (+)",
+    "columnFlextimeNegative": "Flextime Cap (\u2212)",
+    "columnOvertimeThreshold": "Overtime Threshold",
+    "columnMaxCarryover": "Max Vacation Carryover",
+    "columnDefault": "Default",
+    "columnStatus": "Status",
+
+    "templateDetails": "Template Details",
+    "viewTemplateInfo": "View evaluation template configuration",
+    "sectionBasicInfo": "Basic Information",
+    "sectionTimeConfig": "Time Configuration",
+    "sectionVacationConfig": "Vacation Configuration",
+    "sectionSettings": "Settings",
+    "sectionTimestamps": "Timestamps",
+    "fieldName": "Name",
+    "fieldDescription": "Description",
+    "fieldFlextimePositive": "Flextime Cap (Positive)",
+    "fieldFlextimeNegative": "Flextime Cap (Negative)",
+    "fieldOvertimeThreshold": "Overtime Threshold",
+    "fieldMaxCarryover": "Max Vacation Carryover",
+    "fieldIsDefault": "Default Template",
+    "fieldIsActive": "Active",
+    "fieldActiveDescription": "Inactive templates are not available for assignment",
+    "labelCreated": "Created",
+    "labelLastUpdated": "Last Updated",
+    "labelYes": "Yes",
+    "labelNo": "No",
+    "labelDays": "{value} days",
+
+    "create": "Create",
+    "createTitle": "New Evaluation Template",
+    "createDescription": "Create a new monthly evaluation template with flextime and overtime rules.",
+    "edit": "Edit",
+    "editTitle": "Edit Evaluation Template",
+    "editDescription": "Modify the selected evaluation template.",
+    "saveChanges": "Save Changes",
+    "saving": "Saving...",
+    "failedCreate": "Failed to create evaluation template",
+    "failedUpdate": "Failed to update evaluation template",
+    "viewDetails": "View Details",
+
+    "namePlaceholder": "e.g. Standard Template",
+    "descriptionPlaceholder": "Optional description of this template's purpose...",
+    "minutesPlaceholder": "Minutes (e.g. 600)",
+    "daysPlaceholder": "Days (e.g. 5.0)",
+
+    "validationNameRequired": "Name is required",
+    "validationNameMaxLength": "Name must be at most 100 characters",
+    "validationMinZero": "Value must be 0 or greater",
+
+    "defaultWarning": "Setting this as default will unset the current default template",
+
+    "deleteTitle": "Delete Evaluation Template",
+    "deleteDescription": "Are you sure you want to delete \"{name}\"? This action cannot be undone.",
+    "deleteDefaultError": "Cannot delete the default evaluation template. Set another template as default first.",
+    "delete": "Delete",
+    "failedDelete": "Failed to delete evaluation template",
+
+    "setDefaultTitle": "Set as Default Template",
+    "setDefaultDescription": "Set \"{name}\" as the default evaluation template? This will unset the current default.",
+    "setDefault": "Set as Default",
+    "failedSetDefault": "Failed to set template as default",
+
+    "statusActive": "Active",
+    "statusInactive": "Inactive",
+    "defaultBadge": "Default"
   }
 }
