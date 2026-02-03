@@ -470,7 +470,6 @@ func main() {
 	r.Use(chimiddleware.RealIP)
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
-	r.Use(chimiddleware.Timeout(60 * time.Second))
 
 	// Health check endpoint
 	r.Get("/health", func(w http.ResponseWriter, _ *http.Request) {
@@ -493,6 +492,7 @@ func main() {
 		// Protected routes (require authentication)
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.AuthMiddleware(jwtManager))
+			r.Use(chimiddleware.Timeout(60 * time.Second))
 			handler.RegisterUserRoutes(r, userHandler, authzMiddleware)
 			handler.RegisterTenantRoutes(r, tenantHandler, authzMiddleware)
 
@@ -571,6 +571,14 @@ func main() {
 			})
 		})
 
+		// SSE stream routes — auth + tenant but NO Timeout middleware
+		// (chi's Timeout buffers the entire response, which breaks SSE streaming)
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.AuthMiddleware(jwtManager))
+			r.Use(tenantMiddleware.RequireTenant)
+			handler.RegisterNotificationStreamRoute(r, notificationHandler, authzMiddleware)
+		})
+
 		// API info
 		r.Get("/", func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
@@ -583,7 +591,7 @@ func main() {
 		Addr:         ":" + cfg.Port,
 		Handler:      r,
 		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
+		WriteTimeout: 0, // Disabled: per-request timeouts handled by chi middleware; SSE streams need long-lived connections
 		IdleTimeout:  60 * time.Second,
 	}
 
