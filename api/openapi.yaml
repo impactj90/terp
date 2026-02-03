@@ -214,6 +214,8 @@ paths:
     $ref: 'paths/users.yaml#/~1users'
   /users/{id}:
     $ref: 'paths/users.yaml#/~1users~1{id}'
+  /users/{id}/password:
+    $ref: 'paths/users.yaml#/~1users~1{id}~1password'
 
   # Notifications
   /notifications:

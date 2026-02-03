@@ -72,7 +72,7 @@ export {
 
 // Users
 export { useUser, useUpdateUser } from './use-user'
-export { useUsers } from './use-users'
+export { useUsers, useCreateUser, useDeleteUser, useChangeUserPassword } from './use-users'
 export {
   useUserGroups,
   useUserGroup,

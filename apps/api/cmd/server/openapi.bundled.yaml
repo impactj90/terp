@@ -499,6 +499,36 @@ paths:
           $ref: '#/responses/Forbidden'
         '404':
           $ref: '#/responses/NotFound'
+  '/users/{id}/password':
+    post:
+      tags:
+        - Users
+      summary: Change user password
+      description: |
+        Updates the password for a user. Users can change their own password; admins can reset any user's password.
+      operationId: changeUserPassword
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/ChangePasswordRequest'
+      responses:
+        '204':
+          description: Password updated
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '403':
+          $ref: '#/responses/Forbidden'
+        '404':
+          $ref: '#/responses/NotFound'
   /notifications:
     get:
       tags:

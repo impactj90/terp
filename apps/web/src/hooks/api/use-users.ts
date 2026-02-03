@@ -1,4 +1,4 @@
-import { useApiQuery } from '@/hooks'
+import { useApiQuery, useApiMutation } from '@/hooks'
 
 interface UseUsersOptions {
   limit?: number
@@ -16,4 +16,20 @@ export function useUsers(options: UseUsersOptions = {}) {
     },
     enabled,
   })
+}
+
+export function useCreateUser() {
+  return useApiMutation('/users', 'post', {
+    invalidateKeys: [['/users']],
+  })
+}
+
+export function useDeleteUser() {
+  return useApiMutation('/users/{id}', 'delete', {
+    invalidateKeys: [['/users']],
+  })
+}
+
+export function useChangeUserPassword() {
+  return useApiMutation('/users/{id}/password', 'post')
 }
