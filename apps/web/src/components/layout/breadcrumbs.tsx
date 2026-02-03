@@ -50,6 +50,7 @@ const segmentToKey: Record<string, string> = {
   'correction-assistant': 'correctionAssistant',
   'monthly-values': 'monthlyValues',
   'payroll-exports': 'payrollExports',
+  'export-interfaces': 'exportInterfaces',
 }
 
 interface BreadcrumbNavItem {

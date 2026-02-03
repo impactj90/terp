@@ -24,6 +24,7 @@ import {
   CalendarClock,
   CalendarCheck,
   FileOutput,
+  Settings2,
 } from 'lucide-react'
 import type { UserRole } from '@/hooks/use-has-role'
 
@@ -239,6 +240,12 @@ export const navConfig: NavSection[] = [
         titleKey: 'payrollExports',
         href: '/admin/payroll-exports',
         icon: FileOutput,
+        roles: ['admin'],
+      },
+      {
+        titleKey: 'exportInterfaces',
+        href: '/admin/export-interfaces',
+        icon: Settings2,
         roles: ['admin'],
       },
     ],

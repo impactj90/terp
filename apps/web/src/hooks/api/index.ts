@@ -253,3 +253,14 @@ export {
   type PayrollExportLine,
   type PayrollExportPreview,
 } from './use-payroll-exports'
+
+// Export Interfaces (admin CRUD)
+export {
+  useExportInterfaces as useExportInterfacesList,
+  useExportInterface,
+  useExportInterfaceAccounts,
+  useCreateExportInterface,
+  useUpdateExportInterface,
+  useDeleteExportInterface,
+  useSetExportInterfaceAccounts,
+} from './use-export-interfaces'
