@@ -81,7 +81,9 @@
     "settings": "Settings",
     "tenants": "Tenants",
     "time": "Time",
-    "correctionAssistant": "Correction Assistant"
+    "correctionAssistant": "Correction Assistant",
+    "employeeDayPlans": "Employee Day Plans",
+    "monthlyValues": "Monthly Values"
   },
   "sidebar": {
     "collapse": "Collapse",
@@ -172,7 +174,9 @@
     "monthlyEvaluation": "Monthly Evaluation",
     "yearOverview": "Year Overview",
     "teamOverview": "Team Overview",
-    "correctionAssistant": "Correction Assistant"
+    "correctionAssistant": "Correction Assistant",
+    "employeeDayPlans": "Employee Day Plans",
+    "monthlyValues": "Monthly Values"
   },
   "time": {
     "today": "Today",
@@ -2162,6 +2166,170 @@
       "updateSuccess": "Message updated",
       "updateFailed": "Failed to update message",
       "resetSuccess": "Message reset to default"
+    }
+  },
+  "employeeDayPlans": {
+    "title": "Employee Day Plans",
+    "subtitle": "Manage day plan assignments for employees across date ranges",
+    "searchPlaceholder": "Search employees...",
+    "allDepartments": "All departments",
+    "clearFilters": "Clear filters",
+    "viewWeek": "Week",
+    "viewTwoWeeks": "2 Weeks",
+    "viewMonth": "Month",
+    "previousPeriod": "Previous period",
+    "nextPeriod": "Next period",
+    "today": "Today",
+    "bulkAssign": "Bulk Assign",
+    "deleteRange": "Delete Range",
+    "emptyTitle": "No Employees Found",
+    "emptySubtitle": "No employees match the selected filters",
+    "emptyNoData": "No day plan assignments for this period",
+    "sourceTariff": "Tariff",
+    "sourceManual": "Manual",
+    "sourceHoliday": "Holiday",
+    "offDay": "Off Day",
+    "cellEditTitle": "Edit Day Plan",
+    "cellEditDayPlan": "Day Plan",
+    "cellEditDayPlanPlaceholder": "Select day plan...",
+    "cellEditNoDayPlan": "No day plan (off day)",
+    "cellEditSource": "Source",
+    "cellEditNotes": "Notes",
+    "cellEditNotesPlaceholder": "Optional notes...",
+    "cellEditSave": "Save",
+    "cellEditRemove": "Remove",
+    "cellEditCancel": "Cancel",
+    "bulkAssignTitle": "Bulk Assign Day Plans",
+    "bulkAssignDescription": "Assign a day plan to multiple employees over a date range",
+    "bulkAssignEmployees": "Employees",
+    "bulkAssignSelectEmployees": "Select employees...",
+    "bulkAssignDateRange": "Date Range",
+    "bulkAssignDayPlan": "Day Plan",
+    "bulkAssignSelectDayPlan": "Select day plan...",
+    "bulkAssignSource": "Source",
+    "bulkAssignNotes": "Notes",
+    "bulkAssignNotesPlaceholder": "Optional notes...",
+    "bulkAssignPreview": "{count} assignments will be created/updated for {employees} employees over {days} days",
+    "bulkAssignConfirm": "Assign",
+    "bulkAssignSuccess": "Created: {created}, Updated: {updated}",
+    "bulkAssignNoEmployees": "Please select at least one employee",
+    "bulkAssignNoDateRange": "Please select a date range",
+    "bulkAssignNoDayPlan": "Please select a day plan",
+    "deleteRangeTitle": "Delete Day Plan Assignments",
+    "deleteRangeDescription": "Delete all day plan assignments for an employee within a date range",
+    "deleteRangeEmployee": "Employee",
+    "deleteRangeSelectEmployee": "Select employee...",
+    "deleteRangeDateRange": "Date Range",
+    "deleteRangeConfirmation": "This will delete all day plan assignments for {employee} from {from} to {to}",
+    "deleteRangeConfirm": "Delete",
+    "deleteRangeSuccess": "Deleted: {deleted} assignments",
+    "deleteRangeNoEmployee": "Please select an employee",
+    "deleteRangeNoDateRange": "Please select a date range",
+    "tooltipDayPlan": "Day Plan: {name}",
+    "tooltipSource": "Source: {source}",
+    "tooltipNotes": "Notes: {notes}"
+  },
+  "monthlyValues": {
+    "page": {
+      "title": "Monthly Values",
+      "subtitle": "View and manage monthly values for all employees"
+    },
+    "toolbar": {
+      "allDepartments": "All Departments",
+      "allStatuses": "All Statuses",
+      "searchPlaceholder": "Search employee...",
+      "clearFilters": "Clear filters"
+    },
+    "status": {
+      "open": "Open",
+      "calculated": "Calculated",
+      "closed": "Closed",
+      "exported": "Exported"
+    },
+    "table": {
+      "employee": "Employee",
+      "personnelNumber": "Pers. No.",
+      "status": "Status",
+      "target": "Target",
+      "net": "Net",
+      "overtime": "Overtime",
+      "balance": "Balance",
+      "absenceDays": "Absence Days",
+      "workingDays": "Work Days"
+    },
+    "batch": {
+      "selectAll": "Select all",
+      "selectedCount": "{count} selected",
+      "closeSelected": "Close Selected",
+      "reopenSelected": "Reopen Selected",
+      "recalculate": "Recalculate"
+    },
+    "batchClose": {
+      "title": "Batch Close Month",
+      "description": "Close monthly values for {monthLabel}",
+      "closingEmployees": "Closing {count} employees",
+      "closingDepartment": "Closing all employees in {department}",
+      "closingAll": "Closing all employees",
+      "recalculateBeforeClosing": "Recalculate before closing",
+      "recalculateDescription": "Ensures all values are up-to-date before finalizing. Recommended.",
+      "confirm": "Close Month",
+      "processing": "Processing...",
+      "resultTitle": "Batch Close Results",
+      "closed": "Closed",
+      "skipped": "Skipped (already closed)",
+      "errors": "Errors",
+      "errorDetail": "Error details",
+      "done": "Done"
+    },
+    "batchReopen": {
+      "title": "Batch Reopen Month",
+      "description": "Reopen monthly values for {monthLabel}",
+      "warning": "Reopening closed months will unlock all time entries. Any changes will require recalculation before closing again.",
+      "reopeningEmployees": "Reopening {count} employees",
+      "reasonLabel": "Reason for reopening",
+      "reasonPlaceholder": "Explain why these months need to be reopened...",
+      "minCharacters": "Minimum 10 characters. {count}/10",
+      "reasonTooShort": "Please provide a reason with at least 10 characters",
+      "confirm": "Reopen Months",
+      "progress": "Reopening {current} of {total}...",
+      "resultTitle": "Batch Reopen Results",
+      "reopened": "Reopened",
+      "errors": "Errors",
+      "done": "Done"
+    },
+    "recalculate": {
+      "title": "Recalculate Monthly Values",
+      "description": "Recalculate all monthly values for {monthLabel}",
+      "info": "This will recalculate time totals, overtime, and balance for all employees. Closed months will be skipped.",
+      "confirm": "Recalculate",
+      "success": "Recalculation started for {count} employees",
+      "refreshHint": "Values will be updated shortly. Refresh to see changes."
+    },
+    "detail": {
+      "timeSummary": "Time Summary",
+      "target": "Target Hours",
+      "net": "Net Hours",
+      "overtime": "Overtime",
+      "balance": "Balance",
+      "workDays": "Work Days",
+      "workingDays": "Working Days",
+      "workedDays": "Worked Days",
+      "absenceDays": "Absence Days",
+      "closingInfo": "Closing Info",
+      "status": "Status",
+      "closedAt": "Closed At",
+      "close": "Close",
+      "closeMonth": "Close Month",
+      "reopenMonth": "Reopen Month",
+      "goToEmployee": "Go to Employee"
+    },
+    "empty": {
+      "title": "No monthly values found",
+      "description": "No monthly values exist for this period. You may need to run a recalculation first."
+    },
+    "count": {
+      "item": "{count} employee",
+      "items": "{count} employees"
     }
   }
 }

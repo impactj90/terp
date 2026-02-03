@@ -21,6 +21,8 @@ import {
   ScrollText,
   Wallet,
   AlertTriangle,
+  CalendarClock,
+  CalendarCheck,
 } from 'lucide-react'
 import type { UserRole } from '@/hooks/use-has-role'
 
@@ -143,6 +145,12 @@ export const navConfig: NavSection[] = [
         roles: ['admin'],
       },
       {
+        titleKey: 'employeeDayPlans',
+        href: '/admin/employee-day-plans',
+        icon: CalendarClock,
+        roles: ['admin'],
+      },
+      {
         titleKey: 'weekPlans',
         href: '/admin/week-plans',
         icon: CalendarRange,
@@ -182,6 +190,12 @@ export const navConfig: NavSection[] = [
         titleKey: 'correctionAssistant',
         href: '/admin/correction-assistant',
         icon: AlertTriangle,
+        roles: ['admin'],
+      },
+      {
+        titleKey: 'monthlyValues',
+        href: '/admin/monthly-values',
+        icon: CalendarCheck,
         roles: ['admin'],
       },
     ],

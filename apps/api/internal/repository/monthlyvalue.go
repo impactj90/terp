@@ -139,7 +139,10 @@ func (r *MonthlyValueRepository) ListAll(ctx context.Context, filter MonthlyValu
 	}
 	if filter.DepartmentID != nil {
 		q = q.Joins("JOIN employees ON employees.id = monthly_values.employee_id").
-			Where("employees.department_id = ?", *filter.DepartmentID)
+			Where(
+				"(employees.department_id = ? OR employees.id IN (SELECT tm.employee_id FROM team_members tm JOIN teams t ON t.id = tm.team_id WHERE t.department_id = ?))",
+				*filter.DepartmentID, *filter.DepartmentID,
+			)
 	}
 
 	var values []model.MonthlyValue

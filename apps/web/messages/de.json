@@ -81,7 +81,9 @@
     "settings": "Einstellungen",
     "tenants": "Mandanten",
     "time": "Stempeluhr",
-    "correctionAssistant": "Korrekturassistent"
+    "correctionAssistant": "Korrekturassistent",
+    "employeeDayPlans": "Mitarbeiter-Tagespläne",
+    "monthlyValues": "Monatswerte"
   },
   "sidebar": {
     "collapse": "Einklappen",
@@ -172,7 +174,9 @@
     "monthlyEvaluation": "Monatsauswertung",
     "yearOverview": "Jahresübersicht",
     "teamOverview": "Teamübersicht",
-    "correctionAssistant": "Korrekturassistent"
+    "correctionAssistant": "Korrekturassistent",
+    "employeeDayPlans": "Mitarbeiter-Tagespläne",
+    "monthlyValues": "Monatswerte"
   },
   "time": {
     "today": "Heute",
@@ -2162,6 +2166,170 @@
       "updateSuccess": "Meldung aktualisiert",
       "updateFailed": "Meldung konnte nicht aktualisiert werden",
       "resetSuccess": "Meldung auf Standard zurückgesetzt"
+    }
+  },
+  "employeeDayPlans": {
+    "title": "Mitarbeiter-Tagespläne",
+    "subtitle": "Tagesplan-Zuweisungen für Mitarbeiter über Zeiträume verwalten",
+    "searchPlaceholder": "Mitarbeiter suchen...",
+    "allDepartments": "Alle Abteilungen",
+    "clearFilters": "Filter zurücksetzen",
+    "viewWeek": "Woche",
+    "viewTwoWeeks": "2 Wochen",
+    "viewMonth": "Monat",
+    "previousPeriod": "Vorheriger Zeitraum",
+    "nextPeriod": "Nächster Zeitraum",
+    "today": "Heute",
+    "bulkAssign": "Massenzuweisung",
+    "deleteRange": "Zeitraum löschen",
+    "emptyTitle": "Keine Mitarbeiter gefunden",
+    "emptySubtitle": "Keine Mitarbeiter entsprechen den ausgewählten Filtern",
+    "emptyNoData": "Keine Tagesplan-Zuweisungen für diesen Zeitraum",
+    "sourceTariff": "Tarif",
+    "sourceManual": "Manuell",
+    "sourceHoliday": "Feiertag",
+    "offDay": "Freier Tag",
+    "cellEditTitle": "Tagesplan bearbeiten",
+    "cellEditDayPlan": "Tagesplan",
+    "cellEditDayPlanPlaceholder": "Tagesplan auswählen...",
+    "cellEditNoDayPlan": "Kein Tagesplan (freier Tag)",
+    "cellEditSource": "Quelle",
+    "cellEditNotes": "Notizen",
+    "cellEditNotesPlaceholder": "Optionale Notizen...",
+    "cellEditSave": "Speichern",
+    "cellEditRemove": "Entfernen",
+    "cellEditCancel": "Abbrechen",
+    "bulkAssignTitle": "Tagespläne zuweisen",
+    "bulkAssignDescription": "Einen Tagesplan mehreren Mitarbeitern über einen Zeitraum zuweisen",
+    "bulkAssignEmployees": "Mitarbeiter",
+    "bulkAssignSelectEmployees": "Mitarbeiter auswählen...",
+    "bulkAssignDateRange": "Zeitraum",
+    "bulkAssignDayPlan": "Tagesplan",
+    "bulkAssignSelectDayPlan": "Tagesplan auswählen...",
+    "bulkAssignSource": "Quelle",
+    "bulkAssignNotes": "Notizen",
+    "bulkAssignNotesPlaceholder": "Optionale Notizen...",
+    "bulkAssignPreview": "{count} Zuweisungen werden für {employees} Mitarbeiter über {days} Tage erstellt/aktualisiert",
+    "bulkAssignConfirm": "Zuweisen",
+    "bulkAssignSuccess": "Erstellt: {created}, Aktualisiert: {updated}",
+    "bulkAssignNoEmployees": "Bitte wählen Sie mindestens einen Mitarbeiter",
+    "bulkAssignNoDateRange": "Bitte wählen Sie einen Zeitraum",
+    "bulkAssignNoDayPlan": "Bitte wählen Sie einen Tagesplan",
+    "deleteRangeTitle": "Tagesplan-Zuweisungen löschen",
+    "deleteRangeDescription": "Alle Tagesplan-Zuweisungen eines Mitarbeiters in einem Zeitraum löschen",
+    "deleteRangeEmployee": "Mitarbeiter",
+    "deleteRangeSelectEmployee": "Mitarbeiter auswählen...",
+    "deleteRangeDateRange": "Zeitraum",
+    "deleteRangeConfirmation": "Dies löscht alle Tagesplan-Zuweisungen für {employee} von {from} bis {to}",
+    "deleteRangeConfirm": "Löschen",
+    "deleteRangeSuccess": "Gelöscht: {deleted} Zuweisungen",
+    "deleteRangeNoEmployee": "Bitte wählen Sie einen Mitarbeiter",
+    "deleteRangeNoDateRange": "Bitte wählen Sie einen Zeitraum",
+    "tooltipDayPlan": "Tagesplan: {name}",
+    "tooltipSource": "Quelle: {source}",
+    "tooltipNotes": "Notizen: {notes}"
+  },
+  "monthlyValues": {
+    "page": {
+      "title": "Monatswerte",
+      "subtitle": "Monatswerte aller Mitarbeiter anzeigen und verwalten"
+    },
+    "toolbar": {
+      "allDepartments": "Alle Abteilungen",
+      "allStatuses": "Alle Status",
+      "searchPlaceholder": "Mitarbeiter suchen...",
+      "clearFilters": "Filter zurücksetzen"
+    },
+    "status": {
+      "open": "Offen",
+      "calculated": "Berechnet",
+      "closed": "Geschlossen",
+      "exported": "Exportiert"
+    },
+    "table": {
+      "employee": "Mitarbeiter",
+      "personnelNumber": "Pers. Nr.",
+      "status": "Status",
+      "target": "Soll",
+      "net": "Netto",
+      "overtime": "Überstunden",
+      "balance": "Saldo",
+      "absenceDays": "Abwesenheitstage",
+      "workingDays": "Arbeitstage"
+    },
+    "batch": {
+      "selectAll": "Alle auswählen",
+      "selectedCount": "{count} ausgewählt",
+      "closeSelected": "Ausgewählte schließen",
+      "reopenSelected": "Ausgewählte öffnen",
+      "recalculate": "Neuberechnen"
+    },
+    "batchClose": {
+      "title": "Monat stapelweise schließen",
+      "description": "Monatswerte für {monthLabel} schließen",
+      "closingEmployees": "{count} Mitarbeiter schließen",
+      "closingDepartment": "Alle Mitarbeiter in {department} schließen",
+      "closingAll": "Alle Mitarbeiter schließen",
+      "recalculateBeforeClosing": "Vor dem Schließen neuberechnen",
+      "recalculateDescription": "Stellt sicher, dass alle Werte aktuell sind. Empfohlen.",
+      "confirm": "Monat schließen",
+      "processing": "Verarbeitung...",
+      "resultTitle": "Ergebnisse",
+      "closed": "Geschlossen",
+      "skipped": "Übersprungen (bereits geschlossen)",
+      "errors": "Fehler",
+      "errorDetail": "Fehlerdetails",
+      "done": "Fertig"
+    },
+    "batchReopen": {
+      "title": "Monat stapelweise öffnen",
+      "description": "Monatswerte für {monthLabel} wieder öffnen",
+      "warning": "Das Öffnen geschlossener Monate entsperrt alle Zeiteinträge. Änderungen erfordern eine Neuberechnung vor dem erneuten Schließen.",
+      "reopeningEmployees": "{count} Mitarbeiter wieder öffnen",
+      "reasonLabel": "Grund für das Öffnen",
+      "reasonPlaceholder": "Erklären Sie, warum diese Monate geöffnet werden müssen...",
+      "minCharacters": "Mindestens 10 Zeichen. {count}/10",
+      "reasonTooShort": "Bitte geben Sie einen Grund mit mindestens 10 Zeichen an",
+      "confirm": "Monate öffnen",
+      "progress": "Öffne {current} von {total}...",
+      "resultTitle": "Ergebnisse",
+      "reopened": "Geöffnet",
+      "errors": "Fehler",
+      "done": "Fertig"
+    },
+    "recalculate": {
+      "title": "Monatswerte neuberechnen",
+      "description": "Alle Monatswerte für {monthLabel} neuberechnen",
+      "info": "Dies berechnet Zeitsummen, Überstunden und Saldo für alle Mitarbeiter neu. Geschlossene Monate werden übersprungen.",
+      "confirm": "Neuberechnen",
+      "success": "Neuberechnung für {count} Mitarbeiter gestartet",
+      "refreshHint": "Die Werte werden in Kürze aktualisiert. Aktualisieren Sie die Seite, um Änderungen zu sehen."
+    },
+    "detail": {
+      "timeSummary": "Zeitübersicht",
+      "target": "Soll-Stunden",
+      "net": "Netto-Stunden",
+      "overtime": "Überstunden",
+      "balance": "Saldo",
+      "workDays": "Arbeitstage",
+      "workingDays": "Arbeitstage (Soll)",
+      "workedDays": "Gearbeitete Tage",
+      "absenceDays": "Abwesenheitstage",
+      "closingInfo": "Abschlussinfo",
+      "status": "Status",
+      "closedAt": "Geschlossen am",
+      "close": "Schließen",
+      "closeMonth": "Monat schließen",
+      "reopenMonth": "Monat öffnen",
+      "goToEmployee": "Zum Mitarbeiter"
+    },
+    "empty": {
+      "title": "Keine Monatswerte gefunden",
+      "description": "Für diesen Zeitraum existieren keine Monatswerte. Möglicherweise muss zuerst eine Neuberechnung durchgeführt werden."
+    },
+    "count": {
+      "item": "{count} Mitarbeiter",
+      "items": "{count} Mitarbeiter"
     }
   }
 }

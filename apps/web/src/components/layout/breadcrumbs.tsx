@@ -28,6 +28,7 @@ const segmentToKey: Record<string, string> = {
   departments: 'departments',
   'employment-types': 'employmentTypes',
   'day-plans': 'dayPlans',
+  'employee-day-plans': 'employeeDayPlans',
   'week-plans': 'weekPlans',
   users: 'users',
   'user-groups': 'userGroups',
@@ -47,6 +48,7 @@ const segmentToKey: Record<string, string> = {
   'year-overview': 'yearOverview',
   'team-overview': 'teamOverview',
   'correction-assistant': 'correctionAssistant',
+  'monthly-values': 'monthlyValues',
 }
 
 interface BreadcrumbNavItem {

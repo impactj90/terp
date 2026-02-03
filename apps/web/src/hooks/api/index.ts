@@ -206,6 +206,27 @@ export {
 export { useTeamDayViews } from './use-team-day-views'
 export { useTeamDailyValues } from './use-team-daily-values'
 
+// Employee Day Plans
+export {
+  useEmployeeDayPlans,
+  useEmployeeDayPlansForEmployee,
+  useCreateEmployeeDayPlan,
+  useUpdateEmployeeDayPlan,
+  useBulkCreateEmployeeDayPlans,
+  useDeleteEmployeeDayPlanRange,
+  useDeleteEmployeeDayPlan,
+} from './use-employee-day-plans'
+
+// Admin Monthly Values (flat routes)
+export {
+  useAdminMonthlyValues,
+  useMonthlyValueById,
+  useCloseMonthById,
+  useReopenMonthById,
+  useCloseMonthBatch,
+  useRecalculateMonthlyValues,
+} from './use-admin-monthly-values'
+
 // Correction Assistant
 export {
   useCorrectionAssistantItems,
