@@ -165,8 +165,8 @@ export function UserFormSheet({ open, onOpenChange, user, onSuccess }: UserFormS
           body: {
             display_name: form.displayName.trim(),
             username: form.username.trim() || undefined,
-            user_group_id: form.userGroupId || undefined,
-            employee_id: form.employeeId || undefined,
+            user_group_id: form.userGroupId,
+            employee_id: form.employeeId,
             is_active: form.isActive,
             is_locked: form.isLocked,
             data_scope_type: form.dataScopeType as

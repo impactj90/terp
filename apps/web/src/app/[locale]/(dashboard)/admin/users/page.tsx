@@ -107,7 +107,7 @@ export default function AdminUsersPage() {
     setError(null)
     setSavingUserId(user.id)
 
-    const selectedValue = value === 'none' ? null : value
+    const selectedValue = value === 'none' ? '' : value
 
     try {
       await updateMutation.mutateAsync({
