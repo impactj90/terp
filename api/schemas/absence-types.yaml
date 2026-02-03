@@ -6,6 +6,7 @@ AbsenceType:
     - code
     - name
     - category
+    - affects_vacation_balance
   properties:
     id:
       type: string

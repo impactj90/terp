@@ -26,7 +26,8 @@ type AbsenceType struct {
 
 	// Whether this absence type deducts from vacation balance
 	// Example: true
-	AffectsVacationBalance bool `json:"affects_vacation_balance,omitempty"`
+	// Required: true
+	AffectsVacationBalance *bool `json:"affects_vacation_balance"`
 
 	// Calculation rule that determines account value for this absence type
 	// Format: uuid
@@ -118,6 +119,10 @@ func (m *AbsenceType) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
+	if err := m.validateAffectsVacationBalance(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateCalculationRuleID(formats); err != nil {
 		res = append(res, err)
 	}
@@ -166,6 +171,15 @@ func (m *AbsenceType) validateAbsenceTypeGroupID(formats strfmt.Registry) error 
 	}
 
 	if err := validate.FormatOf("absence_type_group_id", "body", "uuid", m.AbsenceTypeGroupID.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *AbsenceType) validateAffectsVacationBalance(formats strfmt.Registry) error {
+
+	if err := validate.Required("affects_vacation_balance", "body", m.AffectsVacationBalance); err != nil {
 		return err
 	}
 

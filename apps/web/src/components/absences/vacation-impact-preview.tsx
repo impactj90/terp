@@ -64,7 +64,8 @@ export function VacationImpactPreview({
   const t = useTranslations('absences')
 
   // Calculate the actual deduction
-  const affectsBalance = absenceType?.affects_vacation_balance !== false
+  // Note: affects_vacation_balance may be undefined when false due to omitempty in JSON serialization
+  const affectsBalance = absenceType?.affects_vacation_balance === true
   const deduction = affectsBalance
     ? isHalfDay
       ? 0.5

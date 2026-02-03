@@ -752,7 +752,7 @@ func (h *AbsenceHandler) absenceTypeToResponse(at *model.AbsenceType) *models.Ab
 		IsActive:               at.IsActive,
 		IsSystem:               at.IsSystem,
 		IsPaid:                 at.Portion != model.AbsencePortionNone,
-		AffectsVacationBalance: at.DeductsVacation,
+		AffectsVacationBalance: &at.DeductsVacation,
 		RequiresApproval:       at.RequiresApproval,
 		Portion:                int64(at.Portion),
 		HolidayCode:            at.HolidayCode,
