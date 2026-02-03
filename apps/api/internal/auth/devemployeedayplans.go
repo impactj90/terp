@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"fmt"
+	"crypto/sha256"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,7 +16,7 @@ type DevEmployeeDayPlan struct {
 	Source     string     // "tariff" or "holiday"
 }
 
-// Employee→WeekPlan→DayPlan mapping for January 2026.
+// Employee→WeekPlan→DayPlan mapping for 2026.
 // | Employee | WeekPlan | Mon-Thu       | Fri           | Sat-Sun |
 // |----------|----------|---------------|---------------|---------|
 // | Admin    | WEEK-40H | STD-8H (502)  | STD-8H (502)  | nil     |
@@ -39,41 +39,53 @@ var devEmployeeWeekConfigs = []employeeWeekConfig{
 	{DevEmployeeAnnaID, &DayPlanSTD8HID, &DayPlanFRI6HID},
 }
 
-// January 2026 holidays: Jan 1 (Neujahr), Jan 6 (Heilige Drei Könige)
-var januaryHolidays = map[int]bool{
-	1: true, // Neujahr
-	6: true, // Heilige Drei Könige
+// devHolidayDates is built from DevHolidays for fast lookup.
+var devHolidayDates map[time.Time]bool
+
+func init() {
+	devHolidayDates = make(map[time.Time]bool, len(DevHolidays))
+	for _, h := range DevHolidays {
+		devHolidayDates[h.HolidayDate] = true
+	}
 }
 
-// generateDevEmployeeDayPlans creates day plans for all 5 employees for January 2026.
-// UUID range: 12000-12999, base per employee: Admin=12000, User=12100, Maria=12200, Thomas=12300, Anna=12400.
+// deterministicUUID generates a stable UUID from a seed string using SHA-256.
+// This ensures the same employee+date always produces the same UUID across restarts.
+func deterministicUUID(seed string) uuid.UUID {
+	hash := sha256.Sum256([]byte(seed))
+	id, _ := uuid.FromBytes(hash[:16])
+	// Set version 5 (SHA-based) and variant bits
+	id[6] = (id[6] & 0x0f) | 0x50
+	id[8] = (id[8] & 0x3f) | 0x80
+	return id
+}
+
+// generateDevEmployeeDayPlans creates day plans for all 5 employees for the full year 2026.
 func generateDevEmployeeDayPlans() []DevEmployeeDayPlan {
-	plans := make([]DevEmployeeDayPlan, 0, 5*31) // 5 employees × 31 days
+	startDate := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	endDate := time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC)
 
-	for empIdx, cfg := range devEmployeeWeekConfigs {
-		baseID := 12000 + empIdx*100
+	plans := make([]DevEmployeeDayPlan, 0, 5*365)
 
-		for day := 1; day <= 31; day++ {
-			date := time.Date(2026, 1, day, 0, 0, 0, 0, time.UTC)
+	for _, cfg := range devEmployeeWeekConfigs {
+		date := startDate
+		for !date.After(endDate) {
 			weekday := date.Weekday()
 
-			id := uuid.MustParse(fmt.Sprintf("00000000-0000-0000-0000-%012d", baseID+day))
+			id := deterministicUUID(cfg.EmployeeID.String() + date.Format("2006-01-02"))
 
 			var dayPlanID *uuid.UUID
 			source := "tariff"
 
 			switch {
-			case januaryHolidays[day]:
-				// Holiday: off day
+			case devHolidayDates[date]:
 				dayPlanID = nil
 				source = "holiday"
 			case weekday == time.Saturday || weekday == time.Sunday:
-				// Weekend: off day
 				dayPlanID = nil
 			case weekday == time.Friday:
 				dayPlanID = cfg.Friday
 			default:
-				// Monday-Thursday
 				dayPlanID = cfg.MonThru
 			}
 
@@ -84,13 +96,15 @@ func generateDevEmployeeDayPlans() []DevEmployeeDayPlan {
 				DayPlanID:  dayPlanID,
 				Source:     source,
 			})
+
+			date = date.AddDate(0, 0, 1)
 		}
 	}
 
 	return plans
 }
 
-// GetDevEmployeeDayPlans returns all dev employee day plans for January 2026.
+// GetDevEmployeeDayPlans returns all dev employee day plans for 2026.
 func GetDevEmployeeDayPlans() []DevEmployeeDayPlan {
 	return generateDevEmployeeDayPlans()
 }

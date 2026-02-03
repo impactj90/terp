@@ -1,22 +1,14 @@
 'use client'
 
 import * as React from 'react'
-import { Calendar, Loader2, Trash2 } from 'lucide-react'
+import { Calendar, Edit, Ban } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useLocale } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
-import { useEmployeeAbsences, useDeleteAbsence } from '@/hooks/api'
+import { useEmployeeAbsences } from '@/hooks/api'
 import { formatDate, parseISODate } from '@/lib/time-utils'
 import type { components } from '@/lib/api/types'
 
@@ -27,6 +19,10 @@ interface PendingRequestsProps {
   employeeId?: string
   /** Callback when an absence is clicked */
   onSelect?: (absence: Absence) => void
+  /** Callback when edit is clicked on an absence */
+  onEdit?: (absence: Absence) => void
+  /** Callback when cancel is clicked on an absence */
+  onCancel?: (absence: Absence) => void
   /** Additional className */
   className?: string
 }
@@ -35,6 +31,7 @@ const STATUS_COLORS: Record<string, { variant: 'default' | 'secondary' | 'destru
   pending: { variant: 'secondary', labelKey: 'statusPending' },
   approved: { variant: 'default', labelKey: 'statusApproved' },
   rejected: { variant: 'destructive', labelKey: 'statusRejected' },
+  cancelled: { variant: 'outline', labelKey: 'statusCancelled' },
 }
 
 function formatAbsenceDate(absence: Absence, locale: string): string {
@@ -49,18 +46,16 @@ function formatAbsenceDate(absence: Absence, locale: string): string {
 export function PendingRequests({
   employeeId,
   onSelect,
+  onEdit,
+  onCancel,
   className,
 }: PendingRequestsProps) {
-  const [deleteId, setDeleteId] = React.useState<string | null>(null)
-  const [confirmOpen, setConfirmOpen] = React.useState(false)
-
   const t = useTranslations('absences')
-  const tc = useTranslations('common')
   const locale = useLocale()
 
   // Fetch absences for current year and next year
   const currentYear = new Date().getFullYear()
-  const { data: absencesData, isLoading, refetch } = useEmployeeAbsences(
+  const { data: absencesData, isLoading } = useEmployeeAbsences(
     employeeId ?? '',
     {
       from: formatDate(new Date(currentYear, 0, 1)),
@@ -69,8 +64,6 @@ export function PendingRequests({
     }
   )
 
-  const deleteMutation = useDeleteAbsence()
-
   const absences = absencesData?.data ?? []
 
   // Group absences by status
@@ -78,6 +71,7 @@ export function PendingRequests({
     const pending: Absence[] = []
     const approved: Absence[] = []
     const rejected: Absence[] = []
+    const cancelled: Absence[] = []
 
     for (const absence of absences) {
       const status = absence.status ?? 'pending'
@@ -87,6 +81,8 @@ export function PendingRequests({
         approved.push(absence)
       } else if (status === 'rejected') {
         rejected.push(absence)
+      } else if (status === 'cancelled') {
+        cancelled.push(absence)
       }
     }
 
@@ -97,28 +93,10 @@ export function PendingRequests({
     pending.sort(sortByDate)
     approved.sort(sortByDate)
     rejected.sort(sortByDate)
+    cancelled.sort(sortByDate)
 
-    return { pending, approved, rejected }
+    return { pending, approved, rejected, cancelled }
   }, [absences])
-
-  const handleDeleteClick = (absenceId: string) => {
-    setDeleteId(absenceId)
-    setConfirmOpen(true)
-  }
-
-  const handleConfirmDelete = async () => {
-    if (!deleteId) return
-
-    try {
-      await deleteMutation.mutateAsync({
-        path: { id: deleteId },
-      })
-      refetch()
-    } finally {
-      setConfirmOpen(false)
-      setDeleteId(null)
-    }
-  }
 
   if (isLoading) {
     return (
@@ -151,8 +129,8 @@ export function PendingRequests({
           count={groupedAbsences.pending.length}
           absences={groupedAbsences.pending}
           onSelect={onSelect}
-          onDelete={handleDeleteClick}
-          canDelete
+          onEdit={onEdit}
+          onCancel={onCancel}
           locale={locale}
         />
       )}
@@ -164,6 +142,8 @@ export function PendingRequests({
           count={groupedAbsences.approved.length}
           absences={groupedAbsences.approved}
           onSelect={onSelect}
+          onEdit={onEdit}
+          onCancel={onCancel}
           locale={locale}
         />
       )}
@@ -179,38 +159,17 @@ export function PendingRequests({
         />
       )}
 
-      {/* Delete confirmation dialog */}
-      <Sheet open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <SheetContent side="bottom" className="sm:max-w-md mx-auto">
-          <SheetHeader>
-            <SheetTitle>{t('deleteRequest')}</SheetTitle>
-            <SheetDescription>
-              {t('deleteConfirmation')}
-            </SheetDescription>
-          </SheetHeader>
-          <SheetFooter className="flex-row gap-2 mt-4">
-            <Button
-              variant="outline"
-              onClick={() => setConfirmOpen(false)}
-              disabled={deleteMutation.isPending}
-              className="flex-1"
-            >
-              {tc('cancel')}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmDelete}
-              disabled={deleteMutation.isPending}
-              className="flex-1"
-            >
-              {deleteMutation.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              {tc('delete')}
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+      {/* Cancelled */}
+      {groupedAbsences.cancelled.length > 0 && (
+        <AbsenceGroup
+          title={t('statusCancelled')}
+          count={groupedAbsences.cancelled.length}
+          absences={groupedAbsences.cancelled}
+          onSelect={onSelect}
+          locale={locale}
+        />
+      )}
+
     </div>
   )
 }
@@ -220,8 +179,8 @@ interface AbsenceGroupProps {
   count: number
   absences: Absence[]
   onSelect?: (absence: Absence) => void
-  onDelete?: (id: string) => void
-  canDelete?: boolean
+  onEdit?: (absence: Absence) => void
+  onCancel?: (absence: Absence) => void
   locale: string
 }
 
@@ -230,8 +189,8 @@ function AbsenceGroup({
   count,
   absences,
   onSelect,
-  onDelete,
-  canDelete,
+  onEdit,
+  onCancel,
   locale,
 }: AbsenceGroupProps) {
   return (
@@ -245,7 +204,16 @@ function AbsenceGroup({
             key={absence.id}
             absence={absence}
             onClick={() => onSelect?.(absence)}
-            onDelete={canDelete ? () => onDelete?.(absence.id) : undefined}
+            onEdit={
+              (absence.status === 'pending' || absence.status === 'approved')
+                ? () => onEdit?.(absence)
+                : undefined
+            }
+            onCancel={
+              (absence.status === 'pending' || absence.status === 'approved')
+                ? () => onCancel?.(absence)
+                : undefined
+            }
             locale={locale}
           />
         ))}
@@ -257,11 +225,12 @@ function AbsenceGroup({
 interface AbsenceCardProps {
   absence: Absence
   onClick?: () => void
-  onDelete?: () => void
+  onEdit?: () => void
+  onCancel?: () => void
   locale: string
 }
 
-function AbsenceCard({ absence, onClick, onDelete, locale }: AbsenceCardProps) {
+function AbsenceCard({ absence, onClick, onEdit, onCancel, locale }: AbsenceCardProps) {
   const t = useTranslations('absences')
   const tc = useTranslations('common')
   const status = absence.status ?? 'pending'
@@ -309,18 +278,32 @@ function AbsenceCard({ absence, onClick, onDelete, locale }: AbsenceCardProps) {
           <Badge variant={statusConfig.variant}>
             {t(statusConfig.labelKey as Parameters<typeof t>[0])}
           </Badge>
-          {onDelete && (
+          {onEdit && (
             <Button
               variant="ghost"
               size="icon"
               className="h-8 w-8 shrink-0"
               onClick={(e) => {
                 e.stopPropagation()
-                onDelete()
+                onEdit()
               }}
             >
-              <Trash2 className="h-4 w-4 text-muted-foreground" />
-              <span className="sr-only">{tc('delete')}</span>
+              <Edit className="h-4 w-4 text-muted-foreground" />
+              <span className="sr-only">{tc('edit')}</span>
+            </Button>
+          )}
+          {onCancel && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              onClick={(e) => {
+                e.stopPropagation()
+                onCancel()
+              }}
+            >
+              <Ban className="h-4 w-4 text-muted-foreground" />
+              <span className="sr-only">{t('cancelAbsence')}</span>
             </Button>
           )}
         </div>

@@ -11,7 +11,13 @@ import { AbsenceRequestForm } from '@/components/absences/absence-request-form'
 import { AbsenceCalendarView } from '@/components/absences/absence-calendar-view'
 import { PendingRequests } from '@/components/absences/pending-requests'
 import { VacationBalanceCard } from '@/components/absences/vacation-balance-card'
+import { AbsenceDetailSheet } from '@/components/absences/absence-detail-sheet'
+import { AbsenceEditFormSheet } from '@/components/absences/absence-edit-form-sheet'
+import { AbsenceCancelDialog } from '@/components/absences/absence-cancel-dialog'
 import type { DateRange } from '@/components/ui/calendar'
+import type { components } from '@/lib/api/types'
+
+type Absence = components['schemas']['Absence']
 
 export default function AbsencesPage() {
   const t = useTranslations('absences')
@@ -21,6 +27,12 @@ export default function AbsencesPage() {
 
   const [formOpen, setFormOpen] = useState(false)
   const [selectedDates, setSelectedDates] = useState<DateRange>()
+
+  // Detail / Edit / Cancel state
+  const [selectedAbsence, setSelectedAbsence] = useState<Absence | null>(null)
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [cancelOpen, setCancelOpen] = useState(false)
 
   const handleCalendarClick = (date: Date) => {
     setSelectedDates({ from: date, to: date })
@@ -34,6 +46,38 @@ export default function AbsencesPage() {
 
   const handleFormSuccess = () => {
     // Form handles its own refetch via query invalidation
+  }
+
+  // Detail sheet: clicking an absence card
+  const handleAbsenceSelect = (absence: Absence) => {
+    setSelectedAbsence(absence)
+    setDetailOpen(true)
+  }
+
+  // From detail sheet: open edit
+  const handleEditFromDetail = (absence: Absence) => {
+    setDetailOpen(false)
+    setSelectedAbsence(absence)
+    setEditOpen(true)
+  }
+
+  // From detail sheet: open cancel
+  const handleCancelFromDetail = (absence: Absence) => {
+    setDetailOpen(false)
+    setSelectedAbsence(absence)
+    setCancelOpen(true)
+  }
+
+  // Direct edit from card icon
+  const handleEditClick = (absence: Absence) => {
+    setSelectedAbsence(absence)
+    setEditOpen(true)
+  }
+
+  // Direct cancel from card icon
+  const handleCancelClick = (absence: Absence) => {
+    setSelectedAbsence(absence)
+    setCancelOpen(true)
   }
 
   if (authLoading) {
@@ -80,7 +124,12 @@ export default function AbsencesPage() {
               <CardTitle className="text-base">{t('yourRequests')}</CardTitle>
             </CardHeader>
             <CardContent>
-              <PendingRequests employeeId={employeeId} />
+              <PendingRequests
+                employeeId={employeeId}
+                onSelect={handleAbsenceSelect}
+                onEdit={handleEditClick}
+                onCancel={handleCancelClick}
+              />
             </CardContent>
           </Card>
         </div>
@@ -106,6 +155,29 @@ export default function AbsencesPage() {
         onOpenChange={setFormOpen}
         onSuccess={handleFormSuccess}
         initialDates={selectedDates}
+      />
+
+      {/* Absence detail sheet */}
+      <AbsenceDetailSheet
+        absence={selectedAbsence}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        onEdit={handleEditFromDetail}
+        onCancel={handleCancelFromDetail}
+      />
+
+      {/* Absence edit form sheet */}
+      <AbsenceEditFormSheet
+        absence={selectedAbsence}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+      />
+
+      {/* Absence cancel dialog */}
+      <AbsenceCancelDialog
+        absence={selectedAbsence}
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
       />
     </div>
   )

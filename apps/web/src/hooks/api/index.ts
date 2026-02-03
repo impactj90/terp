@@ -100,6 +100,7 @@ export {
   useEmployeeAbsences,
   useAbsence,
   useCreateAbsenceRange,
+  useUpdateAbsence,
   useDeleteAbsence,
   useApproveAbsence,
   useRejectAbsence,

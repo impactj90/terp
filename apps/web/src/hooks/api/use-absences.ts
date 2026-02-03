@@ -122,6 +122,20 @@ export function useCreateAbsenceRange() {
 }
 
 /**
+ * Hook to update an absence (edit duration/notes, or cancel via status change).
+ */
+export function useUpdateAbsence() {
+  return useApiMutation('/absences/{id}', 'patch', {
+    invalidateKeys: [
+      ['/absences'],
+      ['/employees/{id}/absences'],
+      ['/employees/{id}/vacation-balance'],
+      ['/vacation-balances'],
+    ],
+  })
+}
+
+/**
  * Hook to delete an absence.
  */
 export function useDeleteAbsence() {
