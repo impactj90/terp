@@ -139,7 +139,10 @@ func (r *EmployeeRepository) List(ctx context.Context, filter EmployeeFilter) ([
 	query := r.db.GORM.WithContext(ctx).Model(&model.Employee{}).Preload("Tariff").Where("tenant_id = ?", filter.TenantID)
 
 	if filter.DepartmentID != nil {
-		query = query.Where("department_id = ?", *filter.DepartmentID)
+		query = query.Where(
+			"(department_id = ? OR id IN (SELECT tm.employee_id FROM team_members tm JOIN teams t ON t.id = tm.team_id WHERE t.department_id = ?))",
+			*filter.DepartmentID, *filter.DepartmentID,
+		)
 	}
 	if filter.EmployeeGroupID != nil {
 		query = query.Where("employee_group_id = ?", *filter.EmployeeGroupID)
@@ -172,7 +175,10 @@ func (r *EmployeeRepository) List(ctx context.Context, filter EmployeeFilter) ([
 		if len(filter.ScopeDepartmentIDs) == 0 {
 			query = query.Where("1 = 0")
 		} else {
-			query = query.Where("department_id IN ?", filter.ScopeDepartmentIDs)
+			query = query.Where(
+				"(department_id IN ? OR id IN (SELECT tm.employee_id FROM team_members tm JOIN teams t ON t.id = tm.team_id WHERE t.department_id IN ?))",
+				filter.ScopeDepartmentIDs, filter.ScopeDepartmentIDs,
+			)
 		}
 	case model.DataScopeEmployee:
 		if len(filter.ScopeEmployeeIDs) == 0 {
