@@ -83,7 +83,8 @@
     "time": "Stempeluhr",
     "correctionAssistant": "Korrekturassistent",
     "employeeDayPlans": "Mitarbeiter-Tagespläne",
-    "monthlyValues": "Monatswerte"
+    "monthlyValues": "Monatswerte",
+    "payrollExports": "Lohnexporte"
   },
   "sidebar": {
     "collapse": "Einklappen",
@@ -176,7 +177,8 @@
     "teamOverview": "Teamübersicht",
     "correctionAssistant": "Korrekturassistent",
     "employeeDayPlans": "Mitarbeiter-Tagespläne",
-    "monthlyValues": "Monatswerte"
+    "monthlyValues": "Monatswerte",
+    "payrollExports": "Lohnexporte"
   },
   "time": {
     "today": "Heute",
@@ -2330,6 +2332,136 @@
     "count": {
       "item": "{count} Mitarbeiter",
       "items": "{count} Mitarbeiter"
+    }
+  },
+  "payrollExports": {
+    "page": {
+      "title": "Lohnexporte",
+      "subtitle": "Lohnexport-Dateien erstellen, vorschauen und herunterladen"
+    },
+    "toolbar": {
+      "allStatuses": "Alle Status",
+      "generateExport": "Export erstellen"
+    },
+    "status": {
+      "pending": "Ausstehend",
+      "generating": "Wird erstellt",
+      "completed": "Abgeschlossen",
+      "failed": "Fehlgeschlagen"
+    },
+    "table": {
+      "yearMonth": "Zeitraum",
+      "exportType": "Exporttyp",
+      "format": "Format",
+      "status": "Status",
+      "employeeCount": "Mitarbeiter",
+      "totalHours": "Gesamtstunden",
+      "generatedAt": "Erstellt am",
+      "actions": "Aktionen"
+    },
+    "exportType": {
+      "standard": "Standard",
+      "datev": "DATEV",
+      "sage": "Sage",
+      "custom": "Benutzerdefiniert"
+    },
+    "format": {
+      "csv": "CSV",
+      "xlsx": "Excel",
+      "xml": "XML",
+      "json": "JSON"
+    },
+    "actions": {
+      "preview": "Vorschau",
+      "download": "Herunterladen",
+      "delete": "Löschen"
+    },
+    "generate": {
+      "title": "Lohnexport erstellen",
+      "description": "Neuen Lohnexport für den ausgewählten Zeitraum erstellen",
+      "yearLabel": "Jahr",
+      "monthLabel": "Monat",
+      "exportTypeLabel": "Exporttyp",
+      "formatLabel": "Format",
+      "interfaceLabel": "Export-Schnittstelle",
+      "interfacePlaceholder": "Schnittstelle auswählen (optional)",
+      "noInterface": "Keine",
+      "advancedParameters": "Erweiterte Parameter",
+      "employeeIdsLabel": "Mitarbeiter-IDs (kommagetrennt)",
+      "employeeIdsPlaceholder": "Leer lassen für alle Mitarbeiter",
+      "departmentIdsLabel": "Abteilungs-IDs (kommagetrennt)",
+      "departmentIdsPlaceholder": "Leer lassen für alle Abteilungen",
+      "accountIdsLabel": "Konten-IDs (kommagetrennt)",
+      "accountIdsPlaceholder": "Leer lassen für alle Konten",
+      "submit": "Export erstellen",
+      "validationRequired": "Jahr, Monat und Format sind erforderlich",
+      "monthNotClosed": "Alle Mitarbeiter müssen geschlossene Monate haben, bevor exportiert werden kann. Bitte schließen Sie zuerst alle Monate ab.",
+      "monthNotClosedLink": "Zu Monatswerten",
+      "error": "Export konnte nicht erstellt werden",
+      "futureMonthError": "Export kann nicht für den aktuellen oder einen zukünftigen Monat erstellt werden"
+    },
+    "preview": {
+      "title": "Export-Vorschau",
+      "description": "Vorschau der Exportdaten für {period}",
+      "personnelNumber": "Pers.-Nr.",
+      "firstName": "Vorname",
+      "lastName": "Nachname",
+      "department": "Abteilung",
+      "costCenter": "Kostenstelle",
+      "targetHours": "Soll",
+      "workedHours": "Ist",
+      "overtimeHours": "Überstunden",
+      "vacationDays": "Urlaub",
+      "sickDays": "Krank",
+      "otherAbsenceDays": "Sonst. Abw.",
+      "summaryRow": "Gesamt",
+      "noData": "Keine Vorschaudaten verfügbar",
+      "notReady": "Der Export ist noch nicht abgeschlossen. Die Vorschau ist verfügbar, sobald die Erstellung abgeschlossen ist.",
+      "close": "Schließen"
+    },
+    "detail": {
+      "title": "Export-Details",
+      "exportInfo": "Export-Informationen",
+      "type": "Typ",
+      "format": "Format",
+      "period": "Zeitraum",
+      "interface": "Schnittstelle",
+      "statusInfo": "Status",
+      "status": "Status",
+      "requestedAt": "Angefordert am",
+      "startedAt": "Gestartet am",
+      "completedAt": "Abgeschlossen am",
+      "summary": "Zusammenfassung",
+      "employeeCount": "Mitarbeiter",
+      "totalHours": "Gesamtstunden",
+      "totalOvertime": "Überstunden gesamt",
+      "rowCount": "Zeilen",
+      "fileSize": "Dateigröße",
+      "errorMessage": "Fehler",
+      "close": "Schließen",
+      "preview": "Vorschau",
+      "download": "Herunterladen",
+      "delete": "Löschen"
+    },
+    "delete": {
+      "title": "Export löschen",
+      "description": "Möchten Sie diesen Lohnexport wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "confirm": "Löschen",
+      "success": "Export erfolgreich gelöscht"
+    },
+    "download": {
+      "starting": "Download wird gestartet...",
+      "error": "Export konnte nicht heruntergeladen werden"
+    },
+    "empty": {
+      "title": "Keine Lohnexporte",
+      "description": "Keine Lohnexporte für die ausgewählten Filter gefunden.",
+      "generateHint": "Erstellen Sie Ihren ersten Export, um loszulegen.",
+      "generateButton": "Export erstellen"
+    },
+    "count": {
+      "item": "{count} Export",
+      "items": "{count} Exporte"
     }
   }
 }

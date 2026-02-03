@@ -83,7 +83,8 @@
     "time": "Time",
     "correctionAssistant": "Correction Assistant",
     "employeeDayPlans": "Employee Day Plans",
-    "monthlyValues": "Monthly Values"
+    "monthlyValues": "Monthly Values",
+    "payrollExports": "Payroll Exports"
   },
   "sidebar": {
     "collapse": "Collapse",
@@ -176,7 +177,8 @@
     "teamOverview": "Team Overview",
     "correctionAssistant": "Correction Assistant",
     "employeeDayPlans": "Employee Day Plans",
-    "monthlyValues": "Monthly Values"
+    "monthlyValues": "Monthly Values",
+    "payrollExports": "Payroll Exports"
   },
   "time": {
     "today": "Today",
@@ -2330,6 +2332,136 @@
     "count": {
       "item": "{count} employee",
       "items": "{count} employees"
+    }
+  },
+  "payrollExports": {
+    "page": {
+      "title": "Payroll Exports",
+      "subtitle": "Generate, preview, and download payroll export files"
+    },
+    "toolbar": {
+      "allStatuses": "All Statuses",
+      "generateExport": "Generate Export"
+    },
+    "status": {
+      "pending": "Pending",
+      "generating": "Generating",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "table": {
+      "yearMonth": "Period",
+      "exportType": "Export Type",
+      "format": "Format",
+      "status": "Status",
+      "employeeCount": "Employees",
+      "totalHours": "Total Hours",
+      "generatedAt": "Generated At",
+      "actions": "Actions"
+    },
+    "exportType": {
+      "standard": "Standard",
+      "datev": "DATEV",
+      "sage": "Sage",
+      "custom": "Custom"
+    },
+    "format": {
+      "csv": "CSV",
+      "xlsx": "Excel",
+      "xml": "XML",
+      "json": "JSON"
+    },
+    "actions": {
+      "preview": "Preview",
+      "download": "Download",
+      "delete": "Delete"
+    },
+    "generate": {
+      "title": "Generate Payroll Export",
+      "description": "Create a new payroll export for the selected period",
+      "yearLabel": "Year",
+      "monthLabel": "Month",
+      "exportTypeLabel": "Export Type",
+      "formatLabel": "Format",
+      "interfaceLabel": "Export Interface",
+      "interfacePlaceholder": "Select interface (optional)",
+      "noInterface": "None",
+      "advancedParameters": "Advanced Parameters",
+      "employeeIdsLabel": "Employee IDs (comma-separated)",
+      "employeeIdsPlaceholder": "Leave empty for all employees",
+      "departmentIdsLabel": "Department IDs (comma-separated)",
+      "departmentIdsPlaceholder": "Leave empty for all departments",
+      "accountIdsLabel": "Account IDs (comma-separated)",
+      "accountIdsPlaceholder": "Leave empty for all accounts",
+      "submit": "Generate Export",
+      "validationRequired": "Year, month, and format are required",
+      "monthNotClosed": "All employees must have closed months before exporting. Please close all months first.",
+      "monthNotClosedLink": "Go to Monthly Values",
+      "error": "Failed to generate export",
+      "futureMonthError": "Cannot generate export for the current or a future month"
+    },
+    "preview": {
+      "title": "Export Preview",
+      "description": "Preview of export data for {period}",
+      "personnelNumber": "Pers. No.",
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "department": "Department",
+      "costCenter": "Cost Center",
+      "targetHours": "Target",
+      "workedHours": "Worked",
+      "overtimeHours": "Overtime",
+      "vacationDays": "Vacation",
+      "sickDays": "Sick",
+      "otherAbsenceDays": "Other Abs.",
+      "summaryRow": "Total",
+      "noData": "No preview data available",
+      "notReady": "Export is not yet completed. Preview will be available once generation finishes.",
+      "close": "Close"
+    },
+    "detail": {
+      "title": "Export Details",
+      "exportInfo": "Export Information",
+      "type": "Type",
+      "format": "Format",
+      "period": "Period",
+      "interface": "Interface",
+      "statusInfo": "Status",
+      "status": "Status",
+      "requestedAt": "Requested At",
+      "startedAt": "Started At",
+      "completedAt": "Completed At",
+      "summary": "Summary",
+      "employeeCount": "Employees",
+      "totalHours": "Total Hours",
+      "totalOvertime": "Total Overtime",
+      "rowCount": "Rows",
+      "fileSize": "File Size",
+      "errorMessage": "Error",
+      "close": "Close",
+      "preview": "Preview",
+      "download": "Download",
+      "delete": "Delete"
+    },
+    "delete": {
+      "title": "Delete Export",
+      "description": "Are you sure you want to delete this payroll export? This action cannot be undone.",
+      "confirm": "Delete",
+      "success": "Export deleted successfully"
+    },
+    "download": {
+      "starting": "Starting download...",
+      "error": "Failed to download export"
+    },
+    "empty": {
+      "title": "No payroll exports",
+      "description": "No payroll exports found for the selected filters.",
+      "generateHint": "Generate your first export to get started.",
+      "generateButton": "Generate Export"
+    },
+    "count": {
+      "item": "{count} export",
+      "items": "{count} exports"
     }
   }
 }

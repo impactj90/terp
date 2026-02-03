@@ -25,6 +25,7 @@ var (
 	ErrPayrollExportNotReady       = errors.New("export is not ready (still generating or not started)")
 	ErrPayrollExportFailed         = errors.New("export generation failed")
 	ErrPayrollExportMonthNotClosed = errors.New("month is not closed for all employees in scope")
+	ErrPayrollExportFutureMonth    = errors.New("cannot generate export for a future month")
 )
 
 // payrollExportRepository defines the interface for payroll export data access.
@@ -115,6 +116,11 @@ func (s *PayrollExportService) Generate(ctx context.Context, input GeneratePayro
 	}
 	if input.Month < 1 || input.Month > 12 {
 		return nil, ErrPayrollExportMonthInvalid
+	}
+
+	now := time.Now()
+	if input.Year > now.Year() || (input.Year == now.Year() && input.Month >= int(now.Month())) {
+		return nil, ErrPayrollExportFutureMonth
 	}
 
 	format := strings.TrimSpace(input.Format)

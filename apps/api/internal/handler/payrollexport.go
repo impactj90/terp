@@ -347,6 +347,8 @@ func handlePayrollExportError(w http.ResponseWriter, err error) {
 		respondError(w, http.StatusInternalServerError, "Export generation failed")
 	case service.ErrPayrollExportMonthNotClosed:
 		respondError(w, http.StatusConflict, "Month is not closed for all employees in scope")
+	case service.ErrPayrollExportFutureMonth:
+		respondError(w, http.StatusBadRequest, "Cannot generate export for a future month")
 	default:
 		respondError(w, http.StatusInternalServerError, "Internal server error")
 	}

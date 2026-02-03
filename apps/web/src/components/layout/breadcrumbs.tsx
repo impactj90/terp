@@ -49,6 +49,7 @@ const segmentToKey: Record<string, string> = {
   'team-overview': 'teamOverview',
   'correction-assistant': 'correctionAssistant',
   'monthly-values': 'monthlyValues',
+  'payroll-exports': 'payrollExports',
 }
 
 interface BreadcrumbNavItem {

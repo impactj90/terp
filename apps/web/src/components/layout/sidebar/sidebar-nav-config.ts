@@ -23,6 +23,7 @@ import {
   AlertTriangle,
   CalendarClock,
   CalendarCheck,
+  FileOutput,
 } from 'lucide-react'
 import type { UserRole } from '@/hooks/use-has-role'
 
@@ -232,6 +233,12 @@ export const navConfig: NavSection[] = [
         titleKey: 'tenants',
         href: '/admin/tenants',
         icon: Shield,
+        roles: ['admin'],
+      },
+      {
+        titleKey: 'payrollExports',
+        href: '/admin/payroll-exports',
+        icon: FileOutput,
         roles: ['admin'],
       },
     ],
