@@ -27,6 +27,7 @@ const segmentToKey: Record<string, string> = {
   employees: 'employees',
   departments: 'departments',
   'employment-types': 'employmentTypes',
+  'cost-centers': 'costCenters',
   'day-plans': 'dayPlans',
   'employee-day-plans': 'employeeDayPlans',
   'week-plans': 'weekPlans',

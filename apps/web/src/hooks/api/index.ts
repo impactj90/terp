@@ -134,10 +134,22 @@ export {
 } from './use-departments'
 
 // Cost Centers
-export { useCostCenters, useCostCenter } from './use-cost-centers'
+export {
+  useCostCenters,
+  useCostCenter,
+  useCreateCostCenter,
+  useUpdateCostCenter,
+  useDeleteCostCenter,
+} from './use-cost-centers'
 
 // Employment Types
-export { useEmploymentTypes, useEmploymentType } from './use-employment-types'
+export {
+  useEmploymentTypes,
+  useEmploymentType,
+  useCreateEmploymentType,
+  useUpdateEmploymentType,
+  useDeleteEmploymentType,
+} from './use-employment-types'
 
 // Teams
 export {

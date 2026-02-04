@@ -1,4 +1,4 @@
-import { useApiQuery } from '@/hooks'
+import { useApiQuery, useApiMutation } from '@/hooks'
 
 interface UseEmploymentTypesOptions {
   enabled?: boolean
@@ -33,5 +33,23 @@ export function useEmploymentType(id: string, enabled = true) {
   return useApiQuery('/employment-types/{id}', {
     path: { id },
     enabled: enabled && !!id,
+  })
+}
+
+export function useCreateEmploymentType() {
+  return useApiMutation('/employment-types', 'post', {
+    invalidateKeys: [['/employment-types']],
+  })
+}
+
+export function useUpdateEmploymentType() {
+  return useApiMutation('/employment-types/{id}', 'patch', {
+    invalidateKeys: [['/employment-types']],
+  })
+}
+
+export function useDeleteEmploymentType() {
+  return useApiMutation('/employment-types/{id}', 'delete', {
+    invalidateKeys: [['/employment-types']],
   })
 }

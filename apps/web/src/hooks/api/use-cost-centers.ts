@@ -1,4 +1,4 @@
-import { useApiQuery } from '@/hooks'
+import { useApiQuery, useApiMutation } from '@/hooks'
 
 interface UseCostCentersOptions {
   enabled?: boolean
@@ -33,5 +33,23 @@ export function useCostCenter(id: string, enabled = true) {
   return useApiQuery('/cost-centers/{id}', {
     path: { id },
     enabled: enabled && !!id,
+  })
+}
+
+export function useCreateCostCenter() {
+  return useApiMutation('/cost-centers', 'post', {
+    invalidateKeys: [['/cost-centers']],
+  })
+}
+
+export function useUpdateCostCenter() {
+  return useApiMutation('/cost-centers/{id}', 'patch', {
+    invalidateKeys: [['/cost-centers']],
+  })
+}
+
+export function useDeleteCostCenter() {
+  return useApiMutation('/cost-centers/{id}', 'delete', {
+    invalidateKeys: [['/cost-centers']],
   })
 }

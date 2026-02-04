@@ -12,6 +12,7 @@ import {
   UsersRound,
   Building2,
   Briefcase,
+  Landmark,
   Settings,
   FileText,
   CalendarOff,
@@ -133,6 +134,12 @@ export const navConfig: NavSection[] = [
         titleKey: 'departments',
         href: '/admin/departments',
         icon: Building2,
+        roles: ['admin'],
+      },
+      {
+        titleKey: 'costCenters',
+        href: '/admin/cost-centers',
+        icon: Landmark,
         roles: ['admin'],
       },
       {
