@@ -1,4 +1,4 @@
-import { useApiQuery } from '@/hooks'
+import { useApiQuery, useApiMutation } from '@/hooks'
 
 interface UseVacationBalancesOptions {
   employeeId?: string
@@ -64,5 +64,57 @@ export function useEmployeeVacationBalance(
     path: { id: employeeId },
     params: { year },
     enabled: enabled && !!employeeId,
+  })
+}
+
+/**
+ * Hook to create a new vacation balance.
+ *
+ * @example
+ * ```tsx
+ * const createBalance = useCreateVacationBalance()
+ * createBalance.mutate({
+ *   body: { employee_id: '...', year: 2026, base_entitlement: 30 }
+ * })
+ * ```
+ */
+export function useCreateVacationBalance() {
+  return useApiMutation('/vacation-balances', 'post', {
+    invalidateKeys: [['/vacation-balances'], ['/employees']],
+  })
+}
+
+/**
+ * Hook to update an existing vacation balance.
+ *
+ * @example
+ * ```tsx
+ * const updateBalance = useUpdateVacationBalance()
+ * updateBalance.mutate({
+ *   path: { id: '...' },
+ *   body: { base_entitlement: 25 }
+ * })
+ * ```
+ */
+export function useUpdateVacationBalance() {
+  return useApiMutation('/vacation-balances/{id}', 'patch', {
+    invalidateKeys: [['/vacation-balances'], ['/employees']],
+  })
+}
+
+/**
+ * Hook to initialize vacation balances for all active employees for a year.
+ *
+ * @example
+ * ```tsx
+ * const initialize = useInitializeVacationBalances()
+ * initialize.mutate({
+ *   body: { year: 2026, carryover: true }
+ * })
+ * ```
+ */
+export function useInitializeVacationBalances() {
+  return useApiMutation('/vacation-balances/initialize', 'post', {
+    invalidateKeys: [['/vacation-balances']],
   })
 }

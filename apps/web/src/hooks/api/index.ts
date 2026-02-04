@@ -51,6 +51,9 @@ export {
   useVacationBalances,
   useVacationBalance,
   useEmployeeVacationBalance,
+  useCreateVacationBalance,
+  useUpdateVacationBalance,
+  useInitializeVacationBalances,
 } from './use-vacation-balance'
 
 // Employee Day View

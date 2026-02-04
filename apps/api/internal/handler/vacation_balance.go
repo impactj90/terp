@@ -186,18 +186,14 @@ func (h *VacationBalanceHandler) Update(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	input := service.UpdateVacationBalanceInput{}
-	if req.BaseEntitlement != 0 || req.AdditionalEntitlement != 0 {
-		entitlement := decimal.NewFromFloat(req.BaseEntitlement).Add(decimal.NewFromFloat(req.AdditionalEntitlement))
-		input.Entitlement = &entitlement
-	}
-	if req.CarryoverFromPrevious != 0 {
-		carryover := decimal.NewFromFloat(req.CarryoverFromPrevious)
-		input.Carryover = &carryover
-	}
-	if req.ManualAdjustment != 0 {
-		adjustment := decimal.NewFromFloat(req.ManualAdjustment)
-		input.Adjustments = &adjustment
+	entitlement := decimal.NewFromFloat(req.BaseEntitlement).Add(decimal.NewFromFloat(req.AdditionalEntitlement))
+	carryover := decimal.NewFromFloat(req.CarryoverFromPrevious)
+	adjustment := decimal.NewFromFloat(req.ManualAdjustment)
+
+	input := service.UpdateVacationBalanceInput{
+		Entitlement: &entitlement,
+		Carryover:   &carryover,
+		Adjustments: &adjustment,
 	}
 	if !time.Time(req.CarryoverExpiresAt).IsZero() {
 		t := time.Time(req.CarryoverExpiresAt)
@@ -296,6 +292,22 @@ func (h *VacationBalanceHandler) balanceToResponse(vb *model.VacationBalance) *m
 	if vb.CarryoverExpiresAt != nil {
 		d := strfmt.Date(*vb.CarryoverExpiresAt)
 		resp.CarryoverExpiresAt = &d
+	}
+
+	if vb.Employee != nil {
+		empID := strfmt.UUID(vb.Employee.ID.String())
+		fn := vb.Employee.FirstName
+		ln := vb.Employee.LastName
+		pn := vb.Employee.PersonnelNumber
+		resp.Employee.ID = &empID
+		resp.Employee.FirstName = &fn
+		resp.Employee.LastName = &ln
+		resp.Employee.PersonnelNumber = &pn
+		resp.Employee.IsActive = vb.Employee.IsActive
+		if vb.Employee.DepartmentID != nil {
+			depID := strfmt.UUID(vb.Employee.DepartmentID.String())
+			resp.Employee.DepartmentID = &depID
+		}
 	}
 
 	return resp

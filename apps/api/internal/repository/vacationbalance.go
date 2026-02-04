@@ -32,6 +32,7 @@ func (r *VacationBalanceRepository) Create(ctx context.Context, balance *model.V
 func (r *VacationBalanceRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.VacationBalance, error) {
 	var balance model.VacationBalance
 	err := r.db.GORM.WithContext(ctx).
+		Preload("Employee").
 		First(&balance, "id = ?", id).Error
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -128,7 +129,7 @@ func (r *VacationBalanceRepository) ListAll(ctx context.Context, filter Vacation
 	}
 
 	var balances []model.VacationBalance
-	err := q.Order("vacation_balances.year DESC").Find(&balances).Error
+	err := q.Preload("Employee").Order("vacation_balances.year DESC").Find(&balances).Error
 	if err != nil {
 		return nil, fmt.Errorf("failed to list vacation balances: %w", err)
 	}

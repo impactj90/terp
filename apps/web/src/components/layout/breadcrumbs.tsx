@@ -52,6 +52,7 @@ const segmentToKey: Record<string, string> = {
   'payroll-exports': 'payrollExports',
   'export-interfaces': 'exportInterfaces',
   'monthly-evaluations': 'monthlyEvaluations',
+  'vacation-balances': 'vacationBalances',
 }
 
 interface BreadcrumbNavItem {

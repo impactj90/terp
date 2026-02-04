@@ -201,6 +201,12 @@ export const navConfig: NavSection[] = [
         icon: CalendarCheck,
         roles: ['admin'],
       },
+      {
+        titleKey: 'vacationBalances',
+        href: '/admin/vacation-balances',
+        icon: Palmtree,
+        roles: ['admin'],
+      },
     ],
   },
   {
