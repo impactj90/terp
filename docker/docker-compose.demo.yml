@@ -1,0 +1,31 @@
+services:
+  api:
+    environment:
+      FRONTEND_URL: https://${NGROK_DOMAIN}
+
+  web:
+    environment:
+      - NEXT_PUBLIC_API_URL=/api/v1
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: terp-caddy
+    entrypoint: /entrypoint.sh
+    volumes:
+      - ./Caddyfile.demo:/etc/caddy/Caddyfile
+      - ./caddy-demo-entrypoint.sh:/entrypoint.sh
+    environment:
+      DEMO_USER: ${DEMO_USER:-demo}
+      DEMO_PASSWORD: ${DEMO_PASSWORD}
+    depends_on:
+      - api
+      - web
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: terp-ngrok
+    command: http caddy:80 --domain=${NGROK_DOMAIN}
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
+    depends_on:
+      - caddy

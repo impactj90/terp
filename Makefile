@@ -1,7 +1,8 @@
-.PHONY: dev dev-down dev-clean dev-logs dev-ps build test test-coverage lint fmt tidy migrate-up migrate-down migrate-create migrate-status swagger-bundle generate generate-web generate-all clean install-tools help
+.PHONY: dev dev-down dev-clean dev-logs dev-ps demo demo-down demo-logs build test test-coverage lint fmt tidy migrate-up migrate-down migrate-create migrate-status swagger-bundle generate generate-web generate-all clean install-tools help
 
 # Variables
 DOCKER_COMPOSE = docker compose -p terp -f docker/docker-compose.yml
+DOCKER_COMPOSE_DEMO = docker compose -p terp --env-file .env -f docker/docker-compose.yml -f docker/docker-compose.demo.yml
 GOBIN = $(shell go env GOPATH)/bin
 MIGRATE = $(GOBIN)/migrate
 LOCAL_DB = postgres://dev:dev@localhost:5432/terp?sslmode=disable
@@ -43,6 +44,30 @@ dev-logs: ## Follow logs from all services
 ## dev-ps: Show status of services
 dev-ps: ## Show running services
 	$(DOCKER_COMPOSE) ps
+
+## demo: Start demo environment with public tunnel
+demo: ## Start demo with public URL and password protection
+	$(DOCKER_COMPOSE_DEMO) up --build -d
+	@echo "Waiting for database to be ready..."
+	@sleep 3
+	@echo "Running migrations..."
+	@$(MIGRATE) -path db/migrations -database "$(LOCAL_DB)" up || true
+	@echo ""
+	@echo "========================================="
+	@echo "  Demo environment ready!"
+	@echo "  URL: https://$$(grep NGROK_DOMAIN .env | cut -d= -f2)"
+	@echo "  User: $$(grep DEMO_USER .env | cut -d= -f2)"
+	@echo "  Password: $$(grep DEMO_PASSWORD .env | cut -d= -f2)"
+	@echo "========================================="
+
+## demo-down: Stop demo environment
+demo-down: ## Stop demo environment
+	$(DOCKER_COMPOSE_DEMO) down -v --remove-orphans
+	@docker rm -f terp-postgres terp-api terp-web terp-caddy terp-ngrok 2>/dev/null || true
+
+## demo-logs: Show demo logs
+demo-logs: ## Follow logs from demo services
+	$(DOCKER_COMPOSE_DEMO) logs -f
 
 ## build: Build production Docker images
 build: ## Build production images
