@@ -13,6 +13,7 @@ import {
   Building2,
   Briefcase,
   Landmark,
+  MapPin,
   Settings,
   FileText,
   CalendarOff,
@@ -142,6 +143,12 @@ export const navConfig: NavSection[] = [
         titleKey: 'costCenters',
         href: '/admin/cost-centers',
         icon: Landmark,
+        roles: ['admin'],
+      },
+      {
+        titleKey: 'locations',
+        href: '/admin/locations',
+        icon: MapPin,
         roles: ['admin'],
       },
       {

@@ -142,6 +142,15 @@ export {
   useDeleteCostCenter,
 } from './use-cost-centers'
 
+// Locations
+export {
+  useLocations,
+  useLocation,
+  useCreateLocation,
+  useUpdateLocation,
+  useDeleteLocation,
+} from './use-locations'
+
 // Employment Types
 export {
   useEmploymentTypes,
