@@ -89,7 +89,8 @@
     "exportInterfaces": "Exportschnittstellen",
     "monthlyEvaluations": "Auswertungsvorlagen",
     "vacationBalances": "Urlaubskonten",
-    "evaluations": "Auswertungen"
+    "evaluations": "Auswertungen",
+    "auditLogs": "Audit-Protokoll"
   },
   "sidebar": {
     "collapse": "Einklappen",
@@ -188,7 +189,8 @@
     "exportInterfaces": "Exportschnittstellen",
     "monthlyEvaluations": "Auswertungsvorlagen",
     "vacationBalances": "Urlaubskonten",
-    "evaluations": "Auswertungen"
+    "evaluations": "Auswertungen",
+    "auditLogs": "Audit-Protokoll"
   },
   "time": {
     "today": "Heute",
@@ -458,7 +460,7 @@
     "afterRequest": "Nach Antrag",
     "countDays": "{count} Tage",
     "daysRemainingProgress": "{remaining} / {total} Tage verbleibend",
-    "doesNotAffectBalance": "{name} hat keinen Einfluss auf Ihr Urlaubskonto.",
+    "doesNotAffectBalance": "hat keinen Einfluss auf Ihr Urlaubskonto.",
     "negativeBalanceWarning": "Dieser Antrag würde zu einem negativen Urlaubssaldo führen. Bitte wenden Sie sich an Ihren Vorgesetzten, wenn Sie zusätzliche Freizeit benötigen.",
     "lowBalanceWarning": "Ihr Urlaubssaldo wird niedrig. Nach diesem Antrag verbleiben Ihnen {count} Tage."
   },
@@ -3242,5 +3244,122 @@
     "warnings": {
       "largeDateRange": "Großer Zeitraum ausgewählt (über 90 Tage). Das Laden kann länger dauern."
     }
+  },
+  "auditLogs": {
+    "page": {
+      "title": "Audit-Protokoll",
+      "subtitle": "Systemaktivitaeten, Aenderungen und Benutzeraktionen fuer Compliance und Fehlersuche ueberpruefen"
+    },
+    "filters": {
+      "dateRange": "Zeitraum",
+      "user": "Benutzer",
+      "allUsers": "Alle Benutzer",
+      "entityType": "Entitaetstyp",
+      "allEntityTypes": "Alle Entitaetstypen",
+      "entityId": "Entitaets-ID",
+      "entityIdPlaceholder": "Entitaets-UUID eingeben...",
+      "action": "Aktion",
+      "allActions": "Alle Aktionen",
+      "clearFilters": "Filter zuruecksetzen"
+    },
+    "table": {
+      "timestamp": "Zeitstempel",
+      "user": "Benutzer",
+      "action": "Aktion",
+      "entityType": "Entitaetstyp",
+      "entityName": "Entitaetsname",
+      "ipAddress": "IP-Adresse",
+      "details": "Details"
+    },
+    "actions": {
+      "create": "Erstellen",
+      "update": "Aktualisieren",
+      "delete": "Loeschen",
+      "approve": "Genehmigen",
+      "reject": "Ablehnen",
+      "close": "Schliessen",
+      "reopen": "Wiedereroeffnen",
+      "export": "Exportieren",
+      "import": "Importieren",
+      "login": "Anmeldung",
+      "logout": "Abmeldung"
+    },
+    "entityTypes": {
+      "booking": "Buchung",
+      "absence": "Abwesenheit",
+      "monthly_value": "Monatswert",
+      "daily_value": "Tageswert",
+      "employee": "Mitarbeiter",
+      "user": "Benutzer",
+      "department": "Abteilung",
+      "team": "Team",
+      "cost_center": "Kostenstelle",
+      "employment_type": "Beschaeftigungsart",
+      "day_plan": "Tagesplan",
+      "week_plan": "Wochenplan",
+      "tariff": "Tarif",
+      "holiday": "Feiertag",
+      "absence_type": "Abwesenheitsart",
+      "booking_type": "Buchungstyp",
+      "account": "Konto",
+      "vacation_balance": "Urlaubskonto",
+      "report": "Bericht",
+      "tenant": "Mandant",
+      "user_group": "Benutzergruppe",
+      "notification_preference": "Benachrichtigungseinstellung",
+      "employee_tariff_assignment": "Tarifzuweisung",
+      "employee_day_plan": "Mitarbeiter-Tagesplan",
+      "payroll_export": "Lohnexport",
+      "export_interface": "Exportschnittstelle",
+      "monthly_evaluation": "Auswertungsvorlage",
+      "correction_message": "Korrekturmeldung"
+    },
+    "detail": {
+      "title": "Audit-Protokoll Details",
+      "eventInfo": "Ereignisinformationen",
+      "userInfo": "Benutzerinformationen",
+      "requestInfo": "Anfrageinformationen",
+      "timestamps": "Zeitstempel",
+      "changesSection": "Aenderungen",
+      "metadataSection": "Metadaten",
+      "entityType": "Entitaetstyp",
+      "entityName": "Entitaetsname",
+      "entityId": "Entitaets-ID",
+      "action": "Aktion",
+      "user": "Benutzer",
+      "userId": "Benutzer-ID",
+      "ipAddress": "IP-Adresse",
+      "userAgent": "User Agent",
+      "performedAt": "Durchgefuehrt am",
+      "close": "Schliessen",
+      "copied": "Kopiert!",
+      "copyId": "ID kopieren"
+    },
+    "diff": {
+      "field": "Feld",
+      "before": "Vorher",
+      "after": "Nachher",
+      "noChanges": "Keine Aenderungen aufgezeichnet",
+      "added": "Hinzugefuegt",
+      "removed": "Entfernt",
+      "modified": "Geaendert"
+    },
+    "metadata": {
+      "noMetadata": "Keine zusaetzlichen Metadaten"
+    },
+    "empty": {
+      "title": "Keine Audit-Protokolleintraege gefunden",
+      "description": "Keine Audit-Protokolleintraege entsprechen den ausgewaehlten Filtern. Versuchen Sie, Ihre Filterkriterien anzupassen."
+    },
+    "count": {
+      "items": "{count} Ergebnisse",
+      "item": "{count} Ergebnis"
+    },
+    "pagination": {
+      "loadMore": "Mehr laden",
+      "loading": "Laden...",
+      "allLoaded": "Alle Eintraege geladen"
+    },
+    "system": "System"
   }
 }

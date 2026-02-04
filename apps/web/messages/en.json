@@ -89,7 +89,8 @@
     "exportInterfaces": "Export Interfaces",
     "monthlyEvaluations": "Evaluation Templates",
     "vacationBalances": "Vacation Balances",
-    "evaluations": "Evaluations"
+    "evaluations": "Evaluations",
+    "auditLogs": "Audit Logs"
   },
   "sidebar": {
     "collapse": "Collapse",
@@ -188,7 +189,8 @@
     "exportInterfaces": "Export Interfaces",
     "monthlyEvaluations": "Evaluation Templates",
     "vacationBalances": "Vacation Balances",
-    "evaluations": "Evaluations"
+    "evaluations": "Evaluations",
+    "auditLogs": "Audit Logs"
   },
   "time": {
     "today": "Today",
@@ -458,7 +460,7 @@
     "afterRequest": "After request",
     "countDays": "{count} days",
     "daysRemainingProgress": "{remaining} / {total} days remaining",
-    "doesNotAffectBalance": "{name} does not affect your vacation balance.",
+    "doesNotAffectBalance": "does not affect your vacation balance.",
     "negativeBalanceWarning": "This request would result in a negative vacation balance. Please contact your manager if you need additional time off.",
     "lowBalanceWarning": "Your vacation balance is getting low. You will have {count} days remaining after this request."
   },
@@ -3242,5 +3244,122 @@
     "warnings": {
       "largeDateRange": "Large date range selected (over 90 days). Loading may take longer."
     }
+  },
+  "auditLogs": {
+    "page": {
+      "title": "Audit Logs",
+      "subtitle": "Review system activity, changes, and user actions for compliance and debugging"
+    },
+    "filters": {
+      "dateRange": "Date Range",
+      "user": "User",
+      "allUsers": "All Users",
+      "entityType": "Entity Type",
+      "allEntityTypes": "All Entity Types",
+      "entityId": "Entity ID",
+      "entityIdPlaceholder": "Enter entity UUID...",
+      "action": "Action",
+      "allActions": "All Actions",
+      "clearFilters": "Clear filters"
+    },
+    "table": {
+      "timestamp": "Timestamp",
+      "user": "User",
+      "action": "Action",
+      "entityType": "Entity Type",
+      "entityName": "Entity Name",
+      "ipAddress": "IP Address",
+      "details": "Details"
+    },
+    "actions": {
+      "create": "Create",
+      "update": "Update",
+      "delete": "Delete",
+      "approve": "Approve",
+      "reject": "Reject",
+      "close": "Close",
+      "reopen": "Reopen",
+      "export": "Export",
+      "import": "Import",
+      "login": "Login",
+      "logout": "Logout"
+    },
+    "entityTypes": {
+      "booking": "Booking",
+      "absence": "Absence",
+      "monthly_value": "Monthly Value",
+      "daily_value": "Daily Value",
+      "employee": "Employee",
+      "user": "User",
+      "department": "Department",
+      "team": "Team",
+      "cost_center": "Cost Center",
+      "employment_type": "Employment Type",
+      "day_plan": "Day Plan",
+      "week_plan": "Week Plan",
+      "tariff": "Tariff",
+      "holiday": "Holiday",
+      "absence_type": "Absence Type",
+      "booking_type": "Booking Type",
+      "account": "Account",
+      "vacation_balance": "Vacation Balance",
+      "report": "Report",
+      "tenant": "Tenant",
+      "user_group": "User Group",
+      "notification_preference": "Notification Preference",
+      "employee_tariff_assignment": "Tariff Assignment",
+      "employee_day_plan": "Employee Day Plan",
+      "payroll_export": "Payroll Export",
+      "export_interface": "Export Interface",
+      "monthly_evaluation": "Evaluation Template",
+      "correction_message": "Correction Message"
+    },
+    "detail": {
+      "title": "Audit Log Details",
+      "eventInfo": "Event Information",
+      "userInfo": "User Information",
+      "requestInfo": "Request Information",
+      "timestamps": "Timestamps",
+      "changesSection": "Changes",
+      "metadataSection": "Metadata",
+      "entityType": "Entity Type",
+      "entityName": "Entity Name",
+      "entityId": "Entity ID",
+      "action": "Action",
+      "user": "User",
+      "userId": "User ID",
+      "ipAddress": "IP Address",
+      "userAgent": "User Agent",
+      "performedAt": "Performed At",
+      "close": "Close",
+      "copied": "Copied!",
+      "copyId": "Copy ID"
+    },
+    "diff": {
+      "field": "Field",
+      "before": "Before",
+      "after": "After",
+      "noChanges": "No changes recorded",
+      "added": "Added",
+      "removed": "Removed",
+      "modified": "Modified"
+    },
+    "metadata": {
+      "noMetadata": "No additional metadata"
+    },
+    "empty": {
+      "title": "No audit log entries found",
+      "description": "No audit log entries match the selected filters. Try adjusting your filter criteria."
+    },
+    "count": {
+      "items": "{count} results",
+      "item": "{count} result"
+    },
+    "pagination": {
+      "loadMore": "Load More",
+      "loading": "Loading...",
+      "allLoaded": "All entries loaded"
+    },
+    "system": "System"
   }
 }

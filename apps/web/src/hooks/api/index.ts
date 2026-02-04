@@ -309,3 +309,9 @@ export {
   useEvaluationLogs,
   useEvaluationWorkflowHistory,
 } from './use-evaluations'
+
+// Audit Logs
+export {
+  useAuditLogs,
+  useAuditLog,
+} from './use-audit-logs'

@@ -28,6 +28,7 @@ import {
   FileOutput,
   Settings2,
   BarChart3,
+  FileClock,
 } from 'lucide-react'
 import type { UserRole } from '@/hooks/use-has-role'
 
@@ -243,6 +244,12 @@ export const navConfig: NavSection[] = [
         titleKey: 'reports',
         href: '/admin/reports',
         icon: FileText,
+        roles: ['admin'],
+      },
+      {
+        titleKey: 'auditLogs',
+        href: '/admin/audit-logs',
+        icon: FileClock,
         roles: ['admin'],
       },
       {
