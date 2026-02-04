@@ -49,6 +49,7 @@ const segmentToKey: Record<string, string> = {
   'year-overview': 'yearOverview',
   'team-overview': 'teamOverview',
   'correction-assistant': 'correctionAssistant',
+  evaluations: 'evaluations',
   'monthly-values': 'monthlyValues',
   'payroll-exports': 'payrollExports',
   'export-interfaces': 'exportInterfaces',

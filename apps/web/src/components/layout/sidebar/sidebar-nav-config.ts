@@ -27,6 +27,7 @@ import {
   CalendarCheck,
   FileOutput,
   Settings2,
+  BarChart3,
 } from 'lucide-react'
 import type { UserRole } from '@/hooks/use-has-role'
 
@@ -200,6 +201,12 @@ export const navConfig: NavSection[] = [
         titleKey: 'correctionAssistant',
         href: '/admin/correction-assistant',
         icon: AlertTriangle,
+        roles: ['admin'],
+      },
+      {
+        titleKey: 'evaluations',
+        href: '/admin/evaluations',
+        icon: BarChart3,
         roles: ['admin'],
       },
       {

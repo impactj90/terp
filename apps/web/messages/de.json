@@ -88,7 +88,8 @@
     "payrollExports": "Lohnexporte",
     "exportInterfaces": "Exportschnittstellen",
     "monthlyEvaluations": "Auswertungsvorlagen",
-    "vacationBalances": "Urlaubskonten"
+    "vacationBalances": "Urlaubskonten",
+    "evaluations": "Auswertungen"
   },
   "sidebar": {
     "collapse": "Einklappen",
@@ -186,7 +187,8 @@
     "payrollExports": "Lohnexporte",
     "exportInterfaces": "Exportschnittstellen",
     "monthlyEvaluations": "Auswertungsvorlagen",
-    "vacationBalances": "Urlaubskonten"
+    "vacationBalances": "Urlaubskonten",
+    "evaluations": "Auswertungen"
   },
   "time": {
     "today": "Heute",
@@ -3086,6 +3088,159 @@
     "count": {
       "item": "{count} Bericht",
       "items": "{count} Berichte"
+    }
+  },
+  "evaluations": {
+    "page": {
+      "title": "Auswertungen",
+      "subtitle": "Tageswerte, Buchungen, Terminal-Buchungen, Protokolle und Workflow-Verlauf abfragen"
+    },
+    "tabs": {
+      "dailyValues": "Tageswerte",
+      "bookings": "Buchungen",
+      "terminalBookings": "Terminal-Buchungen",
+      "logs": "Protokoll",
+      "workflowHistory": "Workflow-Verlauf"
+    },
+    "filters": {
+      "dateRange": "Zeitraum",
+      "employee": "Mitarbeiter",
+      "allEmployees": "Alle Mitarbeiter",
+      "department": "Abteilung",
+      "allDepartments": "Alle Abteilungen",
+      "clearFilters": "Filter zurücksetzen",
+      "hasErrors": "Nur Fehler",
+      "includeNoBookings": "Tage ohne Buchungen anzeigen",
+      "bookingType": "Buchungsart",
+      "allBookingTypes": "Alle Buchungsarten",
+      "source": "Quelle",
+      "allSources": "Alle Quellen",
+      "direction": "Richtung",
+      "allDirections": "Alle Richtungen",
+      "directionIn": "Kommen",
+      "directionOut": "Gehen",
+      "entityType": "Objekttyp",
+      "allEntityTypes": "Alle Objekttypen",
+      "action": "Aktion",
+      "allActions": "Alle Aktionen",
+      "user": "Benutzer",
+      "allUsers": "Alle Benutzer"
+    },
+    "sources": {
+      "web": "Web",
+      "terminal": "Terminal",
+      "api": "API",
+      "import": "Import",
+      "correction": "Korrektur"
+    },
+    "actions": {
+      "create": "Erstellen",
+      "update": "Aktualisieren",
+      "delete": "Löschen",
+      "approve": "Genehmigen",
+      "reject": "Ablehnen",
+      "close": "Abschließen",
+      "reopen": "Wiedereröffnen"
+    },
+    "entityTypes": {
+      "booking": "Buchung",
+      "absence": "Abwesenheit",
+      "monthly_value": "Monatswert",
+      "daily_value": "Tageswert"
+    },
+    "status": {
+      "pending": "Ausstehend",
+      "calculated": "Berechnet",
+      "error": "Fehler",
+      "approved": "Genehmigt",
+      "no_data": "Keine Daten"
+    },
+    "dailyValues": {
+      "date": "Datum",
+      "employee": "Mitarbeiter",
+      "status": "Status",
+      "target": "Soll",
+      "gross": "Brutto",
+      "net": "Netto",
+      "break": "Pause",
+      "overtime": "Überstunden",
+      "balance": "Saldo",
+      "firstCome": "Erster Kommt",
+      "lastGo": "Letzter Geht",
+      "bookings": "Buchungen",
+      "errors": "Fehler"
+    },
+    "bookings": {
+      "date": "Datum",
+      "employee": "Mitarbeiter",
+      "time": "Zeit",
+      "bookingType": "Buchungsart",
+      "source": "Quelle",
+      "direction": "Richtung",
+      "notes": "Notizen",
+      "createdAt": "Erstellt am"
+    },
+    "terminalBookings": {
+      "date": "Datum",
+      "employee": "Mitarbeiter",
+      "originalTime": "Originalzeit",
+      "editedTime": "Bearbeitete Zeit",
+      "wasEdited": "Bearbeitet",
+      "bookingType": "Buchungsart",
+      "terminalId": "Terminal-ID",
+      "source": "Quelle",
+      "createdAt": "Erstellt am",
+      "editedBadge": "Bearbeitet"
+    },
+    "logs": {
+      "timestamp": "Zeitstempel",
+      "user": "Benutzer",
+      "action": "Aktion",
+      "entityType": "Objekttyp",
+      "entityName": "Objektname",
+      "changes": "Änderungen",
+      "viewDetails": "Details anzeigen"
+    },
+    "workflow": {
+      "timestamp": "Zeitstempel",
+      "user": "Benutzer",
+      "action": "Aktion",
+      "entityType": "Objekttyp",
+      "entityName": "Objektname",
+      "metadata": "Metadaten",
+      "viewDetails": "Details anzeigen"
+    },
+    "detail": {
+      "title": "Eintragsdetails",
+      "logTitle": "Protokolldetails",
+      "workflowTitle": "Workflow-Details",
+      "timestamp": "Zeitstempel",
+      "user": "Benutzer",
+      "action": "Aktion",
+      "entityType": "Objekttyp",
+      "entityId": "Objekt-ID",
+      "entityName": "Objektname",
+      "changesSection": "Änderungen",
+      "metadataSection": "Metadaten",
+      "before": "Vorher",
+      "after": "Nachher",
+      "noChanges": "Keine Änderungen erfasst",
+      "noMetadata": "Keine Metadaten",
+      "close": "Schließen"
+    },
+    "empty": {
+      "dailyValues": "Keine Tageswerte für den ausgewählten Zeitraum gefunden",
+      "bookings": "Keine Buchungen für den ausgewählten Zeitraum gefunden",
+      "terminalBookings": "Keine Terminal-Buchungen für den ausgewählten Zeitraum gefunden",
+      "logs": "Keine Protokolleinträge für den ausgewählten Zeitraum gefunden",
+      "workflow": "Keine Workflow-Einträge für den ausgewählten Zeitraum gefunden"
+    },
+    "count": {
+      "items": "{count} Ergebnisse",
+      "item": "{count} Ergebnis"
+    },
+    "warnings": {
+      "largeDateRange": "Großer Zeitraum ausgewählt (über 90 Tage). Das Laden kann länger dauern."
     }
   }
 }

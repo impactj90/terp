@@ -300,3 +300,12 @@ export {
   useDeleteReport,
   useDownloadReport,
 } from './use-reports'
+
+// Evaluations
+export {
+  useEvaluationDailyValues,
+  useEvaluationBookings,
+  useEvaluationTerminalBookings,
+  useEvaluationLogs,
+  useEvaluationWorkflowHistory,
+} from './use-evaluations'

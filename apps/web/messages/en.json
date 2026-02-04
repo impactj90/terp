@@ -88,7 +88,8 @@
     "payrollExports": "Payroll Exports",
     "exportInterfaces": "Export Interfaces",
     "monthlyEvaluations": "Evaluation Templates",
-    "vacationBalances": "Vacation Balances"
+    "vacationBalances": "Vacation Balances",
+    "evaluations": "Evaluations"
   },
   "sidebar": {
     "collapse": "Collapse",
@@ -186,7 +187,8 @@
     "payrollExports": "Payroll Exports",
     "exportInterfaces": "Export Interfaces",
     "monthlyEvaluations": "Evaluation Templates",
-    "vacationBalances": "Vacation Balances"
+    "vacationBalances": "Vacation Balances",
+    "evaluations": "Evaluations"
   },
   "time": {
     "today": "Today",
@@ -3086,6 +3088,159 @@
     "count": {
       "item": "{count} report",
       "items": "{count} reports"
+    }
+  },
+  "evaluations": {
+    "page": {
+      "title": "Evaluations",
+      "subtitle": "Query daily values, bookings, terminal bookings, change logs, and workflow history"
+    },
+    "tabs": {
+      "dailyValues": "Daily Values",
+      "bookings": "Bookings",
+      "terminalBookings": "Terminal Bookings",
+      "logs": "Logs",
+      "workflowHistory": "Workflow History"
+    },
+    "filters": {
+      "dateRange": "Date Range",
+      "employee": "Employee",
+      "allEmployees": "All Employees",
+      "department": "Department",
+      "allDepartments": "All Departments",
+      "clearFilters": "Clear filters",
+      "hasErrors": "Errors only",
+      "includeNoBookings": "Include days without bookings",
+      "bookingType": "Booking Type",
+      "allBookingTypes": "All Booking Types",
+      "source": "Source",
+      "allSources": "All Sources",
+      "direction": "Direction",
+      "allDirections": "All Directions",
+      "directionIn": "In",
+      "directionOut": "Out",
+      "entityType": "Entity Type",
+      "allEntityTypes": "All Entity Types",
+      "action": "Action",
+      "allActions": "All Actions",
+      "user": "User",
+      "allUsers": "All Users"
+    },
+    "sources": {
+      "web": "Web",
+      "terminal": "Terminal",
+      "api": "API",
+      "import": "Import",
+      "correction": "Correction"
+    },
+    "actions": {
+      "create": "Create",
+      "update": "Update",
+      "delete": "Delete",
+      "approve": "Approve",
+      "reject": "Reject",
+      "close": "Close",
+      "reopen": "Reopen"
+    },
+    "entityTypes": {
+      "booking": "Booking",
+      "absence": "Absence",
+      "monthly_value": "Monthly Value",
+      "daily_value": "Daily Value"
+    },
+    "status": {
+      "pending": "Pending",
+      "calculated": "Calculated",
+      "error": "Error",
+      "approved": "Approved",
+      "no_data": "No Data"
+    },
+    "dailyValues": {
+      "date": "Date",
+      "employee": "Employee",
+      "status": "Status",
+      "target": "Target",
+      "gross": "Gross",
+      "net": "Net",
+      "break": "Break",
+      "overtime": "Overtime",
+      "balance": "Balance",
+      "firstCome": "First Come",
+      "lastGo": "Last Go",
+      "bookings": "Bookings",
+      "errors": "Errors"
+    },
+    "bookings": {
+      "date": "Date",
+      "employee": "Employee",
+      "time": "Time",
+      "bookingType": "Booking Type",
+      "source": "Source",
+      "direction": "Direction",
+      "notes": "Notes",
+      "createdAt": "Created At"
+    },
+    "terminalBookings": {
+      "date": "Date",
+      "employee": "Employee",
+      "originalTime": "Original Time",
+      "editedTime": "Edited Time",
+      "wasEdited": "Edited",
+      "bookingType": "Booking Type",
+      "terminalId": "Terminal ID",
+      "source": "Source",
+      "createdAt": "Created At",
+      "editedBadge": "Edited"
+    },
+    "logs": {
+      "timestamp": "Timestamp",
+      "user": "User",
+      "action": "Action",
+      "entityType": "Entity Type",
+      "entityName": "Entity Name",
+      "changes": "Changes",
+      "viewDetails": "View Details"
+    },
+    "workflow": {
+      "timestamp": "Timestamp",
+      "user": "User",
+      "action": "Action",
+      "entityType": "Entity Type",
+      "entityName": "Entity Name",
+      "metadata": "Metadata",
+      "viewDetails": "View Details"
+    },
+    "detail": {
+      "title": "Entry Details",
+      "logTitle": "Change Log Details",
+      "workflowTitle": "Workflow Entry Details",
+      "timestamp": "Timestamp",
+      "user": "User",
+      "action": "Action",
+      "entityType": "Entity Type",
+      "entityId": "Entity ID",
+      "entityName": "Entity Name",
+      "changesSection": "Changes",
+      "metadataSection": "Metadata",
+      "before": "Before",
+      "after": "After",
+      "noChanges": "No changes recorded",
+      "noMetadata": "No metadata",
+      "close": "Close"
+    },
+    "empty": {
+      "dailyValues": "No daily values found for the selected period",
+      "bookings": "No bookings found for the selected period",
+      "terminalBookings": "No terminal bookings found for the selected period",
+      "logs": "No log entries found for the selected period",
+      "workflow": "No workflow entries found for the selected period"
+    },
+    "count": {
+      "items": "{count} results",
+      "item": "{count} result"
+    },
+    "warnings": {
+      "largeDateRange": "Large date range selected (over 90 days). Loading may take longer."
     }
   }
 }
