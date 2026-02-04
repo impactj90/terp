@@ -324,3 +324,22 @@ export {
   useAuditLogs,
   useAuditLog,
 } from './use-audit-logs'
+
+// System Settings
+export {
+  useSystemSettings,
+  useUpdateSystemSettings,
+  useCleanupDeleteBookings,
+  useCleanupDeleteBookingData,
+  useCleanupReReadBookings,
+  useCleanupMarkDeleteOrders,
+} from './use-system-settings'
+
+// Tenants
+export {
+  useTenants,
+  useTenant,
+  useCreateTenant,
+  useUpdateTenant,
+  useDeactivateTenant,
+} from './use-tenants'
