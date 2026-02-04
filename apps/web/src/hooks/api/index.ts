@@ -291,3 +291,12 @@ export {
   useDeleteMonthlyEvaluation,
   useSetDefaultMonthlyEvaluation,
 } from './use-monthly-evaluations'
+
+// Reports
+export {
+  useReports,
+  useReport,
+  useGenerateReport,
+  useDeleteReport,
+  useDownloadReport,
+} from './use-reports'

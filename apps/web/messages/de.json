@@ -2963,5 +2963,129 @@
     "addEmploymentType": "Beschäftigungsart hinzufügen",
     "countSingular": "{count} Beschäftigungsart",
     "countPlural": "{count} Beschäftigungsarten"
+  },
+  "reports": {
+    "page": {
+      "title": "Berichte",
+      "subtitle": "Berichte erstellen, herunterladen und verwalten"
+    },
+    "toolbar": {
+      "allTypes": "Alle Typen",
+      "allStatuses": "Alle Status",
+      "generateReport": "Bericht erstellen"
+    },
+    "status": {
+      "pending": "Ausstehend",
+      "generating": "Wird erstellt",
+      "completed": "Abgeschlossen",
+      "failed": "Fehlgeschlagen"
+    },
+    "table": {
+      "name": "Name",
+      "reportType": "Typ",
+      "format": "Format",
+      "status": "Status",
+      "rowCount": "Zeilen",
+      "fileSize": "Groesse",
+      "generatedAt": "Erstellt am",
+      "actions": "Aktionen"
+    },
+    "types": {
+      "daily_overview": "Tagesuebersicht",
+      "weekly_overview": "Wochenuebersicht",
+      "monthly_overview": "Monatsuebersicht",
+      "employee_timesheet": "Mitarbeiter-Zeitnachweis",
+      "department_summary": "Abteilungsuebersicht",
+      "absence_report": "Abwesenheitsbericht",
+      "vacation_report": "Urlaubsbericht",
+      "overtime_report": "Ueberstundenbericht",
+      "account_balances": "Kontensalden",
+      "custom": "Benutzerdefiniert"
+    },
+    "typeGroups": {
+      "masterData": "Stammdaten",
+      "monthly": "Monatlich",
+      "absenceVacation": "Abwesenheit / Urlaub",
+      "timeAnalysis": "Zeitanalyse",
+      "other": "Sonstige"
+    },
+    "format": {
+      "json": "JSON",
+      "csv": "CSV",
+      "xlsx": "Excel",
+      "pdf": "PDF"
+    },
+    "actions": {
+      "download": "Herunterladen",
+      "delete": "Loeschen",
+      "viewDetails": "Details anzeigen"
+    },
+    "generate": {
+      "title": "Bericht erstellen",
+      "description": "Neuen Bericht konfigurieren und erstellen",
+      "reportTypeLabel": "Berichtstyp",
+      "reportTypePlaceholder": "Berichtstyp waehlen",
+      "nameLabel": "Berichtsname",
+      "namePlaceholder": "Wird automatisch generiert, wenn leer",
+      "formatLabel": "Format",
+      "dateRangeLabel": "Zeitraum",
+      "dateRangeRequired": "Ein Zeitraum ist fuer diesen Berichtstyp erforderlich",
+      "employeeFilterLabel": "Mitarbeiter",
+      "employeeFilterPlaceholder": "Alle Mitarbeiter",
+      "departmentFilterLabel": "Abteilungen",
+      "departmentFilterPlaceholder": "Alle Abteilungen",
+      "costCenterFilterLabel": "Kostenstellen",
+      "costCenterFilterPlaceholder": "Alle Kostenstellen",
+      "teamFilterLabel": "Teams",
+      "teamFilterPlaceholder": "Alle Teams",
+      "filtersSection": "Filter",
+      "submit": "Bericht erstellen",
+      "validationReportTypeRequired": "Berichtstyp ist erforderlich",
+      "validationFormatRequired": "Format ist erforderlich",
+      "error": "Bericht konnte nicht erstellt werden"
+    },
+    "detail": {
+      "title": "Berichtsdetails",
+      "reportInfo": "Berichtsinformationen",
+      "type": "Typ",
+      "format": "Format",
+      "name": "Name",
+      "statusInfo": "Status",
+      "status": "Status",
+      "requestedAt": "Angefordert am",
+      "startedAt": "Gestartet am",
+      "completedAt": "Abgeschlossen am",
+      "results": "Ergebnisse",
+      "rowCount": "Zeilen",
+      "fileSize": "Dateigroesse",
+      "parameters": "Parameter",
+      "dateRange": "Zeitraum",
+      "employees": "Mitarbeiter",
+      "departments": "Abteilungen",
+      "costCenters": "Kostenstellen",
+      "teams": "Teams",
+      "errorMessage": "Fehler",
+      "close": "Schliessen",
+      "download": "Herunterladen",
+      "delete": "Loeschen",
+      "noParameters": "Keine Filterparameter"
+    },
+    "delete": {
+      "title": "Bericht loeschen",
+      "description": "Moechten Sie diesen Bericht wirklich loeschen? Diese Aktion kann nicht rueckgaengig gemacht werden.",
+      "confirm": "Loeschen"
+    },
+    "download": {
+      "error": "Bericht konnte nicht heruntergeladen werden"
+    },
+    "empty": {
+      "title": "Noch keine Berichte erstellt",
+      "description": "Erstellen Sie Ihren ersten Bericht, um loszulegen.",
+      "generateButton": "Bericht erstellen"
+    },
+    "count": {
+      "item": "{count} Bericht",
+      "items": "{count} Berichte"
+    }
   }
 }

@@ -2963,5 +2963,129 @@
     "addEmploymentType": "Add Employment Type",
     "countSingular": "{count} employment type",
     "countPlural": "{count} employment types"
+  },
+  "reports": {
+    "page": {
+      "title": "Reports",
+      "subtitle": "Generate, download, and manage reports"
+    },
+    "toolbar": {
+      "allTypes": "All Types",
+      "allStatuses": "All Statuses",
+      "generateReport": "Generate Report"
+    },
+    "status": {
+      "pending": "Pending",
+      "generating": "Generating",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "table": {
+      "name": "Name",
+      "reportType": "Type",
+      "format": "Format",
+      "status": "Status",
+      "rowCount": "Rows",
+      "fileSize": "Size",
+      "generatedAt": "Generated At",
+      "actions": "Actions"
+    },
+    "types": {
+      "daily_overview": "Daily Overview",
+      "weekly_overview": "Weekly Overview",
+      "monthly_overview": "Monthly Overview",
+      "employee_timesheet": "Employee Timesheet",
+      "department_summary": "Department Summary",
+      "absence_report": "Absence Report",
+      "vacation_report": "Vacation Report",
+      "overtime_report": "Overtime Report",
+      "account_balances": "Account Balances",
+      "custom": "Custom"
+    },
+    "typeGroups": {
+      "masterData": "Master Data",
+      "monthly": "Monthly",
+      "absenceVacation": "Absence / Vacation",
+      "timeAnalysis": "Time Analysis",
+      "other": "Other"
+    },
+    "format": {
+      "json": "JSON",
+      "csv": "CSV",
+      "xlsx": "Excel",
+      "pdf": "PDF"
+    },
+    "actions": {
+      "download": "Download",
+      "delete": "Delete",
+      "viewDetails": "View Details"
+    },
+    "generate": {
+      "title": "Generate Report",
+      "description": "Configure and generate a new report",
+      "reportTypeLabel": "Report Type",
+      "reportTypePlaceholder": "Select report type",
+      "nameLabel": "Report Name",
+      "namePlaceholder": "Auto-generated if empty",
+      "formatLabel": "Format",
+      "dateRangeLabel": "Date Range",
+      "dateRangeRequired": "Date range is required for this report type",
+      "employeeFilterLabel": "Employees",
+      "employeeFilterPlaceholder": "All employees",
+      "departmentFilterLabel": "Departments",
+      "departmentFilterPlaceholder": "All departments",
+      "costCenterFilterLabel": "Cost Centers",
+      "costCenterFilterPlaceholder": "All cost centers",
+      "teamFilterLabel": "Teams",
+      "teamFilterPlaceholder": "All teams",
+      "filtersSection": "Filters",
+      "submit": "Generate Report",
+      "validationReportTypeRequired": "Report type is required",
+      "validationFormatRequired": "Format is required",
+      "error": "Failed to generate report"
+    },
+    "detail": {
+      "title": "Report Details",
+      "reportInfo": "Report Information",
+      "type": "Type",
+      "format": "Format",
+      "name": "Name",
+      "statusInfo": "Status",
+      "status": "Status",
+      "requestedAt": "Requested At",
+      "startedAt": "Started At",
+      "completedAt": "Completed At",
+      "results": "Results",
+      "rowCount": "Rows",
+      "fileSize": "File Size",
+      "parameters": "Parameters",
+      "dateRange": "Date Range",
+      "employees": "Employees",
+      "departments": "Departments",
+      "costCenters": "Cost Centers",
+      "teams": "Teams",
+      "errorMessage": "Error",
+      "close": "Close",
+      "download": "Download",
+      "delete": "Delete",
+      "noParameters": "No filter parameters"
+    },
+    "delete": {
+      "title": "Delete Report",
+      "description": "Are you sure you want to delete this report? This action cannot be undone.",
+      "confirm": "Delete"
+    },
+    "download": {
+      "error": "Failed to download report"
+    },
+    "empty": {
+      "title": "No reports generated yet",
+      "description": "Create your first report to get started.",
+      "generateButton": "Generate Report"
+    },
+    "count": {
+      "item": "{count} report",
+      "items": "{count} reports"
+    }
   }
 }
