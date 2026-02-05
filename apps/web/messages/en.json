@@ -91,7 +91,8 @@
     "monthlyEvaluations": "Evaluation Templates",
     "vacationBalances": "Vacation Balances",
     "evaluations": "Evaluations",
-    "auditLogs": "Audit Logs"
+    "auditLogs": "Audit Logs",
+    "contactTypes": "Contact Types"
   },
   "sidebar": {
     "collapse": "Collapse",
@@ -192,7 +193,8 @@
     "monthlyEvaluations": "Evaluation Templates",
     "vacationBalances": "Vacation Balances",
     "evaluations": "Evaluations",
-    "auditLogs": "Audit Logs"
+    "auditLogs": "Audit Logs",
+    "contactTypes": "Contact Types"
   },
   "time": {
     "today": "Today",
@@ -3642,5 +3644,91 @@
 
     "countSingular": "{count} tenant",
     "countPlural": "{count} tenants"
+  },
+  "adminContactTypes": {
+    "title": "Contact Types",
+    "subtitle": "Manage contact types and their associated kinds",
+
+    "typesTitle": "Contact Types",
+    "kindsTitle": "Contact Kinds",
+
+    "newType": "Add Type",
+    "newKind": "Add Kind",
+
+    "searchPlaceholder": "Search...",
+
+    "dataTypeText": "Text",
+    "dataTypeEmail": "Email",
+    "dataTypePhone": "Phone",
+    "dataTypeUrl": "URL",
+
+    "statusActive": "Active",
+    "statusInactive": "Inactive",
+
+    "edit": "Edit",
+    "delete": "Delete",
+
+    "editType": "Edit Contact Type",
+    "createTypeDescription": "Add a new contact type with data format configuration.",
+    "editTypeDescription": "Modify contact type details.",
+
+    "editKind": "Edit Contact Kind",
+    "createKindDescription": "Add a new contact kind for the selected type.",
+    "editKindDescription": "Modify contact kind details.",
+
+    "sectionBasicInfo": "Basic Information",
+    "sectionStatus": "Status",
+
+    "fieldCode": "Code",
+    "fieldName": "Name",
+    "fieldLabel": "Label",
+    "fieldDataType": "Data Type",
+    "fieldDescription": "Description",
+    "fieldSortOrder": "Sort Order",
+    "fieldActive": "Active",
+    "fieldActiveDescription": "Inactive items are hidden from dropdowns",
+    "fieldContactType": "Contact Type",
+
+    "codePlaceholder": "e.g. EMAIL",
+    "codeHint": "Unique code (uppercase, max 50 chars). Cannot be changed after creation.",
+    "namePlaceholder": "e.g. Email Address",
+    "labelPlaceholder": "e.g. Work Email",
+    "descriptionPlaceholder": "Optional description...",
+    "sortOrderPlaceholder": "e.g. 10",
+    "dataTypePlaceholder": "Select data type...",
+    "dataTypeHint": "Determines input validation format. Cannot be changed after creation.",
+
+    "validationCodeRequired": "Code is required",
+    "validationNameRequired": "Name is required",
+    "validationLabelRequired": "Label is required",
+    "validationDataTypeRequired": "Data type is required",
+    "validationCodeMaxLength": "Code must be at most 50 characters",
+
+    "cancel": "Cancel",
+    "saveChanges": "Save Changes",
+    "create": "Create",
+    "saving": "Saving...",
+
+    "failedCreateType": "Failed to create contact type",
+    "failedUpdateType": "Failed to update contact type",
+    "failedCreateKind": "Failed to create contact kind",
+    "failedUpdateKind": "Failed to update contact kind",
+    "failedDelete": "Failed to delete",
+
+    "deleteType": "Delete Contact Type",
+    "deleteTypeDescription": "Are you sure you want to delete \"{name}\"? This action cannot be undone.",
+    "deleteTypeInUse": "This contact type cannot be deleted because it has associated contact kinds. Remove or reassign the kinds first.",
+
+    "deleteKind": "Delete Contact Kind",
+    "deleteKindDescription": "Are you sure you want to delete \"{label}\"? This action cannot be undone.",
+
+    "emptyTypesTitle": "No contact types found",
+    "emptyTypesHint": "Get started by creating your first contact type",
+
+    "emptyKindsTitle": "No contact kinds found",
+    "emptyKindsHint": "Add your first contact kind for this type",
+
+    "selectTypePrompt": "Select a Contact Type",
+    "selectTypeDescription": "Choose a contact type from the left panel to view and manage its kinds"
   }
 }

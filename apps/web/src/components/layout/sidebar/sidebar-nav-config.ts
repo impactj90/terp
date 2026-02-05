@@ -30,6 +30,7 @@ import {
   Settings2,
   BarChart3,
   FileClock,
+  Contact,
 } from 'lucide-react'
 import type { UserRole } from '@/hooks/use-has-role'
 
@@ -197,6 +198,12 @@ export const navConfig: NavSection[] = [
         titleKey: 'bookingTypes',
         href: '/admin/booking-types',
         icon: Clock,
+        roles: ['admin'],
+      },
+      {
+        titleKey: 'contactTypes',
+        href: '/admin/contact-types',
+        icon: Contact,
         roles: ['admin'],
       },
       {

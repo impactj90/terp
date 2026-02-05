@@ -343,3 +343,20 @@ export {
   useUpdateTenant,
   useDeactivateTenant,
 } from './use-tenants'
+
+// Contact Types
+export {
+  useContactTypes,
+  useContactType,
+  useCreateContactType,
+  useUpdateContactType,
+  useDeleteContactType,
+} from './use-contact-types'
+
+// Contact Kinds
+export {
+  useContactKinds,
+  useCreateContactKind,
+  useUpdateContactKind,
+  useDeleteContactKind,
+} from './use-contact-kinds'

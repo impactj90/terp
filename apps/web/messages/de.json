@@ -91,7 +91,8 @@
     "monthlyEvaluations": "Auswertungsvorlagen",
     "vacationBalances": "Urlaubskonten",
     "evaluations": "Auswertungen",
-    "auditLogs": "Audit-Protokoll"
+    "auditLogs": "Audit-Protokoll",
+    "contactTypes": "Kontaktarten"
   },
   "sidebar": {
     "collapse": "Einklappen",
@@ -192,7 +193,8 @@
     "monthlyEvaluations": "Auswertungsvorlagen",
     "vacationBalances": "Urlaubskonten",
     "evaluations": "Auswertungen",
-    "auditLogs": "Audit-Protokoll"
+    "auditLogs": "Audit-Protokoll",
+    "contactTypes": "Kontaktarten"
   },
   "time": {
     "today": "Heute",
@@ -3642,5 +3644,91 @@
 
     "countSingular": "{count} Mandant",
     "countPlural": "{count} Mandanten"
+  },
+  "adminContactTypes": {
+    "title": "Kontaktarten",
+    "subtitle": "Kontaktarten und deren zugeordnete Ausprägungen verwalten",
+
+    "typesTitle": "Kontaktarten",
+    "kindsTitle": "Kontaktausprägungen",
+
+    "newType": "Typ hinzufügen",
+    "newKind": "Ausprägung hinzufügen",
+
+    "searchPlaceholder": "Suchen...",
+
+    "dataTypeText": "Text",
+    "dataTypeEmail": "E-Mail",
+    "dataTypePhone": "Telefon",
+    "dataTypeUrl": "URL",
+
+    "statusActive": "Aktiv",
+    "statusInactive": "Inaktiv",
+
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+
+    "editType": "Kontaktart bearbeiten",
+    "createTypeDescription": "Eine neue Kontaktart mit Datenformat-Konfiguration hinzufügen.",
+    "editTypeDescription": "Kontaktart-Details bearbeiten.",
+
+    "editKind": "Kontaktausprägung bearbeiten",
+    "createKindDescription": "Eine neue Kontaktausprägung für den ausgewählten Typ hinzufügen.",
+    "editKindDescription": "Kontaktausprägung-Details bearbeiten.",
+
+    "sectionBasicInfo": "Grundinformationen",
+    "sectionStatus": "Status",
+
+    "fieldCode": "Code",
+    "fieldName": "Name",
+    "fieldLabel": "Bezeichnung",
+    "fieldDataType": "Datentyp",
+    "fieldDescription": "Beschreibung",
+    "fieldSortOrder": "Sortierung",
+    "fieldActive": "Aktiv",
+    "fieldActiveDescription": "Inaktive Einträge werden in Auswahlfeldern ausgeblendet",
+    "fieldContactType": "Kontaktart",
+
+    "codePlaceholder": "z.B. EMAIL",
+    "codeHint": "Eindeutiger Code (Großbuchstaben, max. 50 Zeichen). Kann nach Erstellung nicht geändert werden.",
+    "namePlaceholder": "z.B. E-Mail-Adresse",
+    "labelPlaceholder": "z.B. Geschäftliche E-Mail",
+    "descriptionPlaceholder": "Optionale Beschreibung...",
+    "sortOrderPlaceholder": "z.B. 10",
+    "dataTypePlaceholder": "Datentyp auswählen...",
+    "dataTypeHint": "Bestimmt das Eingabevalidierungsformat. Kann nach Erstellung nicht geändert werden.",
+
+    "validationCodeRequired": "Code ist erforderlich",
+    "validationNameRequired": "Name ist erforderlich",
+    "validationLabelRequired": "Bezeichnung ist erforderlich",
+    "validationDataTypeRequired": "Datentyp ist erforderlich",
+    "validationCodeMaxLength": "Code darf maximal 50 Zeichen lang sein",
+
+    "cancel": "Abbrechen",
+    "saveChanges": "Änderungen speichern",
+    "create": "Erstellen",
+    "saving": "Speichern...",
+
+    "failedCreateType": "Kontaktart konnte nicht erstellt werden",
+    "failedUpdateType": "Kontaktart konnte nicht aktualisiert werden",
+    "failedCreateKind": "Kontaktausprägung konnte nicht erstellt werden",
+    "failedUpdateKind": "Kontaktausprägung konnte nicht aktualisiert werden",
+    "failedDelete": "Löschen fehlgeschlagen",
+
+    "deleteType": "Kontaktart löschen",
+    "deleteTypeDescription": "Möchten Sie \"{name}\" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteTypeInUse": "Diese Kontaktart kann nicht gelöscht werden, da ihr Kontaktausprägungen zugeordnet sind. Entfernen oder verschieben Sie die Ausprägungen zuerst.",
+
+    "deleteKind": "Kontaktausprägung löschen",
+    "deleteKindDescription": "Möchten Sie \"{label}\" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+
+    "emptyTypesTitle": "Keine Kontaktarten gefunden",
+    "emptyTypesHint": "Erstellen Sie Ihre erste Kontaktart",
+
+    "emptyKindsTitle": "Keine Kontaktausprägungen gefunden",
+    "emptyKindsHint": "Fügen Sie die erste Kontaktausprägung für diesen Typ hinzu",
+
+    "selectTypePrompt": "Kontaktart auswählen",
+    "selectTypeDescription": "Wählen Sie eine Kontaktart aus dem linken Panel, um deren Ausprägungen anzuzeigen und zu verwalten"
   }
 }
