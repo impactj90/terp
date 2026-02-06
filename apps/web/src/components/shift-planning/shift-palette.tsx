@@ -23,18 +23,20 @@ export function ShiftPalette({ shifts, isLoading }: ShiftPaletteProps) {
   )
 
   return (
-    <div className="w-[200px] shrink-0 border-r bg-muted/30">
-      <div className="p-3 border-b">
-        <h3 className="text-sm font-medium">{t('shiftPalette')}</h3>
-        <p className="text-xs text-muted-foreground mt-1">
+    <div className="w-[180px] shrink-0 border-r bg-muted/20 flex flex-col">
+      {/* Header aligned with grid header row */}
+      <div className="h-[52px] flex flex-col justify-center px-3 border-b bg-muted/50">
+        <h3 className="text-xs font-medium text-muted-foreground">{t('shiftPalette')}</h3>
+        <p className="text-[10px] text-muted-foreground/70 leading-tight">
           {t('paletteDragHint')}
         </p>
       </div>
 
-      <div className="p-2 space-y-1">
+      {/* Shifts list aligned with employee rows */}
+      <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
         {isLoading ? (
           Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-10 w-full rounded-md" />
+            <Skeleton key={i} className="h-[42px] w-full rounded-md" />
           ))
         ) : activeShifts.length === 0 ? (
           <p className="text-xs text-muted-foreground p-2">
@@ -68,15 +70,15 @@ function DraggableShiftItem({ shift }: { shift: Shift }) {
       style={style}
       {...listeners}
       {...attributes}
-      className="flex items-center gap-2 rounded-md border bg-background p-2 cursor-grab active:cursor-grabbing hover:bg-accent/50 transition-colors"
+      className="flex items-center gap-2 rounded-md border bg-background px-2 py-1.5 cursor-grab active:cursor-grabbing hover:bg-accent/50 transition-colors min-h-[42px]"
     >
       <div
-        className="h-5 w-5 rounded-sm border shrink-0"
+        className="h-6 w-6 rounded-sm shrink-0"
         style={{ backgroundColor: shift.color || '#808080' }}
       />
       <div className="min-w-0 flex-1">
-        <div className="text-xs font-medium truncate">{shift.code}</div>
-        <div className="text-[10px] text-muted-foreground truncate">
+        <div className="text-xs font-semibold truncate">{shift.code}</div>
+        <div className="text-[10px] text-muted-foreground truncate leading-tight">
           {shift.name}
         </div>
       </div>

@@ -279,29 +279,13 @@ export function ShiftPlanningBoard({ enabled }: ShiftPlanningBoardProps) {
     if (cellData?.type !== 'cell') return
 
     const shift = shiftData.shift as Shift
-    const { employeeId, date, existingPlan } = cellData as {
+    const { employeeId, date } = cellData as {
       employeeId: string
       date: Date
       existingPlan: EmployeeDayPlan | null
     }
 
-    if (existingPlan) {
-      // Open dialog for editing/viewing
-      const employee = employees.find((e) => e.id === employeeId)
-      const employeeName = employee
-        ? `${employee.last_name}, ${employee.first_name}`
-        : ''
-      setEditCell({
-        employeeId,
-        employeeName,
-        date,
-        existingPlan,
-        preselectedShiftId: shift.id,
-      })
-      return
-    }
-
-    // Create new EmployeeDayPlan with shift (bulk upsert for robustness)
+    // Directly assign shift via bulk upsert (handles both create and update)
     try {
       await createPlanMutation.mutateAsync({
         body: {
@@ -441,14 +425,14 @@ export function ShiftPlanningBoard({ enabled }: ShiftPlanningBoardProps) {
         </div>
 
         {/* Board layout: palette + grid */}
-        <Card>
+        <Card className="overflow-hidden">
           <CardContent className="p-0">
-            <div className="flex">
+            <div className="flex bg-card">
               {/* Shift palette sidebar */}
               <ShiftPalette shifts={shifts} isLoading={shiftsLoading} />
 
               {/* Calendar grid */}
-              <div className="flex-1 overflow-x-auto">
+              <div className="flex-1 overflow-x-auto bg-card">
                 {isLoading ? (
                   <BoardGridSkeleton columns={dates.length || 7} />
                 ) : employees.length === 0 ? (
@@ -461,15 +445,15 @@ export function ShiftPlanningBoard({ enabled }: ShiftPlanningBoardProps) {
                     </p>
                   </div>
                 ) : (
-                  <div className="min-w-fit">
+                  <div className="min-w-fit bg-card">
                     {/* Header row */}
                     <div
                       className="grid gap-px border-b bg-muted/50"
                       style={{
-                        gridTemplateColumns: `180px repeat(${dates.length}, minmax(60px, 1fr))`,
+                        gridTemplateColumns: `160px repeat(${dates.length}, minmax(80px, 1fr))`,
                       }}
                     >
-                      <div className="sticky left-0 z-10 bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground flex items-center">
+                      <div className="sticky left-0 z-10 bg-muted/50 px-3 h-[52px] text-xs font-medium text-muted-foreground flex items-center">
                         {t('employee')}
                       </div>
                       {dates.map((date) => {
@@ -479,13 +463,15 @@ export function ShiftPlanningBoard({ enabled }: ShiftPlanningBoardProps) {
                           <div
                             key={formatDate(date)}
                             className={cn(
-                              'px-1 py-2 text-center text-xs font-medium',
-                              weekend && 'text-muted-foreground bg-muted/30',
-                              today && 'text-primary font-bold'
+                              'px-1 h-[52px] flex flex-col items-center justify-center text-xs font-medium',
+                              weekend && 'text-muted-foreground/70 bg-muted/30',
+                              today && 'text-primary'
                             )}
                           >
-                            <div>{formatDisplayDate(date, 'weekday', locale)}</div>
-                            <div className="text-[10px]">
+                            <div className={cn(today && 'font-bold underline underline-offset-2')}>
+                              {formatDisplayDate(date, 'weekday', locale)}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">
                               {date.getDate().toString().padStart(2, '0')}.
                               {(date.getMonth() + 1).toString().padStart(2, '0')}
                             </div>
@@ -500,11 +486,11 @@ export function ShiftPlanningBoard({ enabled }: ShiftPlanningBoardProps) {
                         key={employee.id}
                         className="grid gap-px border-b last:border-b-0 hover:bg-accent/20 transition-colors"
                         style={{
-                          gridTemplateColumns: `180px repeat(${dates.length}, minmax(60px, 1fr))`,
+                          gridTemplateColumns: `160px repeat(${dates.length}, minmax(80px, 1fr))`,
                         }}
                       >
                         {/* Employee name cell */}
-                        <div className="sticky left-0 z-10 bg-background px-3 py-1 flex items-center min-h-[42px]">
+                        <div className="sticky left-0 z-10 bg-card px-3 py-1 flex items-center min-h-[42px] border-r">
                           <div className="truncate">
                             <span className="text-sm font-medium">
                               {employee.last_name}, {employee.first_name}
@@ -524,15 +510,22 @@ export function ShiftPlanningBoard({ enabled }: ShiftPlanningBoardProps) {
                           const shift = plan?.shift_id
                             ? (plan.shift ?? shiftMap.get(plan.shift_id) ?? null)
                             : null
+                          const weekend = isWeekend(date)
 
                           return (
-                            <div key={dateStr} className="p-0.5">
+                            <div
+                              key={dateStr}
+                              className={cn(
+                                'p-1',
+                                weekend && 'bg-muted/30'
+                              )}
+                            >
                               <DroppableShiftCell
                                 employeeId={employee.id}
                                 date={date}
                                 plan={plan}
                                 shift={shift}
-                                isWeekend={isWeekend(date)}
+                                isWeekend={weekend}
                                 isToday={isToday(date)}
                                 onClick={() =>
                                   handleCellClick(employee.id, date, plan)
@@ -658,13 +651,20 @@ function DroppableShiftCell({
         ? '-'
         : ''
 
-  // Source-based styling when no shift color
+  // Source-based styling when no shift color (works in both light and dark mode)
   const sourceClass = !bgColor && plan
     ? isTariff
-      ? 'bg-blue-50 border-blue-200 text-blue-700'
+      ? 'bg-blue-500/20 border-blue-500/40 text-blue-600 dark:text-blue-400'
       : isHoliday
-        ? 'bg-orange-50 border-orange-200 text-orange-700'
-        : 'bg-green-50 border-green-200 text-green-700'
+        ? 'bg-orange-500/20 border-orange-500/40 text-orange-600 dark:text-orange-400'
+        : 'bg-emerald-500/20 border-emerald-500/40 text-emerald-600 dark:text-emerald-400'
+    : ''
+
+  // Empty cell styling
+  const emptyClass = !bgColor && !plan
+    ? weekend
+      ? 'bg-muted/50 border-muted-foreground/20 text-muted-foreground/50'
+      : 'bg-muted/20 border-muted-foreground/20 text-muted-foreground/40 border-dashed'
     : ''
 
   return (
@@ -672,13 +672,13 @@ function DroppableShiftCell({
       ref={setNodeRef}
       onClick={onClick}
       className={cn(
-        'h-[34px] rounded-sm border text-center flex items-center justify-center cursor-pointer transition-colors text-[11px] font-medium',
-        weekend && !bgColor && !plan && 'bg-muted/30',
-        today && 'ring-1 ring-primary/50',
-        isOver && 'ring-2 ring-primary bg-primary/10',
-        !bgColor && !plan && 'border-dashed hover:bg-accent/30',
-        bgColor && 'border-transparent hover:opacity-80',
-        sourceClass
+        'h-[34px] rounded-sm border text-center flex items-center justify-center cursor-pointer transition-all text-[11px] font-medium',
+        today && 'ring-2 ring-primary/60 ring-offset-1 ring-offset-background',
+        isOver && 'ring-2 ring-primary bg-primary/20 scale-105',
+        !bgColor && !plan && 'hover:bg-accent/40 hover:border-accent-foreground/30',
+        bgColor && 'border-transparent shadow-sm hover:shadow-md hover:scale-[1.02]',
+        sourceClass,
+        emptyClass
       )}
       style={
         bgColor
@@ -702,16 +702,16 @@ function BoardGridSkeleton({ columns }: { columns: number }) {
   return (
     <div className="p-4 space-y-2">
       <div className="flex gap-1">
-        <Skeleton className="h-8 w-[180px]" />
+        <Skeleton className="h-[52px] w-[160px]" />
         {Array.from({ length: Math.min(columns, 7) }).map((_, i) => (
-          <Skeleton key={i} className="h-8 flex-1" />
+          <Skeleton key={i} className="h-[52px] flex-1 min-w-[80px]" />
         ))}
       </div>
       {Array.from({ length: 6 }).map((_, row) => (
         <div key={row} className="flex gap-1">
-          <Skeleton className="h-[34px] w-[180px]" />
+          <Skeleton className="h-[42px] w-[160px]" />
           {Array.from({ length: Math.min(columns, 7) }).map((_, i) => (
-            <Skeleton key={i} className="h-[34px] flex-1" />
+            <Skeleton key={i} className="h-[42px] flex-1 min-w-[80px]" />
           ))}
         </div>
       ))}
