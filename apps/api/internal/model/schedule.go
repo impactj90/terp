@@ -20,6 +20,7 @@ const (
 	TaskTypeTerminalSync      TaskType = "terminal_sync"
 	TaskTypeTerminalImport    TaskType = "terminal_import"
 	TaskTypeExecuteMacros     TaskType = "execute_macros"
+	TaskTypeGenerateDayPlans  TaskType = "generate_day_plans"
 )
 
 // TimingType represents a schedule timing type.

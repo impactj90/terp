@@ -26,8 +26,8 @@ func NewAliveCheckTaskHandler() *AliveCheckTaskHandler {
 // Execute runs the alive check task.
 func (h *AliveCheckTaskHandler) Execute(_ context.Context, tenantID uuid.UUID, _ json.RawMessage) (json.RawMessage, error) {
 	result := map[string]interface{}{
-		"status":    "alive",
-		"tenant_id": tenantID.String(),
+		"status":     "alive",
+		"tenant_id":  tenantID.String(),
 		"checked_at": time.Now().UTC().Format(time.RFC3339),
 	}
 	data, _ := json.Marshal(result)
@@ -256,10 +256,10 @@ func (h *TerminalImportTaskHandler) Execute(ctx context.Context, tenantID uuid.U
 	}
 
 	data, _ := json.Marshal(map[string]interface{}{
-		"status":          "completed",
-		"pending_total":   total,
-		"fetched":         len(bookings),
-		"message":         "Terminal import task executed (processing placeholder)",
+		"status":        "completed",
+		"pending_total": total,
+		"fetched":       len(bookings),
+		"message":       "Terminal import task executed (processing placeholder)",
 	})
 	return data, nil
 }
@@ -286,6 +286,70 @@ func (h *PlaceholderTaskHandler) Execute(_ context.Context, tenantID uuid.UUID, 
 	data, _ := json.Marshal(map[string]interface{}{
 		"status":  "placeholder",
 		"message": fmt.Sprintf("%s task executed as placeholder", h.taskName),
+	})
+	return data, nil
+}
+
+// --- Generate Day Plans Task ---
+
+// generateDayPlansServiceForScheduler defines the interface for the employee day plan service.
+type generateDayPlansServiceForScheduler interface {
+	GenerateFromTariff(ctx context.Context, input GenerateFromTariffInput) (*GenerateFromTariffResult, error)
+}
+
+// GenerateDayPlansTaskHandler handles the generate_day_plans task type.
+type GenerateDayPlansTaskHandler struct {
+	edpService generateDayPlansServiceForScheduler
+}
+
+// NewGenerateDayPlansTaskHandler creates a new GenerateDayPlansTaskHandler.
+func NewGenerateDayPlansTaskHandler(edpService generateDayPlansServiceForScheduler) *GenerateDayPlansTaskHandler {
+	return &GenerateDayPlansTaskHandler{edpService: edpService}
+}
+
+// Execute runs the generate_day_plans task.
+func (h *GenerateDayPlansTaskHandler) Execute(ctx context.Context, tenantID uuid.UUID, params json.RawMessage) (json.RawMessage, error) {
+	var config struct {
+		DaysAhead int `json:"days_ahead"`
+	}
+	if len(params) > 0 {
+		_ = json.Unmarshal(params, &config)
+	}
+	if config.DaysAhead <= 0 {
+		config.DaysAhead = 14 // Default: 14 days ahead
+	}
+
+	now := time.Now().Truncate(24 * time.Hour)
+	from := now
+	to := now.AddDate(0, 0, config.DaysAhead)
+
+	log.Info().
+		Str("tenant_id", tenantID.String()).
+		Int("days_ahead", config.DaysAhead).
+		Time("from", from).
+		Time("to", to).
+		Msg("executing generate_day_plans task")
+
+	input := GenerateFromTariffInput{
+		TenantID:              tenantID,
+		EmployeeIDs:           nil, // All employees
+		From:                  from,
+		To:                    to,
+		OverwriteTariffSource: true,
+	}
+
+	result, err := h.edpService.GenerateFromTariff(ctx, input)
+	if err != nil {
+		return nil, fmt.Errorf("generate_day_plans failed: %w", err)
+	}
+
+	data, _ := json.Marshal(map[string]interface{}{
+		"days_ahead":          config.DaysAhead,
+		"from":                from.Format("2006-01-02"),
+		"to":                  to.Format("2006-01-02"),
+		"employees_processed": result.EmployeesProcessed,
+		"plans_created":       result.PlansCreated,
+		"employees_skipped":   result.EmployeesSkipped,
 	})
 	return data, nil
 }

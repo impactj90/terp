@@ -490,6 +490,8 @@ paths:
     $ref: 'paths/employee-day-plans.yaml#/~1employee-day-plans~1bulk'
   /employee-day-plans/delete-range:
     $ref: 'paths/employee-day-plans.yaml#/~1employee-day-plans~1delete-range'
+  /employee-day-plans/generate-from-tariff:
+    $ref: 'paths/employee-day-plans.yaml#/~1employee-day-plans~1generate-from-tariff'
   /employee-day-plans/{id}:
     $ref: 'paths/employee-day-plans.yaml#/~1employee-day-plans~1{id}'
   /employees/{employee_id}/day-plans:
@@ -1203,6 +1205,10 @@ definitions:
     $ref: 'schemas/employee-day-plans.yaml#/DeleteRangeRequest'
   EmployeeDayPlanSource:
     $ref: 'schemas/employee-day-plans.yaml#/EmployeeDayPlanSource'
+  GenerateFromTariffRequest:
+    $ref: 'schemas/employee-day-plans.yaml#/GenerateFromTariffRequest'
+  GenerateFromTariffResponse:
+    $ref: 'schemas/employee-day-plans.yaml#/GenerateFromTariffResponse'
 
   # Monthly Evaluations
   MonthlyEvaluation:

@@ -124,5 +124,20 @@ func GetTaskCatalog() []TaskCatalogItem {
 				},
 			},
 		},
+		{
+			TaskType:    model.TaskTypeGenerateDayPlans,
+			Name:        "Generate Day Plans",
+			Description: "Expands tariff week plans into employee day plans for upcoming period.",
+			ParameterSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"days_ahead": map[string]interface{}{
+						"type":        "integer",
+						"description": "How many days ahead to generate (default: 14)",
+						"default":     14,
+					},
+				},
+			},
+		},
 	}
 }

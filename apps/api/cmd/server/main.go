@@ -114,6 +114,8 @@ func main() {
 	auditLogService := service.NewAuditLogService(auditLogRepo)
 	groupService := service.NewGroupService(employeeGroupRepo, workflowGroupRepo, activityGroupRepo)
 	edpService := service.NewEmployeeDayPlanService(empDayPlanRepo, employeeRepo, dayPlanRepo, shiftRepo)
+	edpService.SetTariffRepo(tariffRepo)
+	edpService.SetEmployeeListRepo(employeeRepo)
 	employeeTariffAssignmentService := service.NewEmployeeTariffAssignmentService(employeeTariffAssignmentRepo, employeeRepo, tariffRepo)
 	activityService := service.NewActivityService(activityRepo)
 	orderService := service.NewOrderService(orderRepo)
@@ -384,8 +386,6 @@ func main() {
 	shiftService := service.NewShiftService(shiftRepo)
 	shiftHandler := handler.NewShiftHandler(shiftService)
 
-
-
 	// Initialize Macros
 	macroRepo := repository.NewMacroRepository(db)
 	macroService := service.NewMacroService(macroRepo)
@@ -406,6 +406,7 @@ func main() {
 	schedulerExecutor.RegisterHandler(model.TaskTypeTerminalSync, service.NewPlaceholderTaskHandler("terminal_sync"))
 	schedulerExecutor.RegisterHandler(model.TaskTypeTerminalImport, service.NewTerminalImportTaskHandler(terminalService))
 	schedulerExecutor.RegisterHandler(model.TaskTypeExecuteMacros, service.NewExecuteMacrosTaskHandler(macroService))
+	schedulerExecutor.RegisterHandler(model.TaskTypeGenerateDayPlans, service.NewGenerateDayPlansTaskHandler(edpService))
 
 	scheduleHandler := handler.NewScheduleHandler(scheduleService, schedulerExecutor)
 

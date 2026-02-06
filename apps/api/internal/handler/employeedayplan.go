@@ -330,7 +330,69 @@ func handleEDPError(w http.ResponseWriter, err error, defaultMsg string) {
 		respondError(w, http.StatusBadRequest, "from and to dates are required")
 	case service.ErrEDPDateRangeInvalid:
 		respondError(w, http.StatusBadRequest, "from date must not be after to date")
+	case service.ErrGenerateRepoNotConfigured:
+		respondError(w, http.StatusInternalServerError, "Generate from tariff not configured")
 	default:
 		respondError(w, http.StatusInternalServerError, defaultMsg)
 	}
+}
+
+// GenerateFromTariff generates employee day plans from tariff week plans.
+func (h *EmployeeDayPlanHandler) GenerateFromTariff(w http.ResponseWriter, r *http.Request) {
+	tenantID, ok := middleware.TenantFromContext(r.Context())
+	if !ok {
+		respondError(w, http.StatusUnauthorized, "Tenant required")
+		return
+	}
+
+	var req models.GenerateFromTariffRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	// Set defaults
+	now := time.Now().Truncate(24 * time.Hour)
+	from := now
+	to := now.AddDate(0, 3, 0) // Default: 3 months ahead
+	overwrite := true
+
+	if !time.Time(req.From).IsZero() {
+		from = time.Time(req.From)
+	}
+	if !time.Time(req.To).IsZero() {
+		to = time.Time(req.To)
+	}
+	if req.OverwriteTariffSource != nil {
+		overwrite = *req.OverwriteTariffSource
+	}
+
+	// Parse employee IDs
+	var employeeIDs []uuid.UUID
+	for _, idStr := range req.EmployeeIds {
+		if id, err := uuid.Parse(idStr.String()); err == nil {
+			employeeIDs = append(employeeIDs, id)
+		}
+	}
+
+	input := service.GenerateFromTariffInput{
+		TenantID:              tenantID,
+		EmployeeIDs:           employeeIDs,
+		From:                  from,
+		To:                    to,
+		OverwriteTariffSource: overwrite,
+	}
+
+	result, err := h.edpService.GenerateFromTariff(r.Context(), input)
+	if err != nil {
+		handleEDPError(w, err, "Failed to generate day plans from tariff")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, map[string]any{
+		"employees_processed": result.EmployeesProcessed,
+		"plans_created":       result.PlansCreated,
+		"plans_updated":       result.PlansUpdated,
+		"employees_skipped":   result.EmployeesSkipped,
+	})
 }

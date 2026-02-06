@@ -659,6 +659,7 @@ func RegisterEmployeeDayPlanRoutes(r chi.Router, h *EmployeeDayPlanHandler, auth
 			r.Post("/", h.Create)
 			r.Post("/bulk", h.BulkCreate)
 			r.Post("/delete-range", h.DeleteRange)
+			r.Post("/generate-from-tariff", h.GenerateFromTariff)
 			r.Get("/{id}", h.Get)
 			r.Put("/{id}", h.Update)
 			r.Delete("/{id}", h.Delete)
@@ -669,6 +670,7 @@ func RegisterEmployeeDayPlanRoutes(r chi.Router, h *EmployeeDayPlanHandler, auth
 		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
 		r.With(authz.RequirePermission(permManage)).Post("/bulk", h.BulkCreate)
 		r.With(authz.RequirePermission(permManage)).Post("/delete-range", h.DeleteRange)
+		r.With(authz.RequirePermission(permManage)).Post("/generate-from-tariff", h.GenerateFromTariff)
 		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
 		r.With(authz.RequirePermission(permManage)).Put("/{id}", h.Update)
 		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
@@ -1529,7 +1531,6 @@ func RegisterShiftRoutes(r chi.Router, h *ShiftHandler, authz *middleware.Author
 		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
 	})
 }
-
 
 // RegisterMacroRoutes registers macro routes.
 func RegisterMacroRoutes(r chi.Router, h *MacroHandler, authz *middleware.AuthorizationMiddleware) {

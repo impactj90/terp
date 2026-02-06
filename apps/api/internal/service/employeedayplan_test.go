@@ -476,3 +476,290 @@ func TestEmployeeDayPlanService_DeleteRange_InvalidDateRange(t *testing.T) {
 	})
 	assert.ErrorIs(t, err, service.ErrEDPDateRangeInvalid)
 }
+
+// --- GenerateFromTariff Tests ---
+
+func createTestWeekPlanForEDP(t *testing.T, db *repository.DB, tenantID uuid.UUID, dayPlanIDs [7]*uuid.UUID) *model.WeekPlan {
+	t.Helper()
+	weekPlanRepo := repository.NewWeekPlanRepository(db)
+	wp := &model.WeekPlan{
+		TenantID:           tenantID,
+		Code:               "WP-" + uuid.New().String()[:8],
+		Name:               "Test Week Plan",
+		MondayDayPlanID:    dayPlanIDs[0],
+		TuesdayDayPlanID:   dayPlanIDs[1],
+		WednesdayDayPlanID: dayPlanIDs[2],
+		ThursdayDayPlanID:  dayPlanIDs[3],
+		FridayDayPlanID:    dayPlanIDs[4],
+		SaturdayDayPlanID:  dayPlanIDs[5],
+		SundayDayPlanID:    dayPlanIDs[6],
+	}
+	require.NoError(t, weekPlanRepo.Create(context.Background(), wp))
+	return wp
+}
+
+func createTestTariffForEDP(t *testing.T, db *repository.DB, tenantID uuid.UUID, weekPlanID uuid.UUID) *model.Tariff {
+	t.Helper()
+	tariffRepo := repository.NewTariffRepository(db)
+	tariff := &model.Tariff{
+		TenantID:   tenantID,
+		Code:       "TAR-" + uuid.New().String()[:8],
+		Name:       "Test Tariff",
+		WeekPlanID: &weekPlanID,
+		RhythmType: model.RhythmTypeWeekly,
+		IsActive:   true,
+	}
+	require.NoError(t, tariffRepo.Create(context.Background(), tariff))
+	return tariff
+}
+
+func createTestEmployeeWithTariffForEDP(t *testing.T, db *repository.DB, tenantID uuid.UUID, tariffID *uuid.UUID) *model.Employee {
+	t.Helper()
+	empRepo := repository.NewEmployeeRepository(db)
+	emp := &model.Employee{
+		TenantID:        tenantID,
+		PersonnelNumber: "EMP-" + uuid.New().String()[:8],
+		PIN:             uuid.New().String()[:6],
+		FirstName:       "Test",
+		LastName:        "Employee",
+		TariffID:        tariffID,
+		EntryDate:       time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+		IsActive:        true,
+	}
+	require.NoError(t, empRepo.Create(context.Background(), emp))
+	return emp
+}
+
+func newEDPServiceWithTariff(db *repository.DB) *service.EmployeeDayPlanService {
+	edpRepo := repository.NewEmployeeDayPlanRepository(db)
+	empRepo := repository.NewEmployeeRepository(db)
+	dayPlanRepo := repository.NewDayPlanRepository(db)
+	shiftRepo := repository.NewShiftRepository(db)
+	tariffRepo := repository.NewTariffRepository(db)
+
+	svc := service.NewEmployeeDayPlanService(edpRepo, empRepo, dayPlanRepo, shiftRepo)
+	svc.SetTariffRepo(tariffRepo)
+	svc.SetEmployeeListRepo(empRepo)
+	return svc
+}
+
+func TestEmployeeDayPlanService_GenerateFromTariff_Success(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	svc := newEDPServiceWithTariff(db)
+	ctx := context.Background()
+
+	tenant := createTestTenantForEDPService(t, db)
+	dp := createTestDayPlanForEDPService(t, db, tenant.ID)
+
+	// Create week plan with same day plan for all days
+	dayPlanIDs := [7]*uuid.UUID{&dp.ID, &dp.ID, &dp.ID, &dp.ID, &dp.ID, nil, nil} // Mon-Fri work, Sat-Sun off
+	wp := createTestWeekPlanForEDP(t, db, tenant.ID, dayPlanIDs)
+	tariff := createTestTariffForEDP(t, db, tenant.ID, wp.ID)
+	emp := createTestEmployeeWithTariffForEDP(t, db, tenant.ID, &tariff.ID)
+
+	// Generate for one week
+	from := time.Date(2026, 2, 9, 0, 0, 0, 0, time.UTC)  // Monday
+	to := time.Date(2026, 2, 15, 0, 0, 0, 0, time.UTC)   // Sunday
+
+	result, err := svc.GenerateFromTariff(ctx, service.GenerateFromTariffInput{
+		TenantID:              tenant.ID,
+		EmployeeIDs:           []uuid.UUID{emp.ID},
+		From:                  from,
+		To:                    to,
+		OverwriteTariffSource: true,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 1, result.EmployeesProcessed)
+	assert.Equal(t, 5, result.PlansCreated) // 5 working days (Mon-Fri)
+	assert.Equal(t, 0, result.EmployeesSkipped)
+
+	// Verify plans were created
+	plans, err := svc.List(ctx, service.ListEmployeeDayPlansInput{
+		TenantID:   tenant.ID,
+		EmployeeID: &emp.ID,
+		From:       from,
+		To:         to,
+	})
+	require.NoError(t, err)
+	assert.Len(t, plans, 5)
+
+	// All plans should have source=tariff
+	for _, plan := range plans {
+		assert.Equal(t, model.EmployeeDayPlanSourceTariff, plan.Source)
+		assert.Equal(t, &dp.ID, plan.DayPlanID)
+	}
+}
+
+func TestEmployeeDayPlanService_GenerateFromTariff_PreservesManualPlans(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	svc := newEDPServiceWithTariff(db)
+	ctx := context.Background()
+
+	tenant := createTestTenantForEDPService(t, db)
+	dp := createTestDayPlanForEDPService(t, db, tenant.ID)
+	dpManual := createTestDayPlanForEDPService(t, db, tenant.ID)
+
+	dayPlanIDs := [7]*uuid.UUID{&dp.ID, &dp.ID, &dp.ID, &dp.ID, &dp.ID, nil, nil}
+	wp := createTestWeekPlanForEDP(t, db, tenant.ID, dayPlanIDs)
+	tariff := createTestTariffForEDP(t, db, tenant.ID, wp.ID)
+	emp := createTestEmployeeWithTariffForEDP(t, db, tenant.ID, &tariff.ID)
+
+	// Create a manual override for Wednesday
+	wednesday := time.Date(2026, 2, 11, 0, 0, 0, 0, time.UTC)
+	_, err := svc.Create(ctx, service.CreateEmployeeDayPlanInput{
+		TenantID:   tenant.ID,
+		EmployeeID: emp.ID,
+		PlanDate:   wednesday,
+		DayPlanID:  &dpManual.ID,
+		Source:     "manual",
+		Notes:      "Manual override",
+	})
+	require.NoError(t, err)
+
+	// Generate for the week
+	from := time.Date(2026, 2, 9, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 2, 15, 0, 0, 0, 0, time.UTC)
+
+	result, err := svc.GenerateFromTariff(ctx, service.GenerateFromTariffInput{
+		TenantID:              tenant.ID,
+		EmployeeIDs:           []uuid.UUID{emp.ID},
+		From:                  from,
+		To:                    to,
+		OverwriteTariffSource: true,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 1, result.EmployeesProcessed)
+	assert.Equal(t, 4, result.PlansCreated) // 4 days (Wed is manual)
+
+	// Verify manual plan is preserved
+	plans, err := svc.List(ctx, service.ListEmployeeDayPlansInput{
+		TenantID:   tenant.ID,
+		EmployeeID: &emp.ID,
+		From:       wednesday,
+		To:         wednesday,
+	})
+	require.NoError(t, err)
+	assert.Len(t, plans, 1)
+	assert.Equal(t, model.EmployeeDayPlanSourceManual, plans[0].Source)
+	assert.Equal(t, "Manual override", plans[0].Notes)
+}
+
+func TestEmployeeDayPlanService_GenerateFromTariff_SkipsEmployeesWithoutTariff(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	svc := newEDPServiceWithTariff(db)
+	ctx := context.Background()
+
+	tenant := createTestTenantForEDPService(t, db)
+	emp := createTestEmployeeForEDPService(t, db, tenant.ID) // No tariff assigned
+
+	from := time.Date(2026, 2, 9, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 2, 15, 0, 0, 0, 0, time.UTC)
+
+	result, err := svc.GenerateFromTariff(ctx, service.GenerateFromTariffInput{
+		TenantID:              tenant.ID,
+		EmployeeIDs:           []uuid.UUID{emp.ID},
+		From:                  from,
+		To:                    to,
+		OverwriteTariffSource: true,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 0, result.EmployeesProcessed)
+	assert.Equal(t, 0, result.PlansCreated)
+	assert.Equal(t, 1, result.EmployeesSkipped)
+}
+
+func TestEmployeeDayPlanService_GenerateFromTariff_AllActiveEmployees(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	svc := newEDPServiceWithTariff(db)
+	ctx := context.Background()
+
+	tenant := createTestTenantForEDPService(t, db)
+	dp := createTestDayPlanForEDPService(t, db, tenant.ID)
+
+	dayPlanIDs := [7]*uuid.UUID{&dp.ID, &dp.ID, &dp.ID, &dp.ID, &dp.ID, nil, nil}
+	wp := createTestWeekPlanForEDP(t, db, tenant.ID, dayPlanIDs)
+	tariff := createTestTariffForEDP(t, db, tenant.ID, wp.ID)
+
+	// Create 3 employees with tariff
+	emp1 := createTestEmployeeWithTariffForEDP(t, db, tenant.ID, &tariff.ID)
+	emp2 := createTestEmployeeWithTariffForEDP(t, db, tenant.ID, &tariff.ID)
+	emp3 := createTestEmployeeWithTariffForEDP(t, db, tenant.ID, nil) // No tariff
+
+	_ = emp1
+	_ = emp2
+	_ = emp3
+
+	from := time.Date(2026, 2, 9, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 2, 9, 0, 0, 0, 0, time.UTC) // Just Monday
+
+	result, err := svc.GenerateFromTariff(ctx, service.GenerateFromTariffInput{
+		TenantID:              tenant.ID,
+		EmployeeIDs:           nil, // All active employees
+		From:                  from,
+		To:                    to,
+		OverwriteTariffSource: true,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 2, result.EmployeesProcessed)
+	assert.Equal(t, 2, result.PlansCreated) // 1 plan per employee for Monday
+	assert.Equal(t, 1, result.EmployeesSkipped)
+}
+
+func TestEmployeeDayPlanService_GenerateFromTariff_ReposNotConfigured(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	svc := newEDPService(db) // Service without tariff repos
+	ctx := context.Background()
+
+	tenant := createTestTenantForEDPService(t, db)
+
+	_, err := svc.GenerateFromTariff(ctx, service.GenerateFromTariffInput{
+		TenantID: tenant.ID,
+		From:     time.Now(),
+		To:       time.Now().AddDate(0, 0, 7),
+	})
+	assert.ErrorIs(t, err, service.ErrGenerateRepoNotConfigured)
+}
+
+func TestEmployeeDayPlanService_GenerateFromTariff_RespectsEmployeeExitDate(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	svc := newEDPServiceWithTariff(db)
+	ctx := context.Background()
+
+	tenant := createTestTenantForEDPService(t, db)
+	dp := createTestDayPlanForEDPService(t, db, tenant.ID)
+
+	dayPlanIDs := [7]*uuid.UUID{&dp.ID, &dp.ID, &dp.ID, &dp.ID, &dp.ID, nil, nil}
+	wp := createTestWeekPlanForEDP(t, db, tenant.ID, dayPlanIDs)
+	tariff := createTestTariffForEDP(t, db, tenant.ID, wp.ID)
+
+	// Create employee with exit date
+	empRepo := repository.NewEmployeeRepository(db)
+	exitDate := time.Date(2026, 2, 11, 0, 0, 0, 0, time.UTC) // Wednesday
+	emp := &model.Employee{
+		TenantID:        tenant.ID,
+		PersonnelNumber: "EMP-" + uuid.New().String()[:8],
+		PIN:             uuid.New().String()[:6],
+		FirstName:       "Test",
+		LastName:        "Employee",
+		TariffID:        &tariff.ID,
+		EntryDate:       time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+		ExitDate:        &exitDate,
+		IsActive:        true,
+	}
+	require.NoError(t, empRepo.Create(ctx, emp))
+
+	// Try to generate for the whole week
+	from := time.Date(2026, 2, 9, 0, 0, 0, 0, time.UTC)  // Monday
+	to := time.Date(2026, 2, 15, 0, 0, 0, 0, time.UTC)   // Sunday
+
+	result, err := svc.GenerateFromTariff(ctx, service.GenerateFromTariffInput{
+		TenantID:              tenant.ID,
+		EmployeeIDs:           []uuid.UUID{emp.ID},
+		From:                  from,
+		To:                    to,
+		OverwriteTariffSource: true,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 1, result.EmployeesProcessed)
+	assert.Equal(t, 3, result.PlansCreated) // Only Mon, Tue, Wed (exit date is Wed)
+}

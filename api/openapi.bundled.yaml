@@ -5710,6 +5710,31 @@ paths:
           $ref: '#/responses/BadRequest'
         '401':
           $ref: '#/responses/Unauthorized'
+  /employee-day-plans/generate-from-tariff:
+    post:
+      tags:
+        - Employee Day Plans
+      summary: Generate employee day plans from tariff week plans
+      description: |
+        Expands tariff week plans into employee day plans for the specified
+        date range. Respects manual overrides (source='manual' or 'holiday').
+        Uses upsert - safe to call multiple times.
+      operationId: generateEmployeeDayPlansFromTariff
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/GenerateFromTariffRequest'
+      responses:
+        '200':
+          description: Generation completed
+          schema:
+            $ref: '#/definitions/GenerateFromTariffResponse'
+        '400':
+          $ref: '#/responses/BadRequest'
+        '401':
+          $ref: '#/responses/Unauthorized'
   '/employee-day-plans/{id}':
     get:
       tags:
@@ -17718,6 +17743,39 @@ definitions:
       - tariff
       - manual
       - holiday
+  GenerateFromTariffRequest:
+    type: object
+    properties:
+      employee_ids:
+        type: array
+        items:
+          type: string
+          format: uuid
+        description: Specific employees to process. Empty = all active employees with tariff.
+      from:
+        type: string
+        format: date
+        description: Start date. Default = today.
+      to:
+        type: string
+        format: date
+        description: End date. Default = today + 3 months.
+      overwrite_tariff_source:
+        type: boolean
+        default: true
+        description: Replace existing plans with source='tariff'. Manual/holiday plans are always preserved.
+  GenerateFromTariffResponse:
+    type: object
+    properties:
+      employees_processed:
+        type: integer
+      plans_created:
+        type: integer
+      plans_updated:
+        type: integer
+      employees_skipped:
+        type: integer
+        description: Employees without valid tariff or outside date range
   MonthlyEvaluation:
     type: object
     properties:

@@ -1,4 +1,30 @@
 # Employee Day Plan endpoints
+/employee-day-plans/generate-from-tariff:
+  post:
+    tags:
+      - Employee Day Plans
+    summary: Generate employee day plans from tariff week plans
+    description: |
+      Expands tariff week plans into employee day plans for the specified
+      date range. Respects manual overrides (source='manual' or 'holiday').
+      Uses upsert - safe to call multiple times.
+    operationId: generateEmployeeDayPlansFromTariff
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '../schemas/employee-day-plans.yaml#/GenerateFromTariffRequest'
+    responses:
+      200:
+        description: Generation completed
+        schema:
+          $ref: '../schemas/employee-day-plans.yaml#/GenerateFromTariffResponse'
+      400:
+        $ref: '../responses/errors.yaml#/BadRequest'
+      401:
+        $ref: '../responses/errors.yaml#/Unauthorized'
+
 /employee-day-plans:
   get:
     tags:

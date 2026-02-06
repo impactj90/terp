@@ -6,8 +6,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 
 	"github.com/tolga/terp/internal/model"
+	"github.com/tolga/terp/internal/repository"
 )
 
 var (
@@ -49,11 +51,23 @@ type shiftRepositoryForEDP interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*model.Shift, error)
 }
 
+// tariffRepositoryForEDP defines the interface for tariff lookup (used for day plan generation).
+type tariffRepositoryForEDP interface {
+	GetWithDetails(ctx context.Context, id uuid.UUID) (*model.Tariff, error)
+}
+
+// employeeListRepositoryForEDP defines the interface for listing employees (used for bulk generation).
+type employeeListRepositoryForEDP interface {
+	List(ctx context.Context, filter repository.EmployeeFilter) ([]model.Employee, int64, error)
+}
+
 type EmployeeDayPlanService struct {
-	edpRepo      edpRepository
-	employeeRepo employeeRepositoryForEDP
-	dayPlanRepo  dayPlanRepositoryForEDP
-	shiftRepo    shiftRepositoryForEDP
+	edpRepo          edpRepository
+	employeeRepo     employeeRepositoryForEDP
+	dayPlanRepo      dayPlanRepositoryForEDP
+	shiftRepo        shiftRepositoryForEDP
+	tariffRepo       tariffRepositoryForEDP
+	employeeListRepo employeeListRepositoryForEDP
 }
 
 func NewEmployeeDayPlanService(
@@ -68,6 +82,16 @@ func NewEmployeeDayPlanService(
 		dayPlanRepo:  dayPlanRepo,
 		shiftRepo:    shiftRepo,
 	}
+}
+
+// SetTariffRepo sets the tariff repository (required for GenerateFromTariff).
+func (s *EmployeeDayPlanService) SetTariffRepo(repo tariffRepositoryForEDP) {
+	s.tariffRepo = repo
+}
+
+// SetEmployeeListRepo sets the employee list repository (required for GenerateFromTariff).
+func (s *EmployeeDayPlanService) SetEmployeeListRepo(repo employeeListRepositoryForEDP) {
+	s.employeeListRepo = repo
 }
 
 // ListInput represents the input for listing employee day plans.
@@ -352,4 +376,193 @@ func isValidSource(source model.EmployeeDayPlanSource) bool {
 	return source == model.EmployeeDayPlanSourceTariff ||
 		source == model.EmployeeDayPlanSourceManual ||
 		source == model.EmployeeDayPlanSourceHoliday
+}
+
+// GenerateFromTariffInput represents input for bulk day plan generation.
+type GenerateFromTariffInput struct {
+	TenantID              uuid.UUID
+	EmployeeIDs           []uuid.UUID // empty = all active employees with tariff
+	From                  time.Time
+	To                    time.Time
+	OverwriteTariffSource bool
+}
+
+// GenerateFromTariffResult represents the result of bulk generation.
+type GenerateFromTariffResult struct {
+	EmployeesProcessed int
+	PlansCreated       int
+	PlansUpdated       int
+	EmployeesSkipped   int
+}
+
+var (
+	ErrGenerateRepoNotConfigured = errors.New("tariff or employee list repository not configured")
+)
+
+// GenerateFromTariff expands tariff week plans into employee day plans for the specified date range.
+// Respects manual overrides (source='manual' or 'holiday'). Uses upsert - safe to call multiple times.
+func (s *EmployeeDayPlanService) GenerateFromTariff(
+	ctx context.Context,
+	input GenerateFromTariffInput,
+) (*GenerateFromTariffResult, error) {
+	if s.tariffRepo == nil || s.employeeListRepo == nil {
+		return nil, ErrGenerateRepoNotConfigured
+	}
+
+	result := &GenerateFromTariffResult{}
+
+	// Get employees to process
+	var employees []model.Employee
+	if len(input.EmployeeIDs) > 0 {
+		// Fetch specific employees
+		for _, empID := range input.EmployeeIDs {
+			emp, err := s.employeeRepo.GetByID(ctx, empID)
+			if err != nil {
+				log.Warn().Err(err).Str("employee_id", empID.String()).Msg("employee not found, skipping")
+				result.EmployeesSkipped++
+				continue
+			}
+			if emp.TenantID != input.TenantID {
+				log.Warn().Str("employee_id", empID.String()).Msg("employee belongs to different tenant, skipping")
+				result.EmployeesSkipped++
+				continue
+			}
+			employees = append(employees, *emp)
+		}
+	} else {
+		// Get all active employees for the tenant
+		isActive := true
+		filter := repository.EmployeeFilter{
+			TenantID: input.TenantID,
+			IsActive: &isActive,
+		}
+		emps, _, err := s.employeeListRepo.List(ctx, filter)
+		if err != nil {
+			return nil, err
+		}
+		employees = emps
+	}
+
+	// Process each employee
+	for _, emp := range employees {
+		// Get the effective tariff ID
+		tariffID := emp.TariffID
+		if tariffID == nil {
+			log.Debug().Str("employee_id", emp.ID.String()).Msg("employee has no tariff, skipping")
+			result.EmployeesSkipped++
+			continue
+		}
+
+		// Fetch tariff with details
+		tariff, err := s.tariffRepo.GetWithDetails(ctx, *tariffID)
+		if err != nil {
+			log.Warn().Err(err).Str("employee_id", emp.ID.String()).Str("tariff_id", tariffID.String()).Msg("failed to get tariff, skipping")
+			result.EmployeesSkipped++
+			continue
+		}
+
+		// Calculate sync window
+		start, end, ok := s.getTariffSyncWindow(&emp, tariff, input.From, input.To)
+		if !ok {
+			log.Debug().Str("employee_id", emp.ID.String()).Msg("no valid sync window, skipping")
+			result.EmployeesSkipped++
+			continue
+		}
+
+		// Get existing plans in date range
+		existingPlans, err := s.edpRepo.List(ctx, input.TenantID, &emp.ID, start, end)
+		if err != nil {
+			log.Warn().Err(err).Str("employee_id", emp.ID.String()).Msg("failed to get existing plans, skipping")
+			result.EmployeesSkipped++
+			continue
+		}
+
+		// Build skip map for non-tariff sources
+		skipDates := make(map[string]struct{}, len(existingPlans))
+		for _, plan := range existingPlans {
+			if plan.Source != model.EmployeeDayPlanSourceTariff {
+				skipDates[plan.PlanDate.Format("2006-01-02")] = struct{}{}
+			}
+		}
+
+		// Generate plans for each day
+		var plans []model.EmployeeDayPlan
+		for date := start; !date.After(end); date = date.AddDate(0, 0, 1) {
+			dateKey := date.Format("2006-01-02")
+			if _, ok := skipDates[dateKey]; ok {
+				continue // Skip dates with manual/holiday plans
+			}
+
+			dayPlanID := tariff.GetDayPlanIDForDate(date)
+			if dayPlanID == nil {
+				continue // No day plan for this date
+			}
+
+			plans = append(plans, model.EmployeeDayPlan{
+				TenantID:   emp.TenantID,
+				EmployeeID: emp.ID,
+				PlanDate:   date,
+				DayPlanID:  dayPlanID,
+				Source:     model.EmployeeDayPlanSourceTariff,
+			})
+		}
+
+		if len(plans) > 0 {
+			if err := s.edpRepo.BulkCreate(ctx, plans); err != nil {
+				log.Warn().Err(err).Str("employee_id", emp.ID.String()).Msg("failed to create plans, skipping")
+				result.EmployeesSkipped++
+				continue
+			}
+			result.PlansCreated += len(plans)
+		}
+
+		result.EmployeesProcessed++
+	}
+
+	log.Info().
+		Str("tenant_id", input.TenantID.String()).
+		Int("employees_processed", result.EmployeesProcessed).
+		Int("plans_created", result.PlansCreated).
+		Int("employees_skipped", result.EmployeesSkipped).
+		Msg("completed day plan generation from tariff")
+
+	return result, nil
+}
+
+// getTariffSyncWindow calculates the valid sync window based on employee, tariff, and input constraints.
+func (s *EmployeeDayPlanService) getTariffSyncWindow(emp *model.Employee, tariff *model.Tariff, inputFrom, inputTo time.Time) (time.Time, time.Time, bool) {
+	// Start with input range
+	start := inputFrom
+	end := inputTo
+
+	// Constrain by employee entry date
+	if emp.EntryDate.After(start) {
+		start = emp.EntryDate
+	}
+
+	// Constrain by employee exit date
+	if emp.ExitDate != nil && emp.ExitDate.Before(end) {
+		end = *emp.ExitDate
+	}
+
+	// Constrain by tariff validity
+	if tariff != nil && tariff.ValidFrom != nil {
+		validFrom := tariff.ValidFrom.Truncate(24 * time.Hour)
+		if validFrom.After(start) {
+			start = validFrom
+		}
+	}
+	if tariff != nil && tariff.ValidTo != nil {
+		validTo := tariff.ValidTo.Truncate(24 * time.Hour)
+		if validTo.Before(end) {
+			end = validTo
+		}
+	}
+
+	// Check if window is valid
+	if start.After(end) {
+		return start, end, false
+	}
+
+	return start, end, true
 }
