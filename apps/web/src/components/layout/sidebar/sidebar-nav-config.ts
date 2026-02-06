@@ -33,6 +33,7 @@ import {
   Calculator,
   Umbrella,
   Layers,
+  Package,
 } from 'lucide-react'
 import type { UserRole } from '@/hooks/use-has-role'
 
@@ -248,6 +249,12 @@ export const navConfig: NavSection[] = [
         titleKey: 'shiftPlanning',
         href: '/admin/shift-planning',
         icon: Layers,
+        roles: ['admin'],
+      },
+      {
+        titleKey: 'orders',
+        href: '/admin/orders',
+        icon: Package,
         roles: ['admin'],
       },
     ],
