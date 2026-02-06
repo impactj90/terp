@@ -232,10 +232,10 @@ func TestAccessProfileService_Delete_InUse(t *testing.T) {
 	// Create an employee for the assignment
 	empRepo := repository.NewEmployeeRepository(db)
 	emp := &model.Employee{
-		TenantID:       tenant.ID,
+		TenantID:        tenant.ID,
 		PersonnelNumber: "EMP001",
-		FirstName:      "Test",
-		LastName:       "Employee",
+		FirstName:       "Test",
+		LastName:        "Employee",
 	}
 	err = empRepo.Create(ctx, emp)
 	require.NoError(t, err)

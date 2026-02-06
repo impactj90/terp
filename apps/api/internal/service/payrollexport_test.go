@@ -123,20 +123,20 @@ func TestPayrollExportService_Generate_Success(t *testing.T) {
 			TenantID:        tenantID,
 			PersonnelNumber: "EMP001",
 			FirstName:       "Max",
-			LastName:         "Mustermann",
+			LastName:        "Mustermann",
 		},
 	}, int64(1), nil)
 
 	// Mock monthly value for employee
 	mvRepo.On("GetByEmployeeMonth", ctx, emp1ID, 2025, 1).Return(&model.MonthlyValue{
-		EmployeeID:      emp1ID,
-		TotalTargetTime: 480, // 8 hours in minutes
-		TotalNetTime:    510, // 8.5 hours in minutes
-		TotalOvertime:   30,  // 0.5 hours in minutes
-		VacationTaken:   decimal.NewFromFloat(2.0),
-		SickDays:        1,
+		EmployeeID:       emp1ID,
+		TotalTargetTime:  480, // 8 hours in minutes
+		TotalNetTime:     510, // 8.5 hours in minutes
+		TotalOvertime:    30,  // 0.5 hours in minutes
+		VacationTaken:    decimal.NewFromFloat(2.0),
+		SickDays:         1,
 		OtherAbsenceDays: 0,
-		IsClosed:        true,
+		IsClosed:         true,
 	}, nil)
 
 	// Mock repo operations
@@ -421,17 +421,17 @@ func TestPayrollExportService_GetDownloadContent_NotReady(t *testing.T) {
 func TestGenerateCSV(t *testing.T) {
 	lines := []model.PayrollExportLine{
 		{
-			PersonnelNumber: "EMP001",
-			FirstName:       "Max",
-			LastName:        "Mustermann",
-			DepartmentCode:  "DEV",
-			CostCenterCode:  "CC100",
-			TargetHours:     decimal.NewFromFloat(160.00),
-			WorkedHours:     decimal.NewFromFloat(168.50),
-			OvertimeHours:   decimal.NewFromFloat(8.50),
-			AccountValues:   map[string]float64{},
-			VacationDays:    decimal.NewFromFloat(2.00),
-			SickDays:        decimal.NewFromFloat(1.00),
+			PersonnelNumber:  "EMP001",
+			FirstName:        "Max",
+			LastName:         "Mustermann",
+			DepartmentCode:   "DEV",
+			CostCenterCode:   "CC100",
+			TargetHours:      decimal.NewFromFloat(160.00),
+			WorkedHours:      decimal.NewFromFloat(168.50),
+			OvertimeHours:    decimal.NewFromFloat(8.50),
+			AccountValues:    map[string]float64{},
+			VacationDays:     decimal.NewFromFloat(2.00),
+			SickDays:         decimal.NewFromFloat(1.00),
 			OtherAbsenceDays: decimal.NewFromFloat(0.00),
 		},
 	}

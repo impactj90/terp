@@ -11,14 +11,14 @@ import (
 )
 
 var (
-	ErrBookingReasonNotFound          = errors.New("booking reason not found")
-	ErrBookingReasonCodeReq           = errors.New("booking reason code is required")
-	ErrBookingReasonLabelReq          = errors.New("booking reason label is required")
-	ErrBookingReasonCodeExists        = errors.New("booking reason code already exists for this booking type")
-	ErrBookingReasonTypeIDReq         = errors.New("booking type ID is required")
-	ErrBookingReasonInvalidRefTime    = errors.New("invalid reference_time: must be plan_start, plan_end, or booking_time")
-	ErrBookingReasonOffsetWithoutRef  = errors.New("offset_minutes requires reference_time to be set")
-	ErrBookingReasonRefWithoutOffset  = errors.New("reference_time requires offset_minutes to be set")
+	ErrBookingReasonNotFound         = errors.New("booking reason not found")
+	ErrBookingReasonCodeReq          = errors.New("booking reason code is required")
+	ErrBookingReasonLabelReq         = errors.New("booking reason label is required")
+	ErrBookingReasonCodeExists       = errors.New("booking reason code already exists for this booking type")
+	ErrBookingReasonTypeIDReq        = errors.New("booking type ID is required")
+	ErrBookingReasonInvalidRefTime   = errors.New("invalid reference_time: must be plan_start, plan_end, or booking_time")
+	ErrBookingReasonOffsetWithoutRef = errors.New("offset_minutes requires reference_time to be set")
+	ErrBookingReasonRefWithoutOffset = errors.New("reference_time requires offset_minutes to be set")
 )
 
 // bookingReasonRepository defines the interface for booking reason data access.

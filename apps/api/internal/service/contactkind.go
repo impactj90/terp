@@ -32,8 +32,8 @@ type contactKindRepository interface {
 }
 
 type ContactKindService struct {
-	repo       contactKindRepository
-	typeRepo   contactTypeRepository
+	repo     contactKindRepository
+	typeRepo contactTypeRepository
 }
 
 func NewContactKindService(repo contactKindRepository, typeRepo contactTypeRepository) *ContactKindService {

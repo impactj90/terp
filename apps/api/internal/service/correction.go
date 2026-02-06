@@ -14,9 +14,9 @@ import (
 
 // Correction service errors.
 var (
-	ErrCorrectionNotFound    = errors.New("correction not found")
-	ErrCorrectionNotPending  = errors.New("correction is not in pending status")
-	ErrCorrectionIsApproved  = errors.New("cannot delete approved corrections")
+	ErrCorrectionNotFound   = errors.New("correction not found")
+	ErrCorrectionNotPending = errors.New("correction is not in pending status")
+	ErrCorrectionIsApproved = errors.New("cannot delete approved corrections")
 )
 
 type correctionRepo interface {

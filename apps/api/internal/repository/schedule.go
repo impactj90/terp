@@ -13,10 +13,10 @@ import (
 )
 
 var (
-	ErrScheduleNotFound         = errors.New("schedule not found")
-	ErrScheduleTaskNotFound     = errors.New("schedule task not found")
+	ErrScheduleNotFound          = errors.New("schedule not found")
+	ErrScheduleTaskNotFound      = errors.New("schedule task not found")
 	ErrScheduleExecutionNotFound = errors.New("schedule execution not found")
-	ErrScheduleNameConflict     = errors.New("schedule name already exists for this tenant")
+	ErrScheduleNameConflict      = errors.New("schedule name already exists for this tenant")
 )
 
 // ScheduleRepository handles schedule data access.

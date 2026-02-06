@@ -403,4 +403,3 @@ func (h *MonthlyValueHandler) monthlyValueToResponse(mv *model.MonthlyValue) *mo
 
 	return resp
 }
-

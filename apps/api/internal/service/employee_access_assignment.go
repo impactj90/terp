@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	ErrEmployeeAccessAssignmentNotFound        = errors.New("employee access assignment not found")
+	ErrEmployeeAccessAssignmentNotFound         = errors.New("employee access assignment not found")
 	ErrEmployeeAccessAssignmentEmployeeRequired = errors.New("employee ID is required")
 	ErrEmployeeAccessAssignmentProfileRequired  = errors.New("access profile ID is required")
 )

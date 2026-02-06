@@ -342,11 +342,11 @@ type UpdateTariffInput struct {
 	ClearRhythmStartDate bool
 
 	// ZMI Vacation Fields
-	AnnualVacationDays             *decimal.Decimal
-	WorkDaysPerWeek                *int
-	VacationBasis                  *model.VacationBasis
-	VacationCappingRuleGroupID     *uuid.UUID
-	ClearAnnualVacationDays        bool
+	AnnualVacationDays              *decimal.Decimal
+	WorkDaysPerWeek                 *int
+	VacationBasis                   *model.VacationBasis
+	VacationCappingRuleGroupID      *uuid.UUID
+	ClearAnnualVacationDays         bool
 	ClearVacationCappingRuleGroupID bool
 
 	// ZMI Target Hours Fields

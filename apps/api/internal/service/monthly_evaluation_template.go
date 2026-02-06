@@ -14,8 +14,8 @@ import (
 
 // Monthly evaluation template service errors.
 var (
-	ErrMonthlyEvalTemplateNotFound  = errors.New("monthly evaluation template not found")
-	ErrCannotDeleteDefaultTemplate  = errors.New("cannot delete default evaluation template")
+	ErrMonthlyEvalTemplateNotFound = errors.New("monthly evaluation template not found")
+	ErrCannotDeleteDefaultTemplate = errors.New("cannot delete default evaluation template")
 )
 
 type monthlyEvalTemplateRepo interface {

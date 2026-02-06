@@ -61,7 +61,7 @@ type BookingService struct {
 	bookingRepo      bookingRepositoryForService
 	bookingTypeRepo  bookingTypeRepositoryForService
 	recalcSvc        recalcServiceForBooking
-	monthlyValueRepo monthlyValueLookupForBooking // Optional - may be nil until TICKET-086
+	monthlyValueRepo monthlyValueLookupForBooking  // Optional - may be nil until TICKET-086
 	reasonRepo       bookingReasonLookupForService // Optional - for derived booking support
 	dayPlanRepo      dayPlanLookupForBooking       // Optional - for plan-based reference times
 }

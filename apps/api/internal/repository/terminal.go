@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	ErrImportBatchNotFound       = errors.New("import batch not found")
+	ErrImportBatchNotFound        = errors.New("import batch not found")
 	ErrRawTerminalBookingNotFound = errors.New("raw terminal booking not found")
 )
 

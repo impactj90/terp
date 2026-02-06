@@ -59,27 +59,27 @@ type vacationConfigSeederForAuth interface {
 
 // AuthHandler handles authentication endpoints.
 type AuthHandler struct {
-	jwtManager          *auth.JWTManager
-	authConfig          *auth.Config
-	userService         *service.UserService
-	tenantService       *service.TenantService
-	employeeService     *service.EmployeeService
-	bookingTypeService  *service.BookingTypeService
-	absenceService      *service.AbsenceService
-	holidayService      *service.HolidayService
-	dayPlanService      *service.DayPlanService
-	weekPlanService     *service.WeekPlanService
-	tariffService       *service.TariffService
-	departmentService   *service.DepartmentService
-	teamService         *service.TeamService
-	bookingRepo         bookingRepoForAuth
-	dailyValueRepo      dailyValueRepoForAuth
-	monthlyValueRepo    monthlyValueRepoForAuth
-	empDayPlanRepo      empDayPlanRepoForAuth
-	absenceDayRepo      absenceDayRepoForAuth
-	vacationBalanceRepo    vacationBalanceRepoForAuth
-	accountRepo            accountRepoForAuth
-	vacationConfigSeeder   vacationConfigSeederForAuth
+	jwtManager           *auth.JWTManager
+	authConfig           *auth.Config
+	userService          *service.UserService
+	tenantService        *service.TenantService
+	employeeService      *service.EmployeeService
+	bookingTypeService   *service.BookingTypeService
+	absenceService       *service.AbsenceService
+	holidayService       *service.HolidayService
+	dayPlanService       *service.DayPlanService
+	weekPlanService      *service.WeekPlanService
+	tariffService        *service.TariffService
+	departmentService    *service.DepartmentService
+	teamService          *service.TeamService
+	bookingRepo          bookingRepoForAuth
+	dailyValueRepo       dailyValueRepoForAuth
+	monthlyValueRepo     monthlyValueRepoForAuth
+	empDayPlanRepo       empDayPlanRepoForAuth
+	absenceDayRepo       absenceDayRepoForAuth
+	vacationBalanceRepo  vacationBalanceRepoForAuth
+	accountRepo          accountRepoForAuth
+	vacationConfigSeeder vacationConfigSeederForAuth
 }
 
 // NewAuthHandler creates a new auth handler instance.

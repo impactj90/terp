@@ -30,10 +30,10 @@ func createAccessTestFixtures(t *testing.T, db *repository.DB) (*model.Tenant, *
 
 	empRepo := repository.NewEmployeeRepository(db)
 	emp := &model.Employee{
-		TenantID:       tenant.ID,
+		TenantID:        tenant.ID,
 		PersonnelNumber: "EMP" + uuid.New().String()[:4],
-		FirstName:      "Test",
-		LastName:       "Employee",
+		FirstName:       "Test",
+		LastName:        "Employee",
 	}
 	err = empRepo.Create(ctx, emp)
 	require.NoError(t, err)
