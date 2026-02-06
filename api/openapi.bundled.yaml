@@ -10630,120 +10630,6 @@ paths:
           description: Shift is in use by shift assignments
           schema:
             $ref: '#/definitions/ProblemDetails'
-  /shift-assignments:
-    get:
-      tags:
-        - Shift Assignments
-      summary: List shift assignments
-      description: |
-        Returns all shift assignments for the tenant.
-        Placeholder - requires separate Plantafel documentation for full implementation.
-      operationId: listShiftAssignments
-      responses:
-        '200':
-          description: List of shift assignments
-          schema:
-            $ref: '#/definitions/ShiftAssignmentList'
-        '401':
-          $ref: '#/responses/Unauthorized'
-    post:
-      tags:
-        - Shift Assignments
-      summary: Create shift assignment
-      description: |
-        Assigns a shift to an employee for an optional date range.
-        Placeholder - requires separate Plantafel documentation for full implementation.
-      operationId: createShiftAssignment
-      parameters:
-        - name: body
-          in: body
-          required: true
-          schema:
-            $ref: '#/definitions/CreateShiftAssignmentRequest'
-      responses:
-        '201':
-          description: Created shift assignment
-          schema:
-            $ref: '#/definitions/ShiftAssignment'
-        '400':
-          $ref: '#/responses/BadRequest'
-        '401':
-          $ref: '#/responses/Unauthorized'
-  '/shift-assignments/{id}':
-    get:
-      tags:
-        - Shift Assignments
-      summary: Get shift assignment by ID
-      description: |
-        Retrieves shift assignment details.
-        Placeholder - requires separate Plantafel documentation for full implementation.
-      operationId: getShiftAssignment
-      parameters:
-        - name: id
-          in: path
-          required: true
-          type: string
-          format: uuid
-      responses:
-        '200':
-          description: Shift assignment details
-          schema:
-            $ref: '#/definitions/ShiftAssignment'
-        '401':
-          $ref: '#/responses/Unauthorized'
-        '404':
-          $ref: '#/responses/NotFound'
-    patch:
-      tags:
-        - Shift Assignments
-      summary: Update shift assignment
-      description: |
-        Updates shift assignment properties (date range, notes, active status).
-        Placeholder - requires separate Plantafel documentation for full implementation.
-      operationId: updateShiftAssignment
-      parameters:
-        - name: id
-          in: path
-          required: true
-          type: string
-          format: uuid
-        - name: body
-          in: body
-          required: true
-          schema:
-            $ref: '#/definitions/UpdateShiftAssignmentRequest'
-      responses:
-        '200':
-          description: Updated shift assignment
-          schema:
-            $ref: '#/definitions/ShiftAssignment'
-        '400':
-          $ref: '#/responses/BadRequest'
-        '401':
-          $ref: '#/responses/Unauthorized'
-        '404':
-          $ref: '#/responses/NotFound'
-    delete:
-      tags:
-        - Shift Assignments
-      summary: Delete shift assignment
-      description: |
-        Permanently removes a shift assignment.
-        Placeholder - requires separate Plantafel documentation for full implementation.
-      operationId: deleteShiftAssignment
-      parameters:
-        - name: id
-          in: path
-          required: true
-          type: string
-          format: uuid
-      responses:
-        '204':
-          description: Shift assignment deleted
-        '401':
-          $ref: '#/responses/Unauthorized'
-        '404':
-          $ref: '#/responses/NotFound'
   /macros:
     get:
       tags:
@@ -17704,6 +17590,10 @@ definitions:
       day_plan_id:
         type: string
         format: uuid
+      shift_id:
+        type: string
+        format: uuid
+        x-nullable: true
       source:
         $ref: '#/definitions/EmployeeDayPlanSource'
       notes:
@@ -17716,6 +17606,8 @@ definitions:
         format: date-time
       day_plan:
         $ref: '#/definitions/DayPlan'
+      shift:
+        $ref: '#/definitions/Shift'
     required:
       - id
       - tenant_id
@@ -17735,6 +17627,11 @@ definitions:
         type: string
         format: uuid
         description: 'If null, marks the day as an off day'
+      shift_id:
+        type: string
+        format: uuid
+        x-nullable: true
+        description: Optional shift reference for shift planning board
       source:
         $ref: '#/definitions/EmployeeDayPlanSource'
       notes:
@@ -17749,6 +17646,11 @@ definitions:
         type: string
         format: uuid
         description: 'If null, marks the day as an off day'
+      shift_id:
+        type: string
+        format: uuid
+        x-nullable: true
+        description: Optional shift reference for shift planning board
       source:
         $ref: '#/definitions/EmployeeDayPlanSource'
       notes:
@@ -17781,6 +17683,10 @@ definitions:
             day_plan_id:
               type: string
               format: uuid
+            shift_id:
+              type: string
+              format: uuid
+              x-nullable: true
             source:
               $ref: '#/definitions/EmployeeDayPlanSource'
             notes:
@@ -21923,88 +21829,6 @@ definitions:
         type: array
         items:
           $ref: '#/definitions/Shift'
-  ShiftAssignment:
-    type: object
-    required:
-      - id
-      - tenant_id
-      - employee_id
-      - shift_id
-    properties:
-      id:
-        type: string
-        format: uuid
-      tenant_id:
-        type: string
-        format: uuid
-      employee_id:
-        type: string
-        format: uuid
-      shift_id:
-        type: string
-        format: uuid
-      valid_from:
-        type: string
-        format: date
-        x-nullable: true
-      valid_to:
-        type: string
-        format: date
-        x-nullable: true
-      notes:
-        type: string
-        x-nullable: true
-      is_active:
-        type: boolean
-        example: true
-      created_at:
-        type: string
-        format: date-time
-      updated_at:
-        type: string
-        format: date-time
-  CreateShiftAssignmentRequest:
-    type: object
-    required:
-      - employee_id
-      - shift_id
-    properties:
-      employee_id:
-        type: string
-        format: uuid
-      shift_id:
-        type: string
-        format: uuid
-      valid_from:
-        type: string
-        format: date
-      valid_to:
-        type: string
-        format: date
-      notes:
-        type: string
-  UpdateShiftAssignmentRequest:
-    type: object
-    properties:
-      valid_from:
-        type: string
-        format: date
-      valid_to:
-        type: string
-        format: date
-      notes:
-        type: string
-      is_active:
-        type: boolean
-  ShiftAssignmentList:
-    type: object
-    required:
-      - data
-    properties:
-      data:
-        type: array
-        items:
-          $ref: '#/definitions/ShiftAssignment'
 responses:
   BadRequest:
     description: Invalid request

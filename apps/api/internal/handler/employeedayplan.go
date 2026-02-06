@@ -131,6 +131,11 @@ func (h *EmployeeDayPlanHandler) Create(w http.ResponseWriter, r *http.Request) 
 		input.DayPlanID = &id
 	}
 
+	if req.ShiftID != nil && req.ShiftID.String() != "" && req.ShiftID.String() != "00000000-0000-0000-0000-000000000000" {
+		id := uuid.MustParse(req.ShiftID.String())
+		input.ShiftID = &id
+	}
+
 	plan, err := h.edpService.Create(r.Context(), input)
 	if err != nil {
 		handleEDPError(w, err, "Failed to create employee day plan")
@@ -170,6 +175,11 @@ func (h *EmployeeDayPlanHandler) Update(w http.ResponseWriter, r *http.Request) 
 	if req.DayPlanID.String() != "" && req.DayPlanID.String() != "00000000-0000-0000-0000-000000000000" {
 		dpID := uuid.MustParse(req.DayPlanID.String())
 		input.DayPlanID = &dpID
+	}
+
+	if req.ShiftID != nil && req.ShiftID.String() != "" && req.ShiftID.String() != "00000000-0000-0000-0000-000000000000" {
+		shiftID := uuid.MustParse(req.ShiftID.String())
+		input.ShiftID = &shiftID
 	}
 
 	if string(req.Source) != "" {
@@ -241,6 +251,10 @@ func (h *EmployeeDayPlanHandler) BulkCreate(w http.ResponseWriter, r *http.Reque
 			id := uuid.MustParse(p.DayPlanID.String())
 			entries[i].DayPlanID = &id
 		}
+		if p.ShiftID != nil && p.ShiftID.String() != "" && p.ShiftID.String() != "00000000-0000-0000-0000-000000000000" {
+			id := uuid.MustParse(p.ShiftID.String())
+			entries[i].ShiftID = &id
+		}
 	}
 
 	input := service.BulkCreateInput{
@@ -310,6 +324,8 @@ func handleEDPError(w http.ResponseWriter, err error, defaultMsg string) {
 		respondError(w, http.StatusBadRequest, "Invalid day plan reference")
 	case service.ErrEDPInvalidEmployee:
 		respondError(w, http.StatusBadRequest, "Invalid employee reference")
+	case service.ErrEDPInvalidShift:
+		respondError(w, http.StatusBadRequest, "Invalid shift reference")
 	case service.ErrEDPDateRangeReq:
 		respondError(w, http.StatusBadRequest, "from and to dates are required")
 	case service.ErrEDPDateRangeInvalid:

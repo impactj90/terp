@@ -154,6 +154,10 @@ type BulkCreateEmployeeDayPlanRequestPlansItems0 struct {
 	// Format: date
 	PlanDate *strfmt.Date `json:"plan_date"`
 
+	// shift id
+	// Format: uuid
+	ShiftID *strfmt.UUID `json:"shift_id,omitempty"`
+
 	// source
 	Source EmployeeDayPlanSource `json:"source,omitempty"`
 }
@@ -171,6 +175,10 @@ func (m *BulkCreateEmployeeDayPlanRequestPlansItems0) Validate(formats strfmt.Re
 	}
 
 	if err := m.validatePlanDate(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateShiftID(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -216,6 +224,18 @@ func (m *BulkCreateEmployeeDayPlanRequestPlansItems0) validatePlanDate(formats s
 	}
 
 	if err := validate.FormatOf("plan_date", "body", "date", m.PlanDate.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *BulkCreateEmployeeDayPlanRequestPlansItems0) validateShiftID(formats strfmt.Registry) error {
+	if swag.IsZero(m.ShiftID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("shift_id", "body", "uuid", m.ShiftID.String(), formats); err != nil {
 		return err
 	}
 

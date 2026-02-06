@@ -78,11 +78,11 @@ func (r *ShiftRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-// HasAssignments checks if a shift is referenced by any shift assignments.
+// HasAssignments checks if a shift is referenced by any employee day plans.
 func (r *ShiftRepository) HasAssignments(ctx context.Context, shiftID uuid.UUID) (bool, error) {
 	var count int64
 	err := r.db.GORM.WithContext(ctx).
-		Model(&model.ShiftAssignment{}).
+		Model(&model.EmployeeDayPlan{}).
 		Where("shift_id = ?", shiftID).
 		Count(&count).Error
 	if err != nil {

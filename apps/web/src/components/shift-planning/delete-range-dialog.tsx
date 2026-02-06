@@ -40,7 +40,7 @@ export function DeleteRangeDialog({
   defaultEmployeeName,
   onSuccess,
 }: DeleteRangeDialogProps) {
-  const t = useTranslations('employeeDayPlans')
+  const t = useTranslations('shiftPlanning')
   const locale = useLocale()
 
   // State
@@ -200,7 +200,7 @@ export function DeleteRangeDialog({
               onClick={() => onOpenChange(false)}
               disabled={deleteMutation.isPending}
             >
-              {t('cellEditCancel')}
+              {t('assignmentCancel')}
             </Button>
             <Button
               type="submit"

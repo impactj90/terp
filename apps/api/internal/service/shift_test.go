@@ -3,6 +3,7 @@ package service_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -186,18 +187,41 @@ func TestShiftService_Delete_InUse(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	shiftRepo := repository.NewShiftRepository(db)
 	shiftSvc := service.NewShiftService(shiftRepo)
-	saRepo := repository.NewShiftAssignmentRepository(db)
-	saSvc := service.NewShiftAssignmentService(saRepo)
+	edpRepo := repository.NewEmployeeDayPlanRepository(db)
 	ctx := context.Background()
 
-	tenant, emp, shift := createShiftTestFixtures(t, db)
+	// Create tenant
+	tenant := createShiftServiceTestTenant(t, db)
 
-	// Create an assignment referencing this shift
-	_, err := saSvc.Create(ctx, service.CreateShiftAssignmentInput{
+	// Create employee
+	empRepo := repository.NewEmployeeRepository(db)
+	emp := &model.Employee{
+		TenantID:  tenant.ID,
+		FirstName: "Test",
+		LastName:  "Employee",
+		IsActive:  true,
+	}
+	err := empRepo.Create(ctx, emp)
+	require.NoError(t, err)
+
+	// Create shift
+	shift, err := shiftSvc.Create(ctx, service.CreateShiftInput{
+		TenantID: tenant.ID,
+		Code:     "INUSE_" + uuid.New().String()[:4],
+		Name:     "In Use Shift",
+	})
+	require.NoError(t, err)
+
+	// Create an employee day plan referencing this shift
+	planDate := time.Date(2025, 1, 15, 0, 0, 0, 0, time.UTC)
+	edp := &model.EmployeeDayPlan{
 		TenantID:   tenant.ID,
 		EmployeeID: emp.ID,
-		ShiftID:    shift.ID,
-	})
+		PlanDate:   planDate,
+		ShiftID:    &shift.ID,
+		Source:     "manual",
+	}
+	err = edpRepo.Upsert(ctx, edp)
 	require.NoError(t, err)
 
 	// Try to delete shift -- should fail because it is referenced

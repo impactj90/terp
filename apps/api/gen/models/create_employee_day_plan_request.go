@@ -37,6 +37,10 @@ type CreateEmployeeDayPlanRequest struct {
 	// Format: date
 	PlanDate *strfmt.Date `json:"plan_date"`
 
+	// Optional shift reference for shift planning board
+	// Format: uuid
+	ShiftID *strfmt.UUID `json:"shift_id,omitempty"`
+
 	// source
 	Source EmployeeDayPlanSource `json:"source,omitempty"`
 }
@@ -54,6 +58,10 @@ func (m *CreateEmployeeDayPlanRequest) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validatePlanDate(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateShiftID(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -99,6 +107,18 @@ func (m *CreateEmployeeDayPlanRequest) validatePlanDate(formats strfmt.Registry)
 	}
 
 	if err := validate.FormatOf("plan_date", "body", "date", m.PlanDate.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *CreateEmployeeDayPlanRequest) validateShiftID(formats strfmt.Registry) error {
+	if swag.IsZero(m.ShiftID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("shift_id", "body", "uuid", m.ShiftID.String(), formats); err != nil {
 		return err
 	}
 

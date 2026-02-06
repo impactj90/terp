@@ -62,7 +62,8 @@ func newEDPService(db *repository.DB) *service.EmployeeDayPlanService {
 	edpRepo := repository.NewEmployeeDayPlanRepository(db)
 	empRepo := repository.NewEmployeeRepository(db)
 	dayPlanRepo := repository.NewDayPlanRepository(db)
-	return service.NewEmployeeDayPlanService(edpRepo, empRepo, dayPlanRepo)
+	shiftRepo := repository.NewShiftRepository(db)
+	return service.NewEmployeeDayPlanService(edpRepo, empRepo, dayPlanRepo, shiftRepo)
 }
 
 func TestEmployeeDayPlanService_List(t *testing.T) {

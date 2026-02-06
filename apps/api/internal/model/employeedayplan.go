@@ -23,6 +23,7 @@ type EmployeeDayPlan struct {
 	PlanDate   time.Time             `gorm:"type:date;not null" json:"plan_date"`
 	DayPlanID  *uuid.UUID            `gorm:"type:uuid" json:"day_plan_id,omitempty"`
 	Source     EmployeeDayPlanSource `gorm:"type:varchar(20);default:'tariff'" json:"source"`
+	ShiftID    *uuid.UUID            `gorm:"type:uuid" json:"shift_id,omitempty"`
 	Notes      string                `gorm:"type:text" json:"notes,omitempty"`
 	CreatedAt  time.Time             `gorm:"default:now()" json:"created_at"`
 	UpdatedAt  time.Time             `gorm:"default:now()" json:"updated_at"`
@@ -30,6 +31,7 @@ type EmployeeDayPlan struct {
 	// Relations
 	Employee *Employee `gorm:"foreignKey:EmployeeID" json:"employee,omitempty"`
 	DayPlan  *DayPlan  `gorm:"foreignKey:DayPlanID" json:"day_plan,omitempty"`
+	Shift    *Shift    `gorm:"foreignKey:ShiftID" json:"shift,omitempty"`
 }
 
 // TableName returns the database table name.

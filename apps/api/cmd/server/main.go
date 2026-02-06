@@ -93,6 +93,7 @@ func main() {
 	orderRepo := repository.NewOrderRepository(db)
 	orderAssignmentRepo := repository.NewOrderAssignmentRepository(db)
 	orderBookingRepo := repository.NewOrderBookingRepository(db)
+	shiftRepo := repository.NewShiftRepository(db)
 
 	// Initialize services
 	userService := service.NewUserService(userRepo, userGroupRepo)
@@ -112,7 +113,7 @@ func main() {
 	notificationService := service.NewNotificationService(notificationRepo, notificationPreferencesRepo, userRepo)
 	auditLogService := service.NewAuditLogService(auditLogRepo)
 	groupService := service.NewGroupService(employeeGroupRepo, workflowGroupRepo, activityGroupRepo)
-	edpService := service.NewEmployeeDayPlanService(empDayPlanRepo, employeeRepo, dayPlanRepo)
+	edpService := service.NewEmployeeDayPlanService(empDayPlanRepo, employeeRepo, dayPlanRepo, shiftRepo)
 	employeeTariffAssignmentService := service.NewEmployeeTariffAssignmentService(employeeTariffAssignmentRepo, employeeRepo, tariffRepo)
 	activityService := service.NewActivityService(activityRepo)
 	orderService := service.NewOrderService(orderRepo)
@@ -380,13 +381,10 @@ func main() {
 	travelAllowancePreviewHandler := handler.NewTravelAllowancePreviewHandler(travelAllowancePreviewService)
 
 	// Initialize Shift Planning (Plantafel)
-	shiftRepo := repository.NewShiftRepository(db)
 	shiftService := service.NewShiftService(shiftRepo)
 	shiftHandler := handler.NewShiftHandler(shiftService)
 
-	shiftAssignmentRepo := repository.NewShiftAssignmentRepository(db)
-	shiftAssignmentService := service.NewShiftAssignmentService(shiftAssignmentRepo)
-	shiftAssignmentHandler := handler.NewShiftAssignmentHandler(shiftAssignmentService)
+
 
 	// Initialize Macros
 	macroRepo := repository.NewMacroRepository(db)
@@ -567,7 +565,6 @@ func main() {
 				handler.RegisterExtendedTravelRuleRoutes(r, extendedTravelRuleHandler, authzMiddleware)
 				handler.RegisterTravelAllowancePreviewRoutes(r, travelAllowancePreviewHandler, authzMiddleware)
 				handler.RegisterShiftRoutes(r, shiftHandler, authzMiddleware)
-				handler.RegisterShiftAssignmentRoutes(r, shiftAssignmentHandler, authzMiddleware)
 				handler.RegisterMacroRoutes(r, macroHandler, authzMiddleware)
 				handler.RegisterLocationRoutes(r, locationHandler, authzMiddleware)
 				handler.RegisterCorrectionRoutes(r, correctionHandler, authzMiddleware)

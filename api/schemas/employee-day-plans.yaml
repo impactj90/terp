@@ -24,6 +24,10 @@ EmployeeDayPlan:
     day_plan_id:
       type: string
       format: uuid
+    shift_id:
+      type: string
+      format: uuid
+      x-nullable: true
     source:
       $ref: '#/EmployeeDayPlanSource'
     notes:
@@ -36,6 +40,8 @@ EmployeeDayPlan:
       format: date-time
     day_plan:
       $ref: 'day-plans.yaml#/DayPlan'
+    shift:
+      $ref: 'shift-planning.yaml#/Shift'
   required:
     - id
     - tenant_id
@@ -68,6 +74,11 @@ CreateEmployeeDayPlanRequest:
       type: string
       format: uuid
       description: If null, marks the day as an off day
+    shift_id:
+      type: string
+      format: uuid
+      x-nullable: true
+      description: Optional shift reference for shift planning board
     source:
       $ref: '#/EmployeeDayPlanSource'
     notes:
@@ -83,6 +94,11 @@ UpdateEmployeeDayPlanRequest:
       type: string
       format: uuid
       description: If null, marks the day as an off day
+    shift_id:
+      type: string
+      format: uuid
+      x-nullable: true
+      description: Optional shift reference for shift planning board
     source:
       $ref: '#/EmployeeDayPlanSource'
     notes:
@@ -105,6 +121,10 @@ BulkCreateEmployeeDayPlanRequest:
           day_plan_id:
             type: string
             format: uuid
+          shift_id:
+            type: string
+            format: uuid
+            x-nullable: true
           source:
             $ref: '#/EmployeeDayPlanSource'
           notes:

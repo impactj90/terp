@@ -24,7 +24,6 @@ import {
   ScrollText,
   Wallet,
   AlertTriangle,
-  CalendarClock,
   CalendarCheck,
   FileOutput,
   Settings2,
@@ -33,6 +32,7 @@ import {
   Contact,
   Calculator,
   Umbrella,
+  Layers,
 } from 'lucide-react'
 import type { UserRole } from '@/hooks/use-has-role'
 
@@ -166,13 +166,7 @@ export const navConfig: NavSection[] = [
         icon: CalendarDays,
         roles: ['admin'],
       },
-      {
-        titleKey: 'employeeDayPlans',
-        href: '/admin/employee-day-plans',
-        icon: CalendarClock,
-        roles: ['admin'],
-      },
-      {
+{
         titleKey: 'weekPlans',
         href: '/admin/week-plans',
         icon: CalendarRange,
@@ -248,6 +242,12 @@ export const navConfig: NavSection[] = [
         titleKey: 'vacationConfig',
         href: '/admin/vacation-config',
         icon: Umbrella,
+        roles: ['admin'],
+      },
+      {
+        titleKey: 'shiftPlanning',
+        href: '/admin/shift-planning',
+        icon: Layers,
         roles: ['admin'],
       },
     ],

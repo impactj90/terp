@@ -756,10 +756,6 @@ paths:
     $ref: 'paths/shift-planning.yaml#/~1shifts'
   /shifts/{id}:
     $ref: 'paths/shift-planning.yaml#/~1shifts~1{id}'
-  /shift-assignments:
-    $ref: 'paths/shift-planning.yaml#/~1shift-assignments'
-  /shift-assignments/{id}:
-    $ref: 'paths/shift-planning.yaml#/~1shift-assignments~1{id}'
 
   # Macros
   /macros:
@@ -1585,14 +1581,6 @@ definitions:
     $ref: 'schemas/shift-planning.yaml#/UpdateShiftRequest'
   ShiftList:
     $ref: 'schemas/shift-planning.yaml#/ShiftList'
-  ShiftAssignment:
-    $ref: 'schemas/shift-planning.yaml#/ShiftAssignment'
-  CreateShiftAssignmentRequest:
-    $ref: 'schemas/shift-planning.yaml#/CreateShiftAssignmentRequest'
-  UpdateShiftAssignmentRequest:
-    $ref: 'schemas/shift-planning.yaml#/UpdateShiftAssignmentRequest'
-  ShiftAssignmentList:
-    $ref: 'schemas/shift-planning.yaml#/ShiftAssignmentList'
 
 responses:
   BadRequest:

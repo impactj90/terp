@@ -1530,25 +1530,6 @@ func RegisterShiftRoutes(r chi.Router, h *ShiftHandler, authz *middleware.Author
 	})
 }
 
-// RegisterShiftAssignmentRoutes registers shift assignment routes.
-func RegisterShiftAssignmentRoutes(r chi.Router, h *ShiftAssignmentHandler, authz *middleware.AuthorizationMiddleware) {
-	permManage := permissions.ID("shift_planning.manage").String()
-	r.Route("/shift-assignments", func(r chi.Router) {
-		if authz == nil {
-			r.Get("/", h.List)
-			r.Post("/", h.Create)
-			r.Get("/{id}", h.Get)
-			r.Patch("/{id}", h.Update)
-			r.Delete("/{id}", h.Delete)
-			return
-		}
-		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
-		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
-		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
-		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)
-		r.With(authz.RequirePermission(permManage)).Delete("/{id}", h.Delete)
-	})
-}
 
 // RegisterMacroRoutes registers macro routes.
 func RegisterMacroRoutes(r chi.Router, h *MacroHandler, authz *middleware.AuthorizationMiddleware) {

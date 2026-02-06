@@ -49,6 +49,13 @@ type EmployeeDayPlan struct {
 	// Format: date
 	PlanDate *strfmt.Date `json:"plan_date"`
 
+	// shift
+	Shift *Shift `json:"shift,omitempty"`
+
+	// shift id
+	// Format: uuid
+	ShiftID *strfmt.UUID `json:"shift_id,omitempty"`
+
 	// source
 	// Required: true
 	Source *EmployeeDayPlanSource `json:"source"`
@@ -88,6 +95,14 @@ func (m *EmployeeDayPlan) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validatePlanDate(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateShift(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateShiftID(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -195,6 +210,41 @@ func (m *EmployeeDayPlan) validatePlanDate(formats strfmt.Registry) error {
 	return nil
 }
 
+func (m *EmployeeDayPlan) validateShift(formats strfmt.Registry) error {
+	if swag.IsZero(m.Shift) { // not required
+		return nil
+	}
+
+	if m.Shift != nil {
+		if err := m.Shift.Validate(formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("shift")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("shift")
+			}
+
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m *EmployeeDayPlan) validateShiftID(formats strfmt.Registry) error {
+	if swag.IsZero(m.ShiftID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("shift_id", "body", "uuid", m.ShiftID.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (m *EmployeeDayPlan) validateSource(formats strfmt.Registry) error {
 
 	if err := validate.Required("source", "body", m.Source); err != nil {
@@ -256,6 +306,10 @@ func (m *EmployeeDayPlan) ContextValidate(ctx context.Context, formats strfmt.Re
 		res = append(res, err)
 	}
 
+	if err := m.contextValidateShift(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.contextValidateSource(ctx, formats); err != nil {
 		res = append(res, err)
 	}
@@ -282,6 +336,31 @@ func (m *EmployeeDayPlan) contextValidateDayPlan(ctx context.Context, formats st
 			ce := new(errors.CompositeError)
 			if stderrors.As(err, &ce) {
 				return ce.ValidateName("day_plan")
+			}
+
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m *EmployeeDayPlan) contextValidateShift(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Shift != nil {
+
+		if swag.IsZero(m.Shift) { // not required
+			return nil
+		}
+
+		if err := m.Shift.ContextValidate(ctx, formats); err != nil {
+			ve := new(errors.Validation)
+			if stderrors.As(err, &ve) {
+				return ve.ValidateName("shift")
+			}
+			ce := new(errors.CompositeError)
+			if stderrors.As(err, &ce) {
+				return ce.ValidateName("shift")
 			}
 
 			return err

@@ -26,8 +26,16 @@ import {
 import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { SearchInput } from '@/components/ui/search-input'
-import { useEmployees, useDayPlans, useBulkCreateEmployeeDayPlans } from '@/hooks/api'
+import {
+  useEmployees,
+  useDayPlans,
+  useShifts,
+  useBulkCreateEmployeeDayPlans,
+} from '@/hooks/api'
 import { formatDate } from '@/lib/time-utils'
+import type { components } from '@/lib/api/types'
+
+type Shift = components['schemas']['Shift']
 
 interface BulkAssignDialogProps {
   open: boolean
@@ -50,14 +58,14 @@ export function BulkAssignDialog({
   onOpenChange,
   onSuccess,
 }: BulkAssignDialogProps) {
-  const t = useTranslations('employeeDayPlans')
+  const t = useTranslations('shiftPlanning')
 
   // State
   const [selectedEmployeeIds, setSelectedEmployeeIds] = React.useState<Set<string>>(new Set())
   const [employeeSearch, setEmployeeSearch] = React.useState('')
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined)
+  const [selectedShiftId, setSelectedShiftId] = React.useState('')
   const [selectedDayPlanId, setSelectedDayPlanId] = React.useState('')
-  const [source, setSource] = React.useState<'tariff' | 'manual' | 'holiday'>('manual')
   const [notes, setNotes] = React.useState('')
   const [result, setResult] = React.useState<{ created: number; updated: number } | null>(null)
   const [error, setError] = React.useState<string | null>(null)
@@ -72,6 +80,9 @@ export function BulkAssignDialog({
 
   const { data: dayPlansData } = useDayPlans({ active: true, enabled: open })
   const dayPlans = dayPlansData?.data ?? []
+
+  const { data: shiftsData } = useShifts({ enabled: open })
+  const shifts: Shift[] = (shiftsData?.data ?? []).filter((s: Shift) => s.is_active)
 
   const bulkMutation = useBulkCreateEmployeeDayPlans()
 
@@ -93,13 +104,24 @@ export function BulkAssignDialog({
       setSelectedEmployeeIds(new Set())
       setEmployeeSearch('')
       setDateRange(undefined)
+      setSelectedShiftId('')
       setSelectedDayPlanId('')
-      setSource('manual')
       setNotes('')
       setResult(null)
       setError(null)
     }
   }, [open])
+
+  // When shift changes, auto-fill day_plan_id
+  const handleShiftChange = (shiftId: string) => {
+    setSelectedShiftId(shiftId)
+    if (shiftId) {
+      const shift = shifts.find((s) => s.id === shiftId)
+      if (shift?.day_plan_id) {
+        setSelectedDayPlanId(shift.day_plan_id)
+      }
+    }
+  }
 
   // Toggle employee selection
   const toggleEmployee = (employeeId: string) => {
@@ -153,8 +175,8 @@ export function BulkAssignDialog({
       setError(t('bulkAssignNoDateRange'))
       return
     }
-    if (!selectedDayPlanId) {
-      setError(t('bulkAssignNoDayPlan'))
+    if (!selectedShiftId && !selectedDayPlanId) {
+      setError(t('bulkAssignNoSelection'))
       return
     }
 
@@ -163,8 +185,9 @@ export function BulkAssignDialog({
       dates.map((date) => ({
         employee_id: employeeId,
         plan_date: formatDate(date),
-        day_plan_id: selectedDayPlanId,
-        source,
+        shift_id: selectedShiftId || undefined,
+        day_plan_id: selectedDayPlanId || undefined,
+        source: 'manual' as const,
         notes: notes || undefined,
       }))
     )
@@ -241,7 +264,7 @@ export function BulkAssignDialog({
                 ))}
                 {filteredEmployees.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-4">
-                    {t('emptyTitle')}
+                    {t('boardEmptyTitle')}
                   </p>
                 )}
               </ScrollArea>
@@ -261,9 +284,44 @@ export function BulkAssignDialog({
               />
             </div>
 
+            {/* Shift selector */}
+            <div className="space-y-2">
+              <Label>{t('bulkAssignShift')}</Label>
+              <Select
+                value={selectedShiftId || '__none__'}
+                onValueChange={(val) =>
+                  handleShiftChange(val === '__none__' ? '' : val)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t('bulkAssignSelectShift')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">
+                    {t('cellNoShift')}
+                  </SelectItem>
+                  {shifts.map((shift) => (
+                    <SelectItem key={shift.id} value={shift.id}>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="h-3 w-3 rounded-sm border shrink-0"
+                          style={{
+                            backgroundColor: shift.color || '#808080',
+                          }}
+                        />
+                        <span>
+                          {shift.code} - {shift.name}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Day plan selector */}
             <div className="space-y-2">
-              <Label>{t('bulkAssignDayPlan')}</Label>
+              <Label>{t('cellDayPlan')}</Label>
               <Select
                 value={selectedDayPlanId || '__none__'}
                 onValueChange={(val) =>
@@ -271,11 +329,11 @@ export function BulkAssignDialog({
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={t('bulkAssignSelectDayPlan')} />
+                  <SelectValue placeholder={t('cellDayPlanPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__" disabled>
-                    {t('bulkAssignSelectDayPlan')}
+                  <SelectItem value="__none__">
+                    {t('cellNoDayPlan')}
                   </SelectItem>
                   {dayPlans.map((dp) => (
                     <SelectItem key={dp.id} value={dp.id}>
@@ -286,31 +344,13 @@ export function BulkAssignDialog({
               </Select>
             </div>
 
-            {/* Source selector */}
-            <div className="space-y-2">
-              <Label>{t('bulkAssignSource')}</Label>
-              <Select
-                value={source}
-                onValueChange={(val) => setSource(val as typeof source)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="manual">{t('sourceManual')}</SelectItem>
-                  <SelectItem value="tariff">{t('sourceTariff')}</SelectItem>
-                  <SelectItem value="holiday">{t('sourceHoliday')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
             {/* Notes */}
             <div className="space-y-2">
-              <Label>{t('bulkAssignNotes')}</Label>
+              <Label>{t('assignmentNotes')}</Label>
               <Input
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder={t('bulkAssignNotesPlaceholder')}
+                placeholder={t('assignmentNotesPlaceholder')}
               />
             </div>
 
@@ -352,7 +392,7 @@ export function BulkAssignDialog({
               onClick={() => onOpenChange(false)}
               disabled={bulkMutation.isPending}
             >
-              {t('cellEditCancel')}
+              {t('assignmentCancel')}
             </Button>
             <Button type="submit" disabled={bulkMutation.isPending}>
               {bulkMutation.isPending && (

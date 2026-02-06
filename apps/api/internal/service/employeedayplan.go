@@ -18,6 +18,7 @@ var (
 	ErrEDPInvalidSource        = errors.New("invalid source (must be 'tariff', 'manual', or 'holiday')")
 	ErrEDPInvalidDayPlan       = errors.New("invalid day plan reference")
 	ErrEDPInvalidEmployee      = errors.New("invalid employee reference")
+	ErrEDPInvalidShift         = errors.New("invalid shift reference")
 	ErrEDPDateRangeReq         = errors.New("from and to dates are required")
 	ErrEDPDateRangeInvalid     = errors.New("from date must not be after to date")
 )
@@ -43,21 +44,29 @@ type dayPlanRepositoryForEDP interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*model.DayPlan, error)
 }
 
+// shiftRepositoryForEDP defines the interface for shift lookup (used for validation).
+type shiftRepositoryForEDP interface {
+	GetByID(ctx context.Context, id uuid.UUID) (*model.Shift, error)
+}
+
 type EmployeeDayPlanService struct {
 	edpRepo      edpRepository
 	employeeRepo employeeRepositoryForEDP
 	dayPlanRepo  dayPlanRepositoryForEDP
+	shiftRepo    shiftRepositoryForEDP
 }
 
 func NewEmployeeDayPlanService(
 	edpRepo edpRepository,
 	employeeRepo employeeRepositoryForEDP,
 	dayPlanRepo dayPlanRepositoryForEDP,
+	shiftRepo shiftRepositoryForEDP,
 ) *EmployeeDayPlanService {
 	return &EmployeeDayPlanService{
 		edpRepo:      edpRepo,
 		employeeRepo: employeeRepo,
 		dayPlanRepo:  dayPlanRepo,
+		shiftRepo:    shiftRepo,
 	}
 }
 
@@ -96,6 +105,7 @@ type CreateEmployeeDayPlanInput struct {
 	EmployeeID uuid.UUID
 	PlanDate   time.Time
 	DayPlanID  *uuid.UUID
+	ShiftID    *uuid.UUID
 	Source     string
 	Notes      string
 }
@@ -123,6 +133,17 @@ func (s *EmployeeDayPlanService) Create(ctx context.Context, input CreateEmploye
 		return nil, ErrEDPInvalidEmployee
 	}
 
+	// Validate shift if provided; auto-populate day_plan_id from shift
+	if input.ShiftID != nil {
+		shift, err := s.shiftRepo.GetByID(ctx, *input.ShiftID)
+		if err != nil {
+			return nil, ErrEDPInvalidShift
+		}
+		if input.DayPlanID == nil && shift.DayPlanID != nil {
+			input.DayPlanID = shift.DayPlanID
+		}
+	}
+
 	// Validate day plan if provided
 	if input.DayPlanID != nil {
 		dp, err := s.dayPlanRepo.GetByID(ctx, *input.DayPlanID)
@@ -136,6 +157,7 @@ func (s *EmployeeDayPlanService) Create(ctx context.Context, input CreateEmploye
 		EmployeeID: input.EmployeeID,
 		PlanDate:   input.PlanDate,
 		DayPlanID:  input.DayPlanID,
+		ShiftID:    input.ShiftID,
 		Source:     source,
 		Notes:      input.Notes,
 	}
@@ -149,9 +171,11 @@ func (s *EmployeeDayPlanService) Create(ctx context.Context, input CreateEmploye
 // UpdateEmployeeDayPlanInput represents the input for updating an employee day plan.
 type UpdateEmployeeDayPlanInput struct {
 	DayPlanID      *uuid.UUID
+	ShiftID        *uuid.UUID
 	Source         *string
 	Notes          *string
 	ClearDayPlanID bool
+	ClearShiftID   bool
 }
 
 // Update updates an employee day plan.
@@ -159,6 +183,20 @@ func (s *EmployeeDayPlanService) Update(ctx context.Context, id uuid.UUID, tenan
 	plan, err := s.edpRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, ErrEmployeeDayPlanNotFound
+	}
+
+	if input.ClearShiftID {
+		plan.ShiftID = nil
+	} else if input.ShiftID != nil {
+		shift, err := s.shiftRepo.GetByID(ctx, *input.ShiftID)
+		if err != nil {
+			return nil, ErrEDPInvalidShift
+		}
+		plan.ShiftID = input.ShiftID
+		// Auto-populate day_plan_id from shift if not explicitly set
+		if input.DayPlanID == nil && !input.ClearDayPlanID && shift.DayPlanID != nil {
+			plan.DayPlanID = shift.DayPlanID
+		}
 	}
 
 	if input.ClearDayPlanID {
@@ -198,11 +236,12 @@ func (s *EmployeeDayPlanService) Delete(ctx context.Context, id uuid.UUID) error
 	return s.edpRepo.Delete(ctx, id)
 }
 
-// BulkCreateInput represents a single entry in a bulk create request.
+// BulkCreateEntry represents a single entry in a bulk create request.
 type BulkCreateEntry struct {
 	EmployeeID uuid.UUID
 	PlanDate   time.Time
 	DayPlanID  *uuid.UUID
+	ShiftID    *uuid.UUID
 	Source     string
 	Notes      string
 }
@@ -243,9 +282,21 @@ func (s *EmployeeDayPlanService) BulkCreate(ctx context.Context, input BulkCreat
 			return nil, ErrEDPInvalidEmployee
 		}
 
+		// Validate shift if provided; auto-populate day_plan_id from shift
+		dayPlanID := entry.DayPlanID
+		if entry.ShiftID != nil {
+			shift, err := s.shiftRepo.GetByID(ctx, *entry.ShiftID)
+			if err != nil {
+				return nil, ErrEDPInvalidShift
+			}
+			if dayPlanID == nil && shift.DayPlanID != nil {
+				dayPlanID = shift.DayPlanID
+			}
+		}
+
 		// Validate day plan if provided
-		if entry.DayPlanID != nil {
-			dp, err := s.dayPlanRepo.GetByID(ctx, *entry.DayPlanID)
+		if dayPlanID != nil {
+			dp, err := s.dayPlanRepo.GetByID(ctx, *dayPlanID)
 			if err != nil || dp.TenantID != input.TenantID {
 				return nil, ErrEDPInvalidDayPlan
 			}
@@ -255,7 +306,8 @@ func (s *EmployeeDayPlanService) BulkCreate(ctx context.Context, input BulkCreat
 			TenantID:   input.TenantID,
 			EmployeeID: entry.EmployeeID,
 			PlanDate:   entry.PlanDate,
-			DayPlanID:  entry.DayPlanID,
+			DayPlanID:  dayPlanID,
+			ShiftID:    entry.ShiftID,
 			Source:     source,
 			Notes:      entry.Notes,
 		})

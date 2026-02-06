@@ -36,6 +36,7 @@ func (r *EmployeeDayPlanRepository) Create(ctx context.Context, plan *model.Empl
 func (r *EmployeeDayPlanRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.EmployeeDayPlan, error) {
 	var plan model.EmployeeDayPlan
 	err := r.db.GORM.WithContext(ctx).
+		Preload("Shift").
 		First(&plan, "id = ?", id).Error
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -72,6 +73,7 @@ func (r *EmployeeDayPlanRepository) GetForEmployeeDate(ctx context.Context, empl
 		Preload("DayPlan").
 		Preload("DayPlan.Breaks").
 		Preload("DayPlan.Bonuses").
+		Preload("Shift").
 		Where("employee_id = ? AND plan_date = ?", employeeID, date).
 		First(&plan).Error
 
@@ -91,6 +93,7 @@ func (r *EmployeeDayPlanRepository) GetForEmployeeDateRange(ctx context.Context,
 		Preload("DayPlan").
 		Preload("DayPlan.Breaks").
 		Preload("DayPlan.Bonuses").
+		Preload("Shift").
 		Where("employee_id = ? AND plan_date >= ? AND plan_date <= ?", employeeID, from, to).
 		Order("plan_date ASC").
 		Find(&plans).Error
@@ -105,6 +108,7 @@ func (r *EmployeeDayPlanRepository) GetForEmployeeDateRange(ctx context.Context,
 func (r *EmployeeDayPlanRepository) List(ctx context.Context, tenantID uuid.UUID, employeeID *uuid.UUID, from, to time.Time) ([]model.EmployeeDayPlan, error) {
 	q := r.db.GORM.WithContext(ctx).
 		Preload("DayPlan").
+		Preload("Shift").
 		Where("tenant_id = ? AND plan_date >= ? AND plan_date <= ?", tenantID, from, to)
 
 	if employeeID != nil {
@@ -124,7 +128,7 @@ func (r *EmployeeDayPlanRepository) Upsert(ctx context.Context, plan *model.Empl
 	return r.db.GORM.WithContext(ctx).
 		Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "employee_id"}, {Name: "plan_date"}},
-			DoUpdates: clause.AssignmentColumns([]string{"day_plan_id", "source", "notes", "updated_at"}),
+			DoUpdates: clause.AssignmentColumns([]string{"day_plan_id", "shift_id", "source", "notes", "updated_at"}),
 		}).
 		Create(plan).Error
 }
@@ -137,7 +141,7 @@ func (r *EmployeeDayPlanRepository) BulkCreate(ctx context.Context, plans []mode
 	return r.db.GORM.WithContext(ctx).
 		Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "employee_id"}, {Name: "plan_date"}},
-			DoUpdates: clause.AssignmentColumns([]string{"day_plan_id", "source", "notes", "updated_at"}),
+			DoUpdates: clause.AssignmentColumns([]string{"day_plan_id", "shift_id", "source", "notes", "updated_at"}),
 		}).
 		CreateInBatches(plans, 100).Error
 }

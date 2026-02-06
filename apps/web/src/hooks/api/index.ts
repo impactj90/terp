@@ -427,3 +427,12 @@ export {
   useVacationEntitlementPreview,
   useVacationCarryoverPreview,
 } from './use-vacation-config'
+
+// Shift Planning
+export {
+  useShifts,
+  useShift,
+  useCreateShift,
+  useUpdateShift,
+  useDeleteShift,
+} from './use-shift-planning'

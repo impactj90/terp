@@ -4663,63 +4663,6 @@ export interface paths {
         patch: operations["updateShift"];
         trace?: never;
     };
-    "/shift-assignments": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List shift assignments
-         * @description Returns all shift assignments for the tenant.
-         *     Placeholder - requires separate Plantafel documentation for full implementation.
-         */
-        get: operations["listShiftAssignments"];
-        put?: never;
-        /**
-         * Create shift assignment
-         * @description Assigns a shift to an employee for an optional date range.
-         *     Placeholder - requires separate Plantafel documentation for full implementation.
-         */
-        post: operations["createShiftAssignment"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/shift-assignments/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get shift assignment by ID
-         * @description Retrieves shift assignment details.
-         *     Placeholder - requires separate Plantafel documentation for full implementation.
-         */
-        get: operations["getShiftAssignment"];
-        put?: never;
-        post?: never;
-        /**
-         * Delete shift assignment
-         * @description Permanently removes a shift assignment.
-         *     Placeholder - requires separate Plantafel documentation for full implementation.
-         */
-        delete: operations["deleteShiftAssignment"];
-        options?: never;
-        head?: never;
-        /**
-         * Update shift assignment
-         * @description Updates shift assignment properties (date range, notes, active status).
-         *     Placeholder - requires separate Plantafel documentation for full implementation.
-         */
-        patch: operations["updateShiftAssignment"];
-        trace?: never;
-    };
     "/macros": {
         parameters: {
             query?: never;
@@ -8389,6 +8332,8 @@ export interface components {
             plan_date: string;
             /** Format: uuid */
             day_plan_id?: string;
+            /** Format: uuid */
+            shift_id?: string | null;
             source: components["schemas"]["EmployeeDayPlanSource"];
             notes?: string;
             /** Format: date-time */
@@ -8396,6 +8341,7 @@ export interface components {
             /** Format: date-time */
             updated_at?: string;
             day_plan?: components["schemas"]["DayPlan"];
+            shift?: components["schemas"]["Shift"];
         };
         CreateEmployeeDayPlanRequest: {
             /** Format: uuid */
@@ -8407,6 +8353,11 @@ export interface components {
              * @description If null, marks the day as an off day
              */
             day_plan_id?: string;
+            /**
+             * Format: uuid
+             * @description Optional shift reference for shift planning board
+             */
+            shift_id?: string | null;
             source?: components["schemas"]["EmployeeDayPlanSource"];
             notes?: string;
         };
@@ -8416,6 +8367,11 @@ export interface components {
              * @description If null, marks the day as an off day
              */
             day_plan_id?: string;
+            /**
+             * Format: uuid
+             * @description Optional shift reference for shift planning board
+             */
+            shift_id?: string | null;
             source?: components["schemas"]["EmployeeDayPlanSource"];
             notes?: string;
         };
@@ -8431,6 +8387,8 @@ export interface components {
                 plan_date: string;
                 /** Format: uuid */
                 day_plan_id?: string;
+                /** Format: uuid */
+                shift_id?: string | null;
                 source?: components["schemas"]["EmployeeDayPlanSource"];
                 notes?: string;
             }[];
@@ -10572,49 +10530,6 @@ export interface components {
         };
         ShiftList: {
             data: components["schemas"]["Shift"][];
-        };
-        ShiftAssignment: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            tenant_id: string;
-            /** Format: uuid */
-            employee_id: string;
-            /** Format: uuid */
-            shift_id: string;
-            /** Format: date */
-            valid_from?: string | null;
-            /** Format: date */
-            valid_to?: string | null;
-            notes?: string | null;
-            /** @example true */
-            is_active?: boolean;
-            /** Format: date-time */
-            created_at?: string;
-            /** Format: date-time */
-            updated_at?: string;
-        };
-        CreateShiftAssignmentRequest: {
-            /** Format: uuid */
-            employee_id: string;
-            /** Format: uuid */
-            shift_id: string;
-            /** Format: date */
-            valid_from?: string;
-            /** Format: date */
-            valid_to?: string;
-            notes?: string;
-        };
-        UpdateShiftAssignmentRequest: {
-            /** Format: date */
-            valid_from?: string;
-            /** Format: date */
-            valid_to?: string;
-            notes?: string;
-            is_active?: boolean;
-        };
-        ShiftAssignmentList: {
-            data: components["schemas"]["ShiftAssignment"][];
         };
         schema1: {
             /** Format: uuid */
@@ -21823,128 +21738,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Shift"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    listShiftAssignments: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description List of shift assignments */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ShiftAssignmentList"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-        };
-    };
-    createShiftAssignment: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateShiftAssignmentRequest"];
-            };
-        };
-        responses: {
-            /** @description Created shift assignment */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ShiftAssignment"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-        };
-    };
-    getShiftAssignment: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Shift assignment details */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ShiftAssignment"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    deleteShiftAssignment: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Shift assignment deleted */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            401: components["responses"]["Unauthorized"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    updateShiftAssignment: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateShiftAssignmentRequest"];
-            };
-        };
-        responses: {
-            /** @description Updated shift assignment */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ShiftAssignment"];
                 };
             };
             400: components["responses"]["BadRequest"];
