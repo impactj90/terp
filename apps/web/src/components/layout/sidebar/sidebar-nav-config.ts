@@ -31,6 +31,7 @@ import {
   BarChart3,
   FileClock,
   Contact,
+  Calculator,
 } from 'lucide-react'
 import type { UserRole } from '@/hooks/use-has-role'
 
@@ -204,6 +205,12 @@ export const navConfig: NavSection[] = [
         titleKey: 'contactTypes',
         href: '/admin/contact-types',
         icon: Contact,
+        roles: ['admin'],
+      },
+      {
+        titleKey: 'calculationRules',
+        href: '/admin/calculation-rules',
+        icon: Calculator,
         roles: ['admin'],
       },
       {
