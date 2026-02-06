@@ -141,6 +141,10 @@ func (h *TariffHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if req.VacationBasis != "" {
 		input.VacationBasis = model.VacationBasis(req.VacationBasis)
 	}
+	if req.VacationCappingRuleGroupID.String() != "" {
+		id := uuid.MustParse(req.VacationCappingRuleGroupID.String())
+		input.VacationCappingRuleGroupID = &id
+	}
 
 	// ZMI Target Hours Fields
 	if req.DailyTargetHours != 0 {
@@ -312,6 +316,14 @@ func (h *TariffHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if req.VacationBasis != "" {
 		vb := model.VacationBasis(req.VacationBasis)
 		input.VacationBasis = &vb
+	}
+	if req.VacationCappingRuleGroupID != nil {
+		if req.VacationCappingRuleGroupID.String() != "" {
+			id := uuid.MustParse(req.VacationCappingRuleGroupID.String())
+			input.VacationCappingRuleGroupID = &id
+		} else {
+			input.ClearVacationCappingRuleGroupID = true
+		}
 	}
 
 	// ZMI Target Hours Fields

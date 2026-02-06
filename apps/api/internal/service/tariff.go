@@ -103,9 +103,10 @@ type CreateTariffInput struct {
 	DayPlans        []TariffDayPlanInput // For x_days: day plans per position
 
 	// ZMI Vacation Fields
-	AnnualVacationDays *decimal.Decimal
-	WorkDaysPerWeek    *int
-	VacationBasis      model.VacationBasis
+	AnnualVacationDays         *decimal.Decimal
+	WorkDaysPerWeek            *int
+	VacationBasis              model.VacationBasis
+	VacationCappingRuleGroupID *uuid.UUID
 
 	// ZMI Target Hours Fields
 	DailyTargetHours   *decimal.Decimal
@@ -241,9 +242,10 @@ func (s *TariffService) Create(ctx context.Context, input CreateTariffInput) (*m
 		RhythmStartDate: input.RhythmStartDate,
 
 		// ZMI Vacation Fields
-		AnnualVacationDays: input.AnnualVacationDays,
-		WorkDaysPerWeek:    input.WorkDaysPerWeek,
-		VacationBasis:      input.VacationBasis,
+		AnnualVacationDays:         input.AnnualVacationDays,
+		WorkDaysPerWeek:            input.WorkDaysPerWeek,
+		VacationBasis:              input.VacationBasis,
+		VacationCappingRuleGroupID: input.VacationCappingRuleGroupID,
 
 		// ZMI Target Hours Fields
 		DailyTargetHours:   input.DailyTargetHours,
@@ -340,10 +342,12 @@ type UpdateTariffInput struct {
 	ClearRhythmStartDate bool
 
 	// ZMI Vacation Fields
-	AnnualVacationDays      *decimal.Decimal
-	WorkDaysPerWeek         *int
-	VacationBasis           *model.VacationBasis
-	ClearAnnualVacationDays bool
+	AnnualVacationDays             *decimal.Decimal
+	WorkDaysPerWeek                *int
+	VacationBasis                  *model.VacationBasis
+	VacationCappingRuleGroupID     *uuid.UUID
+	ClearAnnualVacationDays        bool
+	ClearVacationCappingRuleGroupID bool
 
 	// ZMI Target Hours Fields
 	DailyTargetHours        *decimal.Decimal
@@ -509,6 +513,11 @@ func (s *TariffService) Update(ctx context.Context, id uuid.UUID, tenantID uuid.
 			return nil, ErrInvalidVacationBasis
 		}
 		tariff.VacationBasis = *input.VacationBasis
+	}
+	if input.ClearVacationCappingRuleGroupID {
+		tariff.VacationCappingRuleGroupID = nil
+	} else if input.VacationCappingRuleGroupID != nil {
+		tariff.VacationCappingRuleGroupID = input.VacationCappingRuleGroupID
 	}
 
 	// =====================================================

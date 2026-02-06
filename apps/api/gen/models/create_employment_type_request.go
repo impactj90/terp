@@ -36,6 +36,10 @@ type CreateEmploymentTypeRequest struct {
 	// Max Length: 255
 	// Min Length: 1
 	Name *string `json:"name"`
+
+	// Links employment type to its vacation calculation group
+	// Format: uuid
+	VacationCalcGroupID strfmt.UUID `json:"vacation_calc_group_id,omitempty"`
 }
 
 // Validate validates this create employment type request
@@ -47,6 +51,10 @@ func (m *CreateEmploymentTypeRequest) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateName(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateVacationCalcGroupID(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -84,6 +92,18 @@ func (m *CreateEmploymentTypeRequest) validateName(formats strfmt.Registry) erro
 	}
 
 	if err := validate.MaxLength("name", "body", *m.Name, 255); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *CreateEmploymentTypeRequest) validateVacationCalcGroupID(formats strfmt.Registry) error {
+	if swag.IsZero(m.VacationCalcGroupID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("vacation_calc_group_id", "body", "uuid", m.VacationCalcGroupID.String(), formats); err != nil {
 		return err
 	}
 

@@ -226,6 +226,9 @@ func main() {
 	monthlyValueHandler := handler.NewMonthlyValueHandler(monthlyValueService, monthlyCalcService, employeeService)
 	holidayService.SetRecalcServices(recalcService, monthlyCalcService, employeeRepo)
 
+	// Initialize vacation config seeder (for dev login)
+	vacationConfigSeeder := repository.NewVacationConfigSeeder(db)
+
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(
 		authConfig,
@@ -248,6 +251,7 @@ func main() {
 		absenceDayRepo,
 		vacationBalanceRepo,
 		accountRepo,
+		vacationConfigSeeder,
 	)
 	userHandler := handler.NewUserHandler(userService)
 	tenantHandler := handler.NewTenantHandler(tenantService)

@@ -85,6 +85,10 @@ type CreateTariffRequest struct {
 	// Enum: ["calendar_year","entry_date"]
 	VacationBasis string `json:"vacation_basis,omitempty"`
 
+	// Links tariff to its vacation capping rule group
+	// Format: uuid
+	VacationCappingRuleGroupID strfmt.UUID `json:"vacation_capping_rule_group_id,omitempty"`
+
 	// valid from
 	// Format: date
 	ValidFrom strfmt.Date `json:"valid_from,omitempty"`
@@ -142,6 +146,10 @@ func (m *CreateTariffRequest) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateVacationBasis(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateVacationCappingRuleGroupID(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -392,6 +400,18 @@ func (m *CreateTariffRequest) validateVacationBasis(formats strfmt.Registry) err
 
 	// value enum
 	if err := m.validateVacationBasisEnum("vacation_basis", "body", m.VacationBasis); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *CreateTariffRequest) validateVacationCappingRuleGroupID(formats strfmt.Registry) error {
+	if swag.IsZero(m.VacationCappingRuleGroupID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("vacation_capping_rule_group_id", "body", "uuid", m.VacationCappingRuleGroupID.String(), formats); err != nil {
 		return err
 	}
 

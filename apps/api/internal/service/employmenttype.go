@@ -39,11 +39,12 @@ func NewEmploymentTypeService(employmentTypeRepo employmentTypeRepository) *Empl
 
 // CreateEmploymentTypeInput represents the input for creating an employment type.
 type CreateEmploymentTypeInput struct {
-	TenantID           uuid.UUID
-	Code               string
-	Name               string
-	DefaultWeeklyHours decimal.Decimal
-	IsActive           bool
+	TenantID            uuid.UUID
+	Code                string
+	Name                string
+	DefaultWeeklyHours  decimal.Decimal
+	IsActive            bool
+	VacationCalcGroupID *uuid.UUID
 }
 
 // Create creates a new employment type with validation.
@@ -65,11 +66,12 @@ func (s *EmploymentTypeService) Create(ctx context.Context, input CreateEmployme
 	}
 
 	et := &model.EmploymentType{
-		TenantID:           input.TenantID,
-		Code:               code,
-		Name:               name,
-		DefaultWeeklyHours: input.DefaultWeeklyHours,
-		IsActive:           input.IsActive,
+		TenantID:            input.TenantID,
+		Code:                code,
+		Name:                name,
+		DefaultWeeklyHours:  input.DefaultWeeklyHours,
+		IsActive:            input.IsActive,
+		VacationCalcGroupID: input.VacationCalcGroupID,
 	}
 
 	if err := s.employmentTypeRepo.Create(ctx, et); err != nil {
@@ -99,10 +101,12 @@ func (s *EmploymentTypeService) GetByCode(ctx context.Context, tenantID uuid.UUI
 
 // UpdateEmploymentTypeInput represents the input for updating an employment type.
 type UpdateEmploymentTypeInput struct {
-	Code               *string
-	Name               *string
-	DefaultWeeklyHours *decimal.Decimal
-	IsActive           *bool
+	Code                     *string
+	Name                     *string
+	DefaultWeeklyHours       *decimal.Decimal
+	IsActive                 *bool
+	VacationCalcGroupID      *uuid.UUID
+	ClearVacationCalcGroupID bool
 }
 
 // Update updates an employment type.
@@ -138,6 +142,11 @@ func (s *EmploymentTypeService) Update(ctx context.Context, id uuid.UUID, input 
 	}
 	if input.IsActive != nil {
 		et.IsActive = *input.IsActive
+	}
+	if input.ClearVacationCalcGroupID {
+		et.VacationCalcGroupID = nil
+	} else if input.VacationCalcGroupID != nil {
+		et.VacationCalcGroupID = input.VacationCalcGroupID
 	}
 
 	if err := s.employmentTypeRepo.Update(ctx, et); err != nil {

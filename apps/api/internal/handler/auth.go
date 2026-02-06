@@ -52,6 +52,11 @@ type accountRepoForAuth interface {
 	Upsert(ctx context.Context, account *model.Account) error
 }
 
+// vacationConfigSeederForAuth defines the interface for seeding vacation config data in auth handler.
+type vacationConfigSeederForAuth interface {
+	SeedAll(ctx context.Context, tenantID uuid.UUID) error
+}
+
 // AuthHandler handles authentication endpoints.
 type AuthHandler struct {
 	jwtManager          *auth.JWTManager
@@ -72,8 +77,9 @@ type AuthHandler struct {
 	monthlyValueRepo    monthlyValueRepoForAuth
 	empDayPlanRepo      empDayPlanRepoForAuth
 	absenceDayRepo      absenceDayRepoForAuth
-	vacationBalanceRepo vacationBalanceRepoForAuth
-	accountRepo         accountRepoForAuth
+	vacationBalanceRepo    vacationBalanceRepoForAuth
+	accountRepo            accountRepoForAuth
+	vacationConfigSeeder   vacationConfigSeederForAuth
 }
 
 // NewAuthHandler creates a new auth handler instance.
@@ -98,28 +104,30 @@ func NewAuthHandler(
 	absenceDayRepo absenceDayRepoForAuth,
 	vacationBalanceRepo vacationBalanceRepoForAuth,
 	accountRepo accountRepoForAuth,
+	vacationConfigSeeder vacationConfigSeederForAuth,
 ) *AuthHandler {
 	return &AuthHandler{
-		jwtManager:          jwtManager,
-		authConfig:          config,
-		userService:         userService,
-		tenantService:       tenantService,
-		employeeService:     employeeService,
-		bookingTypeService:  bookingTypeService,
-		absenceService:      absenceService,
-		holidayService:      holidayService,
-		dayPlanService:      dayPlanService,
-		weekPlanService:     weekPlanService,
-		tariffService:       tariffService,
-		departmentService:   departmentService,
-		teamService:         teamService,
-		bookingRepo:         bookingRepo,
-		dailyValueRepo:      dailyValueRepo,
-		monthlyValueRepo:    monthlyValueRepo,
-		empDayPlanRepo:      empDayPlanRepo,
-		absenceDayRepo:      absenceDayRepo,
-		vacationBalanceRepo: vacationBalanceRepo,
-		accountRepo:         accountRepo,
+		jwtManager:           jwtManager,
+		authConfig:           config,
+		userService:          userService,
+		tenantService:        tenantService,
+		employeeService:      employeeService,
+		bookingTypeService:   bookingTypeService,
+		absenceService:       absenceService,
+		holidayService:       holidayService,
+		dayPlanService:       dayPlanService,
+		weekPlanService:      weekPlanService,
+		tariffService:        tariffService,
+		departmentService:    departmentService,
+		teamService:          teamService,
+		bookingRepo:          bookingRepo,
+		dailyValueRepo:       dailyValueRepo,
+		monthlyValueRepo:     monthlyValueRepo,
+		empDayPlanRepo:       empDayPlanRepo,
+		absenceDayRepo:       absenceDayRepo,
+		vacationBalanceRepo:  vacationBalanceRepo,
+		accountRepo:          accountRepo,
+		vacationConfigSeeder: vacationConfigSeeder,
 	}
 }
 
@@ -546,6 +554,12 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusInternalServerError, "failed to sync dev vacation balances to database")
 			return
 		}
+	}
+
+	// Seed vacation configuration (special calcs, calc groups, capping rules, etc.)
+	if err := h.vacationConfigSeeder.SeedAll(r.Context(), devTenant.ID); err != nil {
+		respondError(w, http.StatusInternalServerError, "failed to seed dev vacation config to database")
+		return
 	}
 
 	token, err := h.jwtManager.Generate(devUser.ID, devUser.Email, devUser.DisplayName, devUser.Role)

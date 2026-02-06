@@ -96,6 +96,10 @@ func (h *EmploymentTypeHandler) Create(w http.ResponseWriter, r *http.Request) {
 		DefaultWeeklyHours: weeklyHours,
 		IsActive:           true, // Default to active for new employment types
 	}
+	if req.VacationCalcGroupID.String() != "" {
+		id := uuid.MustParse(req.VacationCalcGroupID.String())
+		input.VacationCalcGroupID = &id
+	}
 
 	et, err := h.employmentTypeService.Create(r.Context(), input)
 	if err != nil {
@@ -150,6 +154,10 @@ func (h *EmploymentTypeHandler) Update(w http.ResponseWriter, r *http.Request) {
 	// Note: IsActive cannot be reliably detected as "provided" vs "default false"
 	// with the current OpenAPI spec design. Consider using x-nullable in spec.
 	input.IsActive = &req.IsActive
+	if req.VacationCalcGroupID.String() != "" {
+		id := uuid.MustParse(req.VacationCalcGroupID.String())
+		input.VacationCalcGroupID = &id
+	}
 
 	et, err := h.employmentTypeService.Update(r.Context(), id, input)
 	if err != nil {

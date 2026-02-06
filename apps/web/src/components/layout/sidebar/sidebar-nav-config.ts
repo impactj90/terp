@@ -32,6 +32,7 @@ import {
   FileClock,
   Contact,
   Calculator,
+  Umbrella,
 } from 'lucide-react'
 import type { UserRole } from '@/hooks/use-has-role'
 
@@ -241,6 +242,12 @@ export const navConfig: NavSection[] = [
         titleKey: 'vacationBalances',
         href: '/admin/vacation-balances',
         icon: Palmtree,
+        roles: ['admin'],
+      },
+      {
+        titleKey: 'vacationConfig',
+        href: '/admin/vacation-config',
+        icon: Umbrella,
         roles: ['admin'],
       },
     ],

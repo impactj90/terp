@@ -29,6 +29,11 @@ EmploymentType:
     is_active:
       type: boolean
       example: true
+    vacation_calc_group_id:
+      type: string
+      format: uuid
+      description: "Links employment type to its vacation calculation group"
+      x-nullable: true
     created_at:
       type: string
       format: date-time
@@ -70,6 +75,10 @@ CreateEmploymentTypeRequest:
     default_weekly_hours:
       type: number
       format: decimal
+    vacation_calc_group_id:
+      type: string
+      format: uuid
+      description: "Links employment type to its vacation calculation group"
 
 UpdateEmploymentTypeRequest:
   type: object
@@ -89,6 +98,10 @@ UpdateEmploymentTypeRequest:
       format: decimal
     is_active:
       type: boolean
+    vacation_calc_group_id:
+      type: string
+      format: uuid
+      description: "Links employment type to its vacation calculation group"
 
 EmploymentTypeList:
   type: object

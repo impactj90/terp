@@ -14022,6 +14022,11 @@ definitions:
       is_active:
         type: boolean
         example: true
+      vacation_calc_group_id:
+        type: string
+        format: uuid
+        description: Links employment type to its vacation calculation group
+        x-nullable: true
       created_at:
         type: string
         format: date-time
@@ -14061,6 +14066,10 @@ definitions:
       default_weekly_hours:
         type: number
         format: decimal
+      vacation_calc_group_id:
+        type: string
+        format: uuid
+        description: Links employment type to its vacation calculation group
   UpdateEmploymentTypeRequest:
     type: object
     properties:
@@ -14079,6 +14088,10 @@ definitions:
         format: decimal
       is_active:
         type: boolean
+      vacation_calc_group_id:
+        type: string
+        format: uuid
+        description: Links employment type to its vacation calculation group
   EmploymentTypeList:
     type: object
     required:
@@ -14440,6 +14453,11 @@ definitions:
           - entry_date
         description: 'ZMI: Urlaubsberechnung Basis - Vacation year calculation basis'
         example: calendar_year
+      vacation_capping_rule_group_id:
+        type: string
+        format: uuid
+        description: 'ZMI: Kappungsregelgruppe - Links tariff to its vacation capping rule group'
+        x-nullable: true
       daily_target_hours:
         type: number
         format: double
@@ -14707,6 +14725,10 @@ definitions:
         enum:
           - calendar_year
           - entry_date
+      vacation_capping_rule_group_id:
+        type: string
+        format: uuid
+        description: Links tariff to its vacation capping rule group
       daily_target_hours:
         type: number
         format: double
@@ -14797,6 +14819,11 @@ definitions:
         enum:
           - calendar_year
           - entry_date
+      vacation_capping_rule_group_id:
+        type: string
+        format: uuid
+        description: Links tariff to its vacation capping rule group
+        x-nullable: true
       daily_target_hours:
         type: number
         format: double

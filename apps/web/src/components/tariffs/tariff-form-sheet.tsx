@@ -35,7 +35,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DurationInput } from '@/components/ui/duration-input'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
-import { useCreateTariff, useUpdateTariff, useTariff, useWeekPlans, useDayPlans } from '@/hooks/api'
+import { useCreateTariff, useUpdateTariff, useTariff, useWeekPlans, useDayPlans, useVacationCappingRuleGroups } from '@/hooks/api'
 import { parseISODate } from '@/lib/time-utils'
 import { RollingWeekPlanSelector } from './rolling-week-plan-selector'
 import { XDaysRhythmConfig } from './x-days-rhythm-config'
@@ -73,6 +73,7 @@ interface FormState {
   annualVacationDays: number | null
   workDaysPerWeek: number | null
   vacationBasis: 'calendar_year' | 'entry_date'
+  vacationCappingRuleGroupId: string
 
   // Target Hours (stored as hours)
   dailyTargetHours: number | null
@@ -111,6 +112,7 @@ const INITIAL_STATE: FormState = {
   annualVacationDays: null,
   workDaysPerWeek: 5,
   vacationBasis: 'calendar_year',
+  vacationCappingRuleGroupId: '',
 
   // Target Hours
   dailyTargetHours: null,
@@ -165,6 +167,10 @@ export function TariffFormSheet({
   const { data: dayPlansData } = useDayPlans({ active: true, enabled: open })
   const dayPlans = dayPlansData?.data ?? []
 
+  // Fetch vacation capping rule groups for selector
+  const { data: cappingGroupsData } = useVacationCappingRuleGroups({ enabled: open })
+  const cappingGroups = cappingGroupsData?.data ?? []
+
   const createMutation = useCreateTariff()
   const updateMutation = useUpdateTariff()
 
@@ -199,6 +205,7 @@ export function TariffFormSheet({
           annualVacationDays: fullTariff.annual_vacation_days ?? null,
           workDaysPerWeek: fullTariff.work_days_per_week ?? 5,
           vacationBasis: fullTariff.vacation_basis ?? 'calendar_year',
+          vacationCappingRuleGroupId: fullTariff.vacation_capping_rule_group_id ?? '',
 
           // Target Hours
           dailyTargetHours: fullTariff.daily_target_hours ?? null,
@@ -290,6 +297,7 @@ export function TariffFormSheet({
         annual_vacation_days: nullToUndefined(form.annualVacationDays),
         work_days_per_week: nullToUndefined(form.workDaysPerWeek),
         vacation_basis: form.vacationBasis,
+        vacation_capping_rule_group_id: form.vacationCappingRuleGroupId || undefined,
 
         // Target hours
         daily_target_hours: nullToUndefined(form.dailyTargetHours),
@@ -670,6 +678,32 @@ export function TariffFormSheet({
                   </Select>
                   <p className="text-xs text-muted-foreground">
                     {t('vacationYearBasisHelp')}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t('fieldVacationCappingRuleGroup')}</Label>
+                  <Select
+                    value={form.vacationCappingRuleGroupId || '__none__'}
+                    onValueChange={(v) =>
+                      setForm({ ...form, vacationCappingRuleGroupId: v === '__none__' ? '' : v })
+                    }
+                    disabled={isPending}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('selectVacationCappingRuleGroup')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">{t('noVacationCappingRuleGroup')}</SelectItem>
+                      {cappingGroups.map((cg) => (
+                        <SelectItem key={cg.id} value={cg.id}>
+                          {cg.code} - {cg.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {t('vacationCappingRuleGroupHelp')}
                   </p>
                 </div>
               </TabsContent>

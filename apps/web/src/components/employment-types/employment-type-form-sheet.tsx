@@ -21,7 +21,15 @@ import {
 import {
   useCreateEmploymentType,
   useUpdateEmploymentType,
+  useVacationCalculationGroups,
 } from '@/hooks/api'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import type { components } from '@/lib/api/types'
 
 type EmploymentType = components['schemas']['EmploymentType']
@@ -39,6 +47,7 @@ interface FormState {
   description: string
   defaultWeeklyHours: string
   isActive: boolean
+  vacationCalcGroupId: string
 }
 
 const INITIAL_STATE: FormState = {
@@ -47,6 +56,7 @@ const INITIAL_STATE: FormState = {
   description: '',
   defaultWeeklyHours: '40.00',
   isActive: true,
+  vacationCalcGroupId: '',
 }
 
 export function EmploymentTypeFormSheet({
@@ -63,6 +73,10 @@ export function EmploymentTypeFormSheet({
   const createMutation = useCreateEmploymentType()
   const updateMutation = useUpdateEmploymentType()
 
+  // Fetch vacation calculation groups for dropdown
+  const { data: calcGroupsData } = useVacationCalculationGroups({ enabled: open })
+  const calcGroups = calcGroupsData?.data ?? []
+
   React.useEffect(() => {
     if (open) {
       if (employmentType) {
@@ -74,6 +88,7 @@ export function EmploymentTypeFormSheet({
             ? Number(employmentType.default_weekly_hours).toFixed(2)
             : '40.00',
           isActive: employmentType.is_active ?? true,
+          vacationCalcGroupId: employmentType.vacation_calc_group_id ?? '',
         })
       } else {
         setForm(INITIAL_STATE)
@@ -116,6 +131,7 @@ export function EmploymentTypeFormSheet({
             description: form.description.trim() || undefined,
             default_weekly_hours: form.defaultWeeklyHours ? parseFloat(form.defaultWeeklyHours) : undefined,
             is_active: form.isActive,
+            vacation_calc_group_id: form.vacationCalcGroupId || undefined,
           },
         })
       } else {
@@ -125,6 +141,7 @@ export function EmploymentTypeFormSheet({
             name: form.name.trim(),
             description: form.description.trim() || undefined,
             default_weekly_hours: form.defaultWeeklyHours ? parseFloat(form.defaultWeeklyHours) : undefined,
+            vacation_calc_group_id: form.vacationCalcGroupId || undefined,
           },
         })
       }
@@ -223,6 +240,32 @@ export function EmploymentTypeFormSheet({
                 />
                 <p className="text-xs text-muted-foreground">
                   {t('weeklyHoursHint')}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="vacationCalcGroupId">{t('fieldVacationCalcGroup')}</Label>
+                <Select
+                  value={form.vacationCalcGroupId || '__none__'}
+                  onValueChange={(value) =>
+                    setForm((prev) => ({ ...prev, vacationCalcGroupId: value === '__none__' ? '' : value }))
+                  }
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger id="vacationCalcGroupId">
+                    <SelectValue placeholder={t('selectVacationCalcGroup')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">{t('noVacationCalcGroup')}</SelectItem>
+                    {calcGroups.map((cg) => (
+                      <SelectItem key={cg.id} value={cg.id}>
+                        {cg.code} - {cg.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {t('vacationCalcGroupHint')}
                 </p>
               </div>
             </div>

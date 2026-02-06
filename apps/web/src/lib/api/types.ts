@@ -6335,6 +6335,11 @@ export interface components {
             default_weekly_hours?: number;
             /** @example true */
             is_active?: boolean;
+            /**
+             * Format: uuid
+             * @description Links employment type to its vacation calculation group
+             */
+            vacation_calc_group_id?: string | null;
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */
@@ -6352,6 +6357,11 @@ export interface components {
             description?: string;
             /** Format: decimal */
             default_weekly_hours?: number;
+            /**
+             * Format: uuid
+             * @description Links employment type to its vacation calculation group
+             */
+            vacation_calc_group_id?: string;
         };
         UpdateEmploymentTypeRequest: {
             name?: string;
@@ -6360,6 +6370,11 @@ export interface components {
             /** Format: decimal */
             default_weekly_hours?: number;
             is_active?: boolean;
+            /**
+             * Format: uuid
+             * @description Links employment type to its vacation calculation group
+             */
+            vacation_calc_group_id?: string;
         };
         EmploymentTypeList: {
             data: components["schemas"]["EmploymentType"][];
@@ -6534,6 +6549,11 @@ export interface components {
              * @enum {string}
              */
             vacation_basis?: "calendar_year" | "entry_date";
+            /**
+             * Format: uuid
+             * @description ZMI: Kappungsregelgruppe - Links tariff to its vacation capping rule group
+             */
+            vacation_capping_rule_group_id?: string | null;
             /**
              * Format: double
              * @description ZMI: Tagessollstunden - Daily target hours
@@ -6712,6 +6732,11 @@ export interface components {
             work_days_per_week?: number;
             /** @enum {string} */
             vacation_basis?: "calendar_year" | "entry_date";
+            /**
+             * Format: uuid
+             * @description Links tariff to its vacation capping rule group
+             */
+            vacation_capping_rule_group_id?: string;
             /** Format: double */
             daily_target_hours?: number;
             /** Format: double */
@@ -6758,6 +6783,11 @@ export interface components {
             work_days_per_week?: number | null;
             /** @enum {string} */
             vacation_basis?: "calendar_year" | "entry_date";
+            /**
+             * Format: uuid
+             * @description Links tariff to its vacation capping rule group
+             */
+            vacation_capping_rule_group_id?: string | null;
             /** Format: double */
             daily_target_hours?: number | null;
             /** Format: double */
@@ -6883,7 +6913,7 @@ export interface components {
              * @description Whether this absence type deducts from vacation balance
              * @example true
              */
-            affects_vacation_balance?: boolean;
+            affects_vacation_balance: boolean;
             /** @example true */
             requires_approval?: boolean;
             /**

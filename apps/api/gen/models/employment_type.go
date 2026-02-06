@@ -57,6 +57,10 @@ type EmploymentType struct {
 	// updated at
 	// Format: date-time
 	UpdatedAt strfmt.DateTime `json:"updated_at,omitempty"`
+
+	// Links employment type to its vacation calculation group
+	// Format: uuid
+	VacationCalcGroupID *strfmt.UUID `json:"vacation_calc_group_id,omitempty"`
 }
 
 // Validate validates this employment type
@@ -84,6 +88,10 @@ func (m *EmploymentType) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateUpdatedAt(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateVacationCalcGroupID(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -155,6 +163,18 @@ func (m *EmploymentType) validateUpdatedAt(formats strfmt.Registry) error {
 	}
 
 	if err := validate.FormatOf("updated_at", "body", "date-time", m.UpdatedAt.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *EmploymentType) validateVacationCalcGroupID(formats strfmt.Registry) error {
+	if swag.IsZero(m.VacationCalcGroupID) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("vacation_calc_group_id", "body", "uuid", m.VacationCalcGroupID.String(), formats); err != nil {
 		return err
 	}
 

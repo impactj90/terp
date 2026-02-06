@@ -59,6 +59,11 @@ Tariff:
         - entry_date
       description: "ZMI: Urlaubsberechnung Basis - Vacation year calculation basis"
       example: "calendar_year"
+    vacation_capping_rule_group_id:
+      type: string
+      format: uuid
+      description: "ZMI: Kappungsregelgruppe - Links tariff to its vacation capping rule group"
+      x-nullable: true
 
     # ZMI Target Hours Fields
     daily_target_hours:
@@ -364,6 +369,10 @@ CreateTariffRequest:
       enum:
         - calendar_year
         - entry_date
+    vacation_capping_rule_group_id:
+      type: string
+      format: uuid
+      description: "Links tariff to its vacation capping rule group"
 
     # ZMI Target Hours Fields
     daily_target_hours:
@@ -463,6 +472,11 @@ UpdateTariffRequest:
       enum:
         - calendar_year
         - entry_date
+    vacation_capping_rule_group_id:
+      type: string
+      format: uuid
+      description: "Links tariff to its vacation capping rule group"
+      x-nullable: true
 
     # ZMI Target Hours Fields
     daily_target_hours:
