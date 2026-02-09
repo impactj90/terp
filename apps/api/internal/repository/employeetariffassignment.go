@@ -114,6 +114,36 @@ func (r *EmployeeTariffAssignmentRepository) GetEffectiveForDate(ctx context.Con
 	return &assignment, nil
 }
 
+// GetEffectiveForDateBatch retrieves the active assignment covering the given date for multiple employees.
+// Returns a map of employeeID → assignment (most recent effective_from wins per employee).
+func (r *EmployeeTariffAssignmentRepository) GetEffectiveForDateBatch(ctx context.Context, employeeIDs []uuid.UUID, date time.Time) (map[uuid.UUID]*model.EmployeeTariffAssignment, error) {
+	if len(employeeIDs) == 0 {
+		return make(map[uuid.UUID]*model.EmployeeTariffAssignment), nil
+	}
+
+	var assignments []model.EmployeeTariffAssignment
+	err := r.db.GORM.WithContext(ctx).
+		Preload("Tariff").
+		Where("employee_id IN ? AND is_active = ? AND effective_from <= ? AND (effective_to IS NULL OR effective_to >= ?)",
+			employeeIDs, true, date, date).
+		Order("effective_from DESC").
+		Find(&assignments).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to batch fetch effective tariff assignments: %w", err)
+	}
+
+	result := make(map[uuid.UUID]*model.EmployeeTariffAssignment, len(assignments))
+	for i := range assignments {
+		a := &assignments[i]
+		// First match per employee wins (ordered by effective_from DESC)
+		if _, exists := result[a.EmployeeID]; !exists {
+			result[a.EmployeeID] = a
+		}
+	}
+
+	return result, nil
+}
+
 // HasOverlap checks if any active assignment overlaps the given date range for the employee.
 // excludeID can be set to exclude a specific assignment (for update operations).
 func (r *EmployeeTariffAssignmentRepository) HasOverlap(ctx context.Context, employeeID uuid.UUID, from time.Time, to *time.Time, excludeID *uuid.UUID) (bool, error) {

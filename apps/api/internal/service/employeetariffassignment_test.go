@@ -20,6 +20,7 @@ func setupAssignmentService(t *testing.T) (
 	*repository.EmployeeRepository,
 	*repository.TariffRepository,
 	*model.Tenant,
+	*repository.EmployeeDayPlanRepository,
 ) {
 	t.Helper()
 	db := testutil.SetupTestDB(t)
@@ -28,8 +29,9 @@ func setupAssignmentService(t *testing.T) (
 	employeeRepo := repository.NewEmployeeRepository(db)
 	tariffRepo := repository.NewTariffRepository(db)
 	assignmentRepo := repository.NewEmployeeTariffAssignmentRepository(db)
+	empDayPlanRepo := repository.NewEmployeeDayPlanRepository(db)
 
-	svc := service.NewEmployeeTariffAssignmentService(assignmentRepo, employeeRepo, tariffRepo)
+	svc := service.NewEmployeeTariffAssignmentService(assignmentRepo, employeeRepo, tariffRepo, empDayPlanRepo)
 
 	tenant := &model.Tenant{
 		Name:     "Test Tenant " + uuid.New().String()[:8],
@@ -38,7 +40,7 @@ func setupAssignmentService(t *testing.T) (
 	}
 	require.NoError(t, tenantRepo.Create(context.Background(), tenant))
 
-	return svc, employeeRepo, tariffRepo, tenant
+	return svc, employeeRepo, tariffRepo, tenant, empDayPlanRepo
 }
 
 func createTestEmployee(t *testing.T, employeeRepo *repository.EmployeeRepository, tenantID uuid.UUID, pn string) *model.Employee {
@@ -69,7 +71,7 @@ func createTestAssignmentTariff(t *testing.T, tariffRepo *repository.TariffRepos
 }
 
 func TestEmployeeTariffAssignment_Create_Success(t *testing.T) {
-	svc, employeeRepo, tariffRepo, tenant := setupAssignmentService(t)
+	svc, employeeRepo, tariffRepo, tenant, _ := setupAssignmentService(t)
 	ctx := context.Background()
 
 	emp := createTestEmployee(t, employeeRepo, tenant.ID, "E-ASSIGN-01")
@@ -97,7 +99,7 @@ func TestEmployeeTariffAssignment_Create_Success(t *testing.T) {
 }
 
 func TestEmployeeTariffAssignment_Create_OpenEnded(t *testing.T) {
-	svc, employeeRepo, tariffRepo, tenant := setupAssignmentService(t)
+	svc, employeeRepo, tariffRepo, tenant, _ := setupAssignmentService(t)
 	ctx := context.Background()
 
 	emp := createTestEmployee(t, employeeRepo, tenant.ID, "E-ASSIGN-02")
@@ -116,7 +118,7 @@ func TestEmployeeTariffAssignment_Create_OpenEnded(t *testing.T) {
 }
 
 func TestEmployeeTariffAssignment_Create_InvalidDates(t *testing.T) {
-	svc, employeeRepo, tariffRepo, tenant := setupAssignmentService(t)
+	svc, employeeRepo, tariffRepo, tenant, _ := setupAssignmentService(t)
 	ctx := context.Background()
 
 	emp := createTestEmployee(t, employeeRepo, tenant.ID, "E-ASSIGN-03")
@@ -136,7 +138,7 @@ func TestEmployeeTariffAssignment_Create_InvalidDates(t *testing.T) {
 }
 
 func TestEmployeeTariffAssignment_Create_OverlapDetected(t *testing.T) {
-	svc, employeeRepo, tariffRepo, tenant := setupAssignmentService(t)
+	svc, employeeRepo, tariffRepo, tenant, _ := setupAssignmentService(t)
 	ctx := context.Background()
 
 	emp := createTestEmployee(t, employeeRepo, tenant.ID, "E-ASSIGN-04")
@@ -168,7 +170,7 @@ func TestEmployeeTariffAssignment_Create_OverlapDetected(t *testing.T) {
 }
 
 func TestEmployeeTariffAssignment_Create_NonOverlapping_Success(t *testing.T) {
-	svc, employeeRepo, tariffRepo, tenant := setupAssignmentService(t)
+	svc, employeeRepo, tariffRepo, tenant, _ := setupAssignmentService(t)
 	ctx := context.Background()
 
 	emp := createTestEmployee(t, employeeRepo, tenant.ID, "E-ASSIGN-05")
@@ -201,7 +203,7 @@ func TestEmployeeTariffAssignment_Create_NonOverlapping_Success(t *testing.T) {
 }
 
 func TestEmployeeTariffAssignment_Create_EmployeeNotFound(t *testing.T) {
-	svc, _, tariffRepo, tenant := setupAssignmentService(t)
+	svc, _, tariffRepo, tenant, _ := setupAssignmentService(t)
 	ctx := context.Background()
 
 	tariff := createTestAssignmentTariff(t, tariffRepo, tenant.ID, "T-ASSIGN-06")
@@ -216,7 +218,7 @@ func TestEmployeeTariffAssignment_Create_EmployeeNotFound(t *testing.T) {
 }
 
 func TestEmployeeTariffAssignment_Create_TariffNotFound(t *testing.T) {
-	svc, employeeRepo, _, tenant := setupAssignmentService(t)
+	svc, employeeRepo, _, tenant, _ := setupAssignmentService(t)
 	ctx := context.Background()
 
 	emp := createTestEmployee(t, employeeRepo, tenant.ID, "E-ASSIGN-07")
@@ -231,7 +233,7 @@ func TestEmployeeTariffAssignment_Create_TariffNotFound(t *testing.T) {
 }
 
 func TestEmployeeTariffAssignment_Update_Success(t *testing.T) {
-	svc, employeeRepo, tariffRepo, tenant := setupAssignmentService(t)
+	svc, employeeRepo, tariffRepo, tenant, _ := setupAssignmentService(t)
 	ctx := context.Background()
 
 	emp := createTestEmployee(t, employeeRepo, tenant.ID, "E-ASSIGN-08")
@@ -261,7 +263,7 @@ func TestEmployeeTariffAssignment_Update_Success(t *testing.T) {
 }
 
 func TestEmployeeTariffAssignment_Update_NotFound(t *testing.T) {
-	svc, _, _, tenant := setupAssignmentService(t)
+	svc, _, _, tenant, _ := setupAssignmentService(t)
 	ctx := context.Background()
 
 	notes := "test"
@@ -272,7 +274,7 @@ func TestEmployeeTariffAssignment_Update_NotFound(t *testing.T) {
 }
 
 func TestEmployeeTariffAssignment_Delete_Success(t *testing.T) {
-	svc, employeeRepo, tariffRepo, tenant := setupAssignmentService(t)
+	svc, employeeRepo, tariffRepo, tenant, _ := setupAssignmentService(t)
 	ctx := context.Background()
 
 	emp := createTestEmployee(t, employeeRepo, tenant.ID, "E-ASSIGN-09")
@@ -295,7 +297,7 @@ func TestEmployeeTariffAssignment_Delete_Success(t *testing.T) {
 }
 
 func TestEmployeeTariffAssignment_Delete_NotFound(t *testing.T) {
-	svc, _, _, _ := setupAssignmentService(t)
+	svc, _, _, _, _ := setupAssignmentService(t)
 	ctx := context.Background()
 
 	err := svc.Delete(ctx, uuid.New())
@@ -303,7 +305,7 @@ func TestEmployeeTariffAssignment_Delete_NotFound(t *testing.T) {
 }
 
 func TestEmployeeTariffAssignment_ListByEmployee(t *testing.T) {
-	svc, employeeRepo, tariffRepo, tenant := setupAssignmentService(t)
+	svc, employeeRepo, tariffRepo, tenant, _ := setupAssignmentService(t)
 	ctx := context.Background()
 
 	emp := createTestEmployee(t, employeeRepo, tenant.ID, "E-ASSIGN-10")
@@ -340,7 +342,7 @@ func TestEmployeeTariffAssignment_ListByEmployee(t *testing.T) {
 }
 
 func TestEmployeeTariffAssignment_GetEffective_FromAssignment(t *testing.T) {
-	svc, employeeRepo, tariffRepo, tenant := setupAssignmentService(t)
+	svc, employeeRepo, tariffRepo, tenant, _ := setupAssignmentService(t)
 	ctx := context.Background()
 
 	emp := createTestEmployee(t, employeeRepo, tenant.ID, "E-ASSIGN-11")
@@ -367,7 +369,7 @@ func TestEmployeeTariffAssignment_GetEffective_FromAssignment(t *testing.T) {
 }
 
 func TestEmployeeTariffAssignment_GetEffective_FallbackToDefault(t *testing.T) {
-	svc, employeeRepo, tariffRepo, tenant := setupAssignmentService(t)
+	svc, employeeRepo, tariffRepo, tenant, _ := setupAssignmentService(t)
 	ctx := context.Background()
 
 	tariff := createTestAssignmentTariff(t, tariffRepo, tenant.ID, "T-ASSIGN-12")
@@ -395,7 +397,7 @@ func TestEmployeeTariffAssignment_GetEffective_FallbackToDefault(t *testing.T) {
 }
 
 func TestEmployeeTariffAssignment_GetEffective_None(t *testing.T) {
-	svc, employeeRepo, _, tenant := setupAssignmentService(t)
+	svc, employeeRepo, _, tenant, _ := setupAssignmentService(t)
 	ctx := context.Background()
 
 	// Employee with no default tariff and no assignments
@@ -409,7 +411,7 @@ func TestEmployeeTariffAssignment_GetEffective_None(t *testing.T) {
 }
 
 func TestEmployeeTariffAssignment_GetEffective_OutsideRange(t *testing.T) {
-	svc, employeeRepo, tariffRepo, tenant := setupAssignmentService(t)
+	svc, employeeRepo, tariffRepo, tenant, _ := setupAssignmentService(t)
 	ctx := context.Background()
 
 	emp := createTestEmployee(t, employeeRepo, tenant.ID, "E-ASSIGN-14")

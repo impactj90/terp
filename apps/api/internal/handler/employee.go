@@ -20,11 +20,15 @@ import (
 )
 
 type EmployeeHandler struct {
-	employeeService *service.EmployeeService
-	auditService    *service.AuditLogService
+	employeeService   *service.EmployeeService
+	auditService      *service.AuditLogService
+	assignmentService *service.EmployeeTariffAssignmentService
 }
 
 func (h *EmployeeHandler) SetAuditService(s *service.AuditLogService) { h.auditService = s }
+func (h *EmployeeHandler) SetAssignmentService(s *service.EmployeeTariffAssignmentService) {
+	h.assignmentService = s
+}
 
 var errEmployeeScopeDenied = errors.New("employee access denied by scope")
 
@@ -106,6 +110,21 @@ func (h *EmployeeHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Override employee tariff with effective assignment tariff (if any)
+	if h.assignmentService != nil && len(employees) > 0 {
+		empIDs := make([]uuid.UUID, len(employees))
+		for i := range employees {
+			empIDs[i] = employees[i].ID
+		}
+		if assignments, err := h.assignmentService.GetEffectiveTariffBatch(r.Context(), empIDs, time.Now()); err == nil {
+			for i := range employees {
+				if a, ok := assignments[employees[i].ID]; ok && a.Tariff != nil {
+					employees[i].Tariff = a.Tariff
+				}
+			}
+		}
+	}
+
 	response := EmployeeList{
 		Data:  employees,
 		Total: total,
@@ -178,6 +197,15 @@ func (h *EmployeeHandler) Get(w http.ResponseWriter, r *http.Request) {
 	if !scope.AllowsEmployee(emp) {
 		respondError(w, http.StatusForbidden, "Permission denied")
 		return
+	}
+
+	// Override employee tariff with effective assignment tariff (if any)
+	if h.assignmentService != nil {
+		if assignments, err := h.assignmentService.GetEffectiveTariffBatch(r.Context(), []uuid.UUID{id}, time.Now()); err == nil {
+			if a, ok := assignments[id]; ok && a.Tariff != nil {
+				emp.Tariff = a.Tariff
+			}
+		}
 	}
 
 	respondJSON(w, http.StatusOK, emp)

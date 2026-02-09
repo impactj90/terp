@@ -36,8 +36,9 @@ func setupAssignmentHandler(t *testing.T) (
 	employeeRepo := repository.NewEmployeeRepository(db)
 	tariffRepo := repository.NewTariffRepository(db)
 	assignmentRepo := repository.NewEmployeeTariffAssignmentRepository(db)
+	empDayPlanRepo := repository.NewEmployeeDayPlanRepository(db)
 
-	svc := service.NewEmployeeTariffAssignmentService(assignmentRepo, employeeRepo, tariffRepo)
+	svc := service.NewEmployeeTariffAssignmentService(assignmentRepo, employeeRepo, tariffRepo, empDayPlanRepo)
 	h := handler.NewEmployeeTariffAssignmentHandler(svc)
 
 	tenant := &model.Tenant{
