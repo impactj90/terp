@@ -48,7 +48,7 @@ func TestEmploymentTypeService_Create_Success(t *testing.T) {
 	assert.Equal(t, "FT", et.Code)
 	assert.Equal(t, "Full Time", et.Name)
 	assert.True(t, decimal.NewFromFloat(40.0).Equal(et.DefaultWeeklyHours))
-	assert.Equal(t, tenant.ID, et.TenantID)
+	assert.Equal(t, &tenant.ID, et.TenantID)
 	assert.True(t, et.IsActive)
 }
 

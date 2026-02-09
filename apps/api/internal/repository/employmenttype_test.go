@@ -33,7 +33,7 @@ func TestEmploymentTypeRepository_Create(t *testing.T) {
 
 	tenant := createTestTenantForEmploymentType(t, db)
 	et := &model.EmploymentType{
-		TenantID:           tenant.ID,
+		TenantID:           &tenant.ID,
 		Code:               "FT",
 		Name:               "Full Time",
 		DefaultWeeklyHours: decimal.NewFromFloat(40.0),
@@ -52,7 +52,7 @@ func TestEmploymentTypeRepository_Create_WithWeeklyHours(t *testing.T) {
 
 	tenant := createTestTenantForEmploymentType(t, db)
 	et := &model.EmploymentType{
-		TenantID:           tenant.ID,
+		TenantID:           &tenant.ID,
 		Code:               "PT",
 		Name:               "Part Time",
 		DefaultWeeklyHours: decimal.NewFromFloat(20.0),
@@ -74,7 +74,7 @@ func TestEmploymentTypeRepository_GetByID(t *testing.T) {
 
 	tenant := createTestTenantForEmploymentType(t, db)
 	et := &model.EmploymentType{
-		TenantID:           tenant.ID,
+		TenantID:           &tenant.ID,
 		Code:               "FT",
 		Name:               "Full Time",
 		DefaultWeeklyHours: decimal.NewFromFloat(40.0),
@@ -105,7 +105,7 @@ func TestEmploymentTypeRepository_GetByCode(t *testing.T) {
 
 	tenant := createTestTenantForEmploymentType(t, db)
 	et := &model.EmploymentType{
-		TenantID:           tenant.ID,
+		TenantID:           &tenant.ID,
 		Code:               "FT",
 		Name:               "Full Time",
 		DefaultWeeklyHours: decimal.NewFromFloat(40.0),
@@ -134,7 +134,7 @@ func TestEmploymentTypeRepository_Update(t *testing.T) {
 
 	tenant := createTestTenantForEmploymentType(t, db)
 	et := &model.EmploymentType{
-		TenantID:           tenant.ID,
+		TenantID:           &tenant.ID,
 		Code:               "FT",
 		Name:               "Original Name",
 		DefaultWeeklyHours: decimal.NewFromFloat(40.0),
@@ -159,7 +159,7 @@ func TestEmploymentTypeRepository_Delete(t *testing.T) {
 
 	tenant := createTestTenantForEmploymentType(t, db)
 	et := &model.EmploymentType{
-		TenantID:           tenant.ID,
+		TenantID:           &tenant.ID,
 		Code:               "FT",
 		Name:               "To Delete",
 		DefaultWeeklyHours: decimal.NewFromFloat(40.0),
@@ -188,12 +188,19 @@ func TestEmploymentTypeRepository_List(t *testing.T) {
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmploymentType(t, db)
-	require.NoError(t, repo.Create(ctx, &model.EmploymentType{TenantID: tenant.ID, Code: "FT", Name: "Full Time", DefaultWeeklyHours: decimal.NewFromFloat(40.0), IsActive: true}))
-	require.NoError(t, repo.Create(ctx, &model.EmploymentType{TenantID: tenant.ID, Code: "PT", Name: "Part Time", DefaultWeeklyHours: decimal.NewFromFloat(20.0), IsActive: false}))
+	require.NoError(t, repo.Create(ctx, &model.EmploymentType{TenantID: &tenant.ID, Code: "FT", Name: "Full Time", DefaultWeeklyHours: decimal.NewFromFloat(40.0), IsActive: true}))
+	require.NoError(t, repo.Create(ctx, &model.EmploymentType{TenantID: &tenant.ID, Code: "PT", Name: "Part Time", DefaultWeeklyHours: decimal.NewFromFloat(20.0), IsActive: false}))
 
 	employmentTypes, err := repo.List(ctx, tenant.ID)
 	require.NoError(t, err)
-	assert.Len(t, employmentTypes, 2)
+	// Filter to tenant-specific only (system types also included)
+	var tenantTypes []model.EmploymentType
+	for _, et := range employmentTypes {
+		if et.TenantID != nil {
+			tenantTypes = append(tenantTypes, et)
+		}
+	}
+	assert.Len(t, tenantTypes, 2)
 }
 
 func TestEmploymentTypeRepository_List_OrderedByCode(t *testing.T) {
@@ -202,16 +209,23 @@ func TestEmploymentTypeRepository_List_OrderedByCode(t *testing.T) {
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmploymentType(t, db)
-	require.NoError(t, repo.Create(ctx, &model.EmploymentType{TenantID: tenant.ID, Code: "PT", Name: "Part Time", DefaultWeeklyHours: decimal.NewFromFloat(20.0)}))
-	require.NoError(t, repo.Create(ctx, &model.EmploymentType{TenantID: tenant.ID, Code: "CT", Name: "Contract", DefaultWeeklyHours: decimal.NewFromFloat(40.0)}))
-	require.NoError(t, repo.Create(ctx, &model.EmploymentType{TenantID: tenant.ID, Code: "FT", Name: "Full Time", DefaultWeeklyHours: decimal.NewFromFloat(40.0)}))
+	require.NoError(t, repo.Create(ctx, &model.EmploymentType{TenantID: &tenant.ID, Code: "PT", Name: "Part Time", DefaultWeeklyHours: decimal.NewFromFloat(20.0)}))
+	require.NoError(t, repo.Create(ctx, &model.EmploymentType{TenantID: &tenant.ID, Code: "CT", Name: "Contract", DefaultWeeklyHours: decimal.NewFromFloat(40.0)}))
+	require.NoError(t, repo.Create(ctx, &model.EmploymentType{TenantID: &tenant.ID, Code: "FT", Name: "Full Time", DefaultWeeklyHours: decimal.NewFromFloat(40.0)}))
 
 	employmentTypes, err := repo.List(ctx, tenant.ID)
 	require.NoError(t, err)
-	assert.Len(t, employmentTypes, 3)
-	assert.Equal(t, "CT", employmentTypes[0].Code)
-	assert.Equal(t, "FT", employmentTypes[1].Code)
-	assert.Equal(t, "PT", employmentTypes[2].Code)
+	// Filter to tenant-specific only to check ordering
+	var tenantTypes []model.EmploymentType
+	for _, et := range employmentTypes {
+		if et.TenantID != nil {
+			tenantTypes = append(tenantTypes, et)
+		}
+	}
+	assert.Len(t, tenantTypes, 3)
+	assert.Equal(t, "CT", tenantTypes[0].Code)
+	assert.Equal(t, "FT", tenantTypes[1].Code)
+	assert.Equal(t, "PT", tenantTypes[2].Code)
 }
 
 func TestEmploymentTypeRepository_List_Empty(t *testing.T) {
@@ -223,7 +237,10 @@ func TestEmploymentTypeRepository_List_Empty(t *testing.T) {
 
 	employmentTypes, err := repo.List(ctx, tenant.ID)
 	require.NoError(t, err)
-	assert.Empty(t, employmentTypes)
+	// Only system types should be present
+	for _, et := range employmentTypes {
+		assert.Nil(t, et.TenantID)
+	}
 }
 
 func TestEmploymentTypeRepository_ListActive(t *testing.T) {
@@ -232,13 +249,20 @@ func TestEmploymentTypeRepository_ListActive(t *testing.T) {
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmploymentType(t, db)
-	require.NoError(t, repo.Create(ctx, &model.EmploymentType{TenantID: tenant.ID, Code: "FT", Name: "Full Time", DefaultWeeklyHours: decimal.NewFromFloat(40.0), IsActive: true}))
-	require.NoError(t, repo.Create(ctx, &model.EmploymentType{TenantID: tenant.ID, Code: "PT", Name: "Part Time", DefaultWeeklyHours: decimal.NewFromFloat(20.0), IsActive: false}))
+	require.NoError(t, repo.Create(ctx, &model.EmploymentType{TenantID: &tenant.ID, Code: "FT", Name: "Full Time", DefaultWeeklyHours: decimal.NewFromFloat(40.0), IsActive: true}))
+	require.NoError(t, repo.Create(ctx, &model.EmploymentType{TenantID: &tenant.ID, Code: "PT", Name: "Part Time", DefaultWeeklyHours: decimal.NewFromFloat(20.0), IsActive: false}))
 
 	employmentTypes, err := repo.ListActive(ctx, tenant.ID)
 	require.NoError(t, err)
-	assert.Len(t, employmentTypes, 1)
-	assert.Equal(t, "FT", employmentTypes[0].Code)
+	// Should include tenant-specific active + system types
+	var tenantActive []model.EmploymentType
+	for _, et := range employmentTypes {
+		if et.TenantID != nil {
+			tenantActive = append(tenantActive, et)
+		}
+	}
+	assert.Len(t, tenantActive, 1)
+	assert.Equal(t, "FT", tenantActive[0].Code)
 }
 
 func TestEmploymentTypeRepository_ListActive_Empty(t *testing.T) {
@@ -250,5 +274,8 @@ func TestEmploymentTypeRepository_ListActive_Empty(t *testing.T) {
 
 	employmentTypes, err := repo.ListActive(ctx, tenant.ID)
 	require.NoError(t, err)
-	assert.Empty(t, employmentTypes)
+	// Only system types should be present
+	for _, et := range employmentTypes {
+		assert.Nil(t, et.TenantID)
+	}
 }

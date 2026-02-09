@@ -66,7 +66,7 @@ func (s *EmploymentTypeService) Create(ctx context.Context, input CreateEmployme
 	}
 
 	et := &model.EmploymentType{
-		TenantID:            input.TenantID,
+		TenantID:            &input.TenantID,
 		Code:                code,
 		Name:                name,
 		DefaultWeeklyHours:  input.DefaultWeeklyHours,
@@ -122,8 +122,8 @@ func (s *EmploymentTypeService) Update(ctx context.Context, id uuid.UUID, input 
 			return nil, ErrEmploymentTypeCodeRequired
 		}
 		// Check if the new code conflicts with another employment type
-		if code != et.Code {
-			existing, err := s.employmentTypeRepo.GetByCode(ctx, et.TenantID, code)
+		if code != et.Code && et.TenantID != nil {
+			existing, err := s.employmentTypeRepo.GetByCode(ctx, *et.TenantID, code)
 			if err == nil && existing != nil {
 				return nil, ErrEmploymentTypeCodeExists
 			}

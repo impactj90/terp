@@ -47,11 +47,12 @@ func (r *EmploymentTypeRepository) GetByID(ctx context.Context, id uuid.UUID) (*
 	return &et, nil
 }
 
-// GetByCode retrieves an employment type by tenant ID and code.
+// GetByCode retrieves an employment type by tenant ID and code (includes system types).
 func (r *EmploymentTypeRepository) GetByCode(ctx context.Context, tenantID uuid.UUID, code string) (*model.EmploymentType, error) {
 	var et model.EmploymentType
 	err := r.db.GORM.WithContext(ctx).
-		Where("tenant_id = ? AND code = ?", tenantID, code).
+		Where("(tenant_id = ? OR tenant_id IS NULL) AND code = ?", tenantID, code).
+		Order("tenant_id DESC NULLS LAST").
 		First(&et).Error
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -80,11 +81,11 @@ func (r *EmploymentTypeRepository) Delete(ctx context.Context, id uuid.UUID) err
 	return nil
 }
 
-// List retrieves all employment types for a tenant.
+// List retrieves all employment types for a tenant, including system types.
 func (r *EmploymentTypeRepository) List(ctx context.Context, tenantID uuid.UUID) ([]model.EmploymentType, error) {
 	var employmentTypes []model.EmploymentType
 	err := r.db.GORM.WithContext(ctx).
-		Where("tenant_id = ?", tenantID).
+		Where("tenant_id = ? OR tenant_id IS NULL", tenantID).
 		Order("code ASC").
 		Find(&employmentTypes).Error
 
@@ -94,11 +95,11 @@ func (r *EmploymentTypeRepository) List(ctx context.Context, tenantID uuid.UUID)
 	return employmentTypes, nil
 }
 
-// ListActive retrieves all active employment types for a tenant.
+// ListActive retrieves all active employment types for a tenant, including system types.
 func (r *EmploymentTypeRepository) ListActive(ctx context.Context, tenantID uuid.UUID) ([]model.EmploymentType, error) {
 	var employmentTypes []model.EmploymentType
 	err := r.db.GORM.WithContext(ctx).
-		Where("tenant_id = ? AND is_active = ?", tenantID, true).
+		Where("(tenant_id = ? OR tenant_id IS NULL) AND is_active = ?", tenantID, true).
 		Order("code ASC").
 		Find(&employmentTypes).Error
 
