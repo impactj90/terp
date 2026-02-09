@@ -58,7 +58,7 @@ export function useBooking(id: string, enabled = true) {
  */
 export function useCreateBooking() {
   return useApiMutation('/bookings', 'post', {
-    invalidateKeys: [['/bookings'], ['/daily-values'], ['/employees/{id}/day/{date}']],
+    invalidateKeys: [['/bookings'], ['/daily-values'], ['/employees/{id}/day/{date}'], ['employees']],
   })
 }
 
@@ -67,7 +67,7 @@ export function useCreateBooking() {
  */
 export function useUpdateBooking() {
   return useApiMutation('/bookings/{id}', 'put', {
-    invalidateKeys: [['/bookings'], ['/daily-values'], ['/employees/{id}/day/{date}']],
+    invalidateKeys: [['/bookings'], ['/daily-values'], ['/employees/{id}/day/{date}'], ['employees']],
   })
 }
 
@@ -76,6 +76,6 @@ export function useUpdateBooking() {
  */
 export function useDeleteBooking() {
   return useApiMutation('/bookings/{id}', 'delete', {
-    invalidateKeys: [['/bookings'], ['/daily-values'], ['/employees/{id}/day/{date}']],
+    invalidateKeys: [['/bookings'], ['/daily-values'], ['/employees/{id}/day/{date}'], ['employees']],
   })
 }

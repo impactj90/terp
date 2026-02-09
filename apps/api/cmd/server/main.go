@@ -226,6 +226,7 @@ func main() {
 
 	// Initialize MonthlyCalcService
 	monthlyCalcService := service.NewMonthlyCalcService(monthlyEvalService, monthlyValueRepo)
+	recalcService.SetMonthlyCalcService(monthlyCalcService)
 	monthlyValueHandler := handler.NewMonthlyValueHandler(monthlyValueService, monthlyCalcService, employeeService)
 	holidayService.SetRecalcServices(recalcService, monthlyCalcService, employeeRepo)
 

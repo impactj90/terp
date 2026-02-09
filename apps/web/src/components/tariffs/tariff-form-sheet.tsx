@@ -35,7 +35,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DurationInput } from '@/components/ui/duration-input'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
-import { useCreateTariff, useUpdateTariff, useTariff, useWeekPlans, useDayPlans, useVacationCappingRuleGroups } from '@/hooks/api'
+import { useCreateTariff, useUpdateTariff, useTariff, useWeekPlans, useDayPlans, useVacationCappingRuleGroups, useGenerateFromTariff } from '@/hooks/api'
 import { parseISODate } from '@/lib/time-utils'
 import { RollingWeekPlanSelector } from './rolling-week-plan-selector'
 import { XDaysRhythmConfig } from './x-days-rhythm-config'
@@ -173,6 +173,7 @@ export function TariffFormSheet({
 
   const createMutation = useCreateTariff()
   const updateMutation = useUpdateTariff()
+  const generateFromTariff = useGenerateFromTariff()
 
   // Reset form when opening
   React.useEffect(() => {
@@ -329,6 +330,11 @@ export function TariffFormSheet({
           },
         })
       }
+
+      // Regenerate employee day plans so timesheet/day views reflect the updated tariff.
+      // Runs in background - don't block the form from closing.
+      generateFromTariff.mutate({ overwrite_tariff_source: true })
+
       onSuccess?.()
     } catch (err) {
       const apiError = err as { detail?: string; message?: string }

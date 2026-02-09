@@ -240,6 +240,7 @@ export {
   useBulkCreateEmployeeDayPlans,
   useDeleteEmployeeDayPlanRange,
   useDeleteEmployeeDayPlan,
+  useGenerateFromTariff,
 } from './use-employee-day-plans'
 
 // Admin Monthly Values (flat routes)

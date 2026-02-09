@@ -35,10 +35,16 @@ type RecalcResult struct {
 	Errors        []RecalcError
 }
 
+// monthlyCalcForRecalc defines the interface for monthly calculation after daily recalc.
+type monthlyCalcForRecalc interface {
+	CalculateMonth(ctx context.Context, employeeID uuid.UUID, year, month int) (*model.MonthlyValue, error)
+}
+
 // RecalcService triggers recalculation for employees.
 type RecalcService struct {
 	dailyCalc    dailyCalcServiceForRecalc
 	employeeRepo employeeRepositoryForRecalc
+	monthlyCalc  monthlyCalcForRecalc
 }
 
 // NewRecalcService creates a new RecalcService instance.
@@ -52,7 +58,15 @@ func NewRecalcService(
 	}
 }
 
+// SetMonthlyCalcService sets the monthly calculation service for automatic
+// monthly recalculation after daily values change.
+func (s *RecalcService) SetMonthlyCalcService(monthlyCalc monthlyCalcForRecalc) {
+	s.monthlyCalc = monthlyCalc
+}
+
 // TriggerRecalc recalculates a single day for one employee.
+// After daily calculation, also recalculates the affected month so that
+// monthly evaluation values (flextime balance, totals) stay in sync.
 func (s *RecalcService) TriggerRecalc(ctx context.Context, tenantID, employeeID uuid.UUID, date time.Time) (*RecalcResult, error) {
 	_, err := s.dailyCalc.CalculateDay(ctx, tenantID, employeeID, date)
 	if err != nil {
@@ -64,6 +78,12 @@ func (s *RecalcService) TriggerRecalc(ctx context.Context, tenantID, employeeID 
 			},
 		}, err
 	}
+
+	// Recalculate the affected month so monthly values reflect the daily change
+	if s.monthlyCalc != nil {
+		_, _ = s.monthlyCalc.CalculateMonth(ctx, employeeID, date.Year(), int(date.Month()))
+	}
+
 	return &RecalcResult{ProcessedDays: 1, FailedDays: 0}, nil
 }
 

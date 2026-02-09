@@ -1,4 +1,7 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useApiQuery, useApiMutation } from '@/hooks'
+import { authStorage, tenantIdStorage } from '@/lib/api'
+import { clientEnv } from '@/config/env'
 
 interface UseEmployeeDayPlansOptions {
   employeeId?: string
@@ -139,5 +142,75 @@ export function useDeleteEmployeeDayPlanRange() {
 export function useDeleteEmployeeDayPlan() {
   return useApiMutation('/employee-day-plans/{id}', 'delete', {
     invalidateKeys: [['/employee-day-plans'], ['/employees']],
+  })
+}
+
+interface GenerateFromTariffInput {
+  employee_ids?: string[]
+  from?: string
+  to?: string
+  overwrite_tariff_source?: boolean
+}
+
+/**
+ * Hook to generate employee day plans from tariff week plans.
+ * After generation, invalidates all employee-related queries so views
+ * (timesheet, day view, daily values) show the updated day plans.
+ *
+ * @example
+ * ```tsx
+ * const generate = useGenerateFromTariff()
+ * generate.mutate({ overwrite_tariff_source: true })
+ * ```
+ */
+export function useGenerateFromTariff() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (input: GenerateFromTariffInput) => {
+      const token = authStorage.getToken()
+      const tenantId = tenantIdStorage.getTenantId()
+
+      const response = await fetch(
+        `${clientEnv.apiUrl}/employee-day-plans/generate-from-tariff`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            ...(tenantId ? { 'X-Tenant-ID': tenantId } : {}),
+          },
+          body: JSON.stringify(input),
+        }
+      )
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Request failed' }))
+        throw new Error(error.message || 'Failed to generate day plans')
+      }
+
+      return response.json()
+    },
+    onSuccess: () => {
+      // Invalidate all queries that depend on day plans:
+      // - '/employee-day-plans' (day plans list)
+      // - '/employees/{id}/day/{date}' (day view with day plan name)
+      // - '/employees/{employee_id}/day-plans' (employee day plans)
+      // - ['employees', id, 'months', ...] (daily values, custom key format)
+      // - '/daily-values' (admin daily values list)
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0]
+          if (typeof key === 'string') {
+            return (
+              key.startsWith('/employees/') ||
+              key === '/employee-day-plans' ||
+              key === '/daily-values'
+            )
+          }
+          return key === 'employees'
+        },
+      })
+    },
   })
 }
