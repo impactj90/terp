@@ -74,8 +74,11 @@ export function useApiQuery<Path extends GetPaths>(
 ) {
   const { params, path: pathParams, ...queryOptions } = options ?? {}
 
+  // Build query key, filtering out undefined values for cleaner cache keys
+  const queryKey = [path, ...(params ? [params] : []), ...(pathParams ? [pathParams] : [])]
+
   return useQuery({
-    queryKey: [path, params, pathParams],
+    queryKey,
     queryFn: async () => {
       const { data, error } = await api.GET(path as never, {
         params: {

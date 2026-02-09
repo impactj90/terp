@@ -186,12 +186,14 @@ export function useApiMutation<
       return data as MutationResponse<Path, Method>
     },
     ...mutationOptions,
-    onSuccess: (data, variables, context) => {
-      // Invalidate specified query keys
+    onSuccess: async (data, variables, context) => {
+      // Refetch specified query keys (forces immediate refetch)
       if (invalidateKeys?.length) {
-        invalidateKeys.forEach((key) => {
-          queryClient.invalidateQueries({ queryKey: key })
-        })
+        await Promise.all(
+          invalidateKeys.map((key) =>
+            queryClient.refetchQueries({ queryKey: key, type: 'active' })
+          )
+        )
       }
 
       // Call custom onSuccess if provided

@@ -34,6 +34,10 @@ import {
   Umbrella,
   Layers,
   Package,
+  Timer,
+  Repeat,
+  DoorOpen,
+  Terminal,
 } from 'lucide-react'
 import type { UserRole } from '@/hooks/use-has-role'
 
@@ -315,6 +319,30 @@ export const navConfig: NavSection[] = [
         titleKey: 'monthlyEvaluations',
         href: '/admin/monthly-evaluations',
         icon: ClipboardList,
+        roles: ['admin'],
+      },
+      {
+        titleKey: 'schedules',
+        href: '/admin/schedules',
+        icon: Timer,
+        roles: ['admin'],
+      },
+      {
+        titleKey: 'macros',
+        href: '/admin/macros',
+        icon: Repeat,
+        roles: ['admin'],
+      },
+      {
+        titleKey: 'accessControl',
+        href: '/admin/access-control',
+        icon: DoorOpen,
+        roles: ['admin'],
+      },
+      {
+        titleKey: 'terminalBookings',
+        href: '/admin/terminal-bookings',
+        icon: Terminal,
         roles: ['admin'],
       },
     ],
