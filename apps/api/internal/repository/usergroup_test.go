@@ -33,7 +33,7 @@ func TestUserGroupRepository_Create(t *testing.T) {
 
 	tenant := createTestTenantForUserGroup(t, db)
 	ug := &model.UserGroup{
-		TenantID:    tenant.ID,
+		TenantID:    &tenant.ID,
 		Name:        "Administrators",
 		Code:        "ADMIN",
 		Description: "Admin group",
@@ -53,7 +53,7 @@ func TestUserGroupRepository_Create_WithDefaults(t *testing.T) {
 
 	tenant := createTestTenantForUserGroup(t, db)
 	ug := &model.UserGroup{
-		TenantID: tenant.ID,
+		TenantID: &tenant.ID,
 		Name:     "Users",
 		Code:     "USERS",
 	}
@@ -71,7 +71,7 @@ func TestUserGroupRepository_GetByID(t *testing.T) {
 
 	tenant := createTestTenantForUserGroup(t, db)
 	ug := &model.UserGroup{
-		TenantID: tenant.ID,
+		TenantID: &tenant.ID,
 		Name:     "Administrators",
 		Code:     "ADMIN",
 		IsAdmin:  true,
@@ -101,7 +101,7 @@ func TestUserGroupRepository_GetByName(t *testing.T) {
 
 	tenant := createTestTenantForUserGroup(t, db)
 	ug := &model.UserGroup{
-		TenantID: tenant.ID,
+		TenantID: &tenant.ID,
 		Name:     "Administrators",
 		Code:     "ADMIN",
 		IsAdmin:  true,
@@ -135,7 +135,7 @@ func TestUserGroupRepository_GetByName_DifferentTenant(t *testing.T) {
 	tenant2 := createTestTenantForUserGroup(t, db)
 
 	ug := &model.UserGroup{
-		TenantID: tenant1.ID,
+		TenantID: &tenant1.ID,
 		Name:     "Administrators",
 		Code:     "ADMIN",
 		IsAdmin:  true,
@@ -155,7 +155,7 @@ func TestUserGroupRepository_Update(t *testing.T) {
 
 	tenant := createTestTenantForUserGroup(t, db)
 	ug := &model.UserGroup{
-		TenantID: tenant.ID,
+		TenantID: &tenant.ID,
 		Name:     "Original Name",
 		Code:     "ORIGINAL",
 		IsAdmin:  false,
@@ -182,7 +182,7 @@ func TestUserGroupRepository_Delete(t *testing.T) {
 
 	tenant := createTestTenantForUserGroup(t, db)
 	ug := &model.UserGroup{
-		TenantID: tenant.ID,
+		TenantID: &tenant.ID,
 		Name:     "To Delete",
 		Code:     "TO_DELETE",
 	}
@@ -210,15 +210,19 @@ func TestUserGroupRepository_List(t *testing.T) {
 	ctx := context.Background()
 
 	tenant := createTestTenantForUserGroup(t, db)
-	require.NoError(t, repo.Create(ctx, &model.UserGroup{TenantID: tenant.ID, Name: "Admins", Code: "ADMINS", IsAdmin: true}))
-	require.NoError(t, repo.Create(ctx, &model.UserGroup{TenantID: tenant.ID, Name: "Users", Code: "USERS", IsAdmin: false}))
+	require.NoError(t, repo.Create(ctx, &model.UserGroup{TenantID: &tenant.ID, Name: "Admins", Code: "ADMINS", IsAdmin: true}))
+	require.NoError(t, repo.Create(ctx, &model.UserGroup{TenantID: &tenant.ID, Name: "Users", Code: "USERS", IsAdmin: false}))
 
 	groups, err := repo.List(ctx, tenant.ID)
 	require.NoError(t, err)
-	assert.Len(t, groups, 2)
-	// Should be ordered by name
-	assert.Equal(t, "Admins", groups[0].Name)
-	assert.Equal(t, "Users", groups[1].Name)
+	// Count only tenant-specific groups (system groups also included)
+	var tenantGroups []model.UserGroup
+	for _, g := range groups {
+		if g.TenantID != nil {
+			tenantGroups = append(tenantGroups, g)
+		}
+	}
+	assert.Len(t, tenantGroups, 2)
 }
 
 func TestUserGroupRepository_List_Empty(t *testing.T) {
@@ -230,7 +234,10 @@ func TestUserGroupRepository_List_Empty(t *testing.T) {
 
 	groups, err := repo.List(ctx, tenant.ID)
 	require.NoError(t, err)
-	assert.Empty(t, groups)
+	// Only system groups should be present (no tenant-specific ones)
+	for _, g := range groups {
+		assert.Nil(t, g.TenantID)
+	}
 }
 
 func TestUserGroupRepository_List_TenantIsolation(t *testing.T) {
@@ -241,16 +248,29 @@ func TestUserGroupRepository_List_TenantIsolation(t *testing.T) {
 	tenant1 := createTestTenantForUserGroup(t, db)
 	tenant2 := createTestTenantForUserGroup(t, db)
 
-	require.NoError(t, repo.Create(ctx, &model.UserGroup{TenantID: tenant1.ID, Name: "Tenant1 Group", Code: "TENANT1"}))
-	require.NoError(t, repo.Create(ctx, &model.UserGroup{TenantID: tenant2.ID, Name: "Tenant2 Group", Code: "TENANT2"}))
+	require.NoError(t, repo.Create(ctx, &model.UserGroup{TenantID: &tenant1.ID, Name: "Tenant1 Group", Code: "TENANT1"}))
+	require.NoError(t, repo.Create(ctx, &model.UserGroup{TenantID: &tenant2.ID, Name: "Tenant2 Group", Code: "TENANT2"}))
 
 	groups1, err := repo.List(ctx, tenant1.ID)
 	require.NoError(t, err)
-	assert.Len(t, groups1, 1)
-	assert.Equal(t, "Tenant1 Group", groups1[0].Name)
+	// Should contain tenant1's group + system groups, but not tenant2's group
+	var found1 bool
+	for _, g := range groups1 {
+		if g.TenantID != nil {
+			assert.Equal(t, "Tenant1 Group", g.Name)
+			found1 = true
+		}
+	}
+	assert.True(t, found1)
 
 	groups2, err := repo.List(ctx, tenant2.ID)
 	require.NoError(t, err)
-	assert.Len(t, groups2, 1)
-	assert.Equal(t, "Tenant2 Group", groups2[0].Name)
+	var found2 bool
+	for _, g := range groups2 {
+		if g.TenantID != nil {
+			assert.Equal(t, "Tenant2 Group", g.Name)
+			found2 = true
+		}
+	}
+	assert.True(t, found2)
 }

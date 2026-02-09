@@ -47,11 +47,12 @@ func (r *UserGroupRepository) GetByID(ctx context.Context, id uuid.UUID) (*model
 	return &ug, nil
 }
 
-// GetByName retrieves a user group by name for a tenant.
+// GetByName retrieves a user group by name for a tenant (includes system groups).
 func (r *UserGroupRepository) GetByName(ctx context.Context, tenantID uuid.UUID, name string) (*model.UserGroup, error) {
 	var ug model.UserGroup
 	err := r.db.GORM.WithContext(ctx).
-		Where("tenant_id = ? AND name = ?", tenantID, name).
+		Where("(tenant_id = ? OR tenant_id IS NULL) AND name = ?", tenantID, name).
+		Order("tenant_id DESC NULLS LAST").
 		First(&ug).Error
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -63,11 +64,12 @@ func (r *UserGroupRepository) GetByName(ctx context.Context, tenantID uuid.UUID,
 	return &ug, nil
 }
 
-// GetByCode retrieves a user group by code for a tenant.
+// GetByCode retrieves a user group by code for a tenant (includes system groups).
 func (r *UserGroupRepository) GetByCode(ctx context.Context, tenantID uuid.UUID, code string) (*model.UserGroup, error) {
 	var ug model.UserGroup
 	err := r.db.GORM.WithContext(ctx).
-		Where("tenant_id = ? AND code = ?", tenantID, code).
+		Where("(tenant_id = ? OR tenant_id IS NULL) AND code = ?", tenantID, code).
+		Order("tenant_id DESC NULLS LAST").
 		First(&ug).Error
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -96,12 +98,12 @@ func (r *UserGroupRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-// List retrieves all user groups for a tenant.
+// List retrieves all user groups for a tenant, including system groups.
 func (r *UserGroupRepository) List(ctx context.Context, tenantID uuid.UUID) ([]model.UserGroup, error) {
 	var groups []model.UserGroup
 	err := r.db.GORM.WithContext(ctx).
-		Where("tenant_id = ?", tenantID).
-		Order("name ASC").
+		Where("tenant_id = ? OR tenant_id IS NULL", tenantID).
+		Order("is_system DESC, name ASC").
 		Find(&groups).Error
 
 	if err != nil {
@@ -110,12 +112,12 @@ func (r *UserGroupRepository) List(ctx context.Context, tenantID uuid.UUID) ([]m
 	return groups, nil
 }
 
-// ListByActive retrieves user groups by active status for a tenant.
+// ListByActive retrieves user groups by active status for a tenant, including system groups.
 func (r *UserGroupRepository) ListByActive(ctx context.Context, tenantID uuid.UUID, isActive bool) ([]model.UserGroup, error) {
 	var groups []model.UserGroup
 	err := r.db.GORM.WithContext(ctx).
-		Where("tenant_id = ? AND is_active = ?", tenantID, isActive).
-		Order("name ASC").
+		Where("(tenant_id = ? OR tenant_id IS NULL) AND is_active = ?", tenantID, isActive).
+		Order("is_system DESC, name ASC").
 		Find(&groups).Error
 
 	if err != nil {

@@ -361,7 +361,7 @@ func TestUserGroupHandler_Update_SystemGroup(t *testing.T) {
 
 	// Create system group directly via repo
 	ug := &model.UserGroup{
-		TenantID: tenant.ID,
+		TenantID: &tenant.ID,
 		Name:     "System Group",
 		IsSystem: true,
 	}
@@ -440,7 +440,7 @@ func TestUserGroupHandler_Delete_SystemGroup(t *testing.T) {
 
 	// Create system group directly via repo
 	ug := &model.UserGroup{
-		TenantID: tenant.ID,
+		TenantID: &tenant.ID,
 		Name:     "System Group",
 		IsSystem: true,
 	}

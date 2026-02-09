@@ -107,7 +107,6 @@ func mapUsersToResponse(users []model.User) []*models.User {
 
 func mapUserGroupToResponse(ug *model.UserGroup) *models.UserGroup {
 	id := strfmt.UUID(ug.ID.String())
-	tenantID := strfmt.UUID(ug.TenantID.String())
 	name := ug.Name
 	code := ug.Code
 	createdAt := strfmt.DateTime(ug.CreatedAt)
@@ -115,7 +114,6 @@ func mapUserGroupToResponse(ug *model.UserGroup) *models.UserGroup {
 
 	resp := &models.UserGroup{
 		ID:        &id,
-		TenantID:  &tenantID,
 		Name:      &name,
 		Code:      &code,
 		IsActive:  ug.IsActive,
@@ -123,6 +121,11 @@ func mapUserGroupToResponse(ug *model.UserGroup) *models.UserGroup {
 		IsAdmin:   ug.IsAdmin,
 		CreatedAt: createdAt,
 		UpdatedAt: updatedAt,
+	}
+
+	if ug.TenantID != nil {
+		tenantID := strfmt.UUID(ug.TenantID.String())
+		resp.TenantID = &tenantID
 	}
 
 	if ug.Description != "" {

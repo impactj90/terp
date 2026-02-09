@@ -106,7 +106,7 @@ func (s *UserGroupService) Create(ctx context.Context, input CreateUserGroupInpu
 	}
 
 	ug := &model.UserGroup{
-		TenantID:    input.TenantID,
+		TenantID:    &input.TenantID,
 		Name:        name,
 		Code:        code,
 		Description: strings.TrimSpace(input.Description),
@@ -162,8 +162,8 @@ func (s *UserGroupService) Update(ctx context.Context, id uuid.UUID, input Updat
 			return nil, ErrUserGroupNameRequired
 		}
 		// Check if new name conflicts with existing group
-		if name != ug.Name {
-			existing, err := s.userGroupRepo.GetByName(ctx, ug.TenantID, name)
+		if name != ug.Name && ug.TenantID != nil {
+			existing, err := s.userGroupRepo.GetByName(ctx, *ug.TenantID, name)
 			if err != nil {
 				return nil, err
 			}
@@ -179,8 +179,8 @@ func (s *UserGroupService) Update(ctx context.Context, id uuid.UUID, input Updat
 		if code == "" {
 			return nil, ErrUserGroupCodeRequired
 		}
-		if code != ug.Code {
-			existing, err := s.userGroupRepo.GetByCode(ctx, ug.TenantID, code)
+		if code != ug.Code && ug.TenantID != nil {
+			existing, err := s.userGroupRepo.GetByCode(ctx, *ug.TenantID, code)
 			if err != nil {
 				return nil, err
 			}

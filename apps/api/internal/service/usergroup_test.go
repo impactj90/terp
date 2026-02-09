@@ -51,7 +51,7 @@ func TestUserGroupService_Create_Success(t *testing.T) {
 	ug, err := svc.Create(ctx, input)
 	require.NoError(t, err)
 	assert.Equal(t, "Administrators", ug.Name)
-	assert.Equal(t, tenant.ID, ug.TenantID)
+	assert.Equal(t, &tenant.ID, ug.TenantID)
 	assert.Equal(t, "Admin group with full access", ug.Description)
 	assert.True(t, ug.IsAdmin)
 	assert.False(t, ug.IsSystem)
@@ -176,7 +176,7 @@ func TestUserGroupService_Create_SameNameDifferentTenant(t *testing.T) {
 	}
 	ug, err := svc.Create(ctx, input2)
 	require.NoError(t, err)
-	assert.Equal(t, tenant2.ID, ug.TenantID)
+	assert.Equal(t, &tenant2.ID, ug.TenantID)
 }
 
 func TestUserGroupService_GetByID_Success(t *testing.T) {
@@ -412,7 +412,7 @@ func TestUserGroupService_Delete_SystemGroup(t *testing.T) {
 
 	// Create system group directly via repo
 	ug := &model.UserGroup{
-		TenantID: tenant.ID,
+		TenantID: &tenant.ID,
 		Name:     "System Group",
 		IsSystem: true,
 	}
@@ -432,7 +432,7 @@ func TestUserGroupService_Update_SystemGroup(t *testing.T) {
 
 	// Create system group directly via repo
 	ug := &model.UserGroup{
-		TenantID: tenant.ID,
+		TenantID: &tenant.ID,
 		Name:     "System Group",
 		IsSystem: true,
 	}

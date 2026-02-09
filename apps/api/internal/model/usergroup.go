@@ -10,7 +10,7 @@ import (
 
 type UserGroup struct {
 	ID          uuid.UUID      `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	TenantID    uuid.UUID      `gorm:"type:uuid;not null;index" json:"tenant_id"`
+	TenantID    *uuid.UUID     `gorm:"type:uuid;index" json:"tenant_id,omitempty"`
 	Name        string         `gorm:"type:varchar(100);not null" json:"name"`
 	Code        string         `gorm:"type:varchar(50);not null" json:"code"`
 	Description string         `gorm:"type:text" json:"description,omitempty"`
