@@ -5,7 +5,7 @@ import { useTranslations, useLocale } from 'next-intl'
 import { useSearchParams } from 'next/navigation'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks/use-has-role'
+import { useHasPermission } from '@/hooks'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
@@ -52,7 +52,7 @@ export default function TimesheetPage() {
   const tc = useTranslations('common')
   const locale = useLocale()
   const { user } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canViewAll } = useHasPermission(['time_tracking.view_all'])
   const searchParams = useSearchParams()
   const [viewMode, setViewMode] = useState<ViewMode>('day')
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -70,7 +70,7 @@ export default function TimesheetPage() {
 
   // Fetch employees for admin selector
   const { data: employeesData } = useEmployees({
-    enabled: isAdmin,
+    enabled: canViewAll,
     limit: 250,
   })
 
@@ -94,7 +94,7 @@ export default function TimesheetPage() {
   }, [searchParams])
 
   useEffect(() => {
-    if (!isAdmin) return
+    if (!canViewAll) return
     if (selectedEmployeeId) return
 
     if (userEmployeeId) {
@@ -106,9 +106,9 @@ export default function TimesheetPage() {
     if (firstEmployee?.id) {
       setSelectedEmployeeId(firstEmployee.id)
     }
-  }, [employeesData?.data, isAdmin, selectedEmployeeId, userEmployeeId])
+  }, [employeesData?.data, canViewAll, selectedEmployeeId, userEmployeeId])
 
-  const effectiveEmployeeId = isAdmin ? selectedEmployeeId : userEmployeeId
+  const effectiveEmployeeId = canViewAll ? selectedEmployeeId : userEmployeeId
 
   // Get the selected employee name for display
   const selectedEmployee = employeesData?.data?.find(emp => emp.id === selectedEmployeeId)
@@ -276,7 +276,7 @@ export default function TimesheetPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           {/* Employee selector (admin only) */}
-          {isAdmin && (
+          {canViewAll && (
             <Select
               value={selectedEmployeeId ?? ''}
               onValueChange={setSelectedEmployeeId}

@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import { ArrowLeft, Edit, UserX, Clock, Mail, Phone } from 'lucide-react'
 import { format } from 'date-fns'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import { useEmployee, useDeleteEmployee } from '@/hooks/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -29,12 +29,12 @@ export default function EmployeeDetailPage() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['employees.view'])
   const t = useTranslations('adminEmployees')
   const ta = useTranslations('employeeTariffAssignments')
 
   const employeeId = params.id
-  const { data: employee, isLoading } = useEmployee(employeeId, !authLoading && isAdmin)
+  const { data: employee, isLoading } = useEmployee(employeeId, !authLoading && !permLoading && canAccess)
 
   // Edit / delete state
   const [editOpen, setEditOpen] = React.useState(false)
@@ -48,10 +48,10 @@ export default function EmployeeDetailPage() {
 
   // Redirect if not admin
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   const handleConfirmDelete = async () => {
     if (!employee) return

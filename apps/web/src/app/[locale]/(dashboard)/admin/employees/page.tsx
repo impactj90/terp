@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, Users, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import { useEmployees, useDeleteEmployee } from '@/hooks/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -31,7 +31,7 @@ type Employee = components['schemas']['Employee']
 export default function EmployeesPage() {
   const router = useRouter()
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['employees.view'])
   const t = useTranslations('adminEmployees')
 
   // Pagination and filters
@@ -53,7 +53,7 @@ export default function EmployeesPage() {
     limit,
     search: search || undefined,
     active: activeFilter,
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
 
   // Delete mutation
@@ -69,12 +69,11 @@ export default function EmployeesPage() {
     setSelectedIds(new Set())
   }, [page, search, activeFilter])
 
-  // Redirect if not admin
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   const employees = data?.data ?? []
   const total = data?.total ?? 0
@@ -130,12 +129,12 @@ export default function EmployeesPage() {
   // Check for any active filters
   const hasFilters = Boolean(search) || activeFilter !== undefined
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <EmployeesPageSkeleton />
   }
 
-  if (!isAdmin) {
-    return null // Will redirect
+  if (!canAccess) {
+    return null
   }
 
   return (

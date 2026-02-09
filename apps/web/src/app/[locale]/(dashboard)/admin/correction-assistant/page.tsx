@@ -4,7 +4,7 @@ import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import {
   useCorrectionAssistantItems,
   useCorrectionMessages,
@@ -43,7 +43,7 @@ export default function CorrectionAssistantPage() {
   const router = useRouter()
   const t = useTranslations('correctionAssistant')
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['corrections.manage'])
 
   // Tab state
   const [activeTab, setActiveTab] = React.useState<'corrections' | 'messages'>('corrections')
@@ -75,17 +75,17 @@ export default function CorrectionAssistantPage() {
 
   // Auth guard
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   // Reset page when filters change
   React.useEffect(() => {
     setPage(1)
   }, [dateRange, departmentId, severity, errorCode])
 
-  const enabled = !authLoading && isAdmin
+  const enabled = !authLoading && !permLoading && canAccess
 
   // Departments for filter dropdown
   const { data: departmentsData, isLoading: departmentsLoading } = useDepartments({ enabled })
@@ -183,11 +183,11 @@ export default function CorrectionAssistantPage() {
     employeeSearch
   )
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <CorrectionAssistantSkeleton />
   }
 
-  if (!isAdmin) {
+  if (!canAccess) {
     return null
   }
 

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Plus, Clock, ArrowDownLeft, ArrowUpRight, X, FolderOpen } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import {
   useBookingTypes,
   useUpdateBookingType,
@@ -39,7 +39,7 @@ export default function BookingTypesPage() {
   const t = useTranslations('adminBookingTypes')
   const tGroups = useTranslations('adminBookingTypeGroups')
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['booking_types.manage'])
 
   // Page-level tab state
   const [activeTab, setActiveTab] = React.useState<'booking-types' | 'groups'>('booking-types')
@@ -60,10 +60,10 @@ export default function BookingTypesPage() {
 
   // Data fetching
   const { data: bookingTypesData, isLoading } = useBookingTypes({
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
   const { data: groupsData, isLoading: groupsLoading } = useBookingTypeGroups({
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
 
   // Mutations
@@ -72,10 +72,10 @@ export default function BookingTypesPage() {
   const deleteGroupMutation = useDeleteBookingTypeGroup()
 
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   const bookingTypes = bookingTypesData?.data ?? []
   const bookingTypeGroupsList = (groupsData as { data?: BookingTypeGroup[] })?.data ?? []
@@ -166,11 +166,11 @@ export default function BookingTypesPage() {
 
   const hasFilters = Boolean(search || directionFilter !== 'all')
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <BookingTypesPageSkeleton />
   }
 
-  if (!isAdmin) {
+  if (!canAccess) {
     return null
   }
 

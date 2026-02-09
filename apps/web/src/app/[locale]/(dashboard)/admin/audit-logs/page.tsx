@@ -4,7 +4,7 @@ import * as React from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import { useAuditLogs, useUsers } from '@/hooks/api'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -24,7 +24,7 @@ export default function AuditLogsPage() {
   const searchParams = useSearchParams()
   const t = useTranslations('auditLogs')
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['users.manage'])
 
   // Read initial state from URL
   const initialFrom = searchParams.get('from')
@@ -58,10 +58,10 @@ export default function AuditLogsPage() {
 
   // Auth guard
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   // Sync state to URL
   const stateRef = React.useRef({ dateRange, userId, entityType, entityId, action })
@@ -85,7 +85,7 @@ export default function AuditLogsPage() {
   // Computed API params
   const fromStr = dateRange?.from?.toISOString()
   const toStr = dateRange?.to?.toISOString()
-  const enabled = !authLoading && isAdmin
+  const enabled = !authLoading && !permLoading && canAccess
 
   const { data, isLoading, isFetching } = useAuditLogs({
     userId: userId ?? undefined,
@@ -190,11 +190,11 @@ export default function AuditLogsPage() {
 
   const hasFilters = !!(userId || entityType || entityId || action)
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <AuditLogSkeleton />
   }
 
-  if (!isAdmin) {
+  if (!canAccess) {
     return null
   }
 

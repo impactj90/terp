@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { Upload, X, Loader2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import {
   useImportBatches,
   useTriggerTerminalImport,
@@ -66,7 +66,7 @@ const BATCH_STATUS_CONFIG: Record<string, { className: string; labelKey: string 
 export function ImportBatchesTab() {
   const t = useTranslations('adminTerminalBookings')
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['terminal_bookings.manage'])
 
   // Filter state
   const [statusFilter, setStatusFilter] = React.useState<StatusFilter>('all')
@@ -75,7 +75,7 @@ export function ImportBatchesTab() {
   // Data
   const { data: batchData, isLoading } = useImportBatches({
     status: statusFilter !== 'all' ? (statusFilter as 'pending' | 'processing' | 'completed' | 'failed') : undefined,
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
 
   const batches = (batchData?.data ?? []) as ImportBatch[]

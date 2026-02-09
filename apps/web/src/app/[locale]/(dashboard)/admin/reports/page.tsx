@@ -4,7 +4,7 @@ import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import {
   useReports,
   useReport,
@@ -29,7 +29,7 @@ export default function ReportsPage() {
   const t = useTranslations('reports')
   const tc = useTranslations('common')
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['reports.view'])
 
   // Filters
   const [reportTypeFilter, setReportTypeFilter] = React.useState<string>('all')
@@ -42,12 +42,12 @@ export default function ReportsPage() {
 
   // Auth guard
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
-  const enabled = !authLoading && isAdmin
+  const enabled = !authLoading && !permLoading && canAccess
 
   // Queries
   const { data: reportsData, isLoading: reportsLoading } = useReports({
@@ -97,11 +97,11 @@ export default function ReportsPage() {
     }
   }
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <ReportSkeleton />
   }
 
-  if (!isAdmin) {
+  if (!canAccess) {
     return null
   }
 

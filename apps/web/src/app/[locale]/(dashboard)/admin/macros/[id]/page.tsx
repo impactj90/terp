@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { ArrowLeft, Pencil, Trash2, Play } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import {
   useMacro,
   useDeleteMacro,
@@ -30,23 +30,23 @@ export default function MacroDetailPage() {
   const router = useRouter()
   const t = useTranslations('adminMacros')
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['macros.manage'])
 
   const [editOpen, setEditOpen] = React.useState(false)
   const [deleteOpen, setDeleteOpen] = React.useState(false)
 
-  const { data: macro, isLoading } = useMacro(params.id, !authLoading && isAdmin)
-  const { data: executionsData } = useMacroExecutions(params.id, !authLoading && isAdmin)
+  const { data: macro, isLoading } = useMacro(params.id, !authLoading && !permLoading && canAccess)
+  const { data: executionsData } = useMacroExecutions(params.id, !authLoading && !permLoading && canAccess)
   const deleteMutation = useDeleteMacro()
   const executeMutation = useExecuteMacro()
 
   const executions = executionsData?.data ?? []
 
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   const handleDelete = async () => {
     await deleteMutation.mutateAsync({ path: { id: params.id } })

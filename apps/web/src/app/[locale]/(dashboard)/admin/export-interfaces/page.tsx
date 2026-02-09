@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Plus, Settings2, X } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import {
   useExportInterfaces,
   useDeleteExportInterface,
@@ -42,7 +42,7 @@ export default function ExportInterfacesPage() {
   const router = useRouter()
   const t = useTranslations('adminExportInterfaces')
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['payroll.manage'])
 
   // Filters
   const [search, setSearch] = React.useState('')
@@ -58,7 +58,7 @@ export default function ExportInterfacesPage() {
 
   // Fetch export interfaces
   const { data: interfacesData, isLoading } = useExportInterfaces({
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
 
   // Delete mutation
@@ -66,10 +66,10 @@ export default function ExportInterfacesPage() {
 
   // Redirect if not admin
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   // Extract interfaces from wrapped response
   const interfaces = (interfacesData as { data?: ExportInterface[] })?.data ?? []
@@ -142,11 +142,11 @@ export default function ExportInterfacesPage() {
     setStatusFilter('all')
   }
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <ExportInterfacesPageSkeleton />
   }
 
-  if (!isAdmin) {
+  if (!canAccess) {
     return null
   }
 

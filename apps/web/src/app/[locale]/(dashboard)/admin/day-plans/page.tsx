@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, Calendar, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import { useDayPlans, useDeleteDayPlan } from '@/hooks/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -30,7 +30,7 @@ type DayPlan = components['schemas']['DayPlan']
 export default function DayPlansPage() {
   const router = useRouter()
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['day_plans.manage'])
   const t = useTranslations('adminDayPlans')
 
   // Filters
@@ -49,7 +49,7 @@ export default function DayPlansPage() {
   const { data, isLoading, isFetching } = useDayPlans({
     active: activeFilter,
     planType: typeFilter,
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
 
   // Delete mutation
@@ -57,10 +57,10 @@ export default function DayPlansPage() {
 
   // Redirect if not admin
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   const dayPlans = React.useMemo(() => {
     let plans = data?.data ?? []
@@ -111,11 +111,11 @@ export default function DayPlansPage() {
 
   const hasFilters = Boolean(search) || activeFilter !== undefined || typeFilter !== undefined
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <DayPlansPageSkeleton />
   }
 
-  if (!isAdmin) {
+  if (!canAccess) {
     return null
   }
 

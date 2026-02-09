@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Plus, Layers, X } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import { useShifts, useDeleteShift } from '@/hooks/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -29,7 +29,7 @@ type ShiftPlanningTab = 'shifts' | 'planning-board'
 export default function ShiftPlanningPage() {
   const router = useRouter()
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['shift_planning.manage'])
   const t = useTranslations('shiftPlanning')
 
   const [activeTab, setActiveTab] = React.useState<ShiftPlanningTab>('shifts')
@@ -43,15 +43,15 @@ export default function ShiftPlanningPage() {
   const [deleteItem, setDeleteItem] = React.useState<Shift | null>(null)
   const [deleteError, setDeleteError] = React.useState<string | null>(null)
 
-  const { data: shiftsData, isLoading } = useShifts({ enabled: !authLoading && isAdmin })
+  const { data: shiftsData, isLoading } = useShifts({ enabled: !authLoading && !permLoading && canAccess })
   const deleteMutation = useDeleteShift()
   const shifts = shiftsData?.data ?? []
 
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   const filteredItems = React.useMemo(() => {
     let filtered = shifts
@@ -109,11 +109,11 @@ export default function ShiftPlanningPage() {
 
   const hasFilters = Boolean(search) || activeOnly
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <ShiftPlanningPageSkeleton />
   }
 
-  if (!isAdmin) {
+  if (!canAccess) {
     return null
   }
 

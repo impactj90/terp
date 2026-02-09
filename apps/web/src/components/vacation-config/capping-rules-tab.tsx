@@ -4,7 +4,7 @@ import * as React from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { Plus, Shield, X, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import {
   useVacationCappingRules,
   useCreateVacationCappingRule,
@@ -95,7 +95,7 @@ const INITIAL_FORM: FormState = {
 export function CappingRulesTab() {
   const t = useTranslations('adminVacationConfig')
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['absence_types.manage'])
   const months = useLocalizedMonths()
 
   const formatCutoffDate = React.useCallback(
@@ -111,7 +111,7 @@ export function CappingRulesTab() {
   const [deleteError, setDeleteError] = React.useState<string | null>(null)
 
   const { data: rulesData, isLoading } = useVacationCappingRules({
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
   const deleteMutation = useDeleteVacationCappingRule()
   const items = (rulesData?.data ?? []) as VacationCappingRule[]

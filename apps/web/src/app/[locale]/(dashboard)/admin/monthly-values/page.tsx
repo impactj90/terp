@@ -4,7 +4,7 @@ import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations, useLocale } from 'next-intl'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import {
   useAdminMonthlyValues,
   useEmployees,
@@ -28,7 +28,7 @@ export default function MonthlyValuesPage() {
   const t = useTranslations('monthlyValues')
   const locale = useLocale()
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['reports.view'])
 
   // Filters
   const [year, setYear] = React.useState(() => new Date().getFullYear())
@@ -50,17 +50,17 @@ export default function MonthlyValuesPage() {
 
   // Auth guard
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   // Clear selection when filters change
   React.useEffect(() => {
     setSelectedIds(new Set())
   }, [year, month, departmentId, statusFilter])
 
-  const enabled = !authLoading && isAdmin
+  const enabled = !authLoading && !permLoading && canAccess
 
   // Monthly values
   const { data: mvData, isLoading: mvLoading } = useAdminMonthlyValues({
@@ -199,11 +199,11 @@ export default function MonthlyValuesPage() {
     }
   }
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <MonthlyValuesSkeleton />
   }
 
-  if (!isAdmin) {
+  if (!canAccess) {
     return null
   }
 

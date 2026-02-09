@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Plus, Wallet, X, FolderOpen } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import {
   useAccounts,
   useAccountUsage,
@@ -61,7 +61,7 @@ export default function AccountsPage() {
   const t = useTranslations('adminAccounts')
   const tGroups = useTranslations('adminAccountGroups')
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['accounts.manage'])
 
   // Tab state
   const [activeTab, setActiveTab] = React.useState<'accounts' | 'groups'>('accounts')
@@ -87,12 +87,12 @@ export default function AccountsPage() {
   // Fetch accounts (include system accounts for admin view)
   const { data: accountsData, isLoading } = useAccounts({
     includeSystem: true,
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
 
   // Fetch account groups
   const { data: groupsData, isLoading: groupsLoading } = useAccountGroups({
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
 
   // Mutations
@@ -104,10 +104,10 @@ export default function AccountsPage() {
 
   // Redirect if not admin
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   // Extract accounts from wrapped response
   const accounts = (accountsData as { data?: Account[] })?.data ?? []
@@ -250,11 +250,11 @@ export default function AccountsPage() {
     setShowSystem(true)
   }
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <AccountsPageSkeleton />
   }
 
-  if (!isAdmin) {
+  if (!canAccess) {
     return null
   }
 

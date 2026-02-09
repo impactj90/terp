@@ -4,7 +4,7 @@ import * as React from 'react'
 import { useTranslations } from 'next-intl'
 import { Plus, FolderOpen, X, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import {
   useVacationCalculationGroups,
   useCreateVacationCalculationGroup,
@@ -84,7 +84,7 @@ const INITIAL_FORM: FormState = {
 export function CalculationGroupsTab() {
   const t = useTranslations('adminVacationConfig')
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['absence_types.manage'])
 
   const [search, setSearch] = React.useState('')
   const [createOpen, setCreateOpen] = React.useState(false)
@@ -93,7 +93,7 @@ export function CalculationGroupsTab() {
   const [deleteError, setDeleteError] = React.useState<string | null>(null)
 
   const { data: groupsData, isLoading } = useVacationCalculationGroups({
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
   const deleteMutation = useDeleteVacationCalculationGroup()
   const items = (groupsData?.data ?? []) as VacationCalculationGroup[]

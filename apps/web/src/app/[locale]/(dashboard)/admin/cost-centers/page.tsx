@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, Landmark, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import { useCostCenters, useDeleteCostCenter } from '@/hooks/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -20,7 +20,7 @@ type CostCenter = components['schemas']['CostCenter']
 export default function CostCentersPage() {
   const router = useRouter()
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['departments.manage'])
   const t = useTranslations('adminCostCenters')
 
   const [search, setSearch] = React.useState('')
@@ -29,15 +29,15 @@ export default function CostCentersPage() {
   const [viewItem, setViewItem] = React.useState<CostCenter | null>(null)
   const [deleteItem, setDeleteItem] = React.useState<CostCenter | null>(null)
 
-  const { data: costCentersData, isLoading } = useCostCenters({ enabled: !authLoading && isAdmin })
+  const { data: costCentersData, isLoading } = useCostCenters({ enabled: !authLoading && !permLoading && canAccess })
   const deleteMutation = useDeleteCostCenter()
   const costCenters = costCentersData?.data ?? []
 
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   const filteredItems = React.useMemo(() => {
     if (!search.trim()) return costCenters
@@ -79,11 +79,11 @@ export default function CostCentersPage() {
 
   const hasFilters = Boolean(search)
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <CostCentersPageSkeleton />
   }
 
-  if (!isAdmin) {
+  if (!canAccess) {
     return null
   }
 

@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import { ArrowLeft, Edit, Trash2, Plus, Package } from 'lucide-react'
 import { format } from 'date-fns'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import {
   useOrder,
   useDeleteOrder,
@@ -37,11 +37,11 @@ export default function OrderDetailPage() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['orders.manage'])
   const t = useTranslations('adminOrders')
 
   const orderId = params.id
-  const { data: order, isLoading } = useOrder(orderId, !authLoading && isAdmin)
+  const { data: order, isLoading } = useOrder(orderId, !authLoading && !permLoading && canAccess)
 
   // Edit / delete order state
   const [editOpen, setEditOpen] = React.useState(false)
@@ -63,11 +63,11 @@ export default function OrderDetailPage() {
   // Fetch assignments and bookings
   const { data: assignmentsData, isLoading: assignmentsLoading } = useOrderAssignments({
     orderId,
-    enabled: !authLoading && isAdmin && !!orderId,
+    enabled: !authLoading && !permLoading && canAccess && !!orderId,
   })
   const { data: bookingsData, isLoading: bookingsLoading } = useOrderBookings({
     orderId,
-    enabled: !authLoading && isAdmin && !!orderId,
+    enabled: !authLoading && !permLoading && canAccess && !!orderId,
   })
 
   const assignments = assignmentsData?.data ?? []
@@ -75,10 +75,10 @@ export default function OrderDetailPage() {
 
   // Redirect if not admin
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   const handleConfirmDeleteOrder = async () => {
     if (!order) return

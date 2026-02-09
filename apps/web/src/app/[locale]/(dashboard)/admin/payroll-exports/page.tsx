@@ -4,7 +4,7 @@ import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import {
   usePayrollExports,
   usePayrollExport,
@@ -30,7 +30,7 @@ export default function PayrollExportsPage() {
   const t = useTranslations('payrollExports')
   const tc = useTranslations('common')
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['payroll.view'])
 
   // Filters
   const [year, setYear] = React.useState(() => new Date().getFullYear())
@@ -45,12 +45,12 @@ export default function PayrollExportsPage() {
 
   // Auth guard
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
-  const enabled = !authLoading && isAdmin
+  const enabled = !authLoading && !permLoading && canAccess
 
   // Queries
   const { data: exportsData, isLoading: exportsLoading } = usePayrollExports({
@@ -107,11 +107,11 @@ export default function PayrollExportsPage() {
     setSelectedItem(null) // Close detail sheet if open
   }
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <PayrollExportSkeleton />
   }
 
-  if (!isAdmin) {
+  if (!canAccess) {
     return null
   }
 

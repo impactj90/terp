@@ -4,7 +4,7 @@ import * as React from 'react'
 import { useTranslations } from 'next-intl'
 import { Plus, UserX, X, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import {
   useEmployeeCappingExceptions,
   useCreateEmployeeCappingException,
@@ -87,7 +87,7 @@ const INITIAL_FORM: FormState = {
 export function EmployeeExceptionsTab() {
   const t = useTranslations('adminVacationConfig')
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['absence_types.manage'])
 
   const [search, setSearch] = React.useState('')
   const [createOpen, setCreateOpen] = React.useState(false)
@@ -96,17 +96,17 @@ export function EmployeeExceptionsTab() {
   const [deleteError, setDeleteError] = React.useState<string | null>(null)
 
   const { data: exceptionsData, isLoading } = useEmployeeCappingExceptions({
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
   const deleteMutation = useDeleteEmployeeCappingException()
   const items = (exceptionsData?.data ?? []) as EmployeeCappingException[]
 
   // Lookup data
-  const { data: employeesData } = useEmployees({ limit: 200, active: true, enabled: !authLoading && isAdmin })
+  const { data: employeesData } = useEmployees({ limit: 200, active: true, enabled: !authLoading && !permLoading && canAccess })
   const employees = (employeesData?.data ?? []) as Employee[]
   const employeeMap = React.useMemo(() => new Map(employees.map((e) => [e.id, e])), [employees])
 
-  const { data: cappingRulesData } = useVacationCappingRules({ enabled: !authLoading && isAdmin })
+  const { data: cappingRulesData } = useVacationCappingRules({ enabled: !authLoading && !permLoading && canAccess })
   const cappingRules = (cappingRulesData?.data ?? []) as VacationCappingRule[]
   const cappingRuleMap = React.useMemo(() => new Map(cappingRules.map((r) => [r.id, r])), [cappingRules])
 

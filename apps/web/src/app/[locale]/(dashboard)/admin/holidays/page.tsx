@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Plus, CalendarDays, List, CalendarRange, X, Copy, Wand2 } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import { useHolidays, useDeleteHoliday } from '@/hooks/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -30,7 +30,7 @@ export default function HolidaysPage() {
   const router = useRouter()
   const t = useTranslations('adminHolidays')
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['holidays.manage'])
 
   // View mode and filters
   const [viewMode, setViewMode] = React.useState<'list' | 'calendar'>('calendar')
@@ -49,7 +49,7 @@ export default function HolidaysPage() {
   // Fetch holidays for selected year
   const { data: holidaysData, isLoading } = useHolidays({
     year,
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
 
   // Delete mutation
@@ -57,10 +57,10 @@ export default function HolidaysPage() {
 
   // Redirect if not admin
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   const holidays = holidaysData ?? []
 
@@ -115,11 +115,11 @@ export default function HolidaysPage() {
 
   const hasFilters = Boolean(search)
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <HolidaysPageSkeleton />
   }
 
-  if (!isAdmin) {
+  if (!canAccess) {
     return null
   }
 

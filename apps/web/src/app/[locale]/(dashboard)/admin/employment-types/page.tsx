@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, Briefcase, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import { useEmploymentTypes, useDeleteEmploymentType } from '@/hooks/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -20,7 +20,7 @@ type EmploymentType = components['schemas']['EmploymentType']
 export default function EmploymentTypesPage() {
   const router = useRouter()
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['employees.view'])
   const t = useTranslations('adminEmploymentTypes')
 
   const [search, setSearch] = React.useState('')
@@ -29,15 +29,15 @@ export default function EmploymentTypesPage() {
   const [viewItem, setViewItem] = React.useState<EmploymentType | null>(null)
   const [deleteItem, setDeleteItem] = React.useState<EmploymentType | null>(null)
 
-  const { data: employmentTypesData, isLoading } = useEmploymentTypes({ enabled: !authLoading && isAdmin })
+  const { data: employmentTypesData, isLoading } = useEmploymentTypes({ enabled: !authLoading && !permLoading && canAccess })
   const deleteMutation = useDeleteEmploymentType()
   const employmentTypes = employmentTypesData?.data ?? []
 
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   const filteredItems = React.useMemo(() => {
     if (!search.trim()) return employmentTypes
@@ -79,11 +79,11 @@ export default function EmploymentTypesPage() {
 
   const hasFilters = Boolean(search)
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <EmploymentTypesPageSkeleton />
   }
 
-  if (!isAdmin) {
+  if (!canAccess) {
     return null
   }
 

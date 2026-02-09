@@ -4,7 +4,7 @@ import * as React from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import { useDepartments, useEmployees } from '@/hooks/api'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
@@ -34,7 +34,7 @@ export default function EvaluationsPage() {
   const searchParams = useSearchParams()
   const t = useTranslations('evaluations')
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['reports.view'])
 
   // Read initial state from URL
   const initialTab = (searchParams.get('tab') as EvaluationTab) || 'daily-values'
@@ -67,10 +67,10 @@ export default function EvaluationsPage() {
 
   // Auth guard
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   // Sync state to URL - use a ref to avoid infinite loops from searchParams dependency
   const stateRef = React.useRef({ activeTab, dateRange, employeeId, departmentId })
@@ -92,7 +92,7 @@ export default function EvaluationsPage() {
     [router, pathname]
   )
 
-  const enabled = !authLoading && isAdmin
+  const enabled = !authLoading && !permLoading && canAccess
 
   // Departments and employees for filter dropdowns
   const { data: departmentsData, isLoading: departmentsLoading } = useDepartments({ enabled })
@@ -170,11 +170,11 @@ export default function EvaluationsPage() {
 
   const hasFilters = !!(employeeId || departmentId)
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <EvaluationsSkeleton />
   }
 
-  if (!isAdmin) {
+  if (!canAccess) {
     return null
   }
 

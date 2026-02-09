@@ -4,7 +4,7 @@ import * as React from 'react'
 import { useTranslations } from 'next-intl'
 import { Plus, Sparkles, X, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import {
   useVacationSpecialCalculations,
   useCreateVacationSpecialCalculation,
@@ -97,7 +97,7 @@ const TYPE_BADGE_CONFIG: Record<SpecialCalcType, { className: string; labelKey: 
 export function SpecialCalculationsTab() {
   const t = useTranslations('adminVacationConfig')
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['absence_types.manage'])
 
   // Filter state
   const [search, setSearch] = React.useState('')
@@ -111,7 +111,7 @@ export function SpecialCalculationsTab() {
 
   // Data
   const { data: calcData, isLoading } = useVacationSpecialCalculations({
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
   const deleteMutation = useDeleteVacationSpecialCalculation()
   const items = (calcData?.data ?? []) as VacationSpecialCalculation[]

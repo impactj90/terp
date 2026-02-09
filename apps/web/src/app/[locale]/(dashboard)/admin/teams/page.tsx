@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, Users, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import { useTeams, useDeleteTeam, useDepartments } from '@/hooks/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -32,7 +32,7 @@ type Team = components['schemas']['Team']
 export default function TeamsPage() {
   const router = useRouter()
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['teams.manage'])
   const t = useTranslations('adminTeams')
 
   // Filters
@@ -53,11 +53,11 @@ export default function TeamsPage() {
     limit: 100, // Fetch a reasonable number of teams
     departmentId: departmentFilter,
     isActive: activeFilter,
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
 
   // Fetch departments for filter
-  const { data: departmentsData } = useDepartments({ enabled: !authLoading && isAdmin })
+  const { data: departmentsData } = useDepartments({ enabled: !authLoading && !permLoading && canAccess })
   const departments = departmentsData?.data ?? []
 
   // Delete mutation
@@ -70,10 +70,10 @@ export default function TeamsPage() {
 
   // Redirect if not admin
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   // Filter teams by search (client-side since API may not support text search)
   const allTeams = data?.items ?? []
@@ -129,11 +129,11 @@ export default function TeamsPage() {
   // Check for any active filters
   const hasFilters = Boolean(search) || departmentFilter !== undefined || activeFilter !== undefined
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <TeamsPageSkeleton />
   }
 
-  if (!isAdmin) {
+  if (!canAccess) {
     return null // Will redirect
   }
 

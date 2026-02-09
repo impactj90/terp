@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { Plus, Users, X, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import {
   useEmployeeAccessAssignments,
   useCreateEmployeeAccessAssignment,
@@ -63,7 +63,7 @@ type EmployeeAccessAssignment = components['schemas']['EmployeeAccessAssignment'
 export function AssignmentsTab() {
   const t = useTranslations('adminAccessControl')
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['access_control.manage'])
 
   // Filter state
   const [search, setSearch] = React.useState('')
@@ -77,14 +77,14 @@ export function AssignmentsTab() {
 
   // Data
   const { data: assignmentData, isLoading } = useEmployeeAccessAssignments({
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
   const { data: profilesData } = useAccessProfiles({
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
   const { data: employeesData } = useEmployees({
     active: true,
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
   const deleteMutation = useDeleteEmployeeAccessAssignment()
 

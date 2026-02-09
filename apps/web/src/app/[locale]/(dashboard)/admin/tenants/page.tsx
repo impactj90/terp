@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, Shield, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import { useTenants } from '@/hooks/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -26,7 +26,7 @@ type Tenant = components['schemas']['Tenant']
 export default function TenantsPage() {
   const router = useRouter()
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['tenants.manage'])
   const t = useTranslations('adminTenants')
 
   const [search, setSearch] = React.useState('')
@@ -37,7 +37,7 @@ export default function TenantsPage() {
   const [deactivateItem, setDeactivateItem] = React.useState<Tenant | null>(null)
 
   const { data: tenantsResponse, isLoading } = useTenants({
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
     params: { include_inactive: showInactive },
   })
 
@@ -52,10 +52,10 @@ export default function TenantsPage() {
   }, [tenantsResponse])
 
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   const filteredItems = React.useMemo(() => {
     if (!search.trim()) return tenants
@@ -93,11 +93,11 @@ export default function TenantsPage() {
 
   const hasFilters = Boolean(search) || showInactive
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <TenantsPageSkeleton />
   }
 
-  if (!isAdmin) {
+  if (!canAccess) {
     return null
   }
 

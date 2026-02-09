@@ -4,7 +4,7 @@ import * as React from 'react'
 import { useTranslations } from 'next-intl'
 import { Plus, Shield, X, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import {
   useAccessProfiles,
   useCreateAccessProfile,
@@ -70,7 +70,7 @@ const INITIAL_FORM: FormState = {
 export function ProfilesTab() {
   const t = useTranslations('adminAccessControl')
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['access_control.manage'])
 
   // Filter state
   const [search, setSearch] = React.useState('')
@@ -83,7 +83,7 @@ export function ProfilesTab() {
 
   // Data
   const { data: profileData, isLoading } = useAccessProfiles({
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
   const deleteMutation = useDeleteAccessProfile()
   const items = (profileData?.data ?? []) as AccessProfile[]

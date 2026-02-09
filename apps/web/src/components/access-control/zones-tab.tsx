@@ -4,7 +4,7 @@ import * as React from 'react'
 import { useTranslations } from 'next-intl'
 import { Plus, Shield, X, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import {
   useAccessZones,
   useCreateAccessZone,
@@ -72,7 +72,7 @@ const INITIAL_FORM: FormState = {
 export function ZonesTab() {
   const t = useTranslations('adminAccessControl')
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['access_control.manage'])
 
   // Filter state
   const [search, setSearch] = React.useState('')
@@ -85,7 +85,7 @@ export function ZonesTab() {
 
   // Data
   const { data: zoneData, isLoading } = useAccessZones({
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
   const deleteMutation = useDeleteAccessZone()
   const items = (zoneData?.data ?? []) as AccessZone[]

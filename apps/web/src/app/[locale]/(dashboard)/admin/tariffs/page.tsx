@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Plus, FileText, X } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import { useTariffs, useDeleteTariff } from '@/hooks/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -33,7 +33,7 @@ export default function TariffsPage() {
   const router = useRouter()
   const t = useTranslations('adminTariffs')
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['tariffs.manage'])
 
   // Filters
   const [search, setSearch] = React.useState('')
@@ -49,7 +49,7 @@ export default function TariffsPage() {
   // Fetch tariffs
   const { data, isLoading, isFetching } = useTariffs({
     active: activeFilter,
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
 
   // Delete mutation
@@ -57,10 +57,10 @@ export default function TariffsPage() {
 
   // Redirect if not admin
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   const tariffs = React.useMemo(() => {
     let list = data?.data ?? []
@@ -112,11 +112,11 @@ export default function TariffsPage() {
 
   const hasFilters = Boolean(search) || activeFilter !== undefined
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <TariffsPageSkeleton />
   }
 
-  if (!isAdmin) {
+  if (!canAccess) {
     return null
   }
 

@@ -39,7 +39,6 @@ import {
   DoorOpen,
   Terminal,
 } from 'lucide-react'
-import type { UserRole } from '@/hooks/use-has-role'
 
 /**
  * Navigation item configuration
@@ -51,8 +50,8 @@ export interface NavItem {
   href: string
   /** Lucide icon component */
   icon: LucideIcon
-  /** Required roles to see this item (if undefined, all roles can see) */
-  roles?: UserRole[]
+  /** Required permissions to see this item (if undefined, all users can see) */
+  permissions?: string[]
   /** Optional badge count */
   badge?: number
 }
@@ -63,8 +62,6 @@ export interface NavItem {
 export interface NavSection {
   /** Translation key in 'nav' namespace */
   titleKey: string
-  /** Required roles to see this section (if undefined, all roles can see) */
-  roles?: UserRole[]
   /** Navigation items in this section */
   items: NavItem[]
 }
@@ -121,229 +118,227 @@ export const navConfig: NavSection[] = [
   },
   {
     titleKey: 'management',
-    roles: ['admin'],
     items: [
       {
         titleKey: 'approvals',
         href: '/admin/approvals',
         icon: ClipboardCheck,
-        roles: ['admin'],
+        permissions: ['absences.approve'],
       },
       {
         titleKey: 'employees',
         href: '/admin/employees',
         icon: Users,
-        roles: ['admin'],
+        permissions: ['employees.view'],
       },
       {
         titleKey: 'teams',
         href: '/admin/teams',
         icon: UsersRound,
-        roles: ['admin'],
+        permissions: ['teams.manage'],
       },
       {
         titleKey: 'departments',
         href: '/admin/departments',
         icon: Building2,
-        roles: ['admin'],
+        permissions: ['departments.manage'],
       },
       {
         titleKey: 'costCenters',
         href: '/admin/cost-centers',
         icon: Landmark,
-        roles: ['admin'],
+        permissions: ['departments.manage'],
       },
       {
         titleKey: 'locations',
         href: '/admin/locations',
         icon: MapPin,
-        roles: ['admin'],
+        permissions: ['locations.manage'],
       },
       {
         titleKey: 'employmentTypes',
         href: '/admin/employment-types',
         icon: Briefcase,
-        roles: ['admin'],
+        permissions: ['employees.view'],
       },
       {
         titleKey: 'dayPlans',
         href: '/admin/day-plans',
         icon: CalendarDays,
-        roles: ['admin'],
+        permissions: ['day_plans.manage'],
       },
-{
+      {
         titleKey: 'weekPlans',
         href: '/admin/week-plans',
         icon: CalendarRange,
-        roles: ['admin'],
+        permissions: ['week_plans.manage'],
       },
       {
         titleKey: 'tariffs',
         href: '/admin/tariffs',
         icon: ScrollText,
-        roles: ['admin'],
+        permissions: ['tariffs.manage'],
       },
       {
         titleKey: 'holidays',
         href: '/admin/holidays',
         icon: CalendarHeart,
-        roles: ['admin'],
+        permissions: ['holidays.manage'],
       },
       {
         titleKey: 'absenceTypes',
         href: '/admin/absence-types',
         icon: CalendarOff,
-        roles: ['admin'],
+        permissions: ['absence_types.manage'],
       },
       {
         titleKey: 'bookingTypes',
         href: '/admin/booking-types',
         icon: Clock,
-        roles: ['admin'],
+        permissions: ['booking_types.manage'],
       },
       {
         titleKey: 'contactTypes',
         href: '/admin/contact-types',
         icon: Contact,
-        roles: ['admin'],
+        permissions: ['contact_management.manage'],
       },
       {
         titleKey: 'calculationRules',
         href: '/admin/calculation-rules',
         icon: Calculator,
-        roles: ['admin'],
+        permissions: ['absence_types.manage'],
       },
       {
         titleKey: 'accounts',
         href: '/admin/accounts',
         icon: Wallet,
-        roles: ['admin'],
+        permissions: ['accounts.manage'],
       },
       {
         titleKey: 'correctionAssistant',
         href: '/admin/correction-assistant',
         icon: AlertTriangle,
-        roles: ['admin'],
+        permissions: ['corrections.manage'],
       },
       {
         titleKey: 'evaluations',
         href: '/admin/evaluations',
         icon: BarChart3,
-        roles: ['admin'],
+        permissions: ['reports.view'],
       },
       {
         titleKey: 'monthlyValues',
         href: '/admin/monthly-values',
         icon: CalendarCheck,
-        roles: ['admin'],
+        permissions: ['reports.view'],
       },
       {
         titleKey: 'vacationBalances',
         href: '/admin/vacation-balances',
         icon: Palmtree,
-        roles: ['admin'],
+        permissions: ['absences.manage'],
       },
       {
         titleKey: 'vacationConfig',
         href: '/admin/vacation-config',
         icon: Umbrella,
-        roles: ['admin'],
+        permissions: ['absence_types.manage'],
       },
       {
         titleKey: 'shiftPlanning',
         href: '/admin/shift-planning',
         icon: Layers,
-        roles: ['admin'],
+        permissions: ['shift_planning.manage'],
       },
       {
         titleKey: 'orders',
         href: '/admin/orders',
         icon: Package,
-        roles: ['admin'],
+        permissions: ['orders.manage'],
       },
     ],
   },
   {
     titleKey: 'administration',
-    roles: ['admin'],
     items: [
       {
         titleKey: 'users',
         href: '/admin/users',
         icon: UserCog,
-        roles: ['admin'],
+        permissions: ['users.manage'],
       },
       {
         titleKey: 'userGroups',
         href: '/admin/user-groups',
         icon: ShieldCheck,
-        roles: ['admin'],
+        permissions: ['users.manage'],
       },
       {
         titleKey: 'reports',
         href: '/admin/reports',
         icon: FileText,
-        roles: ['admin'],
+        permissions: ['reports.view'],
       },
       {
         titleKey: 'auditLogs',
         href: '/admin/audit-logs',
         icon: FileClock,
-        roles: ['admin'],
+        permissions: ['users.manage'],
       },
       {
         titleKey: 'settings',
         href: '/admin/settings',
         icon: Settings,
-        roles: ['admin'],
+        permissions: ['settings.manage'],
       },
       {
         titleKey: 'tenants',
         href: '/admin/tenants',
         icon: Shield,
-        roles: ['admin'],
+        permissions: ['tenants.manage'],
       },
       {
         titleKey: 'payrollExports',
         href: '/admin/payroll-exports',
         icon: FileOutput,
-        roles: ['admin'],
+        permissions: ['payroll.view'],
       },
       {
         titleKey: 'exportInterfaces',
         href: '/admin/export-interfaces',
         icon: Settings2,
-        roles: ['admin'],
+        permissions: ['payroll.manage'],
       },
       {
         titleKey: 'monthlyEvaluations',
         href: '/admin/monthly-evaluations',
         icon: ClipboardList,
-        roles: ['admin'],
+        permissions: ['monthly_evaluations.manage'],
       },
       {
         titleKey: 'schedules',
         href: '/admin/schedules',
         icon: Timer,
-        roles: ['admin'],
+        permissions: ['schedules.manage'],
       },
       {
         titleKey: 'macros',
         href: '/admin/macros',
         icon: Repeat,
-        roles: ['admin'],
+        permissions: ['macros.manage'],
       },
       {
         titleKey: 'accessControl',
         href: '/admin/access-control',
         icon: DoorOpen,
-        roles: ['admin'],
+        permissions: ['access_control.manage'],
       },
       {
         titleKey: 'terminalBookings',
         href: '/admin/terminal-bookings',
         icon: Terminal,
-        roles: ['admin'],
+        permissions: ['terminal_bookings.manage'],
       },
     ],
   },

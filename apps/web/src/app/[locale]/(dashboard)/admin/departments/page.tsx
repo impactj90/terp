@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, Building2, X, TreePine, List } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import { useDepartments, useDepartmentTree, useDeleteDepartment } from '@/hooks/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -34,7 +34,7 @@ type DepartmentNode = components['schemas']['DepartmentNode']
 export default function DepartmentsPage() {
   const router = useRouter()
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['departments.manage'])
   const t = useTranslations('adminDepartments')
 
   // View mode
@@ -53,11 +53,11 @@ export default function DepartmentsPage() {
 
   // Fetch data
   const { data: treeData, isLoading: treeLoading } = useDepartmentTree({
-    enabled: !authLoading && isAdmin && viewMode === 'tree',
+    enabled: !authLoading && !permLoading && canAccess && viewMode === 'tree',
   })
 
   const { data: listData, isLoading: listLoading } = useDepartments({
-    enabled: !authLoading && isAdmin && viewMode === 'list',
+    enabled: !authLoading && !permLoading && canAccess && viewMode === 'list',
     active: activeFilter,
   })
 
@@ -66,10 +66,10 @@ export default function DepartmentsPage() {
 
   // Redirect if not admin
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   const tree = treeData ?? []
   const departments = listData?.data ?? []
@@ -151,11 +151,11 @@ export default function DepartmentsPage() {
 
   const hasFilters = Boolean(search) || activeFilter !== undefined
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <DepartmentsPageSkeleton />
   }
 
-  if (!isAdmin) {
+  if (!canAccess) {
     return null
   }
 

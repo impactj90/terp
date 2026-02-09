@@ -4,7 +4,7 @@ import * as React from 'react'
 import { useTranslations } from 'next-intl'
 import { Loader2, Check, Minus, AlertTriangle } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import {
   useEmployees,
   useVacationEntitlementPreview,
@@ -54,9 +54,9 @@ const formatDecimal = (val: number | undefined | null) => {
 
 export function VacationPreviewsTab() {
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['absence_types.manage'])
 
-  const { data: employeesData } = useEmployees({ limit: 200, active: true, enabled: !authLoading && isAdmin })
+  const { data: employeesData } = useEmployees({ limit: 200, active: true, enabled: !authLoading && !permLoading && canAccess })
   const employees = (employeesData?.data ?? []) as Employee[]
 
   return (

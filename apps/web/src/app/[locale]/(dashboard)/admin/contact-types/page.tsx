@@ -4,7 +4,7 @@ import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import {
   useContactTypes,
   useContactKinds,
@@ -27,7 +27,7 @@ type ContactKind = components['schemas']['ContactKind']
 export default function ContactTypesPage() {
   const router = useRouter()
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['contact_management.manage'])
   const t = useTranslations('adminContactTypes')
 
   // Contact Types state
@@ -44,13 +44,13 @@ export default function ContactTypesPage() {
 
   // Data fetching
   const { data: typesData, isLoading: typesLoading } = useContactTypes({
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
   const contactTypes = typesData?.data ?? []
 
   const { data: kindsData, isLoading: kindsLoading } = useContactKinds({
     contactTypeId: selectedType?.id,
-    enabled: !authLoading && isAdmin && !!selectedType,
+    enabled: !authLoading && !permLoading && canAccess && !!selectedType,
   })
   const contactKinds = kindsData?.data ?? []
 
@@ -59,10 +59,10 @@ export default function ContactTypesPage() {
   const deleteKindMutation = useDeleteContactKind()
 
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   const handleSelectType = (type: ContactType) => {
     setSelectedType(type)
@@ -108,11 +108,11 @@ export default function ContactTypesPage() {
     }
   }
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <ContactTypePageSkeleton />
   }
 
-  if (!isAdmin) {
+  if (!canAccess) {
     return null
   }
 

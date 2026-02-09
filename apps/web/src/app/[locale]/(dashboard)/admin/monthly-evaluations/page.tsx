@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Plus, FileText, X } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import {
   useMonthlyEvaluations,
   useDeleteMonthlyEvaluation,
@@ -42,7 +42,7 @@ export default function MonthlyEvaluationsPage() {
   const router = useRouter()
   const t = useTranslations('adminMonthlyEvaluations')
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['monthly_evaluations.manage'])
 
   // Filters
   const [search, setSearch] = React.useState('')
@@ -59,7 +59,7 @@ export default function MonthlyEvaluationsPage() {
 
   // Fetch monthly evaluation templates
   const { data: templatesData, isLoading } = useMonthlyEvaluations({
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
 
   // Mutations
@@ -68,10 +68,10 @@ export default function MonthlyEvaluationsPage() {
 
   // Redirect if not admin
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   // Extract templates from wrapped response
   const templates = (templatesData as { items?: MonthlyEvaluation[] })?.items ?? []
@@ -168,11 +168,11 @@ export default function MonthlyEvaluationsPage() {
     setStatusFilter('all')
   }
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <MonthlyEvaluationsPageSkeleton />
   }
 
-  if (!isAdmin) {
+  if (!canAccess) {
     return null
   }
 

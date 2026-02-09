@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Palmtree } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import { useVacationBalances, useDepartments } from '@/hooks/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -26,7 +26,7 @@ type VacationBalance = components['schemas']['VacationBalance']
 export default function AdminVacationBalancesPage() {
   const router = useRouter()
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['absences.manage'])
   const t = useTranslations('adminVacationBalances')
 
   // Filter state
@@ -42,16 +42,16 @@ export default function AdminVacationBalancesPage() {
 
   // Auth redirect
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   // Data fetching
   const { data: balancesData, isLoading } = useVacationBalances({
     year,
     departmentId,
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
   const balances = balancesData?.data ?? []
 
@@ -67,12 +67,12 @@ export default function AdminVacationBalancesPage() {
 
   const { data: departmentsData } = useDepartments({
     active: true,
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
   const departments = (departmentsData?.data ?? []).map((d) => ({ id: d.id, name: d.name }))
 
-  if (authLoading) return <VacationBalancesPageSkeleton />
-  if (!isAdmin) return null
+  if (authLoading || permLoading) return <VacationBalancesPageSkeleton />
+  if (!canAccess) return null
 
   return (
     <div className="space-y-6">

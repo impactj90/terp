@@ -4,7 +4,7 @@ import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import {
   useAbsences,
   useApproveAbsence,
@@ -45,7 +45,7 @@ export default function ApprovalsPage() {
   const router = useRouter()
   const t = useTranslations('adminApprovals')
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['absences.approve'])
 
   const [activeTab, setActiveTab] = React.useState<'timesheets' | 'absences'>(
     'timesheets'
@@ -74,7 +74,7 @@ export default function ApprovalsPage() {
     variant: 'success',
   })
 
-  const enabled = !authLoading && isAdmin
+  const enabled = !authLoading && !permLoading && canAccess
 
   const from = dateRange?.from ? formatDate(dateRange.from) : undefined
   const to = dateRange?.to ? formatDate(dateRange.to) : undefined
@@ -192,10 +192,10 @@ export default function ApprovalsPage() {
   const approveDailyValue = useApproveDailyValue()
 
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   const showToast = React.useCallback(
     (message: string, variant: 'success' | 'error' = 'success') => {
@@ -379,11 +379,11 @@ export default function ApprovalsPage() {
     }
   }
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <ApprovalsPageSkeleton />
   }
 
-  if (!isAdmin) {
+  if (!canAccess) {
     return null
   }
 

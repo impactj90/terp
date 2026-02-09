@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Plus, CalendarOff, X, FolderOpen } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import {
   useAbsenceTypes,
   useDeleteAbsenceType,
@@ -60,7 +60,7 @@ export default function AbsenceTypesPage() {
   const t = useTranslations('adminAbsenceTypes')
   const tGroups = useTranslations('adminAbsenceTypeGroups')
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['absence_types.manage'])
 
   // Tab state
   const [activeTab, setActiveTab] = React.useState<'absence-types' | 'groups'>('absence-types')
@@ -84,11 +84,11 @@ export default function AbsenceTypesPage() {
   const [deleteGroupItem, setDeleteGroupItem] = React.useState<AbsenceTypeGroup | null>(null)
 
   // Fetch absence types
-  const { data: absenceTypesData, isLoading } = useAbsenceTypes(!authLoading && isAdmin)
+  const { data: absenceTypesData, isLoading } = useAbsenceTypes(!authLoading && !permLoading && canAccess)
 
   // Fetch absence type groups
   const { data: groupsData, isLoading: groupsLoading } = useAbsenceTypeGroups({
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
 
   // Mutations
@@ -97,10 +97,10 @@ export default function AbsenceTypesPage() {
 
   // Redirect if not admin
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   const absenceTypes = absenceTypesData?.data ?? []
   const absenceTypeGroupsList = (groupsData as { data?: AbsenceTypeGroup[] })?.data ?? []
@@ -195,11 +195,11 @@ export default function AbsenceTypesPage() {
     setShowSystem(true)
   }
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <AbsenceTypesPageSkeleton />
   }
 
-  if (!isAdmin) {
+  if (!canAccess) {
     return null
   }
 

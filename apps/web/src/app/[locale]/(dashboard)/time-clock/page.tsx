@@ -6,7 +6,7 @@ import { RefreshCw } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
 import { useEmployees } from '@/hooks/api/use-employees'
 import { useClockState } from '@/hooks/use-clock-state'
-import { useHasRole } from '@/hooks/use-has-role'
+import { useHasPermission } from '@/hooks'
 import {
   ClockStatusBadge,
   RunningTimer,
@@ -41,13 +41,13 @@ export default function TimeClockPage() {
   const t = useTranslations('timeClock')
   const tc = useTranslations('common')
   const { user, isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canViewAll } = useHasPermission(['time_tracking.view_all'])
 
   const userEmployeeId = user?.employee_id ?? null
   const employees = useEmployees({
     limit: 250,
     active: true,
-    enabled: isAdmin,
+    enabled: canViewAll,
   })
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
@@ -55,7 +55,7 @@ export default function TimeClockPage() {
 
   // Set default employee for admin (or use own employee for regular users)
   useEffect(() => {
-    if (!isAdmin) {
+    if (!canViewAll) {
       if (userEmployeeId && selectedEmployeeId !== userEmployeeId) {
         setSelectedEmployeeId(userEmployeeId)
       }
@@ -73,9 +73,9 @@ export default function TimeClockPage() {
     if (firstEmployee?.id) {
       setSelectedEmployeeId(firstEmployee.id)
     }
-  }, [employees.data, isAdmin, selectedEmployeeId, userEmployeeId])
+  }, [employees.data, canViewAll, selectedEmployeeId, userEmployeeId])
 
-  const effectiveEmployeeId = isAdmin ? selectedEmployeeId : userEmployeeId
+  const effectiveEmployeeId = canViewAll ? selectedEmployeeId : userEmployeeId
 
   const clockState = useClockState({
     employeeId: effectiveEmployeeId ?? '',
@@ -98,11 +98,11 @@ export default function TimeClockPage() {
   )
 
   // Loading state
-  if (authLoading || (isAdmin && employees.isLoading)) {
+  if (authLoading || (canViewAll && employees.isLoading)) {
     return <TimeClockSkeleton />
   }
 
-  if (!isAdmin && !userEmployeeId) {
+  if (!canViewAll && !userEmployeeId) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <p className="text-muted-foreground">{tc('noEmployeeRecord')}</p>
@@ -111,7 +111,7 @@ export default function TimeClockPage() {
     )
   }
 
-  if (isAdmin && employees.data?.data?.length === 0) {
+  if (canViewAll && employees.data?.data?.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <p className="text-muted-foreground">{t('noEmployees')}</p>
@@ -163,7 +163,7 @@ export default function TimeClockPage() {
       )}
 
       {/* Employee Selector (temporary until user-employee link exists) */}
-      {isAdmin && employees.data?.data && employees.data.data.length > 1 && selectedEmployeeId && (
+      {canViewAll && employees.data?.data && employees.data.data.length > 1 && selectedEmployeeId && (
         <EmployeeSelector
           employees={employees.data.data}
           selectedId={selectedEmployeeId}

@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks/use-has-role'
+import { useHasPermission } from '@/hooks'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -30,19 +30,19 @@ export default function YearOverviewPage() {
   const tc = useTranslations('common')
   const router = useRouter()
   const { user, isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canViewAll } = useHasPermission(['time_tracking.view_all'])
 
   // For regular users, use their employee_id; for admin, allow selection
   const userEmployeeId = user?.employee_id ?? undefined
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | undefined>(undefined)
-  const effectiveEmployeeId = isAdmin ? selectedEmployeeId : userEmployeeId
+  const effectiveEmployeeId = canViewAll ? selectedEmployeeId : userEmployeeId
 
   const currentYear = new Date().getFullYear()
   const [selectedYear, setSelectedYear] = useState(currentYear)
 
   // Fetch employees for admin selector
   const { data: employeesData } = useEmployees({
-    enabled: isAdmin,
+    enabled: canViewAll,
     limit: 250,
   })
 
@@ -92,7 +92,7 @@ export default function YearOverviewPage() {
     return <YearOverviewPageSkeleton />
   }
 
-  if (!isAdmin && !userEmployeeId) {
+  if (!canViewAll && !userEmployeeId) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <p className="text-muted-foreground">
@@ -145,7 +145,7 @@ export default function YearOverviewPage() {
       {/* Controls row */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         {/* Employee selector (admin only) */}
-        {isAdmin && (
+        {canViewAll && (
           <Select
             value={selectedEmployeeId ?? ''}
             onValueChange={setSelectedEmployeeId}
@@ -234,7 +234,7 @@ export default function YearOverviewPage() {
       )}
 
       {/* No employee selected message for admin */}
-      {isAdmin && !effectiveEmployeeId && (
+      {canViewAll && !effectiveEmployeeId && (
         <Card>
           <CardContent className="py-12">
             <div className="text-center text-muted-foreground">

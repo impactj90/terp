@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, CalendarDays, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import { useWeekPlans, useDeleteWeekPlan } from '@/hooks/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -30,7 +30,7 @@ type WeekPlan = components['schemas']['WeekPlan']
 export default function WeekPlansPage() {
   const router = useRouter()
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['week_plans.manage'])
   const t = useTranslations('adminWeekPlans')
 
   // Filters
@@ -47,7 +47,7 @@ export default function WeekPlansPage() {
   // Fetch week plans
   const { data, isLoading, isFetching } = useWeekPlans({
     active: activeFilter,
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
 
   // Delete mutation
@@ -55,10 +55,10 @@ export default function WeekPlansPage() {
 
   // Redirect if not admin
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   const weekPlans = React.useMemo(() => {
     let plans = data?.data ?? []
@@ -109,11 +109,11 @@ export default function WeekPlansPage() {
 
   const hasFilters = Boolean(search) || activeFilter !== undefined
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <WeekPlansPageSkeleton />
   }
 
-  if (!isAdmin) {
+  if (!canAccess) {
     return null
   }
 

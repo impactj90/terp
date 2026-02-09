@@ -31,12 +31,12 @@ export function useCreateUserGroup() {
 
 export function useUpdateUserGroup() {
   return useApiMutation('/user-groups/{id}', 'patch', {
-    invalidateKeys: [['/user-groups'], ['/user-groups/{id}']],
+    invalidateKeys: [['/user-groups'], ['/user-groups/{id}'], ['/auth/permissions']],
   })
 }
 
 export function useDeleteUserGroup() {
   return useApiMutation('/user-groups/{id}', 'delete', {
-    invalidateKeys: [['/user-groups']],
+    invalidateKeys: [['/user-groups'], ['/auth/permissions']],
   })
 }

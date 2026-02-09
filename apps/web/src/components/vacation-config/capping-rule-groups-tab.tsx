@@ -4,7 +4,7 @@ import * as React from 'react'
 import { useTranslations } from 'next-intl'
 import { Plus, FolderOpen, X, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import {
   useVacationCappingRuleGroups,
   useCreateVacationCappingRuleGroup,
@@ -75,7 +75,7 @@ const INITIAL_FORM: FormState = {
 export function CappingRuleGroupsTab() {
   const t = useTranslations('adminVacationConfig')
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['absence_types.manage'])
 
   const [search, setSearch] = React.useState('')
   const [createOpen, setCreateOpen] = React.useState(false)
@@ -84,7 +84,7 @@ export function CappingRuleGroupsTab() {
   const [deleteError, setDeleteError] = React.useState<string | null>(null)
 
   const { data: groupsData, isLoading } = useVacationCappingRuleGroups({
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
   const deleteMutation = useDeleteVacationCappingRuleGroup()
   const items = (groupsData?.data ?? []) as VacationCappingRuleGroup[]

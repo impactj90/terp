@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { Terminal, X } from 'lucide-react'
 import { format } from 'date-fns'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import {
   useTerminalBookings,
   useEmployees,
@@ -76,7 +76,7 @@ function getDefaultDateRange() {
 export function BookingsTab() {
   const t = useTranslations('adminTerminalBookings')
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['terminal_bookings.manage'])
 
   // Filter state
   const defaults = React.useMemo(() => getDefaultDateRange(), [])
@@ -95,11 +95,11 @@ export function BookingsTab() {
     employee_id: employeeId !== 'all' ? employeeId : undefined,
     status: status !== 'all' ? (status as 'pending' | 'processed' | 'failed' | 'skipped') : undefined,
     import_batch_id: importBatchId || undefined,
-    enabled: !authLoading && isAdmin && !!dateFrom && !!dateTo,
+    enabled: !authLoading && !permLoading && canAccess && !!dateFrom && !!dateTo,
   })
   const { data: employeesData } = useEmployees({
     active: true,
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
 
   const bookings = (bookingsData?.data ?? []) as RawTerminalBooking[]

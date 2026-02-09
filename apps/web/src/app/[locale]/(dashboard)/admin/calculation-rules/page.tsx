@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, Calculator, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import { useCalculationRules, useDeleteCalculationRule } from '@/hooks/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -26,7 +26,7 @@ type CalculationRule = components['schemas']['CalculationRule']
 export default function CalculationRulesPage() {
   const router = useRouter()
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['absence_types.manage'])
   const t = useTranslations('adminCalculationRules')
 
   const [search, setSearch] = React.useState('')
@@ -37,15 +37,15 @@ export default function CalculationRulesPage() {
   const [deleteItem, setDeleteItem] = React.useState<CalculationRule | null>(null)
   const [deleteError, setDeleteError] = React.useState<string | null>(null)
 
-  const { data: rulesData, isLoading } = useCalculationRules({ enabled: !authLoading && isAdmin })
+  const { data: rulesData, isLoading } = useCalculationRules({ enabled: !authLoading && !permLoading && canAccess })
   const deleteMutation = useDeleteCalculationRule()
   const rules = rulesData?.data ?? []
 
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   const filteredItems = React.useMemo(() => {
     let filtered = rules
@@ -103,11 +103,11 @@ export default function CalculationRulesPage() {
 
   const hasFilters = Boolean(search) || activeOnly
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <CalculationRulesPageSkeleton />
   }
 
-  if (!isAdmin) {
+  if (!canAccess) {
     return null
   }
 

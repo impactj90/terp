@@ -18,4 +18,4 @@ export {
   USER_ROLES,
   type UserRole,
 } from './use-has-role'
-export { useHasPermission } from './use-has-permission'
+export { useHasPermission, usePermissionChecker } from './use-has-permission'

@@ -4,8 +4,7 @@ import { useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import { type UserRole } from '@/hooks/use-has-role'
-import { useAuth } from '@/providers/auth-provider'
+import { usePermissionChecker } from '@/hooks/use-has-permission'
 import { useSidebar } from './sidebar-context'
 import { SidebarNavItem } from './sidebar-nav-item'
 import { navConfig, type NavSection, type NavItem } from './sidebar-nav-config'
@@ -16,32 +15,28 @@ interface SidebarNavProps {
 }
 
 /**
- * Filters a nav item based on user role.
+ * Filters a nav item based on user permissions.
  */
-function filterNavItem(item: NavItem, userRole: UserRole | null): boolean {
-  if (!item.roles) return true
-  if (!userRole) return false
-  return item.roles.includes(userRole)
+function filterNavItem(
+  item: NavItem,
+  check: (keys: string[]) => boolean
+): boolean {
+  if (!item.permissions) return true
+  return check(item.permissions)
 }
 
 /**
- * Filters a nav section based on user role.
+ * Filters a nav section based on user permissions.
+ * A section is visible if it has at least one visible item.
  */
 function filterNavSection(
   section: NavSection,
-  userRole: UserRole | null
+  check: (keys: string[]) => boolean
 ): NavSection | null {
-  // First check if user has access to the section itself
-  if (section.roles && (!userRole || !section.roles.includes(userRole))) {
-    return null
-  }
-
-  // Filter items within the section
   const filteredItems = section.items.filter((item) =>
-    filterNavItem(item, userRole)
+    filterNavItem(item, check)
   )
 
-  // Don't return section if no items are visible
   if (filteredItems.length === 0) {
     return null
   }
@@ -54,22 +49,20 @@ function filterNavSection(
 
 /**
  * Sidebar navigation component.
- * Renders navigation sections with role-based filtering.
+ * Renders navigation sections with permission-based filtering.
  */
 export function SidebarNav({ sections = navConfig }: SidebarNavProps) {
-  const { user, isAuthenticated } = useAuth()
   const { isCollapsed } = useSidebar()
   const t = useTranslations('nav')
+  const { check, isLoading } = usePermissionChecker()
 
-  // Get user role for filtering
-  const userRole = isAuthenticated && user ? user.role : null
-
-  // Filter sections based on user role
+  // Filter sections based on user permissions
   const visibleSections = useMemo(() => {
+    if (isLoading) return []
     return sections
-      .map((section) => filterNavSection(section, userRole))
+      .map((section) => filterNavSection(section, check))
       .filter((section): section is NavSection => section !== null)
-  }, [sections, userRole])
+  }, [sections, check, isLoading])
 
   return (
     <ScrollArea className="flex-1 min-h-0 px-3">

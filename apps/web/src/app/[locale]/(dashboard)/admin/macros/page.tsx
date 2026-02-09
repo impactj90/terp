@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Plus, Repeat, X } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import { useMacros, useDeleteMacro, useUpdateMacro } from '@/hooks/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -21,22 +21,22 @@ export default function MacrosPage() {
   const router = useRouter()
   const t = useTranslations('adminMacros')
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['macros.manage'])
 
   const [search, setSearch] = React.useState('')
   const [createOpen, setCreateOpen] = React.useState(false)
   const [editItem, setEditItem] = React.useState<Macro | null>(null)
   const [deleteItem, setDeleteItem] = React.useState<Macro | null>(null)
 
-  const { data, isLoading } = useMacros({ enabled: !authLoading && isAdmin })
+  const { data, isLoading } = useMacros({ enabled: !authLoading && !permLoading && canAccess })
   const deleteMutation = useDeleteMacro()
   const updateMutation = useUpdateMacro()
 
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   const macros = data?.data ?? []
 
@@ -76,11 +76,11 @@ export default function MacrosPage() {
     setEditItem(null)
   }
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <MacrosPageSkeleton />
   }
 
-  if (!isAdmin) {
+  if (!canAccess) {
     return null
   }
 

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Plus, Clock, X } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import { useSchedules, useDeleteSchedule, useUpdateSchedule } from '@/hooks/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -21,22 +21,22 @@ export default function SchedulesPage() {
   const router = useRouter()
   const t = useTranslations('adminSchedules')
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['schedules.manage'])
 
   const [search, setSearch] = React.useState('')
   const [createOpen, setCreateOpen] = React.useState(false)
   const [editItem, setEditItem] = React.useState<Schedule | null>(null)
   const [deleteItem, setDeleteItem] = React.useState<Schedule | null>(null)
 
-  const { data, isLoading } = useSchedules({ enabled: !authLoading && isAdmin })
+  const { data, isLoading } = useSchedules({ enabled: !authLoading && !permLoading && canAccess })
   const deleteMutation = useDeleteSchedule()
   const updateMutation = useUpdateSchedule()
 
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   const schedules = data?.data ?? []
 
@@ -76,11 +76,11 @@ export default function SchedulesPage() {
     setEditItem(null)
   }
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <SchedulesPageSkeleton />
   }
 
-  if (!isAdmin) {
+  if (!canAccess) {
     return null
   }
 

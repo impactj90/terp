@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useAuth } from '@/providers/auth-provider'
 import { useCurrentPermissions, usePermissions } from '@/hooks/api'
 
@@ -11,41 +11,59 @@ const buildPermissionKey = (resource?: string | null, action?: string | null) =>
   return `${resource}.${action}`
 }
 
-export function useHasPermission(keys: PermissionKey[]) {
+export function usePermissionChecker() {
   const { isAuthenticated } = useAuth()
   const permissionsQuery = usePermissions(isAuthenticated)
   const currentPermissionsQuery = useCurrentPermissions(isAuthenticated)
 
-  const allowed = useMemo(() => {
+  const isAdmin = useMemo(() => {
     if (!isAuthenticated || !currentPermissionsQuery.data?.data) {
       return false
     }
+    return currentPermissionsQuery.data.data.is_admin === true
+  }, [isAuthenticated, currentPermissionsQuery.data])
 
-    if (currentPermissionsQuery.data.data.is_admin) {
-      return true
-    }
-
-    const allowedSet = new Set(currentPermissionsQuery.data.data.permission_ids ?? [])
-    if (!permissionsQuery.data?.data) {
-      return false
-    }
-
-    const catalogMap = new Map<string, string>()
+  const catalogMap = useMemo(() => {
+    const map = new Map<string, string>()
+    if (!permissionsQuery.data?.data) return map
     permissionsQuery.data.data.forEach((perm) => {
       const key = buildPermissionKey(perm.resource, perm.action)
       if (key && perm.id) {
-        catalogMap.set(key, perm.id)
+        map.set(key, perm.id)
       }
     })
+    return map
+  }, [permissionsQuery.data])
 
-    return keys.some((key) => {
-      const id = catalogMap.get(key)
-      return id ? allowedSet.has(id) : false
-    })
-  }, [isAuthenticated, permissionsQuery.data, currentPermissionsQuery.data, keys])
+  const allowedSet = useMemo(() => {
+    return new Set(currentPermissionsQuery.data?.data?.permission_ids ?? [])
+  }, [currentPermissionsQuery.data])
+
+  const check = useCallback(
+    (keys: PermissionKey[]) => {
+      if (!isAuthenticated || !currentPermissionsQuery.data?.data) {
+        return false
+      }
+      if (isAdmin) return true
+      return keys.some((key) => {
+        const id = catalogMap.get(key)
+        return id ? allowedSet.has(id) : false
+      })
+    },
+    [isAuthenticated, currentPermissionsQuery.data, isAdmin, catalogMap, allowedSet]
+  )
 
   return {
-    allowed,
+    check,
+    isAdmin,
     isLoading: permissionsQuery.isLoading || currentPermissionsQuery.isLoading,
   }
+}
+
+export function useHasPermission(keys: PermissionKey[]) {
+  const { check, isLoading } = usePermissionChecker()
+
+  const allowed = useMemo(() => check(keys), [check, keys])
+
+  return { allowed, isLoading }
 }

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, MapPin, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import { useLocations, useDeleteLocation } from '@/hooks/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -20,7 +20,7 @@ type Location = components['schemas']['Location']
 export default function LocationsPage() {
   const router = useRouter()
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['locations.manage'])
   const t = useTranslations('adminLocations')
 
   const [search, setSearch] = React.useState('')
@@ -29,15 +29,15 @@ export default function LocationsPage() {
   const [viewItem, setViewItem] = React.useState<Location | null>(null)
   const [deleteItem, setDeleteItem] = React.useState<Location | null>(null)
 
-  const { data: locationsData, isLoading } = useLocations({ enabled: !authLoading && isAdmin })
+  const { data: locationsData, isLoading } = useLocations({ enabled: !authLoading && !permLoading && canAccess })
   const deleteMutation = useDeleteLocation()
   const locations = locationsData?.data ?? []
 
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   const filteredItems = React.useMemo(() => {
     if (!search.trim()) return locations
@@ -80,11 +80,11 @@ export default function LocationsPage() {
 
   const hasFilters = Boolean(search)
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <LocationsPageSkeleton />
   }
 
-  if (!isAdmin) {
+  if (!canAccess) {
     return null
   }
 

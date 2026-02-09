@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Plus, Package, Activity, X } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
-import { useHasRole } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import {
   useOrders,
   useDeleteOrder,
@@ -36,7 +36,7 @@ export default function OrdersPage() {
   const t = useTranslations('adminOrders')
   const tAct = useTranslations('adminActivities')
   const { isLoading: authLoading } = useAuth()
-  const isAdmin = useHasRole(['admin'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['orders.manage'])
 
   // Page-level tab state
   const [activeTab, setActiveTab] = React.useState<'orders' | 'activities'>('orders')
@@ -55,10 +55,10 @@ export default function OrdersPage() {
 
   // Data fetching
   const { data: ordersData, isLoading: ordersLoading } = useOrders({
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
   const { data: activitiesData, isLoading: activitiesLoading } = useActivities({
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && !permLoading && canAccess,
   })
 
   // Mutations
@@ -66,10 +66,10 @@ export default function OrdersPage() {
   const deleteActivityMutation = useDeleteActivity()
 
   React.useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !permLoading && !canAccess) {
       router.push('/dashboard')
     }
-  }, [authLoading, isAdmin, router])
+  }, [authLoading, permLoading, canAccess, router])
 
   const orders = ordersData?.data ?? []
   const activities = activitiesData?.data ?? []
@@ -151,11 +151,11 @@ export default function OrdersPage() {
     setEditActivity(null)
   }
 
-  if (authLoading) {
+  if (authLoading || permLoading) {
     return <OrdersPageSkeleton />
   }
 
-  if (!isAdmin) {
+  if (!canAccess) {
     return null
   }
 
