@@ -343,6 +343,14 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Ensure all dev users have user_tenants entries
+	for _, user := range auth.DevUsers {
+		if err := h.tenantService.AddUserToTenant(r.Context(), user.ID, devTenant.ID, "member"); err != nil {
+			respondError(w, http.StatusInternalServerError, "failed to add dev user to tenant")
+			return
+		}
+	}
+
 	// Create all dev employee day plans (idempotent via BulkCreate with ON CONFLICT)
 	devDayPlans := auth.GetDevEmployeeDayPlans()
 	if len(devDayPlans) > 0 {
@@ -611,55 +619,89 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// In dev mode, redirect to dev login
-	if h.authConfig.IsDevMode() {
-		respondJSON(w, http.StatusBadRequest, map[string]any{
-			"message": "You are in dev mode, please use /auth/dev/login instead.",
-		})
-		return
-	}
+	var user *model.User
+	var tenant *model.Tenant
 
 	tenantIDStr := r.Header.Get("X-Tenant-ID")
-	if tenantIDStr == "" {
-		respondError(w, http.StatusBadRequest, "Tenant required")
-		return
-	}
-	tenantID, err := uuid.Parse(tenantIDStr)
-	if err != nil {
-		respondError(w, http.StatusBadRequest, "Invalid tenant ID")
-		return
+	if tenantIDStr != "" {
+		// Tenant-scoped login (existing behaviour)
+		tenantID, err := uuid.Parse(tenantIDStr)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid tenant ID")
+			return
+		}
+
+		tenant, err = h.tenantService.GetByID(r.Context(), tenantID)
+		if errors.Is(err, service.ErrTenantNotFound) {
+			respondError(w, http.StatusUnauthorized, "Invalid tenant")
+			return
+		}
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, "Failed to load tenant")
+			return
+		}
+		if !tenant.IsActive {
+			respondError(w, http.StatusForbidden, "Tenant is inactive")
+			return
+		}
+
+		user, err = h.userService.Authenticate(r.Context(), tenantID, req.Email, req.Password)
+		if errors.Is(err, service.ErrInvalidCredentials) {
+			respondError(w, http.StatusUnauthorized, "Invalid credentials")
+			return
+		}
+		if errors.Is(err, service.ErrUserInactive) {
+			respondError(w, http.StatusForbidden, "User is inactive")
+			return
+		}
+		if errors.Is(err, service.ErrUserLocked) {
+			respondError(w, http.StatusForbidden, "User is locked")
+			return
+		}
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, "Failed to authenticate")
+			return
+		}
+	} else {
+		// No tenant header — look up user by email globally
+		var err error
+		user, err = h.userService.AuthenticateByEmail(r.Context(), req.Email, req.Password)
+		if errors.Is(err, service.ErrInvalidCredentials) {
+			respondError(w, http.StatusUnauthorized, "Invalid credentials")
+			return
+		}
+		if errors.Is(err, service.ErrUserInactive) {
+			respondError(w, http.StatusForbidden, "User is inactive")
+			return
+		}
+		if errors.Is(err, service.ErrUserLocked) {
+			respondError(w, http.StatusForbidden, "User is locked")
+			return
+		}
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, "Failed to authenticate")
+			return
+		}
+
+		if user.TenantID == nil {
+			respondError(w, http.StatusUnauthorized, "User has no tenant assigned")
+			return
+		}
+
+		tenant, err = h.tenantService.GetByID(r.Context(), *user.TenantID)
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, "Failed to load tenant")
+			return
+		}
+		if !tenant.IsActive {
+			respondError(w, http.StatusForbidden, "Tenant is inactive")
+			return
+		}
 	}
 
-	tenant, err := h.tenantService.GetByID(r.Context(), tenantID)
-	if errors.Is(err, service.ErrTenantNotFound) {
-		respondError(w, http.StatusUnauthorized, "Invalid tenant")
-		return
-	}
-	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to load tenant")
-		return
-	}
-	if !tenant.IsActive {
-		respondError(w, http.StatusForbidden, "Tenant is inactive")
-		return
-	}
-
-	user, err := h.userService.Authenticate(r.Context(), tenantID, req.Email, req.Password)
-	if errors.Is(err, service.ErrInvalidCredentials) {
-		respondError(w, http.StatusUnauthorized, "Invalid credentials")
-		return
-	}
-	if errors.Is(err, service.ErrUserInactive) {
-		respondError(w, http.StatusForbidden, "User is inactive")
-		return
-	}
-	if errors.Is(err, service.ErrUserLocked) {
-		respondError(w, http.StatusForbidden, "User is locked")
-		return
-	}
-	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to authenticate")
-		return
+	// Backfill user_tenants for users that existed before the migration
+	if tenant != nil {
+		_ = h.tenantService.AddUserToTenant(r.Context(), user.ID, tenant.ID, "member")
 	}
 
 	token, err := h.jwtManager.Generate(user.ID, user.Email, user.DisplayName, string(user.Role))
@@ -679,8 +721,9 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	})
 
 	respondJSON(w, http.StatusOK, map[string]any{
-		"token": token,
-		"user":  mapUserToResponse(user),
+		"token":  token,
+		"user":   mapUserToResponse(user),
+		"tenant": tenant,
 	})
 }
 

@@ -58,6 +58,8 @@ func RegisterUserRoutes(r chi.Router, h *UserHandler, authz *middleware.Authoriz
 }
 
 // RegisterTenantRoutes registers tenant routes.
+// GET /tenants is open to all authenticated users (data is user-filtered).
+// CRUD operations (POST/PATCH/DELETE) remain admin-only.
 func RegisterTenantRoutes(r chi.Router, h *TenantHandler, authz *middleware.AuthorizationMiddleware) {
 	permManage := permissions.ID("tenants.manage").String()
 	r.Route("/tenants", func(r chi.Router) {
@@ -70,7 +72,7 @@ func RegisterTenantRoutes(r chi.Router, h *TenantHandler, authz *middleware.Auth
 			return
 		}
 
-		r.With(authz.RequirePermission(permManage)).Get("/", h.List)
+		r.Get("/", h.List)
 		r.With(authz.RequirePermission(permManage)).Post("/", h.Create)
 		r.With(authz.RequirePermission(permManage)).Get("/{id}", h.Get)
 		r.With(authz.RequirePermission(permManage)).Patch("/{id}", h.Update)

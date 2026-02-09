@@ -95,9 +95,11 @@ func main() {
 	orderBookingRepo := repository.NewOrderBookingRepository(db)
 	shiftRepo := repository.NewShiftRepository(db)
 
+	userTenantRepo := repository.NewUserTenantRepository(db)
+
 	// Initialize services
 	userService := service.NewUserService(userRepo, userGroupRepo)
-	tenantService := service.NewTenantService(tenantRepo)
+	tenantService := service.NewTenantService(tenantRepo, userTenantRepo)
 	accountService := service.NewAccountService(accountRepo)
 	holidayService := service.NewHolidayService(holidayRepo)
 	costCenterService := service.NewCostCenterService(costCenterRepo)
@@ -440,6 +442,7 @@ func main() {
 	dailyCalcService.SetNotificationService(notificationService)
 	dailyValueService.SetNotificationService(notificationService)
 	userService.SetNotificationService(notificationService)
+	userService.SetUserTenantRepo(userTenantRepo)
 
 	// Wire audit log service into handlers
 	userHandler.SetAuditService(auditLogService)
@@ -455,7 +458,7 @@ func main() {
 	systemSettingsHandler.SetAuditService(auditLogService)
 
 	// Initialize tenant middleware
-	tenantMiddleware := middleware.NewTenantMiddleware(tenantService)
+	tenantMiddleware := middleware.NewTenantMiddleware(tenantService, userTenantRepo)
 	authzMiddleware := middleware.NewAuthorizationMiddleware(userRepo)
 
 	// Create router

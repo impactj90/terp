@@ -28,7 +28,7 @@ func newTenantInput(name, slug string) service.CreateTenantInput {
 func TestTenantService_Create_Success(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewTenantRepository(db)
-	svc := service.NewTenantService(repo)
+	svc := service.NewTenantService(repo, repository.NewUserTenantRepository(db))
 	ctx := context.Background()
 
 	slug := "test-" + uuid.New().String()[:8]
@@ -42,7 +42,7 @@ func TestTenantService_Create_Success(t *testing.T) {
 func TestTenantService_Create_NormalizesSlug(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewTenantRepository(db)
-	svc := service.NewTenantService(repo)
+	svc := service.NewTenantService(repo, repository.NewUserTenantRepository(db))
 	ctx := context.Background()
 
 	suffix := uuid.New().String()[:8]
@@ -56,7 +56,7 @@ func TestTenantService_Create_NormalizesSlug(t *testing.T) {
 func TestTenantService_Create_SlugExists(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewTenantRepository(db)
-	svc := service.NewTenantService(repo)
+	svc := service.NewTenantService(repo, repository.NewUserTenantRepository(db))
 	ctx := context.Background()
 
 	slug := "existing-" + uuid.New().String()[:8]
@@ -70,7 +70,7 @@ func TestTenantService_Create_SlugExists(t *testing.T) {
 func TestTenantService_Create_InvalidSlug_Empty(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewTenantRepository(db)
-	svc := service.NewTenantService(repo)
+	svc := service.NewTenantService(repo, repository.NewUserTenantRepository(db))
 	ctx := context.Background()
 
 	_, err := svc.Create(ctx, newTenantInput("Test", ""))
@@ -80,7 +80,7 @@ func TestTenantService_Create_InvalidSlug_Empty(t *testing.T) {
 func TestTenantService_Create_InvalidSlug_TooShort(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewTenantRepository(db)
-	svc := service.NewTenantService(repo)
+	svc := service.NewTenantService(repo, repository.NewUserTenantRepository(db))
 	ctx := context.Background()
 
 	_, err := svc.Create(ctx, newTenantInput("Test", "ab"))
@@ -90,7 +90,7 @@ func TestTenantService_Create_InvalidSlug_TooShort(t *testing.T) {
 func TestTenantService_Create_InvalidAddress(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewTenantRepository(db)
-	svc := service.NewTenantService(repo)
+	svc := service.NewTenantService(repo, repository.NewUserTenantRepository(db))
 	ctx := context.Background()
 
 	input := newTenantInput("Test", "test-"+uuid.New().String()[:8])
@@ -102,7 +102,7 @@ func TestTenantService_Create_InvalidAddress(t *testing.T) {
 func TestTenantService_Create_InvalidVacationBasis(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewTenantRepository(db)
-	svc := service.NewTenantService(repo)
+	svc := service.NewTenantService(repo, repository.NewUserTenantRepository(db))
 	ctx := context.Background()
 
 	input := newTenantInput("Test", "test-"+uuid.New().String()[:8])
@@ -115,7 +115,7 @@ func TestTenantService_Create_InvalidVacationBasis(t *testing.T) {
 func TestTenantService_GetByID_Success(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewTenantRepository(db)
-	svc := service.NewTenantService(repo)
+	svc := service.NewTenantService(repo, repository.NewUserTenantRepository(db))
 	ctx := context.Background()
 
 	created, err := svc.Create(ctx, newTenantInput("Test", "test-"+uuid.New().String()[:8]))
@@ -130,7 +130,7 @@ func TestTenantService_GetByID_Success(t *testing.T) {
 func TestTenantService_GetByID_NotFound(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewTenantRepository(db)
-	svc := service.NewTenantService(repo)
+	svc := service.NewTenantService(repo, repository.NewUserTenantRepository(db))
 	ctx := context.Background()
 
 	_, err := svc.GetByID(ctx, uuid.New())
@@ -140,7 +140,7 @@ func TestTenantService_GetByID_NotFound(t *testing.T) {
 func TestTenantService_GetBySlug_Success(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewTenantRepository(db)
-	svc := service.NewTenantService(repo)
+	svc := service.NewTenantService(repo, repository.NewUserTenantRepository(db))
 	ctx := context.Background()
 
 	slug := "unique-" + uuid.New().String()[:8]
@@ -155,7 +155,7 @@ func TestTenantService_GetBySlug_Success(t *testing.T) {
 func TestTenantService_GetBySlug_NotFound(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewTenantRepository(db)
-	svc := service.NewTenantService(repo)
+	svc := service.NewTenantService(repo, repository.NewUserTenantRepository(db))
 	ctx := context.Background()
 
 	_, err := svc.GetBySlug(ctx, "nonexistent")
@@ -165,7 +165,7 @@ func TestTenantService_GetBySlug_NotFound(t *testing.T) {
 func TestTenantService_Update(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewTenantRepository(db)
-	svc := service.NewTenantService(repo)
+	svc := service.NewTenantService(repo, repository.NewUserTenantRepository(db))
 	ctx := context.Background()
 
 	tenant, err := svc.Create(ctx, newTenantInput("Original", "test-"+uuid.New().String()[:8]))
@@ -183,7 +183,7 @@ func TestTenantService_Update(t *testing.T) {
 func TestTenantService_List_All(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewTenantRepository(db)
-	svc := service.NewTenantService(repo)
+	svc := service.NewTenantService(repo, repository.NewUserTenantRepository(db))
 	ctx := context.Background()
 
 	_, err := svc.Create(ctx, newTenantInput("Tenant A", "tenant-a-"+uuid.New().String()[:8]))
@@ -199,7 +199,7 @@ func TestTenantService_List_All(t *testing.T) {
 func TestTenantService_List_ActiveOnly(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewTenantRepository(db)
-	svc := service.NewTenantService(repo)
+	svc := service.NewTenantService(repo, repository.NewUserTenantRepository(db))
 	ctx := context.Background()
 
 	activeName := "Active-" + uuid.New().String()[:8]
@@ -229,7 +229,7 @@ func TestTenantService_List_ActiveOnly(t *testing.T) {
 func TestTenantService_Deactivate(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewTenantRepository(db)
-	svc := service.NewTenantService(repo)
+	svc := service.NewTenantService(repo, repository.NewUserTenantRepository(db))
 	ctx := context.Background()
 
 	tenant, err := svc.Create(ctx, newTenantInput("ToDeactivate", "to-delete-"+uuid.New().String()[:8]))

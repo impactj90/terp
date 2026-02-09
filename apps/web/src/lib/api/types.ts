@@ -37,7 +37,8 @@ export interface paths {
         /**
          * Login with credentials
          * @description Authenticate with email/password and receive a JWT token.
-         *     In development mode, use dev/login instead for easier testing.
+         *     X-Tenant-ID header is optional. If omitted, the user is looked up
+         *     by email globally (uses the unique email constraint).
          */
         post: operations["authLogin"];
         delete?: never;
@@ -2508,6 +2509,28 @@ export interface paths {
         put?: never;
         /** Delete employee day plans in date range */
         post: operations["deleteEmployeeDayPlanRange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/employee-day-plans/generate-from-tariff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate employee day plans from tariff week plans
+         * @description Expands tariff week plans into employee day plans for the specified
+         *     date range. Respects manual overrides (source='manual' or 'holiday').
+         *     Uses upsert - safe to call multiple times.
+         */
+        post: operations["generateEmployeeDayPlansFromTariff"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8403,6 +8426,32 @@ export interface components {
         };
         /** @enum {string} */
         EmployeeDayPlanSource: "tariff" | "manual" | "holiday";
+        GenerateFromTariffRequest: {
+            /** @description Specific employees to process. Empty = all active employees with tariff. */
+            employee_ids?: string[];
+            /**
+             * Format: date
+             * @description Start date. Default = today.
+             */
+            from?: string;
+            /**
+             * Format: date
+             * @description End date. Default = today + 3 months.
+             */
+            to?: string;
+            /**
+             * @description Replace existing plans with source='tariff'. Manual/holiday plans are always preserved.
+             * @default true
+             */
+            overwrite_tariff_source: boolean;
+        };
+        GenerateFromTariffResponse: {
+            employees_processed?: number;
+            plans_created?: number;
+            plans_updated?: number;
+            /** @description Employees without valid tariff or outside date range */
+            employees_skipped?: number;
+        };
         MonthlyEvaluation: {
             /** Format: uuid */
             id: string;
@@ -10709,7 +10758,10 @@ export interface operations {
     authLogin: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Optional tenant ID. If omitted, tenant is derived from user record. */
+                "X-Tenant-ID"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -10734,6 +10786,7 @@ export interface operations {
                         /** @description JWT token */
                         token?: string;
                         user?: components["schemas"]["User"];
+                        tenant?: components["schemas"]["Tenant"];
                     };
                 };
             };
@@ -16339,6 +16392,32 @@ export interface operations {
                     "application/json": {
                         deleted?: number;
                     };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    generateEmployeeDayPlansFromTariff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GenerateFromTariffRequest"];
+            };
+        };
+        responses: {
+            /** @description Generation completed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GenerateFromTariffResponse"];
                 };
             };
             400: components["responses"]["BadRequest"];

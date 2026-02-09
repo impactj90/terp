@@ -36,6 +36,16 @@ export function useLogin() {
       if ('token' in data && typeof data.token === 'string') {
         authStorage.setToken(data.token)
       }
+      // Store the tenant ID from the response
+      if (
+        'tenant' in data &&
+        data.tenant &&
+        typeof data.tenant === 'object' &&
+        'id' in data.tenant &&
+        typeof data.tenant.id === 'string'
+      ) {
+        tenantIdStorage.setTenantId(data.tenant.id)
+      }
     },
   })
 }
@@ -104,10 +114,12 @@ export function useLogout() {
   return useApiMutation('/auth/logout', 'post', {
     onSuccess: () => {
       authStorage.clearToken()
+      tenantIdStorage.clearTenantId()
     },
     onError: () => {
-      // Even if the server call fails, clear the local token
+      // Even if the server call fails, clear local state
       authStorage.clearToken()
+      tenantIdStorage.clearTenantId()
     },
   })
 }

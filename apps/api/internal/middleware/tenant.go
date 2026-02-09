@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/tolga/terp/internal/auth"
 	"github.com/tolga/terp/internal/model"
 )
 
@@ -18,12 +19,18 @@ type TenantService interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*model.Tenant, error)
 }
 
-type TenantMiddleware struct {
-	tenantService TenantService
+// UserTenantChecker checks whether a user has access to a tenant.
+type UserTenantChecker interface {
+	UserHasAccess(ctx context.Context, userID, tenantID uuid.UUID) (bool, error)
 }
 
-func NewTenantMiddleware(ts TenantService) *TenantMiddleware {
-	return &TenantMiddleware{tenantService: ts}
+type TenantMiddleware struct {
+	tenantService     TenantService
+	userTenantChecker UserTenantChecker
+}
+
+func NewTenantMiddleware(ts TenantService, utc UserTenantChecker) *TenantMiddleware {
+	return &TenantMiddleware{tenantService: ts, userTenantChecker: utc}
 }
 
 // TenantFromContext extracts tenant ID from context.
@@ -63,6 +70,24 @@ func (m *TenantMiddleware) RequireTenant(next http.Handler) http.Handler {
 		if !tenant.IsActive {
 			http.Error(w, "tenant is inactive", http.StatusForbidden)
 			return
+		}
+
+		// Verify user has access to this tenant
+		if m.userTenantChecker != nil {
+			user, ok := auth.UserFromContext(r.Context())
+			if !ok {
+				http.Error(w, "authentication required", http.StatusUnauthorized)
+				return
+			}
+			hasAccess, err := m.userTenantChecker.UserHasAccess(r.Context(), user.ID, tenantID)
+			if err != nil {
+				http.Error(w, "failed to check tenant access", http.StatusInternalServerError)
+				return
+			}
+			if !hasAccess {
+				http.Error(w, "access denied for this tenant", http.StatusForbidden)
+				return
+			}
 		}
 
 		// Add tenant ID to context

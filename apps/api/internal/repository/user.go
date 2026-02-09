@@ -61,6 +61,22 @@ func (r *UserRepository) GetByEmail(ctx context.Context, tenantID uuid.UUID, ema
 	return &user, nil
 }
 
+// FindByEmail retrieves a user by email without tenant filter (uses global unique constraint).
+func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*model.User, error) {
+	var user model.User
+	err := r.db.GORM.WithContext(ctx).
+		Where("email = ?", email).
+		First(&user).Error
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrUserNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to find user by email: %w", err)
+	}
+	return &user, nil
+}
+
 // GetByEmployeeID retrieves a user by employee ID within a tenant.
 func (r *UserRepository) GetByEmployeeID(ctx context.Context, tenantID, employeeID uuid.UUID) (*model.User, error) {
 	var user model.User

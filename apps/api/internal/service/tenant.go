@@ -32,12 +32,19 @@ type tenantRepository interface {
 	Upsert(ctx context.Context, tenant *model.Tenant) error
 }
 
-type TenantService struct {
-	tenantRepo tenantRepository
+// userTenantRepository defines the interface for user-tenant association data access.
+type userTenantRepository interface {
+	ListTenantsForUser(ctx context.Context, userID uuid.UUID) ([]model.Tenant, error)
+	AddUserToTenant(ctx context.Context, userID, tenantID uuid.UUID, role string) error
 }
 
-func NewTenantService(tenantRepo tenantRepository) *TenantService {
-	return &TenantService{tenantRepo: tenantRepo}
+type TenantService struct {
+	tenantRepo     tenantRepository
+	userTenantRepo userTenantRepository
+}
+
+func NewTenantService(tenantRepo tenantRepository, userTenantRepo userTenantRepository) *TenantService {
+	return &TenantService{tenantRepo: tenantRepo, userTenantRepo: userTenantRepo}
 }
 
 type CreateTenantInput struct {
@@ -236,6 +243,16 @@ func (s *TenantService) UpsertDevTenant(ctx context.Context, id uuid.UUID, name,
 		IsActive:       true,
 	}
 	return s.tenantRepo.Upsert(ctx, tenant)
+}
+
+// ListForUser returns only tenants the user has access to.
+func (s *TenantService) ListForUser(ctx context.Context, userID uuid.UUID) ([]model.Tenant, error) {
+	return s.userTenantRepo.ListTenantsForUser(ctx, userID)
+}
+
+// AddUserToTenant creates a user-tenant association (idempotent).
+func (s *TenantService) AddUserToTenant(ctx context.Context, userID, tenantID uuid.UUID, role string) error {
+	return s.userTenantRepo.AddUserToTenant(ctx, userID, tenantID, role)
 }
 
 func stringPointer(value string) *string {

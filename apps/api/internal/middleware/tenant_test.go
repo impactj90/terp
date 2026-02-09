@@ -10,18 +10,20 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/tolga/terp/internal/auth"
 	"github.com/tolga/terp/internal/middleware"
 	"github.com/tolga/terp/internal/repository"
 	"github.com/tolga/terp/internal/service"
 	"github.com/tolga/terp/internal/testutil"
 )
 
-func setupTenantMiddleware(t *testing.T) (*middleware.TenantMiddleware, *service.TenantService) {
+func setupTenantMiddleware(t *testing.T) (*middleware.TenantMiddleware, *service.TenantService, *repository.UserTenantRepository, *repository.DB) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewTenantRepository(db)
-	svc := service.NewTenantService(repo)
-	mw := middleware.NewTenantMiddleware(svc)
-	return mw, svc
+	userTenantRepo := repository.NewUserTenantRepository(db)
+	svc := service.NewTenantService(repo, userTenantRepo)
+	mw := middleware.NewTenantMiddleware(svc, userTenantRepo)
+	return mw, svc, userTenantRepo, db
 }
 
 func TestTenantFromContext_Found(t *testing.T) {
@@ -41,8 +43,11 @@ func TestTenantFromContext_NotFound(t *testing.T) {
 }
 
 func TestRequireTenant_Success(t *testing.T) {
-	mw, svc := setupTenantMiddleware(t)
+	mw, svc, utRepo, db := setupTenantMiddleware(t)
 	ctx := context.Background()
+
+	userID := uuid.New()
+	db.GORM.Exec("INSERT INTO users (id, email, display_name, role, is_active, is_locked) VALUES (?, 'mw@test.com', 'MWTest', 'admin', true, false)", userID)
 
 	tenant, err := svc.Create(ctx, service.CreateTenantInput{
 		Name:           "Test Tenant",
@@ -53,8 +58,9 @@ func TestRequireTenant_Success(t *testing.T) {
 		AddressCountry: "DE",
 	})
 	require.NoError(t, err)
+	require.NoError(t, utRepo.AddUserToTenant(ctx, userID, tenant.ID, "member"))
 
-	handler := mw.RequireTenant(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	h := mw.RequireTenant(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tenantID, ok := middleware.TenantFromContext(r.Context())
 		require.True(t, ok)
 		assert.Equal(t, tenant.ID, tenantID)
@@ -63,15 +69,16 @@ func TestRequireTenant_Success(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	req.Header.Set("X-Tenant-ID", tenant.ID.String())
+	req = req.WithContext(auth.ContextWithUser(req.Context(), &auth.User{ID: userID, Email: "mw@test.com", DisplayName: "MWTest", Role: "admin"}))
 	rr := httptest.NewRecorder()
 
-	handler.ServeHTTP(rr, req)
+	h.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
 func TestRequireTenant_MissingHeader(t *testing.T) {
-	mw, _ := setupTenantMiddleware(t)
+	mw, _, _, _ := setupTenantMiddleware(t)
 
 	handler := mw.RequireTenant(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Fatal("handler should not be called")
@@ -87,7 +94,7 @@ func TestRequireTenant_MissingHeader(t *testing.T) {
 }
 
 func TestRequireTenant_InvalidUUID(t *testing.T) {
-	mw, _ := setupTenantMiddleware(t)
+	mw, _, _, _ := setupTenantMiddleware(t)
 
 	handler := mw.RequireTenant(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Fatal("handler should not be called")
@@ -104,7 +111,7 @@ func TestRequireTenant_InvalidUUID(t *testing.T) {
 }
 
 func TestRequireTenant_TenantNotFound(t *testing.T) {
-	mw, _ := setupTenantMiddleware(t)
+	mw, _, _, _ := setupTenantMiddleware(t)
 
 	handler := mw.RequireTenant(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Fatal("handler should not be called")
@@ -121,7 +128,7 @@ func TestRequireTenant_TenantNotFound(t *testing.T) {
 }
 
 func TestRequireTenant_InactiveTenant(t *testing.T) {
-	mw, svc := setupTenantMiddleware(t)
+	mw, svc, _, _ := setupTenantMiddleware(t)
 	ctx := context.Background()
 
 	tenant, err := svc.Create(ctx, service.CreateTenantInput{
@@ -153,7 +160,7 @@ func TestRequireTenant_InactiveTenant(t *testing.T) {
 }
 
 func TestOptionalTenant_WithValidHeader(t *testing.T) {
-	mw, svc := setupTenantMiddleware(t)
+	mw, svc, _, _ := setupTenantMiddleware(t)
 	ctx := context.Background()
 
 	tenant, err := svc.Create(ctx, service.CreateTenantInput{
@@ -183,7 +190,7 @@ func TestOptionalTenant_WithValidHeader(t *testing.T) {
 }
 
 func TestOptionalTenant_WithoutHeader(t *testing.T) {
-	mw, _ := setupTenantMiddleware(t)
+	mw, _, _, _ := setupTenantMiddleware(t)
 
 	handler := mw.OptionalTenant(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, ok := middleware.TenantFromContext(r.Context())
@@ -200,7 +207,7 @@ func TestOptionalTenant_WithoutHeader(t *testing.T) {
 }
 
 func TestOptionalTenant_InvalidUUID(t *testing.T) {
-	mw, _ := setupTenantMiddleware(t)
+	mw, _, _, _ := setupTenantMiddleware(t)
 
 	handler := mw.OptionalTenant(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, ok := middleware.TenantFromContext(r.Context())

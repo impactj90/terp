@@ -5,17 +5,20 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
-import { useDevLogin } from '@/hooks/use-auth'
+import { useDevLogin, useLogin } from '@/hooks/use-auth'
 import { useAuth } from '@/providers/auth-provider'
 
 function LoginPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const devLogin = useDevLogin()
+  const loginMutation = useLogin()
   const { isAuthenticated, isLoading: isAuthLoading, refetch } = useAuth()
   const t = useTranslations('login')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
 
   const returnUrl = searchParams.get('returnUrl') ?? '/dashboard'
 
@@ -42,6 +45,22 @@ function LoginPageContent() {
     }
   }
 
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      await loginMutation.mutateAsync({ body: { email, password } })
+      await refetch()
+      router.push(returnUrl)
+    } catch {
+      setError(t('loginFailed'))
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const isPageLoading = isLoading || isAuthLoading
 
   return (
@@ -59,7 +78,7 @@ function LoginPageContent() {
 
       {/* Login form card */}
       <div className="rounded-lg border bg-card p-6 shadow-sm">
-        <form className="space-y-4">
+        <form className="space-y-4" onSubmit={handleLogin}>
           <div className="space-y-2">
             <label htmlFor="email" className="text-sm font-medium">
               {t('email')}
@@ -70,6 +89,9 @@ function LoginPageContent() {
               placeholder={t('emailPlaceholder')}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               disabled={isPageLoading}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
             />
           </div>
           <div className="space-y-2">
@@ -90,6 +112,9 @@ function LoginPageContent() {
               placeholder={t('passwordPlaceholder')}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               disabled={isPageLoading}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
             />
           </div>
           <Button type="submit" className="w-full" disabled={isPageLoading}>

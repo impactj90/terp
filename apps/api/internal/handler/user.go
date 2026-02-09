@@ -85,6 +85,13 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		input.TenantID = &tenantID
+	} else if headerTenantID := r.Header.Get("X-Tenant-ID"); headerTenantID != "" {
+		tenantID, err := uuid.Parse(headerTenantID)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid X-Tenant-ID header")
+			return
+		}
+		input.TenantID = &tenantID
 	}
 	if req.Email != nil {
 		input.Email = string(*req.Email)

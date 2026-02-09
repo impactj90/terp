@@ -25,10 +25,16 @@ var (
 	ErrInvalidDataScopeType   = errors.New("invalid data scope type")
 )
 
+// userTenantRepo defines the interface for user-tenant association data access.
+type userTenantRepoForUser interface {
+	AddUserToTenant(ctx context.Context, userID, tenantID uuid.UUID, role string) error
+}
+
 type UserService struct {
 	userRepo        *repository.UserRepository
 	userGroupRepo   userGroupLookupRepository
 	notificationSvc *NotificationService
+	userTenantRepo  userTenantRepoForUser
 }
 
 type userGroupLookupRepository interface {
@@ -68,6 +74,11 @@ func NewUserService(userRepo *repository.UserRepository, userGroupRepo userGroup
 // SetNotificationService sets the notification service for user events.
 func (s *UserService) SetNotificationService(notificationSvc *NotificationService) {
 	s.notificationSvc = notificationSvc
+}
+
+// SetUserTenantRepo sets the user-tenant repository for auto-adding tenant access.
+func (s *UserService) SetUserTenantRepo(repo userTenantRepoForUser) {
+	s.userTenantRepo = repo
 }
 
 func normalizeScopeType(scope *model.DataScopeType) (model.DataScopeType, error) {
@@ -124,6 +135,37 @@ func (s *UserService) Authenticate(ctx context.Context, tenantID uuid.UUID, emai
 	}
 
 	user, err := s.userRepo.GetByEmail(ctx, tenantID, email)
+	if errors.Is(err, repository.ErrUserNotFound) {
+		return nil, ErrInvalidCredentials
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	if !user.IsActive {
+		return nil, ErrUserInactive
+	}
+	if user.IsLocked {
+		return nil, ErrUserLocked
+	}
+	if user.PasswordHash == nil || *user.PasswordHash == "" {
+		return nil, ErrInvalidCredentials
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(*user.PasswordHash), []byte(password)); err != nil {
+		return nil, ErrInvalidCredentials
+	}
+
+	return user, nil
+}
+
+// AuthenticateByEmail verifies credentials without requiring a tenant ID (uses global email lookup).
+func (s *UserService) AuthenticateByEmail(ctx context.Context, email, password string) (*model.User, error) {
+	if password == "" {
+		return nil, ErrInvalidCredentials
+	}
+
+	user, err := s.userRepo.FindByEmail(ctx, email)
 	if errors.Is(err, repository.ErrUserNotFound) {
 		return nil, ErrInvalidCredentials
 	}
@@ -412,6 +454,11 @@ func (s *UserService) CreateUser(ctx context.Context, input CreateUserInput) (*m
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	// Auto-add user to tenant in user_tenants
+	if s.userTenantRepo != nil && user.TenantID != nil {
+		_ = s.userTenantRepo.AddUserToTenant(ctx, user.ID, *user.TenantID, "member")
 	}
 
 	return user, nil

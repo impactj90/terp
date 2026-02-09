@@ -187,11 +187,11 @@ export function useApiMutation<
     },
     ...mutationOptions,
     onSuccess: async (data, variables, context) => {
-      // Refetch specified query keys (forces immediate refetch)
+      // Invalidate specified query keys (marks all matching queries as stale)
       if (invalidateKeys?.length) {
         await Promise.all(
           invalidateKeys.map((key) =>
-            queryClient.refetchQueries({ queryKey: key, type: 'active' })
+            queryClient.invalidateQueries({ queryKey: key })
           )
         )
       }

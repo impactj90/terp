@@ -223,9 +223,18 @@ paths:
       summary: Login with credentials
       description: |
         Authenticate with email/password and receive a JWT token.
-        In development mode, use dev/login instead for easier testing.
+        X-Tenant-ID header is optional. If omitted, the user is looked up
+        by email globally (uses the unique email constraint).
       operationId: authLogin
       security: []
+      parameters:
+        - name: X-Tenant-ID
+          in: header
+          required: false
+          description: Optional tenant ID. If omitted, tenant is derived from user record.
+          schema:
+            type: string
+            format: uuid
       requestBody:
         content:
           application/json:
@@ -255,6 +264,8 @@ paths:
                     description: JWT token
                   user:
                     $ref: "#/components/schemas/User"
+                  tenant:
+                    $ref: "#/components/schemas/Tenant"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "500":
@@ -6519,6 +6530,33 @@ paths:
                 properties:
                   deleted:
                     type: integer
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /employee-day-plans/generate-from-tariff:
+    post:
+      tags:
+        - Employee Day Plans
+      summary: Generate employee day plans from tariff week plans
+      description: |
+        Expands tariff week plans into employee day plans for the specified
+        date range. Respects manual overrides (source='manual' or 'holiday').
+        Uses upsert - safe to call multiple times.
+      operationId: generateEmployeeDayPlansFromTariff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateFromTariffRequest"
+        required: true
+      responses:
+        "200":
+          description: Generation completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateFromTariffResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -19243,6 +19281,41 @@ components:
         - tariff
         - manual
         - holiday
+    GenerateFromTariffRequest:
+      type: object
+      properties:
+        employee_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Specific employees to process. Empty = all active employees with
+            tariff.
+        from:
+          type: string
+          format: date
+          description: Start date. Default = today.
+        to:
+          type: string
+          format: date
+          description: End date. Default = today + 3 months.
+        overwrite_tariff_source:
+          type: boolean
+          default: true
+          description: Replace existing plans with source='tariff'. Manual/holiday plans
+            are always preserved.
+    GenerateFromTariffResponse:
+      type: object
+      properties:
+        employees_processed:
+          type: integer
+        plans_created:
+          type: integer
+        plans_updated:
+          type: integer
+        employees_skipped:
+          type: integer
+          description: Employees without valid tariff or outside date range
     MonthlyEvaluation:
       type: object
       properties:

@@ -212,10 +212,17 @@ paths:
       summary: Login with credentials
       description: |
         Authenticate with email/password and receive a JWT token.
-        In development mode, use dev/login instead for easier testing.
+        X-Tenant-ID header is optional. If omitted, the user is looked up
+        by email globally (uses the unique email constraint).
       operationId: authLogin
       security: []
       parameters:
+        - name: X-Tenant-ID
+          in: header
+          required: false
+          type: string
+          format: uuid
+          description: 'Optional tenant ID. If omitted, tenant is derived from user record.'
         - name: body
           in: body
           required: true
@@ -242,6 +249,8 @@ paths:
                 description: JWT token
               user:
                 $ref: '#/definitions/User'
+              tenant:
+                $ref: '#/definitions/Tenant'
         '401':
           $ref: '#/responses/Unauthorized'
         '500':

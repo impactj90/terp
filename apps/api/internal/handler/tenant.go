@@ -10,8 +10,8 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/tolga/terp/gen/models"
+	"github.com/tolga/terp/internal/auth"
 	"github.com/tolga/terp/internal/model"
-	"github.com/tolga/terp/internal/repository"
 	"github.com/tolga/terp/internal/service"
 )
 
@@ -24,10 +24,34 @@ func NewTenantHandler(tenantService *service.TenantService) *TenantHandler {
 }
 
 func (h *TenantHandler) List(w http.ResponseWriter, r *http.Request) {
+	// Return only tenants the authenticated user has access to
+	user, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		respondError(w, http.StatusUnauthorized, "Authentication required")
+		return
+	}
+
+	tenants, err := h.tenantService.ListForUser(r.Context(), user.ID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to list tenants")
+		return
+	}
+
+	// Apply optional name filter client-side
 	query := r.URL.Query()
 	nameFilter := strings.TrimSpace(query.Get("name"))
+	if nameFilter != "" {
+		filtered := make([]model.Tenant, 0)
+		lower := strings.ToLower(nameFilter)
+		for _, t := range tenants {
+			if strings.Contains(strings.ToLower(t.Name), lower) {
+				filtered = append(filtered, t)
+			}
+		}
+		tenants = filtered
+	}
 
-	var activeFilter *bool
+	// Apply active filter
 	activeParam := strings.TrimSpace(query.Get("active"))
 	if activeParam != "" {
 		parsed, err := strconv.ParseBool(activeParam)
@@ -35,23 +59,13 @@ func (h *TenantHandler) List(w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusBadRequest, "Invalid active filter")
 			return
 		}
-		activeFilter = &parsed
-	} else if query.Get("include_inactive") != "true" {
-		defaultActive := true
-		activeFilter = &defaultActive
-	}
-
-	filters := repository.TenantListFilters{
-		Active: activeFilter,
-	}
-	if nameFilter != "" {
-		filters.Name = &nameFilter
-	}
-
-	tenants, err := h.tenantService.List(r.Context(), filters)
-	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to list tenants")
-		return
+		filtered := make([]model.Tenant, 0)
+		for _, t := range tenants {
+			if t.IsActive == parsed {
+				filtered = append(filtered, t)
+			}
+		}
+		tenants = filtered
 	}
 
 	respondJSON(w, http.StatusOK, tenants)
@@ -124,6 +138,12 @@ func (h *TenantHandler) Create(w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusInternalServerError, "Failed to create tenant")
 		}
 		return
+	}
+
+	// Auto-add creating user to the new tenant
+	user, ok := auth.UserFromContext(r.Context())
+	if ok {
+		_ = h.tenantService.AddUserToTenant(r.Context(), user.ID, tenant.ID, "owner")
 	}
 
 	respondJSON(w, http.StatusCreated, tenant)
