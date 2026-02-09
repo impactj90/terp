@@ -96,6 +96,7 @@ func main() {
 	shiftRepo := repository.NewShiftRepository(db)
 
 	userTenantRepo := repository.NewUserTenantRepository(db)
+	contactKindRepo := repository.NewContactKindRepository(db)
 
 	// Initialize services
 	userService := service.NewUserService(userRepo, userGroupRepo)
@@ -107,7 +108,7 @@ func main() {
 	userGroupService := service.NewUserGroupService(userGroupRepo, userRepo)
 	departmentService := service.NewDepartmentService(departmentRepo)
 	teamService := service.NewTeamService(teamRepo)
-	employeeService := service.NewEmployeeService(employeeRepo, tariffRepo, empDayPlanRepo)
+	employeeService := service.NewEmployeeService(employeeRepo, tariffRepo, empDayPlanRepo, contactKindRepo)
 	dayPlanService := service.NewDayPlanService(dayPlanRepo)
 	weekPlanService := service.NewWeekPlanService(weekPlanRepo, dayPlanRepo)
 	tariffService := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
@@ -335,7 +336,6 @@ func main() {
 	contactTypeService := service.NewContactTypeService(contactTypeRepo)
 	contactTypeHandler := handler.NewContactTypeHandler(contactTypeService)
 
-	contactKindRepo := repository.NewContactKindRepository(db)
 	contactKindService := service.NewContactKindService(contactKindRepo, contactTypeRepo)
 	contactKindHandler := handler.NewContactKindHandler(contactKindService)
 

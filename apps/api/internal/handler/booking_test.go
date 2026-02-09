@@ -71,7 +71,7 @@ func setupBookingHandler(t *testing.T) (*handler.BookingHandler, *service.Bookin
 	dailyCalcService := service.NewDailyCalcService(bookingRepo, empDayPlanRepo, dayPlanRepo, dailyValueRepo, holidayRepo, employeeRepo, absenceDayRepo)
 	recalcService := service.NewRecalcService(dailyCalcService, employeeRepo)
 	bookingService := service.NewBookingService(bookingRepo, bookingTypeRepo, recalcService, nil)
-	employeeService := service.NewEmployeeService(employeeRepo, tariffRepo, empDayPlanRepo)
+	employeeService := service.NewEmployeeService(employeeRepo, tariffRepo, empDayPlanRepo, nil)
 
 	// Create handler
 	h := handler.NewBookingHandler(
@@ -645,7 +645,7 @@ func setupBookingHandlerWithAudit(t *testing.T) (*handler.BookingHandler, *servi
 	dailyCalcService := service.NewDailyCalcService(bookingRepo, empDayPlanRepo, dayPlanRepo, dailyValueRepo, holidayRepo, employeeRepo, absenceDayRepo)
 	recalcService := service.NewRecalcService(dailyCalcService, employeeRepo)
 	bookingService := service.NewBookingService(bookingRepo, bookingTypeRepo, recalcService, nil)
-	employeeService := service.NewEmployeeService(employeeRepo, tariffRepo, empDayPlanRepo)
+	employeeService := service.NewEmployeeService(employeeRepo, tariffRepo, empDayPlanRepo, nil)
 	auditService := service.NewAuditLogService(auditLogRepo)
 
 	// Create handler with audit service

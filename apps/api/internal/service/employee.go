@@ -62,6 +62,10 @@ type employeeTariffRepository interface {
 	GetWithDetails(ctx context.Context, id uuid.UUID) (*model.Tariff, error)
 }
 
+type employeeContactKindRepository interface {
+	GetByID(ctx context.Context, id uuid.UUID) (*model.ContactKind, error)
+}
+
 type employeeTariffDayPlanRepository interface {
 	GetForEmployeeDateRange(ctx context.Context, employeeID uuid.UUID, from, to time.Time) ([]model.EmployeeDayPlan, error)
 	BulkCreate(ctx context.Context, plans []model.EmployeeDayPlan) error
@@ -72,17 +76,20 @@ type EmployeeService struct {
 	employeeRepo        employeeRepository
 	tariffRepo          employeeTariffRepository
 	employeeDayPlanRepo employeeTariffDayPlanRepository
+	contactKindRepo     employeeContactKindRepository
 }
 
 func NewEmployeeService(
 	employeeRepo employeeRepository,
 	tariffRepo employeeTariffRepository,
 	employeeDayPlanRepo employeeTariffDayPlanRepository,
+	contactKindRepo employeeContactKindRepository,
 ) *EmployeeService {
 	return &EmployeeService{
 		employeeRepo:        employeeRepo,
 		tariffRepo:          tariffRepo,
 		employeeDayPlanRepo: employeeDayPlanRepo,
+		contactKindRepo:     contactKindRepo,
 	}
 }
 
@@ -709,11 +716,12 @@ func (s *EmployeeService) Search(ctx context.Context, tenantID uuid.UUID, query 
 
 // CreateContactInput represents the input for creating a contact.
 type CreateContactInput struct {
-	EmployeeID  uuid.UUID
-	ContactType string
-	Value       string
-	Label       string
-	IsPrimary   bool
+	EmployeeID    uuid.UUID
+	ContactType   string
+	ContactKindID *uuid.UUID
+	Value         string
+	Label         string
+	IsPrimary     bool
 }
 
 // AddContact adds a contact to an employee.
@@ -733,12 +741,22 @@ func (s *EmployeeService) AddContact(ctx context.Context, input CreateContactInp
 		return nil, ErrContactValueRequired
 	}
 
+	if input.ContactKindID != nil {
+		if s.contactKindRepo == nil {
+			return nil, ErrContactKindNotFound
+		}
+		if _, err := s.contactKindRepo.GetByID(ctx, *input.ContactKindID); err != nil {
+			return nil, ErrContactKindNotFound
+		}
+	}
+
 	contact := &model.EmployeeContact{
-		EmployeeID:  input.EmployeeID,
-		ContactType: contactType,
-		Value:       value,
-		Label:       strings.TrimSpace(input.Label),
-		IsPrimary:   input.IsPrimary,
+		EmployeeID:    input.EmployeeID,
+		ContactType:   contactType,
+		ContactKindID: input.ContactKindID,
+		Value:         value,
+		Label:         strings.TrimSpace(input.Label),
+		IsPrimary:     input.IsPrimary,
 	}
 
 	if err := s.employeeRepo.CreateContact(ctx, contact); err != nil {

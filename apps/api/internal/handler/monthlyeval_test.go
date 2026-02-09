@@ -76,7 +76,7 @@ func setupMonthlyEvalHandler(t *testing.T) *monthlyEvalTestContext {
 	// Create services
 	empDayPlanRepo := repository.NewEmployeeDayPlanRepository(db)
 	monthlyEvalService := service.NewMonthlyEvalService(monthlyValueRepo, dailyValueRepo, absenceDayRepo, employeeRepo, tariffRepo)
-	employeeService := service.NewEmployeeService(employeeRepo, tariffRepo, empDayPlanRepo)
+	employeeService := service.NewEmployeeService(employeeRepo, tariffRepo, empDayPlanRepo, nil)
 
 	// Create handler
 	h := handler.NewMonthlyEvalHandler(monthlyEvalService, employeeService)

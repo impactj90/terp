@@ -220,6 +220,7 @@ func (r *EmployeeRepository) GetWithDetails(ctx context.Context, id uuid.UUID) (
 		Preload("WorkflowGroup").
 		Preload("ActivityGroup").
 		Preload("Contacts").
+		Preload("Contacts.ContactKind").
 		Preload("Cards", "is_active = ?", true).
 		Where("id = ?", id).
 		First(&emp).Error
@@ -279,7 +280,7 @@ func (r *EmployeeRepository) CreateContact(ctx context.Context, contact *model.E
 // GetContactByID retrieves a contact by ID.
 func (r *EmployeeRepository) GetContactByID(ctx context.Context, id uuid.UUID) (*model.EmployeeContact, error) {
 	var contact model.EmployeeContact
-	err := r.db.GORM.WithContext(ctx).First(&contact, "id = ?", id).Error
+	err := r.db.GORM.WithContext(ctx).Preload("ContactKind").First(&contact, "id = ?", id).Error
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrContactNotFound
@@ -306,6 +307,7 @@ func (r *EmployeeRepository) DeleteContact(ctx context.Context, id uuid.UUID) er
 func (r *EmployeeRepository) ListContacts(ctx context.Context, employeeID uuid.UUID) ([]model.EmployeeContact, error) {
 	var contacts []model.EmployeeContact
 	err := r.db.GORM.WithContext(ctx).
+		Preload("ContactKind").
 		Where("employee_id = ?", employeeID).
 		Order("is_primary DESC, contact_type ASC").
 		Find(&contacts).Error

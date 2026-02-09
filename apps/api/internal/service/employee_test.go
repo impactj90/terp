@@ -32,7 +32,7 @@ func createTestTenantForEmployeeService(t *testing.T, db *repository.DB) *model.
 func TestEmployeeService_Create_Success(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmployeeService(t, db)
@@ -61,7 +61,7 @@ func TestEmployeeService_Create_Success(t *testing.T) {
 func TestEmployeeService_Create_WithAllFields(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmployeeService(t, db)
@@ -90,7 +90,7 @@ func TestEmployeeService_Create_WithAllFields(t *testing.T) {
 func TestEmployeeService_Create_EmptyPersonnelNumber(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmployeeService(t, db)
@@ -110,7 +110,7 @@ func TestEmployeeService_Create_EmptyPersonnelNumber(t *testing.T) {
 func TestEmployeeService_Create_EmptyPIN_AutoAssigns(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmployeeService(t, db)
@@ -145,7 +145,7 @@ func TestEmployeeService_Create_EmptyPIN_AutoAssigns(t *testing.T) {
 func TestEmployeeService_Create_EmptyFirstName(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmployeeService(t, db)
@@ -165,7 +165,7 @@ func TestEmployeeService_Create_EmptyFirstName(t *testing.T) {
 func TestEmployeeService_Create_EmptyLastName(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmployeeService(t, db)
@@ -185,7 +185,7 @@ func TestEmployeeService_Create_EmptyLastName(t *testing.T) {
 func TestEmployeeService_Create_DuplicatePersonnelNumber(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmployeeService(t, db)
@@ -216,7 +216,7 @@ func TestEmployeeService_Create_DuplicatePersonnelNumber(t *testing.T) {
 func TestEmployeeService_Create_DuplicatePIN(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmployeeService(t, db)
@@ -247,7 +247,7 @@ func TestEmployeeService_Create_DuplicatePIN(t *testing.T) {
 func TestEmployeeService_Create_InvalidEntryDate(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmployeeService(t, db)
@@ -268,7 +268,7 @@ func TestEmployeeService_Create_InvalidEntryDate(t *testing.T) {
 func TestEmployeeService_Create_TrimsWhitespace(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmployeeService(t, db)
@@ -295,7 +295,7 @@ func TestEmployeeService_Create_TrimsWhitespace(t *testing.T) {
 func TestEmployeeService_GetByID_Success(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmployeeService(t, db)
@@ -320,7 +320,7 @@ func TestEmployeeService_GetByID_Success(t *testing.T) {
 func TestEmployeeService_GetByID_NotFound(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	_, err := svc.GetByID(ctx, uuid.New())
@@ -330,7 +330,7 @@ func TestEmployeeService_GetByID_NotFound(t *testing.T) {
 func TestEmployeeService_Update_Success(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmployeeService(t, db)
@@ -362,7 +362,7 @@ func TestEmployeeService_Update_Success(t *testing.T) {
 func TestEmployeeService_Update_NotFound(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	newName := "Updated"
@@ -377,7 +377,7 @@ func TestEmployeeService_Update_NotFound(t *testing.T) {
 func TestEmployeeService_Update_EmptyFirstName(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmployeeService(t, db)
@@ -405,7 +405,7 @@ func TestEmployeeService_Update_EmptyFirstName(t *testing.T) {
 func TestEmployeeService_Update_ExitBeforeEntry(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmployeeService(t, db)
@@ -434,7 +434,7 @@ func TestEmployeeService_Update_ExitBeforeEntry(t *testing.T) {
 func TestEmployeeService_Deactivate_SetsExitDate(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmployeeService(t, db)
@@ -463,7 +463,7 @@ func TestEmployeeService_Deactivate_SetsExitDate(t *testing.T) {
 func TestEmployeeService_Deactivate_PreservesExitDate(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmployeeService(t, db)
@@ -502,7 +502,7 @@ func TestEmployeeService_Deactivate_PreservesExitDate(t *testing.T) {
 func TestEmployeeService_Deactivate_NotFound(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	err := svc.Deactivate(ctx, uuid.New())
@@ -512,7 +512,7 @@ func TestEmployeeService_Deactivate_NotFound(t *testing.T) {
 func TestEmployeeService_List(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmployeeService(t, db)
@@ -543,7 +543,7 @@ func TestEmployeeService_List(t *testing.T) {
 func TestEmployeeService_Search(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmployeeService(t, db)
@@ -568,7 +568,7 @@ func TestEmployeeService_Search(t *testing.T) {
 func TestEmployeeService_Contact_AddAndRemove(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmployeeService(t, db)
@@ -617,7 +617,7 @@ func TestEmployeeService_Contact_AddAndRemove(t *testing.T) {
 func TestEmployeeService_AddContact_EmployeeNotFound(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	contactInput := service.CreateContactInput{
@@ -632,7 +632,7 @@ func TestEmployeeService_AddContact_EmployeeNotFound(t *testing.T) {
 func TestEmployeeService_AddContact_EmptyType(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmployeeService(t, db)
@@ -659,7 +659,7 @@ func TestEmployeeService_AddContact_EmptyType(t *testing.T) {
 func TestEmployeeService_AddContact_EmptyValue(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmployeeService(t, db)
@@ -683,10 +683,95 @@ func TestEmployeeService_AddContact_EmptyValue(t *testing.T) {
 	assert.ErrorIs(t, err, service.ErrContactValueRequired)
 }
 
+func TestEmployeeService_AddContact_WithContactKindID(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewEmployeeRepository(db)
+	contactKindRepo := repository.NewContactKindRepository(db)
+	contactTypeRepo := repository.NewContactTypeRepository(db)
+	svc := service.NewEmployeeService(repo, nil, nil, contactKindRepo)
+	ctx := context.Background()
+
+	tenant := createTestTenantForEmployeeService(t, db)
+
+	empInput := service.CreateEmployeeInput{
+		TenantID:        tenant.ID,
+		PersonnelNumber: "E001",
+		PIN:             "1234",
+		FirstName:       "John",
+		LastName:        "Doe",
+		EntryDate:       time.Now(),
+	}
+	emp, err := svc.Create(ctx, empInput)
+	require.NoError(t, err)
+
+	// Create a contact type and kind
+	ct := &model.ContactType{
+		TenantID: tenant.ID,
+		Code:     "email",
+		Name:     "Email",
+		DataType: "email",
+		IsActive: true,
+	}
+	err = contactTypeRepo.Create(ctx, ct)
+	require.NoError(t, err)
+
+	ck := &model.ContactKind{
+		TenantID:      tenant.ID,
+		ContactTypeID: ct.ID,
+		Code:          "work_email",
+		Label:         "Work Email",
+		IsActive:      true,
+	}
+	err = contactKindRepo.Create(ctx, ck)
+	require.NoError(t, err)
+
+	contactInput := service.CreateContactInput{
+		EmployeeID:    emp.ID,
+		ContactType:   "email",
+		ContactKindID: &ck.ID,
+		Value:         "john@work.com",
+	}
+	contact, err := svc.AddContact(ctx, contactInput)
+	require.NoError(t, err)
+	assert.NotNil(t, contact.ContactKindID)
+	assert.Equal(t, ck.ID, *contact.ContactKindID)
+}
+
+func TestEmployeeService_AddContact_InvalidContactKindID(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := repository.NewEmployeeRepository(db)
+	contactKindRepo := repository.NewContactKindRepository(db)
+	svc := service.NewEmployeeService(repo, nil, nil, contactKindRepo)
+	ctx := context.Background()
+
+	tenant := createTestTenantForEmployeeService(t, db)
+
+	empInput := service.CreateEmployeeInput{
+		TenantID:        tenant.ID,
+		PersonnelNumber: "E001",
+		PIN:             "1234",
+		FirstName:       "John",
+		LastName:        "Doe",
+		EntryDate:       time.Now(),
+	}
+	emp, err := svc.Create(ctx, empInput)
+	require.NoError(t, err)
+
+	badID := uuid.New()
+	contactInput := service.CreateContactInput{
+		EmployeeID:    emp.ID,
+		ContactType:   "email",
+		ContactKindID: &badID,
+		Value:         "john@work.com",
+	}
+	_, err = svc.AddContact(ctx, contactInput)
+	assert.ErrorIs(t, err, service.ErrContactKindNotFound)
+}
+
 func TestEmployeeService_RemoveContact_NotFound(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	err := svc.RemoveContact(ctx, uuid.New())
@@ -696,7 +781,7 @@ func TestEmployeeService_RemoveContact_NotFound(t *testing.T) {
 func TestEmployeeService_Card_AddAndDeactivate(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmployeeService(t, db)
@@ -747,7 +832,7 @@ func TestEmployeeService_Card_AddAndDeactivate(t *testing.T) {
 func TestEmployeeService_AddCard_EmployeeNotFound(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmployeeService(t, db)
@@ -765,7 +850,7 @@ func TestEmployeeService_AddCard_EmployeeNotFound(t *testing.T) {
 func TestEmployeeService_AddCard_EmptyCardNumber(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmployeeService(t, db)
@@ -793,7 +878,7 @@ func TestEmployeeService_AddCard_EmptyCardNumber(t *testing.T) {
 func TestEmployeeService_AddCard_DuplicateCardNumber(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmployeeService(t, db)
@@ -832,7 +917,7 @@ func TestEmployeeService_AddCard_DuplicateCardNumber(t *testing.T) {
 func TestEmployeeService_DeactivateCard_NotFound(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	err := svc.DeactivateCard(ctx, uuid.New(), "Lost")
@@ -842,7 +927,7 @@ func TestEmployeeService_DeactivateCard_NotFound(t *testing.T) {
 func TestEmployeeService_ListCards_EmployeeNotFound(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	_, err := svc.ListCards(ctx, uuid.New())
@@ -854,7 +939,7 @@ func TestEmployeeService_ListCards_EmployeeNotFound(t *testing.T) {
 func TestEmployeeService_Create_WithExtendedFields(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmployeeService(t, db)
@@ -920,7 +1005,7 @@ func TestEmployeeService_Create_WithExtendedFields(t *testing.T) {
 func TestEmployeeService_Update_ExtendedFields(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmployeeService(t, db)
@@ -966,7 +1051,7 @@ func TestEmployeeService_Update_ExtendedFields(t *testing.T) {
 func TestEmployeeService_Update_ClearBirthDate(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := repository.NewEmployeeRepository(db)
-	svc := service.NewEmployeeService(repo, nil, nil)
+	svc := service.NewEmployeeService(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	tenant := createTestTenantForEmployeeService(t, db)

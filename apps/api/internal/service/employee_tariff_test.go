@@ -84,7 +84,7 @@ func TestEmployeeService_TariffSyncPreservesManualPlans(t *testing.T) {
 	employeeRepo := repository.NewEmployeeRepository(db)
 	tariffRepo := repository.NewTariffRepository(db)
 	empDayPlanRepo := repository.NewEmployeeDayPlanRepository(db)
-	svc := service.NewEmployeeService(employeeRepo, tariffRepo, empDayPlanRepo)
+	svc := service.NewEmployeeService(employeeRepo, tariffRepo, empDayPlanRepo, nil)
 
 	tenant := createTestTenantForEmployeeTariffService(t, db)
 	dayPlanA := createTestDayPlanForEmployeeTariff(t, db, tenant.ID, "DP-A")
@@ -132,7 +132,7 @@ func TestEmployeeService_ClearTariffRemovesOnlyTariffPlans(t *testing.T) {
 	employeeRepo := repository.NewEmployeeRepository(db)
 	tariffRepo := repository.NewTariffRepository(db)
 	empDayPlanRepo := repository.NewEmployeeDayPlanRepository(db)
-	svc := service.NewEmployeeService(employeeRepo, tariffRepo, empDayPlanRepo)
+	svc := service.NewEmployeeService(employeeRepo, tariffRepo, empDayPlanRepo, nil)
 
 	tenant := createTestTenantForEmployeeTariffService(t, db)
 	dayPlanA := createTestDayPlanForEmployeeTariff(t, db, tenant.ID, "DP-CLEAR")
@@ -188,7 +188,7 @@ func TestEmployeeService_BulkAssignTariff_SelectedIDs(t *testing.T) {
 	employeeRepo := repository.NewEmployeeRepository(db)
 	tariffRepo := repository.NewTariffRepository(db)
 	empDayPlanRepo := repository.NewEmployeeDayPlanRepository(db)
-	svc := service.NewEmployeeService(employeeRepo, tariffRepo, empDayPlanRepo)
+	svc := service.NewEmployeeService(employeeRepo, tariffRepo, empDayPlanRepo, nil)
 
 	tenant := createTestTenantForEmployeeTariffService(t, db)
 	tariff := createTestTariffForEmployeeTariff(t, db, tenant.ID, "TBULK", nil)
@@ -236,7 +236,7 @@ func TestEmployeeService_BulkAssignTariff_Filtered(t *testing.T) {
 	employeeRepo := repository.NewEmployeeRepository(db)
 	tariffRepo := repository.NewTariffRepository(db)
 	empDayPlanRepo := repository.NewEmployeeDayPlanRepository(db)
-	svc := service.NewEmployeeService(employeeRepo, tariffRepo, empDayPlanRepo)
+	svc := service.NewEmployeeService(employeeRepo, tariffRepo, empDayPlanRepo, nil)
 
 	tenant := createTestTenantForEmployeeTariffService(t, db)
 	tariff := createTestTariffForEmployeeTariff(t, db, tenant.ID, "TFILTER", nil)

@@ -904,6 +904,14 @@ func (h *EmployeeHandler) AddContact(w http.ResponseWriter, r *http.Request) {
 		Value:       *req.Value,
 		Label:       req.Label,
 	}
+	if req.ContactKindID != "" {
+		ckID, err := uuid.Parse(req.ContactKindID.String())
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid contact kind ID")
+			return
+		}
+		input.ContactKindID = &ckID
+	}
 	if req.IsPrimary != nil {
 		input.IsPrimary = *req.IsPrimary
 	}
@@ -917,6 +925,8 @@ func (h *EmployeeHandler) AddContact(w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusBadRequest, "Contact type is required")
 		case service.ErrContactValueRequired:
 			respondError(w, http.StatusBadRequest, "Contact value is required")
+		case service.ErrContactKindNotFound:
+			respondError(w, http.StatusBadRequest, "Contact kind not found")
 		default:
 			respondError(w, http.StatusInternalServerError, "Failed to add contact")
 		}
