@@ -44,7 +44,7 @@ func (h *EmploymentTypeHandler) List(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusInternalServerError, "Failed to list employment types")
 		return
 	}
-	respondJSON(w, http.StatusOK, employmentTypes)
+	respondJSON(w, http.StatusOK, map[string]any{"data": employmentTypes})
 }
 
 func (h *EmploymentTypeHandler) Get(w http.ResponseWriter, r *http.Request) {

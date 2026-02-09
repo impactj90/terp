@@ -248,10 +248,12 @@ func TestCostCenterHandler_List_All(t *testing.T) {
 	h.List(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
-	var result []model.CostCenter
+	var result struct {
+		Data []model.CostCenter `json:"data"`
+	}
 	err := json.Unmarshal(rr.Body.Bytes(), &result)
 	require.NoError(t, err)
-	assert.Len(t, result, 2)
+	assert.Len(t, result.Data, 2)
 }
 
 func TestCostCenterHandler_List_ActiveOnly(t *testing.T) {
@@ -285,11 +287,13 @@ func TestCostCenterHandler_List_ActiveOnly(t *testing.T) {
 	h.List(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
-	var result []model.CostCenter
+	var result struct {
+		Data []model.CostCenter `json:"data"`
+	}
 	err = json.Unmarshal(rr.Body.Bytes(), &result)
 	require.NoError(t, err)
-	assert.Len(t, result, 1)
-	assert.Equal(t, "CC001", result[0].Code)
+	assert.Len(t, result.Data, 1)
+	assert.Equal(t, "CC001", result.Data[0].Code)
 }
 
 func TestCostCenterHandler_List_NoTenant(t *testing.T) {

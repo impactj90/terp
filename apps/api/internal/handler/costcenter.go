@@ -43,7 +43,7 @@ func (h *CostCenterHandler) List(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusInternalServerError, "Failed to list cost centers")
 		return
 	}
-	respondJSON(w, http.StatusOK, costCenters)
+	respondJSON(w, http.StatusOK, map[string]any{"data": costCenters})
 }
 
 func (h *CostCenterHandler) Get(w http.ResponseWriter, r *http.Request) {
