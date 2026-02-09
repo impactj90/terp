@@ -57,19 +57,13 @@ export function YearSummaryCards({
     )
   }, [monthlyValues])
 
-  // Get flextime from last closed/exported month
+  // Get flextime from the latest month with data (flextime_end = accumulated balance)
   const currentFlextime = useMemo(() => {
-    const closedMonths = monthlyValues
-      .filter((mv) => mv.status === 'closed' || mv.status === 'exported')
-      .sort((a, b) => (b.month ?? 0) - (a.month ?? 0))
+    if (monthlyValues.length === 0) return 0
 
-    if (closedMonths.length > 0) {
-      const lastClosed = closedMonths[0]
-      return lastClosed?.account_balances?.flextime ?? lastClosed?.balance_minutes ?? 0
-    }
-
-    // If no closed months, sum up all balance_minutes
-    return monthlyValues.reduce((sum, mv) => sum + (mv.balance_minutes ?? 0), 0)
+    const sorted = [...monthlyValues].sort((a, b) => (b.month ?? 0) - (a.month ?? 0))
+    const latest = sorted[0]
+    return latest?.account_balances?.flextime ?? 0
   }, [monthlyValues])
 
   if (isLoading) {

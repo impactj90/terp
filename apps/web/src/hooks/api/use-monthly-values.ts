@@ -119,7 +119,28 @@ export function useMonthlyValues(options: UseMonthlyValuesOptions = {}) {
   return useQuery<MonthlyValuesResponse>({
     queryKey: ['employees', employeeId, 'months', year, month],
     queryFn: async () => {
-      const summary = await apiRequest(`/employees/${employeeId}/months/${year}/${month}`)
+      const token = authStorage.getToken()
+      const tenantId = tenantIdStorage.getTenantId()
+
+      const response = await fetch(`${clientEnv.apiUrl}/employees/${employeeId}/months/${year}/${month}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(tenantId ? { 'X-Tenant-ID': tenantId } : {}),
+        },
+      })
+
+      // 404 means no monthly value calculated yet — return empty data
+      if (response.status === 404) {
+        return { data: [] }
+      }
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Request failed' }))
+        throw new Error(error.message || 'Request failed')
+      }
+
+      const summary = await response.json()
       // Transform and wrap in array for backward compatibility
       return { data: [addLegacyFields(summary)] }
     },
@@ -176,6 +197,7 @@ export function useCloseMonth() {
       apiRequest(`/employees/${employeeId}/months/${year}/${month}/close`, { method: 'POST' }),
     onSuccess: (_, { employeeId, year, month }) => {
       queryClient.invalidateQueries({ queryKey: ['employees', employeeId, 'months', year, month] })
+      queryClient.invalidateQueries({ queryKey: ['employees', employeeId, 'months', year], exact: true })
     },
   })
 }
@@ -191,6 +213,7 @@ export function useReopenMonth() {
       apiRequest(`/employees/${employeeId}/months/${year}/${month}/reopen`, { method: 'POST' }),
     onSuccess: (_, { employeeId, year, month }) => {
       queryClient.invalidateQueries({ queryKey: ['employees', employeeId, 'months', year, month] })
+      queryClient.invalidateQueries({ queryKey: ['employees', employeeId, 'months', year], exact: true })
     },
   })
 }
@@ -206,6 +229,7 @@ export function useRecalculateMonth() {
       apiRequest(`/employees/${employeeId}/months/${year}/${month}/recalculate`, { method: 'POST' }),
     onSuccess: (_, { employeeId, year, month }) => {
       queryClient.invalidateQueries({ queryKey: ['employees', employeeId, 'months', year, month] })
+      queryClient.invalidateQueries({ queryKey: ['employees', employeeId, 'months', year], exact: true })
     },
   })
 }
