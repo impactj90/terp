@@ -112,7 +112,7 @@ func withUserContext(r *http.Request, user *auth.User) *http.Request {
 
 // --- GetMonthSummary tests ---
 
-func TestMonthlyEvalHandler_GetMonthSummary_NotFound(t *testing.T) {
+func TestMonthlyEvalHandler_GetMonthSummary_NoPersistedValue_CalculatesOnTheFly(t *testing.T) {
 	tc := setupMonthlyEvalHandler(t)
 
 	req := httptest.NewRequest("GET", "/employees/"+tc.employee.ID.String()+"/months/2026/1", nil)
@@ -126,7 +126,16 @@ func TestMonthlyEvalHandler_GetMonthSummary_NotFound(t *testing.T) {
 
 	tc.handler.GetMonthSummary(rr, req)
 
-	assert.Equal(t, http.StatusNotFound, rr.Code)
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	var result map[string]interface{}
+	err := json.Unmarshal(rr.Body.Bytes(), &result)
+	require.NoError(t, err)
+	assert.Equal(t, float64(2026), result["year"])
+	assert.Equal(t, float64(1), result["month"])
+	// total_net_time is omitted when 0 due to omitempty in generated model
+	assert.Nil(t, result["total_net_time"])
+	assert.Equal(t, false, result["is_closed"])
 }
 
 func TestMonthlyEvalHandler_GetMonthSummary_InvalidMonth(t *testing.T) {

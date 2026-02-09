@@ -157,16 +157,40 @@ func TestMonthlyEvalService_GetMonthSummary_Success(t *testing.T) {
 	monthlyValueRepo.AssertExpectations(t)
 }
 
-func TestMonthlyEvalService_GetMonthSummary_NotFound(t *testing.T) {
+func TestMonthlyEvalService_GetMonthSummary_NotFound_CalculatesOnTheFly(t *testing.T) {
 	ctx := context.Background()
-	svc, monthlyValueRepo, _, _, _, _ := newTestMonthlyEvalService()
+	svc, monthlyValueRepo, dailyValueRepo, absenceDayRepo, employeeRepo, _ := newTestMonthlyEvalService()
 
+	tenantID := uuid.New()
 	employeeID := uuid.New()
+
+	// No persisted monthly value
 	monthlyValueRepo.On("GetByEmployeeMonth", ctx, employeeID, 2026, 1).Return(nil, nil)
 
-	_, err := svc.GetMonthSummary(ctx, employeeID, 2026, 1)
+	// Employee exists
+	employee := &model.Employee{ID: employeeID, TenantID: tenantID}
+	employeeRepo.On("GetByID", ctx, employeeID).Return(employee, nil)
 
-	assert.ErrorIs(t, err, ErrMonthlyValueNotFound)
+	// No previous month
+	monthlyValueRepo.On("GetPreviousMonth", ctx, employeeID, 2026, 1).Return(nil, nil)
+
+	from := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 1, 31, 0, 0, 0, 0, time.UTC)
+
+	// One work day
+	dailyValues := []model.DailyValue{
+		{EmployeeID: employeeID, ValueDate: time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC), GrossTime: 510, NetTime: 480, TargetTime: 480, BreakTime: 30},
+	}
+	dailyValueRepo.On("GetByEmployeeDateRange", ctx, employeeID, from, to).Return(dailyValues, nil)
+	absenceDayRepo.On("GetByEmployeeDateRange", ctx, employeeID, from, to).Return([]model.AbsenceDay{}, nil)
+
+	result, err := svc.GetMonthSummary(ctx, employeeID, 2026, 1)
+
+	require.NoError(t, err)
+	assert.Equal(t, employeeID, result.EmployeeID)
+	assert.Equal(t, 480, result.TotalNetTime)
+	assert.Equal(t, 1, result.WorkDays)
+	assert.False(t, result.IsClosed)
 }
 
 func TestMonthlyEvalService_GetMonthSummary_InvalidYear(t *testing.T) {

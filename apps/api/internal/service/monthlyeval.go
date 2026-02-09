@@ -137,7 +137,7 @@ func monthDateRange(year, month int) (time.Time, time.Time) {
 }
 
 // GetMonthSummary retrieves the monthly summary for an employee.
-// Returns ErrMonthlyValueNotFound if no monthly value has been calculated.
+// If no persisted monthly value exists, it calculates one on-the-fly from daily values.
 func (s *MonthlyEvalService) GetMonthSummary(ctx context.Context, employeeID uuid.UUID, year, month int) (*MonthSummary, error) {
 	if err := validateYearMonth(year, month); err != nil {
 		return nil, err
@@ -147,11 +147,55 @@ func (s *MonthlyEvalService) GetMonthSummary(ctx context.Context, employeeID uui
 	if err != nil {
 		return nil, err
 	}
-	if mv == nil {
-		return nil, ErrMonthlyValueNotFound
+	if mv != nil {
+		return monthlyValueToSummary(mv), nil
 	}
 
-	return monthlyValueToSummary(mv), nil
+	// No persisted record — calculate on-the-fly from daily values
+	return s.calculateMonthSummary(ctx, employeeID, year, month)
+}
+
+// calculateMonthSummary builds a MonthSummary from daily values without persisting.
+func (s *MonthlyEvalService) calculateMonthSummary(ctx context.Context, employeeID uuid.UUID, year, month int) (*MonthSummary, error) {
+	employee, err := s.employeeRepo.GetByID(ctx, employeeID)
+	if err != nil {
+		return nil, ErrEmployeeNotFoundForEval
+	}
+
+	from, to := monthDateRange(year, month)
+
+	prevMonth, err := s.monthlyValueRepo.GetPreviousMonth(ctx, employeeID, year, month)
+	if err != nil {
+		return nil, err
+	}
+	previousCarryover := 0
+	if prevMonth != nil {
+		previousCarryover = prevMonth.FlextimeEnd
+	}
+
+	dailyValues, err := s.dailyValueRepo.GetByEmployeeDateRange(ctx, employeeID, from, to)
+	if err != nil {
+		return nil, err
+	}
+
+	absences, err := s.absenceDayRepo.GetByEmployeeDateRange(ctx, employeeID, from, to)
+	if err != nil {
+		return nil, err
+	}
+
+	var tariff *model.Tariff
+	if employee.TariffID != nil {
+		tariff, err = s.tariffRepo.GetByID(ctx, *employee.TariffID)
+		if err != nil {
+			tariff = nil
+		}
+	}
+
+	calcInput := s.buildMonthlyCalcInput(dailyValues, absences, previousCarryover, tariff)
+	calcOutput := calculation.CalculateMonth(calcInput)
+	built := s.buildMonthlyValue(employee.TenantID, employeeID, year, month, calcOutput, previousCarryover)
+
+	return monthlyValueToSummary(built), nil
 }
 
 // monthlyValueToSummary converts model.MonthlyValue to MonthSummary.
