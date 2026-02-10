@@ -1741,6 +1741,11 @@ func (m *mockDailyAccountValueWriter) DeleteByEmployeeDate(ctx context.Context, 
 	return args.Error(0)
 }
 
+func (m *mockDailyAccountValueWriter) DeleteByEmployeeDateAndSource(ctx context.Context, employeeID uuid.UUID, date time.Time, source model.DailyAccountValueSource) error {
+	args := m.Called(ctx, employeeID, date, source)
+	return args.Error(0)
+}
+
 func TestPostDailyAccountValues_NetAccountPosting(t *testing.T) {
 	ctx := context.Background()
 	tenantID := uuid.New()
@@ -1945,4 +1950,292 @@ func TestPostDailyAccountValues_CapZeroWhenUnderCap(t *testing.T) {
 	require.Len(t, davRepo.upsertedValues, 1)
 	assert.Equal(t, 0, davRepo.upsertedValues[0].ValueMinutes)
 	assert.Equal(t, model.DailyAccountValueSourceCappedTime, davRepo.upsertedValues[0].Source)
+}
+
+func TestPostSurchargeValues_PerMinute(t *testing.T) {
+	ctx := context.Background()
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	date := testDate(2026, 1, 20)
+	surchargeAccountID := uuid.New()
+
+	davRepo := new(mockDailyAccountValueWriter)
+	davRepo.On("Upsert", mock.Anything, mock.Anything).Return(nil)
+	davRepo.On("DeleteByEmployeeDateAndSource", mock.Anything, employeeID, date, model.DailyAccountValueSourceSurcharge).Return(nil)
+
+	svc := newTestService(nil, nil, nil, nil, nil)
+	svc.SetDailyAccountValueRepo(davRepo)
+
+	dayPlanID := uuid.New()
+	dayPlan := &model.DayPlan{
+		ID:       dayPlanID,
+		TenantID: tenantID,
+		Bonuses: []model.DayPlanBonus{
+			{
+				ID:               uuid.New(),
+				DayPlanID:        dayPlanID,
+				AccountID:        surchargeAccountID,
+				TimeFrom:         1320, // 22:00
+				TimeTo:           1440, // 00:00
+				CalculationType:  model.CalculationPerMinute,
+				ValueMinutes:     0,
+				AppliesOnHoliday: false,
+				Account: &model.Account{
+					ID:   surchargeAccountID,
+					Code: "NIGHT",
+				},
+			},
+		},
+	}
+	empDayPlan := &model.EmployeeDayPlan{
+		DayPlan: dayPlan,
+	}
+	dailyValue := &model.DailyValue{
+		EmployeeID: employeeID,
+		ValueDate:  date,
+		NetTime:    480,
+	}
+
+	// Work period 20:00 - 23:00 → 60 min overlap with 22:00-00:00
+	pairs := []calculation.BookingPair{
+		{
+			InBooking:  &calculation.BookingInput{ID: uuid.New(), Time: 1200, Direction: calculation.DirectionIn},
+			OutBooking: &calculation.BookingInput{ID: uuid.New(), Time: 1380, Direction: calculation.DirectionOut},
+			Category:   calculation.CategoryWork,
+			Duration:   180,
+		},
+	}
+
+	svc.postSurchargeValues(ctx, tenantID, employeeID, date, empDayPlan, dailyValue, pairs, false, 0)
+
+	// Should have deleted old surcharges and upserted new one
+	davRepo.AssertCalled(t, "DeleteByEmployeeDateAndSource", mock.Anything, employeeID, date, model.DailyAccountValueSourceSurcharge)
+	require.Len(t, davRepo.upsertedValues, 1)
+	assert.Equal(t, surchargeAccountID, davRepo.upsertedValues[0].AccountID)
+	assert.Equal(t, 60, davRepo.upsertedValues[0].ValueMinutes)
+	assert.Equal(t, model.DailyAccountValueSourceSurcharge, davRepo.upsertedValues[0].Source)
+}
+
+func TestPostSurchargeValues_Fixed(t *testing.T) {
+	ctx := context.Background()
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	date := testDate(2026, 1, 20)
+	surchargeAccountID := uuid.New()
+
+	davRepo := new(mockDailyAccountValueWriter)
+	davRepo.On("Upsert", mock.Anything, mock.Anything).Return(nil)
+	davRepo.On("DeleteByEmployeeDateAndSource", mock.Anything, employeeID, date, model.DailyAccountValueSourceSurcharge).Return(nil)
+
+	svc := newTestService(nil, nil, nil, nil, nil)
+	svc.SetDailyAccountValueRepo(davRepo)
+
+	dayPlanID := uuid.New()
+	dayPlan := &model.DayPlan{
+		ID:       dayPlanID,
+		TenantID: tenantID,
+		Bonuses: []model.DayPlanBonus{
+			{
+				ID:               uuid.New(),
+				DayPlanID:        dayPlanID,
+				AccountID:        surchargeAccountID,
+				TimeFrom:         1320,
+				TimeTo:           1440,
+				CalculationType:  model.CalculationFixed,
+				ValueMinutes:     30,
+				AppliesOnHoliday: false,
+				Account: &model.Account{
+					ID:   surchargeAccountID,
+					Code: "NIGHT_FLAT",
+				},
+			},
+		},
+	}
+	empDayPlan := &model.EmployeeDayPlan{
+		DayPlan: dayPlan,
+	}
+	dailyValue := &model.DailyValue{
+		EmployeeID: employeeID,
+		ValueDate:  date,
+		NetTime:    480,
+	}
+
+	pairs := []calculation.BookingPair{
+		{
+			InBooking:  &calculation.BookingInput{ID: uuid.New(), Time: 1200, Direction: calculation.DirectionIn},
+			OutBooking: &calculation.BookingInput{ID: uuid.New(), Time: 1380, Direction: calculation.DirectionOut},
+			Category:   calculation.CategoryWork,
+			Duration:   180,
+		},
+	}
+
+	svc.postSurchargeValues(ctx, tenantID, employeeID, date, empDayPlan, dailyValue, pairs, false, 0)
+
+	require.Len(t, davRepo.upsertedValues, 1)
+	assert.Equal(t, 30, davRepo.upsertedValues[0].ValueMinutes) // Fixed 30 min
+	assert.Equal(t, model.DailyAccountValueSourceSurcharge, davRepo.upsertedValues[0].Source)
+}
+
+func TestPostSurchargeValues_NoBonuses_CleansUpOnly(t *testing.T) {
+	ctx := context.Background()
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	date := testDate(2026, 1, 20)
+
+	davRepo := new(mockDailyAccountValueWriter)
+	davRepo.On("DeleteByEmployeeDateAndSource", mock.Anything, employeeID, date, model.DailyAccountValueSourceSurcharge).Return(nil)
+
+	svc := newTestService(nil, nil, nil, nil, nil)
+	svc.SetDailyAccountValueRepo(davRepo)
+
+	dayPlanID := uuid.New()
+	dayPlan := &model.DayPlan{
+		ID:       dayPlanID,
+		TenantID: tenantID,
+		// No bonuses
+	}
+	empDayPlan := &model.EmployeeDayPlan{
+		DayPlan: dayPlan,
+	}
+	dailyValue := &model.DailyValue{
+		EmployeeID: employeeID,
+		ValueDate:  date,
+		NetTime:    480,
+	}
+
+	svc.postSurchargeValues(ctx, tenantID, employeeID, date, empDayPlan, dailyValue, nil, false, 0)
+
+	davRepo.AssertCalled(t, "DeleteByEmployeeDateAndSource", mock.Anything, employeeID, date, model.DailyAccountValueSourceSurcharge)
+	assert.Len(t, davRepo.upsertedValues, 0) // No surcharges posted
+}
+
+func TestPostSurchargeValues_NilRepo_NoOp(t *testing.T) {
+	ctx := context.Background()
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	date := testDate(2026, 1, 20)
+
+	svc := newTestService(nil, nil, nil, nil, nil)
+	// Do not set dailyAccountValRepo
+
+	dailyValue := &model.DailyValue{
+		EmployeeID: employeeID,
+		ValueDate:  date,
+		NetTime:    480,
+	}
+
+	// Should not panic
+	svc.postSurchargeValues(ctx, tenantID, employeeID, date, nil, dailyValue, nil, false, 0)
+}
+
+func TestPostSurchargeValues_HolidaySurcharge(t *testing.T) {
+	ctx := context.Background()
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	date := testDate(2026, 1, 1)
+	holidayAccountID := uuid.New()
+
+	davRepo := new(mockDailyAccountValueWriter)
+	davRepo.On("Upsert", mock.Anything, mock.Anything).Return(nil)
+	davRepo.On("DeleteByEmployeeDateAndSource", mock.Anything, employeeID, date, model.DailyAccountValueSourceSurcharge).Return(nil)
+
+	svc := newTestService(nil, nil, nil, nil, nil)
+	svc.SetDailyAccountValueRepo(davRepo)
+
+	dayPlanID := uuid.New()
+	dayPlan := &model.DayPlan{
+		ID:       dayPlanID,
+		TenantID: tenantID,
+		Bonuses: []model.DayPlanBonus{
+			{
+				ID:               uuid.New(),
+				DayPlanID:        dayPlanID,
+				AccountID:        holidayAccountID,
+				TimeFrom:         0,
+				TimeTo:           1440,
+				CalculationType:  model.CalculationPerMinute,
+				AppliesOnHoliday: true,
+				Account: &model.Account{
+					ID:   holidayAccountID,
+					Code: "HOLIDAY_BONUS",
+				},
+			},
+		},
+	}
+	empDayPlan := &model.EmployeeDayPlan{
+		DayPlan: dayPlan,
+	}
+	dailyValue := &model.DailyValue{
+		EmployeeID: employeeID,
+		ValueDate:  date,
+		NetTime:    480,
+	}
+
+	// Work period 08:00 - 16:00 (480 min)
+	pairs := []calculation.BookingPair{
+		{
+			InBooking:  &calculation.BookingInput{ID: uuid.New(), Time: 480, Direction: calculation.DirectionIn},
+			OutBooking: &calculation.BookingInput{ID: uuid.New(), Time: 960, Direction: calculation.DirectionOut},
+			Category:   calculation.CategoryWork,
+			Duration:   480,
+		},
+	}
+
+	svc.postSurchargeValues(ctx, tenantID, employeeID, date, empDayPlan, dailyValue, pairs, true, 1)
+
+	require.Len(t, davRepo.upsertedValues, 1)
+	assert.Equal(t, holidayAccountID, davRepo.upsertedValues[0].AccountID)
+	assert.Equal(t, 480, davRepo.upsertedValues[0].ValueMinutes) // Full work time as holiday bonus
+}
+
+func TestPostSurchargeValues_WorkdaySurcharge_SkippedOnHoliday(t *testing.T) {
+	ctx := context.Background()
+	tenantID := uuid.New()
+	employeeID := uuid.New()
+	date := testDate(2026, 1, 1)
+
+	davRepo := new(mockDailyAccountValueWriter)
+	davRepo.On("DeleteByEmployeeDateAndSource", mock.Anything, employeeID, date, model.DailyAccountValueSourceSurcharge).Return(nil)
+
+	svc := newTestService(nil, nil, nil, nil, nil)
+	svc.SetDailyAccountValueRepo(davRepo)
+
+	dayPlanID := uuid.New()
+	dayPlan := &model.DayPlan{
+		ID:       dayPlanID,
+		TenantID: tenantID,
+		Bonuses: []model.DayPlanBonus{
+			{
+				ID:               uuid.New(),
+				DayPlanID:        dayPlanID,
+				AccountID:        uuid.New(),
+				TimeFrom:         1320,
+				TimeTo:           1440,
+				CalculationType:  model.CalculationPerMinute,
+				AppliesOnHoliday: false, // Workday only
+			},
+		},
+	}
+	empDayPlan := &model.EmployeeDayPlan{
+		DayPlan: dayPlan,
+	}
+	dailyValue := &model.DailyValue{
+		EmployeeID: employeeID,
+		ValueDate:  date,
+		NetTime:    480,
+	}
+
+	pairs := []calculation.BookingPair{
+		{
+			InBooking:  &calculation.BookingInput{ID: uuid.New(), Time: 1200, Direction: calculation.DirectionIn},
+			OutBooking: &calculation.BookingInput{ID: uuid.New(), Time: 1380, Direction: calculation.DirectionOut},
+			Category:   calculation.CategoryWork,
+			Duration:   180,
+		},
+	}
+
+	// Holiday = true → workday-only surcharge should be skipped
+	svc.postSurchargeValues(ctx, tenantID, employeeID, date, empDayPlan, dailyValue, pairs, true, 1)
+
+	assert.Len(t, davRepo.upsertedValues, 0) // No surcharges posted
 }

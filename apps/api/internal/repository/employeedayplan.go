@@ -73,6 +73,7 @@ func (r *EmployeeDayPlanRepository) GetForEmployeeDate(ctx context.Context, empl
 		Preload("DayPlan").
 		Preload("DayPlan.Breaks").
 		Preload("DayPlan.Bonuses").
+		Preload("DayPlan.Bonuses.Account").
 		Preload("Shift").
 		Where("employee_id = ? AND plan_date = ?", employeeID, date).
 		First(&plan).Error
@@ -93,6 +94,7 @@ func (r *EmployeeDayPlanRepository) GetForEmployeeDateRange(ctx context.Context,
 		Preload("DayPlan").
 		Preload("DayPlan.Breaks").
 		Preload("DayPlan.Bonuses").
+		Preload("DayPlan.Bonuses.Account").
 		Preload("Shift").
 		Where("employee_id = ? AND plan_date >= ? AND plan_date <= ?", employeeID, from, to).
 		Order("plan_date ASC").

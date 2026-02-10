@@ -118,6 +118,18 @@ func (r *DailyAccountValueRepository) DeleteByEmployeeDate(ctx context.Context, 
 	return nil
 }
 
+// DeleteByEmployeeDateAndSource deletes daily account values for an employee on a date filtered by source.
+func (r *DailyAccountValueRepository) DeleteByEmployeeDateAndSource(ctx context.Context, employeeID uuid.UUID, date time.Time, source model.DailyAccountValueSource) error {
+	result := r.db.GORM.WithContext(ctx).
+		Where("employee_id = ? AND value_date = ? AND source = ?", employeeID, date, source).
+		Delete(&model.DailyAccountValue{})
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to delete daily account values by source: %w", result.Error)
+	}
+	return nil
+}
+
 // SumByAccountAndRange sums daily account values for an employee, account, and date range.
 func (r *DailyAccountValueRepository) SumByAccountAndRange(ctx context.Context, employeeID, accountID uuid.UUID, from, to time.Time) (int, error) {
 	var result struct {

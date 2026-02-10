@@ -23,6 +23,9 @@ type SurchargeConfig struct {
 	AppliesOnHoliday  bool      // If true, applies on holidays
 	AppliesOnWorkday  bool      // If true, applies on regular workdays
 	HolidayCategories []int     // Which holiday categories (1, 2, 3) - empty = all
+	CalculationType string // "per_minute" (default), "fixed", "percentage"
+	ValueMinutes    int    // Flat value for fixed, percentage for percentage type
+	MinWorkMinutes  *int   // Minimum daily net work time required to apply bonus
 }
 
 // SurchargeResult contains calculated surcharge for one config.
@@ -94,6 +97,7 @@ func surchargeApplies(config SurchargeConfig, isHoliday bool, holidayCategory in
 //   - configs: Surcharge configurations from day plan bonuses
 //   - isHoliday: Whether this day is a holiday
 //   - holidayCategory: Holiday category (1, 2, 3) if applicable, 0 if not a holiday
+//   - netWorkTime: Daily net work time in minutes (for MinWorkMinutes gate)
 //
 // Returns surcharge results for each applicable config with total minutes.
 func CalculateSurcharges(
@@ -101,6 +105,7 @@ func CalculateSurcharges(
 	configs []SurchargeConfig,
 	isHoliday bool,
 	holidayCategory int,
+	netWorkTime int,
 ) SurchargeCalculationResult {
 	result := SurchargeCalculationResult{
 		Surcharges: make([]SurchargeResult, 0),
@@ -112,23 +117,43 @@ func CalculateSurcharges(
 			continue
 		}
 
+		// Check minimum work time gate
+		if config.MinWorkMinutes != nil && netWorkTime < *config.MinWorkMinutes {
+			continue
+		}
+
 		// Calculate overlap between work periods and surcharge window
-		totalMinutes := 0
+		overlapMinutes := 0
 		for _, period := range workPeriods {
 			overlap := CalculateOverlap(
 				period.Start, period.End,
 				config.TimeFrom, config.TimeTo,
 			)
-			totalMinutes += overlap
+			overlapMinutes += overlap
 		}
 
-		if totalMinutes > 0 {
+		if overlapMinutes == 0 {
+			continue
+		}
+
+		// Apply calculation type
+		var bonusMinutes int
+		switch config.CalculationType {
+		case "fixed":
+			bonusMinutes = config.ValueMinutes
+		case "percentage":
+			bonusMinutes = overlapMinutes * config.ValueMinutes / 100
+		default: // "per_minute" or empty
+			bonusMinutes = overlapMinutes
+		}
+
+		if bonusMinutes > 0 {
 			result.Surcharges = append(result.Surcharges, SurchargeResult{
 				AccountID:   config.AccountID,
 				AccountCode: config.AccountCode,
-				Minutes:     totalMinutes,
+				Minutes:     bonusMinutes,
 			})
-			result.TotalMinutes += totalMinutes
+			result.TotalMinutes += bonusMinutes
 		}
 	}
 
@@ -153,6 +178,9 @@ func SplitOvernightSurcharge(config SurchargeConfig) []SurchargeConfig {
 		AppliesOnHoliday:  config.AppliesOnHoliday,
 		AppliesOnWorkday:  config.AppliesOnWorkday,
 		HolidayCategories: config.HolidayCategories,
+		CalculationType:   config.CalculationType,
+		ValueMinutes:      config.ValueMinutes,
+		MinWorkMinutes:    config.MinWorkMinutes,
 	}
 
 	morningConfig := SurchargeConfig{
@@ -163,6 +191,9 @@ func SplitOvernightSurcharge(config SurchargeConfig) []SurchargeConfig {
 		AppliesOnHoliday:  config.AppliesOnHoliday,
 		AppliesOnWorkday:  config.AppliesOnWorkday,
 		HolidayCategories: config.HolidayCategories,
+		CalculationType:   config.CalculationType,
+		ValueMinutes:      config.ValueMinutes,
+		MinWorkMinutes:    config.MinWorkMinutes,
 	}
 
 	return []SurchargeConfig{eveningConfig, morningConfig}
@@ -210,6 +241,9 @@ func ConvertBonusesToSurchargeConfigs(bonuses []model.DayPlanBonus) []SurchargeC
 			TimeTo:           bonus.TimeTo,
 			AppliesOnHoliday: bonus.AppliesOnHoliday,
 			AppliesOnWorkday: !bonus.AppliesOnHoliday, // Inverse: holiday=workday-only, not-holiday=holiday-only
+			CalculationType:  string(bonus.CalculationType),
+			ValueMinutes:     bonus.ValueMinutes,
+			MinWorkMinutes:   bonus.MinWorkMinutes,
 		}
 
 		if bonus.Account != nil {

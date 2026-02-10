@@ -77,6 +77,7 @@ type settingsLookup interface {
 type dailyAccountValueWriter interface {
 	Upsert(ctx context.Context, dav *model.DailyAccountValue) error
 	DeleteByEmployeeDate(ctx context.Context, employeeID uuid.UUID, date time.Time) error
+	DeleteByEmployeeDateAndSource(ctx context.Context, employeeID uuid.UUID, date time.Time, source model.DailyAccountValueSource) error
 }
 
 // DailyCalcService orchestrates daily time calculations.
@@ -195,6 +196,7 @@ func (s *DailyCalcService) CalculateDay(ctx context.Context, tenantID, employeeI
 
 	// 4. Handle special cases
 	var dailyValue *model.DailyValue
+	var calcPairs []calculation.BookingPair
 
 	if empDayPlan == nil || empDayPlan.DayPlanID == nil {
 		// Off day - no day plan assigned
@@ -221,7 +223,7 @@ func (s *DailyCalcService) CalculateDay(ctx context.Context, tenantID, employeeI
 		}
 	} else {
 		// Normal calculation with bookings
-		dailyValue, err = s.calculateWithBookings(ctx, tenantID, employeeID, date, empDayPlan, bookings, isHoliday)
+		dailyValue, calcPairs, err = s.calculateWithBookings(ctx, tenantID, employeeID, date, empDayPlan, bookings, isHoliday)
 		if err != nil {
 			return nil, err
 		}
@@ -236,6 +238,9 @@ func (s *DailyCalcService) CalculateDay(ctx context.Context, tenantID, employeeI
 
 	// 6. Post daily account values (net/cap) based on the day plan
 	s.postDailyAccountValues(ctx, tenantID, employeeID, date, empDayPlan, dailyValue)
+
+	// 7. Post surcharge bonus values based on day plan bonuses
+	s.postSurchargeValues(ctx, tenantID, employeeID, date, empDayPlan, dailyValue, calcPairs, isHoliday, holidayCategory)
 
 	// Notify on newly detected errors
 	s.notifyDailyCalcError(ctx, tenantID, employeeID, date, previousValue, dailyValue)
@@ -325,6 +330,63 @@ func (s *DailyCalcService) postDailyAccountValues(
 			ValueDate:    date,
 			ValueMinutes: cappedMinutes,
 			Source:       model.DailyAccountValueSourceCappedTime,
+			DayPlanID:    &dayPlan.ID,
+		}
+		_ = s.dailyAccountValRepo.Upsert(ctx, dav)
+	}
+}
+
+// postSurchargeValues calculates and posts surcharge bonuses from day plan bonus configs.
+// Uses the calculation engine to evaluate overlap between work periods and bonus time windows,
+// then posts resulting minutes to the configured accounts.
+func (s *DailyCalcService) postSurchargeValues(
+	ctx context.Context,
+	tenantID, employeeID uuid.UUID,
+	date time.Time,
+	empDayPlan *model.EmployeeDayPlan,
+	dailyValue *model.DailyValue,
+	pairs []calculation.BookingPair,
+	isHoliday bool,
+	holidayCategory int,
+) {
+	if s.dailyAccountValRepo == nil || dailyValue == nil {
+		return
+	}
+
+	var dayPlan *model.DayPlan
+	if empDayPlan != nil {
+		dayPlan = empDayPlan.DayPlan
+	}
+
+	// Clean up old surcharge postings
+	_ = s.dailyAccountValRepo.DeleteByEmployeeDateAndSource(ctx, employeeID, date, model.DailyAccountValueSourceSurcharge)
+
+	if dayPlan == nil || len(dayPlan.Bonuses) == 0 {
+		return
+	}
+
+	// Convert bonuses to surcharge configs (handles overnight splits)
+	rawConfigs := calculation.ConvertBonusesToSurchargeConfigs(dayPlan.Bonuses)
+	var configs []calculation.SurchargeConfig
+	for _, c := range rawConfigs {
+		configs = append(configs, calculation.SplitOvernightSurcharge(c)...)
+	}
+
+	// Extract work periods from calculation result pairs
+	workPeriods := calculation.ExtractWorkPeriods(pairs)
+
+	// Calculate surcharges
+	surchargeResult := calculation.CalculateSurcharges(workPeriods, configs, isHoliday, holidayCategory, dailyValue.NetTime)
+
+	// Post each surcharge to its account
+	for _, sr := range surchargeResult.Surcharges {
+		dav := &model.DailyAccountValue{
+			TenantID:     tenantID,
+			EmployeeID:   employeeID,
+			AccountID:    sr.AccountID,
+			ValueDate:    date,
+			ValueMinutes: sr.Minutes,
+			Source:       model.DailyAccountValueSourceSurcharge,
 			DayPlanID:    &dayPlan.ID,
 		}
 		_ = s.dailyAccountValRepo.Upsert(ctx, dav)
@@ -941,7 +1003,7 @@ func (s *DailyCalcService) calculateWithBookings(
 	empDayPlan *model.EmployeeDayPlan,
 	bookings []model.Booking,
 	isHoliday bool,
-) (*model.DailyValue, error) {
+) (*model.DailyValue, []calculation.BookingPair, error) {
 	dayPlan := empDayPlan.DayPlan
 	var shiftResult *calculation.ShiftDetectionResult
 
@@ -959,7 +1021,7 @@ func (s *DailyCalcService) calculateWithBookings(
 		if !result.IsOriginalPlan && result.MatchedPlanID != uuid.Nil && s.dayPlanRepo != nil {
 			matchedPlan, err := s.dayPlanRepo.GetWithDetails(ctx, result.MatchedPlanID)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			if matchedPlan != nil {
 				empDayPlan = &model.EmployeeDayPlan{
@@ -998,11 +1060,11 @@ func (s *DailyCalcService) calculateWithBookings(
 	// Update booking calculated times
 	if len(result.CalculatedTimes) > 0 {
 		if err := s.bookingRepo.UpdateCalculatedTimes(ctx, result.CalculatedTimes); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
-	return dailyValue, nil
+	return dailyValue, result.Pairs, nil
 }
 
 func (s *DailyCalcService) buildCalcInput(

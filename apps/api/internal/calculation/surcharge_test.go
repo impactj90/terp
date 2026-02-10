@@ -29,7 +29,7 @@ func TestCalculateSurcharges_NightShift(t *testing.T) {
 		{Start: 1200, End: 1380}, // 20:00 - 23:00
 	}
 
-	result := CalculateSurcharges(workPeriods, configs, false, 0)
+	result := CalculateSurcharges(workPeriods, configs, false, 0, 480)
 
 	assert.Len(t, result.Surcharges, 1)
 	assert.Equal(t, nightAccountID, result.Surcharges[0].AccountID)
@@ -60,16 +60,16 @@ func TestCalculateSurcharges_HolidaySurcharge(t *testing.T) {
 	}
 
 	// Category 1 holiday - should apply
-	result := CalculateSurcharges(workPeriods, configs, true, 1)
+	result := CalculateSurcharges(workPeriods, configs, true, 1, 480)
 	assert.Len(t, result.Surcharges, 1)
 	assert.Equal(t, 480, result.Surcharges[0].Minutes)
 
 	// Category 3 holiday - should NOT apply (not in categories)
-	result = CalculateSurcharges(workPeriods, configs, true, 3)
+	result = CalculateSurcharges(workPeriods, configs, true, 3, 480)
 	assert.Len(t, result.Surcharges, 0)
 
 	// Normal workday - should NOT apply
-	result = CalculateSurcharges(workPeriods, configs, false, 0)
+	result = CalculateSurcharges(workPeriods, configs, false, 0, 480)
 	assert.Len(t, result.Surcharges, 0)
 }
 
@@ -93,12 +93,12 @@ func TestCalculateSurcharges_NightNotOnHoliday(t *testing.T) {
 	}
 
 	// Normal workday - should apply
-	result := CalculateSurcharges(workPeriods, configs, false, 0)
+	result := CalculateSurcharges(workPeriods, configs, false, 0, 480)
 	assert.Len(t, result.Surcharges, 1)
 	assert.Equal(t, 60, result.Surcharges[0].Minutes)
 
 	// Holiday - should NOT apply
-	result = CalculateSurcharges(workPeriods, configs, true, 1)
+	result = CalculateSurcharges(workPeriods, configs, true, 1, 480)
 	assert.Len(t, result.Surcharges, 0)
 }
 
@@ -121,7 +121,7 @@ func TestCalculateSurcharges_MultiplePeriods(t *testing.T) {
 		{Start: 450, End: 540}, // 07:30 - 09:00 (overlap: 07:30-08:00 = 30 min)
 	}
 
-	result := CalculateSurcharges(workPeriods, configs, false, 0)
+	result := CalculateSurcharges(workPeriods, configs, false, 0, 480)
 	assert.Len(t, result.Surcharges, 1)
 	assert.Equal(t, 90, result.Surcharges[0].Minutes) // 60 + 30 = 90
 }
@@ -137,7 +137,7 @@ func TestCalculateSurcharges_NoWorkPeriods(t *testing.T) {
 		},
 	}
 
-	result := CalculateSurcharges([]TimePeriod{}, configs, false, 0)
+	result := CalculateSurcharges([]TimePeriod{}, configs, false, 0, 480)
 	assert.Len(t, result.Surcharges, 0)
 	assert.Equal(t, 0, result.TotalMinutes)
 }
@@ -158,7 +158,7 @@ func TestCalculateSurcharges_NoOverlap(t *testing.T) {
 		{Start: 480, End: 960},
 	}
 
-	result := CalculateSurcharges(workPeriods, configs, false, 0)
+	result := CalculateSurcharges(workPeriods, configs, false, 0, 480)
 	assert.Len(t, result.Surcharges, 0)
 }
 
@@ -400,4 +400,197 @@ func TestConvertBonusesToSurchargeConfigs_Empty(t *testing.T) {
 	configs := ConvertBonusesToSurchargeConfigs([]model.DayPlanBonus{})
 	assert.Len(t, configs, 0)
 	assert.NotNil(t, configs) // Should be empty slice, not nil
+}
+
+func TestConvertBonusesToSurchargeConfigs_MapsNewFields(t *testing.T) {
+	accountID := uuid.New()
+	minWork := 240
+
+	bonuses := []model.DayPlanBonus{
+		{
+			ID:              uuid.New(),
+			AccountID:       accountID,
+			TimeFrom:        1320,
+			TimeTo:          1440,
+			CalculationType: model.CalculationFixed,
+			ValueMinutes:    30,
+			MinWorkMinutes:  &minWork,
+			Account: &model.Account{
+				ID:   accountID,
+				Code: "NIGHT",
+			},
+		},
+	}
+
+	configs := ConvertBonusesToSurchargeConfigs(bonuses)
+
+	assert.Len(t, configs, 1)
+	assert.Equal(t, "fixed", configs[0].CalculationType)
+	assert.Equal(t, 30, configs[0].ValueMinutes)
+	assert.NotNil(t, configs[0].MinWorkMinutes)
+	assert.Equal(t, 240, *configs[0].MinWorkMinutes)
+	assert.Equal(t, "NIGHT", configs[0].AccountCode)
+}
+
+func TestCalculateSurcharges_PerMinute(t *testing.T) {
+	accountID := uuid.New()
+
+	configs := []SurchargeConfig{
+		{
+			AccountID:        accountID,
+			AccountCode:      "NIGHT",
+			TimeFrom:         1320, // 22:00
+			TimeTo:           1440, // 00:00
+			AppliesOnWorkday: true,
+			CalculationType:  "per_minute",
+		},
+	}
+
+	workPeriods := []TimePeriod{
+		{Start: 1200, End: 1380}, // 20:00 - 23:00
+	}
+
+	result := CalculateSurcharges(workPeriods, configs, false, 0, 480)
+	assert.Len(t, result.Surcharges, 1)
+	assert.Equal(t, 60, result.Surcharges[0].Minutes) // 22:00-23:00 = 60 min overlap
+}
+
+func TestCalculateSurcharges_Fixed_WithOverlap(t *testing.T) {
+	accountID := uuid.New()
+
+	configs := []SurchargeConfig{
+		{
+			AccountID:        accountID,
+			AccountCode:      "NIGHT_FLAT",
+			TimeFrom:         1320, // 22:00
+			TimeTo:           1440, // 00:00
+			AppliesOnWorkday: true,
+			CalculationType:  "fixed",
+			ValueMinutes:     30,
+		},
+	}
+
+	workPeriods := []TimePeriod{
+		{Start: 1200, End: 1380}, // 20:00 - 23:00
+	}
+
+	result := CalculateSurcharges(workPeriods, configs, false, 0, 480)
+	assert.Len(t, result.Surcharges, 1)
+	assert.Equal(t, 30, result.Surcharges[0].Minutes) // Fixed 30 min regardless of overlap
+}
+
+func TestCalculateSurcharges_Fixed_NoOverlap(t *testing.T) {
+	configs := []SurchargeConfig{
+		{
+			AccountID:        uuid.New(),
+			AccountCode:      "NIGHT_FLAT",
+			TimeFrom:         1320, // 22:00
+			TimeTo:           1440, // 00:00
+			AppliesOnWorkday: true,
+			CalculationType:  "fixed",
+			ValueMinutes:     30,
+		},
+	}
+
+	workPeriods := []TimePeriod{
+		{Start: 480, End: 960}, // 08:00 - 16:00 (no overlap with night)
+	}
+
+	result := CalculateSurcharges(workPeriods, configs, false, 0, 480)
+	assert.Len(t, result.Surcharges, 0) // No overlap = no bonus
+}
+
+func TestCalculateSurcharges_Percentage(t *testing.T) {
+	accountID := uuid.New()
+
+	configs := []SurchargeConfig{
+		{
+			AccountID:        accountID,
+			AccountCode:      "NIGHT_PCT",
+			TimeFrom:         1320, // 22:00
+			TimeTo:           1440, // 00:00
+			AppliesOnWorkday: true,
+			CalculationType:  "percentage",
+			ValueMinutes:     50, // 50%
+		},
+	}
+
+	workPeriods := []TimePeriod{
+		{Start: 1200, End: 1380}, // 20:00 - 23:00 (60 min overlap)
+	}
+
+	result := CalculateSurcharges(workPeriods, configs, false, 0, 480)
+	assert.Len(t, result.Surcharges, 1)
+	assert.Equal(t, 30, result.Surcharges[0].Minutes) // 60 * 50 / 100 = 30
+}
+
+func TestCalculateSurcharges_MinWorkMinutes_BelowThreshold(t *testing.T) {
+	minWork := 480 // 8 hours required
+
+	configs := []SurchargeConfig{
+		{
+			AccountID:        uuid.New(),
+			AccountCode:      "NIGHT",
+			TimeFrom:         1320,
+			TimeTo:           1440,
+			AppliesOnWorkday: true,
+			MinWorkMinutes:   &minWork,
+		},
+	}
+
+	workPeriods := []TimePeriod{
+		{Start: 1200, End: 1380},
+	}
+
+	// Net work time is 240 (below 480 threshold)
+	result := CalculateSurcharges(workPeriods, configs, false, 0, 240)
+	assert.Len(t, result.Surcharges, 0) // Skipped due to MinWorkMinutes gate
+}
+
+func TestCalculateSurcharges_MinWorkMinutes_AboveThreshold(t *testing.T) {
+	minWork := 240
+
+	configs := []SurchargeConfig{
+		{
+			AccountID:        uuid.New(),
+			AccountCode:      "NIGHT",
+			TimeFrom:         1320,
+			TimeTo:           1440,
+			AppliesOnWorkday: true,
+			MinWorkMinutes:   &minWork,
+		},
+	}
+
+	workPeriods := []TimePeriod{
+		{Start: 1200, End: 1380},
+	}
+
+	result := CalculateSurcharges(workPeriods, configs, false, 0, 480)
+	assert.Len(t, result.Surcharges, 1)
+	assert.Equal(t, 60, result.Surcharges[0].Minutes)
+}
+
+func TestSplitOvernightSurcharge_PreservesNewFields(t *testing.T) {
+	minWork := 240
+
+	config := SurchargeConfig{
+		AccountID:        uuid.New(),
+		AccountCode:      "NIGHT",
+		TimeFrom:         1320, // 22:00
+		TimeTo:           360,  // 06:00 (overnight)
+		AppliesOnWorkday: true,
+		CalculationType:  "fixed",
+		ValueMinutes:     30,
+		MinWorkMinutes:   &minWork,
+	}
+
+	result := SplitOvernightSurcharge(config)
+
+	assert.Len(t, result, 2)
+	for _, r := range result {
+		assert.Equal(t, "fixed", r.CalculationType)
+		assert.Equal(t, 30, r.ValueMinutes)
+		assert.NotNil(t, r.MinWorkMinutes)
+		assert.Equal(t, 240, *r.MinWorkMinutes)
+	}
 }

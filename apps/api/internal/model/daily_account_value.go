@@ -12,6 +12,7 @@ type DailyAccountValueSource string
 const (
 	DailyAccountValueSourceNetTime    DailyAccountValueSource = "net_time"
 	DailyAccountValueSourceCappedTime DailyAccountValueSource = "capped_time"
+	DailyAccountValueSourceSurcharge  DailyAccountValueSource = "surcharge"
 )
 
 // DailyAccountValue represents a daily account posting from calculation.
