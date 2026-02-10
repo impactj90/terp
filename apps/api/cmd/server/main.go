@@ -177,6 +177,8 @@ func main() {
 		decimal.Zero,
 	)
 	vacationService.SetEmpDayPlanRepo(empDayPlanRepo)
+	vacationService.SetTariffAssignmentRepo(employeeTariffAssignmentRepo)
+	employeeTariffAssignmentService.SetVacationService(vacationService)
 	vacationHandler := handler.NewVacationHandler(vacationService)
 	vacationBalanceService := service.NewVacationBalanceService(vacationBalanceRepo)
 	vacationBalanceHandler := handler.NewVacationBalanceHandler(vacationBalanceService, vacationService, employeeService)

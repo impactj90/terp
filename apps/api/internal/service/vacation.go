@@ -66,6 +66,11 @@ type empDayPlanRepoForVacation interface {
 	GetForEmployeeDateRange(ctx context.Context, employeeID uuid.UUID, from, to time.Time) ([]model.EmployeeDayPlan, error)
 }
 
+// tariffAssignmentRepoForVacation resolves the active tariff assignment for an employee.
+type tariffAssignmentRepoForVacation interface {
+	GetEffectiveForDate(ctx context.Context, employeeID uuid.UUID, date time.Time) (*model.EmployeeTariffAssignment, error)
+}
+
 // PreviewEntitlementInput represents input for entitlement preview.
 type PreviewEntitlementInput struct {
 	EmployeeID          uuid.UUID
@@ -98,6 +103,7 @@ type VacationService struct {
 	employmentTypeRepo    employmentTypeRepoForVacation
 	vacationCalcGroupRepo vacationCalcGroupRepoForVacation
 	empDayPlanRepo        empDayPlanRepoForVacation
+	tariffAssignmentRepo  tariffAssignmentRepoForVacation
 	defaultMaxCarryover   decimal.Decimal // 0 = unlimited
 }
 
@@ -129,6 +135,11 @@ func NewVacationService(
 // SetEmpDayPlanRepo sets the employee day plan repository for vacation deduction weighting.
 func (s *VacationService) SetEmpDayPlanRepo(repo empDayPlanRepoForVacation) {
 	s.empDayPlanRepo = repo
+}
+
+// SetTariffAssignmentRepo sets the tariff assignment repository for resolving effective tariffs.
+func (s *VacationService) SetTariffAssignmentRepo(repo tariffAssignmentRepoForVacation) {
+	s.tariffAssignmentRepo = repo
 }
 
 // GetBalance retrieves the vacation balance for an employee and year.
@@ -310,13 +321,29 @@ func (s *VacationService) buildCalcInput(
 		input.BirthDate = *employee.BirthDate
 	}
 
-	// Resolve StandardWeeklyHours from tariff (fallback 40)
+	// Resolve tariff: (1) active assignment, (2) employee.TariffID fallback
+	var tariff *model.Tariff
+	if s.tariffAssignmentRepo != nil {
+		refDate := time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
+		if assignment, err := s.tariffAssignmentRepo.GetEffectiveForDate(ctx, employee.ID, refDate); err == nil && assignment != nil {
+			tariff = assignment.Tariff
+		}
+	}
+	if tariff == nil && employee.TariffID != nil && s.tariffRepo != nil {
+		t, err := s.tariffRepo.GetByID(ctx, *employee.TariffID)
+		if err == nil && t != nil {
+			tariff = t
+		}
+	}
+
+	// Apply tariff values (StandardWeeklyHours and BaseVacationDays)
 	input.StandardWeeklyHours = decimal.NewFromInt(40)
-	if employee.TariffID != nil && s.tariffRepo != nil {
-		if tariff, err := s.tariffRepo.GetByID(ctx, *employee.TariffID); err == nil && tariff != nil {
-			if tariff.WeeklyTargetHours != nil && tariff.WeeklyTargetHours.IsPositive() {
-				input.StandardWeeklyHours = *tariff.WeeklyTargetHours
-			}
+	if tariff != nil {
+		if tariff.WeeklyTargetHours != nil && tariff.WeeklyTargetHours.IsPositive() {
+			input.StandardWeeklyHours = *tariff.WeeklyTargetHours
+		}
+		if tariff.AnnualVacationDays != nil && tariff.AnnualVacationDays.IsPositive() {
+			input.BaseVacationDays = *tariff.AnnualVacationDays
 		}
 	}
 
@@ -324,7 +351,7 @@ func (s *VacationService) buildCalcInput(
 	if calcGroup != nil {
 		input.Basis = calculation.VacationBasis(calcGroup.Basis)
 	} else {
-		input.Basis = s.resolveVacationBasis(ctx, employee)
+		input.Basis = s.resolveVacationBasisFromTariff(ctx, employee, tariff)
 	}
 
 	// Set reference date based on basis
@@ -348,17 +375,15 @@ func (s *VacationService) buildCalcInput(
 	return input
 }
 
-func (s *VacationService) resolveVacationBasis(ctx context.Context, employee *model.Employee) calculation.VacationBasis {
+func (s *VacationService) resolveVacationBasisFromTariff(ctx context.Context, employee *model.Employee, tariff *model.Tariff) calculation.VacationBasis {
 	basis := model.VacationBasisCalendarYear
 	if s.tenantRepo != nil {
 		if tenant, err := s.tenantRepo.GetByID(ctx, employee.TenantID); err == nil && tenant != nil {
 			basis = tenant.GetVacationBasis()
 		}
 	}
-	if employee.TariffID != nil && s.tariffRepo != nil {
-		if tariff, err := s.tariffRepo.GetByID(ctx, *employee.TariffID); err == nil && tariff != nil {
-			basis = tariff.GetVacationBasis()
-		}
+	if tariff != nil {
+		basis = tariff.GetVacationBasis()
 	}
 	return calculation.VacationBasis(basis)
 }

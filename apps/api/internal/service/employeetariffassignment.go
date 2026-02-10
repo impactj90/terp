@@ -56,6 +56,11 @@ type recalcServiceForAssignment interface {
 	TriggerRecalcRange(ctx context.Context, tenantID, employeeID uuid.UUID, from, to time.Time) (*RecalcResult, error)
 }
 
+// vacationServiceForAssignment defines the interface for recalculating vacation entitlement.
+type vacationServiceForAssignment interface {
+	InitializeYear(ctx context.Context, employeeID uuid.UUID, year int) (*model.VacationBalance, error)
+}
+
 // EmployeeTariffAssignmentService handles business logic for tariff assignments.
 type EmployeeTariffAssignmentService struct {
 	assignmentRepo employeeTariffAssignmentRepository
@@ -63,6 +68,7 @@ type EmployeeTariffAssignmentService struct {
 	tariffRepo     tariffRepositoryForAssignment
 	dayPlanRepo    assignmentDayPlanRepository
 	recalcSvc      recalcServiceForAssignment
+	vacationSvc    vacationServiceForAssignment
 }
 
 // NewEmployeeTariffAssignmentService creates a new employee tariff assignment service.
@@ -83,6 +89,11 @@ func NewEmployeeTariffAssignmentService(
 // SetRecalcService sets the recalculation service for triggering daily value recalc after day plan changes.
 func (s *EmployeeTariffAssignmentService) SetRecalcService(recalcSvc recalcServiceForAssignment) {
 	s.recalcSvc = recalcSvc
+}
+
+// SetVacationService sets the vacation service for recalculating entitlement on tariff changes.
+func (s *EmployeeTariffAssignmentService) SetVacationService(vacationSvc vacationServiceForAssignment) {
+	s.vacationSvc = vacationSvc
 }
 
 // CreateEmployeeTariffAssignmentInput represents the input for creating a tariff assignment.
@@ -185,6 +196,9 @@ func (s *EmployeeTariffAssignmentService) Create(ctx context.Context, input Crea
 		}
 	}
 
+	// Recalculate vacation entitlement for affected years
+	s.recalcVacationForYears(ctx, input.EmployeeID, input.EffectiveFrom, input.EffectiveTo)
+
 	return created, nil
 }
 
@@ -283,6 +297,9 @@ func (s *EmployeeTariffAssignmentService) Update(ctx context.Context, assignment
 		}
 	}
 
+	// Recalculate vacation entitlement for affected years
+	s.recalcVacationForYears(ctx, assignment.EmployeeID, assignment.EffectiveFrom, assignment.EffectiveTo)
+
 	return updated, nil
 }
 
@@ -310,7 +327,24 @@ func (s *EmployeeTariffAssignmentService) Delete(ctx context.Context, id uuid.UU
 		}
 	}
 
+	// Recalculate vacation entitlement for affected years
+	s.recalcVacationForYears(ctx, employeeID, effectiveFrom, effectiveTo)
+
 	return nil
+}
+
+// recalcVacationForYears recalculates vacation entitlement for affected years.
+func (s *EmployeeTariffAssignmentService) recalcVacationForYears(ctx context.Context, employeeID uuid.UUID, from time.Time, to *time.Time) {
+	if s.vacationSvc == nil {
+		return
+	}
+	endYear := time.Now().Year()
+	if to != nil && to.Year() < endYear {
+		endYear = to.Year()
+	}
+	for year := from.Year(); year <= endYear; year++ {
+		_, _ = s.vacationSvc.InitializeYear(ctx, employeeID, year)
+	}
 }
 
 // ListByEmployee retrieves all tariff assignments for an employee.

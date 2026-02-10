@@ -388,7 +388,7 @@ func TestVacationService_ResolveVacationBasis_UsesTenantDefault(t *testing.T) {
 		VacationBasis: model.VacationBasisEntryDate,
 	}, nil)
 
-	basis := svc.resolveVacationBasis(ctx, employee)
+	basis := svc.resolveVacationBasisFromTariff(ctx, employee, nil)
 	assert.Equal(t, calculation.VacationBasisEntryDate, basis)
 }
 

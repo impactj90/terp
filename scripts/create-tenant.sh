@@ -56,10 +56,20 @@ new_user AS (
   SELECT id, :'admin_email', :'admin_display_name', :'password_hash', 'admin', true, false
   FROM new_tenant
   RETURNING id, tenant_id
+),
+link AS (
+  INSERT INTO user_tenants (user_id, tenant_id, role)
+  SELECT id, tenant_id, 'member' FROM new_user
+),
+default_day_plans AS (
+  INSERT INTO day_plans (tenant_id, code, name, description, plan_type, regular_hours, come_from, come_to, go_from, go_to, is_active)
+  SELECT id, v.code, v.name, v.description, v.plan_type, v.regular_hours, v.come_from, v.come_to, v.go_from, v.go_to, true
+  FROM new_tenant, (VALUES
+    ('FREI',  'Freizeit',      'Arbeitsfreier Tag (Wochenende, freier Tag etc.)', 'fixed',    0,   NULL, NULL, NULL, NULL),
+    ('FLEX',  'Flexzeit 8h',   'Gleitzeit 8 Stunden (Kommen 06:00-09:00, Gehen 15:00-19:00)', 'flextime', 480, 360,  540,  900,  1140)
+  ) AS v(code, name, description, plan_type, regular_hours, come_from, come_to, go_from, go_to)
 )
-INSERT INTO user_tenants (user_id, tenant_id, role)
-SELECT id, tenant_id, 'member' FROM new_user
-RETURNING tenant_id;
+SELECT id FROM new_tenant;
 
 COMMIT;
 SQL

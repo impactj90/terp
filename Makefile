@@ -1,4 +1,4 @@
-.PHONY: dev dev-down dev-clean dev-logs dev-ps demo demo-down demo-logs build test test-coverage lint fmt tidy migrate-up migrate-down migrate-create migrate-status swagger-bundle generate generate-web generate-all clean install-tools help
+.PHONY: dev dev-down dev-reset dev-clean dev-logs dev-ps demo demo-down demo-logs build test test-coverage lint fmt tidy migrate-up migrate-down migrate-create migrate-status swagger-bundle generate generate-web generate-all clean install-tools help
 
 # Variables
 DOCKER_COMPOSE = docker compose -p terp -f docker/docker-compose.yml
@@ -27,9 +27,18 @@ dev: ## Start all services with Docker Compose and run migrations
 	@echo "Development environment ready!"
 
 ## dev-down: Stop development environment
-dev-down: ## Stop all services and remove volumes
-	$(DOCKER_COMPOSE) down -v --remove-orphans
-	@docker rm -f terp-postgres terp-api terp-web 2>/dev/null || true
+dev-down: ## Stop all services (preserves data)
+	$(DOCKER_COMPOSE) down --remove-orphans
+
+## dev-reset: Wipe database and reinitialize (keeps containers running)
+dev-reset: ## Drop all tables, rerun migrations, and restart API
+	@echo "Resetting database..."
+	$(DOCKER_COMPOSE) exec postgres psql -U dev -d terp -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+	@echo "Running migrations..."
+	@$(MIGRATE) -path db/migrations -database "$(LOCAL_DB)" up || true
+	@echo "Restarting API..."
+	$(DOCKER_COMPOSE) restart api
+	@echo "Database reset complete!"
 
 ## dev-clean: Force remove all containers and volumes
 dev-clean: ## Force clean all terp containers and volumes
