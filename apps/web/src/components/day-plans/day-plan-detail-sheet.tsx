@@ -1,12 +1,24 @@
 'use client'
 
 import * as React from 'react'
+import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Edit, Trash2, Copy, Clock, Settings, Calendar } from 'lucide-react'
+import { Edit, Trash2, Copy, Clock, Settings, Calendar, Plus, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { TimeInput } from '@/components/ui/time-input'
+import { DurationInput } from '@/components/ui/duration-input'
 import {
   Sheet,
   SheetContent,
@@ -14,7 +26,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { useDayPlan } from '@/hooks/api'
+import { useDayPlan, useCreateDayPlanBonus, useDeleteDayPlanBonus, useAccounts } from '@/hooks/api'
 import { formatTime, formatDuration } from '@/lib/time-utils'
 import type { components } from '@/lib/api/types'
 
@@ -68,7 +80,79 @@ export function DayPlanDetailSheet({
   onCopy,
 }: DayPlanDetailSheetProps) {
   const t = useTranslations('adminDayPlans')
-  const { data: dayPlan, isLoading } = useDayPlan(dayPlanId ?? '', open && !!dayPlanId)
+  const { data: dayPlan, isLoading, refetch } = useDayPlan(dayPlanId ?? '', open && !!dayPlanId)
+  const { data: accountsData } = useAccounts({ accountType: 'bonus', active: true, includeSystem: true, enabled: open })
+  const createBonusMutation = useCreateDayPlanBonus()
+  const deleteBonusMutation = useDeleteDayPlanBonus()
+  const [showAddBonus, setShowAddBonus] = useState(false)
+  const [newBonus, setNewBonus] = useState({
+    accountId: '',
+    timeFrom: 1320,
+    timeTo: 360,
+    calculationType: 'per_minute' as 'fixed' | 'per_minute' | 'percentage',
+    valueMinutes: 0,
+    minWorkMinutes: null as number | null,
+    appliesOnHoliday: false,
+  })
+
+  // Reset add bonus form when sheet closes
+  React.useEffect(() => {
+    if (!open) {
+      setShowAddBonus(false)
+      setNewBonus({
+        accountId: '',
+        timeFrom: 1320,
+        timeTo: 360,
+        calculationType: 'per_minute',
+        valueMinutes: 0,
+        minWorkMinutes: null,
+        appliesOnHoliday: false,
+      })
+    }
+  }, [open])
+
+  const handleAddBonus = async () => {
+    if (!dayPlan || !newBonus.accountId) return
+    try {
+      await createBonusMutation.mutateAsync({
+        path: { id: dayPlan.id },
+        body: {
+          account_id: newBonus.accountId,
+          time_from: newBonus.timeFrom,
+          time_to: newBonus.timeTo,
+          calculation_type: newBonus.calculationType,
+          value_minutes: newBonus.valueMinutes,
+          min_work_minutes: newBonus.minWorkMinutes ?? undefined,
+          applies_on_holiday: newBonus.appliesOnHoliday,
+        },
+      })
+      setShowAddBonus(false)
+      setNewBonus({
+        accountId: '',
+        timeFrom: 1320,
+        timeTo: 360,
+        calculationType: 'per_minute',
+        valueMinutes: 0,
+        minWorkMinutes: null,
+        appliesOnHoliday: false,
+      })
+      refetch()
+    } catch {
+      // Error handled by mutation
+    }
+  }
+
+  const handleDeleteBonus = async (bonusId: string) => {
+    if (!dayPlan) return
+    try {
+      await deleteBonusMutation.mutateAsync({
+        path: { id: dayPlan.id, bonusId },
+      })
+      refetch()
+    } catch {
+      // Error handled by mutation
+    }
+  }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -237,14 +321,25 @@ export function DayPlanDetailSheet({
                 )}
 
                 {/* Bonuses Section */}
-                {dayPlan.bonuses && dayPlan.bonuses.length > 0 && (
-                  <Section title={t('sectionBonuses')} icon={Settings}>
+                <Section title={t('sectionBonuses')} icon={Settings}>
+                  {dayPlan.bonuses && dayPlan.bonuses.length > 0 ? (
                     <div className="space-y-3">
                       {dayPlan.bonuses.map((bonus) => (
                         <div key={bonus.id} className="border rounded-lg p-3 text-sm">
                           <div className="flex items-center justify-between mb-2">
                             <span className="font-medium">{bonus.account?.name ?? t('unknownAccount')}</span>
-                            <span>{formatDuration(bonus.value_minutes)}</span>
+                            <div className="flex items-center gap-2">
+                              <span>{formatDuration(bonus.value_minutes)}</span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                                onClick={() => handleDeleteBonus(bonus.id)}
+                                disabled={deleteBonusMutation.isPending}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
                           <div className="text-muted-foreground">
                             {formatTime(bonus.time_from)} - {formatTime(bonus.time_to)}
@@ -258,8 +353,134 @@ export function DayPlanDetailSheet({
                         </div>
                       ))}
                     </div>
-                  </Section>
-                )}
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{t('noBonusesConfigured')}</p>
+                  )}
+
+                  {/* Add Bonus Form */}
+                  {showAddBonus ? (
+                    <div className="border rounded-lg p-4 space-y-4 mt-4 max-h-80 overflow-y-auto">
+                      <h4 className="text-sm font-medium">{t('addBonus')}</h4>
+
+                      <div className="space-y-2">
+                        <Label>{t('fieldAccount')}</Label>
+                        <Select
+                          value={newBonus.accountId}
+                          onValueChange={(v) => setNewBonus({ ...newBonus, accountId: v })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={t('selectAccount')} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {accountsData?.data?.map((account) => (
+                              <SelectItem key={account.id} value={account.id}>
+                                {account.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>{t('fieldTimeFrom')}</Label>
+                          <TimeInput
+                            value={newBonus.timeFrom}
+                            onChange={(v) => setNewBonus({ ...newBonus, timeFrom: v ?? 0 })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>{t('fieldTimeTo')}</Label>
+                          <TimeInput
+                            value={newBonus.timeTo}
+                            onChange={(v) => setNewBonus({ ...newBonus, timeTo: v ?? 0 })}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>{t('fieldCalculationType')}</Label>
+                          <Select
+                            value={newBonus.calculationType}
+                            onValueChange={(v) =>
+                              setNewBonus({ ...newBonus, calculationType: v as 'fixed' | 'per_minute' | 'percentage' })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="fixed">{t('bonusCalculationFixed')}</SelectItem>
+                              <SelectItem value="per_minute">{t('bonusCalculationPerMinute')}</SelectItem>
+                              <SelectItem value="percentage">{t('bonusCalculationPercentage')}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>{t('fieldValueMinutes')}</Label>
+                          <DurationInput
+                            value={newBonus.valueMinutes}
+                            onChange={(v) => setNewBonus({ ...newBonus, valueMinutes: v ?? 0 })}
+                            format="minutes"
+                            className="w-full"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>{t('fieldMinWorkMinutes')}</Label>
+                        <DurationInput
+                          value={newBonus.minWorkMinutes}
+                          onChange={(v) => setNewBonus({ ...newBonus, minWorkMinutes: v })}
+                          format="hhmm"
+                          className="w-full"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="applies-on-holiday"
+                          checked={newBonus.appliesOnHoliday}
+                          onCheckedChange={(c) => setNewBonus({ ...newBonus, appliesOnHoliday: c === true })}
+                        />
+                        <Label htmlFor="applies-on-holiday">{t('fieldAppliesOnHoliday')}</Label>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowAddBonus(false)}
+                          className="flex-1"
+                        >
+                          {t('cancel')}
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={handleAddBonus}
+                          disabled={createBonusMutation.isPending || !newBonus.accountId}
+                          className="flex-1"
+                        >
+                          {createBonusMutation.isPending && (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          )}
+                          {t('addBonus')}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowAddBonus(true)}
+                      className="mt-4"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      {t('addBonus')}
+                    </Button>
+                  )}
+                </Section>
               </div>
             </ScrollArea>
 

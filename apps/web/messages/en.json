@@ -1618,6 +1618,16 @@
     "bonusCalculationPercentage": "Percentage",
     "bonusAppliesOnHoliday": "Applies on holiday",
     "unknownAccount": "Unknown Account",
+    "addBonus": "Add Bonus",
+    "noBonusesConfigured": "No bonuses configured",
+    "fieldAccount": "Account",
+    "fieldTimeFrom": "Time From",
+    "fieldTimeTo": "Time To",
+    "fieldCalculationType": "Calculation Type",
+    "fieldMinWorkMinutes": "Min. Work Time",
+    "fieldAppliesOnHoliday": "Applies on holidays",
+    "selectAccount": "Select account...",
+    "cancel": "Cancel",
     "notFound": "Day plan not found"
   },
   "adminWeekPlans": {

@@ -1618,6 +1618,16 @@
     "bonusCalculationPercentage": "Prozentsatz",
     "bonusAppliesOnHoliday": "Gilt an Feiertagen",
     "unknownAccount": "Unbekanntes Konto",
+    "addBonus": "Zuschlag hinzufügen",
+    "noBonusesConfigured": "Keine Zuschläge konfiguriert",
+    "fieldAccount": "Konto",
+    "fieldTimeFrom": "Von",
+    "fieldTimeTo": "Bis",
+    "fieldCalculationType": "Berechnungsart",
+    "fieldMinWorkMinutes": "Mindestarbeitszeit",
+    "fieldAppliesOnHoliday": "Gilt an Feiertagen",
+    "selectAccount": "Konto auswählen...",
+    "cancel": "Abbrechen",
     "notFound": "Tagesplan nicht gefunden"
   },
   "adminWeekPlans": {
