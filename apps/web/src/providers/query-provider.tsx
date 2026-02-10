@@ -23,8 +23,8 @@ function makeQueryClient() {
         staleTime: 5 * 60 * 1000,
         // Cached data is kept for 30 minutes
         gcTime: 30 * 60 * 1000,
-        // Don't refetch on window focus by default
-        refetchOnWindowFocus: false,
+        // Refetch stale queries when window regains focus
+        refetchOnWindowFocus: true,
         // Retry failed requests once
         retry: 1,
         // Don't retry on 4xx errors (except 408, 429)

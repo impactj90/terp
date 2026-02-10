@@ -87,6 +87,7 @@ const tenantMiddleware: Middleware = {
 function createApiClient() {
   const client = createClient<paths>({
     baseUrl: clientEnv.apiUrl,
+    cache: 'no-store',
   })
 
   // Register middleware
