@@ -113,7 +113,7 @@ func main() {
 	weekPlanService := service.NewWeekPlanService(weekPlanRepo, dayPlanRepo)
 	tariffService := service.NewTariffService(tariffRepo, weekPlanRepo, dayPlanRepo)
 	bookingTypeService := service.NewBookingTypeService(bookingTypeRepo)
-	notificationService := service.NewNotificationService(notificationRepo, notificationPreferencesRepo, userRepo)
+	notificationService := service.NewNotificationService(notificationRepo, notificationPreferencesRepo, userRepo, employeeRepo)
 	auditLogService := service.NewAuditLogService(auditLogRepo)
 	groupService := service.NewGroupService(employeeGroupRepo, workflowGroupRepo, activityGroupRepo)
 	edpService := service.NewEmployeeDayPlanService(empDayPlanRepo, employeeRepo, dayPlanRepo, shiftRepo)

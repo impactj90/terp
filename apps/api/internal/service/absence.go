@@ -11,6 +11,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/tolga/terp/internal/model"
+	"github.com/tolga/terp/internal/permissions"
 )
 
 // Absence service errors.
@@ -474,7 +475,7 @@ func (s *AbsenceService) notifyPendingAbsence(ctx context.Context, input CreateA
 	}
 
 	link := "/admin/approvals"
-	_, _ = s.notificationSvc.CreateForTenantAdmins(ctx, input.TenantID, CreateNotificationInput{
+	_, _ = s.notificationSvc.CreateForScopedAdmins(ctx, input.TenantID, input.EmployeeID, permissions.ID("absences.approve").String(), CreateNotificationInput{
 		Type:    model.NotificationTypeReminders,
 		Title:   "Absence approval required",
 		Message: fmt.Sprintf("%s request for %s is pending approval.", absenceTypeName, dateLabel),

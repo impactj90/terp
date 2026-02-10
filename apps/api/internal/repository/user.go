@@ -194,7 +194,7 @@ func (r *UserRepository) GetByUsername(ctx context.Context, tenantID uuid.UUID, 
 // ListByTenant retrieves all users for a tenant.
 func (r *UserRepository) ListByTenant(ctx context.Context, tenantID uuid.UUID, includeInactive bool) ([]model.User, error) {
 	var users []model.User
-	query := r.db.GORM.WithContext(ctx).Where("tenant_id = ?", tenantID)
+	query := r.db.GORM.WithContext(ctx).Preload("UserGroup").Where("tenant_id = ?", tenantID)
 	if !includeInactive {
 		query = query.Where("is_active = ?", true)
 	}

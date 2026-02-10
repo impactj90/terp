@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 
+	"github.com/tolga/terp/internal/access"
 	"github.com/tolga/terp/internal/model"
 	"github.com/tolga/terp/internal/repository"
 )
@@ -17,6 +19,7 @@ type NotificationService struct {
 	notificationRepo *repository.NotificationRepository
 	preferencesRepo  *repository.NotificationPreferencesRepository
 	userRepo         notificationUserRepository
+	employeeRepo     notificationEmployeeRepository
 	streamHub        *NotificationStreamHub
 }
 
@@ -25,16 +28,22 @@ type notificationUserRepository interface {
 	GetByEmployeeID(ctx context.Context, tenantID, employeeID uuid.UUID) (*model.User, error)
 }
 
+type notificationEmployeeRepository interface {
+	GetByID(ctx context.Context, id uuid.UUID) (*model.Employee, error)
+}
+
 // NewNotificationService creates a new NotificationService.
 func NewNotificationService(
 	notificationRepo *repository.NotificationRepository,
 	preferencesRepo *repository.NotificationPreferencesRepository,
 	userRepo notificationUserRepository,
+	employeeRepo notificationEmployeeRepository,
 ) *NotificationService {
 	return &NotificationService{
 		notificationRepo: notificationRepo,
 		preferencesRepo:  preferencesRepo,
 		userRepo:         userRepo,
+		employeeRepo:     employeeRepo,
 	}
 }
 
@@ -134,9 +143,67 @@ func (s *NotificationService) CreateForTenantAdmins(ctx context.Context, tenantI
 	var created []model.Notification
 	for i := range users {
 		user := users[i]
-		if user.Role != model.RoleAdmin {
+		if !user.IsAdmin() {
 			continue
 		}
+		createdNotification, err := s.Create(ctx, CreateNotificationInput{
+			TenantID: tenantID,
+			UserID:   user.ID,
+			Type:     input.Type,
+			Title:    input.Title,
+			Message:  input.Message,
+			Link:     input.Link,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if createdNotification != nil {
+			created = append(created, *createdNotification)
+		}
+	}
+
+	return created, nil
+}
+
+// CreateForScopedAdmins creates notifications for users who hold the given permission
+// and whose DataScope covers the given employee.
+// Users in an IsAdmin group or whose UserGroup.Permissions includes permissionID are considered.
+// DataScope filtering further restricts delivery based on department/employee scope.
+func (s *NotificationService) CreateForScopedAdmins(ctx context.Context, tenantID, employeeID uuid.UUID, permissionID string, input CreateNotificationInput) ([]model.Notification, error) {
+	if s.userRepo == nil {
+		return nil, errors.New("user repository not configured")
+	}
+	if s.employeeRepo == nil {
+		return nil, errors.New("employee repository not configured")
+	}
+
+	employee, err := s.employeeRepo.GetByID(ctx, employeeID)
+	if err != nil {
+		return nil, fmt.Errorf("load employee for scoped notification: %w", err)
+	}
+
+	users, err := s.userRepo.ListByTenant(ctx, tenantID, false)
+	if err != nil {
+		return nil, err
+	}
+
+	var created []model.Notification
+	for i := range users {
+		user := users[i]
+
+		// Check permission via UserGroup (IsAdmin groups pass all checks)
+		if user.UserGroup == nil || !user.UserGroup.HasPermission(permissionID) {
+			continue
+		}
+
+		scope, err := access.ScopeFromUser(&user)
+		if err != nil {
+			continue
+		}
+		if !scope.AllowsEmployee(employee) {
+			continue
+		}
+
 		createdNotification, err := s.Create(ctx, CreateNotificationInput{
 			TenantID: tenantID,
 			UserID:   user.ID,
