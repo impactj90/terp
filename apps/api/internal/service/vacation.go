@@ -71,6 +71,16 @@ type tariffAssignmentRepoForVacation interface {
 	GetEffectiveForDate(ctx context.Context, employeeID uuid.UUID, date time.Time) (*model.EmployeeTariffAssignment, error)
 }
 
+// cappingGroupRepoForVacation provides capping rule group lookup for carryover capping.
+type cappingGroupRepoForVacation interface {
+	GetByID(ctx context.Context, id uuid.UUID) (*model.VacationCappingRuleGroup, error)
+}
+
+// exceptionRepoForVacation provides employee capping exception lookup.
+type exceptionRepoForVacation interface {
+	ListActiveByEmployee(ctx context.Context, employeeID uuid.UUID, year *int) ([]model.EmployeeCappingException, error)
+}
+
 // PreviewEntitlementInput represents input for entitlement preview.
 type PreviewEntitlementInput struct {
 	EmployeeID          uuid.UUID
@@ -104,6 +114,8 @@ type VacationService struct {
 	vacationCalcGroupRepo vacationCalcGroupRepoForVacation
 	empDayPlanRepo        empDayPlanRepoForVacation
 	tariffAssignmentRepo  tariffAssignmentRepoForVacation
+	cappingGroupRepo      cappingGroupRepoForVacation
+	exceptionRepo         exceptionRepoForVacation
 	defaultMaxCarryover   decimal.Decimal // 0 = unlimited
 }
 
@@ -140,6 +152,16 @@ func (s *VacationService) SetEmpDayPlanRepo(repo empDayPlanRepoForVacation) {
 // SetTariffAssignmentRepo sets the tariff assignment repository for resolving effective tariffs.
 func (s *VacationService) SetTariffAssignmentRepo(repo tariffAssignmentRepoForVacation) {
 	s.tariffAssignmentRepo = repo
+}
+
+// SetCappingGroupRepo sets the capping rule group repository for carryover capping.
+func (s *VacationService) SetCappingGroupRepo(repo cappingGroupRepoForVacation) {
+	s.cappingGroupRepo = repo
+}
+
+// SetExceptionRepo sets the employee capping exception repository.
+func (s *VacationService) SetExceptionRepo(repo exceptionRepoForVacation) {
+	s.exceptionRepo = repo
 }
 
 // GetBalance retrieves the vacation balance for an employee and year.
@@ -300,6 +322,30 @@ func (s *VacationService) resolveCalcGroup(ctx context.Context, employee *model.
 	return group
 }
 
+// resolveTariff resolves the effective tariff for an employee in a given year.
+// Resolution order: (1) active tariff assignment, (2) employee.TariffID fallback.
+func (s *VacationService) resolveTariff(ctx context.Context, employee *model.Employee, year int) *model.Tariff {
+	var tariff *model.Tariff
+	if s.tariffAssignmentRepo != nil {
+		// Use end-of-year for past years so mid-year assignments are found.
+		// For current/future years, use today so not-yet-started assignments are excluded.
+		refDate := time.Date(year, 12, 31, 0, 0, 0, 0, time.UTC)
+		if now := time.Now(); refDate.After(now) {
+			refDate = now
+		}
+		if assignment, err := s.tariffAssignmentRepo.GetEffectiveForDate(ctx, employee.ID, refDate); err == nil && assignment != nil {
+			tariff = assignment.Tariff
+		}
+	}
+	if tariff == nil && employee.TariffID != nil && s.tariffRepo != nil {
+		t, err := s.tariffRepo.GetByID(ctx, *employee.TariffID)
+		if err == nil && t != nil {
+			tariff = t
+		}
+	}
+	return tariff
+}
+
 // buildCalcInput constructs the VacationCalcInput from employee, tariff, and optional calc group.
 func (s *VacationService) buildCalcInput(
 	ctx context.Context,
@@ -321,20 +367,8 @@ func (s *VacationService) buildCalcInput(
 		input.BirthDate = *employee.BirthDate
 	}
 
-	// Resolve tariff: (1) active assignment, (2) employee.TariffID fallback
-	var tariff *model.Tariff
-	if s.tariffAssignmentRepo != nil {
-		refDate := time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
-		if assignment, err := s.tariffAssignmentRepo.GetEffectiveForDate(ctx, employee.ID, refDate); err == nil && assignment != nil {
-			tariff = assignment.Tariff
-		}
-	}
-	if tariff == nil && employee.TariffID != nil && s.tariffRepo != nil {
-		t, err := s.tariffRepo.GetByID(ctx, *employee.TariffID)
-		if err == nil && t != nil {
-			tariff = t
-		}
-	}
+	// Resolve tariff
+	tariff := s.resolveTariff(ctx, employee, year)
 
 	// Apply tariff values (StandardWeeklyHours and BaseVacationDays)
 	input.StandardWeeklyHours = decimal.NewFromInt(40)
@@ -482,9 +516,68 @@ func (s *VacationService) AdjustBalance(ctx context.Context, employeeID uuid.UUI
 	return s.vacationBalanceRepo.Upsert(ctx, balance)
 }
 
+// calculateCappedCarryover applies tariff capping rules to carryover if available,
+// falling back to the simple defaultMaxCarryover calculation.
+func (s *VacationService) calculateCappedCarryover(ctx context.Context, employee *model.Employee, prevYear int, available decimal.Decimal) decimal.Decimal {
+	// Try advanced capping if repos are available
+	tariff := s.resolveTariff(ctx, employee, prevYear)
+	if tariff != nil && tariff.VacationCappingRuleGroupID != nil && s.cappingGroupRepo != nil {
+		group, err := s.cappingGroupRepo.GetByID(ctx, *tariff.VacationCappingRuleGroupID)
+		if err == nil && group != nil {
+			// Build CarryoverInput
+			calcInput := calculation.CarryoverInput{
+				AvailableDays: available,
+				Year:          prevYear,
+				ReferenceDate: time.Now(),
+				CappingRules:  make([]calculation.CappingRuleInput, 0, len(group.CappingRules)),
+				Exceptions:    make([]calculation.CappingExceptionInput, 0),
+			}
+
+			for _, rule := range group.CappingRules {
+				if !rule.IsActive {
+					continue
+				}
+				calcInput.CappingRules = append(calcInput.CappingRules, calculation.CappingRuleInput{
+					RuleID:      rule.ID.String(),
+					RuleName:    rule.Name,
+					RuleType:    string(rule.RuleType),
+					CutoffMonth: rule.CutoffMonth,
+					CutoffDay:   rule.CutoffDay,
+					CapValue:    rule.CapValue,
+				})
+			}
+
+			// Load employee exceptions if repo is available
+			if s.exceptionRepo != nil {
+				year := prevYear
+				exceptions, err := s.exceptionRepo.ListActiveByEmployee(ctx, employee.ID, &year)
+				if err == nil {
+					for _, exc := range exceptions {
+						excInput := calculation.CappingExceptionInput{
+							CappingRuleID: exc.CappingRuleID.String(),
+							ExemptionType: string(exc.ExemptionType),
+						}
+						if exc.RetainDays != nil {
+							rd := *exc.RetainDays
+							excInput.RetainDays = &rd
+						}
+						calcInput.Exceptions = append(calcInput.Exceptions, excInput)
+					}
+				}
+			}
+
+			output := calculation.CalculateCarryoverWithCapping(calcInput)
+			return output.CappedCarryover
+		}
+	}
+
+	// Fallback: simple carryover with defaultMaxCarryover
+	return calculation.CalculateCarryover(available, s.defaultMaxCarryover)
+}
+
 // CarryoverFromPreviousYear carries over remaining vacation from the previous year.
 // The year parameter is the TARGET year (receiving the carryover).
-// Respects the configured defaultMaxCarryover (0 = unlimited).
+// Respects tariff capping rules when available, falling back to defaultMaxCarryover (0 = unlimited).
 func (s *VacationService) CarryoverFromPreviousYear(ctx context.Context, employeeID uuid.UUID, year int) error {
 	if year < 1901 || year > 2200 {
 		return ErrInvalidYear
@@ -506,9 +599,9 @@ func (s *VacationService) CarryoverFromPreviousYear(ctx context.Context, employe
 		return nil
 	}
 
-	// Calculate carryover amount (capped by max)
+	// Calculate carryover amount (capped by tariff capping rules or defaultMaxCarryover)
 	available := prevBalance.Available()
-	carryover := calculation.CalculateCarryover(available, s.defaultMaxCarryover)
+	carryover := s.calculateCappedCarryover(ctx, employee, year-1, available)
 
 	if carryover.IsZero() {
 		return nil

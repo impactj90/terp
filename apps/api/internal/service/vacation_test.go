@@ -117,6 +117,42 @@ func (m *mockTariffRepoForVacation) GetByID(ctx context.Context, id uuid.UUID) (
 	return args.Get(0).(*model.Tariff), args.Error(1)
 }
 
+type mockCappingGroupRepoForVacation struct {
+	mock.Mock
+}
+
+func (m *mockCappingGroupRepoForVacation) GetByID(ctx context.Context, id uuid.UUID) (*model.VacationCappingRuleGroup, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.VacationCappingRuleGroup), args.Error(1)
+}
+
+type mockExceptionRepoForVacation struct {
+	mock.Mock
+}
+
+func (m *mockExceptionRepoForVacation) ListActiveByEmployee(ctx context.Context, employeeID uuid.UUID, year *int) ([]model.EmployeeCappingException, error) {
+	args := m.Called(ctx, employeeID, year)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]model.EmployeeCappingException), args.Error(1)
+}
+
+type mockTariffAssignmentRepoForVacation struct {
+	mock.Mock
+}
+
+func (m *mockTariffAssignmentRepoForVacation) GetEffectiveForDate(ctx context.Context, employeeID uuid.UUID, date time.Time) (*model.EmployeeTariffAssignment, error) {
+	args := m.Called(ctx, employeeID, date)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.EmployeeTariffAssignment), args.Error(1)
+}
+
 // --- Test helper ---
 
 func newTestVacationService(maxCarryover decimal.Decimal) (
@@ -894,6 +930,205 @@ func TestVacationService_RecalculateTaken_NilEmpDayPlanRepo(t *testing.T) {
 	vacBalanceRepo.On("UpdateTaken", ctx, employeeID, 2026, decimal.NewFromFloat(2.0)).Return(nil)
 
 	err := svc.RecalculateTaken(ctx, employeeID, 2026)
+
+	require.NoError(t, err)
+	vacBalanceRepo.AssertExpectations(t)
+}
+
+// --- Capped Carryover Tests ---
+
+func TestVacationService_CarryoverFromPreviousYear_CappedByTariffRules(t *testing.T) {
+	// Employee has 20 available vacation days. Tariff has a capping rule group
+	// with a year_end cap of 15 days. Carryover should be capped to 15.
+	ctx := context.Background()
+	svc, vacBalanceRepo, _, _, employeeRepo, _, tariffRepo, _ := newTestVacationService(decimal.Zero)
+
+	cappingGroupRepo := new(mockCappingGroupRepoForVacation)
+	exceptionRepo := new(mockExceptionRepoForVacation)
+	svc.SetCappingGroupRepo(cappingGroupRepo)
+	svc.SetExceptionRepo(exceptionRepo)
+
+	employeeID := uuid.New()
+	tenantID := uuid.New()
+	tariffID := uuid.New()
+	cappingGroupID := uuid.New()
+	ruleID := uuid.New()
+
+	employee := &model.Employee{
+		ID:       employeeID,
+		TenantID: tenantID,
+		TariffID: &tariffID,
+	}
+	employeeRepo.On("GetByID", ctx, employeeID).Return(employee, nil)
+
+	// Tariff with capping rule group
+	tariffRepo.On("GetByID", ctx, tariffID).Return(&model.Tariff{
+		ID:                         tariffID,
+		VacationCappingRuleGroupID: &cappingGroupID,
+	}, nil)
+
+	// Capping group with a year_end rule capping at 15 days
+	cappingGroupRepo.On("GetByID", ctx, cappingGroupID).Return(&model.VacationCappingRuleGroup{
+		ID: cappingGroupID,
+		CappingRules: []model.VacationCappingRule{
+			{
+				ID:          ruleID,
+				Name:        "Year End Cap",
+				RuleType:    model.CappingRuleTypeYearEnd,
+				CutoffMonth: 12,
+				CutoffDay:   31,
+				CapValue:    decimal.NewFromInt(15),
+				IsActive:    true,
+			},
+		},
+	}, nil)
+
+	// No exceptions
+	prevYear := 2025
+	exceptionRepo.On("ListActiveByEmployee", ctx, employeeID, &prevYear).Return([]model.EmployeeCappingException{}, nil)
+
+	// Previous year: 30 entitlement - 10 taken = 20 available
+	prevBalance := &model.VacationBalance{
+		EmployeeID:  employeeID,
+		Year:        2025,
+		Entitlement: decimal.NewFromInt(30),
+		Taken:       decimal.NewFromInt(10),
+	}
+	vacBalanceRepo.On("GetByEmployeeYear", ctx, employeeID, 2025).Return(prevBalance, nil)
+	vacBalanceRepo.On("GetByEmployeeYear", ctx, employeeID, 2026).Return(nil, nil)
+	vacBalanceRepo.On("Upsert", ctx, mock.MatchedBy(func(b *model.VacationBalance) bool {
+		// 20 available, year_end cap at 15 -> carryover = 15
+		return b.Year == 2026 &&
+			b.EmployeeID == employeeID &&
+			b.Carryover.Equal(decimal.NewFromInt(15))
+	})).Return(nil)
+
+	err := svc.CarryoverFromPreviousYear(ctx, employeeID, 2026)
+
+	require.NoError(t, err)
+	vacBalanceRepo.AssertExpectations(t)
+	cappingGroupRepo.AssertExpectations(t)
+	exceptionRepo.AssertExpectations(t)
+}
+
+func TestVacationService_CarryoverFromPreviousYear_CappingWithException(t *testing.T) {
+	// Employee has 20 available days. Year_end cap is 15, but employee has a
+	// partial exception retaining up to 18 days.
+	ctx := context.Background()
+	svc, vacBalanceRepo, _, _, employeeRepo, _, tariffRepo, _ := newTestVacationService(decimal.Zero)
+
+	cappingGroupRepo := new(mockCappingGroupRepoForVacation)
+	exceptionRepo := new(mockExceptionRepoForVacation)
+	svc.SetCappingGroupRepo(cappingGroupRepo)
+	svc.SetExceptionRepo(exceptionRepo)
+
+	employeeID := uuid.New()
+	tenantID := uuid.New()
+	tariffID := uuid.New()
+	cappingGroupID := uuid.New()
+	ruleID := uuid.New()
+
+	employee := &model.Employee{
+		ID:       employeeID,
+		TenantID: tenantID,
+		TariffID: &tariffID,
+	}
+	employeeRepo.On("GetByID", ctx, employeeID).Return(employee, nil)
+
+	tariffRepo.On("GetByID", ctx, tariffID).Return(&model.Tariff{
+		ID:                         tariffID,
+		VacationCappingRuleGroupID: &cappingGroupID,
+	}, nil)
+
+	cappingGroupRepo.On("GetByID", ctx, cappingGroupID).Return(&model.VacationCappingRuleGroup{
+		ID: cappingGroupID,
+		CappingRules: []model.VacationCappingRule{
+			{
+				ID:          ruleID,
+				Name:        "Year End Cap",
+				RuleType:    model.CappingRuleTypeYearEnd,
+				CutoffMonth: 12,
+				CutoffDay:   31,
+				CapValue:    decimal.NewFromInt(15),
+				IsActive:    true,
+			},
+		},
+	}, nil)
+
+	// Partial exception: retain up to 18 days instead of 15
+	retainDays := decimal.NewFromInt(18)
+	prevYear := 2025
+	exceptionRepo.On("ListActiveByEmployee", ctx, employeeID, &prevYear).Return([]model.EmployeeCappingException{
+		{
+			EmployeeID:    employeeID,
+			CappingRuleID: ruleID,
+			ExemptionType: model.ExemptionTypePartial,
+			RetainDays:    &retainDays,
+			IsActive:      true,
+		},
+	}, nil)
+
+	// Previous year: 30 - 10 = 20 available
+	prevBalance := &model.VacationBalance{
+		EmployeeID:  employeeID,
+		Year:        2025,
+		Entitlement: decimal.NewFromInt(30),
+		Taken:       decimal.NewFromInt(10),
+	}
+	vacBalanceRepo.On("GetByEmployeeYear", ctx, employeeID, 2025).Return(prevBalance, nil)
+	vacBalanceRepo.On("GetByEmployeeYear", ctx, employeeID, 2026).Return(nil, nil)
+	vacBalanceRepo.On("Upsert", ctx, mock.MatchedBy(func(b *model.VacationBalance) bool {
+		// 20 available, cap=15, but partial exception retains up to 18 -> carryover = 18
+		return b.Carryover.Equal(decimal.NewFromInt(18))
+	})).Return(nil)
+
+	err := svc.CarryoverFromPreviousYear(ctx, employeeID, 2026)
+
+	require.NoError(t, err)
+	vacBalanceRepo.AssertExpectations(t)
+}
+
+func TestVacationService_CarryoverFromPreviousYear_NoCappingGroupFallsBack(t *testing.T) {
+	// When tariff has no capping group, falls back to defaultMaxCarryover.
+	ctx := context.Background()
+	maxCarryover := decimal.NewFromInt(10)
+	svc, vacBalanceRepo, _, _, employeeRepo, _, tariffRepo, _ := newTestVacationService(maxCarryover)
+
+	cappingGroupRepo := new(mockCappingGroupRepoForVacation)
+	svc.SetCappingGroupRepo(cappingGroupRepo)
+
+	employeeID := uuid.New()
+	tenantID := uuid.New()
+	tariffID := uuid.New()
+
+	employee := &model.Employee{
+		ID:       employeeID,
+		TenantID: tenantID,
+		TariffID: &tariffID,
+	}
+	employeeRepo.On("GetByID", ctx, employeeID).Return(employee, nil)
+
+	// Tariff without capping group
+	tariffRepo.On("GetByID", ctx, tariffID).Return(&model.Tariff{
+		ID:                         tariffID,
+		VacationCappingRuleGroupID: nil,
+	}, nil)
+
+	// Previous year: 30 - 12 = 18 available
+	prevBalance := &model.VacationBalance{
+		EmployeeID:  employeeID,
+		Year:        2025,
+		Entitlement: decimal.NewFromInt(30),
+		Taken:       decimal.NewFromInt(12),
+	}
+	vacBalanceRepo.On("GetByEmployeeYear", ctx, employeeID, 2025).Return(prevBalance, nil)
+	vacBalanceRepo.On("GetByEmployeeYear", ctx, employeeID, 2026).Return(nil, nil)
+	vacBalanceRepo.On("Upsert", ctx, mock.MatchedBy(func(b *model.VacationBalance) bool {
+		// 18 available, no capping group, fallback maxCarryover=10 -> carryover = 10
+		return b.Carryover.Equal(decimal.NewFromInt(10))
+	})).Return(nil)
+
+	err := svc.CarryoverFromPreviousYear(ctx, employeeID, 2026)
 
 	require.NoError(t, err)
 	vacBalanceRepo.AssertExpectations(t)

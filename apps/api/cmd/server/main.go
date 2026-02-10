@@ -26,6 +26,11 @@ import (
 )
 
 func main() {
+	// Serialize decimal.Decimal as JSON numbers (e.g. 8.00) instead of strings ("8.00").
+	// Without this, frontends that round-trip decimal fields through forms will send
+	// strings back, which Go's json decoder rejects for float64 targets.
+	decimal.MarshalJSONWithoutQuotes = true
+
 	// Setup logger
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	cfg := config.Load()
@@ -205,6 +210,10 @@ func main() {
 	employeeCappingExceptionRepo := repository.NewEmployeeCappingExceptionRepository(db)
 	employeeCappingExceptionService := service.NewEmployeeCappingExceptionService(employeeCappingExceptionRepo, vacationCappingRuleRepo)
 	employeeCappingExceptionHandler := handler.NewEmployeeCappingExceptionHandler(employeeCappingExceptionService)
+
+	// Wire capping repos into vacation service for carryover capping
+	vacationService.SetCappingGroupRepo(vacationCappingRuleGroupRepo)
+	vacationService.SetExceptionRepo(employeeCappingExceptionRepo)
 
 	// Initialize Vacation Carryover Service
 	vacationCarryoverService := service.NewVacationCarryoverService(
