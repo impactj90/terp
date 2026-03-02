@@ -1,4 +1,4 @@
-.PHONY: dev dev-down dev-reset dev-clean dev-logs dev-ps demo demo-down demo-logs build test test-coverage lint fmt tidy migrate-up migrate-down migrate-create migrate-status swagger-bundle generate generate-web generate-all clean install-tools help
+.PHONY: dev dev-down dev-reset dev-clean dev-logs dev-ps demo demo-down demo-logs build test test-coverage lint fmt tidy migrate-up migrate-down migrate-create migrate-status swagger-bundle generate generate-web generate-all clean install-tools help prod-setup prod-deploy prod-migrate prod-logs prod-ssh
 
 # Variables
 DOCKER_COMPOSE = docker compose -p terp -f docker/docker-compose.yml
@@ -177,3 +177,32 @@ install-tools: ## Install required development tools
 	@echo "Installing swagger-cli (for bundling OpenAPI specs)..."
 	npm install -g @apidevtools/swagger-cli
 	@echo "All tools installed!"
+
+# === Production Deployment (Hetzner VPS) ===
+
+prod-setup: ## Initial server setup (SERVER=<ip> required)
+	@test -n "$(SERVER)" || (echo "SERVER required: make prod-setup SERVER=<ip>" && exit 1)
+	scp deploy/setup.sh root@$(SERVER):/tmp/setup.sh
+	ssh root@$(SERVER) 'chmod +x /tmp/setup.sh && /tmp/setup.sh'
+
+prod-deploy: ## Build and deploy API to server (SERVER=<ip> required)
+	@test -n "$(SERVER)" || (echo "SERVER required: make prod-deploy SERVER=<ip>" && exit 1)
+	bash deploy/deploy.sh $(SERVER)
+
+prod-migrate: ## Run migrations on server (SERVER=<ip> required)
+	@test -n "$(SERVER)" || (echo "SERVER required: make prod-migrate SERVER=<ip>" && exit 1)
+	ssh root@$(SERVER) 'cd /opt/terp && source .env.prod && docker run --rm \
+		--network terp-prod_internal \
+		-v /opt/terp/migrations:/migrations \
+		migrate/migrate:v4.17.1 \
+		-path=/migrations \
+		-database "postgres://terp:$${DB_PASSWORD}@postgres:5432/terp_prod?sslmode=disable" \
+		up'
+
+prod-logs: ## Tail logs from server (SERVER=<ip> required)
+	@test -n "$(SERVER)" || (echo "SERVER required: make prod-logs SERVER=<ip>" && exit 1)
+	ssh root@$(SERVER) 'cd /opt/terp && docker compose --env-file .env.prod -f docker-compose.prod.yml logs -f'
+
+prod-ssh: ## SSH into server (SERVER=<ip> required)
+	@test -n "$(SERVER)" || (echo "SERVER required: make prod-ssh SERVER=<ip>" && exit 1)
+	ssh root@$(SERVER)

@@ -30,6 +30,9 @@ apps/web/node_modules/
 apps/web/.pnpm-store/
 node_modules/
 
+# Prisma generated client (regenerate with `pnpm db:generate`)
+apps/web/src/generated/
+
 # Next.js build output
 .vercel
 

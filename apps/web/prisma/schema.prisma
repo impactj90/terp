@@ -1,0 +1,157 @@
+// Prisma Schema for Terp — Core Foundation (ZMI-TICKET-200)
+// This schema is READ-ONLY against the existing PostgreSQL database.
+// DO NOT run `prisma db push` or `prisma migrate dev`.
+// Schema changes are managed via SQL migrations in db/migrations/.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// -----------------------------------------------------------------------------
+// User
+// -----------------------------------------------------------------------------
+// Migrations: 000001, 000008, 000014, 000039
+//
+// CHECK constraints (enforced at DB level only):
+//   - role IN ('user', 'admin')
+//   - data_scope_type IN ('all', 'tenant', 'department', 'employee')
+//
+// Partial unique index (cannot be modeled in Prisma):
+//   - idx_users_tenant_username: UNIQUE ON (tenant_id, username) WHERE username IS NOT NULL
+//
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model User {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                  String    @unique @db.VarChar(255)
+  displayName            String    @map("display_name") @db.VarChar(255)
+  avatarUrl              String?   @map("avatar_url") @db.Text
+  role                   String    @default("user") @db.VarChar(50)
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  tenantId               String?   @map("tenant_id") @db.Uuid
+  userGroupId            String?   @map("user_group_id") @db.Uuid
+  employeeId             String?   @map("employee_id") @db.Uuid
+  username               String?   @db.VarChar(100)
+  isActive               Boolean?  @default(true) @map("is_active")
+  deletedAt              DateTime? @map("deleted_at") @db.Timestamptz(6)
+  passwordHash           String?   @map("password_hash") @db.VarChar(255)
+  ssoId                  String?   @map("sso_id") @db.VarChar(255)
+  isLocked               Boolean   @default(false) @map("is_locked")
+  dataScopeType          String    @default("all") @map("data_scope_type") @db.VarChar(20)
+  dataScopeTenantIds     String[]  @default([]) @map("data_scope_tenant_ids") @db.Uuid
+  dataScopeDepartmentIds String[]  @default([]) @map("data_scope_department_ids") @db.Uuid
+  dataScopeEmployeeIds   String[]  @default([]) @map("data_scope_employee_ids") @db.Uuid
+
+  // Relations
+  tenant      Tenant?      @relation(fields: [tenantId], references: [id])
+  userGroup   UserGroup?   @relation(fields: [userGroupId], references: [id])
+  userTenants UserTenant[]
+
+  // Indexes
+  @@unique([tenantId, email], map: "idx_users_tenant_email")
+  @@index([email], map: "idx_users_email")
+  @@index([displayName], map: "idx_users_display_name")
+  @@index([tenantId], map: "idx_users_tenant")
+  @@index([userGroupId], map: "idx_users_user_group")
+  @@index([deletedAt], map: "idx_users_deleted_at")
+  @@map("users")
+}
+
+// -----------------------------------------------------------------------------
+// Tenant
+// -----------------------------------------------------------------------------
+// Migrations: 000002, 000037
+//
+// CHECK constraints (enforced at DB level only):
+//   - vacation_basis IN ('calendar_year', 'entry_date')
+//
+// Note: No deleted_at column. Tenants use is_active = false for deactivation.
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model Tenant {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                 String    @db.VarChar(255)
+  slug                 String    @unique @db.VarChar(100)
+  settings             Json?     @default("{}") @db.JsonB
+  isActive             Boolean?  @default(true) @map("is_active")
+  createdAt            DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime? @default(now()) @map("updated_at") @db.Timestamptz(6)
+  addressStreet        String?   @map("address_street") @db.VarChar(255)
+  addressZip           String?   @map("address_zip") @db.VarChar(20)
+  addressCity          String?   @map("address_city") @db.VarChar(100)
+  addressCountry       String?   @map("address_country") @db.VarChar(100)
+  phone                String?   @db.VarChar(50)
+  email                String?   @db.VarChar(255)
+  payrollExportBasePath String?  @map("payroll_export_base_path") @db.Text
+  notes                String?   @db.Text
+  vacationBasis        String    @default("calendar_year") @map("vacation_basis") @db.VarChar(20)
+
+  // Relations
+  users       User[]
+  userGroups  UserGroup[]
+  userTenants UserTenant[]
+
+  // Indexes
+  @@index([slug], map: "idx_tenants_slug")
+  @@index([isActive], map: "idx_tenants_is_active")
+  @@map("tenants")
+}
+
+// -----------------------------------------------------------------------------
+// UserGroup
+// -----------------------------------------------------------------------------
+// Migrations: 000007, 000036, 000087
+//
+// COALESCE-based unique indexes (cannot be modeled in Prisma):
+//   - idx_user_groups_tenant_code: UNIQUE ON (COALESCE(tenant_id, '00000000-...'), code)
+//   - idx_user_groups_tenant_name: UNIQUE ON (COALESCE(tenant_id, '00000000-...'), name)
+// These constraints are enforced at the DB level only.
+//
+// tenant_id is nullable: NULL = system-wide group visible to all tenants.
+model UserGroup {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String?   @map("tenant_id") @db.Uuid
+  name        String    @db.VarChar(100)
+  code        String    @db.VarChar(50)
+  description String?   @db.Text
+  permissions Json?     @default("[]") @db.JsonB
+  isAdmin     Boolean?  @default(false) @map("is_admin")
+  isSystem    Boolean?  @default(false) @map("is_system")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime? @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  users  User[]
+
+  // Indexes
+  @@index([tenantId], map: "idx_user_groups_tenant")
+  @@map("user_groups")
+}
+
+// -----------------------------------------------------------------------------
+// UserTenant
+// -----------------------------------------------------------------------------
+// Migration: 000084
+//
+// Join table linking users to tenants they have access to.
+// Uses composite primary key (user_id, tenant_id) — no surrogate id column.
+model UserTenant {
+  userId    String   @map("user_id") @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  role      String   @default("member") @db.VarChar(50)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relations
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Composite primary key
+  @@id([userId, tenantId])
+  @@map("user_tenants")
+}

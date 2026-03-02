@@ -527,9 +527,9 @@ func RegisterAbsenceRoutes(r chi.Router, h *AbsenceHandler, authz *middleware.Au
 			r.Delete("/{id}", h.DeleteType)
 			return
 		}
-		r.With(authz.RequirePermission(absenceTypesPerm)).Get("/", h.ListTypes)
+		r.Get("/", h.ListTypes)
+		r.Get("/{id}", h.GetType)
 		r.With(authz.RequirePermission(absenceTypesPerm)).Post("/", h.CreateType)
-		r.With(authz.RequirePermission(absenceTypesPerm)).Get("/{id}", h.GetType)
 		r.With(authz.RequirePermission(absenceTypesPerm)).Patch("/{id}", h.UpdateType)
 		r.With(authz.RequirePermission(absenceTypesPerm)).Delete("/{id}", h.DeleteType)
 	})

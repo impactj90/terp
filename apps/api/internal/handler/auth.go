@@ -80,6 +80,8 @@ type AuthHandler struct {
 	vacationBalanceRepo  vacationBalanceRepoForAuth
 	accountRepo          accountRepoForAuth
 	vacationConfigSeeder vacationConfigSeederForAuth
+	shiftService         *service.ShiftService
+	userGroupService     *service.UserGroupService
 }
 
 // NewAuthHandler creates a new auth handler instance.
@@ -105,6 +107,8 @@ func NewAuthHandler(
 	vacationBalanceRepo vacationBalanceRepoForAuth,
 	accountRepo accountRepoForAuth,
 	vacationConfigSeeder vacationConfigSeederForAuth,
+	shiftService *service.ShiftService,
+	userGroupService *service.UserGroupService,
 ) *AuthHandler {
 	return &AuthHandler{
 		jwtManager:           jwtManager,
@@ -128,6 +132,8 @@ func NewAuthHandler(
 		vacationBalanceRepo:  vacationBalanceRepo,
 		accountRepo:          accountRepo,
 		vacationConfigSeeder: vacationConfigSeeder,
+		shiftService:         shiftService,
+		userGroupService:     userGroupService,
 	}
 }
 
@@ -275,6 +281,54 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := h.weekPlanService.UpsertDevWeekPlan(r.Context(), weekPlan); err != nil {
 			respondError(w, http.StatusInternalServerError, "failed to sync dev week plans to database")
+			return
+		}
+	}
+
+	// Create all dev shifts (tenant-level, idempotent)
+	for _, devS := range auth.GetDevShifts() {
+		shift := &model.Shift{
+			ID:            devS.ID,
+			TenantID:      devTenant.ID,
+			Code:          devS.Code,
+			Name:          devS.Name,
+			Description:   devS.Description,
+			DayPlanID:     devS.DayPlanID,
+			Color:         devS.Color,
+			Qualification: devS.Qualification,
+			IsActive:      true,
+			SortOrder:     devS.SortOrder,
+		}
+		if err := h.shiftService.UpsertDevShift(r.Context(), shift); err != nil {
+			respondError(w, http.StatusInternalServerError, "failed to sync dev shifts to database")
+			return
+		}
+	}
+
+	// Create all dev user groups (tenant-level, idempotent)
+	for _, devUG := range auth.GetDevUserGroups() {
+		perms := devUG.Permissions
+		if perms == nil {
+			perms = []string{}
+		}
+		permsJSON, err := json.Marshal(perms)
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, "failed to marshal user group permissions")
+			return
+		}
+		ug := &model.UserGroup{
+			ID:          devUG.ID,
+			TenantID:    &devTenant.ID,
+			Code:        devUG.Code,
+			Name:        devUG.Name,
+			Description: devUG.Description,
+			Permissions: permsJSON,
+			IsAdmin:     devUG.IsAdmin,
+			IsSystem:    false,
+			IsActive:    true,
+		}
+		if err := h.userGroupService.UpsertDevUserGroup(r.Context(), ug); err != nil {
+			respondError(w, http.StatusInternalServerError, "failed to sync dev user groups to database")
 			return
 		}
 	}

@@ -38,6 +38,7 @@ import {
   Repeat,
   DoorOpen,
   Terminal,
+  Mail,
 } from 'lucide-react'
 
 /**
@@ -256,6 +257,12 @@ export const navConfig: NavSection[] = [
         href: '/admin/orders',
         icon: Package,
         permissions: ['orders.manage'],
+      },
+      {
+        titleKey: 'employeeMessages',
+        href: '/admin/employee-messages',
+        icon: Mail,
+        permissions: ['notifications.manage'],
       },
     ],
   },

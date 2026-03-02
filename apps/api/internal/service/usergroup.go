@@ -30,6 +30,7 @@ type userGroupRepositoryForService interface {
 	GetByName(ctx context.Context, tenantID uuid.UUID, name string) (*model.UserGroup, error)
 	GetByCode(ctx context.Context, tenantID uuid.UUID, code string) (*model.UserGroup, error)
 	Update(ctx context.Context, ug *model.UserGroup) error
+	Upsert(ctx context.Context, ug *model.UserGroup) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	List(ctx context.Context, tenantID uuid.UUID) ([]model.UserGroup, error)
 	ListByActive(ctx context.Context, tenantID uuid.UUID, isActive bool) ([]model.UserGroup, error)
@@ -262,6 +263,11 @@ func (s *UserGroupService) GetByName(ctx context.Context, tenantID uuid.UUID, na
 // GetByCode retrieves a user group by code for a tenant.
 func (s *UserGroupService) GetByCode(ctx context.Context, tenantID uuid.UUID, code string) (*model.UserGroup, error) {
 	return s.userGroupRepo.GetByCode(ctx, tenantID, code)
+}
+
+// UpsertDevUserGroup creates or updates a user group for dev seeding (idempotent).
+func (s *UserGroupService) UpsertDevUserGroup(ctx context.Context, ug *model.UserGroup) error {
+	return s.userGroupRepo.Upsert(ctx, ug)
 }
 
 // permissionsToJSON converts a slice of permission strings to JSON.

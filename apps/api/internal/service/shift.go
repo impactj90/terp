@@ -26,6 +26,7 @@ type shiftRepository interface {
 	List(ctx context.Context, tenantID uuid.UUID) ([]model.Shift, error)
 	Update(ctx context.Context, s *model.Shift) error
 	Delete(ctx context.Context, id uuid.UUID) error
+	Upsert(ctx context.Context, s *model.Shift) error
 	HasAssignments(ctx context.Context, shiftID uuid.UUID) (bool, error)
 }
 
@@ -166,4 +167,9 @@ func (s *ShiftService) Delete(ctx context.Context, id uuid.UUID) error {
 // List retrieves all shifts for a tenant.
 func (s *ShiftService) List(ctx context.Context, tenantID uuid.UUID) ([]model.Shift, error) {
 	return s.repo.List(ctx, tenantID)
+}
+
+// UpsertDevShift creates or updates a shift for dev seeding (idempotent).
+func (s *ShiftService) UpsertDevShift(ctx context.Context, shift *model.Shift) error {
+	return s.repo.Upsert(ctx, shift)
 }

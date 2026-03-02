@@ -248,6 +248,9 @@ func main() {
 	// Initialize vacation config seeder (for dev login)
 	vacationConfigSeeder := repository.NewVacationConfigSeeder(db)
 
+	// Initialize shift service early (needed for dev login seeding)
+	shiftService := service.NewShiftService(shiftRepo)
+
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(
 		authConfig,
@@ -271,6 +274,8 @@ func main() {
 		vacationBalanceRepo,
 		accountRepo,
 		vacationConfigSeeder,
+		shiftService,
+		userGroupService,
 	)
 	userHandler := handler.NewUserHandler(userService)
 	tenantHandler := handler.NewTenantHandler(tenantService)
@@ -399,7 +404,6 @@ func main() {
 	travelAllowancePreviewHandler := handler.NewTravelAllowancePreviewHandler(travelAllowancePreviewService)
 
 	// Initialize Shift Planning (Plantafel)
-	shiftService := service.NewShiftService(shiftRepo)
 	shiftHandler := handler.NewShiftHandler(shiftService)
 
 	// Initialize Macros

@@ -112,6 +112,11 @@ func (r *UserGroupRepository) List(ctx context.Context, tenantID uuid.UUID) ([]m
 	return groups, nil
 }
 
+// Upsert creates or updates a user group by ID. Used for dev mode seeding.
+func (r *UserGroupRepository) Upsert(ctx context.Context, ug *model.UserGroup) error {
+	return r.db.GORM.WithContext(ctx).Save(ug).Error
+}
+
 // ListByActive retrieves user groups by active status for a tenant, including system groups.
 func (r *UserGroupRepository) ListByActive(ctx context.Context, tenantID uuid.UUID, isActive bool) ([]model.UserGroup, error) {
 	var groups []model.UserGroup

@@ -78,6 +78,11 @@ func (r *ShiftRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+// Upsert creates or updates a shift by ID. Used for dev mode seeding.
+func (r *ShiftRepository) Upsert(ctx context.Context, s *model.Shift) error {
+	return r.db.GORM.WithContext(ctx).Save(s).Error
+}
+
 // HasAssignments checks if a shift is referenced by any employee day plans.
 func (r *ShiftRepository) HasAssignments(ctx context.Context, shiftID uuid.UUID) (bool, error) {
 	var count int64
