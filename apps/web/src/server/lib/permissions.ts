@@ -58,3 +58,40 @@ export function isUserAdmin(user: ContextUser): boolean {
   }
   return user.role === "admin"
 }
+
+/**
+ * Checks if a user has a specific permission (by UUID).
+ * Mirrors Go PermissionChecker.Has()
+ *
+ * Order of precedence:
+ * 1. UserGroup with isAdmin:true and isActive:true -> true (all permissions)
+ * 2. UserGroup with isActive:false -> false (no permissions)
+ * 3. No UserGroup but role === "admin" -> true (fallback)
+ * 4. Otherwise -> check permission in UserGroup.permissions array
+ */
+export function hasPermission(user: ContextUser, permissionId: string): boolean {
+  if (!permissionId) return false
+
+  const userGroup = user.userGroup
+
+  if (userGroup) {
+    if (!userGroup.isActive) return false
+    if (userGroup.isAdmin) return true
+    const permissions = userGroup.permissions as string[] | null
+    return permissions?.includes(permissionId) ?? false
+  }
+
+  // Fallback: role-based admin
+  return user.role === "admin"
+}
+
+/**
+ * Checks if a user has ANY of the specified permissions.
+ * Mirrors Go PermissionChecker.HasAny()
+ */
+export function hasAnyPermission(
+  user: ContextUser,
+  permissionIds: string[]
+): boolean {
+  return permissionIds.some((id) => hasPermission(user, id))
+}

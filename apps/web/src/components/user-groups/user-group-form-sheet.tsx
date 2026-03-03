@@ -51,7 +51,13 @@ const CATEGORY_DEFINITIONS = [
 
 type UserGroup = components['schemas']['UserGroup']
 
-type Permission = components['schemas']['Permission']
+type Permission = {
+  id: string
+  key: string
+  resource: string
+  action: string
+  description: string
+}
 
 type PermissionCategory = {
   id: string
@@ -106,7 +112,7 @@ export function UserGroupFormSheet({
   const [expandedCategories, setExpandedCategories] = React.useState<Set<string>>(new Set())
 
   const { data: permissionsData, isLoading: permissionsLoading } = usePermissions(open)
-  const permissions = permissionsData?.data ?? []
+  const permissions = permissionsData?.permissions ?? []
 
   const createMutation = useCreateUserGroup()
   const updateMutation = useUpdateUserGroup()

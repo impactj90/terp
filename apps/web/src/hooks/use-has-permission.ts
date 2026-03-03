@@ -25,11 +25,11 @@ export function usePermissionChecker() {
     return currentPermissionsQuery.data.is_admin === true
   }, [isAuthenticated, currentPermissionsQuery.data])
 
-  // Permission catalog from Go backend (still uses .data wrapper via openapi-fetch)
+  // Permission catalog from tRPC (replaces Go backend openapi-fetch)
   const catalogMap = useMemo(() => {
     const map = new Map<string, string>()
-    if (!permissionsQuery.data?.data) return map
-    permissionsQuery.data.data.forEach((perm) => {
+    if (!permissionsQuery.data?.permissions) return map
+    permissionsQuery.data.permissions.forEach((perm) => {
       const key = buildPermissionKey(perm.resource, perm.action)
       if (key && perm.id) {
         map.set(key, perm.id)

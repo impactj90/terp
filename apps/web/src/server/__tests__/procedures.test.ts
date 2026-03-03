@@ -131,12 +131,40 @@ describe("tenantProcedure", () => {
   })
 
   it("allows access with user session and tenant ID", async () => {
+    const tenantId = "tenant-abc"
     const caller = createCaller(
       createMockContext({
         authToken: "test-token-123",
-        user: createMockUser(),
+        user: createMockUser({
+          userTenants: [
+            {
+              userId: "00000000-0000-0000-0000-000000000001",
+              tenantId,
+              role: "member",
+              createdAt: new Date(),
+              tenant: {
+                id: tenantId,
+                name: "Test Tenant",
+                slug: "test-tenant",
+                settings: null,
+                isActive: true,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                addressStreet: null,
+                addressZip: null,
+                addressCity: null,
+                addressCountry: null,
+                phone: null,
+                email: null,
+                payrollExportBasePath: null,
+                notes: null,
+                vacationBasis: "calendar_year",
+              },
+            } as ContextUser["userTenants"][number],
+          ],
+        }),
         session: createMockSession(),
-        tenantId: "tenant-abc",
+        tenantId,
       })
     )
     const result = await caller.tenant()

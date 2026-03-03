@@ -144,6 +144,11 @@ export const createTRPCRouter = t.router
 export const createCallerFactory = t.createCallerFactory
 
 /**
+ * Middleware factory -- used by authorization middleware in separate files.
+ */
+export const createMiddleware = t.middleware
+
+/**
  * Public procedure — no authentication required.
  * Available to anyone, including unauthenticated users.
  */
@@ -175,8 +180,8 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
  * Extends protectedProcedure with tenant ID requirement.
  * Throws UNAUTHORIZED if no auth token, FORBIDDEN if no tenant ID.
  *
- * NOTE: Does not validate that the user has access to the tenant.
- * ZMI-TICKET-203 will add tenant access validation.
+ * Validates that the user has access to the requested tenant via
+ * the userTenants join table (ZMI-TICKET-203).
  */
 export const tenantProcedure = protectedProcedure.use(
   async ({ ctx, next }) => {
@@ -184,6 +189,18 @@ export const tenantProcedure = protectedProcedure.use(
       throw new TRPCError({
         code: "FORBIDDEN",
         message: "Tenant ID required",
+      })
+    }
+
+    // Validate that the user has access to this tenant via userTenants
+    const hasAccess = ctx.user.userTenants.some(
+      (ut) => ut.tenantId === ctx.tenantId
+    )
+
+    if (!hasAccess) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Access to tenant denied",
       })
     }
 
