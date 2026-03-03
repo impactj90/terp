@@ -1,6 +1,6 @@
 # ZMI-TICKET-203: Authorization Middleware
 
-Status: Proposed
+Status: Done
 Priority: P1
 Owner: TBD
 
