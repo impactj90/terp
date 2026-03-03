@@ -1,4 +1,4 @@
-// Prisma Schema for Terp — Core Foundation (ZMI-TICKET-200)
+// Prisma Schema for Terp — Core Foundation (ZMI-TICKET-200, ZMI-TICKET-204, ZMI-TICKET-205)
 // This schema is READ-ONLY against the existing PostgreSQL database.
 // DO NOT run `prisma db push` or `prisma migrate dev`.
 // Schema changes are managed via SQL migrations in db/migrations/.
@@ -35,7 +35,7 @@ model User {
   updatedAt              DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   tenantId               String?   @map("tenant_id") @db.Uuid
   userGroupId            String?   @map("user_group_id") @db.Uuid
-  employeeId             String?   @map("employee_id") @db.Uuid
+  employeeId             String?   @unique @map("employee_id") @db.Uuid
   username               String?   @db.VarChar(100)
   isActive               Boolean?  @default(true) @map("is_active")
   deletedAt              DateTime? @map("deleted_at") @db.Timestamptz(6)
@@ -50,6 +50,7 @@ model User {
   // Relations
   tenant      Tenant?      @relation(fields: [tenantId], references: [id])
   userGroup   UserGroup?   @relation(fields: [userGroupId], references: [id])
+  employee    Employee?    @relation(fields: [employeeId], references: [id], onDelete: SetNull)
   userTenants UserTenant[]
 
   // Indexes
@@ -91,17 +92,20 @@ model Tenant {
   vacationBasis        String    @default("calendar_year") @map("vacation_basis") @db.VarChar(20)
 
   // Relations
-  users           User[]
-  userGroups      UserGroup[]
-  userTenants     UserTenant[]
-  costCenters     CostCenter[]
-  locations       Location[]
-  employmentTypes EmploymentType[]
-  holidays        Holiday[]
-  accountGroups   AccountGroup[]
-  accounts        Account[]
-  departments     Department[]
-  teams           Team[]
+  users                     User[]
+  userGroups                UserGroup[]
+  userTenants               UserTenant[]
+  costCenters               CostCenter[]
+  locations                 Location[]
+  employmentTypes           EmploymentType[]
+  holidays                  Holiday[]
+  accountGroups             AccountGroup[]
+  accounts                  Account[]
+  departments               Department[]
+  teams                     Team[]
+  employees                 Employee[]
+  employeeCards             EmployeeCard[]
+  employeeTariffAssignments EmployeeTariffAssignment[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
@@ -181,7 +185,8 @@ model CostCenter {
   updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employees Employee[]
 
   // Indexes
   @@unique([tenantId, code], map: "cost_centers_tenant_id_code_key")
@@ -242,7 +247,8 @@ model EmploymentType {
   updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant    Tenant?    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employees Employee[]
   // Note: vacationCalcGroupId FK references vacation_calculation_groups(id) ON DELETE SET NULL.
   // VacationCalculationGroup model is not yet in Prisma. Relation will be added when it is.
 
@@ -362,7 +368,6 @@ model Account {
 //
 // Self-referential tree via parent_id.
 // manager_employee_id FK references employees(id) ON DELETE SET NULL.
-// Employee model not yet in Prisma (TICKET-205); modeled as bare UUID.
 model Department {
   id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenantId          String       @map("tenant_id") @db.Uuid
@@ -376,12 +381,12 @@ model Department {
   updatedAt         DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  parent   Department?  @relation("DepartmentTree", fields: [parentId], references: [id], onDelete: SetNull)
-  children Department[] @relation("DepartmentTree")
-  teams    Team[]
-  // Note: managerEmployeeId FK references employees(id) ON DELETE SET NULL.
-  // Employee model not yet in Prisma (TICKET-205). Relation will be added then.
+  tenant    Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parent    Department?  @relation("DepartmentTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children  Department[] @relation("DepartmentTree")
+  manager   Employee?    @relation("DepartmentManager", fields: [managerEmployeeId], references: [id], onDelete: SetNull)
+  employees Employee[]   @relation("EmployeeDepartment")
+  teams     Team[]
 
   // Indexes
   @@unique([tenantId, code], map: "departments_tenant_id_code_key")
@@ -397,7 +402,6 @@ model Department {
 // Migrations: 000010, 000014
 //
 // leader_employee_id FK references employees(id) ON DELETE SET NULL.
-// Employee model not yet in Prisma (TICKET-205); modeled as bare UUID.
 model Team {
   id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenantId         String       @map("tenant_id") @db.Uuid
@@ -412,9 +416,8 @@ model Team {
   // Relations
   tenant     Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   department Department?  @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  leader     Employee?    @relation("TeamLeader", fields: [leaderEmployeeId], references: [id], onDelete: SetNull)
   members    TeamMember[]
-  // Note: leaderEmployeeId FK references employees(id) ON DELETE SET NULL.
-  // Employee model not yet in Prisma (TICKET-205). Relation will be added then.
 
   // Indexes
   @@unique([tenantId, name], map: "teams_tenant_id_name_key")
@@ -430,7 +433,6 @@ model Team {
 //
 // Composite primary key: (team_id, employee_id). No surrogate id column.
 // employee_id FK references employees(id) ON DELETE CASCADE.
-// Employee model not yet in Prisma (TICKET-205); modeled as bare UUID.
 //
 // Role values: 'member' (default), 'lead', 'deputy'
 model TeamMember {
@@ -440,9 +442,8 @@ model TeamMember {
   role       String   @default("member") @db.VarChar(50)
 
   // Relations
-  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  // Note: employeeId FK references employees(id) ON DELETE CASCADE.
-  // Employee model not yet in Prisma (TICKET-205). Relation will be added then.
+  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   // Composite primary key
   @@id([teamId, employeeId])
@@ -450,4 +451,221 @@ model TeamMember {
   // Indexes
   @@index([employeeId], map: "idx_team_members_employee")
   @@map("team_members")
+}
+
+// -----------------------------------------------------------------------------
+// Employee
+// -----------------------------------------------------------------------------
+// Migrations: 000011, 000031, 000041, 000058
+//
+// CHECK constraints (enforced at DB level only):
+//   - chk_employee_gender: gender IS NULL OR gender = '' OR gender IN ('male', 'female', 'diverse', 'not_specified')
+//   - chk_employee_marital_status: marital_status IS NULL OR marital_status = '' OR marital_status IN ('single', 'married', 'divorced', 'widowed', 'registered_partnership', 'not_specified')
+//
+// Soft delete via deleted_at column.
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model Employee {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId             String    @map("tenant_id") @db.Uuid
+  personnelNumber      String    @map("personnel_number") @db.VarChar(50)
+  pin                  String    @db.VarChar(20)
+  firstName            String    @map("first_name") @db.VarChar(100)
+  lastName             String    @map("last_name") @db.VarChar(100)
+  email                String?   @db.VarChar(255)
+  phone                String?   @db.VarChar(50)
+  entryDate            DateTime  @map("entry_date") @db.Date
+  exitDate             DateTime? @map("exit_date") @db.Date
+  departmentId         String?   @map("department_id") @db.Uuid
+  costCenterId         String?   @map("cost_center_id") @db.Uuid
+  employmentTypeId     String?   @map("employment_type_id") @db.Uuid
+  weeklyHours          Decimal   @default(40.00) @map("weekly_hours") @db.Decimal(5, 2)
+  vacationDaysPerYear  Decimal   @default(30.00) @map("vacation_days_per_year") @db.Decimal(5, 2)
+  isActive             Boolean   @default(true) @map("is_active")
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt            DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  // Added by migration 000031
+  tariffId             String?   @map("tariff_id") @db.Uuid
+
+  // Extended personnel master data (migration 000041)
+  exitReason           String?   @map("exit_reason") @db.VarChar(255)
+  notes                String?   @db.Text
+  addressStreet        String?   @map("address_street") @db.VarChar(255)
+  addressZip           String?   @map("address_zip") @db.VarChar(20)
+  addressCity          String?   @map("address_city") @db.VarChar(100)
+  addressCountry       String?   @map("address_country") @db.VarChar(100)
+  birthDate            DateTime? @map("birth_date") @db.Date
+  gender               String?   @db.VarChar(20)
+  nationality          String?   @db.VarChar(100)
+  religion             String?   @db.VarChar(100)
+  maritalStatus        String?   @map("marital_status") @db.VarChar(50)
+  birthPlace           String?   @map("birth_place") @db.VarChar(100)
+  birthCountry         String?   @map("birth_country") @db.VarChar(100)
+  roomNumber           String?   @map("room_number") @db.VarChar(50)
+  photoUrl             String?   @map("photo_url") @db.VarChar(500)
+  employeeGroupId      String?   @map("employee_group_id") @db.Uuid
+  workflowGroupId      String?   @map("workflow_group_id") @db.Uuid
+  activityGroupId      String?   @map("activity_group_id") @db.Uuid
+  partTimePercent      Decimal?  @map("part_time_percent") @db.Decimal(5, 2)
+  disabilityFlag       Boolean   @default(false) @map("disability_flag")
+  dailyTargetHours     Decimal?  @map("daily_target_hours") @db.Decimal(5, 2)
+  weeklyTargetHours    Decimal?  @map("weekly_target_hours") @db.Decimal(5, 2)
+  monthlyTargetHours   Decimal?  @map("monthly_target_hours") @db.Decimal(7, 2)
+  annualTargetHours    Decimal?  @map("annual_target_hours") @db.Decimal(8, 2)
+  workDaysPerWeek      Decimal?  @map("work_days_per_week") @db.Decimal(3, 1)
+  calculationStartDate DateTime? @map("calculation_start_date") @db.Date
+
+  // Added by migration 000058
+  defaultOrderId       String?   @map("default_order_id") @db.Uuid
+  defaultActivityId    String?   @map("default_activity_id") @db.Uuid
+
+  // Relations to models already in Prisma
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  department     Department?     @relation("EmployeeDepartment", fields: [departmentId], references: [id], onDelete: SetNull)
+  costCenter     CostCenter?     @relation(fields: [costCenterId], references: [id], onDelete: SetNull)
+  employmentType EmploymentType? @relation(fields: [employmentTypeId], references: [id], onDelete: SetNull)
+
+  // Reverse relations (FK on other tables pointing to employees)
+  user               User?
+  managedDepartments Department[] @relation("DepartmentManager")
+  ledTeams           Team[]       @relation("TeamLeader")
+  teamMemberships    TeamMember[]
+  contacts           EmployeeContact[]
+  cards              EmployeeCard[]
+  tariffAssignments  EmployeeTariffAssignment[]
+
+  // Note: tariffId FK references tariffs(id) ON DELETE SET NULL.
+  // Tariff model not yet in Prisma. Relation will be added when it is.
+  //
+  // Note: employeeGroupId FK references employee_groups(id) ON DELETE SET NULL.
+  // EmployeeGroup model not yet in Prisma. Relation will be added when it is.
+  //
+  // Note: workflowGroupId FK references workflow_groups(id) ON DELETE SET NULL.
+  // WorkflowGroup model not yet in Prisma. Relation will be added when it is.
+  //
+  // Note: activityGroupId FK references activity_groups(id) ON DELETE SET NULL.
+  // ActivityGroup model not yet in Prisma. Relation will be added when it is.
+  //
+  // Note: defaultOrderId FK references orders(id) ON DELETE SET NULL.
+  // Order model not yet in Prisma. Relation will be added when it is.
+  //
+  // Note: defaultActivityId FK references activities(id) ON DELETE SET NULL.
+  // Activity model not yet in Prisma. Relation will be added when it is.
+
+  // Indexes
+  @@unique([tenantId, personnelNumber], map: "employees_tenant_id_personnel_number_key")
+  @@unique([tenantId, pin], map: "employees_tenant_id_pin_key")
+  @@index([tenantId], map: "idx_employees_tenant")
+  @@index([departmentId], map: "idx_employees_department")
+  @@index([tenantId, isActive], map: "idx_employees_active")
+  @@index([deletedAt], map: "idx_employees_deleted_at")
+  @@index([tenantId, lastName, firstName], map: "idx_employees_name")
+  @@index([tariffId], map: "idx_employees_tariff")
+  @@index([employeeGroupId], map: "idx_employees_employee_group")
+  @@index([workflowGroupId], map: "idx_employees_workflow_group")
+  @@index([activityGroupId], map: "idx_employees_activity_group")
+  @@index([defaultOrderId], map: "idx_employees_default_order")
+  @@index([defaultActivityId], map: "idx_employees_default_activity")
+  @@map("employees")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeContact
+// -----------------------------------------------------------------------------
+// Migrations: 000012, 000069
+//
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model EmployeeContact {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  employeeId    String   @map("employee_id") @db.Uuid
+  contactType   String   @map("contact_type") @db.VarChar(50)
+  value         String   @db.VarChar(255)
+  label         String?  @db.VarChar(100)
+  isPrimary     Boolean  @default(false) @map("is_primary")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Added by migration 000069
+  contactKindId String?  @map("contact_kind_id") @db.Uuid
+
+  // Relations
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  // Note: contactKindId FK references contact_kinds(id) ON DELETE SET NULL.
+  // ContactKind model not yet in Prisma. Relation will be added when it is.
+
+  // Indexes
+  @@index([employeeId], map: "idx_employee_contacts_employee")
+  @@index([employeeId, contactType], map: "idx_employee_contacts_type")
+  @@index([contactKindId], map: "idx_employee_contacts_kind")
+  @@map("employee_contacts")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeCard
+// -----------------------------------------------------------------------------
+// Migration: 000013
+//
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model EmployeeCard {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String    @map("tenant_id") @db.Uuid
+  employeeId         String    @map("employee_id") @db.Uuid
+  cardNumber         String    @map("card_number") @db.VarChar(100)
+  cardType           String    @default("rfid") @map("card_type") @db.VarChar(50)
+  validFrom          DateTime  @default(dbgenerated("CURRENT_DATE")) @map("valid_from") @db.Date
+  validTo            DateTime? @map("valid_to") @db.Date
+  isActive           Boolean   @default(true) @map("is_active")
+  deactivatedAt      DateTime? @map("deactivated_at") @db.Timestamptz(6)
+  deactivationReason String?   @map("deactivation_reason") @db.VarChar(255)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  // Indexes
+  @@unique([tenantId, cardNumber], map: "employee_cards_tenant_id_card_number_key")
+  @@index([employeeId], map: "idx_employee_cards_employee")
+  @@index([tenantId, cardNumber], map: "idx_employee_cards_card")
+  @@index([tenantId, isActive], map: "idx_employee_cards_active")
+  @@map("employee_cards")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeTariffAssignment
+// -----------------------------------------------------------------------------
+// Migration: 000054
+//
+// CHECK constraint (enforced at DB level only):
+//   - overwrite_behavior IN ('overwrite', 'preserve_manual')
+//
+// Trigger: update_employee_tariff_assignments_updated_at BEFORE UPDATE
+model EmployeeTariffAssignment {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  employeeId        String    @map("employee_id") @db.Uuid
+  tariffId          String    @map("tariff_id") @db.Uuid
+  effectiveFrom     DateTime  @map("effective_from") @db.Date
+  effectiveTo       DateTime? @map("effective_to") @db.Date
+  overwriteBehavior String    @default("preserve_manual") @map("overwrite_behavior") @db.VarChar(20)
+  notes             String?   @db.Text
+  isActive          Boolean   @default(true) @map("is_active")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  // Note: tariffId FK references tariffs(id) ON DELETE CASCADE.
+  // Tariff model not yet in Prisma. Relation will be added when it is.
+
+  // Indexes
+  @@index([tenantId], map: "idx_eta_tenant")
+  @@index([employeeId], map: "idx_eta_employee")
+  @@index([tariffId], map: "idx_eta_tariff")
+  @@index([employeeId, effectiveFrom, effectiveTo], map: "idx_eta_employee_dates")
+  @@index([employeeId, effectiveFrom, effectiveTo, isActive], map: "idx_eta_effective_lookup")
+  @@map("employee_tariff_assignments")
 }
