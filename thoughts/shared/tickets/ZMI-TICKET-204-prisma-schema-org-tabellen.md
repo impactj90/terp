@@ -1,6 +1,6 @@
 # ZMI-TICKET-204: Prisma Schema: Org-Tabellen
 
-Status: Proposed
+Status: Done
 Priority: P1
 Owner: TBD
 
