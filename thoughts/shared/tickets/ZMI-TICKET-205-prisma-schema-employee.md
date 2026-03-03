@@ -1,6 +1,6 @@
 # ZMI-TICKET-205: Prisma Schema: Employee
 
-Status: Proposed
+Status: Done
 Priority: P1
 Owner: TBD
 
