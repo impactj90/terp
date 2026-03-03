@@ -1,6 +1,6 @@
 # ZMI-TICKET-202: Supabase Auth Migration
 
-Status: Proposed
+Status: Done
 Priority: P1
 Owner: TBD
 
