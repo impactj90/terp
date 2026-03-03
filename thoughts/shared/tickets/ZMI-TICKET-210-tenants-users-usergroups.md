@@ -1,6 +1,6 @@
 # ZMI-TICKET-210: Tenants, Users, User Groups
 
-Status: Proposed
+Status: Done
 Priority: P1
 Owner: TBD
 
