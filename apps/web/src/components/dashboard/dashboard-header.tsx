@@ -6,7 +6,7 @@ import { useLocale } from 'next-intl'
 interface User {
   id: string
   email: string
-  display_name: string
+  displayName: string
   role: string
 }
 
@@ -41,7 +41,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
   return (
     <div>
       <h1 className="text-2xl font-bold tracking-tight">
-        {greeting}{user?.display_name ? `, ${user.display_name}` : ''}
+        {greeting}{user?.displayName ? `, ${user.displayName}` : ''}
       </h1>
       <p className="text-muted-foreground">{today}</p>
     </div>

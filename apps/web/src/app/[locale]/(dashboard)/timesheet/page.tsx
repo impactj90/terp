@@ -65,7 +65,7 @@ export default function TimesheetPage() {
   const deleteBooking = useDeleteBooking()
 
   // For regular users, use their employee_id; for admin, allow selection
-  const userEmployeeId = user?.employee_id ?? undefined
+  const userEmployeeId = user?.employeeId ?? undefined
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | undefined>(undefined)
 
   // Fetch employees for admin selector
@@ -114,7 +114,7 @@ export default function TimesheetPage() {
   const selectedEmployee = employeesData?.data?.find(emp => emp.id === selectedEmployeeId)
   const employeeName = selectedEmployee
     ? `${selectedEmployee.first_name} ${selectedEmployee.last_name}`
-    : user?.display_name
+    : user?.displayName
 
   // Calculate period dates based on view mode
   const periodDates = useMemo(() => {

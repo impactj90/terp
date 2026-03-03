@@ -2,7 +2,8 @@
 
 import { useCallback, useMemo } from 'react'
 import { useAuth } from '@/providers/auth-provider'
-import { useCurrentPermissions, usePermissions } from '@/hooks/api'
+import { useCurrentPermissions } from '@/hooks/api/use-current-permissions'
+import { usePermissions } from '@/hooks/api/use-permissions'
 
 type PermissionKey = string
 
@@ -16,13 +17,15 @@ export function usePermissionChecker() {
   const permissionsQuery = usePermissions(isAuthenticated)
   const currentPermissionsQuery = useCurrentPermissions(isAuthenticated)
 
+  // tRPC returns { permission_ids, is_admin } directly (no .data wrapper)
   const isAdmin = useMemo(() => {
-    if (!isAuthenticated || !currentPermissionsQuery.data?.data) {
+    if (!isAuthenticated || !currentPermissionsQuery.data) {
       return false
     }
-    return currentPermissionsQuery.data.data.is_admin === true
+    return currentPermissionsQuery.data.is_admin === true
   }, [isAuthenticated, currentPermissionsQuery.data])
 
+  // Permission catalog from Go backend (still uses .data wrapper via openapi-fetch)
   const catalogMap = useMemo(() => {
     const map = new Map<string, string>()
     if (!permissionsQuery.data?.data) return map
@@ -35,13 +38,14 @@ export function usePermissionChecker() {
     return map
   }, [permissionsQuery.data])
 
+  // tRPC returns permission_ids directly (no .data wrapper)
   const allowedSet = useMemo(() => {
-    return new Set(currentPermissionsQuery.data?.data?.permission_ids ?? [])
+    return new Set(currentPermissionsQuery.data?.permission_ids ?? [])
   }, [currentPermissionsQuery.data])
 
   const check = useCallback(
     (keys: PermissionKey[]) => {
-      if (!isAuthenticated || !currentPermissionsQuery.data?.data) {
+      if (!isAuthenticated || !currentPermissionsQuery.data) {
         return false
       }
       if (isAdmin) return true

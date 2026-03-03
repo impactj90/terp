@@ -4,7 +4,11 @@ import { clientEnv } from '@/config/env'
 
 /**
  * Auth token storage interface.
- * Allows different storage implementations (localStorage, cookies, etc.)
+ * Provides synchronous access to the current Supabase access token.
+ *
+ * The token is synced from the Supabase session by the AuthProvider.
+ * This allows legacy hooks (use-monthly-values, use-reports, etc.)
+ * to continue using `authStorage.getToken()` synchronously.
  */
 export interface AuthTokenStorage {
   getToken: () => string | null
@@ -40,13 +44,25 @@ const createLocalStorage = (key: string) => ({
   },
 })
 
-const tokenStorage = createLocalStorage('auth_token')
 const tenantStorage = createLocalStorage('tenant_id')
 
+/**
+ * Module-level cache for the Supabase access token.
+ * Updated by AuthProvider when the session changes.
+ *
+ * This bridges the gap between Supabase's async session API
+ * and legacy hooks that need synchronous token access.
+ */
+let cachedAccessToken: string | null = null
+
 export const authStorage: AuthTokenStorage = {
-  getToken: tokenStorage.get,
-  setToken: tokenStorage.set,
-  clearToken: tokenStorage.clear,
+  getToken: () => cachedAccessToken,
+  setToken: (token: string) => {
+    cachedAccessToken = token
+  },
+  clearToken: () => {
+    cachedAccessToken = null
+  },
 }
 
 export const tenantIdStorage: TenantStorage = {
@@ -56,13 +72,24 @@ export const tenantIdStorage: TenantStorage = {
 }
 
 /**
- * Auth middleware that adds Authorization header to all requests.
+ * Auth middleware that adds Authorization header from Supabase session.
+ *
+ * Reads the access token from the Supabase browser client so that
+ * Go backend REST API calls are authenticated with the Supabase JWT.
  */
 const authMiddleware: Middleware = {
   async onRequest({ request }) {
-    const token = authStorage.getToken()
-    if (token) {
-      request.headers.set('Authorization', `Bearer ${token}`)
+    if (typeof window !== 'undefined') {
+      const { createClient: createSupabaseClient } = await import(
+        '@/lib/supabase/client'
+      )
+      const supabase = createSupabaseClient()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      if (session?.access_token) {
+        request.headers.set('Authorization', `Bearer ${session.access_token}`)
+      }
     }
     return request
   },

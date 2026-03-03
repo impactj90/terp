@@ -6,7 +6,8 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
 import { createTRPCClient, httpBatchLink } from "@trpc/client"
 import type { AppRouter } from "@/server/root"
 import { TRPCProvider } from "./context"
-import { authStorage, tenantIdStorage } from "@/lib/api/client"
+import { createClient } from "@/lib/supabase/client"
+import { tenantIdStorage } from "@/lib/api/client"
 
 /**
  * Creates a QueryClient with defaults matching the existing QueryProvider.
@@ -67,13 +68,16 @@ export function TRPCReactProvider({
       links: [
         httpBatchLink({
           url: `${getBaseUrl()}/api/trpc`,
-          headers() {
+          async headers() {
             const headers: Record<string, string> = {}
 
-            // Forward auth token to tRPC server
-            const token = authStorage.getToken()
-            if (token) {
-              headers["authorization"] = `Bearer ${token}`
+            // Get the current Supabase session token
+            const supabase = createClient()
+            const {
+              data: { session },
+            } = await supabase.auth.getSession()
+            if (session?.access_token) {
+              headers["authorization"] = `Bearer ${session.access_token}`
             }
 
             // Forward tenant ID to tRPC server

@@ -1,16 +1,43 @@
 'use client'
 
-import { createContext, useContext, useCallback, useMemo } from 'react'
+import {
+  createContext,
+  useContext,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { useCurrentUser, useLogout, type User } from '@/hooks/use-auth'
+import { useQuery } from '@tanstack/react-query'
+import { createClient } from '@/lib/supabase/client'
+import { useTRPC } from '@/trpc'
 import { authStorage } from '@/lib/api/client'
+import type { Session } from '@supabase/supabase-js'
 
 /**
- * Auth context value interface
+ * User type from the tRPC auth.me response.
+ */
+export type AuthUser = {
+  id: string
+  email: string
+  displayName: string
+  avatarUrl: string | null
+  role: string
+  tenantId: string | null
+  userGroupId: string | null
+  employeeId: string | null
+  isActive: boolean | null
+}
+
+/**
+ * Auth context value interface.
  */
 export interface AuthContextValue {
-  /** Current authenticated user, null if not authenticated */
-  user: User | null
+  /** Current authenticated user from DB (via tRPC auth.me) */
+  user: AuthUser | null
+  /** Supabase session */
+  session: Session | null
   /** Whether auth state is being loaded */
   isLoading: boolean
   /** Whether user is authenticated */
@@ -30,7 +57,10 @@ interface AuthProviderProps {
 }
 
 /**
- * Auth provider component that manages authentication state.
+ * Auth provider component that manages authentication state via Supabase.
+ *
+ * Listens for Supabase auth state changes and fetches the full user
+ * from the database via the tRPC auth.me endpoint.
  *
  * @example
  * ```tsx
@@ -41,44 +71,81 @@ interface AuthProviderProps {
  */
 export function AuthProvider({ children }: AuthProviderProps) {
   const queryClient = useQueryClient()
+  const supabase = useMemo(() => createClient(), [])
+  const trpc = useTRPC()
+  const [session, setSession] = useState<Session | null>(null)
+  const [isSessionLoading, setIsSessionLoading] = useState(true)
 
-  // Check if we have a token before making the API call
-  const hasToken = typeof window !== 'undefined' && !!authStorage.getToken()
+  // Listen for Supabase auth state changes
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+      setSession(initialSession)
+      setIsSessionLoading(false)
+      // Sync token to authStorage for legacy API hooks
+      if (initialSession?.access_token) {
+        authStorage.setToken(initialSession.access_token)
+      } else {
+        authStorage.clearToken()
+      }
+    })
 
-  const {
-    data: user,
-    isLoading,
-    error,
-    refetch: refetchUser,
-  } = useCurrentUser(hasToken)
+    // Subscribe to auth changes (login, logout, token refresh)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession)
+      setIsSessionLoading(false)
+      // Sync token to authStorage for legacy API hooks
+      if (newSession?.access_token) {
+        authStorage.setToken(newSession.access_token)
+      } else {
+        authStorage.clearToken()
+      }
+    })
 
-  const logoutMutation = useLogout()
+    return () => subscription.unsubscribe()
+  }, [supabase])
+
+  // Fetch user data from tRPC when session is available
+  const meQuery = useQuery(
+    trpc.auth.me.queryOptions(undefined, {
+      enabled: !!session,
+      retry: false,
+      staleTime: 5 * 60 * 1000,
+    })
+  )
 
   const logout = useCallback(async () => {
-    try {
-      await logoutMutation.mutateAsync({})
-    } catch {
-      // Error is handled in the mutation's onError
-    } finally {
-      // Clear all queries on logout
-      queryClient.clear()
-    }
-  }, [logoutMutation, queryClient])
+    await supabase.auth.signOut()
+    authStorage.clearToken()
+    queryClient.clear()
+    setSession(null)
+  }, [supabase, queryClient])
 
   const refetch = useCallback(async () => {
-    await refetchUser()
-  }, [refetchUser])
+    await meQuery.refetch()
+  }, [meQuery])
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      user: user ?? null,
-      isLoading: hasToken && isLoading,
-      isAuthenticated: !!user,
-      error: error as Error | null,
+      user: meQuery.data?.user ?? null,
+      session,
+      isLoading: isSessionLoading || (!!session && meQuery.isLoading),
+      isAuthenticated: !!session && !!meQuery.data?.user,
+      error: meQuery.error as Error | null,
       logout,
       refetch,
     }),
-    [user, isLoading, hasToken, error, logout, refetch]
+    [
+      session,
+      isSessionLoading,
+      meQuery.data,
+      meQuery.isLoading,
+      meQuery.error,
+      logout,
+      refetch,
+    ]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

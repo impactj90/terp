@@ -50,7 +50,7 @@ export function AccountSettingsCard({ user }: AccountSettingsCardProps) {
 
   // Initialize form data when user changes
   useEffect(() => {
-    setDisplayName(user.display_name || '')
+    setDisplayName(user.displayName || '')
   }, [user])
 
   // Clear success message after 3 seconds
@@ -63,7 +63,7 @@ export function AccountSettingsCard({ user }: AccountSettingsCardProps) {
   }, [successMessage])
 
   const handleCancel = () => {
-    setDisplayName(user.display_name || '')
+    setDisplayName(user.displayName || '')
     setError(null)
     setIsEditing(false)
   }
@@ -186,7 +186,7 @@ export function AccountSettingsCard({ user }: AccountSettingsCardProps) {
               )}
             </>
           ) : (
-            <p className="text-sm font-medium">{user.display_name || t('notSet')}</p>
+            <p className="text-sm font-medium">{user.displayName || t('notSet')}</p>
           )}
         </div>
 

@@ -2,12 +2,11 @@
 
 import { useMemo } from 'react'
 import { useAuth } from '@/providers/auth-provider'
-import type { components } from '@/lib/api/types'
 
 /**
- * User role type from the API schema
+ * User role type — matches the role values stored in the database.
  */
-export type UserRole = components['schemas']['User']['role']
+export type UserRole = 'user' | 'admin'
 
 /**
  * All available roles for easy reference
@@ -42,7 +41,7 @@ export function useHasRole(roles: UserRole[]): boolean {
       return false
     }
 
-    return roles.includes(user.role)
+    return roles.includes(user.role as UserRole)
   }, [user, isAuthenticated, roles])
 }
 
@@ -67,7 +66,7 @@ export function useHasMinRole(minRole: UserRole): boolean {
       return false
     }
 
-    const userRoleIndex = ROLE_HIERARCHY.indexOf(user.role)
+    const userRoleIndex = ROLE_HIERARCHY.indexOf(user.role as UserRole)
     const minRoleIndex = ROLE_HIERARCHY.indexOf(minRole)
 
     return userRoleIndex >= minRoleIndex
@@ -93,6 +92,6 @@ export function useUserRole(): UserRole | null {
       return null
     }
 
-    return user.role
+    return user.role as UserRole
   }, [user, isAuthenticated])
 }

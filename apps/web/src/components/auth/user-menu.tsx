@@ -41,7 +41,7 @@ export function UserMenu() {
     <div className="flex items-center gap-4">
       <div className="text-sm">
         <span className="text-muted-foreground">{t('signedInAs')} </span>
-        <span className="font-medium">{user.display_name}</span>
+        <span className="font-medium">{user.displayName}</span>
         <span className="ml-2 text-xs text-muted-foreground">({user.role})</span>
       </div>
       <Button variant="outline" size="sm" onClick={handleLogout}>

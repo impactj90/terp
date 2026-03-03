@@ -33,7 +33,7 @@ export default function YearOverviewPage() {
   const { allowed: canViewAll } = useHasPermission(['time_tracking.view_all'])
 
   // For regular users, use their employee_id; for admin, allow selection
-  const userEmployeeId = user?.employee_id ?? undefined
+  const userEmployeeId = user?.employeeId ?? undefined
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | undefined>(undefined)
   const effectiveEmployeeId = canViewAll ? selectedEmployeeId : userEmployeeId
 
@@ -123,7 +123,7 @@ export default function YearOverviewPage() {
   const selectedEmployee = employeesData?.data?.find(emp => emp.id === selectedEmployeeId)
   const employeeName = selectedEmployee
     ? `${selectedEmployee.first_name} ${selectedEmployee.last_name}`
-    : user?.display_name
+    : user?.displayName
 
   return (
     <div className="space-y-6">

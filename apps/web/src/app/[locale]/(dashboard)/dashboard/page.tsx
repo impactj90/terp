@@ -20,7 +20,7 @@ export default function DashboardPage() {
   const t = useTranslations('dashboard')
 
   // Get employee_id directly from user (set via /auth/me from database)
-  const employeeId = user?.employee_id
+  const employeeId = user?.employeeId
 
   // Show loading state while fetching auth data
   if (isLoading) {

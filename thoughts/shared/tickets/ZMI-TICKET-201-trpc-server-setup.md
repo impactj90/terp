@@ -1,8 +1,9 @@
 # ZMI-TICKET-201: tRPC Server Setup
 
-Status: Proposed
+Status: Done
 Priority: P1
 Owner: TBD
+Completed: 2026-03-03
 
 ## Goal
 tRPC-Server in der Next.js App aufsetzen mit Context Factory, Procedure-Typen und App Router Handler. Dies ist die Grundlage für alle tRPC-Router, die in den folgenden Tickets implementiert werden.
@@ -66,13 +67,13 @@ apps/web/
 - Bestehende Hooks bleiben zunächst parallel aktiv
 
 ## Acceptance Criteria
-- [ ] tRPC Server initialisiert mit Context Factory
-- [ ] `publicProcedure`, `protectedProcedure`, `tenantProcedure` definiert
-- [ ] App Router Handler antwortet auf `/api/trpc/*`
-- [ ] tRPC Client im Frontend verfügbar
-- [ ] Ein Health-Check-Procedure (`health.check`) funktioniert end-to-end
-- [ ] Zod-Validation-Errors werden korrekt als tRPC-Errors zurückgegeben
-- [ ] TypeScript-Typen sind end-to-end durchgereicht (Input → Output)
+- [x] tRPC Server initialisiert mit Context Factory
+- [x] `publicProcedure`, `protectedProcedure`, `tenantProcedure` definiert
+- [x] App Router Handler antwortet auf `/api/trpc/*`
+- [x] tRPC Client im Frontend verfügbar
+- [x] Ein Health-Check-Procedure (`health.check`) funktioniert end-to-end
+- [x] Zod-Validation-Errors werden korrekt als tRPC-Errors zurückgegeben
+- [x] TypeScript-Typen sind end-to-end durchgereicht (Input → Output)
 
 ## Tests
 - Unit-Test: Context Factory erstellt korrekten Context

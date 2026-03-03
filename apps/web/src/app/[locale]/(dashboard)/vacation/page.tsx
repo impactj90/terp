@@ -19,7 +19,7 @@ export default function VacationPage() {
   const t = useTranslations('vacation')
   const tc = useTranslations('common')
   const { user, isLoading: authLoading } = useAuth()
-  const employeeId = user?.employee_id
+  const employeeId = user?.employeeId
   const currentYear = new Date().getFullYear()
   const [selectedYear, setSelectedYear] = useState(currentYear)
 

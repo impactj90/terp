@@ -18,7 +18,7 @@ import {
 export default function ProfilePage() {
   const t = useTranslations('profile')
   const { user, isLoading: authLoading } = useAuth()
-  const employeeId = user?.employee_id
+  const employeeId = user?.employeeId
 
   const { data: employee, isLoading: employeeLoading } = useEmployee(
     employeeId ?? '',
@@ -59,10 +59,10 @@ export default function ProfilePage() {
         {/* User info without employee */}
         <div className="flex items-center gap-4">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted text-xl font-medium">
-            {(user.display_name || user.email || '?').charAt(0).toUpperCase()}
+            {(user.displayName || user.email || '?').charAt(0).toUpperCase()}
           </div>
           <div>
-            <h2 className="text-xl font-semibold">{user.display_name || user.email}</h2>
+            <h2 className="text-xl font-semibold">{user.displayName || user.email}</h2>
             <p className="text-sm text-muted-foreground">{user.email}</p>
           </div>
         </div>

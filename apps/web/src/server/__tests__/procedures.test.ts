@@ -7,7 +7,8 @@ import {
   tenantProcedure,
   createCallerFactory,
 } from "../trpc"
-import type { TRPCContext } from "../trpc"
+import type { TRPCContext, ContextUser } from "../trpc"
+import type { Session, User as SupabaseUser } from "@supabase/supabase-js"
 
 /**
  * Test router with all three procedure types.
@@ -22,6 +23,50 @@ const testRouter = createTRPCRouter({
 })
 
 const createCaller = createCallerFactory(testRouter)
+
+/**
+ * Creates a mock ContextUser for tests.
+ */
+function createMockUser(overrides: Partial<ContextUser> = {}): ContextUser {
+  return {
+    id: "00000000-0000-0000-0000-000000000001",
+    email: "test@example.com",
+    displayName: "Test User",
+    avatarUrl: null,
+    role: "user",
+    tenantId: null,
+    userGroupId: null,
+    employeeId: null,
+    username: null,
+    isActive: true,
+    isLocked: false,
+    passwordHash: null,
+    ssoId: null,
+    dataScopeType: "all",
+    dataScopeTenantIds: [],
+    dataScopeDepartmentIds: [],
+    dataScopeEmployeeIds: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    deletedAt: null,
+    userGroup: null,
+    userTenants: [],
+    ...overrides,
+  } as ContextUser
+}
+
+/**
+ * Creates a mock Session for tests.
+ */
+function createMockSession(): Session {
+  return {
+    access_token: "test-token-123",
+    user: {
+      id: "00000000-0000-0000-0000-000000000001",
+      email: "test@example.com",
+    } as SupabaseUser,
+  } as Session
+}
 
 function createMockContext(overrides: Partial<TRPCContext> = {}): TRPCContext {
   return {
@@ -43,14 +88,25 @@ describe("publicProcedure", () => {
 })
 
 describe("protectedProcedure", () => {
-  it("throws UNAUTHORIZED without auth token", async () => {
+  it("throws UNAUTHORIZED without user session", async () => {
     const caller = createCaller(createMockContext())
     await expect(caller.protected()).rejects.toThrow("Authentication required")
   })
 
-  it("allows access with auth token", async () => {
+  it("throws UNAUTHORIZED with auth token but no resolved user", async () => {
     const caller = createCaller(
       createMockContext({ authToken: "test-token-123" })
+    )
+    await expect(caller.protected()).rejects.toThrow("Authentication required")
+  })
+
+  it("allows access with valid user and session", async () => {
+    const caller = createCaller(
+      createMockContext({
+        authToken: "test-token-123",
+        user: createMockUser(),
+        session: createMockSession(),
+      })
     )
     const result = await caller.protected()
     expect(result).toBe("protected")
@@ -58,22 +114,28 @@ describe("protectedProcedure", () => {
 })
 
 describe("tenantProcedure", () => {
-  it("throws UNAUTHORIZED without auth token", async () => {
+  it("throws UNAUTHORIZED without user session", async () => {
     const caller = createCaller(createMockContext({ tenantId: "tenant-1" }))
     await expect(caller.tenant()).rejects.toThrow("Authentication required")
   })
 
   it("throws FORBIDDEN without tenant ID", async () => {
     const caller = createCaller(
-      createMockContext({ authToken: "test-token-123" })
+      createMockContext({
+        authToken: "test-token-123",
+        user: createMockUser(),
+        session: createMockSession(),
+      })
     )
     await expect(caller.tenant()).rejects.toThrow("Tenant ID required")
   })
 
-  it("allows access with auth token and tenant ID", async () => {
+  it("allows access with user session and tenant ID", async () => {
     const caller = createCaller(
       createMockContext({
         authToken: "test-token-123",
+        user: createMockUser(),
+        session: createMockSession(),
         tenantId: "tenant-abc",
       })
     )

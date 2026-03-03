@@ -57,10 +57,10 @@ export function UserMenu() {
         >
           <Avatar className="h-9 w-9">
             <AvatarImage
-              src={user.avatar_url ?? undefined}
-              alt={user.display_name}
+              src={user.avatarUrl ?? undefined}
+              alt={user.displayName}
             />
-            <AvatarFallback>{getInitials(user.display_name)}</AvatarFallback>
+            <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
@@ -68,7 +68,7 @@ export function UserMenu() {
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">
-              {user.display_name}
+              {user.displayName}
             </p>
             <p className="text-xs leading-none text-muted-foreground">
               {user.email}

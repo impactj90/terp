@@ -36,7 +36,7 @@ export function ProfileHeader({ user, employee }: ProfileHeaderProps) {
       {/* Avatar with upload button */}
       <div className="relative">
         <Avatar className="h-24 w-24 text-2xl">
-          <AvatarImage src={user.avatar_url ?? undefined} alt={fullName} />
+          <AvatarImage src={user.avatarUrl ?? undefined} alt={fullName} />
           <AvatarFallback className="text-2xl font-medium">
             {initials}
           </AvatarFallback>

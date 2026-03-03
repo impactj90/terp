@@ -11,24 +11,39 @@ import type { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch"
 import { ZodError } from "zod"
 import { prisma } from "@/lib/db"
 import type { PrismaClient } from "@/generated/prisma/client"
+import type {
+  User as PrismaUser,
+  UserGroup,
+  UserTenant,
+  Tenant,
+} from "@/generated/prisma/client"
+import type { Session } from "@supabase/supabase-js"
+import { createClient } from "@supabase/supabase-js"
+import { clientEnv, serverEnv } from "@/config/env"
+
+/**
+ * The user object stored in context after Supabase session resolution.
+ * Includes the user's group (with permissions) and tenant memberships.
+ */
+export type ContextUser = PrismaUser & {
+  userGroup: UserGroup | null
+  userTenants: (UserTenant & { tenant: Tenant })[]
+}
 
 /**
  * tRPC Context
  *
  * Available to all procedures. Extended by middleware for procedure-specific
- * guarantees (e.g., protectedProcedure guarantees `authToken` is non-null).
- *
- * NOTE: `user` and `session` are null until ZMI-TICKET-202 (Supabase Auth)
- * implements actual user resolution from the auth token.
+ * guarantees (e.g., protectedProcedure guarantees `user` and `session` are non-null).
  */
 export type TRPCContext = {
   prisma: PrismaClient
   /** Raw Authorization header value (Bearer token). Null if not provided. */
   authToken: string | null
-  /** User object resolved from session. Null until ZMI-TICKET-202. */
-  user: null
-  /** Session object. Null until ZMI-TICKET-202. */
-  session: null
+  /** User object resolved from Supabase session. Null if not authenticated. */
+  user: ContextUser | null
+  /** Supabase session. Null if not authenticated. */
+  session: Session | null
   /** Tenant ID from X-Tenant-ID header. Null if not provided. */
   tenantId: string | null
 }
@@ -36,12 +51,12 @@ export type TRPCContext = {
 /**
  * Creates the tRPC context for each request.
  *
- * Extracts auth token and tenant ID from request headers.
- * User/session resolution will be added in ZMI-TICKET-202.
+ * Extracts auth token from the Authorization header, validates it with
+ * Supabase, and resolves the full user from the database.
  */
-export function createTRPCContext(
+export async function createTRPCContext(
   opts: FetchCreateContextFnOptions
-): TRPCContext {
+): Promise<TRPCContext> {
   const authHeader = opts.req.headers.get("authorization")
   const authToken = authHeader?.startsWith("Bearer ")
     ? authHeader.slice(7)
@@ -49,11 +64,57 @@ export function createTRPCContext(
 
   const tenantId = opts.req.headers.get("x-tenant-id")
 
+  let user: ContextUser | null = null
+  let session: Session | null = null
+
+  if (authToken) {
+    try {
+      // Create a Supabase client with the service role to validate tokens
+      const supabase = createClient(
+        clientEnv.supabaseUrl,
+        serverEnv.supabaseServiceRoleKey,
+        {
+          auth: { autoRefreshToken: false, persistSession: false },
+        }
+      )
+
+      // Validate the access token with Supabase
+      const {
+        data: { user: supabaseUser },
+        error,
+      } = await supabase.auth.getUser(authToken)
+
+      if (supabaseUser && !error) {
+        // Look up the full user from public.users with relations
+        const dbUser = await prisma.user.findUnique({
+          where: { id: supabaseUser.id },
+          include: {
+            userGroup: true,
+            userTenants: {
+              include: { tenant: true },
+            },
+          },
+        })
+
+        if (dbUser && dbUser.isActive !== false && !dbUser.isLocked) {
+          user = dbUser as ContextUser
+          // Construct a minimal session object for downstream use
+          session = {
+            access_token: authToken,
+            user: supabaseUser,
+          } as Session
+        }
+      }
+    } catch {
+      // Token validation failed — user remains null (unauthenticated)
+    }
+  }
+
   return {
     prisma,
     authToken,
-    user: null,
-    session: null,
+    user,
+    session,
     tenantId,
   }
 }
@@ -89,14 +150,11 @@ export const createCallerFactory = t.createCallerFactory
 export const publicProcedure = t.procedure
 
 /**
- * Protected procedure — requires a valid auth token.
- * Throws UNAUTHORIZED if no Bearer token is present in the Authorization header.
- *
- * NOTE: This currently only checks for token presence, not validity.
- * ZMI-TICKET-202 will add Supabase session validation and user resolution.
+ * Protected procedure — requires a valid Supabase session and resolved user.
+ * Throws UNAUTHORIZED if no valid session/user is present.
  */
 export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
-  if (!ctx.authToken) {
+  if (!ctx.user || !ctx.session) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
       message: "Authentication required",
@@ -106,7 +164,8 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
   return next({
     ctx: {
       ...ctx,
-      authToken: ctx.authToken, // narrowed to non-null
+      user: ctx.user, // narrowed to non-null
+      session: ctx.session, // narrowed to non-null
     },
   })
 })

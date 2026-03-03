@@ -43,7 +43,7 @@ export default function TimeClockPage() {
   const { user, isLoading: authLoading } = useAuth()
   const { allowed: canViewAll } = useHasPermission(['time_tracking.view_all'])
 
-  const userEmployeeId = user?.employee_id ?? null
+  const userEmployeeId = user?.employeeId ?? null
   const employees = useEmployees({
     limit: 250,
     active: true,

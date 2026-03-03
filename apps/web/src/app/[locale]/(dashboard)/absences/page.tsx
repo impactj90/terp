@@ -23,7 +23,7 @@ export default function AbsencesPage() {
   const t = useTranslations('absences')
   const tc = useTranslations('common')
   const { user, isLoading: authLoading } = useAuth()
-  const employeeId = user?.employee_id
+  const employeeId = user?.employeeId
 
   const [formOpen, setFormOpen] = useState(false)
   const [selectedDates, setSelectedDates] = useState<DateRange>()

@@ -1,19 +1,18 @@
 'use client'
 
-import { Suspense, useState, useEffect } from 'react'
+import { Suspense, useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
-import { useDevLogin, useLogin } from '@/hooks/use-auth'
 import { useAuth } from '@/providers/auth-provider'
+import { createClient } from '@/lib/supabase/client'
 
 function LoginPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const devLogin = useDevLogin()
-  const loginMutation = useLogin()
-  const { isAuthenticated, isLoading: isAuthLoading, refetch } = useAuth()
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth()
+  const supabase = useMemo(() => createClient(), [])
   const t = useTranslations('login')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -29,14 +28,24 @@ function LoginPageContent() {
     }
   }, [isAuthenticated, isAuthLoading, router, returnUrl])
 
-  const handleDevLogin = async (role: 'admin' | 'user') => {
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
     setIsLoading(true)
     setError(null)
 
     try {
-      await devLogin(role)
-      // Refetch user data to update auth state
-      await refetch()
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+      if (signInError) {
+        setError(t('loginFailed'))
+        return
+      }
+
+      // The onAuthStateChange listener in AuthProvider will pick up the session.
+      // Redirect will happen via the useEffect above once isAuthenticated is true.
       router.push(returnUrl)
     } catch {
       setError(t('loginFailed'))
@@ -45,14 +54,26 @@ function LoginPageContent() {
     }
   }
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
+  // Dev login: uses pre-seeded Supabase test users
+  const handleDevLogin = async (role: 'admin' | 'user') => {
     setIsLoading(true)
     setError(null)
 
+    const devCredentials = {
+      admin: { email: 'admin@dev.local', password: 'dev-password-admin' },
+      user: { email: 'user@dev.local', password: 'dev-password-user' },
+    }
+
     try {
-      await loginMutation.mutateAsync({ body: { email, password } })
-      await refetch()
+      const { error: signInError } = await supabase.auth.signInWithPassword(
+        devCredentials[role]
+      )
+
+      if (signInError) {
+        setError(t('loginFailed'))
+        return
+      }
+
       router.push(returnUrl)
     } catch {
       setError(t('loginFailed'))

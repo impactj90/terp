@@ -2,15 +2,8 @@
 export { useApiQuery } from './use-api-query'
 export { useApiMutation } from './use-api-mutation'
 
-// Auth hooks
-export {
-  useCurrentUser,
-  useLogin,
-  useDevLogin,
-  useDevUsers,
-  useLogout,
-  type User,
-} from './use-auth'
+// Auth hooks (User type re-exported from auth-provider for backward compatibility)
+export { type User } from './use-auth'
 export {
   useHasRole,
   useHasMinRole,
