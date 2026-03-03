@@ -17,9 +17,11 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { useTenant } from '@/hooks/api'
-import type { components } from '@/lib/api/types'
+import type { AppRouter } from '@/server/root'
+import type { inferRouterOutputs } from '@trpc/server'
 
-type Tenant = components['schemas']['Tenant']
+type RouterOutput = inferRouterOutputs<AppRouter>
+type Tenant = RouterOutput['tenants']['getById']
 
 interface TenantDetailSheetProps {
   tenantId: string | null
@@ -86,8 +88,8 @@ export function TenantDetailSheet({
                   <h3 className="text-lg font-semibold">{tenant.name}</h3>
                   <p className="text-sm text-muted-foreground font-mono">{tenant.slug}</p>
                 </div>
-                <Badge variant={tenant.is_active ? 'default' : 'secondary'}>
-                  {tenant.is_active ? t('statusActive') : t('statusInactive')}
+                <Badge variant={tenant.isActive ? 'default' : 'secondary'}>
+                  {tenant.isActive ? t('statusActive') : t('statusInactive')}
                 </Badge>
               </div>
 
@@ -104,10 +106,10 @@ export function TenantDetailSheet({
               <div className="space-y-2">
                 <h4 className="text-sm font-medium text-muted-foreground">{t('addressSection')}</h4>
                 <div className="rounded-lg border p-4">
-                  <DetailRow label={t('fieldStreet')} value={tenant.address_street} />
-                  <DetailRow label={t('fieldZip')} value={tenant.address_zip} />
-                  <DetailRow label={t('fieldCity')} value={tenant.address_city} />
-                  <DetailRow label={t('fieldCountry')} value={tenant.address_country} />
+                  <DetailRow label={t('fieldStreet')} value={tenant.addressStreet} />
+                  <DetailRow label={t('fieldZip')} value={tenant.addressZip} />
+                  <DetailRow label={t('fieldCity')} value={tenant.addressCity} />
+                  <DetailRow label={t('fieldCountry')} value={tenant.addressCountry} />
                 </div>
               </div>
 
@@ -124,12 +126,12 @@ export function TenantDetailSheet({
               <div className="space-y-2">
                 <h4 className="text-sm font-medium text-muted-foreground">{t('settingsSection')}</h4>
                 <div className="rounded-lg border p-4">
-                  <DetailRow label={t('fieldPayrollExportPath')} value={tenant.payroll_export_base_path} />
+                  <DetailRow label={t('fieldPayrollExportPath')} value={tenant.payrollExportBasePath} />
                   <DetailRow
                     label={t('fieldVacationBasis')}
                     value={
                       <Badge variant="outline">
-                        {tenant.vacation_basis === 'calendar_year'
+                        {tenant.vacationBasis === 'calendar_year'
                           ? t('vacationBasisCalendarYear')
                           : t('vacationBasisEntryDate')}
                       </Badge>
@@ -145,8 +147,8 @@ export function TenantDetailSheet({
               <div className="space-y-2">
                 <h4 className="text-sm font-medium text-muted-foreground">{t('timestampsSection')}</h4>
                 <div className="rounded-lg border p-4">
-                  <DetailRow label={t('labelCreated')} value={formatDate(tenant.created_at)} />
-                  <DetailRow label={t('labelLastUpdated')} value={formatDate(tenant.updated_at)} />
+                  <DetailRow label={t('labelCreated')} value={formatDate(tenant.createdAt)} />
+                  <DetailRow label={t('labelLastUpdated')} value={formatDate(tenant.updatedAt)} />
                 </div>
               </div>
             </div>
@@ -163,7 +165,7 @@ export function TenantDetailSheet({
                 <Edit className="mr-2 h-4 w-4" />
                 {t('edit')}
               </Button>
-              {tenant.is_active && (
+              {tenant.isActive && (
                 <Button
                   variant="destructive"
                   onClick={() => onDeactivate(tenant)}

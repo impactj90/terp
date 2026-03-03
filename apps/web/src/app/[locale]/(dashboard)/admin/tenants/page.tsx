@@ -19,9 +19,11 @@ import {
   TenantDetailSheet,
   TenantDeactivateDialog,
 } from '@/components/tenants'
-import type { components } from '@/lib/api/types'
+import type { AppRouter } from '@/server/root'
+import type { inferRouterOutputs } from '@trpc/server'
 
-type Tenant = components['schemas']['Tenant']
+type RouterOutput = inferRouterOutputs<AppRouter>
+type Tenant = RouterOutput['tenants']['list'][number]
 
 export default function TenantsPage() {
   const router = useRouter()
@@ -64,7 +66,7 @@ export default function TenantsPage() {
       (item) =>
         item.name.toLowerCase().includes(searchLower) ||
         item.slug.toLowerCase().includes(searchLower) ||
-        (item.address_city && item.address_city.toLowerCase().includes(searchLower))
+        (item.addressCity && item.addressCity.toLowerCase().includes(searchLower))
     )
   }, [tenants, search])
 

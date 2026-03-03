@@ -65,7 +65,7 @@ export function LogsTab({ from, to, employeeId, departmentId, onViewDetail }: Lo
 
   // Users for filter dropdown
   const { data: usersData } = useUsers({ enabled: !!from && !!to })
-  const users = (usersData as { data?: Array<{ id: string; display_name: string }> })?.data ?? []
+  const users = (usersData as { data?: Array<{ id: string; displayName: string }> })?.data ?? []
 
   const { data, isLoading } = useEvaluationLogs({
     from,
@@ -158,7 +158,7 @@ export function LogsTab({ from, to, employeeId, departmentId, onViewDetail }: Lo
               <SelectItem value="all">{t('filters.allUsers')}</SelectItem>
               {users.map((u) => (
                 <SelectItem key={u.id} value={u.id}>
-                  {u.display_name}
+                  {u.displayName}
                 </SelectItem>
               ))}
             </SelectContent>

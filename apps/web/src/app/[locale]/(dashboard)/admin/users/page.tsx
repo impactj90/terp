@@ -42,11 +42,12 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { UserFormSheet, UserDeleteDialog, ChangePasswordDialog } from '@/components/users'
-import type { components } from '@/lib/api/types'
+import type { AppRouter } from '@/server/root'
+import type { inferRouterOutputs } from '@trpc/server'
 
-type User = components['schemas']['User']
-
-type UserGroup = components['schemas']['UserGroup']
+type RouterOutput = inferRouterOutputs<AppRouter>
+type User = RouterOutput['users']['list']['data'][number]
+type UserGroup = RouterOutput['userGroups']['list']['data'][number]
 
 export default function AdminUsersPage() {
   const router = useRouter()
@@ -90,8 +91,8 @@ export default function AdminUsersPage() {
 
   const groupOptions = React.useMemo(() => {
     return [...groups].sort((a, b) => {
-      const activeA = a.is_active !== false
-      const activeB = b.is_active !== false
+      const activeA = a.isActive !== false
+      const activeB = b.isActive !== false
       if (activeA !== activeB) return activeA ? -1 : 1
       return a.name.localeCompare(b.name)
     })
@@ -111,10 +112,8 @@ export default function AdminUsersPage() {
 
     try {
       await updateMutation.mutateAsync({
-        path: { id: user.id },
-        body: {
-          user_group_id: selectedValue,
-        },
+        id: user.id,
+        userGroupId: selectedValue || null,
       })
     } catch (err) {
       const apiError = err as { detail?: string; message?: string }
@@ -172,10 +171,10 @@ export default function AdminUsersPage() {
           ) : (
             <div className="divide-y">
               {users.map((user) => {
-                const group = user.user_group_id ? groupNameById.get(user.user_group_id) : null
+                const group = user.userGroupId ? groupNameById.get(user.userGroupId) : null
                 const isSaving = savingUserId === user.id
-                const isInactive = user.is_active === false
-                const isLocked = user.is_locked === true
+                const isInactive = user.isActive === false
+                const isLocked = user.isLocked === true
                 return (
                   <div
                     key={user.id}
@@ -184,10 +183,10 @@ export default function AdminUsersPage() {
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         {isLocked && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
-                        <p className="text-sm font-medium">{user.display_name}</p>
+                        <p className="text-sm font-medium">{user.displayName}</p>
                       </div>
                       <p className="text-xs text-muted-foreground">{user.email}</p>
-                      {group?.is_admin && (
+                      {group?.isAdmin && (
                         <div className="inline-flex items-center gap-1 text-xs text-primary">
                           <ShieldCheck className="h-3 w-3" />
                           {t('adminGroupBadge')}
@@ -198,7 +197,7 @@ export default function AdminUsersPage() {
                     <div className="flex items-center gap-2">
                       <div className="w-full sm:w-64">
                         <Select
-                          value={user.user_group_id ?? 'none'}
+                          value={user.userGroupId ?? 'none'}
                           onValueChange={(value) => handleGroupChange(user, value)}
                           disabled={isSaving}
                         >
@@ -211,16 +210,16 @@ export default function AdminUsersPage() {
                               <SelectItem
                                 key={groupOption.id}
                                 value={groupOption.id}
-                                disabled={groupOption.is_active === false}
+                                disabled={groupOption.isActive === false}
                               >
-                                {groupOption.is_active === false
+                                {groupOption.isActive === false
                                   ? `${groupOption.name} (${tCommon('inactive')})`
                                   : groupOption.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
-                        {group?.is_system && (
+                        {group?.isSystem && (
                           <p className="mt-1 text-xs text-muted-foreground">
                             {t('systemGroupHint')}
                           </p>

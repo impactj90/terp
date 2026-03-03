@@ -33,9 +33,11 @@ import {
   useEmployees,
   useDepartments,
 } from '@/hooks/api'
-import type { components } from '@/lib/api/types'
+import type { AppRouter } from '@/server/root'
+import type { inferRouterOutputs } from '@trpc/server'
 
-type User = components['schemas']['User']
+type RouterOutput = inferRouterOutputs<AppRouter>
+type User = RouterOutput['users']['list']['data'][number]
 
 interface UserFormSheetProps {
   open: boolean
@@ -128,18 +130,18 @@ export function UserFormSheet({ open, onOpenChange, user, onSuccess }: UserFormS
       setForm({
         email: user.email ?? '',
         username: user.username ?? '',
-        displayName: user.display_name ?? '',
+        displayName: user.displayName ?? '',
         password: '',
-        userGroupId: user.user_group_id ?? '',
-        employeeId: user.employee_id ?? '',
-        isActive: user.is_active ?? true,
-        isLocked: user.is_locked ?? false,
-        dataScopeType: user.data_scope_type ?? 'all',
-        dataScopeTenantIds: user.data_scope_tenant_ids ?? [],
-        dataScopeDepartmentIds: user.data_scope_department_ids ?? [],
-        dataScopeEmployeeIds: user.data_scope_employee_ids ?? [],
+        userGroupId: user.userGroupId ?? '',
+        employeeId: user.employeeId ?? '',
+        isActive: user.isActive ?? true,
+        isLocked: user.isLocked ?? false,
+        dataScopeType: user.dataScopeType ?? 'all',
+        dataScopeTenantIds: user.dataScopeTenantIds ?? [],
+        dataScopeDepartmentIds: user.dataScopeDepartmentIds ?? [],
+        dataScopeEmployeeIds: user.dataScopeEmployeeIds ?? [],
       })
-      setShowDataScope((user.data_scope_type ?? 'all') !== 'all')
+      setShowDataScope((user.dataScopeType ?? 'all') !== 'all')
     } else {
       setForm(INITIAL_STATE)
       setShowDataScope(false)
@@ -161,50 +163,46 @@ export function UserFormSheet({ open, onOpenChange, user, onSuccess }: UserFormS
     try {
       if (isEdit && user) {
         await updateMutation.mutateAsync({
-          path: { id: user.id },
-          body: {
-            display_name: form.displayName.trim(),
-            username: form.username.trim() || undefined,
-            user_group_id: form.userGroupId,
-            employee_id: form.employeeId,
-            is_active: form.isActive,
-            is_locked: form.isLocked,
-            data_scope_type: form.dataScopeType as
-              | 'all'
-              | 'tenant'
-              | 'department'
-              | 'employee',
-            data_scope_tenant_ids:
-              form.dataScopeType === 'tenant' ? form.dataScopeTenantIds : undefined,
-            data_scope_department_ids:
-              form.dataScopeType === 'department' ? form.dataScopeDepartmentIds : undefined,
-            data_scope_employee_ids:
-              form.dataScopeType === 'employee' ? form.dataScopeEmployeeIds : undefined,
-          },
+          id: user.id,
+          displayName: form.displayName.trim(),
+          username: form.username.trim() || undefined,
+          userGroupId: form.userGroupId || null,
+          employeeId: form.employeeId || null,
+          isActive: form.isActive,
+          isLocked: form.isLocked,
+          dataScopeType: form.dataScopeType as
+            | 'all'
+            | 'tenant'
+            | 'department'
+            | 'employee',
+          dataScopeTenantIds:
+            form.dataScopeType === 'tenant' ? form.dataScopeTenantIds : undefined,
+          dataScopeDepartmentIds:
+            form.dataScopeType === 'department' ? form.dataScopeDepartmentIds : undefined,
+          dataScopeEmployeeIds:
+            form.dataScopeType === 'employee' ? form.dataScopeEmployeeIds : undefined,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            email: form.email.trim(),
-            display_name: form.displayName.trim(),
-            password: form.password,
-            username: form.username.trim() || undefined,
-            user_group_id: form.userGroupId || undefined,
-            employee_id: form.employeeId || undefined,
-            is_active: form.isActive,
-            is_locked: form.isLocked,
-            data_scope_type: form.dataScopeType as
-              | 'all'
-              | 'tenant'
-              | 'department'
-              | 'employee',
-            data_scope_tenant_ids:
-              form.dataScopeType === 'tenant' ? form.dataScopeTenantIds : undefined,
-            data_scope_department_ids:
-              form.dataScopeType === 'department' ? form.dataScopeDepartmentIds : undefined,
-            data_scope_employee_ids:
-              form.dataScopeType === 'employee' ? form.dataScopeEmployeeIds : undefined,
-          },
+          email: form.email.trim(),
+          displayName: form.displayName.trim(),
+          password: form.password,
+          username: form.username.trim() || undefined,
+          userGroupId: form.userGroupId || undefined,
+          employeeId: form.employeeId || undefined,
+          isActive: form.isActive,
+          isLocked: form.isLocked,
+          dataScopeType: form.dataScopeType as
+            | 'all'
+            | 'tenant'
+            | 'department'
+            | 'employee',
+          dataScopeTenantIds:
+            form.dataScopeType === 'tenant' ? form.dataScopeTenantIds : undefined,
+          dataScopeDepartmentIds:
+            form.dataScopeType === 'department' ? form.dataScopeDepartmentIds : undefined,
+          dataScopeEmployeeIds:
+            form.dataScopeType === 'employee' ? form.dataScopeEmployeeIds : undefined,
         })
       }
 

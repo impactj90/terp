@@ -1,4 +1,5 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
 interface UseTenantsOptions {
   enabled?: boolean
@@ -8,14 +9,22 @@ interface UseTenantsOptions {
 /**
  * Hook to fetch list of tenants.
  *
+ * Returns only tenants the current user has access to (via userTenants).
+ *
  * @example
  * ```tsx
- * const { data, isLoading } = useTenants({ params: { include_inactive: true } })
+ * const { data, isLoading } = useTenants({ params: { active: true } })
  * ```
  */
 export function useTenants(options: UseTenantsOptions = {}) {
   const { enabled = true, params } = options
-  return useApiQuery('/tenants', { enabled, params })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.tenants.list.queryOptions(
+      { name: params?.name, active: params?.active },
+      { enabled }
+    )
+  )
 }
 
 /**
@@ -27,26 +36,50 @@ export function useTenants(options: UseTenantsOptions = {}) {
  * ```
  */
 export function useTenant(id: string, enabled = true) {
-  return useApiQuery('/tenants/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.tenants.getById.queryOptions(
+      { id },
+      { enabled: enabled && !!id }
+    )
+  )
 }
 
 export function useCreateTenant() {
-  return useApiMutation('/tenants', 'post', {
-    invalidateKeys: [['/tenants']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.tenants.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.tenants.list.queryKey(),
+      })
+    },
   })
 }
 
 export function useUpdateTenant() {
-  return useApiMutation('/tenants/{id}', 'patch', {
-    invalidateKeys: [['/tenants']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.tenants.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.tenants.list.queryKey(),
+      })
+    },
   })
 }
 
 export function useDeactivateTenant() {
-  return useApiMutation('/tenants/{id}', 'delete', {
-    invalidateKeys: [['/tenants']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.tenants.deactivate.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.tenants.list.queryKey(),
+      })
+    },
   })
 }

@@ -10,11 +10,17 @@ import { createTRPCRouter, createCallerFactory } from "./trpc"
 import { healthRouter } from "./routers/health"
 import { authRouter } from "./routers/auth"
 import { permissionsRouter } from "./routers/permissions"
+import { tenantsRouter } from "./routers/tenants"
+import { userGroupsRouter } from "./routers/userGroups"
+import { usersRouter } from "./routers/users"
 
 export const appRouter = createTRPCRouter({
   health: healthRouter,
   auth: authRouter,
   permissions: permissionsRouter,
+  tenants: tenantsRouter,
+  users: usersRouter,
+  userGroups: userGroupsRouter,
 })
 
 /** Type-only export for client-side inference. */

@@ -4,9 +4,11 @@ import * as React from 'react'
 import { useTranslations } from 'next-intl'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useDeleteUser } from '@/hooks/api'
-import type { components } from '@/lib/api/types'
+import type { AppRouter } from '@/server/root'
+import type { inferRouterOutputs } from '@trpc/server'
 
-type User = components['schemas']['User']
+type RouterOutput = inferRouterOutputs<AppRouter>
+type User = RouterOutput['users']['list']['data'][number]
 
 interface UserDeleteDialogProps {
   user: User | null
@@ -22,7 +24,7 @@ export function UserDeleteDialog({ user, onOpenChange, onSuccess }: UserDeleteDi
   const handleConfirm = async () => {
     if (!user) return
     try {
-      await deleteMutation.mutateAsync({ path: { id: user.id } })
+      await deleteMutation.mutateAsync({ id: user.id })
       onSuccess?.()
       onOpenChange(false)
     } catch {
@@ -36,7 +38,7 @@ export function UserDeleteDialog({ user, onOpenChange, onSuccess }: UserDeleteDi
       onOpenChange={onOpenChange}
       title={t('deleteUser')}
       description={
-        user ? t('deleteDescription', { name: user.display_name, email: user.email }) : ''
+        user ? t('deleteDescription', { name: user.displayName, email: user.email }) : ''
       }
       confirmLabel={tCommon('delete')}
       cancelLabel={tCommon('cancel')}

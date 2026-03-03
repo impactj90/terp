@@ -21,9 +21,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { components } from '@/lib/api/types'
+import type { AppRouter } from '@/server/root'
+import type { inferRouterOutputs } from '@trpc/server'
 
-type Tenant = components['schemas']['Tenant']
+type RouterOutput = inferRouterOutputs<AppRouter>
+type Tenant = RouterOutput['tenants']['list'][number]
 
 interface TenantDataTableProps {
   items: Tenant[]
@@ -84,21 +86,21 @@ export function TenantDataTable({
               {item.slug}
             </TableCell>
             <TableCell className="text-sm text-muted-foreground">
-              {item.address_city || '-'}
+              {item.addressCity || '-'}
             </TableCell>
             <TableCell className="text-sm text-muted-foreground">
-              {item.address_country || '-'}
+              {item.addressCountry || '-'}
             </TableCell>
             <TableCell>
               <Badge variant="outline">
-                {item.vacation_basis === 'calendar_year'
+                {item.vacationBasis === 'calendar_year'
                   ? t('vacationBasisCalendarYear')
                   : t('vacationBasisEntryDate')}
               </Badge>
             </TableCell>
             <TableCell>
-              <Badge variant={item.is_active ? 'default' : 'secondary'}>
-                {item.is_active ? t('statusActive') : t('statusInactive')}
+              <Badge variant={item.isActive ? 'default' : 'secondary'}>
+                {item.isActive ? t('statusActive') : t('statusInactive')}
               </Badge>
             </TableCell>
             <TableCell onClick={(e) => e.stopPropagation()}>
@@ -118,7 +120,7 @@ export function TenantDataTable({
                     <Edit className="mr-2 h-4 w-4" />
                     {t('edit')}
                   </DropdownMenuItem>
-                  {item.is_active && (
+                  {item.isActive && (
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem

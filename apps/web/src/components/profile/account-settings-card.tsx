@@ -83,8 +83,8 @@ export function AccountSettingsCard({ user }: AccountSettingsCardProps) {
 
     try {
       await updateUser.mutateAsync({
-        path: { id: user.id },
-        body: { display_name: displayName.trim() },
+        id: user.id,
+        displayName: displayName.trim(),
       })
       setIsEditing(false)
       setSuccessMessage(t('displayNameUpdated'))

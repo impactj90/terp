@@ -49,13 +49,20 @@ import {
   AvatarGroupCount,
   AvatarImage,
 } from '@/components/ui/avatar'
-import type { components } from '@/lib/api/types'
+import type { AppRouter } from '@/server/root'
+import type { inferRouterOutputs } from '@trpc/server'
 
-type UserGroup = components['schemas']['UserGroup']
+type RouterOutput = inferRouterOutputs<AppRouter>
+type UserGroup = RouterOutput['userGroups']['list']['data'][number]
+type User = RouterOutput['users']['list']['data'][number]
 
-type User = components['schemas']['User']
-
-type Permission = components['schemas']['Permission']
+type Permission = {
+  id: string
+  key: string
+  resource: string
+  action: string
+  description: string
+}
 
 type PermissionCategory = {
   id: string
@@ -205,10 +212,10 @@ export default function UserGroupsPage() {
   const membersByGroup = React.useMemo(() => {
     const map = new Map<string, User[]>()
     users.forEach((user) => {
-      if (!user.user_group_id) return
-      const groupMembers = map.get(user.user_group_id) ?? []
+      if (!user.userGroupId) return
+      const groupMembers = map.get(user.userGroupId) ?? []
       groupMembers.push(user)
-      map.set(user.user_group_id, groupMembers)
+      map.set(user.userGroupId, groupMembers)
     })
     return map
   }, [users])
@@ -225,16 +232,14 @@ export default function UserGroupsPage() {
     })
   }, [groups, search])
 
-  const handleToggleActive = async (group: UserGroup, isActive: boolean) => {
-    if (group.is_system) return
+  const handleToggleActive = async (group: UserGroup, active: boolean) => {
+    if (group.isSystem) return
     setTogglingId(group.id)
     try {
       await updateMutation.mutateAsync({
-        path: { id: group.id },
-        body: {
-          is_active: isActive,
-          is_admin: group.is_admin ?? false,
-        },
+        id: group.id,
+        isActive: active,
+        isAdmin: group.isAdmin ?? false,
       })
     } catch {
       // errors handled by mutation
@@ -248,7 +253,7 @@ export default function UserGroupsPage() {
 
     try {
       await deleteMutation.mutateAsync({
-        path: { id: deleteGroup.id },
+        id: deleteGroup.id,
       })
       setDeleteGroup(null)
     } catch {
@@ -394,20 +399,20 @@ export default function UserGroupsPage() {
                     </div>
                     <CardAction>
                       <div className="flex flex-wrap items-center gap-2">
-                        {group.is_system && (
+                        {group.isSystem && (
                           <Badge variant="outline">
                             <Lock className="mr-1 h-3 w-3" />
                             {t('systemBadge')}
                           </Badge>
                         )}
-                        {group.is_admin && (
+                        {group.isAdmin && (
                           <Badge>
                             <ShieldCheck className="mr-1 h-3 w-3" />
                             {t('adminBadge')}
                           </Badge>
                         )}
-                        <Badge variant={group.is_active ? 'secondary' : 'outline'}>
-                          {group.is_active ? t('active') : t('inactive')}
+                        <Badge variant={group.isActive ? 'secondary' : 'outline'}>
+                          {group.isActive ? t('active') : t('inactive')}
                         </Badge>
                       </div>
                     </CardAction>
@@ -431,10 +436,10 @@ export default function UserGroupsPage() {
                         {previewMembers.map((member) => (
                           <Avatar key={member.id} size="sm">
                             <AvatarImage
-                              src={member.avatar_url ?? undefined}
-                              alt={member.display_name}
+                              src={member.avatarUrl ?? undefined}
+                              alt={member.displayName}
                             />
-                            <AvatarFallback>{getInitials(member.display_name)}</AvatarFallback>
+                            <AvatarFallback>{getInitials(member.displayName)}</AvatarFallback>
                           </Avatar>
                         ))}
                         {extraCount > 0 && <AvatarGroupCount>+{extraCount}</AvatarGroupCount>}
@@ -450,9 +455,9 @@ export default function UserGroupsPage() {
                       </p>
                     </div>
                     <Switch
-                      checked={group.is_active ?? true}
+                      checked={group.isActive ?? true}
                       onCheckedChange={(checked) => handleToggleActive(group, checked)}
-                      disabled={group.is_system || togglingId === group.id}
+                      disabled={group.isSystem || togglingId === group.id}
                     />
                   </div>
 
@@ -514,7 +519,7 @@ export default function UserGroupsPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => setEditGroup(group)}
-                      disabled={group.is_system}
+                      disabled={group.isSystem ?? false}
                     >
                       {tCommon('edit')}
                     </Button>
@@ -522,7 +527,7 @@ export default function UserGroupsPage() {
                       variant="ghost"
                       size="sm"
                       onClick={() => setDeleteGroup(group)}
-                      disabled={group.is_system}
+                      disabled={group.isSystem ?? false}
                     >
                       {tCommon('delete')}
                     </Button>

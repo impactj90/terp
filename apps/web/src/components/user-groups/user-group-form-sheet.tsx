@@ -20,7 +20,8 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { useCreateUserGroup, usePermissions, useUpdateUserGroup } from '@/hooks/api'
-import type { components } from '@/lib/api/types'
+import type { AppRouter } from '@/server/root'
+import type { inferRouterOutputs } from '@trpc/server'
 
 const CATEGORY_DEFINITIONS = [
   { id: 'employees', labelKey: 'categoryEmployees', resources: ['employees'] },
@@ -49,7 +50,8 @@ const CATEGORY_DEFINITIONS = [
   { id: 'reports', labelKey: 'categoryReports', resources: ['reports'] },
 ] as const
 
-type UserGroup = components['schemas']['UserGroup']
+type RouterOutput = inferRouterOutputs<AppRouter>
+type UserGroup = RouterOutput['userGroups']['list']['data'][number]
 
 type Permission = {
   id: string
@@ -105,7 +107,7 @@ export function UserGroupFormSheet({
 }: UserGroupFormSheetProps) {
   const t = useTranslations('adminUserGroups')
   const isEdit = !!group
-  const isSystem = group?.is_system ?? false
+  const isSystem = group?.isSystem ?? false
 
   const [form, setForm] = React.useState<FormState>(INITIAL_STATE)
   const [error, setError] = React.useState<string | null>(null)
@@ -125,8 +127,8 @@ export function UserGroupFormSheet({
         code: group.code ?? '',
         name: group.name ?? '',
         description: group.description ?? '',
-        isAdmin: group.is_admin ?? false,
-        isActive: group.is_active ?? true,
+        isAdmin: group.isAdmin ?? false,
+        isActive: group.isActive ?? true,
         permissionIds: group.permissions?.map((permission) => permission.id) ?? [],
       })
     } else {
@@ -275,24 +277,20 @@ export function UserGroupFormSheet({
     try {
       if (isEdit && group) {
         await updateMutation.mutateAsync({
-          path: { id: group.id },
-          body: {
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            is_admin: form.isAdmin,
-            is_active: form.isActive,
-            permission_ids: form.permissionIds,
-          },
+          id: group.id,
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          isAdmin: form.isAdmin,
+          isActive: form.isActive,
+          permissions: form.permissionIds,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            code: form.code.trim().toUpperCase(),
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            is_admin: form.isAdmin,
-            permission_ids: form.permissionIds,
-          },
+          code: form.code.trim().toUpperCase(),
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          isAdmin: form.isAdmin,
+          permissions: form.permissionIds,
         })
       }
 

@@ -1,7 +1,8 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
 /**
- * Hook to fetch a user by ID.
+ * Hook to fetch a user by ID with relations (tenant, userGroup, employee).
  *
  * @example
  * ```tsx
@@ -9,26 +10,41 @@ import { useApiQuery, useApiMutation } from '@/hooks'
  * ```
  */
 export function useUser(userId: string, enabled = true) {
-  return useApiQuery('/users/{id}', {
-    path: { id: userId },
-    enabled: enabled && !!userId,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.users.getById.queryOptions(
+      { id: userId },
+      { enabled: enabled && !!userId }
+    )
+  )
 }
 
 /**
- * Hook to update a user (display_name, avatar_url).
+ * Hook to update a user (display_name, avatar_url, etc.).
+ *
+ * Invalidates users list and auth.me queries on success.
  *
  * @example
  * ```tsx
  * const updateUser = useUpdateUser()
- * updateUser.mutate({
- *   path: { id: userId },
- *   body: { display_name: 'New Name' }
- * })
+ * updateUser.mutate({ id: userId, displayName: 'New Name' })
  * ```
  */
 export function useUpdateUser() {
-  return useApiMutation('/users/{id}', 'patch', {
-    invalidateKeys: [['/users/{id}'], ['/auth/me'], ['/users']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.users.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.users.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.users.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.auth.me.queryKey(),
+      })
+    },
   })
 }

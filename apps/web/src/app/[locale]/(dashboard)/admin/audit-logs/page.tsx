@@ -101,7 +101,7 @@ export default function AuditLogsPage() {
 
   // Users for filter dropdown
   const { data: usersData, isLoading: usersLoading } = useUsers({ enabled })
-  const users = (usersData as { data?: Array<{ id: string; display_name: string }> })?.data ?? []
+  const users = usersData?.data?.map(u => ({ id: u.id, displayName: u.displayName })) ?? []
 
   // Append new data when it arrives
   React.useEffect(() => {

@@ -16,9 +16,11 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { useChangeUserPassword } from '@/hooks/api'
-import type { components } from '@/lib/api/types'
+import type { AppRouter } from '@/server/root'
+import type { inferRouterOutputs } from '@trpc/server'
 
-type User = components['schemas']['User']
+type RouterOutput = inferRouterOutputs<AppRouter>
+type User = RouterOutput['users']['list']['data'][number]
 
 interface ChangePasswordDialogProps {
   user: User | null
@@ -99,11 +101,8 @@ export function ChangePasswordDialog({
 
     try {
       await changePasswordMutation.mutateAsync({
-        path: { id: user.id },
-        body: {
-          current_password: isSelf ? form.currentPassword : undefined,
-          new_password: form.newPassword,
-        },
+        userId: user.id,
+        newPassword: form.newPassword,
       })
       onSuccess?.()
       onOpenChange(false)
@@ -125,7 +124,7 @@ export function ChangePasswordDialog({
             {isSelf
               ? t('passwordDescriptionSelf')
               : user
-                ? t('passwordDescription', { name: user.display_name })
+                ? t('passwordDescription', { name: user.displayName })
                 : ''}
           </SheetDescription>
         </SheetHeader>

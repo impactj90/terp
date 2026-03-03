@@ -1,4 +1,5 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
 interface UseUsersOptions {
   limit?: number
@@ -6,30 +7,52 @@ interface UseUsersOptions {
   enabled?: boolean
 }
 
+/**
+ * Hook to fetch a paginated list of users for the current tenant.
+ *
+ * @example
+ * ```tsx
+ * const { data, isLoading } = useUsers({ search: 'john', limit: 50 })
+ * ```
+ */
 export function useUsers(options: UseUsersOptions = {}) {
   const { limit = 100, search, enabled = true } = options
-
-  return useApiQuery('/users', {
-    params: {
-      limit,
-      search: search || undefined,
-    },
-    enabled,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.users.list.queryOptions(
+      { limit, search: search || undefined },
+      { enabled }
+    )
+  )
 }
 
 export function useCreateUser() {
-  return useApiMutation('/users', 'post', {
-    invalidateKeys: [['/users']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.users.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.users.list.queryKey(),
+      })
+    },
   })
 }
 
 export function useDeleteUser() {
-  return useApiMutation('/users/{id}', 'delete', {
-    invalidateKeys: [['/users']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.users.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.users.list.queryKey(),
+      })
+    },
   })
 }
 
 export function useChangeUserPassword() {
-  return useApiMutation('/users/{id}/password', 'post')
+  const trpc = useTRPC()
+  return useMutation(trpc.users.changePassword.mutationOptions())
 }

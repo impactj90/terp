@@ -4,9 +4,11 @@ import * as React from 'react'
 import { useTranslations } from 'next-intl'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useDeactivateTenant } from '@/hooks/api'
-import type { components } from '@/lib/api/types'
+import type { AppRouter } from '@/server/root'
+import type { inferRouterOutputs } from '@trpc/server'
 
-type Tenant = components['schemas']['Tenant']
+type RouterOutput = inferRouterOutputs<AppRouter>
+type Tenant = RouterOutput['tenants']['getById']
 
 interface TenantDeactivateDialogProps {
   tenant: Tenant | null
@@ -27,7 +29,7 @@ export function TenantDeactivateDialog({
   const handleConfirm = async () => {
     if (!tenant) return
     try {
-      await deactivateMutation.mutateAsync({ path: { id: tenant.id } })
+      await deactivateMutation.mutateAsync({ id: tenant.id })
       onOpenChange(false)
       onSuccess?.()
     } catch {

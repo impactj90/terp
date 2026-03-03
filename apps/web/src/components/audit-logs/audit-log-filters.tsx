@@ -25,7 +25,7 @@ interface AuditLogFiltersProps {
   onEntityIdChange: (id: string) => void
   action: string | null
   onActionChange: (action: string | null) => void
-  users: Array<{ id: string; display_name: string }>
+  users: Array<{ id: string; displayName: string }>
   isLoadingUsers?: boolean
   onClearFilters: () => void
   hasFilters: boolean
@@ -83,7 +83,7 @@ export function AuditLogFilters({
               <SelectItem value="all">{t('filters.allUsers')}</SelectItem>
               {users.map((u) => (
                 <SelectItem key={u.id} value={u.id}>
-                  {u.display_name}
+                  {u.displayName}
                 </SelectItem>
               ))}
             </SelectContent>

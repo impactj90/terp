@@ -26,9 +26,11 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { useCreateTenant, useUpdateTenant } from '@/hooks/api'
-import type { components } from '@/lib/api/types'
+import type { AppRouter } from '@/server/root'
+import type { inferRouterOutputs } from '@trpc/server'
 
-type Tenant = components['schemas']['Tenant']
+type RouterOutput = inferRouterOutputs<AppRouter>
+type Tenant = RouterOutput['tenants']['getById']
 
 interface TenantFormSheetProps {
   open: boolean
@@ -88,16 +90,16 @@ export function TenantFormSheet({
         setForm({
           name: tenant.name || '',
           slug: tenant.slug || '',
-          addressStreet: tenant.address_street || '',
-          addressZip: tenant.address_zip || '',
-          addressCity: tenant.address_city || '',
-          addressCountry: tenant.address_country || '',
+          addressStreet: tenant.addressStreet || '',
+          addressZip: tenant.addressZip || '',
+          addressCity: tenant.addressCity || '',
+          addressCountry: tenant.addressCountry || '',
           phone: tenant.phone || '',
           email: tenant.email || '',
-          payrollExportBasePath: tenant.payroll_export_base_path || '',
+          payrollExportBasePath: tenant.payrollExportBasePath || '',
           notes: tenant.notes || '',
-          vacationBasis: tenant.vacation_basis || 'calendar_year',
-          isActive: tenant.is_active ?? true,
+          vacationBasis: (tenant.vacationBasis as 'calendar_year' | 'entry_date') || 'calendar_year',
+          isActive: tenant.isActive ?? true,
         })
       } else {
         setForm(INITIAL_STATE)
@@ -154,36 +156,32 @@ export function TenantFormSheet({
     try {
       if (isEdit && tenant) {
         await updateMutation.mutateAsync({
-          path: { id: tenant.id },
-          body: {
-            name: form.name.trim(),
-            address_street: form.addressStreet.trim(),
-            address_zip: form.addressZip.trim(),
-            address_city: form.addressCity.trim(),
-            address_country: form.addressCountry.trim(),
-            phone: form.phone.trim() || null,
-            email: form.email.trim() || null,
-            payroll_export_base_path: form.payrollExportBasePath.trim() || null,
-            notes: form.notes.trim() || null,
-            vacation_basis: form.vacationBasis,
-            is_active: form.isActive,
-          },
+          id: tenant.id,
+          name: form.name.trim(),
+          addressStreet: form.addressStreet.trim(),
+          addressZip: form.addressZip.trim(),
+          addressCity: form.addressCity.trim(),
+          addressCountry: form.addressCountry.trim(),
+          phone: form.phone.trim() || null,
+          email: form.email.trim() || null,
+          payrollExportBasePath: form.payrollExportBasePath.trim() || null,
+          notes: form.notes.trim() || null,
+          vacationBasis: form.vacationBasis,
+          isActive: form.isActive,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            name: form.name.trim(),
-            slug: form.slug.trim(),
-            address_street: form.addressStreet.trim(),
-            address_zip: form.addressZip.trim(),
-            address_city: form.addressCity.trim(),
-            address_country: form.addressCountry.trim(),
-            phone: form.phone.trim() || undefined,
-            email: form.email.trim() || undefined,
-            payroll_export_base_path: form.payrollExportBasePath.trim() || undefined,
-            notes: form.notes.trim() || undefined,
-            vacation_basis: form.vacationBasis,
-          },
+          name: form.name.trim(),
+          slug: form.slug.trim(),
+          addressStreet: form.addressStreet.trim(),
+          addressZip: form.addressZip.trim(),
+          addressCity: form.addressCity.trim(),
+          addressCountry: form.addressCountry.trim(),
+          phone: form.phone.trim() || undefined,
+          email: form.email.trim() || undefined,
+          payrollExportBasePath: form.payrollExportBasePath.trim() || undefined,
+          notes: form.notes.trim() || undefined,
+          vacationBasis: form.vacationBasis,
         })
       }
 
