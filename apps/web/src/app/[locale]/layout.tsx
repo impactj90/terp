@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import '../globals.css'
-import { QueryProvider } from '@/providers/query-provider'
+import { TRPCReactProvider } from '@/trpc/provider'
 import { AuthProvider } from '@/providers/auth-provider'
 import { ThemeProvider } from '@/providers/theme-provider'
 import { NextIntlClientProvider } from 'next-intl'
@@ -43,11 +43,11 @@ export default async function LocaleLayout({
       <body className="min-h-screen bg-background font-sans antialiased">
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider defaultTheme="system">
-            <QueryProvider>
+            <TRPCReactProvider>
               <AuthProvider>
                 {children}
               </AuthProvider>
-            </QueryProvider>
+            </TRPCReactProvider>
           </ThemeProvider>
         </NextIntlClientProvider>
       </body>
