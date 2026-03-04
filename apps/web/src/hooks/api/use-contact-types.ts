@@ -1,4 +1,7 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+
+// ==================== Query Hooks ====================
 
 interface UseContactTypesOptions {
   active?: boolean
@@ -16,13 +19,10 @@ interface UseContactTypesOptions {
  */
 export function useContactTypes(options: UseContactTypesOptions = {}) {
   const { active, enabled = true } = options
-
-  return useApiQuery('/contact-types', {
-    params: {
-      active,
-    },
-    enabled,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.contactTypes.list.queryOptions({ isActive: active }, { enabled })
+  )
 }
 
 /**
@@ -34,10 +34,13 @@ export function useContactTypes(options: UseContactTypesOptions = {}) {
  * ```
  */
 export function useContactType(id: string, enabled = true) {
-  return useApiQuery('/contact-types/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.contactTypes.getById.queryOptions(
+      { id },
+      { enabled: enabled && !!id }
+    )
+  )
 }
 
 // ==================== Mutation Hooks ====================
@@ -46,8 +49,15 @@ export function useContactType(id: string, enabled = true) {
  * Hook to create a new contact type.
  */
 export function useCreateContactType() {
-  return useApiMutation('/contact-types', 'post', {
-    invalidateKeys: [['/contact-types']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.contactTypes.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.contactTypes.list.queryKey(),
+      })
+    },
   })
 }
 
@@ -55,8 +65,15 @@ export function useCreateContactType() {
  * Hook to update an existing contact type.
  */
 export function useUpdateContactType() {
-  return useApiMutation('/contact-types/{id}', 'patch', {
-    invalidateKeys: [['/contact-types']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.contactTypes.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.contactTypes.list.queryKey(),
+      })
+    },
   })
 }
 
@@ -64,7 +81,14 @@ export function useUpdateContactType() {
  * Hook to delete a contact type.
  */
 export function useDeleteContactType() {
-  return useApiMutation('/contact-types/{id}', 'delete', {
-    invalidateKeys: [['/contact-types']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.contactTypes.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.contactTypes.list.queryKey(),
+      })
+    },
   })
 }

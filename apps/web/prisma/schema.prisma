@@ -106,6 +106,8 @@ model Tenant {
   employees                 Employee[]
   employeeCards             EmployeeCard[]
   employeeTariffAssignments EmployeeTariffAssignment[]
+  contactTypes              ContactType[]
+  contactKinds              ContactKind[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
@@ -362,6 +364,68 @@ model Account {
 }
 
 // -----------------------------------------------------------------------------
+// ContactType
+// -----------------------------------------------------------------------------
+// Migration: 000068
+//
+// Trigger: update_contact_types_updated_at BEFORE UPDATE
+//
+// Valid data_type values (enforced at application level):
+//   text, email, phone, url
+model ContactType {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  code        String   @db.VarChar(50)
+  name        String   @db.VarChar(255)
+  dataType    String   @default("text") @map("data_type") @db.VarChar(20)
+  description String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order") @db.Integer
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contactKinds ContactKind[]
+
+  // Indexes
+  @@unique([tenantId, code], map: "contact_types_tenant_id_code_key")
+  @@index([tenantId], map: "idx_contact_types_tenant")
+  @@index([tenantId, isActive], map: "idx_contact_types_tenant_active")
+  @@map("contact_types")
+}
+
+// -----------------------------------------------------------------------------
+// ContactKind
+// -----------------------------------------------------------------------------
+// Migration: 000068
+//
+// Trigger: update_contact_kinds_updated_at BEFORE UPDATE
+model ContactKind {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  contactTypeId String   @map("contact_type_id") @db.Uuid
+  code          String   @db.VarChar(50)
+  label         String   @db.VarChar(255)
+  isActive      Boolean  @default(true) @map("is_active")
+  sortOrder     Int      @default(0) @map("sort_order") @db.Integer
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contactType      ContactType       @relation(fields: [contactTypeId], references: [id], onDelete: Cascade)
+  employeeContacts EmployeeContact[]
+
+  // Indexes
+  @@unique([tenantId, code], map: "contact_kinds_tenant_id_code_key")
+  @@index([tenantId], map: "idx_contact_kinds_tenant")
+  @@index([contactTypeId], map: "idx_contact_kinds_type")
+  @@index([tenantId, isActive], map: "idx_contact_kinds_tenant_active")
+  @@map("contact_kinds")
+}
+
+// -----------------------------------------------------------------------------
 // Department
 // -----------------------------------------------------------------------------
 // Migrations: 000009, 000014
@@ -590,9 +654,8 @@ model EmployeeContact {
   contactKindId String?  @map("contact_kind_id") @db.Uuid
 
   // Relations
-  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  // Note: contactKindId FK references contact_kinds(id) ON DELETE SET NULL.
-  // ContactKind model not yet in Prisma. Relation will be added when it is.
+  employee    Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  contactKind ContactKind? @relation(fields: [contactKindId], references: [id], onDelete: SetNull)
 
   // Indexes
   @@index([employeeId], map: "idx_employee_contacts_employee")
