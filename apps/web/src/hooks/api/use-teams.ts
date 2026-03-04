@@ -1,12 +1,15 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
 // ==================== Query Hooks ====================
 
 interface UseTeamsOptions {
+  page?: number
+  pageSize?: number
   limit?: number
-  cursor?: string
   departmentId?: string
   isActive?: boolean
+  search?: string
   enabled?: boolean
 }
 
@@ -16,23 +19,34 @@ interface UseTeamsOptions {
  * @example
  * ```tsx
  * const { data, isLoading } = useTeams({
- *   limit: 20,
+ *   pageSize: 20,
  *   departmentId: 'dept-123',
  * })
  * ```
  */
 export function useTeams(options: UseTeamsOptions = {}) {
-  const { limit = 20, cursor, departmentId, isActive, enabled = true } = options
-
-  return useApiQuery('/teams', {
-    params: {
-      limit,
-      cursor,
-      department_id: departmentId,
-      is_active: isActive,
-    },
-    enabled,
-  })
+  const {
+    page = 1,
+    pageSize,
+    limit,
+    departmentId,
+    isActive,
+    search,
+    enabled = true,
+  } = options
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.teams.list.queryOptions(
+      {
+        page,
+        pageSize: pageSize ?? limit ?? 20,
+        departmentId,
+        isActive,
+        search,
+      },
+      { enabled }
+    )
+  )
 }
 
 /**
@@ -44,11 +58,13 @@ export function useTeams(options: UseTeamsOptions = {}) {
  * ```
  */
 export function useTeam(id: string, enabled = true) {
-  return useApiQuery('/teams/{id}', {
-    path: { id },
-    params: { include_members: true },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.teams.getById.queryOptions(
+      { id, includeMembers: true },
+      { enabled: enabled && !!id }
+    )
+  )
 }
 
 /**
@@ -60,10 +76,13 @@ export function useTeam(id: string, enabled = true) {
  * ```
  */
 export function useTeamMembers(teamId: string, enabled = true) {
-  return useApiQuery('/teams/{id}/members', {
-    path: { id: teamId },
-    enabled: enabled && !!teamId,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.teams.getMembers.queryOptions(
+      { teamId },
+      { enabled: enabled && !!teamId }
+    )
+  )
 }
 
 // ==================== Mutation Hooks ====================
@@ -74,14 +93,19 @@ export function useTeamMembers(teamId: string, enabled = true) {
  * @example
  * ```tsx
  * const createTeam = useCreateTeam()
- * createTeam.mutate({
- *   body: { name: 'Frontend Team', ... }
- * })
+ * createTeam.mutate({ name: 'Frontend Team' })
  * ```
  */
 export function useCreateTeam() {
-  return useApiMutation('/teams', 'post', {
-    invalidateKeys: [['/teams']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.teams.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.teams.list.queryKey(),
+      })
+    },
   })
 }
 
@@ -91,15 +115,19 @@ export function useCreateTeam() {
  * @example
  * ```tsx
  * const updateTeam = useUpdateTeam()
- * updateTeam.mutate({
- *   path: { id: teamId },
- *   body: { name: 'Updated Team Name' }
- * })
+ * updateTeam.mutate({ id: teamId, name: 'Updated Team Name' })
  * ```
  */
 export function useUpdateTeam() {
-  return useApiMutation('/teams/{id}', 'put', {
-    invalidateKeys: [['/teams']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.teams.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.teams.list.queryKey(),
+      })
+    },
   })
 }
 
@@ -109,12 +137,19 @@ export function useUpdateTeam() {
  * @example
  * ```tsx
  * const deleteTeam = useDeleteTeam()
- * deleteTeam.mutate({ path: { id: teamId } })
+ * deleteTeam.mutate({ id: teamId })
  * ```
  */
 export function useDeleteTeam() {
-  return useApiMutation('/teams/{id}', 'delete', {
-    invalidateKeys: [['/teams']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.teams.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.teams.list.queryKey(),
+      })
+    },
   })
 }
 
@@ -124,15 +159,25 @@ export function useDeleteTeam() {
  * @example
  * ```tsx
  * const addMember = useAddTeamMember()
- * addMember.mutate({
- *   path: { id: teamId },
- *   body: { employee_id: empId, role: 'member' }
- * })
+ * addMember.mutate({ teamId, employeeId, role: 'member' })
  * ```
  */
 export function useAddTeamMember() {
-  return useApiMutation('/teams/{id}/members', 'post', {
-    invalidateKeys: [['/teams'], ['/teams/{id}']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.teams.addMember.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.teams.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.teams.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.teams.getMembers.queryKey(),
+      })
+    },
   })
 }
 
@@ -142,15 +187,25 @@ export function useAddTeamMember() {
  * @example
  * ```tsx
  * const updateMember = useUpdateTeamMember()
- * updateMember.mutate({
- *   path: { id: teamId, employee_id: empId },
- *   body: { role: 'lead' }
- * })
+ * updateMember.mutate({ teamId, employeeId, role: 'lead' })
  * ```
  */
 export function useUpdateTeamMember() {
-  return useApiMutation('/teams/{id}/members/{employee_id}', 'put', {
-    invalidateKeys: [['/teams'], ['/teams/{id}']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.teams.updateMemberRole.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.teams.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.teams.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.teams.getMembers.queryKey(),
+      })
+    },
   })
 }
 
@@ -160,13 +215,24 @@ export function useUpdateTeamMember() {
  * @example
  * ```tsx
  * const removeMember = useRemoveTeamMember()
- * removeMember.mutate({
- *   path: { id: teamId, employee_id: empId }
- * })
+ * removeMember.mutate({ teamId, employeeId })
  * ```
  */
 export function useRemoveTeamMember() {
-  return useApiMutation('/teams/{id}/members/{employee_id}', 'delete', {
-    invalidateKeys: [['/teams'], ['/teams/{id}']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.teams.removeMember.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.teams.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.teams.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.teams.getMembers.queryKey(),
+      })
+    },
   })
 }
