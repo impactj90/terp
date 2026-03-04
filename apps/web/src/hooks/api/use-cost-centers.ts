@@ -1,7 +1,11 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+
+// ==================== Query Hooks ====================
 
 interface UseCostCentersOptions {
   enabled?: boolean
+  isActive?: boolean
 }
 
 /**
@@ -14,11 +18,11 @@ interface UseCostCentersOptions {
  * ```
  */
 export function useCostCenters(options: UseCostCentersOptions = {}) {
-  const { enabled = true } = options
-
-  return useApiQuery('/cost-centers', {
-    enabled,
-  })
+  const { enabled = true, isActive } = options
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.costCenters.list.queryOptions({ isActive }, { enabled })
+  )
 }
 
 /**
@@ -30,26 +34,76 @@ export function useCostCenters(options: UseCostCentersOptions = {}) {
  * ```
  */
 export function useCostCenter(id: string, enabled = true) {
-  return useApiQuery('/cost-centers/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.costCenters.getById.queryOptions({ id }, { enabled: enabled && !!id })
+  )
 }
 
+// ==================== Mutation Hooks ====================
+
+/**
+ * Hook to create a new cost center.
+ *
+ * @example
+ * ```tsx
+ * const createCostCenter = useCreateCostCenter()
+ * createCostCenter.mutate({ code: 'CC001', name: 'Engineering' })
+ * ```
+ */
 export function useCreateCostCenter() {
-  return useApiMutation('/cost-centers', 'post', {
-    invalidateKeys: [['/cost-centers']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.costCenters.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.costCenters.list.queryKey(),
+      })
+    },
   })
 }
 
+/**
+ * Hook to update an existing cost center.
+ *
+ * @example
+ * ```tsx
+ * const updateCostCenter = useUpdateCostCenter()
+ * updateCostCenter.mutate({ id: costCenterId, name: 'Updated Name' })
+ * ```
+ */
 export function useUpdateCostCenter() {
-  return useApiMutation('/cost-centers/{id}', 'patch', {
-    invalidateKeys: [['/cost-centers']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.costCenters.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.costCenters.list.queryKey(),
+      })
+    },
   })
 }
 
+/**
+ * Hook to delete a cost center.
+ *
+ * @example
+ * ```tsx
+ * const deleteCostCenter = useDeleteCostCenter()
+ * deleteCostCenter.mutate({ id: costCenterId })
+ * ```
+ */
 export function useDeleteCostCenter() {
-  return useApiMutation('/cost-centers/{id}', 'delete', {
-    invalidateKeys: [['/cost-centers']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.costCenters.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.costCenters.list.queryKey(),
+      })
+    },
   })
 }

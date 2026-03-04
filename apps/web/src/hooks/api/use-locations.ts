@@ -1,7 +1,11 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+
+// ==================== Query Hooks ====================
 
 interface UseLocationsOptions {
   enabled?: boolean
+  isActive?: boolean
 }
 
 /**
@@ -14,11 +18,11 @@ interface UseLocationsOptions {
  * ```
  */
 export function useLocations(options: UseLocationsOptions = {}) {
-  const { enabled = true } = options
-
-  return useApiQuery('/locations', {
-    enabled,
-  })
+  const { enabled = true, isActive } = options
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.locations.list.queryOptions({ isActive }, { enabled })
+  )
 }
 
 /**
@@ -30,26 +34,76 @@ export function useLocations(options: UseLocationsOptions = {}) {
  * ```
  */
 export function useLocation(id: string, enabled = true) {
-  return useApiQuery('/locations/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.locations.getById.queryOptions({ id }, { enabled: enabled && !!id })
+  )
 }
 
+// ==================== Mutation Hooks ====================
+
+/**
+ * Hook to create a new location.
+ *
+ * @example
+ * ```tsx
+ * const createLocation = useCreateLocation()
+ * createLocation.mutate({ code: 'HQ', name: 'Headquarters' })
+ * ```
+ */
 export function useCreateLocation() {
-  return useApiMutation('/locations', 'post', {
-    invalidateKeys: [['/locations']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.locations.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.locations.list.queryKey(),
+      })
+    },
   })
 }
 
+/**
+ * Hook to update an existing location.
+ *
+ * @example
+ * ```tsx
+ * const updateLocation = useUpdateLocation()
+ * updateLocation.mutate({ id: locationId, name: 'Updated Name' })
+ * ```
+ */
 export function useUpdateLocation() {
-  return useApiMutation('/locations/{id}', 'patch', {
-    invalidateKeys: [['/locations']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.locations.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.locations.list.queryKey(),
+      })
+    },
   })
 }
 
+/**
+ * Hook to delete a location.
+ *
+ * @example
+ * ```tsx
+ * const deleteLocation = useDeleteLocation()
+ * deleteLocation.mutate({ id: locationId })
+ * ```
+ */
 export function useDeleteLocation() {
-  return useApiMutation('/locations/{id}', 'delete', {
-    invalidateKeys: [['/locations']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.locations.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.locations.list.queryKey(),
+      })
+    },
   })
 }

@@ -1,4 +1,5 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
 // ==================== Query Hooks ====================
 
@@ -26,12 +27,9 @@ interface UseHolidaysOptions {
  * ```
  */
 export function useHolidays(options: UseHolidaysOptions = {}) {
-  const { year, from, to, departmentId, enabled = true } = options
-
-  return useApiQuery('/holidays', {
-    params: { year, from, to, department_id: departmentId },
-    enabled,
-  })
+  const { enabled = true, ...input } = options
+  const trpc = useTRPC()
+  return useQuery(trpc.holidays.list.queryOptions(input, { enabled }))
 }
 
 /**
@@ -43,10 +41,10 @@ export function useHolidays(options: UseHolidaysOptions = {}) {
  * ```
  */
 export function useHoliday(id: string, enabled = true) {
-  return useApiQuery('/holidays/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.holidays.getById.queryOptions({ id }, { enabled: enabled && !!id })
+  )
 }
 
 // ==================== Mutation Hooks ====================
@@ -58,18 +56,22 @@ export function useHoliday(id: string, enabled = true) {
  * ```tsx
  * const createHoliday = useCreateHoliday()
  * createHoliday.mutate({
- *   body: {
- *     name: 'Christmas Day',
- *     holiday_date: '2026-12-25',
- *     category: 1,
- *     applies_to_all: true,
- *   }
+ *   name: 'Christmas Day',
+ *   holidayDate: '2026-12-25',
+ *   holidayCategory: 1,
  * })
  * ```
  */
 export function useCreateHoliday() {
-  return useApiMutation('/holidays', 'post', {
-    invalidateKeys: [['/holidays']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.holidays.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.holidays.list.queryKey(),
+      })
+    },
   })
 }
 
@@ -79,15 +81,19 @@ export function useCreateHoliday() {
  * @example
  * ```tsx
  * const updateHoliday = useUpdateHoliday()
- * updateHoliday.mutate({
- *   path: { id: holidayId },
- *   body: { name: 'Updated Name' }
- * })
+ * updateHoliday.mutate({ id: holidayId, name: 'Updated Name' })
  * ```
  */
 export function useUpdateHoliday() {
-  return useApiMutation('/holidays/{id}', 'patch', {
-    invalidateKeys: [['/holidays']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.holidays.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.holidays.list.queryKey(),
+      })
+    },
   })
 }
 
@@ -97,12 +103,19 @@ export function useUpdateHoliday() {
  * @example
  * ```tsx
  * const deleteHoliday = useDeleteHoliday()
- * deleteHoliday.mutate({ path: { id: holidayId } })
+ * deleteHoliday.mutate({ id: holidayId })
  * ```
  */
 export function useDeleteHoliday() {
-  return useApiMutation('/holidays/{id}', 'delete', {
-    invalidateKeys: [['/holidays']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.holidays.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.holidays.list.queryKey(),
+      })
+    },
   })
 }
 
@@ -112,15 +125,19 @@ export function useDeleteHoliday() {
  * @example
  * ```tsx
  * const generateHolidays = useGenerateHolidays()
- * generateHolidays.mutate({
- *   body: { year: 2026, state: 'BY' }
- * })
+ * generateHolidays.mutate({ year: 2026, state: 'BY' })
  * ```
  */
 export function useGenerateHolidays() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return useApiMutation('/holidays/generate' as any, 'post', {
-    invalidateKeys: [['/holidays']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.holidays.generate.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.holidays.list.queryKey(),
+      })
+    },
   })
 }
 
@@ -130,14 +147,18 @@ export function useGenerateHolidays() {
  * @example
  * ```tsx
  * const copyHolidays = useCopyHolidays()
- * copyHolidays.mutate({
- *   body: { source_year: 2025, target_year: 2026 }
- * })
+ * copyHolidays.mutate({ sourceYear: 2025, targetYear: 2026 })
  * ```
  */
 export function useCopyHolidays() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return useApiMutation('/holidays/copy' as any, 'post', {
-    invalidateKeys: [['/holidays']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.holidays.copy.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.holidays.list.queryKey(),
+      })
+    },
   })
 }
