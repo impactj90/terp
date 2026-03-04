@@ -1,6 +1,6 @@
 # ZMI-TICKET-211: Departments + Teams
 
-Status: Proposed
+Status: Done
 Priority: P2
 Owner: TBD
 
