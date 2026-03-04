@@ -1,7 +1,11 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+
+// ==================== Query Hooks ====================
 
 interface UseEmploymentTypesOptions {
   enabled?: boolean
+  isActive?: boolean
 }
 
 /**
@@ -14,11 +18,11 @@ interface UseEmploymentTypesOptions {
  * ```
  */
 export function useEmploymentTypes(options: UseEmploymentTypesOptions = {}) {
-  const { enabled = true } = options
-
-  return useApiQuery('/employment-types', {
-    enabled,
-  })
+  const { enabled = true, isActive } = options
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.employmentTypes.list.queryOptions({ isActive }, { enabled })
+  )
 }
 
 /**
@@ -30,26 +34,79 @@ export function useEmploymentTypes(options: UseEmploymentTypesOptions = {}) {
  * ```
  */
 export function useEmploymentType(id: string, enabled = true) {
-  return useApiQuery('/employment-types/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.employmentTypes.getById.queryOptions(
+      { id },
+      { enabled: enabled && !!id }
+    )
+  )
 }
 
+// ==================== Mutation Hooks ====================
+
+/**
+ * Hook to create a new employment type.
+ *
+ * @example
+ * ```tsx
+ * const createEmploymentType = useCreateEmploymentType()
+ * createEmploymentType.mutate({ code: 'FT', name: 'Full Time' })
+ * ```
+ */
 export function useCreateEmploymentType() {
-  return useApiMutation('/employment-types', 'post', {
-    invalidateKeys: [['/employment-types']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.employmentTypes.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.employmentTypes.list.queryKey(),
+      })
+    },
   })
 }
 
+/**
+ * Hook to update an existing employment type.
+ *
+ * @example
+ * ```tsx
+ * const updateEmploymentType = useUpdateEmploymentType()
+ * updateEmploymentType.mutate({ id: typeId, name: 'Updated Name' })
+ * ```
+ */
 export function useUpdateEmploymentType() {
-  return useApiMutation('/employment-types/{id}', 'patch', {
-    invalidateKeys: [['/employment-types']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.employmentTypes.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.employmentTypes.list.queryKey(),
+      })
+    },
   })
 }
 
+/**
+ * Hook to delete an employment type.
+ *
+ * @example
+ * ```tsx
+ * const deleteEmploymentType = useDeleteEmploymentType()
+ * deleteEmploymentType.mutate({ id: typeId })
+ * ```
+ */
 export function useDeleteEmploymentType() {
-  return useApiMutation('/employment-types/{id}', 'delete', {
-    invalidateKeys: [['/employment-types']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.employmentTypes.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.employmentTypes.list.queryKey(),
+      })
+    },
   })
 }
