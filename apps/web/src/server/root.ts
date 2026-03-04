@@ -15,6 +15,7 @@ import { userGroupsRouter } from "./routers/userGroups"
 import { usersRouter } from "./routers/users"
 import { departmentsRouter } from "./routers/departments"
 import { teamsRouter } from "./routers/teams"
+import { costCentersRouter } from "./routers/costCenters"
 
 export const appRouter = createTRPCRouter({
   health: healthRouter,
@@ -25,6 +26,7 @@ export const appRouter = createTRPCRouter({
   userGroups: userGroupsRouter,
   departments: departmentsRouter,
   teams: teamsRouter,
+  costCenters: costCentersRouter,
 })
 
 /** Type-only export for client-side inference. */

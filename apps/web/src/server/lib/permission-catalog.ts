@@ -38,7 +38,7 @@ function p(
 }
 
 /**
- * All 46 permissions, mirroring Go's allPermissions slice.
+ * All 48 permissions, mirroring Go's allPermissions slice.
  * Order matches the Go source file for easy comparison.
  */
 export const ALL_PERMISSIONS: Permission[] = [
@@ -205,6 +205,8 @@ export const ALL_PERMISSIONS: Permission[] = [
   ),
   p("macros.manage", "macros", "manage", "Manage macros and macro assignments"),
   p("locations.manage", "locations", "manage", "Manage work locations"),
+  p("cost_centers.manage", "cost_centers", "manage", "Manage cost centers"),
+  p("employment_types.manage", "employment_types", "manage", "Manage employment types"),
   p("corrections.manage", "corrections", "manage", "Manage corrections"),
   p(
     "monthly_evaluations.manage",
