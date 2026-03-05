@@ -1,19 +1,28 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+
+// ==================== Query Hooks ====================
 
 /**
  * Hook to fetch employee access cards.
  *
  * @example
  * ```tsx
- * const { data: cards, isLoading } = useEmployeeCards(employeeId)
+ * const { data, isLoading } = useEmployeeCards(employeeId)
+ * const cards = data?.data ?? []
  * ```
  */
 export function useEmployeeCards(employeeId: string, enabled = true) {
-  return useApiQuery('/employees/{id}/cards', {
-    path: { id: employeeId },
-    enabled: enabled && !!employeeId,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.employeeCards.list.queryOptions(
+      { employeeId },
+      { enabled: enabled && !!employeeId }
+    )
+  )
 }
+
+// ==================== Mutation Hooks ====================
 
 /**
  * Hook to create a new employee access card.
@@ -22,14 +31,27 @@ export function useEmployeeCards(employeeId: string, enabled = true) {
  * ```tsx
  * const createCard = useCreateEmployeeCard()
  * createCard.mutate({
- *   path: { id: employeeId },
- *   body: { card_number: 'CARD001', card_type: 'rfid', valid_from: '2024-01-01' }
+ *   employeeId: '...',
+ *   cardNumber: 'CARD001',
  * })
  * ```
  */
 export function useCreateEmployeeCard() {
-  return useApiMutation('/employees/{id}/cards', 'post', {
-    invalidateKeys: [['/employees/{id}/cards'], ['/employees/{id}'], ['/employees']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.employeeCards.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeCards.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.list.queryKey(),
+      })
+    },
   })
 }
 
@@ -39,11 +61,24 @@ export function useCreateEmployeeCard() {
  * @example
  * ```tsx
  * const deactivateCard = useDeactivateEmployeeCard()
- * deactivateCard.mutate({ path: { id: employeeId, cardId: cardId } })
+ * deactivateCard.mutate({ id: cardId, reason: 'Lost' })
  * ```
  */
 export function useDeactivateEmployeeCard() {
-  return useApiMutation('/employees/{id}/cards/{cardId}', 'delete', {
-    invalidateKeys: [['/employees/{id}/cards'], ['/employees/{id}'], ['/employees']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.employeeCards.deactivate.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeCards.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.list.queryKey(),
+      })
+    },
   })
 }

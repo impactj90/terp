@@ -1,12 +1,18 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+
+// ==================== Query Hooks ====================
 
 interface UseEmployeesOptions {
-  limit?: number
+  enabled?: boolean
   page?: number
+  pageSize?: number
   search?: string
   departmentId?: string
-  active?: boolean
-  enabled?: boolean
+  costCenterId?: string
+  employmentTypeId?: string
+  isActive?: boolean
+  hasExitDate?: boolean
 }
 
 /**
@@ -15,24 +21,18 @@ interface UseEmployeesOptions {
  * @example
  * ```tsx
  * const { data, isLoading } = useEmployees({
- *   limit: 20,
+ *   pageSize: 20,
  *   search: 'John',
  * })
+ * const employees = data?.items ?? []
  * ```
  */
 export function useEmployees(options: UseEmployeesOptions = {}) {
-  const { limit = 20, page, search, departmentId, active, enabled = true } = options
-
-  return useApiQuery('/employees', {
-    params: {
-      limit,
-      page,
-      q: search,
-      department_id: departmentId,
-      active,
-    },
-    enabled,
-  })
+  const { enabled = true, ...input } = options
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.employees.list.queryOptions(input, { enabled })
+  )
 }
 
 /**
@@ -44,11 +44,32 @@ export function useEmployees(options: UseEmployeesOptions = {}) {
  * ```
  */
 export function useEmployee(id: string, enabled = true) {
-  return useApiQuery('/employees/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.employees.getById.queryOptions({ id }, { enabled: enabled && !!id })
+  )
 }
+
+/**
+ * Hook for employee search autocomplete.
+ *
+ * @example
+ * ```tsx
+ * const { data } = useEmployeeSearch('John')
+ * const results = data?.items ?? []
+ * ```
+ */
+export function useEmployeeSearch(query: string, enabled = true) {
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.employees.search.queryOptions(
+      { query },
+      { enabled: enabled && query.length > 0 }
+    )
+  )
+}
+
+// ==================== Mutation Hooks ====================
 
 /**
  * Hook to create a new employee.
@@ -57,13 +78,23 @@ export function useEmployee(id: string, enabled = true) {
  * ```tsx
  * const createEmployee = useCreateEmployee()
  * createEmployee.mutate({
- *   body: { first_name: 'John', last_name: 'Doe', ... }
+ *   personnelNumber: 'EMP001',
+ *   firstName: 'John',
+ *   lastName: 'Doe',
+ *   entryDate: new Date(),
  * })
  * ```
  */
 export function useCreateEmployee() {
-  return useApiMutation('/employees', 'post', {
-    invalidateKeys: [['/employees']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.employees.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.list.queryKey(),
+      })
+    },
   })
 }
 
@@ -73,30 +104,41 @@ export function useCreateEmployee() {
  * @example
  * ```tsx
  * const updateEmployee = useUpdateEmployee()
- * updateEmployee.mutate({
- *   path: { id: employeeId },
- *   body: { first_name: 'Updated' }
- * })
+ * updateEmployee.mutate({ id: employeeId, firstName: 'Updated' })
  * ```
  */
 export function useUpdateEmployee() {
-  return useApiMutation('/employees/{id}', 'put', {
-    invalidateKeys: [['/employees']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.employees.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.list.queryKey(),
+      })
+    },
   })
 }
 
 /**
- * Hook to delete an employee.
+ * Hook to delete (deactivate) an employee.
  *
  * @example
  * ```tsx
  * const deleteEmployee = useDeleteEmployee()
- * deleteEmployee.mutate({ path: { id: employeeId } })
+ * deleteEmployee.mutate({ id: employeeId })
  * ```
  */
 export function useDeleteEmployee() {
-  return useApiMutation('/employees/{id}', 'delete', {
-    invalidateKeys: [['/employees']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.employees.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.list.queryKey(),
+      })
+    },
   })
 }
 
@@ -107,12 +149,20 @@ export function useDeleteEmployee() {
  * ```tsx
  * const bulkAssignTariff = useBulkAssignTariff()
  * bulkAssignTariff.mutate({
- *   body: { employee_ids: ['...'], tariff_id: '...' }
+ *   employeeIds: ['...'],
+ *   tariffId: '...',
  * })
  * ```
  */
 export function useBulkAssignTariff() {
-  return useApiMutation('/employees/bulk-tariff', 'patch', {
-    invalidateKeys: [['/employees']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.employees.bulkAssignTariff.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.list.queryKey(),
+      })
+    },
   })
 }

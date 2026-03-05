@@ -4,6 +4,7 @@
 export {
   useEmployees,
   useEmployee,
+  useEmployeeSearch,
   useCreateEmployee,
   useUpdateEmployee,
   useDeleteEmployee,

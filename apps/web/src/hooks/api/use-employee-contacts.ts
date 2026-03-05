@@ -1,19 +1,28 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+
+// ==================== Query Hooks ====================
 
 /**
  * Hook to fetch employee contacts.
  *
  * @example
  * ```tsx
- * const { data: contacts, isLoading } = useEmployeeContacts(employeeId)
+ * const { data, isLoading } = useEmployeeContacts(employeeId)
+ * const contacts = data?.data ?? []
  * ```
  */
 export function useEmployeeContacts(employeeId: string, enabled = true) {
-  return useApiQuery('/employees/{id}/contacts', {
-    path: { id: employeeId },
-    enabled: enabled && !!employeeId,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.employeeContacts.list.queryOptions(
+      { employeeId },
+      { enabled: enabled && !!employeeId }
+    )
+  )
 }
+
+// ==================== Mutation Hooks ====================
 
 /**
  * Hook to create a new employee contact.
@@ -22,14 +31,28 @@ export function useEmployeeContacts(employeeId: string, enabled = true) {
  * ```tsx
  * const createContact = useCreateEmployeeContact()
  * createContact.mutate({
- *   path: { id: employeeId },
- *   body: { contact_type: 'email', value: 'john@example.com', is_primary: false }
+ *   employeeId: '...',
+ *   contactType: 'email',
+ *   value: 'john@example.com',
  * })
  * ```
  */
 export function useCreateEmployeeContact() {
-  return useApiMutation('/employees/{id}/contacts', 'post', {
-    invalidateKeys: [['/employees/{id}/contacts'], ['/employees/{id}'], ['/employees']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.employeeContacts.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeContacts.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.list.queryKey(),
+      })
+    },
   })
 }
 
@@ -39,11 +62,24 @@ export function useCreateEmployeeContact() {
  * @example
  * ```tsx
  * const deleteContact = useDeleteEmployeeContact()
- * deleteContact.mutate({ path: { id: employeeId, contactId: contactId } })
+ * deleteContact.mutate({ id: contactId })
  * ```
  */
 export function useDeleteEmployeeContact() {
-  return useApiMutation('/employees/{id}/contacts/{contactId}', 'delete', {
-    invalidateKeys: [['/employees/{id}/contacts'], ['/employees/{id}'], ['/employees']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.employeeContacts.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeContacts.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.list.queryKey(),
+      })
+    },
   })
 }

@@ -1,4 +1,7 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+
+// ==================== Query Hooks ====================
 
 /**
  * Hook to fetch all tariff assignments for an employee.
@@ -6,17 +9,20 @@ import { useApiQuery, useApiMutation } from '@/hooks'
  * @example
  * ```tsx
  * const { data, isLoading } = useEmployeeTariffAssignments(employeeId)
+ * const assignments = data?.data ?? []
  * ```
  */
 export function useEmployeeTariffAssignments(
   employeeId: string,
   options?: { active?: boolean; enabled?: boolean }
 ) {
-  return useApiQuery('/employees/{id}/tariff-assignments', {
-    path: { id: employeeId },
-    params: { active: options?.active },
-    enabled: (options?.enabled ?? true) && !!employeeId,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.employeeTariffAssignments.list.queryOptions(
+      { employeeId, isActive: options?.active },
+      { enabled: (options?.enabled ?? true) && !!employeeId }
+    )
+  )
 }
 
 /**
@@ -32,73 +38,13 @@ export function useEmployeeTariffAssignment(
   assignmentId: string,
   enabled = true
 ) {
-  return useApiQuery('/employees/{id}/tariff-assignments/{assignmentId}', {
-    path: { id: employeeId, assignmentId },
-    enabled: enabled && !!employeeId && !!assignmentId,
-  })
-}
-
-/**
- * Hook to create a tariff assignment for an employee.
- *
- * @example
- * ```tsx
- * const createAssignment = useCreateEmployeeTariffAssignment()
- * createAssignment.mutate({
- *   path: { id: employeeId },
- *   body: { tariff_id: '...', effective_from: '2026-01-01' }
- * })
- * ```
- */
-export function useCreateEmployeeTariffAssignment() {
-  return useApiMutation('/employees/{id}/tariff-assignments', 'post', {
-    invalidateKeys: [
-      ['/employees/{id}/tariff-assignments'],
-      ['/employees/{id}/effective-tariff'],
-      ['/employees'],
-    ],
-  })
-}
-
-/**
- * Hook to update a tariff assignment.
- *
- * @example
- * ```tsx
- * const updateAssignment = useUpdateEmployeeTariffAssignment()
- * updateAssignment.mutate({
- *   path: { id: employeeId, assignmentId },
- *   body: { effective_from: '2026-02-01' }
- * })
- * ```
- */
-export function useUpdateEmployeeTariffAssignment() {
-  return useApiMutation('/employees/{id}/tariff-assignments/{assignmentId}', 'put', {
-    invalidateKeys: [
-      ['/employees/{id}/tariff-assignments'],
-      ['/employees/{id}/effective-tariff'],
-      ['/employees'],
-    ],
-  })
-}
-
-/**
- * Hook to delete a tariff assignment.
- *
- * @example
- * ```tsx
- * const deleteAssignment = useDeleteEmployeeTariffAssignment()
- * deleteAssignment.mutate({ path: { id: employeeId, assignmentId } })
- * ```
- */
-export function useDeleteEmployeeTariffAssignment() {
-  return useApiMutation('/employees/{id}/tariff-assignments/{assignmentId}', 'delete', {
-    invalidateKeys: [
-      ['/employees/{id}/tariff-assignments'],
-      ['/employees/{id}/effective-tariff'],
-      ['/employees'],
-    ],
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.employeeTariffAssignments.getById.queryOptions(
+      { employeeId, id: assignmentId },
+      { enabled: enabled && !!employeeId && !!assignmentId }
+    )
+  )
 }
 
 /**
@@ -114,9 +60,114 @@ export function useEffectiveTariff(
   date: string,
   enabled = true
 ) {
-  return useApiQuery('/employees/{id}/effective-tariff', {
-    path: { id: employeeId },
-    params: { date },
-    enabled: enabled && !!employeeId && !!date,
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.employeeTariffAssignments.effective.queryOptions(
+      { employeeId, date },
+      { enabled: enabled && !!employeeId && !!date }
+    )
+  )
+}
+
+// ==================== Mutation Hooks ====================
+
+/**
+ * Hook to create a tariff assignment for an employee.
+ *
+ * @example
+ * ```tsx
+ * const createAssignment = useCreateEmployeeTariffAssignment()
+ * createAssignment.mutate({
+ *   employeeId: '...',
+ *   tariffId: '...',
+ *   effectiveFrom: new Date('2026-01-01'),
+ * })
+ * ```
+ */
+export function useCreateEmployeeTariffAssignment() {
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.employeeTariffAssignments.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeTariffAssignments.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeTariffAssignments.effective.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.getById.queryKey(),
+      })
+    },
+  })
+}
+
+/**
+ * Hook to update a tariff assignment.
+ *
+ * @example
+ * ```tsx
+ * const updateAssignment = useUpdateEmployeeTariffAssignment()
+ * updateAssignment.mutate({
+ *   employeeId: '...',
+ *   id: assignmentId,
+ *   effectiveFrom: new Date('2026-02-01'),
+ * })
+ * ```
+ */
+export function useUpdateEmployeeTariffAssignment() {
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.employeeTariffAssignments.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeTariffAssignments.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeTariffAssignments.effective.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.getById.queryKey(),
+      })
+    },
+  })
+}
+
+/**
+ * Hook to delete a tariff assignment.
+ *
+ * @example
+ * ```tsx
+ * const deleteAssignment = useDeleteEmployeeTariffAssignment()
+ * deleteAssignment.mutate({ employeeId: '...', id: assignmentId })
+ * ```
+ */
+export function useDeleteEmployeeTariffAssignment() {
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.employeeTariffAssignments.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeTariffAssignments.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeTariffAssignments.effective.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.getById.queryKey(),
+      })
+    },
   })
 }

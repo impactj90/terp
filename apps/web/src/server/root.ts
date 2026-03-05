@@ -19,6 +19,10 @@ import { costCentersRouter } from "./routers/costCenters"
 import { employmentTypesRouter } from "./routers/employmentTypes"
 import { locationsRouter } from "./routers/locations"
 import { holidaysRouter } from "./routers/holidays"
+import { employeesRouter } from "./routers/employees"
+import { employeeContactsRouter } from "./routers/employeeContacts"
+import { employeeCardsRouter } from "./routers/employeeCards"
+import { employeeTariffAssignmentsRouter } from "./routers/employeeTariffAssignments"
 
 export const appRouter = createTRPCRouter({
   health: healthRouter,
@@ -33,6 +37,10 @@ export const appRouter = createTRPCRouter({
   employmentTypes: employmentTypesRouter,
   locations: locationsRouter,
   holidays: holidaysRouter,
+  employees: employeesRouter,
+  employeeContacts: employeeContactsRouter,
+  employeeCards: employeeCardsRouter,
+  employeeTariffAssignments: employeeTariffAssignmentsRouter,
 })
 
 /** Type-only export for client-side inference. */
