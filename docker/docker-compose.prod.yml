@@ -1,22 +1,4 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: terp-prod-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: terp_prod
-      POSTGRES_USER: terp
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U terp -d terp_prod"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - internal
-
   api:
     image: terp-api:latest
     container_name: terp-prod-api
@@ -24,15 +6,12 @@ services:
     environment:
       ENV: production
       PORT: "8080"
-      DATABASE_URL: postgres://terp:${DB_PASSWORD}@postgres:5432/terp_prod?sslmode=disable
+      DATABASE_URL: ${DATABASE_URL}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRY: 24h
       LOG_LEVEL: info
       BASE_URL: ${API_BASE_URL}
       FRONTEND_URL: ${FRONTEND_URL}
-    depends_on:
-      postgres:
-        condition: service_healthy
     networks:
       - internal
 
@@ -55,7 +34,6 @@ services:
       - internal
 
 volumes:
-  postgres_data:
   caddy_data:
   caddy_config:
 

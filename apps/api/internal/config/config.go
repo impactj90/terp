@@ -30,7 +30,7 @@ func Load() *Config {
 	cfg := &Config{
 		Env:         getEnv("ENV", "development"),
 		Port:        getEnv("PORT", "8080"),
-		DatabaseURL: getEnv("DATABASE_URL", "postgres://dev:dev@localhost:5432/terp?sslmode=disable"),
+		DatabaseURL: getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:54322/postgres?sslmode=disable"),
 		JWT: JWTConfig{
 			Secret: getEnv("JWT_SECRET", "dev-secret-change-in-production"),
 			Expiry: parseDuration(getEnv("JWT_EXPIRY", "24h")),

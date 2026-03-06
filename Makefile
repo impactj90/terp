@@ -1,11 +1,10 @@
-.PHONY: dev dev-down dev-reset dev-clean dev-logs dev-ps demo demo-down demo-logs build test test-coverage lint fmt tidy migrate-up migrate-down migrate-create migrate-status swagger-bundle generate generate-web generate-all clean install-tools help prod-setup prod-deploy prod-migrate prod-logs prod-ssh
+.PHONY: dev dev-down dev-reset dev-clean dev-logs dev-ps demo demo-down demo-logs build test test-coverage lint fmt tidy db-start db-stop db-reset db-status db-migrate-new swagger-bundle generate generate-web generate-all clean install-tools help prod-setup prod-deploy prod-migrate prod-logs prod-ssh
 
 # Variables
 DOCKER_COMPOSE = docker compose -p terp -f docker/docker-compose.yml
 DOCKER_COMPOSE_DEMO = docker compose -p terp --env-file .env -f docker/docker-compose.yml -f docker/docker-compose.demo.yml
 GOBIN = $(shell go env GOPATH)/bin
-MIGRATE = $(GOBIN)/migrate
-LOCAL_DB = postgres://dev:dev@localhost:5432/terp?sslmode=disable
+LOCAL_DB = postgresql://postgres:postgres@localhost:54322/postgres
 
 # Colors for help
 CYAN := \033[36m
@@ -18,33 +17,27 @@ help:
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  $(CYAN)%-15s$(RESET) %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 ## dev: Start development environment
-dev: ## Start all services with Docker Compose and run migrations
+dev: ## Start Supabase + Docker services and run migrations
+	@npx supabase start
 	$(DOCKER_COMPOSE) up --build -d
-	@echo "Waiting for database to be ready..."
-	@sleep 3
-	@echo "Running migrations..."
-	@$(MIGRATE) -path db/migrations -database "$(LOCAL_DB)" up || true
 	@echo "Development environment ready!"
 
 ## dev-down: Stop development environment
-dev-down: ## Stop all services (preserves data)
+dev-down: ## Stop Docker services (Supabase keeps running)
 	$(DOCKER_COMPOSE) down --remove-orphans
 
-## dev-reset: Wipe database and reinitialize (keeps containers running)
-dev-reset: ## Drop all tables, rerun migrations, and restart API
-	@echo "Resetting database..."
-	$(DOCKER_COMPOSE) exec postgres psql -U dev -d terp -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
-	@echo "Running migrations..."
-	@$(MIGRATE) -path db/migrations -database "$(LOCAL_DB)" up || true
-	@echo "Restarting API..."
+## dev-reset: Wipe database and reinitialize
+dev-reset: ## Reset Supabase DB and restart API
+	@npx supabase db reset
 	$(DOCKER_COMPOSE) restart api
 	@echo "Database reset complete!"
 
 ## dev-clean: Force remove all containers and volumes
-dev-clean: ## Force clean all terp containers and volumes
+dev-clean: ## Force clean all terp containers and volumes, stop Supabase
 	$(DOCKER_COMPOSE) down -v --remove-orphans 2>/dev/null || true
-	docker rm -f terp-postgres terp-api terp-web 2>/dev/null || true
-	docker volume rm terp_postgres_data terp_web_node_modules 2>/dev/null || true
+	docker rm -f terp-api terp-web 2>/dev/null || true
+	docker volume rm terp_web_node_modules 2>/dev/null || true
+	@npx supabase stop 2>/dev/null || true
 
 ## dev-logs: Show logs from all services
 dev-logs: ## Follow logs from all services
@@ -54,13 +47,30 @@ dev-logs: ## Follow logs from all services
 dev-ps: ## Show running services
 	$(DOCKER_COMPOSE) ps
 
+## db-start: Start Supabase (local Postgres + Studio)
+db-start: ## Start Supabase local development stack
+	npx supabase start
+
+## db-stop: Stop Supabase
+db-stop: ## Stop Supabase local development stack
+	npx supabase stop
+
+## db-reset: Reset database
+db-reset: ## Reset Supabase DB (drops all data, reruns migrations + seed)
+	npx supabase db reset
+
+## db-status: Check Supabase status
+db-status: ## Show Supabase service status and connection info
+	npx supabase status
+
+## db-migrate-new: Create a new migration
+db-migrate-new: ## Create a new Supabase migration (usage: make db-migrate-new name=migration_name)
+	npx supabase migration new $(name)
+
 ## demo: Start demo environment with public tunnel
 demo: ## Start demo with public URL and password protection
+	@npx supabase start
 	$(DOCKER_COMPOSE_DEMO) up --build -d
-	@echo "Waiting for database to be ready..."
-	@sleep 3
-	@echo "Running migrations..."
-	@$(MIGRATE) -path db/migrations -database "$(LOCAL_DB)" up || true
 	@echo ""
 	@echo "========================================="
 	@echo "  Demo environment ready!"
@@ -72,7 +82,7 @@ demo: ## Start demo with public URL and password protection
 ## demo-down: Stop demo environment
 demo-down: ## Stop demo environment
 	$(DOCKER_COMPOSE_DEMO) down -v --remove-orphans
-	@docker rm -f terp-postgres terp-api terp-web terp-caddy terp-ngrok 2>/dev/null || true
+	@docker rm -f terp-api terp-web terp-caddy terp-ngrok 2>/dev/null || true
 
 ## demo-logs: Show demo logs
 demo-logs: ## Follow logs from demo services
@@ -103,27 +113,6 @@ fmt: ## Format Go code with gofmt
 ## tidy: Tidy Go modules
 tidy: ## Run go mod tidy
 	cd apps/api && go mod tidy
-
-## ensure-migrate: Auto-install migrate binary if missing
-$(MIGRATE):
-	@echo "migrate not found, installing..."
-	go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.17.1
-
-## migrate-up: Run database migrations (local)
-migrate-up: $(MIGRATE) ## Apply all pending migrations locally
-	$(MIGRATE) -path db/migrations -database "$(LOCAL_DB)" up
-
-## migrate-down: Rollback last migration (local)
-migrate-down: $(MIGRATE) ## Rollback last migration locally
-	$(MIGRATE) -path db/migrations -database "$(LOCAL_DB)" down 1
-
-## migrate-status: Check migration status (local)
-migrate-status: $(MIGRATE) ## Show current migration version locally
-	$(MIGRATE) -path db/migrations -database "$(LOCAL_DB)" version
-
-## migrate-create: Create new migration file
-migrate-create: $(MIGRATE) ## Create a new migration (usage: make migrate-create name=migration_name)
-	$(MIGRATE) create -ext sql -dir db/migrations -seq $(name)
 
 ## swagger-bundle: Bundle OpenAPI spec into single file
 swagger-bundle: ## Bundle multi-file OpenAPI spec into single file
@@ -170,8 +159,6 @@ install-tools: ## Install required development tools
 	go install golang.org/x/tools/cmd/goimports@latest
 	@echo "Installing air (hot reload)..."
 	go install github.com/air-verse/air@v1.52.3
-	@echo "Installing migrate..."
-	go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.17.1
 	@echo "Installing go-swagger..."
 	go install github.com/go-swagger/go-swagger/cmd/swagger@latest
 	@echo "Installing swagger-cli (for bundling OpenAPI specs)..."
@@ -189,15 +176,9 @@ prod-deploy: ## Build and deploy API to server (SERVER=<ip> required)
 	@test -n "$(SERVER)" || (echo "SERVER required: make prod-deploy SERVER=<ip>" && exit 1)
 	bash deploy/deploy.sh $(SERVER)
 
-prod-migrate: ## Run migrations on server (SERVER=<ip> required)
-	@test -n "$(SERVER)" || (echo "SERVER required: make prod-migrate SERVER=<ip>" && exit 1)
-	ssh root@$(SERVER) 'cd /opt/terp && source .env.prod && docker run --rm \
-		--network terp-prod_internal \
-		-v /opt/terp/migrations:/migrations \
-		migrate/migrate:v4.17.1 \
-		-path=/migrations \
-		-database "postgres://terp:$${DB_PASSWORD}@postgres:5432/terp_prod?sslmode=disable" \
-		up'
+prod-migrate: ## Run migrations on production Supabase (requires SUPABASE_DB_URL)
+	@test -n "$(SUPABASE_DB_URL)" || (echo "SUPABASE_DB_URL required" && exit 1)
+	npx supabase db push --db-url "$(SUPABASE_DB_URL)"
 
 prod-logs: ## Tail logs from server (SERVER=<ip> required)
 	@test -n "$(SERVER)" || (echo "SERVER required: make prod-logs SERVER=<ip>" && exit 1)

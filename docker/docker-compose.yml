@@ -1,21 +1,4 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: terp-postgres
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_DB: terp
-      POSTGRES_USER: dev
-      POSTGRES_PASSWORD: dev
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dev -d terp"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   api:
     build:
       context: ..
@@ -26,13 +9,12 @@ services:
     environment:
       ENV: development
       PORT: "8080"
-      DATABASE_URL: postgres://dev:dev@postgres:5432/terp?sslmode=disable
+      DATABASE_URL: postgres://postgres:postgres@host.docker.internal:54322/postgres?sslmode=disable
       JWT_SECRET: dev-secret-key-change-in-production
       JWT_EXPIRY: 24h
       LOG_LEVEL: debug
-    depends_on:
-      postgres:
-        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ../apps/api:/app
     working_dir: /app
@@ -49,9 +31,10 @@ services:
     command: sh -c "corepack enable && pnpm install && pnpm dev"
     environment:
       - NEXT_TELEMETRY_DISABLED=1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - api
 
 volumes:
-  postgres_data:
   web_node_modules:

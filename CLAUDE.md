@@ -16,13 +16,15 @@ Go monorepo using `go.work` workspace:
 
 ```bash
 make install-tools    # Install dev tools (run first on new machine)
-make dev              # Start all services (DB + API with hot reload)
-make dev-down         # Stop services
+make dev              # Start Supabase + Docker services
+make dev-down         # Stop Docker services (Supabase keeps running)
 make dev-logs         # Follow logs
 make dev-ps           # Check service status
-make migrate-up       # Apply migrations
-make migrate-down     # Rollback last migration
-make migrate-create name=foo  # Create new migration
+make db-start         # Start Supabase (local Postgres + Studio)
+make db-stop          # Stop Supabase
+make db-reset         # Reset DB (drops all data, reruns migrations + seed)
+make db-status        # Show Supabase connection info
+make db-migrate-new name=foo  # Create new Supabase migration
 make swagger-bundle   # Bundle multi-file OpenAPI into single file
 make generate         # Generate Go models from OpenAPI spec
 make test             # Run tests with race detection

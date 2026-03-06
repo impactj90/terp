@@ -23,7 +23,7 @@ func getSharedDB() (*gorm.DB, error) {
 	setupOnce.Do(func() {
 		databaseURL := os.Getenv("TEST_DATABASE_URL")
 		if databaseURL == "" {
-			databaseURL = "postgres://dev:dev@localhost:5432/terp?sslmode=disable"
+			databaseURL = "postgres://postgres:postgres@localhost:54322/postgres?sslmode=disable"
 		}
 
 		sharedDB, setupError = gorm.Open(postgres.Open(databaseURL), &gorm.Config{

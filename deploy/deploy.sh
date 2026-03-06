@@ -25,13 +25,12 @@ echo "=== Starting services ==="
 ssh "${REMOTE}" "cd ${APP_DIR} && docker compose --env-file .env.prod -f docker-compose.prod.yml up -d"
 
 echo "=== Running migrations ==="
-# Source .env.prod to get DB_PASSWORD, then run migrate via Docker
+# Source .env.prod to get DATABASE_URL, then run migrate via Docker
 ssh "${REMOTE}" "cd ${APP_DIR} && source .env.prod && docker run --rm \
-    --network terp-prod_internal \
     -v ${APP_DIR}/migrations:/migrations \
     migrate/migrate:v4.17.1 \
     -path=/migrations \
-    -database \"postgres://terp:\${DB_PASSWORD}@postgres:5432/terp_prod?sslmode=disable\" \
+    -database \"\${DATABASE_URL}\" \
     up"
 
 echo "=== Cleaning up local temp file ==="

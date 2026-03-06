@@ -8,7 +8,7 @@ set -euo pipefail
 #   ./scripts/create-tenant.sh
 #   DATABASE_URL="postgres://user:pass@host:5432/terp" ./scripts/create-tenant.sh
 
-DATABASE_URL="${DATABASE_URL:-postgres://dev:dev@localhost:5432/terp?sslmode=disable}"
+DATABASE_URL="${DATABASE_URL:-postgresql://postgres:postgres@localhost:54322/postgres}"
 
 # --- Check dependencies ---
 for cmd in psql htpasswd; do
