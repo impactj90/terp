@@ -23,9 +23,30 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { useAbsenceType } from '@/hooks/api'
-import type { components } from '@/lib/api/types'
 
-type AbsenceType = components['schemas']['AbsenceType']
+/** AbsenceType shape from tRPC output */
+interface AbsenceType {
+  id: string
+  tenantId: string | null
+  code: string
+  name: string
+  description: string | null
+  category: string
+  portion: number
+  holidayCode: string | null
+  priority: number
+  deductsVacation: boolean
+  requiresApproval: boolean
+  requiresDocument: boolean
+  color: string
+  sortOrder: number
+  isSystem: boolean
+  isActive: boolean
+  absenceTypeGroupId: string | null
+  calculationRuleId: string | null
+  createdAt: Date | string
+  updatedAt: Date | string
+}
 
 interface AbsenceTypeDetailSheetProps {
   absenceTypeId: string | null
@@ -65,6 +86,8 @@ function BooleanBadge({ value, trueLabel, falseLabel }: { value: boolean | undef
 
 const categoryLabelKeys: Record<string, string> = {
   vacation: 'categoryVacation',
+  illness: 'categorySick',
+  special: 'categoryPersonal',
   sick: 'categorySick',
   personal: 'categoryPersonal',
   unpaid: 'categoryUnpaid',
@@ -82,12 +105,12 @@ export function AbsenceTypeDetailSheet({
   const t = useTranslations('adminAbsenceTypes')
   const { data: absenceType, isLoading } = useAbsenceType(absenceTypeId || '', open && !!absenceTypeId)
 
-  const formatDateTime = (date: string | undefined | null) => {
+  const formatDateTime = (date: Date | string | undefined | null) => {
     if (!date) return '-'
     return format(new Date(date), 'dd.MM.yyyy HH:mm')
   }
 
-  const isSystem = absenceType?.is_system ?? false
+  const isSystem = absenceType?.isSystem ?? false
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -131,8 +154,8 @@ export function AbsenceTypeDetailSheet({
                     {absenceType.code}
                   </p>
                 </div>
-                <Badge variant={absenceType.is_active ? 'default' : 'secondary'}>
-                  {absenceType.is_active ? t('statusActive') : t('statusInactive')}
+                <Badge variant={absenceType.isActive ? 'default' : 'secondary'}>
+                  {absenceType.isActive ? t('statusActive') : t('statusInactive')}
                 </Badge>
               </div>
 
@@ -171,16 +194,12 @@ export function AbsenceTypeDetailSheet({
                 <h4 className="text-sm font-medium text-muted-foreground">{t('sectionBehavior')}</h4>
                 <div className="rounded-lg border p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">{t('fieldPaid')}</span>
-                    <BooleanBadge value={absenceType.is_paid} trueLabel={t('paidLabel')} falseLabel={t('unpaidLabel')} />
-                  </div>
-                  <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">{t('fieldAffectsVacation')}</span>
-                    <BooleanBadge value={absenceType.affects_vacation_balance} trueLabel={t('yes')} falseLabel={t('no')} />
+                    <BooleanBadge value={absenceType.deductsVacation} trueLabel={t('yes')} falseLabel={t('no')} />
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">{t('fieldRequiresApproval')}</span>
-                    <BooleanBadge value={absenceType.requires_approval} trueLabel={t('requiredLabel')} falseLabel={t('notRequiredLabel')} />
+                    <BooleanBadge value={absenceType.requiresApproval} trueLabel={t('requiredLabel')} falseLabel={t('notRequiredLabel')} />
                   </div>
                 </div>
               </div>
@@ -189,8 +208,8 @@ export function AbsenceTypeDetailSheet({
               <div className="space-y-2">
                 <h4 className="text-sm font-medium text-muted-foreground">{t('timestampsSection')}</h4>
                 <div className="rounded-lg border p-4">
-                  <DetailRow label={t('labelCreated')} value={formatDateTime(absenceType.created_at)} />
-                  <DetailRow label={t('labelLastUpdated')} value={formatDateTime(absenceType.updated_at)} />
+                  <DetailRow label={t('labelCreated')} value={formatDateTime(absenceType.createdAt)} />
+                  <DetailRow label={t('labelLastUpdated')} value={formatDateTime(absenceType.updatedAt)} />
                 </div>
               </div>
             </div>

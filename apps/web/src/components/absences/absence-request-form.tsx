@@ -33,7 +33,6 @@ import {
 import { formatDate, isSameDay, parseISODate } from '@/lib/time-utils'
 import type { components } from '@/lib/api/types'
 
-type AbsenceType = components['schemas']['AbsenceType']
 type Absence = components['schemas']['Absence']
 
 interface AbsenceRequestFormProps {
@@ -123,7 +122,7 @@ export function AbsenceRequestForm({
   }, [open, initialDates])
 
   // Fetch absence types
-  const { data: absenceTypesData, isLoading: isLoadingTypes } = useAbsenceTypes(open)
+  const { data: absenceTypesData, isLoading: isLoadingTypes } = useAbsenceTypes({ enabled: open })
 
   // Fetch holidays for current year
   const currentYear = new Date().getFullYear()
@@ -355,7 +354,7 @@ export function AbsenceRequestForm({
                 totalEntitlement={balanceData?.total_entitlement}
                 requestedDays={requestedDays}
                 isHalfDay={form.duration === '0.5'}
-                absenceType={selectedType as AbsenceType}
+                absenceType={selectedType}
                 isLoading={isLoadingBalance}
               />
             )}

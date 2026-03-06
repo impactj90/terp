@@ -36,9 +36,30 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { components } from '@/lib/api/types'
 
-type AbsenceType = components['schemas']['AbsenceType']
+/** AbsenceType shape from tRPC output */
+interface AbsenceType {
+  id: string
+  tenantId: string | null
+  code: string
+  name: string
+  description: string | null
+  category: string
+  portion: number
+  holidayCode: string | null
+  priority: number
+  deductsVacation: boolean
+  requiresApproval: boolean
+  requiresDocument: boolean
+  color: string
+  sortOrder: number
+  isSystem: boolean
+  isActive: boolean
+  absenceTypeGroupId: string | null
+  calculationRuleId: string | null
+  createdAt: Date | string
+  updatedAt: Date | string
+}
 
 interface AbsenceTypeDataTableProps {
   absenceTypes: AbsenceType[]
@@ -50,9 +71,11 @@ interface AbsenceTypeDataTableProps {
 
 const categoryConfig: Record<string, { labelKey: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
   vacation: { labelKey: 'categoryVacation', variant: 'default' },
+  illness: { labelKey: 'categorySick', variant: 'destructive' },
+  special: { labelKey: 'categoryPersonal', variant: 'secondary' },
+  unpaid: { labelKey: 'categoryUnpaid', variant: 'outline' },
   sick: { labelKey: 'categorySick', variant: 'destructive' },
   personal: { labelKey: 'categoryPersonal', variant: 'secondary' },
-  unpaid: { labelKey: 'categoryUnpaid', variant: 'outline' },
   holiday: { labelKey: 'categoryHoliday', variant: 'default' },
   other: { labelKey: 'categoryOther', variant: 'outline' },
 }
@@ -104,7 +127,6 @@ export function AbsenceTypeDataTable({
           <TableHead className="w-20">{t('columnCode')}</TableHead>
           <TableHead>{t('columnName')}</TableHead>
           <TableHead className="w-24">{t('columnCategory')}</TableHead>
-          <TableHead className="w-20 text-center">{t('columnPaid')}</TableHead>
           <TableHead className="w-20 text-center">{t('columnVacation')}</TableHead>
           <TableHead className="w-20 text-center">{t('columnApproval')}</TableHead>
           <TableHead className="w-24">{t('columnStatus')}</TableHead>
@@ -146,28 +168,25 @@ export function AbsenceTypeDataTable({
                 <Badge variant={category.variant}>{t(category.labelKey as Parameters<typeof t>[0])}</Badge>
               </TableCell>
               <TableCell className="text-center">
-                <BooleanIndicator value={type.is_paid} label={t('fieldPaid')} />
+                <BooleanIndicator value={type.deductsVacation} label={t('fieldAffectsVacation')} />
               </TableCell>
               <TableCell className="text-center">
-                <BooleanIndicator value={type.affects_vacation_balance} label={t('fieldAffectsVacation')} />
-              </TableCell>
-              <TableCell className="text-center">
-                <BooleanIndicator value={type.requires_approval} label={t('fieldRequiresApproval')} />
+                <BooleanIndicator value={type.requiresApproval} label={t('fieldRequiresApproval')} />
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-1">
-                  {type.is_system && (
+                  {type.isSystem && (
                     <Badge variant="outline" className="text-xs">
                       <Lock className="mr-1 h-3 w-3" />
                       {t('statusSystem')}
                     </Badge>
                   )}
-                  {!type.is_active && (
+                  {!type.isActive && (
                     <Badge variant="secondary" className="text-xs">
                       {t('statusInactive')}
                     </Badge>
                   )}
-                  {type.is_active && !type.is_system && (
+                  {type.isActive && !type.isSystem && (
                     <Badge variant="default" className="text-xs">
                       {t('statusActive')}
                     </Badge>
@@ -187,7 +206,7 @@ export function AbsenceTypeDataTable({
                       <Eye className="mr-2 h-4 w-4" />
                       {t('viewDetails')}
                     </DropdownMenuItem>
-                    {type.is_system ? (
+                    {type.isSystem ? (
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -208,7 +227,7 @@ export function AbsenceTypeDataTable({
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuSeparator />
-                    {type.is_system ? (
+                    {type.isSystem ? (
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -253,7 +272,6 @@ function AbsenceTypeDataTableSkeleton() {
           <TableHead className="w-24"><Skeleton className="h-4 w-16" /></TableHead>
           <TableHead className="w-20"><Skeleton className="h-4 w-12" /></TableHead>
           <TableHead className="w-20"><Skeleton className="h-4 w-12" /></TableHead>
-          <TableHead className="w-20"><Skeleton className="h-4 w-12" /></TableHead>
           <TableHead className="w-24"><Skeleton className="h-4 w-16" /></TableHead>
           <TableHead className="w-16" />
         </TableRow>
@@ -270,7 +288,6 @@ function AbsenceTypeDataTableSkeleton() {
               </div>
             </TableCell>
             <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
-            <TableCell><Skeleton className="h-4 w-4 mx-auto" /></TableCell>
             <TableCell><Skeleton className="h-4 w-4 mx-auto" /></TableCell>
             <TableCell><Skeleton className="h-4 w-4 mx-auto" /></TableCell>
             <TableCell><Skeleton className="h-5 w-14 rounded-full" /></TableCell>

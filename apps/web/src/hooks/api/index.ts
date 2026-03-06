@@ -98,8 +98,6 @@ export {
 
 // Absences
 export {
-  useAbsenceTypes,
-  useAbsenceType,
   useAbsences,
   useEmployeeAbsences,
   useAbsence,
@@ -108,10 +106,16 @@ export {
   useDeleteAbsence,
   useApproveAbsence,
   useRejectAbsence,
+} from './use-absences'
+
+// Absence Types (tRPC)
+export {
+  useAbsenceTypes,
+  useAbsenceType,
   useCreateAbsenceType,
   useUpdateAbsenceType,
   useDeleteAbsenceType,
-} from './use-absences'
+} from './use-absence-types'
 
 // Holidays
 export {

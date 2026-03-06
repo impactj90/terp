@@ -6,9 +6,11 @@ import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { isSameDay, isWeekend } from '@/lib/time-utils'
-import type { components } from '@/lib/api/types'
-
-type AbsenceType = components['schemas']['AbsenceType']
+/** AbsenceType shape (minimal fields needed by this component) */
+interface AbsenceType {
+  name: string
+  deductsVacation: boolean
+}
 
 interface VacationImpactPreviewProps {
   /** Current vacation balance */
@@ -64,8 +66,7 @@ export function VacationImpactPreview({
   const t = useTranslations('absences')
 
   // Calculate the actual deduction
-  // Note: affects_vacation_balance may be undefined when false due to omitempty in JSON serialization
-  const affectsBalance = absenceType?.affects_vacation_balance === true
+  const affectsBalance = absenceType?.deductsVacation === true
   const deduction = affectsBalance
     ? isHalfDay
       ? 0.5

@@ -119,6 +119,7 @@ model Tenant {
   calculationRules          CalculationRule[]
   dayPlans                  DayPlan[]
   weekPlans                 WeekPlan[]
+  absenceTypes              AbsenceType[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
@@ -993,9 +994,8 @@ model AbsenceTypeGroup {
   updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  // Note: absence_types.absence_type_group_id FK references this table.
-  // AbsenceType model not yet in Prisma. Relation will be added when it is.
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  absenceTypes AbsenceType[]
 
   // Indexes
   @@unique([tenantId, code], map: "absence_type_groups_tenant_id_code_key")
@@ -1025,10 +1025,9 @@ model CalculationRule {
   updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  account Account? @relation(fields: [accountId], references: [id], onDelete: SetNull)
-  // Note: absence_types.calculation_rule_id FK references this table.
-  // AbsenceType model not yet in Prisma. Relation will be added when it is.
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  account      Account?      @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  absenceTypes AbsenceType[]
 
   // Indexes
   @@unique([tenantId, code], map: "calculation_rules_tenant_id_code_key")
@@ -1036,6 +1035,52 @@ model CalculationRule {
   @@index([accountId], map: "idx_calculation_rules_account")
   @@index([tenantId, isActive], map: "idx_calculation_rules_active")
   @@map("calculation_rules")
+}
+
+// -----------------------------------------------------------------------------
+// AbsenceType
+// -----------------------------------------------------------------------------
+// Migrations: 000025, 000042 (group FK), 000047 (calculation rule FK), 000085 (seed)
+//
+// tenant_id is nullable: NULL = system-wide type visible to all tenants.
+//
+// COALESCE-based unique index (cannot be modeled in Prisma):
+//   - idx_absence_types_code: UNIQUE ON (COALESCE(tenant_id, '00000000-...'), code)
+// This constraint is enforced at the DB level only.
+//
+// Trigger: update_absence_types_updated_at auto-sets updated_at on UPDATE
+model AbsenceType {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId            String?   @map("tenant_id") @db.Uuid
+  code                String    @db.VarChar(10)
+  name                String    @db.VarChar(100)
+  description         String?   @db.Text
+  category            String    @db.VarChar(20)
+  portion             Int       @default(1) @db.Integer
+  holidayCode         String?   @map("holiday_code") @db.VarChar(10)
+  priority            Int       @default(0) @db.Integer
+  deductsVacation     Boolean   @default(false) @map("deducts_vacation")
+  requiresApproval    Boolean   @default(true) @map("requires_approval")
+  requiresDocument    Boolean   @default(false) @map("requires_document")
+  color               String    @default("#808080") @db.VarChar(7)
+  sortOrder           Int       @default(0) @map("sort_order") @db.Integer
+  isSystem            Boolean   @default(false) @map("is_system")
+  isActive            Boolean   @default(true) @map("is_active")
+  absenceTypeGroupId  String?   @map("absence_type_group_id") @db.Uuid
+  calculationRuleId   String?   @map("calculation_rule_id") @db.Uuid
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant            Tenant?            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  absenceTypeGroup  AbsenceTypeGroup?  @relation(fields: [absenceTypeGroupId], references: [id], onDelete: SetNull)
+  calculationRule   CalculationRule?   @relation(fields: [calculationRuleId], references: [id], onDelete: SetNull)
+
+  // Indexes
+  @@index([tenantId], map: "idx_absence_types_tenant")
+  @@index([absenceTypeGroupId], map: "idx_absence_types_group")
+  @@index([calculationRuleId], map: "idx_absence_types_calculation_rule")
+  @@map("absence_types")
 }
 
 // -----------------------------------------------------------------------------

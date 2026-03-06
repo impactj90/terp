@@ -6,9 +6,20 @@ import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { components } from '@/lib/api/types'
 
-type AbsenceType = components['schemas']['AbsenceType']
+/** AbsenceType shape from tRPC output */
+interface AbsenceType {
+  id: string
+  code: string
+  name: string
+  description: string | null
+  category: string
+  color: string
+  deductsVacation: boolean
+  requiresApproval: boolean
+  isSystem: boolean
+  isActive: boolean
+}
 
 interface AbsenceTypeSelectorProps {
   /** Selected absence type ID */
@@ -27,6 +38,8 @@ interface AbsenceTypeSelectorProps {
 
 const CATEGORY_LABEL_KEYS: Record<string, string> = {
   vacation: 'categoryVacation',
+  illness: 'categorySick',
+  special: 'categoryPersonal',
   sick: 'categorySick',
   personal: 'categoryPersonal',
   unpaid: 'categoryUnpaid',
@@ -36,6 +49,8 @@ const CATEGORY_LABEL_KEYS: Record<string, string> = {
 
 const CATEGORY_COLORS: Record<string, string> = {
   vacation: 'bg-green-500',
+  illness: 'bg-red-500',
+  special: 'bg-blue-500',
   sick: 'bg-red-500',
   personal: 'bg-blue-500',
   unpaid: 'bg-gray-500',
@@ -126,12 +141,12 @@ export function AbsenceTypeSelector({
               <Badge variant="secondary" className="text-xs">
                 {t((CATEGORY_LABEL_KEYS[type.category] ?? type.category) as Parameters<typeof t>[0])}
               </Badge>
-              {type.affects_vacation_balance && (
+              {type.deductsVacation && (
                 <Badge variant="outline" className="text-xs">
                   {t('affectsBalance')}
                 </Badge>
               )}
-              {type.requires_approval && (
+              {type.requiresApproval && (
                 <Badge variant="outline" className="text-xs">
                   {t('requiresApproval')}
                 </Badge>

@@ -38,14 +38,50 @@ import {
 } from '@/components/absence-type-groups'
 import type { components } from '@/lib/api/types'
 
-type AbsenceType = components['schemas']['AbsenceType']
-type AbsenceTypeGroup = components['schemas']['AbsenceTypeGroup']
+// AbsenceTypeGroup still uses the OpenAPI type since those components are not yet migrated
+type AbsenceTypeGroupLegacy = components['schemas']['AbsenceTypeGroup']
+
+/** AbsenceType shape from tRPC absenceTypes.list */
+interface AbsenceType {
+  id: string
+  tenantId: string | null
+  code: string
+  name: string
+  description: string | null
+  category: string
+  portion: number
+  holidayCode: string | null
+  priority: number
+  deductsVacation: boolean
+  requiresApproval: boolean
+  requiresDocument: boolean
+  color: string
+  sortOrder: number
+  isSystem: boolean
+  isActive: boolean
+  absenceTypeGroupId: string | null
+  calculationRuleId: string | null
+  createdAt: Date | string
+  updatedAt: Date | string
+}
+
+/** AbsenceTypeGroup shape from tRPC absenceTypeGroups.list */
+interface AbsenceTypeGroup {
+  id: string
+  tenantId: string
+  code: string
+  name: string
+  description: string | null
+  isActive: boolean
+  createdAt: Date | string
+  updatedAt: Date | string
+}
 
 const CATEGORY_OPTIONS = [
   { value: 'all', labelKey: 'allCategories' },
   { value: 'vacation', labelKey: 'categoryVacation' },
-  { value: 'sick', labelKey: 'categorySick' },
-  { value: 'personal', labelKey: 'categoryPersonal' },
+  { value: 'illness', labelKey: 'categorySick' },
+  { value: 'special', labelKey: 'categoryPersonal' },
   { value: 'unpaid', labelKey: 'categoryUnpaid' },
 ] as const
 
@@ -80,11 +116,11 @@ export default function AbsenceTypesPage() {
   // Groups state
   const [groupSearch, setGroupSearch] = React.useState('')
   const [createGroupOpen, setCreateGroupOpen] = React.useState(false)
-  const [editGroupItem, setEditGroupItem] = React.useState<AbsenceTypeGroup | null>(null)
-  const [deleteGroupItem, setDeleteGroupItem] = React.useState<AbsenceTypeGroup | null>(null)
+  const [editGroupItem, setEditGroupItem] = React.useState<AbsenceTypeGroupLegacy | null>(null)
+  const [deleteGroupItem, setDeleteGroupItem] = React.useState<AbsenceTypeGroupLegacy | null>(null)
 
   // Fetch absence types
-  const { data: absenceTypesData, isLoading } = useAbsenceTypes(!authLoading && !permLoading && canAccess)
+  const { data: absenceTypesData, isLoading } = useAbsenceTypes({ enabled: !authLoading && !permLoading && canAccess })
 
   // Fetch absence type groups
   const { data: groupsData, isLoading: groupsLoading } = useAbsenceTypeGroups({
@@ -103,7 +139,7 @@ export default function AbsenceTypesPage() {
   }, [authLoading, permLoading, canAccess, router])
 
   const absenceTypes = absenceTypesData?.data ?? []
-  const absenceTypeGroupsList = (groupsData as { data?: AbsenceTypeGroup[] })?.data ?? []
+  const absenceTypeGroupsList = groupsData?.data ?? []
 
   // Filter absence types client-side
   const filteredTypes = React.useMemo(() => {
@@ -120,9 +156,9 @@ export default function AbsenceTypesPage() {
       if (categoryFilter !== 'all' && t.category !== categoryFilter) {
         return false
       }
-      if (statusFilter === 'active' && !t.is_active) return false
-      if (statusFilter === 'inactive' && t.is_active) return false
-      if (!showSystem && t.is_system) return false
+      if (statusFilter === 'active' && !t.isActive) return false
+      if (statusFilter === 'inactive' && t.isActive) return false
+      if (!showSystem && t.isSystem) return false
       return true
     })
   }, [absenceTypes, search, categoryFilter, statusFilter, showSystem])
@@ -153,9 +189,7 @@ export default function AbsenceTypesPage() {
     if (!deleteItem) return
 
     try {
-      await deleteMutation.mutateAsync({
-        path: { id: deleteItem.id },
-      })
+      await deleteMutation.mutateAsync({ id: deleteItem.id })
       setDeleteItem(null)
       setViewItem(null)
     } catch {
@@ -177,9 +211,7 @@ export default function AbsenceTypesPage() {
     if (!deleteGroupItem) return
 
     try {
-      await deleteGroupMutation.mutateAsync({
-        path: { id: deleteGroupItem.id },
-      })
+      await deleteGroupMutation.mutateAsync({ id: deleteGroupItem.id })
       setDeleteGroupItem(null)
     } catch {
       // Error handled by mutation

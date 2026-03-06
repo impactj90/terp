@@ -9,31 +9,6 @@ interface UseAbsencesOptions {
 }
 
 /**
- * Hook to fetch list of absence types.
- *
- * @example
- * ```tsx
- * const { data } = useAbsenceTypes()
- * ```
- */
-export function useAbsenceTypes(enabled = true) {
-  return useApiQuery('/absence-types', {
-    params: { active: true },
-    enabled,
-  })
-}
-
-/**
- * Hook to fetch a single absence type by ID.
- */
-export function useAbsenceType(id: string, enabled = true) {
-  return useApiQuery('/absence-types/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
-}
-
-/**
  * Hook to fetch list of absences.
  *
  * @example
@@ -173,29 +148,3 @@ export function useRejectAbsence() {
   })
 }
 
-/**
- * Hook to create a new absence type.
- */
-export function useCreateAbsenceType() {
-  return useApiMutation('/absence-types', 'post', {
-    invalidateKeys: [['/absence-types']],
-  })
-}
-
-/**
- * Hook to update an absence type.
- */
-export function useUpdateAbsenceType() {
-  return useApiMutation('/absence-types/{id}', 'patch', {
-    invalidateKeys: [['/absence-types']],
-  })
-}
-
-/**
- * Hook to delete an absence type.
- */
-export function useDeleteAbsenceType() {
-  return useApiMutation('/absence-types/{id}', 'delete', {
-    invalidateKeys: [['/absence-types']],
-  })
-}

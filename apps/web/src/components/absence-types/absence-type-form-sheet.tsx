@@ -26,9 +26,30 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useCreateAbsenceType, useUpdateAbsenceType } from '@/hooks/api'
-import type { components } from '@/lib/api/types'
 
-type AbsenceType = components['schemas']['AbsenceType']
+/** AbsenceType shape from tRPC output */
+interface AbsenceType {
+  id: string
+  tenantId: string | null
+  code: string
+  name: string
+  description: string | null
+  category: string
+  portion: number
+  holidayCode: string | null
+  priority: number
+  deductsVacation: boolean
+  requiresApproval: boolean
+  requiresDocument: boolean
+  color: string
+  sortOrder: number
+  isSystem: boolean
+  isActive: boolean
+  absenceTypeGroupId: string | null
+  calculationRuleId: string | null
+  createdAt: Date | string
+  updatedAt: Date | string
+}
 
 interface AbsenceTypeFormSheetProps {
   open: boolean
@@ -43,8 +64,7 @@ interface FormState {
   description: string
   category: string
   color: string
-  isPaid: boolean
-  affectsVacationBalance: boolean
+  deductsVacation: boolean
   requiresApproval: boolean
   isActive: boolean
 }
@@ -55,16 +75,15 @@ const INITIAL_STATE: FormState = {
   description: '',
   category: 'vacation',
   color: '#808080',
-  isPaid: true,
-  affectsVacationBalance: false,
+  deductsVacation: false,
   requiresApproval: true,
   isActive: true,
 }
 
 const CATEGORY_OPTIONS = [
   { value: 'vacation', labelKey: 'categoryVacation' },
-  { value: 'sick', labelKey: 'categorySick' },
-  { value: 'personal', labelKey: 'categoryPersonal' },
+  { value: 'illness', labelKey: 'categorySick' },
+  { value: 'special', labelKey: 'categoryPersonal' },
   { value: 'unpaid', labelKey: 'categoryUnpaid' },
 ] as const
 
@@ -76,7 +95,7 @@ export function AbsenceTypeFormSheet({
 }: AbsenceTypeFormSheetProps) {
   const t = useTranslations('adminAbsenceTypes')
   const isEdit = !!absenceType
-  const isSystem = absenceType?.is_system ?? false
+  const isSystem = absenceType?.isSystem ?? false
   const [form, setForm] = React.useState<FormState>(INITIAL_STATE)
   const [error, setError] = React.useState<string | null>(null)
 
@@ -94,10 +113,9 @@ export function AbsenceTypeFormSheet({
           description: absenceType.description || '',
           category: absenceType.category || 'vacation',
           color: absenceType.color || '#808080',
-          isPaid: absenceType.is_paid ?? true,
-          affectsVacationBalance: absenceType.affects_vacation_balance ?? false,
-          requiresApproval: absenceType.requires_approval ?? true,
-          isActive: absenceType.is_active ?? true,
+          deductsVacation: absenceType.deductsVacation ?? false,
+          requiresApproval: absenceType.requiresApproval ?? true,
+          isActive: absenceType.isActive ?? true,
         })
       } else {
         setForm(INITIAL_STATE)
@@ -125,34 +143,28 @@ export function AbsenceTypeFormSheet({
     try {
       if (isEdit && absenceType) {
         await updateMutation.mutateAsync({
-          path: { id: absenceType.id },
-          body: {
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            category: form.category as 'vacation' | 'sick' | 'personal' | 'unpaid' | 'holiday' | 'other',
-            color: form.color,
-            is_paid: form.isPaid,
-            affects_vacation_balance: form.affectsVacationBalance,
-            requires_approval: form.requiresApproval,
-            is_active: form.isActive,
-          },
+          id: absenceType.id,
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          category: form.category as 'vacation' | 'illness' | 'special' | 'unpaid',
+          color: form.color,
+          deductsVacation: form.deductsVacation,
+          requiresApproval: form.requiresApproval,
+          isActive: form.isActive,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            code: form.code.trim(),
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            category: form.category as 'vacation' | 'sick' | 'personal' | 'unpaid' | 'holiday' | 'other',
-            color: form.color,
-            is_paid: form.isPaid,
-            affects_vacation_balance: form.affectsVacationBalance,
-            requires_approval: form.requiresApproval,
-            portion: 1,
-            priority: 0,
-            sort_order: 0,
-            requires_document: false,
-          },
+          code: form.code.trim(),
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          category: form.category as 'vacation' | 'illness' | 'special' | 'unpaid',
+          color: form.color,
+          deductsVacation: form.deductsVacation,
+          requiresApproval: form.requiresApproval,
+          portion: 1,
+          priority: 0,
+          sortOrder: 0,
+          requiresDocument: false,
         })
       }
 
@@ -291,33 +303,16 @@ export function AbsenceTypeFormSheet({
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label htmlFor="isPaid">{t('fieldPaid')}</Label>
-                  <p className="text-xs text-muted-foreground">
-                    {t('fieldPaidDescription')}
-                  </p>
-                </div>
-                <Switch
-                  id="isPaid"
-                  checked={form.isPaid}
-                  onCheckedChange={(checked) =>
-                    setForm((prev) => ({ ...prev, isPaid: checked }))
-                  }
-                  disabled={isSubmitting}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="affectsVacationBalance">{t('fieldAffectsVacation')}</Label>
+                  <Label htmlFor="deductsVacation">{t('fieldAffectsVacation')}</Label>
                   <p className="text-xs text-muted-foreground">
                     {t('fieldAffectsVacationDescription')}
                   </p>
                 </div>
                 <Switch
-                  id="affectsVacationBalance"
-                  checked={form.affectsVacationBalance}
+                  id="deductsVacation"
+                  checked={form.deductsVacation}
                   onCheckedChange={(checked) =>
-                    setForm((prev) => ({ ...prev, affectsVacationBalance: checked }))
+                    setForm((prev) => ({ ...prev, deductsVacation: checked }))
                   }
                   disabled={isSubmitting}
                 />

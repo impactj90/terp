@@ -32,6 +32,7 @@ import { bookingReasonsRouter } from "./routers/bookingReasons"
 import { bookingTypeGroupsRouter } from "./routers/bookingTypeGroups"
 import { absenceTypeGroupsRouter } from "./routers/absenceTypeGroups"
 import { calculationRulesRouter } from "./routers/calculationRules"
+import { absenceTypesRouter } from "./routers/absenceTypes"
 import { dayPlansRouter } from "./routers/dayPlans"
 import { weekPlansRouter } from "./routers/weekPlans"
 
@@ -61,6 +62,7 @@ export const appRouter = createTRPCRouter({
   bookingTypeGroups: bookingTypeGroupsRouter,
   absenceTypeGroups: absenceTypeGroupsRouter,
   calculationRules: calculationRulesRouter,
+  absenceTypes: absenceTypesRouter,
   dayPlans: dayPlansRouter,
   weekPlans: weekPlansRouter,
 })
