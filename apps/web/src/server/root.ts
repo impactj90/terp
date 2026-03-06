@@ -42,6 +42,9 @@ import { vacationCappingRulesRouter } from "./routers/vacationCappingRules"
 import { vacationCappingRuleGroupsRouter } from "./routers/vacationCappingRuleGroups"
 import { employeeCappingExceptionsRouter } from "./routers/employeeCappingExceptions"
 import { vacationRouter } from "./routers/vacation"
+import { systemSettingsRouter } from "./routers/systemSettings"
+import { auditLogsRouter } from "./routers/auditLogs"
+import { notificationsRouter } from "./routers/notifications"
 
 export const appRouter = createTRPCRouter({
   health: healthRouter,
@@ -79,6 +82,9 @@ export const appRouter = createTRPCRouter({
   vacationCappingRuleGroups: vacationCappingRuleGroupsRouter,
   employeeCappingExceptions: employeeCappingExceptionsRouter,
   vacation: vacationRouter,
+  systemSettings: systemSettingsRouter,
+  auditLogs: auditLogsRouter,
+  notifications: notificationsRouter,
 })
 
 /** Type-only export for client-side inference. */

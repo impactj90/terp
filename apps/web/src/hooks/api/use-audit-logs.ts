@@ -1,52 +1,46 @@
-import { useApiQuery } from '@/hooks'
-import type { components } from '@/lib/api/types'
+import { useTRPC } from "@/trpc"
+import { useQuery } from "@tanstack/react-query"
 
 // --- Interfaces ---
-
-type AuditAction = components['schemas']['AuditLog']['action']
 
 interface UseAuditLogsOptions {
   userId?: string
   entityType?: string
   entityId?: string
-  action?: AuditAction
-  from?: string
-  to?: string
-  limit?: number
-  cursor?: string
+  action?: string
+  fromDate?: string
+  toDate?: string
+  page?: number
+  pageSize?: number
   enabled?: boolean
 }
 
 // --- Query Hooks ---
 
 /**
- * List audit logs with filters.
- * GET /audit-logs
+ * List audit logs with filters (tRPC).
+ * Returns paginated results with total count.
  */
 export function useAuditLogs(options: UseAuditLogsOptions = {}) {
-  const { userId, entityType, entityId, action, from, to, limit, cursor, enabled = true } = options
-  return useApiQuery('/audit-logs', {
-    params: {
-      user_id: userId,
-      entity_type: entityType,
-      entity_id: entityId,
-      action,
-      from,
-      to,
-      limit,
-      cursor,
-    },
-    enabled,
-  })
+  const { enabled = true, ...input } = options
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.auditLogs.list.queryOptions(
+      Object.keys(input).length > 0 ? input : undefined,
+      { enabled }
+    )
+  )
 }
 
 /**
- * Get a single audit log by ID.
- * GET /audit-logs/{id}
+ * Get a single audit log by ID (tRPC).
  */
 export function useAuditLog(id: string | undefined) {
-  return useApiQuery('/audit-logs/{id}', {
-    path: { id: id! },
-    enabled: !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.auditLogs.getById.queryOptions(
+      { id: id! },
+      { enabled: !!id }
+    )
+  )
 }

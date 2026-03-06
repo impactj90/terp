@@ -1,59 +1,90 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
-type NotificationType = 'approvals' | 'errors' | 'reminders' | 'system'
+type NotificationType = "approvals" | "errors" | "reminders" | "system"
 
 interface UseNotificationsOptions {
   type?: NotificationType
   unread?: boolean
-  from?: string
-  to?: string
-  limit?: number
-  offset?: number
+  fromDate?: string
+  toDate?: string
+  page?: number
+  pageSize?: number
   enabled?: boolean
 }
 
 /**
- * Hook to fetch notifications for the current user.
+ * Hook to fetch notifications for the current user (tRPC).
+ * Returns items, total, and unreadCount.
  */
 export function useNotifications(options: UseNotificationsOptions = {}) {
-  const { enabled = true, ...params } = options
-
-  return useApiQuery('/notifications', {
-    params,
-    enabled,
-  })
+  const { enabled = true, ...input } = options
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.notifications.list.queryOptions(
+      Object.keys(input).length > 0 ? input : undefined,
+      { enabled }
+    )
+  )
 }
 
 /**
- * Hook to mark a notification as read.
+ * Hook to mark a notification as read (tRPC).
+ * Invalidates notifications list on success.
  */
 export function useMarkNotificationRead() {
-  return useApiMutation('/notifications/{id}/read', 'post', {
-    invalidateKeys: [['/notifications']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.notifications.markRead.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.notifications.list.queryKey(),
+      })
+    },
   })
 }
 
 /**
- * Hook to mark all notifications as read.
+ * Hook to mark all notifications as read (tRPC).
+ * Invalidates notifications list on success.
  */
 export function useMarkAllNotificationsRead() {
-  return useApiMutation('/notifications/read-all', 'post', {
-    invalidateKeys: [['/notifications']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.notifications.markAllRead.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.notifications.list.queryKey(),
+      })
+    },
   })
 }
 
 /**
- * Hook to fetch notification preferences.
+ * Hook to fetch notification preferences (tRPC).
  */
 export function useNotificationPreferences(enabled = true) {
-  return useApiQuery('/notification-preferences', { enabled })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.notifications.preferences.queryOptions(undefined, { enabled })
+  )
 }
 
 /**
- * Hook to update notification preferences.
+ * Hook to update notification preferences (tRPC).
+ * Invalidates preferences query on success.
  */
 export function useUpdateNotificationPreferences() {
-  return useApiMutation('/notification-preferences', 'put', {
-    invalidateKeys: [['/notification-preferences']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.notifications.updatePreferences.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.notifications.preferences.queryKey(),
+      })
+    },
   })
 }

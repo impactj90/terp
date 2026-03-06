@@ -1,6 +1,6 @@
 # ZMI-TICKET-221: System Settings + Audit Logs + Notifications CRUD
 
-Status: Proposed
+Status: Completed
 Priority: P2
 Owner: TBD
 

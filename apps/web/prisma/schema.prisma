@@ -51,7 +51,10 @@ model User {
   tenant      Tenant?      @relation(fields: [tenantId], references: [id])
   userGroup   UserGroup?   @relation(fields: [userGroupId], references: [id])
   employee    Employee?    @relation(fields: [employeeId], references: [id], onDelete: SetNull)
-  userTenants UserTenant[]
+  userTenants             UserTenant[]
+  auditLogs               AuditLog[]
+  notifications           Notification[]
+  notificationPreferences NotificationPreference[]
 
   // Indexes
   @@unique([tenantId, email], map: "idx_users_tenant_email")
@@ -127,6 +130,9 @@ model Tenant {
   vacationCappingRuleGroups   VacationCappingRuleGroup[]
   employeeCappingExceptions   EmployeeCappingException[]
   vacationBalances            VacationBalance[]
+  systemSettings              SystemSetting[]
+  notifications               Notification[]
+  notificationPreferences     NotificationPreference[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
@@ -1685,4 +1691,132 @@ model VacationBalance {
   @@index([tenantId], map: "idx_vacation_balances_tenant")
   @@index([employeeId], map: "idx_vacation_balances_employee")
   @@map("vacation_balances")
+}
+
+// -----------------------------------------------------------------------------
+// SystemSetting
+// -----------------------------------------------------------------------------
+// Migration: 000067
+//
+// Singleton per tenant via UNIQUE(tenant_id).
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model SystemSetting {
+  id                                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId                          String   @map("tenant_id") @db.Uuid
+  roundingRelativeToPlan            Boolean  @default(false) @map("rounding_relative_to_plan")
+  errorListEnabled                  Boolean  @default(true) @map("error_list_enabled")
+  trackedErrorCodes                 String[] @default([]) @map("tracked_error_codes") @db.Text
+  autoFillOrderEndBookings          Boolean  @default(false) @map("auto_fill_order_end_bookings")
+  birthdayWindowDaysBefore          Int      @default(7) @map("birthday_window_days_before")
+  birthdayWindowDaysAfter           Int      @default(7) @map("birthday_window_days_after")
+  followUpEntriesEnabled            Boolean  @default(false) @map("follow_up_entries_enabled")
+  proxyHost                         String?  @map("proxy_host") @db.VarChar(255)
+  proxyPort                         Int?     @map("proxy_port")
+  proxyUsername                     String?  @map("proxy_username") @db.VarChar(255)
+  proxyPassword                     String?  @map("proxy_password") @db.VarChar(255)
+  proxyEnabled                      Boolean  @default(false) @map("proxy_enabled")
+  serverAliveEnabled                Boolean  @default(false) @map("server_alive_enabled")
+  serverAliveExpectedCompletionTime Int?     @map("server_alive_expected_completion_time")
+  serverAliveThresholdMinutes       Int?     @default(30) @map("server_alive_threshold_minutes")
+  serverAliveNotifyAdmins           Boolean  @default(true) @map("server_alive_notify_admins")
+  createdAt                         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Indexes
+  @@unique([tenantId], map: "system_settings_tenant_id_key")
+  @@index([tenantId], map: "idx_system_settings_tenant_id")
+  @@map("system_settings")
+}
+
+// -----------------------------------------------------------------------------
+// AuditLog
+// -----------------------------------------------------------------------------
+// Migration: 000040
+//
+// Note: tenant_id has NO foreign key constraint in the DB (unlike other tables).
+// user_id FK references users(id) ON DELETE SET NULL.
+model AuditLog {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  userId      String?  @map("user_id") @db.Uuid
+  action      String   @db.VarChar(20)
+  entityType  String   @map("entity_type") @db.VarChar(100)
+  entityId    String   @map("entity_id") @db.Uuid
+  entityName  String?  @map("entity_name") @db.Text
+  changes     Json?    @db.JsonB
+  metadata    Json?    @db.JsonB
+  ipAddress   String?  @map("ip_address") @db.Text
+  userAgent   String?  @map("user_agent") @db.Text
+  performedAt DateTime @default(now()) @map("performed_at") @db.Timestamptz(6)
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Indexes
+  @@index([tenantId], map: "idx_audit_logs_tenant")
+  @@index([userId], map: "idx_audit_logs_user")
+  @@index([entityType, entityId], map: "idx_audit_logs_entity")
+  @@index([action], map: "idx_audit_logs_action")
+  @@index([performedAt], map: "idx_audit_logs_performed_at")
+  @@map("audit_logs")
+}
+
+// -----------------------------------------------------------------------------
+// Notification
+// -----------------------------------------------------------------------------
+// Migration: 000035
+//
+// User-scoped notifications with read status.
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model Notification {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String    @map("tenant_id") @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  type      String    @db.VarChar(20)
+  title     String    @db.VarChar(255)
+  message   String    @db.Text
+  link      String?   @db.Text
+  readAt    DateTime? @map("read_at") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Indexes
+  @@index([userId, readAt], map: "idx_notifications_user_read")
+  @@index([userId, createdAt(sort: Desc)], map: "idx_notifications_user_created")
+  @@index([tenantId, userId, createdAt(sort: Desc)], map: "idx_notifications_tenant_user_created")
+  @@map("notifications")
+}
+
+// -----------------------------------------------------------------------------
+// NotificationPreference
+// -----------------------------------------------------------------------------
+// Migration: 000035
+//
+// Per-user notification settings (getOrCreate with defaults).
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model NotificationPreference {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  userId           String   @map("user_id") @db.Uuid
+  approvalsEnabled Boolean  @default(true) @map("approvals_enabled")
+  errorsEnabled    Boolean  @default(true) @map("errors_enabled")
+  remindersEnabled Boolean  @default(true) @map("reminders_enabled")
+  systemEnabled    Boolean  @default(true) @map("system_enabled")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Indexes
+  @@unique([tenantId, userId], map: "notification_preferences_tenant_id_user_id_key")
+  @@map("notification_preferences")
 }
