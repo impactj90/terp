@@ -106,6 +106,19 @@ model Tenant {
   employees                 Employee[]
   employeeCards             EmployeeCard[]
   employeeTariffAssignments EmployeeTariffAssignment[]
+  employeeGroups            EmployeeGroup[]
+  workflowGroups            WorkflowGroup[]
+  activityGroups            ActivityGroup[]
+  activities                Activity[]
+  orders                    Order[]
+  orderAssignments          OrderAssignment[]
+  bookingTypes              BookingType[]
+  bookingReasons            BookingReason[]
+  bookingTypeGroups         BookingTypeGroup[]
+  absenceTypeGroups         AbsenceTypeGroup[]
+  calculationRules          CalculationRule[]
+  dayPlans                  DayPlan[]
+  weekPlans                 WeekPlan[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
@@ -187,6 +200,7 @@ model CostCenter {
   // Relations
   tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   employees Employee[]
+  orders    Order[]
 
   // Indexes
   @@unique([tenantId, code], map: "cost_centers_tenant_id_code_key")
@@ -351,8 +365,13 @@ model Account {
   updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant       Tenant?       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  accountGroup AccountGroup? @relation(fields: [accountGroupId], references: [id], onDelete: SetNull)
+  tenant           Tenant?       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  accountGroup     AccountGroup? @relation(fields: [accountGroupId], references: [id], onDelete: SetNull)
+  bookingTypes     BookingType[]
+  calculationRules CalculationRule[]
+  dayPlanBonuses     DayPlanBonus[]
+  dayPlanNetAccounts DayPlan[] @relation("DayPlanNetAccount")
+  dayPlanCapAccounts DayPlan[] @relation("DayPlanCapAccount")
 
   // Indexes
   @@unique([tenantId, code], map: "accounts_tenant_id_code_key")
@@ -537,21 +556,14 @@ model Employee {
 
   // Note: tariffId FK references tariffs(id) ON DELETE SET NULL.
   // Tariff model not yet in Prisma. Relation will be added when it is.
-  //
-  // Note: employeeGroupId FK references employee_groups(id) ON DELETE SET NULL.
-  // EmployeeGroup model not yet in Prisma. Relation will be added when it is.
-  //
-  // Note: workflowGroupId FK references workflow_groups(id) ON DELETE SET NULL.
-  // WorkflowGroup model not yet in Prisma. Relation will be added when it is.
-  //
-  // Note: activityGroupId FK references activity_groups(id) ON DELETE SET NULL.
-  // ActivityGroup model not yet in Prisma. Relation will be added when it is.
-  //
-  // Note: defaultOrderId FK references orders(id) ON DELETE SET NULL.
-  // Order model not yet in Prisma. Relation will be added when it is.
-  //
-  // Note: defaultActivityId FK references activities(id) ON DELETE SET NULL.
-  // Activity model not yet in Prisma. Relation will be added when it is.
+
+  // Relations to group/order/activity models
+  employeeGroup    EmployeeGroup?    @relation(fields: [employeeGroupId], references: [id], onDelete: SetNull)
+  workflowGroup    WorkflowGroup?    @relation(fields: [workflowGroupId], references: [id], onDelete: SetNull)
+  activityGroup    ActivityGroup?    @relation(fields: [activityGroupId], references: [id], onDelete: SetNull)
+  defaultOrder     Order?            @relation("EmployeeDefaultOrder", fields: [defaultOrderId], references: [id], onDelete: SetNull)
+  defaultActivity  Activity?         @relation("EmployeeDefaultActivity", fields: [defaultActivityId], references: [id], onDelete: SetNull)
+  orderAssignments OrderAssignment[]
 
   // Indexes
   @@unique([tenantId, personnelNumber], map: "employees_tenant_id_personnel_number_key")
@@ -668,4 +680,579 @@ model EmployeeTariffAssignment {
   @@index([employeeId, effectiveFrom, effectiveTo], map: "idx_eta_employee_dates")
   @@index([employeeId, effectiveFrom, effectiveTo, isActive], map: "idx_eta_effective_lookup")
   @@map("employee_tariff_assignments")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeGroup
+// -----------------------------------------------------------------------------
+// Migrations: 000041
+model EmployeeGroup {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  code        String    @db.VarChar(50)
+  name        String    @db.VarChar(255)
+  description String?   @db.Text
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employees Employee[]
+
+  @@unique([tenantId, code], map: "employee_groups_tenant_id_code_key")
+  @@index([tenantId], map: "idx_employee_groups_tenant")
+  @@map("employee_groups")
+}
+
+// -----------------------------------------------------------------------------
+// WorkflowGroup
+// -----------------------------------------------------------------------------
+// Migrations: 000041
+model WorkflowGroup {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  code        String    @db.VarChar(50)
+  name        String    @db.VarChar(255)
+  description String?   @db.Text
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employees Employee[]
+
+  @@unique([tenantId, code], map: "workflow_groups_tenant_id_code_key")
+  @@index([tenantId], map: "idx_workflow_groups_tenant")
+  @@map("workflow_groups")
+}
+
+// -----------------------------------------------------------------------------
+// ActivityGroup
+// -----------------------------------------------------------------------------
+// Migrations: 000041
+model ActivityGroup {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  code        String    @db.VarChar(50)
+  name        String    @db.VarChar(255)
+  description String?   @db.Text
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employees Employee[]
+
+  @@unique([tenantId, code], map: "activity_groups_tenant_id_code_key")
+  @@index([tenantId], map: "idx_activity_groups_tenant")
+  @@map("activity_groups")
+}
+
+// -----------------------------------------------------------------------------
+// Activity
+// -----------------------------------------------------------------------------
+// Migrations: 000053
+//
+// Trigger: update_activities_updated_at auto-sets updated_at on UPDATE
+model Activity {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  code        String    @db.VarChar(50)
+  name        String    @db.VarChar(255)
+  description String?   @db.Text
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant              Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  defaultForEmployees Employee[] @relation("EmployeeDefaultActivity")
+
+  @@unique([tenantId, code], map: "activities_tenant_id_code_key")
+  @@index([tenantId], map: "idx_activities_tenant")
+  @@index([tenantId, isActive], map: "idx_activities_tenant_active")
+  @@map("activities")
+}
+
+// -----------------------------------------------------------------------------
+// Order
+// -----------------------------------------------------------------------------
+// Migrations: 000055
+//
+// CHECK constraints (enforced at DB level only):
+//   status IN ('planned', 'active', 'completed', 'cancelled')
+//
+// Trigger: update_orders_updated_at auto-sets updated_at on UPDATE
+model Order {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String    @map("tenant_id") @db.Uuid
+  code               String    @db.VarChar(50)
+  name               String    @db.VarChar(255)
+  description        String?   @db.Text
+  status             String    @default("active") @db.VarChar(20)
+  customer           String?   @db.VarChar(255)
+  costCenterId       String?   @map("cost_center_id") @db.Uuid
+  billingRatePerHour Decimal?  @map("billing_rate_per_hour") @db.Decimal(10, 2)
+  validFrom          DateTime? @map("valid_from") @db.Date
+  validTo            DateTime? @map("valid_to") @db.Date
+  isActive           Boolean   @default(true) @map("is_active")
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant              Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  costCenter          CostCenter?       @relation(fields: [costCenterId], references: [id], onDelete: SetNull)
+  assignments         OrderAssignment[]
+  defaultForEmployees Employee[]        @relation("EmployeeDefaultOrder")
+
+  @@unique([tenantId, code], map: "orders_tenant_id_code_key")
+  @@index([tenantId], map: "idx_orders_tenant")
+  @@index([tenantId, isActive], map: "idx_orders_tenant_active")
+  @@index([tenantId, status], map: "idx_orders_tenant_status")
+  @@index([costCenterId], map: "idx_orders_cost_center")
+  @@map("orders")
+}
+
+// -----------------------------------------------------------------------------
+// OrderAssignment
+// -----------------------------------------------------------------------------
+// Migrations: 000056
+//
+// CHECK constraints (enforced at DB level only):
+//   role IN ('worker', 'leader', 'sales')
+//
+// Trigger: update_order_assignments_updated_at auto-sets updated_at on UPDATE
+model OrderAssignment {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  orderId    String    @map("order_id") @db.Uuid
+  employeeId String    @map("employee_id") @db.Uuid
+  role       String    @default("worker") @db.VarChar(20)
+  validFrom  DateTime? @map("valid_from") @db.Date
+  validTo    DateTime? @map("valid_to") @db.Date
+  isActive   Boolean   @default(true) @map("is_active")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([orderId, employeeId, role], map: "order_assignments_order_id_employee_id_role_key")
+  @@index([tenantId], map: "idx_order_assignments_tenant")
+  @@index([orderId], map: "idx_order_assignments_order")
+  @@index([employeeId], map: "idx_order_assignments_employee")
+  @@index([employeeId, isActive], map: "idx_order_assignments_employee_active")
+  @@map("order_assignments")
+}
+
+// -----------------------------------------------------------------------------
+// BookingType
+// -----------------------------------------------------------------------------
+// Migrations: 000021, 000044
+//
+// COALESCE-based unique index (cannot be modeled in Prisma):
+//   idx_booking_types_code: UNIQUE ON (COALESCE(tenant_id, '00000000-...'), code)
+// This constraint is enforced at the DB level only.
+//
+// tenant_id is nullable: NULL = system-wide type visible to all tenants.
+// System types seeded: COME, GO, BREAK_START, BREAK_END
+//
+// CHECK constraints (enforced at DB level only):
+//   - direction IN ('in', 'out')
+//   - category IN ('work', 'break', 'business_trip', 'other')
+model BookingType {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String?   @map("tenant_id") @db.Uuid
+  code           String    @db.VarChar(20)
+  name           String    @db.VarChar(255)
+  description    String?   @db.Text
+  direction      String    @db.VarChar(10)
+  category       String    @default("work") @db.VarChar(30)
+  accountId      String?   @map("account_id") @db.Uuid
+  requiresReason Boolean   @default(false) @map("requires_reason")
+  isSystem       Boolean   @default(false) @map("is_system")
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant          Tenant?                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  account         Account?                 @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  bookingReasons  BookingReason[]
+  groupMembers    BookingTypeGroupMember[]
+
+  // Indexes
+  @@index([tenantId], map: "idx_booking_types_tenant")
+  @@index([accountId], map: "idx_booking_types_account")
+  @@index([category], map: "idx_booking_types_category")
+  @@map("booking_types")
+}
+
+// -----------------------------------------------------------------------------
+// BookingReason
+// -----------------------------------------------------------------------------
+// Migrations: 000044, 000078
+//
+// Trigger: update_booking_reasons_updated_at auto-sets updated_at on UPDATE
+model BookingReason {
+  id                       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId                 String    @map("tenant_id") @db.Uuid
+  bookingTypeId            String    @map("booking_type_id") @db.Uuid
+  code                     String    @db.VarChar(50)
+  label                    String    @db.VarChar(255)
+  isActive                 Boolean   @default(true) @map("is_active")
+  sortOrder                Int       @default(0) @map("sort_order") @db.Integer
+  referenceTime            String?   @map("reference_time") @db.VarChar(20)
+  offsetMinutes            Int?      @map("offset_minutes") @db.Integer
+  adjustmentBookingTypeId  String?   @map("adjustment_booking_type_id") @db.Uuid
+  createdAt                DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bookingType BookingType @relation(fields: [bookingTypeId], references: [id], onDelete: Cascade)
+  // Note: adjustmentBookingTypeId FK references booking_types(id) ON DELETE SET NULL.
+  // Self-relation to BookingType omitted to avoid multiple FK ambiguity.
+
+  // Indexes
+  @@unique([tenantId, bookingTypeId, code], map: "booking_reasons_tenant_id_booking_type_id_code_key")
+  @@index([tenantId], map: "idx_booking_reasons_tenant")
+  @@index([bookingTypeId], map: "idx_booking_reasons_booking_type")
+  @@map("booking_reasons")
+}
+
+// -----------------------------------------------------------------------------
+// BookingTypeGroup
+// -----------------------------------------------------------------------------
+// Migrations: 000044
+//
+// Trigger: update_booking_type_groups_updated_at auto-sets updated_at on UPDATE
+model BookingTypeGroup {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  code        String    @db.VarChar(50)
+  name        String    @db.VarChar(255)
+  description String?   @db.Text
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant  Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  members BookingTypeGroupMember[]
+
+  // Indexes
+  @@unique([tenantId, code], map: "booking_type_groups_tenant_id_code_key")
+  @@index([tenantId], map: "idx_booking_type_groups_tenant")
+  @@map("booking_type_groups")
+}
+
+// -----------------------------------------------------------------------------
+// BookingTypeGroupMember
+// -----------------------------------------------------------------------------
+// Migration: 000044
+//
+// Join table linking booking types to groups with sort ordering.
+model BookingTypeGroupMember {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  groupId       String   @map("group_id") @db.Uuid
+  bookingTypeId String   @map("booking_type_id") @db.Uuid
+  sortOrder     Int      @default(0) @map("sort_order") @db.Integer
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relations
+  group       BookingTypeGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  bookingType BookingType      @relation(fields: [bookingTypeId], references: [id], onDelete: Cascade)
+
+  // Indexes
+  @@unique([groupId, bookingTypeId], map: "booking_type_group_members_group_id_booking_type_id_key")
+  @@index([groupId], map: "idx_btgm_group")
+  @@index([bookingTypeId], map: "idx_btgm_booking_type")
+  @@map("booking_type_group_members")
+}
+
+// -----------------------------------------------------------------------------
+// AbsenceTypeGroup
+// -----------------------------------------------------------------------------
+// Migration: 000042
+//
+// Trigger: update_absence_type_groups_updated_at auto-sets updated_at on UPDATE
+model AbsenceTypeGroup {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  code        String    @db.VarChar(50)
+  name        String    @db.VarChar(255)
+  description String?   @db.Text
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  // Note: absence_types.absence_type_group_id FK references this table.
+  // AbsenceType model not yet in Prisma. Relation will be added when it is.
+
+  // Indexes
+  @@unique([tenantId, code], map: "absence_type_groups_tenant_id_code_key")
+  @@index([tenantId], map: "idx_absence_type_groups_tenant")
+  @@map("absence_type_groups")
+}
+
+// -----------------------------------------------------------------------------
+// CalculationRule
+// -----------------------------------------------------------------------------
+// Migration: 000046
+//
+// Formula: account_value = value * factor (if value=0, use daily target time * factor)
+//
+// Trigger: update_calculation_rules_updated_at auto-sets updated_at on UPDATE
+model CalculationRule {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  code        String    @db.VarChar(50)
+  name        String    @db.VarChar(255)
+  description String?   @db.Text
+  accountId   String?   @map("account_id") @db.Uuid
+  value       Int       @default(0) @db.Integer
+  factor      Decimal   @default(1.00) @db.Decimal(5, 2)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  account Account? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  // Note: absence_types.calculation_rule_id FK references this table.
+  // AbsenceType model not yet in Prisma. Relation will be added when it is.
+
+  // Indexes
+  @@unique([tenantId, code], map: "calculation_rules_tenant_id_code_key")
+  @@index([tenantId], map: "idx_calculation_rules_tenant")
+  @@index([accountId], map: "idx_calculation_rules_account")
+  @@index([tenantId, isActive], map: "idx_calculation_rules_active")
+  @@map("calculation_rules")
+}
+
+// -----------------------------------------------------------------------------
+// DayPlan
+// -----------------------------------------------------------------------------
+// Migrations: 000015, 000030, 000079
+//
+// CHECK constraints (enforced at DB level only):
+//   - plan_type IN ('fixed', 'flextime')
+//   - no_booking_behavior IN ('error', 'deduct_target', 'vocational_school', 'adopt_target', 'target_with_order')
+//   - day_change_behavior IN ('none', 'at_arrival', 'at_departure', 'auto_complete')
+//
+// Self-referential FKs shift_alt_plan_1..6 cannot all be modeled as named Prisma relations
+// without excessive verbosity. We model the columns but omit relation fields for alt plans.
+//
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model DayPlan {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId              String    @map("tenant_id") @db.Uuid
+  code                  String    @db.VarChar(20)
+  name                  String    @db.VarChar(255)
+  description           String?   @db.Text
+  planType              String    @default("fixed") @map("plan_type") @db.VarChar(20)
+
+  // Time windows (minutes from midnight)
+  comeFrom              Int?      @map("come_from") @db.Integer
+  comeTo                Int?      @map("come_to") @db.Integer
+  goFrom                Int?      @map("go_from") @db.Integer
+  goTo                  Int?      @map("go_to") @db.Integer
+  coreStart             Int?      @map("core_start") @db.Integer
+  coreEnd               Int?      @map("core_end") @db.Integer
+
+  // Target hours
+  regularHours          Int       @default(480) @map("regular_hours") @db.Integer
+  regularHours2         Int?      @map("regular_hours_2") @db.Integer
+  fromEmployeeMaster    Boolean   @default(false) @map("from_employee_master")
+
+  // Tolerance settings
+  toleranceComePlus     Int       @default(0) @map("tolerance_come_plus") @db.Integer
+  toleranceComeMinus    Int       @default(0) @map("tolerance_come_minus") @db.Integer
+  toleranceGoPlus       Int       @default(0) @map("tolerance_go_plus") @db.Integer
+  toleranceGoMinus      Int       @default(0) @map("tolerance_go_minus") @db.Integer
+
+  // Rounding settings
+  roundingComeType      String?   @map("rounding_come_type") @db.VarChar(20)
+  roundingComeInterval  Int?      @map("rounding_come_interval") @db.Integer
+  roundingGoType        String?   @map("rounding_go_type") @db.VarChar(20)
+  roundingGoInterval    Int?      @map("rounding_go_interval") @db.Integer
+
+  // Caps
+  minWorkTime           Int?      @map("min_work_time") @db.Integer
+  maxNetWorkTime        Int?      @map("max_net_work_time") @db.Integer
+
+  // Variable work time
+  variableWorkTime      Boolean   @default(false) @map("variable_work_time")
+
+  // Rounding extras
+  roundAllBookings      Boolean   @default(false) @map("round_all_bookings")
+  roundingComeAddValue  Int?      @map("rounding_come_add_value") @db.Integer
+  roundingGoAddValue    Int?      @map("rounding_go_add_value") @db.Integer
+
+  // Holiday credits (minutes)
+  holidayCreditCat1     Int?      @map("holiday_credit_cat1") @db.Integer
+  holidayCreditCat2     Int?      @map("holiday_credit_cat2") @db.Integer
+  holidayCreditCat3     Int?      @map("holiday_credit_cat3") @db.Integer
+
+  // Vacation deduction
+  vacationDeduction     Decimal   @default(1.00) @map("vacation_deduction") @db.Decimal(5, 2)
+
+  // No-booking behavior
+  noBookingBehavior     String    @default("error") @map("no_booking_behavior") @db.VarChar(30)
+
+  // Day change behavior
+  dayChangeBehavior     String    @default("none") @map("day_change_behavior") @db.VarChar(30)
+
+  // Shift detection windows (minutes from midnight)
+  shiftDetectArriveFrom Int?      @map("shift_detect_arrive_from") @db.Integer
+  shiftDetectArriveTo   Int?      @map("shift_detect_arrive_to") @db.Integer
+  shiftDetectDepartFrom Int?      @map("shift_detect_depart_from") @db.Integer
+  shiftDetectDepartTo   Int?      @map("shift_detect_depart_to") @db.Integer
+
+  // Alternative day plans for shift detection (self-referential FKs)
+  shiftAltPlan1         String?   @map("shift_alt_plan_1") @db.Uuid
+  shiftAltPlan2         String?   @map("shift_alt_plan_2") @db.Uuid
+  shiftAltPlan3         String?   @map("shift_alt_plan_3") @db.Uuid
+  shiftAltPlan4         String?   @map("shift_alt_plan_4") @db.Uuid
+  shiftAltPlan5         String?   @map("shift_alt_plan_5") @db.Uuid
+  shiftAltPlan6         String?   @map("shift_alt_plan_6") @db.Uuid
+
+  // Account references
+  netAccountId          String?   @map("net_account_id") @db.Uuid
+  capAccountId          String?   @map("cap_account_id") @db.Uuid
+
+  isActive              Boolean   @default(true) @map("is_active")
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant     Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  netAccount Account?       @relation("DayPlanNetAccount", fields: [netAccountId], references: [id], onDelete: SetNull)
+  capAccount Account?       @relation("DayPlanCapAccount", fields: [capAccountId], references: [id], onDelete: SetNull)
+  breaks     DayPlanBreak[]
+  bonuses    DayPlanBonus[]
+
+  // Reverse relations for WeekPlan
+  weekPlanMondays     WeekPlan[] @relation("WeekPlanMonday")
+  weekPlanTuesdays    WeekPlan[] @relation("WeekPlanTuesday")
+  weekPlanWednesdays  WeekPlan[] @relation("WeekPlanWednesday")
+  weekPlanThursdays   WeekPlan[] @relation("WeekPlanThursday")
+  weekPlanFridays     WeekPlan[] @relation("WeekPlanFriday")
+  weekPlanSaturdays   WeekPlan[] @relation("WeekPlanSaturday")
+  weekPlanSundays     WeekPlan[] @relation("WeekPlanSunday")
+
+  // Indexes
+  @@unique([tenantId, code], map: "day_plans_tenant_id_code_key")
+  @@index([tenantId], map: "idx_day_plans_tenant")
+  @@index([tenantId, isActive], map: "idx_day_plans_active")
+  @@map("day_plans")
+}
+
+// -----------------------------------------------------------------------------
+// DayPlanBreak
+// -----------------------------------------------------------------------------
+// Migrations: 000016, 000030
+//
+// CHECK constraints (enforced at DB level only):
+//   - break_type IN ('fixed', 'variable', 'minimum')
+model DayPlanBreak {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  dayPlanId         String    @map("day_plan_id") @db.Uuid
+  breakType         String    @map("break_type") @db.VarChar(20)
+  startTime         Int?      @map("start_time") @db.Integer
+  endTime           Int?      @map("end_time") @db.Integer
+  duration          Int       @db.Integer
+  afterWorkMinutes  Int?      @map("after_work_minutes") @db.Integer
+  autoDeduct        Boolean   @default(true) @map("auto_deduct")
+  isPaid            Boolean   @default(false) @map("is_paid")
+  minutesDifference Boolean   @default(false) @map("minutes_difference")
+  sortOrder         Int       @default(0) @map("sort_order") @db.Integer
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  dayPlan DayPlan @relation(fields: [dayPlanId], references: [id], onDelete: Cascade)
+
+  // Indexes
+  @@index([dayPlanId], map: "idx_day_plan_breaks_plan")
+  @@map("day_plan_breaks")
+}
+
+// -----------------------------------------------------------------------------
+// DayPlanBonus
+// -----------------------------------------------------------------------------
+// Migration: 000017
+//
+// CHECK constraints (enforced at DB level only):
+//   - calculation_type IN ('fixed', 'per_minute', 'percentage')
+model DayPlanBonus {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  dayPlanId         String    @map("day_plan_id") @db.Uuid
+  accountId         String    @map("account_id") @db.Uuid
+  timeFrom          Int       @map("time_from") @db.Integer
+  timeTo            Int       @map("time_to") @db.Integer
+  calculationType   String    @map("calculation_type") @db.VarChar(20)
+  valueMinutes      Int       @map("value_minutes") @db.Integer
+  minWorkMinutes    Int?      @map("min_work_minutes") @db.Integer
+  appliesOnHoliday  Boolean   @default(false) @map("applies_on_holiday")
+  sortOrder         Int       @default(0) @map("sort_order") @db.Integer
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  dayPlan DayPlan @relation(fields: [dayPlanId], references: [id], onDelete: Cascade)
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  // Indexes
+  @@index([dayPlanId], map: "idx_day_plan_bonuses_plan")
+  @@index([accountId], map: "idx_day_plan_bonuses_account")
+  @@map("day_plan_bonuses")
+}
+
+// -----------------------------------------------------------------------------
+// WeekPlan
+// -----------------------------------------------------------------------------
+// Migration: 000018
+//
+// 7 nullable FK columns referencing day_plans(id) ON DELETE SET NULL.
+// Note: Prisma requires named relations when multiple FKs reference the same model.
+model WeekPlan {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId              String    @map("tenant_id") @db.Uuid
+  code                  String    @db.VarChar(20)
+  name                  String    @db.VarChar(255)
+  description           String?   @db.Text
+  mondayDayPlanId       String?   @map("monday_day_plan_id") @db.Uuid
+  tuesdayDayPlanId      String?   @map("tuesday_day_plan_id") @db.Uuid
+  wednesdayDayPlanId    String?   @map("wednesday_day_plan_id") @db.Uuid
+  thursdayDayPlanId     String?   @map("thursday_day_plan_id") @db.Uuid
+  fridayDayPlanId       String?   @map("friday_day_plan_id") @db.Uuid
+  saturdayDayPlanId     String?   @map("saturday_day_plan_id") @db.Uuid
+  sundayDayPlanId       String?   @map("sunday_day_plan_id") @db.Uuid
+  isActive              Boolean   @default(true) @map("is_active")
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mondayDayPlan   DayPlan? @relation("WeekPlanMonday", fields: [mondayDayPlanId], references: [id], onDelete: SetNull)
+  tuesdayDayPlan  DayPlan? @relation("WeekPlanTuesday", fields: [tuesdayDayPlanId], references: [id], onDelete: SetNull)
+  wednesdayDayPlan DayPlan? @relation("WeekPlanWednesday", fields: [wednesdayDayPlanId], references: [id], onDelete: SetNull)
+  thursdayDayPlan DayPlan? @relation("WeekPlanThursday", fields: [thursdayDayPlanId], references: [id], onDelete: SetNull)
+  fridayDayPlan   DayPlan? @relation("WeekPlanFriday", fields: [fridayDayPlanId], references: [id], onDelete: SetNull)
+  saturdayDayPlan DayPlan? @relation("WeekPlanSaturday", fields: [saturdayDayPlanId], references: [id], onDelete: SetNull)
+  sundayDayPlan   DayPlan? @relation("WeekPlanSunday", fields: [sundayDayPlanId], references: [id], onDelete: SetNull)
+
+  // Indexes
+  @@unique([tenantId, code], map: "week_plans_tenant_id_code_key")
+  @@index([tenantId], map: "idx_week_plans_tenant")
+  @@map("week_plans")
 }

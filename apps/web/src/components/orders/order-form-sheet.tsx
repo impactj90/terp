@@ -30,9 +30,24 @@ import {
   useUpdateOrder,
   useCostCenters,
 } from '@/hooks/api'
-import type { components } from '@/lib/api/types'
-
-type Order = components['schemas']['Order']
+interface Order {
+  id: string
+  code: string
+  name: string
+  description: string | null
+  status: string
+  customer: string | null
+  costCenterId?: string | null
+  cost_center_id?: string | null
+  billingRatePerHour?: number | null
+  billing_rate_per_hour?: number | null
+  validFrom?: Date | string | null
+  valid_from?: string | null
+  validTo?: Date | string | null
+  valid_to?: string | null
+  isActive?: boolean
+  is_active?: boolean
+}
 
 interface OrderFormSheetProps {
   open: boolean
@@ -86,17 +101,22 @@ export function OrderFormSheet({
   React.useEffect(() => {
     if (open) {
       if (order) {
+        const ccId = order.costCenterId ?? order.cost_center_id ?? ''
+        const rate = order.billingRatePerHour ?? order.billing_rate_per_hour
+        const vFrom = order.validFrom ?? order.valid_from
+        const vTo = order.validTo ?? order.valid_to
+        const active = order.isActive ?? order.is_active ?? true
         setForm({
           code: order.code || '',
           name: order.name || '',
           description: order.description || '',
-          status: order.status || 'planned',
+          status: (order.status as FormState['status']) || 'planned',
           customer: order.customer || '',
-          costCenterId: order.cost_center_id || '',
-          billingRatePerHour: order.billing_rate_per_hour?.toString() || '',
-          validFrom: order.valid_from?.split('T')[0] || '',
-          validTo: order.valid_to?.split('T')[0] || '',
-          isActive: order.is_active ?? true,
+          costCenterId: ccId || '',
+          billingRatePerHour: rate?.toString() || '',
+          validFrom: vFrom ? String(vFrom).split('T')[0] ?? '' : '',
+          validTo: vTo ? String(vTo).split('T')[0] ?? '' : '',
+          isActive: active,
         })
       } else {
         setForm(INITIAL_STATE)
@@ -131,32 +151,28 @@ export function OrderFormSheet({
     try {
       if (isEdit && order) {
         await updateMutation.mutateAsync({
-          path: { id: order.id },
-          body: {
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            status: form.status,
-            customer: form.customer.trim() || undefined,
-            cost_center_id: form.costCenterId || undefined,
-            billing_rate_per_hour: form.billingRatePerHour ? parseFloat(form.billingRatePerHour) : undefined,
-            valid_from: form.validFrom || undefined,
-            valid_to: form.validTo || undefined,
-            is_active: form.isActive,
-          },
+          id: order.id,
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          status: form.status,
+          customer: form.customer.trim() || undefined,
+          costCenterId: form.costCenterId || undefined,
+          billingRatePerHour: form.billingRatePerHour ? parseFloat(form.billingRatePerHour) : undefined,
+          validFrom: form.validFrom || undefined,
+          validTo: form.validTo || undefined,
+          isActive: form.isActive,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            code: form.code.trim(),
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            status: form.status,
-            customer: form.customer.trim() || undefined,
-            cost_center_id: form.costCenterId || undefined,
-            billing_rate_per_hour: form.billingRatePerHour ? parseFloat(form.billingRatePerHour) : undefined,
-            valid_from: form.validFrom || undefined,
-            valid_to: form.validTo || undefined,
-          },
+          code: form.code.trim(),
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          status: form.status,
+          customer: form.customer.trim() || undefined,
+          costCenterId: form.costCenterId || undefined,
+          billingRatePerHour: form.billingRatePerHour ? parseFloat(form.billingRatePerHour) : undefined,
+          validFrom: form.validFrom || undefined,
+          validTo: form.validTo || undefined,
         })
       }
 

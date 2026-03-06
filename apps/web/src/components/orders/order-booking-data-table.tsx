@@ -22,16 +22,27 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { components } from '@/lib/api/types'
 
-type OrderBooking = components['schemas']['OrderBooking']
-type Employee = components['schemas']['Employee']
-type Activity = components['schemas']['Activity']
-
-// Extended type that includes optional employee and activity objects from API response
-interface OrderBookingWithRelations extends OrderBooking {
-  employee?: Employee
-  activity?: Activity
+interface OrderBookingWithRelations {
+  id: string
+  bookingDate?: string | null
+  booking_date?: string | null
+  timeMinutes?: number
+  time_minutes?: number
+  description?: string | null
+  source?: string
+  employee?: {
+    id: string
+    firstName?: string
+    first_name?: string
+    lastName?: string
+    last_name?: string
+  } | null
+  activity?: {
+    id: string
+    name?: string
+    code?: string
+  } | null
 }
 
 interface OrderBookingDataTableProps {
@@ -100,15 +111,15 @@ export function OrderBookingDataTable({
       <TableBody>
         {items.map((item) => (
           <TableRow key={item.id}>
-            <TableCell className="text-sm">{formatDate(item.booking_date)}</TableCell>
+            <TableCell className="text-sm">{formatDate(String(item.bookingDate ?? item.booking_date ?? ''))}</TableCell>
             <TableCell className="font-medium">
-              {item.employee?.first_name} {item.employee?.last_name}
+              {item.employee?.firstName ?? item.employee?.first_name} {item.employee?.lastName ?? item.employee?.last_name}
             </TableCell>
             <TableCell className="text-sm text-muted-foreground">
               {item.activity?.name || '-'}
             </TableCell>
             <TableCell className="font-mono text-sm">
-              {formatTimeMinutes(item.time_minutes)}
+              {formatTimeMinutes(item.timeMinutes ?? item.time_minutes)}
             </TableCell>
             <TableCell className="text-sm text-muted-foreground truncate max-w-[200px]">
               {item.description || '-'}

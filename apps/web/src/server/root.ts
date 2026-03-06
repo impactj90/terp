@@ -23,6 +23,17 @@ import { employeesRouter } from "./routers/employees"
 import { employeeContactsRouter } from "./routers/employeeContacts"
 import { employeeCardsRouter } from "./routers/employeeCards"
 import { employeeTariffAssignmentsRouter } from "./routers/employeeTariffAssignments"
+import { groupsRouter } from "./routers/groups"
+import { activitiesRouter } from "./routers/activities"
+import { ordersRouter } from "./routers/orders"
+import { orderAssignmentsRouter } from "./routers/orderAssignments"
+import { bookingTypesRouter } from "./routers/bookingTypes"
+import { bookingReasonsRouter } from "./routers/bookingReasons"
+import { bookingTypeGroupsRouter } from "./routers/bookingTypeGroups"
+import { absenceTypeGroupsRouter } from "./routers/absenceTypeGroups"
+import { calculationRulesRouter } from "./routers/calculationRules"
+import { dayPlansRouter } from "./routers/dayPlans"
+import { weekPlansRouter } from "./routers/weekPlans"
 
 export const appRouter = createTRPCRouter({
   health: healthRouter,
@@ -41,6 +52,17 @@ export const appRouter = createTRPCRouter({
   employeeContacts: employeeContactsRouter,
   employeeCards: employeeCardsRouter,
   employeeTariffAssignments: employeeTariffAssignmentsRouter,
+  groups: groupsRouter,
+  activities: activitiesRouter,
+  orders: ordersRouter,
+  orderAssignments: orderAssignmentsRouter,
+  bookingTypes: bookingTypesRouter,
+  bookingReasons: bookingReasonsRouter,
+  bookingTypeGroups: bookingTypeGroupsRouter,
+  absenceTypeGroups: absenceTypeGroupsRouter,
+  calculationRules: calculationRulesRouter,
+  dayPlans: dayPlansRouter,
+  weekPlans: weekPlansRouter,
 })
 
 /** Type-only export for client-side inference. */

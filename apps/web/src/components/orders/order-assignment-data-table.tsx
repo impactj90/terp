@@ -22,14 +22,23 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { OrderAssignmentRoleBadge } from './order-assignment-role-badge'
-import type { components } from '@/lib/api/types'
 
-type OrderAssignment = components['schemas']['OrderAssignment']
-type Employee = components['schemas']['Employee']
-
-// Extended type that includes the optional employee object from API response
-interface OrderAssignmentWithEmployee extends OrderAssignment {
-  employee?: Employee
+interface OrderAssignmentWithEmployee {
+  id: string
+  role: string
+  validFrom?: Date | string | null
+  valid_from?: string | null
+  validTo?: Date | string | null
+  valid_to?: string | null
+  employee?: {
+    id: string
+    firstName?: string
+    first_name?: string
+    lastName?: string
+    last_name?: string
+    personnelNumber?: string
+    personnel_number?: string
+  } | null
 }
 
 interface OrderAssignmentDataTableProps {
@@ -77,13 +86,13 @@ export function OrderAssignmentDataTable({
         {items.map((item) => (
           <TableRow key={item.id}>
             <TableCell className="font-medium">
-              {item.employee?.first_name} {item.employee?.last_name}
+              {item.employee?.firstName ?? item.employee?.first_name} {item.employee?.lastName ?? item.employee?.last_name}
             </TableCell>
             <TableCell>
               <OrderAssignmentRoleBadge role={item.role} />
             </TableCell>
-            <TableCell className="text-sm">{formatDate(item.valid_from)}</TableCell>
-            <TableCell className="text-sm">{formatDate(item.valid_to)}</TableCell>
+            <TableCell className="text-sm">{formatDate(String(item.validFrom ?? item.valid_from ?? ''))}</TableCell>
+            <TableCell className="text-sm">{formatDate(String(item.validTo ?? item.valid_to ?? ''))}</TableCell>
             <TableCell>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

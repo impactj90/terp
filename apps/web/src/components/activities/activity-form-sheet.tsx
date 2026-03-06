@@ -22,9 +22,14 @@ import {
   useCreateActivity,
   useUpdateActivity,
 } from '@/hooks/api'
-import type { components } from '@/lib/api/types'
-
-type Activity = components['schemas']['Activity']
+interface Activity {
+  id: string
+  code: string
+  name: string
+  description: string | null
+  isActive?: boolean
+  is_active?: boolean
+}
 
 interface ActivityFormSheetProps {
   open: boolean
@@ -68,7 +73,7 @@ export function ActivityFormSheet({
           code: activity.code || '',
           name: activity.name || '',
           description: activity.description || '',
-          isActive: activity.is_active ?? true,
+          isActive: activity.isActive ?? activity.is_active ?? true,
         })
       } else {
         setForm(INITIAL_STATE)
@@ -103,20 +108,16 @@ export function ActivityFormSheet({
     try {
       if (isEdit && activity) {
         await updateMutation.mutateAsync({
-          path: { id: activity.id },
-          body: {
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            is_active: form.isActive,
-          },
+          id: activity.id,
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          isActive: form.isActive,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            code: form.code.trim(),
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-          },
+          code: form.code.trim(),
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
         })
       }
 

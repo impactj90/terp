@@ -2,16 +2,15 @@
 
 import { Badge } from '@/components/ui/badge'
 import { useTranslations } from 'next-intl'
-import type { components } from '@/lib/api/types'
 
-type OrderStatus = components['schemas']['Order']['status']
+type OrderStatus = 'planned' | 'active' | 'completed' | 'cancelled'
 
 interface OrderStatusBadgeProps {
-  status: OrderStatus | undefined | null
+  status: string | undefined | null
 }
 
 const statusConfig: Record<
-  NonNullable<OrderStatus>,
+  OrderStatus,
   { labelKey: 'statusPlanned' | 'statusActive' | 'statusCompleted' | 'statusCancelled'; className: string }
 > = {
   planned: {
@@ -42,7 +41,7 @@ export function OrderStatusBadge({ status }: OrderStatusBadgeProps) {
     return <Badge variant="secondary">{t('statusUnknown')}</Badge>
   }
 
-  const config = statusConfig[status]
+  const config = statusConfig[status as OrderStatus]
 
   return (
     <Badge variant="secondary" className={config.className}>

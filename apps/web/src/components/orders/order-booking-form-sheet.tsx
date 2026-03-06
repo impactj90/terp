@@ -78,9 +78,9 @@ export function OrderBookingFormSheet({
 
   const createMutation = useCreateOrderBooking()
   const updateMutation = useUpdateOrderBooking()
-  const { data: employeesData } = useEmployees({ active: true, enabled: open })
-  const { data: activitiesData } = useActivities({ active: true, enabled: open })
-  const employees = employeesData?.data ?? []
+  const { data: employeesData } = useEmployees({ isActive: true, enabled: open })
+  const { data: activitiesData } = useActivities({ isActive: true, enabled: open })
+  const employees = employeesData?.items ?? []
   const activities = activitiesData?.data ?? []
 
   React.useEffect(() => {
@@ -202,7 +202,7 @@ export function OrderBookingFormSheet({
                     <SelectItem value="__none__">{t('selectEmployee')}</SelectItem>
                     {employees.map((emp) => (
                       <SelectItem key={emp.id} value={emp.id}>
-                        {emp.first_name} {emp.last_name}
+                        {emp.firstName} {emp.lastName}
                       </SelectItem>
                     ))}
                   </SelectContent>

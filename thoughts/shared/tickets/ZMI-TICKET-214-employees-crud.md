@@ -1,6 +1,6 @@
 # ZMI-TICKET-214: Employees CRUD
 
-Status: Proposed
+Status: Done
 Priority: P1
 Owner: TBD
 

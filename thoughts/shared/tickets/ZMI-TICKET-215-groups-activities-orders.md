@@ -1,6 +1,6 @@
 # ZMI-TICKET-215: Groups + Activities + Orders
 
-Status: Proposed
+Status: Completed
 Priority: P2
 Owner: TBD
 

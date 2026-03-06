@@ -1,6 +1,6 @@
 # ZMI-TICKET-216: Booking Types, Reasons, Groups
 
-Status: Proposed
+Status: Completed
 Priority: P2
 Owner: TBD
 

@@ -1,9 +1,5 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
-
-interface UseActivitiesOptions {
-  active?: boolean
-  enabled?: boolean
-}
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
 /**
  * Hook to fetch list of activities.
@@ -14,13 +10,14 @@ interface UseActivitiesOptions {
  * const activities = data?.data ?? []
  * ```
  */
-export function useActivities(options: UseActivitiesOptions = {}) {
-  const { active, enabled = true } = options
-
-  return useApiQuery('/activities', {
-    params: { active },
-    enabled,
-  })
+export function useActivities(
+  options: { isActive?: boolean; enabled?: boolean } = {}
+) {
+  const { isActive, enabled = true } = options
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.activities.list.queryOptions({ isActive }, { enabled })
+  )
 }
 
 /**
@@ -32,26 +29,47 @@ export function useActivities(options: UseActivitiesOptions = {}) {
  * ```
  */
 export function useActivity(id: string, enabled = true) {
-  return useApiQuery('/activities/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.activities.getById.queryOptions({ id }, { enabled: enabled && !!id })
+  )
 }
 
 export function useCreateActivity() {
-  return useApiMutation('/activities', 'post', {
-    invalidateKeys: [['/activities']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.activities.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.activities.list.queryKey(),
+      })
+    },
   })
 }
 
 export function useUpdateActivity() {
-  return useApiMutation('/activities/{id}', 'patch', {
-    invalidateKeys: [['/activities']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.activities.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.activities.list.queryKey(),
+      })
+    },
   })
 }
 
 export function useDeleteActivity() {
-  return useApiMutation('/activities/{id}', 'delete', {
-    invalidateKeys: [['/activities']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.activities.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.activities.list.queryKey(),
+      })
+    },
   })
 }

@@ -381,6 +381,15 @@ export {
   useDeleteBookingTypeGroup,
 } from './use-booking-type-groups'
 
+// Booking Reasons
+export {
+  useBookingReasons,
+  useBookingReason,
+  useCreateBookingReason,
+  useUpdateBookingReason,
+  useDeleteBookingReason,
+} from './use-booking-reasons'
+
 // Absence Type Groups
 export {
   useAbsenceTypeGroups,
@@ -456,6 +465,15 @@ export {
   useUpdateActivity,
   useDeleteActivity,
 } from './use-activities'
+
+// Groups (Employee, Workflow, Activity)
+export {
+  useGroups,
+  useGroup,
+  useCreateGroup,
+  useUpdateGroup,
+  useDeleteGroup,
+} from './use-groups'
 
 // Order Assignments
 export {

@@ -22,9 +22,18 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { OrderStatusBadge } from './order-status-badge'
-import type { components } from '@/lib/api/types'
 
-type Order = components['schemas']['Order']
+interface Order {
+  id: string
+  code: string
+  name: string
+  status: string
+  customer?: string | null
+  validFrom?: Date | string | null
+  valid_from?: string | null
+  validTo?: Date | string | null
+  valid_to?: string | null
+}
 
 interface OrderDataTableProps {
   items: Order[]
@@ -93,8 +102,8 @@ export function OrderDataTable({
             <TableCell className="text-sm text-muted-foreground">
               {item.customer || '-'}
             </TableCell>
-            <TableCell className="text-sm">{formatDate(item.valid_from)}</TableCell>
-            <TableCell className="text-sm">{formatDate(item.valid_to)}</TableCell>
+            <TableCell className="text-sm">{formatDate(String(item.validFrom ?? item.valid_from ?? ''))}</TableCell>
+            <TableCell className="text-sm">{formatDate(String(item.validTo ?? item.valid_to ?? ''))}</TableCell>
             <TableCell onClick={(e) => e.stopPropagation()}>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

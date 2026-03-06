@@ -1,28 +1,33 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
-
-interface UseAbsenceTypeGroupsOptions {
-  enabled?: boolean
-}
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
 /**
  * Hook to fetch absence type groups.
  */
-export function useAbsenceTypeGroups(options: UseAbsenceTypeGroupsOptions = {}) {
-  const { enabled = true } = options
-
-  return useApiQuery('/absence-type-groups', {
-    enabled,
-  })
+export function useAbsenceTypeGroups(
+  options: {
+    isActive?: boolean
+    enabled?: boolean
+  } = {}
+) {
+  const { isActive, enabled = true } = options
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.absenceTypeGroups.list.queryOptions({ isActive }, { enabled })
+  )
 }
 
 /**
  * Hook to fetch a single absence type group by ID.
  */
 export function useAbsenceTypeGroup(id: string, enabled = true) {
-  return useApiQuery('/absence-type-groups/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.absenceTypeGroups.getById.queryOptions(
+      { id },
+      { enabled: enabled && !!id }
+    )
+  )
 }
 
 // ==================== Mutation Hooks ====================
@@ -31,8 +36,15 @@ export function useAbsenceTypeGroup(id: string, enabled = true) {
  * Hook to create a new absence type group.
  */
 export function useCreateAbsenceTypeGroup() {
-  return useApiMutation('/absence-type-groups', 'post', {
-    invalidateKeys: [['/absence-type-groups']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.absenceTypeGroups.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.absenceTypeGroups.list.queryKey(),
+      })
+    },
   })
 }
 
@@ -40,8 +52,15 @@ export function useCreateAbsenceTypeGroup() {
  * Hook to update an existing absence type group.
  */
 export function useUpdateAbsenceTypeGroup() {
-  return useApiMutation('/absence-type-groups/{id}', 'patch', {
-    invalidateKeys: [['/absence-type-groups'], ['/absence-type-groups/{id}']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.absenceTypeGroups.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.absenceTypeGroups.list.queryKey(),
+      })
+    },
   })
 }
 
@@ -49,7 +68,14 @@ export function useUpdateAbsenceTypeGroup() {
  * Hook to delete an absence type group.
  */
 export function useDeleteAbsenceTypeGroup() {
-  return useApiMutation('/absence-type-groups/{id}', 'delete', {
-    invalidateKeys: [['/absence-type-groups'], ['/absence-type-groups/{id}']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.absenceTypeGroups.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.absenceTypeGroups.list.queryKey(),
+      })
+    },
   })
 }

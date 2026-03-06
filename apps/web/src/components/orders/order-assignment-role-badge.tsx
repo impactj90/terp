@@ -2,16 +2,15 @@
 
 import { Badge } from '@/components/ui/badge'
 import { useTranslations } from 'next-intl'
-import type { components } from '@/lib/api/types'
 
-type AssignmentRole = components['schemas']['OrderAssignment']['role']
+type AssignmentRole = 'worker' | 'leader' | 'sales'
 
 interface OrderAssignmentRoleBadgeProps {
-  role: AssignmentRole | undefined | null
+  role: string | undefined | null
 }
 
 const roleConfig: Record<
-  NonNullable<AssignmentRole>,
+  AssignmentRole,
   { labelKey: 'roleWorker' | 'roleLeader' | 'roleSales'; className: string }
 > = {
   worker: {
@@ -42,7 +41,7 @@ export function OrderAssignmentRoleBadge({ role }: OrderAssignmentRoleBadgeProps
     )
   }
 
-  const config = roleConfig[role]
+  const config = roleConfig[role as AssignmentRole]
 
   return (
     <Badge variant="secondary" className={config.className}>

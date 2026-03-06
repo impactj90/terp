@@ -1,10 +1,5 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
-
-interface UseOrderAssignmentsOptions {
-  orderId?: string
-  employeeId?: string
-  enabled?: boolean
-}
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
 /**
  * Hook to fetch list of order assignments.
@@ -15,13 +10,21 @@ interface UseOrderAssignmentsOptions {
  * const assignments = data?.data ?? []
  * ```
  */
-export function useOrderAssignments(options: UseOrderAssignmentsOptions = {}) {
+export function useOrderAssignments(
+  options: {
+    orderId?: string
+    employeeId?: string
+    enabled?: boolean
+  } = {}
+) {
   const { orderId, employeeId, enabled = true } = options
-
-  return useApiQuery('/order-assignments', {
-    params: { order_id: orderId, employee_id: employeeId },
-    enabled,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.orderAssignments.list.queryOptions(
+      { orderId, employeeId },
+      { enabled }
+    )
+  )
 }
 
 /**
@@ -33,11 +36,17 @@ export function useOrderAssignments(options: UseOrderAssignmentsOptions = {}) {
  * const assignments = data?.data ?? []
  * ```
  */
-export function useOrderAssignmentsByOrder(orderId: string, enabled = true) {
-  return useApiQuery('/orders/{id}/assignments', {
-    path: { id: orderId },
-    enabled: enabled && !!orderId,
-  })
+export function useOrderAssignmentsByOrder(
+  orderId: string,
+  enabled = true
+) {
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.orderAssignments.byOrder.queryOptions(
+      { orderId },
+      { enabled: enabled && !!orderId }
+    )
+  )
 }
 
 /**
@@ -49,26 +58,68 @@ export function useOrderAssignmentsByOrder(orderId: string, enabled = true) {
  * ```
  */
 export function useOrderAssignment(id: string, enabled = true) {
-  return useApiQuery('/order-assignments/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.orderAssignments.getById.queryOptions(
+      { id },
+      { enabled: enabled && !!id }
+    )
+  )
 }
 
 export function useCreateOrderAssignment() {
-  return useApiMutation('/order-assignments', 'post', {
-    invalidateKeys: [['/order-assignments'], ['/orders']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.orderAssignments.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.orderAssignments.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.orderAssignments.byOrder.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.orders.list.queryKey(),
+      })
+    },
   })
 }
 
 export function useUpdateOrderAssignment() {
-  return useApiMutation('/order-assignments/{id}', 'patch', {
-    invalidateKeys: [['/order-assignments'], ['/orders']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.orderAssignments.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.orderAssignments.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.orderAssignments.byOrder.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.orders.list.queryKey(),
+      })
+    },
   })
 }
 
 export function useDeleteOrderAssignment() {
-  return useApiMutation('/order-assignments/{id}', 'delete', {
-    invalidateKeys: [['/order-assignments'], ['/orders']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.orderAssignments.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.orderAssignments.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.orderAssignments.byOrder.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.orders.list.queryKey(),
+      })
+    },
   })
 }

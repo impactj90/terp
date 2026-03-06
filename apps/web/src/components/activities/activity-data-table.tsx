@@ -21,9 +21,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { components } from '@/lib/api/types'
 
-type ActivityType = components['schemas']['Activity']
+interface ActivityType {
+  id: string
+  code: string
+  name: string
+  description?: string | null
+  isActive?: boolean
+  is_active?: boolean
+}
 
 interface ActivityDataTableProps {
   items: ActivityType[]
@@ -77,8 +83,8 @@ export function ActivityDataTable({
               {item.description || '-'}
             </TableCell>
             <TableCell>
-              <Badge variant={item.is_active ? 'default' : 'secondary'}>
-                {item.is_active ? t('statusActive') : t('statusInactive')}
+              <Badge variant={(item.isActive ?? item.is_active) ? 'default' : 'secondary'}>
+                {(item.isActive ?? item.is_active) ? t('statusActive') : t('statusInactive')}
               </Badge>
             </TableCell>
             <TableCell onClick={(e) => e.stopPropagation()}>

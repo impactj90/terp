@@ -30,7 +30,17 @@ import {
 } from '@/components/orders'
 import type { components } from '@/lib/api/types'
 
-type OrderAssignment = components['schemas']['OrderAssignment']
+interface OrderAssignment {
+  id: string
+  employeeId?: string
+  employee_id?: string
+  role: string
+  validFrom?: Date | string | null
+  valid_from?: string | null
+  validTo?: Date | string | null
+  valid_to?: string | null
+}
+
 type OrderBooking = components['schemas']['OrderBooking']
 
 export default function OrderDetailPage() {
@@ -56,8 +66,10 @@ export default function OrderDetailPage() {
 
   // Booking state
   const [bookingFormOpen, setBookingFormOpen] = React.useState(false)
-  const [editBooking, setEditBooking] = React.useState<OrderBooking | null>(null)
-  const [deleteBooking, setDeleteBooking] = React.useState<OrderBooking | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [editBooking, setEditBooking] = React.useState<any>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [deleteBooking, setDeleteBooking] = React.useState<any>(null)
   const deleteBookingMutation = useDeleteOrderBooking()
 
   // Fetch assignments and bookings
@@ -83,7 +95,7 @@ export default function OrderDetailPage() {
   const handleConfirmDeleteOrder = async () => {
     if (!order) return
     try {
-      await deleteMutation.mutateAsync({ path: { id: order.id } })
+      await deleteMutation.mutateAsync({ id: order.id })
       router.push('/admin/orders')
     } catch {
       // Error handled by mutation
@@ -93,7 +105,7 @@ export default function OrderDetailPage() {
   const handleConfirmDeleteAssignment = async () => {
     if (!deleteAssignment) return
     try {
-      await deleteAssignmentMutation.mutateAsync({ path: { id: deleteAssignment.id } })
+      await deleteAssignmentMutation.mutateAsync({ id: deleteAssignment.id })
       setDeleteAssignment(null)
     } catch {
       // Error handled by mutation
@@ -110,7 +122,7 @@ export default function OrderDetailPage() {
     }
   }
 
-  const formatDate = (date: string | undefined | null) => {
+  const formatDate = (date: string | Date | undefined | null) => {
     if (!date) return '-'
     return format(new Date(date), 'dd.MM.yyyy')
   }
@@ -191,8 +203,8 @@ export default function OrderDetailPage() {
               <CardContent className="pt-6">
                 <h3 className="text-sm font-medium text-muted-foreground mb-4">{t('sectionValidity')}</h3>
                 <div className="space-y-3">
-                  <DetailRow label={t('fieldValidFrom')} value={formatDate(order.valid_from)} />
-                  <DetailRow label={t('fieldValidTo')} value={formatDate(order.valid_to)} />
+                  <DetailRow label={t('fieldValidFrom')} value={formatDate(order.validFrom)} />
+                  <DetailRow label={t('fieldValidTo')} value={formatDate(order.validTo)} />
                 </div>
               </CardContent>
             </Card>
@@ -204,11 +216,11 @@ export default function OrderDetailPage() {
                 <div className="space-y-3">
                   <DetailRow
                     label={t('fieldBillingRate')}
-                    value={order.billing_rate_per_hour ? `${order.billing_rate_per_hour.toFixed(2)}` : undefined}
+                    value={order.billingRatePerHour ? `${Number(order.billingRatePerHour).toFixed(2)}` : undefined}
                   />
                   <DetailRow
                     label={t('fieldCostCenter')}
-                    value={order.cost_center_id ? order.cost_center_id : undefined}
+                    value={order.costCenter ? `${order.costCenter.code} - ${order.costCenter.name}` : undefined}
                   />
                 </div>
               </CardContent>
@@ -313,7 +325,7 @@ export default function OrderDetailPage() {
         open={!!deleteAssignment}
         onOpenChange={(open) => { if (!open) setDeleteAssignment(null) }}
         title={t('deleteAssignment')}
-        description={t('deleteDescription', { name: `${deleteAssignment?.employee_id}` })}
+        description={t('deleteDescription', { name: deleteAssignment?.employeeId ?? deleteAssignment?.employee_id ?? '' })}
         confirmLabel={t('delete')}
         variant="destructive"
         isLoading={deleteAssignmentMutation.isPending}

@@ -1,10 +1,5 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
-
-interface UseOrdersOptions {
-  active?: boolean
-  status?: 'planned' | 'active' | 'completed' | 'cancelled'
-  enabled?: boolean
-}
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
 /**
  * Hook to fetch list of orders.
@@ -15,13 +10,18 @@ interface UseOrdersOptions {
  * const orders = data?.data ?? []
  * ```
  */
-export function useOrders(options: UseOrdersOptions = {}) {
-  const { active, status, enabled = true } = options
-
-  return useApiQuery('/orders', {
-    params: { active, status },
-    enabled,
-  })
+export function useOrders(
+  options: {
+    isActive?: boolean
+    status?: string
+    enabled?: boolean
+  } = {}
+) {
+  const { isActive, status, enabled = true } = options
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.orders.list.queryOptions({ isActive, status }, { enabled })
+  )
 }
 
 /**
@@ -33,26 +33,47 @@ export function useOrders(options: UseOrdersOptions = {}) {
  * ```
  */
 export function useOrder(id: string, enabled = true) {
-  return useApiQuery('/orders/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.orders.getById.queryOptions({ id }, { enabled: enabled && !!id })
+  )
 }
 
 export function useCreateOrder() {
-  return useApiMutation('/orders', 'post', {
-    invalidateKeys: [['/orders']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.orders.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.orders.list.queryKey(),
+      })
+    },
   })
 }
 
 export function useUpdateOrder() {
-  return useApiMutation('/orders/{id}', 'patch', {
-    invalidateKeys: [['/orders']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.orders.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.orders.list.queryKey(),
+      })
+    },
   })
 }
 
 export function useDeleteOrder() {
-  return useApiMutation('/orders/{id}', 'delete', {
-    invalidateKeys: [['/orders']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.orders.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.orders.list.queryKey(),
+      })
+    },
   })
 }

@@ -26,9 +26,16 @@ import {
   useUpdateOrderAssignment,
   useEmployees,
 } from '@/hooks/api'
-import type { components } from '@/lib/api/types'
-
-type OrderAssignment = components['schemas']['OrderAssignment']
+interface OrderAssignment {
+  id: string
+  employeeId?: string
+  employee_id?: string
+  role: string
+  validFrom?: Date | string | null
+  valid_from?: string | null
+  validTo?: Date | string | null
+  valid_to?: string | null
+}
 
 interface OrderAssignmentFormDialogProps {
   open: boolean
@@ -66,17 +73,20 @@ export function OrderAssignmentFormDialog({
 
   const createMutation = useCreateOrderAssignment()
   const updateMutation = useUpdateOrderAssignment()
-  const { data: employeesData } = useEmployees({ active: true, enabled: open })
-  const employees = employeesData?.data ?? []
+  const { data: employeesData } = useEmployees({ isActive: true, enabled: open })
+  const employees = employeesData?.items ?? []
 
   React.useEffect(() => {
     if (open) {
       if (assignment) {
+        const empId = assignment.employeeId ?? assignment.employee_id ?? ''
+        const vFrom = assignment.validFrom ?? assignment.valid_from
+        const vTo = assignment.validTo ?? assignment.valid_to
         setForm({
-          employeeId: assignment.employee_id || '',
-          role: assignment.role || 'worker',
-          validFrom: assignment.valid_from?.split('T')[0] || '',
-          validTo: assignment.valid_to?.split('T')[0] || '',
+          employeeId: empId,
+          role: (assignment.role as FormState['role']) || 'worker',
+          validFrom: vFrom ? String(vFrom).split('T')[0] ?? '' : '',
+          validTo: vTo ? String(vTo).split('T')[0] ?? '' : '',
         })
       } else {
         setForm(INITIAL_STATE)
@@ -96,22 +106,18 @@ export function OrderAssignmentFormDialog({
     try {
       if (isEdit && assignment) {
         await updateMutation.mutateAsync({
-          path: { id: assignment.id },
-          body: {
-            role: form.role,
-            valid_from: form.validFrom || undefined,
-            valid_to: form.validTo || undefined,
-          },
+          id: assignment.id,
+          role: form.role,
+          validFrom: form.validFrom || undefined,
+          validTo: form.validTo || undefined,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            order_id: orderId,
-            employee_id: form.employeeId,
-            role: form.role,
-            valid_from: form.validFrom || undefined,
-            valid_to: form.validTo || undefined,
-          },
+          orderId,
+          employeeId: form.employeeId,
+          role: form.role,
+          validFrom: form.validFrom || undefined,
+          validTo: form.validTo || undefined,
         })
       }
 
@@ -151,7 +157,7 @@ export function OrderAssignmentFormDialog({
                 <SelectItem value="__none__">{t('selectEmployee')}</SelectItem>
                 {employees.map((emp) => (
                   <SelectItem key={emp.id} value={emp.id}>
-                    {emp.first_name} {emp.last_name} ({emp.personnel_number})
+                    {emp.firstName} {emp.lastName} ({emp.personnelNumber})
                   </SelectItem>
                 ))}
               </SelectContent>
