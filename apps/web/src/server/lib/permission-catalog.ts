@@ -214,6 +214,12 @@ export const ALL_PERMISSIONS: Permission[] = [
     "manage",
     "Manage monthly evaluation templates"
   ),
+  p(
+    "vacation_config.manage",
+    "vacation_config",
+    "manage",
+    "Manage vacation configuration including special calculations, calculation groups, capping rules, and exceptions"
+  ),
 ]
 
 // Lookup maps

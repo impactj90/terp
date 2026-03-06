@@ -1,8 +1,9 @@
 # ZMI-TICKET-218: Absence Types
 
-Status: Proposed
+Status: Completed
 Priority: P2
 Owner: TBD
+Completed: 2026-03-06
 
 ## Goal
 tRPC-Router für Absence Types (Abwesenheitstypen) implementieren. Absence Types definieren die verschiedenen Abwesenheitsarten (Urlaub, Krankheit, etc.) mit zugehörigen Berechnungsregeln und sind die Grundlage für das Abwesenheits-Management.
@@ -71,10 +72,10 @@ model AbsenceType {
 - `apps/api/internal/repository/absencetype.go` (113 Zeilen)
 
 ## Acceptance Criteria
-- [ ] AbsenceType CRUD mit Calculation Rule Verknüpfung
-- [ ] Löschung verhindert wenn AbsenceType in Absences verwendet
-- [ ] Frontend-Hooks nutzen tRPC statt fetch
-- [ ] Bestehende Tests portiert
+- [x] AbsenceType CRUD mit Calculation Rule Verknüpfung
+- [x] Löschung verhindert wenn AbsenceType in Absences verwendet
+- [x] Frontend-Hooks nutzen tRPC statt fetch
+- [x] Bestehende Tests portiert
 
 ## Tests
 - Unit-Test: AbsenceType mit CalculationRule erstellen

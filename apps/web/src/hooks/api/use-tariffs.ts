@@ -1,125 +1,118 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
-
-interface UseTariffsOptions {
-  active?: boolean
-  enabled?: boolean
-}
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
 /**
- * Hook to fetch list of tariffs with optional filters.
+ * Hook to fetch list of tariffs (tRPC).
  *
- * @example
- * ```tsx
- * const { data, isLoading } = useTariffs({
- *   active: true,
- * })
- * ```
+ * Supports optional isActive filter.
  */
-export function useTariffs(options: UseTariffsOptions = {}) {
-  const { active, enabled = true } = options
-
-  return useApiQuery('/tariffs', {
-    params: {
-      active,
-    },
-    enabled,
-  })
+export function useTariffs(
+  options: {
+    isActive?: boolean
+    enabled?: boolean
+  } = {}
+) {
+  const { enabled = true, ...input } = options
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.tariffs.list.queryOptions(
+      Object.keys(input).length > 0 ? input : undefined,
+      { enabled }
+    )
+  )
 }
 
 /**
- * Hook to fetch a single tariff by ID with breaks.
- *
- * @example
- * ```tsx
- * const { data: tariff, isLoading } = useTariff(tariffId)
- * ```
+ * Hook to fetch a single tariff by ID with all relations (tRPC).
  */
 export function useTariff(id: string, enabled = true) {
-  return useApiQuery('/tariffs/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.tariffs.getById.queryOptions(
+      { id },
+      { enabled: enabled && !!id }
+    )
+  )
 }
 
+// ==================== Mutation Hooks ====================
+
 /**
- * Hook to create a new tariff.
- *
- * @example
- * ```tsx
- * const createTariff = useCreateTariff()
- * createTariff.mutate({
- *   body: { code: 'TARIFF-001', name: 'Standard Tariff' }
- * })
- * ```
+ * Hook to create a new tariff (tRPC).
  */
 export function useCreateTariff() {
-  return useApiMutation('/tariffs', 'post', {
-    invalidateKeys: [['/tariffs']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.tariffs.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.tariffs.list.queryKey(),
+      })
+    },
   })
 }
 
 /**
- * Hook to update an existing tariff.
- *
- * @example
- * ```tsx
- * const updateTariff = useUpdateTariff()
- * updateTariff.mutate({
- *   path: { id: tariffId },
- *   body: { name: 'Updated Name' }
- * })
- * ```
+ * Hook to update an existing tariff (tRPC).
  */
 export function useUpdateTariff() {
-  return useApiMutation('/tariffs/{id}', 'put', {
-    invalidateKeys: [['/tariffs']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.tariffs.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.tariffs.list.queryKey(),
+      })
+    },
   })
 }
 
 /**
- * Hook to delete a tariff.
- *
- * @example
- * ```tsx
- * const deleteTariff = useDeleteTariff()
- * deleteTariff.mutate({ path: { id: tariffId } })
- * ```
+ * Hook to delete a tariff (tRPC).
  */
 export function useDeleteTariff() {
-  return useApiMutation('/tariffs/{id}', 'delete', {
-    invalidateKeys: [['/tariffs']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.tariffs.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.tariffs.list.queryKey(),
+      })
+    },
   })
 }
 
 /**
- * Hook to add a break to a tariff.
- *
- * @example
- * ```tsx
- * const createBreak = useCreateTariffBreak()
- * createBreak.mutate({
- *   path: { id: tariffId },
- *   body: { break_type: 'minimum', after_work_minutes: 300, duration: 30 }
- * })
- * ```
+ * Hook to add a break to a tariff (tRPC).
  */
 export function useCreateTariffBreak() {
-  return useApiMutation('/tariffs/{id}/breaks', 'post', {
-    invalidateKeys: [['/tariffs']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.tariffs.createBreak.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.tariffs.list.queryKey(),
+      })
+    },
   })
 }
 
 /**
- * Hook to delete a break from a tariff.
- *
- * @example
- * ```tsx
- * const deleteBreak = useDeleteTariffBreak()
- * deleteBreak.mutate({ path: { id: tariffId, breakId: breakId } })
- * ```
+ * Hook to delete a break from a tariff (tRPC).
  */
 export function useDeleteTariffBreak() {
-  return useApiMutation('/tariffs/{id}/breaks/{breakId}', 'delete', {
-    invalidateKeys: [['/tariffs']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.tariffs.deleteBreak.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.tariffs.list.queryKey(),
+      })
+    },
   })
 }

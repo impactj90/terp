@@ -1,6 +1,6 @@
 # ZMI-TICKET-220: Vacation Configuration
 
-Status: Proposed
+Status: Completed
 Priority: P2
 Owner: TBD
 

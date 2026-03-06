@@ -35,6 +35,13 @@ import { calculationRulesRouter } from "./routers/calculationRules"
 import { absenceTypesRouter } from "./routers/absenceTypes"
 import { dayPlansRouter } from "./routers/dayPlans"
 import { weekPlansRouter } from "./routers/weekPlans"
+import { tariffsRouter } from "./routers/tariffs"
+import { vacationSpecialCalcsRouter } from "./routers/vacationSpecialCalcs"
+import { vacationCalcGroupsRouter } from "./routers/vacationCalcGroups"
+import { vacationCappingRulesRouter } from "./routers/vacationCappingRules"
+import { vacationCappingRuleGroupsRouter } from "./routers/vacationCappingRuleGroups"
+import { employeeCappingExceptionsRouter } from "./routers/employeeCappingExceptions"
+import { vacationRouter } from "./routers/vacation"
 
 export const appRouter = createTRPCRouter({
   health: healthRouter,
@@ -65,6 +72,13 @@ export const appRouter = createTRPCRouter({
   absenceTypes: absenceTypesRouter,
   dayPlans: dayPlansRouter,
   weekPlans: weekPlansRouter,
+  tariffs: tariffsRouter,
+  vacationSpecialCalcs: vacationSpecialCalcsRouter,
+  vacationCalcGroups: vacationCalcGroupsRouter,
+  vacationCappingRules: vacationCappingRulesRouter,
+  vacationCappingRuleGroups: vacationCappingRuleGroupsRouter,
+  employeeCappingExceptions: employeeCappingExceptionsRouter,
+  vacation: vacationRouter,
 })
 
 /** Type-only export for client-side inference. */

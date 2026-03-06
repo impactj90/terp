@@ -1,276 +1,434 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
 // ==================== Vacation Special Calculations ====================
 
-interface UseVacationSpecialCalculationsOptions {
-  enabled?: boolean
-}
-
 /**
- * Hook to fetch vacation special calculations.
+ * Hook to fetch vacation special calculations (tRPC).
+ *
+ * Supports optional isActive filter.
  */
-export function useVacationSpecialCalculations(options: UseVacationSpecialCalculationsOptions = {}) {
-  const { enabled = true } = options
-  return useApiQuery('/vacation-special-calculations', { enabled })
+export function useVacationSpecialCalculations(
+  options: { isActive?: boolean; type?: string; enabled?: boolean } = {}
+) {
+  const { enabled = true, ...input } = options
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.vacationSpecialCalcs.list.queryOptions(
+      Object.keys(input).length > 0 ? input : undefined,
+      { enabled }
+    )
+  )
 }
 
 /**
- * Hook to fetch a single vacation special calculation by ID.
+ * Hook to fetch a single vacation special calculation by ID (tRPC).
  */
 export function useVacationSpecialCalculation(id: string, enabled = true) {
-  return useApiQuery('/vacation-special-calculations/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.vacationSpecialCalcs.getById.queryOptions(
+      { id },
+      { enabled: enabled && !!id }
+    )
+  )
 }
 
 /**
- * Hook to create a new vacation special calculation.
+ * Hook to create a new vacation special calculation (tRPC).
  */
 export function useCreateVacationSpecialCalculation() {
-  return useApiMutation('/vacation-special-calculations', 'post', {
-    invalidateKeys: [['/vacation-special-calculations']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.vacationSpecialCalcs.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.vacationSpecialCalcs.list.queryKey(),
+      })
+    },
   })
 }
 
 /**
- * Hook to update an existing vacation special calculation.
+ * Hook to update an existing vacation special calculation (tRPC).
  */
 export function useUpdateVacationSpecialCalculation() {
-  return useApiMutation('/vacation-special-calculations/{id}', 'patch', {
-    invalidateKeys: [['/vacation-special-calculations'], ['/vacation-special-calculations/{id}']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.vacationSpecialCalcs.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.vacationSpecialCalcs.list.queryKey(),
+      })
+    },
   })
 }
 
 /**
- * Hook to delete a vacation special calculation.
+ * Hook to delete a vacation special calculation (tRPC).
  */
 export function useDeleteVacationSpecialCalculation() {
-  return useApiMutation('/vacation-special-calculations/{id}', 'delete', {
-    invalidateKeys: [['/vacation-special-calculations'], ['/vacation-special-calculations/{id}']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.vacationSpecialCalcs.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.vacationSpecialCalcs.list.queryKey(),
+      })
+    },
   })
 }
 
 // ==================== Vacation Calculation Groups ====================
 
-interface UseVacationCalculationGroupsOptions {
-  enabled?: boolean
-}
-
 /**
- * Hook to fetch vacation calculation groups.
+ * Hook to fetch vacation calculation groups (tRPC).
+ *
+ * Supports optional isActive filter.
  */
-export function useVacationCalculationGroups(options: UseVacationCalculationGroupsOptions = {}) {
-  const { enabled = true } = options
-  return useApiQuery('/vacation-calculation-groups', { enabled })
+export function useVacationCalculationGroups(
+  options: { isActive?: boolean; enabled?: boolean } = {}
+) {
+  const trpc = useTRPC()
+  const { enabled = true, ...input } = options
+  return useQuery(
+    trpc.vacationCalcGroups.list.queryOptions(
+      Object.keys(input).length > 0 ? input : undefined,
+      { enabled }
+    )
+  )
 }
 
 /**
- * Hook to fetch a single vacation calculation group by ID.
+ * Hook to fetch a single vacation calculation group by ID (tRPC).
  */
 export function useVacationCalculationGroup(id: string, enabled = true) {
-  return useApiQuery('/vacation-calculation-groups/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.vacationCalcGroups.getById.queryOptions(
+      { id },
+      { enabled: enabled && !!id }
+    )
+  )
 }
 
 /**
- * Hook to create a new vacation calculation group.
+ * Hook to create a new vacation calculation group (tRPC).
  */
 export function useCreateVacationCalculationGroup() {
-  return useApiMutation('/vacation-calculation-groups', 'post', {
-    invalidateKeys: [['/vacation-calculation-groups']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.vacationCalcGroups.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.vacationCalcGroups.list.queryKey(),
+      })
+    },
   })
 }
 
 /**
- * Hook to update an existing vacation calculation group.
+ * Hook to update an existing vacation calculation group (tRPC).
  */
 export function useUpdateVacationCalculationGroup() {
-  return useApiMutation('/vacation-calculation-groups/{id}', 'patch', {
-    invalidateKeys: [['/vacation-calculation-groups'], ['/vacation-calculation-groups/{id}']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.vacationCalcGroups.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.vacationCalcGroups.list.queryKey(),
+      })
+    },
   })
 }
 
 /**
- * Hook to delete a vacation calculation group.
+ * Hook to delete a vacation calculation group (tRPC).
  */
 export function useDeleteVacationCalculationGroup() {
-  return useApiMutation('/vacation-calculation-groups/{id}', 'delete', {
-    invalidateKeys: [['/vacation-calculation-groups'], ['/vacation-calculation-groups/{id}']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.vacationCalcGroups.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.vacationCalcGroups.list.queryKey(),
+      })
+    },
   })
 }
 
 // ==================== Vacation Capping Rules ====================
 
-interface UseVacationCappingRulesOptions {
-  enabled?: boolean
-}
-
 /**
- * Hook to fetch vacation capping rules.
+ * Hook to fetch vacation capping rules (tRPC).
+ *
+ * Supports optional isActive and ruleType filters.
  */
-export function useVacationCappingRules(options: UseVacationCappingRulesOptions = {}) {
-  const { enabled = true } = options
-  return useApiQuery('/vacation-capping-rules', { enabled })
+export function useVacationCappingRules(
+  options: { isActive?: boolean; ruleType?: string; enabled?: boolean } = {}
+) {
+  const trpc = useTRPC()
+  const { enabled = true, ...input } = options
+  return useQuery(
+    trpc.vacationCappingRules.list.queryOptions(
+      Object.keys(input).length > 0 ? input : undefined,
+      { enabled }
+    )
+  )
 }
 
 /**
- * Hook to fetch a single vacation capping rule by ID.
+ * Hook to fetch a single vacation capping rule by ID (tRPC).
  */
 export function useVacationCappingRule(id: string, enabled = true) {
-  return useApiQuery('/vacation-capping-rules/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.vacationCappingRules.getById.queryOptions(
+      { id },
+      { enabled: enabled && !!id }
+    )
+  )
 }
 
 /**
- * Hook to create a new vacation capping rule.
+ * Hook to create a new vacation capping rule (tRPC).
  */
 export function useCreateVacationCappingRule() {
-  return useApiMutation('/vacation-capping-rules', 'post', {
-    invalidateKeys: [['/vacation-capping-rules']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.vacationCappingRules.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.vacationCappingRules.list.queryKey(),
+      })
+    },
   })
 }
 
 /**
- * Hook to update an existing vacation capping rule.
+ * Hook to update an existing vacation capping rule (tRPC).
  */
 export function useUpdateVacationCappingRule() {
-  return useApiMutation('/vacation-capping-rules/{id}', 'patch', {
-    invalidateKeys: [['/vacation-capping-rules'], ['/vacation-capping-rules/{id}']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.vacationCappingRules.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.vacationCappingRules.list.queryKey(),
+      })
+    },
   })
 }
 
 /**
- * Hook to delete a vacation capping rule.
+ * Hook to delete a vacation capping rule (tRPC).
  */
 export function useDeleteVacationCappingRule() {
-  return useApiMutation('/vacation-capping-rules/{id}', 'delete', {
-    invalidateKeys: [['/vacation-capping-rules'], ['/vacation-capping-rules/{id}']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.vacationCappingRules.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.vacationCappingRules.list.queryKey(),
+      })
+    },
   })
 }
 
 // ==================== Vacation Capping Rule Groups ====================
 
-interface UseVacationCappingRuleGroupsOptions {
-  enabled?: boolean
-}
-
 /**
- * Hook to fetch vacation capping rule groups.
+ * Hook to fetch vacation capping rule groups (tRPC).
+ *
+ * Supports optional isActive filter.
  */
-export function useVacationCappingRuleGroups(options: UseVacationCappingRuleGroupsOptions = {}) {
-  const { enabled = true } = options
-  return useApiQuery('/vacation-capping-rule-groups', { enabled })
+export function useVacationCappingRuleGroups(
+  options: { isActive?: boolean; enabled?: boolean } = {}
+) {
+  const trpc = useTRPC()
+  const { enabled = true, ...input } = options
+  return useQuery(
+    trpc.vacationCappingRuleGroups.list.queryOptions(
+      Object.keys(input).length > 0 ? input : undefined,
+      { enabled }
+    )
+  )
 }
 
 /**
- * Hook to fetch a single vacation capping rule group by ID.
+ * Hook to fetch a single vacation capping rule group by ID (tRPC).
  */
 export function useVacationCappingRuleGroup(id: string, enabled = true) {
-  return useApiQuery('/vacation-capping-rule-groups/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.vacationCappingRuleGroups.getById.queryOptions(
+      { id },
+      { enabled: enabled && !!id }
+    )
+  )
 }
 
 /**
- * Hook to create a new vacation capping rule group.
+ * Hook to create a new vacation capping rule group (tRPC).
  */
 export function useCreateVacationCappingRuleGroup() {
-  return useApiMutation('/vacation-capping-rule-groups', 'post', {
-    invalidateKeys: [['/vacation-capping-rule-groups']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.vacationCappingRuleGroups.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.vacationCappingRuleGroups.list.queryKey(),
+      })
+    },
   })
 }
 
 /**
- * Hook to update an existing vacation capping rule group.
+ * Hook to update an existing vacation capping rule group (tRPC).
  */
 export function useUpdateVacationCappingRuleGroup() {
-  return useApiMutation('/vacation-capping-rule-groups/{id}', 'patch', {
-    invalidateKeys: [['/vacation-capping-rule-groups'], ['/vacation-capping-rule-groups/{id}']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.vacationCappingRuleGroups.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.vacationCappingRuleGroups.list.queryKey(),
+      })
+    },
   })
 }
 
 /**
- * Hook to delete a vacation capping rule group.
+ * Hook to delete a vacation capping rule group (tRPC).
  */
 export function useDeleteVacationCappingRuleGroup() {
-  return useApiMutation('/vacation-capping-rule-groups/{id}', 'delete', {
-    invalidateKeys: [['/vacation-capping-rule-groups'], ['/vacation-capping-rule-groups/{id}']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.vacationCappingRuleGroups.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.vacationCappingRuleGroups.list.queryKey(),
+      })
+    },
   })
 }
 
 // ==================== Employee Capping Exceptions ====================
 
-interface UseEmployeeCappingExceptionsOptions {
-  enabled?: boolean
-}
-
 /**
- * Hook to fetch employee capping exceptions.
+ * Hook to fetch employee capping exceptions (tRPC).
+ *
+ * Supports optional employeeId, cappingRuleId, year filters.
  */
-export function useEmployeeCappingExceptions(options: UseEmployeeCappingExceptionsOptions = {}) {
-  const { enabled = true } = options
-  return useApiQuery('/employee-capping-exceptions', { enabled })
+export function useEmployeeCappingExceptions(
+  options: {
+    employeeId?: string
+    cappingRuleId?: string
+    year?: number
+    enabled?: boolean
+  } = {}
+) {
+  const trpc = useTRPC()
+  const { enabled = true, ...input } = options
+  return useQuery(
+    trpc.employeeCappingExceptions.list.queryOptions(
+      Object.keys(input).length > 0 ? input : undefined,
+      { enabled }
+    )
+  )
 }
 
 /**
- * Hook to fetch a single employee capping exception by ID.
+ * Hook to fetch a single employee capping exception by ID (tRPC).
  */
 export function useEmployeeCappingException(id: string, enabled = true) {
-  return useApiQuery('/employee-capping-exceptions/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.employeeCappingExceptions.getById.queryOptions(
+      { id },
+      { enabled: enabled && !!id }
+    )
+  )
 }
 
 /**
- * Hook to create a new employee capping exception.
+ * Hook to create a new employee capping exception (tRPC).
  */
 export function useCreateEmployeeCappingException() {
-  return useApiMutation('/employee-capping-exceptions', 'post', {
-    invalidateKeys: [['/employee-capping-exceptions']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.employeeCappingExceptions.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeCappingExceptions.list.queryKey(),
+      })
+    },
   })
 }
 
 /**
- * Hook to update an existing employee capping exception.
+ * Hook to update an existing employee capping exception (tRPC).
  */
 export function useUpdateEmployeeCappingException() {
-  return useApiMutation('/employee-capping-exceptions/{id}', 'patch', {
-    invalidateKeys: [['/employee-capping-exceptions'], ['/employee-capping-exceptions/{id}']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.employeeCappingExceptions.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeCappingExceptions.list.queryKey(),
+      })
+    },
   })
 }
 
 /**
- * Hook to delete an employee capping exception.
+ * Hook to delete an employee capping exception (tRPC).
  */
 export function useDeleteEmployeeCappingException() {
-  return useApiMutation('/employee-capping-exceptions/{id}', 'delete', {
-    invalidateKeys: [['/employee-capping-exceptions'], ['/employee-capping-exceptions/{id}']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.employeeCappingExceptions.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeCappingExceptions.list.queryKey(),
+      })
+    },
   })
 }
 
 // ==================== Previews ====================
 
 /**
- * Hook to calculate vacation entitlement preview.
+ * Hook to calculate vacation entitlement preview (tRPC).
  */
 export function useVacationEntitlementPreview() {
-  return useApiMutation('/vacation-entitlement/preview', 'post', {
-    invalidateKeys: [],
+  const trpc = useTRPC()
+  return useMutation({
+    ...trpc.vacation.entitlementPreview.mutationOptions(),
   })
 }
 
 /**
- * Hook to calculate vacation carryover preview.
+ * Hook to calculate vacation carryover preview (tRPC).
  */
 export function useVacationCarryoverPreview() {
-  return useApiMutation('/vacation-carryover/preview', 'post', {
-    invalidateKeys: [],
+  const trpc = useTRPC()
+  return useMutation({
+    ...trpc.vacation.carryoverPreview.mutationOptions(),
   })
 }

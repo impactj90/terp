@@ -1,6 +1,6 @@
 # ZMI-TICKET-219: Tariff Configuration
 
-Status: Proposed
+Status: Completed
 Priority: P2
 Owner: TBD
 
