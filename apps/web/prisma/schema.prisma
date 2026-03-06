@@ -55,6 +55,8 @@ model User {
   auditLogs               AuditLog[]
   notifications           Notification[]
   notificationPreferences NotificationPreference[]
+  employeeMessages        EmployeeMessage[]
+  macroExecutionsTriggers MacroExecution[]
 
   // Indexes
   @@unique([tenantId, email], map: "idx_users_tenant_email")
@@ -133,6 +135,12 @@ model Tenant {
   systemSettings              SystemSetting[]
   notifications               Notification[]
   notificationPreferences     NotificationPreference[]
+  shifts                      Shift[]
+  shiftAssignments            ShiftAssignment[]
+  macros                      Macro[]
+  macroAssignments            MacroAssignment[]
+  macroExecutions             MacroExecution[]
+  employeeMessages            EmployeeMessage[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
@@ -578,6 +586,9 @@ model Employee {
   orderAssignments OrderAssignment[]
   cappingExceptions EmployeeCappingException[]
   vacationBalances  VacationBalance[]
+  shiftAssignments  ShiftAssignment[]
+  macroAssignments  MacroAssignment[]
+  messageRecipients EmployeeMessageRecipient[]
 
   // Indexes
   @@unique([tenantId, personnelNumber], map: "employees_tenant_id_personnel_number_key")
@@ -1197,6 +1208,7 @@ model DayPlan {
   breaks     DayPlanBreak[]
   bonuses    DayPlanBonus[]
   tariffDayPlans TariffDayPlan[]
+  shifts     Shift[]
 
   // Reverse relations for WeekPlan
   weekPlanMondays     WeekPlan[] @relation("WeekPlanMonday")
@@ -1381,6 +1393,7 @@ model Tariff {
   employees       Employee[]
   tariffAssignments EmployeeTariffAssignment[]
   vacationCappingRuleGroup VacationCappingRuleGroup? @relation(fields: [vacationCappingRuleGroupId], references: [id], onDelete: SetNull)
+  macroAssignments  MacroAssignment[]
 
   // Indexes
   @@unique([tenantId, code], map: "tariffs_tenant_id_code_key")
@@ -1819,4 +1832,236 @@ model NotificationPreference {
   // Indexes
   @@unique([tenantId, userId], map: "notification_preferences_tenant_id_user_id_key")
   @@map("notification_preferences")
+}
+
+// -----------------------------------------------------------------------------
+// Shift
+// -----------------------------------------------------------------------------
+// Migration: 000076
+//
+// Shift definitions for the planning board.
+// CHECK constraints: DB-level unique(tenant_id, code)
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model Shift {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  code          String    @db.VarChar(50)
+  name          String    @db.VarChar(255)
+  description   String?   @db.Text
+  dayPlanId     String?   @map("day_plan_id") @db.Uuid
+  color         String?   @db.VarChar(7)
+  qualification String?   @db.Text
+  isActive      Boolean   @default(true) @map("is_active")
+  sortOrder     Int       @default(0) @map("sort_order")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  dayPlan          DayPlan?          @relation(fields: [dayPlanId], references: [id], onDelete: SetNull)
+  shiftAssignments ShiftAssignment[]
+
+  // Indexes
+  @@unique([tenantId, code])
+  @@index([tenantId], map: "idx_shifts_tenant")
+  @@index([dayPlanId], map: "idx_shifts_day_plan")
+  @@map("shifts")
+}
+
+// -----------------------------------------------------------------------------
+// ShiftAssignment
+// -----------------------------------------------------------------------------
+// Migration: 000076
+//
+// Employee-to-shift assignments with date ranges.
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model ShiftAssignment {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  employeeId String    @map("employee_id") @db.Uuid
+  shiftId    String    @map("shift_id") @db.Uuid
+  validFrom  DateTime? @map("valid_from") @db.Date
+  validTo    DateTime? @map("valid_to") @db.Date
+  notes      String?   @db.Text
+  isActive   Boolean   @default(true) @map("is_active")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  shift    Shift    @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+
+  // Indexes
+  @@index([tenantId], map: "idx_shift_assignments_tenant")
+  @@index([employeeId], map: "idx_shift_assignments_employee")
+  @@index([shiftId], map: "idx_shift_assignments_shift")
+  @@index([validFrom, validTo], map: "idx_shift_assignments_dates")
+  @@map("shift_assignments")
+}
+
+// -----------------------------------------------------------------------------
+// Macro
+// -----------------------------------------------------------------------------
+// Migration: 000077
+//
+// Macro definitions for weekly and monthly automation actions.
+// CHECK constraints (enforced at DB level only):
+//   - macro_type IN ('weekly', 'monthly')
+//   - action_type IN ('log_message', 'recalculate_target_hours', 'reset_flextime', 'carry_forward_balance')
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model Macro {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  name         String   @db.VarChar(255)
+  description  String?  @db.Text
+  macroType    String   @map("macro_type") @db.VarChar(10)
+  actionType   String   @map("action_type") @db.VarChar(50)
+  actionParams Json     @default("{}") @map("action_params") @db.JsonB
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  assignments MacroAssignment[]
+  executions  MacroExecution[]
+
+  // Indexes
+  @@unique([tenantId, name])
+  @@index([tenantId], map: "idx_macros_tenant")
+  @@index([tenantId, isActive], map: "idx_macros_active")
+  @@index([tenantId, macroType], map: "idx_macros_type")
+  @@map("macros")
+}
+
+// -----------------------------------------------------------------------------
+// MacroAssignment
+// -----------------------------------------------------------------------------
+// Migration: 000077
+//
+// Links macros to tariffs or employees with execution day configuration.
+// CHECK constraints (enforced at DB level only):
+//   - (tariff_id IS NOT NULL AND employee_id IS NULL) OR (tariff_id IS NULL AND employee_id IS NOT NULL)
+//   - execution_day >= 0 AND execution_day <= 31
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model MacroAssignment {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  macroId      String   @map("macro_id") @db.Uuid
+  tariffId     String?  @map("tariff_id") @db.Uuid
+  employeeId   String?  @map("employee_id") @db.Uuid
+  executionDay Int      @map("execution_day")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  macro    Macro     @relation(fields: [macroId], references: [id], onDelete: Cascade)
+  tariff   Tariff?   @relation(fields: [tariffId], references: [id], onDelete: Cascade)
+  employee Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  macroExecutions MacroExecution[]
+
+  // Indexes
+  @@index([tenantId], map: "idx_macro_assignments_tenant")
+  @@index([macroId], map: "idx_macro_assignments_macro")
+  @@index([tariffId], map: "idx_macro_assignments_tariff")
+  @@index([employeeId], map: "idx_macro_assignments_employee")
+  @@index([tenantId, isActive], map: "idx_macro_assignments_active")
+  @@map("macro_assignments")
+}
+
+// -----------------------------------------------------------------------------
+// MacroExecution
+// -----------------------------------------------------------------------------
+// Migration: 000077
+//
+// Execution history for macro runs.
+// CHECK constraints (enforced at DB level only):
+//   - status IN ('pending', 'running', 'completed', 'failed')
+//   - trigger_type IN ('scheduled', 'manual')
+// NOTE: No updatedAt column in the SQL table
+model MacroExecution {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  macroId      String    @map("macro_id") @db.Uuid
+  assignmentId String?   @map("assignment_id") @db.Uuid
+  status       String    @default("pending") @db.VarChar(20)
+  triggerType  String    @default("scheduled") @map("trigger_type") @db.VarChar(20)
+  triggeredBy  String?   @map("triggered_by") @db.Uuid
+  startedAt    DateTime? @map("started_at") @db.Timestamptz(6)
+  completedAt  DateTime? @map("completed_at") @db.Timestamptz(6)
+  result       Json      @default("{}") @db.JsonB
+  errorMessage String?   @map("error_message") @db.Text
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  macro           Macro            @relation(fields: [macroId], references: [id], onDelete: Cascade)
+  assignment      MacroAssignment? @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
+  triggeredByUser User?            @relation(fields: [triggeredBy], references: [id], onDelete: SetNull)
+
+  // Indexes
+  @@index([tenantId], map: "idx_macro_executions_tenant")
+  @@index([macroId], map: "idx_macro_executions_macro")
+  @@index([status], map: "idx_macro_executions_status")
+  @@index([createdAt(sort: Desc)], map: "idx_macro_executions_created")
+  @@map("macro_executions")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeMessage
+// -----------------------------------------------------------------------------
+// Migration: 000070
+//
+// Messages created by users to be sent to employees.
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model EmployeeMessage {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  senderId  String   @map("sender_id") @db.Uuid
+  subject   String   @db.VarChar(255)
+  body      String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant     Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sender     User                       @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  recipients EmployeeMessageRecipient[]
+
+  // Indexes
+  @@index([tenantId], map: "idx_employee_messages_tenant")
+  @@index([senderId], map: "idx_employee_messages_sender")
+  @@index([tenantId, createdAt(sort: Desc)], map: "idx_employee_messages_tenant_created")
+  @@map("employee_messages")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeMessageRecipient
+// -----------------------------------------------------------------------------
+// Migration: 000070
+//
+// Per-recipient delivery status for employee messages.
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model EmployeeMessageRecipient {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  messageId    String    @map("message_id") @db.Uuid
+  employeeId   String    @map("employee_id") @db.Uuid
+  status       String    @default("pending") @db.VarChar(20)
+  sentAt       DateTime? @map("sent_at") @db.Timestamptz(6)
+  errorMessage String?   @map("error_message") @db.Text
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  message  EmployeeMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  employee Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  // Indexes
+  @@index([messageId], map: "idx_emr_message")
+  @@index([employeeId], map: "idx_emr_employee")
+  @@index([status], map: "idx_emr_status")
+  @@map("employee_message_recipients")
 }

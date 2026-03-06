@@ -1,83 +1,187 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+
+// ==================== Macro CRUD Hooks ====================
 
 interface UseMacrosOptions {
   enabled?: boolean
 }
 
-// === Macro CRUD ===
+/**
+ * Hook to fetch list of macros with assignments (tRPC).
+ */
 export function useMacros(options: UseMacrosOptions = {}) {
   const { enabled = true } = options
-  return useApiQuery('/macros', { enabled })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.macros.list.queryOptions(undefined, { enabled })
+  )
 }
 
+/**
+ * Hook to fetch a single macro by ID with assignments (tRPC).
+ */
 export function useMacro(id: string, enabled = true) {
-  return useApiQuery('/macros/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.macros.getById.queryOptions(
+      { id },
+      { enabled: enabled && !!id }
+    )
+  )
 }
 
+/**
+ * Hook to create a new macro (tRPC).
+ */
 export function useCreateMacro() {
-  return useApiMutation('/macros', 'post', {
-    invalidateKeys: [['/macros']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.macros.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.macros.list.queryKey(),
+      })
+    },
   })
 }
 
+/**
+ * Hook to update an existing macro (tRPC).
+ */
 export function useUpdateMacro() {
-  return useApiMutation('/macros/{id}', 'patch', {
-    invalidateKeys: [['/macros']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.macros.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.macros.list.queryKey(),
+      })
+    },
   })
 }
 
+/**
+ * Hook to delete a macro (tRPC).
+ */
 export function useDeleteMacro() {
-  return useApiMutation('/macros/{id}', 'delete', {
-    invalidateKeys: [['/macros']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.macros.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.macros.list.queryKey(),
+      })
+    },
   })
 }
 
-// === Macro Assignments ===
+// ==================== Assignment Hooks ====================
+
+/**
+ * Hook to fetch assignments for a macro (tRPC).
+ */
 export function useMacroAssignments(macroId: string, enabled = true) {
-  return useApiQuery('/macros/{id}/assignments', {
-    path: { id: macroId },
-    enabled: enabled && !!macroId,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.macros.listAssignments.queryOptions(
+      { macroId },
+      { enabled: enabled && !!macroId }
+    )
+  )
 }
 
+/**
+ * Hook to create a new macro assignment (tRPC).
+ */
 export function useCreateMacroAssignment() {
-  return useApiMutation('/macros/{id}/assignments', 'post', {
-    invalidateKeys: [['/macros']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.macros.createAssignment.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.macros.list.queryKey(),
+      })
+    },
   })
 }
 
+/**
+ * Hook to update an existing macro assignment (tRPC).
+ */
 export function useUpdateMacroAssignment() {
-  return useApiMutation('/macros/{id}/assignments/{assignmentId}', 'patch', {
-    invalidateKeys: [['/macros']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.macros.updateAssignment.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.macros.list.queryKey(),
+      })
+    },
   })
 }
 
+/**
+ * Hook to delete a macro assignment (tRPC).
+ */
 export function useDeleteMacroAssignment() {
-  return useApiMutation('/macros/{id}/assignments/{assignmentId}', 'delete', {
-    invalidateKeys: [['/macros']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.macros.deleteAssignment.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.macros.list.queryKey(),
+      })
+    },
   })
 }
 
-// === Macro Execution ===
+// ==================== Execution Hooks ====================
+
+/**
+ * Hook to manually execute a macro (tRPC).
+ */
 export function useExecuteMacro() {
-  return useApiMutation('/macros/{id}/execute', 'post', {
-    invalidateKeys: [['/macros']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.macros.triggerExecution.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.macros.list.queryKey(),
+      })
+    },
   })
 }
 
+/**
+ * Hook to fetch execution history for a macro (tRPC).
+ */
 export function useMacroExecutions(macroId: string, enabled = true) {
-  return useApiQuery('/macros/{id}/executions', {
-    path: { id: macroId },
-    enabled: enabled && !!macroId,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.macros.listExecutions.queryOptions(
+      { macroId },
+      { enabled: enabled && !!macroId }
+    )
+  )
 }
 
+/**
+ * Hook to fetch a single macro execution (tRPC).
+ */
 export function useMacroExecution(id: string, enabled = true) {
-  return useApiQuery('/macro-executions/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.macros.getExecution.queryOptions(
+      { id },
+      { enabled: enabled && !!id }
+    )
+  )
 }

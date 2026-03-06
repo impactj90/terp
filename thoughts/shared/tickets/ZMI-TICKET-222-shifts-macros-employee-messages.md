@@ -1,6 +1,6 @@
 # ZMI-TICKET-222: Shifts, Macros Config, Employee Messages
 
-Status: Proposed
+Status: Completed
 Priority: P2
 Owner: TBD
 

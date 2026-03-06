@@ -1,54 +1,82 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
-// ==================== Shifts ====================
+// ==================== Query Hooks ====================
 
 interface UseShiftsOptions {
   enabled?: boolean
 }
 
 /**
- * Hook to fetch shifts.
+ * Hook to fetch shifts (tRPC).
  */
 export function useShifts(options: UseShiftsOptions = {}) {
   const { enabled = true } = options
-  return useApiQuery('/shifts', { enabled })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.shifts.list.queryOptions(undefined, { enabled })
+  )
 }
 
 /**
- * Hook to fetch a single shift by ID.
+ * Hook to fetch a single shift by ID (tRPC).
  */
 export function useShift(id: string, enabled = true) {
-  return useApiQuery('/shifts/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.shifts.getById.queryOptions(
+      { id },
+      { enabled: enabled && !!id }
+    )
+  )
 }
 
-// ==================== Shift Mutation Hooks ====================
+// ==================== Mutation Hooks ====================
 
 /**
- * Hook to create a new shift.
+ * Hook to create a new shift (tRPC).
  */
 export function useCreateShift() {
-  return useApiMutation('/shifts', 'post', {
-    invalidateKeys: [['/shifts']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.shifts.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.shifts.list.queryKey(),
+      })
+    },
   })
 }
 
 /**
- * Hook to update an existing shift.
+ * Hook to update an existing shift (tRPC).
  */
 export function useUpdateShift() {
-  return useApiMutation('/shifts/{id}', 'patch', {
-    invalidateKeys: [['/shifts'], ['/shifts/{id}']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.shifts.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.shifts.list.queryKey(),
+      })
+    },
   })
 }
 
 /**
- * Hook to delete a shift.
+ * Hook to delete a shift (tRPC).
  */
 export function useDeleteShift() {
-  return useApiMutation('/shifts/{id}', 'delete', {
-    invalidateKeys: [['/shifts'], ['/shifts/{id}']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.shifts.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.shifts.list.queryKey(),
+      })
+    },
   })
 }
