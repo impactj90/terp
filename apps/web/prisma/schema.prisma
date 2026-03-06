@@ -141,6 +141,9 @@ model Tenant {
   macroAssignments            MacroAssignment[]
   macroExecutions             MacroExecution[]
   employeeMessages            EmployeeMessage[]
+  accessZones                 AccessZone[]
+  accessProfiles              AccessProfile[]
+  employeeAccessAssignments   EmployeeAccessAssignment[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
@@ -589,6 +592,7 @@ model Employee {
   shiftAssignments  ShiftAssignment[]
   macroAssignments  MacroAssignment[]
   messageRecipients EmployeeMessageRecipient[]
+  accessAssignments EmployeeAccessAssignment[]
 
   // Indexes
   @@unique([tenantId, personnelNumber], map: "employees_tenant_id_personnel_number_key")
@@ -2064,4 +2068,88 @@ model EmployeeMessageRecipient {
   @@index([employeeId], map: "idx_emr_employee")
   @@index([status], map: "idx_emr_status")
   @@map("employee_message_recipients")
+}
+
+// -----------------------------------------------------------------------------
+// AccessZone
+// -----------------------------------------------------------------------------
+// Migration: 000073
+//
+// Physical access zone/area definition.
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model AccessZone {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  code        String   @db.VarChar(50)
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Indexes
+  @@unique([tenantId, code])
+  @@index([tenantId], map: "idx_access_zones_tenant")
+  @@map("access_zones")
+}
+
+// -----------------------------------------------------------------------------
+// AccessProfile
+// -----------------------------------------------------------------------------
+// Migration: 000073
+//
+// Named access profile grouping access permissions.
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model AccessProfile {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  code        String   @db.VarChar(50)
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant                    Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employeeAccessAssignments EmployeeAccessAssignment[]
+
+  // Indexes
+  @@unique([tenantId, code])
+  @@index([tenantId], map: "idx_access_profiles_tenant")
+  @@map("access_profiles")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeAccessAssignment
+// -----------------------------------------------------------------------------
+// Migration: 000073
+//
+// Links an employee to an access profile with optional validity period.
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model EmployeeAccessAssignment {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  employeeId      String    @map("employee_id") @db.Uuid
+  accessProfileId String    @map("access_profile_id") @db.Uuid
+  validFrom       DateTime? @map("valid_from") @db.Date
+  validTo         DateTime? @map("valid_to") @db.Date
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee      Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  accessProfile AccessProfile @relation(fields: [accessProfileId], references: [id], onDelete: Cascade)
+
+  // Indexes
+  @@index([tenantId], map: "idx_employee_access_assignments_tenant")
+  @@index([employeeId], map: "idx_employee_access_assignments_employee")
+  @@index([accessProfileId], map: "idx_employee_access_assignments_profile")
+  @@map("employee_access_assignments")
 }

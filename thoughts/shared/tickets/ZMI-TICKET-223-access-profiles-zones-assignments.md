@@ -1,6 +1,6 @@
 # ZMI-TICKET-223: Access Profiles, Zones, Assignments
 
-Status: Proposed
+Status: Completed
 Priority: P2
 Owner: TBD
 

@@ -48,6 +48,9 @@ import { notificationsRouter } from "./routers/notifications"
 import { shiftsRouter } from "./routers/shifts"
 import { macrosRouter } from "./routers/macros"
 import { employeeMessagesRouter } from "./routers/employeeMessages"
+import { accessZonesRouter } from "./routers/accessZones"
+import { accessProfilesRouter } from "./routers/accessProfiles"
+import { employeeAccessAssignmentsRouter } from "./routers/employeeAccessAssignments"
 
 export const appRouter = createTRPCRouter({
   health: healthRouter,
@@ -91,6 +94,9 @@ export const appRouter = createTRPCRouter({
   shifts: shiftsRouter,
   macros: macrosRouter,
   employeeMessages: employeeMessagesRouter,
+  accessZones: accessZonesRouter,
+  accessProfiles: accessProfilesRouter,
+  employeeAccessAssignments: employeeAccessAssignmentsRouter,
 })
 
 /** Type-only export for client-side inference. */

@@ -1,4 +1,5 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
 // --- Access Zones ---
 
@@ -6,33 +7,75 @@ interface UseAccessZonesOptions {
   enabled?: boolean
 }
 
+/**
+ * Hook to fetch access zones (tRPC).
+ */
 export function useAccessZones(options: UseAccessZonesOptions = {}) {
   const { enabled = true } = options
-  return useApiQuery('/access-zones', { enabled })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.accessZones.list.queryOptions(undefined, { enabled })
+  )
 }
 
+/**
+ * Hook to fetch a single access zone by ID (tRPC).
+ */
 export function useAccessZone(id: string, enabled = true) {
-  return useApiQuery('/access-zones/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.accessZones.getById.queryOptions(
+      { id },
+      { enabled: enabled && !!id }
+    )
+  )
 }
 
+/**
+ * Hook to create a new access zone (tRPC).
+ */
 export function useCreateAccessZone() {
-  return useApiMutation('/access-zones', 'post', {
-    invalidateKeys: [['/access-zones']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.accessZones.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.accessZones.list.queryKey(),
+      })
+    },
   })
 }
 
+/**
+ * Hook to update an existing access zone (tRPC).
+ */
 export function useUpdateAccessZone() {
-  return useApiMutation('/access-zones/{id}', 'patch', {
-    invalidateKeys: [['/access-zones']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.accessZones.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.accessZones.list.queryKey(),
+      })
+    },
   })
 }
 
+/**
+ * Hook to delete an access zone (tRPC).
+ */
 export function useDeleteAccessZone() {
-  return useApiMutation('/access-zones/{id}', 'delete', {
-    invalidateKeys: [['/access-zones']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.accessZones.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.accessZones.list.queryKey(),
+      })
+    },
   })
 }
 
@@ -42,33 +85,75 @@ interface UseAccessProfilesOptions {
   enabled?: boolean
 }
 
+/**
+ * Hook to fetch access profiles (tRPC).
+ */
 export function useAccessProfiles(options: UseAccessProfilesOptions = {}) {
   const { enabled = true } = options
-  return useApiQuery('/access-profiles', { enabled })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.accessProfiles.list.queryOptions(undefined, { enabled })
+  )
 }
 
+/**
+ * Hook to fetch a single access profile by ID (tRPC).
+ */
 export function useAccessProfile(id: string, enabled = true) {
-  return useApiQuery('/access-profiles/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.accessProfiles.getById.queryOptions(
+      { id },
+      { enabled: enabled && !!id }
+    )
+  )
 }
 
+/**
+ * Hook to create a new access profile (tRPC).
+ */
 export function useCreateAccessProfile() {
-  return useApiMutation('/access-profiles', 'post', {
-    invalidateKeys: [['/access-profiles']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.accessProfiles.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.accessProfiles.list.queryKey(),
+      })
+    },
   })
 }
 
+/**
+ * Hook to update an existing access profile (tRPC).
+ */
 export function useUpdateAccessProfile() {
-  return useApiMutation('/access-profiles/{id}', 'patch', {
-    invalidateKeys: [['/access-profiles']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.accessProfiles.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.accessProfiles.list.queryKey(),
+      })
+    },
   })
 }
 
+/**
+ * Hook to delete an access profile (tRPC).
+ */
 export function useDeleteAccessProfile() {
-  return useApiMutation('/access-profiles/{id}', 'delete', {
-    invalidateKeys: [['/access-profiles']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.accessProfiles.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.accessProfiles.list.queryKey(),
+      })
+    },
   })
 }
 
@@ -78,27 +163,65 @@ interface UseEmployeeAccessAssignmentsOptions {
   enabled?: boolean
 }
 
-export function useEmployeeAccessAssignments(options: UseEmployeeAccessAssignmentsOptions = {}) {
+/**
+ * Hook to fetch employee access assignments (tRPC).
+ */
+export function useEmployeeAccessAssignments(
+  options: UseEmployeeAccessAssignmentsOptions = {}
+) {
   const { enabled = true } = options
-  return useApiQuery('/employee-access-assignments', {
-    enabled,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.employeeAccessAssignments.list.queryOptions(undefined, {
+      enabled,
+    })
+  )
 }
 
+/**
+ * Hook to create a new employee access assignment (tRPC).
+ */
 export function useCreateEmployeeAccessAssignment() {
-  return useApiMutation('/employee-access-assignments', 'post', {
-    invalidateKeys: [['/employee-access-assignments']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.employeeAccessAssignments.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeAccessAssignments.list.queryKey(),
+      })
+    },
   })
 }
 
+/**
+ * Hook to update an existing employee access assignment (tRPC).
+ */
 export function useUpdateEmployeeAccessAssignment() {
-  return useApiMutation('/employee-access-assignments/{id}', 'patch', {
-    invalidateKeys: [['/employee-access-assignments']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.employeeAccessAssignments.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeAccessAssignments.list.queryKey(),
+      })
+    },
   })
 }
 
+/**
+ * Hook to delete an employee access assignment (tRPC).
+ */
 export function useDeleteEmployeeAccessAssignment() {
-  return useApiMutation('/employee-access-assignments/{id}', 'delete', {
-    invalidateKeys: [['/employee-access-assignments']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.employeeAccessAssignments.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeAccessAssignments.list.queryKey(),
+      })
+    },
   })
 }
