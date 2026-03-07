@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -22,14 +21,12 @@ import (
 // NotificationHandler handles notification-related HTTP requests.
 type NotificationHandler struct {
 	notificationService *service.NotificationService
-	streamHub           *service.NotificationStreamHub
 }
 
 // NewNotificationHandler creates a new NotificationHandler instance.
-func NewNotificationHandler(notificationService *service.NotificationService, streamHub *service.NotificationStreamHub) *NotificationHandler {
+func NewNotificationHandler(notificationService *service.NotificationService) *NotificationHandler {
 	return &NotificationHandler{
 		notificationService: notificationService,
-		streamHub:           streamHub,
 	}
 }
 
@@ -250,60 +247,6 @@ func (h *NotificationHandler) UpdatePreferences(w http.ResponseWriter, r *http.R
 	}
 
 	respondJSON(w, http.StatusOK, h.preferencesToResponse(prefs))
-}
-
-// Stream handles GET /notifications/stream
-func (h *NotificationHandler) Stream(w http.ResponseWriter, r *http.Request) {
-	_, ok := middleware.TenantFromContext(r.Context())
-	if !ok {
-		respondError(w, http.StatusUnauthorized, "Tenant required")
-		return
-	}
-
-	user, ok := auth.UserFromContext(r.Context())
-	if !ok {
-		respondError(w, http.StatusUnauthorized, "User required")
-		return
-	}
-
-	if h.streamHub == nil {
-		respondError(w, http.StatusInternalServerError, "Notification stream unavailable")
-		return
-	}
-
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		respondError(w, http.StatusInternalServerError, "Streaming unsupported")
-		return
-	}
-
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("X-Accel-Buffering", "no")
-
-	client := h.streamHub.Subscribe(user.ID)
-	defer h.streamHub.Unsubscribe(user.ID, client)
-
-	heartbeat := time.NewTicker(10 * time.Second)
-	defer heartbeat.Stop()
-
-	for {
-		select {
-		case <-r.Context().Done():
-			return
-		case event, ok := <-client.Events:
-			if !ok {
-				return
-			}
-			_, _ = fmt.Fprintf(w, "event: %s\n", event.Event)
-			_, _ = fmt.Fprintf(w, "data: %s\n\n", event.Data)
-			flusher.Flush()
-		case <-heartbeat.C:
-			_, _ = fmt.Fprint(w, ": ping\n\n")
-			flusher.Flush()
-		}
-	}
 }
 
 func (h *NotificationHandler) notificationToResponse(notification *model.Notification) *models.Notification {

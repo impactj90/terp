@@ -1,6 +1,6 @@
 # ZMI-TICKET-230: Supabase Realtime ersetzt SSE NotificationStreamHub
 
-Status: Proposed
+Status: Completed
 Priority: P3
 Owner: TBD
 

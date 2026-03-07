@@ -129,9 +129,6 @@ func main() {
 	orderService := service.NewOrderService(orderRepo)
 	orderAssignmentService := service.NewOrderAssignmentService(orderAssignmentRepo)
 	orderBookingService := service.NewOrderBookingService(orderBookingRepo)
-	notificationStreamHub := service.NewNotificationStreamHub()
-	notificationService.SetStreamHub(notificationStreamHub)
-
 	bookingReasonRepo := repository.NewBookingReasonRepository(db)
 	bookingTypeGroupRepo := repository.NewBookingTypeGroupRepository(db)
 	accountGroupRepo := repository.NewAccountGroupRepository(db)
@@ -295,7 +292,7 @@ func main() {
 	dailyValueHandler := handler.NewDailyValueHandler(dailyValueService, employeeService)
 	dailyValueHandler.SetRecalcService(recalcService)
 	dailyAccountValueHandler := handler.NewDailyAccountValueHandler(dailyAccountValueService)
-	notificationHandler := handler.NewNotificationHandler(notificationService, notificationStreamHub)
+	notificationHandler := handler.NewNotificationHandler(notificationService)
 	permissionHandler := handler.NewPermissionHandler()
 	auditLogHandler := handler.NewAuditLogHandler(auditLogService)
 	bookingReasonService := service.NewBookingReasonService(bookingReasonRepo)
@@ -594,14 +591,6 @@ func main() {
 			})
 		})
 
-		// SSE stream routes — auth + tenant but NO Timeout middleware
-		// (chi's Timeout buffers the entire response, which breaks SSE streaming)
-		r.Group(func(r chi.Router) {
-			r.Use(middleware.AuthMiddleware(jwtManager))
-			r.Use(tenantMiddleware.RequireTenant)
-			handler.RegisterNotificationStreamRoute(r, notificationHandler, authzMiddleware)
-		})
-
 		// API info
 		r.Get("/", func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
@@ -614,7 +603,7 @@ func main() {
 		Addr:         ":" + cfg.Port,
 		Handler:      r,
 		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 0, // Disabled: per-request timeouts handled by chi middleware; SSE streams need long-lived connections
+		WriteTimeout: 0, // Disabled: per-request timeouts handled by chi middleware (SSE removed in TICKET-230; consider setting a value)
 		IdleTimeout:  60 * time.Second,
 	}
 

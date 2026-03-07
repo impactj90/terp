@@ -299,23 +299,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/notifications/stream": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Stream notifications for the current user */
-        get: operations["streamNotifications"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/notification-preferences": {
         parameters: {
             query?: never;
@@ -11165,26 +11148,6 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["MarkNotificationsReadResponse"];
                 };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-        };
-    };
-    streamNotifications: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Server-sent events stream */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];

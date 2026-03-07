@@ -224,8 +224,6 @@ paths:
     $ref: 'paths/notifications.yaml#/~1notifications~1{id}~1read'
   /notifications/read-all:
     $ref: 'paths/notifications.yaml#/~1notifications~1read-all'
-  /notifications/stream:
-    $ref: 'paths/notifications.yaml#/~1notifications~1stream'
   /notification-preferences:
     $ref: 'paths/notifications.yaml#/~1notification-preferences'
 

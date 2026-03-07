@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -20,7 +19,6 @@ type NotificationService struct {
 	preferencesRepo  *repository.NotificationPreferencesRepository
 	userRepo         notificationUserRepository
 	employeeRepo     notificationEmployeeRepository
-	streamHub        *NotificationStreamHub
 }
 
 type notificationUserRepository interface {
@@ -45,11 +43,6 @@ func NewNotificationService(
 		userRepo:         userRepo,
 		employeeRepo:     employeeRepo,
 	}
-}
-
-// SetStreamHub attaches a stream hub for real-time events.
-func (s *NotificationService) SetStreamHub(hub *NotificationStreamHub) {
-	s.streamHub = hub
 }
 
 // NotificationListParams defines filters for listing notifications.
@@ -123,8 +116,6 @@ func (s *NotificationService) Create(ctx context.Context, input CreateNotificati
 	if err := s.notificationRepo.Create(ctx, notification); err != nil {
 		return nil, err
 	}
-
-	s.publishEvent(notification.UserID, "notification.created", notification)
 
 	return notification, nil
 }
@@ -255,11 +246,6 @@ func (s *NotificationService) MarkRead(ctx context.Context, tenantID, userID, no
 		return nil, err
 	}
 
-	s.publishEvent(userID, "notification.read", map[string]any{
-		"id":      notification.ID,
-		"read_at": notification.ReadAt,
-	})
-
 	return notification, nil
 }
 
@@ -269,12 +255,6 @@ func (s *NotificationService) MarkAllRead(ctx context.Context, tenantID, userID 
 	count, err := s.notificationRepo.MarkAllRead(ctx, tenantID, userID, now)
 	if err != nil {
 		return 0, err
-	}
-
-	if count > 0 {
-		s.publishEvent(userID, "notification.read_all", map[string]any{
-			"read_at": now,
-		})
 	}
 
 	return count, nil
@@ -311,20 +291,4 @@ func (s *NotificationService) getOrCreatePreferences(ctx context.Context, tenant
 	}
 
 	return s.preferencesRepo.Upsert(ctx, defaults)
-}
-
-func (s *NotificationService) publishEvent(userID uuid.UUID, event string, payload any) {
-	if s.streamHub == nil {
-		return
-	}
-
-	data, err := json.Marshal(payload)
-	if err != nil {
-		return
-	}
-
-	s.streamHub.Publish(userID, NotificationStreamEvent{
-		Event: event,
-		Data:  data,
-	})
 }

@@ -641,17 +641,6 @@ func RegisterNotificationRoutes(r chi.Router, h *NotificationHandler, authz *mid
 	})
 }
 
-// RegisterNotificationStreamRoute registers the SSE stream endpoint separately
-// so it can be mounted without chi's Timeout middleware (which buffers responses).
-func RegisterNotificationStreamRoute(r chi.Router, h *NotificationHandler, authz *middleware.AuthorizationMiddleware) {
-	if authz == nil {
-		r.Get("/notifications/stream", h.Stream)
-		return
-	}
-	permManage := permissions.ID("notifications.manage").String()
-	r.With(authz.RequirePermission(permManage)).Get("/notifications/stream", h.Stream)
-}
-
 // RegisterEmployeeDayPlanRoutes registers employee day plan routes.
 func RegisterEmployeeDayPlanRoutes(r chi.Router, h *EmployeeDayPlanHandler, authz *middleware.AuthorizationMiddleware) {
 	permManage := permissions.ID("time_plans.manage").String()

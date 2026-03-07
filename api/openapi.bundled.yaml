@@ -626,21 +626,6 @@ paths:
           $ref: '#/responses/Unauthorized'
         '403':
           $ref: '#/responses/Forbidden'
-  /notifications/stream:
-    get:
-      tags:
-        - Notifications
-      summary: Stream notifications for the current user
-      operationId: streamNotifications
-      produces:
-        - text/event-stream
-      responses:
-        '200':
-          description: Server-sent events stream
-        '401':
-          $ref: '#/responses/Unauthorized'
-        '403':
-          $ref: '#/responses/Forbidden'
   /notification-preferences:
     get:
       tags:

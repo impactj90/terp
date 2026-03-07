@@ -6,7 +6,7 @@
  * access their own notifications).
  *
  * Notification creation is internal only (called by other services).
- * SSE streaming is deferred to TICKET-230.
+ * Realtime streaming handled by Supabase Realtime (TICKET-230).
  *
  * Replaces the Go backend notification endpoints:
  * - GET /notifications -> notifications.list
