@@ -58,6 +58,10 @@ import { terminalBookingsRouter } from "./routers/terminalBookings"
 import { vehiclesRouter } from "./routers/vehicles"
 import { vehicleRoutesRouter } from "./routers/vehicleRoutes"
 import { tripRecordsRouter } from "./routers/tripRecords"
+import { travelAllowanceRuleSetsRouter } from "./routers/travelAllowanceRuleSets"
+import { localTravelRulesRouter } from "./routers/localTravelRules"
+import { extendedTravelRulesRouter } from "./routers/extendedTravelRules"
+import { travelAllowancePreviewRouter } from "./routers/travelAllowancePreview"
 
 export const appRouter = createTRPCRouter({
   health: healthRouter,
@@ -111,6 +115,10 @@ export const appRouter = createTRPCRouter({
   vehicles: vehiclesRouter,
   vehicleRoutes: vehicleRoutesRouter,
   tripRecords: tripRecordsRouter,
+  travelAllowanceRuleSets: travelAllowanceRuleSetsRouter,
+  localTravelRules: localTravelRulesRouter,
+  extendedTravelRules: extendedTravelRulesRouter,
+  travelAllowancePreview: travelAllowancePreviewRouter,
 })
 
 /** Type-only export for client-side inference. */

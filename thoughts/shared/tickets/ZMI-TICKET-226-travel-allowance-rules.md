@@ -1,6 +1,6 @@
 # ZMI-TICKET-226: Travel Allowance Rules
 
-Status: Proposed
+Status: Completed
 Priority: P2
 Owner: TBD
 

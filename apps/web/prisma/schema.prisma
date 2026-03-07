@@ -155,6 +155,9 @@ model Tenant {
   vehicles                    Vehicle[]
   vehicleRoutes               VehicleRoute[]
   tripRecords                 TripRecord[]
+  travelAllowanceRuleSets     TravelAllowanceRuleSet[]
+  localTravelRules            LocalTravelRule[]
+  extendedTravelRules         ExtendedTravelRule[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
@@ -2518,4 +2521,107 @@ model TripRecord {
   @@index([routeId], map: "idx_trip_records_route")
   @@index([tripDate], map: "idx_trip_records_date")
   @@map("trip_records")
+}
+
+// -----------------------------------------------------------------------------
+// TravelAllowanceRuleSet
+// -----------------------------------------------------------------------------
+// Migration: 000075
+//
+// Travel allowance (Ausloese) rule set containers with validity period
+// and calculation options (ZMI manual 10.14).
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model TravelAllowanceRuleSet {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId         String    @map("tenant_id") @db.Uuid
+  code             String    @db.VarChar(50)
+  name             String    @db.VarChar(255)
+  description      String?   @db.Text
+  validFrom        DateTime? @map("valid_from") @db.Date
+  validTo          DateTime? @map("valid_to") @db.Date
+  calculationBasis String    @default("per_day") @map("calculation_basis") @db.VarChar(20)
+  distanceRule     String    @default("longest") @map("distance_rule") @db.VarChar(20)
+  isActive         Boolean   @default(true) @map("is_active")
+  sortOrder        Int       @default(0) @map("sort_order")
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant             Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  localTravelRules   LocalTravelRule[]
+  extendedTravelRules ExtendedTravelRule[]
+
+  // Indexes
+  @@unique([tenantId, code])
+  @@index([tenantId], map: "idx_travel_allowance_rule_sets_tenant")
+  @@map("travel_allowance_rule_sets")
+}
+
+// -----------------------------------------------------------------------------
+// LocalTravelRule
+// -----------------------------------------------------------------------------
+// Migration: 000075
+//
+// Local travel (Nahmontage) rules: distance/duration ranges with tax-free
+// and taxable amounts (ZMI manual 10.14.1).
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model LocalTravelRule {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String    @map("tenant_id") @db.Uuid
+  ruleSetId          String    @map("rule_set_id") @db.Uuid
+  minDistanceKm      Decimal   @default(0) @map("min_distance_km") @db.Decimal(10, 2)
+  maxDistanceKm      Decimal?  @map("max_distance_km") @db.Decimal(10, 2)
+  minDurationMinutes Int       @default(0) @map("min_duration_minutes")
+  maxDurationMinutes Int?      @map("max_duration_minutes")
+  taxFreeAmount      Decimal   @default(0) @map("tax_free_amount") @db.Decimal(10, 2)
+  taxableAmount      Decimal   @default(0) @map("taxable_amount") @db.Decimal(10, 2)
+  isActive           Boolean   @default(true) @map("is_active")
+  sortOrder          Int       @default(0) @map("sort_order")
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant  Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ruleSet TravelAllowanceRuleSet  @relation(fields: [ruleSetId], references: [id], onDelete: Cascade)
+
+  // Indexes
+  @@index([tenantId], map: "idx_local_travel_rules_tenant")
+  @@index([ruleSetId], map: "idx_local_travel_rules_rule_set")
+  @@map("local_travel_rules")
+}
+
+// -----------------------------------------------------------------------------
+// ExtendedTravelRule
+// -----------------------------------------------------------------------------
+// Migration: 000075
+//
+// Extended travel (Fernmontage) rules: arrival/departure/intermediate day
+// rates with three-month rule (ZMI manual 10.14.2).
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model ExtendedTravelRule {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId               String    @map("tenant_id") @db.Uuid
+  ruleSetId              String    @map("rule_set_id") @db.Uuid
+  arrivalDayTaxFree      Decimal   @default(0) @map("arrival_day_tax_free") @db.Decimal(10, 2)
+  arrivalDayTaxable      Decimal   @default(0) @map("arrival_day_taxable") @db.Decimal(10, 2)
+  departureDayTaxFree    Decimal   @default(0) @map("departure_day_tax_free") @db.Decimal(10, 2)
+  departureDayTaxable    Decimal   @default(0) @map("departure_day_taxable") @db.Decimal(10, 2)
+  intermediateDayTaxFree Decimal   @default(0) @map("intermediate_day_tax_free") @db.Decimal(10, 2)
+  intermediateDayTaxable Decimal   @default(0) @map("intermediate_day_taxable") @db.Decimal(10, 2)
+  threeMonthEnabled      Boolean   @default(false) @map("three_month_enabled")
+  threeMonthTaxFree      Decimal   @default(0) @map("three_month_tax_free") @db.Decimal(10, 2)
+  threeMonthTaxable      Decimal   @default(0) @map("three_month_taxable") @db.Decimal(10, 2)
+  isActive               Boolean   @default(true) @map("is_active")
+  sortOrder              Int       @default(0) @map("sort_order")
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant  Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ruleSet TravelAllowanceRuleSet  @relation(fields: [ruleSetId], references: [id], onDelete: Cascade)
+
+  // Indexes
+  @@index([tenantId], map: "idx_extended_travel_rules_tenant")
+  @@index([ruleSetId], map: "idx_extended_travel_rules_rule_set")
+  @@map("extended_travel_rules")
 }
