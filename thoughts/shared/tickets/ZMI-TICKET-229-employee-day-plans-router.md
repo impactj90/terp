@@ -1,6 +1,6 @@
 # ZMI-TICKET-229: Employee Day Plans Router (Bulk, Generate from Tariff)
 
-Status: Proposed
+Status: Completed
 Priority: P2
 Owner: TBD
 
