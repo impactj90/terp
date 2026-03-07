@@ -416,12 +416,11 @@ export const bookingTypesRouter = createTRPCRouter({
         })
       }
 
-      // Check usage in bookings table via raw SQL
-      const result = await ctx.prisma.$queryRawUnsafe<[{ count: number }]>(
-        `SELECT COUNT(*)::int as count FROM bookings WHERE booking_type_id = $1`,
-        input.id
-      )
-      if (result[0] && result[0].count > 0) {
+      // Check usage in bookings table
+      const bookingCount = await ctx.prisma.booking.count({
+        where: { bookingTypeId: input.id },
+      })
+      if (bookingCount > 0) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Cannot delete booking type that is in use",

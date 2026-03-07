@@ -864,58 +864,46 @@ async function gatherDailyOverview(ctx: AnyCtx, params: ReportParameters, tenant
   const { from, to } = parseDateRange(params.fromDate, params.toDate)
   if (!from || !to) return data
 
-  // Use raw query since DailyValue has no Prisma model yet
-  const employeeFilter = params.employeeIds && params.employeeIds.length > 0
-    ? `AND dv.employee_id = ANY($3::uuid[])`
-    : ""
-
-  const queryParams: unknown[] = [from.toISOString().slice(0, 10), to.toISOString().slice(0, 10)]
+  const dvWhere: Record<string, unknown> = {
+    tenantId,
+    valueDate: {
+      gte: from,
+      lte: to,
+    },
+  }
   if (params.employeeIds && params.employeeIds.length > 0) {
-    queryParams.push(params.employeeIds)
+    dvWhere.employeeId = { in: params.employeeIds }
   }
 
-  interface DailyValueRow {
-    value_date: Date
-    employee_id: string
-    personnel_number: string
-    gross_time: number
-    net_time: number
-    target_time: number
-    overtime: number
-    undertime: number
-    break_time: number
-    status: string
-  }
-
-  const values: DailyValueRow[] = await ctx.prisma.$queryRawUnsafe(
-    `SELECT dv.value_date, dv.employee_id, e.personnel_number,
-            dv.gross_time, dv.net_time, dv.target_time,
-            dv.overtime, dv.undertime, dv.break_time,
-            dv.status
-     FROM daily_values dv
-     JOIN employees e ON e.id = dv.employee_id
-     WHERE dv.tenant_id = '${tenantId}'
-       AND dv.value_date >= $1
-       AND dv.value_date <= $2
-       ${employeeFilter}
-     ORDER BY dv.value_date, e.personnel_number
-     LIMIT 10000`,
-    ...queryParams
-  )
+  const values = await ctx.prisma.dailyValue.findMany({
+    where: dvWhere,
+    include: {
+      employee: {
+        select: {
+          personnelNumber: true,
+        },
+      },
+    },
+    orderBy: [
+      { valueDate: "asc" },
+      { employee: { personnelNumber: "asc" } },
+    ],
+    take: 10000,
+  })
 
   for (const dv of values) {
     data.values.push([
-      dv.value_date instanceof Date
-        ? dv.value_date.toISOString().slice(0, 10)
-        : String(dv.value_date),
-      String(dv.employee_id),
-      dv.personnel_number || "",
-      minutesToHoursString(dv.gross_time || 0),
-      minutesToHoursString(dv.net_time || 0),
-      minutesToHoursString(dv.target_time || 0),
+      dv.valueDate instanceof Date
+        ? dv.valueDate.toISOString().slice(0, 10)
+        : String(dv.valueDate),
+      String(dv.employeeId),
+      dv.employee.personnelNumber || "",
+      minutesToHoursString(dv.grossTime || 0),
+      minutesToHoursString(dv.netTime || 0),
+      minutesToHoursString(dv.targetTime || 0),
       minutesToHoursString(dv.overtime || 0),
       minutesToHoursString(dv.undertime || 0),
-      minutesToHoursString(dv.break_time || 0),
+      minutesToHoursString(dv.breakTime || 0),
       dv.status || "",
     ])
   }

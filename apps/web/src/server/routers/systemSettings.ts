@@ -174,46 +174,99 @@ function validateDateRange(dateFrom: string, dateTo: string) {
 }
 
 /**
- * Builds a raw SQL query and params for bookings table with optional employee filter.
- * Returns [sql, params] tuple.
+ * Deletes bookings for a tenant within a date range, with optional employee filter.
  */
-function buildBookingsQuery(
-  operation: "SELECT COUNT(*)::int as count" | "DELETE",
+async function deleteBookings(
+  prisma: PrismaClient,
   tenantId: string,
   dateFrom: string,
   dateTo: string,
   employeeIds?: string[]
-): [string, unknown[]] {
-  let sql = `${operation} FROM bookings WHERE tenant_id = $1::uuid AND booking_date BETWEEN $2::date AND $3::date`
-  const params: unknown[] = [tenantId, dateFrom, dateTo]
-
-  if (employeeIds && employeeIds.length > 0) {
-    sql += ` AND employee_id = ANY($4::uuid[])`
-    params.push(employeeIds)
+): Promise<number> {
+  const where: Record<string, unknown> = {
+    tenantId,
+    bookingDate: {
+      gte: new Date(dateFrom),
+      lte: new Date(dateTo),
+    },
   }
-
-  return [sql, params]
+  if (employeeIds && employeeIds.length > 0) {
+    where.employeeId = { in: employeeIds }
+  }
+  const result = await prisma.booking.deleteMany({ where })
+  return result.count
 }
 
 /**
- * Builds a raw SQL query for daily_values table with optional employee filter.
+ * Counts bookings for a tenant within a date range, with optional employee filter.
  */
-function buildDailyValuesQuery(
-  operation: "SELECT COUNT(*)::int as count" | "DELETE",
+async function countBookings(
+  prisma: PrismaClient,
   tenantId: string,
   dateFrom: string,
   dateTo: string,
   employeeIds?: string[]
-): [string, unknown[]] {
-  let sql = `${operation} FROM daily_values WHERE tenant_id = $1::uuid AND date BETWEEN $2::date AND $3::date`
-  const params: unknown[] = [tenantId, dateFrom, dateTo]
-
-  if (employeeIds && employeeIds.length > 0) {
-    sql += ` AND employee_id = ANY($4::uuid[])`
-    params.push(employeeIds)
+): Promise<number> {
+  const where: Record<string, unknown> = {
+    tenantId,
+    bookingDate: {
+      gte: new Date(dateFrom),
+      lte: new Date(dateTo),
+    },
   }
+  if (employeeIds && employeeIds.length > 0) {
+    where.employeeId = { in: employeeIds }
+  }
+  return prisma.booking.count({ where })
+}
 
-  return [sql, params]
+/**
+ * Deletes daily_values for a tenant within a date range, with optional employee filter.
+ * Fixes pre-existing bug: raw SQL referenced column 'date' but actual column is 'value_date'.
+ */
+async function deleteDailyValues(
+  prisma: PrismaClient,
+  tenantId: string,
+  dateFrom: string,
+  dateTo: string,
+  employeeIds?: string[]
+): Promise<number> {
+  const where: Record<string, unknown> = {
+    tenantId,
+    valueDate: {
+      gte: new Date(dateFrom),
+      lte: new Date(dateTo),
+    },
+  }
+  if (employeeIds && employeeIds.length > 0) {
+    where.employeeId = { in: employeeIds }
+  }
+  const result = await prisma.dailyValue.deleteMany({ where })
+  return result.count
+}
+
+/**
+ * Counts daily_values for a tenant within a date range, with optional employee filter.
+ * Fixes pre-existing bug: raw SQL referenced column 'date' but actual column is 'value_date'.
+ */
+async function countDailyValues(
+  prisma: PrismaClient,
+  tenantId: string,
+  dateFrom: string,
+  dateTo: string,
+  employeeIds?: string[]
+): Promise<number> {
+  const where: Record<string, unknown> = {
+    tenantId,
+    valueDate: {
+      gte: new Date(dateFrom),
+      lte: new Date(dateTo),
+    },
+  }
+  if (employeeIds && employeeIds.length > 0) {
+    where.employeeId = { in: employeeIds }
+  }
+  return prisma.dailyValue.count({ where })
 }
 
 /**
@@ -347,7 +400,6 @@ export const systemSettingsRouter = createTRPCRouter({
    *
    * Preview mode (confirm: false): returns count of affected bookings.
    * Execute mode (confirm: true): deletes bookings and returns count.
-   * Uses raw SQL since bookings table has no Prisma model.
    *
    * Requires: settings.manage permission
    */
@@ -361,33 +413,29 @@ export const systemSettingsRouter = createTRPCRouter({
 
       if (!input.confirm) {
         // Preview mode: count bookings
-        const [sql, params] = buildBookingsQuery(
-          "SELECT COUNT(*)::int as count",
+        const count = await countBookings(
+          ctx.prisma,
           tenantId,
           input.dateFrom,
           input.dateTo,
           input.employeeIds
         )
-        const result = await ctx.prisma.$queryRawUnsafe<
-          [{ count: number }]
-        >(sql, ...params)
 
         return {
           operation: "delete_bookings",
-          affectedCount: result[0]?.count ?? 0,
+          affectedCount: count,
           preview: true,
         }
       }
 
       // Execute mode: delete bookings
-      const [sql, params] = buildBookingsQuery(
-        "DELETE",
+      const deleted = await deleteBookings(
+        ctx.prisma,
         tenantId,
         input.dateFrom,
         input.dateTo,
         input.employeeIds
       )
-      const deleted = await ctx.prisma.$executeRawUnsafe(sql, ...params)
 
       return {
         operation: "delete_bookings",
@@ -402,7 +450,6 @@ export const systemSettingsRouter = createTRPCRouter({
    *
    * Preview mode: returns counts of bookings and daily values.
    * Execute mode: deletes all three entity types.
-   * Uses raw SQL for tables without Prisma models.
    *
    * Requires: settings.manage permission
    */
@@ -416,34 +463,22 @@ export const systemSettingsRouter = createTRPCRouter({
 
       if (!input.confirm) {
         // Preview mode: count bookings + daily values
-        const [bookingsSql, bookingsParams] = buildBookingsQuery(
-          "SELECT COUNT(*)::int as count",
-          tenantId,
-          input.dateFrom,
-          input.dateTo,
-          input.employeeIds
-        )
-        const [dvSql, dvParams] = buildDailyValuesQuery(
-          "SELECT COUNT(*)::int as count",
-          tenantId,
-          input.dateFrom,
-          input.dateTo,
-          input.employeeIds
-        )
-
-        const [bookingsResult, dvResult] = await Promise.all([
-          ctx.prisma.$queryRawUnsafe<[{ count: number }]>(
-            bookingsSql,
-            ...bookingsParams
+        const [bookingsCount, dailyValuesCount] = await Promise.all([
+          countBookings(
+            ctx.prisma,
+            tenantId,
+            input.dateFrom,
+            input.dateTo,
+            input.employeeIds
           ),
-          ctx.prisma.$queryRawUnsafe<[{ count: number }]>(
-            dvSql,
-            ...dvParams
+          countDailyValues(
+            ctx.prisma,
+            tenantId,
+            input.dateFrom,
+            input.dateTo,
+            input.employeeIds
           ),
         ])
-
-        const bookingsCount = bookingsResult[0]?.count ?? 0
-        const dailyValuesCount = dvResult[0]?.count ?? 0
 
         return {
           operation: "delete_booking_data",
@@ -457,24 +492,22 @@ export const systemSettingsRouter = createTRPCRouter({
       }
 
       // Execute mode: delete bookings + daily values + employee day plans
-      const [bookingsSql, bookingsParams] = buildBookingsQuery(
-        "DELETE",
-        tenantId,
-        input.dateFrom,
-        input.dateTo,
-        input.employeeIds
-      )
-      const [dvSql, dvParams] = buildDailyValuesQuery(
-        "DELETE",
-        tenantId,
-        input.dateFrom,
-        input.dateTo,
-        input.employeeIds
-      )
       const [deletedBookings, deletedDailyValues, deletedEdps] =
         await Promise.all([
-          ctx.prisma.$executeRawUnsafe(bookingsSql, ...bookingsParams),
-          ctx.prisma.$executeRawUnsafe(dvSql, ...dvParams),
+          deleteBookings(
+            ctx.prisma,
+            tenantId,
+            input.dateFrom,
+            input.dateTo,
+            input.employeeIds
+          ),
+          deleteDailyValues(
+            ctx.prisma,
+            tenantId,
+            input.dateFrom,
+            input.dateTo,
+            input.employeeIds
+          ),
           deleteEmployeeDayPlans(
             ctx.prisma,
             tenantId,
@@ -514,20 +547,17 @@ export const systemSettingsRouter = createTRPCRouter({
 
       if (!input.confirm) {
         // Preview mode: count bookings
-        const [sql, params] = buildBookingsQuery(
-          "SELECT COUNT(*)::int as count",
+        const count = await countBookings(
+          ctx.prisma,
           tenantId,
           input.dateFrom,
           input.dateTo,
           input.employeeIds
         )
-        const result = await ctx.prisma.$queryRawUnsafe<
-          [{ count: number }]
-        >(sql, ...params)
 
         return {
           operation: "re_read_bookings",
-          affectedCount: result[0]?.count ?? 0,
+          affectedCount: count,
           preview: true,
         }
       }

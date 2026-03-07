@@ -1,6 +1,6 @@
 # ZMI-TICKET-231: Prisma Schema: bookings, daily_values, daily_account_values
 
-Status: Proposed
+Status: Done
 Priority: P1
 Owner: TBD
 
@@ -102,12 +102,12 @@ model DailyAccountValue {
 ```
 
 ## Acceptance Criteria
-- [ ] Booking Modell mit allen Feldern und Relationen
-- [ ] DailyValue Modell mit Status-Management und Account-Values
-- [ ] DailyAccountValue Modell mit Unique-Constraint
-- [ ] Performante Indizes auf [employee_id, date] und [tenant_id, date]
-- [ ] `prisma generate` erfolgreich
-- [ ] Bestehende DB-Daten werden korrekt gelesen
+- [x] Booking Modell mit allen Feldern und Relationen
+- [x] DailyValue Modell mit Status-Management und Account-Values
+- [x] DailyAccountValue Modell mit Unique-Constraint
+- [x] Performante Indizes auf [employee_id, date] und [tenant_id, date]
+- [x] `prisma generate` erfolgreich
+- [x] Bestehende DB-Daten werden korrekt gelesen
 
 ## Tests
 - Unit-Test: Booking mit Relationen laden

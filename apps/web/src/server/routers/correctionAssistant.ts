@@ -185,18 +185,6 @@ function mapMessage(msg: {
 
 // --- Raw SQL row type for daily values query ---
 
-interface DailyValueRow {
-  id: string
-  employee_id: string
-  value_date: Date
-  error_codes: string[] | null
-  warnings: string[] | null
-  first_name: string
-  last_name: string
-  department_id: string | null
-  department_name: string | null
-}
-
 // --- Router ---
 
 export const correctionAssistantRouter = createTRPCRouter({
@@ -332,7 +320,7 @@ export const correctionAssistantRouter = createTRPCRouter({
    * correctionAssistant.listItems -- Returns daily values with errors for correction.
    *
    * Auto-seeds default messages on first access.
-   * Uses raw SQL query for daily_values (not in Prisma schema).
+   * Queries daily_values via Prisma with employee/department includes.
    * Applies in-memory pagination after filtering.
    *
    * Requires: time_tracking.view_all permission
@@ -390,41 +378,40 @@ export const correctionAssistantRouter = createTRPCRouter({
       })
       const messageMap = new Map(activeMessages.map((m) => [m.code, m]))
 
-      // Build raw SQL query with dynamic filters
-      const queryParams: unknown[] = [tenantId, fromDate, toDate]
-      let paramIndex = 4
+      // Build Prisma query with dynamic filters
+      const dvWhere: Record<string, unknown> = {
+        tenantId,
+        hasError: true,
+        valueDate: {
+          gte: fromDate,
+          lte: toDate,
+        },
+      }
 
-      let employeeFilter = ""
       if (input?.employeeId) {
-        employeeFilter = `AND dv.employee_id = $${paramIndex}`
-        queryParams.push(input.employeeId)
-        paramIndex++
+        dvWhere.employeeId = input.employeeId
       }
 
-      let departmentFilter = ""
       if (input?.departmentId) {
-        departmentFilter = `AND e.department_id = $${paramIndex}`
-        queryParams.push(input.departmentId)
-        paramIndex++
+        dvWhere.employee = { departmentId: input.departmentId }
       }
 
-      const rows: DailyValueRow[] = await ctx.prisma.$queryRawUnsafe(
-        `SELECT dv.id, dv.employee_id, dv.value_date,
-                dv.error_codes, dv.warnings,
-                e.first_name, e.last_name,
-                e.department_id, d.name as department_name
-         FROM daily_values dv
-         JOIN employees e ON e.id = dv.employee_id
-         LEFT JOIN departments d ON d.id = e.department_id
-         WHERE dv.tenant_id = $1
-           AND dv.has_error = true
-           AND dv.value_date >= $2
-           AND dv.value_date <= $3
-           ${employeeFilter}
-           ${departmentFilter}
-         ORDER BY dv.value_date ASC`,
-        ...queryParams
-      )
+      const rows = await ctx.prisma.dailyValue.findMany({
+        where: dvWhere,
+        include: {
+          employee: {
+            select: {
+              firstName: true,
+              lastName: true,
+              departmentId: true,
+              department: {
+                select: { name: true },
+              },
+            },
+          },
+        },
+        orderBy: { valueDate: "asc" },
+      })
 
       // Build correction assistant items
       const severityFilter = input?.severity
@@ -453,8 +440,8 @@ export const correctionAssistantRouter = createTRPCRouter({
         const errors: CorrectionAssistantError[] = []
 
         // Process error codes
-        if (row.error_codes) {
-          for (const code of row.error_codes) {
+        if (row.errorCodes) {
+          for (const code of row.errorCodes) {
             if (severityFilter && severityFilter !== "error") continue
             if (codeFilter && codeFilter !== code) continue
 
@@ -501,16 +488,16 @@ export const correctionAssistantRouter = createTRPCRouter({
         if (errors.length === 0) continue
 
         // Format date as YYYY-MM-DD string
-        const valueDate = row.value_date instanceof Date
-          ? row.value_date.toISOString().split("T")[0]!
-          : String(row.value_date).split("T")[0]!
+        const valueDate = row.valueDate instanceof Date
+          ? row.valueDate.toISOString().split("T")[0]!
+          : String(row.valueDate).split("T")[0]!
 
         items.push({
           dailyValueId: row.id,
-          employeeId: row.employee_id,
-          employeeName: `${row.first_name} ${row.last_name}`,
-          departmentId: row.department_id,
-          departmentName: row.department_name,
+          employeeId: row.employeeId,
+          employeeName: `${row.employee.firstName} ${row.employee.lastName}`,
+          departmentId: row.employee.departmentId,
+          departmentName: row.employee.department?.name ?? null,
           valueDate,
           errors,
         })
