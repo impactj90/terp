@@ -62,6 +62,8 @@ import { travelAllowanceRuleSetsRouter } from "./routers/travelAllowanceRuleSets
 import { localTravelRulesRouter } from "./routers/localTravelRules"
 import { extendedTravelRulesRouter } from "./routers/extendedTravelRules"
 import { travelAllowancePreviewRouter } from "./routers/travelAllowancePreview"
+import { monthlyEvalTemplatesRouter } from "./routers/monthlyEvalTemplates"
+import { correctionAssistantRouter } from "./routers/correctionAssistant"
 
 export const appRouter = createTRPCRouter({
   health: healthRouter,
@@ -119,6 +121,8 @@ export const appRouter = createTRPCRouter({
   localTravelRules: localTravelRulesRouter,
   extendedTravelRules: extendedTravelRulesRouter,
   travelAllowancePreview: travelAllowancePreviewRouter,
+  monthlyEvalTemplates: monthlyEvalTemplatesRouter,
+  correctionAssistant: correctionAssistantRouter,
 })
 
 /** Type-only export for client-side inference. */

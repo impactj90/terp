@@ -48,13 +48,13 @@ export function CorrectionMessageDataTable({
 
   const handleStartEdit = (message: CorrectionMessage) => {
     setEditingId(message.id)
-    setEditValue(message.custom_text ?? '')
+    setEditValue(message.customText ?? '')
   }
 
   const handleSaveEdit = async (id: string) => {
     const newValue = editValue.trim() || null
     setEditingId(null)
-    await onUpdateMessage(id, { custom_text: newValue })
+    await onUpdateMessage(id, { customText: newValue })
   }
 
   const handleCancelEdit = () => {
@@ -101,7 +101,7 @@ export function CorrectionMessageDataTable({
               {message.code}
             </TableCell>
             <TableCell className="max-w-xs truncate text-sm">
-              {message.default_text}
+              {message.defaultText}
             </TableCell>
             <TableCell className="max-w-xs" onClick={(e) => e.stopPropagation()}>
               {editingId === message.id ? (
@@ -119,7 +119,7 @@ export function CorrectionMessageDataTable({
                   className="w-full text-left text-sm truncate cursor-pointer hover:bg-muted/50 rounded px-2 py-1 -mx-2 -my-1"
                   onClick={() => handleStartEdit(message)}
                 >
-                  {message.custom_text || (
+                  {message.customText || (
                     <span className="text-muted-foreground/50 italic">
                       {t('messages.clickToCustomize')}
                     </span>
@@ -128,7 +128,7 @@ export function CorrectionMessageDataTable({
               )}
             </TableCell>
             <TableCell className="max-w-xs truncate text-sm text-muted-foreground">
-              {message.effective_text}
+              {message.effectiveText}
             </TableCell>
             <TableCell>
               <Badge variant={message.severity === 'error' ? 'destructive' : 'secondary'}>
@@ -138,9 +138,9 @@ export function CorrectionMessageDataTable({
             <TableCell onClick={(e) => e.stopPropagation()}>
               <Switch
                 size="sm"
-                checked={message.is_active}
+                checked={message.isActive}
                 onCheckedChange={() =>
-                  onUpdateMessage(message.id, { is_active: !message.is_active })
+                  onUpdateMessage(message.id, { isActive: !message.isActive })
                 }
                 disabled={isUpdating}
               />

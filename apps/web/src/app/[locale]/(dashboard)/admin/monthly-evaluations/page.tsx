@@ -28,9 +28,21 @@ import {
   MonthlyEvaluationFormSheet,
   MonthlyEvaluationDetailSheet,
 } from '@/components/monthly-evaluations'
-import type { components } from '@/lib/api/types'
 
-type MonthlyEvaluation = components['schemas']['MonthlyEvaluation']
+interface MonthlyEvaluation {
+  id: string
+  tenantId: string
+  name: string
+  description: string
+  flextimeCapPositive: number
+  flextimeCapNegative: number
+  overtimeThreshold: number
+  maxCarryoverVacation: number
+  isDefault: boolean
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
 
 const STATUS_OPTIONS = [
   { value: 'all', labelKey: 'allStatuses' },
@@ -74,7 +86,7 @@ export default function MonthlyEvaluationsPage() {
   }, [authLoading, permLoading, canAccess, router])
 
   // Extract templates from wrapped response
-  const templates = (templatesData as { items?: MonthlyEvaluation[] })?.items ?? []
+  const templates = templatesData?.data ?? []
 
   // Client-side filtering and sorting
   const filteredTemplates = React.useMemo(() => {
@@ -88,15 +100,15 @@ export default function MonthlyEvaluationsPage() {
           return false
         }
       }
-      if (statusFilter === 'active' && !item.is_active) return false
-      if (statusFilter === 'inactive' && item.is_active) return false
+      if (statusFilter === 'active' && !item.isActive) return false
+      if (statusFilter === 'inactive' && item.isActive) return false
       return true
     })
 
     // Sort: default template first, then alphabetical by name
     filtered.sort((a, b) => {
-      if (a.is_default && !b.is_default) return -1
-      if (!a.is_default && b.is_default) return 1
+      if (a.isDefault && !b.isDefault) return -1
+      if (!a.isDefault && b.isDefault) return 1
       return (a.name || '').localeCompare(b.name || '')
     })
 
@@ -126,17 +138,15 @@ export default function MonthlyEvaluationsPage() {
     if (!deleteItem) return
     setDeleteError(null)
     try {
-      await deleteMutation.mutateAsync({
-        path: { id: deleteItem.id },
-      })
+      await deleteMutation.mutateAsync({ id: deleteItem.id })
       setDeleteItem(null)
       setViewItem(null)
     } catch (err) {
-      const apiError = err as { status?: number; detail?: string; message?: string }
-      if (apiError.status === 409) {
+      const apiError = err as { data?: { code?: string }; message?: string }
+      if (apiError.data?.code === 'BAD_REQUEST') {
         setDeleteError(t('deleteDefaultError'))
       } else {
-        setDeleteError(apiError.detail ?? apiError.message ?? t('failedDelete'))
+        setDeleteError(apiError.message ?? t('failedDelete'))
       }
     }
   }
@@ -145,14 +155,12 @@ export default function MonthlyEvaluationsPage() {
     if (!setDefaultItem) return
     setSetDefaultError(null)
     try {
-      await setDefaultMutation.mutateAsync({
-        path: { id: setDefaultItem.id },
-      })
+      await setDefaultMutation.mutateAsync({ id: setDefaultItem.id })
       setSetDefaultItem(null)
       setViewItem(null)
     } catch (err) {
-      const apiError = err as { detail?: string; message?: string }
-      setSetDefaultError(apiError.detail ?? apiError.message ?? t('failedSetDefault'))
+      const apiError = err as { message?: string }
+      setSetDefaultError(apiError.message ?? t('failedSetDefault'))
     }
   }
 

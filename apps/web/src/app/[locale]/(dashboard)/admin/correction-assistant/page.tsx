@@ -99,9 +99,9 @@ export default function CorrectionAssistantPage() {
   const { data: correctionData, isLoading: correctionsLoading } = useCorrectionAssistantItems({
     from,
     to,
-    department_id: departmentId ?? undefined,
+    departmentId: departmentId ?? undefined,
     severity: severity !== 'all' ? (severity as 'error' | 'hint') : undefined,
-    error_code: errorCode || undefined,
+    errorCode: errorCode || undefined,
     limit,
     offset,
     enabled,
@@ -118,23 +118,23 @@ export default function CorrectionAssistantPage() {
     for (const item of items) {
       for (const err of item.errors) {
         rows.push({
-          daily_value_id: item.daily_value_id,
-          employee_id: item.employee_id,
-          employee_name: item.employee_name,
-          department_id: item.department_id,
-          department_name: item.department_name,
-          value_date: item.value_date,
+          dailyValueId: item.dailyValueId,
+          employeeId: item.employeeId,
+          employeeName: item.employeeName,
+          departmentId: item.departmentId,
+          departmentName: item.departmentName,
+          valueDate: item.valueDate,
           code: err.code,
-          severity: err.severity,
+          severity: err.severity as 'error' | 'hint',
           message: err.message,
-          error_type: err.error_type,
+          errorType: err.errorType,
         })
       }
     }
     // Client-side employee name filter
     if (employeeSearch) {
       const searchLower = employeeSearch.toLowerCase()
-      return rows.filter((r) => r.employee_name.toLowerCase().includes(searchLower))
+      return rows.filter((r) => r.employeeName.toLowerCase().includes(searchLower))
     }
     return rows
   }, [correctionData, employeeSearch])
@@ -158,7 +158,7 @@ export default function CorrectionAssistantPage() {
   // Detail sheet: find original item from flattened row
   const handleRowClick = (row: FlattenedCorrectionRow) => {
     const items = correctionData?.data ?? []
-    const original = items.find((item) => item.daily_value_id === row.daily_value_id) ?? null
+    const original = items.find((item) => item.dailyValueId === row.dailyValueId) ?? null
     setSelectedItem(original)
   }
 

@@ -14,16 +14,16 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 
 export interface FlattenedCorrectionRow {
-  daily_value_id: string
-  employee_id: string
-  employee_name: string
-  department_id: string | null
-  department_name: string | null
-  value_date: string
+  dailyValueId: string
+  employeeId: string
+  employeeName: string
+  departmentId: string | null
+  departmentName: string | null
+  valueDate: string
   code: string
   severity: 'error' | 'hint'
   message: string
-  error_type: string
+  errorType: string
 }
 
 interface CorrectionAssistantDataTableProps {
@@ -68,13 +68,13 @@ export function CorrectionAssistantDataTable({
       <TableBody>
         {items.map((item, index) => (
           <TableRow
-            key={`${item.daily_value_id}-${item.code}-${index}`}
+            key={`${item.dailyValueId}-${item.code}-${index}`}
             className="cursor-pointer"
             onClick={() => onRowClick(item)}
           >
-            <TableCell className="font-medium">{item.employee_name}</TableCell>
-            <TableCell>{item.department_name || '-'}</TableCell>
-            <TableCell>{formatDateDisplay(item.value_date)}</TableCell>
+            <TableCell className="font-medium">{item.employeeName}</TableCell>
+            <TableCell>{item.departmentName || '-'}</TableCell>
+            <TableCell>{formatDateDisplay(item.valueDate)}</TableCell>
             <TableCell className="font-mono text-sm">{item.code}</TableCell>
             <TableCell>
               <Badge variant={item.severity === 'error' ? 'destructive' : 'secondary'}>

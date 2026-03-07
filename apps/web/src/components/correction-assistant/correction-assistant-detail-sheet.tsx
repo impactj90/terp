@@ -40,7 +40,7 @@ export function CorrectionAssistantDetailSheet({
 
   const handleGoToEmployee = () => {
     if (item) {
-      router.push(`/admin/employees/${item.employee_id}`)
+      router.push(`/admin/employees/${item.employeeId}`)
       onOpenChange(false)
     }
   }
@@ -50,10 +50,10 @@ export function CorrectionAssistantDetailSheet({
       <SheetContent side="right" className="w-full sm:max-w-lg flex flex-col">
         <SheetHeader>
           <SheetTitle>
-            {item ? `${item.employee_name} - ${formatDateDisplay(item.value_date)}` : t('detail.title')}
+            {item ? `${item.employeeName} - ${formatDateDisplay(item.valueDate)}` : t('detail.title')}
           </SheetTitle>
           <SheetDescription>
-            {item?.department_name || t('detail.description')}
+            {item?.departmentName || t('detail.description')}
           </SheetDescription>
         </SheetHeader>
 
@@ -65,17 +65,17 @@ export function CorrectionAssistantDetailSheet({
                 <div className="rounded-lg border p-4 space-y-2">
                   <div className="flex justify-between py-1">
                     <span className="text-sm text-muted-foreground">{t('detail.employee')}</span>
-                    <span className="text-sm font-medium">{item.employee_name}</span>
+                    <span className="text-sm font-medium">{item.employeeName}</span>
                   </div>
-                  {item.department_name && (
+                  {item.departmentName && (
                     <div className="flex justify-between py-1">
                       <span className="text-sm text-muted-foreground">{t('detail.department')}</span>
-                      <span className="text-sm font-medium">{item.department_name}</span>
+                      <span className="text-sm font-medium">{item.departmentName}</span>
                     </div>
                   )}
                   <div className="flex justify-between py-1">
                     <span className="text-sm text-muted-foreground">{t('detail.date')}</span>
-                    <span className="text-sm font-medium">{formatDateDisplay(item.value_date)}</span>
+                    <span className="text-sm font-medium">{formatDateDisplay(item.valueDate)}</span>
                   </div>
                 </div>
               </div>
@@ -100,7 +100,7 @@ export function CorrectionAssistantDetailSheet({
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground">{t('detail.errorType')}:</span>
                       <Badge variant="outline" className="text-xs">
-                        {error.error_type}
+                        {error.errorType}
                       </Badge>
                     </div>
                   </div>

@@ -48,25 +48,25 @@ export function CorrectionMessageEditDialog({
 
   React.useEffect(() => {
     if (message && open) {
-      setCustomText(message.custom_text ?? '')
-      setSeverity(message.severity)
-      setIsActive(message.is_active)
+      setCustomText(message.customText ?? '')
+      setSeverity(message.severity as 'error' | 'hint')
+      setIsActive(message.isActive)
     }
   }, [message, open])
 
   const handleSave = async () => {
     if (!message) return
     await onUpdate(message.id, {
-      custom_text: customText.trim() || null,
+      customText: customText.trim() || null,
       severity,
-      is_active: isActive,
+      isActive,
     })
     onOpenChange(false)
   }
 
   const handleResetToDefault = async () => {
     if (!message) return
-    await onUpdate(message.id, { custom_text: null })
+    await onUpdate(message.id, { customText: null })
     setCustomText('')
   }
 

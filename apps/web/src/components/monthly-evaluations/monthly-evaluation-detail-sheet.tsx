@@ -20,9 +20,21 @@ import {
   useMonthlyEvaluation,
 } from '@/hooks/api/use-monthly-evaluations'
 import { formatDuration } from '@/lib/time-utils'
-import type { components } from '@/lib/api/types'
 
-type MonthlyEvaluation = components['schemas']['MonthlyEvaluation']
+interface MonthlyEvaluation {
+  id: string
+  tenantId: string
+  name: string
+  description: string
+  flextimeCapPositive: number
+  flextimeCapNegative: number
+  overtimeThreshold: number
+  maxCarryoverVacation: number
+  isDefault: boolean
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
 
 interface MonthlyEvaluationDetailSheetProps {
   itemId: string | null
@@ -58,7 +70,7 @@ export function MonthlyEvaluationDetailSheet({
   const t = useTranslations('adminMonthlyEvaluations')
   const { data: item, isLoading } = useMonthlyEvaluation(itemId || '', open && !!itemId)
 
-  const formatDateTime = (date: string | undefined | null) => {
+  const formatDateTime = (date: Date | string | undefined | null) => {
     if (!date) return '-'
     return format(new Date(date), 'dd.MM.yyyy HH:mm')
   }
@@ -107,14 +119,14 @@ export function MonthlyEvaluationDetailSheet({
                   )}
                 </div>
                 <div className="flex gap-2">
-                  {item.is_default && (
+                  {item.isDefault && (
                     <Badge variant="outline" className="border-amber-500 text-amber-600">
                       <Star className="mr-1 h-3 w-3 fill-amber-500" />
                       {t('defaultBadge')}
                     </Badge>
                   )}
-                  <Badge variant={item.is_active ? 'default' : 'secondary'}>
-                    {item.is_active ? t('statusActive') : t('statusInactive')}
+                  <Badge variant={item.isActive ? 'default' : 'secondary'}>
+                    {item.isActive ? t('statusActive') : t('statusInactive')}
                   </Badge>
                 </div>
               </div>
@@ -134,15 +146,15 @@ export function MonthlyEvaluationDetailSheet({
                 <div className="rounded-lg border p-4">
                   <DetailRow
                     label={t('fieldFlextimePositive')}
-                    value={formatMinuteValue(item.flextime_cap_positive)}
+                    value={formatMinuteValue(item.flextimeCapPositive)}
                   />
                   <DetailRow
                     label={t('fieldFlextimeNegative')}
-                    value={formatMinuteValue(item.flextime_cap_negative)}
+                    value={formatMinuteValue(item.flextimeCapNegative)}
                   />
                   <DetailRow
                     label={t('fieldOvertimeThreshold')}
-                    value={formatMinuteValue(item.overtime_threshold)}
+                    value={formatMinuteValue(item.overtimeThreshold)}
                   />
                 </div>
               </div>
@@ -153,7 +165,7 @@ export function MonthlyEvaluationDetailSheet({
                 <div className="rounded-lg border p-4">
                   <DetailRow
                     label={t('fieldMaxCarryover')}
-                    value={formatCarryoverValue(item.max_carryover_vacation)}
+                    value={formatCarryoverValue(item.maxCarryoverVacation)}
                   />
                 </div>
               </div>
@@ -164,13 +176,13 @@ export function MonthlyEvaluationDetailSheet({
                 <div className="rounded-lg border p-4">
                   <DetailRow
                     label={t('fieldIsDefault')}
-                    value={item.is_default ? t('labelYes') : t('labelNo')}
+                    value={item.isDefault ? t('labelYes') : t('labelNo')}
                   />
                   <DetailRow
                     label={t('fieldIsActive')}
                     value={
-                      <Badge variant={item.is_active ? 'default' : 'secondary'}>
-                        {item.is_active ? t('statusActive') : t('statusInactive')}
+                      <Badge variant={item.isActive ? 'default' : 'secondary'}>
+                        {item.isActive ? t('statusActive') : t('statusInactive')}
                       </Badge>
                     }
                   />
@@ -181,8 +193,8 @@ export function MonthlyEvaluationDetailSheet({
               <div className="space-y-2">
                 <h4 className="text-sm font-medium text-muted-foreground">{t('sectionTimestamps')}</h4>
                 <div className="rounded-lg border p-4">
-                  <DetailRow label={t('labelCreated')} value={formatDateTime(item.created_at)} />
-                  <DetailRow label={t('labelLastUpdated')} value={formatDateTime(item.updated_at)} />
+                  <DetailRow label={t('labelCreated')} value={formatDateTime(item.createdAt)} />
+                  <DetailRow label={t('labelLastUpdated')} value={formatDateTime(item.updatedAt)} />
                 </div>
               </div>
             </div>
@@ -195,7 +207,7 @@ export function MonthlyEvaluationDetailSheet({
           </Button>
           {item && (
             <>
-              {!item.is_default && item.is_active && (
+              {!item.isDefault && item.isActive && (
                 <Button variant="outline" onClick={() => onSetDefault(item)}>
                   <Star className="mr-2 h-4 w-4" />
                   {t('setDefault')}

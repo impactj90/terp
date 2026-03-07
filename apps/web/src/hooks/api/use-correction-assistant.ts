@@ -1,88 +1,57 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { authStorage, tenantIdStorage } from '@/lib/api'
-import { clientEnv } from '@/config/env'
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
-// --- Manual fetch helper (same pattern as use-monthly-values.ts) ---
+// --- Re-export types inferred from tRPC router for backward compatibility ---
 
-async function apiRequest(url: string, options?: RequestInit) {
-  const token = authStorage.getToken()
-  const tenantId = tenantIdStorage.getTenantId()
-
-  const response = await fetch(`${clientEnv.apiUrl}${url}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(tenantId ? { 'X-Tenant-ID': tenantId } : {}),
-      ...options?.headers,
-    },
-  })
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Request failed' }))
-    throw new Error(error.message || 'Request failed')
-  }
-
-  return response.json()
-}
-
-// --- TypeScript Interfaces (matching backend schema definitions) ---
-
-export interface CorrectionAssistantError {
+export type CorrectionAssistantError = {
   code: string
-  severity: 'error' | 'hint'
+  severity: string
   message: string
-  error_type: string
+  errorType: string
 }
 
-export interface CorrectionAssistantItem {
-  daily_value_id: string
-  employee_id: string
-  employee_name: string
-  department_id: string | null
-  department_name: string | null
-  value_date: string
+export type CorrectionAssistantItem = {
+  dailyValueId: string
+  employeeId: string
+  employeeName: string
+  departmentId: string | null
+  departmentName: string | null
+  valueDate: string
   errors: CorrectionAssistantError[]
 }
 
-export interface CorrectionAssistantList {
+export type CorrectionAssistantList = {
   data: CorrectionAssistantItem[]
   meta: {
     total: number
     limit: number
     offset: number
-    has_more: boolean
+    hasMore: boolean
   }
 }
 
-export interface CorrectionMessage {
+export type CorrectionMessage = {
   id: string
-  tenant_id: string
+  tenantId: string
   code: string
-  default_text: string
-  custom_text: string | null
-  effective_text: string
-  severity: 'error' | 'hint'
+  defaultText: string
+  customText: string | null
+  effectiveText: string
+  severity: string
   description: string | null
-  is_active: boolean
-  created_at: string
-  updated_at: string
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
 }
 
-export interface CorrectionMessageList {
+export type CorrectionMessageList = {
   data: CorrectionMessage[]
-  meta?: {
-    total: number
-    limit: number
-    offset: number
-    has_more: boolean
-  }
 }
 
-export interface UpdateCorrectionMessageRequest {
-  custom_text?: string | null
+export type UpdateCorrectionMessageRequest = {
+  customText?: string | null
   severity?: 'error' | 'hint'
-  is_active?: boolean
+  isActive?: boolean
 }
 
 // --- Query Hooks ---
@@ -90,85 +59,77 @@ export interface UpdateCorrectionMessageRequest {
 interface UseCorrectionAssistantItemsOptions {
   from?: string
   to?: string
-  employee_id?: string
-  department_id?: string
-  severity?: 'error' | 'hint'
-  error_code?: string
+  employeeId?: string
+  departmentId?: string
+  severity?: "error" | "hint"
+  errorCode?: string
   limit?: number
   offset?: number
   enabled?: boolean
 }
 
+/**
+ * Hook to fetch correction assistant items (daily values with errors) (tRPC).
+ */
 export function useCorrectionAssistantItems(options: UseCorrectionAssistantItemsOptions = {}) {
   const { enabled = true, ...params } = options
-
-  const queryParams = new URLSearchParams()
-  if (params.from) queryParams.set('from', params.from)
-  if (params.to) queryParams.set('to', params.to)
-  if (params.employee_id) queryParams.set('employee_id', params.employee_id)
-  if (params.department_id) queryParams.set('department_id', params.department_id)
-  if (params.severity) queryParams.set('severity', params.severity)
-  if (params.error_code) queryParams.set('error_code', params.error_code)
-  if (params.limit !== undefined) queryParams.set('limit', String(params.limit))
-  if (params.offset !== undefined) queryParams.set('offset', String(params.offset))
-
-  const qs = queryParams.toString()
-  const url = `/correction-assistant${qs ? `?${qs}` : ''}`
-
-  return useQuery<CorrectionAssistantList>({
-    queryKey: ['correction-assistant', params],
-    queryFn: () => apiRequest(url),
-    enabled,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.correctionAssistant.listItems.queryOptions(
+      params,
+      { enabled }
+    )
+  )
 }
 
 interface UseCorrectionMessagesOptions {
-  severity?: 'error' | 'hint'
-  is_active?: boolean
+  severity?: "error" | "hint"
+  isActive?: boolean
   code?: string
   enabled?: boolean
 }
 
+/**
+ * Hook to fetch correction messages catalog (tRPC).
+ */
 export function useCorrectionMessages(options: UseCorrectionMessagesOptions = {}) {
   const { enabled = true, ...params } = options
-
-  const queryParams = new URLSearchParams()
-  if (params.severity) queryParams.set('severity', params.severity)
-  if (params.is_active !== undefined) queryParams.set('is_active', String(params.is_active))
-  if (params.code) queryParams.set('code', params.code)
-
-  const qs = queryParams.toString()
-  const url = `/correction-messages${qs ? `?${qs}` : ''}`
-
-  return useQuery<CorrectionMessageList>({
-    queryKey: ['correction-messages', params],
-    queryFn: () => apiRequest(url),
-    enabled,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.correctionAssistant.listMessages.queryOptions(
+      params,
+      { enabled }
+    )
+  )
 }
 
+/**
+ * Hook to fetch a single correction message by ID (tRPC).
+ */
 export function useCorrectionMessage(id: string, enabled = true) {
-  return useQuery<CorrectionMessage>({
-    queryKey: ['correction-messages', id],
-    queryFn: () => apiRequest(`/correction-messages/${id}`),
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.correctionAssistant.getMessage.queryOptions(
+      { id },
+      { enabled: enabled && !!id }
+    )
+  )
 }
 
 // --- Mutation Hooks ---
 
+/**
+ * Hook to update a correction message (tRPC).
+ */
 export function useUpdateCorrectionMessage() {
+  const trpc = useTRPC()
   const queryClient = useQueryClient()
-
   return useMutation({
-    mutationFn: ({ id, ...body }: UpdateCorrectionMessageRequest & { id: string }) =>
-      apiRequest(`/correction-messages/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(body),
-      }),
+    ...trpc.correctionAssistant.updateMessage.mutationOptions(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['correction-messages'] })
-      queryClient.invalidateQueries({ queryKey: ['correction-assistant'] })
+      queryClient.invalidateQueries({ queryKey: trpc.correctionAssistant.listMessages.queryKey() })
+      queryClient.invalidateQueries({ queryKey: trpc.correctionAssistant.getMessage.queryKey() })
+      queryClient.invalidateQueries({ queryKey: trpc.correctionAssistant.listItems.queryKey() })
     },
   })
 }

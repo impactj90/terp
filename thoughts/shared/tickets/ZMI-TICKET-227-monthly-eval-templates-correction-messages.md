@@ -1,6 +1,6 @@
 # ZMI-TICKET-227: Monthly Eval Templates, Correction Messages
 
-Status: Proposed
+Status: Done
 Priority: P2
 Owner: TBD
 

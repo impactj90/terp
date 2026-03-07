@@ -22,9 +22,21 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatDuration } from '@/lib/time-utils'
-import type { components } from '@/lib/api/types'
 
-type MonthlyEvaluation = components['schemas']['MonthlyEvaluation']
+interface MonthlyEvaluation {
+  id: string
+  tenantId: string
+  name: string
+  description: string
+  flextimeCapPositive: number
+  flextimeCapNegative: number
+  overtimeThreshold: number
+  maxCarryoverVacation: number
+  isDefault: boolean
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
 
 interface MonthlyEvaluationDataTableProps {
   items: MonthlyEvaluation[]
@@ -84,7 +96,7 @@ export function MonthlyEvaluationDataTable({
         {items.map((item) => (
           <TableRow
             key={item.id}
-            className={`cursor-pointer ${item.is_default ? 'bg-amber-50/50 dark:bg-amber-950/20' : ''}`}
+            className={`cursor-pointer ${item.isDefault ? 'bg-amber-50/50 dark:bg-amber-950/20' : ''}`}
             onClick={() => onView(item)}
           >
             <TableCell>
@@ -94,25 +106,25 @@ export function MonthlyEvaluationDataTable({
               {item.description || '-'}
             </TableCell>
             <TableCell className="text-sm text-muted-foreground">
-              {formatMinuteValue(item.flextime_cap_positive)}
+              {formatMinuteValue(item.flextimeCapPositive)}
             </TableCell>
             <TableCell className="text-sm text-muted-foreground">
-              {formatMinuteValue(item.flextime_cap_negative)}
+              {formatMinuteValue(item.flextimeCapNegative)}
             </TableCell>
             <TableCell className="text-sm text-muted-foreground">
-              {formatMinuteValue(item.overtime_threshold)}
+              {formatMinuteValue(item.overtimeThreshold)}
             </TableCell>
             <TableCell className="text-sm text-muted-foreground">
-              {formatCarryoverValue(item.max_carryover_vacation)}
+              {formatCarryoverValue(item.maxCarryoverVacation)}
             </TableCell>
             <TableCell>
-              {item.is_default && (
+              {item.isDefault && (
                 <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
               )}
             </TableCell>
             <TableCell>
-              <Badge variant={item.is_active ? 'default' : 'secondary'}>
-                {item.is_active ? t('statusActive') : t('statusInactive')}
+              <Badge variant={item.isActive ? 'default' : 'secondary'}>
+                {item.isActive ? t('statusActive') : t('statusInactive')}
               </Badge>
             </TableCell>
             <TableCell onClick={(e) => e.stopPropagation()}>
@@ -132,7 +144,7 @@ export function MonthlyEvaluationDataTable({
                     <Edit className="mr-2 h-4 w-4" />
                     {t('edit')}
                   </DropdownMenuItem>
-                  {!item.is_default && item.is_active && (
+                  {!item.isDefault && item.isActive && (
                     <DropdownMenuItem onClick={() => onSetDefault(item)}>
                       <Star className="mr-2 h-4 w-4" />
                       {t('setDefault')}

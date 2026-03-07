@@ -23,9 +23,21 @@ import {
   useUpdateMonthlyEvaluation,
 } from '@/hooks/api/use-monthly-evaluations'
 import { formatDuration } from '@/lib/time-utils'
-import type { components } from '@/lib/api/types'
 
-type MonthlyEvaluation = components['schemas']['MonthlyEvaluation']
+interface MonthlyEvaluation {
+  id: string
+  tenantId: string
+  name: string
+  description: string
+  flextimeCapPositive: number
+  flextimeCapNegative: number
+  overtimeThreshold: number
+  maxCarryoverVacation: number
+  isDefault: boolean
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
 
 interface MonthlyEvaluationFormSheetProps {
   open: boolean
@@ -78,12 +90,12 @@ export function MonthlyEvaluationFormSheet({
         setForm({
           name: item.name || '',
           description: item.description || '',
-          flextimeCapPositive: item.flextime_cap_positive ?? '',
-          flextimeCapNegative: item.flextime_cap_negative ?? '',
-          overtimeThreshold: item.overtime_threshold ?? '',
-          maxCarryoverVacation: item.max_carryover_vacation ?? '',
-          isDefault: item.is_default ?? false,
-          isActive: item.is_active ?? true,
+          flextimeCapPositive: item.flextimeCapPositive ?? '',
+          flextimeCapNegative: item.flextimeCapNegative ?? '',
+          overtimeThreshold: item.overtimeThreshold ?? '',
+          maxCarryoverVacation: item.maxCarryoverVacation ?? '',
+          isDefault: item.isDefault ?? false,
+          isActive: item.isActive ?? true,
         })
       } else {
         setForm(INITIAL_STATE)
@@ -122,38 +134,34 @@ export function MonthlyEvaluationFormSheet({
     try {
       if (isEdit && item) {
         await updateMutation.mutateAsync({
-          path: { id: item.id },
-          body: {
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            flextime_cap_positive: form.flextimeCapPositive !== '' ? Number(form.flextimeCapPositive) : undefined,
-            flextime_cap_negative: form.flextimeCapNegative !== '' ? Number(form.flextimeCapNegative) : undefined,
-            overtime_threshold: form.overtimeThreshold !== '' ? Number(form.overtimeThreshold) : undefined,
-            max_carryover_vacation: form.maxCarryoverVacation !== '' ? Number(form.maxCarryoverVacation) : undefined,
-            is_default: form.isDefault,
-            is_active: form.isActive,
-          },
+          id: item.id,
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          flextimeCapPositive: form.flextimeCapPositive !== '' ? Number(form.flextimeCapPositive) : undefined,
+          flextimeCapNegative: form.flextimeCapNegative !== '' ? Number(form.flextimeCapNegative) : undefined,
+          overtimeThreshold: form.overtimeThreshold !== '' ? Number(form.overtimeThreshold) : undefined,
+          maxCarryoverVacation: form.maxCarryoverVacation !== '' ? Number(form.maxCarryoverVacation) : undefined,
+          isDefault: form.isDefault,
+          isActive: form.isActive,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            flextime_cap_positive: form.flextimeCapPositive !== '' ? Number(form.flextimeCapPositive) : undefined,
-            flextime_cap_negative: form.flextimeCapNegative !== '' ? Number(form.flextimeCapNegative) : undefined,
-            overtime_threshold: form.overtimeThreshold !== '' ? Number(form.overtimeThreshold) : undefined,
-            max_carryover_vacation: form.maxCarryoverVacation !== '' ? Number(form.maxCarryoverVacation) : undefined,
-            is_default: form.isDefault,
-            is_active: form.isActive,
-          },
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          flextimeCapPositive: form.flextimeCapPositive !== '' ? Number(form.flextimeCapPositive) : undefined,
+          flextimeCapNegative: form.flextimeCapNegative !== '' ? Number(form.flextimeCapNegative) : undefined,
+          overtimeThreshold: form.overtimeThreshold !== '' ? Number(form.overtimeThreshold) : undefined,
+          maxCarryoverVacation: form.maxCarryoverVacation !== '' ? Number(form.maxCarryoverVacation) : undefined,
+          isDefault: form.isDefault,
+          isActive: form.isActive,
         })
       }
 
       onSuccess?.()
     } catch (err) {
-      const apiError = err as { detail?: string; message?: string }
+      const apiError = err as { message?: string }
       setError(
-        apiError.detail ?? apiError.message ?? (isEdit ? t('failedUpdate') : t('failedCreate'))
+        apiError.message ?? (isEdit ? t('failedUpdate') : t('failedCreate'))
       )
     }
   }
