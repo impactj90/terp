@@ -71,7 +71,7 @@ export default function TimesheetPage() {
   // Fetch employees for admin selector
   const { data: employeesData } = useEmployees({
     enabled: canViewAll,
-    limit: 250,
+    pageSize: 250,
   })
 
   // Read date, view, and employee from URL search params (e.g. from monthly evaluation navigation)
@@ -102,18 +102,18 @@ export default function TimesheetPage() {
       return
     }
 
-    const firstEmployee = employeesData?.data?.[0]
+    const firstEmployee = employeesData?.items?.[0]
     if (firstEmployee?.id) {
       setSelectedEmployeeId(firstEmployee.id)
     }
-  }, [employeesData?.data, canViewAll, selectedEmployeeId, userEmployeeId])
+  }, [employeesData?.items, canViewAll, selectedEmployeeId, userEmployeeId])
 
   const effectiveEmployeeId = canViewAll ? selectedEmployeeId : userEmployeeId
 
   // Get the selected employee name for display
-  const selectedEmployee = employeesData?.data?.find(emp => emp.id === selectedEmployeeId)
+  const selectedEmployee = employeesData?.items?.find((emp: { id: string }) => emp.id === selectedEmployeeId)
   const employeeName = selectedEmployee
-    ? `${selectedEmployee.first_name} ${selectedEmployee.last_name}`
+    ? `${selectedEmployee.firstName} ${selectedEmployee.lastName}`
     : user?.displayName
 
   // Calculate period dates based on view mode
@@ -221,7 +221,7 @@ export default function TimesheetPage() {
     if (!deletingBooking) return
 
     try {
-      await deleteBooking.mutateAsync({ path: { id: deletingBooking.id } } as never)
+      await deleteBooking.mutateAsync({ id: deletingBooking.id })
       setIsDeleteDialogOpen(false)
       setDeletingBooking(null)
     } catch (error) {
@@ -285,9 +285,9 @@ export default function TimesheetPage() {
                 <SelectValue placeholder={t('selectEmployee')} />
               </SelectTrigger>
               <SelectContent>
-                {employeesData?.data?.map((emp) => (
+                {employeesData?.items?.map((emp: { id: string; firstName: string; lastName: string }) => (
                   <SelectItem key={emp.id} value={emp.id}>
-                    {emp.first_name} {emp.last_name}
+                    {emp.firstName} {emp.lastName}
                   </SelectItem>
                 ))}
               </SelectContent>

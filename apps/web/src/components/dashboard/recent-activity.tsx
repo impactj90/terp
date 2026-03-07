@@ -16,7 +16,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { useBookings } from '@/hooks/api'
 import { formatDate, formatRelativeDate, formatTime } from '@/lib/time-utils'
-import type { components } from '@/lib/api/types'
 
 interface RecentActivityProps {
   employeeId?: string
@@ -24,7 +23,18 @@ interface RecentActivityProps {
   className?: string
 }
 
-type Booking = components['schemas']['Booking']
+interface BookingItem {
+  id: string
+  bookingDate: string | Date
+  editedTime: number
+  originalTime: number
+  bookingType?: {
+    code: string
+    name: string
+    direction: string
+  } | null
+  notes?: string | null
+}
 
 /**
  * Dashboard section showing recent booking activity.
@@ -50,18 +60,20 @@ export function RecentActivity({
     employeeId,
     from: formatDate(weekAgo),
     to: formatDate(new Date()),
-    limit: limit * 2, // Fetch more to ensure we have enough after filtering
+    pageSize: limit * 2, // Fetch more to ensure we have enough after filtering
     enabled: !!employeeId,
   })
 
   // Get recent bookings, sorted by date and time descending
-  const recentBookings = (data?.data ?? [])
+  const recentBookings = (data?.items ?? [])
     .slice()
     .sort((a, b) => {
       // Sort by date first, then by time
-      const dateCompare = b.booking_date.localeCompare(a.booking_date)
+      const dateA = String(a.bookingDate)
+      const dateB = String(b.bookingDate)
+      const dateCompare = dateB.localeCompare(dateA)
       if (dateCompare !== 0) return dateCompare
-      return b.edited_time - a.edited_time
+      return b.editedTime - a.editedTime
     })
     .slice(0, limit)
 
@@ -134,10 +146,10 @@ export function RecentActivity({
   )
 }
 
-function ActivityItem({ booking }: { booking: Booking }) {
+function ActivityItem({ booking }: { booking: BookingItem }) {
   const t = useTranslations('dashboard')
-  const direction = booking.booking_type?.direction
-  const bookingTypeName = booking.booking_type?.name ?? ''
+  const direction = booking.bookingType?.direction
+  const bookingTypeName = booking.bookingType?.name ?? ''
 
   // Determine icon and description based on booking type
   const getIcon = () => {
@@ -166,10 +178,11 @@ function ActivityItem({ booking }: { booking: Booking }) {
     return direction === 'in' ? t('clockedInActivity') : t('clockedOutActivity')
   }
 
-  const dateStr = formatRelativeDate(booking.booking_date)
-  // Use time_string if available, otherwise convert edited_time from minutes
-  const timeStr = booking.time_string ?? formatTime(booking.edited_time)
-  const wasEdited = booking.edited_time !== booking.original_time
+  // bookingDate is serialized as string from tRPC
+  const bookingDateStr = String(booking.bookingDate).split('T')[0]!
+  const dateStr = formatRelativeDate(bookingDateStr)
+  const timeStr = formatTime(booking.editedTime)
+  const wasEdited = booking.editedTime !== booking.originalTime
 
   return (
     <div className="flex items-start gap-3 px-6 py-3">

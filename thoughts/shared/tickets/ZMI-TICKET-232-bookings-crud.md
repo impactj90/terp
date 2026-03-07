@@ -1,6 +1,6 @@
 # ZMI-TICKET-232: Bookings CRUD (ohne Recalc-Trigger)
 
-Status: Proposed
+Status: Completed
 Priority: P1
 Owner: TBD
 

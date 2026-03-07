@@ -45,7 +45,7 @@ export function BookingCreateDialog({
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
 
-  const bookingTypesQuery = useBookingTypes({ active: true, enabled: open })
+  const bookingTypesQuery = useBookingTypes({ isActive: true, enabled: open })
   const createBooking = useCreateBooking()
   const bookingTypes = bookingTypesQuery.data?.data ?? []
 
@@ -90,14 +90,12 @@ export function BookingCreateDialog({
 
     try {
       await createBooking.mutateAsync({
-        body: {
-          employee_id: employeeId,
-          booking_date: formatDate(date),
-          booking_type_id: selectedTypeId,
-          time,
-          notes: notes || undefined,
-        },
-      } as never)
+        employeeId,
+        bookingDate: formatDate(date),
+        bookingTypeId: selectedTypeId,
+        time,
+        notes: notes || undefined,
+      })
 
       onOpenChange(false)
     } catch (err) {

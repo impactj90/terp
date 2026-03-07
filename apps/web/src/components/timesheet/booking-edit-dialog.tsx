@@ -82,12 +82,10 @@ export function BookingEditDialog({
       }
 
       await updateBooking.mutateAsync({
-        path: { id: booking.id },
-        body: {
-          time: editedTime,
-          notes: notes || undefined,
-        },
-      } as never)
+        id: booking.id,
+        time: editedTime,
+        notes: notes || undefined,
+      })
 
       onOpenChange(false)
       onSuccess?.()

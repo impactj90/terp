@@ -24,7 +24,7 @@ export function QuickActions({ employeeId }: QuickActionsProps) {
   const createBooking = useCreateBooking()
 
   // Fetch booking types to get the correct IDs for clock in/out
-  const { data: bookingTypesData } = useBookingTypes({ active: true })
+  const { data: bookingTypesData } = useBookingTypes({ isActive: true })
 
   // Get today's data to determine clock status
   const { data: dayView } = useEmployeeDayView(
@@ -57,12 +57,10 @@ export function QuickActions({ employeeId }: QuickActionsProps) {
 
     try {
       await createBooking.mutateAsync({
-        body: {
-          employee_id: employeeId,
-          booking_date: formatDate(new Date()),
-          booking_type_id: clockInType.id,
-          time: getCurrentTimeString(),
-        },
+        employeeId,
+        bookingDate: formatDate(new Date()),
+        bookingTypeId: clockInType.id,
+        time: getCurrentTimeString(),
       })
     } catch (error) {
       // Error is handled by React Query
@@ -75,12 +73,10 @@ export function QuickActions({ employeeId }: QuickActionsProps) {
 
     try {
       await createBooking.mutateAsync({
-        body: {
-          employee_id: employeeId,
-          booking_date: formatDate(new Date()),
-          booking_type_id: clockOutType.id,
-          time: getCurrentTimeString(),
-        },
+        employeeId,
+        bookingDate: formatDate(new Date()),
+        bookingTypeId: clockOutType.id,
+        time: getCurrentTimeString(),
       })
     } catch (error) {
       console.error('Failed to clock out:', error)

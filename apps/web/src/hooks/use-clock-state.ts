@@ -10,7 +10,14 @@ import type { ClockStatus } from '@/components/time-clock/clock-status-badge'
 import type { components } from '@/lib/api/types'
 
 type Booking = components['schemas']['Booking']
-type BookingType = components['schemas']['BookingType']
+
+interface BookingTypeEntry {
+  id: string
+  code: string
+  name: string
+  direction: string
+  [key: string]: unknown
+}
 
 // Booking type codes
 const CLOCK_IN = 'A1'
@@ -33,18 +40,19 @@ export function useClockState({ employeeId, enabled = true }: UseClockStateOptio
   const dayView = useEmployeeDayView(employeeId, today, { enabled: enabled && !!employeeId })
 
   // Fetch booking types
-  const bookingTypes = useBookingTypes({ active: true, enabled })
+  const bookingTypes = useBookingTypes({ isActive: true, enabled })
 
   // Create booking mutation
   const createBooking = useCreateBooking()
 
   // Build booking type lookup
   const bookingTypeMap = useMemo(() => {
-    const map = new Map<string, BookingType>()
-    if (bookingTypes.data?.data) {
-      for (const bt of bookingTypes.data.data) {
+    const map = new Map<string, BookingTypeEntry>()
+    const items = bookingTypes.data?.data
+    if (items) {
+      for (const bt of items) {
         if (bt.code) {
-          map.set(bt.code, bt)
+          map.set(bt.code, bt as unknown as BookingTypeEntry)
         }
       }
     }
@@ -116,12 +124,10 @@ export function useClockState({ employeeId, enabled = true }: UseClockStateOptio
       }
 
       await createBooking.mutateAsync({
-        body: {
-          employee_id: employeeId,
-          booking_date: today,
-          booking_type_id: bookingType.id,
-          time: getCurrentTimeString(),
-        },
+        employeeId,
+        bookingDate: today,
+        bookingTypeId: bookingType.id,
+        time: getCurrentTimeString(),
       })
 
       // Invalidate day view to refresh

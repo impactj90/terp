@@ -1,10 +1,13 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
 interface UseBookingsOptions {
   employeeId?: string
   from?: string
   to?: string
+  /** @deprecated Use pageSize instead */
   limit?: number
+  pageSize?: number
   page?: number
   enabled?: boolean
 }
@@ -26,39 +29,55 @@ export function useBookings(options: UseBookingsOptions = {}) {
     employeeId,
     from,
     to,
-    limit = 50,
+    limit,
+    pageSize,
     page,
     enabled = true,
   } = options
-
-  return useApiQuery('/bookings', {
-    params: {
-      employee_id: employeeId,
-      from,
-      to,
-      limit,
-      page,
-    },
-    enabled,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.bookings.list.queryOptions(
+      {
+        employeeId,
+        fromDate: from,
+        toDate: to,
+        pageSize: pageSize ?? limit ?? 50,
+        page,
+      },
+      { enabled }
+    )
+  )
 }
 
 /**
  * Hook to fetch a single booking by ID.
  */
 export function useBooking(id: string, enabled = true) {
-  return useApiQuery('/bookings/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.bookings.getById.queryOptions(
+      { id },
+      { enabled: enabled && !!id }
+    )
+  )
 }
 
 /**
  * Hook to create a new booking (clock in/out).
  */
 export function useCreateBooking() {
-  return useApiMutation('/bookings', 'post', {
-    invalidateKeys: [['/bookings'], ['/daily-values'], ['/employees/{id}/day/{date}'], ['employees']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.bookings.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookings.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookings.getById.queryKey(),
+      })
+    },
   })
 }
 
@@ -66,8 +85,18 @@ export function useCreateBooking() {
  * Hook to update an existing booking.
  */
 export function useUpdateBooking() {
-  return useApiMutation('/bookings/{id}', 'put', {
-    invalidateKeys: [['/bookings'], ['/daily-values'], ['/employees/{id}/day/{date}'], ['employees']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.bookings.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookings.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookings.getById.queryKey(),
+      })
+    },
   })
 }
 
@@ -75,7 +104,17 @@ export function useUpdateBooking() {
  * Hook to delete a booking.
  */
 export function useDeleteBooking() {
-  return useApiMutation('/bookings/{id}', 'delete', {
-    invalidateKeys: [['/bookings'], ['/daily-values'], ['/employees/{id}/day/{date}'], ['employees']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.bookings.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookings.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookings.getById.queryKey(),
+      })
+    },
   })
 }
