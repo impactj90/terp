@@ -353,14 +353,11 @@ export const shiftsRouter = createTRPCRouter({
         })
       }
 
-      // Check if shift is in use via employee_day_plans (not in Prisma schema)
-      const dayPlanResult = await ctx.prisma.$queryRawUnsafe<
-        [{ count: bigint }]
-      >(
-        `SELECT COUNT(*)::bigint as count FROM employee_day_plans WHERE shift_id = $1`,
-        input.id
-      )
-      const inUseByDayPlans = Number(dayPlanResult[0].count) > 0
+      // Check if shift is in use via employee_day_plans
+      const dayPlanCount = await ctx.prisma.employeeDayPlan.count({
+        where: { shiftId: input.id },
+      })
+      const inUseByDayPlans = dayPlanCount > 0
 
       // Check shift_assignments via Prisma
       const assignmentCount = await ctx.prisma.shiftAssignment.count({

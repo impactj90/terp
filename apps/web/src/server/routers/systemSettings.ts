@@ -217,23 +217,30 @@ function buildDailyValuesQuery(
 }
 
 /**
- * Builds a raw SQL query for employee_day_plans table with optional employee filter.
+ * Deletes employee_day_plans for a tenant within a date range, with optional employee filter.
+ * Uses Prisma model instead of raw SQL.
  */
-function buildEdpQuery(
+async function deleteEmployeeDayPlans(
+  prisma: PrismaClient,
   tenantId: string,
   dateFrom: string,
   dateTo: string,
   employeeIds?: string[]
-): [string, unknown[]] {
-  let sql = `DELETE FROM employee_day_plans WHERE tenant_id = $1::uuid AND date BETWEEN $2::date AND $3::date`
-  const params: unknown[] = [tenantId, dateFrom, dateTo]
-
-  if (employeeIds && employeeIds.length > 0) {
-    sql += ` AND employee_id = ANY($4::uuid[])`
-    params.push(employeeIds)
+): Promise<number> {
+  const where: Record<string, unknown> = {
+    tenantId,
+    planDate: {
+      gte: new Date(dateFrom),
+      lte: new Date(dateTo),
+    },
   }
 
-  return [sql, params]
+  if (employeeIds && employeeIds.length > 0) {
+    where.employeeId = { in: employeeIds }
+  }
+
+  const result = await prisma.employeeDayPlan.deleteMany({ where })
+  return result.count
 }
 
 // --- Router ---
@@ -464,18 +471,17 @@ export const systemSettingsRouter = createTRPCRouter({
         input.dateTo,
         input.employeeIds
       )
-      const [edpSql, edpParams] = buildEdpQuery(
-        tenantId,
-        input.dateFrom,
-        input.dateTo,
-        input.employeeIds
-      )
-
       const [deletedBookings, deletedDailyValues, deletedEdps] =
         await Promise.all([
           ctx.prisma.$executeRawUnsafe(bookingsSql, ...bookingsParams),
           ctx.prisma.$executeRawUnsafe(dvSql, ...dvParams),
-          ctx.prisma.$executeRawUnsafe(edpSql, ...edpParams),
+          deleteEmployeeDayPlans(
+            ctx.prisma,
+            tenantId,
+            input.dateFrom,
+            input.dateTo,
+            input.employeeIds
+          ),
         ])
 
       return {

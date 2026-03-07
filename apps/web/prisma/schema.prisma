@@ -139,6 +139,7 @@ model Tenant {
   notificationPreferences     NotificationPreference[]
   shifts                      Shift[]
   shiftAssignments            ShiftAssignment[]
+  employeeDayPlans            EmployeeDayPlan[]
   macros                      Macro[]
   macroAssignments            MacroAssignment[]
   macroExecutions             MacroExecution[]
@@ -607,6 +608,7 @@ model Employee {
   cappingExceptions EmployeeCappingException[]
   vacationBalances  VacationBalance[]
   shiftAssignments  ShiftAssignment[]
+  employeeDayPlans  EmployeeDayPlan[]
   macroAssignments  MacroAssignment[]
   messageRecipients EmployeeMessageRecipient[]
   accessAssignments    EmployeeAccessAssignment[]
@@ -1233,6 +1235,7 @@ model DayPlan {
   bonuses    DayPlanBonus[]
   tariffDayPlans TariffDayPlan[]
   shifts     Shift[]
+  employeeDayPlans EmployeeDayPlan[]
 
   // Reverse relations for WeekPlan
   weekPlanMondays     WeekPlan[] @relation("WeekPlanMonday")
@@ -1884,6 +1887,7 @@ model Shift {
   tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   dayPlan          DayPlan?          @relation(fields: [dayPlanId], references: [id], onDelete: SetNull)
   shiftAssignments ShiftAssignment[]
+  employeeDayPlans EmployeeDayPlan[]
 
   // Indexes
   @@unique([tenantId, code])
@@ -1922,6 +1926,44 @@ model ShiftAssignment {
   @@index([shiftId], map: "idx_shift_assignments_shift")
   @@index([validFrom, validTo], map: "idx_shift_assignments_dates")
   @@map("shift_assignments")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeDayPlan
+// -----------------------------------------------------------------------------
+// Migrations: 000023, 000083
+//
+// Stores assigned day plans per employee per date.
+// day_plan_id NULL represents an off day (no work scheduled).
+// source values: 'tariff', 'manual', 'holiday'
+//
+// CHECK constraints (enforced at DB level only):
+//   - UNIQUE(employee_id, plan_date)
+model EmployeeDayPlan {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  employeeId String    @map("employee_id") @db.Uuid
+  planDate   DateTime  @map("plan_date") @db.Date
+  dayPlanId  String?   @map("day_plan_id") @db.Uuid
+  shiftId    String?   @map("shift_id") @db.Uuid
+  source     String?   @default("tariff") @db.VarChar(20)
+  notes      String?   @db.Text
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  dayPlan  DayPlan?  @relation(fields: [dayPlanId], references: [id], onDelete: SetNull)
+  shift    Shift?    @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+
+  // Constraints & indexes
+  @@unique([employeeId, planDate])
+  @@index([tenantId], map: "idx_employee_day_plans_tenant")
+  @@index([employeeId, planDate], map: "idx_employee_day_plans_employee_date")
+  @@index([planDate], map: "idx_employee_day_plans_date")
+  @@index([shiftId], map: "idx_employee_day_plans_shift")
+  @@map("employee_day_plans")
 }
 
 // -----------------------------------------------------------------------------
