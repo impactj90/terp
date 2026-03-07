@@ -95,6 +95,7 @@ export {
   useNotificationPreferences,
   useUpdateNotificationPreferences,
 } from './use-notifications'
+export { useUnreadCount } from '../use-unread-count'
 
 // Absences
 export {

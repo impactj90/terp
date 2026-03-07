@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useMarkAllNotificationsRead, useMarkNotificationRead, useNotifications } from '@/hooks/api'
+import { useUnreadCount } from '@/hooks/use-unread-count'
 import { NotificationPreferencesCard } from '@/components/notifications/notification-preferences'
 import { formatRelativeTime } from '@/lib/time-utils'
 
@@ -23,17 +24,7 @@ const notificationIcons = {
 
 type NotificationType = keyof typeof notificationIcons
 
-type Notification = {
-  id: string
-  type: NotificationType
-  title: string
-  message: string
-  link?: string | null
-  read_at?: string | null
-  created_at: string
-}
-
-const DEFAULT_LIMIT = 20
+const DEFAULT_PAGE_SIZE = 20
 
 type TabValue = 'all' | 'preferences'
 
@@ -56,42 +47,31 @@ export default function NotificationsPage() {
     type: 'all',
     unreadOnly: false,
   })
-  const [offset, setOffset] = useState(0)
-  const [items, setItems] = useState<Notification[]>([])
+  const [page, setPage] = useState(1)
 
   useEffect(() => {
     setTab(searchParams.get('tab') === 'preferences' ? 'preferences' : 'all')
   }, [searchParams])
 
   useEffect(() => {
-    setOffset(0)
-    setItems([])
+    setPage(1)
   }, [filters, tab])
 
   const { data, isLoading } = useNotifications({
-    limit: DEFAULT_LIMIT,
-    offset,
+    pageSize: DEFAULT_PAGE_SIZE,
+    page,
     type: filters.type === 'all' ? undefined : filters.type,
     unread: filters.unreadOnly ? true : undefined,
     enabled: tab === 'all',
   })
 
-  useEffect(() => {
-    if (!data?.data) return
-    const pageItems = data.data as Notification[]
-    if (offset === 0) {
-      setItems(pageItems)
-    } else if (pageItems.length > 0) {
-      setItems((prev) => [...prev, ...pageItems])
-    }
-  }, [data, offset])
-
   const markRead = useMarkNotificationRead()
   const markAllRead = useMarkAllNotificationsRead()
+  const { unreadCount } = useUnreadCount()
 
-  const total = data?.total ?? items.length
-  const unreadCount = data?.unread_count ?? 0
-  const hasMore = items.length < total
+  const items = data?.items ?? []
+  const total = data?.total ?? 0
+  const hasMore = page * DEFAULT_PAGE_SIZE < total
 
   const filterOptions = useMemo(
     () => [
@@ -114,12 +94,12 @@ export default function NotificationsPage() {
 
   const handleMarkAllRead = () => {
     if (unreadCount === 0) return
-    markAllRead.mutate({})
+    markAllRead.mutate()
   }
 
-  const handleNotificationClick = (notification: Notification) => {
-    if (!notification.read_at) {
-      markRead.mutate({ path: { id: notification.id } })
+  const handleNotificationClick = (notification: { id: string; readAt: unknown }) => {
+    if (!notification.readAt) {
+      markRead.mutate({ id: notification.id })
     }
   }
 
@@ -179,8 +159,9 @@ export default function NotificationsPage() {
               ) : (
                 <div className="divide-y rounded-lg border">
                   {items.map((notification) => {
-                    const Icon = notificationIcons[notification.type]
-                    const isUnread = !notification.read_at
+                    const Icon = notificationIcons[notification.type as NotificationType]
+                    const isUnread = !notification.readAt
+                    const createdAtStr = String(notification.createdAt)
                     return (
                       <Link
                         key={notification.id}
@@ -189,7 +170,7 @@ export default function NotificationsPage() {
                         className="flex items-start gap-4 p-4 transition hover:bg-muted/50"
                       >
                         <span className="mt-1 rounded-full bg-muted p-2">
-                          <Icon className="h-4 w-4 text-muted-foreground" />
+                          {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
                         </span>
                         <div className="flex-1 space-y-2">
                           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -200,12 +181,12 @@ export default function NotificationsPage() {
                               {isUnread && <Badge variant="secondary">{t('unread')}</Badge>}
                             </div>
                             <span className="text-xs text-muted-foreground">
-                              {formatRelativeTime(notification.created_at, locale)}
+                              {formatRelativeTime(createdAtStr, locale)}
                             </span>
                           </div>
                           <p className="text-sm text-muted-foreground">{notification.message}</p>
                           <div className="text-xs text-muted-foreground">
-                            {t(`typeLabel.${notification.type}`)}
+                            {t(`typeLabel.${notification.type}` as Parameters<typeof t>[0])}
                           </div>
                         </div>
                       </Link>
@@ -218,7 +199,7 @@ export default function NotificationsPage() {
                 <div className="flex justify-center">
                   <Button
                     variant="outline"
-                    onClick={() => setOffset((prev) => prev + DEFAULT_LIMIT)}
+                    onClick={() => setPage((prev) => prev + 1)}
                   >
                     {t('loadMore')}
                   </Button>

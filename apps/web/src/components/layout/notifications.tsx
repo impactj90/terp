@@ -25,7 +25,7 @@ import {
   useMarkNotificationRead,
   useNotifications,
 } from '@/hooks/api'
-import { useNotificationsStream } from '@/hooks/use-notifications-stream'
+import { useUnreadCount } from '@/hooks/use-unread-count'
 import { useAuth } from '@/providers/auth-provider'
 import { formatRelativeTime } from '@/lib/time-utils'
 
@@ -37,16 +37,6 @@ const notificationIcons = {
 } as const
 
 type NotificationType = keyof typeof notificationIcons
-
-type Notification = {
-  id: string
-  type: NotificationType
-  title: string
-  message: string
-  link?: string | null
-  read_at?: string | null
-  created_at: string
-}
 
 interface NotificationsProps {
   /** Override notification count (for testing/demo) */
@@ -62,24 +52,22 @@ export function Notifications({ count }: NotificationsProps) {
   const locale = useLocale()
   const { isAuthenticated } = useAuth()
 
-  useNotificationsStream({ enabled: isAuthenticated })
-
-  const { data } = useNotifications({ limit: 10, enabled: isAuthenticated })
+  const { data } = useNotifications({ pageSize: 10, enabled: isAuthenticated })
+  const { unreadCount: hookUnreadCount } = useUnreadCount(isAuthenticated)
   const markRead = useMarkNotificationRead()
   const markAllRead = useMarkAllNotificationsRead()
 
-  const notifications = (data?.data ?? []) as Notification[]
-  const unreadCount =
-    count ?? data?.unread_count ?? notifications.filter((n) => !n.read_at).length
+  const notifications = data?.items ?? []
+  const unreadCount = count ?? hookUnreadCount
 
   const handleMarkAll = () => {
     if (unreadCount === 0) return
-    markAllRead.mutate({})
+    markAllRead.mutate()
   }
 
-  const handleNotificationClick = (notification: Notification) => {
-    if (!notification.read_at) {
-      markRead.mutate({ path: { id: notification.id } })
+  const handleNotificationClick = (notification: { id: string; readAt: unknown }) => {
+    if (!notification.readAt) {
+      markRead.mutate({ id: notification.id })
     }
   }
 
@@ -128,8 +116,10 @@ export function Notifications({ count }: NotificationsProps) {
             </div>
           ) : (
             notifications.map((notification) => {
-              const Icon = notificationIcons[notification.type]
-              const isUnread = !notification.read_at
+              const Icon = notificationIcons[notification.type as NotificationType]
+              const isUnread = !notification.readAt
+              // createdAt comes as an ISO string over the wire (no superjson transformer)
+              const createdAtStr = String(notification.createdAt)
               return (
                 <DropdownMenuItem
                   key={notification.id}
@@ -144,7 +134,7 @@ export function Notifications({ count }: NotificationsProps) {
                     <div className="flex w-full items-start justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <span className="rounded-full bg-muted p-1">
-                          <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                          {Icon && <Icon className="h-3.5 w-3.5 text-muted-foreground" />}
                         </span>
                         <span
                           className={`text-sm ${isUnread ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}
@@ -160,7 +150,7 @@ export function Notifications({ count }: NotificationsProps) {
                       {notification.message}
                     </p>
                     <span className="text-xs text-muted-foreground">
-                      {formatRelativeTime(notification.created_at, locale)}
+                      {formatRelativeTime(createdAtStr, locale)}
                     </span>
                   </Link>
                 </DropdownMenuItem>

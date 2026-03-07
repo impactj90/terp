@@ -1,12 +1,12 @@
 /**
  * Notifications Router
  *
- * Provides notification listing, read marking, and preference management
- * via tRPC procedures. All operations are user-scoped (users can only
- * access their own notifications).
+ * Provides notification listing, read marking, preference management,
+ * and realtime subscription via tRPC procedures. All operations are
+ * user-scoped (users can only access their own notifications).
  *
  * Notification creation is internal only (called by other services).
- * Realtime streaming handled by Supabase Realtime (TICKET-230).
+ * Realtime events delivered via PubSub hub + tRPC subscription (onEvent).
  *
  * Replaces the Go backend notification endpoints:
  * - GET /notifications -> notifications.list
@@ -194,6 +194,15 @@ export const notificationsRouter = createTRPCRouter({
         data: { readAt: new Date() },
       })
 
+      // Publish unread count update via PubSub
+      const { getHub } = await import('@/lib/pubsub/singleton')
+      const { userTopic } = await import('@/lib/pubsub/topics')
+      const hub = getHub()
+      const newCount = await ctx.prisma.notification.count({
+        where: { tenantId, userId, readAt: null },
+      })
+      await hub.publish(userTopic(userId), { event: 'unread_count', unread_count: newCount }, true)
+
       return { success: true }
     }),
 
@@ -216,8 +225,92 @@ export const notificationsRouter = createTRPCRouter({
         data: { readAt: new Date() },
       })
 
+      // Publish unread count update via PubSub (count is now 0)
+      const { getHub } = await import('@/lib/pubsub/singleton')
+      const { userTopic } = await import('@/lib/pubsub/topics')
+      const hub = getHub()
+      await hub.publish(userTopic(userId), { event: 'unread_count', unread_count: 0 }, true)
+
       return { success: true, count: result.count }
     }),
+
+  /**
+   * notifications.unreadCount -- Returns the count of unread notifications.
+   *
+   * Used by the useUnreadCount hook for badge display.
+   * The subscription (onEvent) also pushes count updates in realtime.
+   *
+   * No additional permission required -- user-scoped.
+   */
+  unreadCount: tenantProcedure
+    .query(async ({ ctx }) => {
+      const tenantId = ctx.tenantId!
+      const userId = ctx.user.id
+      const count = await ctx.prisma.notification.count({
+        where: { tenantId, userId, readAt: null },
+      })
+      return { unread_count: count }
+    }),
+
+  /**
+   * notifications.onEvent -- Realtime subscription for notification events.
+   *
+   * Uses PubSub hub to deliver events via SSE (httpSubscriptionLink).
+   * Yields an initial 'connected' event with the current unread count,
+   * then streams 'notification' events as they arrive.
+   *
+   * Adapted from workbook for terp's multi-tenant architecture.
+   */
+  onEvent: tenantProcedure.subscription(async function* ({ ctx, signal }) {
+    const { getHub } = await import('@/lib/pubsub/singleton')
+    const { userTopic } = await import('@/lib/pubsub/topics')
+    const hub = getHub()
+    const userId = ctx.user.id
+    const tenantId = ctx.tenantId!
+
+    // Yield initial connected event with unread count
+    let unreadCount = 0
+    try {
+      unreadCount = await ctx.prisma.notification.count({
+        where: { tenantId, userId, readAt: null },
+      })
+    } catch {
+      // Silently ignore
+    }
+    yield { type: 'connected' as const, unread_count: unreadCount }
+
+    // Queue + resolver pattern to bridge callback-based PubSub to async generator
+    const queue: Array<{ type: 'notification' | 'feed_update'; subtype?: string; unread_count?: number }> = []
+    let resolve: (() => void) | null = null
+
+    const userSub = hub.subscribe(userTopic(userId), (msg) => {
+      const payload = msg.payload as Record<string, unknown> | undefined
+      queue.push({
+        type: 'notification',
+        subtype: (payload?.type as string) ?? undefined,
+        unread_count: typeof payload?.unread_count === 'number' ? payload.unread_count : undefined,
+      })
+      resolve?.()
+    })
+
+    signal?.addEventListener('abort', () => {
+      resolve?.()
+    })
+
+    try {
+      while (!signal?.aborted) {
+        if (queue.length === 0) {
+          await new Promise<void>((r) => { resolve = r })
+          resolve = null
+        }
+        while (queue.length > 0 && !signal?.aborted) {
+          yield queue.shift()!
+        }
+      }
+    } finally {
+      hub.unsubscribe(userSub)
+    }
+  }),
 
   /**
    * notifications.preferences -- Returns notification preferences for the user.

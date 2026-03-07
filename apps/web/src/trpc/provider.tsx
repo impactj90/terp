@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
-import { createTRPCClient, httpBatchLink } from "@trpc/client"
+import { createTRPCClient, httpBatchLink, httpSubscriptionLink, splitLink } from "@trpc/client"
 import type { AppRouter } from "@/server/root"
 import { TRPCProvider } from "./context"
 import { createClient } from "@/lib/supabase/client"
@@ -63,35 +63,63 @@ export function TRPCReactProvider({
 }) {
   const queryClient = getQueryClient()
 
-  const [trpcClient] = useState(() =>
-    createTRPCClient<AppRouter>({
+  const [trpcClient] = useState(() => {
+    const url = `${getBaseUrl()}/api/trpc`
+
+    async function getHeaders() {
+      const headers: Record<string, string> = {}
+
+      // Get the current Supabase session token
+      const supabase = createClient()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      if (session?.access_token) {
+        headers["authorization"] = `Bearer ${session.access_token}`
+      }
+
+      // Forward tenant ID to tRPC server
+      const tenantId = tenantIdStorage.getTenantId()
+      if (tenantId) {
+        headers["x-tenant-id"] = tenantId
+      }
+
+      return headers
+    }
+
+    return createTRPCClient<AppRouter>({
       links: [
-        httpBatchLink({
-          url: `${getBaseUrl()}/api/trpc`,
-          async headers() {
-            const headers: Record<string, string> = {}
-
-            // Get the current Supabase session token
-            const supabase = createClient()
-            const {
-              data: { session },
-            } = await supabase.auth.getSession()
-            if (session?.access_token) {
-              headers["authorization"] = `Bearer ${session.access_token}`
-            }
-
-            // Forward tenant ID to tRPC server
-            const tenantId = tenantIdStorage.getTenantId()
-            if (tenantId) {
-              headers["x-tenant-id"] = tenantId
-            }
-
-            return headers
-          },
+        splitLink({
+          condition: (op) => op.type === "subscription",
+          true: httpSubscriptionLink({
+            url,
+            // SSE (EventSource) doesn't support custom headers.
+            // connectionParams are serialized as URL query parameters
+            // and read by createTRPCContext on the server.
+            connectionParams: async () => {
+              const params: Record<string, string> = {}
+              const supabase = createClient()
+              const {
+                data: { session },
+              } = await supabase.auth.getSession()
+              if (session?.access_token) {
+                params["authorization"] = `Bearer ${session.access_token}`
+              }
+              const tenantId = tenantIdStorage.getTenantId()
+              if (tenantId) {
+                params["x-tenant-id"] = tenantId
+              }
+              return params
+            },
+          }),
+          false: httpBatchLink({
+            url,
+            headers: getHeaders,
+          }),
         }),
       ],
     })
-  )
+  })
 
   return (
     <QueryClientProvider client={queryClient}>

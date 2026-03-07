@@ -41,6 +41,9 @@ export function useMarkNotificationRead() {
       queryClient.invalidateQueries({
         queryKey: trpc.notifications.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.notifications.unreadCount.queryKey(),
+      })
     },
   })
 }
@@ -57,6 +60,9 @@ export function useMarkAllNotificationsRead() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.notifications.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.notifications.unreadCount.queryKey(),
       })
     },
   })

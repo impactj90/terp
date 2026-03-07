@@ -11,10 +11,10 @@ import { Separator } from '@/components/ui/separator'
 import { useNotificationPreferences, useUpdateNotificationPreferences } from '@/hooks/api'
 
 interface PreferencesState {
-  approvals_enabled: boolean
-  errors_enabled: boolean
-  reminders_enabled: boolean
-  system_enabled: boolean
+  approvalsEnabled: boolean
+  errorsEnabled: boolean
+  remindersEnabled: boolean
+  systemEnabled: boolean
 }
 
 export function NotificationPreferencesCard() {
@@ -24,10 +24,10 @@ export function NotificationPreferencesCard() {
   const updatePreferences = useUpdateNotificationPreferences()
 
   const [formState, setFormState] = useState<PreferencesState>({
-    approvals_enabled: true,
-    errors_enabled: true,
-    reminders_enabled: true,
-    system_enabled: true,
+    approvalsEnabled: true,
+    errorsEnabled: true,
+    remindersEnabled: true,
+    systemEnabled: true,
   })
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -35,10 +35,10 @@ export function NotificationPreferencesCard() {
   useEffect(() => {
     if (data) {
       setFormState({
-        approvals_enabled: data.approvals_enabled,
-        errors_enabled: data.errors_enabled,
-        reminders_enabled: data.reminders_enabled,
-        system_enabled: data.system_enabled,
+        approvalsEnabled: data.approvalsEnabled,
+        errorsEnabled: data.errorsEnabled,
+        remindersEnabled: data.remindersEnabled,
+        systemEnabled: data.systemEnabled,
       })
     }
   }, [data])
@@ -51,7 +51,7 @@ export function NotificationPreferencesCard() {
     setErrorMessage(null)
     setSuccessMessage(null)
     try {
-      await updatePreferences.mutateAsync({ body: formState })
+      await updatePreferences.mutateAsync(formState)
       setSuccessMessage(t('preferencesSaved'))
     } catch {
       setErrorMessage(t('preferencesSaveFailed'))
@@ -82,32 +82,32 @@ export function NotificationPreferencesCard() {
           <PreferenceRow
             title={t('categoryApprovals')}
             description={t('categoryApprovalsDescription')}
-            checked={formState.approvals_enabled}
-            onCheckedChange={handleToggle('approvals_enabled')}
+            checked={formState.approvalsEnabled}
+            onCheckedChange={handleToggle('approvalsEnabled')}
             disabled={isLoading || updatePreferences.isPending}
           />
           <Separator />
           <PreferenceRow
             title={t('categoryErrors')}
             description={t('categoryErrorsDescription')}
-            checked={formState.errors_enabled}
-            onCheckedChange={handleToggle('errors_enabled')}
+            checked={formState.errorsEnabled}
+            onCheckedChange={handleToggle('errorsEnabled')}
             disabled={isLoading || updatePreferences.isPending}
           />
           <Separator />
           <PreferenceRow
             title={t('categoryReminders')}
             description={t('categoryRemindersDescription')}
-            checked={formState.reminders_enabled}
-            onCheckedChange={handleToggle('reminders_enabled')}
+            checked={formState.remindersEnabled}
+            onCheckedChange={handleToggle('remindersEnabled')}
             disabled={isLoading || updatePreferences.isPending}
           />
           <Separator />
           <PreferenceRow
             title={t('categorySystem')}
             description={t('categorySystemDescription')}
-            checked={formState.system_enabled}
-            onCheckedChange={handleToggle('system_enabled')}
+            checked={formState.systemEnabled}
+            onCheckedChange={handleToggle('systemEnabled')}
             disabled={isLoading || updatePreferences.isPending}
           />
         </div>

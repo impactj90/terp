@@ -1,12 +1,17 @@
 package service
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 
 	"github.com/tolga/terp/internal/access"
 	"github.com/tolga/terp/internal/model"
@@ -116,6 +121,9 @@ func (s *NotificationService) Create(ctx context.Context, input CreateNotificati
 	if err := s.notificationRepo.Create(ctx, notification); err != nil {
 		return nil, err
 	}
+
+	// Fire-and-forget: publish to PubSub via Next.js webhook
+	s.publishNotificationEvent(input.UserID, notification)
 
 	return notification, nil
 }
@@ -270,6 +278,56 @@ func (s *NotificationService) UpdatePreferences(ctx context.Context, tenantID, u
 	prefs.TenantID = tenantID
 	prefs.UserID = userID
 	return s.preferencesRepo.Upsert(ctx, &prefs)
+}
+
+// publishNotificationEvent sends a fire-and-forget POST to the Next.js internal
+// webhook so the PubSub hub can push realtime events to connected clients.
+func (s *NotificationService) publishNotificationEvent(userID uuid.UUID, notif *model.Notification) {
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		frontendURL = "http://localhost:3000"
+	}
+	internalKey := os.Getenv("INTERNAL_API_KEY")
+	if internalKey == "" {
+		return // No key configured, skip publishing
+	}
+
+	event := map[string]interface{}{
+		"event":    "notification",
+		"type":     string(notif.Type),
+		"notif_id": notif.ID.String(),
+	}
+
+	body, err := json.Marshal(map[string]interface{}{
+		"userId": userID.String(),
+		"event":  event,
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to marshal notification publish payload")
+		return
+	}
+
+	go func() {
+		url := frontendURL + "/api/internal/notifications/publish"
+		req, err := http.NewRequest("POST", url, bytes.NewReader(body))
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to create notification publish request")
+			return
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Internal-Api-Key", internalKey)
+
+		client := &http.Client{Timeout: 5 * time.Second}
+		resp, err := client.Do(req)
+		if err != nil {
+			log.Warn().Err(err).Msg("Failed to publish notification event to Next.js")
+			return
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			log.Warn().Int("status", resp.StatusCode).Msg("Notification publish returned non-200")
+		}
+	}()
 }
 
 func (s *NotificationService) getOrCreatePreferences(ctx context.Context, tenantID, userID uuid.UUID) (*model.NotificationPreferences, error) {

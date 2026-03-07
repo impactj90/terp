@@ -57,12 +57,22 @@ export type TRPCContext = {
 export async function createTRPCContext(
   opts: FetchCreateContextFnOptions
 ): Promise<TRPCContext> {
-  const authHeader = opts.req.headers.get("authorization")
+  // For regular requests, auth comes from headers.
+  // For SSE subscriptions (httpSubscriptionLink), auth comes from
+  // connectionParams since EventSource doesn't support custom headers.
+  const connParams = opts.info?.connectionParams
+  const authHeader =
+    opts.req.headers.get("authorization") ??
+    (connParams?.["authorization"] as string | undefined) ??
+    null
   const authToken = authHeader?.startsWith("Bearer ")
     ? authHeader.slice(7)
     : null
 
-  const tenantId = opts.req.headers.get("x-tenant-id")
+  const tenantId =
+    opts.req.headers.get("x-tenant-id") ??
+    (connParams?.["x-tenant-id"] as string | undefined) ??
+    null
 
   let user: ContextUser | null = null
   let session: Session | null = null

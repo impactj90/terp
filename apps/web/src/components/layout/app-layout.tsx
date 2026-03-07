@@ -8,6 +8,8 @@ import { MobileNav } from './mobile-nav'
 import { MobileSidebarSheet } from './mobile-sidebar-sheet'
 import { Breadcrumbs } from './breadcrumbs'
 import { SkipLink } from './skip-link'
+import { useGlobalNotifications } from '@/hooks/use-global-notifications'
+import { useAuth } from '@/providers/auth-provider'
 
 interface AppLayoutContentProps {
   children: React.ReactNode
@@ -19,6 +21,8 @@ interface AppLayoutContentProps {
 function AppLayoutContent({ children }: AppLayoutContentProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { isCollapsed } = useSidebar()
+  const { isAuthenticated } = useAuth()
+  useGlobalNotifications(isAuthenticated)
 
   return (
     <>
