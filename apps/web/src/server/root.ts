@@ -51,6 +51,9 @@ import { employeeMessagesRouter } from "./routers/employeeMessages"
 import { accessZonesRouter } from "./routers/accessZones"
 import { accessProfilesRouter } from "./routers/accessProfiles"
 import { employeeAccessAssignmentsRouter } from "./routers/employeeAccessAssignments"
+import { exportInterfacesRouter } from "./routers/exportInterfaces"
+import { payrollExportsRouter } from "./routers/payrollExports"
+import { reportsRouter } from "./routers/reports"
 
 export const appRouter = createTRPCRouter({
   health: healthRouter,
@@ -97,6 +100,9 @@ export const appRouter = createTRPCRouter({
   accessZones: accessZonesRouter,
   accessProfiles: accessProfilesRouter,
   employeeAccessAssignments: employeeAccessAssignmentsRouter,
+  exportInterfaces: exportInterfacesRouter,
+  payrollExports: payrollExportsRouter,
+  reports: reportsRouter,
 })
 
 /** Type-only export for client-side inference. */

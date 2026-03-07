@@ -57,6 +57,8 @@ model User {
   notificationPreferences NotificationPreference[]
   employeeMessages        EmployeeMessage[]
   macroExecutionsTriggers MacroExecution[]
+  payrollExportsCreated  PayrollExport[]
+  reportsCreated         Report[]
 
   // Indexes
   @@unique([tenantId, email], map: "idx_users_tenant_email")
@@ -144,6 +146,10 @@ model Tenant {
   accessZones                 AccessZone[]
   accessProfiles              AccessProfile[]
   employeeAccessAssignments   EmployeeAccessAssignment[]
+  exportInterfaces            ExportInterface[]
+  payrollExports              PayrollExport[]
+  reports                     Report[]
+  monthlyValues               MonthlyValue[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
@@ -394,8 +400,9 @@ model Account {
   bookingTypes     BookingType[]
   calculationRules CalculationRule[]
   dayPlanBonuses     DayPlanBonus[]
-  dayPlanNetAccounts DayPlan[] @relation("DayPlanNetAccount")
-  dayPlanCapAccounts DayPlan[] @relation("DayPlanCapAccount")
+  dayPlanNetAccounts       DayPlan[] @relation("DayPlanNetAccount")
+  dayPlanCapAccounts       DayPlan[] @relation("DayPlanCapAccount")
+  exportInterfaceAccounts  ExportInterfaceAccount[]
 
   // Indexes
   @@unique([tenantId, code], map: "accounts_tenant_id_code_key")
@@ -593,6 +600,7 @@ model Employee {
   macroAssignments  MacroAssignment[]
   messageRecipients EmployeeMessageRecipient[]
   accessAssignments EmployeeAccessAssignment[]
+  monthlyValues     MonthlyValue[]
 
   // Indexes
   @@unique([tenantId, personnelNumber], map: "employees_tenant_id_personnel_number_key")
@@ -2152,4 +2160,189 @@ model EmployeeAccessAssignment {
   @@index([employeeId], map: "idx_employee_access_assignments_employee")
   @@index([accessProfileId], map: "idx_employee_access_assignments_profile")
   @@map("employee_access_assignments")
+}
+
+// -----------------------------------------------------------------------------
+// ExportInterface
+// -----------------------------------------------------------------------------
+// Migration: 000059
+//
+// Defines an export interface for payroll system integration.
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model ExportInterface {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  interfaceNumber Int      @map("interface_number")
+  name            String   @db.VarChar(255)
+  mandantNumber   String?  @map("mandant_number") @db.VarChar(50)
+  exportScript    String?  @map("export_script") @db.VarChar(255)
+  exportPath      String?  @map("export_path") @db.VarChar(500)
+  outputFilename  String?  @map("output_filename") @db.VarChar(255)
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant         Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  accounts       ExportInterfaceAccount[]
+  payrollExports PayrollExport[]
+
+  // Indexes
+  @@unique([tenantId, interfaceNumber])
+  @@index([tenantId], map: "idx_ei_tenant")
+  @@map("export_interfaces")
+}
+
+// -----------------------------------------------------------------------------
+// ExportInterfaceAccount
+// -----------------------------------------------------------------------------
+// Migration: 000060
+//
+// Junction table linking export interfaces to accounts with sort order.
+// NOTE: No updatedAt column in the DB.
+model ExportInterfaceAccount {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  exportInterfaceId String   @map("export_interface_id") @db.Uuid
+  accountId         String   @map("account_id") @db.Uuid
+  sortOrder         Int      @default(0) @map("sort_order")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relations
+  exportInterface ExportInterface @relation(fields: [exportInterfaceId], references: [id], onDelete: Cascade)
+  account         Account         @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  // Indexes
+  @@unique([exportInterfaceId, accountId])
+  @@index([exportInterfaceId], map: "idx_eia_interface")
+  @@index([accountId], map: "idx_eia_account")
+  @@map("export_interface_accounts")
+}
+
+// -----------------------------------------------------------------------------
+// PayrollExport
+// -----------------------------------------------------------------------------
+// Migration: 000061
+//
+// Stores generated payroll export records and file content.
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model PayrollExport {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  exportInterfaceId String?   @map("export_interface_id") @db.Uuid
+  year              Int
+  month             Int
+  status            String    @default("pending") @db.VarChar(20)
+  exportType        String    @default("standard") @map("export_type") @db.VarChar(20)
+  format            String    @default("csv") @db.VarChar(10)
+  parameters        Json      @default("{}") @db.JsonB
+  fileContent       String?   @map("file_content") @db.Text
+  fileSize          Int?      @map("file_size")
+  rowCount          Int?      @map("row_count")
+  employeeCount     Int?      @map("employee_count")
+  totalHours        Decimal?  @map("total_hours") @db.Decimal(12, 2)
+  totalOvertime     Decimal?  @map("total_overtime") @db.Decimal(12, 2)
+  errorMessage      String?   @map("error_message") @db.Text
+  requestedAt       DateTime  @default(now()) @map("requested_at") @db.Timestamptz(6)
+  startedAt         DateTime? @map("started_at") @db.Timestamptz(6)
+  completedAt       DateTime? @map("completed_at") @db.Timestamptz(6)
+  createdBy         String?   @map("created_by") @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  exportInterface ExportInterface? @relation(fields: [exportInterfaceId], references: [id], onDelete: SetNull)
+  createdByUser   User?            @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+
+  // Indexes
+  @@index([tenantId], map: "idx_pe_tenant")
+  @@index([exportInterfaceId], map: "idx_pe_interface")
+  @@index([tenantId, year, month], map: "idx_pe_period")
+  @@index([status], map: "idx_pe_status")
+  @@map("payroll_exports")
+}
+
+// -----------------------------------------------------------------------------
+// Report
+// -----------------------------------------------------------------------------
+// Migration: 000066
+//
+// Stores generated report records and file content (BYTEA).
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model Report {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  reportType   String    @map("report_type") @db.VarChar(30)
+  name         String?   @db.VarChar(255)
+  description  String?   @db.Text
+  status       String    @default("pending") @db.VarChar(20)
+  format       String    @default("xlsx") @db.VarChar(10)
+  parameters   Json      @default("{}") @db.JsonB
+  fileContent  Bytes?    @map("file_content")
+  fileSize     Int?      @map("file_size")
+  rowCount     Int?      @map("row_count")
+  errorMessage String?   @map("error_message") @db.Text
+  requestedAt  DateTime  @default(now()) @map("requested_at") @db.Timestamptz(6)
+  startedAt    DateTime? @map("started_at") @db.Timestamptz(6)
+  completedAt  DateTime? @map("completed_at") @db.Timestamptz(6)
+  createdBy    String?   @map("created_by") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant        Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdByUser User?  @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+
+  // Indexes
+  @@index([tenantId], map: "idx_reports_tenant")
+  @@index([tenantId, reportType], map: "idx_reports_type")
+  @@index([status], map: "idx_reports_status")
+  @@map("reports")
+}
+
+// -----------------------------------------------------------------------------
+// MonthlyValue
+// -----------------------------------------------------------------------------
+// Migration: 000028
+//
+// Monthly aggregation results for employee time tracking.
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model MonthlyValue {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId         String    @map("tenant_id") @db.Uuid
+  employeeId       String    @map("employee_id") @db.Uuid
+  year             Int
+  month            Int
+  totalGrossTime   Int       @default(0) @map("total_gross_time")
+  totalNetTime     Int       @default(0) @map("total_net_time")
+  totalTargetTime  Int       @default(0) @map("total_target_time")
+  totalOvertime    Int       @default(0) @map("total_overtime")
+  totalUndertime   Int       @default(0) @map("total_undertime")
+  totalBreakTime   Int       @default(0) @map("total_break_time")
+  flextimeStart    Int       @default(0) @map("flextime_start")
+  flextimeChange   Int       @default(0) @map("flextime_change")
+  flextimeEnd      Int       @default(0) @map("flextime_end")
+  flextimeCarryover Int      @default(0) @map("flextime_carryover")
+  vacationTaken    Decimal   @default(0) @map("vacation_taken") @db.Decimal(5, 2)
+  sickDays         Int       @default(0) @map("sick_days")
+  otherAbsenceDays Int       @default(0) @map("other_absence_days")
+  workDays         Int       @default(0) @map("work_days")
+  daysWithErrors   Int       @default(0) @map("days_with_errors")
+  isClosed         Boolean   @default(false) @map("is_closed")
+  closedAt         DateTime? @map("closed_at") @db.Timestamptz(6)
+  closedBy         String?   @map("closed_by") @db.Uuid
+  reopenedAt       DateTime? @map("reopened_at") @db.Timestamptz(6)
+  reopenedBy       String?   @map("reopened_by") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  // Indexes
+  @@unique([employeeId, year, month])
+  @@index([tenantId], map: "idx_mv_tenant")
+  @@index([employeeId], map: "idx_mv_employee")
+  @@map("monthly_values")
 }

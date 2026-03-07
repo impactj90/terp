@@ -1,42 +1,36 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { api, authStorage, tenantIdStorage } from '@/lib/api'
-import { clientEnv } from '@/config/env'
-import type { components } from '@/lib/api/types'
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
 // --- Interfaces ---
 
-type ReportStatus = 'pending' | 'generating' | 'completed' | 'failed'
-
 interface UseReportsOptions {
-  reportType?: string
-  status?: string
+  reportType?: "daily_overview" | "weekly_overview" | "monthly_overview" |
+    "employee_timesheet" | "department_summary" | "absence_report" |
+    "vacation_report" | "overtime_report" | "account_balances" | "custom"
+  status?: "pending" | "generating" | "completed" | "failed"
   limit?: number
   cursor?: string
   enabled?: boolean
 }
 
-// --- Query Hooks ---
+// ==================== Query Hooks ====================
 
 /**
- * List reports with filters.
- * GET /reports
+ * List reports with filters (tRPC).
+ * Supports polling when items are in pending/generating status.
  */
 export function useReports(options: UseReportsOptions = {}) {
   const { reportType, status, limit, cursor, enabled = true } = options
-  return useApiQuery('/reports', {
-    params: {
-      report_type: reportType as components['schemas']['Report']['report_type'] | undefined,
-      status: status as ReportStatus | undefined,
-      limit,
-      cursor,
-    },
-    enabled,
-    // Poll list if any item is pending/generating
+  const trpc = useTRPC()
+  return useQuery({
+    ...trpc.reports.list.queryOptions(
+      { reportType, status, limit, cursor },
+      { enabled }
+    ),
     refetchInterval: (query) => {
-      const items = (query.state.data as { data?: Array<{ status?: string }> })?.data
+      const items = query.state.data?.data
       const hasInProgress = items?.some(
-        (item) => item.status === 'pending' || item.status === 'generating'
+        (item) => item.status === "pending" || item.status === "generating"
       )
       return hasInProgress ? 3000 : false
     },
@@ -44,90 +38,78 @@ export function useReports(options: UseReportsOptions = {}) {
 }
 
 /**
- * Get a single report by ID.
- * GET /reports/{id}
+ * Get a single report by ID (tRPC).
+ * Polls while status is pending/generating.
  */
 export function useReport(id: string | undefined) {
-  return useApiQuery('/reports/{id}', {
-    path: { id: id! },
-    enabled: !!id,
+  const trpc = useTRPC()
+  return useQuery({
+    ...trpc.reports.getById.queryOptions(
+      { id: id! },
+      { enabled: !!id }
+    ),
     refetchInterval: (query) => {
-      const status = (query.state.data as { status?: string })?.status
-      return (status === 'pending' || status === 'generating') ? 3000 : false
+      const status = query.state.data?.status
+      return status === "pending" || status === "generating" ? 3000 : false
     },
   })
 }
 
-// --- Mutation Hooks ---
+// ==================== Mutation Hooks ====================
 
 /**
- * Generate a new report.
- * POST /reports -> returns 202 (Accepted)
- *
- * NOTE: useApiMutation only infers return types from 200/201.
- * Using custom useMutation with manual typing (same pattern as
- * useGeneratePayrollExport in use-payroll-exports.ts).
+ * Generate a new report (tRPC).
  */
 export function useGenerateReport() {
+  const trpc = useTRPC()
   const queryClient = useQueryClient()
-  return useMutation<
-    components['schemas']['Report'],
-    Error,
-    { body: components['schemas']['GenerateReportRequest'] }
-  >({
-    mutationFn: async (variables) => {
-      const { data, error } = await api.POST('/reports' as never, {
-        body: variables.body,
-      } as never)
-      if (error) throw error
-      return data as components['schemas']['Report']
-    },
+  return useMutation({
+    ...trpc.reports.generate.mutationOptions(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/reports'] })
+      queryClient.invalidateQueries({
+        queryKey: trpc.reports.list.queryKey(),
+      })
     },
   })
 }
 
 /**
- * Delete a report.
- * DELETE /reports/{id}
+ * Delete a report (tRPC).
  */
 export function useDeleteReport() {
-  return useApiMutation('/reports/{id}', 'delete', {
-    invalidateKeys: [['/reports']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.reports.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.reports.list.queryKey(),
+      })
+    },
   })
 }
 
 /**
- * Download a report file as a blob.
- * Custom hook using raw fetch (openapi-fetch cannot handle blob responses).
+ * Download a report file (tRPC).
+ * Fetches base64-encoded content, decodes it, and triggers browser download.
  */
 export function useDownloadReport() {
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
   return useMutation<void, Error, { id: string; filename?: string }>({
     mutationFn: async ({ id, filename }) => {
-      const token = authStorage.getToken()
-      const tenantId = tenantIdStorage.getTenantId()
-      const response = await fetch(
-        `${clientEnv.apiUrl}/reports/${id}/download`,
-        {
-          headers: {
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            ...(tenantId ? { 'X-Tenant-ID': tenantId } : {}),
-          },
-        }
+      const result = await queryClient.fetchQuery(
+        trpc.reports.download.queryOptions({ id })
       )
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null)
-        throw new Error(
-          errorData?.detail ?? errorData?.title ?? `Download failed (${response.status})`
-        )
+      const byteString = atob(result.content)
+      const bytes = new Uint8Array(byteString.length)
+      for (let i = 0; i < byteString.length; i++) {
+        bytes[i] = byteString.charCodeAt(i)
       }
-      const blob = await response.blob()
-      const disposition = response.headers.get('Content-Disposition')
-      const extractedName = disposition?.match(/filename="?(.+?)"?$/)?.[1]
-      const downloadName = extractedName ?? filename ?? 'report'
+      const blob = new Blob([bytes], { type: result.contentType })
+      const downloadName = filename ?? result.filename
       const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
+      const a = document.createElement("a")
       a.href = url
       a.download = downloadName
       document.body.appendChild(a)

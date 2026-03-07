@@ -1,72 +1,63 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api, authStorage, tenantIdStorage } from '@/lib/api'
-import { clientEnv } from '@/config/env'
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
 // --- Interfaces ---
 
 /**
- * PayrollExportLine - inline schema from preview endpoint.
- * Not generated as a named type, defined manually.
+ * PayrollExportLine - structured line from preview endpoint.
  */
 export interface PayrollExportLine {
-  employee_id: string
-  personnel_number: string
-  first_name?: string
-  last_name?: string
-  department_code?: string
-  cost_center_code?: string
-  target_hours?: number
-  worked_hours?: number
-  overtime_hours?: number
-  account_values?: Record<string, number>
-  vacation_days?: number
-  sick_days?: number
-  other_absence_days?: number
+  employeeId: string
+  personnelNumber: string
+  firstName: string
+  lastName: string
+  departmentCode: string
+  costCenterCode: string
+  targetHours: number
+  workedHours: number
+  overtimeHours: number
+  accountValues: Record<string, number>
+  vacationDays: number
+  sickDays: number
+  otherAbsenceDays: number
 }
 
 export interface PayrollExportPreview {
   lines: PayrollExportLine[]
   summary: {
-    employee_count: number
-    total_hours: number
-    total_overtime: number
+    employeeCount: number
+    totalHours: number
+    totalOvertime: number
   }
 }
-
-type PayrollExportStatus = 'pending' | 'generating' | 'completed' | 'failed'
 
 interface UsePayrollExportsOptions {
   year?: number
   month?: number
-  status?: string
+  status?: "pending" | "generating" | "completed" | "failed"
   limit?: number
   cursor?: string
   enabled?: boolean
 }
 
-// --- Query Hooks ---
+// ==================== Query Hooks ====================
 
 /**
- * List payroll exports with filters.
- * GET /payroll-exports
+ * List payroll exports with filters (tRPC).
+ * Supports polling when items are in pending/generating status.
  */
 export function usePayrollExports(options: UsePayrollExportsOptions = {}) {
   const { year, month, status, limit, cursor, enabled = true } = options
-  return useApiQuery('/payroll-exports', {
-    params: {
-      year,
-      month,
-      status: status as PayrollExportStatus | undefined,
-      limit,
-      cursor,
-    },
-    enabled,
-    // Poll list if any item is pending/generating
+  const trpc = useTRPC()
+  return useQuery({
+    ...trpc.payrollExports.list.queryOptions(
+      { year, month, status, limit, cursor },
+      { enabled }
+    ),
     refetchInterval: (query) => {
-      const items = (query.state.data as { data?: Array<{ status?: string }> })?.data
+      const items = query.state.data?.data
       const hasInProgress = items?.some(
-        (item) => item.status === 'pending' || item.status === 'generating'
+        (item) => item.status === "pending" || item.status === "generating"
       )
       return hasInProgress ? 3000 : false
     },
@@ -74,140 +65,104 @@ export function usePayrollExports(options: UsePayrollExportsOptions = {}) {
 }
 
 /**
- * Get a single payroll export by ID.
- * GET /payroll-exports/{id}
+ * Get a single payroll export by ID (tRPC).
+ * Polls while status is pending/generating.
  */
 export function usePayrollExport(id: string | undefined) {
-  return useApiQuery('/payroll-exports/{id}', {
-    path: { id: id! },
-    enabled: !!id,
+  const trpc = useTRPC()
+  return useQuery({
+    ...trpc.payrollExports.getById.queryOptions(
+      { id: id! },
+      { enabled: !!id }
+    ),
     refetchInterval: (query) => {
-      const status = (query.state.data as { status?: string })?.status
-      return (status === 'pending' || status === 'generating') ? 3000 : false
+      const status = query.state.data?.status
+      return status === "pending" || status === "generating" ? 3000 : false
     },
   })
 }
 
 /**
- * Preview payroll export data.
- * GET /payroll-exports/{id}/preview
- *
- * NOTE: Response type is inline in the OpenAPI spec.
- * Using manual useQuery with typed response.
+ * Preview payroll export data (tRPC).
  */
 export function usePayrollExportPreview(id: string | undefined, enabled = true) {
-  return useQuery<PayrollExportPreview>({
-    queryKey: ['/payroll-exports/{id}/preview', { id }],
-    queryFn: async () => {
-      const { data, error } = await api.GET('/payroll-exports/{id}/preview' as never, {
-        params: { path: { id } },
-      } as never)
-      if (error) throw error
-      return data as PayrollExportPreview
-    },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.payrollExports.preview.queryOptions(
+      { id: id! },
+      { enabled: enabled && !!id }
+    )
+  )
 }
 
 /**
- * List export interfaces (for generate dialog dropdown).
- * GET /export-interfaces
+ * List export interfaces (for generate dialog dropdown) (tRPC).
  */
 export function useExportInterfaces(enabled = true) {
-  return useApiQuery('/export-interfaces', {
-    params: { active_only: true },
-    enabled,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.exportInterfaces.list.queryOptions(
+      { activeOnly: true },
+      { enabled }
+    )
+  )
 }
 
-// --- Mutation Hooks ---
+// ==================== Mutation Hooks ====================
 
 /**
- * Generate a new payroll export.
- * POST /payroll-exports -> returns 202 (Accepted)
- *
- * NOTE: useApiMutation only infers return types from 200/201.
- * Using custom useMutation with manual typing (same pattern as
- * useRecalculateMonthlyValues in use-admin-monthly-values.ts).
+ * Generate a new payroll export (tRPC).
  */
 export function useGeneratePayrollExport() {
+  const trpc = useTRPC()
   const queryClient = useQueryClient()
-  return useMutation<
-    {
-      id?: string
-      status?: string
-      year?: number
-      month?: number
-    },
-    Error,
-    {
-      body: {
-        year: number
-        month: number
-        format: string
-        export_type?: string
-        export_interface_id?: string
-        parameters?: {
-          employee_ids?: string[]
-          department_ids?: string[]
-          include_accounts?: string[]
-        }
-      }
-    }
-  >({
-    mutationFn: async (variables) => {
-      const { data, error } = await api.POST('/payroll-exports' as never, {
-        body: variables.body,
-      } as never)
-      if (error) throw error
-      return data as { id?: string; status?: string; year?: number; month?: number }
-    },
+  return useMutation({
+    ...trpc.payrollExports.generate.mutationOptions(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/payroll-exports'] })
+      queryClient.invalidateQueries({
+        queryKey: trpc.payrollExports.list.queryKey(),
+      })
     },
   })
 }
 
 /**
- * Delete a payroll export.
- * DELETE /payroll-exports/{id}
+ * Delete a payroll export (tRPC).
  */
 export function useDeletePayrollExport() {
-  return useApiMutation('/payroll-exports/{id}', 'delete', {
-    invalidateKeys: [['/payroll-exports']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.payrollExports.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.payrollExports.list.queryKey(),
+      })
+    },
   })
 }
 
 /**
- * Download a payroll export file as a blob.
- * Custom hook using raw fetch (openapi-fetch cannot handle blob responses).
+ * Download a payroll export file (tRPC).
+ * Fetches base64-encoded content, decodes it, and triggers browser download.
  */
 export function useDownloadPayrollExport() {
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
   return useMutation<void, Error, { id: string; filename?: string }>({
     mutationFn: async ({ id, filename }) => {
-      const token = authStorage.getToken()
-      const tenantId = tenantIdStorage.getTenantId()
-      const response = await fetch(
-        `${clientEnv.apiUrl}/payroll-exports/${id}/download`,
-        {
-          headers: {
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            ...(tenantId ? { 'X-Tenant-ID': tenantId } : {}),
-          },
-        }
+      const result = await queryClient.fetchQuery(
+        trpc.payrollExports.download.queryOptions({ id })
       )
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null)
-        throw new Error(
-          errorData?.detail ?? errorData?.title ?? `Download failed (${response.status})`
-        )
+      const byteString = atob(result.content)
+      const bytes = new Uint8Array(byteString.length)
+      for (let i = 0; i < byteString.length; i++) {
+        bytes[i] = byteString.charCodeAt(i)
       }
-      const blob = await response.blob()
-      const disposition = response.headers.get('Content-Disposition')
-      const extractedName = disposition?.match(/filename="?(.+?)"?$/)?.[1]
-      const downloadName = extractedName ?? filename ?? 'export'
+      const blob = new Blob([bytes], { type: result.contentType })
+      const downloadName = filename ?? result.filename
       const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
+      const a = document.createElement("a")
       a.href = url
       a.download = downloadName
       document.body.appendChild(a)
