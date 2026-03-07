@@ -557,6 +557,33 @@ export {
   useImportBatch,
 } from './use-terminal-bookings'
 
+// Vehicles
+export {
+  useVehicles,
+  useVehicle,
+  useCreateVehicle,
+  useUpdateVehicle,
+  useDeleteVehicle,
+} from './use-vehicles'
+
+// Vehicle Routes
+export {
+  useVehicleRoutes,
+  useVehicleRoute,
+  useCreateVehicleRoute,
+  useUpdateVehicleRoute,
+  useDeleteVehicleRoute,
+} from './use-vehicle-routes'
+
+// Trip Records
+export {
+  useTripRecords,
+  useTripRecord,
+  useCreateTripRecord,
+  useUpdateTripRecord,
+  useDeleteTripRecord,
+} from './use-trip-records'
+
 // Employee Messages
 export {
   useEmployeeMessages,

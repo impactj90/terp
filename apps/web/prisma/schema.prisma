@@ -150,6 +150,11 @@ model Tenant {
   payrollExports              PayrollExport[]
   reports                     Report[]
   monthlyValues               MonthlyValue[]
+  importBatches               ImportBatch[]
+  rawTerminalBookings         RawTerminalBooking[]
+  vehicles                    Vehicle[]
+  vehicleRoutes               VehicleRoute[]
+  tripRecords                 TripRecord[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
@@ -599,8 +604,9 @@ model Employee {
   shiftAssignments  ShiftAssignment[]
   macroAssignments  MacroAssignment[]
   messageRecipients EmployeeMessageRecipient[]
-  accessAssignments EmployeeAccessAssignment[]
-  monthlyValues     MonthlyValue[]
+  accessAssignments    EmployeeAccessAssignment[]
+  monthlyValues        MonthlyValue[]
+  rawTerminalBookings  RawTerminalBooking[]
 
   // Indexes
   @@unique([tenantId, personnelNumber], map: "employees_tenant_id_personnel_number_key")
@@ -919,8 +925,9 @@ model BookingType {
   // Relations
   tenant          Tenant?                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   account         Account?                 @relation(fields: [accountId], references: [id], onDelete: SetNull)
-  bookingReasons  BookingReason[]
-  groupMembers    BookingTypeGroupMember[]
+  bookingReasons      BookingReason[]
+  groupMembers        BookingTypeGroupMember[]
+  rawTerminalBookings RawTerminalBooking[]
 
   // Indexes
   @@index([tenantId], map: "idx_booking_types_tenant")
@@ -2345,4 +2352,170 @@ model MonthlyValue {
   @@index([tenantId], map: "idx_mv_tenant")
   @@index([employeeId], map: "idx_mv_employee")
   @@map("monthly_values")
+}
+
+// -----------------------------------------------------------------------------
+// ImportBatch
+// -----------------------------------------------------------------------------
+// Migration: 000071
+//
+// Tracks terminal import batches for idempotent processing.
+// Trigger: update_import_batches_updated_at auto-sets updated_at on UPDATE
+model ImportBatch {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  batchReference  String    @map("batch_reference") @db.VarChar(255)
+  source          String    @default("terminal") @db.VarChar(50)
+  terminalId      String?   @map("terminal_id") @db.VarChar(100)
+  status          String    @default("pending") @db.VarChar(20)
+  recordsTotal    Int       @default(0) @map("records_total")
+  recordsImported Int       @default(0) @map("records_imported")
+  recordsFailed   Int       @default(0) @map("records_failed")
+  errorMessage    String?   @map("error_message") @db.Text
+  startedAt       DateTime? @map("started_at") @db.Timestamptz(6)
+  completedAt     DateTime? @map("completed_at") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant      Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rawBookings RawTerminalBooking[]
+
+  // Indexes
+  @@unique([tenantId, batchReference], map: "idx_import_batches_unique_ref")
+  @@index([tenantId], map: "idx_import_batches_tenant")
+  @@index([status], map: "idx_import_batches_status")
+  @@map("import_batches")
+}
+
+// -----------------------------------------------------------------------------
+// RawTerminalBooking
+// -----------------------------------------------------------------------------
+// Migration: 000072
+//
+// Immutable raw booking data read from time recording terminals.
+// processed_booking_id is a plain UUID without Prisma relation because the
+// Booking model is not yet in Prisma.
+// Trigger: update_raw_terminal_bookings_updated_at auto-sets updated_at on UPDATE
+model RawTerminalBooking {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String    @map("tenant_id") @db.Uuid
+  importBatchId      String    @map("import_batch_id") @db.Uuid
+  terminalId         String    @map("terminal_id") @db.VarChar(100)
+  employeePin        String    @map("employee_pin") @db.VarChar(20)
+  employeeId         String?   @map("employee_id") @db.Uuid
+  rawTimestamp       DateTime  @map("raw_timestamp") @db.Timestamptz(6)
+  rawBookingCode     String    @map("raw_booking_code") @db.VarChar(20)
+  bookingDate        DateTime  @map("booking_date") @db.Date
+  bookingTypeId      String?   @map("booking_type_id") @db.Uuid
+  processedBookingId String?   @map("processed_booking_id") @db.Uuid
+  status             String    @default("pending") @db.VarChar(20)
+  errorMessage       String?   @map("error_message") @db.Text
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  importBatch ImportBatch  @relation(fields: [importBatchId], references: [id], onDelete: Cascade)
+  employee    Employee?    @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  bookingType BookingType? @relation(fields: [bookingTypeId], references: [id], onDelete: SetNull)
+  // Note: processedBookingId is NOT a Prisma relation because Booking model doesn't exist yet
+
+  // Indexes
+  @@index([tenantId], map: "idx_raw_terminal_bookings_tenant")
+  @@index([importBatchId], map: "idx_raw_terminal_bookings_batch")
+  @@index([employeeId], map: "idx_raw_terminal_bookings_employee")
+  @@index([tenantId, bookingDate], map: "idx_raw_terminal_bookings_date")
+  @@map("raw_terminal_bookings")
+}
+
+// -----------------------------------------------------------------------------
+// Vehicle
+// -----------------------------------------------------------------------------
+// Migration: 000074
+//
+// Vehicle definitions for mileage tracking.
+// Trigger: update_vehicles_updated_at auto-sets updated_at on UPDATE
+model Vehicle {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  code         String    @db.VarChar(50)
+  name         String    @db.VarChar(255)
+  description  String?   @db.Text
+  licensePlate String?   @map("license_plate") @db.VarChar(20)
+  isActive     Boolean   @default(true) @map("is_active")
+  sortOrder    Int       @default(0) @map("sort_order")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tripRecords TripRecord[]
+
+  // Indexes
+  @@unique([tenantId, code])
+  @@index([tenantId], map: "idx_vehicles_tenant")
+  @@map("vehicles")
+}
+
+// -----------------------------------------------------------------------------
+// VehicleRoute
+// -----------------------------------------------------------------------------
+// Migration: 000074
+//
+// Defined travel routes for vehicles.
+// Trigger: update_vehicle_routes_updated_at auto-sets updated_at on UPDATE
+model VehicleRoute {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  code        String    @db.VarChar(50)
+  name        String    @db.VarChar(255)
+  description String?   @db.Text
+  distanceKm  Decimal?  @map("distance_km") @db.Decimal(10, 2)
+  isActive    Boolean   @default(true) @map("is_active")
+  sortOrder   Int       @default(0) @map("sort_order")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tripRecords TripRecord[]
+
+  // Indexes
+  @@unique([tenantId, code])
+  @@index([tenantId], map: "idx_vehicle_routes_tenant")
+  @@map("vehicle_routes")
+}
+
+// -----------------------------------------------------------------------------
+// TripRecord
+// -----------------------------------------------------------------------------
+// Migration: 000074
+//
+// Individual trip mileage log entries.
+// Trigger: update_trip_records_updated_at auto-sets updated_at on UPDATE
+model TripRecord {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  vehicleId    String    @map("vehicle_id") @db.Uuid
+  routeId      String?   @map("route_id") @db.Uuid
+  tripDate     DateTime  @map("trip_date") @db.Date
+  startMileage Decimal?  @map("start_mileage") @db.Decimal(10, 1)
+  endMileage   Decimal?  @map("end_mileage") @db.Decimal(10, 1)
+  distanceKm   Decimal?  @map("distance_km") @db.Decimal(10, 2)
+  notes        String?   @db.Text
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle      Vehicle       @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicleRoute VehicleRoute? @relation(fields: [routeId], references: [id], onDelete: SetNull)
+
+  // Indexes
+  @@index([tenantId], map: "idx_trip_records_tenant")
+  @@index([vehicleId], map: "idx_trip_records_vehicle")
+  @@index([routeId], map: "idx_trip_records_route")
+  @@index([tripDate], map: "idx_trip_records_date")
+  @@map("trip_records")
 }

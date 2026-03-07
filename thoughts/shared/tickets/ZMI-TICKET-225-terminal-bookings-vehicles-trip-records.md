@@ -1,6 +1,6 @@
 # ZMI-TICKET-225: Terminal Bookings, Vehicles, Trip Records
 
-Status: Proposed
+Status: Completed
 Priority: P2
 Owner: TBD
 

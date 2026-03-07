@@ -1,56 +1,97 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
 // --- Terminal Bookings ---
 
 interface UseTerminalBookingsOptions {
   from?: string
   to?: string
-  terminal_id?: string
-  employee_id?: string
-  status?: 'pending' | 'processed' | 'failed' | 'skipped'
-  import_batch_id?: string
+  terminalId?: string
+  employeeId?: string
+  status?: "pending" | "processed" | "failed" | "skipped"
+  importBatchId?: string
   limit?: number
   page?: number
   enabled?: boolean
 }
 
-export function useTerminalBookings(options: UseTerminalBookingsOptions = {}) {
-  const { from, to, terminal_id, employee_id, status, import_batch_id, limit, page, enabled = true } = options
-  return useApiQuery('/terminal-bookings', {
-    params: { from: from!, to: to!, terminal_id, employee_id, status, import_batch_id, limit, page },
-    enabled: enabled && !!from && !!to,
-  })
+export function useTerminalBookings(
+  options: UseTerminalBookingsOptions = {}
+) {
+  const {
+    from,
+    to,
+    terminalId,
+    employeeId,
+    status,
+    importBatchId,
+    limit,
+    page,
+    enabled = true,
+  } = options
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.terminalBookings.list.queryOptions(
+      {
+        from,
+        to,
+        terminalId,
+        employeeId,
+        status,
+        importBatchId,
+        limit,
+        page,
+      },
+      { enabled: enabled && !!from && !!to }
+    )
+  )
 }
 
 // --- Import Trigger ---
 
 export function useTriggerTerminalImport() {
-  return useApiMutation('/terminal-bookings/import', 'post', {
-    invalidateKeys: [['/terminal-bookings'], ['/import-batches']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.terminalBookings.import.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.terminalBookings.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.terminalBookings.batches.queryKey(),
+      })
+    },
   })
 }
 
 // --- Import Batches ---
 
 interface UseImportBatchesOptions {
-  status?: 'pending' | 'processing' | 'completed' | 'failed'
-  terminal_id?: string
+  status?: "pending" | "processing" | "completed" | "failed"
+  terminalId?: string
   limit?: number
   page?: number
   enabled?: boolean
 }
 
 export function useImportBatches(options: UseImportBatchesOptions = {}) {
-  const { status, terminal_id, limit, page, enabled = true } = options
-  return useApiQuery('/import-batches', {
-    params: { status, terminal_id, limit, page },
-    enabled,
-  })
+  const { status, terminalId, limit, page, enabled = true } = options
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.terminalBookings.batches.queryOptions(
+      { status, terminalId, limit, page },
+      { enabled }
+    )
+  )
 }
 
 export function useImportBatch(id: string, enabled = true) {
-  return useApiQuery('/import-batches/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.terminalBookings.batch.queryOptions(
+      { id },
+      { enabled: enabled && !!id }
+    )
+  )
 }

@@ -54,6 +54,10 @@ import { employeeAccessAssignmentsRouter } from "./routers/employeeAccessAssignm
 import { exportInterfacesRouter } from "./routers/exportInterfaces"
 import { payrollExportsRouter } from "./routers/payrollExports"
 import { reportsRouter } from "./routers/reports"
+import { terminalBookingsRouter } from "./routers/terminalBookings"
+import { vehiclesRouter } from "./routers/vehicles"
+import { vehicleRoutesRouter } from "./routers/vehicleRoutes"
+import { tripRecordsRouter } from "./routers/tripRecords"
 
 export const appRouter = createTRPCRouter({
   health: healthRouter,
@@ -103,6 +107,10 @@ export const appRouter = createTRPCRouter({
   exportInterfaces: exportInterfacesRouter,
   payrollExports: payrollExportsRouter,
   reports: reportsRouter,
+  terminalBookings: terminalBookingsRouter,
+  vehicles: vehiclesRouter,
+  vehicleRoutes: vehicleRoutesRouter,
+  tripRecords: tripRecordsRouter,
 })
 
 /** Type-only export for client-side inference. */
