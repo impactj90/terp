@@ -27,6 +27,10 @@ export class CronExecutionLogger {
     tenantId: string,
     name: string,
     taskType: string,
+    options?: {
+      timingType?: string
+      timingConfig?: Prisma.InputJsonValue
+    },
   ): Promise<string> {
     const schedule = await this.prisma.schedule.upsert({
       where: {
@@ -36,8 +40,8 @@ export class CronExecutionLogger {
         tenantId,
         name,
         description: `Vercel Cron: ${name}`,
-        timingType: "daily",
-        timingConfig: { time: "02:00", source: "vercel_cron" },
+        timingType: options?.timingType ?? "daily",
+        timingConfig: options?.timingConfig ?? { time: "02:00", source: "vercel_cron" },
         isEnabled: true,
         tasks: {
           create: {

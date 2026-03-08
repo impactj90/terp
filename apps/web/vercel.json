@@ -3,6 +3,18 @@
     {
       "path": "/api/cron/calculate-days",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/calculate-months",
+      "schedule": "0 3 2 * *"
+    },
+    {
+      "path": "/api/cron/generate-day-plans",
+      "schedule": "0 1 * * 0"
+    },
+    {
+      "path": "/api/cron/execute-macros",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

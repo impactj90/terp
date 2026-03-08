@@ -1,6 +1,6 @@
 # ZMI-TICKET-246: Vercel Cron: calculate_months, generate_day_plans, execute_macros
 
-Status: Proposed
+Status: Completed
 Priority: P2
 Owner: TBD
 

@@ -148,7 +148,7 @@ function validateExecutionDay(macroType: string, day: number): void {
  * Executes a macro action and returns the result.
  * Port of Go executeAction (service/macro.go lines 479-528).
  */
-async function executeAction(macro: {
+export async function executeAction(macro: {
   id: string
   name: string
   macroType: string
