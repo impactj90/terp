@@ -25,10 +25,16 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import type { components } from '@/lib/api/types'
 
-type ScheduleTask = components['schemas']['ScheduleTask']
-type TaskType = ScheduleTask['task_type']
+type TaskType = 'calculate_days' | 'calculate_months' | 'backup_database' | 'send_notifications' | 'export_data' | 'alive_check' | 'execute_macros' | 'generate_day_plans'
+
+interface ScheduleTask {
+  id: string
+  taskType: string
+  sortOrder: number
+  parameters?: unknown
+  isEnabled: boolean
+}
 
 interface ScheduleTaskFormDialogProps {
   open: boolean
@@ -74,14 +80,14 @@ export function ScheduleTaskFormDialog({
     if (open) {
       if (task) {
         setForm({
-          taskType: task.task_type,
-          sortOrder: task.sort_order,
+          taskType: task.taskType as TaskType,
+          sortOrder: task.sortOrder,
           parameters: task.parameters ? JSON.stringify(task.parameters, null, 2) : '{}',
-          isEnabled: task.is_enabled ?? true,
+          isEnabled: task.isEnabled ?? true,
         })
       } else {
         const maxOrder = existingTasks.reduce(
-          (max, t) => Math.max(max, t.sort_order),
+          (max, t) => Math.max(max, t.sortOrder),
           0
         )
         setForm({
@@ -111,23 +117,20 @@ export function ScheduleTaskFormDialog({
     try {
       if (isEdit && task) {
         await updateMutation.mutateAsync({
-          path: { id: scheduleId, taskId: task.id },
-          body: {
-            task_type: form.taskType,
-            sort_order: form.sortOrder,
-            parameters: parsedParams,
-            is_enabled: form.isEnabled,
-          },
+          scheduleId,
+          taskId: task.id,
+          taskType: form.taskType,
+          sortOrder: form.sortOrder,
+          parameters: parsedParams,
+          isEnabled: form.isEnabled,
         })
       } else {
         await createMutation.mutateAsync({
-          path: { id: scheduleId },
-          body: {
-            task_type: form.taskType,
-            sort_order: form.sortOrder,
-            parameters: parsedParams,
-            is_enabled: form.isEnabled,
-          },
+          scheduleId,
+          taskType: form.taskType,
+          sortOrder: form.sortOrder,
+          parameters: parsedParams,
+          isEnabled: form.isEnabled,
         })
       }
       onOpenChange(false)
@@ -137,7 +140,7 @@ export function ScheduleTaskFormDialog({
     }
   }
 
-  const selectedCatalogEntry = catalog.find((c) => c.task_type === form.taskType)
+  const selectedCatalogEntry = catalog.find((c) => c.taskType === form.taskType)
   const isSubmitting = createMutation.isPending || updateMutation.isPending
 
   return (
@@ -165,7 +168,7 @@ export function ScheduleTaskFormDialog({
               </SelectTrigger>
               <SelectContent>
                 {catalog.map((entry) => (
-                  <SelectItem key={entry.task_type} value={entry.task_type}>
+                  <SelectItem key={entry.taskType} value={entry.taskType}>
                     {entry.name}
                   </SelectItem>
                 ))}

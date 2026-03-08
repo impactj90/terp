@@ -2,15 +2,19 @@
 
 import { useTranslations } from 'next-intl'
 import { Badge } from '@/components/ui/badge'
-import type { components } from '@/lib/api/types'
 
-type Schedule = components['schemas']['Schedule']
-type TimingType = Schedule['timing_type']
-type TimingConfig = components['schemas']['TimingConfig']
+type TimingType = 'seconds' | 'minutes' | 'hours' | 'daily' | 'weekly' | 'monthly' | 'manual'
+
+interface TimingConfig {
+  interval?: number
+  time?: string
+  day_of_week?: number
+  day_of_month?: number
+}
 
 interface ScheduleTimingBadgeProps {
-  timingType: TimingType
-  timingConfig?: TimingConfig
+  timingType: string
+  timingConfig?: unknown
 }
 
 const timingStyleConfig: Record<TimingType, string> = {
@@ -27,28 +31,30 @@ const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'F
 
 export function ScheduleTimingBadge({ timingType, timingConfig }: ScheduleTimingBadgeProps) {
   const t = useTranslations('adminSchedules')
+  const type = timingType as TimingType
+  const config = timingConfig as TimingConfig | undefined
 
   const getLabel = (): string => {
-    switch (timingType) {
+    switch (type) {
       case 'seconds':
-        return t('timingSeconds', { interval: timingConfig?.interval ?? 0 })
+        return t('timingSeconds', { interval: config?.interval ?? 0 })
       case 'minutes':
-        return t('timingMinutes', { interval: timingConfig?.interval ?? 0 })
+        return t('timingMinutes', { interval: config?.interval ?? 0 })
       case 'hours':
-        return t('timingHours', { interval: timingConfig?.interval ?? 0 })
+        return t('timingHours', { interval: config?.interval ?? 0 })
       case 'daily':
-        return t('timingDaily', { time: timingConfig?.time ?? '00:00' })
+        return t('timingDaily', { time: config?.time ?? '00:00' })
       case 'weekly': {
-        const dayIndex = timingConfig?.day_of_week ?? 0
+        const dayIndex = config?.day_of_week ?? 0
         return t('timingWeekly', {
           day: DAYS_OF_WEEK[dayIndex] ?? 'Sunday',
-          time: timingConfig?.time ?? '00:00',
+          time: config?.time ?? '00:00',
         })
       }
       case 'monthly':
         return t('timingMonthly', {
-          day: timingConfig?.day_of_month ?? 1,
-          time: timingConfig?.time ?? '00:00',
+          day: config?.day_of_month ?? 1,
+          time: config?.time ?? '00:00',
         })
       case 'manual':
         return t('timingManual')
@@ -58,7 +64,7 @@ export function ScheduleTimingBadge({ timingType, timingConfig }: ScheduleTiming
   }
 
   return (
-    <Badge variant="secondary" className={timingStyleConfig[timingType]}>
+    <Badge variant="secondary" className={timingStyleConfig[type]}>
       {getLabel()}
     </Badge>
   )

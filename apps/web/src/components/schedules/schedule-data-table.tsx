@@ -22,27 +22,36 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { ScheduleTimingBadge } from './schedule-timing-badge'
-import type { components } from '@/lib/api/types'
 
-type Schedule = components['schemas']['Schedule']
-
-interface ScheduleDataTableProps {
-  items: Schedule[]
-  isLoading: boolean
-  onView: (item: Schedule) => void
-  onEdit: (item: Schedule) => void
-  onDelete: (item: Schedule) => void
-  onToggleEnabled?: (item: Schedule, enabled: boolean) => void
+interface ScheduleItem {
+  id: string
+  name: string
+  description: string | null
+  timingType: string
+  timingConfig?: unknown
+  isEnabled: boolean
+  lastRunAt: string | Date | null
+  nextRunAt: string | Date | null
+  tasks?: { id: string }[]
 }
 
-export function ScheduleDataTable({
+interface ScheduleDataTableProps<T extends ScheduleItem> {
+  items: T[]
+  isLoading: boolean
+  onView: (item: T) => void
+  onEdit: (item: T) => void
+  onDelete: (item: T) => void
+  onToggleEnabled?: (item: T, enabled: boolean) => void
+}
+
+export function ScheduleDataTable<T extends ScheduleItem>({
   items,
   isLoading,
   onView,
   onEdit,
   onDelete,
   onToggleEnabled,
-}: ScheduleDataTableProps) {
+}: ScheduleDataTableProps<T>) {
   const t = useTranslations('adminSchedules')
 
   if (isLoading) {
@@ -77,20 +86,20 @@ export function ScheduleDataTable({
             <TableCell className="font-medium">{item.name}</TableCell>
             <TableCell>
               <ScheduleTimingBadge
-                timingType={item.timing_type}
-                timingConfig={item.timing_config}
+                timingType={item.timingType}
+                timingConfig={item.timingConfig}
               />
             </TableCell>
             <TableCell onClick={(e) => e.stopPropagation()}>
               <Switch
-                checked={item.is_enabled ?? false}
+                checked={item.isEnabled ?? false}
                 onCheckedChange={(checked) => onToggleEnabled?.(item, checked)}
               />
             </TableCell>
             <TableCell>{item.tasks?.length ?? 0}</TableCell>
             <TableCell className="text-sm text-muted-foreground">
-              {item.last_run_at
-                ? new Date(item.last_run_at).toLocaleString()
+              {item.lastRunAt
+                ? new Date(item.lastRunAt).toLocaleString()
                 : t('neverRun')}
             </TableCell>
             <TableCell onClick={(e) => e.stopPropagation()}>

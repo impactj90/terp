@@ -10,24 +10,29 @@ import { Switch } from '@/components/ui/switch'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useDeleteScheduleTask, useUpdateScheduleTask } from '@/hooks/api'
 import { ScheduleTaskFormDialog } from './schedule-task-form-dialog'
-import type { components } from '@/lib/api/types'
 
-type ScheduleTask = components['schemas']['ScheduleTask']
+interface ScheduleTask {
+  id: string
+  taskType: string
+  sortOrder: number
+  parameters?: unknown
+  isEnabled: boolean
+}
 
 interface ScheduleTaskListProps {
   scheduleId: string
   tasks: ScheduleTask[]
 }
 
-const TASK_TYPE_LABELS: Record<ScheduleTask['task_type'], string> = {
+const TASK_TYPE_LABELS: Record<string, string> = {
   calculate_days: 'Calculate Days',
   calculate_months: 'Calculate Months',
   backup_database: 'Backup Database',
   send_notifications: 'Send Notifications',
   export_data: 'Export Data',
   alive_check: 'Alive Check',
-  terminal_sync: 'Terminal Sync',
-  terminal_import: 'Terminal Import',
+  execute_macros: 'Execute Macros',
+  generate_day_plans: 'Generate Day Plans',
 }
 
 export function ScheduleTaskList({ scheduleId, tasks }: ScheduleTaskListProps) {
@@ -40,20 +45,22 @@ export function ScheduleTaskList({ scheduleId, tasks }: ScheduleTaskListProps) {
   const updateMutation = useUpdateScheduleTask()
 
   const sortedTasks = React.useMemo(() => {
-    return [...tasks].sort((a, b) => a.sort_order - b.sort_order)
+    return [...tasks].sort((a, b) => a.sortOrder - b.sortOrder)
   }, [tasks])
 
   const handleToggleEnabled = async (task: ScheduleTask, enabled: boolean) => {
     await updateMutation.mutateAsync({
-      path: { id: scheduleId, taskId: task.id },
-      body: { is_enabled: enabled },
+      scheduleId,
+      taskId: task.id,
+      isEnabled: enabled,
     })
   }
 
   const handleConfirmDelete = async () => {
     if (!deleteTask) return
     await deleteMutation.mutateAsync({
-      path: { id: scheduleId, taskId: deleteTask.id },
+      scheduleId,
+      taskId: deleteTask.id,
     })
     setDeleteTask(null)
   }
@@ -87,19 +94,19 @@ export function ScheduleTaskList({ scheduleId, tasks }: ScheduleTaskListProps) {
                 <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline">#{task.sort_order}</Badge>
+                    <Badge variant="outline">#{task.sortOrder}</Badge>
                     <span className="font-medium">
-                      {TASK_TYPE_LABELS[task.task_type]}
+                      {TASK_TYPE_LABELS[task.taskType] ?? task.taskType}
                     </span>
                   </div>
-                  {task.parameters && Object.keys(task.parameters).length > 0 && (
+                  {typeof task.parameters === 'object' && task.parameters !== null && Object.keys(task.parameters as Record<string, unknown>).length > 0 ? (
                     <p className="text-xs text-muted-foreground mt-1 truncate">
-                      {JSON.stringify(task.parameters)}
+                      {String(JSON.stringify(task.parameters))}
                     </p>
-                  )}
+                  ) : null}
                 </div>
                 <Switch
-                  checked={task.is_enabled ?? true}
+                  checked={task.isEnabled ?? true}
                   onCheckedChange={(checked) => handleToggleEnabled(task, checked)}
                 />
                 <Button

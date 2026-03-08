@@ -1,6 +1,6 @@
 # ZMI-TICKET-247: Schedules Router (CRUD + Execution Management)
 
-Status: Proposed
+Status: Completed
 Priority: P2
 Owner: TBD
 

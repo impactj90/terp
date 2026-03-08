@@ -55,6 +55,7 @@ import { employeeAccessAssignmentsRouter } from "./routers/employeeAccessAssignm
 import { exportInterfacesRouter } from "./routers/exportInterfaces"
 import { payrollExportsRouter } from "./routers/payrollExports"
 import { reportsRouter } from "./routers/reports"
+import { schedulesRouter } from "./routers/schedules"
 import { terminalBookingsRouter } from "./routers/terminalBookings"
 import { vehiclesRouter } from "./routers/vehicles"
 import { vehicleRoutesRouter } from "./routers/vehicleRoutes"
@@ -121,6 +122,7 @@ export const appRouter = createTRPCRouter({
   exportInterfaces: exportInterfacesRouter,
   payrollExports: payrollExportsRouter,
   reports: reportsRouter,
+  schedules: schedulesRouter,
   terminalBookings: terminalBookingsRouter,
   vehicles: vehiclesRouter,
   vehicleRoutes: vehicleRoutesRouter,

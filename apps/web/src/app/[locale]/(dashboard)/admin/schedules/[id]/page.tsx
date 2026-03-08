@@ -48,13 +48,13 @@ export default function ScheduleDetailPage() {
   }, [authLoading, permLoading, canAccess, router])
 
   const handleDelete = async () => {
-    await deleteMutation.mutateAsync({ path: { id: params.id } })
+    await deleteMutation.mutateAsync({ id: params.id })
     router.push('/admin/schedules')
   }
 
   const handleExecute = async () => {
     try {
-      await executeMutation.mutateAsync({ path: { id: params.id } })
+      await executeMutation.mutateAsync({ scheduleId: params.id })
       // Execution started successfully - UI will refresh via query invalidation
     } catch {
       // Error is handled by the mutation
@@ -96,10 +96,10 @@ export default function ScheduleDetailPage() {
           <h1 className="text-2xl font-bold">{schedule.name}</h1>
           <div className="flex items-center gap-2 mt-1">
             <ScheduleTimingBadge
-              timingType={schedule.timing_type}
-              timingConfig={schedule.timing_config}
+              timingType={schedule.timingType}
+              timingConfig={schedule.timingConfig}
             />
-            {schedule.is_enabled ? (
+            {schedule.isEnabled ? (
               <span className="text-sm text-green-600">{t('statusEnabled')}</span>
             ) : (
               <span className="text-sm text-muted-foreground">{t('statusDisabled')}</span>

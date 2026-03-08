@@ -1,89 +1,199 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
-// === Query Options Types ===
+// ==================== Schedule CRUD Hooks ====================
+
 interface UseSchedulesOptions {
   enabled?: boolean
 }
 
-// === Schedule CRUD ===
+/**
+ * Hook to fetch list of schedules with tasks (tRPC).
+ */
 export function useSchedules(options: UseSchedulesOptions = {}) {
   const { enabled = true } = options
-  return useApiQuery('/schedules', { enabled })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.schedules.list.queryOptions(undefined, { enabled })
+  )
 }
 
+/**
+ * Hook to fetch a single schedule by ID with tasks (tRPC).
+ */
 export function useSchedule(id: string, enabled = true) {
-  return useApiQuery('/schedules/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.schedules.getById.queryOptions(
+      { id },
+      { enabled: enabled && !!id }
+    )
+  )
 }
 
+/**
+ * Hook to create a new schedule (tRPC).
+ */
 export function useCreateSchedule() {
-  return useApiMutation('/schedules', 'post', {
-    invalidateKeys: [['/schedules']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.schedules.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.schedules.list.queryKey(),
+      })
+    },
   })
 }
 
+/**
+ * Hook to update an existing schedule (tRPC).
+ */
 export function useUpdateSchedule() {
-  return useApiMutation('/schedules/{id}', 'patch', {
-    invalidateKeys: [['/schedules']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.schedules.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.schedules.list.queryKey(),
+      })
+    },
   })
 }
 
+/**
+ * Hook to delete a schedule (tRPC).
+ */
 export function useDeleteSchedule() {
-  return useApiMutation('/schedules/{id}', 'delete', {
-    invalidateKeys: [['/schedules']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.schedules.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.schedules.list.queryKey(),
+      })
+    },
   })
 }
 
-// === Schedule Tasks ===
+// ==================== Task Hooks ====================
+
+/**
+ * Hook to fetch tasks for a schedule (tRPC).
+ */
 export function useScheduleTasks(scheduleId: string, enabled = true) {
-  return useApiQuery('/schedules/{id}/tasks', {
-    path: { id: scheduleId },
-    enabled: enabled && !!scheduleId,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.schedules.tasks.queryOptions(
+      { scheduleId },
+      { enabled: enabled && !!scheduleId }
+    )
+  )
 }
 
+/**
+ * Hook to create a new schedule task (tRPC).
+ */
 export function useCreateScheduleTask() {
-  return useApiMutation('/schedules/{id}/tasks', 'post', {
-    invalidateKeys: [['/schedules'], ['/schedules/{id}/tasks']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.schedules.createTask.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.schedules.list.queryKey(),
+      })
+    },
   })
 }
 
+/**
+ * Hook to update an existing schedule task (tRPC).
+ */
 export function useUpdateScheduleTask() {
-  return useApiMutation('/schedules/{id}/tasks/{taskId}', 'patch', {
-    invalidateKeys: [['/schedules'], ['/schedules/{id}/tasks']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.schedules.updateTask.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.schedules.list.queryKey(),
+      })
+    },
   })
 }
 
+/**
+ * Hook to delete a schedule task (tRPC).
+ */
 export function useDeleteScheduleTask() {
-  return useApiMutation('/schedules/{id}/tasks/{taskId}', 'delete', {
-    invalidateKeys: [['/schedules'], ['/schedules/{id}/tasks']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.schedules.deleteTask.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.schedules.list.queryKey(),
+      })
+    },
   })
 }
 
-// === Schedule Execution ===
+// ==================== Execution Hooks ====================
+
+/**
+ * Hook to manually execute a schedule (tRPC).
+ */
 export function useExecuteSchedule() {
-  return useApiMutation('/schedules/{id}/execute', 'post', {
-    invalidateKeys: [['/schedules']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.schedules.execute.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.schedules.list.queryKey(),
+      })
+    },
   })
 }
 
+/**
+ * Hook to fetch execution history for a schedule (tRPC).
+ */
 export function useScheduleExecutions(scheduleId: string, enabled = true) {
-  return useApiQuery('/schedules/{id}/executions', {
-    path: { id: scheduleId },
-    enabled: enabled && !!scheduleId,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.schedules.executions.queryOptions(
+      { scheduleId },
+      { enabled: enabled && !!scheduleId }
+    )
+  )
 }
 
+/**
+ * Hook to fetch a single schedule execution (tRPC).
+ */
 export function useScheduleExecution(id: string, enabled = true) {
-  return useApiQuery('/schedule-executions/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.schedules.execution.queryOptions(
+      { id },
+      { enabled: enabled && !!id }
+    )
+  )
 }
 
-// === Task Catalog ===
+// ==================== Task Catalog Hook ====================
+
+/**
+ * Hook to fetch available task types (tRPC).
+ */
 export function useTaskCatalog(enabled = true) {
-  return useApiQuery('/scheduler/task-catalog', { enabled })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.schedules.taskCatalog.queryOptions(undefined, { enabled })
+  )
 }

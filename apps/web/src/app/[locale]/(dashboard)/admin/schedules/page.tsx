@@ -13,9 +13,8 @@ import { SearchInput } from '@/components/ui/search-input'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ScheduleDataTable, ScheduleFormSheet } from '@/components/schedules'
-import type { components } from '@/lib/api/types'
 
-type Schedule = components['schemas']['Schedule']
+type Schedule = NonNullable<ReturnType<typeof useSchedules>['data']>['data'][number]
 
 export default function SchedulesPage() {
   const router = useRouter()
@@ -60,14 +59,14 @@ export default function SchedulesPage() {
 
   const handleDelete = async () => {
     if (!deleteItem) return
-    await deleteMutation.mutateAsync({ path: { id: deleteItem.id } })
+    await deleteMutation.mutateAsync({ id: deleteItem.id })
     setDeleteItem(null)
   }
 
   const handleToggleEnabled = async (item: Schedule, enabled: boolean) => {
     await updateMutation.mutateAsync({
-      path: { id: item.id },
-      body: { is_enabled: enabled },
+      id: item.id,
+      isEnabled: enabled,
     })
   }
 

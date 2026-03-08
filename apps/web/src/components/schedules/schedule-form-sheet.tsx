@@ -26,10 +26,17 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import type { components } from '@/lib/api/types'
 
-type Schedule = components['schemas']['Schedule']
-type TimingType = Schedule['timing_type']
+type TimingType = 'seconds' | 'minutes' | 'hours' | 'daily' | 'weekly' | 'monthly' | 'manual'
+
+interface Schedule {
+  id: string
+  name: string
+  description: string | null
+  timingType: string
+  timingConfig?: unknown
+  isEnabled: boolean
+}
 
 interface ScheduleFormSheetProps {
   open: boolean
@@ -107,15 +114,21 @@ export function ScheduleFormSheet({
   React.useEffect(() => {
     if (open) {
       if (schedule) {
+        const config = schedule.timingConfig as {
+          interval?: number
+          time?: string
+          day_of_week?: number
+          day_of_month?: number
+        } | null
         setForm({
           name: schedule.name ?? '',
           description: schedule.description ?? '',
-          timingType: schedule.timing_type ?? 'daily',
-          interval: schedule.timing_config?.interval ?? 60,
-          time: schedule.timing_config?.time ?? '00:00',
-          dayOfWeek: schedule.timing_config?.day_of_week ?? 1,
-          dayOfMonth: schedule.timing_config?.day_of_month ?? 1,
-          isEnabled: schedule.is_enabled ?? true,
+          timingType: (schedule.timingType as TimingType) ?? 'daily',
+          interval: config?.interval ?? 60,
+          time: config?.time ?? '00:00',
+          dayOfWeek: config?.day_of_week ?? 1,
+          dayOfMonth: config?.day_of_month ?? 1,
+          isEnabled: schedule.isEnabled ?? true,
         })
       } else {
         setForm(INITIAL_STATE)
@@ -153,19 +166,19 @@ export function ScheduleFormSheet({
     const payload = {
       name: form.name.trim(),
       description: form.description.trim() || undefined,
-      timing_type: form.timingType,
-      timing_config: buildTimingConfig(),
-      is_enabled: form.isEnabled,
+      timingType: form.timingType as TimingType,
+      timingConfig: buildTimingConfig(),
+      isEnabled: form.isEnabled,
     }
 
     try {
       if (isEdit && schedule) {
         await updateMutation.mutateAsync({
-          path: { id: schedule.id },
-          body: payload,
+          id: schedule.id,
+          ...payload,
         })
       } else {
-        await createMutation.mutateAsync({ body: payload })
+        await createMutation.mutateAsync(payload)
       }
       onSuccess?.()
       onOpenChange(false)
