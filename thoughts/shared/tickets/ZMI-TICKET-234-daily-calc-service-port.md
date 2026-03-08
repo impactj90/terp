@@ -1,8 +1,9 @@
 # ZMI-TICKET-234: DailyCalcService Port (1.250 Zeilen Go → TS)
 
-Status: Proposed
+Status: Completed
 Priority: P1
 Owner: TBD
+Completed: 2026-03-08
 
 ## Goal
 Den vollständigen DailyCalcService von Go nach TypeScript portieren. Dies ist das **komplexeste Ticket** der gesamten Migration — der Service orchestriert die Tagesberechnung: Buchungen laden, EmployeeDayPlan laden, Pure-Calculation-Library aufrufen, DailyValues + DailyAccountValues speichern. Nutzt die in TICKET-233 erstellte Calculation Engine.

@@ -66,3 +66,12 @@ export {
 } from "./surcharges"
 export { normalizeCrossMidnight, isValidTimeOfDay, MINUTES_PER_DAY, MAX_MINUTES_FROM_MIDNIGHT } from "./time"
 export * from "./errors"
+
+// Shift detection
+export type {
+  ShiftMatchType,
+  ShiftDetectionInput,
+  ShiftDetectionResult,
+  DayPlanLoader,
+} from "./shift-detection"
+export { ShiftDetector, isInTimeWindow, matchesPlan } from "./shift-detection"
