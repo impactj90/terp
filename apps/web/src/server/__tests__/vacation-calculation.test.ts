@@ -9,6 +9,7 @@ import {
 } from "../lib/vacation-calculation"
 import {
   calculateCarryoverWithCapping,
+  calculateCarryover,
   type CarryoverInput,
 } from "../lib/carryover-calculation"
 
@@ -455,5 +456,33 @@ describe("calculateCarryoverWithCapping", () => {
     expect(result.rulesApplied).toHaveLength(2)
     expect(result.rulesApplied[0]!.applied).toBe(true)
     expect(result.rulesApplied[1]!.applied).toBe(true)
+  })
+})
+
+// --- calculateCarryover (simple) tests ---
+
+describe("calculateCarryover (simple)", () => {
+  it("caps at maxCarryover when available exceeds limit", () => {
+    expect(calculateCarryover(20, 10)).toBe(10)
+  })
+
+  it("returns available when under limit", () => {
+    expect(calculateCarryover(5, 10)).toBe(5)
+  })
+
+  it("returns 0 for zero available", () => {
+    expect(calculateCarryover(0, 10)).toBe(0)
+  })
+
+  it("returns 0 for negative available", () => {
+    expect(calculateCarryover(-5, 10)).toBe(0)
+  })
+
+  it("returns full available when maxCarryover is 0 (unlimited)", () => {
+    expect(calculateCarryover(25, 0)).toBe(25)
+  })
+
+  it("returns full available when maxCarryover is negative (unlimited)", () => {
+    expect(calculateCarryover(25, -1)).toBe(25)
   })
 })

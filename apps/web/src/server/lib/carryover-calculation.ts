@@ -147,3 +147,20 @@ export function calculateCarryoverWithCapping(
 
   return output
 }
+
+/**
+ * Simple carryover cap without capping rules.
+ * Port of Go calculation.CalculateCarryover().
+ *
+ * @param available - Available vacation days from previous year
+ * @param maxCarryover - Maximum carryover allowed (0 or negative = unlimited)
+ * @returns Capped carryover amount
+ */
+export function calculateCarryover(
+  available: number,
+  maxCarryover: number
+): number {
+  if (available <= 0) return 0
+  if (maxCarryover > 0 && available > maxCarryover) return maxCarryover
+  return available
+}

@@ -85,8 +85,14 @@ describe("vacation.entitlementPreview", () => {
       employee: {
         findFirst: vi.fn().mockResolvedValue(employee),
       },
+      employeeTariffAssignment: {
+        findFirst: vi.fn().mockResolvedValue(null),
+      },
       tariff: {
         findFirst: vi.fn().mockResolvedValue(tariff),
+      },
+      tenant: {
+        findFirst: vi.fn().mockResolvedValue({ vacationBasis: "calendar_year" }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -123,8 +129,14 @@ describe("vacation.entitlementPreview", () => {
       vacationCalculationGroup: {
         findFirst: vi.fn().mockResolvedValue(calcGroup),
       },
+      employeeTariffAssignment: {
+        findFirst: vi.fn().mockResolvedValue(null),
+      },
       tariff: {
         findFirst: vi.fn().mockResolvedValue(tariff),
+      },
+      tenant: {
+        findFirst: vi.fn().mockResolvedValue({ vacationBasis: "calendar_year" }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -185,6 +197,9 @@ describe("vacation.carryoverPreview", () => {
       employee: {
         findFirst: vi.fn().mockResolvedValue(employee),
       },
+      employeeTariffAssignment: {
+        findFirst: vi.fn().mockResolvedValue(null),
+      },
       tariff: {
         findFirst: vi.fn().mockResolvedValue(tariff),
       },
@@ -229,6 +244,12 @@ describe("vacation.carryoverPreview", () => {
       employee: {
         findFirst: vi.fn().mockResolvedValue(employee),
       },
+      employeeTariffAssignment: {
+        findFirst: vi.fn().mockResolvedValue(null),
+      },
+      tariff: {
+        findFirst: vi.fn().mockResolvedValue(null),
+      },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     await expect(
@@ -242,6 +263,9 @@ describe("vacation.carryoverPreview", () => {
     const mockPrisma = {
       employee: {
         findFirst: vi.fn().mockResolvedValue(employee),
+      },
+      employeeTariffAssignment: {
+        findFirst: vi.fn().mockResolvedValue(null),
       },
       tariff: {
         findFirst: vi.fn().mockResolvedValue(tariff),
@@ -264,6 +288,9 @@ describe("vacation.carryoverPreview", () => {
     const mockPrisma = {
       employee: {
         findFirst: vi.fn().mockResolvedValue(employee),
+      },
+      employeeTariffAssignment: {
+        findFirst: vi.fn().mockResolvedValue(null),
       },
       tariff: {
         findFirst: vi.fn().mockResolvedValue(tariff),

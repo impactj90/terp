@@ -1,6 +1,6 @@
 # ZMI-TICKET-241: VacationService Port (Entitlement Calc, 627 Zeilen)
 
-Status: Proposed
+Status: Completed
 Priority: P1
 Owner: TBD
 

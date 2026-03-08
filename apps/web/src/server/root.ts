@@ -70,6 +70,7 @@ import { dailyValuesRouter } from "./routers/dailyValues"
 import { dailyAccountValuesRouter } from "./routers/dailyAccountValues"
 import { monthlyValuesRouter } from "./routers/monthlyValues"
 import { absencesRouter } from "./routers/absences"
+import { vacationBalancesRouter } from "./routers/vacationBalances"
 
 export const appRouter = createTRPCRouter({
   health: healthRouter,
@@ -135,6 +136,7 @@ export const appRouter = createTRPCRouter({
   dailyAccountValues: dailyAccountValuesRouter,
   monthlyValues: monthlyValuesRouter,
   absences: absencesRouter,
+  vacationBalances: vacationBalancesRouter,
 })
 
 /** Type-only export for client-side inference. */

@@ -1,39 +1,49 @@
 /**
- * Vacation Preview Router
+ * Vacation Router
  *
- * Provides entitlement and carryover preview endpoints via tRPC procedures.
- * These are compute-only (no persistence) -- they calculate vacation entitlement
- * and carryover based on current data.
+ * Provides vacation entitlement/carryover preview endpoints and business logic
+ * mutations (initializeYear, getBalance, adjustBalance, carryoverFromPreviousYear,
+ * initializeBatch) via tRPC procedures.
  *
  * Replaces the Go backend endpoints:
  * - POST /vacation-entitlement/preview -> vacation.entitlementPreview
  * - POST /vacation-carryover/preview -> vacation.carryoverPreview
+ * - GET  /vacation-balances/employee/:id -> vacation.getBalance
+ * - POST /vacation-balances/initialize-year -> vacation.initializeYear
+ * - POST /vacation-balances/adjust -> vacation.adjustBalance
+ * - POST /vacation-balances/carryover -> vacation.carryoverFromPreviousYear
+ * - POST /vacation-balances/initialize -> vacation.initializeBatch
  *
  * @see apps/api/internal/service/vacation.go
  * @see apps/api/internal/service/vacationcarryover.go
  */
 import { z } from "zod"
-import { Prisma } from "@/generated/prisma/client"
+import type { Prisma, PrismaClient } from "@/generated/prisma/client"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "../trpc"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
-import {
-  calculateVacation,
-  type VacationCalcInput,
-  type VacationSpecialCalc,
-  type VacationBasis,
-} from "../lib/vacation-calculation"
+import { calculateVacation } from "../lib/vacation-calculation"
 import {
   calculateCarryoverWithCapping,
+  calculateCarryover,
   type CarryoverInput,
   type CappingRuleInput,
   type CappingExceptionInput,
 } from "../lib/carryover-calculation"
+import {
+  resolveTariff,
+  resolveCalcGroup,
+  resolveVacationBasis,
+  buildCalcInput,
+  calculateAvailable,
+  type ResolvedCalcGroup,
+} from "../lib/vacation-helpers"
 
 // --- Permission Constants ---
 
 const VACATION_CONFIG_MANAGE = permissionIdByKey("vacation_config.manage")!
+const ABSENCES_MANAGE = permissionIdByKey("absences.manage")!
 
 // --- Output Schemas ---
 
@@ -78,6 +88,31 @@ const carryoverPreviewOutputSchema = z.object({
   ),
 })
 
+export const vacationBalanceOutputSchema = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  employeeId: z.string().uuid(),
+  year: z.number(),
+  entitlement: z.number(),
+  carryover: z.number(),
+  adjustments: z.number(),
+  taken: z.number(),
+  total: z.number(),
+  available: z.number(),
+  carryoverExpiresAt: z.date().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  employee: z
+    .object({
+      id: z.string().uuid(),
+      firstName: z.string(),
+      lastName: z.string(),
+      personnelNumber: z.string(),
+    })
+    .nullable()
+    .optional(),
+})
+
 // --- Helpers ---
 
 function decimalToNumber(
@@ -87,6 +122,136 @@ function decimalToNumber(
   return Number(val)
 }
 
+/**
+ * Maps a Prisma VacationBalance record (with optional employee include)
+ * to the output schema shape.
+ */
+function mapBalanceToOutput(
+  record: {
+    id: string
+    tenantId: string
+    employeeId: string
+    year: number
+    entitlement: Prisma.Decimal
+    carryover: Prisma.Decimal
+    adjustments: Prisma.Decimal
+    taken: Prisma.Decimal
+    carryoverExpiresAt: Date | null
+    createdAt: Date
+    updatedAt: Date
+    employee?: {
+      id: string
+      firstName: string
+      lastName: string
+      personnelNumber: string
+    } | null
+  }
+) {
+  const entitlement = decimalToNumber(record.entitlement)
+  const carryover = decimalToNumber(record.carryover)
+  const adjustments = decimalToNumber(record.adjustments)
+  const taken = decimalToNumber(record.taken)
+  const total = entitlement + carryover + adjustments
+  const available = total - taken
+
+  return {
+    id: record.id,
+    tenantId: record.tenantId,
+    employeeId: record.employeeId,
+    year: record.year,
+    entitlement,
+    carryover,
+    adjustments,
+    taken,
+    total,
+    available,
+    carryoverExpiresAt: record.carryoverExpiresAt,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+    employee: record.employee
+      ? {
+          id: record.employee.id,
+          firstName: record.employee.firstName,
+          lastName: record.employee.lastName,
+          personnelNumber: record.employee.personnelNumber,
+        }
+      : null,
+  }
+}
+
+/**
+ * Calculates capped carryover using tariff capping rules (advanced) or simple cap (fallback).
+ * Port of Go VacationService.calculateCappedCarryover() (vacation.go lines 521-576)
+ */
+async function calculateCappedCarryover(
+  prisma: PrismaClient,
+  tenantId: string,
+  employee: { id: string; tariffId: string | null },
+  prevYear: number,
+  available: number,
+  defaultMaxCarryover: number = 0
+): Promise<number> {
+  // Resolve tariff for previous year
+  const tariff = await resolveTariff(prisma, employee, prevYear, tenantId)
+
+  // If tariff has capping rule group, use advanced capping
+  if (tariff?.vacationCappingRuleGroupId) {
+    const cappingGroup = await prisma.vacationCappingRuleGroup.findFirst({
+      where: { id: tariff.vacationCappingRuleGroupId, tenantId },
+      include: {
+        cappingRuleLinks: {
+          include: { cappingRule: true },
+        },
+      },
+    })
+
+    if (cappingGroup) {
+      // Build capping rules
+      const cappingRules: CappingRuleInput[] =
+        cappingGroup.cappingRuleLinks.map((link) => ({
+          ruleId: link.cappingRule.id,
+          ruleName: link.cappingRule.name,
+          ruleType: link.cappingRule.ruleType as "year_end" | "mid_year",
+          cutoffMonth: link.cappingRule.cutoffMonth,
+          cutoffDay: link.cappingRule.cutoffDay,
+          capValue: decimalToNumber(link.cappingRule.capValue),
+        }))
+
+      // Load employee exceptions
+      const exceptions = await prisma.employeeCappingException.findMany({
+        where: {
+          employeeId: employee.id,
+          isActive: true,
+          OR: [{ year: prevYear }, { year: null }],
+        },
+      })
+
+      const exceptionsInput: CappingExceptionInput[] = exceptions.map(
+        (exc) => ({
+          cappingRuleId: exc.cappingRuleId,
+          exemptionType: exc.exemptionType as "full" | "partial",
+          retainDays: exc.retainDays ? Number(exc.retainDays) : null,
+        })
+      )
+
+      // Build carryover input
+      const carryoverInput: CarryoverInput = {
+        availableDays: available,
+        year: prevYear,
+        referenceDate: new Date(),
+        cappingRules,
+        exceptions: exceptionsInput,
+      }
+
+      const output = calculateCarryoverWithCapping(carryoverInput)
+      return output.cappedCarryover
+    }
+  }
+
+  // Fallback: simple carryover with defaultMaxCarryover
+  return calculateCarryover(available, defaultMaxCarryover)
+}
+
 // --- Router ---
 
 export const vacationRouter = createTRPCRouter({
@@ -94,7 +259,7 @@ export const vacationRouter = createTRPCRouter({
    * vacation.entitlementPreview -- Computes vacation entitlement preview.
    *
    * Loads employee data, resolves calculation group (from override or employment type),
-   * and runs the vacation calculation engine.
+   * resolves tariff via tariff assignments, and runs the vacation calculation engine.
    *
    * Requires: vacation_config.manage permission
    */
@@ -124,18 +289,7 @@ export const vacationRouter = createTRPCRouter({
       }
 
       // Resolve calculation group
-      let calcGroup: {
-        id: string
-        name: string
-        basis: string
-        specialCalcLinks: Array<{
-          specialCalculation: {
-            type: string
-            threshold: number
-            bonusDays: Prisma.Decimal
-          }
-        }>
-      } | null = null
+      let calcGroup: ResolvedCalcGroup | null = null
 
       if (input.calcGroupId) {
         // Use provided override
@@ -150,84 +304,37 @@ export const vacationRouter = createTRPCRouter({
               },
             },
           },
-        })
-      } else if (employee.employmentType?.vacationCalcGroupId) {
+        }) as ResolvedCalcGroup | null
+      } else {
         // Resolve from employment type
-        calcGroup = await ctx.prisma.vacationCalculationGroup.findFirst({
-          where: {
-            id: employee.employmentType.vacationCalcGroupId,
-            tenantId,
-          },
-          include: {
-            specialCalcLinks: {
-              include: {
-                specialCalculation: {
-                  select: { type: true, threshold: true, bonusDays: true },
-                },
-              },
-            },
-          },
-        })
+        calcGroup = await resolveCalcGroup(ctx.prisma, employee, tenantId)
       }
 
-      // Resolve tariff for base vacation days and standard weekly hours
-      let baseVacationDays = decimalToNumber(employee.vacationDaysPerYear)
-      let standardWeeklyHours = 40 // Default
-      const weeklyHours = decimalToNumber(employee.weeklyHours)
+      // Resolve tariff via tariff assignments (enhanced resolution)
+      const tariff = await resolveTariff(
+        ctx.prisma,
+        employee,
+        input.year,
+        tenantId
+      )
 
-      if (employee.tariffId) {
-        const tariff = await ctx.prisma.tariff.findFirst({
-          where: { id: employee.tariffId, tenantId },
-        })
-        if (tariff) {
-          if (tariff.annualVacationDays) {
-            baseVacationDays = decimalToNumber(tariff.annualVacationDays)
-          }
-          if (tariff.weeklyTargetHours) {
-            standardWeeklyHours = decimalToNumber(tariff.weeklyTargetHours)
-          }
-        }
-      }
+      // Resolve vacation basis via resolution chain
+      const basis = await resolveVacationBasis(
+        ctx.prisma,
+        employee,
+        tariff,
+        calcGroup,
+        tenantId
+      )
 
-      // Build special calcs list
-      const specialCalcs: VacationSpecialCalc[] =
-        calcGroup?.specialCalcLinks.map((link) => ({
-          type: link.specialCalculation.type as VacationSpecialCalc["type"],
-          threshold: link.specialCalculation.threshold,
-          bonusDays: decimalToNumber(link.specialCalculation.bonusDays),
-        })) ?? []
-
-      // Determine basis
-      const basis: VacationBasis =
-        (calcGroup?.basis as VacationBasis) ?? "calendar_year"
-
-      // Build reference date (Jan 1 of the target year for calendar_year basis,
-      // or entry date anniversary for entry_date basis)
-      const referenceDate =
-        basis === "calendar_year"
-          ? new Date(Date.UTC(input.year, 0, 1))
-          : new Date(
-              Date.UTC(
-                input.year,
-                employee.entryDate.getMonth(),
-                employee.entryDate.getDate()
-              )
-            )
-
-      // Build calculation input
-      const calcInput: VacationCalcInput = {
-        birthDate: employee.birthDate ?? new Date(Date.UTC(1990, 0, 1)),
-        entryDate: employee.entryDate,
-        exitDate: employee.exitDate,
-        weeklyHours,
-        hasDisability: employee.disabilityFlag,
-        baseVacationDays,
-        standardWeeklyHours,
-        basis,
-        specialCalcs,
-        year: input.year,
-        referenceDate,
-      }
+      // Build calculation input using shared helper
+      const { calcInput, weeklyHours, standardWeeklyHours } = buildCalcInput(
+        employee,
+        input.year,
+        tariff,
+        calcGroup,
+        basis
+      )
 
       // Run calculation
       const result = calculateVacation(calcInput)
@@ -290,21 +397,17 @@ export const vacationRouter = createTRPCRouter({
         })
       }
 
-      // Get tariff
-      if (!employee.tariffId) {
+      // Get tariff (use tariff assignment resolution)
+      const tariff = await resolveTariff(
+        ctx.prisma,
+        employee,
+        input.year,
+        tenantId
+      )
+      if (!tariff) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Employee has no tariff assigned",
-        })
-      }
-
-      const tariff = await ctx.prisma.tariff.findFirst({
-        where: { id: employee.tariffId, tenantId },
-      })
-      if (!tariff) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Tariff not found",
         })
       }
 
@@ -400,6 +503,464 @@ export const vacationRouter = createTRPCRouter({
         forfeitedDays: result.forfeitedDays,
         hasException: result.hasException,
         rulesApplied: result.rulesApplied,
+      }
+    }),
+
+  // =====================================================================
+  // Business Logic Mutations
+  // =====================================================================
+
+  /**
+   * vacation.getBalance -- Retrieves vacation balance for an employee/year.
+   *
+   * Port of Go VacationService.GetBalance() (vacation.go lines 168-183)
+   * Requires: absences.manage permission
+   */
+  getBalance: tenantProcedure
+    .use(requirePermission(ABSENCES_MANAGE))
+    .input(
+      z.object({
+        employeeId: z.string().uuid(),
+        year: z.number().int().min(1900).max(2200),
+      })
+    )
+    .output(vacationBalanceOutputSchema)
+    .query(async ({ ctx, input }) => {
+      const tenantId = ctx.tenantId!
+
+      const balance = await ctx.prisma.vacationBalance.findFirst({
+        where: {
+          employeeId: input.employeeId,
+          year: input.year,
+          tenantId,
+        },
+        include: {
+          employee: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              personnelNumber: true,
+            },
+          },
+        },
+      })
+
+      if (!balance) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Vacation balance not found",
+        })
+      }
+
+      return mapBalanceToOutput(balance)
+    }),
+
+  /**
+   * vacation.initializeYear -- Calculates and stores vacation entitlement for a year.
+   *
+   * Uses employee's employment type, tariff, and calc group to compute entitlement.
+   * Idempotent: calling multiple times recalculates entitlement but preserves
+   * carryover, adjustments, and taken.
+   *
+   * Port of Go VacationService.InitializeYear() (vacation.go lines 189-234)
+   * Requires: absences.manage permission
+   */
+  initializeYear: tenantProcedure
+    .use(requirePermission(ABSENCES_MANAGE))
+    .input(
+      z.object({
+        employeeId: z.string().uuid(),
+        year: z.number().int().min(1900).max(2200),
+      })
+    )
+    .output(vacationBalanceOutputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const tenantId = ctx.tenantId!
+
+      // 1. Get employee with employment type
+      const employee = await ctx.prisma.employee.findFirst({
+        where: { id: input.employeeId, tenantId },
+        include: { employmentType: true },
+      })
+      if (!employee) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Employee not found",
+        })
+      }
+
+      // 2. Resolve calculation group
+      const calcGroup = await resolveCalcGroup(ctx.prisma, employee, tenantId)
+
+      // 3. Resolve tariff
+      const tariff = await resolveTariff(
+        ctx.prisma,
+        employee,
+        input.year,
+        tenantId
+      )
+
+      // 4. Resolve vacation basis
+      const basis = await resolveVacationBasis(
+        ctx.prisma,
+        employee,
+        tariff,
+        calcGroup,
+        tenantId
+      )
+
+      // 5. Build calculation input
+      const { calcInput } = buildCalcInput(
+        employee,
+        input.year,
+        tariff,
+        calcGroup,
+        basis
+      )
+
+      // 6. Calculate entitlement
+      const result = calculateVacation(calcInput)
+
+      // 7-8. Upsert balance with new entitlement (preserves carryover/adjustments/taken)
+      const balance = await ctx.prisma.vacationBalance.upsert({
+        where: {
+          employeeId_year: {
+            employeeId: input.employeeId,
+            year: input.year,
+          },
+        },
+        update: {
+          entitlement: result.totalEntitlement,
+        },
+        create: {
+          tenantId,
+          employeeId: input.employeeId,
+          year: input.year,
+          entitlement: result.totalEntitlement,
+          carryover: 0,
+          adjustments: 0,
+          taken: 0,
+        },
+        include: {
+          employee: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              personnelNumber: true,
+            },
+          },
+        },
+      })
+
+      return mapBalanceToOutput(balance)
+    }),
+
+  /**
+   * vacation.adjustBalance -- Adds a manual adjustment to the vacation balance.
+   *
+   * The adjustment is accumulated (added to existing adjustments), not replaced.
+   * A positive value adds days; a negative value deducts days.
+   *
+   * Port of Go VacationService.AdjustBalance() (vacation.go lines 498-517)
+   * Requires: absences.manage permission
+   */
+  adjustBalance: tenantProcedure
+    .use(requirePermission(ABSENCES_MANAGE))
+    .input(
+      z.object({
+        employeeId: z.string().uuid(),
+        year: z.number().int().min(1900).max(2200),
+        adjustment: z.number(),
+        notes: z.string().optional(),
+      })
+    )
+    .output(vacationBalanceOutputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const tenantId = ctx.tenantId!
+
+      // 1. Get existing balance (must exist)
+      const existing = await ctx.prisma.vacationBalance.findFirst({
+        where: {
+          employeeId: input.employeeId,
+          year: input.year,
+          tenantId,
+        },
+      })
+      if (!existing) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Vacation balance not found",
+        })
+      }
+
+      // 2-3. Accumulate adjustment
+      const balance = await ctx.prisma.vacationBalance.update({
+        where: {
+          employeeId_year: {
+            employeeId: input.employeeId,
+            year: input.year,
+          },
+        },
+        data: {
+          adjustments: {
+            increment: input.adjustment,
+          },
+        },
+        include: {
+          employee: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              personnelNumber: true,
+            },
+          },
+        },
+      })
+
+      return mapBalanceToOutput(balance)
+    }),
+
+  /**
+   * vacation.carryoverFromPreviousYear -- Carries over remaining vacation
+   * from the previous year.
+   *
+   * The year parameter is the TARGET year (receiving the carryover).
+   * Respects tariff capping rules when available, falling back to simple cap.
+   *
+   * Port of Go VacationService.CarryoverFromPreviousYear() (vacation.go lines 581-627)
+   * Requires: absences.manage permission
+   */
+  carryoverFromPreviousYear: tenantProcedure
+    .use(requirePermission(ABSENCES_MANAGE))
+    .input(
+      z.object({
+        employeeId: z.string().uuid(),
+        year: z.number().int().min(1901).max(2200),
+      })
+    )
+    .output(vacationBalanceOutputSchema.nullable())
+    .mutation(async ({ ctx, input }) => {
+      const tenantId = ctx.tenantId!
+      const prevYear = input.year - 1
+
+      // 1. Get employee
+      const employee = await ctx.prisma.employee.findFirst({
+        where: { id: input.employeeId, tenantId },
+      })
+      if (!employee) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Employee not found",
+        })
+      }
+
+      // 2. Get previous year's balance
+      const prevBalance = await ctx.prisma.vacationBalance.findFirst({
+        where: {
+          employeeId: input.employeeId,
+          year: prevYear,
+          tenantId,
+        },
+      })
+      if (!prevBalance) {
+        // No previous year balance - nothing to carry over
+        return null
+      }
+
+      // 3. Calculate available
+      const available = calculateAvailable(prevBalance)
+
+      // 4. Calculate capped carryover
+      const carryover = await calculateCappedCarryover(
+        ctx.prisma as PrismaClient,
+        tenantId,
+        employee,
+        prevYear,
+        available
+      )
+
+      // 5. If carryover is 0, return null
+      if (carryover <= 0) {
+        return null
+      }
+
+      // 6. Upsert current year balance with carryover (replaces, not accumulates)
+      const balance = await ctx.prisma.vacationBalance.upsert({
+        where: {
+          employeeId_year: {
+            employeeId: input.employeeId,
+            year: input.year,
+          },
+        },
+        update: {
+          carryover,
+        },
+        create: {
+          tenantId,
+          employeeId: input.employeeId,
+          year: input.year,
+          entitlement: 0,
+          carryover,
+          adjustments: 0,
+          taken: 0,
+        },
+        include: {
+          employee: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              personnelNumber: true,
+            },
+          },
+        },
+      })
+
+      return mapBalanceToOutput(balance)
+    }),
+
+  /**
+   * vacation.initializeBatch -- Initializes vacation balances for all active
+   * employees for a given year.
+   *
+   * Optionally carries over from the previous year before initializing.
+   *
+   * Port of Go VacationBalanceHandler.Initialize() (handler lines 217-268)
+   * Requires: absences.manage permission
+   */
+  initializeBatch: tenantProcedure
+    .use(requirePermission(ABSENCES_MANAGE))
+    .input(
+      z.object({
+        year: z.number().int().min(1900).max(2200),
+        carryover: z.boolean().default(true),
+      })
+    )
+    .output(
+      z.object({
+        message: z.string(),
+        createdCount: z.number(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const tenantId = ctx.tenantId!
+
+      // 1. Get all active employees for tenant
+      const employees = await ctx.prisma.employee.findMany({
+        where: { tenantId, isActive: true },
+        include: { employmentType: true },
+      })
+
+      let createdCount = 0
+
+      // 2. For each employee
+      for (const employee of employees) {
+        try {
+          // a. If carryover requested, carry over from previous year (best effort)
+          if (input.carryover && input.year >= 1901) {
+            try {
+              const prevBalance =
+                await ctx.prisma.vacationBalance.findFirst({
+                  where: {
+                    employeeId: employee.id,
+                    year: input.year - 1,
+                    tenantId,
+                  },
+                })
+              if (prevBalance) {
+                const available = calculateAvailable(prevBalance)
+                const carryoverAmount = await calculateCappedCarryover(
+                  ctx.prisma as PrismaClient,
+                  tenantId,
+                  employee,
+                  input.year - 1,
+                  available
+                )
+                if (carryoverAmount > 0) {
+                  await ctx.prisma.vacationBalance.upsert({
+                    where: {
+                      employeeId_year: {
+                        employeeId: employee.id,
+                        year: input.year,
+                      },
+                    },
+                    update: { carryover: carryoverAmount },
+                    create: {
+                      tenantId,
+                      employeeId: employee.id,
+                      year: input.year,
+                      entitlement: 0,
+                      carryover: carryoverAmount,
+                      adjustments: 0,
+                      taken: 0,
+                    },
+                  })
+                }
+              }
+            } catch {
+              // Best effort: skip carryover errors for individual employees
+            }
+          }
+
+          // b. Initialize year (calculate entitlement)
+          const calcGroup = await resolveCalcGroup(
+            ctx.prisma,
+            employee,
+            tenantId
+          )
+          const tariff = await resolveTariff(
+            ctx.prisma,
+            employee,
+            input.year,
+            tenantId
+          )
+          const basis = await resolveVacationBasis(
+            ctx.prisma,
+            employee,
+            tariff,
+            calcGroup,
+            tenantId
+          )
+          const { calcInput } = buildCalcInput(
+            employee,
+            input.year,
+            tariff,
+            calcGroup,
+            basis
+          )
+          const result = calculateVacation(calcInput)
+
+          await ctx.prisma.vacationBalance.upsert({
+            where: {
+              employeeId_year: {
+                employeeId: employee.id,
+                year: input.year,
+              },
+            },
+            update: { entitlement: result.totalEntitlement },
+            create: {
+              tenantId,
+              employeeId: employee.id,
+              year: input.year,
+              entitlement: result.totalEntitlement,
+              carryover: 0,
+              adjustments: 0,
+              taken: 0,
+            },
+          })
+
+          createdCount++
+        } catch {
+          // Skip employees with errors, continue with next
+        }
+      }
+
+      return {
+        message: `Initialized vacation balances for ${createdCount} of ${employees.length} employees`,
+        createdCount,
       }
     }),
 })

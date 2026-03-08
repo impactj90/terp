@@ -119,7 +119,14 @@ function useAbsenceInvalidation() {
     queryClient.invalidateQueries({
       queryKey: trpc.absences.getById.queryKey(),
     })
-    // Invalidate legacy REST vacation balance queries (still using useApiQuery)
+    // Invalidate tRPC vacation balance queries
+    queryClient.invalidateQueries({
+      queryKey: trpc.vacationBalances.list.queryKey(),
+    })
+    queryClient.invalidateQueries({
+      queryKey: trpc.vacation.getBalance.queryKey(),
+    })
+    // Invalidate legacy REST vacation balance queries (during transition)
     queryClient.invalidateQueries({
       queryKey: ["/vacation-balances"],
     })
