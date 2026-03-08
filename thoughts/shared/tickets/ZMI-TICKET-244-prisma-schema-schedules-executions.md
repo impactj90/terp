@@ -1,6 +1,6 @@
 # ZMI-TICKET-244: Prisma Schema: schedules, executions
 
-Status: Proposed
+Status: Done
 Priority: P2
 Owner: TBD
 

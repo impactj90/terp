@@ -59,6 +59,7 @@ model User {
   macroExecutionsTriggers MacroExecution[]
   payrollExportsCreated  PayrollExport[]
   reportsCreated         Report[]
+  scheduleExecutionsTriggers  ScheduleExecution[]
 
   // Indexes
   @@unique([tenantId, email], map: "idx_users_tenant_email")
@@ -165,6 +166,8 @@ model Tenant {
   dailyValues                 DailyValue[]
   dailyAccountValues          DailyAccountValue[]
   absenceDays                 AbsenceDay[]
+  schedules                   Schedule[]
+  scheduleExecutions          ScheduleExecution[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
@@ -2972,4 +2975,145 @@ model AbsenceDay {
   @@index([employeeId, absenceDate], map: "idx_absence_days_lookup")
   @@index([employeeId, absenceDate, status], map: "idx_absence_days_range")
   @@map("absence_days")
+}
+
+// -----------------------------------------------------------------------------
+// Schedule
+// -----------------------------------------------------------------------------
+// Migration: 000062
+//
+// Schedule definitions for automated background tasks.
+// CHECK constraints (enforced at DB level only):
+//   - timing_type IN ('seconds', 'minutes', 'hours', 'daily', 'weekly', 'monthly', 'manual')
+//
+// Partial index (cannot be modeled in Prisma):
+//   - idx_schedules_next_run: ON (next_run_at) WHERE is_enabled = true
+//
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model Schedule {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  name         String    @db.VarChar(255)
+  description  String?   @db.Text
+  timingType   String    @map("timing_type") @db.VarChar(20)
+  timingConfig Json      @default("{}") @map("timing_config") @db.JsonB
+  isEnabled    Boolean   @default(true) @map("is_enabled")
+  lastRunAt    DateTime? @map("last_run_at") @db.Timestamptz(6)
+  nextRunAt    DateTime? @map("next_run_at") @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant     Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tasks      ScheduleTask[]
+  executions ScheduleExecution[]
+
+  // Indexes
+  @@unique([tenantId, name])
+  @@index([tenantId], map: "idx_schedules_tenant")
+  @@index([tenantId, isEnabled], map: "idx_schedules_enabled")
+  @@map("schedules")
+}
+
+// -----------------------------------------------------------------------------
+// ScheduleTask
+// -----------------------------------------------------------------------------
+// Migration: 000063
+//
+// Ordered tasks within a schedule. Executed top-to-bottom by sort_order.
+// CHECK constraints (enforced at DB level only):
+//   - task_type IN ('calculate_days', 'calculate_months', 'backup_database',
+//     'send_notifications', 'export_data', 'alive_check')
+//   Note: Go code also uses 'terminal_sync', 'terminal_import', 'execute_macros',
+//   'generate_day_plans' which are not in the DB CHECK constraint.
+//
+// Note: No tenant_id column. Tenant scoping is through the parent schedules table.
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model ScheduleTask {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  scheduleId String   @map("schedule_id") @db.Uuid
+  taskType   String   @map("task_type") @db.VarChar(50)
+  sortOrder  Int      @default(0) @map("sort_order")
+  parameters Json     @default("{}") @db.JsonB
+  isEnabled  Boolean  @default(true) @map("is_enabled")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  schedule Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  // Indexes
+  @@index([scheduleId], map: "idx_schedule_tasks_schedule")
+  @@index([scheduleId, sortOrder], map: "idx_schedule_tasks_order")
+  @@map("schedule_tasks")
+}
+
+// -----------------------------------------------------------------------------
+// ScheduleExecution
+// -----------------------------------------------------------------------------
+// Migration: 000064
+//
+// Execution log for schedule runs. Append-only (no updated_at column).
+// CHECK constraints (enforced at DB level only):
+//   - status IN ('pending', 'running', 'completed', 'failed', 'partial')
+//   - trigger_type IN ('scheduled', 'manual')
+model ScheduleExecution {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  scheduleId     String    @map("schedule_id") @db.Uuid
+  status         String    @default("pending") @db.VarChar(20)
+  triggerType    String    @default("scheduled") @map("trigger_type") @db.VarChar(20)
+  triggeredBy    String?   @map("triggered_by") @db.Uuid
+  startedAt      DateTime? @map("started_at") @db.Timestamptz(6)
+  completedAt    DateTime? @map("completed_at") @db.Timestamptz(6)
+  errorMessage   String?   @map("error_message") @db.Text
+  tasksTotal     Int       @default(0) @map("tasks_total")
+  tasksSucceeded Int       @default(0) @map("tasks_succeeded")
+  tasksFailed    Int       @default(0) @map("tasks_failed")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant          Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  schedule        Schedule                @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  triggeredByUser User?                   @relation(fields: [triggeredBy], references: [id], onDelete: SetNull)
+  taskExecutions  ScheduleTaskExecution[]
+
+  // Indexes
+  @@index([tenantId], map: "idx_schedule_executions_tenant")
+  @@index([scheduleId], map: "idx_schedule_executions_schedule")
+  @@index([status], map: "idx_schedule_executions_status")
+  @@index([createdAt(sort: Desc)], map: "idx_schedule_executions_created")
+  @@map("schedule_executions")
+}
+
+// -----------------------------------------------------------------------------
+// ScheduleTaskExecution
+// -----------------------------------------------------------------------------
+// Migration: 000065
+//
+// Per-task execution log within a schedule execution run. Append-only (no updated_at column).
+// CHECK constraints (enforced at DB level only):
+//   - status IN ('pending', 'running', 'completed', 'failed', 'skipped')
+//
+// Note: No FK to schedule_tasks. task_type and sort_order are denormalized copies
+// from the schedule_task at time of execution.
+model ScheduleTaskExecution {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  executionId  String    @map("execution_id") @db.Uuid
+  taskType     String    @map("task_type") @db.VarChar(50)
+  sortOrder    Int       @default(0) @map("sort_order")
+  status       String    @default("pending") @db.VarChar(20)
+  startedAt    DateTime? @map("started_at") @db.Timestamptz(6)
+  completedAt  DateTime? @map("completed_at") @db.Timestamptz(6)
+  errorMessage String?   @map("error_message") @db.Text
+  result       Json      @default("{}") @db.JsonB
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relations
+  execution ScheduleExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  // Indexes
+  @@index([executionId], map: "idx_ste_execution")
+  @@index([executionId, sortOrder], map: "idx_ste_order")
+  @@map("schedule_task_executions")
 }
