@@ -107,6 +107,7 @@ export {
   useDeleteAbsence,
   useApproveAbsence,
   useRejectAbsence,
+  useCancelAbsence,
 } from './use-absences'
 
 // Absence Types (tRPC)

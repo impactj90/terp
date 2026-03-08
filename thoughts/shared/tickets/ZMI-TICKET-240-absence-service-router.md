@@ -1,6 +1,6 @@
 # ZMI-TICKET-240: Absence Service + Router (Create Range, Approve/Reject)
 
-Status: Proposed
+Status: Completed
 Priority: P1
 Owner: TBD
 
