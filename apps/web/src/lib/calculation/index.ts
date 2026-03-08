@@ -75,3 +75,21 @@ export type {
   DayPlanLoader,
 } from "./shift-detection"
 export { ShiftDetector, isInTimeWindow, matchesPlan } from "./shift-detection"
+
+// Monthly calculation
+export type {
+  CreditType,
+  DailyValueInput as MonthlyDailyValueInput,
+  MonthlyEvaluationInput,
+  AbsenceSummaryInput,
+  MonthlyCalcInput,
+  MonthlyCalcOutput,
+} from "./monthly"
+export {
+  calculateMonth,
+  calculateAnnualCarryover,
+  CREDIT_TYPE_NO_EVALUATION,
+  CREDIT_TYPE_COMPLETE_CARRYOVER,
+  CREDIT_TYPE_AFTER_THRESHOLD,
+  CREDIT_TYPE_NO_CARRYOVER,
+} from "./monthly"

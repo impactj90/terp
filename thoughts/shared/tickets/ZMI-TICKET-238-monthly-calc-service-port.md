@@ -1,6 +1,6 @@
 # ZMI-TICKET-238: MonthlyCalcService Port
 
-Status: Proposed
+Status: Done
 Priority: P1
 Owner: TBD
 

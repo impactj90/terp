@@ -59,6 +59,17 @@ export const WARN_SHORT_BREAK = "SHORT_BREAK"
 /** Break auto-deducted */
 export const WARN_AUTO_BREAK_APPLIED = "AUTO_BREAK_APPLIED"
 
+// --- Monthly calculation warning codes ---
+
+/** FlextimeCredited capped at monthly max */
+export const WARN_MONTHLY_CAP_REACHED = "MONTHLY_CAP_REACHED"
+/** FlextimeEnd hit positive/negative balance cap */
+export const WARN_FLEXTIME_CAPPED = "FLEXTIME_CAPPED"
+/** Overtime below threshold, forfeited */
+export const WARN_BELOW_THRESHOLD = "BELOW_THRESHOLD"
+/** Credit type resets balance to zero */
+export const WARN_NO_CARRYOVER = "NO_CARRYOVER"
+
 // All error code values for lookup
 const ERROR_CODES = new Set([
   ERR_MISSING_COME,
