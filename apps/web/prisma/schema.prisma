@@ -164,6 +164,7 @@ model Tenant {
   bookings                    Booking[]
   dailyValues                 DailyValue[]
   dailyAccountValues          DailyAccountValue[]
+  absenceDays                 AbsenceDay[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
@@ -621,6 +622,7 @@ model Employee {
   bookings             Booking[]
   dailyValues          DailyValue[]
   dailyAccountValues   DailyAccountValue[]
+  absenceDays          AbsenceDay[]
 
   // Indexes
   @@unique([tenantId, personnelNumber], map: "employees_tenant_id_personnel_number_key")
@@ -1133,6 +1135,7 @@ model AbsenceType {
   tenant            Tenant?            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   absenceTypeGroup  AbsenceTypeGroup?  @relation(fields: [absenceTypeGroupId], references: [id], onDelete: SetNull)
   calculationRule   CalculationRule?   @relation(fields: [calculationRuleId], references: [id], onDelete: SetNull)
+  absenceDays       AbsenceDay[]
 
   // Indexes
   @@index([tenantId], map: "idx_absence_types_tenant")
@@ -2905,4 +2908,68 @@ model DailyAccountValue {
   @@index([valueDate], map: "idx_daily_account_values_date")
   @@index([employeeId, valueDate], map: "idx_daily_account_values_lookup")
   @@map("daily_account_values")
+}
+
+// -----------------------------------------------------------------------------
+// AbsenceDay
+// -----------------------------------------------------------------------------
+// Migration: 000026
+//
+// Tracks employee absences per date, linked to absence_types for credit calculation.
+// Duration: 1.00 = full day, 0.50 = half day.
+// Status values: 'pending', 'approved', 'rejected', 'cancelled'
+// Half-day period values: 'morning', 'afternoon'
+//
+// Partial unique index (cannot be modeled in Prisma, enforced at DB level):
+//   - idx_absence_days_unique: UNIQUE ON (employee_id, absence_date) WHERE status != 'cancelled'
+//
+// approved_by and created_by are bare UUIDs without Prisma relations (audit fields,
+// FK to users(id) with default NO ACTION).
+//
+// Trigger: update_absence_days_updated_at auto-sets updated_at on UPDATE
+model AbsenceDay {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  employeeId      String    @map("employee_id") @db.Uuid
+
+  // The date and type of absence
+  absenceDate     DateTime  @map("absence_date") @db.Date
+  absenceTypeId   String    @map("absence_type_id") @db.Uuid
+
+  // Duration: 1.00 = full day, 0.50 = half day
+  duration        Decimal   @default(1.00) @db.Decimal(3, 2)
+
+  // Half day specification (when duration = 0.5)
+  halfDayPeriod   String?   @map("half_day_period") @db.VarChar(10)
+
+  // Approval workflow
+  status          String    @default("pending") @db.VarChar(20)
+  approvedBy      String?   @map("approved_by") @db.Uuid
+  approvedAt      DateTime? @map("approved_at") @db.Timestamptz(6)
+  rejectionReason String?   @map("rejection_reason") @db.Text
+
+  // Optional notes
+  notes           String?   @db.Text
+
+  // Audit
+  createdBy       String?   @map("created_by") @db.Uuid
+
+  // Timestamps
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee    Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  absenceType AbsenceType @relation(fields: [absenceTypeId], references: [id])
+
+  // Indexes
+  @@index([tenantId], map: "idx_absence_days_tenant")
+  @@index([employeeId], map: "idx_absence_days_employee")
+  @@index([absenceDate], map: "idx_absence_days_date")
+  @@index([absenceTypeId], map: "idx_absence_days_type")
+  @@index([status], map: "idx_absence_days_status")
+  @@index([employeeId, absenceDate], map: "idx_absence_days_lookup")
+  @@index([employeeId, absenceDate, status], map: "idx_absence_days_range")
+  @@map("absence_days")
 }

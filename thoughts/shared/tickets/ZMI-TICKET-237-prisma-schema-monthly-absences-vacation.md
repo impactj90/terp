@@ -1,6 +1,6 @@
 # ZMI-TICKET-237: Prisma Schema: monthly_values, absences, vacation_balances
 
-Status: Proposed
+Status: Completed
 Priority: P1
 Owner: TBD
 

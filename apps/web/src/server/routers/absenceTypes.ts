@@ -465,12 +465,11 @@ export const absenceTypesRouter = createTRPCRouter({
         })
       }
 
-      // Check usage in absence_days table via raw SQL
-      const result = await ctx.prisma.$queryRawUnsafe<[{ count: number }]>(
-        `SELECT COUNT(*)::int as count FROM absence_days WHERE absence_type_id = $1`,
-        input.id
-      )
-      if (result[0] && result[0].count > 0) {
+      // Check usage in absence_days table
+      const absenceDayCount = await ctx.prisma.absenceDay.count({
+        where: { absenceTypeId: input.id },
+      })
+      if (absenceDayCount > 0) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message:

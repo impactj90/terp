@@ -503,7 +503,7 @@ describe("absenceTypes.delete", () => {
         findFirst: vi.fn().mockResolvedValue(existing),
         delete: vi.fn().mockResolvedValue(existing),
       },
-      $queryRawUnsafe: vi.fn().mockResolvedValue([{ count: 0 }]),
+      absenceDay: { count: vi.fn().mockResolvedValue(0) },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: TYPE_ID })
@@ -544,7 +544,7 @@ describe("absenceTypes.delete", () => {
       absenceType: {
         findFirst: vi.fn().mockResolvedValue(existing),
       },
-      $queryRawUnsafe: vi.fn().mockResolvedValue([{ count: 5 }]),
+      absenceDay: { count: vi.fn().mockResolvedValue(5) },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     await expect(caller.delete({ id: TYPE_ID })).rejects.toThrow(
