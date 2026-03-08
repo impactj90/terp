@@ -83,7 +83,7 @@ export default function MonthlyValuesPage() {
 
   // Frontend join: enrich monthly values with employee names
   const enrichedRows: MonthlyValueRow[] = React.useMemo(() => {
-    const monthlyValues = mvData?.data ?? []
+    const monthlyValues = mvData?.items ?? []
     const employees = employeesData?.data ?? []
 
     // Build employee lookup map
@@ -100,25 +100,29 @@ export default function MonthlyValuesPage() {
     }
 
     return monthlyValues.map((mv) => {
-      const emp = employeeMap.get(mv.employee_id ?? '')
+      const emp = employeeMap.get(mv.employeeId ?? '')
+      // Compute derived fields from tRPC response (camelCase)
+      const vacationTaken = mv.vacationTaken ?? 0
+      const sickDays = mv.sickDays ?? 0
+      const otherAbsenceDays = mv.otherAbsenceDays ?? 0
       return {
         id: mv.id ?? '',
-        employee_id: mv.employee_id ?? '',
+        employee_id: mv.employeeId ?? '',
         employee_name: emp
           ? `${emp.last_name}, ${emp.first_name}`
-          : (mv.employee_id ?? ''),
+          : (mv.employeeId ?? ''),
         personnel_number: emp?.personnel_number ?? '',
         year: mv.year ?? year,
         month: mv.month ?? month,
         status: (mv.status ?? 'open') as MonthlyValueRow['status'],
-        target_minutes: mv.target_minutes ?? 0,
-        net_minutes: mv.net_minutes ?? 0,
-        overtime_minutes: mv.overtime_minutes ?? 0,
-        balance_minutes: mv.balance_minutes ?? 0,
-        absence_days: mv.absence_days ?? 0,
-        working_days: mv.working_days ?? 0,
-        worked_days: mv.worked_days ?? 0,
-        closed_at: mv.closed_at ?? null,
+        target_minutes: mv.totalTargetTime ?? 0,
+        net_minutes: mv.totalNetTime ?? 0,
+        overtime_minutes: mv.totalOvertime ?? 0,
+        balance_minutes: mv.balanceMinutes ?? 0,
+        absence_days: vacationTaken + sickDays + otherAbsenceDays,
+        working_days: mv.workDays ?? 0,
+        worked_days: mv.workDays ?? 0,
+        closed_at: mv.closedAt ? String(mv.closedAt) : null,
       }
     })
   }, [mvData, employeesData, year, month])

@@ -1,36 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { authStorage, tenantIdStorage } from '@/lib/api'
-import { clientEnv } from '@/config/env'
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
-async function apiRequest(url: string, options?: RequestInit) {
-  const token = authStorage.getToken()
-  const tenantId = tenantIdStorage.getTenantId()
-
-  const response = await fetch(`${clientEnv.apiUrl}${url}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(tenantId ? { 'X-Tenant-ID': tenantId } : {}),
-      ...options?.headers,
-    },
-  })
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Request failed' }))
-    throw new Error(error.message || 'Request failed')
-  }
-
-  return response.json()
-}
-
-interface UseMonthlyValuesOptions {
-  employeeId?: string
-  year?: number
-  month?: number
-  enabled?: boolean
-}
-
+// Keep the existing MonthSummary interface (snake_case) for backward compatibility
 export interface MonthSummary {
   // Core fields from API
   employee_id: string
@@ -73,79 +44,11 @@ export interface MonthSummary {
   account_balances?: Record<string, number> | null
 }
 
-/**
- * Response structure that wraps MonthSummary in a data array for backward compatibility.
- * Legacy components access via .data[0], new components can use directly.
- */
-interface MonthlyValuesResponse {
-  data: MonthSummary[]
-}
-
-/**
- * Transform API response to include legacy field names.
- */
-function addLegacyFields(summary: Omit<MonthSummary, 'id'>): MonthSummary {
-  const balance = (summary.total_overtime ?? 0) - (summary.total_undertime ?? 0)
-  return {
-    ...summary,
-    // Add legacy field aliases
-    id: `${summary.employee_id}-${summary.year}-${summary.month}`,
-    target_minutes: summary.total_target_time,
-    gross_minutes: summary.total_gross_time,
-    break_minutes: summary.total_break_time,
-    net_minutes: summary.total_net_time,
-    balance_minutes: balance,
-    working_days: summary.work_days,
-    worked_days: summary.work_days,
-    absence_days: summary.vacation_taken + summary.sick_days + summary.other_absence_days,
-    holiday_days: 0, // Not available from this endpoint
-    status: summary.is_closed ? 'closed' : 'open',
-    account_balances: {
-      flextime: summary.flextime_end ?? 0,
-    },
-  }
-}
-
-/**
- * Hook to fetch monthly value for an employee.
- * Uses the /employees/{id}/months/{year}/{month} endpoint.
- *
- * Returns { data: [MonthSummary] } for backward compatibility with components
- * that expect an array (accessed via .data[0]).
- */
-export function useMonthlyValues(options: UseMonthlyValuesOptions = {}) {
-  const { employeeId, year, month, enabled = true } = options
-
-  return useQuery<MonthlyValuesResponse>({
-    queryKey: ['employees', employeeId, 'months', year, month],
-    queryFn: async () => {
-      const token = authStorage.getToken()
-      const tenantId = tenantIdStorage.getTenantId()
-
-      const response = await fetch(`${clientEnv.apiUrl}/employees/${employeeId}/months/${year}/${month}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...(tenantId ? { 'X-Tenant-ID': tenantId } : {}),
-        },
-      })
-
-      // 404 means no monthly value calculated yet — return empty data
-      if (response.status === 404) {
-        return { data: [] }
-      }
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: 'Request failed' }))
-        throw new Error(error.message || 'Request failed')
-      }
-
-      const summary = await response.json()
-      // Transform and wrap in array for backward compatibility
-      return { data: [addLegacyFields(summary)] }
-    },
-    enabled: enabled && !!employeeId && !!year && !!month,
-  })
+interface UseMonthlyValuesOptions {
+  employeeId?: string
+  year?: number
+  month?: number
+  enabled?: boolean
 }
 
 interface CloseMonthParams {
@@ -160,76 +63,179 @@ interface UseYearOverviewOptions {
   enabled?: boolean
 }
 
-interface YearOverviewApiResponse {
-  year: number
-  data: Omit<MonthSummary, 'id'>[]
+/**
+ * Transform tRPC MonthSummary (camelCase) to legacy MonthSummary (snake_case).
+ */
+function transformToLegacyMonthSummary(
+  ms: Record<string, unknown>
+): MonthSummary {
+  const overtime = (ms.totalOvertime as number) ?? 0
+  const undertime = (ms.totalUndertime as number) ?? 0
+  const balance = overtime - undertime
+  const vacationTaken = Number(ms.vacationTaken ?? 0)
+  const sickDays = (ms.sickDays as number) ?? 0
+  const otherAbsenceDays = (ms.otherAbsenceDays as number) ?? 0
+
+  return {
+    employee_id: ms.employeeId as string,
+    year: ms.year as number,
+    month: ms.month as number,
+    total_gross_time: ms.totalGrossTime as number,
+    total_net_time: ms.totalNetTime as number,
+    total_target_time: ms.totalTargetTime as number,
+    total_overtime: overtime,
+    total_undertime: undertime,
+    total_break_time: ms.totalBreakTime as number,
+    flextime_start: ms.flextimeStart as number,
+    flextime_change: ms.flextimeChange as number,
+    flextime_end: ms.flextimeEnd as number,
+    flextime_carryover: ms.flextimeCarryover as number,
+    vacation_taken: vacationTaken,
+    sick_days: sickDays,
+    other_absence_days: otherAbsenceDays,
+    work_days: ms.workDays as number,
+    days_with_errors: ms.daysWithErrors as number,
+    is_closed: ms.isClosed as boolean,
+    closed_at: ms.closedAt ? String(ms.closedAt) : undefined,
+    closed_by: ms.closedBy as string | undefined,
+    reopened_at: ms.reopenedAt ? String(ms.reopenedAt) : undefined,
+    reopened_by: ms.reopenedBy as string | undefined,
+    warnings: (ms.warnings as string[]) ?? [],
+    // Legacy aliases
+    id: `${ms.employeeId}-${ms.year}-${ms.month}`,
+    target_minutes: ms.totalTargetTime as number,
+    gross_minutes: ms.totalGrossTime as number,
+    break_minutes: ms.totalBreakTime as number,
+    net_minutes: ms.totalNetTime as number,
+    balance_minutes: balance,
+    working_days: ms.workDays as number,
+    worked_days: ms.workDays as number,
+    absence_days: vacationTaken + sickDays + otherAbsenceDays,
+    holiday_days: 0,
+    status: (ms.isClosed as boolean) ? "closed" : "open",
+    account_balances: {
+      flextime: (ms.flextimeEnd as number) ?? 0,
+    },
+  }
+}
+
+/**
+ * Hook to fetch monthly value for an employee.
+ * Uses tRPC monthlyValues.forEmployee query.
+ *
+ * Returns { data: [MonthSummary] } for backward compatibility with components
+ * that expect an array (accessed via .data[0]).
+ */
+export function useMonthlyValues(options: UseMonthlyValuesOptions = {}) {
+  const { employeeId, year, month, enabled = true } = options
+  const trpc = useTRPC()
+
+  return useQuery({
+    ...trpc.monthlyValues.forEmployee.queryOptions(
+      { employeeId: employeeId!, year: year!, month: month! },
+      { enabled: enabled && !!employeeId && !!year && !!month }
+    ),
+    select: (data) => ({
+      data: [
+        transformToLegacyMonthSummary(
+          data as unknown as Record<string, unknown>
+        ),
+      ],
+    }),
+  })
 }
 
 /**
  * Hook to fetch all monthly values for an employee for a given year.
- * Uses the /employees/{id}/months/{year} endpoint (no month parameter).
+ * Uses tRPC monthlyValues.yearOverview query.
  *
  * Returns { data: MonthSummary[] } with all months that have data.
  */
 export function useYearOverview(options: UseYearOverviewOptions = {}) {
   const { employeeId, year, enabled = true } = options
+  const trpc = useTRPC()
 
-  return useQuery<MonthlyValuesResponse>({
-    queryKey: ['employees', employeeId, 'months', year],
-    queryFn: async () => {
-      const response: YearOverviewApiResponse = await apiRequest(
-        `/employees/${employeeId}/months/${year}`
-      )
-      return { data: (response.data ?? []).map(addLegacyFields) }
-    },
-    enabled: enabled && !!employeeId && !!year,
+  return useQuery({
+    ...trpc.monthlyValues.yearOverview.queryOptions(
+      { employeeId: employeeId!, year: year! },
+      { enabled: enabled && !!employeeId && !!year }
+    ),
+    select: (data) => ({
+      data: data.map((ms) =>
+        transformToLegacyMonthSummary(ms as unknown as Record<string, unknown>)
+      ),
+    }),
   })
 }
 
 /**
  * Hook to close a month for an employee.
- * Uses the /employees/{id}/months/{year}/{month}/close endpoint.
+ * Uses tRPC monthlyValues.close mutation with { employeeId, year, month } input.
  */
 export function useCloseMonth() {
+  const trpc = useTRPC()
   const queryClient = useQueryClient()
+
   return useMutation({
-    mutationFn: ({ employeeId, year, month }: CloseMonthParams) =>
-      apiRequest(`/employees/${employeeId}/months/${year}/${month}/close`, { method: 'POST' }),
-    onSuccess: (_, { employeeId, year, month }) => {
-      queryClient.invalidateQueries({ queryKey: ['employees', employeeId, 'months', year, month] })
-      queryClient.invalidateQueries({ queryKey: ['employees', employeeId, 'months', year], exact: true })
+    ...trpc.monthlyValues.close.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.monthlyValues.forEmployee.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.monthlyValues.yearOverview.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.monthlyValues.list.queryKey(),
+      })
     },
   })
 }
 
 /**
  * Hook to reopen a month for an employee.
- * Uses the /employees/{id}/months/{year}/{month}/reopen endpoint.
+ * Uses tRPC monthlyValues.reopen mutation with { employeeId, year, month } input.
  */
 export function useReopenMonth() {
+  const trpc = useTRPC()
   const queryClient = useQueryClient()
+
   return useMutation({
-    mutationFn: ({ employeeId, year, month }: CloseMonthParams) =>
-      apiRequest(`/employees/${employeeId}/months/${year}/${month}/reopen`, { method: 'POST' }),
-    onSuccess: (_, { employeeId, year, month }) => {
-      queryClient.invalidateQueries({ queryKey: ['employees', employeeId, 'months', year, month] })
-      queryClient.invalidateQueries({ queryKey: ['employees', employeeId, 'months', year], exact: true })
+    ...trpc.monthlyValues.reopen.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.monthlyValues.forEmployee.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.monthlyValues.yearOverview.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.monthlyValues.list.queryKey(),
+      })
     },
   })
 }
 
 /**
  * Hook to recalculate a month for an employee.
- * Uses the /employees/{id}/months/{year}/{month}/recalculate endpoint.
+ * Uses tRPC monthlyValues.recalculate mutation.
  */
 export function useRecalculateMonth() {
+  const trpc = useTRPC()
   const queryClient = useQueryClient()
+
   return useMutation({
-    mutationFn: ({ employeeId, year, month }: CloseMonthParams) =>
-      apiRequest(`/employees/${employeeId}/months/${year}/${month}/recalculate`, { method: 'POST' }),
-    onSuccess: (_, { employeeId, year, month }) => {
-      queryClient.invalidateQueries({ queryKey: ['employees', employeeId, 'months', year, month] })
-      queryClient.invalidateQueries({ queryKey: ['employees', employeeId, 'months', year], exact: true })
+    ...trpc.monthlyValues.recalculate.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.monthlyValues.forEmployee.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.monthlyValues.yearOverview.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.monthlyValues.list.queryKey(),
+      })
     },
   })
 }

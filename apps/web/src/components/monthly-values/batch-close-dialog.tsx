@@ -34,10 +34,10 @@ interface BatchCloseDialogProps {
 type DialogState = 'confirming' | 'processing' | 'results'
 
 interface BatchCloseResult {
-  closed_count?: number
-  skipped_count?: number
-  error_count?: number
-  errors?: Array<{ employee_id?: string; reason?: string }>
+  closedCount?: number
+  skippedCount?: number
+  errorCount?: number
+  errors?: Array<{ employeeId?: string; reason?: string }>
 }
 
 export function BatchCloseDialog({
@@ -74,29 +74,17 @@ export function BatchCloseDialog({
     setState('processing')
 
     try {
-      type CloseBatchBody = {
-        year: number
-        month: number
-        recalculate?: boolean
-        employee_ids?: string[]
-        department_id?: string
-      }
-
-      const body: CloseBatchBody = {
+      const input = {
         year,
         month,
         recalculate,
+        ...(selectedEmployeeIds.length > 0
+          ? { employeeIds: selectedEmployeeIds }
+          : {}),
+        ...(departmentId ? { departmentId } : {}),
       }
 
-      if (selectedEmployeeIds.length > 0) {
-        body.employee_ids = selectedEmployeeIds
-      } else if (departmentId) {
-        body.department_id = departmentId
-      }
-
-      const data = await closeBatchMutation.mutateAsync({
-        body,
-      } as never)
+      const data = await closeBatchMutation.mutateAsync(input)
 
       setResult(data as unknown as BatchCloseResult)
       setState('results')
@@ -176,29 +164,29 @@ export function BatchCloseDialog({
                 <h4 className="font-medium">{t('batchClose.resultTitle')}</h4>
 
                 <div className="space-y-2">
-                  {(result.closed_count ?? 0) > 0 && (
+                  {(result.closedCount ?? 0) > 0 && (
                     <div className="flex items-center gap-2 text-sm">
                       <CheckCircle2 className="h-4 w-4 text-green-600" />
                       <span>
-                        {t('batchClose.closed')}: {result.closed_count}
+                        {t('batchClose.closed')}: {result.closedCount}
                       </span>
                     </div>
                   )}
 
-                  {(result.skipped_count ?? 0) > 0 && (
+                  {(result.skippedCount ?? 0) > 0 && (
                     <div className="flex items-center gap-2 text-sm">
                       <AlertTriangle className="h-4 w-4 text-yellow-600" />
                       <span>
-                        {t('batchClose.skipped')}: {result.skipped_count}
+                        {t('batchClose.skipped')}: {result.skippedCount}
                       </span>
                     </div>
                   )}
 
-                  {(result.error_count ?? 0) > 0 && (
+                  {(result.errorCount ?? 0) > 0 && (
                     <div className="flex items-center gap-2 text-sm">
                       <XCircle className="h-4 w-4 text-red-600" />
                       <span>
-                        {t('batchClose.errors')}: {result.error_count}
+                        {t('batchClose.errors')}: {result.errorCount}
                       </span>
                     </div>
                   )}
@@ -212,7 +200,7 @@ export function BatchCloseDialog({
                     <div className="rounded-lg border p-3 space-y-1">
                       {result.errors.map((err, index) => (
                         <div key={index} className="text-xs text-muted-foreground">
-                          <span className="font-mono">{err.employee_id}</span>: {err.reason}
+                          <span className="font-mono">{err.employeeId}</span>: {err.reason}
                         </div>
                       ))}
                     </div>

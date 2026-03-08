@@ -50,11 +50,9 @@ export function RecalculateDialog({
     setSuccessMessage(null)
 
     try {
-      const result = await recalculateMutation.mutateAsync({
-        body: { year, month },
-      })
+      const result = await recalculateMutation.mutateAsync({ year, month })
       setSuccessMessage(
-        t('recalculate.success', { count: result.affected_employees ?? 0 })
+        t('recalculate.success', { count: result.affectedEmployees ?? 0 })
       )
       // Auto-close after a short delay
       setTimeout(() => {

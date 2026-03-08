@@ -80,10 +80,7 @@ export function BatchReopenDialog({
       setProgress({ current: i + 1, total: selectedItems.length })
 
       try {
-        await reopenMutation.mutateAsync({
-          path: { id: item.id },
-          body: { reason: reason.trim() },
-        })
+        await reopenMutation.mutateAsync({ id: item.id })
         successCount++
       } catch {
         errors.push({ employee_name: item.employee_name, reason: 'Failed to reopen' })

@@ -1,13 +1,12 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { api } from '@/lib/api'
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
 // --- Interfaces ---
 
 interface UseAdminMonthlyValuesOptions {
   year?: number
   month?: number
-  status?: 'open' | 'calculated' | 'closed' | 'exported'
+  status?: "open" | "calculated" | "closed" | "exported"
   departmentId?: string
   employeeId?: string
   enabled?: boolean
@@ -16,31 +15,42 @@ interface UseAdminMonthlyValuesOptions {
 // --- Query Hooks ---
 
 /**
- * List all monthly values with filters (flat route).
- * GET /monthly-values
+ * List all monthly values with filters (admin view).
+ * Uses tRPC monthlyValues.list query.
  */
-export function useAdminMonthlyValues(options: UseAdminMonthlyValuesOptions = {}) {
-  const { year, month, status, departmentId, employeeId, enabled = true } = options
-  return useApiQuery('/monthly-values', {
-    params: {
-      year,
-      month,
-      status,
-      department_id: departmentId,
-      employee_id: employeeId,
-    },
-    enabled,
+export function useAdminMonthlyValues(
+  options: UseAdminMonthlyValuesOptions = {}
+) {
+  const { year, month, status, departmentId, employeeId, enabled = true } =
+    options
+  const trpc = useTRPC()
+
+  return useQuery({
+    ...trpc.monthlyValues.list.queryOptions(
+      {
+        year: year!,
+        month: month!,
+        status: status as "open" | "calculated" | "closed" | undefined,
+        departmentId,
+        employeeId,
+      },
+      { enabled: enabled && !!year && !!month }
+    ),
   })
 }
 
 /**
  * Get a single monthly value by ID.
- * GET /monthly-values/{id}
+ * Uses tRPC monthlyValues.getById query.
  */
 export function useMonthlyValueById(id: string | undefined) {
-  return useApiQuery('/monthly-values/{id}', {
-    path: { id: id! },
-    enabled: !!id,
+  const trpc = useTRPC()
+
+  return useQuery({
+    ...trpc.monthlyValues.getById.queryOptions(
+      { id: id! },
+      { enabled: !!id }
+    ),
   })
 }
 
@@ -48,58 +58,78 @@ export function useMonthlyValueById(id: string | undefined) {
 
 /**
  * Close a single month by monthly value ID.
- * POST /monthly-values/{id}/close
+ * Uses tRPC monthlyValues.close mutation with { id } input.
  */
 export function useCloseMonthById() {
-  return useApiMutation('/monthly-values/{id}/close', 'post', {
-    invalidateKeys: [['/monthly-values']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    ...trpc.monthlyValues.close.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.monthlyValues.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.monthlyValues.getById.queryKey(),
+      })
+    },
   })
 }
 
 /**
  * Reopen a single month by monthly value ID.
- * POST /monthly-values/{id}/reopen
+ * Uses tRPC monthlyValues.reopen mutation with { id } input.
  */
 export function useReopenMonthById() {
-  return useApiMutation('/monthly-values/{id}/reopen', 'post', {
-    invalidateKeys: [['/monthly-values']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    ...trpc.monthlyValues.reopen.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.monthlyValues.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.monthlyValues.getById.queryKey(),
+      })
+    },
   })
 }
 
 /**
  * Batch close monthly values.
- * POST /monthly-values/close-batch
+ * Uses tRPC monthlyValues.closeBatch mutation.
  */
 export function useCloseMonthBatch() {
-  return useApiMutation('/monthly-values/close-batch', 'post', {
-    invalidateKeys: [['/monthly-values']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    ...trpc.monthlyValues.closeBatch.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.monthlyValues.list.queryKey(),
+      })
+    },
   })
 }
 
 /**
  * Recalculate monthly values.
- * POST /monthly-values/recalculate
- *
- * NOTE: Returns HTTP 202 (Accepted). The useApiMutation MutationResponse
- * type only infers from 200/201 responses, so the return type resolves
- * to void. We use a custom hook with manual typing instead.
+ * Uses tRPC monthlyValues.recalculate mutation.
  */
 export function useRecalculateMonthlyValues() {
+  const trpc = useTRPC()
   const queryClient = useQueryClient()
-  return useMutation<
-    { message?: string; affected_employees?: number },
-    Error,
-    { body: { year: number; month: number; employee_id?: string } }
-  >({
-    mutationFn: async (variables) => {
-      const { data, error } = await api.POST('/monthly-values/recalculate' as never, {
-        body: variables.body,
-      } as never)
-      if (error) throw error
-      return data as { message?: string; affected_employees?: number }
-    },
+
+  return useMutation({
+    ...trpc.monthlyValues.recalculate.mutationOptions(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/monthly-values'] })
+      queryClient.invalidateQueries({
+        queryKey: trpc.monthlyValues.list.queryKey(),
+      })
     },
   })
 }
