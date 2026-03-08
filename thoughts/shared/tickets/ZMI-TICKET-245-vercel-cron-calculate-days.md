@@ -1,6 +1,6 @@
 # ZMI-TICKET-245: Vercel Cron: calculate_days Task
 
-Status: Proposed
+Status: Completed
 Priority: P2
 Owner: TBD
 
