@@ -66,6 +66,8 @@ import { travelAllowancePreviewRouter } from "./routers/travelAllowancePreview"
 import { monthlyEvalTemplatesRouter } from "./routers/monthlyEvalTemplates"
 import { correctionAssistantRouter } from "./routers/correctionAssistant"
 import { employeeDayPlansRouter } from "./routers/employeeDayPlans"
+import { dailyValuesRouter } from "./routers/dailyValues"
+import { dailyAccountValuesRouter } from "./routers/dailyAccountValues"
 
 export const appRouter = createTRPCRouter({
   health: healthRouter,
@@ -127,6 +129,8 @@ export const appRouter = createTRPCRouter({
   monthlyEvalTemplates: monthlyEvalTemplatesRouter,
   correctionAssistant: correctionAssistantRouter,
   employeeDayPlans: employeeDayPlansRouter,
+  dailyValues: dailyValuesRouter,
+  dailyAccountValues: dailyAccountValuesRouter,
 })
 
 /** Type-only export for client-side inference. */

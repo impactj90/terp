@@ -1,8 +1,7 @@
-import { useQueries } from '@tanstack/react-query'
-import { api } from '@/lib/api'
-import type { components } from '@/lib/api/types'
-
-type DailyValue = components['schemas']['DailyValue']
+import { useTRPC } from "@/trpc"
+import { useQueries } from "@tanstack/react-query"
+import type { DailyValue } from "./use-daily-values"
+import { transformToLegacyDailyValue } from "./use-daily-values"
 
 export interface TeamDailyValuesResult {
   employeeId: string
@@ -19,7 +18,9 @@ interface UseTeamDailyValuesOptions {
 
 /**
  * Hook to fetch daily values for multiple employees over a date range.
- * Uses /daily-values with employee_id, from, and to filters per employee.
+ * Uses tRPC dailyValues.listAll with per-employee queries in parallel.
+ *
+ * Used by: Team Overview page.
  */
 export function useTeamDailyValues({
   employeeIds,
@@ -28,35 +29,37 @@ export function useTeamDailyValues({
   enabled = true,
   staleTime = 60 * 1000,
 }: UseTeamDailyValuesOptions) {
+  const trpc = useTRPC()
+
   const queries = useQueries({
     queries: employeeIds.map((employeeId) => ({
-      queryKey: ['/daily-values', employeeId, from, to],
-      queryFn: async (): Promise<TeamDailyValuesResult> => {
-        const { data, error } = await api.GET('/daily-values' as never, {
-          params: {
-            query: {
-              employee_id: employeeId,
-              from,
-              to,
-              limit: 100,
-            },
-          },
-        } as never)
-        if (error) throw error
-
-        return {
+      ...trpc.dailyValues.listAll.queryOptions(
+        {
           employeeId,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          values: ((data as any)?.data ?? []) as DailyValue[],
+          fromDate: from,
+          toDate: to,
+          pageSize: 100,
+        },
+        {
+          enabled: enabled && !!employeeId && !!from && !!to,
+          staleTime,
         }
-      },
-      enabled: enabled && !!employeeId && !!from && !!to,
-      staleTime,
+      ),
+      select: (
+        data: { items: Record<string, unknown>[]; total: number }
+      ): TeamDailyValuesResult => ({
+        employeeId,
+        values: data.items.map((dv) =>
+          transformToLegacyDailyValue(dv as unknown as Record<string, unknown>)
+        ),
+      }),
     })),
   })
 
   return {
-    data: queries.map((q) => q.data).filter(Boolean) as TeamDailyValuesResult[],
+    data: queries
+      .map((q) => q.data)
+      .filter(Boolean) as TeamDailyValuesResult[],
     isLoading: queries.some((q) => q.isLoading),
     isError: queries.some((q) => q.isError),
     refetchAll: () => queries.forEach((q) => q.refetch()),

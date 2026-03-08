@@ -1,6 +1,6 @@
 # ZMI-TICKET-236: Daily Values Router (List, Approve, Recalculate)
 
-Status: Proposed
+Status: Completed
 Priority: P1
 Owner: TBD
 

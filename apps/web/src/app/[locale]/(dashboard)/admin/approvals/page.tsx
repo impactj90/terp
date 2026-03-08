@@ -13,6 +13,7 @@ import {
   useApproveDailyValue,
   useTeams,
   useTeamMembers,
+  type DailyValue,
 } from '@/hooks/api'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -30,8 +31,6 @@ import type { DateRange } from '@/components/ui/date-range-picker'
 import type { components } from '@/lib/api/types'
 
 type Absence = components['schemas']['Absence']
-
-type DailyValue = components['schemas']['DailyValue']
 
 type Team = components['schemas']['Team']
 
@@ -207,7 +206,7 @@ export default function ApprovalsPage() {
   const handleApproveTimesheet = async (id: string) => {
     setApprovingId(id)
     try {
-      await approveDailyValue.mutateAsync({ path: { id } })
+      await approveDailyValue.mutateAsync({ id })
       showToast(t('toastTimesheetApproved'))
     } catch {
       showToast(t('toastActionFailed'), 'error')
@@ -325,7 +324,7 @@ export default function ApprovalsPage() {
     let approvedCount = 0
     for (const id of selectedTimesheetIds) {
       try {
-        await approveDailyValue.mutateAsync({ path: { id } })
+        await approveDailyValue.mutateAsync({ id })
         approvedCount += 1
       } catch {
         // Continue bulk approvals

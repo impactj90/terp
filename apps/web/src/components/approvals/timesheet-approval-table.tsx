@@ -16,9 +16,7 @@ import {
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatBalanceDuration, formatDuration } from '@/lib/time-utils'
-import type { components } from '@/lib/api/types'
-
-type DailyValue = components['schemas']['DailyValue']
+import type { DailyValue } from '@/hooks/api/use-daily-values'
 
 interface TimesheetApprovalTableProps {
   dailyValues: DailyValue[]
