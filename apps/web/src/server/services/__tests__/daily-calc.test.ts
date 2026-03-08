@@ -54,6 +54,10 @@ function createPrismaMocks() {
     dayPlan: {
       findFirst: vi.fn().mockResolvedValue(null),
     },
+    orderBooking: {
+      deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
+      create: vi.fn().mockResolvedValue({}),
+    },
     $queryRaw: vi.fn().mockResolvedValue([]),
     $executeRaw: vi.fn().mockResolvedValue(0),
     $transaction: vi.fn().mockResolvedValue([]),

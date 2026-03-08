@@ -48,18 +48,18 @@ model User {
   dataScopeEmployeeIds   String[]  @default([]) @map("data_scope_employee_ids") @db.Uuid
 
   // Relations
-  tenant      Tenant?      @relation(fields: [tenantId], references: [id])
-  userGroup   UserGroup?   @relation(fields: [userGroupId], references: [id])
-  employee    Employee?    @relation(fields: [employeeId], references: [id], onDelete: SetNull)
-  userTenants             UserTenant[]
-  auditLogs               AuditLog[]
-  notifications           Notification[]
-  notificationPreferences NotificationPreference[]
-  employeeMessages        EmployeeMessage[]
-  macroExecutionsTriggers MacroExecution[]
-  payrollExportsCreated  PayrollExport[]
-  reportsCreated         Report[]
-  scheduleExecutionsTriggers  ScheduleExecution[]
+  tenant                     Tenant?                  @relation(fields: [tenantId], references: [id])
+  userGroup                  UserGroup?               @relation(fields: [userGroupId], references: [id])
+  employee                   Employee?                @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  userTenants                UserTenant[]
+  auditLogs                  AuditLog[]
+  notifications              Notification[]
+  notificationPreferences    NotificationPreference[]
+  employeeMessages           EmployeeMessage[]
+  macroExecutionsTriggers    MacroExecution[]
+  payrollExportsCreated      PayrollExport[]
+  reportsCreated             Report[]
+  scheduleExecutionsTriggers ScheduleExecution[]
 
   // Indexes
   @@unique([tenantId, email], map: "idx_users_tenant_email")
@@ -82,53 +82,53 @@ model User {
 // Note: No deleted_at column. Tenants use is_active = false for deactivation.
 // Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
 model Tenant {
-  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name                 String    @db.VarChar(255)
-  slug                 String    @unique @db.VarChar(100)
-  settings             Json?     @default("{}") @db.JsonB
-  isActive             Boolean?  @default(true) @map("is_active")
-  createdAt            DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt            DateTime? @default(now()) @map("updated_at") @db.Timestamptz(6)
-  addressStreet        String?   @map("address_street") @db.VarChar(255)
-  addressZip           String?   @map("address_zip") @db.VarChar(20)
-  addressCity          String?   @map("address_city") @db.VarChar(100)
-  addressCountry       String?   @map("address_country") @db.VarChar(100)
-  phone                String?   @db.VarChar(50)
-  email                String?   @db.VarChar(255)
-  payrollExportBasePath String?  @map("payroll_export_base_path") @db.Text
-  notes                String?   @db.Text
-  vacationBasis        String    @default("calendar_year") @map("vacation_basis") @db.VarChar(20)
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                  String    @db.VarChar(255)
+  slug                  String    @unique @db.VarChar(100)
+  settings              Json?     @default("{}") @db.JsonB
+  isActive              Boolean?  @default(true) @map("is_active")
+  createdAt             DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime? @default(now()) @map("updated_at") @db.Timestamptz(6)
+  addressStreet         String?   @map("address_street") @db.VarChar(255)
+  addressZip            String?   @map("address_zip") @db.VarChar(20)
+  addressCity           String?   @map("address_city") @db.VarChar(100)
+  addressCountry        String?   @map("address_country") @db.VarChar(100)
+  phone                 String?   @db.VarChar(50)
+  email                 String?   @db.VarChar(255)
+  payrollExportBasePath String?   @map("payroll_export_base_path") @db.Text
+  notes                 String?   @db.Text
+  vacationBasis         String    @default("calendar_year") @map("vacation_basis") @db.VarChar(20)
 
   // Relations
-  users                     User[]
-  userGroups                UserGroup[]
-  userTenants               UserTenant[]
-  costCenters               CostCenter[]
-  locations                 Location[]
-  employmentTypes           EmploymentType[]
-  holidays                  Holiday[]
-  accountGroups             AccountGroup[]
-  accounts                  Account[]
-  departments               Department[]
-  teams                     Team[]
-  employees                 Employee[]
-  employeeCards             EmployeeCard[]
-  employeeTariffAssignments EmployeeTariffAssignment[]
-  employeeGroups            EmployeeGroup[]
-  workflowGroups            WorkflowGroup[]
-  activityGroups            ActivityGroup[]
-  activities                Activity[]
-  orders                    Order[]
-  orderAssignments          OrderAssignment[]
-  bookingTypes              BookingType[]
-  bookingReasons            BookingReason[]
-  bookingTypeGroups         BookingTypeGroup[]
-  absenceTypeGroups         AbsenceTypeGroup[]
-  calculationRules          CalculationRule[]
-  dayPlans                  DayPlan[]
-  weekPlans                 WeekPlan[]
-  absenceTypes              AbsenceType[]
-  tariffs                   Tariff[]
+  users                       User[]
+  userGroups                  UserGroup[]
+  userTenants                 UserTenant[]
+  costCenters                 CostCenter[]
+  locations                   Location[]
+  employmentTypes             EmploymentType[]
+  holidays                    Holiday[]
+  accountGroups               AccountGroup[]
+  accounts                    Account[]
+  departments                 Department[]
+  teams                       Team[]
+  employees                   Employee[]
+  employeeCards               EmployeeCard[]
+  employeeTariffAssignments   EmployeeTariffAssignment[]
+  employeeGroups              EmployeeGroup[]
+  workflowGroups              WorkflowGroup[]
+  activityGroups              ActivityGroup[]
+  activities                  Activity[]
+  orders                      Order[]
+  orderAssignments            OrderAssignment[]
+  bookingTypes                BookingType[]
+  bookingReasons              BookingReason[]
+  bookingTypeGroups           BookingTypeGroup[]
+  absenceTypeGroups           AbsenceTypeGroup[]
+  calculationRules            CalculationRule[]
+  dayPlans                    DayPlan[]
+  weekPlans                   WeekPlan[]
+  absenceTypes                AbsenceType[]
+  tariffs                     Tariff[]
   vacationSpecialCalculations VacationSpecialCalculation[]
   vacationCalculationGroups   VacationCalculationGroup[]
   vacationCappingRules        VacationCappingRule[]
@@ -168,6 +168,8 @@ model Tenant {
   absenceDays                 AbsenceDay[]
   schedules                   Schedule[]
   scheduleExecutions          ScheduleExecution[]
+  corrections                 Correction[]
+  orderBookings               OrderBooking[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
@@ -237,14 +239,14 @@ model UserTenant {
 //
 // Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
 model CostCenter {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId    String    @map("tenant_id") @db.Uuid
-  code        String    @db.VarChar(50)
-  name        String    @db.VarChar(255)
-  description String?   @db.Text
-  isActive    Boolean   @default(true) @map("is_active")
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  code        String   @db.VarChar(50)
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -265,18 +267,18 @@ model CostCenter {
 //
 // Note: No ON DELETE clause on tenant_id FK (defaults to NO ACTION).
 model Location {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId    String    @map("tenant_id") @db.Uuid
-  code        String    @db.VarChar(20)
-  name        String    @db.VarChar(255)
-  description String    @default("") @db.Text
-  address     String    @default("") @db.Text
-  city        String    @default("") @db.VarChar(255)
-  country     String    @default("") @db.VarChar(100)
-  timezone    String    @default("") @db.VarChar(100)
-  isActive    Boolean   @default(true) @map("is_active")
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  code        String   @db.VarChar(20)
+  name        String   @db.VarChar(255)
+  description String   @default("") @db.Text
+  address     String   @default("") @db.Text
+  city        String   @default("") @db.VarChar(255)
+  country     String   @default("") @db.VarChar(100)
+  timezone    String   @default("") @db.VarChar(100)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   tenant Tenant @relation(fields: [tenantId], references: [id])
@@ -299,19 +301,19 @@ model Location {
 // tenant_id is nullable: NULL = system-wide type visible to all tenants.
 // System types seeded: VZ, TZ, MINI, AZUBI, WERK, PRAKT
 model EmploymentType {
-  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId            String?   @map("tenant_id") @db.Uuid
-  code                String    @db.VarChar(50)
-  name                String    @db.VarChar(255)
-  weeklyHoursDefault  Decimal   @default(40.00) @map("weekly_hours_default") @db.Decimal(5, 2)
-  isActive            Boolean   @default(true) @map("is_active")
-  vacationCalcGroupId String?   @map("vacation_calc_group_id") @db.Uuid
-  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId            String?  @map("tenant_id") @db.Uuid
+  code                String   @db.VarChar(50)
+  name                String   @db.VarChar(255)
+  weeklyHoursDefault  Decimal  @default(40.00) @map("weekly_hours_default") @db.Decimal(5, 2)
+  isActive            Boolean  @default(true) @map("is_active")
+  vacationCalcGroupId String?  @map("vacation_calc_group_id") @db.Uuid
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant    Tenant?    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  employees Employee[]
+  tenant            Tenant?                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employees         Employee[]
   vacationCalcGroup VacationCalculationGroup? @relation(fields: [vacationCalcGroupId], references: [id], onDelete: SetNull)
 
   // Indexes
@@ -331,15 +333,15 @@ model EmploymentType {
 // Note: department_id has no FK constraint in the DB (just a UUID column).
 // Trigger: update_holidays_updated_at BEFORE UPDATE
 model Holiday {
-  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId        String    @map("tenant_id") @db.Uuid
-  holidayDate     DateTime  @map("holiday_date") @db.Date
-  name            String    @db.VarChar(255)
-  holidayCategory Int       @default(1) @map("holiday_category") @db.Integer
-  appliesToAll    Boolean   @default(true) @map("applies_to_all")
-  departmentId    String?   @map("department_id") @db.Uuid
-  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  holidayDate     DateTime @map("holiday_date") @db.Date
+  name            String   @db.VarChar(255)
+  holidayCategory Int      @default(1) @map("holiday_category") @db.Integer
+  appliesToAll    Boolean  @default(true) @map("applies_to_all")
+  departmentId    String?  @map("department_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -360,15 +362,15 @@ model Holiday {
 //
 // Trigger: update_account_groups_updated_at BEFORE UPDATE
 model AccountGroup {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId    String    @map("tenant_id") @db.Uuid
-  code        String    @db.VarChar(50)
-  name        String    @db.VarChar(255)
-  description String?   @db.Text
-  isActive    Boolean   @default(true) @map("is_active")
-  sortOrder   Int       @default(0) @map("sort_order") @db.Integer
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  code        String   @db.VarChar(50)
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order") @db.Integer
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -393,35 +395,36 @@ model AccountGroup {
 // tenant_id is nullable: NULL = system account (FLEX, OT, VAC).
 // System accounts seeded in migration 000006.
 model Account {
-  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId          String?   @map("tenant_id") @db.Uuid
-  code              String    @db.VarChar(50)
-  name              String    @db.VarChar(255)
-  accountType       String    @map("account_type") @db.VarChar(20)
-  unit              String    @default("minutes") @db.VarChar(20)
-  isSystem          Boolean   @default(false) @map("is_system")
-  isActive          Boolean   @default(true) @map("is_active")
-  description       String?   @db.Text
-  isPayrollRelevant Boolean   @default(false) @map("is_payroll_relevant")
-  payrollCode       String?   @map("payroll_code") @db.VarChar(50)
-  sortOrder         Int       @default(0) @map("sort_order") @db.Integer
-  yearCarryover     Boolean   @default(true) @map("year_carryover")
-  accountGroupId    String?   @map("account_group_id") @db.Uuid
-  displayFormat     String    @default("decimal") @map("display_format") @db.VarChar(20)
-  bonusFactor       Decimal?  @map("bonus_factor") @db.Decimal(5, 2)
-  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String?  @map("tenant_id") @db.Uuid
+  code              String   @db.VarChar(50)
+  name              String   @db.VarChar(255)
+  accountType       String   @map("account_type") @db.VarChar(20)
+  unit              String   @default("minutes") @db.VarChar(20)
+  isSystem          Boolean  @default(false) @map("is_system")
+  isActive          Boolean  @default(true) @map("is_active")
+  description       String?  @db.Text
+  isPayrollRelevant Boolean  @default(false) @map("is_payroll_relevant")
+  payrollCode       String?  @map("payroll_code") @db.VarChar(50)
+  sortOrder         Int      @default(0) @map("sort_order") @db.Integer
+  yearCarryover     Boolean  @default(true) @map("year_carryover")
+  accountGroupId    String?  @map("account_group_id") @db.Uuid
+  displayFormat     String   @default("decimal") @map("display_format") @db.VarChar(20)
+  bonusFactor       Decimal? @map("bonus_factor") @db.Decimal(5, 2)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant           Tenant?       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  accountGroup     AccountGroup? @relation(fields: [accountGroupId], references: [id], onDelete: SetNull)
-  bookingTypes     BookingType[]
-  calculationRules CalculationRule[]
-  dayPlanBonuses     DayPlanBonus[]
-  dayPlanNetAccounts       DayPlan[] @relation("DayPlanNetAccount")
-  dayPlanCapAccounts       DayPlan[] @relation("DayPlanCapAccount")
-  exportInterfaceAccounts  ExportInterfaceAccount[]
-  dailyAccountValues       DailyAccountValue[]
+  tenant                  Tenant?                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  accountGroup            AccountGroup?            @relation(fields: [accountGroupId], references: [id], onDelete: SetNull)
+  bookingTypes            BookingType[]
+  calculationRules        CalculationRule[]
+  dayPlanBonuses          DayPlanBonus[]
+  dayPlanNetAccounts      DayPlan[]                @relation("DayPlanNetAccount")
+  dayPlanCapAccounts      DayPlan[]                @relation("DayPlanCapAccount")
+  exportInterfaceAccounts ExportInterfaceAccount[]
+  dailyAccountValues      DailyAccountValue[]
+  corrections             Correction[]
 
   // Indexes
   @@unique([tenantId, code], map: "accounts_tenant_id_code_key")
@@ -438,16 +441,16 @@ model Account {
 // Self-referential tree via parent_id.
 // manager_employee_id FK references employees(id) ON DELETE SET NULL.
 model Department {
-  id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId          String       @map("tenant_id") @db.Uuid
-  parentId          String?      @map("parent_id") @db.Uuid
-  code              String       @db.VarChar(50)
-  name              String       @db.VarChar(255)
-  description       String?      @db.Text
-  managerEmployeeId String?      @map("manager_employee_id") @db.Uuid
-  isActive          Boolean      @default(true) @map("is_active")
-  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  parentId          String?  @map("parent_id") @db.Uuid
+  code              String   @db.VarChar(50)
+  name              String   @db.VarChar(255)
+  description       String?  @db.Text
+  managerEmployeeId String?  @map("manager_employee_id") @db.Uuid
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   tenant    Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -472,15 +475,15 @@ model Department {
 //
 // leader_employee_id FK references employees(id) ON DELETE SET NULL.
 model Team {
-  id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId         String       @map("tenant_id") @db.Uuid
-  departmentId     String?      @map("department_id") @db.Uuid
-  name             String       @db.VarChar(255)
-  description      String?      @db.Text
-  leaderEmployeeId String?      @map("leader_employee_id") @db.Uuid
-  isActive         Boolean      @default(true) @map("is_active")
-  createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  departmentId     String?  @map("department_id") @db.Uuid
+  name             String   @db.VarChar(255)
+  description      String?  @db.Text
+  leaderEmployeeId String?  @map("leader_employee_id") @db.Uuid
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   tenant     Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -516,7 +519,6 @@ model TeamMember {
 
   // Composite primary key
   @@id([teamId, employeeId])
-
   // Indexes
   @@index([employeeId], map: "idx_team_members_employee")
   @@map("team_members")
@@ -534,28 +536,28 @@ model TeamMember {
 // Soft delete via deleted_at column.
 // Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
 model Employee {
-  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId             String    @map("tenant_id") @db.Uuid
-  personnelNumber      String    @map("personnel_number") @db.VarChar(50)
-  pin                  String    @db.VarChar(20)
-  firstName            String    @map("first_name") @db.VarChar(100)
-  lastName             String    @map("last_name") @db.VarChar(100)
-  email                String?   @db.VarChar(255)
-  phone                String?   @db.VarChar(50)
-  entryDate            DateTime  @map("entry_date") @db.Date
-  exitDate             DateTime? @map("exit_date") @db.Date
-  departmentId         String?   @map("department_id") @db.Uuid
-  costCenterId         String?   @map("cost_center_id") @db.Uuid
-  employmentTypeId     String?   @map("employment_type_id") @db.Uuid
-  weeklyHours          Decimal   @default(40.00) @map("weekly_hours") @db.Decimal(5, 2)
-  vacationDaysPerYear  Decimal   @default(30.00) @map("vacation_days_per_year") @db.Decimal(5, 2)
-  isActive             Boolean   @default(true) @map("is_active")
-  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt            DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt            DateTime? @map("deleted_at") @db.Timestamptz(6)
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId            String    @map("tenant_id") @db.Uuid
+  personnelNumber     String    @map("personnel_number") @db.VarChar(50)
+  pin                 String    @db.VarChar(20)
+  firstName           String    @map("first_name") @db.VarChar(100)
+  lastName            String    @map("last_name") @db.VarChar(100)
+  email               String?   @db.VarChar(255)
+  phone               String?   @db.VarChar(50)
+  entryDate           DateTime  @map("entry_date") @db.Date
+  exitDate            DateTime? @map("exit_date") @db.Date
+  departmentId        String?   @map("department_id") @db.Uuid
+  costCenterId        String?   @map("cost_center_id") @db.Uuid
+  employmentTypeId    String?   @map("employment_type_id") @db.Uuid
+  weeklyHours         Decimal   @default(40.00) @map("weekly_hours") @db.Decimal(5, 2)
+  vacationDaysPerYear Decimal   @default(30.00) @map("vacation_days_per_year") @db.Decimal(5, 2)
+  isActive            Boolean   @default(true) @map("is_active")
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt           DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   // Added by migration 000031
-  tariffId             String?   @map("tariff_id") @db.Uuid
+  tariffId String? @map("tariff_id") @db.Uuid
 
   // Extended personnel master data (migration 000041)
   exitReason           String?   @map("exit_reason") @db.VarChar(255)
@@ -586,8 +588,8 @@ model Employee {
   calculationStartDate DateTime? @map("calculation_start_date") @db.Date
 
   // Added by migration 000058
-  defaultOrderId       String?   @map("default_order_id") @db.Uuid
-  defaultActivityId    String?   @map("default_activity_id") @db.Uuid
+  defaultOrderId    String? @map("default_order_id") @db.Uuid
+  defaultActivityId String? @map("default_activity_id") @db.Uuid
 
   // Relations to models already in Prisma
   tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -597,8 +599,8 @@ model Employee {
 
   // Reverse relations (FK on other tables pointing to employees)
   user               User?
-  managedDepartments Department[] @relation("DepartmentManager")
-  ledTeams           Team[]       @relation("TeamLeader")
+  managedDepartments Department[]               @relation("DepartmentManager")
+  ledTeams           Team[]                     @relation("TeamLeader")
   teamMemberships    TeamMember[]
   contacts           EmployeeContact[]
   cards              EmployeeCard[]
@@ -607,25 +609,27 @@ model Employee {
   tariff Tariff? @relation(fields: [tariffId], references: [id], onDelete: SetNull)
 
   // Relations to group/order/activity models
-  employeeGroup    EmployeeGroup?    @relation(fields: [employeeGroupId], references: [id], onDelete: SetNull)
-  workflowGroup    WorkflowGroup?    @relation(fields: [workflowGroupId], references: [id], onDelete: SetNull)
-  activityGroup    ActivityGroup?    @relation(fields: [activityGroupId], references: [id], onDelete: SetNull)
-  defaultOrder     Order?            @relation("EmployeeDefaultOrder", fields: [defaultOrderId], references: [id], onDelete: SetNull)
-  defaultActivity  Activity?         @relation("EmployeeDefaultActivity", fields: [defaultActivityId], references: [id], onDelete: SetNull)
-  orderAssignments OrderAssignment[]
-  cappingExceptions EmployeeCappingException[]
-  vacationBalances  VacationBalance[]
-  shiftAssignments  ShiftAssignment[]
-  employeeDayPlans  EmployeeDayPlan[]
-  macroAssignments  MacroAssignment[]
-  messageRecipients EmployeeMessageRecipient[]
-  accessAssignments    EmployeeAccessAssignment[]
-  monthlyValues        MonthlyValue[]
-  rawTerminalBookings  RawTerminalBooking[]
-  bookings             Booking[]
-  dailyValues          DailyValue[]
-  dailyAccountValues   DailyAccountValue[]
-  absenceDays          AbsenceDay[]
+  employeeGroup       EmployeeGroup?             @relation(fields: [employeeGroupId], references: [id], onDelete: SetNull)
+  workflowGroup       WorkflowGroup?             @relation(fields: [workflowGroupId], references: [id], onDelete: SetNull)
+  activityGroup       ActivityGroup?             @relation(fields: [activityGroupId], references: [id], onDelete: SetNull)
+  defaultOrder        Order?                     @relation("EmployeeDefaultOrder", fields: [defaultOrderId], references: [id], onDelete: SetNull)
+  defaultActivity     Activity?                  @relation("EmployeeDefaultActivity", fields: [defaultActivityId], references: [id], onDelete: SetNull)
+  orderAssignments    OrderAssignment[]
+  cappingExceptions   EmployeeCappingException[]
+  vacationBalances    VacationBalance[]
+  shiftAssignments    ShiftAssignment[]
+  employeeDayPlans    EmployeeDayPlan[]
+  macroAssignments    MacroAssignment[]
+  messageRecipients   EmployeeMessageRecipient[]
+  accessAssignments   EmployeeAccessAssignment[]
+  monthlyValues       MonthlyValue[]
+  rawTerminalBookings RawTerminalBooking[]
+  bookings            Booking[]
+  dailyValues         DailyValue[]
+  dailyAccountValues  DailyAccountValue[]
+  absenceDays         AbsenceDay[]
+  corrections         Correction[]
+  orderBookings       OrderBooking[]
 
   // Indexes
   @@unique([tenantId, personnelNumber], map: "employees_tenant_id_personnel_number_key")
@@ -651,17 +655,17 @@ model Employee {
 //
 // Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
 model EmployeeContact {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  employeeId    String   @map("employee_id") @db.Uuid
-  contactType   String   @map("contact_type") @db.VarChar(50)
-  value         String   @db.VarChar(255)
-  label         String?  @db.VarChar(100)
-  isPrimary     Boolean  @default(false) @map("is_primary")
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  employeeId  String   @map("employee_id") @db.Uuid
+  contactType String   @map("contact_type") @db.VarChar(50)
+  value       String   @db.VarChar(255)
+  label       String?  @db.VarChar(100)
+  isPrimary   Boolean  @default(false) @map("is_primary")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Added by migration 000069
-  contactKindId String?  @map("contact_kind_id") @db.Uuid
+  contactKindId String? @map("contact_kind_id") @db.Uuid
 
   // Relations
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
@@ -732,7 +736,7 @@ model EmployeeTariffAssignment {
   // Relations
   tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  tariff Tariff @relation(fields: [tariffId], references: [id], onDelete: Cascade)
+  tariff   Tariff   @relation(fields: [tariffId], references: [id], onDelete: Cascade)
 
   // Indexes
   @@index([tenantId], map: "idx_eta_tenant")
@@ -748,14 +752,14 @@ model EmployeeTariffAssignment {
 // -----------------------------------------------------------------------------
 // Migrations: 000041
 model EmployeeGroup {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId    String    @map("tenant_id") @db.Uuid
-  code        String    @db.VarChar(50)
-  name        String    @db.VarChar(255)
-  description String?   @db.Text
-  isActive    Boolean   @default(true) @map("is_active")
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  code        String   @db.VarChar(50)
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -771,14 +775,14 @@ model EmployeeGroup {
 // -----------------------------------------------------------------------------
 // Migrations: 000041
 model WorkflowGroup {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId    String    @map("tenant_id") @db.Uuid
-  code        String    @db.VarChar(50)
-  name        String    @db.VarChar(255)
-  description String?   @db.Text
-  isActive    Boolean   @default(true) @map("is_active")
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  code        String   @db.VarChar(50)
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -794,14 +798,14 @@ model WorkflowGroup {
 // -----------------------------------------------------------------------------
 // Migrations: 000041
 model ActivityGroup {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId    String    @map("tenant_id") @db.Uuid
-  code        String    @db.VarChar(50)
-  name        String    @db.VarChar(255)
-  description String?   @db.Text
-  isActive    Boolean   @default(true) @map("is_active")
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  code        String   @db.VarChar(50)
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -819,18 +823,19 @@ model ActivityGroup {
 //
 // Trigger: update_activities_updated_at auto-sets updated_at on UPDATE
 model Activity {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId    String    @map("tenant_id") @db.Uuid
-  code        String    @db.VarChar(50)
-  name        String    @db.VarChar(255)
-  description String?   @db.Text
-  isActive    Boolean   @default(true) @map("is_active")
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  code        String   @db.VarChar(50)
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant              Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  defaultForEmployees Employee[] @relation("EmployeeDefaultActivity")
+  tenant              Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  defaultForEmployees Employee[]     @relation("EmployeeDefaultActivity")
+  orderBookings       OrderBooking[]
 
   @@unique([tenantId, code], map: "activities_tenant_id_code_key")
   @@index([tenantId], map: "idx_activities_tenant")
@@ -868,6 +873,7 @@ model Order {
   costCenter          CostCenter?       @relation(fields: [costCenterId], references: [id], onDelete: SetNull)
   assignments         OrderAssignment[]
   defaultForEmployees Employee[]        @relation("EmployeeDefaultOrder")
+  orderBookings       OrderBooking[]
 
   @@unique([tenantId, code], map: "orders_tenant_id_code_key")
   @@index([tenantId], map: "idx_orders_tenant")
@@ -927,23 +933,23 @@ model OrderAssignment {
 //   - direction IN ('in', 'out')
 //   - category IN ('work', 'break', 'business_trip', 'other')
 model BookingType {
-  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId       String?   @map("tenant_id") @db.Uuid
-  code           String    @db.VarChar(20)
-  name           String    @db.VarChar(255)
-  description    String?   @db.Text
-  direction      String    @db.VarChar(10)
-  category       String    @default("work") @db.VarChar(30)
-  accountId      String?   @map("account_id") @db.Uuid
-  requiresReason Boolean   @default(false) @map("requires_reason")
-  isSystem       Boolean   @default(false) @map("is_system")
-  isActive       Boolean   @default(true) @map("is_active")
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String?  @map("tenant_id") @db.Uuid
+  code           String   @db.VarChar(20)
+  name           String   @db.VarChar(255)
+  description    String?  @db.Text
+  direction      String   @db.VarChar(10)
+  category       String   @default("work") @db.VarChar(30)
+  accountId      String?  @map("account_id") @db.Uuid
+  requiresReason Boolean  @default(false) @map("requires_reason")
+  isSystem       Boolean  @default(false) @map("is_system")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant          Tenant?                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  account         Account?                 @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  tenant              Tenant?                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  account             Account?                 @relation(fields: [accountId], references: [id], onDelete: SetNull)
   bookingReasons      BookingReason[]
   groupMembers        BookingTypeGroupMember[]
   rawTerminalBookings RawTerminalBooking[]
@@ -963,18 +969,18 @@ model BookingType {
 //
 // Trigger: update_booking_reasons_updated_at auto-sets updated_at on UPDATE
 model BookingReason {
-  id                       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId                 String    @map("tenant_id") @db.Uuid
-  bookingTypeId            String    @map("booking_type_id") @db.Uuid
-  code                     String    @db.VarChar(50)
-  label                    String    @db.VarChar(255)
-  isActive                 Boolean   @default(true) @map("is_active")
-  sortOrder                Int       @default(0) @map("sort_order") @db.Integer
-  referenceTime            String?   @map("reference_time") @db.VarChar(20)
-  offsetMinutes            Int?      @map("offset_minutes") @db.Integer
-  adjustmentBookingTypeId  String?   @map("adjustment_booking_type_id") @db.Uuid
-  createdAt                DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt                DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId                String   @map("tenant_id") @db.Uuid
+  bookingTypeId           String   @map("booking_type_id") @db.Uuid
+  code                    String   @db.VarChar(50)
+  label                   String   @db.VarChar(255)
+  isActive                Boolean  @default(true) @map("is_active")
+  sortOrder               Int      @default(0) @map("sort_order") @db.Integer
+  referenceTime           String?  @map("reference_time") @db.VarChar(20)
+  offsetMinutes           Int?     @map("offset_minutes") @db.Integer
+  adjustmentBookingTypeId String?  @map("adjustment_booking_type_id") @db.Uuid
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -997,14 +1003,14 @@ model BookingReason {
 //
 // Trigger: update_booking_type_groups_updated_at auto-sets updated_at on UPDATE
 model BookingTypeGroup {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId    String    @map("tenant_id") @db.Uuid
-  code        String    @db.VarChar(50)
-  name        String    @db.VarChar(255)
-  description String?   @db.Text
-  isActive    Boolean   @default(true) @map("is_active")
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  code        String   @db.VarChar(50)
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   tenant  Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -1047,14 +1053,14 @@ model BookingTypeGroupMember {
 //
 // Trigger: update_absence_type_groups_updated_at auto-sets updated_at on UPDATE
 model AbsenceTypeGroup {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId    String    @map("tenant_id") @db.Uuid
-  code        String    @db.VarChar(50)
-  name        String    @db.VarChar(255)
-  description String?   @db.Text
-  isActive    Boolean   @default(true) @map("is_active")
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  code        String   @db.VarChar(50)
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -1075,17 +1081,17 @@ model AbsenceTypeGroup {
 //
 // Trigger: update_calculation_rules_updated_at auto-sets updated_at on UPDATE
 model CalculationRule {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId    String    @map("tenant_id") @db.Uuid
-  code        String    @db.VarChar(50)
-  name        String    @db.VarChar(255)
-  description String?   @db.Text
-  accountId   String?   @map("account_id") @db.Uuid
-  value       Int       @default(0) @db.Integer
-  factor      Decimal   @default(1.00) @db.Decimal(5, 2)
-  isActive    Boolean   @default(true) @map("is_active")
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  code        String   @db.VarChar(50)
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  accountId   String?  @map("account_id") @db.Uuid
+  value       Int      @default(0) @db.Integer
+  factor      Decimal  @default(1.00) @db.Decimal(5, 2)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -1113,32 +1119,32 @@ model CalculationRule {
 //
 // Trigger: update_absence_types_updated_at auto-sets updated_at on UPDATE
 model AbsenceType {
-  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId            String?   @map("tenant_id") @db.Uuid
-  code                String    @db.VarChar(10)
-  name                String    @db.VarChar(100)
-  description         String?   @db.Text
-  category            String    @db.VarChar(20)
-  portion             Int       @default(1) @db.Integer
-  holidayCode         String?   @map("holiday_code") @db.VarChar(10)
-  priority            Int       @default(0) @db.Integer
-  deductsVacation     Boolean   @default(false) @map("deducts_vacation")
-  requiresApproval    Boolean   @default(true) @map("requires_approval")
-  requiresDocument    Boolean   @default(false) @map("requires_document")
-  color               String    @default("#808080") @db.VarChar(7)
-  sortOrder           Int       @default(0) @map("sort_order") @db.Integer
-  isSystem            Boolean   @default(false) @map("is_system")
-  isActive            Boolean   @default(true) @map("is_active")
-  absenceTypeGroupId  String?   @map("absence_type_group_id") @db.Uuid
-  calculationRuleId   String?   @map("calculation_rule_id") @db.Uuid
-  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String?  @map("tenant_id") @db.Uuid
+  code               String   @db.VarChar(10)
+  name               String   @db.VarChar(100)
+  description        String?  @db.Text
+  category           String   @db.VarChar(20)
+  portion            Int      @default(1) @db.Integer
+  holidayCode        String?  @map("holiday_code") @db.VarChar(10)
+  priority           Int      @default(0) @db.Integer
+  deductsVacation    Boolean  @default(false) @map("deducts_vacation")
+  requiresApproval   Boolean  @default(true) @map("requires_approval")
+  requiresDocument   Boolean  @default(false) @map("requires_document")
+  color              String   @default("#808080") @db.VarChar(7)
+  sortOrder          Int      @default(0) @map("sort_order") @db.Integer
+  isSystem           Boolean  @default(false) @map("is_system")
+  isActive           Boolean  @default(true) @map("is_active")
+  absenceTypeGroupId String?  @map("absence_type_group_id") @db.Uuid
+  calculationRuleId  String?  @map("calculation_rule_id") @db.Uuid
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant            Tenant?            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  absenceTypeGroup  AbsenceTypeGroup?  @relation(fields: [absenceTypeGroupId], references: [id], onDelete: SetNull)
-  calculationRule   CalculationRule?   @relation(fields: [calculationRuleId], references: [id], onDelete: SetNull)
-  absenceDays       AbsenceDay[]
+  tenant           Tenant?           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  absenceTypeGroup AbsenceTypeGroup? @relation(fields: [absenceTypeGroupId], references: [id], onDelete: SetNull)
+  calculationRule  CalculationRule?  @relation(fields: [calculationRuleId], references: [id], onDelete: SetNull)
+  absenceDays      AbsenceDay[]
 
   // Indexes
   @@index([tenantId], map: "idx_absence_types_tenant")
@@ -1162,105 +1168,105 @@ model AbsenceType {
 //
 // Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
 model DayPlan {
-  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId              String    @map("tenant_id") @db.Uuid
-  code                  String    @db.VarChar(20)
-  name                  String    @db.VarChar(255)
-  description           String?   @db.Text
-  planType              String    @default("fixed") @map("plan_type") @db.VarChar(20)
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String  @map("tenant_id") @db.Uuid
+  code        String  @db.VarChar(20)
+  name        String  @db.VarChar(255)
+  description String? @db.Text
+  planType    String  @default("fixed") @map("plan_type") @db.VarChar(20)
 
   // Time windows (minutes from midnight)
-  comeFrom              Int?      @map("come_from") @db.Integer
-  comeTo                Int?      @map("come_to") @db.Integer
-  goFrom                Int?      @map("go_from") @db.Integer
-  goTo                  Int?      @map("go_to") @db.Integer
-  coreStart             Int?      @map("core_start") @db.Integer
-  coreEnd               Int?      @map("core_end") @db.Integer
+  comeFrom  Int? @map("come_from") @db.Integer
+  comeTo    Int? @map("come_to") @db.Integer
+  goFrom    Int? @map("go_from") @db.Integer
+  goTo      Int? @map("go_to") @db.Integer
+  coreStart Int? @map("core_start") @db.Integer
+  coreEnd   Int? @map("core_end") @db.Integer
 
   // Target hours
-  regularHours          Int       @default(480) @map("regular_hours") @db.Integer
-  regularHours2         Int?      @map("regular_hours_2") @db.Integer
-  fromEmployeeMaster    Boolean   @default(false) @map("from_employee_master")
+  regularHours       Int     @default(480) @map("regular_hours") @db.Integer
+  regularHours2      Int?    @map("regular_hours_2") @db.Integer
+  fromEmployeeMaster Boolean @default(false) @map("from_employee_master")
 
   // Tolerance settings
-  toleranceComePlus     Int       @default(0) @map("tolerance_come_plus") @db.Integer
-  toleranceComeMinus    Int       @default(0) @map("tolerance_come_minus") @db.Integer
-  toleranceGoPlus       Int       @default(0) @map("tolerance_go_plus") @db.Integer
-  toleranceGoMinus      Int       @default(0) @map("tolerance_go_minus") @db.Integer
+  toleranceComePlus  Int @default(0) @map("tolerance_come_plus") @db.Integer
+  toleranceComeMinus Int @default(0) @map("tolerance_come_minus") @db.Integer
+  toleranceGoPlus    Int @default(0) @map("tolerance_go_plus") @db.Integer
+  toleranceGoMinus   Int @default(0) @map("tolerance_go_minus") @db.Integer
 
   // Rounding settings
-  roundingComeType      String?   @map("rounding_come_type") @db.VarChar(20)
-  roundingComeInterval  Int?      @map("rounding_come_interval") @db.Integer
-  roundingGoType        String?   @map("rounding_go_type") @db.VarChar(20)
-  roundingGoInterval    Int?      @map("rounding_go_interval") @db.Integer
+  roundingComeType     String? @map("rounding_come_type") @db.VarChar(20)
+  roundingComeInterval Int?    @map("rounding_come_interval") @db.Integer
+  roundingGoType       String? @map("rounding_go_type") @db.VarChar(20)
+  roundingGoInterval   Int?    @map("rounding_go_interval") @db.Integer
 
   // Caps
-  minWorkTime           Int?      @map("min_work_time") @db.Integer
-  maxNetWorkTime        Int?      @map("max_net_work_time") @db.Integer
+  minWorkTime    Int? @map("min_work_time") @db.Integer
+  maxNetWorkTime Int? @map("max_net_work_time") @db.Integer
 
   // Variable work time
-  variableWorkTime      Boolean   @default(false) @map("variable_work_time")
+  variableWorkTime Boolean @default(false) @map("variable_work_time")
 
   // Rounding extras
-  roundAllBookings      Boolean   @default(false) @map("round_all_bookings")
-  roundingComeAddValue  Int?      @map("rounding_come_add_value") @db.Integer
-  roundingGoAddValue    Int?      @map("rounding_go_add_value") @db.Integer
+  roundAllBookings     Boolean @default(false) @map("round_all_bookings")
+  roundingComeAddValue Int?    @map("rounding_come_add_value") @db.Integer
+  roundingGoAddValue   Int?    @map("rounding_go_add_value") @db.Integer
 
   // Holiday credits (minutes)
-  holidayCreditCat1     Int?      @map("holiday_credit_cat1") @db.Integer
-  holidayCreditCat2     Int?      @map("holiday_credit_cat2") @db.Integer
-  holidayCreditCat3     Int?      @map("holiday_credit_cat3") @db.Integer
+  holidayCreditCat1 Int? @map("holiday_credit_cat1") @db.Integer
+  holidayCreditCat2 Int? @map("holiday_credit_cat2") @db.Integer
+  holidayCreditCat3 Int? @map("holiday_credit_cat3") @db.Integer
 
   // Vacation deduction
-  vacationDeduction     Decimal   @default(1.00) @map("vacation_deduction") @db.Decimal(5, 2)
+  vacationDeduction Decimal @default(1.00) @map("vacation_deduction") @db.Decimal(5, 2)
 
   // No-booking behavior
-  noBookingBehavior     String    @default("error") @map("no_booking_behavior") @db.VarChar(30)
+  noBookingBehavior String @default("error") @map("no_booking_behavior") @db.VarChar(30)
 
   // Day change behavior
-  dayChangeBehavior     String    @default("none") @map("day_change_behavior") @db.VarChar(30)
+  dayChangeBehavior String @default("none") @map("day_change_behavior") @db.VarChar(30)
 
   // Shift detection windows (minutes from midnight)
-  shiftDetectArriveFrom Int?      @map("shift_detect_arrive_from") @db.Integer
-  shiftDetectArriveTo   Int?      @map("shift_detect_arrive_to") @db.Integer
-  shiftDetectDepartFrom Int?      @map("shift_detect_depart_from") @db.Integer
-  shiftDetectDepartTo   Int?      @map("shift_detect_depart_to") @db.Integer
+  shiftDetectArriveFrom Int? @map("shift_detect_arrive_from") @db.Integer
+  shiftDetectArriveTo   Int? @map("shift_detect_arrive_to") @db.Integer
+  shiftDetectDepartFrom Int? @map("shift_detect_depart_from") @db.Integer
+  shiftDetectDepartTo   Int? @map("shift_detect_depart_to") @db.Integer
 
   // Alternative day plans for shift detection (self-referential FKs)
-  shiftAltPlan1         String?   @map("shift_alt_plan_1") @db.Uuid
-  shiftAltPlan2         String?   @map("shift_alt_plan_2") @db.Uuid
-  shiftAltPlan3         String?   @map("shift_alt_plan_3") @db.Uuid
-  shiftAltPlan4         String?   @map("shift_alt_plan_4") @db.Uuid
-  shiftAltPlan5         String?   @map("shift_alt_plan_5") @db.Uuid
-  shiftAltPlan6         String?   @map("shift_alt_plan_6") @db.Uuid
+  shiftAltPlan1 String? @map("shift_alt_plan_1") @db.Uuid
+  shiftAltPlan2 String? @map("shift_alt_plan_2") @db.Uuid
+  shiftAltPlan3 String? @map("shift_alt_plan_3") @db.Uuid
+  shiftAltPlan4 String? @map("shift_alt_plan_4") @db.Uuid
+  shiftAltPlan5 String? @map("shift_alt_plan_5") @db.Uuid
+  shiftAltPlan6 String? @map("shift_alt_plan_6") @db.Uuid
 
   // Account references
-  netAccountId          String?   @map("net_account_id") @db.Uuid
-  capAccountId          String?   @map("cap_account_id") @db.Uuid
+  netAccountId String? @map("net_account_id") @db.Uuid
+  capAccountId String? @map("cap_account_id") @db.Uuid
 
-  isActive              Boolean   @default(true) @map("is_active")
-  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant     Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  netAccount Account?       @relation("DayPlanNetAccount", fields: [netAccountId], references: [id], onDelete: SetNull)
-  capAccount Account?       @relation("DayPlanCapAccount", fields: [capAccountId], references: [id], onDelete: SetNull)
-  breaks     DayPlanBreak[]
-  bonuses    DayPlanBonus[]
-  tariffDayPlans TariffDayPlan[]
-  shifts     Shift[]
-  employeeDayPlans EmployeeDayPlan[]
+  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  netAccount         Account?            @relation("DayPlanNetAccount", fields: [netAccountId], references: [id], onDelete: SetNull)
+  capAccount         Account?            @relation("DayPlanCapAccount", fields: [capAccountId], references: [id], onDelete: SetNull)
+  breaks             DayPlanBreak[]
+  bonuses            DayPlanBonus[]
+  tariffDayPlans     TariffDayPlan[]
+  shifts             Shift[]
+  employeeDayPlans   EmployeeDayPlan[]
   dailyAccountValues DailyAccountValue[]
 
   // Reverse relations for WeekPlan
-  weekPlanMondays     WeekPlan[] @relation("WeekPlanMonday")
-  weekPlanTuesdays    WeekPlan[] @relation("WeekPlanTuesday")
-  weekPlanWednesdays  WeekPlan[] @relation("WeekPlanWednesday")
-  weekPlanThursdays   WeekPlan[] @relation("WeekPlanThursday")
-  weekPlanFridays     WeekPlan[] @relation("WeekPlanFriday")
-  weekPlanSaturdays   WeekPlan[] @relation("WeekPlanSaturday")
-  weekPlanSundays     WeekPlan[] @relation("WeekPlanSunday")
+  weekPlanMondays    WeekPlan[] @relation("WeekPlanMonday")
+  weekPlanTuesdays   WeekPlan[] @relation("WeekPlanTuesday")
+  weekPlanWednesdays WeekPlan[] @relation("WeekPlanWednesday")
+  weekPlanThursdays  WeekPlan[] @relation("WeekPlanThursday")
+  weekPlanFridays    WeekPlan[] @relation("WeekPlanFriday")
+  weekPlanSaturdays  WeekPlan[] @relation("WeekPlanSaturday")
+  weekPlanSundays    WeekPlan[] @relation("WeekPlanSunday")
 
   // Indexes
   @@unique([tenantId, code], map: "day_plans_tenant_id_code_key")
@@ -1277,19 +1283,19 @@ model DayPlan {
 // CHECK constraints (enforced at DB level only):
 //   - break_type IN ('fixed', 'variable', 'minimum')
 model DayPlanBreak {
-  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  dayPlanId         String    @map("day_plan_id") @db.Uuid
-  breakType         String    @map("break_type") @db.VarChar(20)
-  startTime         Int?      @map("start_time") @db.Integer
-  endTime           Int?      @map("end_time") @db.Integer
-  duration          Int       @db.Integer
-  afterWorkMinutes  Int?      @map("after_work_minutes") @db.Integer
-  autoDeduct        Boolean   @default(true) @map("auto_deduct")
-  isPaid            Boolean   @default(false) @map("is_paid")
-  minutesDifference Boolean   @default(false) @map("minutes_difference")
-  sortOrder         Int       @default(0) @map("sort_order") @db.Integer
-  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  dayPlanId         String   @map("day_plan_id") @db.Uuid
+  breakType         String   @map("break_type") @db.VarChar(20)
+  startTime         Int?     @map("start_time") @db.Integer
+  endTime           Int?     @map("end_time") @db.Integer
+  duration          Int      @db.Integer
+  afterWorkMinutes  Int?     @map("after_work_minutes") @db.Integer
+  autoDeduct        Boolean  @default(true) @map("auto_deduct")
+  isPaid            Boolean  @default(false) @map("is_paid")
+  minutesDifference Boolean  @default(false) @map("minutes_difference")
+  sortOrder         Int      @default(0) @map("sort_order") @db.Integer
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   dayPlan DayPlan @relation(fields: [dayPlanId], references: [id], onDelete: Cascade)
@@ -1307,18 +1313,18 @@ model DayPlanBreak {
 // CHECK constraints (enforced at DB level only):
 //   - calculation_type IN ('fixed', 'per_minute', 'percentage')
 model DayPlanBonus {
-  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  dayPlanId         String    @map("day_plan_id") @db.Uuid
-  accountId         String    @map("account_id") @db.Uuid
-  timeFrom          Int       @map("time_from") @db.Integer
-  timeTo            Int       @map("time_to") @db.Integer
-  calculationType   String    @map("calculation_type") @db.VarChar(20)
-  valueMinutes      Int       @map("value_minutes") @db.Integer
-  minWorkMinutes    Int?      @map("min_work_minutes") @db.Integer
-  appliesOnHoliday  Boolean   @default(false) @map("applies_on_holiday")
-  sortOrder         Int       @default(0) @map("sort_order") @db.Integer
-  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  dayPlanId        String   @map("day_plan_id") @db.Uuid
+  accountId        String   @map("account_id") @db.Uuid
+  timeFrom         Int      @map("time_from") @db.Integer
+  timeTo           Int      @map("time_to") @db.Integer
+  calculationType  String   @map("calculation_type") @db.VarChar(20)
+  valueMinutes     Int      @map("value_minutes") @db.Integer
+  minWorkMinutes   Int?     @map("min_work_minutes") @db.Integer
+  appliesOnHoliday Boolean  @default(false) @map("applies_on_holiday")
+  sortOrder        Int      @default(0) @map("sort_order") @db.Integer
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   dayPlan DayPlan @relation(fields: [dayPlanId], references: [id], onDelete: Cascade)
@@ -1338,35 +1344,35 @@ model DayPlanBonus {
 // 7 nullable FK columns referencing day_plans(id) ON DELETE SET NULL.
 // Note: Prisma requires named relations when multiple FKs reference the same model.
 model WeekPlan {
-  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId              String    @map("tenant_id") @db.Uuid
-  code                  String    @db.VarChar(20)
-  name                  String    @db.VarChar(255)
-  description           String?   @db.Text
-  mondayDayPlanId       String?   @map("monday_day_plan_id") @db.Uuid
-  tuesdayDayPlanId      String?   @map("tuesday_day_plan_id") @db.Uuid
-  wednesdayDayPlanId    String?   @map("wednesday_day_plan_id") @db.Uuid
-  thursdayDayPlanId     String?   @map("thursday_day_plan_id") @db.Uuid
-  fridayDayPlanId       String?   @map("friday_day_plan_id") @db.Uuid
-  saturdayDayPlanId     String?   @map("saturday_day_plan_id") @db.Uuid
-  sundayDayPlanId       String?   @map("sunday_day_plan_id") @db.Uuid
-  isActive              Boolean   @default(true) @map("is_active")
-  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String   @map("tenant_id") @db.Uuid
+  code               String   @db.VarChar(20)
+  name               String   @db.VarChar(255)
+  description        String?  @db.Text
+  mondayDayPlanId    String?  @map("monday_day_plan_id") @db.Uuid
+  tuesdayDayPlanId   String?  @map("tuesday_day_plan_id") @db.Uuid
+  wednesdayDayPlanId String?  @map("wednesday_day_plan_id") @db.Uuid
+  thursdayDayPlanId  String?  @map("thursday_day_plan_id") @db.Uuid
+  fridayDayPlanId    String?  @map("friday_day_plan_id") @db.Uuid
+  saturdayDayPlanId  String?  @map("saturday_day_plan_id") @db.Uuid
+  sundayDayPlanId    String?  @map("sunday_day_plan_id") @db.Uuid
+  isActive           Boolean  @default(true) @map("is_active")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  mondayDayPlan   DayPlan? @relation("WeekPlanMonday", fields: [mondayDayPlanId], references: [id], onDelete: SetNull)
-  tuesdayDayPlan  DayPlan? @relation("WeekPlanTuesday", fields: [tuesdayDayPlanId], references: [id], onDelete: SetNull)
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mondayDayPlan    DayPlan? @relation("WeekPlanMonday", fields: [mondayDayPlanId], references: [id], onDelete: SetNull)
+  tuesdayDayPlan   DayPlan? @relation("WeekPlanTuesday", fields: [tuesdayDayPlanId], references: [id], onDelete: SetNull)
   wednesdayDayPlan DayPlan? @relation("WeekPlanWednesday", fields: [wednesdayDayPlanId], references: [id], onDelete: SetNull)
-  thursdayDayPlan DayPlan? @relation("WeekPlanThursday", fields: [thursdayDayPlanId], references: [id], onDelete: SetNull)
-  fridayDayPlan   DayPlan? @relation("WeekPlanFriday", fields: [fridayDayPlanId], references: [id], onDelete: SetNull)
-  saturdayDayPlan DayPlan? @relation("WeekPlanSaturday", fields: [saturdayDayPlanId], references: [id], onDelete: SetNull)
-  sundayDayPlan   DayPlan? @relation("WeekPlanSunday", fields: [sundayDayPlanId], references: [id], onDelete: SetNull)
+  thursdayDayPlan  DayPlan? @relation("WeekPlanThursday", fields: [thursdayDayPlanId], references: [id], onDelete: SetNull)
+  fridayDayPlan    DayPlan? @relation("WeekPlanFriday", fields: [fridayDayPlanId], references: [id], onDelete: SetNull)
+  saturdayDayPlan  DayPlan? @relation("WeekPlanSaturday", fields: [saturdayDayPlanId], references: [id], onDelete: SetNull)
+  sundayDayPlan    DayPlan? @relation("WeekPlanSunday", fields: [sundayDayPlanId], references: [id], onDelete: SetNull)
 
   // Reverse relations for tariffs
-  tariffs         Tariff[]           // Direct week plan FK on tariff
-  tariffWeekPlans TariffWeekPlan[]   // Rolling weekly rhythm assignments
+  tariffs         Tariff[] // Direct week plan FK on tariff
+  tariffWeekPlans TariffWeekPlan[] // Rolling weekly rhythm assignments
 
   // Indexes
   @@unique([tenantId, code], map: "week_plans_tenant_id_code_key")
@@ -1388,55 +1394,55 @@ model WeekPlan {
 //
 // Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
 model Tariff {
-  id                         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId                   String    @map("tenant_id") @db.Uuid
-  code                       String    @db.VarChar(20)
-  name                       String    @db.VarChar(255)
-  description                String?   @db.Text
-  weekPlanId                 String?   @map("week_plan_id") @db.Uuid
-  validFrom                  DateTime? @map("valid_from") @db.Date
-  validTo                    DateTime? @map("valid_to") @db.Date
-  isActive                   Boolean   @default(true) @map("is_active")
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  code        String    @db.VarChar(20)
+  name        String    @db.VarChar(255)
+  description String?   @db.Text
+  weekPlanId  String?   @map("week_plan_id") @db.Uuid
+  validFrom   DateTime? @map("valid_from") @db.Date
+  validTo     DateTime? @map("valid_to") @db.Date
+  isActive    Boolean   @default(true) @map("is_active")
 
   // Vacation fields (migration 000029)
-  annualVacationDays         Decimal?  @map("annual_vacation_days") @db.Decimal(5, 2)
-  workDaysPerWeek            Int?      @default(5) @map("work_days_per_week")
-  vacationBasis              String?   @default("calendar_year") @map("vacation_basis") @db.VarChar(20)
+  annualVacationDays Decimal? @map("annual_vacation_days") @db.Decimal(5, 2)
+  workDaysPerWeek    Int?     @default(5) @map("work_days_per_week")
+  vacationBasis      String?  @default("calendar_year") @map("vacation_basis") @db.VarChar(20)
 
   // Target hours fields (migration 000029)
-  dailyTargetHours           Decimal?  @map("daily_target_hours") @db.Decimal(5, 2)
-  weeklyTargetHours          Decimal?  @map("weekly_target_hours") @db.Decimal(5, 2)
-  monthlyTargetHours         Decimal?  @map("monthly_target_hours") @db.Decimal(6, 2)
-  annualTargetHours          Decimal?  @map("annual_target_hours") @db.Decimal(7, 2)
+  dailyTargetHours   Decimal? @map("daily_target_hours") @db.Decimal(5, 2)
+  weeklyTargetHours  Decimal? @map("weekly_target_hours") @db.Decimal(5, 2)
+  monthlyTargetHours Decimal? @map("monthly_target_hours") @db.Decimal(6, 2)
+  annualTargetHours  Decimal? @map("annual_target_hours") @db.Decimal(7, 2)
 
   // Flextime fields (migration 000029)
-  maxFlextimePerMonth        Int?      @map("max_flextime_per_month")
-  upperLimitAnnual           Int?      @map("upper_limit_annual")
-  lowerLimitAnnual           Int?      @map("lower_limit_annual")
-  flextimeThreshold          Int?      @map("flextime_threshold")
-  creditType                 String?   @default("no_evaluation") @map("credit_type") @db.VarChar(20)
+  maxFlextimePerMonth Int?    @map("max_flextime_per_month")
+  upperLimitAnnual    Int?    @map("upper_limit_annual")
+  lowerLimitAnnual    Int?    @map("lower_limit_annual")
+  flextimeThreshold   Int?    @map("flextime_threshold")
+  creditType          String? @default("no_evaluation") @map("credit_type") @db.VarChar(20)
 
   // Rhythm fields (migration 000031)
-  rhythmType                 String?   @default("weekly") @map("rhythm_type") @db.VarChar(20)
-  cycleDays                  Int?      @map("cycle_days")
-  rhythmStartDate            DateTime? @map("rhythm_start_date") @db.Date
+  rhythmType      String?   @default("weekly") @map("rhythm_type") @db.VarChar(20)
+  cycleDays       Int?      @map("cycle_days")
+  rhythmStartDate DateTime? @map("rhythm_start_date") @db.Date
 
   // Vacation capping (migration 000051)
-  vacationCappingRuleGroupId String?   @map("vacation_capping_rule_group_id") @db.Uuid
+  vacationCappingRuleGroupId String? @map("vacation_capping_rule_group_id") @db.Uuid
 
-  createdAt                  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt                  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  weekPlan        WeekPlan?           @relation(fields: [weekPlanId], references: [id], onDelete: SetNull)
-  breaks          TariffBreak[]
-  tariffWeekPlans TariffWeekPlan[]
-  tariffDayPlans  TariffDayPlan[]
-  employees       Employee[]
-  tariffAssignments EmployeeTariffAssignment[]
-  vacationCappingRuleGroup VacationCappingRuleGroup? @relation(fields: [vacationCappingRuleGroupId], references: [id], onDelete: SetNull)
-  macroAssignments  MacroAssignment[]
+  tenant                   Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  weekPlan                 WeekPlan?                  @relation(fields: [weekPlanId], references: [id], onDelete: SetNull)
+  breaks                   TariffBreak[]
+  tariffWeekPlans          TariffWeekPlan[]
+  tariffDayPlans           TariffDayPlan[]
+  employees                Employee[]
+  tariffAssignments        EmployeeTariffAssignment[]
+  vacationCappingRuleGroup VacationCappingRuleGroup?  @relation(fields: [vacationCappingRuleGroupId], references: [id], onDelete: SetNull)
+  macroAssignments         MacroAssignment[]
 
   // Indexes
   @@unique([tenantId, code], map: "tariffs_tenant_id_code_key")
@@ -1535,7 +1541,7 @@ model VacationSpecialCalculation {
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant         Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   calcGroupLinks VacationCalcGroupSpecialCalc[]
 
   // Indexes
@@ -1567,7 +1573,7 @@ model VacationCalculationGroup {
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant           Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   specialCalcLinks VacationCalcGroupSpecialCalc[]
   employmentTypes  EmploymentType[]
 
@@ -1589,8 +1595,8 @@ model VacationCalcGroupSpecialCalc {
   createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   // Relations
-  group              VacationCalculationGroup    @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  specialCalculation VacationSpecialCalculation  @relation(fields: [specialCalculationId], references: [id], onDelete: Cascade)
+  group              VacationCalculationGroup   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  specialCalculation VacationSpecialCalculation @relation(fields: [specialCalculationId], references: [id], onDelete: Cascade)
 
   // Indexes
   @@unique([groupId, specialCalculationId], map: "vacation_calc_group_special_calcs_group_special_key")
@@ -1625,8 +1631,8 @@ model VacationCappingRule {
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  ruleGroupLinks VacationCappingRuleGroupRule[]
+  tenant                    Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ruleGroupLinks            VacationCappingRuleGroupRule[]
   employeeCappingExceptions EmployeeCappingException[]
 
   // Indexes
@@ -1652,7 +1658,7 @@ model VacationCappingRuleGroup {
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant           Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   cappingRuleLinks VacationCappingRuleGroupRule[]
   tariffs          Tariff[]
 
@@ -1695,21 +1701,21 @@ model VacationCappingRuleGroupRule {
 // UNIQUE(employee_id, capping_rule_id, year) -- DB treats NULLs as distinct
 // Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
 model EmployeeCappingException {
-  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId       String   @map("tenant_id") @db.Uuid
-  employeeId     String   @map("employee_id") @db.Uuid
-  cappingRuleId  String   @map("capping_rule_id") @db.Uuid
-  exemptionType  String   @map("exemption_type") @db.VarChar(20)
-  retainDays     Decimal? @map("retain_days") @db.Decimal(5, 2)
-  year           Int?
-  notes          String?  @db.Text
-  isActive       Boolean  @default(true) @map("is_active")
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  employeeId    String   @map("employee_id") @db.Uuid
+  cappingRuleId String   @map("capping_rule_id") @db.Uuid
+  exemptionType String   @map("exemption_type") @db.VarChar(20)
+  retainDays    Decimal? @map("retain_days") @db.Decimal(5, 2)
+  year          Int?
+  notes         String?  @db.Text
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  employee    Employee           @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  tenant      Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee    Employee            @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   cappingRule VacationCappingRule @relation(fields: [cappingRuleId], references: [id], onDelete: Cascade)
 
   // Indexes
@@ -1726,17 +1732,17 @@ model EmployeeCappingException {
 //
 // Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
 model VacationBalance {
-  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId          String    @map("tenant_id") @db.Uuid
-  employeeId        String    @map("employee_id") @db.Uuid
-  year              Int
-  entitlement       Decimal   @default(0) @db.Decimal(5, 2)
-  carryover         Decimal   @default(0) @db.Decimal(5, 2)
-  adjustments       Decimal   @default(0) @db.Decimal(5, 2)
-  taken             Decimal   @default(0) @db.Decimal(5, 2)
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String    @map("tenant_id") @db.Uuid
+  employeeId         String    @map("employee_id") @db.Uuid
+  year               Int
+  entitlement        Decimal   @default(0) @db.Decimal(5, 2)
+  carryover          Decimal   @default(0) @db.Decimal(5, 2)
+  adjustments        Decimal   @default(0) @db.Decimal(5, 2)
+  taken              Decimal   @default(0) @db.Decimal(5, 2)
   carryoverExpiresAt DateTime? @map("carryover_expires_at") @db.Date
-  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -1886,18 +1892,18 @@ model NotificationPreference {
 // CHECK constraints: DB-level unique(tenant_id, code)
 // Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
 model Shift {
-  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId      String    @map("tenant_id") @db.Uuid
-  code          String    @db.VarChar(50)
-  name          String    @db.VarChar(255)
-  description   String?   @db.Text
-  dayPlanId     String?   @map("day_plan_id") @db.Uuid
-  color         String?   @db.VarChar(7)
-  qualification String?   @db.Text
-  isActive      Boolean   @default(true) @map("is_active")
-  sortOrder     Int       @default(0) @map("sort_order")
-  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  code          String   @db.VarChar(50)
+  name          String   @db.VarChar(255)
+  description   String?  @db.Text
+  dayPlanId     String?  @map("day_plan_id") @db.Uuid
+  color         String?  @db.VarChar(7)
+  qualification String?  @db.Text
+  isActive      Boolean  @default(true) @map("is_active")
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -1956,22 +1962,22 @@ model ShiftAssignment {
 // CHECK constraints (enforced at DB level only):
 //   - UNIQUE(employee_id, plan_date)
 model EmployeeDayPlan {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId   String    @map("tenant_id") @db.Uuid
-  employeeId String    @map("employee_id") @db.Uuid
-  planDate   DateTime  @map("plan_date") @db.Date
-  dayPlanId  String?   @map("day_plan_id") @db.Uuid
-  shiftId    String?   @map("shift_id") @db.Uuid
-  source     String?   @default("tariff") @db.VarChar(20)
-  notes      String?   @db.Text
-  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  employeeId String   @map("employee_id") @db.Uuid
+  planDate   DateTime @map("plan_date") @db.Date
+  dayPlanId  String?  @map("day_plan_id") @db.Uuid
+  shiftId    String?  @map("shift_id") @db.Uuid
+  source     String?  @default("tariff") @db.VarChar(20)
+  notes      String?  @db.Text
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  employee Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  dayPlan  DayPlan?  @relation(fields: [dayPlanId], references: [id], onDelete: SetNull)
-  shift    Shift?    @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  dayPlan  DayPlan? @relation(fields: [dayPlanId], references: [id], onDelete: SetNull)
+  shift    Shift?   @relation(fields: [shiftId], references: [id], onDelete: SetNull)
 
   // Constraints & indexes
   @@unique([employeeId, planDate])
@@ -2005,7 +2011,7 @@ model Macro {
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant      Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   assignments MacroAssignment[]
   executions  MacroExecution[]
 
@@ -2039,10 +2045,10 @@ model MacroAssignment {
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  macro    Macro     @relation(fields: [macroId], references: [id], onDelete: Cascade)
-  tariff   Tariff?   @relation(fields: [tariffId], references: [id], onDelete: Cascade)
-  employee Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  macro           Macro            @relation(fields: [macroId], references: [id], onDelete: Cascade)
+  tariff          Tariff?          @relation(fields: [tariffId], references: [id], onDelete: Cascade)
+  employee        Employee?        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   macroExecutions MacroExecution[]
 
   // Indexes
@@ -2193,7 +2199,7 @@ model AccessProfile {
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant                    Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant                    Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   employeeAccessAssignments EmployeeAccessAssignment[]
 
   // Indexes
@@ -2378,33 +2384,33 @@ model Report {
 // Monthly aggregation results for employee time tracking.
 // Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
 model MonthlyValue {
-  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId         String    @map("tenant_id") @db.Uuid
-  employeeId       String    @map("employee_id") @db.Uuid
-  year             Int
-  month            Int
-  totalGrossTime   Int       @default(0) @map("total_gross_time")
-  totalNetTime     Int       @default(0) @map("total_net_time")
-  totalTargetTime  Int       @default(0) @map("total_target_time")
-  totalOvertime    Int       @default(0) @map("total_overtime")
-  totalUndertime   Int       @default(0) @map("total_undertime")
-  totalBreakTime   Int       @default(0) @map("total_break_time")
-  flextimeStart    Int       @default(0) @map("flextime_start")
-  flextimeChange   Int       @default(0) @map("flextime_change")
-  flextimeEnd      Int       @default(0) @map("flextime_end")
-  flextimeCarryover Int      @default(0) @map("flextime_carryover")
-  vacationTaken    Decimal   @default(0) @map("vacation_taken") @db.Decimal(5, 2)
-  sickDays         Int       @default(0) @map("sick_days")
-  otherAbsenceDays Int       @default(0) @map("other_absence_days")
-  workDays         Int       @default(0) @map("work_days")
-  daysWithErrors   Int       @default(0) @map("days_with_errors")
-  isClosed         Boolean   @default(false) @map("is_closed")
-  closedAt         DateTime? @map("closed_at") @db.Timestamptz(6)
-  closedBy         String?   @map("closed_by") @db.Uuid
-  reopenedAt       DateTime? @map("reopened_at") @db.Timestamptz(6)
-  reopenedBy       String?   @map("reopened_by") @db.Uuid
-  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  employeeId        String    @map("employee_id") @db.Uuid
+  year              Int
+  month             Int
+  totalGrossTime    Int       @default(0) @map("total_gross_time")
+  totalNetTime      Int       @default(0) @map("total_net_time")
+  totalTargetTime   Int       @default(0) @map("total_target_time")
+  totalOvertime     Int       @default(0) @map("total_overtime")
+  totalUndertime    Int       @default(0) @map("total_undertime")
+  totalBreakTime    Int       @default(0) @map("total_break_time")
+  flextimeStart     Int       @default(0) @map("flextime_start")
+  flextimeChange    Int       @default(0) @map("flextime_change")
+  flextimeEnd       Int       @default(0) @map("flextime_end")
+  flextimeCarryover Int       @default(0) @map("flextime_carryover")
+  vacationTaken     Decimal   @default(0) @map("vacation_taken") @db.Decimal(5, 2)
+  sickDays          Int       @default(0) @map("sick_days")
+  otherAbsenceDays  Int       @default(0) @map("other_absence_days")
+  workDays          Int       @default(0) @map("work_days")
+  daysWithErrors    Int       @default(0) @map("days_with_errors")
+  isClosed          Boolean   @default(false) @map("is_closed")
+  closedAt          DateTime? @map("closed_at") @db.Timestamptz(6)
+  closedBy          String?   @map("closed_by") @db.Uuid
+  reopenedAt        DateTime? @map("reopened_at") @db.Timestamptz(6)
+  reopenedBy        String?   @map("reopened_by") @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -2441,7 +2447,7 @@ model ImportBatch {
   updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant      Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   rawBookings RawTerminalBooking[]
 
   // Indexes
@@ -2459,28 +2465,28 @@ model ImportBatch {
 // Immutable raw booking data read from time recording terminals.
 // Trigger: update_raw_terminal_bookings_updated_at auto-sets updated_at on UPDATE
 model RawTerminalBooking {
-  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId           String    @map("tenant_id") @db.Uuid
-  importBatchId      String    @map("import_batch_id") @db.Uuid
-  terminalId         String    @map("terminal_id") @db.VarChar(100)
-  employeePin        String    @map("employee_pin") @db.VarChar(20)
-  employeeId         String?   @map("employee_id") @db.Uuid
-  rawTimestamp       DateTime  @map("raw_timestamp") @db.Timestamptz(6)
-  rawBookingCode     String    @map("raw_booking_code") @db.VarChar(20)
-  bookingDate        DateTime  @map("booking_date") @db.Date
-  bookingTypeId      String?   @map("booking_type_id") @db.Uuid
-  processedBookingId String?   @map("processed_booking_id") @db.Uuid
-  status             String    @default("pending") @db.VarChar(20)
-  errorMessage       String?   @map("error_message") @db.Text
-  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String   @map("tenant_id") @db.Uuid
+  importBatchId      String   @map("import_batch_id") @db.Uuid
+  terminalId         String   @map("terminal_id") @db.VarChar(100)
+  employeePin        String   @map("employee_pin") @db.VarChar(20)
+  employeeId         String?  @map("employee_id") @db.Uuid
+  rawTimestamp       DateTime @map("raw_timestamp") @db.Timestamptz(6)
+  rawBookingCode     String   @map("raw_booking_code") @db.VarChar(20)
+  bookingDate        DateTime @map("booking_date") @db.Date
+  bookingTypeId      String?  @map("booking_type_id") @db.Uuid
+  processedBookingId String?  @map("processed_booking_id") @db.Uuid
+  status             String   @default("pending") @db.VarChar(20)
+  errorMessage       String?  @map("error_message") @db.Text
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  importBatch ImportBatch  @relation(fields: [importBatchId], references: [id], onDelete: Cascade)
-  employee    Employee?    @relation(fields: [employeeId], references: [id], onDelete: SetNull)
-  bookingType BookingType? @relation(fields: [bookingTypeId], references: [id], onDelete: SetNull)
-  processedBooking Booking? @relation(fields: [processedBookingId], references: [id], onDelete: SetNull)
+  tenant           Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  importBatch      ImportBatch  @relation(fields: [importBatchId], references: [id], onDelete: Cascade)
+  employee         Employee?    @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  bookingType      BookingType? @relation(fields: [bookingTypeId], references: [id], onDelete: SetNull)
+  processedBooking Booking?     @relation(fields: [processedBookingId], references: [id], onDelete: SetNull)
 
   // Indexes
   @@index([tenantId], map: "idx_raw_terminal_bookings_tenant")
@@ -2498,16 +2504,16 @@ model RawTerminalBooking {
 // Vehicle definitions for mileage tracking.
 // Trigger: update_vehicles_updated_at auto-sets updated_at on UPDATE
 model Vehicle {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId     String    @map("tenant_id") @db.Uuid
-  code         String    @db.VarChar(50)
-  name         String    @db.VarChar(255)
-  description  String?   @db.Text
-  licensePlate String?   @map("license_plate") @db.VarChar(20)
-  isActive     Boolean   @default(true) @map("is_active")
-  sortOrder    Int       @default(0) @map("sort_order")
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  code         String   @db.VarChar(50)
+  name         String   @db.VarChar(255)
+  description  String?  @db.Text
+  licensePlate String?  @map("license_plate") @db.VarChar(20)
+  isActive     Boolean  @default(true) @map("is_active")
+  sortOrder    Int      @default(0) @map("sort_order")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -2527,16 +2533,16 @@ model Vehicle {
 // Defined travel routes for vehicles.
 // Trigger: update_vehicle_routes_updated_at auto-sets updated_at on UPDATE
 model VehicleRoute {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId    String    @map("tenant_id") @db.Uuid
-  code        String    @db.VarChar(50)
-  name        String    @db.VarChar(255)
-  description String?   @db.Text
-  distanceKm  Decimal?  @map("distance_km") @db.Decimal(10, 2)
-  isActive    Boolean   @default(true) @map("is_active")
-  sortOrder   Int       @default(0) @map("sort_order")
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  code        String   @db.VarChar(50)
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  distanceKm  Decimal? @map("distance_km") @db.Decimal(10, 2)
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -2556,17 +2562,17 @@ model VehicleRoute {
 // Individual trip mileage log entries.
 // Trigger: update_trip_records_updated_at auto-sets updated_at on UPDATE
 model TripRecord {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId     String    @map("tenant_id") @db.Uuid
-  vehicleId    String    @map("vehicle_id") @db.Uuid
-  routeId      String?   @map("route_id") @db.Uuid
-  tripDate     DateTime  @map("trip_date") @db.Date
-  startMileage Decimal?  @map("start_mileage") @db.Decimal(10, 1)
-  endMileage   Decimal?  @map("end_mileage") @db.Decimal(10, 1)
-  distanceKm   Decimal?  @map("distance_km") @db.Decimal(10, 2)
-  notes        String?   @db.Text
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  vehicleId    String   @map("vehicle_id") @db.Uuid
+  routeId      String?  @map("route_id") @db.Uuid
+  tripDate     DateTime @map("trip_date") @db.Date
+  startMileage Decimal? @map("start_mileage") @db.Decimal(10, 1)
+  endMileage   Decimal? @map("end_mileage") @db.Decimal(10, 1)
+  distanceKm   Decimal? @map("distance_km") @db.Decimal(10, 2)
+  notes        String?  @db.Text
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -2605,8 +2611,8 @@ model TravelAllowanceRuleSet {
   updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant             Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  localTravelRules   LocalTravelRule[]
+  tenant              Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  localTravelRules    LocalTravelRule[]
   extendedTravelRules ExtendedTravelRule[]
 
   // Indexes
@@ -2624,23 +2630,23 @@ model TravelAllowanceRuleSet {
 // and taxable amounts (ZMI manual 10.14.1).
 // Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
 model LocalTravelRule {
-  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId           String    @map("tenant_id") @db.Uuid
-  ruleSetId          String    @map("rule_set_id") @db.Uuid
-  minDistanceKm      Decimal   @default(0) @map("min_distance_km") @db.Decimal(10, 2)
-  maxDistanceKm      Decimal?  @map("max_distance_km") @db.Decimal(10, 2)
-  minDurationMinutes Int       @default(0) @map("min_duration_minutes")
-  maxDurationMinutes Int?      @map("max_duration_minutes")
-  taxFreeAmount      Decimal   @default(0) @map("tax_free_amount") @db.Decimal(10, 2)
-  taxableAmount      Decimal   @default(0) @map("taxable_amount") @db.Decimal(10, 2)
-  isActive           Boolean   @default(true) @map("is_active")
-  sortOrder          Int       @default(0) @map("sort_order")
-  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String   @map("tenant_id") @db.Uuid
+  ruleSetId          String   @map("rule_set_id") @db.Uuid
+  minDistanceKm      Decimal  @default(0) @map("min_distance_km") @db.Decimal(10, 2)
+  maxDistanceKm      Decimal? @map("max_distance_km") @db.Decimal(10, 2)
+  minDurationMinutes Int      @default(0) @map("min_duration_minutes")
+  maxDurationMinutes Int?     @map("max_duration_minutes")
+  taxFreeAmount      Decimal  @default(0) @map("tax_free_amount") @db.Decimal(10, 2)
+  taxableAmount      Decimal  @default(0) @map("taxable_amount") @db.Decimal(10, 2)
+  isActive           Boolean  @default(true) @map("is_active")
+  sortOrder          Int      @default(0) @map("sort_order")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant  Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  ruleSet TravelAllowanceRuleSet  @relation(fields: [ruleSetId], references: [id], onDelete: Cascade)
+  tenant  Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ruleSet TravelAllowanceRuleSet @relation(fields: [ruleSetId], references: [id], onDelete: Cascade)
 
   // Indexes
   @@index([tenantId], map: "idx_local_travel_rules_tenant")
@@ -2657,26 +2663,26 @@ model LocalTravelRule {
 // rates with three-month rule (ZMI manual 10.14.2).
 // Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
 model ExtendedTravelRule {
-  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId               String    @map("tenant_id") @db.Uuid
-  ruleSetId              String    @map("rule_set_id") @db.Uuid
-  arrivalDayTaxFree      Decimal   @default(0) @map("arrival_day_tax_free") @db.Decimal(10, 2)
-  arrivalDayTaxable      Decimal   @default(0) @map("arrival_day_taxable") @db.Decimal(10, 2)
-  departureDayTaxFree    Decimal   @default(0) @map("departure_day_tax_free") @db.Decimal(10, 2)
-  departureDayTaxable    Decimal   @default(0) @map("departure_day_taxable") @db.Decimal(10, 2)
-  intermediateDayTaxFree Decimal   @default(0) @map("intermediate_day_tax_free") @db.Decimal(10, 2)
-  intermediateDayTaxable Decimal   @default(0) @map("intermediate_day_taxable") @db.Decimal(10, 2)
-  threeMonthEnabled      Boolean   @default(false) @map("three_month_enabled")
-  threeMonthTaxFree      Decimal   @default(0) @map("three_month_tax_free") @db.Decimal(10, 2)
-  threeMonthTaxable      Decimal   @default(0) @map("three_month_taxable") @db.Decimal(10, 2)
-  isActive               Boolean   @default(true) @map("is_active")
-  sortOrder              Int       @default(0) @map("sort_order")
-  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt              DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                     String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId               String   @map("tenant_id") @db.Uuid
+  ruleSetId              String   @map("rule_set_id") @db.Uuid
+  arrivalDayTaxFree      Decimal  @default(0) @map("arrival_day_tax_free") @db.Decimal(10, 2)
+  arrivalDayTaxable      Decimal  @default(0) @map("arrival_day_taxable") @db.Decimal(10, 2)
+  departureDayTaxFree    Decimal  @default(0) @map("departure_day_tax_free") @db.Decimal(10, 2)
+  departureDayTaxable    Decimal  @default(0) @map("departure_day_taxable") @db.Decimal(10, 2)
+  intermediateDayTaxFree Decimal  @default(0) @map("intermediate_day_tax_free") @db.Decimal(10, 2)
+  intermediateDayTaxable Decimal  @default(0) @map("intermediate_day_taxable") @db.Decimal(10, 2)
+  threeMonthEnabled      Boolean  @default(false) @map("three_month_enabled")
+  threeMonthTaxFree      Decimal  @default(0) @map("three_month_tax_free") @db.Decimal(10, 2)
+  threeMonthTaxable      Decimal  @default(0) @map("three_month_taxable") @db.Decimal(10, 2)
+  isActive               Boolean  @default(true) @map("is_active")
+  sortOrder              Int      @default(0) @map("sort_order")
+  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant  Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  ruleSet TravelAllowanceRuleSet  @relation(fields: [ruleSetId], references: [id], onDelete: Cascade)
+  tenant  Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ruleSet TravelAllowanceRuleSet @relation(fields: [ruleSetId], references: [id], onDelete: Cascade)
 
   // Indexes
   @@index([tenantId], map: "idx_extended_travel_rules_tenant")
@@ -2761,43 +2767,43 @@ model CorrectionMessage {
 //
 // No update trigger on this table.
 model Booking {
-  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId          String    @map("tenant_id") @db.Uuid
-  employeeId        String    @map("employee_id") @db.Uuid
-  bookingDate       DateTime  @map("booking_date") @db.Date
-  bookingTypeId     String    @map("booking_type_id") @db.Uuid
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  employeeId    String   @map("employee_id") @db.Uuid
+  bookingDate   DateTime @map("booking_date") @db.Date
+  bookingTypeId String   @map("booking_type_id") @db.Uuid
 
   // Time values (minutes from midnight, 0-1439)
-  originalTime      Int       @map("original_time") @db.Integer
-  editedTime        Int       @map("edited_time") @db.Integer
-  calculatedTime    Int?      @map("calculated_time") @db.Integer
+  originalTime   Int  @map("original_time") @db.Integer
+  editedTime     Int  @map("edited_time") @db.Integer
+  calculatedTime Int? @map("calculated_time") @db.Integer
 
   // Pairing
-  pairId            String?   @map("pair_id") @db.Uuid
+  pairId String? @map("pair_id") @db.Uuid
 
   // Metadata
-  source            String?   @default("web") @map("source") @db.VarChar(20)
-  terminalId        String?   @map("terminal_id") @db.Uuid
-  notes             String?   @db.Text
+  source     String? @default("web") @map("source") @db.VarChar(20)
+  terminalId String? @map("terminal_id") @db.Uuid
+  notes      String? @db.Text
 
   // Booking reason and derived booking fields (migration 000078)
-  bookingReasonId   String?   @map("booking_reason_id") @db.Uuid
-  isAutoGenerated   Boolean   @default(false) @map("is_auto_generated")
-  originalBookingId String?   @map("original_booking_id") @db.Uuid
+  bookingReasonId   String? @map("booking_reason_id") @db.Uuid
+  isAutoGenerated   Boolean @default(false) @map("is_auto_generated")
+  originalBookingId String? @map("original_booking_id") @db.Uuid
 
   // Timestamps and audit
-  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
-  createdBy         String?   @map("created_by") @db.Uuid
-  updatedBy         String?   @map("updated_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  createdBy String?  @map("created_by") @db.Uuid
+  updatedBy String?  @map("updated_by") @db.Uuid
 
   // Relations
-  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  employee        Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  bookingType     BookingType     @relation(fields: [bookingTypeId], references: [id])
-  bookingReason   BookingReason?  @relation(fields: [bookingReasonId], references: [id], onDelete: SetNull)
-  originalBooking Booking?        @relation("DerivedBookings", fields: [originalBookingId], references: [id], onDelete: Cascade)
-  derivedBookings Booking[]       @relation("DerivedBookings")
+  tenant              Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee            Employee             @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  bookingType         BookingType          @relation(fields: [bookingTypeId], references: [id])
+  bookingReason       BookingReason?       @relation(fields: [bookingReasonId], references: [id], onDelete: SetNull)
+  originalBooking     Booking?             @relation("DerivedBookings", fields: [originalBookingId], references: [id], onDelete: Cascade)
+  derivedBookings     Booking[]            @relation("DerivedBookings")
   rawTerminalBookings RawTerminalBooking[]
 
   // Indexes
@@ -2823,39 +2829,39 @@ model Booking {
 //
 // No update trigger on this table.
 model DailyValue {
-  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId           String    @map("tenant_id") @db.Uuid
-  employeeId         String    @map("employee_id") @db.Uuid
-  valueDate          DateTime  @map("value_date") @db.Date
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  employeeId String   @map("employee_id") @db.Uuid
+  valueDate  DateTime @map("value_date") @db.Date
 
   // Approval status (migration 000034)
-  status             String    @default("calculated") @db.VarChar(20)
+  status String @default("calculated") @db.VarChar(20)
 
   // Core time values (all in minutes)
-  grossTime          Int       @default(0) @map("gross_time") @db.Integer
-  netTime            Int       @default(0) @map("net_time") @db.Integer
-  targetTime         Int       @default(0) @map("target_time") @db.Integer
-  overtime           Int       @default(0) @db.Integer
-  undertime          Int       @default(0) @db.Integer
-  breakTime          Int       @default(0) @map("break_time") @db.Integer
+  grossTime  Int @default(0) @map("gross_time") @db.Integer
+  netTime    Int @default(0) @map("net_time") @db.Integer
+  targetTime Int @default(0) @map("target_time") @db.Integer
+  overtime   Int @default(0) @db.Integer
+  undertime  Int @default(0) @db.Integer
+  breakTime  Int @default(0) @map("break_time") @db.Integer
 
   // Error status
-  hasError           Boolean   @default(false) @map("has_error")
-  errorCodes         String[]  @map("error_codes")
-  warnings           String[]
+  hasError   Boolean  @default(false) @map("has_error")
+  errorCodes String[] @map("error_codes")
+  warnings   String[]
 
   // Booking summary (times as minutes from midnight 0-1439)
-  firstCome          Int?      @map("first_come") @db.Integer
-  lastGo             Int?      @map("last_go") @db.Integer
-  bookingCount       Int       @default(0) @map("booking_count") @db.Integer
+  firstCome    Int? @map("first_come") @db.Integer
+  lastGo       Int? @map("last_go") @db.Integer
+  bookingCount Int  @default(0) @map("booking_count") @db.Integer
 
   // Calculation tracking
   calculatedAt       DateTime? @map("calculated_at") @db.Timestamptz(6)
   calculationVersion Int       @default(1) @map("calculation_version") @db.Integer
 
   // Timestamps
-  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt          DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -2884,18 +2890,18 @@ model DailyValue {
 //
 // No update trigger on this table.
 model DailyAccountValue {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId     String    @map("tenant_id") @db.Uuid
-  employeeId   String    @map("employee_id") @db.Uuid
-  accountId    String    @map("account_id") @db.Uuid
-  valueDate    DateTime  @map("value_date") @db.Date
-  valueMinutes Int       @default(0) @map("value_minutes") @db.Integer
-  source       String    @db.VarChar(20)
-  dayPlanId    String?   @map("day_plan_id") @db.Uuid
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  employeeId   String   @map("employee_id") @db.Uuid
+  accountId    String   @map("account_id") @db.Uuid
+  valueDate    DateTime @map("value_date") @db.Date
+  valueMinutes Int      @default(0) @map("value_minutes") @db.Integer
+  source       String   @db.VarChar(20)
+  dayPlanId    String?  @map("day_plan_id") @db.Uuid
 
   // Timestamps
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -2931,19 +2937,19 @@ model DailyAccountValue {
 //
 // Trigger: update_absence_days_updated_at auto-sets updated_at on UPDATE
 model AbsenceDay {
-  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId        String    @map("tenant_id") @db.Uuid
-  employeeId      String    @map("employee_id") @db.Uuid
+  id         String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId   String @map("tenant_id") @db.Uuid
+  employeeId String @map("employee_id") @db.Uuid
 
   // The date and type of absence
-  absenceDate     DateTime  @map("absence_date") @db.Date
-  absenceTypeId   String    @map("absence_type_id") @db.Uuid
+  absenceDate   DateTime @map("absence_date") @db.Date
+  absenceTypeId String   @map("absence_type_id") @db.Uuid
 
   // Duration: 1.00 = full day, 0.50 = half day
-  duration        Decimal   @default(1.00) @db.Decimal(3, 2)
+  duration Decimal @default(1.00) @db.Decimal(3, 2)
 
   // Half day specification (when duration = 0.5)
-  halfDayPeriod   String?   @map("half_day_period") @db.VarChar(10)
+  halfDayPeriod String? @map("half_day_period") @db.VarChar(10)
 
   // Approval workflow
   status          String    @default("pending") @db.VarChar(20)
@@ -2952,14 +2958,14 @@ model AbsenceDay {
   rejectionReason String?   @map("rejection_reason") @db.Text
 
   // Optional notes
-  notes           String?   @db.Text
+  notes String? @db.Text
 
   // Audit
-  createdBy       String?   @map("created_by") @db.Uuid
+  createdBy String? @map("created_by") @db.Uuid
 
   // Timestamps
-  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -3116,4 +3122,93 @@ model ScheduleTaskExecution {
   @@index([executionId], map: "idx_ste_execution")
   @@index([executionId, sortOrder], map: "idx_ste_order")
   @@map("schedule_task_executions")
+}
+
+// -----------------------------------------------------------------------------
+// Correction
+// -----------------------------------------------------------------------------
+// Migration: 000080
+//
+// Manual corrections to daily time values (time adjustments, balance adjustments,
+// vacation adjustments, account adjustments).
+//
+// CHECK constraints (enforced at DB level only):
+//   - correction_type IN ('time_adjustment', 'balance_adjustment', 'vacation_adjustment', 'account_adjustment')
+//   - status IN ('pending', 'approved', 'rejected')
+//
+// approved_by and created_by are bare UUIDs without Prisma relations (audit fields,
+// FK to users(id) with default NO ACTION).
+//
+// No update trigger on this table.
+model Correction {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  employeeId     String    @map("employee_id") @db.Uuid
+  correctionDate DateTime  @map("correction_date") @db.Date
+  correctionType String    @map("correction_type") @db.VarChar(50)
+  accountId      String?   @map("account_id") @db.Uuid
+  valueMinutes   Int       @map("value_minutes") @db.Integer
+  reason         String    @default("") @db.Text
+  status         String    @default("pending") @db.VarChar(20)
+  approvedBy     String?   @map("approved_by") @db.Uuid
+  approvedAt     DateTime? @map("approved_at") @db.Timestamptz(6)
+  createdBy      String?   @map("created_by") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant   Tenant   @relation(fields: [tenantId], references: [id])
+  employee Employee @relation(fields: [employeeId], references: [id])
+  account  Account? @relation(fields: [accountId], references: [id])
+
+  // Indexes
+  @@index([tenantId], map: "idx_corrections_tenant_id")
+  @@index([employeeId], map: "idx_corrections_employee_id")
+  @@index([correctionDate], map: "idx_corrections_date")
+  @@index([status], map: "idx_corrections_status")
+  @@map("corrections")
+}
+
+// -----------------------------------------------------------------------------
+// OrderBooking
+// -----------------------------------------------------------------------------
+// Migration: 000057
+//
+// Time bookings against orders (Auftragszeit) for order-based time tracking.
+//
+// CHECK constraints (enforced at DB level only):
+//   - source IN ('manual', 'auto', 'import')
+//
+// created_by and updated_by are bare UUIDs without FK constraints in DB.
+//
+// Trigger: update_order_bookings_updated_at auto-sets updated_at on UPDATE
+model OrderBooking {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  employeeId  String   @map("employee_id") @db.Uuid
+  orderId     String   @map("order_id") @db.Uuid
+  activityId  String?  @map("activity_id") @db.Uuid
+  bookingDate DateTime @map("booking_date") @db.Date
+  timeMinutes Int      @map("time_minutes") @db.Integer
+  description String?  @db.Text
+  source      String   @default("manual") @db.VarChar(20)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy   String?  @map("created_by") @db.Uuid
+  updatedBy   String?  @map("updated_by") @db.Uuid
+
+  // Relations
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  order    Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  activity Activity? @relation(fields: [activityId], references: [id], onDelete: SetNull)
+
+  // Indexes
+  @@index([tenantId], map: "idx_order_bookings_tenant")
+  @@index([employeeId], map: "idx_order_bookings_employee")
+  @@index([orderId], map: "idx_order_bookings_order")
+  @@index([activityId], map: "idx_order_bookings_activity")
+  @@index([employeeId, bookingDate], map: "idx_order_bookings_employee_date")
+  @@index([orderId, bookingDate], map: "idx_order_bookings_order_date")
+  @@map("order_bookings")
 }

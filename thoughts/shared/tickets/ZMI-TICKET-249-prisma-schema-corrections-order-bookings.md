@@ -1,6 +1,6 @@
 # ZMI-TICKET-249: Prisma Schema: corrections, order_bookings
 
-Status: Proposed
+Status: Completed
 Priority: P2
 Owner: TBD
 

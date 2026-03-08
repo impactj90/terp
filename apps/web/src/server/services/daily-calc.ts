@@ -848,24 +848,25 @@ export class DailyCalcService {
           if (emp?.defaultOrderId) {
             try {
               // Delete any previous auto-bookings for this date
-              await this.prisma.$executeRaw`
-                DELETE FROM order_bookings
-                WHERE employee_id = ${employeeId}::uuid
-                  AND booking_date = ${date}::date
-                  AND source = 'auto'
-              `
+              await this.prisma.orderBooking.deleteMany({
+                where: {
+                  employeeId,
+                  bookingDate: new Date(date),
+                  source: "auto",
+                },
+              })
               // Create fresh auto order booking
-              await this.prisma.$executeRaw`
-                INSERT INTO order_bookings (
-                  tenant_id, employee_id, order_id, activity_id,
-                  booking_date, value_minutes, source
-                ) VALUES (
-                  ${emp.tenantId}::uuid, ${employeeId}::uuid,
-                  ${emp.defaultOrderId}::uuid,
-                  ${emp.defaultActivityId}::uuid,
-                  ${date}::date, ${targetTime}, 'auto'
-                )
-              `
+              await this.prisma.orderBooking.create({
+                data: {
+                  tenantId: emp.tenantId,
+                  employeeId,
+                  orderId: emp.defaultOrderId,
+                  activityId: emp.defaultActivityId,
+                  bookingDate: new Date(date),
+                  timeMinutes: targetTime,
+                  source: "auto",
+                },
+              })
               warnings.push("ORDER_BOOKING_CREATED")
             } catch {
               warnings.push("ORDER_BOOKING_FAILED")
