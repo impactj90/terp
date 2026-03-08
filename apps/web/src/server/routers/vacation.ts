@@ -18,7 +18,7 @@
  * @see apps/api/internal/service/vacationcarryover.go
  */
 import { z } from "zod"
-import type { Prisma, PrismaClient } from "@/generated/prisma/client"
+import type { PrismaClient } from "@/generated/prisma/client"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "../trpc"
 import { requirePermission } from "../middleware/authorization"
@@ -39,6 +39,12 @@ import {
   calculateAvailable,
   type ResolvedCalcGroup,
 } from "../lib/vacation-helpers"
+import {
+  vacationBalanceOutputSchema,
+  decimalToNumber,
+  mapBalanceToOutput,
+  employeeSelect,
+} from "../lib/vacation-balance-output"
 
 // --- Permission Constants ---
 
@@ -88,96 +94,7 @@ const carryoverPreviewOutputSchema = z.object({
   ),
 })
 
-export const vacationBalanceOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  employeeId: z.string().uuid(),
-  year: z.number(),
-  entitlement: z.number(),
-  carryover: z.number(),
-  adjustments: z.number(),
-  taken: z.number(),
-  total: z.number(),
-  available: z.number(),
-  carryoverExpiresAt: z.date().nullable(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-  employee: z
-    .object({
-      id: z.string().uuid(),
-      firstName: z.string(),
-      lastName: z.string(),
-      personnelNumber: z.string(),
-    })
-    .nullable()
-    .optional(),
-})
-
 // --- Helpers ---
-
-function decimalToNumber(
-  val: Prisma.Decimal | null | undefined
-): number {
-  if (val === null || val === undefined) return 0
-  return Number(val)
-}
-
-/**
- * Maps a Prisma VacationBalance record (with optional employee include)
- * to the output schema shape.
- */
-function mapBalanceToOutput(
-  record: {
-    id: string
-    tenantId: string
-    employeeId: string
-    year: number
-    entitlement: Prisma.Decimal
-    carryover: Prisma.Decimal
-    adjustments: Prisma.Decimal
-    taken: Prisma.Decimal
-    carryoverExpiresAt: Date | null
-    createdAt: Date
-    updatedAt: Date
-    employee?: {
-      id: string
-      firstName: string
-      lastName: string
-      personnelNumber: string
-    } | null
-  }
-) {
-  const entitlement = decimalToNumber(record.entitlement)
-  const carryover = decimalToNumber(record.carryover)
-  const adjustments = decimalToNumber(record.adjustments)
-  const taken = decimalToNumber(record.taken)
-  const total = entitlement + carryover + adjustments
-  const available = total - taken
-
-  return {
-    id: record.id,
-    tenantId: record.tenantId,
-    employeeId: record.employeeId,
-    year: record.year,
-    entitlement,
-    carryover,
-    adjustments,
-    taken,
-    total,
-    available,
-    carryoverExpiresAt: record.carryoverExpiresAt,
-    createdAt: record.createdAt,
-    updatedAt: record.updatedAt,
-    employee: record.employee
-      ? {
-          id: record.employee.id,
-          firstName: record.employee.firstName,
-          lastName: record.employee.lastName,
-          personnelNumber: record.employee.personnelNumber,
-        }
-      : null,
-  }
-}
 
 /**
  * Calculates capped carryover using tariff capping rules (advanced) or simple cap (fallback).
@@ -534,16 +451,7 @@ export const vacationRouter = createTRPCRouter({
           year: input.year,
           tenantId,
         },
-        include: {
-          employee: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              personnelNumber: true,
-            },
-          },
-        },
+        include: { employee: { select: employeeSelect } },
       })
 
       if (!balance) {
@@ -642,16 +550,7 @@ export const vacationRouter = createTRPCRouter({
           adjustments: 0,
           taken: 0,
         },
-        include: {
-          employee: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              personnelNumber: true,
-            },
-          },
-        },
+        include: { employee: { select: employeeSelect } },
       })
 
       return mapBalanceToOutput(balance)
@@ -708,16 +607,7 @@ export const vacationRouter = createTRPCRouter({
             increment: input.adjustment,
           },
         },
-        include: {
-          employee: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              personnelNumber: true,
-            },
-          },
-        },
+        include: { employee: { select: employeeSelect } },
       })
 
       return mapBalanceToOutput(balance)
@@ -807,16 +697,7 @@ export const vacationRouter = createTRPCRouter({
           adjustments: 0,
           taken: 0,
         },
-        include: {
-          employee: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              personnelNumber: true,
-            },
-          },
-        },
+        include: { employee: { select: employeeSelect } },
       })
 
       return mapBalanceToOutput(balance)

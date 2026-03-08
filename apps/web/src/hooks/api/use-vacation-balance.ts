@@ -127,6 +127,8 @@ interface UseVacationBalancesOptions {
   employeeId?: string
   year?: number
   departmentId?: string
+  page?: number
+  pageSize?: number
   enabled?: boolean
 }
 
@@ -144,18 +146,20 @@ interface UseVacationBalancesOptions {
  * ```
  */
 export function useVacationBalances(options: UseVacationBalancesOptions = {}) {
-  const { employeeId, year, departmentId, enabled = true } = options
+  const { employeeId, year, departmentId, page, pageSize, enabled = true } =
+    options
   const trpc = useTRPC()
 
   return useQuery({
     ...trpc.vacationBalances.list.queryOptions(
-      { employeeId, year, departmentId },
+      { employeeId, year, departmentId, page, pageSize },
       { enabled }
     ),
     select: (data) => ({
-      data: data.map((item) =>
+      data: data.items.map((item) =>
         transformToLegacy(item as unknown as Record<string, unknown>)
       ),
+      total: data.total,
     }),
   })
 }

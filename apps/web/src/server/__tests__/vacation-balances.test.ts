@@ -61,7 +61,7 @@ function createTestContext(prisma: Record<string, unknown>) {
 // --- vacationBalances.list tests ---
 
 describe("vacationBalances.list", () => {
-  it("returns all balances for tenant", async () => {
+  it("returns all balances for tenant with paginated shape", async () => {
     const balances = [
       makeBalance({ year: 2025 }),
       makeBalance({ id: "a0000000-0000-4000-a000-000000000b01", year: 2024 }),
@@ -69,13 +69,15 @@ describe("vacationBalances.list", () => {
     const mockPrisma = {
       vacationBalance: {
         findMany: vi.fn().mockResolvedValue(balances),
+        count: vi.fn().mockResolvedValue(2),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.list({})
-    expect(result).toHaveLength(2)
-    expect(result[0]!.year).toBe(2025)
-    expect(result[1]!.year).toBe(2024)
+    expect(result.items).toHaveLength(2)
+    expect(result.total).toBe(2)
+    expect(result.items[0]!.year).toBe(2025)
+    expect(result.items[1]!.year).toBe(2024)
   })
 
   it("filters by employeeId and year", async () => {
@@ -83,6 +85,7 @@ describe("vacationBalances.list", () => {
     const mockPrisma = {
       vacationBalance: {
         findMany: vi.fn().mockResolvedValue(balances),
+        count: vi.fn().mockResolvedValue(1),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -90,7 +93,8 @@ describe("vacationBalances.list", () => {
       employeeId: EMPLOYEE_ID,
       year: 2025,
     })
-    expect(result).toHaveLength(1)
+    expect(result.items).toHaveLength(1)
+    expect(result.total).toBe(1)
     // Verify the where clause
     expect(mockPrisma.vacationBalance.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -108,6 +112,7 @@ describe("vacationBalances.list", () => {
     const mockPrisma = {
       vacationBalance: {
         findMany: vi.fn().mockResolvedValue([]),
+        count: vi.fn().mockResolvedValue(0),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -116,6 +121,92 @@ describe("vacationBalances.list", () => {
       expect.objectContaining({
         where: expect.objectContaining({
           employee: { departmentId: deptId },
+        }),
+      })
+    )
+  })
+
+  it("respects page and pageSize", async () => {
+    const mockPrisma = {
+      vacationBalance: {
+        findMany: vi.fn().mockResolvedValue([makeBalance()]),
+        count: vi.fn().mockResolvedValue(10),
+      },
+    }
+    const caller = createCaller(createTestContext(mockPrisma))
+    const result = await caller.list({ page: 2, pageSize: 5 })
+    expect(mockPrisma.vacationBalance.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skip: 5, // (2-1) * 5
+        take: 5,
+      })
+    )
+    expect(result.total).toBe(10)
+  })
+
+  it("applies department data scope filter", async () => {
+    const deptId = "a0000000-0000-4000-a000-000000000e00"
+    const mockPrisma = {
+      vacationBalance: {
+        findMany: vi.fn().mockResolvedValue([]),
+        count: vi.fn().mockResolvedValue(0),
+      },
+    }
+    // Create context with department data scope
+    const ctx = createMockContext({
+      prisma: mockPrisma as unknown as ReturnType<
+        typeof createMockContext
+      >["prisma"],
+      authToken: "test-token",
+      user: createUserWithPermissions([ABSENCES_MANAGE], {
+        userTenants: [createMockUserTenant(USER_ID, TENANT_ID)],
+        dataScopeType: "department",
+        dataScopeDepartmentIds: [deptId],
+      }),
+      session: createMockSession(),
+      tenantId: TENANT_ID,
+    })
+    const caller = createCaller(ctx)
+    await caller.list({})
+    expect(mockPrisma.vacationBalance.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          employee: expect.objectContaining({
+            departmentId: { in: [deptId] },
+          }),
+        }),
+      })
+    )
+  })
+
+  it("applies employee data scope filter", async () => {
+    const scopedEmployeeId = "a0000000-0000-4000-a000-000000000f00"
+    const mockPrisma = {
+      vacationBalance: {
+        findMany: vi.fn().mockResolvedValue([]),
+        count: vi.fn().mockResolvedValue(0),
+      },
+    }
+    // Create context with employee data scope
+    const ctx = createMockContext({
+      prisma: mockPrisma as unknown as ReturnType<
+        typeof createMockContext
+      >["prisma"],
+      authToken: "test-token",
+      user: createUserWithPermissions([ABSENCES_MANAGE], {
+        userTenants: [createMockUserTenant(USER_ID, TENANT_ID)],
+        dataScopeType: "employee",
+        dataScopeEmployeeIds: [scopedEmployeeId],
+      }),
+      session: createMockSession(),
+      tenantId: TENANT_ID,
+    })
+    const caller = createCaller(ctx)
+    await caller.list({})
+    expect(mockPrisma.vacationBalance.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          employeeId: { in: [scopedEmployeeId] },
         }),
       })
     )

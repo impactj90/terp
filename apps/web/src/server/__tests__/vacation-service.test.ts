@@ -60,6 +60,8 @@ function makeBalance(overrides: Record<string, unknown> = {}) {
       firstName: "John",
       lastName: "Doe",
       personnelNumber: "EMP001",
+      isActive: true,
+      departmentId: null,
     },
     ...overrides,
   }
