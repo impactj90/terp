@@ -37,12 +37,12 @@ export function QuickActions({ employeeId }: QuickActionsProps) {
   // Check by counting work bookings - odd number means clocked in
   const bookings = dayView?.bookings ?? []
   const workBookings = bookings.filter(
-    (b) => b.booking_type?.direction === 'in' || b.booking_type?.direction === 'out'
+    (b) => b.bookingType?.direction === 'in' || b.bookingType?.direction === 'out'
   )
   // Sort by time and check the last one's direction
-  const sortedWorkBookings = [...workBookings].sort((a, b) => a.edited_time - b.edited_time)
+  const sortedWorkBookings = [...workBookings].sort((a, b) => a.editedTime - b.editedTime)
   const lastBooking = sortedWorkBookings[sortedWorkBookings.length - 1]
-  const isClockedIn = lastBooking?.booking_type?.direction === 'in'
+  const isClockedIn = lastBooking?.bookingType?.direction === 'in'
 
   // Find the booking type IDs for clock in and clock out
   const clockInType = bookingTypesData?.data?.find(

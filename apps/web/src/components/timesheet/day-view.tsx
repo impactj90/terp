@@ -36,27 +36,27 @@ export function DayView({
 
   const dayView = useEmployeeDayView(employeeId ?? '', dateString, { enabled: !!employeeId })
   const bookings = dayView.data?.bookings ?? []
-  const dailyValue = dayView.data?.daily_value ?? null
-  const dayPlan = dayView.data?.day_plan ?? dailyValue?.day_plan ?? null
-  const errors = dayView.data?.errors ?? dailyValue?.errors ?? null
+  const dailyValue = dayView.data?.dailyValue ?? null
+  const dayPlan = dayView.data?.dayPlan ?? null
+  const errors = dayView.data?.errors ?? null
 
   const isLoading = dayView.isLoading
 
-  // Transform bookings to the format expected by BookingList
+  // Transform bookings to the format expected by BookingList (snake_case interface)
   const transformedBookings = bookings.map((b) => ({
     id: b.id,
-    booking_date: b.booking_date,
-    booking_type: b.booking_type ? {
-      code: b.booking_type.code,
-      name: b.booking_type.name,
-      direction: b.booking_type.direction,
+    booking_date: b.bookingDate,
+    booking_type: b.bookingType ? {
+      code: b.bookingType.code,
+      name: b.bookingType.name,
+      direction: b.bookingType.direction as 'in' | 'out',
     } : null,
-    original_time: b.original_time,
-    edited_time: b.edited_time,
-    calculated_time: b.calculated_time,
+    original_time: b.originalTime,
+    edited_time: b.editedTime,
+    calculated_time: b.calculatedTime,
     source: b.source ?? 'terminal',
     notes: b.notes,
-    pair_id: b.pair_id,
+    pair_id: b.pairId,
   }))
 
   return (
@@ -79,16 +79,10 @@ export function DayView({
               {weekend && (
                 <Badge variant="secondary" className="text-xs">{t('weekend')}</Badge>
               )}
-              {dayView.data?.is_holiday && (
+              {dayView.data?.isHoliday && (
                 <Badge variant="secondary" className="text-xs">
                   <Sun className="h-3 w-3 mr-1" />
                   {t('holiday')}
-                </Badge>
-              )}
-              {dailyValue?.is_absence && (
-                <Badge variant="outline" className="text-xs">
-                  <Umbrella className="h-3 w-3 mr-1" />
-                  {dailyValue.absence_type?.name ?? t('absence')}
                 </Badge>
               )}
               <ErrorBadge errors={errors as never} />
@@ -100,9 +94,9 @@ export function DayView({
         {dayPlan && (
           <div className="text-sm text-muted-foreground text-right">
             <div>{dayPlan.name}</div>
-            {dailyValue?.target_minutes !== undefined && dailyValue?.target_minutes !== null && (
+            {dailyValue?.targetTime !== undefined && dailyValue?.targetTime !== null && (
               <div className="text-xs">
-                {t('targetLabel')} {Math.floor((dailyValue.target_minutes ?? 0) / 60)}:{((dailyValue.target_minutes ?? 0) % 60).toString().padStart(2, '0')}
+                {t('targetLabel')} {Math.floor((dailyValue.targetTime ?? 0) / 60)}:{((dailyValue.targetTime ?? 0) % 60).toString().padStart(2, '0')}
               </div>
             )}
           </div>
@@ -115,7 +109,7 @@ export function DayView({
         <BookingList
           bookings={transformedBookings}
           isLoading={isLoading}
-          isEditable={isEditable && !dailyValue?.is_locked}
+          isEditable={isEditable}
           onEdit={onEditBooking as never}
           onDelete={onDeleteBooking as never}
           onAdd={onAddBooking}
@@ -127,11 +121,11 @@ export function DayView({
         <div className="pt-4 border-t">
           <h3 className="text-sm font-medium mb-3">{t('dailySummary')}</h3>
           <DailySummary
-            targetMinutes={dailyValue.target_minutes}
-            grossMinutes={dailyValue.gross_minutes}
-            breakMinutes={dailyValue.break_minutes}
-            netMinutes={dailyValue.net_minutes}
-            balanceMinutes={dailyValue.balance_minutes}
+            targetMinutes={dailyValue.targetTime}
+            grossMinutes={dailyValue.grossTime}
+            breakMinutes={dailyValue.breakTime}
+            netMinutes={dailyValue.netTime}
+            balanceMinutes={dailyValue.balanceMinutes}
             layout="horizontal"
           />
         </div>
@@ -148,12 +142,9 @@ export function DayView({
       {dailyValue && (
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           <span>{t('statusLabel')}: {dailyValue.status}</span>
-          {dailyValue.is_locked && (
-            <Badge variant="outline" className="text-xs">{t('locked')}</Badge>
-          )}
-          {dailyValue.calculated_at && (
+          {dailyValue.calculatedAt && (
             <span>
-              {t('calculated')} {new Date(dailyValue.calculated_at).toLocaleString(locale)}
+              {t('calculated')} {new Date(dailyValue.calculatedAt).toLocaleString(locale)}
             </span>
           )}
         </div>

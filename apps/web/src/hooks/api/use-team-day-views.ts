@@ -1,5 +1,5 @@
-import { useQueries } from '@tanstack/react-query'
-import { api } from '@/lib/api'
+import { useTRPC } from "@/trpc"
+import { useQueries } from "@tanstack/react-query"
 
 interface UseTeamDayViewsOptions {
   employeeIds: string[]
@@ -13,8 +13,8 @@ interface UseTeamDayViewsOptions {
  * Hook to fetch day views for multiple employees in parallel.
  * Used by the Team Overview page to load attendance data for all team members at once.
  *
- * Uses `useQueries` from @tanstack/react-query to run N parallel queries efficiently.
- * Each query uses the same cache key format as `useEmployeeDayView` for consistency.
+ * Uses tRPC employees.dayView query via useQueries for parallel fetching.
+ * Each query shares the same cache as individual useEmployeeDayView calls.
  *
  * @example
  * ```tsx
@@ -31,23 +31,20 @@ export function useTeamDayViews({
   staleTime = 30 * 1000,
   refetchInterval = false,
 }: UseTeamDayViewsOptions) {
+  const trpc = useTRPC()
+
   const queries = useQueries({
-    queries: employeeIds.map((employeeId) => ({
-      queryKey: ['/employees/{id}/day/{date}', undefined, { id: employeeId, date }],
-      queryFn: async () => {
-        const { data, error } = await api.GET('/employees/{id}/day/{date}' as never, {
-          params: {
-            path: { id: employeeId, date },
-          },
-        } as never)
-        if (error) throw error
-        return { employeeId, ...(data as Record<string, unknown>) }
-      },
-      enabled: enabled && !!employeeId && !!date,
-      staleTime,
-      refetchInterval,
-      refetchIntervalInBackground: Boolean(refetchInterval),
-    })),
+    queries: employeeIds.map((employeeId) =>
+      trpc.employees.dayView.queryOptions(
+        { employeeId, date },
+        {
+          enabled: enabled && !!employeeId && !!date,
+          staleTime,
+          refetchInterval,
+          refetchIntervalInBackground: Boolean(refetchInterval),
+        }
+      )
+    ),
   })
 
   return {

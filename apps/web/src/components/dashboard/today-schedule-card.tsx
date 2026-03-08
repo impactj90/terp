@@ -61,43 +61,35 @@ export function TodayScheduleCard({
     )
   }
 
-  // Get data from response
+  // Get data from response (camelCase from tRPC)
   const bookings = data?.bookings ?? []
-  const dailyValue = data?.daily_value
-  const isHoliday = data?.is_holiday ?? false
-  const isWeekend = dailyValue?.is_weekend ?? false
-  const isAbsence = dailyValue?.is_absence ?? false
+  const dailyValue = data?.dailyValue
+  const isHoliday = data?.isHoliday ?? false
 
   // Filter to work bookings only (in/out direction, not break or errand)
   const workBookings = bookings.filter(
-    (b) => b.booking_type?.direction === 'in' || b.booking_type?.direction === 'out'
+    (b) => b.bookingType?.direction === 'in' || b.bookingType?.direction === 'out'
   )
 
   // Sort by time
-  const sortedBookings = [...workBookings].sort((a, b) => a.edited_time - b.edited_time)
+  const sortedBookings = [...workBookings].sort((a, b) => a.editedTime - b.editedTime)
 
   // Check if clocked in: last booking is 'in'
   const lastBooking = sortedBookings[sortedBookings.length - 1]
-  const isClockedIn = lastBooking?.booking_type?.direction === 'in'
+  const isClockedIn = lastBooking?.bookingType?.direction === 'in'
 
   // Get first in and last out
-  const firstIn = sortedBookings.find((b) => b.booking_type?.direction === 'in')
-  const lastOut = [...sortedBookings].reverse().find((b) => b.booking_type?.direction === 'out')
+  const firstIn = sortedBookings.find((b) => b.bookingType?.direction === 'in')
+  const lastOut = [...sortedBookings].reverse().find((b) => b.bookingType?.direction === 'out')
 
   // Get target hours from daily value
-  const targetMinutes = dailyValue?.target_minutes ?? 0
-  const netMinutes = dailyValue?.net_minutes ?? 0
+  const targetMinutes = dailyValue?.targetTime ?? 0
+  const netMinutes = dailyValue?.netTime ?? 0
 
   // Format status badge
   const getStatusBadge = () => {
     if (isHoliday) {
       return <Badge variant="secondary">{t('holiday')}</Badge>
-    }
-    if (isWeekend) {
-      return <Badge variant="secondary">{t('weekend')}</Badge>
-    }
-    if (isAbsence) {
-      return <Badge variant="secondary">{t('absence')}</Badge>
     }
     if (isClockedIn) {
       return <Badge className="bg-green-500 text-white hover:bg-green-500">{t('clockedIn')}</Badge>
@@ -133,7 +125,7 @@ export function TodayScheduleCard({
               <Sun className="h-3.5 w-3.5 text-amber-500" />
               <span className="text-muted-foreground">{t('inLabel')}</span>
               <span className="font-medium">
-                {firstIn.time_string ?? formatTime(firstIn.edited_time)}
+                {formatTime(firstIn.editedTime)}
               </span>
             </div>
           )}
@@ -142,7 +134,7 @@ export function TodayScheduleCard({
               <Moon className="h-3.5 w-3.5 text-blue-500" />
               <span className="text-muted-foreground">{t('outLabel')}</span>
               <span className="font-medium">
-                {lastOut.time_string ?? formatTime(lastOut.edited_time)}
+                {formatTime(lastOut.editedTime)}
               </span>
             </div>
           )}
@@ -154,14 +146,14 @@ export function TodayScheduleCard({
         </div>
       ) : (
         <p className="mt-3 text-sm text-muted-foreground">
-          {isHoliday || isWeekend || isAbsence
+          {isHoliday
             ? t('noWorkScheduled')
             : t('noBookingsYet')}
         </p>
       )}
 
       {/* Errors indicator */}
-      {dailyValue?.has_errors && (
+      {dailyValue?.hasError && (
         <div className="mt-2 flex items-center gap-1 text-xs text-amber-600 dark:text-amber-500">
           <AlertCircle className="h-3 w-3" />
           <span>{t('needsAttention')}</span>

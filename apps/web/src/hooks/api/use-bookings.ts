@@ -77,6 +77,10 @@ export function useCreateBooking() {
       queryClient.invalidateQueries({
         queryKey: trpc.bookings.getById.queryKey(),
       })
+      // Invalidate day views since recalculation was triggered
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.dayView.queryKey(),
+      })
     },
   })
 }
@@ -96,6 +100,10 @@ export function useUpdateBooking() {
       queryClient.invalidateQueries({
         queryKey: trpc.bookings.getById.queryKey(),
       })
+      // Invalidate day views since recalculation was triggered
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.dayView.queryKey(),
+      })
     },
   })
 }
@@ -114,6 +122,10 @@ export function useDeleteBooking() {
       })
       queryClient.invalidateQueries({
         queryKey: trpc.bookings.getById.queryKey(),
+      })
+      // Invalidate day views since recalculation was triggered
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.dayView.queryKey(),
       })
     },
   })

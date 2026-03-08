@@ -31,8 +31,8 @@ interface GroupedMember {
 function getWorkBookings(dayView: DayViewData) {
   const bookings = dayView?.bookings ?? []
   return bookings.filter(
-    (b: { booking_type?: { direction?: string } }) =>
-      b.booking_type?.direction === 'in' || b.booking_type?.direction === 'out'
+    (b: { bookingType?: { direction?: string } }) =>
+      b.bookingType?.direction === 'in' || b.bookingType?.direction === 'out'
   )
 }
 
@@ -40,21 +40,17 @@ function getLastDirection(dayView: DayViewData) {
   const workBookings = getWorkBookings(dayView)
   if (workBookings.length === 0) return null
   const sorted = [...workBookings].sort(
-    (a: { edited_time: number }, b: { edited_time: number }) => a.edited_time - b.edited_time
+    (a: { editedTime: number }, b: { editedTime: number }) => a.editedTime - b.editedTime
   )
-  return sorted[sorted.length - 1]?.booking_type?.direction ?? null
+  return sorted[sorted.length - 1]?.bookingType?.direction ?? null
 }
 
 function classifyMember(dayView: DayViewData): AttendanceGroup {
   if (!dayView) return 'not-yet-in'
 
-  const isHoliday = dayView.is_holiday ?? false
-  const dailyValue = dayView.daily_value
-  const isWeekend = dailyValue?.is_weekend ?? false
-  const isAbsence = dailyValue?.is_absence ?? false
+  const isHoliday = dayView.isHoliday ?? false
 
-  if (isAbsence) return 'on-leave'
-  if (isHoliday || isWeekend) return 'not-yet-in'
+  if (isHoliday) return 'not-yet-in'
 
   const lastDirection = getLastDirection(dayView)
   if (lastDirection === 'in') return 'in'

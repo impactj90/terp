@@ -1,6 +1,6 @@
 # ZMI-TICKET-235: Calculate-Day Endpoint + Booking Create mit Recalc
 
-Status: Proposed
+Status: Completed
 Priority: P1
 Owner: TBD
 

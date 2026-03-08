@@ -2,14 +2,12 @@
 
 import { useMemo, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useTRPC } from '@/trpc'
 import { useCreateBooking } from '@/hooks/api/use-bookings'
 import { useBookingTypes } from '@/hooks/api/use-booking-types'
 import { useEmployeeDayView } from '@/hooks/api/use-employee-day'
 import { getToday, getCurrentTimeString } from '@/lib/time-utils'
 import type { ClockStatus } from '@/components/time-clock/clock-status-badge'
-import type { components } from '@/lib/api/types'
-
-type Booking = components['schemas']['Booking']
 
 interface BookingTypeEntry {
   id: string
@@ -33,6 +31,7 @@ interface UseClockStateOptions {
 }
 
 export function useClockState({ employeeId, enabled = true }: UseClockStateOptions) {
+  const trpc = useTRPC()
   const queryClient = useQueryClient()
   const today = getToday()
 
@@ -69,13 +68,13 @@ export function useClockState({ employeeId, enabled = true }: UseClockStateOptio
 
     // Sort by time (ascending)
     const sorted = [...bookings].sort((a, b) => {
-      const timeA = a.edited_time ?? 0
-      const timeB = b.edited_time ?? 0
+      const timeA = a.editedTime ?? 0
+      const timeB = b.editedTime ?? 0
       return timeA - timeB
     })
 
     const lastBooking = sorted[sorted.length - 1]
-    const lastCode = lastBooking?.booking_type?.code
+    const lastCode = lastBooking?.bookingType?.code
 
     // Determine status based on last booking
     let status: ClockStatus = 'clocked_out'
@@ -84,11 +83,11 @@ export function useClockState({ employeeId, enabled = true }: UseClockStateOptio
     if (lastCode === CLOCK_IN || lastCode === BREAK_END || lastCode === ERRAND_END) {
       status = 'clocked_in'
       // Find the last clock in time for the timer
-      const clockIn = sorted.find(b => b.booking_type?.code === CLOCK_IN)
-      if (clockIn && clockIn.edited_time !== undefined) {
+      const clockIn = sorted.find(b => b.bookingType?.code === CLOCK_IN)
+      if (clockIn && clockIn.editedTime !== undefined) {
         const todayDate = new Date()
         todayDate.setHours(0, 0, 0, 0)
-        clockInTime = new Date(todayDate.getTime() + clockIn.edited_time * 60000)
+        clockInTime = new Date(todayDate.getTime() + clockIn.editedTime * 60000)
       }
     } else if (lastCode === BREAK_START) {
       status = 'on_break'
@@ -130,21 +129,23 @@ export function useClockState({ employeeId, enabled = true }: UseClockStateOptio
         time: getCurrentTimeString(),
       })
 
-      // Invalidate day view to refresh
-      queryClient.invalidateQueries({ queryKey: ['/employees/{id}/day/{date}'] })
+      // Invalidate day view to refresh (tRPC query key)
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.dayView.queryKey(),
+      })
     },
-    [employeeId, today, bookingTypeMap, createBooking, queryClient]
+    [employeeId, today, bookingTypeMap, createBooking, queryClient, trpc]
   )
 
   return {
     // State
     status,
     clockInTime,
-    lastBooking: lastBooking as Booking | null | undefined,
-    bookings: (dayView.data?.bookings ?? []) as Booking[],
-    dailyValue: dayView.data?.daily_value,
-    dayPlan: dayView.data?.day_plan,
-    isHoliday: dayView.data?.is_holiday ?? false,
+    lastBooking,
+    bookings: dayView.data?.bookings ?? [],
+    dailyValue: dayView.data?.dailyValue,
+    dayPlan: dayView.data?.dayPlan,
+    isHoliday: dayView.data?.isHoliday ?? false,
 
     // Loading states
     isLoading: dayView.isLoading || bookingTypes.isLoading,

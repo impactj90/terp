@@ -71,29 +71,24 @@ const statusConfigMap: Record<AttendanceStatus, StatusConfig> = {
 function getWorkBookings(dayView: DayViewData) {
   const bookings = dayView?.bookings ?? []
   return bookings.filter(
-    (b: { booking_type?: { direction?: string } }) =>
-      b.booking_type?.direction === 'in' || b.booking_type?.direction === 'out'
+    (b: { bookingType?: { direction?: string } }) =>
+      b.bookingType?.direction === 'in' || b.bookingType?.direction === 'out'
   )
 }
 
 function getAttendanceStatus(dayView: DayViewData): AttendanceStatus {
   if (!dayView) return 'not-yet-in'
 
-  const isHoliday = dayView.is_holiday ?? false
-  const dailyValue = dayView.daily_value
-  const isWeekend = dailyValue?.is_weekend ?? false
-  const isAbsence = dailyValue?.is_absence ?? false
+  const isHoliday = dayView.isHoliday ?? false
 
   if (isHoliday) return 'holiday'
-  if (isWeekend) return 'weekend'
-  if (isAbsence) return 'on-leave'
 
   const workBookings = getWorkBookings(dayView)
   const sortedBookings = [...workBookings].sort(
-    (a: { edited_time: number }, b: { edited_time: number }) => a.edited_time - b.edited_time
+    (a: { editedTime: number }, b: { editedTime: number }) => a.editedTime - b.editedTime
   )
   const lastBooking = sortedBookings[sortedBookings.length - 1]
-  const isClockedIn = lastBooking?.booking_type?.direction === 'in'
+  const isClockedIn = lastBooking?.bookingType?.direction === 'in'
 
   if (isClockedIn) return 'clocked-in'
   if (workBookings.length > 0) return 'clocked-out'
@@ -104,26 +99,26 @@ function getClockInTime(dayView: DayViewData): string | null {
   if (!dayView) return null
   const workBookings = getWorkBookings(dayView)
   const sortedBookings = [...workBookings].sort(
-    (a: { edited_time: number }, b: { edited_time: number }) => a.edited_time - b.edited_time
+    (a: { editedTime: number }, b: { editedTime: number }) => a.editedTime - b.editedTime
   )
   const firstIn = sortedBookings.find(
-    (b: { booking_type?: { direction?: string } }) => b.booking_type?.direction === 'in'
+    (b: { bookingType?: { direction?: string } }) => b.bookingType?.direction === 'in'
   )
   if (!firstIn) return null
-  return firstIn.time_string ?? formatTime(firstIn.edited_time)
+  return formatTime(firstIn.editedTime)
 }
 
 function getClockOutTime(dayView: DayViewData): string | null {
   if (!dayView) return null
   const workBookings = getWorkBookings(dayView)
   const sortedBookings = [...workBookings].sort(
-    (a: { edited_time: number }, b: { edited_time: number }) => a.edited_time - b.edited_time
+    (a: { editedTime: number }, b: { editedTime: number }) => a.editedTime - b.editedTime
   )
   const lastOut = [...sortedBookings].reverse().find(
-    (b: { booking_type?: { direction?: string } }) => b.booking_type?.direction === 'out'
+    (b: { bookingType?: { direction?: string } }) => b.bookingType?.direction === 'out'
   )
   if (!lastOut) return null
-  return lastOut.time_string ?? formatTime(lastOut.edited_time)
+  return formatTime(lastOut.editedTime)
 }
 
 /**
@@ -168,10 +163,10 @@ export function TeamMemberStatusRow({ member, dayView, isLoading }: TeamMemberSt
   const clockInTime = getClockInTime(dayView)
   const clockOutTime = getClockOutTime(dayView)
   const workBookings = getWorkBookings(dayView)
-  const netMinutes = dayView?.daily_value?.net_minutes ?? dayView?.daily_value?.net_time ?? 0
-  const targetMinutes = dayView?.daily_value?.target_minutes ?? dayView?.daily_value?.target_time ?? 0
-  const overtimeMinutes = dayView?.daily_value?.overtime_minutes ?? dayView?.daily_value?.overtime ?? 0
-  const undertimeMinutes = dayView?.daily_value?.undertime_minutes ?? dayView?.daily_value?.undertime ?? 0
+  const netMinutes = dayView?.dailyValue?.netTime ?? 0
+  const targetMinutes = dayView?.dailyValue?.targetTime ?? 0
+  const overtimeMinutes = dayView?.dailyValue?.overtime ?? 0
+  const undertimeMinutes = dayView?.dailyValue?.undertime ?? 0
 
   return (
     <div className="border-b last:border-b-0">
@@ -242,7 +237,7 @@ export function TeamMemberStatusRow({ member, dayView, isLoading }: TeamMemberSt
 
       {expanded && (
         <div className="px-3 pb-3 text-xs text-muted-foreground">
-          {workBookings.length === 0 && !dayView?.daily_value ? (
+          {workBookings.length === 0 && !dayView?.dailyValue ? (
             <p>{t('noDetailsAvailable')}</p>
           ) : (
             <div className="grid gap-2 sm:grid-cols-2">

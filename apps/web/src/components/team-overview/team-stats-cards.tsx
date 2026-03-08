@@ -50,20 +50,14 @@ export function TeamStatsCards({
     for (const dv of dayViewsData) {
       if (!dv) continue
 
-      const dailyValue = dv.daily_value
-      const isAbsence = dailyValue?.is_absence ?? false
-      const hasErrors = dailyValue?.has_errors ?? dailyValue?.has_error ?? false
-
-      if (isAbsence) {
-        absenceCount++
-        continue
-      }
+      const dailyValue = dv.dailyValue
+      const hasErrors = dailyValue?.hasError ?? false
 
       // Check if present (has bookings)
       const bookings = dv.bookings ?? []
       const workBookings = bookings.filter(
-        (b: { booking_type?: { direction?: string } }) =>
-          b.booking_type?.direction === 'in' || b.booking_type?.direction === 'out'
+        (b: { bookingType?: { direction?: string } }) =>
+          b.bookingType?.direction === 'in' || b.bookingType?.direction === 'out'
       )
       if (workBookings.length > 0) {
         presentCount++

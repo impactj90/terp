@@ -12,8 +12,9 @@
  * - PUT /bookings/{id} -> bookings.update
  * - DELETE /bookings/{id} -> bookings.delete
  *
- * NOTE: Recalculation triggers are NOT implemented here.
- * They will be added in TICKET-235.
+ * Recalculation triggers: After each mutation (create/update/delete),
+ * DailyCalcService.calculateDay() is called to recalculate the affected day.
+ * @see ZMI-TICKET-235
  *
  * @see apps/api/internal/service/booking.go
  * @see apps/api/internal/handler/booking.go
@@ -29,6 +30,7 @@ import {
   type DataScope,
 } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { DailyCalcService } from "../services/daily-calc"
 
 // --- Permission Constants ---
 // Matching Go route registration at apps/api/internal/handler/routes.go:401-465
@@ -455,6 +457,32 @@ async function createDerivedBookingIfNeeded(
   })
 }
 
+// --- Recalculation Helper ---
+
+/**
+ * Triggers recalculation for a specific employee/day.
+ * Best effort -- errors are logged but do not fail the parent operation.
+ * Mirrors Go: `_, _ = s.recalcSvc.TriggerRecalc(ctx, tenantID, employeeID, date)`
+ *
+ * @see ZMI-TICKET-235
+ */
+async function triggerRecalc(
+  prisma: PrismaClient,
+  tenantId: string,
+  employeeId: string,
+  bookingDate: Date
+): Promise<void> {
+  try {
+    const service = new DailyCalcService(prisma)
+    await service.calculateDay(tenantId, employeeId, bookingDate)
+  } catch (error) {
+    console.error(
+      `Recalc failed for employee ${employeeId} on ${bookingDate.toISOString().split("T")[0]}:`,
+      error
+    )
+  }
+}
+
 // --- Router ---
 
 export const bookingsRouter = createTRPCRouter({
@@ -579,8 +607,7 @@ export const bookingsRouter = createTRPCRouter({
    * Time is provided as HH:MM string and converted to minutes from midnight.
    * Source is always set to "web".
    * Creates derived booking if booking reason has adjustment config.
-   *
-   * NOTE: No recalculation trigger (TICKET-235).
+   * Triggers day recalculation after booking creation.
    *
    * Requires: time_tracking.edit permission
    */
@@ -673,7 +700,8 @@ export const bookingsRouter = createTRPCRouter({
         )
       }
 
-      // TODO: TICKET-235 -- trigger recalculation for the affected day
+      // Trigger recalculation for the affected day (best effort)
+      await triggerRecalc(ctx.prisma, tenantId, input.employeeId, new Date(input.bookingDate))
 
       return mapToOutput(booking as unknown as Record<string, unknown>)
     }),
@@ -683,8 +711,7 @@ export const bookingsRouter = createTRPCRouter({
    *
    * Only editedTime and notes can be updated.
    * When editedTime changes, calculatedTime is cleared (set to null).
-   *
-   * NOTE: No recalculation trigger (TICKET-235).
+   * Triggers day recalculation after booking update.
    *
    * Requires: time_tracking.edit permission
    */
@@ -733,7 +760,8 @@ export const bookingsRouter = createTRPCRouter({
         include: bookingDetailInclude,
       })
 
-      // TODO: TICKET-235 -- trigger recalculation for the affected day
+      // Trigger recalculation for the affected day (best effort)
+      await triggerRecalc(ctx.prisma, tenantId, existing.employeeId, existing.bookingDate)
 
       return mapToOutput(updated as unknown as Record<string, unknown>)
     }),
@@ -742,8 +770,7 @@ export const bookingsRouter = createTRPCRouter({
    * bookings.delete -- Deletes a booking.
    *
    * Hard delete. Deletes derived bookings first (in a transaction).
-   *
-   * NOTE: No recalculation trigger (TICKET-235).
+   * Triggers day recalculation after booking deletion.
    *
    * Requires: time_tracking.edit + booking_overview.delete_bookings permission
    */
@@ -784,7 +811,9 @@ export const bookingsRouter = createTRPCRouter({
         })
       })
 
-      // TODO: TICKET-235 -- trigger recalculation for the affected day
+      // Trigger recalculation for the affected day (best effort)
+      // Note: must capture employee/date before deletion (already done via `existing`)
+      await triggerRecalc(ctx.prisma, tenantId, existing.employeeId, existing.bookingDate)
 
       return { success: true }
     }),
