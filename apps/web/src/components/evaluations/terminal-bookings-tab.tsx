@@ -46,8 +46,8 @@ export function TerminalBookingsTab({ from, to, employeeId, departmentId }: Term
     enabled: !!from && !!to,
   })
 
-  const items = data?.data ?? []
-  const total = data?.meta?.total ?? 0
+  const items = data?.items ?? []
+  const total = data?.total ?? 0
   const totalPages = Math.ceil(total / limit)
 
   const formatDateDisplay = (dateStr: string) => {
@@ -111,38 +111,42 @@ export function TerminalBookingsTab({ from, to, employeeId, departmentId }: Term
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.map((item) => (
-                  <TableRow
-                    key={item.id}
-                    className={item.was_edited ? 'bg-yellow-50 dark:bg-yellow-950/20' : ''}
-                  >
-                    <TableCell>{formatDateDisplay(item.booking_date)}</TableCell>
-                    <TableCell className="font-medium">
-                      {item.employee
-                        ? `${item.employee.first_name} ${item.employee.last_name}`
-                        : '-'}
-                    </TableCell>
-                    <TableCell className="font-mono">
-                      {item.original_time_string ?? formatTime(item.original_time ?? 0)}
-                    </TableCell>
-                    <TableCell className="font-mono">
-                      {item.edited_time_string ?? formatTime(item.edited_time ?? 0)}
-                    </TableCell>
-                    <TableCell>
-                      {item.was_edited ? (
-                        <Badge variant="outline" className="border-yellow-500 text-yellow-700">
-                          {t('terminalBookings.editedBadge')}
-                        </Badge>
-                      ) : (
-                        '-'
-                      )}
-                    </TableCell>
-                    <TableCell>{item.booking_type?.name ?? '-'}</TableCell>
-                    <TableCell className="font-mono text-xs">{truncateUuid(item.terminal_id)}</TableCell>
-                    <TableCell>{item.source ?? '-'}</TableCell>
-                    <TableCell>{formatDateTime(item.created_at)}</TableCell>
-                  </TableRow>
-                ))}
+                {items.map((item) => {
+                  const bookingDateStr = String(item.bookingDate).split('T')[0] ?? String(item.bookingDate)
+                  const createdAtStr = String(item.createdAt)
+                  return (
+                    <TableRow
+                      key={item.id}
+                      className={item.wasEdited ? 'bg-yellow-50 dark:bg-yellow-950/20' : ''}
+                    >
+                      <TableCell>{formatDateDisplay(bookingDateStr)}</TableCell>
+                      <TableCell className="font-medium">
+                        {item.employee
+                          ? `${item.employee.firstName} ${item.employee.lastName}`
+                          : '-'}
+                      </TableCell>
+                      <TableCell className="font-mono">
+                        {item.originalTimeString ?? formatTime(item.originalTime ?? 0)}
+                      </TableCell>
+                      <TableCell className="font-mono">
+                        {item.editedTimeString ?? formatTime(item.editedTime ?? 0)}
+                      </TableCell>
+                      <TableCell>
+                        {item.wasEdited ? (
+                          <Badge variant="outline" className="border-yellow-500 text-yellow-700">
+                            {t('terminalBookings.editedBadge')}
+                          </Badge>
+                        ) : (
+                          '-'
+                        )}
+                      </TableCell>
+                      <TableCell>{item.bookingType?.name ?? '-'}</TableCell>
+                      <TableCell className="font-mono text-xs">{truncateUuid(item.terminalId)}</TableCell>
+                      <TableCell>{item.source ?? '-'}</TableCell>
+                      <TableCell>{formatDateTime(createdAtStr)}</TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           )}

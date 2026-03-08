@@ -25,14 +25,25 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import type { components } from '@/lib/api/types'
+/** Workflow entry shape matching tRPC evaluations.workflowHistory output item */
+interface WorkflowEntry {
+  id: string
+  action: string
+  entityType: string
+  entityId: string
+  entityName: string | null
+  metadata?: unknown
+  performedAt: Date | string
+  userId: string | null
+  user?: { id: string; displayName: string } | null
+}
 
 interface WorkflowHistoryTabProps {
   from?: string
   to?: string
   employeeId?: string
   departmentId?: string
-  onViewDetail: (entry: components['schemas']['EvaluationWorkflowEntry']) => void
+  onViewDetail: (entry: WorkflowEntry) => void
 }
 
 type ActionType = 'create' | 'approve' | 'reject' | 'close' | 'reopen'
@@ -72,8 +83,8 @@ export function WorkflowHistoryTab({ from, to, employeeId, departmentId, onViewD
     enabled: !!from && !!to,
   })
 
-  const items = data?.data ?? []
-  const total = data?.meta?.total ?? 0
+  const items = data?.items ?? []
+  const total = data?.total ?? 0
   const totalPages = Math.ceil(total / limit)
 
   const formatDateTime = (dateStr: string) => {
@@ -169,26 +180,27 @@ export function WorkflowHistoryTab({ from, to, employeeId, departmentId, onViewD
               </TableHeader>
               <TableBody>
                 {items.map((item) => {
-                  const badgeConfig = actionBadgeConfig[item.action] ?? { variant: 'outline' as const, className: '' }
+                  const badgeConfig = actionBadgeConfig[item.action as ActionType] ?? { variant: 'outline' as const, className: '' }
+                  const performedAtStr = String(item.performedAt)
                   return (
                     <TableRow
                       key={item.id}
                       className="cursor-pointer"
                       onClick={() => onViewDetail(item)}
                     >
-                      <TableCell>{formatDateTime(item.performed_at)}</TableCell>
-                      <TableCell>{item.user?.display_name ?? '-'}</TableCell>
+                      <TableCell>{formatDateTime(performedAtStr)}</TableCell>
+                      <TableCell>{item.user?.displayName ?? '-'}</TableCell>
                       <TableCell>
                         <Badge variant={badgeConfig.variant} className={badgeConfig.className}>
                           {t(`actions.${item.action}` as Parameters<typeof t>[0])}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {t(`entityTypes.${item.entity_type}` as Parameters<typeof t>[0])}
+                        {t(`entityTypes.${item.entityType}` as Parameters<typeof t>[0])}
                       </TableCell>
-                      <TableCell className="max-w-[150px] truncate">{item.entity_name ?? '-'}</TableCell>
+                      <TableCell className="max-w-[150px] truncate">{item.entityName ?? '-'}</TableCell>
                       <TableCell className="max-w-[200px] truncate font-mono text-xs">
-                        {truncateMetadata(item.metadata)}
+                        {truncateMetadata(item.metadata as Record<string, never> | null | undefined)}
                       </TableCell>
                       <TableCell>
                         <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onViewDetail(item) }}>

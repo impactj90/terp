@@ -73,8 +73,8 @@ export function BookingsTab({ from, to, employeeId, departmentId }: BookingsTabP
     enabled: !!from && !!to,
   })
 
-  const items = data?.data ?? []
-  const total = data?.meta?.total ?? 0
+  const items = data?.items ?? []
+  const total = data?.total ?? 0
   const totalPages = Math.ceil(total / limit)
 
   const formatDateDisplay = (dateStr: string) => {
@@ -192,43 +192,47 @@ export function BookingsTab({ from, to, employeeId, departmentId }: BookingsTabP
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{formatDateDisplay(item.booking_date)}</TableCell>
-                    <TableCell className="font-medium">
-                      {item.employee
-                        ? `${item.employee.first_name} ${item.employee.last_name}`
-                        : '-'}
-                    </TableCell>
-                    <TableCell className="font-mono">
-                      {item.time_string ?? formatTime(item.edited_time ?? 0)}
-                    </TableCell>
-                    <TableCell>
-                      {item.booking_type?.name ?? '-'}
-                    </TableCell>
-                    <TableCell>
-                      {item.source ? (
-                        <Badge
-                          variant="outline"
-                          className={sourceColorMap[item.source] ?? ''}
-                        >
-                          {t(`sources.${item.source}` as Parameters<typeof t>[0])}
-                        </Badge>
-                      ) : (
-                        '-'
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {item.source === 'terminal' || item.pair_id !== undefined
-                        ? '-'
-                        : '-'}
-                    </TableCell>
-                    <TableCell className="max-w-[200px] truncate">
-                      {item.notes ?? '-'}
-                    </TableCell>
-                    <TableCell>{formatDateTime(item.created_at)}</TableCell>
-                  </TableRow>
-                ))}
+                {items.map((item) => {
+                  const bookingDateStr = String(item.bookingDate).split('T')[0] ?? String(item.bookingDate)
+                  const createdAtStr = String(item.createdAt)
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell>{formatDateDisplay(bookingDateStr)}</TableCell>
+                      <TableCell className="font-medium">
+                        {item.employee
+                          ? `${item.employee.firstName} ${item.employee.lastName}`
+                          : '-'}
+                      </TableCell>
+                      <TableCell className="font-mono">
+                        {item.timeString ?? formatTime(item.editedTime ?? 0)}
+                      </TableCell>
+                      <TableCell>
+                        {item.bookingType?.name ?? '-'}
+                      </TableCell>
+                      <TableCell>
+                        {item.source ? (
+                          <Badge
+                            variant="outline"
+                            className={sourceColorMap[item.source] ?? ''}
+                          >
+                            {t(`sources.${item.source}` as Parameters<typeof t>[0])}
+                          </Badge>
+                        ) : (
+                          '-'
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {item.source === 'terminal' || item.pairId !== undefined
+                          ? '-'
+                          : '-'}
+                      </TableCell>
+                      <TableCell className="max-w-[200px] truncate">
+                        {item.notes ?? '-'}
+                      </TableCell>
+                      <TableCell>{formatDateTime(createdAtStr)}</TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           )}

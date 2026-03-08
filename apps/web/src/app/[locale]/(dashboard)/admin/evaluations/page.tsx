@@ -19,14 +19,40 @@ import {
 import { EvaluationDetailSheet } from '@/components/evaluations/evaluation-detail-sheet'
 import { formatDate } from '@/lib/time-utils'
 import type { DateRange } from '@/components/ui/date-range-picker'
-import type { components } from '@/lib/api/types'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertTriangle } from 'lucide-react'
 
 type EvaluationTab = 'daily-values' | 'bookings' | 'terminal-bookings' | 'logs' | 'workflow-history'
+
+/** Log entry shape matching tRPC evaluations.logs output item */
+interface LogEntryShape {
+  id: string
+  action: string
+  entityType: string
+  entityId: string
+  entityName: string | null
+  changes?: unknown
+  performedAt: Date | string
+  userId: string | null
+  user?: { id: string; displayName: string } | null
+}
+
+/** Workflow entry shape matching tRPC evaluations.workflowHistory output item */
+interface WorkflowEntryShape {
+  id: string
+  action: string
+  entityType: string
+  entityId: string
+  entityName: string | null
+  metadata?: unknown
+  performedAt: Date | string
+  userId: string | null
+  user?: { id: string; displayName: string } | null
+}
+
 type DetailEntry =
-  | { type: 'log'; entry: components['schemas']['EvaluationLogEntry'] }
-  | { type: 'workflow'; entry: components['schemas']['EvaluationWorkflowEntry'] }
+  | { type: 'log'; entry: LogEntryShape }
+  | { type: 'workflow'; entry: WorkflowEntryShape }
 
 export default function EvaluationsPage() {
   const router = useRouter()
@@ -101,11 +127,11 @@ export default function EvaluationsPage() {
     name: d.name,
   }))
 
-  const { data: employeesData, isLoading: employeesLoading } = useEmployees({ limit: 500, enabled })
-  const employees = (employeesData?.data ?? []).map(
-    (e: { id: string; first_name: string; last_name: string }) => ({
+  const { data: employeesData, isLoading: employeesLoading } = useEmployees({ pageSize: 500, enabled })
+  const employees = (employeesData?.items ?? []).map(
+    (e: { id: string; firstName?: string; lastName?: string; first_name?: string; last_name?: string }) => ({
       id: e.id,
-      name: `${e.first_name} ${e.last_name}`,
+      name: `${e.firstName ?? e.first_name ?? ''} ${e.lastName ?? e.last_name ?? ''}`.trim(),
     })
   )
 

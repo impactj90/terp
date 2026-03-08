@@ -1,6 +1,6 @@
 # ZMI-TICKET-248: Evaluation Queries Router
 
-Status: Proposed
+Status: Completed
 Priority: P2
 Owner: TBD
 

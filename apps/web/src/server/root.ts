@@ -20,6 +20,7 @@ import { employmentTypesRouter } from "./routers/employmentTypes"
 import { locationsRouter } from "./routers/locations"
 import { holidaysRouter } from "./routers/holidays"
 import { employeesRouter } from "./routers/employees"
+import { evaluationsRouter } from "./routers/evaluations"
 import { employeeContactsRouter } from "./routers/employeeContacts"
 import { employeeCardsRouter } from "./routers/employeeCards"
 import { employeeTariffAssignmentsRouter } from "./routers/employeeTariffAssignments"
@@ -87,6 +88,7 @@ export const appRouter = createTRPCRouter({
   locations: locationsRouter,
   holidays: holidaysRouter,
   employees: employeesRouter,
+  evaluations: evaluationsRouter,
   employeeContacts: employeeContactsRouter,
   employeeCards: employeeCardsRouter,
   employeeTariffAssignments: employeeTariffAssignmentsRouter,

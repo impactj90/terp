@@ -12,11 +12,35 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import type { components } from '@/lib/api/types'
+/** Log entry shape matching tRPC evaluations.logs output item */
+interface LogEntry {
+  id: string
+  action: string
+  entityType: string
+  entityId: string
+  entityName: string | null
+  changes?: unknown
+  performedAt: Date | string
+  userId: string | null
+  user?: { id: string; displayName: string } | null
+}
+
+/** Workflow entry shape matching tRPC evaluations.workflowHistory output item */
+interface WorkflowEntry {
+  id: string
+  action: string
+  entityType: string
+  entityId: string
+  entityName: string | null
+  metadata?: unknown
+  performedAt: Date | string
+  userId: string | null
+  user?: { id: string; displayName: string } | null
+}
 
 type DetailEntry =
-  | { type: 'log'; entry: components['schemas']['EvaluationLogEntry'] }
-  | { type: 'workflow'; entry: components['schemas']['EvaluationWorkflowEntry'] }
+  | { type: 'log'; entry: LogEntry }
+  | { type: 'workflow'; entry: WorkflowEntry }
 
 interface EvaluationDetailSheetProps {
   entry: DetailEntry | null
@@ -153,8 +177,8 @@ export function EvaluationDetailSheet({ entry, open, onOpenChange }: EvaluationD
   const sheetTitle = isLog ? t('detail.logTitle') : t('detail.workflowTitle')
 
   // Extract changes/metadata
-  const changes = isLog ? (item as components['schemas']['EvaluationLogEntry']).changes : null
-  const metadata = !isLog ? (item as components['schemas']['EvaluationWorkflowEntry']).metadata : null
+  const changes = isLog ? (item as LogEntry).changes : null
+  const metadata = !isLog ? (item as WorkflowEntry).metadata : null
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -162,7 +186,7 @@ export function EvaluationDetailSheet({ entry, open, onOpenChange }: EvaluationD
         <SheetHeader>
           <SheetTitle>{sheetTitle}</SheetTitle>
           <SheetDescription>
-            {item.entity_name ?? item.entity_id}
+            {item.entityName ?? item.entityId}
           </SheetDescription>
         </SheetHeader>
 
@@ -176,11 +200,11 @@ export function EvaluationDetailSheet({ entry, open, onOpenChange }: EvaluationD
               <div className="rounded-lg border p-4 space-y-2">
                 <div className="flex justify-between py-1">
                   <span className="text-sm text-muted-foreground">{t('detail.timestamp')}</span>
-                  <span className="text-sm font-medium">{formatDateTime(item.performed_at)}</span>
+                  <span className="text-sm font-medium">{formatDateTime(String(item.performedAt))}</span>
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-sm text-muted-foreground">{t('detail.user')}</span>
-                  <span className="text-sm font-medium">{item.user?.display_name ?? '-'}</span>
+                  <span className="text-sm font-medium">{item.user?.displayName ?? '-'}</span>
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-sm text-muted-foreground">{t('detail.action')}</span>
@@ -191,17 +215,17 @@ export function EvaluationDetailSheet({ entry, open, onOpenChange }: EvaluationD
                 <div className="flex justify-between py-1">
                   <span className="text-sm text-muted-foreground">{t('detail.entityType')}</span>
                   <span className="text-sm font-medium">
-                    {t(`entityTypes.${item.entity_type}` as Parameters<typeof t>[0])}
+                    {t(`entityTypes.${item.entityType}` as Parameters<typeof t>[0])}
                   </span>
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-sm text-muted-foreground">{t('detail.entityId')}</span>
-                  <span className="text-sm font-medium font-mono text-xs">{item.entity_id}</span>
+                  <span className="text-sm font-medium font-mono text-xs">{item.entityId}</span>
                 </div>
-                {item.entity_name && (
+                {item.entityName && (
                   <div className="flex justify-between py-1">
                     <span className="text-sm text-muted-foreground">{t('detail.entityName')}</span>
-                    <span className="text-sm font-medium">{item.entity_name}</span>
+                    <span className="text-sm font-medium">{item.entityName}</span>
                   </div>
                 )}
               </div>
@@ -215,7 +239,7 @@ export function EvaluationDetailSheet({ entry, open, onOpenChange }: EvaluationD
                 </h4>
                 <div className="rounded-lg border p-4">
                   {renderChanges(
-                    changes,
+                    changes as Record<string, never> | null | undefined,
                     t('detail.noChanges'),
                     t('detail.before'),
                     t('detail.after')
@@ -231,7 +255,7 @@ export function EvaluationDetailSheet({ entry, open, onOpenChange }: EvaluationD
                   {t('detail.metadataSection')}
                 </h4>
                 <div className="rounded-lg border p-4">
-                  {renderMetadata(metadata, t('detail.noMetadata'))}
+                  {renderMetadata(metadata as Record<string, never> | null | undefined, t('detail.noMetadata'))}
                 </div>
               </div>
             )}

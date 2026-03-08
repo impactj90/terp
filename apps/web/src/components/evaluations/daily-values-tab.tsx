@@ -61,8 +61,8 @@ export function DailyValuesTab({ from, to, employeeId, departmentId }: DailyValu
     enabled: !!from && !!to,
   })
 
-  const items = data?.data ?? []
-  const total = data?.meta?.total ?? 0
+  const items = data?.items ?? []
+  const total = data?.total ?? 0
   const totalPages = Math.ceil(total / limit)
 
   const formatDateDisplay = (dateStr: string) => {
@@ -136,13 +136,14 @@ export function DailyValuesTab({ from, to, employeeId, departmentId }: DailyValu
                 {items.map((item, index) => {
                   const statusKey = item.status ?? 'pending'
                   const config = statusConfig[statusKey] ?? { variant: 'outline' as const, className: '' }
-                  const balanceMinutes = item.balance_minutes ?? 0
+                  const balanceMinutes = item.balanceMinutes ?? 0
+                  const valueDateStr = String(item.valueDate).split('T')[0] ?? String(item.valueDate)
                   return (
-                    <TableRow key={item.id ?? `${item.employee_id}-${item.date}-${index}`}>
-                      <TableCell>{formatDateDisplay(item.date)}</TableCell>
+                    <TableRow key={item.id ?? `${item.employeeId}-${valueDateStr}-${index}`}>
+                      <TableCell>{formatDateDisplay(valueDateStr)}</TableCell>
                       <TableCell className="font-medium">
                         {item.employee
-                          ? `${item.employee.first_name} ${item.employee.last_name}`
+                          ? `${item.employee.firstName} ${item.employee.lastName}`
                           : '-'}
                       </TableCell>
                       <TableCell>
@@ -151,19 +152,19 @@ export function DailyValuesTab({ from, to, employeeId, departmentId }: DailyValu
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right font-mono">
-                        {formatMinutes(item.target_minutes ?? 0)}
+                        {formatMinutes(item.targetMinutes ?? 0)}
                       </TableCell>
                       <TableCell className="text-right font-mono">
-                        {formatMinutes(item.gross_minutes ?? 0)}
+                        {formatMinutes(item.grossMinutes ?? 0)}
                       </TableCell>
                       <TableCell className="text-right font-mono">
-                        {formatMinutes(item.net_minutes ?? 0)}
+                        {formatMinutes(item.netMinutes ?? 0)}
                       </TableCell>
                       <TableCell className="text-right font-mono">
-                        {formatMinutes(item.break_minutes ?? 0)}
+                        {formatMinutes(item.breakMinutes ?? 0)}
                       </TableCell>
                       <TableCell className="text-right font-mono">
-                        {formatMinutes(item.overtime_minutes ?? 0)}
+                        {formatMinutes(item.overtimeMinutes ?? 0)}
                       </TableCell>
                       <TableCell
                         className={`text-right font-mono ${
@@ -176,11 +177,11 @@ export function DailyValuesTab({ from, to, employeeId, departmentId }: DailyValu
                       >
                         {formatBalance(balanceMinutes)}
                       </TableCell>
-                      <TableCell className="font-mono">{item.first_come ?? '-'}</TableCell>
-                      <TableCell className="font-mono">{item.last_go ?? '-'}</TableCell>
-                      <TableCell className="text-right">{item.booking_count ?? 0}</TableCell>
+                      <TableCell className="font-mono">{item.firstCome ?? '-'}</TableCell>
+                      <TableCell className="font-mono">{item.lastGo ?? '-'}</TableCell>
+                      <TableCell className="text-right">{item.bookingCount ?? 0}</TableCell>
                       <TableCell>
-                        {item.has_errors && (
+                        {item.hasErrors && (
                           <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500" title="Has errors" />
                         )}
                       </TableCell>
