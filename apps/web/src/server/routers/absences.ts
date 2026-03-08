@@ -32,7 +32,7 @@ import {
   type DataScope,
 } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
-import { DailyCalcService } from "../services/daily-calc"
+import { RecalcService } from "../services/recalc"
 
 // --- Permission Constants ---
 // Matching Go route registration at apps/api/internal/handler/routes.go:513-562
@@ -330,6 +330,9 @@ function shouldSkipDate(
 /**
  * Triggers recalculation for a specific employee/day.
  * Best effort -- errors logged but don't fail parent operation.
+ * Uses RecalcService which triggers both daily calc AND monthly recalc.
+ *
+ * @see ZMI-TICKET-243
  */
 async function triggerRecalc(
   prisma: PrismaClient,
@@ -338,8 +341,8 @@ async function triggerRecalc(
   date: Date
 ): Promise<void> {
   try {
-    const service = new DailyCalcService(prisma)
-    await service.calculateDay(tenantId, employeeId, date)
+    const service = new RecalcService(prisma)
+    await service.triggerRecalc(tenantId, employeeId, date)
   } catch (error) {
     console.error(
       `Recalc failed for employee ${employeeId} on ${date.toISOString().split("T")[0]}:`,
@@ -351,6 +354,9 @@ async function triggerRecalc(
 /**
  * Triggers recalculation for a date range.
  * Best effort -- errors logged but don't fail parent operation.
+ * Uses RecalcService for centralized recalc logic.
+ *
+ * @see ZMI-TICKET-243
  */
 async function triggerRecalcRange(
   prisma: PrismaClient,
@@ -360,8 +366,8 @@ async function triggerRecalcRange(
   toDate: Date
 ): Promise<void> {
   try {
-    const service = new DailyCalcService(prisma)
-    await service.calculateDateRange(tenantId, employeeId, fromDate, toDate)
+    const service = new RecalcService(prisma)
+    await service.triggerRecalcRange(tenantId, employeeId, fromDate, toDate)
   } catch (error) {
     console.error(
       `Recalc range failed for employee ${employeeId}:`,

@@ -29,6 +29,7 @@ import {
 } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
 import { DailyCalcService } from "../services/daily-calc"
+import { MonthlyCalcService } from "../services/monthly-calc"
 
 // --- Permission Constants ---
 
@@ -1568,6 +1569,19 @@ export const employeesRouter = createTRPCRouter({
       // Trigger calculation
       const service = new DailyCalcService(ctx.prisma)
       const result = await service.calculateDay(tenantId, employeeId, date)
+
+      // Also trigger monthly recalc (best-effort) so monthly values stay in sync
+      // @see ZMI-TICKET-243
+      try {
+        const monthlyService = new MonthlyCalcService(ctx.prisma)
+        await monthlyService.calculateMonth(
+          employeeId,
+          date.getUTCFullYear(),
+          date.getUTCMonth() + 1,
+        )
+      } catch {
+        // Monthly recalc is best-effort
+      }
 
       // dailyValue may be null if calculation should be skipped
       if (!result) {

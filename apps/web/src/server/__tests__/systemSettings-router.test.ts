@@ -359,16 +359,30 @@ describe("systemSettings.cleanupReReadBookings", () => {
     expect(result.preview).toBe(true)
   })
 
-  it("execute throws PRECONDITION_FAILED", async () => {
-    const mockPrisma = {}
+  it("execute recalculates all active employees when no employeeIds", async () => {
+    const mockPrisma = {
+      employee: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+    }
     const caller = createCaller(createTestContext(mockPrisma))
-    await expect(
-      caller.cleanupReReadBookings({
-        dateFrom: "2025-01-01",
-        dateTo: "2025-02-01",
-        confirm: true,
-      })
-    ).rejects.toThrow("Recalculation service not yet available")
+    const result = await caller.cleanupReReadBookings({
+      dateFrom: "2025-01-01",
+      dateTo: "2025-02-01",
+      confirm: true,
+    })
+
+    expect(result.operation).toBe("re_read_bookings")
+    expect(result.affectedCount).toBe(0)
+    expect(result.preview).toBe(false)
+    expect(mockPrisma.employee.findMany).toHaveBeenCalledWith({
+      where: {
+        tenantId: TENANT_ID,
+        isActive: true,
+        deletedAt: null,
+      },
+      select: { id: true },
+    })
   })
 })
 

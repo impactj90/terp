@@ -19,6 +19,7 @@ import { createTRPCRouter, tenantProcedure } from "../trpc"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
 import type { PrismaClient } from "@/generated/prisma/client"
+import { RecalcService } from "../services/recalc"
 
 // --- Permission Constants ---
 
@@ -562,11 +563,34 @@ export const systemSettingsRouter = createTRPCRouter({
         }
       }
 
-      // Execute mode: recalculation service not yet available
-      throw new TRPCError({
-        code: "PRECONDITION_FAILED",
-        message: "Recalculation service not yet available",
-      })
+      // Execute mode: recalculate bookings
+      // @see ZMI-TICKET-243
+      const recalcService = new RecalcService(ctx.prisma)
+
+      const fromDate = new Date(input.dateFrom)
+      const toDate = new Date(input.dateTo)
+
+      let result
+      if (input.employeeIds && input.employeeIds.length > 0) {
+        result = await recalcService.triggerRecalcBatch(
+          tenantId,
+          input.employeeIds,
+          fromDate,
+          toDate,
+        )
+      } else {
+        result = await recalcService.triggerRecalcAll(
+          tenantId,
+          fromDate,
+          toDate,
+        )
+      }
+
+      return {
+        operation: "re_read_bookings",
+        affectedCount: result.processedDays,
+        preview: false,
+      }
     }),
 
   /**

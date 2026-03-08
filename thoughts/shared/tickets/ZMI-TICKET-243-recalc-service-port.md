@@ -1,6 +1,6 @@
 # ZMI-TICKET-243: RecalcService Port (Forward Cascade)
 
-Status: Proposed
+Status: Done
 Priority: P1
 Owner: TBD
 

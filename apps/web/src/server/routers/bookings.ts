@@ -30,7 +30,7 @@ import {
   type DataScope,
 } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
-import { DailyCalcService } from "../services/daily-calc"
+import { RecalcService } from "../services/recalc"
 
 // --- Permission Constants ---
 // Matching Go route registration at apps/api/internal/handler/routes.go:401-465
@@ -462,9 +462,11 @@ async function createDerivedBookingIfNeeded(
 /**
  * Triggers recalculation for a specific employee/day.
  * Best effort -- errors are logged but do not fail the parent operation.
+ * Uses RecalcService which triggers both daily calc AND monthly recalc.
  * Mirrors Go: `_, _ = s.recalcSvc.TriggerRecalc(ctx, tenantID, employeeID, date)`
  *
  * @see ZMI-TICKET-235
+ * @see ZMI-TICKET-243
  */
 async function triggerRecalc(
   prisma: PrismaClient,
@@ -473,8 +475,8 @@ async function triggerRecalc(
   bookingDate: Date
 ): Promise<void> {
   try {
-    const service = new DailyCalcService(prisma)
-    await service.calculateDay(tenantId, employeeId, bookingDate)
+    const service = new RecalcService(prisma)
+    await service.triggerRecalc(tenantId, employeeId, bookingDate)
   } catch (error) {
     console.error(
       `Recalc failed for employee ${employeeId} on ${bookingDate.toISOString().split("T")[0]}:`,
