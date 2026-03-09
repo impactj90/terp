@@ -5,7 +5,7 @@
  * Throws plain Error subclasses that are mapped by handleServiceError.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
-import { RecalcService } from "@/server/services/recalc"
+import { RecalcService } from "@/lib/services/recalc"
 import * as repo from "./system-settings-repository"
 
 // --- Error Classes ---

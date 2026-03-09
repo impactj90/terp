@@ -13,8 +13,8 @@
 
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db/prisma"
-import { MonthlyCalcService } from "@/server/services/monthly-calc"
-import { CronExecutionLogger } from "@/server/services/cron-execution-logger"
+import { MonthlyCalcService } from "@/lib/services/monthly-calc"
+import { CronExecutionLogger } from "@/lib/services/cron-execution-logger"
 
 export const runtime = "nodejs"
 export const maxDuration = 300 // 5 minutes (Vercel Pro limit)

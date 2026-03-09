@@ -6,7 +6,7 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import { Prisma } from "@/generated/prisma/client"
-import type { DataScope } from "@/server/middleware/authorization"
+import type { DataScope } from "@/lib/auth/middleware"
 import { DailyCalcService } from "@/lib/services/daily-calc"
 import { MonthlyCalcService } from "@/lib/services/monthly-calc"
 import * as repo from "./employees-repository"

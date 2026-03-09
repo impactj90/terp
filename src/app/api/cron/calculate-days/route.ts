@@ -12,8 +12,8 @@
 
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db/prisma"
-import { RecalcService } from "@/server/services/recalc"
-import { CronExecutionLogger } from "@/server/services/cron-execution-logger"
+import { RecalcService } from "@/lib/services/recalc"
+import { CronExecutionLogger } from "@/lib/services/cron-execution-logger"
 
 export const runtime = "nodejs"
 export const maxDuration = 300 // 5 minutes (Vercel Pro limit)

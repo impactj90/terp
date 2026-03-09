@@ -30,7 +30,7 @@ make typecheck        # Type-check with TypeScript
 make build            # Build the Next.js app
 ```
 
-Run single test: `pnpm vitest run src/server/routers/__tests__/TestName.test.ts`
+Run single test: `pnpm vitest run src/trpc/routers/__tests__/TestName.test.ts`
 
 ## Architecture
 

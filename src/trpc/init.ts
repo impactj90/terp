@@ -19,7 +19,7 @@ import type {
 } from "@/generated/prisma/client"
 import type { Session } from "@supabase/supabase-js"
 import { createClient } from "@supabase/supabase-js"
-import { clientEnv, serverEnv } from "@/config/env"
+import { clientEnv, serverEnv } from "@/lib/config"
 
 /**
  * The user object stored in context after Supabase session resolution.

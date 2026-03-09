@@ -5,7 +5,7 @@
  * Throws plain Error subclasses that are mapped by handleServiceError.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
-import { lookupPermission } from "@/server/lib/permission-catalog"
+import { lookupPermission } from "@/lib/auth/permission-catalog"
 import * as repo from "./user-group-repository"
 
 // --- Error Classes ---

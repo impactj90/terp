@@ -17,8 +17,8 @@
 
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db/prisma"
-import { MacroExecutor } from "@/server/services/macro-executor"
-import { CronExecutionLogger } from "@/server/services/cron-execution-logger"
+import { MacroExecutor } from "@/lib/services/macro-executor"
+import { CronExecutionLogger } from "@/lib/services/cron-execution-logger"
 
 export const runtime = "nodejs"
 export const maxDuration = 300 // 5 minutes (Vercel Pro limit)

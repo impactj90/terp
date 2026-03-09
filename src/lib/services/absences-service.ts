@@ -6,7 +6,7 @@
  * Throws plain Error subclasses that are mapped by handleServiceError.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
-import type { DataScope } from "@/server/middleware/authorization"
+import type { DataScope } from "@/lib/auth/middleware"
 import { Decimal } from "@prisma/client/runtime/client"
 import { RecalcService } from "@/lib/services/recalc"
 import * as repo from "./absences-repository"

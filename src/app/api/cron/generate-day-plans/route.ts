@@ -13,8 +13,8 @@
 
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db/prisma"
-import { EmployeeDayPlanGenerator } from "@/server/services/employee-day-plan-generator"
-import { CronExecutionLogger } from "@/server/services/cron-execution-logger"
+import { EmployeeDayPlanGenerator } from "@/lib/services/employee-day-plan-generator"
+import { CronExecutionLogger } from "@/lib/services/cron-execution-logger"
 
 export const runtime = "nodejs"
 export const maxDuration = 300 // 5 minutes (Vercel Pro limit)
