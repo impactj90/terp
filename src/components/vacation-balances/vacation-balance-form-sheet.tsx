@@ -77,8 +77,8 @@ export function VacationBalanceFormSheet({
   const createMutation = useCreateVacationBalance()
   const updateMutation = useUpdateVacationBalance()
 
-  const { data: employeesData } = useEmployees({ limit: 200, active: true, enabled: open })
-  const employees = employeesData?.data ?? []
+  const { data: employeesData } = useEmployees({ pageSize: 200, isActive: true, enabled: open })
+  const employees = employeesData?.items ?? []
 
   // Reset form when opening/closing or balance changes
   React.useEffect(() => {

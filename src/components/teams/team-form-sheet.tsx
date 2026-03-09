@@ -83,13 +83,13 @@ export function TeamFormSheet({
   // Reference data
   const { data: departmentsData, isLoading: loadingDepartments } = useDepartments({ enabled: open })
   const { data: employeesData, isLoading: loadingEmployees } = useEmployees({
-    limit: 100,
-    active: true,
+    pageSize: 100,
+    isActive: true,
     enabled: open
   })
 
   const departments = departmentsData?.data ?? []
-  const employees = employeesData?.data ?? []
+  const employees = employeesData?.items ?? []
 
   function validateForm(formData: FormState): string[] {
     const errors: string[] = []

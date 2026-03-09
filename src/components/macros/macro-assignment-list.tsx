@@ -37,7 +37,7 @@ export function MacroAssignmentList({
   const { data: employeesData } = useEmployees({ enabled: true })
 
   const tariffs = tariffsData?.data ?? []
-  const employees = employeesData?.data ?? []
+  const employees = employeesData?.items ?? []
 
   const getTargetName = (assignment: MacroAssignment): string => {
     if (assignment.tariff_id) {

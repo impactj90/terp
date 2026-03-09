@@ -56,7 +56,7 @@ export default function EmployeeDetailPage() {
   const handleConfirmDelete = async () => {
     if (!employee) return
     try {
-      await deleteMutation.mutateAsync({ path: { id: employee.id } })
+      await deleteMutation.mutateAsync({ id: employee.id })
       router.push('/admin/employees')
     } catch {
       // Error handled by mutation
@@ -92,16 +92,16 @@ export default function EmployeeDetailPage() {
         </Button>
         <div className="flex items-center gap-4 flex-1">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-lg font-medium">
-            {employee.first_name[0]}{employee.last_name[0]}
+            {employee.firstName[0]}{employee.lastName[0]}
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold tracking-tight">
-                {employee.first_name} {employee.last_name}
+                {employee.firstName} {employee.lastName}
               </h1>
-              <StatusBadge isActive={employee.is_active} exitDate={employee.exit_date} />
+              <StatusBadge isActive={employee.isActive} exitDate={employee.exitDate} />
             </div>
-            <p className="text-muted-foreground">{employee.personnel_number}</p>
+            <p className="text-muted-foreground">{employee.personnelNumber}</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => router.push(`/timesheet?employee=${employee.id}`)}>
@@ -146,11 +146,11 @@ export default function EmployeeDetailPage() {
                 <h3 className="text-sm font-medium text-muted-foreground mb-4">{t('sectionEmployment')}</h3>
                 <div className="space-y-3">
                   <DetailRow label={t('labelDepartment')} value={employee.department?.name} />
-                  <DetailRow label={t('labelCostCenter')} value={employee.cost_center ? `${employee.cost_center.name} (${employee.cost_center.code})` : undefined} />
-                  <DetailRow label={t('labelEmploymentType')} value={employee.employment_type?.name} />
-                  <DetailRow label={t('labelTariff')} value={employee.tariff ? `${employee.tariff.code} - ${employee.tariff.name}` : undefined} />
-                  <DetailRow label={t('labelEntryDate')} value={formatDate(employee.entry_date)} />
-                  <DetailRow label={t('labelExitDate')} value={formatDate(employee.exit_date)} />
+                  <DetailRow label={t('labelCostCenter')} value={employee.costCenter ? `${employee.costCenter.name} (${employee.costCenter.code})` : undefined} />
+                  <DetailRow label={t('labelEmploymentType')} value={employee.employmentType?.name} />
+                  <DetailRow label={t('labelTariff')} value={employee.tariffId ?? undefined} />
+                  <DetailRow label={t('labelEntryDate')} value={formatDate(employee.entryDate)} />
+                  <DetailRow label={t('labelExitDate')} value={formatDate(employee.exitDate)} />
                 </div>
               </CardContent>
             </Card>
@@ -160,8 +160,8 @@ export default function EmployeeDetailPage() {
               <CardContent className="pt-6">
                 <h3 className="text-sm font-medium text-muted-foreground mb-4">{t('sectionContract')}</h3>
                 <div className="space-y-3">
-                  <DetailRow label={t('labelWeeklyHours')} value={employee.weekly_hours ? t('weeklyHoursValue', { hours: employee.weekly_hours }) : undefined} />
-                  <DetailRow label={t('labelVacationDays')} value={employee.vacation_days_per_year ? t('vacationDaysValue', { days: employee.vacation_days_per_year }) : undefined} />
+                  <DetailRow label={t('labelWeeklyHours')} value={employee.weeklyHours ? t('weeklyHoursValue', { hours: employee.weeklyHours }) : undefined} />
+                  <DetailRow label={t('labelVacationDays')} value={employee.vacationDaysPerYear ? t('vacationDaysValue', { days: employee.vacationDaysPerYear }) : undefined} />
                 </div>
               </CardContent>
             </Card>
@@ -175,11 +175,11 @@ export default function EmployeeDetailPage() {
                     {employee.cards.map((card) => (
                       <div key={card.id} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
                         <div>
-                          <p className="text-sm font-medium">{card.card_number}</p>
-                          <p className="text-xs text-muted-foreground capitalize">{card.card_type}</p>
+                          <p className="text-sm font-medium">{card.cardNumber}</p>
+                          <p className="text-xs text-muted-foreground capitalize">{card.cardType}</p>
                         </div>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${card.is_active ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}>
-                          {card.is_active ? t('statusActive') : t('statusInactive')}
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${card.isActive ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}>
+                          {card.isActive ? t('statusActive') : t('statusInactive')}
                         </span>
                       </div>
                     ))}
@@ -205,7 +205,7 @@ export default function EmployeeDetailPage() {
       <EmployeeFormSheet
         open={editOpen}
         onOpenChange={setEditOpen}
-        employee={employee}
+        employee={employee as unknown as Parameters<typeof EmployeeFormSheet>[0]['employee']}
         onSuccess={() => setEditOpen(false)}
       />
 
@@ -214,7 +214,7 @@ export default function EmployeeDetailPage() {
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         title={t('deactivateEmployee')}
-        description={t('deactivateDescription', { firstName: employee.first_name, lastName: employee.last_name })}
+        description={t('deactivateDescription', { firstName: employee.firstName, lastName: employee.lastName })}
         confirmLabel={t('deactivate')}
         variant="destructive"
         isLoading={deleteMutation.isPending}

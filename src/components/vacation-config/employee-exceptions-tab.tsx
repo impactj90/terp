@@ -102,8 +102,8 @@ export function EmployeeExceptionsTab() {
   const items = (exceptionsData?.data ?? []) as EmployeeCappingException[]
 
   // Lookup data
-  const { data: employeesData } = useEmployees({ limit: 200, active: true, enabled: !authLoading && !permLoading && canAccess })
-  const employees = (employeesData?.data ?? []) as Employee[]
+  const { data: employeesData } = useEmployees({ pageSize: 200, isActive: true, enabled: !authLoading && !permLoading && canAccess })
+  const employees = (employeesData?.items ?? []) as Employee[]
   const employeeMap = React.useMemo(() => new Map(employees.map((e) => [e.id, e])), [employees])
 
   const { data: cappingRulesData } = useVacationCappingRules({ enabled: !authLoading && !permLoading && canAccess })
@@ -303,8 +303,8 @@ function ExceptionFormSheet({ open, onOpenChange, exception, onSuccess }: Except
   const createMutation = useCreateEmployeeCappingException()
   const updateMutation = useUpdateEmployeeCappingException()
 
-  const { data: employeesData } = useEmployees({ limit: 200, active: true, enabled: open })
-  const employees = (employeesData?.data ?? []) as Employee[]
+  const { data: employeesData } = useEmployees({ pageSize: 200, isActive: true, enabled: open })
+  const employees = (employeesData?.items ?? []) as Employee[]
 
   const { data: cappingRulesData } = useVacationCappingRules({ enabled: open })
   const cappingRules = (cappingRulesData?.data ?? []) as VacationCappingRule[]

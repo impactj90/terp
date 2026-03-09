@@ -56,7 +56,7 @@ export function VacationBalanceCard({
     )
   }
 
-  const remaining = balance.remaining_days ?? 0
+  const remaining = balance.available ?? 0
   const total = balance.total_entitlement ?? 30
   const percent = total > 0 ? ((total - remaining) / total) * 100 : 0
 
@@ -82,11 +82,8 @@ export function VacationBalanceCard({
 
         {/* Details */}
         <div className="text-xs text-muted-foreground space-y-0.5">
-          {balance.used_days !== undefined && balance.used_days > 0 && (
-            <p>{balance.used_days} {balance.used_days !== 1 ? t('daysUsed') : t('dayUsed')}</p>
-          )}
-          {balance.planned_days !== undefined && balance.planned_days > 0 && (
-            <p>{balance.planned_days} {balance.planned_days !== 1 ? t('daysPlanned') : t('dayPlanned')}</p>
+          {balance.taken !== undefined && balance.taken > 0 && (
+            <p>{balance.taken} {balance.taken !== 1 ? t('daysUsed') : t('dayUsed')}</p>
           )}
           {balance.carryover_from_previous !== undefined && balance.carryover_from_previous > 0 && (
             <p>{balance.carryover_from_previous} {balance.carryover_from_previous !== 1 ? t('daysCarriedOver') : t('dayCarriedOver')}</p>

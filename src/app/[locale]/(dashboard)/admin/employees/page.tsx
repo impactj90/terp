@@ -50,9 +50,9 @@ export default function EmployeesPage() {
   // Fetch employees
   const { data, isLoading, isFetching } = useEmployees({
     page,
-    limit,
+    pageSize: limit,
     search: search || undefined,
-    active: activeFilter,
+    isActive: activeFilter,
     enabled: !authLoading && !permLoading && canAccess,
   })
 
@@ -75,7 +75,7 @@ export default function EmployeesPage() {
     }
   }, [authLoading, permLoading, canAccess, router])
 
-  const employees = data?.data ?? []
+  const employees = data?.items ?? []
   const total = data?.total ?? 0
   const totalPages = Math.ceil(total / limit)
 
@@ -107,7 +107,7 @@ export default function EmployeesPage() {
 
     try {
       await deleteMutation.mutateAsync({
-        path: { id: deleteEmployee.id },
+        id: deleteEmployee.id,
       })
       setDeleteEmployee(null)
       // Remove from selection if selected
@@ -225,7 +225,7 @@ export default function EmployeesPage() {
             />
           ) : (
             <EmployeeDataTable
-              employees={employees}
+              employees={employees as unknown as Employee[]}
               isLoading={isLoading}
               selectedIds={selectedIds}
               onSelectIds={setSelectedIds}

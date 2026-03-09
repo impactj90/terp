@@ -76,7 +76,8 @@ export default function DepartmentsPage() {
 
   // Filter tree by search (client-side for simplicity)
   const filteredTree = React.useMemo(() => {
-    if (!search.trim()) return tree
+    const treeNodes = tree as unknown as DepartmentNode[]
+    if (!search.trim()) return treeNodes
 
     const searchLower = search.toLowerCase()
     const filterNodes = (nodes: DepartmentNode[]): DepartmentNode[] => {
@@ -97,7 +98,7 @@ export default function DepartmentsPage() {
         })
         .filter((n): n is NonNullable<typeof n> => n !== null)
     }
-    return filterNodes(tree)
+    return filterNodes(treeNodes)
   }, [tree, search])
 
   // Filter list by search
@@ -135,7 +136,7 @@ export default function DepartmentsPage() {
 
     try {
       await deleteMutation.mutateAsync({
-        path: { id: deleteDepartment.id },
+        id: deleteDepartment.id,
       })
       setDeleteDepartment(null)
     } catch {
@@ -265,7 +266,7 @@ export default function DepartmentsPage() {
             <EmptyState hasFilters={hasFilters} onCreateClick={() => setCreateOpen(true)} />
           ) : (
             <DepartmentDataTable
-              departments={filteredList}
+              departments={filteredList as unknown as Department[]}
               isLoading={false}
               onView={handleView}
               onEdit={handleEdit}

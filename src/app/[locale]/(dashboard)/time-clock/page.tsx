@@ -45,8 +45,8 @@ export default function TimeClockPage() {
 
   const userEmployeeId = user?.employeeId ?? null
   const employees = useEmployees({
-    limit: 250,
-    active: true,
+    pageSize: 250,
+    isActive: true,
     enabled: canViewAll,
   })
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null)
@@ -69,7 +69,7 @@ export default function TimeClockPage() {
       return
     }
 
-    const firstEmployee = employees.data?.data?.[0]
+    const firstEmployee = employees.data?.items?.[0]
     if (firstEmployee?.id) {
       setSelectedEmployeeId(firstEmployee.id)
     }
@@ -111,7 +111,7 @@ export default function TimeClockPage() {
     )
   }
 
-  if (canViewAll && employees.data?.data?.length === 0) {
+  if (canViewAll && employees.data?.items?.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <p className="text-muted-foreground">{t('noEmployees')}</p>
@@ -142,12 +142,12 @@ export default function TimeClockPage() {
   }
 
   const dailyValue = clockState.dailyValue ?? {
-    gross_minutes: 0,
-    break_minutes: 0,
-    net_minutes: 0,
-    target_minutes: 0,
-    overtime_minutes: 0,
-    undertime_minutes: 0,
+    grossTime: 0,
+    breakTime: 0,
+    netTime: 0,
+    targetTime: 0,
+    overtime: 0,
+    undertime: 0,
   }
 
   return (
@@ -163,9 +163,9 @@ export default function TimeClockPage() {
       )}
 
       {/* Employee Selector (temporary until user-employee link exists) */}
-      {canViewAll && employees.data?.data && employees.data.data.length > 1 && selectedEmployeeId && (
+      {canViewAll && employees.data?.items && employees.data.items.length > 1 && selectedEmployeeId && (
         <EmployeeSelector
-          employees={employees.data.data}
+          employees={employees.data.items}
           selectedId={selectedEmployeeId}
           onSelect={setSelectedEmployeeId}
         />
@@ -208,17 +208,17 @@ export default function TimeClockPage() {
       {/* Stats and History Grid */}
       <div className="grid gap-6 md:grid-cols-2">
         <TodayStats
-          grossMinutes={dailyValue.gross_minutes ?? 0}
-          breakMinutes={dailyValue.break_minutes ?? 0}
-          netMinutes={dailyValue.net_minutes ?? 0}
-          targetMinutes={dailyValue.target_minutes ?? 0}
-          overtimeMinutes={dailyValue.overtime_minutes ?? 0}
-          undertimeMinutes={dailyValue.undertime_minutes ?? 0}
+          grossMinutes={dailyValue.grossTime ?? 0}
+          breakMinutes={dailyValue.breakTime ?? 0}
+          netMinutes={dailyValue.netTime ?? 0}
+          targetMinutes={dailyValue.targetTime ?? 0}
+          overtimeMinutes={dailyValue.overtime ?? 0}
+          undertimeMinutes={dailyValue.undertime ?? 0}
           isLoading={clockState.isLoading}
         />
 
         <BookingHistory
-          bookings={clockState.bookings}
+          bookings={clockState.bookings as unknown as Parameters<typeof BookingHistory>[0]['bookings']}
           isLoading={clockState.isLoading}
         />
       </div>

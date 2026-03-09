@@ -86,12 +86,12 @@ export default function ProfilePage() {
       </div>
 
       {/* Profile Header with Avatar */}
-      <ProfileHeader user={user} employee={employee} />
+      <ProfileHeader user={user} employee={employee as unknown as Parameters<typeof ProfileHeader>[0]['employee']} />
 
       {/* Personal Info and Employment Details */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <PersonalInfoCard employee={employee} />
-        <EmploymentDetailsCard employee={employee} />
+        <PersonalInfoCard employee={employee as unknown as Parameters<typeof PersonalInfoCard>[0]['employee']} />
+        <EmploymentDetailsCard employee={employee as unknown as Parameters<typeof EmploymentDetailsCard>[0]['employee']} />
       </div>
 
       {/* Contacts and Cards */}

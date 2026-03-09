@@ -145,16 +145,16 @@ export function GenerateReportDialog({
   const generateMutation = useGenerateReport()
 
   // Entity data for filter dropdowns (only fetch when dialog is open)
-  const { data: employeesData } = useEmployees({ limit: 200, enabled: open })
+  const { data: employeesData } = useEmployees({ pageSize: 200, enabled: open })
   const { data: departmentsData } = useDepartments({ enabled: open })
   const { data: costCentersData } = useCostCenters({ enabled: open })
   const { data: teamsData } = useTeams({ limit: 200, enabled: open })
 
   const employees = React.useMemo(() => {
-    const items = employeesData?.data ?? []
+    const items = employeesData?.items ?? []
     return items.map((e) => ({
       id: e.id ?? '',
-      label: `${e.first_name ?? ''} ${e.last_name ?? ''}`.trim() || e.personnel_number,
+      label: `${e.firstName ?? ''} ${e.lastName ?? ''}`.trim() || e.personnelNumber,
     }))
   }, [employeesData])
 

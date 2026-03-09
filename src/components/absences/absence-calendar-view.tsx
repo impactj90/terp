@@ -51,7 +51,7 @@ export function AbsenceCalendarView({
 
   // Convert holidays to Date array
   const holidays = React.useMemo(
-    () => holidaysData?.map((h) => parseISODate(h.holiday_date)) ?? [],
+    () => holidaysData?.data?.map((h) => parseISODate(h.holidayDate)) ?? [],
     [holidaysData]
   )
 

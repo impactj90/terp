@@ -60,8 +60,8 @@ export function MemberManagementSheet({
 
   // Fetch all active employees for adding
   const { data: employeesData, isLoading: employeesLoading } = useEmployees({
-    limit: 200,
-    active: true,
+    pageSize: 200,
+    isActive: true,
     enabled: open,
   })
 
@@ -72,7 +72,7 @@ export function MemberManagementSheet({
 
   const members = teamData?.members ?? []
   const memberIds = new Set(members.map((m) => m.employee_id))
-  const allEmployees = employeesData?.data ?? []
+  const allEmployees = employeesData?.items ?? []
 
   // Filter employees not already in team
   const availableEmployees = allEmployees.filter(

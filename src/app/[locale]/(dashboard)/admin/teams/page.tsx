@@ -108,7 +108,7 @@ export default function TeamsPage() {
 
     try {
       await deleteMutation.mutateAsync({
-        path: { id: deleteTeam.id },
+        id: deleteTeam.id,
       })
       setDeleteTeam(null)
       if (selectedIds.has(deleteTeam.id)) {
@@ -232,7 +232,7 @@ export default function TeamsPage() {
             />
           ) : (
             <TeamDataTable
-              teams={teams}
+              teams={teams as unknown as Team[]}
               isLoading={isLoading}
               selectedIds={selectedIds}
               onSelectIds={setSelectedIds}

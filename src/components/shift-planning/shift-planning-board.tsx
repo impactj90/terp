@@ -189,12 +189,12 @@ export function ShiftPlanningBoard({ enabled }: ShiftPlanningBoardProps) {
 
   // Data fetching
   const { data: employeesData, isLoading: employeesLoading } = useEmployees({
-    limit: 200,
+    pageSize: 200,
     departmentId,
     search: search || undefined,
     enabled,
   })
-  const employees = employeesData?.data ?? []
+  const employees = employeesData?.items ?? []
 
   const { data: departmentsData } = useDepartments({
     active: true,

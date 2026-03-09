@@ -83,7 +83,7 @@ export default function OrderDetailPage() {
   })
 
   const assignments = assignmentsData?.data ?? []
-  const bookings = bookingsData?.data ?? []
+  const bookings = bookingsData?.items ?? []
 
   // Redirect if not admin
   React.useEffect(() => {
@@ -115,7 +115,7 @@ export default function OrderDetailPage() {
   const handleConfirmDeleteBooking = async () => {
     if (!deleteBooking) return
     try {
-      await deleteBookingMutation.mutateAsync({ path: { id: deleteBooking.id } })
+      await deleteBookingMutation.mutateAsync({ id: deleteBooking.id })
       setDeleteBooking(null)
     } catch {
       // Error handled by mutation

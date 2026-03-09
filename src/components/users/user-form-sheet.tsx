@@ -104,7 +104,7 @@ export function UserFormSheet({ open, onOpenChange, user, onSuccess }: UserFormS
 
   // Reference data
   const { data: groupsData } = useUserGroups({ enabled: open })
-  const { data: employeesData } = useEmployees({ limit: 100, enabled: open })
+  const { data: employeesData } = useEmployees({ pageSize: 100, enabled: open })
   const { data: tenantsData } = useTenants({
     enabled: open && form.dataScopeType === 'tenant',
   })
@@ -112,15 +112,15 @@ export function UserFormSheet({ open, onOpenChange, user, onSuccess }: UserFormS
     enabled: open && form.dataScopeType === 'department',
   })
   const { data: scopeEmployeesData } = useEmployees({
-    limit: 100,
+    pageSize: 100,
     enabled: open && form.dataScopeType === 'employee',
   })
 
   const groups = groupsData?.data ?? []
-  const employees = employeesData?.data ?? []
+  const employees = employeesData?.items ?? []
   const tenants = tenantsData?.data ?? []
   const departments = departmentsData?.data ?? []
-  const scopeEmployees = scopeEmployeesData?.data ?? []
+  const scopeEmployees = scopeEmployeesData?.items ?? []
 
   // Reset form when opening/closing or user changes
   React.useEffect(() => {

@@ -86,7 +86,7 @@ export function ProfilesTab() {
     enabled: !authLoading && !permLoading && canAccess,
   })
   const deleteMutation = useDeleteAccessProfile()
-  const items = (profileData?.data ?? []) as AccessProfile[]
+  const items = (profileData?.data ?? []) as unknown as AccessProfile[]
 
   // Filtering
   const filteredItems = React.useMemo(() => {
@@ -108,7 +108,7 @@ export function ProfilesTab() {
     if (!deleteItem) return
     setDeleteError(null)
     try {
-      await deleteMutation.mutateAsync({ path: { id: deleteItem.id } })
+      await deleteMutation.mutateAsync({ id: deleteItem.id })
       setDeleteItem(null)
     } catch (err) {
       const apiError = err as { status?: number; detail?: string; message?: string }
@@ -338,20 +338,16 @@ function ProfileFormSheet({
     try {
       if (isEdit && item) {
         await updateMutation.mutateAsync({
-          path: { id: item.id },
-          body: {
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            is_active: form.isActive,
-          },
+          id: item.id,
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          isActive: form.isActive,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            code: form.code.trim(),
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-          },
+          code: form.code.trim(),
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
         })
       }
       onSuccess?.()

@@ -49,13 +49,13 @@ export default function MacroDetailPage() {
   }, [authLoading, permLoading, canAccess, router])
 
   const handleDelete = async () => {
-    await deleteMutation.mutateAsync({ path: { id: params.id } })
+    await deleteMutation.mutateAsync({ id: params.id })
     router.push('/admin/macros')
   }
 
   const handleExecute = async () => {
     try {
-      await executeMutation.mutateAsync({ path: { id: params.id } })
+      await executeMutation.mutateAsync({ macroId: params.id })
       // Execution started successfully
     } catch {
       // Error is handled by the mutation
@@ -96,9 +96,9 @@ export default function MacroDetailPage() {
         <div className="flex-1">
           <h1 className="text-2xl font-bold">{macro.name}</h1>
           <div className="flex items-center gap-2 mt-1">
-            <MacroTypeBadge type={macro.macro_type} />
-            <MacroActionBadge action={macro.action_type} />
-            {macro.is_active ? (
+            <MacroTypeBadge type={macro.macroType as "monthly" | "weekly"} />
+            <MacroActionBadge action={macro.actionType as "log_message" | "recalculate_target_hours" | "reset_flextime" | "carry_forward_balance"} />
+            {macro.isActive ? (
               <span className="text-sm text-green-600">{t('statusEnabled')}</span>
             ) : (
               <span className="text-sm text-muted-foreground">{t('statusDisabled')}</span>
@@ -144,13 +144,13 @@ export default function MacroDetailPage() {
         <TabsContent value="assignments" className="mt-6">
           <MacroAssignmentList
             macroId={params.id}
-            macroType={macro.macro_type}
-            assignments={macro.assignments ?? []}
+            macroType={macro.macroType as "monthly" | "weekly"}
+            assignments={macro.assignments as unknown as Parameters<typeof MacroAssignmentList>[0]['assignments']}
           />
         </TabsContent>
 
         <TabsContent value="executions" className="mt-6">
-          <MacroExecutionLog executions={executions} />
+          <MacroExecutionLog executions={executions as unknown as Parameters<typeof MacroExecutionLog>[0]['executions']} />
         </TabsContent>
       </Tabs>
 
@@ -158,7 +158,7 @@ export default function MacroDetailPage() {
       <MacroFormSheet
         open={editOpen}
         onOpenChange={setEditOpen}
-        macro={macro}
+        macro={macro as unknown as Parameters<typeof MacroFormSheet>[0]['macro']}
       />
 
       <ConfirmDialog

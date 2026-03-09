@@ -81,7 +81,7 @@ export function MacroAssignmentFormDialog({
   const { data: tariffsData } = useTariffs({ enabled: open })
   const { data: employeesData } = useEmployees({ enabled: open })
   const tariffs = tariffsData?.data ?? []
-  const employees = employeesData?.data ?? []
+  const employees = employeesData?.items ?? []
 
   const createMutation = useCreateMacroAssignment()
   const updateMutation = useUpdateMacroAssignment()

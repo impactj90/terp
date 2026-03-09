@@ -51,7 +51,7 @@ export default function CalculationRulesPage() {
     let filtered = rules
 
     if (activeOnly) {
-      filtered = filtered.filter((rule) => rule.is_active)
+      filtered = filtered.filter((rule) => rule.isActive)
     }
 
     if (search.trim()) {
@@ -84,7 +84,7 @@ export default function CalculationRulesPage() {
     if (!deleteItem) return
     setDeleteError(null)
     try {
-      await deleteMutation.mutateAsync({ path: { id: deleteItem.id } })
+      await deleteMutation.mutateAsync({ id: deleteItem.id })
       setDeleteItem(null)
     } catch (err) {
       const apiError = err as { status?: number; detail?: string; message?: string }
@@ -180,7 +180,7 @@ export default function CalculationRulesPage() {
             <EmptyState hasFilters={hasFilters} onCreateClick={() => setCreateOpen(true)} />
           ) : (
             <CalculationRuleDataTable
-              items={filteredItems}
+              items={filteredItems as unknown as CalculationRule[]}
               isLoading={false}
               onView={handleView}
               onEdit={handleEdit}

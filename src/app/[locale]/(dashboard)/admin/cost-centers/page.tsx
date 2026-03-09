@@ -65,7 +65,7 @@ export default function CostCentersPage() {
   const handleConfirmDelete = async () => {
     if (!deleteItem) return
     try {
-      await deleteMutation.mutateAsync({ path: { id: deleteItem.id } })
+      await deleteMutation.mutateAsync({ id: deleteItem.id })
       setDeleteItem(null)
     } catch {
       // Error handled by mutation
@@ -144,7 +144,7 @@ export default function CostCentersPage() {
             <EmptyState hasFilters={hasFilters} onCreateClick={() => setCreateOpen(true)} />
           ) : (
             <CostCenterDataTable
-              items={filteredItems}
+              items={filteredItems as unknown as CostCenter[]}
               isLoading={false}
               onView={handleView}
               onEdit={handleEdit}

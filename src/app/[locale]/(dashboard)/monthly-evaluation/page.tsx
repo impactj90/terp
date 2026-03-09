@@ -52,7 +52,7 @@ export default function MonthlyEvaluationPage() {
   // Fetch employees for admin selector
   const { data: employeesData } = useEmployees({
     enabled: canViewAll,
-    limit: 250,
+    pageSize: 250,
   })
 
   // Fetch monthly value
@@ -108,9 +108,9 @@ export default function MonthlyEvaluationPage() {
     (selectedYear === currentDate.getFullYear() && selectedMonth < currentDate.getMonth() + 1)
 
   // Get the selected employee name
-  const selectedEmployee = employeesData?.data?.find(emp => emp.id === selectedEmployeeId)
+  const selectedEmployee = employeesData?.items?.find(emp => emp.id === selectedEmployeeId)
   const employeeName = selectedEmployee
-    ? `${selectedEmployee.first_name} ${selectedEmployee.last_name}`
+    ? `${selectedEmployee.firstName} ${selectedEmployee.lastName}`
     : user?.displayName
 
   if (authLoading) {
@@ -185,9 +185,9 @@ export default function MonthlyEvaluationPage() {
               <SelectValue placeholder={tc('selectEmployee')} />
             </SelectTrigger>
             <SelectContent>
-              {employeesData?.data?.map((emp) => (
+              {employeesData?.items?.map((emp) => (
                 <SelectItem key={emp.id} value={emp.id}>
-                  {emp.first_name} {emp.last_name}
+                  {emp.firstName} {emp.lastName}
                 </SelectItem>
               ))}
             </SelectContent>

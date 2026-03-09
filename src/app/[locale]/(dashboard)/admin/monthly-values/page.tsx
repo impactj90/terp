@@ -72,7 +72,7 @@ export default function MonthlyValuesPage() {
   })
 
   // Employees (for frontend join - fetch all with high limit)
-  const { data: employeesData } = useEmployees({ limit: 1000, enabled })
+  const { data: employeesData } = useEmployees({ pageSize: 1000, enabled })
 
   // Departments (for filter dropdown)
   const { data: departmentsData, isLoading: departmentsLoading } = useDepartments({ enabled })
@@ -84,7 +84,7 @@ export default function MonthlyValuesPage() {
   // Frontend join: enrich monthly values with employee names
   const enrichedRows: MonthlyValueRow[] = React.useMemo(() => {
     const monthlyValues = mvData?.items ?? []
-    const employees = employeesData?.data ?? []
+    const employees = employeesData?.items ?? []
 
     // Build employee lookup map
     const employeeMap = new Map<
@@ -93,9 +93,9 @@ export default function MonthlyValuesPage() {
     >()
     for (const emp of employees) {
       employeeMap.set(emp.id, {
-        first_name: emp.first_name ?? '',
-        last_name: emp.last_name ?? '',
-        personnel_number: emp.personnel_number ?? '',
+        first_name: emp.firstName ?? '',
+        last_name: emp.lastName ?? '',
+        personnel_number: emp.personnelNumber ?? '',
       })
     }
 

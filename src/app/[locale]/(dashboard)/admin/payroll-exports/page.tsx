@@ -56,7 +56,7 @@ export default function PayrollExportsPage() {
   const { data: exportsData, isLoading: exportsLoading } = usePayrollExports({
     year,
     month,
-    status: statusFilter !== 'all' ? statusFilter : undefined,
+    status: statusFilter !== 'all' ? statusFilter as "pending" | "completed" | "failed" | "generating" : undefined,
     enabled,
   })
 
@@ -73,14 +73,14 @@ export default function PayrollExportsPage() {
       id: item.id ?? '',
       year: item.year ?? year,
       month: item.month ?? month,
-      export_type: item.export_type ?? 'standard',
+      export_type: item.exportType ?? 'standard',
       format: item.format ?? '',
       status: item.status ?? 'pending',
-      employee_count: item.employee_count,
-      total_hours: item.total_hours,
-      requested_at: item.requested_at,
-      completed_at: item.completed_at,
-      error_message: item.error_message,
+      employee_count: item.employeeCount ?? undefined,
+      total_hours: (item.totalHours as number | null) ?? undefined,
+      requested_at: item.requestedAt ? String(item.requestedAt) : undefined,
+      completed_at: item.completedAt ? String(item.completedAt) : undefined,
+      error_message: item.errorMessage ?? undefined,
     }))
   }, [exportsData, year, month])
 
@@ -92,7 +92,7 @@ export default function PayrollExportsPage() {
   const handleDelete = async () => {
     if (!deleteTarget) return
     try {
-      await deleteMutation.mutateAsync({ path: { id: deleteTarget.id } })
+      await deleteMutation.mutateAsync({ id: deleteTarget.id })
       setDeleteTarget(null)
       if (selectedItem?.id === deleteTarget.id) {
         setSelectedItem(null)
@@ -187,13 +187,13 @@ export default function PayrollExportsPage() {
           setDeleteTarget(item)
         }}
         fullExport={fullExportData ? {
-          export_interface_id: fullExportData.export_interface_id,
-          file_size: fullExportData.file_size,
-          row_count: fullExportData.row_count,
-          total_overtime: fullExportData.total_overtime,
-          started_at: fullExportData.started_at,
-          requested_at: fullExportData.requested_at,
-          parameters: fullExportData.parameters,
+          export_interface_id: fullExportData.exportInterfaceId,
+          file_size: fullExportData.fileSize,
+          row_count: fullExportData.rowCount,
+          total_overtime: fullExportData.totalOvertime as number | undefined,
+          started_at: fullExportData.startedAt ? String(fullExportData.startedAt) : undefined,
+          requested_at: fullExportData.requestedAt ? String(fullExportData.requestedAt) : undefined,
+          parameters: fullExportData.parameters as Record<string, unknown> | null | undefined,
         } : null}
       />
 

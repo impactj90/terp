@@ -72,7 +72,7 @@ export default function ExportInterfacesPage() {
   }, [authLoading, permLoading, canAccess, router])
 
   // Extract interfaces from wrapped response
-  const interfaces = (interfacesData as { data?: ExportInterface[] })?.data ?? []
+  const interfaces = (interfacesData as unknown as { data?: ExportInterface[] })?.data ?? []
 
   // Client-side filtering
   const filteredInterfaces = React.useMemo(() => {
@@ -116,7 +116,7 @@ export default function ExportInterfacesPage() {
     setDeleteError(null)
     try {
       await deleteMutation.mutateAsync({
-        path: { id: deleteItem.id },
+        id: deleteItem.id,
       })
       setDeleteItem(null)
       setViewItem(null)

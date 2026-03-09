@@ -94,7 +94,7 @@ export default function WeekPlansPage() {
     if (!deleteWeekPlan) return
     try {
       await deleteMutation.mutateAsync({
-        path: { id: deleteWeekPlan.id },
+        id: deleteWeekPlan.id,
       })
       setDeleteWeekPlan(null)
     } catch {
@@ -186,7 +186,7 @@ export default function WeekPlansPage() {
             <EmptyState hasFilters={hasFilters} onCreateClick={() => setCreateOpen(true)} />
           ) : (
             <WeekPlanDataTable
-              weekPlans={weekPlans}
+              weekPlans={weekPlans as unknown as WeekPlan[]}
               isLoading={isLoading}
               onView={handleView}
               onEdit={handleEdit}

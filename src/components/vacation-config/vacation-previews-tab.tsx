@@ -56,8 +56,8 @@ export function VacationPreviewsTab() {
   const { isLoading: authLoading } = useAuth()
   const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['absence_types.manage'])
 
-  const { data: employeesData } = useEmployees({ limit: 200, active: true, enabled: !authLoading && !permLoading && canAccess })
-  const employees = (employeesData?.data ?? []) as Employee[]
+  const { data: employeesData } = useEmployees({ pageSize: 200, isActive: true, enabled: !authLoading && !permLoading && canAccess })
+  const employees = (employeesData?.items ?? []) as Employee[]
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">

@@ -48,7 +48,7 @@ export default function TariffsPage() {
 
   // Fetch tariffs
   const { data, isLoading, isFetching } = useTariffs({
-    active: activeFilter,
+    isActive: activeFilter,
     enabled: !authLoading && !permLoading && canAccess,
   })
 
@@ -96,7 +96,7 @@ export default function TariffsPage() {
     if (!deleteTariff) return
     try {
       await deleteMutation.mutateAsync({
-        path: { id: deleteTariff.id },
+        id: deleteTariff.id,
       })
       setDeleteTariff(null)
       setViewTariff(null)
@@ -189,7 +189,7 @@ export default function TariffsPage() {
             <EmptyState hasFilters={hasFilters} onCreateClick={() => setCreateOpen(true)} />
           ) : (
             <TariffDataTable
-              tariffs={tariffs}
+              tariffs={tariffs as unknown as Tariff[]}
               isLoading={isLoading}
               onView={handleView}
               onEdit={handleEdit}

@@ -57,7 +57,7 @@ export default function ShiftPlanningPage() {
     let filtered = shifts
 
     if (activeOnly) {
-      filtered = filtered.filter((shift) => shift.is_active)
+      filtered = filtered.filter((shift) => shift.isActive)
     }
 
     if (search.trim()) {
@@ -90,7 +90,7 @@ export default function ShiftPlanningPage() {
     if (!deleteItem) return
     setDeleteError(null)
     try {
-      await deleteMutation.mutateAsync({ path: { id: deleteItem.id } })
+      await deleteMutation.mutateAsync({ id: deleteItem.id })
       setDeleteItem(null)
     } catch (err) {
       const apiError = err as { status?: number; detail?: string; message?: string }
@@ -196,7 +196,7 @@ export default function ShiftPlanningPage() {
                 <EmptyState hasFilters={hasFilters} onCreateClick={() => setCreateOpen(true)} />
               ) : (
                 <ShiftDataTable
-                  items={filteredItems}
+                  items={filteredItems as unknown as Shift[]}
                   isLoading={false}
                   onView={handleView}
                   onEdit={handleEdit}

@@ -152,7 +152,7 @@ export function AbsenceRequestForm({
   const absenceTypes = absenceTypesData?.data ?? []
   const selectedType = absenceTypes.find((t) => t.id === form.absenceTypeId)
   const holidays = React.useMemo(
-    () => holidaysData?.map((h) => parseISODate(h.holiday_date)) ?? [],
+    () => holidaysData?.data?.map((h) => parseISODate(h.holidayDate)) ?? [],
     [holidaysData]
   )
   const existingAbsences = absencesData?.data ?? []
@@ -350,7 +350,7 @@ export function AbsenceRequestForm({
             {/* Vacation Impact Preview */}
             {selectedType && requestedDays > 0 && (
               <VacationImpactPreview
-                currentBalance={balanceData?.remaining_days}
+                currentBalance={balanceData?.available}
                 totalEntitlement={balanceData?.total_entitlement}
                 requestedDays={requestedDays}
                 isHalfDay={form.duration === '0.5'}

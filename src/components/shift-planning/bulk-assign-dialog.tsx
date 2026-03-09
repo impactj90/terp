@@ -72,11 +72,11 @@ export function BulkAssignDialog({
 
   // Data fetching
   const { data: employeesData } = useEmployees({
-    limit: 200,
-    active: true,
+    pageSize: 200,
+    isActive: true,
     enabled: open,
   })
-  const employees = employeesData?.data ?? []
+  const employees = employeesData?.items ?? []
 
   const { data: dayPlansData } = useDayPlans({ active: true, enabled: open })
   const dayPlans = dayPlansData?.data ?? []

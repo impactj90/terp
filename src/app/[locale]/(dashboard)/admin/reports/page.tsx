@@ -51,8 +51,8 @@ export default function ReportsPage() {
 
   // Queries
   const { data: reportsData, isLoading: reportsLoading } = useReports({
-    reportType: reportTypeFilter !== 'all' ? reportTypeFilter : undefined,
-    status: statusFilter !== 'all' ? statusFilter : undefined,
+    reportType: reportTypeFilter !== 'all' ? reportTypeFilter as "daily_overview" | "weekly_overview" | "monthly_overview" | "employee_timesheet" | "absence_report" | "overtime_report" | "department_summary" | "account_balances" | "vacation_report" | "custom" : undefined,
+    status: statusFilter !== 'all' ? statusFilter as "pending" | "generating" | "completed" | "failed" : undefined,
     enabled,
   })
 
@@ -67,15 +67,15 @@ export default function ReportsPage() {
     const items = reportsData?.data ?? []
     return items.map((item) => ({
       id: item.id ?? '',
-      name: item.name,
-      report_type: item.report_type ?? 'custom',
+      name: item.name ?? undefined,
+      report_type: item.reportType ?? 'custom',
       format: item.format,
       status: item.status ?? 'pending',
-      row_count: item.row_count,
-      file_size: item.file_size,
-      requested_at: item.requested_at,
-      completed_at: item.completed_at,
-      error_message: item.error_message,
+      row_count: item.rowCount ?? undefined,
+      file_size: item.fileSize ?? undefined,
+      requested_at: item.requestedAt ? String(item.requestedAt) : undefined,
+      completed_at: item.completedAt ? String(item.completedAt) : undefined,
+      error_message: item.errorMessage ?? undefined,
     }))
   }, [reportsData])
 
@@ -87,7 +87,7 @@ export default function ReportsPage() {
   const handleDelete = async () => {
     if (!deleteTarget) return
     try {
-      await deleteMutation.mutateAsync({ path: { id: deleteTarget.id } })
+      await deleteMutation.mutateAsync({ id: deleteTarget.id })
       setDeleteTarget(null)
       if (selectedItem?.id === deleteTarget.id) {
         setSelectedItem(null)
@@ -170,7 +170,7 @@ export default function ReportsPage() {
           setSelectedItem(null)
           setDeleteTarget(item)
         }}
-        fullReport={fullReportData ?? null}
+        fullReport={(fullReportData as unknown as Parameters<typeof ReportDetailSheet>[0]['fullReport']) ?? null}
       />
 
       {/* Delete Confirmation */}

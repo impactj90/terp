@@ -53,14 +53,14 @@ export default function EmployeeMessagesPage() {
     }
   }, [authLoading, permLoading, canAccess, router])
 
-  const messages = messagesData?.data ?? []
+  const messages = messagesData?.items ?? []
 
   // Client-side search filter on subject
   const filteredMessages = React.useMemo(() => {
     if (!search.trim()) return messages
 
     const searchLower = search.toLowerCase()
-    return messages.filter((m: EmployeeMessage) =>
+    return messages.filter((m) =>
       m.subject.toLowerCase().includes(searchLower)
     )
   }, [messages, search])
@@ -123,7 +123,7 @@ export default function EmployeeMessagesPage() {
             <EmptyState hasFilters={hasFilters} onComposeClick={() => setComposeOpen(true)} />
           ) : (
             <MessageDataTable
-              messages={filteredMessages}
+              messages={filteredMessages as unknown as EmployeeMessage[]}
               isLoading={false}
               onView={handleView}
             />

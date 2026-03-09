@@ -62,7 +62,7 @@ export default function HolidaysPage() {
     }
   }, [authLoading, permLoading, canAccess, router])
 
-  const holidays = holidaysData ?? []
+  const holidays = holidaysData?.data ?? []
 
   // Filter by search (client-side)
   const filteredHolidays = React.useMemo(() => {
@@ -99,7 +99,7 @@ export default function HolidaysPage() {
 
     try {
       await deleteMutation.mutateAsync({
-        path: { id: deleteHoliday.id },
+        id: deleteHoliday.id,
       })
       setDeleteHoliday(null)
     } catch {
@@ -210,7 +210,7 @@ export default function HolidaysPage() {
             ) : (
               <HolidayYearCalendar
                 year={year}
-                holidays={filteredHolidays}
+                holidays={filteredHolidays as unknown as Holiday[]}
                 onHolidayClick={handleHolidayClick}
                 onDateClick={handleDateClick}
               />
@@ -219,7 +219,7 @@ export default function HolidaysPage() {
             <EmptyState hasFilters={hasFilters} onCreateClick={() => setCreateOpen(true)} />
           ) : (
             <HolidayDataTable
-              holidays={filteredHolidays}
+              holidays={filteredHolidays as unknown as Holiday[]}
               isLoading={false}
               onView={handleView}
               onEdit={handleEdit}

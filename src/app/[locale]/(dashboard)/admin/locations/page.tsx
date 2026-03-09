@@ -66,7 +66,7 @@ export default function LocationsPage() {
   const handleConfirmDelete = async () => {
     if (!deleteItem) return
     try {
-      await deleteMutation.mutateAsync({ path: { id: deleteItem.id } })
+      await deleteMutation.mutateAsync({ id: deleteItem.id })
       setDeleteItem(null)
     } catch {
       // Error handled by mutation
@@ -145,7 +145,7 @@ export default function LocationsPage() {
             <EmptyState hasFilters={hasFilters} onCreateClick={() => setCreateOpen(true)} />
           ) : (
             <LocationDataTable
-              items={filteredItems}
+              items={filteredItems as unknown as Location[]}
               isLoading={false}
               onView={handleView}
               onEdit={handleEdit}

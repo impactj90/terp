@@ -83,14 +83,14 @@ export function AssignmentsTab() {
     enabled: !authLoading && !permLoading && canAccess,
   })
   const { data: employeesData } = useEmployees({
-    active: true,
+    isActive: true,
     enabled: !authLoading && !permLoading && canAccess,
   })
   const deleteMutation = useDeleteEmployeeAccessAssignment()
 
-  const items = (assignmentData?.data ?? []) as EmployeeAccessAssignment[]
+  const items = (assignmentData?.data ?? []) as unknown as EmployeeAccessAssignment[]
   const profiles = profilesData?.data ?? []
-  const employees = employeesData?.data ?? []
+  const employees = employeesData?.items ?? []
 
   // Build lookup maps
   const profileMap = React.useMemo(() => {
@@ -104,7 +104,7 @@ export function AssignmentsTab() {
   const employeeMap = React.useMemo(() => {
     const map = new Map<string, string>()
     for (const e of employees) {
-      map.set(e.id, `${e.first_name} ${e.last_name}`)
+      map.set(e.id, `${e.firstName} ${e.lastName}`)
     }
     return map
   }, [employees])
@@ -132,7 +132,7 @@ export function AssignmentsTab() {
     if (!deleteItem) return
     setDeleteError(null)
     try {
-      await deleteMutation.mutateAsync({ path: { id: deleteItem.id } })
+      await deleteMutation.mutateAsync({ id: deleteItem.id })
       setDeleteItem(null)
     } catch (err) {
       const apiError = err as { status?: number; detail?: string; message?: string }
@@ -368,9 +368,9 @@ function AssignmentFormDialog({
 
   const createMutation = useCreateEmployeeAccessAssignment()
   const updateMutation = useUpdateEmployeeAccessAssignment()
-  const { data: employeesData } = useEmployees({ active: true, enabled: open })
+  const { data: employeesData } = useEmployees({ isActive: true, enabled: open })
   const { data: profilesData } = useAccessProfiles({ enabled: open })
-  const employees = employeesData?.data ?? []
+  const employees = employeesData?.items ?? []
   const profiles = profilesData?.data ?? []
 
   React.useEffect(() => {
@@ -405,21 +405,17 @@ function AssignmentFormDialog({
     try {
       if (isEdit && assignment) {
         await updateMutation.mutateAsync({
-          path: { id: assignment.id },
-          body: {
-            valid_from: form.validFrom || undefined,
-            valid_to: form.validTo || undefined,
-            is_active: form.isActive,
-          },
+          id: assignment.id,
+          validFrom: form.validFrom || undefined,
+          validTo: form.validTo || undefined,
+          isActive: form.isActive,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            employee_id: form.employeeId,
-            access_profile_id: form.accessProfileId,
-            valid_from: form.validFrom || undefined,
-            valid_to: form.validTo || undefined,
-          },
+          employeeId: form.employeeId,
+          accessProfileId: form.accessProfileId,
+          validFrom: form.validFrom || undefined,
+          validTo: form.validTo || undefined,
         })
       }
 
@@ -459,7 +455,7 @@ function AssignmentFormDialog({
                 <SelectItem value="__none__">{t('assignments.selectEmployee')}</SelectItem>
                 {employees.map((emp) => (
                   <SelectItem key={emp.id} value={emp.id}>
-                    {emp.first_name} {emp.last_name} ({emp.personnel_number})
+                    {emp.firstName} {emp.lastName} ({emp.personnelNumber})
                   </SelectItem>
                 ))}
               </SelectContent>

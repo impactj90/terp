@@ -91,21 +91,17 @@ export function AbsenceTypeGroupFormSheet({
     try {
       if (isEdit && group) {
         await updateMutation.mutateAsync({
-          path: { id: group.id },
-          body: {
-            code: form.code.trim(),
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            is_active: form.isActive,
-          },
+          id: group.id,
+          code: form.code.trim(),
+          name: form.name.trim(),
+          description: form.description.trim() || null,
+          isActive: form.isActive,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            code: form.code.trim(),
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-          },
+          code: form.code.trim(),
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
         })
       }
 

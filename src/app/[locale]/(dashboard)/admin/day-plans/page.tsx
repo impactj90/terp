@@ -96,7 +96,7 @@ export default function DayPlansPage() {
     if (!deleteDayPlan) return
     try {
       await deleteMutation.mutateAsync({
-        path: { id: deleteDayPlan.id },
+        id: deleteDayPlan.id,
       })
       setDeleteDayPlan(null)
     } catch {
@@ -206,7 +206,7 @@ export default function DayPlansPage() {
             <EmptyState hasFilters={hasFilters} onCreateClick={() => setCreateOpen(true)} />
           ) : (
             <DayPlanDataTable
-              dayPlans={dayPlans}
+              dayPlans={dayPlans as unknown as DayPlan[]}
               isLoading={isLoading}
               onView={handleView}
               onEdit={handleEdit}

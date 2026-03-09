@@ -98,12 +98,12 @@ export function BookingsTab() {
     enabled: !authLoading && !permLoading && canAccess && !!dateFrom && !!dateTo,
   })
   const { data: employeesData } = useEmployees({
-    active: true,
+    isActive: true,
     enabled: !authLoading && !permLoading && canAccess,
   })
 
   const bookings = (bookingsData?.data ?? []) as RawTerminalBooking[]
-  const employees = employeesData?.data ?? []
+  const employees = employeesData?.items ?? []
 
   const hasFilters =
     terminalId !== '' ||

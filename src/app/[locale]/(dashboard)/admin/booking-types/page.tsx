@@ -119,7 +119,7 @@ export default function BookingTypesPage() {
 
     try {
       await deleteMutation.mutateAsync({
-        path: { id: deleteItem.id },
+        id: deleteItem.id,
       })
       setDeleteItem(null)
     } catch {
@@ -131,8 +131,8 @@ export default function BookingTypesPage() {
     setTogglingId(type.id)
     try {
       await updateMutation.mutateAsync({
-        path: { id: type.id },
-        body: { is_active: isActive },
+        id: type.id,
+        isActive,
       })
     } catch {
       // Error handled by mutation
@@ -156,7 +156,7 @@ export default function BookingTypesPage() {
 
     try {
       await deleteGroupMutation.mutateAsync({
-        path: { id: deleteGroupItem.id },
+        id: deleteGroupItem.id,
       })
       setDeleteGroupItem(null)
     } catch {
@@ -250,7 +250,7 @@ export default function BookingTypesPage() {
                 />
               ) : (
                 <BookingTypeDataTable
-                  bookingTypes={filteredTypes}
+                  bookingTypes={filteredTypes as unknown as BookingType[]}
                   isLoading={false}
                   onEdit={handleEdit}
                   onDelete={handleDelete}

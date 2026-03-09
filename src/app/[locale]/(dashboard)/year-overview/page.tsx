@@ -43,7 +43,7 @@ export default function YearOverviewPage() {
   // Fetch employees for admin selector
   const { data: employeesData } = useEmployees({
     enabled: canViewAll,
-    limit: 250,
+    pageSize: 250,
   })
 
   // Fetch all monthly values for the year
@@ -120,9 +120,9 @@ export default function YearOverviewPage() {
   }
 
   // Get the selected employee name for export
-  const selectedEmployee = employeesData?.data?.find(emp => emp.id === selectedEmployeeId)
+  const selectedEmployee = employeesData?.items?.find(emp => emp.id === selectedEmployeeId)
   const employeeName = selectedEmployee
-    ? `${selectedEmployee.first_name} ${selectedEmployee.last_name}`
+    ? `${selectedEmployee.firstName} ${selectedEmployee.lastName}`
     : user?.displayName
 
   return (
@@ -154,9 +154,9 @@ export default function YearOverviewPage() {
               <SelectValue placeholder={tc('selectEmployee')} />
             </SelectTrigger>
             <SelectContent>
-              {employeesData?.data?.map((emp) => (
+              {employeesData?.items?.map((emp) => (
                 <SelectItem key={emp.id} value={emp.id}>
-                  {emp.first_name} {emp.last_name}
+                  {emp.firstName} {emp.lastName}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -205,7 +205,7 @@ export default function YearOverviewPage() {
           {/* Summary cards */}
           <YearSummaryCards
             monthlyValues={monthlyValuesList}
-            vacationUsed={vacationBalance?.used_days}
+            vacationUsed={vacationBalance?.taken}
             vacationEntitlement={vacationBalance?.total_entitlement}
             isLoading={isLoading}
           />

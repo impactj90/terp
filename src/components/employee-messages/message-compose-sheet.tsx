@@ -77,11 +77,11 @@ export function MessageComposeSheet({
 
   // Fetch employees for individual selection
   const { data: employeesData } = useEmployees({
-    active: true,
-    limit: 100,
+    isActive: true,
+    pageSize: 100,
     enabled: open,
   })
-  const allEmployees = employeesData?.data ?? []
+  const allEmployees = employeesData?.items ?? []
   const totalEmployeeCount = employeesData?.total ?? 0
 
   // Fetch departments for department selection
@@ -93,8 +93,8 @@ export function MessageComposeSheet({
 
   // Fetch employees for each selected department
   const { data: deptEmployeesData } = useEmployees({
-    active: true,
-    limit: 100,
+    isActive: true,
+    pageSize: 100,
     departmentId: form.selectedDepartmentIds.length === 1 ? form.selectedDepartmentIds[0] : undefined,
     enabled: open && form.recipientMode === 'department' && form.selectedDepartmentIds.length === 1,
   })

@@ -92,10 +92,9 @@ export default function AuditLogsPage() {
     entityType: entityType ?? undefined,
     entityId: entityId || undefined,
     action: action as components['schemas']['AuditLog']['action'] | undefined,
-    from: fromStr,
-    to: toStr,
-    limit,
-    cursor,
+    fromDate: fromStr,
+    toDate: toStr,
+    pageSize: limit,
     enabled,
   })
 
@@ -105,11 +104,11 @@ export default function AuditLogsPage() {
 
   // Append new data when it arrives
   React.useEffect(() => {
-    if (data?.data) {
+    if (data?.items) {
       if (cursor) {
-        setAllItems(prev => [...prev, ...data.data])
+        setAllItems(prev => [...prev, ...(data.items as unknown as components['schemas']['AuditLog'][])])
       } else {
-        setAllItems(data.data)
+        setAllItems(data.items as unknown as components['schemas']['AuditLog'][])
       }
     }
   }, [data, cursor])
@@ -125,8 +124,8 @@ export default function AuditLogsPage() {
     }
   }, [filterKey])
 
-  const hasMore = (data?.data?.length ?? 0) === limit
-  const total = data?.meta?.total ?? allItems.length
+  const hasMore = (data?.items?.length ?? 0) === limit
+  const total = data?.total ?? allItems.length
 
   const handleLoadMore = () => {
     const lastItem = allItems[allItems.length - 1]

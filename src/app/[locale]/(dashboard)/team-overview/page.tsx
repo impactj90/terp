@@ -45,7 +45,8 @@ export default function TeamOverviewPage() {
     isActive: true,
     limit: 100,
   })
-  const teams = teamsData?.items ?? []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const teams = (teamsData?.items ?? []) as any[]
 
   // Auto-select first team if only one available
   useEffect(() => {
@@ -59,11 +60,12 @@ export default function TeamOverviewPage() {
     selectedTeamId ?? '',
     !!selectedTeamId
   )
-  const members = team?.members ?? []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const members = (team?.members ?? []) as any[]
 
   // Fetch day views for all members (used by stats + attendance)
   const employeeIds = members
-    .map((m) => m.employee_id)
+    .map((m) => m.employeeId)
     .filter((id): id is string => !!id)
   const {
     data: dayViewsData,

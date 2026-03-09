@@ -60,14 +60,14 @@ export default function MacrosPage() {
 
   const handleDelete = async () => {
     if (!deleteItem) return
-    await deleteMutation.mutateAsync({ path: { id: deleteItem.id } })
+    await deleteMutation.mutateAsync({ id: deleteItem.id })
     setDeleteItem(null)
   }
 
   const handleToggleActive = async (item: Macro, active: boolean) => {
     await updateMutation.mutateAsync({
-      path: { id: item.id },
-      body: { is_active: active },
+      id: item.id,
+      isActive: active,
     })
   }
 
@@ -131,7 +131,7 @@ export default function MacrosPage() {
             />
           ) : (
             <MacroDataTable
-              items={filteredItems}
+              items={filteredItems as unknown as Macro[]}
               isLoading={false}
               onView={handleView}
               onEdit={handleEdit}
