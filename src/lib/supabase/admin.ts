@@ -7,7 +7,7 @@
  * NEVER expose the service role key to the client.
  */
 import { createClient } from '@supabase/supabase-js'
-import { clientEnv, serverEnv } from '@/config/env'
+import { clientEnv, serverEnv } from '@/lib/config'
 
 export function createAdminClient() {
   return createClient(

@@ -5,7 +5,7 @@
  * The browser client automatically handles session persistence via cookies.
  */
 import { createBrowserClient } from '@supabase/ssr'
-import { clientEnv } from '@/config/env'
+import { clientEnv } from '@/lib/config'
 
 export function createClient() {
   return createBrowserClient(

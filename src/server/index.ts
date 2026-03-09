@@ -14,5 +14,5 @@ export {
   requireSelfOrPermission,
   requireEmployeePermission,
   applyDataScope,
-} from "./middleware/authorization"
-export type { DataScope, DataScopeType } from "./middleware/authorization"
+} from "@/lib/auth/middleware"
+export type { DataScope, DataScopeType } from "@/lib/auth/middleware"

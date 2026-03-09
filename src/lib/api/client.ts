@@ -1,6 +1,6 @@
 import createClient, { type Middleware } from 'openapi-fetch'
 import type { paths } from './types'
-import { clientEnv } from '@/config/env'
+import { clientEnv } from '@/lib/config'
 
 /**
  * Auth token storage interface.
