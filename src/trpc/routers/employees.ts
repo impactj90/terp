@@ -18,7 +18,7 @@
  * @see apps/api/internal/handler/booking.go (DayView + Calculate)
  */
 import { z } from "zod"
-import { Prisma } from "@/generated/prisma/client"
+import type { Prisma } from "@/generated/prisma/client"
 import type { PrismaClient } from "@/generated/prisma/client"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { handleServiceError } from "@/trpc/errors"

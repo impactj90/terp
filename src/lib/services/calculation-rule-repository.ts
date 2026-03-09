@@ -4,7 +4,7 @@
  * Pure Prisma data-access functions for the CalculationRule model.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
-import { Prisma } from "@/generated/prisma/client"
+import type { Prisma } from "@/generated/prisma/client"
 
 export async function findMany(
   prisma: PrismaClient,

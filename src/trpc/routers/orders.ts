@@ -14,7 +14,7 @@
  * @see apps/api/internal/service/order.go
  */
 import { z } from "zod"
-import { Prisma } from "@/generated/prisma/client"
+import type { Prisma } from "@/generated/prisma/client"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"

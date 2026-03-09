@@ -14,7 +14,7 @@
  * @see apps/api/internal/service/vacationcalcgroup.go
  */
 import { z } from "zod"
-import { Prisma } from "@/generated/prisma/client"
+import type { Prisma } from "@/generated/prisma/client"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "@/lib/auth/middleware"

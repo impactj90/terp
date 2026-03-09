@@ -12,7 +12,7 @@
  * @see apps/api/internal/service/employmenttype.go
  */
 import { z } from "zod"
-import { Prisma } from "@/generated/prisma/client"
+import type { Prisma } from "@/generated/prisma/client"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { handleServiceError } from "@/trpc/errors"
 import { requirePermission } from "@/lib/auth/middleware"

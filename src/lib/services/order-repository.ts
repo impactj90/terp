@@ -3,7 +3,7 @@
  *
  * Pure Prisma data-access functions for the Order model.
  */
-import { Prisma } from "@/generated/prisma/client"
+import type { Prisma } from "@/generated/prisma/client"
 import type { PrismaClient } from "@/generated/prisma/client"
 
 const orderInclude = {
