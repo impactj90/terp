@@ -28,6 +28,7 @@ import { groupsRouter } from "./routers/groups"
 import { activitiesRouter } from "./routers/activities"
 import { ordersRouter } from "./routers/orders"
 import { orderAssignmentsRouter } from "./routers/orderAssignments"
+import { orderBookingsRouter } from "./routers/orderBookings"
 import { bookingTypesRouter } from "./routers/bookingTypes"
 import { bookingReasonsRouter } from "./routers/bookingReasons"
 import { bookingsRouter } from "./routers/bookings"
@@ -66,6 +67,7 @@ import { localTravelRulesRouter } from "./routers/localTravelRules"
 import { extendedTravelRulesRouter } from "./routers/extendedTravelRules"
 import { travelAllowancePreviewRouter } from "./routers/travelAllowancePreview"
 import { monthlyEvalTemplatesRouter } from "./routers/monthlyEvalTemplates"
+import { correctionsRouter } from "./routers/corrections"
 import { correctionAssistantRouter } from "./routers/correctionAssistant"
 import { employeeDayPlansRouter } from "./routers/employeeDayPlans"
 import { dailyValuesRouter } from "./routers/dailyValues"
@@ -96,6 +98,7 @@ export const appRouter = createTRPCRouter({
   activities: activitiesRouter,
   orders: ordersRouter,
   orderAssignments: orderAssignmentsRouter,
+  orderBookings: orderBookingsRouter,
   bookingTypes: bookingTypesRouter,
   bookingReasons: bookingReasonsRouter,
   bookings: bookingsRouter,
@@ -134,6 +137,7 @@ export const appRouter = createTRPCRouter({
   extendedTravelRules: extendedTravelRulesRouter,
   travelAllowancePreview: travelAllowancePreviewRouter,
   monthlyEvalTemplates: monthlyEvalTemplatesRouter,
+  corrections: correctionsRouter,
   correctionAssistant: correctionAssistantRouter,
   employeeDayPlans: employeeDayPlansRouter,
   dailyValues: dailyValuesRouter,
