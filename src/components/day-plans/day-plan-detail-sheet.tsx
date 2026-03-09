@@ -26,7 +26,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { useDayPlan, useCreateDayPlanBonus, useDeleteDayPlanBonus, useAccounts } from '@/hooks/api'
+import { useDayPlan, useCreateDayPlanBonus, useDeleteDayPlanBonus, useAccounts } from '@/hooks'
 import { formatTime, formatDuration } from '@/lib/time-utils'
 import type { components } from '@/types/legacy-api-types'
 

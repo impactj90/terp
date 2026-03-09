@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TimeDisplay } from '@/components/timesheet'
 import { cn } from '@/lib/utils'
-import type { MonthSummary } from '@/hooks/api'
+import type { MonthSummary } from '@/hooks'
 
 interface MonthlySummaryCardsProps {
   monthlyValue?: MonthSummary | null

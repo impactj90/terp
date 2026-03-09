@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { TimeInput } from '@/components/ui/time-input'
 import { TagInput } from '@/components/ui/tag-input'
-import { useSystemSettings, useUpdateSystemSettings } from '@/hooks/api'
+import { useSystemSettings, useUpdateSystemSettings } from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type SystemSettings = components['schemas']['SystemSettings']

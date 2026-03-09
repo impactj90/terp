@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useCreateAbsenceType, useUpdateAbsenceType } from '@/hooks/api'
+import { useCreateAbsenceType, useUpdateAbsenceType } from '@/hooks'
 
 /** AbsenceType shape from tRPC output */
 interface AbsenceType {

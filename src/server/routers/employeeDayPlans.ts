@@ -18,20 +18,11 @@
  * @see apps/api/internal/service/employeedayplan.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
-import {
-  EmployeeDayPlanGenerator,
-  getDayPlanIdForDate,
-  getTariffSyncWindow,
-  getWeekdayDayPlanId,
-  tariffGenerateInclude,
-  type TariffForGenerate,
-  type EmployeeForGenerate,
-  type WeekPlanData,
-} from "@/server/services/employee-day-plan-generator"
+import { handleServiceError } from "@/trpc/errors"
+import * as edpService from "@/lib/services/employee-day-plans-service"
 
 // --- Permission Constants ---
 
@@ -74,8 +65,6 @@ const employeeDayPlanOutputSchema = z.object({
   dayPlan: dayPlanSummarySchema.optional(),
   shift: shiftSummarySchema.optional(),
 })
-
-type EmployeeDayPlanOutput = z.infer<typeof employeeDayPlanOutputSchema>
 
 // --- Input Schemas ---
 
@@ -134,69 +123,6 @@ const generateFromTariffInputSchema = z.object({
   overwriteTariffSource: z.boolean().optional(),
 })
 
-// --- Prisma Include Objects ---
-
-const edpListInclude = {
-  dayPlan: { select: { id: true, code: true, name: true, planType: true } },
-  shift: { select: { id: true, code: true, name: true } },
-} as const
-
-const edpDetailInclude = {
-  dayPlan: {
-    include: {
-      breaks: { orderBy: { sortOrder: "asc" as const } },
-      bonuses: {
-        orderBy: { sortOrder: "asc" as const },
-        include: { account: true },
-      },
-    },
-  },
-  shift: true,
-} as const
-
-// tariffGenerateInclude, WeekPlanData, TariffForGenerate, EmployeeForGenerate,
-// getWeekdayDayPlanId, getDayPlanIdForDate, getTariffSyncWindow
-// are imported from @/server/services/employee-day-plan-generator
-
-/**
- * Maps a Prisma EmployeeDayPlan record (with optional relations) to output schema shape.
- */
-function mapToOutput(record: Record<string, unknown>): EmployeeDayPlanOutput {
-  const result: EmployeeDayPlanOutput = {
-    id: record.id as string,
-    tenantId: record.tenantId as string,
-    employeeId: record.employeeId as string,
-    planDate: record.planDate as Date,
-    dayPlanId: (record.dayPlanId as string | null) ?? null,
-    shiftId: (record.shiftId as string | null) ?? null,
-    source: (record.source as string | null) ?? null,
-    notes: (record.notes as string | null) ?? null,
-    createdAt: record.createdAt as Date,
-    updatedAt: record.updatedAt as Date,
-  }
-
-  if (record.dayPlan !== undefined) {
-    result.dayPlan =
-      (record.dayPlan as {
-        id: string
-        code: string
-        name: string
-        planType: string
-      } | null) ?? null
-  }
-
-  if (record.shift !== undefined) {
-    result.shift =
-      (record.shift as {
-        id: string
-        code: string
-        name: string
-      } | null) ?? null
-  }
-
-  return result
-}
-
 // --- Router ---
 
 export const employeeDayPlansRouter = createTRPCRouter({
@@ -213,38 +139,10 @@ export const employeeDayPlansRouter = createTRPCRouter({
     .input(listInputSchema)
     .output(z.object({ data: z.array(employeeDayPlanOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Validate date range
-      if (input.from > input.to) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "from date must not be after to date",
-        })
-      }
-
-      const where: Record<string, unknown> = {
-        tenantId,
-        planDate: {
-          gte: new Date(input.from),
-          lte: new Date(input.to),
-        },
-      }
-
-      if (input.employeeId) {
-        where.employeeId = input.employeeId
-      }
-
-      const plans = await ctx.prisma.employeeDayPlan.findMany({
-        where,
-        include: edpListInclude,
-        orderBy: [{ employeeId: "asc" }, { planDate: "asc" }],
-      })
-
-      return {
-        data: plans.map((p) =>
-          mapToOutput(p as unknown as Record<string, unknown>)
-        ),
+      try {
+        return await edpService.list(ctx.prisma, ctx.tenantId!, input)
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -261,44 +159,10 @@ export const employeeDayPlansRouter = createTRPCRouter({
     .input(forEmployeeInputSchema)
     .output(z.object({ data: z.array(employeeDayPlanOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Validate date range
-      if (input.from > input.to) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "from date must not be after to date",
-        })
-      }
-
-      // Validate employee exists in tenant
-      const employee = await ctx.prisma.employee.findFirst({
-        where: { id: input.employeeId, tenantId },
-      })
-      if (!employee) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Employee not found",
-        })
-      }
-
-      const plans = await ctx.prisma.employeeDayPlan.findMany({
-        where: {
-          tenantId,
-          employeeId: input.employeeId,
-          planDate: {
-            gte: new Date(input.from),
-            lte: new Date(input.to),
-          },
-        },
-        include: edpDetailInclude,
-        orderBy: { planDate: "asc" },
-      })
-
-      return {
-        data: plans.map((p) =>
-          mapToOutput(p as unknown as Record<string, unknown>)
-        ),
+      try {
+        return await edpService.forEmployee(ctx.prisma, ctx.tenantId!, input)
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -314,21 +178,11 @@ export const employeeDayPlansRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(employeeDayPlanOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const plan = await ctx.prisma.employeeDayPlan.findFirst({
-        where: { id: input.id, tenantId },
-        include: edpListInclude,
-      })
-
-      if (!plan) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Employee day plan not found",
-        })
+      try {
+        return await edpService.getById(ctx.prisma, ctx.tenantId!, input.id)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapToOutput(plan as unknown as Record<string, unknown>)
     }),
 
   /**
@@ -345,82 +199,10 @@ export const employeeDayPlansRouter = createTRPCRouter({
     .input(createInputSchema)
     .output(employeeDayPlanOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Validate employee exists in tenant
-      const employee = await ctx.prisma.employee.findFirst({
-        where: { id: input.employeeId, tenantId },
-      })
-      if (!employee) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Invalid employee reference",
-        })
-      }
-
-      let dayPlanId = input.dayPlanId || null
-      const shiftId = input.shiftId || null
-
-      // If shiftId provided: validate shift, auto-populate dayPlanId
-      if (shiftId) {
-        const shift = await ctx.prisma.shift.findFirst({
-          where: { id: shiftId, tenantId },
-        })
-        if (!shift) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Invalid shift reference",
-          })
-        }
-        // Auto-populate dayPlanId from shift if not explicitly provided
-        if (!dayPlanId && shift.dayPlanId) {
-          dayPlanId = shift.dayPlanId
-        }
-      }
-
-      // Validate dayPlanId if provided (or auto-populated)
-      if (dayPlanId) {
-        const dp = await ctx.prisma.dayPlan.findFirst({
-          where: { id: dayPlanId, tenantId },
-        })
-        if (!dp) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Invalid day plan reference",
-          })
-        }
-      }
-
       try {
-        const plan = await ctx.prisma.employeeDayPlan.create({
-          data: {
-            tenantId,
-            employeeId: input.employeeId,
-            planDate: new Date(input.planDate),
-            dayPlanId,
-            shiftId,
-            source: input.source,
-            notes: input.notes?.trim() || null,
-          },
-          include: edpListInclude,
-        })
-
-        return mapToOutput(plan as unknown as Record<string, unknown>)
-      } catch (err: unknown) {
-        // Handle unique constraint violation on [employeeId, planDate]
-        if (
-          err &&
-          typeof err === "object" &&
-          "code" in err &&
-          err.code === "P2002"
-        ) {
-          throw new TRPCError({
-            code: "CONFLICT",
-            message:
-              "An employee day plan already exists for this employee and date",
-          })
-        }
-        throw err
+        return await edpService.create(ctx.prisma, ctx.tenantId!, input)
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -436,80 +218,11 @@ export const employeeDayPlansRouter = createTRPCRouter({
     .input(updateInputSchema)
     .output(employeeDayPlanOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify EDP exists (tenant-scoped)
-      const existing = await ctx.prisma.employeeDayPlan.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Employee day plan not found",
-        })
+      try {
+        return await edpService.update(ctx.prisma, ctx.tenantId!, input)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      // Handle shiftId update
-      if (input.shiftId !== undefined) {
-        if (input.shiftId === null) {
-          data.shiftId = null
-        } else {
-          const shift = await ctx.prisma.shift.findFirst({
-            where: { id: input.shiftId, tenantId },
-          })
-          if (!shift) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Invalid shift reference",
-            })
-          }
-          data.shiftId = input.shiftId
-
-          // Auto-populate dayPlanId from shift if dayPlanId not explicitly in input
-          if (input.dayPlanId === undefined && shift.dayPlanId) {
-            data.dayPlanId = shift.dayPlanId
-          }
-        }
-      }
-
-      // Handle dayPlanId update
-      if (input.dayPlanId !== undefined) {
-        if (input.dayPlanId === null) {
-          data.dayPlanId = null
-        } else {
-          const dp = await ctx.prisma.dayPlan.findFirst({
-            where: { id: input.dayPlanId, tenantId },
-          })
-          if (!dp) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Invalid day plan reference",
-            })
-          }
-          data.dayPlanId = input.dayPlanId
-        }
-      }
-
-      // Handle source update
-      if (input.source !== undefined) {
-        data.source = input.source
-      }
-
-      // Handle notes update
-      if (input.notes !== undefined) {
-        data.notes = input.notes === null ? null : input.notes.trim()
-      }
-
-      const plan = await ctx.prisma.employeeDayPlan.update({
-        where: { id: input.id },
-        data,
-        include: edpListInclude,
-      })
-
-      return mapToOutput(plan as unknown as Record<string, unknown>)
     }),
 
   /**
@@ -524,24 +237,11 @@ export const employeeDayPlansRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify EDP exists (tenant-scoped)
-      const existing = await ctx.prisma.employeeDayPlan.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Employee day plan not found",
-        })
+      try {
+        return await edpService.remove(ctx.prisma, ctx.tenantId!, input.id)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      await ctx.prisma.employeeDayPlan.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 
   /**
@@ -557,98 +257,11 @@ export const employeeDayPlansRouter = createTRPCRouter({
     .input(bulkCreateInputSchema)
     .output(z.object({ created: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Validate all entries first
-      for (const entry of input.entries) {
-        // Validate employee
-        const employee = await ctx.prisma.employee.findFirst({
-          where: { id: entry.employeeId, tenantId },
-        })
-        if (!employee) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `Invalid employee reference: ${entry.employeeId}`,
-          })
-        }
-
-        // Validate shift if provided
-        if (entry.shiftId) {
-          const shift = await ctx.prisma.shift.findFirst({
-            where: { id: entry.shiftId, tenantId },
-          })
-          if (!shift) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: `Invalid shift reference: ${entry.shiftId}`,
-            })
-          }
-        }
-
-        // Validate dayPlan if provided
-        if (entry.dayPlanId) {
-          const dp = await ctx.prisma.dayPlan.findFirst({
-            where: { id: entry.dayPlanId, tenantId },
-          })
-          if (!dp) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: `Invalid day plan reference: ${entry.dayPlanId}`,
-            })
-          }
-        }
+      try {
+        return await edpService.bulkCreate(ctx.prisma, ctx.tenantId!, input)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Resolve dayPlanId from shift for entries without explicit dayPlanId
-      const resolvedEntries = await Promise.all(
-        input.entries.map(async (entry) => {
-          let dayPlanId = entry.dayPlanId || null
-          const shiftId = entry.shiftId || null
-
-          if (shiftId && !dayPlanId) {
-            const shift = await ctx.prisma.shift.findFirst({
-              where: { id: shiftId, tenantId },
-            })
-            if (shift?.dayPlanId) {
-              dayPlanId = shift.dayPlanId
-            }
-          }
-
-          return { ...entry, dayPlanId, shiftId }
-        })
-      )
-
-      // Bulk upsert in transaction
-      await ctx.prisma.$transaction(async (tx) => {
-        for (const entry of resolvedEntries) {
-          const planDate = new Date(entry.planDate)
-          await tx.employeeDayPlan.upsert({
-            where: {
-              employeeId_planDate: {
-                employeeId: entry.employeeId,
-                planDate,
-              },
-            },
-            create: {
-              tenantId,
-              employeeId: entry.employeeId,
-              planDate,
-              dayPlanId: entry.dayPlanId,
-              shiftId: entry.shiftId,
-              source: entry.source,
-              notes: entry.notes?.trim() || null,
-            },
-            update: {
-              dayPlanId: entry.dayPlanId,
-              shiftId: entry.shiftId,
-              source: entry.source,
-              notes: entry.notes?.trim() || null,
-            },
-          })
-        }
-      })
-
-      return { created: input.entries.length }
     }),
 
   /**
@@ -663,39 +276,11 @@ export const employeeDayPlansRouter = createTRPCRouter({
     .input(deleteRangeInputSchema)
     .output(z.object({ deleted: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Validate date range
-      if (input.from > input.to) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "from date must not be after to date",
-        })
+      try {
+        return await edpService.deleteRange(ctx.prisma, ctx.tenantId!, input)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Validate employee exists in tenant
-      const employee = await ctx.prisma.employee.findFirst({
-        where: { id: input.employeeId, tenantId },
-      })
-      if (!employee) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Employee not found",
-        })
-      }
-
-      const result = await ctx.prisma.employeeDayPlan.deleteMany({
-        where: {
-          tenantId,
-          employeeId: input.employeeId,
-          planDate: {
-            gte: new Date(input.from),
-            lte: new Date(input.to),
-          },
-        },
-      })
-
-      return { deleted: result.count }
     }),
 
   /**
@@ -724,13 +309,14 @@ export const employeeDayPlansRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const generator = new EmployeeDayPlanGenerator(ctx.prisma)
-      return generator.generateFromTariff({
-        tenantId: ctx.tenantId!,
-        employeeIds: input.employeeIds,
-        from: input.from ? new Date(input.from) : undefined,
-        to: input.to ? new Date(input.to) : undefined,
-        overwriteTariffSource: input.overwriteTariffSource,
-      })
+      try {
+        return await edpService.generateFromTariff(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+      } catch (err) {
+        handleServiceError(err)
+      }
     }),
 })

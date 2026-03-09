@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
 import { useHasPermission } from '@/hooks'
-import { useUpdateUser, useUserGroups, useUsers } from '@/hooks/api'
+import { useUpdateUser, useUserGroups, useUsers } from '@/hooks'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { SearchInput } from '@/components/ui/search-input'

@@ -25,11 +25,11 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { useAccounts } from '@/hooks/api/use-accounts'
+import { useAccounts } from '@/hooks/use-accounts'
 import {
   useExportInterfaceAccounts,
   useSetExportInterfaceAccounts,
-} from '@/hooks/api/use-export-interfaces'
+} from '@/hooks/use-export-interfaces'
 import type { components } from '@/types/legacy-api-types'
 
 type ExportInterface = components['schemas']['ExportInterface']

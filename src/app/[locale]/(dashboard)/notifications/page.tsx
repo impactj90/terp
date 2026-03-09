@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { useMarkAllNotificationsRead, useMarkNotificationRead, useNotifications } from '@/hooks/api'
+import { useMarkAllNotificationsRead, useMarkNotificationRead, useNotifications } from '@/hooks'
 import { useUnreadCount } from '@/hooks/use-unread-count'
 import { NotificationPreferencesCard } from '@/components/notifications/notification-preferences'
 import { formatRelativeTime } from '@/lib/time-utils'

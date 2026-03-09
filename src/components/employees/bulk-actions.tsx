@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useBulkAssignTariff, useTariffs } from '@/hooks/api'
+import { useBulkAssignTariff, useTariffs } from '@/hooks'
 
 interface BulkFilters {
   search?: string

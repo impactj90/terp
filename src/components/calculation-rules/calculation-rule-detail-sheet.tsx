@@ -16,7 +16,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { useCalculationRule, useAccount } from '@/hooks/api'
+import { useCalculationRule, useAccount } from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type CalculationRule = components['schemas']['CalculationRule']

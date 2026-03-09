@@ -13,8 +13,8 @@
  */
 import { z } from "zod"
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init"
-import { createAdminClient } from "@/lib/supabase/admin"
-import { resolvePermissions, isUserAdmin } from "../lib/permissions"
+import { handleServiceError } from "@/trpc/errors"
+import * as authService from "@/lib/services/auth-service"
 
 // --- Output Schemas ---
 
@@ -60,32 +60,10 @@ export const authRouter = createTRPCRouter({
    * Replaces: GET /auth/me + partial GET /auth/permissions
    */
   me: protectedProcedure.output(meOutputSchema).query(async ({ ctx }) => {
-    const { user } = ctx
-
-    // Build permissions list
-    const permissions = resolvePermissions(user)
-
-    // Build tenants list from userTenants relation
-    const tenants = user.userTenants.map((ut) => ({
-      id: ut.tenant.id,
-      name: ut.tenant.name,
-      slug: ut.tenant.slug,
-    }))
-
-    return {
-      user: {
-        id: user.id,
-        email: user.email,
-        displayName: user.displayName,
-        avatarUrl: user.avatarUrl,
-        role: user.role,
-        tenantId: user.tenantId,
-        userGroupId: user.userGroupId,
-        employeeId: user.employeeId,
-        isActive: user.isActive,
-      },
-      permissions,
-      tenants,
+    try {
+      return await Promise.resolve(authService.getMe(ctx.user))
+    } catch (err) {
+      handleServiceError(err)
     }
   }),
 
@@ -99,13 +77,10 @@ export const authRouter = createTRPCRouter({
   permissions: protectedProcedure
     .output(permissionsOutputSchema)
     .query(async ({ ctx }) => {
-      const { user } = ctx
-      const permissions = resolvePermissions(user)
-      const admin = isUserAdmin(user)
-
-      return {
-        permission_ids: permissions,
-        is_admin: admin,
+      try {
+        return await Promise.resolve(authService.getPermissions(ctx.user))
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -118,11 +93,10 @@ export const authRouter = createTRPCRouter({
   logout: protectedProcedure
     .output(logoutOutputSchema)
     .mutation(async ({ ctx }) => {
-      const adminClient = createAdminClient()
-
-      // Sign out the user globally (invalidates all sessions)
-      await adminClient.auth.admin.signOut(ctx.session.access_token)
-
-      return { success: true }
+      try {
+        return await authService.logout(ctx.session.access_token)
+      } catch (err) {
+        handleServiceError(err)
+      }
     }),
 })

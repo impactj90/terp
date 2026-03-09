@@ -22,7 +22,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { useBookingTypes, useCreateBooking } from '@/hooks/api'
+import { useBookingTypes, useCreateBooking } from '@/hooks'
 import { formatDate, getCurrentTimeString } from '@/lib/time-utils'
 
 interface BookingCreateDialogProps {

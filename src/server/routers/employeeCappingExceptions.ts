@@ -14,10 +14,11 @@
  */
 import { z } from "zod"
 import { Prisma } from "@/generated/prisma/client"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as employeeCappingExceptionService from "@/lib/services/employee-capping-exception-service"
 
 // --- Permission Constants ---
 
@@ -124,32 +125,25 @@ export const employeeCappingExceptionsRouter = createTRPCRouter({
       z.object({ data: z.array(employeeCappingExceptionOutputSchema) })
     )
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const where: Record<string, unknown> = { tenantId }
-
-      if (input?.employeeId !== undefined) {
-        where.employeeId = input.employeeId
-      }
-
-      if (input?.cappingRuleId !== undefined) {
-        where.cappingRuleId = input.cappingRuleId
-      }
-
-      if (input?.year !== undefined) {
-        // Match Go behavior: return entries for specific year OR null year
-        where.OR = [{ year: input.year }, { year: null }]
-      }
-
-      const items = await ctx.prisma.employeeCappingException.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-      })
-
-      return {
-        data: items.map((item) =>
-          mapToOutput(item as unknown as Record<string, unknown>)
-        ),
+      try {
+        const items = await employeeCappingExceptionService.list(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+            ? {
+                employeeId: input.employeeId,
+                cappingRuleId: input.cappingRuleId,
+                year: input.year,
+              }
+            : undefined
+        )
+        return {
+          data: items.map((item) =>
+            mapToOutput(item as unknown as Record<string, unknown>)
+          ),
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -163,20 +157,16 @@ export const employeeCappingExceptionsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(employeeCappingExceptionOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const item = await ctx.prisma.employeeCappingException.findFirst({
-        where: { id: input.id, tenantId },
-      })
-
-      if (!item) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Employee capping exception not found",
-        })
+      try {
+        const item = await employeeCappingExceptionService.getById(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id
+        )
+        return mapToOutput(item as unknown as Record<string, unknown>)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapToOutput(item as unknown as Record<string, unknown>)
     }),
 
   /**
@@ -194,84 +184,16 @@ export const employeeCappingExceptionsRouter = createTRPCRouter({
     .input(createEmployeeCappingExceptionInputSchema)
     .output(employeeCappingExceptionOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Validate capping rule exists
-      const rule = await ctx.prisma.vacationCappingRule.findFirst({
-        where: { id: input.cappingRuleId, tenantId },
-      })
-      if (!rule) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Capping rule not found",
-        })
+      try {
+        const created = await employeeCappingExceptionService.create(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+        return mapToOutput(created as unknown as Record<string, unknown>)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Validate retainDays for partial exemption
-      if (
-        input.exemptionType === "partial" &&
-        (input.retainDays === undefined || input.retainDays === null)
-      ) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Retain days is required for partial exemption type",
-        })
-      }
-
-      // Check uniqueness: employee + rule + year
-      // Handle null year carefully
-      if (input.year !== undefined) {
-        const existing =
-          await ctx.prisma.employeeCappingException.findFirst({
-            where: {
-              employeeId: input.employeeId,
-              cappingRuleId: input.cappingRuleId,
-              year: input.year,
-            },
-          })
-        if (existing) {
-          throw new TRPCError({
-            code: "CONFLICT",
-            message:
-              "An exception for this employee, rule, and year already exists",
-          })
-        }
-      } else {
-        // Check for null-year duplicate
-        const existing =
-          await ctx.prisma.employeeCappingException.findFirst({
-            where: {
-              employeeId: input.employeeId,
-              cappingRuleId: input.cappingRuleId,
-              year: null,
-            },
-          })
-        if (existing) {
-          throw new TRPCError({
-            code: "CONFLICT",
-            message:
-              "An exception for this employee and rule (all years) already exists",
-          })
-        }
-      }
-
-      const created = await ctx.prisma.employeeCappingException.create({
-        data: {
-          tenantId,
-          employeeId: input.employeeId,
-          cappingRuleId: input.cappingRuleId,
-          exemptionType: input.exemptionType,
-          retainDays:
-            input.retainDays !== undefined
-              ? new Prisma.Decimal(input.retainDays)
-              : null,
-          year: input.year ?? null,
-          notes: input.notes?.trim() || null,
-          isActive: input.isActive,
-        },
-      })
-
-      return mapToOutput(created as unknown as Record<string, unknown>)
     }),
 
   /**
@@ -287,63 +209,16 @@ export const employeeCappingExceptionsRouter = createTRPCRouter({
     .input(updateEmployeeCappingExceptionInputSchema)
     .output(employeeCappingExceptionOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const existing =
-        await ctx.prisma.employeeCappingException.findFirst({
-          where: { id: input.id, tenantId },
-        })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Employee capping exception not found",
-        })
+      try {
+        const updated = await employeeCappingExceptionService.update(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+        return mapToOutput(updated as unknown as Record<string, unknown>)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      if (input.exemptionType !== undefined)
-        data.exemptionType = input.exemptionType
-      if (input.retainDays !== undefined) {
-        data.retainDays =
-          input.retainDays === null
-            ? null
-            : new Prisma.Decimal(input.retainDays)
-      }
-      if (input.year !== undefined) data.year = input.year
-      if (input.notes !== undefined) {
-        data.notes = input.notes === null ? null : input.notes.trim()
-      }
-      if (input.isActive !== undefined) data.isActive = input.isActive
-
-      // Determine effective exemption type after update
-      const effectiveType =
-        input.exemptionType ?? existing.exemptionType
-      const effectiveRetainDays =
-        input.retainDays !== undefined
-          ? input.retainDays
-          : existing.retainDays !== null
-            ? Number(existing.retainDays)
-            : null
-
-      // Validate retainDays required for partial
-      if (
-        effectiveType === "partial" &&
-        (effectiveRetainDays === null || effectiveRetainDays === undefined)
-      ) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Retain days is required for partial exemption type",
-        })
-      }
-
-      const updated = await ctx.prisma.employeeCappingException.update({
-        where: { id: input.id },
-        data,
-      })
-
-      return mapToOutput(updated as unknown as Record<string, unknown>)
     }),
 
   /**
@@ -356,23 +231,15 @@ export const employeeCappingExceptionsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const existing =
-        await ctx.prisma.employeeCappingException.findFirst({
-          where: { id: input.id, tenantId },
-        })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Employee capping exception not found",
-        })
+      try {
+        await employeeCappingExceptionService.remove(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id
+        )
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      await ctx.prisma.employeeCappingException.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 })

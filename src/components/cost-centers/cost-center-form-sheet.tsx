@@ -21,7 +21,7 @@ import {
 import {
   useCreateCostCenter,
   useUpdateCostCenter,
-} from '@/hooks/api'
+} from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type CostCenter = components['schemas']['CostCenter']

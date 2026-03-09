@@ -10,12 +10,12 @@ import {
   useCorrectionMessages,
   useUpdateCorrectionMessage,
   useDepartments,
-} from '@/hooks/api'
+} from '@/hooks'
 import type {
   CorrectionAssistantItem,
   CorrectionMessage,
   UpdateCorrectionMessageRequest,
-} from '@/hooks/api/use-correction-assistant'
+} from '@/hooks/use-correction-assistant'
 import type { FlattenedCorrectionRow } from '@/components/correction-assistant/correction-assistant-data-table'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'

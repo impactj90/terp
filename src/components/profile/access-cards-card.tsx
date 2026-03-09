@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useEmployeeCards } from '@/hooks/api'
+import { useEmployeeCards } from '@/hooks'
 import { CreditCard, Barcode, KeyRound, CreditCardIcon } from 'lucide-react'
 import { useTranslations, useLocale } from 'next-intl'
 import type { components } from '@/types/legacy-api-types'

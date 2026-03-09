@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useEmployeeAbsences } from '@/hooks/api'
+import { useEmployeeAbsences } from '@/hooks'
 import { formatDisplayDate } from '@/lib/time-utils'
 import type { components } from '@/types/legacy-api-types'
 

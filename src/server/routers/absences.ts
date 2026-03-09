@@ -21,10 +21,9 @@
  * @see apps/api/internal/repository/absenceday.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { Decimal } from "@prisma/client/runtime/client"
-import type { PrismaClient } from "@/generated/prisma/client"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
+import { handleServiceError } from "@/trpc/errors"
 import {
   requirePermission,
   requireEmployeePermission,
@@ -32,7 +31,7 @@ import {
   type DataScope,
 } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
-import { RecalcService } from "../services/recalc"
+import * as absencesService from "@/lib/services/absences-service"
 
 // --- Permission Constants ---
 // Matching Go route registration at apps/api/internal/handler/routes.go:513-562
@@ -150,79 +149,6 @@ const cancelInputSchema = z.object({
   id: z.string().uuid(),
 })
 
-// --- Prisma Include Objects ---
-
-const absenceDayListInclude = {
-  employee: {
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      personnelNumber: true,
-      isActive: true,
-      departmentId: true,
-    },
-  },
-  absenceType: {
-    select: {
-      id: true,
-      code: true,
-      name: true,
-      category: true,
-      color: true,
-      deductsVacation: true,
-    },
-  },
-} as const
-
-// --- Data Scope Helpers ---
-
-/**
- * Builds a Prisma WHERE clause for absence data scope filtering.
- * Absences are scoped via the employee relation.
- */
-function buildAbsenceDataScopeWhere(
-  dataScope: DataScope
-): Record<string, unknown> | null {
-  if (dataScope.type === "department") {
-    return { employee: { departmentId: { in: dataScope.departmentIds } } }
-  } else if (dataScope.type === "employee") {
-    return { employeeId: { in: dataScope.employeeIds } }
-  }
-  return null
-}
-
-/**
- * Checks that an absence falls within the user's data scope.
- * Throws FORBIDDEN if not.
- */
-function checkAbsenceDataScope(
-  dataScope: DataScope,
-  item: {
-    employeeId: string
-    employee?: { departmentId: string | null } | null
-  }
-): void {
-  if (dataScope.type === "department") {
-    if (
-      !item.employee?.departmentId ||
-      !dataScope.departmentIds.includes(item.employee.departmentId)
-    ) {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "Absence not within data scope",
-      })
-    }
-  } else if (dataScope.type === "employee") {
-    if (!dataScope.employeeIds.includes(item.employeeId)) {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "Absence not within data scope",
-      })
-    }
-  }
-}
-
 // --- Helper Functions ---
 
 /**
@@ -299,185 +225,6 @@ function mapAbsenceDayToOutput(
   return result as z.infer<typeof absenceDayOutputSchema>
 }
 
-/**
- * Determines if a date should be skipped during range creation.
- * Port of Go shouldSkipDate() from service/absence.go.
- *
- * Skip rules:
- * 1. Weekends (Saturday=6, Sunday=0 via getUTCDay())
- * 2. No EmployeeDayPlan for the date (no_plan)
- * 3. EmployeeDayPlan exists but dayPlanId is null (off_day)
- *
- * Holidays are NOT skipped per ZMI spec Section 18.2.
- */
-function shouldSkipDate(
-  date: Date,
-  dayPlanMap: Map<string, { dayPlanId: string | null }>
-): boolean {
-  const dayOfWeek = date.getUTCDay()
-  if (dayOfWeek === 0 || dayOfWeek === 6) return true // weekend
-
-  const dateKey = date.toISOString().split("T")[0]!
-  const dayPlan = dayPlanMap.get(dateKey)
-  if (!dayPlan) return true // no plan -> skip
-  if (!dayPlan.dayPlanId) return true // off-day -> skip
-
-  return false
-}
-
-// --- Recalculation Helpers ---
-
-/**
- * Triggers recalculation for a specific employee/day.
- * Best effort -- errors logged but don't fail parent operation.
- * Uses RecalcService which triggers both daily calc AND monthly recalc.
- *
- * @see ZMI-TICKET-243
- */
-async function triggerRecalc(
-  prisma: PrismaClient,
-  tenantId: string,
-  employeeId: string,
-  date: Date
-): Promise<void> {
-  try {
-    const service = new RecalcService(prisma)
-    await service.triggerRecalc(tenantId, employeeId, date)
-  } catch (error) {
-    console.error(
-      `Recalc failed for employee ${employeeId} on ${date.toISOString().split("T")[0]}:`,
-      error
-    )
-  }
-}
-
-/**
- * Triggers recalculation for a date range.
- * Best effort -- errors logged but don't fail parent operation.
- * Uses RecalcService for centralized recalc logic.
- *
- * @see ZMI-TICKET-243
- */
-async function triggerRecalcRange(
-  prisma: PrismaClient,
-  tenantId: string,
-  employeeId: string,
-  fromDate: Date,
-  toDate: Date
-): Promise<void> {
-  try {
-    const service = new RecalcService(prisma)
-    await service.triggerRecalcRange(tenantId, employeeId, fromDate, toDate)
-  } catch (error) {
-    console.error(
-      `Recalc range failed for employee ${employeeId}:`,
-      error
-    )
-  }
-}
-
-/**
- * Recalculates vacation taken for an employee/year.
- * Sums up all approved absence days for vacation-deducting types,
- * weighted by dayPlan.vacationDeduction * absence.duration.
- *
- * Port of Go VacationService.RecalculateTaken().
- */
-async function recalculateVacationTaken(
-  prisma: PrismaClient,
-  tenantId: string,
-  employeeId: string,
-  year: number
-): Promise<void> {
-  // 1. Get all absence types where deductsVacation = true
-  const vacationTypes = await prisma.absenceType.findMany({
-    where: {
-      OR: [{ tenantId }, { tenantId: null }],
-      deductsVacation: true,
-    },
-    select: { id: true },
-  })
-
-  if (vacationTypes.length === 0) return
-
-  const typeIds = vacationTypes.map((t) => t.id)
-
-  // 2. Year range
-  const yearStart = new Date(Date.UTC(year, 0, 1))
-  const yearEnd = new Date(Date.UTC(year, 11, 31))
-
-  // 3. Fetch approved absence days for these types in the year
-  const absenceDays = await prisma.absenceDay.findMany({
-    where: {
-      employeeId,
-      absenceTypeId: { in: typeIds },
-      status: "approved",
-      absenceDate: { gte: yearStart, lte: yearEnd },
-    },
-    select: {
-      absenceDate: true,
-      duration: true,
-    },
-  })
-
-  // 4. Fetch day plans for the year (for vacationDeduction)
-  const dayPlans = await prisma.employeeDayPlan.findMany({
-    where: {
-      employeeId,
-      planDate: { gte: yearStart, lte: yearEnd },
-    },
-    include: {
-      dayPlan: {
-        select: { vacationDeduction: true },
-      },
-    },
-  })
-
-  // Build dayPlan lookup by date
-  const dayPlanMap = new Map<string, number>()
-  for (const dp of dayPlans) {
-    const dateKey = dp.planDate.toISOString().split("T")[0]!
-    const deduction = dp.dayPlan?.vacationDeduction
-    dayPlanMap.set(
-      dateKey,
-      deduction instanceof Decimal
-        ? deduction.toNumber()
-        : Number(deduction ?? 1)
-    )
-  }
-
-  // 5. Calculate total taken
-  let totalTaken = 0
-  for (const absence of absenceDays) {
-    const dateKey = absence.absenceDate.toISOString().split("T")[0]!
-    const vacationDeduction = dayPlanMap.get(dateKey) ?? 1.0
-    const dur =
-      absence.duration instanceof Decimal
-        ? absence.duration.toNumber()
-        : Number(absence.duration)
-    totalTaken += vacationDeduction * dur
-  }
-
-  // 6. Upsert vacation balance
-  await prisma.vacationBalance.upsert({
-    where: {
-      employeeId_year: { employeeId, year },
-    },
-    update: {
-      taken: totalTaken,
-    },
-    create: {
-      tenantId,
-      employeeId,
-      year,
-      taken: totalTaken,
-      entitlement: 0,
-      carryover: 0,
-      adjustments: 0,
-    },
-  })
-}
-
 // --- Router ---
 
 export const absencesRouter = createTRPCRouter({
@@ -505,67 +252,22 @@ export const absencesRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const page = input.page ?? 1
-      const pageSize = input.pageSize ?? 50
-      const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
-
-      const where: Record<string, unknown> = { tenantId }
-
-      // Optional filters
-      if (input.employeeId) {
-        where.employeeId = input.employeeId
-      }
-
-      if (input.absenceTypeId) {
-        where.absenceTypeId = input.absenceTypeId
-      }
-
-      if (input.status) {
-        where.status = input.status
-      }
-
-      // Date range filters
-      if (input.fromDate || input.toDate) {
-        const absenceDate: Record<string, unknown> = {}
-        if (input.fromDate) {
-          absenceDate.gte = new Date(input.fromDate)
+      try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const { items, total } = await absencesService.list(
+          ctx.prisma,
+          ctx.tenantId!,
+          input,
+          dataScope
+        )
+        return {
+          items: items.map((item) =>
+            mapAbsenceDayToOutput(item as unknown as Record<string, unknown>)
+          ),
+          total,
         }
-        if (input.toDate) {
-          absenceDate.lte = new Date(input.toDate)
-        }
-        where.absenceDate = absenceDate
-      }
-
-      // Apply data scope filtering
-      const scopeWhere = buildAbsenceDataScopeWhere(dataScope)
-      if (scopeWhere) {
-        if (scopeWhere.employee && where.employee) {
-          where.employee = {
-            ...((where.employee as Record<string, unknown>) || {}),
-            ...((scopeWhere.employee as Record<string, unknown>) || {}),
-          }
-        } else {
-          Object.assign(where, scopeWhere)
-        }
-      }
-
-      const [items, total] = await Promise.all([
-        ctx.prisma.absenceDay.findMany({
-          where,
-          include: absenceDayListInclude,
-          skip: (page - 1) * pageSize,
-          take: pageSize,
-          orderBy: { absenceDate: "desc" },
-        }),
-        ctx.prisma.absenceDay.count({ where }),
-      ])
-
-      return {
-        items: items.map((item) =>
-          mapAbsenceDayToOutput(item as unknown as Record<string, unknown>)
-        ),
-        total,
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -591,36 +293,18 @@ export const absencesRouter = createTRPCRouter({
     .input(forEmployeeInputSchema)
     .output(z.array(absenceDayOutputSchema))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const { employeeId } = input
-
-      const where: Record<string, unknown> = { tenantId, employeeId }
-
-      if (input.status) {
-        where.status = input.status
+      try {
+        const absences = await absencesService.forEmployee(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+        return absences.map((a) =>
+          mapAbsenceDayToOutput(a as unknown as Record<string, unknown>)
+        )
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Date range filters
-      if (input.fromDate || input.toDate) {
-        const absenceDate: Record<string, unknown> = {}
-        if (input.fromDate) {
-          absenceDate.gte = new Date(input.fromDate)
-        }
-        if (input.toDate) {
-          absenceDate.lte = new Date(input.toDate)
-        }
-        where.absenceDate = absenceDate
-      }
-
-      const absences = await ctx.prisma.absenceDay.findMany({
-        where,
-        include: absenceDayListInclude,
-        orderBy: { absenceDate: "desc" },
-      })
-
-      return absences.map((a) =>
-        mapAbsenceDayToOutput(a as unknown as Record<string, unknown>)
-      )
     }),
 
   /**
@@ -640,27 +324,20 @@ export const absencesRouter = createTRPCRouter({
     .input(getByIdInputSchema)
     .output(absenceDayOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
-
-      const absence = await ctx.prisma.absenceDay.findFirst({
-        where: { id: input.id, tenantId },
-        include: absenceDayListInclude,
-      })
-
-      if (!absence) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Absence not found",
-        })
+      try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const absence = await absencesService.getById(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id,
+          dataScope
+        )
+        return mapAbsenceDayToOutput(
+          absence as unknown as Record<string, unknown>
+        )
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Check data scope
-      checkAbsenceDataScope(dataScope, absence)
-
-      return mapAbsenceDayToOutput(
-        absence as unknown as Record<string, unknown>
-      )
     }),
 
   /**
@@ -688,157 +365,22 @@ export const absencesRouter = createTRPCRouter({
     .input(createRangeInputSchema)
     .output(createRangeOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const {
-        employeeId,
-        absenceTypeId,
-        fromDate: fromDateStr,
-        toDate: toDateStr,
-        duration,
-        halfDayPeriod,
-        notes,
-      } = input
-
-      const fromDate = new Date(fromDateStr)
-      const toDate = new Date(toDateStr)
-
-      // 1. Validate fromDate <= toDate
-      if (fromDate > toDate) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "fromDate must be before or equal to toDate",
-        })
-      }
-
-      // 2. Validate absence type exists, is active, belongs to tenant (or system type)
-      const absenceType = await ctx.prisma.absenceType.findFirst({
-        where: {
-          id: absenceTypeId,
-          OR: [{ tenantId }, { tenantId: null }],
-          isActive: true,
-        },
-      })
-
-      if (!absenceType) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Absence type not found or inactive",
-        })
-      }
-
-      // 3. Batch-fetch EmployeeDayPlan records for the date range
-      const dayPlans = await ctx.prisma.employeeDayPlan.findMany({
-        where: {
-          employeeId,
-          planDate: { gte: fromDate, lte: toDate },
-        },
-        select: {
-          planDate: true,
-          dayPlanId: true,
-        },
-      })
-
-      const dayPlanMap = new Map<string, { dayPlanId: string | null }>()
-      for (const dp of dayPlans) {
-        const dateKey = dp.planDate.toISOString().split("T")[0]!
-        dayPlanMap.set(dateKey, { dayPlanId: dp.dayPlanId })
-      }
-
-      // 4. Batch-fetch existing absences for employee in range where status != 'cancelled'
-      const existingAbsences = await ctx.prisma.absenceDay.findMany({
-        where: {
-          employeeId,
-          absenceDate: { gte: fromDate, lte: toDate },
-          status: { not: "cancelled" },
-        },
-        select: { absenceDate: true },
-      })
-
-      const existingMap = new Set<string>()
-      for (const ea of existingAbsences) {
-        existingMap.add(ea.absenceDate.toISOString().split("T")[0]!)
-      }
-
-      // 5. Iterate day-by-day and build records to create
-      const toCreate: Array<{
-        tenantId: string
-        employeeId: string
-        absenceDate: Date
-        absenceTypeId: string
-        duration: number
-        halfDayPeriod: string | null
-        status: string
-        notes: string | null
-        createdBy: string | null
-      }> = []
-      const skippedDates: string[] = []
-
-      const currentDate = new Date(fromDate)
-      while (currentDate <= toDate) {
-        const dateKey = currentDate.toISOString().split("T")[0]!
-
-        if (shouldSkipDate(currentDate, dayPlanMap)) {
-          skippedDates.push(dateKey)
-        } else if (existingMap.has(dateKey)) {
-          skippedDates.push(dateKey)
-        } else {
-          toCreate.push({
-            tenantId,
-            employeeId,
-            absenceDate: new Date(currentDate),
-            absenceTypeId,
-            duration,
-            halfDayPeriod: halfDayPeriod ?? null,
-            status: "pending",
-            notes: notes ?? null,
-            createdBy: ctx.user?.id ?? null,
-          })
+      try {
+        const { createdAbsences, skippedDates } =
+          await absencesService.createRange(
+            ctx.prisma,
+            ctx.tenantId!,
+            input,
+            ctx.user?.id ?? null
+          )
+        return {
+          createdDays: createdAbsences.map((a) =>
+            mapAbsenceDayToOutput(a as unknown as Record<string, unknown>)
+          ),
+          skippedDates,
         }
-
-        // Advance to next day
-        currentDate.setUTCDate(currentDate.getUTCDate() + 1)
-      }
-
-      // 6. Batch create
-      if (toCreate.length > 0) {
-        await ctx.prisma.absenceDay.createMany({ data: toCreate })
-      }
-
-      // 7. Re-fetch created records with relations
-      const createdAbsences = toCreate.length > 0
-        ? await ctx.prisma.absenceDay.findMany({
-            where: {
-              employeeId,
-              absenceTypeId,
-              absenceDate: {
-                gte: fromDate,
-                lte: toDate,
-              },
-              status: "pending",
-              createdBy: ctx.user?.id ?? undefined,
-            },
-            include: absenceDayListInclude,
-            orderBy: { absenceDate: "asc" },
-          })
-        : []
-
-      // 8. Trigger recalc range (best effort)
-      if (toCreate.length > 0) {
-        await triggerRecalcRange(
-          ctx.prisma,
-          tenantId,
-          employeeId,
-          fromDate,
-          toDate
-        )
-      }
-
-      // 9. Return created days + skipped dates
-      return {
-        createdDays: createdAbsences.map((a) =>
-          mapAbsenceDayToOutput(a as unknown as Record<string, unknown>)
-        ),
-        skippedDates,
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -859,62 +401,20 @@ export const absencesRouter = createTRPCRouter({
     .input(updateInputSchema)
     .output(absenceDayOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
-
-      // 1. Fetch the absence
-      const absence = await ctx.prisma.absenceDay.findFirst({
-        where: { id: input.id, tenantId },
-        include: {
-          employee: {
-            select: { id: true, departmentId: true },
-          },
-        },
-      })
-
-      if (!absence) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Absence not found",
-        })
+      try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const updated = await absencesService.update(
+          ctx.prisma,
+          ctx.tenantId!,
+          input,
+          dataScope
+        )
+        return mapAbsenceDayToOutput(
+          updated as unknown as Record<string, unknown>
+        )
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // 2. Check data scope
-      checkAbsenceDataScope(dataScope, absence)
-
-      // 3. Validate status is pending
-      if (absence.status !== "pending") {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Only pending absences can be updated",
-        })
-      }
-
-      // 4. Build update data
-      const updateData: Record<string, unknown> = {}
-      if (input.duration !== undefined) {
-        updateData.duration = input.duration
-      }
-      if (input.halfDayPeriod !== undefined) {
-        updateData.halfDayPeriod = input.halfDayPeriod
-      }
-      if (input.notes !== undefined) {
-        updateData.notes = input.notes
-      }
-
-      // 5. Update
-      const updated = await ctx.prisma.absenceDay.update({
-        where: { id: input.id },
-        data: updateData,
-        include: absenceDayListInclude,
-      })
-
-      // 6. Trigger recalc (best effort)
-      await triggerRecalc(ctx.prisma, tenantId, absence.employeeId, absence.absenceDate)
-
-      return mapAbsenceDayToOutput(
-        updated as unknown as Record<string, unknown>
-      )
     }),
 
   /**
@@ -935,61 +435,18 @@ export const absencesRouter = createTRPCRouter({
     .input(deleteInputSchema)
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
-
-      // 1. Fetch the absence with type info
-      const absence = await ctx.prisma.absenceDay.findFirst({
-        where: { id: input.id, tenantId },
-        include: {
-          employee: {
-            select: { id: true, departmentId: true },
-          },
-          absenceType: {
-            select: { deductsVacation: true },
-          },
-        },
-      })
-
-      if (!absence) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Absence not found",
-        })
+      try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        await absencesService.remove(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id,
+          dataScope
+        )
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // 2. Check data scope
-      checkAbsenceDataScope(dataScope, absence)
-
-      const wasApproved = absence.status === "approved"
-      const deductsVacation = absence.absenceType?.deductsVacation ?? false
-      const absenceDate = absence.absenceDate
-      const absenceYear = absenceDate.getUTCFullYear()
-
-      // 3. Hard delete
-      await ctx.prisma.absenceDay.delete({ where: { id: input.id } })
-
-      // 4. Trigger recalc (best effort)
-      await triggerRecalc(ctx.prisma, tenantId, absence.employeeId, absenceDate)
-
-      // 5. If was approved and type deducts vacation, recalculate vacation balance
-      if (wasApproved && deductsVacation) {
-        try {
-          await recalculateVacationTaken(
-            ctx.prisma,
-            tenantId,
-            absence.employeeId,
-            absenceYear
-          )
-        } catch (error) {
-          console.error(
-            `Vacation recalc failed for employee ${absence.employeeId}:`,
-            error
-          )
-        }
-      }
-
-      return { success: true }
     }),
 
   /**
@@ -1012,115 +469,21 @@ export const absencesRouter = createTRPCRouter({
     .input(approveInputSchema)
     .output(absenceDayOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
-
-      // 1. Fetch absence with relations
-      const absence = await ctx.prisma.absenceDay.findFirst({
-        where: { id: input.id, tenantId },
-        include: {
-          employee: {
-            select: { id: true, departmentId: true },
-          },
-          absenceType: {
-            select: {
-              id: true,
-              name: true,
-              deductsVacation: true,
-            },
-          },
-        },
-      })
-
-      if (!absence) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Absence not found",
-        })
-      }
-
-      // 2. Check data scope
-      checkAbsenceDataScope(dataScope, absence)
-
-      // 3. Validate status is pending
-      if (absence.status !== "pending") {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Only pending absences can be approved",
-        })
-      }
-
-      // 4. Update status to approved
-      const updated = await ctx.prisma.absenceDay.update({
-        where: { id: input.id },
-        data: {
-          status: "approved",
-          approvedBy: ctx.user!.id,
-          approvedAt: new Date(),
-        },
-        include: absenceDayListInclude,
-      })
-
-      // 5. Trigger recalc (best effort)
-      await triggerRecalc(ctx.prisma, tenantId, absence.employeeId, absence.absenceDate)
-
-      // 6. If deductsVacation, recalculate vacation balance (best effort)
-      if (absence.absenceType?.deductsVacation) {
-        try {
-          const absenceYear = absence.absenceDate.getUTCFullYear()
-          await recalculateVacationTaken(
-            ctx.prisma,
-            tenantId,
-            absence.employeeId,
-            absenceYear
-          )
-        } catch (error) {
-          console.error(
-            `Vacation recalc failed for employee ${absence.employeeId}:`,
-            error
-          )
-        }
-      }
-
-      // 7. Send notification to employee (best effort)
       try {
-        const dateLabel = absence.absenceDate.toISOString().split("T")[0]
-        const typeName = absence.absenceType?.name ?? "Absence"
-        const link = "/absences"
-
-        const userTenant = await ctx.prisma.$queryRaw<
-          { user_id: string }[]
-        >`
-          SELECT ut.user_id
-          FROM user_tenants ut
-          JOIN users u ON u.id = ut.user_id
-          WHERE ut.tenant_id = ${tenantId}::uuid
-            AND u.employee_id = ${absence.employeeId}::uuid
-          LIMIT 1
-        `
-
-        if (userTenant && userTenant.length > 0) {
-          await ctx.prisma.notification.create({
-            data: {
-              tenantId,
-              userId: userTenant[0]!.user_id,
-              type: "approvals",
-              title: "Absence approved",
-              message: `${typeName} on ${dateLabel} was approved.`,
-              link,
-            },
-          })
-        }
-      } catch {
-        console.error(
-          "Failed to send approval notification for absence",
-          input.id
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const updated = await absencesService.approve(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id,
+          ctx.user!.id,
+          dataScope
         )
+        return mapAbsenceDayToOutput(
+          updated as unknown as Record<string, unknown>
+        )
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapAbsenceDayToOutput(
-        updated as unknown as Record<string, unknown>
-      )
     }),
 
   /**
@@ -1143,96 +506,21 @@ export const absencesRouter = createTRPCRouter({
     .input(rejectInputSchema)
     .output(absenceDayOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
-
-      // 1. Fetch absence with relations
-      const absence = await ctx.prisma.absenceDay.findFirst({
-        where: { id: input.id, tenantId },
-        include: {
-          employee: {
-            select: { id: true, departmentId: true },
-          },
-          absenceType: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
-      })
-
-      if (!absence) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Absence not found",
-        })
-      }
-
-      // 2. Check data scope
-      checkAbsenceDataScope(dataScope, absence)
-
-      // 3. Validate status is pending
-      if (absence.status !== "pending") {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Only pending absences can be rejected",
-        })
-      }
-
-      // 4. Update status to rejected
-      const updated = await ctx.prisma.absenceDay.update({
-        where: { id: input.id },
-        data: {
-          status: "rejected",
-          rejectionReason: input.reason ?? null,
-        },
-        include: absenceDayListInclude,
-      })
-
-      // 5. Trigger recalc (best effort)
-      await triggerRecalc(ctx.prisma, tenantId, absence.employeeId, absence.absenceDate)
-
-      // 6. Send rejection notification to employee (best effort)
       try {
-        const dateLabel = absence.absenceDate.toISOString().split("T")[0]
-        const typeName = absence.absenceType?.name ?? "Absence"
-        const reasonSuffix = input.reason ? ` (Reason: ${input.reason})` : ""
-        const link = "/absences"
-
-        const userTenant = await ctx.prisma.$queryRaw<
-          { user_id: string }[]
-        >`
-          SELECT ut.user_id
-          FROM user_tenants ut
-          JOIN users u ON u.id = ut.user_id
-          WHERE ut.tenant_id = ${tenantId}::uuid
-            AND u.employee_id = ${absence.employeeId}::uuid
-          LIMIT 1
-        `
-
-        if (userTenant && userTenant.length > 0) {
-          await ctx.prisma.notification.create({
-            data: {
-              tenantId,
-              userId: userTenant[0]!.user_id,
-              type: "approvals",
-              title: "Absence rejected",
-              message: `${typeName} on ${dateLabel} was rejected.${reasonSuffix}`,
-              link,
-            },
-          })
-        }
-      } catch {
-        console.error(
-          "Failed to send rejection notification for absence",
-          input.id
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const updated = await absencesService.reject(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id,
+          input.reason,
+          dataScope
         )
+        return mapAbsenceDayToOutput(
+          updated as unknown as Record<string, unknown>
+        )
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapAbsenceDayToOutput(
-        updated as unknown as Record<string, unknown>
-      )
     }),
 
   /**
@@ -1254,74 +542,20 @@ export const absencesRouter = createTRPCRouter({
     .input(cancelInputSchema)
     .output(absenceDayOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
-
-      // 1. Fetch absence with relations
-      const absence = await ctx.prisma.absenceDay.findFirst({
-        where: { id: input.id, tenantId },
-        include: {
-          employee: {
-            select: { id: true, departmentId: true },
-          },
-          absenceType: {
-            select: {
-              id: true,
-              deductsVacation: true,
-            },
-          },
-        },
-      })
-
-      if (!absence) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Absence not found",
-        })
+      try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const updated = await absencesService.cancel(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id,
+          dataScope
+        )
+        return mapAbsenceDayToOutput(
+          updated as unknown as Record<string, unknown>
+        )
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // 2. Check data scope
-      checkAbsenceDataScope(dataScope, absence)
-
-      // 3. Validate status is approved (only approved can be cancelled)
-      if (absence.status !== "approved") {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Only approved absences can be cancelled",
-        })
-      }
-
-      // 4. Update status to cancelled
-      const updated = await ctx.prisma.absenceDay.update({
-        where: { id: input.id },
-        data: { status: "cancelled" },
-        include: absenceDayListInclude,
-      })
-
-      // 5. Trigger recalc (best effort)
-      await triggerRecalc(ctx.prisma, tenantId, absence.employeeId, absence.absenceDate)
-
-      // 6. If deductsVacation, recalculate vacation balance (best effort)
-      if (absence.absenceType?.deductsVacation) {
-        try {
-          const absenceYear = absence.absenceDate.getUTCFullYear()
-          await recalculateVacationTaken(
-            ctx.prisma,
-            tenantId,
-            absence.employeeId,
-            absenceYear
-          )
-        } catch (error) {
-          console.error(
-            `Vacation recalc failed for employee ${absence.employeeId}:`,
-            error
-          )
-        }
-      }
-
-      return mapAbsenceDayToOutput(
-        updated as unknown as Record<string, unknown>
-      )
     }),
 })
 
@@ -1329,7 +563,11 @@ export const absencesRouter = createTRPCRouter({
 
 export {
   mapAbsenceDayToOutput,
+}
+
+// Re-export from service for backward compatibility
+export {
   buildAbsenceDataScopeWhere,
   checkAbsenceDataScope,
   shouldSkipDate,
-}
+} from "@/lib/services/absences-service"

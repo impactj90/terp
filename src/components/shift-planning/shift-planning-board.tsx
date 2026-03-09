@@ -36,7 +36,7 @@ import {
   useShifts,
   useEmployeeDayPlans,
   useBulkCreateEmployeeDayPlans,
-} from '@/hooks/api'
+} from '@/hooks'
 import { ShiftPalette } from './shift-palette'
 import { ShiftAssignmentFormDialog } from './shift-assignment-form-dialog'
 import { BulkAssignDialog } from './bulk-assign-dialog'

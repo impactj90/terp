@@ -17,7 +17,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { useCloseMonthBatch } from '@/hooks/api'
+import { useCloseMonthBatch } from '@/hooks'
 
 interface BatchCloseDialogProps {
   open: boolean

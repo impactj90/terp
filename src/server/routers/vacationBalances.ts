@@ -14,8 +14,6 @@
  * @see apps/api/internal/handler/vacation_balance.go
  */
 import { z } from "zod"
-import type { Prisma } from "@/generated/prisma/client"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import {
   requirePermission,
@@ -23,32 +21,13 @@ import {
   type DataScope,
 } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
-import {
-  vacationBalanceOutputSchema,
-  mapBalanceToOutput,
-  employeeSelect,
-} from "../lib/vacation-balance-output"
+import { handleServiceError } from "@/trpc/errors"
+import { vacationBalanceOutputSchema } from "../lib/vacation-balance-output"
+import * as service from "@/lib/services/vacation-balances-service"
 
 // --- Permission Constants ---
 
 const ABSENCES_MANAGE = permissionIdByKey("absences.manage")!
-
-// --- Data Scope Helper ---
-
-/**
- * Builds a Prisma WHERE clause for vacation balance data scope filtering.
- * Vacation balances are scoped via the employee relation.
- */
-function buildVacationBalanceDataScopeWhere(
-  dataScope: DataScope
-): Record<string, unknown> | null {
-  if (dataScope.type === "department") {
-    return { employee: { departmentId: { in: dataScope.departmentIds } } }
-  } else if (dataScope.type === "employee") {
-    return { employeeId: { in: dataScope.employeeIds } }
-  }
-  return null
-}
 
 // --- Router ---
 
@@ -84,50 +63,17 @@ export const vacationBalancesRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const page = input.page ?? 1
-      const pageSize = input.pageSize ?? 50
       const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
-
-      // Build where clause
-      const where: Record<string, unknown> = { tenantId }
-      if (input.employeeId) {
-        where.employeeId = input.employeeId
-      }
-      if (input.year) {
-        where.year = input.year
-      }
-      if (input.departmentId) {
-        where.employee = { departmentId: input.departmentId }
-      }
-
-      // Apply data scope filtering
-      const scopeWhere = buildVacationBalanceDataScopeWhere(dataScope)
-      if (scopeWhere) {
-        if (scopeWhere.employee && where.employee) {
-          where.employee = {
-            ...((where.employee as Record<string, unknown>) || {}),
-            ...((scopeWhere.employee as Record<string, unknown>) || {}),
-          }
-        } else {
-          Object.assign(where, scopeWhere)
-        }
-      }
-
-      const [items, total] = await Promise.all([
-        ctx.prisma.vacationBalance.findMany({
-          where,
-          include: { employee: { select: employeeSelect } },
-          skip: (page - 1) * pageSize,
-          take: pageSize,
-          orderBy: { year: "desc" },
-        }),
-        ctx.prisma.vacationBalance.count({ where }),
-      ])
-
-      return {
-        items: items.map(mapBalanceToOutput),
-        total,
+      try {
+        return await service.listBalances(ctx.prisma, ctx.tenantId!, dataScope, {
+          page: input.page ?? 1,
+          pageSize: input.pageSize ?? 50,
+          employeeId: input.employeeId,
+          year: input.year,
+          departmentId: input.departmentId,
+        })
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -142,21 +88,11 @@ export const vacationBalancesRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(vacationBalanceOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const balance = await ctx.prisma.vacationBalance.findFirst({
-        where: { id: input.id, tenantId },
-        include: { employee: { select: employeeSelect } },
-      })
-
-      if (!balance) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Vacation balance not found",
-        })
+      try {
+        return await service.getBalanceById(ctx.prisma, ctx.tenantId!, input.id)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapBalanceToOutput(balance)
     }),
 
   /**
@@ -181,39 +117,11 @@ export const vacationBalancesRouter = createTRPCRouter({
     )
     .output(vacationBalanceOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Check for existing balance
-      const existing = await ctx.prisma.vacationBalance.findFirst({
-        where: {
-          employeeId: input.employeeId,
-          year: input.year,
-          tenantId,
-        },
-      })
-      if (existing) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message:
-            "Vacation balance already exists for this employee and year",
-        })
+      try {
+        return await service.createBalance(ctx.prisma, ctx.tenantId!, input)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      const balance = await ctx.prisma.vacationBalance.create({
-        data: {
-          tenantId,
-          employeeId: input.employeeId,
-          year: input.year,
-          entitlement: input.entitlement,
-          carryover: input.carryover,
-          adjustments: input.adjustments,
-          taken: 0,
-          carryoverExpiresAt: input.carryoverExpiresAt ?? null,
-        },
-        include: { employee: { select: employeeSelect } },
-      })
-
-      return mapBalanceToOutput(balance)
     }),
 
   /**
@@ -235,40 +143,10 @@ export const vacationBalancesRouter = createTRPCRouter({
     )
     .output(vacationBalanceOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Find balance by ID + tenant scope
-      const existing = await ctx.prisma.vacationBalance.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Vacation balance not found",
-        })
+      try {
+        return await service.updateBalance(ctx.prisma, ctx.tenantId!, input)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Build partial update data
-      const data: Prisma.VacationBalanceUpdateInput = {}
-      if (input.entitlement !== undefined) {
-        data.entitlement = input.entitlement
-      }
-      if (input.carryover !== undefined) {
-        data.carryover = input.carryover
-      }
-      if (input.adjustments !== undefined) {
-        data.adjustments = input.adjustments
-      }
-      if (input.carryoverExpiresAt !== undefined) {
-        data.carryoverExpiresAt = input.carryoverExpiresAt
-      }
-
-      const balance = await ctx.prisma.vacationBalance.update({
-        where: { id: input.id },
-        data,
-        include: { employee: { select: employeeSelect } },
-      })
-
-      return mapBalanceToOutput(balance)
     }),
 })

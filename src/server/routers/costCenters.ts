@@ -12,10 +12,12 @@
  * @see apps/api/internal/service/costcenter.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
+import { handleServiceError } from "@/trpc/errors"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import * as costCenterService from "@/lib/services/cost-center-service"
+import type { PrismaClient } from "@/generated/prisma/client"
 
 // --- Permission Constants ---
 
@@ -102,20 +104,18 @@ export const costCentersRouter = createTRPCRouter({
     )
     .output(z.object({ data: z.array(costCenterOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const where: Record<string, unknown> = { tenantId }
-
-      if (input?.isActive !== undefined) {
-        where.isActive = input.isActive
-      }
-
-      const costCenters = await ctx.prisma.costCenter.findMany({
-        where,
-        orderBy: { code: "asc" },
-      })
-
-      return {
-        data: costCenters.map(mapCostCenterToOutput),
+      try {
+        const tenantId = ctx.tenantId!
+        const costCenters = await costCenterService.list(
+          ctx.prisma as unknown as PrismaClient,
+          tenantId,
+          input
+        )
+        return {
+          data: costCenters.map(mapCostCenterToOutput),
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -131,19 +131,17 @@ export const costCentersRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(costCenterOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const costCenter = await ctx.prisma.costCenter.findFirst({
-        where: { id: input.id, tenantId },
-      })
-
-      if (!costCenter) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Cost center not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        const costCenter = await costCenterService.getById(
+          ctx.prisma as unknown as PrismaClient,
+          tenantId,
+          input.id
+        )
+        return mapCostCenterToOutput(costCenter)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapCostCenterToOutput(costCenter)
     }),
 
   /**
@@ -159,52 +157,17 @@ export const costCentersRouter = createTRPCRouter({
     .input(createCostCenterInputSchema)
     .output(costCenterOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Trim and validate code
-      const code = input.code.trim()
-      if (code.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Cost center code is required",
-        })
-      }
-
-      // Trim and validate name
-      const name = input.name.trim()
-      if (name.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Cost center name is required",
-        })
-      }
-
-      // Check code uniqueness within tenant
-      const existingByCode = await ctx.prisma.costCenter.findFirst({
-        where: { tenantId, code },
-      })
-      if (existingByCode) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Cost center code already exists",
-        })
-      }
-
-      // Trim description if provided
-      const description = input.description?.trim() || null
-
-      // Create cost center
-      const costCenter = await ctx.prisma.costCenter.create({
-        data: {
+      try {
+        const tenantId = ctx.tenantId!
+        const costCenter = await costCenterService.create(
+          ctx.prisma as unknown as PrismaClient,
           tenantId,
-          code,
-          name,
-          description,
-          isActive: input.isActive ?? true,
-        },
-      })
-
-      return mapCostCenterToOutput(costCenter)
+          input
+        )
+        return mapCostCenterToOutput(costCenter)
+      } catch (err) {
+        handleServiceError(err)
+      }
     }),
 
   /**
@@ -219,79 +182,17 @@ export const costCentersRouter = createTRPCRouter({
     .input(updateCostCenterInputSchema)
     .output(costCenterOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify cost center exists (tenant-scoped)
-      const existing = await ctx.prisma.costCenter.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Cost center not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        const costCenter = await costCenterService.update(
+          ctx.prisma as unknown as PrismaClient,
+          tenantId,
+          input
+        )
+        return mapCostCenterToOutput(costCenter)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      // Handle code update
-      if (input.code !== undefined) {
-        const code = input.code.trim()
-        if (code.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Cost center code is required",
-          })
-        }
-        // Check uniqueness if changed
-        if (code !== existing.code) {
-          const existingByCode = await ctx.prisma.costCenter.findFirst({
-            where: {
-              tenantId,
-              code,
-              NOT: { id: input.id },
-            },
-          })
-          if (existingByCode) {
-            throw new TRPCError({
-              code: "CONFLICT",
-              message: "Cost center code already exists",
-            })
-          }
-        }
-        data.code = code
-      }
-
-      // Handle name update
-      if (input.name !== undefined) {
-        const name = input.name.trim()
-        if (name.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Cost center name is required",
-          })
-        }
-        data.name = name
-      }
-
-      // Handle description update
-      if (input.description !== undefined) {
-        data.description =
-          input.description === null ? null : input.description.trim()
-      }
-
-      // Handle isActive update
-      if (input.isActive !== undefined) {
-        data.isActive = input.isActive
-      }
-
-      const costCenter = await ctx.prisma.costCenter.update({
-        where: { id: input.id },
-        data,
-      })
-
-      return mapCostCenterToOutput(costCenter)
     }),
 
   /**
@@ -306,35 +207,16 @@ export const costCentersRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify cost center exists (tenant-scoped)
-      const existing = await ctx.prisma.costCenter.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Cost center not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        await costCenterService.remove(
+          ctx.prisma as unknown as PrismaClient,
+          tenantId,
+          input.id
+        )
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Check for employees
-      const employeeCount = await ctx.prisma.employee.count({
-        where: { costCenterId: input.id },
-      })
-      if (employeeCount > 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Cannot delete cost center with assigned employees",
-        })
-      }
-
-      // Hard delete
-      await ctx.prisma.costCenter.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 })

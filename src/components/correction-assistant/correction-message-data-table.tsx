@@ -25,7 +25,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import type {
   CorrectionMessage,
   UpdateCorrectionMessageRequest,
-} from '@/hooks/api/use-correction-assistant'
+} from '@/hooks/use-correction-assistant'
 
 interface CorrectionMessageDataTableProps {
   messages: CorrectionMessage[]

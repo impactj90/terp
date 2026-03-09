@@ -22,7 +22,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { useAbsenceType } from '@/hooks/api'
+import { useAbsenceType } from '@/hooks'
 
 /** AbsenceType shape from tRPC output */
 interface AbsenceType {

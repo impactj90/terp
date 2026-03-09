@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { useTranslations, useLocale } from 'next-intl'
-import { useEvaluationDailyValues } from '@/hooks/api'
+import { useEvaluationDailyValues } from '@/hooks'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'

@@ -32,7 +32,7 @@ import {
   useEmployees,
   useDepartments,
   useTenants,
-} from '@/hooks/api'
+} from '@/hooks'
 import type { AppRouter } from '@/trpc/routers/_app'
 import type { inferRouterOutputs } from '@trpc/server'
 

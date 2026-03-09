@@ -30,7 +30,7 @@ import {
   useUpdateTeam,
   useDepartments,
   useEmployees,
-} from '@/hooks/api'
+} from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type Team = components['schemas']['Team']

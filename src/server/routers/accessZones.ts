@@ -13,10 +13,12 @@
  * @see apps/api/internal/service/access_zone.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
+import { handleServiceError } from "@/trpc/errors"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import * as accessZoneService from "@/lib/services/access-zone-service"
+import type { PrismaClient } from "@/generated/prisma/client"
 
 // --- Permission Constants ---
 
@@ -69,25 +71,27 @@ export const accessZonesRouter = createTRPCRouter({
     .input(z.void().optional())
     .output(z.object({ data: z.array(accessZoneOutputSchema) }))
     .query(async ({ ctx }) => {
-      const tenantId = ctx.tenantId!
-
-      const zones = await ctx.prisma.accessZone.findMany({
-        where: { tenantId },
-        orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
-      })
-
-      return {
-        data: zones.map((z) => ({
-          id: z.id,
-          tenantId: z.tenantId,
-          code: z.code,
-          name: z.name,
-          description: z.description,
-          isActive: z.isActive,
-          sortOrder: z.sortOrder,
-          createdAt: z.createdAt,
-          updatedAt: z.updatedAt,
-        })),
+      try {
+        const tenantId = ctx.tenantId!
+        const zones = await accessZoneService.list(
+          ctx.prisma as unknown as PrismaClient,
+          tenantId
+        )
+        return {
+          data: zones.map((z) => ({
+            id: z.id,
+            tenantId: z.tenantId,
+            code: z.code,
+            name: z.name,
+            description: z.description,
+            isActive: z.isActive,
+            sortOrder: z.sortOrder,
+            createdAt: z.createdAt,
+            updatedAt: z.updatedAt,
+          })),
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -101,29 +105,26 @@ export const accessZonesRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(accessZoneOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const zone = await ctx.prisma.accessZone.findFirst({
-        where: { id: input.id, tenantId },
-      })
-
-      if (!zone) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Access zone not found",
-        })
-      }
-
-      return {
-        id: zone.id,
-        tenantId: zone.tenantId,
-        code: zone.code,
-        name: zone.name,
-        description: zone.description,
-        isActive: zone.isActive,
-        sortOrder: zone.sortOrder,
-        createdAt: zone.createdAt,
-        updatedAt: zone.updatedAt,
+      try {
+        const tenantId = ctx.tenantId!
+        const zone = await accessZoneService.getById(
+          ctx.prisma as unknown as PrismaClient,
+          tenantId,
+          input.id
+        )
+        return {
+          id: zone.id,
+          tenantId: zone.tenantId,
+          code: zone.code,
+          name: zone.name,
+          description: zone.description,
+          isActive: zone.isActive,
+          sortOrder: zone.sortOrder,
+          createdAt: zone.createdAt,
+          updatedAt: zone.updatedAt,
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -139,58 +140,26 @@ export const accessZonesRouter = createTRPCRouter({
     .input(createAccessZoneInputSchema)
     .output(accessZoneOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Trim and validate code
-      const code = input.code.trim()
-      if (code.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Access zone code is required",
-        })
-      }
-
-      // Trim and validate name
-      const name = input.name.trim()
-      if (name.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Access zone name is required",
-        })
-      }
-
-      // Check code uniqueness within tenant
-      const existingByCode = await ctx.prisma.accessZone.findFirst({
-        where: { tenantId, code },
-      })
-      if (existingByCode) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Access zone code already exists",
-        })
-      }
-
-      const zone = await ctx.prisma.accessZone.create({
-        data: {
+      try {
+        const tenantId = ctx.tenantId!
+        const zone = await accessZoneService.create(
+          ctx.prisma as unknown as PrismaClient,
           tenantId,
-          code,
-          name,
-          description: input.description?.trim() || null,
-          isActive: true,
-          sortOrder: input.sortOrder ?? 0,
-        },
-      })
-
-      return {
-        id: zone.id,
-        tenantId: zone.tenantId,
-        code: zone.code,
-        name: zone.name,
-        description: zone.description,
-        isActive: zone.isActive,
-        sortOrder: zone.sortOrder,
-        createdAt: zone.createdAt,
-        updatedAt: zone.updatedAt,
+          input
+        )
+        return {
+          id: zone.id,
+          tenantId: zone.tenantId,
+          code: zone.code,
+          name: zone.name,
+          description: zone.description,
+          isActive: zone.isActive,
+          sortOrder: zone.sortOrder,
+          createdAt: zone.createdAt,
+          updatedAt: zone.updatedAt,
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -206,61 +175,26 @@ export const accessZonesRouter = createTRPCRouter({
     .input(updateAccessZoneInputSchema)
     .output(accessZoneOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify zone exists (tenant-scoped)
-      const existing = await ctx.prisma.accessZone.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Access zone not found",
-        })
-      }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      if (input.name !== undefined) {
-        const name = input.name.trim()
-        if (name.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Access zone name is required",
-          })
+      try {
+        const tenantId = ctx.tenantId!
+        const zone = await accessZoneService.update(
+          ctx.prisma as unknown as PrismaClient,
+          tenantId,
+          input
+        )
+        return {
+          id: zone.id,
+          tenantId: zone.tenantId,
+          code: zone.code,
+          name: zone.name,
+          description: zone.description,
+          isActive: zone.isActive,
+          sortOrder: zone.sortOrder,
+          createdAt: zone.createdAt,
+          updatedAt: zone.updatedAt,
         }
-        data.name = name
-      }
-
-      if (input.description !== undefined) {
-        data.description =
-          input.description === null ? null : input.description.trim()
-      }
-
-      if (input.isActive !== undefined) {
-        data.isActive = input.isActive
-      }
-
-      if (input.sortOrder !== undefined) {
-        data.sortOrder = input.sortOrder
-      }
-
-      const zone = await ctx.prisma.accessZone.update({
-        where: { id: input.id },
-        data,
-      })
-
-      return {
-        id: zone.id,
-        tenantId: zone.tenantId,
-        code: zone.code,
-        name: zone.name,
-        description: zone.description,
-        isActive: zone.isActive,
-        sortOrder: zone.sortOrder,
-        createdAt: zone.createdAt,
-        updatedAt: zone.updatedAt,
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -276,24 +210,16 @@ export const accessZonesRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify zone exists (tenant-scoped)
-      const existing = await ctx.prisma.accessZone.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Access zone not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        await accessZoneService.remove(
+          ctx.prisma as unknown as PrismaClient,
+          tenantId,
+          input.id
+        )
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Hard delete
-      await ctx.prisma.accessZone.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 })

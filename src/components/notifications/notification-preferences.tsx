@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Switch } from '@/components/ui/switch'
 import { Alert } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
-import { useNotificationPreferences, useUpdateNotificationPreferences } from '@/hooks/api'
+import { useNotificationPreferences, useUpdateNotificationPreferences } from '@/hooks'
 
 interface PreferencesState {
   approvalsEnabled: boolean

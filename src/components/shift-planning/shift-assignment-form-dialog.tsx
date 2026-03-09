@@ -25,7 +25,7 @@ import {
   useBulkCreateEmployeeDayPlans,
   useDeleteEmployeeDayPlan,
   useDayPlans,
-} from '@/hooks/api'
+} from '@/hooks'
 import { formatDate, formatDisplayDate } from '@/lib/time-utils'
 import type { components } from '@/types/legacy-api-types'
 

@@ -23,7 +23,7 @@ import {
   isToday,
   isWeekend,
 } from '@/lib/time-utils'
-import type { DailyValue } from '@/hooks/api'
+import type { DailyValue } from '@/hooks'
 
 interface DailyBreakdownTableProps {
   dailyValues: DailyValue[]

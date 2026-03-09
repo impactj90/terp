@@ -29,7 +29,7 @@ import {
   useEmployeeVacationBalance,
   useCreateAbsenceRange,
   useHolidays,
-} from '@/hooks/api'
+} from '@/hooks'
 import { formatDate, isSameDay, parseISODate } from '@/lib/time-utils'
 import type { components } from '@/types/legacy-api-types'
 

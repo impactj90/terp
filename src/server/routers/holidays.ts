@@ -15,14 +15,11 @@
  * @see apps/api/internal/holiday/calendar.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
-import {
-  generateHolidays as generateCalendarHolidays,
-  parseState,
-} from "../lib/holiday-calendar"
+import { handleServiceError } from "@/trpc/errors"
+import * as holidayService from "@/lib/services/holiday-service"
 
 // --- Permission Constants ---
 
@@ -113,39 +110,6 @@ function mapHolidayToOutput(h: {
   }
 }
 
-/**
- * Normalize a date to midnight UTC (strip time).
- */
-function normalizeDate(d: Date): Date {
-  return new Date(
-    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
-  )
-}
-
-/**
- * Format a date as YYYY-MM-DD for use as a map key.
- */
-function dateKey(d: Date): string {
-  const nd = normalizeDate(d)
-  return nd.toISOString().slice(0, 10)
-}
-
-/**
- * Create new date with a different year. Returns null for invalid dates
- * (e.g., Feb 29 in non-leap year).
- * Ported from Go: apps/api/internal/service/holiday.go lines 425-433.
- */
-function dateWithYear(year: number, date: Date): Date | null {
-  const month = date.getUTCMonth()
-  const day = date.getUTCDate()
-  const target = new Date(Date.UTC(year, month, day))
-  // If the month/day shifted (e.g., Feb 29 -> Mar 1), the date is invalid
-  if (target.getUTCMonth() !== month || target.getUTCDate() !== day) {
-    return null
-  }
-  return target
-}
-
 // --- Router ---
 
 export const holidaysRouter = createTRPCRouter({
@@ -171,36 +135,15 @@ export const holidaysRouter = createTRPCRouter({
     )
     .output(z.object({ data: z.array(holidayOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const where: Record<string, unknown> = { tenantId }
-
-      if (input?.year !== undefined) {
-        where.holidayDate = {
-          gte: new Date(Date.UTC(input.year, 0, 1)),
-          lt: new Date(Date.UTC(input.year + 1, 0, 1)),
-        }
-      } else if (input?.from || input?.to) {
-        const dateFilter: Record<string, unknown> = {}
-        if (input.from) {
-          dateFilter.gte = new Date(input.from)
-        }
-        if (input.to) {
-          dateFilter.lte = new Date(input.to)
-        }
-        where.holidayDate = dateFilter
-      }
-
-      if (input?.departmentId !== undefined) {
-        where.departmentId = input.departmentId
-      }
-
-      const holidays = await ctx.prisma.holiday.findMany({
-        where,
-        orderBy: { holidayDate: "asc" },
-      })
-
-      return {
-        data: holidays.map(mapHolidayToOutput),
+      try {
+        const holidays = await holidayService.list(
+          ctx.prisma,
+          ctx.tenantId!,
+          input ?? undefined
+        )
+        return { data: holidays.map(mapHolidayToOutput) }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -216,19 +159,16 @@ export const holidaysRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(holidayOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const holiday = await ctx.prisma.holiday.findFirst({
-        where: { id: input.id, tenantId },
-      })
-
-      if (!holiday) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Holiday not found",
-        })
+      try {
+        const holiday = await holidayService.getById(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id
+        )
+        return mapHolidayToOutput(holiday)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapHolidayToOutput(holiday)
     }),
 
   /**
@@ -243,50 +183,16 @@ export const holidaysRouter = createTRPCRouter({
     .input(createHolidayInputSchema)
     .output(holidayOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Parse and validate date
-      const holidayDate = new Date(input.holidayDate)
-      if (isNaN(holidayDate.getTime())) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Holiday date is required",
-        })
+      try {
+        const holiday = await holidayService.create(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+        return mapHolidayToOutput(holiday)
+      } catch (err) {
+        handleServiceError(err)
       }
-      const normalizedDate = normalizeDate(holidayDate)
-
-      // Trim and validate name
-      const name = input.name.trim()
-      if (name.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Holiday name is required",
-        })
-      }
-
-      // Check date uniqueness within tenant
-      const existingByDate = await ctx.prisma.holiday.findFirst({
-        where: { tenantId, holidayDate: normalizedDate },
-      })
-      if (existingByDate) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Holiday already exists on this date",
-        })
-      }
-
-      const holiday = await ctx.prisma.holiday.create({
-        data: {
-          tenantId,
-          holidayDate: normalizedDate,
-          name,
-          holidayCategory: input.holidayCategory,
-          appliesToAll: input.appliesToAll ?? true,
-          departmentId: input.departmentId ?? null,
-        },
-      })
-
-      return mapHolidayToOutput(holiday)
     }),
 
   /**
@@ -301,66 +207,16 @@ export const holidaysRouter = createTRPCRouter({
     .input(updateHolidayInputSchema)
     .output(holidayOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify holiday exists (tenant-scoped)
-      const existing = await ctx.prisma.holiday.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Holiday not found",
-        })
+      try {
+        const holiday = await holidayService.update(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+        return mapHolidayToOutput(holiday)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      const data: Record<string, unknown> = {}
-
-      // Handle date update
-      if (input.holidayDate !== undefined) {
-        const holidayDate = new Date(input.holidayDate)
-        if (isNaN(holidayDate.getTime())) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Holiday date is required",
-          })
-        }
-        data.holidayDate = normalizeDate(holidayDate)
-      }
-
-      // Handle name update
-      if (input.name !== undefined) {
-        const name = input.name.trim()
-        if (name.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Holiday name is required",
-          })
-        }
-        data.name = name
-      }
-
-      // Handle category update
-      if (input.holidayCategory !== undefined) {
-        data.holidayCategory = input.holidayCategory
-      }
-
-      // Handle appliesToAll update
-      if (input.appliesToAll !== undefined) {
-        data.appliesToAll = input.appliesToAll
-      }
-
-      // Handle departmentId update
-      if (input.departmentId !== undefined) {
-        data.departmentId = input.departmentId
-      }
-
-      const holiday = await ctx.prisma.holiday.update({
-        where: { id: input.id },
-        data,
-      })
-
-      return mapHolidayToOutput(holiday)
     }),
 
   /**
@@ -373,24 +229,12 @@ export const holidaysRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify holiday exists (tenant-scoped)
-      const existing = await ctx.prisma.holiday.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Holiday not found",
-        })
+      try {
+        await holidayService.remove(ctx.prisma, ctx.tenantId!, input.id)
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      await ctx.prisma.holiday.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 
   /**
@@ -406,54 +250,16 @@ export const holidaysRouter = createTRPCRouter({
     .input(generateHolidaysInputSchema)
     .output(z.object({ created: z.array(holidayOutputSchema) }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Validate and parse state
-      let state
       try {
-        state = parseState(input.state)
-      } catch {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Invalid state code",
-        })
+        const created = await holidayService.generate(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+        return { created: created.map(mapHolidayToOutput) }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Generate holiday definitions
-      const definitions = generateCalendarHolidays(input.year, state)
-
-      // Load existing holidays for the year
-      const yearStart = new Date(Date.UTC(input.year, 0, 1))
-      const yearEnd = new Date(Date.UTC(input.year + 1, 0, 1))
-      const existing = await ctx.prisma.holiday.findMany({
-        where: {
-          tenantId,
-          holidayDate: { gte: yearStart, lt: yearEnd },
-        },
-      })
-      const existingByDate = new Set(existing.map((h) => dateKey(h.holidayDate)))
-
-      // Create holidays
-      const created: HolidayOutput[] = []
-      for (const def of definitions) {
-        const key = dateKey(def.date)
-        if (input.skipExisting && existingByDate.has(key)) {
-          continue
-        }
-
-        const holiday = await ctx.prisma.holiday.create({
-          data: {
-            tenantId,
-            holidayDate: normalizeDate(def.date),
-            name: def.name,
-            holidayCategory: 1,
-            appliesToAll: true,
-          },
-        })
-        created.push(mapHolidayToOutput(holiday))
-      }
-
-      return { created }
     }),
 
   /**
@@ -469,85 +275,15 @@ export const holidaysRouter = createTRPCRouter({
     .input(copyHolidaysInputSchema)
     .output(z.object({ copied: z.array(holidayOutputSchema) }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      if (input.sourceYear === input.targetYear) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Source and target year must differ",
-        })
+      try {
+        const copied = await holidayService.copy(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+        return { copied: copied.map(mapHolidayToOutput) }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Build category override map keyed by "MM-DD"
-      const overrideMap = new Map<string, number>()
-      if (input.categoryOverrides) {
-        for (const override of input.categoryOverrides) {
-          const key = `${String(override.month).padStart(2, "0")}-${String(override.day).padStart(2, "0")}`
-          overrideMap.set(key, override.category)
-        }
-      }
-
-      // Load source year holidays
-      const sourceStart = new Date(Date.UTC(input.sourceYear, 0, 1))
-      const sourceEnd = new Date(Date.UTC(input.sourceYear + 1, 0, 1))
-      const source = await ctx.prisma.holiday.findMany({
-        where: {
-          tenantId,
-          holidayDate: { gte: sourceStart, lt: sourceEnd },
-        },
-        orderBy: { holidayDate: "asc" },
-      })
-
-      if (source.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "No holidays found for source year",
-        })
-      }
-
-      // Load target year existing holidays
-      const targetStart = new Date(Date.UTC(input.targetYear, 0, 1))
-      const targetEnd = new Date(Date.UTC(input.targetYear + 1, 0, 1))
-      const existingTarget = await ctx.prisma.holiday.findMany({
-        where: {
-          tenantId,
-          holidayDate: { gte: targetStart, lt: targetEnd },
-        },
-      })
-      const existingByDate = new Set(
-        existingTarget.map((h) => dateKey(h.holidayDate))
-      )
-
-      // Copy holidays
-      const copied: HolidayOutput[] = []
-      for (const src of source) {
-        const targetDate = dateWithYear(input.targetYear, src.holidayDate)
-        if (!targetDate) {
-          continue // Skip invalid dates (e.g., Feb 29 in non-leap year)
-        }
-
-        const key = dateKey(targetDate)
-        if (input.skipExisting && existingByDate.has(key)) {
-          continue
-        }
-
-        // Apply category override if present
-        const monthDay = `${String(targetDate.getUTCMonth() + 1).padStart(2, "0")}-${String(targetDate.getUTCDate()).padStart(2, "0")}`
-        const category = overrideMap.get(monthDay) ?? src.holidayCategory
-
-        const holiday = await ctx.prisma.holiday.create({
-          data: {
-            tenantId,
-            holidayDate: normalizeDate(targetDate),
-            name: src.name,
-            holidayCategory: category,
-            appliesToAll: src.appliesToAll,
-            departmentId: src.departmentId,
-          },
-        })
-        copied.push(mapHolidayToOutput(holiday))
-      }
-
-      return { copied }
     }),
 })

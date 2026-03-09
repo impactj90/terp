@@ -30,7 +30,7 @@ import {
   useUpdateWeekPlan,
   useWeekPlan,
   useDayPlans,
-} from '@/hooks/api'
+} from '@/hooks'
 import { cn } from '@/lib/utils'
 import { formatDuration } from '@/lib/time-utils'
 import type { components } from '@/types/legacy-api-types'

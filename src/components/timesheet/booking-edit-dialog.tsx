@@ -15,7 +15,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { useUpdateBooking } from '@/hooks/api'
+import { useUpdateBooking } from '@/hooks'
 
 interface Booking {
   id: string

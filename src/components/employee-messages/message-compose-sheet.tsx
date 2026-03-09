@@ -31,7 +31,7 @@ import {
   useCreateEmployeeMessage,
   useEmployees,
   useDepartments,
-} from '@/hooks/api'
+} from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type Employee = components['schemas']['Employee']

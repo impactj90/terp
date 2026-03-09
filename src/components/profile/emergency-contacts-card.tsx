@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert } from '@/components/ui/alert'
-import { useEmployeeContacts, useDeleteEmployeeContact } from '@/hooks/api'
+import { useEmployeeContacts, useDeleteEmployeeContact } from '@/hooks'
 import { Plus, Users, AlertCircle, CheckCircle } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { ContactFormDialog } from './contact-form-dialog'

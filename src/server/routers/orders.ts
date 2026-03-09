@@ -15,10 +15,11 @@
  */
 import { z } from "zod"
 import { Prisma } from "@/generated/prisma/client"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as orderService from "@/lib/services/order-service"
 
 // --- Permission Constants ---
 
@@ -82,14 +83,6 @@ const updateOrderInputSchema = z.object({
   isActive: z.boolean().optional(),
 })
 
-// --- Prisma include for CostCenter preload ---
-
-const orderInclude = {
-  costCenter: {
-    select: { id: true, code: true, name: true },
-  },
-} as const
-
 // --- Helpers ---
 
 /**
@@ -134,13 +127,6 @@ function mapOrderToOutput(
   }
 }
 
-/**
- * Parses an ISO date string ("2026-01-15") into a Date at midnight UTC.
- */
-function parseDate(dateStr: string): Date {
-  return new Date(dateStr + "T00:00:00Z")
-}
-
 // --- Router ---
 
 export const ordersRouter = createTRPCRouter({
@@ -165,24 +151,13 @@ export const ordersRouter = createTRPCRouter({
     )
     .output(z.object({ data: z.array(orderOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const where: Record<string, unknown> = { tenantId }
-
-      if (input?.isActive !== undefined) {
-        where.isActive = input.isActive
-      }
-      if (input?.status !== undefined) {
-        where.status = input.status
-      }
-
-      const orders = await ctx.prisma.order.findMany({
-        where,
-        orderBy: { code: "asc" },
-        include: orderInclude,
-      })
-
-      return {
-        data: orders.map(mapOrderToOutput),
+      try {
+        const orders = await orderService.list(ctx.prisma, ctx.tenantId!, input)
+        return {
+          data: orders.map(mapOrderToOutput),
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -199,20 +174,16 @@ export const ordersRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(orderOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const order = await ctx.prisma.order.findFirst({
-        where: { id: input.id, tenantId },
-        include: orderInclude,
-      })
-
-      if (!order) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Order not found",
-        })
+      try {
+        const order = await orderService.getById(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id
+        )
+        return mapOrderToOutput(order)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapOrderToOutput(order)
     }),
 
   /**
@@ -230,68 +201,16 @@ export const ordersRouter = createTRPCRouter({
     .input(createOrderInputSchema)
     .output(orderOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Trim and validate code
-      const code = input.code.trim()
-      if (code.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Order code is required",
-        })
+      try {
+        const order = await orderService.create(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+        return mapOrderToOutput(order)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Trim and validate name
-      const name = input.name.trim()
-      if (name.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Order name is required",
-        })
-      }
-
-      // Check code uniqueness within tenant
-      const existingByCode = await ctx.prisma.order.findFirst({
-        where: { tenantId, code },
-      })
-      if (existingByCode) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Order code already exists",
-        })
-      }
-
-      // Trim optional string fields
-      const description = input.description?.trim() || null
-      const customer = input.customer?.trim() || null
-
-      // Create order
-      const created = await ctx.prisma.order.create({
-        data: {
-          tenantId,
-          code,
-          name,
-          description,
-          status: input.status || "active",
-          customer,
-          isActive: true,
-          costCenterId: input.costCenterId || undefined,
-          billingRatePerHour:
-            input.billingRatePerHour !== undefined
-              ? new Prisma.Decimal(input.billingRatePerHour)
-              : undefined,
-          validFrom: input.validFrom ? parseDate(input.validFrom) : undefined,
-          validTo: input.validTo ? parseDate(input.validTo) : undefined,
-        },
-      })
-
-      // Re-fetch with CostCenter preload (matching Go behavior)
-      const order = await ctx.prisma.order.findUniqueOrThrow({
-        where: { id: created.id },
-        include: orderInclude,
-      })
-
-      return mapOrderToOutput(order)
     }),
 
   /**
@@ -308,121 +227,16 @@ export const ordersRouter = createTRPCRouter({
     .input(updateOrderInputSchema)
     .output(orderOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify order exists (tenant-scoped)
-      const existing = await ctx.prisma.order.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Order not found",
-        })
+      try {
+        const order = await orderService.update(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+        return mapOrderToOutput(order)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      // Handle code update
-      if (input.code !== undefined) {
-        const code = input.code.trim()
-        if (code.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Order code is required",
-          })
-        }
-        // Check uniqueness if changed
-        if (code !== existing.code) {
-          const existingByCode = await ctx.prisma.order.findFirst({
-            where: {
-              tenantId,
-              code,
-              NOT: { id: input.id },
-            },
-          })
-          if (existingByCode) {
-            throw new TRPCError({
-              code: "CONFLICT",
-              message: "Order code already exists",
-            })
-          }
-        }
-        data.code = code
-      }
-
-      // Handle name update
-      if (input.name !== undefined) {
-        const name = input.name.trim()
-        if (name.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Order name is required",
-          })
-        }
-        data.name = name
-      }
-
-      // Handle description update
-      if (input.description !== undefined) {
-        data.description =
-          input.description === null ? null : input.description.trim()
-      }
-
-      // Handle status update
-      if (input.status !== undefined) {
-        data.status = input.status
-      }
-
-      // Handle customer update
-      if (input.customer !== undefined) {
-        data.customer =
-          input.customer === null ? null : input.customer.trim()
-      }
-
-      // Handle costCenterId update (nullable)
-      if (input.costCenterId !== undefined) {
-        data.costCenterId = input.costCenterId
-      }
-
-      // Handle billingRatePerHour update (nullable)
-      if (input.billingRatePerHour !== undefined) {
-        data.billingRatePerHour =
-          input.billingRatePerHour === null
-            ? null
-            : new Prisma.Decimal(input.billingRatePerHour)
-      }
-
-      // Handle validFrom update (nullable)
-      if (input.validFrom !== undefined) {
-        data.validFrom =
-          input.validFrom === null ? null : parseDate(input.validFrom)
-      }
-
-      // Handle validTo update (nullable)
-      if (input.validTo !== undefined) {
-        data.validTo =
-          input.validTo === null ? null : parseDate(input.validTo)
-      }
-
-      // Handle isActive update
-      if (input.isActive !== undefined) {
-        data.isActive = input.isActive
-      }
-
-      await ctx.prisma.order.update({
-        where: { id: input.id },
-        data,
-      })
-
-      // Re-fetch with CostCenter preload
-      const order = await ctx.prisma.order.findUniqueOrThrow({
-        where: { id: input.id },
-        include: orderInclude,
-      })
-
-      return mapOrderToOutput(order)
     }),
 
   /**
@@ -437,24 +251,11 @@ export const ordersRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify order exists (tenant-scoped)
-      const existing = await ctx.prisma.order.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Order not found",
-        })
+      try {
+        await orderService.remove(ctx.prisma, ctx.tenantId!, input.id)
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Hard delete (OrderAssignments cascade via FK)
-      await ctx.prisma.order.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 })

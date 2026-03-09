@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { RefreshCw } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
-import { useEmployees } from '@/hooks/api/use-employees'
+import { useEmployees } from '@/hooks/use-employees'
 import { useClockState } from '@/hooks/use-clock-state'
 import { useHasPermission } from '@/hooks'
 import {

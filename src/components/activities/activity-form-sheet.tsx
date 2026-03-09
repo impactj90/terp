@@ -21,7 +21,7 @@ import {
 import {
   useCreateActivity,
   useUpdateActivity,
-} from '@/hooks/api'
+} from '@/hooks'
 interface Activity {
   id: string
   code: string

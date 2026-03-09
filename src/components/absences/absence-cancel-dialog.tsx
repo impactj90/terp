@@ -4,7 +4,7 @@ import * as React from 'react'
 import { useTranslations } from 'next-intl'
 import { useLocale } from 'next-intl'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { useDeleteAbsence } from '@/hooks/api'
+import { useDeleteAbsence } from '@/hooks'
 import { parseISODate } from '@/lib/time-utils'
 import type { components } from '@/types/legacy-api-types'
 

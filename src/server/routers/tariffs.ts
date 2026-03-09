@@ -17,10 +17,11 @@
  */
 import { z } from "zod"
 import { Prisma } from "@/generated/prisma/client"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as tariffsService from "@/lib/services/tariffs-service"
 
 // --- Permission Constants ---
 
@@ -226,31 +227,6 @@ const deleteBreakInputSchema = z.object({
   breakId: z.string().uuid(),
 })
 
-// --- Prisma Include Objects ---
-
-const tariffListInclude = {
-  weekPlan: { select: { id: true, code: true, name: true } },
-} as const
-
-const tariffDetailInclude = {
-  weekPlan: { select: { id: true, code: true, name: true } },
-  breaks: { orderBy: { sortOrder: "asc" as const } },
-  tariffWeekPlans: {
-    orderBy: { sequenceOrder: "asc" as const },
-    include: {
-      weekPlan: { select: { id: true, code: true, name: true } },
-    },
-  },
-  tariffDayPlans: {
-    orderBy: { dayPosition: "asc" as const },
-    include: {
-      dayPlan: {
-        select: { id: true, code: true, name: true, planType: true },
-      },
-    },
-  },
-} as const
-
 // --- Helpers ---
 
 /**
@@ -403,22 +379,20 @@ export const tariffsRouter = createTRPCRouter({
     )
     .output(z.object({ data: z.array(tariffOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
+      try {
+        const tariffs = await tariffsService.list(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
 
-      const where: Record<string, unknown> = { tenantId }
-
-      if (input?.isActive !== undefined) {
-        where.isActive = input.isActive
-      }
-
-      const tariffs = await ctx.prisma.tariff.findMany({
-        where,
-        include: tariffListInclude,
-        orderBy: { code: "asc" },
-      })
-
-      return {
-        data: tariffs.map((t) => mapToOutput(t as Record<string, unknown>)),
+        return {
+          data: tariffs.map((t) =>
+            mapToOutput(t as Record<string, unknown>)
+          ),
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -435,23 +409,19 @@ export const tariffsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(tariffOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
+      try {
+        const tariff = await tariffsService.getById(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id
+        )
 
-      const tariff = await ctx.prisma.tariff.findFirst({
-        where: { id: input.id, tenantId },
-        include: tariffDetailInclude,
-      })
-
-      if (!tariff) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Tariff not found",
+        return mapToOutput(tariff as unknown as Record<string, unknown>, {
+          includeRelations: true,
         })
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapToOutput(tariff as unknown as Record<string, unknown>, {
-        includeRelations: true,
-      })
     }),
 
   /**
@@ -467,231 +437,19 @@ export const tariffsRouter = createTRPCRouter({
     .input(createTariffInputSchema)
     .output(tariffOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
+      try {
+        const result = await tariffsService.create(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
 
-      // Trim and validate code
-      const code = input.code.trim()
-      if (code.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Tariff code is required",
+        return mapToOutput(result as unknown as Record<string, unknown>, {
+          includeRelations: true,
         })
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Trim and validate name
-      const name = input.name.trim()
-      if (name.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Tariff name is required",
-        })
-      }
-
-      // Check code uniqueness within tenant
-      const existingByCode = await ctx.prisma.tariff.findFirst({
-        where: { tenantId, code },
-      })
-      if (existingByCode) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Tariff code already exists",
-        })
-      }
-
-      // Default rhythm type to weekly
-      const rhythmType = input.rhythmType || "weekly"
-
-      // Validate rhythm-specific fields
-      switch (rhythmType) {
-        case "weekly":
-          // Validate single week plan if provided
-          if (input.weekPlanId) {
-            const wp = await ctx.prisma.weekPlan.findFirst({
-              where: { id: input.weekPlanId, tenantId },
-            })
-            if (!wp) {
-              throw new TRPCError({
-                code: "BAD_REQUEST",
-                message: "Invalid week plan reference",
-              })
-            }
-          }
-          break
-
-        case "rolling_weekly":
-          // Require week plan IDs
-          if (!input.weekPlanIds || input.weekPlanIds.length === 0) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message:
-                "week_plan_ids are required for rolling_weekly rhythm",
-            })
-          }
-          // Require rhythm start date
-          if (!input.rhythmStartDate) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message:
-                "rhythm_start_date is required for rolling_weekly and x_days rhythms",
-            })
-          }
-          // Validate all week plan IDs
-          for (const wpId of input.weekPlanIds) {
-            const wp = await ctx.prisma.weekPlan.findFirst({
-              where: { id: wpId, tenantId },
-            })
-            if (!wp) {
-              throw new TRPCError({
-                code: "BAD_REQUEST",
-                message: "Invalid week plan reference",
-              })
-            }
-          }
-          break
-
-        case "x_days":
-          // Require cycle days
-          if (input.cycleDays === undefined || input.cycleDays === null) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "cycle_days is required for x_days rhythm",
-            })
-          }
-          // Require rhythm start date
-          if (!input.rhythmStartDate) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message:
-                "rhythm_start_date is required for rolling_weekly and x_days rhythms",
-            })
-          }
-          // Validate day plans
-          if (input.dayPlans) {
-            for (const dp of input.dayPlans) {
-              if (dp.dayPosition < 1 || dp.dayPosition > input.cycleDays) {
-                throw new TRPCError({
-                  code: "BAD_REQUEST",
-                  message:
-                    "day position must be between 1 and cycle_days",
-                })
-              }
-              if (dp.dayPlanId) {
-                const plan = await ctx.prisma.dayPlan.findFirst({
-                  where: { id: dp.dayPlanId, tenantId },
-                })
-                if (!plan) {
-                  throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: "Invalid day plan reference",
-                  })
-                }
-              }
-            }
-          }
-          break
-      }
-
-      // Trim description
-      const description = input.description?.trim() || null
-
-      // Build tariff create data
-      const tariffData: Record<string, unknown> = {
-        tenantId,
-        code,
-        name,
-        description,
-        isActive: input.isActive,
-        rhythmType,
-        // Week plan (for weekly rhythm)
-        weekPlanId: input.weekPlanId || undefined,
-        // Dates
-        validFrom: input.validFrom ? new Date(input.validFrom) : undefined,
-        validTo: input.validTo ? new Date(input.validTo) : undefined,
-        // Vacation
-        annualVacationDays:
-          input.annualVacationDays !== undefined
-            ? new Prisma.Decimal(input.annualVacationDays)
-            : undefined,
-        workDaysPerWeek: input.workDaysPerWeek,
-        vacationBasis: input.vacationBasis,
-        vacationCappingRuleGroupId: input.vacationCappingRuleGroupId,
-        // Target hours
-        dailyTargetHours:
-          input.dailyTargetHours !== undefined
-            ? new Prisma.Decimal(input.dailyTargetHours)
-            : undefined,
-        weeklyTargetHours:
-          input.weeklyTargetHours !== undefined
-            ? new Prisma.Decimal(input.weeklyTargetHours)
-            : undefined,
-        monthlyTargetHours:
-          input.monthlyTargetHours !== undefined
-            ? new Prisma.Decimal(input.monthlyTargetHours)
-            : undefined,
-        annualTargetHours:
-          input.annualTargetHours !== undefined
-            ? new Prisma.Decimal(input.annualTargetHours)
-            : undefined,
-        // Flextime
-        maxFlextimePerMonth: input.maxFlextimePerMonth,
-        upperLimitAnnual: input.upperLimitAnnual,
-        lowerLimitAnnual: input.lowerLimitAnnual,
-        flextimeThreshold: input.flextimeThreshold,
-        creditType: input.creditType,
-        // Rhythm
-        cycleDays: input.cycleDays,
-        rhythmStartDate: input.rhythmStartDate
-          ? new Date(input.rhythmStartDate)
-          : undefined,
-      }
-
-      // Use transaction for atomicity when creating rhythm sub-records
-      const tariff = await ctx.prisma.$transaction(async (tx) => {
-        const created = await tx.tariff.create({
-          data: tariffData as Parameters<typeof tx.tariff.create>[0]["data"],
-        })
-
-        // Create rhythm sub-records
-        if (
-          rhythmType === "rolling_weekly" &&
-          input.weekPlanIds &&
-          input.weekPlanIds.length > 0
-        ) {
-          await tx.tariffWeekPlan.createMany({
-            data: input.weekPlanIds.map((wpId, i) => ({
-              tariffId: created.id,
-              weekPlanId: wpId,
-              sequenceOrder: i + 1,
-            })),
-          })
-        }
-
-        if (
-          rhythmType === "x_days" &&
-          input.dayPlans &&
-          input.dayPlans.length > 0
-        ) {
-          await tx.tariffDayPlan.createMany({
-            data: input.dayPlans.map((dp) => ({
-              tariffId: created.id,
-              dayPosition: dp.dayPosition,
-              dayPlanId: dp.dayPlanId,
-            })),
-          })
-        }
-
-        return created
-      })
-
-      // Re-fetch with full details
-      const result = await ctx.prisma.tariff.findFirst({
-        where: { id: tariff.id, tenantId },
-        include: tariffDetailInclude,
-      })
-
-      return mapToOutput(result as unknown as Record<string, unknown>, {
-        includeRelations: true,
-      })
     }),
 
   /**
@@ -707,294 +465,19 @@ export const tariffsRouter = createTRPCRouter({
     .input(updateTariffInputSchema)
     .output(tariffOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
+      try {
+        const result = await tariffsService.update(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
 
-      // Verify tariff exists (tenant-scoped)
-      const existing = await ctx.prisma.tariff.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Tariff not found",
+        return mapToOutput(result as unknown as Record<string, unknown>, {
+          includeRelations: true,
         })
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      // Handle name update
-      if (input.name !== undefined) {
-        const name = input.name.trim()
-        if (name.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Tariff name is required",
-          })
-        }
-        data.name = name
-      }
-
-      // Handle description update
-      if (input.description !== undefined) {
-        data.description =
-          input.description === null ? null : input.description.trim()
-      }
-
-      // Handle week plan updates
-      if (input.weekPlanId !== undefined) {
-        if (input.weekPlanId === null) {
-          data.weekPlanId = null
-        } else {
-          // Validate week plan exists in same tenant
-          const wp = await ctx.prisma.weekPlan.findFirst({
-            where: { id: input.weekPlanId, tenantId },
-          })
-          if (!wp) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Invalid week plan reference",
-            })
-          }
-          data.weekPlanId = input.weekPlanId
-        }
-      }
-
-      // Handle date fields
-      if (input.validFrom !== undefined) {
-        data.validFrom =
-          input.validFrom === null ? null : new Date(input.validFrom)
-      }
-      if (input.validTo !== undefined) {
-        data.validTo =
-          input.validTo === null ? null : new Date(input.validTo)
-      }
-
-      // Handle isActive
-      if (input.isActive !== undefined) {
-        data.isActive = input.isActive
-      }
-
-      // Determine effective rhythm type for validation
-      const rhythmType =
-        input.rhythmType ?? (existing.rhythmType as string) ?? "weekly"
-
-      // Handle rhythm type update
-      if (input.rhythmType !== undefined) {
-        data.rhythmType = input.rhythmType
-      }
-
-      // Handle cycle days
-      if (input.cycleDays !== undefined) {
-        data.cycleDays = input.cycleDays
-      }
-
-      // Handle rhythm start date
-      if (input.rhythmStartDate !== undefined) {
-        data.rhythmStartDate =
-          input.rhythmStartDate === null
-            ? null
-            : new Date(input.rhythmStartDate)
-      }
-
-      // Validate rhythm-specific requirements
-      switch (rhythmType) {
-        case "rolling_weekly":
-          if (input.weekPlanIds && input.weekPlanIds.length > 0) {
-            for (const wpId of input.weekPlanIds) {
-              const wp = await ctx.prisma.weekPlan.findFirst({
-                where: { id: wpId, tenantId },
-              })
-              if (!wp) {
-                throw new TRPCError({
-                  code: "BAD_REQUEST",
-                  message: "Invalid week plan reference",
-                })
-              }
-            }
-          }
-          break
-
-        case "x_days": {
-          // Get effective cycle_days
-          const effectiveCycleDays =
-            input.cycleDays !== undefined
-              ? input.cycleDays
-              : existing.cycleDays
-          // Validate day plans if provided
-          if (
-            input.dayPlans &&
-            input.dayPlans.length > 0 &&
-            effectiveCycleDays
-          ) {
-            for (const dp of input.dayPlans) {
-              if (
-                dp.dayPosition < 1 ||
-                dp.dayPosition > effectiveCycleDays
-              ) {
-                throw new TRPCError({
-                  code: "BAD_REQUEST",
-                  message:
-                    "day position must be between 1 and cycle_days",
-                })
-              }
-              if (dp.dayPlanId) {
-                const plan = await ctx.prisma.dayPlan.findFirst({
-                  where: { id: dp.dayPlanId, tenantId },
-                })
-                if (!plan) {
-                  throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: "Invalid day plan reference",
-                  })
-                }
-              }
-            }
-          }
-          break
-        }
-      }
-
-      // Handle vacation fields
-      if (input.annualVacationDays !== undefined) {
-        data.annualVacationDays =
-          input.annualVacationDays === null
-            ? null
-            : new Prisma.Decimal(input.annualVacationDays)
-      }
-      if (input.workDaysPerWeek !== undefined) {
-        data.workDaysPerWeek = input.workDaysPerWeek
-      }
-      if (input.vacationBasis !== undefined) {
-        data.vacationBasis = input.vacationBasis
-      }
-      if (input.vacationCappingRuleGroupId !== undefined) {
-        data.vacationCappingRuleGroupId = input.vacationCappingRuleGroupId
-      }
-
-      // Handle target hours fields
-      if (input.dailyTargetHours !== undefined) {
-        data.dailyTargetHours =
-          input.dailyTargetHours === null
-            ? null
-            : new Prisma.Decimal(input.dailyTargetHours)
-      }
-      if (input.weeklyTargetHours !== undefined) {
-        data.weeklyTargetHours =
-          input.weeklyTargetHours === null
-            ? null
-            : new Prisma.Decimal(input.weeklyTargetHours)
-      }
-      if (input.monthlyTargetHours !== undefined) {
-        data.monthlyTargetHours =
-          input.monthlyTargetHours === null
-            ? null
-            : new Prisma.Decimal(input.monthlyTargetHours)
-      }
-      if (input.annualTargetHours !== undefined) {
-        data.annualTargetHours =
-          input.annualTargetHours === null
-            ? null
-            : new Prisma.Decimal(input.annualTargetHours)
-      }
-
-      // Handle flextime fields
-      if (input.maxFlextimePerMonth !== undefined) {
-        data.maxFlextimePerMonth = input.maxFlextimePerMonth
-      }
-      if (input.upperLimitAnnual !== undefined) {
-        data.upperLimitAnnual = input.upperLimitAnnual
-      }
-      if (input.lowerLimitAnnual !== undefined) {
-        data.lowerLimitAnnual = input.lowerLimitAnnual
-      }
-      if (input.flextimeThreshold !== undefined) {
-        data.flextimeThreshold = input.flextimeThreshold
-      }
-      if (input.creditType !== undefined) {
-        data.creditType = input.creditType
-      }
-
-      // Update tariff + rhythm sub-records in transaction
-      await ctx.prisma.$transaction(async (tx) => {
-        await tx.tariff.update({
-          where: { id: input.id },
-          data,
-        })
-
-        // Handle rhythm type changes -- clean up old sub-records
-        if (input.rhythmType !== undefined) {
-          switch (rhythmType) {
-            case "weekly":
-              // Switching to weekly: clear both sub-record types
-              await tx.tariffWeekPlan.deleteMany({
-                where: { tariffId: input.id },
-              })
-              await tx.tariffDayPlan.deleteMany({
-                where: { tariffId: input.id },
-              })
-              break
-            case "rolling_weekly":
-              // Clear day plans when switching to rolling_weekly
-              await tx.tariffDayPlan.deleteMany({
-                where: { tariffId: input.id },
-              })
-              break
-            case "x_days":
-              // Clear week plans when switching to x_days
-              await tx.tariffWeekPlan.deleteMany({
-                where: { tariffId: input.id },
-              })
-              break
-          }
-        }
-
-        // Update rolling_weekly sub-records if provided
-        if (
-          rhythmType === "rolling_weekly" &&
-          input.weekPlanIds &&
-          input.weekPlanIds.length > 0
-        ) {
-          await tx.tariffWeekPlan.deleteMany({
-            where: { tariffId: input.id },
-          })
-          await tx.tariffWeekPlan.createMany({
-            data: input.weekPlanIds.map((wpId, i) => ({
-              tariffId: input.id,
-              weekPlanId: wpId,
-              sequenceOrder: i + 1,
-            })),
-          })
-        }
-
-        // Update x_days sub-records if provided
-        if (
-          rhythmType === "x_days" &&
-          input.dayPlans &&
-          input.dayPlans.length > 0
-        ) {
-          await tx.tariffDayPlan.deleteMany({
-            where: { tariffId: input.id },
-          })
-          await tx.tariffDayPlan.createMany({
-            data: input.dayPlans.map((dp) => ({
-              tariffId: input.id,
-              dayPosition: dp.dayPosition,
-              dayPlanId: dp.dayPlanId,
-            })),
-          })
-        }
-      })
-
-      // Re-fetch with full details
-      const result = await ctx.prisma.tariff.findFirst({
-        where: { id: input.id, tenantId },
-        include: tariffDetailInclude,
-      })
-
-      return mapToOutput(result as unknown as Record<string, unknown>, {
-        includeRelations: true,
-      })
     }),
 
   /**
@@ -1010,48 +493,12 @@ export const tariffsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify tariff exists (tenant-scoped)
-      const existing = await ctx.prisma.tariff.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Tariff not found",
-        })
+      try {
+        await tariffsService.remove(ctx.prisma, ctx.tenantId!, input.id)
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Check usage in EmployeeTariffAssignment
-      const assignmentCount =
-        await ctx.prisma.employeeTariffAssignment.count({
-          where: { tariffId: input.id },
-        })
-      if (assignmentCount > 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Cannot delete tariff that is assigned to employees",
-        })
-      }
-
-      // Check direct employee tariffId references
-      const employeeCount = await ctx.prisma.employee.count({
-        where: { tariffId: input.id },
-      })
-      if (employeeCount > 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Cannot delete tariff that is assigned to employees",
-        })
-      }
-
-      // Hard delete (cascades to breaks, tariffWeekPlans, tariffDayPlans)
-      await ctx.prisma.tariff.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 
   /**
@@ -1066,45 +513,14 @@ export const tariffsRouter = createTRPCRouter({
     .input(createBreakInputSchema)
     .output(tariffBreakOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify parent tariff exists (tenant-scoped)
-      const tariff = await ctx.prisma.tariff.findFirst({
-        where: { id: input.tariffId, tenantId },
-      })
-      if (!tariff) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Tariff not found",
-        })
-      }
-
-      // Auto-calculate sortOrder
-      const breakCount = await ctx.prisma.tariffBreak.count({
-        where: { tariffId: input.tariffId },
-      })
-
-      const created = await ctx.prisma.tariffBreak.create({
-        data: {
-          tariffId: input.tariffId,
-          breakType: input.breakType,
-          afterWorkMinutes: input.afterWorkMinutes,
-          duration: input.duration,
-          isPaid: input.isPaid ?? false,
-          sortOrder: breakCount,
-        },
-      })
-
-      return {
-        id: created.id,
-        tariffId: created.tariffId,
-        breakType: created.breakType,
-        afterWorkMinutes: created.afterWorkMinutes,
-        duration: created.duration,
-        isPaid: created.isPaid,
-        sortOrder: created.sortOrder,
-        createdAt: created.createdAt,
-        updatedAt: created.updatedAt,
+      try {
+        return await tariffsService.createBreak(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -1120,35 +536,16 @@ export const tariffsRouter = createTRPCRouter({
     .input(deleteBreakInputSchema)
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify parent tariff exists (tenant-scoped)
-      const tariff = await ctx.prisma.tariff.findFirst({
-        where: { id: input.tariffId, tenantId },
-      })
-      if (!tariff) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Tariff not found",
-        })
+      try {
+        await tariffsService.deleteBreak(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.tariffId,
+          input.breakId
+        )
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Verify break exists AND belongs to the tariff
-      const brk = await ctx.prisma.tariffBreak.findFirst({
-        where: { id: input.breakId, tariffId: input.tariffId },
-      })
-      if (!brk) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Tariff break not found",
-        })
-      }
-
-      // Delete break
-      await ctx.prisma.tariffBreak.delete({
-        where: { id: input.breakId },
-      })
-
-      return { success: true }
     }),
 })

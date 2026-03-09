@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Alert } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
-import { useUpdateUser } from '@/hooks/api'
+import { useUpdateUser } from '@/hooks'
 import { useTranslations } from 'next-intl'
 import {
   Pencil,

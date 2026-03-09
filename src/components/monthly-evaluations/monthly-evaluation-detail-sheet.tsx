@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/sheet'
 import {
   useMonthlyEvaluation,
-} from '@/hooks/api/use-monthly-evaluations'
+} from '@/hooks/use-monthly-evaluations'
 import { formatDuration } from '@/lib/time-utils'
 
 interface MonthlyEvaluation {

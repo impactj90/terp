@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useCreateBookingType, useUpdateBookingType } from '@/hooks/api'
+import { useCreateBookingType, useUpdateBookingType } from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type BookingType = components['schemas']['BookingType']

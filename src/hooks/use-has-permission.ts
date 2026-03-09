@@ -2,8 +2,8 @@
 
 import { useCallback, useMemo } from 'react'
 import { useAuth } from '@/providers/auth-provider'
-import { useCurrentPermissions } from '@/hooks/api/use-current-permissions'
-import { usePermissions } from '@/hooks/api/use-permissions'
+import { useCurrentPermissions } from '@/hooks/use-current-permissions'
+import { usePermissions } from '@/hooks/use-permissions'
 
 type PermissionKey = string
 

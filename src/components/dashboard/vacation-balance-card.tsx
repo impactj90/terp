@@ -5,7 +5,7 @@ import { Palmtree, AlertCircle, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
-import { useEmployeeVacationBalance } from '@/hooks/api'
+import { useEmployeeVacationBalance } from '@/hooks'
 
 interface VacationBalanceCardProps {
   employeeId?: string

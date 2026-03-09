@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { useTranslations } from 'next-intl'
 import { Loader2 } from 'lucide-react'
-import { useCreateSchedule, useUpdateSchedule } from '@/hooks/api'
+import { useCreateSchedule, useUpdateSchedule } from '@/hooks'
 import {
   Sheet,
   SheetContent,

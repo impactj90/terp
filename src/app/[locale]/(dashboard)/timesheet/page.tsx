@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useDailyValues, useDeleteBooking, useEmployees } from '@/hooks/api'
+import { useDailyValues, useDeleteBooking, useEmployees } from '@/hooks'
 import {
   formatDate,
   getWeekRange,

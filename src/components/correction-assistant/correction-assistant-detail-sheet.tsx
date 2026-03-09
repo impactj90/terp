@@ -16,7 +16,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import type { CorrectionAssistantItem } from '@/hooks/api/use-correction-assistant'
+import type { CorrectionAssistantItem } from '@/hooks/use-correction-assistant'
 
 interface CorrectionAssistantDetailSheetProps {
   item: CorrectionAssistantItem | null

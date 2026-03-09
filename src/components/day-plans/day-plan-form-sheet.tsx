@@ -27,7 +27,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TimeInput } from '@/components/ui/time-input'
 import { DurationInput } from '@/components/ui/duration-input'
-import { useCreateDayPlan, useUpdateDayPlan, useDayPlan } from '@/hooks/api'
+import { useCreateDayPlan, useUpdateDayPlan, useDayPlan } from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type DayPlan = components['schemas']['DayPlan']

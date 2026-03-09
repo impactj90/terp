@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { useCreateTariff, useTariff } from '@/hooks/api'
+import { useCreateTariff, useTariff } from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type Tariff = components['schemas']['Tariff']

@@ -13,13 +13,14 @@
  * @see apps/api/internal/handler/usergroup.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import {
   permissionIdByKey,
   lookupPermission,
 } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as userGroupService from "@/lib/services/user-group-service"
 
 // --- Permission Constants ---
 
@@ -93,21 +94,6 @@ function resolvePermissionIds(
 }
 
 /**
- * Validate all permission IDs exist in the catalog.
- * Mirrors Go's validatePermissionIDs (usergroup.go lines 281-288).
- */
-function validatePermissionIds(ids: string[]): void {
-  for (const id of ids) {
-    if (!lookupPermission(id)) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: `Invalid permission ID: ${id}`,
-      })
-    }
-  }
-}
-
-/**
  * Maps a Prisma UserGroup to the output schema shape.
  */
 function mapUserGroupToOutput(
@@ -166,21 +152,18 @@ export const userGroupsRouter = createTRPCRouter({
     )
     .output(z.object({ data: z.array(userGroupOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const where: Record<string, unknown> = {
-        OR: [{ tenantId: ctx.tenantId }, { tenantId: null }],
-      }
+      try {
+        const groups = await userGroupService.list(
+          ctx.prisma,
+          ctx.tenantId!,
+          input ?? undefined
+        )
 
-      if (input?.active !== undefined) {
-        where.isActive = input.active
-      }
-
-      const groups = await ctx.prisma.userGroup.findMany({
-        where,
-        orderBy: [{ isSystem: "desc" }, { name: "asc" }],
-      })
-
-      return {
-        data: groups.map((g) => mapUserGroupToOutput(g)),
+        return {
+          data: groups.map((g) => mapUserGroupToOutput(g)),
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -198,24 +181,19 @@ export const userGroupsRouter = createTRPCRouter({
       userGroupOutputSchema.extend({ usersCount: z.number() })
     )
     .query(async ({ ctx, input }) => {
-      const group = await ctx.prisma.userGroup.findFirst({
-        where: {
-          id: input.id,
-          OR: [{ tenantId: ctx.tenantId }, { tenantId: null }],
-        },
-        include: { _count: { select: { users: true } } },
-      })
+      try {
+        const group = await userGroupService.getById(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id
+        )
 
-      if (!group) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "User group not found",
-        })
-      }
-
-      return {
-        ...mapUserGroupToOutput(group),
-        usersCount: group._count.users,
+        return {
+          ...mapUserGroupToOutput(group),
+          usersCount: group._count.users,
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -233,69 +211,17 @@ export const userGroupsRouter = createTRPCRouter({
     .input(createUserGroupInputSchema)
     .output(userGroupOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      // Normalize name and code
-      const name = input.name.trim()
-      if (name.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Name is required",
-        })
+      try {
+        const group = await userGroupService.create(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+
+        return mapUserGroupToOutput(group)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      const code = (input.code?.trim() || name).toUpperCase()
-      if (code.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Code is required",
-        })
-      }
-
-      // Check name uniqueness within tenant (include system groups)
-      const existingByName = await ctx.prisma.userGroup.findFirst({
-        where: {
-          name,
-          OR: [{ tenantId: ctx.tenantId }, { tenantId: null }],
-        },
-      })
-      if (existingByName) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "User group with this name already exists",
-        })
-      }
-
-      // Check code uniqueness within tenant (include system groups)
-      const existingByCode = await ctx.prisma.userGroup.findFirst({
-        where: {
-          code,
-          OR: [{ tenantId: ctx.tenantId }, { tenantId: null }],
-        },
-      })
-      if (existingByCode) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "User group code already exists for this tenant",
-        })
-      }
-
-      // Validate all permission IDs
-      validatePermissionIds(input.permissions)
-
-      // Create user group
-      const group = await ctx.prisma.userGroup.create({
-        data: {
-          tenantId: ctx.tenantId,
-          name,
-          code,
-          description: input.description?.trim() || null,
-          permissions: input.permissions,
-          isAdmin: input.isAdmin,
-          isSystem: false,
-          isActive: input.isActive,
-        },
-      })
-
-      return mapUserGroupToOutput(group)
     }),
 
   /**
@@ -312,133 +238,17 @@ export const userGroupsRouter = createTRPCRouter({
     .input(updateUserGroupInputSchema)
     .output(userGroupOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      // Fetch existing group (scoped to current tenant or system groups)
-      const existing = await ctx.prisma.userGroup.findFirst({
-        where: {
-          id: input.id,
-          OR: [{ tenantId: ctx.tenantId }, { tenantId: null }],
-        },
-      })
+      try {
+        const group = await userGroupService.update(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
 
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "User group not found",
-        })
+        return mapUserGroupToOutput(group)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // System groups cannot be modified
-      if (existing.isSystem) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Cannot modify system group",
-        })
-      }
-
-      const previousIsAdmin = existing.isAdmin
-
-      // Build update data
-      const data: Record<string, unknown> = {}
-
-      if (input.name !== undefined) {
-        const name = input.name.trim()
-        if (name.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Name cannot be empty",
-          })
-        }
-        // Check uniqueness if changed
-        if (name !== existing.name) {
-          const existingByName =
-            await ctx.prisma.userGroup.findFirst({
-              where: {
-                name,
-                OR: [
-                  { tenantId: ctx.tenantId },
-                  { tenantId: null },
-                ],
-                NOT: { id: input.id },
-              },
-            })
-          if (existingByName) {
-            throw new TRPCError({
-              code: "CONFLICT",
-              message: "User group with this name already exists",
-            })
-          }
-        }
-        data.name = name
-      }
-
-      if (input.code !== undefined) {
-        const code = input.code.trim().toUpperCase()
-        if (code.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Code cannot be empty",
-          })
-        }
-        // Check uniqueness if changed
-        if (code !== existing.code) {
-          const existingByCode =
-            await ctx.prisma.userGroup.findFirst({
-              where: {
-                code,
-                OR: [
-                  { tenantId: ctx.tenantId },
-                  { tenantId: null },
-                ],
-                NOT: { id: input.id },
-              },
-            })
-          if (existingByCode) {
-            throw new TRPCError({
-              code: "CONFLICT",
-              message:
-                "User group code already exists for this tenant",
-            })
-          }
-        }
-        data.code = code
-      }
-
-      if (input.description !== undefined) {
-        data.description = input.description.trim() || null
-      }
-
-      if (input.permissions !== undefined) {
-        validatePermissionIds(input.permissions)
-        data.permissions = input.permissions
-      }
-
-      if (input.isAdmin !== undefined) {
-        data.isAdmin = input.isAdmin
-      }
-
-      if (input.isActive !== undefined) {
-        data.isActive = input.isActive
-      }
-
-      // Update group
-      const group = await ctx.prisma.userGroup.update({
-        where: { id: input.id },
-        data,
-      })
-
-      // If isAdmin changed, cascade role update to all users in this group
-      if (
-        input.isAdmin !== undefined &&
-        (previousIsAdmin ?? false) !== input.isAdmin
-      ) {
-        const newRole = input.isAdmin ? "admin" : "user"
-        await ctx.prisma.user.updateMany({
-          where: { userGroupId: input.id },
-          data: { role: newRole },
-        })
-      }
-
-      return mapUserGroupToOutput(group)
     }),
 
   /**
@@ -454,32 +264,16 @@ export const userGroupsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.prisma.userGroup.findFirst({
-        where: {
-          id: input.id,
-          OR: [{ tenantId: ctx.tenantId }, { tenantId: null }],
-        },
-      })
+      try {
+        await userGroupService.remove(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id
+        )
 
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "User group not found",
-        })
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // System groups cannot be deleted
-      if (existing.isSystem) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Cannot delete system group",
-        })
-      }
-
-      await ctx.prisma.userGroup.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 })

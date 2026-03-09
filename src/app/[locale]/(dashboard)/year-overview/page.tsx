@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { YearSelector } from '@/components/vacation'
-import { useYearOverview, useEmployeeVacationBalance, useEmployees } from '@/hooks/api'
+import { useYearOverview, useEmployeeVacationBalance, useEmployees } from '@/hooks'
 import {
   YearOverviewTable,
   YearSummaryCards,

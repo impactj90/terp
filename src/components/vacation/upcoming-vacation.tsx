@@ -5,7 +5,7 @@ import { CalendarCheck, ArrowRight } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useEmployeeAbsences } from '@/hooks/api'
+import { useEmployeeAbsences } from '@/hooks'
 import { formatDisplayDate, formatDate } from '@/lib/time-utils'
 import type { components } from '@/types/legacy-api-types'
 

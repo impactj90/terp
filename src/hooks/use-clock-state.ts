@@ -3,9 +3,9 @@
 import { useMemo, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTRPC } from '@/trpc'
-import { useCreateBooking } from '@/hooks/api/use-bookings'
-import { useBookingTypes } from '@/hooks/api/use-booking-types'
-import { useEmployeeDayView } from '@/hooks/api/use-employee-day'
+import { useCreateBooking } from '@/hooks/use-bookings'
+import { useBookingTypes } from '@/hooks/use-booking-types'
+import { useEmployeeDayView } from '@/hooks/use-employee-day'
 import { getToday, getCurrentTimeString } from '@/lib/time-utils'
 import type { ClockStatus } from '@/components/time-clock/clock-status-badge'
 

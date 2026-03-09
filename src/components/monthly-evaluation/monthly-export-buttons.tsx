@@ -16,7 +16,7 @@ import {
   formatDisplayDate,
   getMonthDates,
 } from '@/lib/time-utils'
-import type { MonthSummary, DailyValue } from '@/hooks/api'
+import type { MonthSummary, DailyValue } from '@/hooks'
 
 interface MonthlyExportButtonsProps {
   monthlyValue?: MonthSummary | null

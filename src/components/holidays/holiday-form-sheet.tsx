@@ -35,7 +35,7 @@ import {
   useCreateHoliday,
   useUpdateHoliday,
   useDepartments,
-} from '@/hooks/api'
+} from '@/hooks'
 import { cn } from '@/lib/utils'
 import { formatDate, parseISODate } from '@/lib/time-utils'
 import type { components } from '@/types/legacy-api-types'

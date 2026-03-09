@@ -23,6 +23,8 @@ import {
   type DataScope,
 } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as evalService from "@/lib/services/evaluations-service"
 
 // --- Permission Constants ---
 // All 5 evaluation endpoints require reports.view
@@ -191,70 +193,6 @@ const workflowHistoryInputSchema = z.object({
   pageSize: z.number().int().min(1).max(100).optional().default(50),
 })
 
-// --- Prisma Include Objects ---
-
-const evalDailyValueInclude = {
-  employee: {
-    select: {
-      id: true,
-      personnelNumber: true,
-      firstName: true,
-      lastName: true,
-      isActive: true,
-    },
-  },
-} as const
-
-const evalBookingInclude = {
-  employee: {
-    select: {
-      id: true,
-      personnelNumber: true,
-      firstName: true,
-      lastName: true,
-      isActive: true,
-    },
-  },
-  bookingType: {
-    select: { id: true, code: true, name: true, direction: true },
-  },
-} as const
-
-const evalLogInclude = {
-  user: {
-    select: { id: true, displayName: true },
-  },
-} as const
-
-// --- Data Scope Helper ---
-
-/**
- * Builds a Prisma WHERE clause for evaluation data scope filtering.
- * Data scope is applied via the employee relation (same pattern as dailyValues/bookings routers).
- */
-function buildDataScopeWhere(
-  dataScope: DataScope
-): Record<string, unknown> | null {
-  if (dataScope.type === "department") {
-    return { employee: { departmentId: { in: dataScope.departmentIds } } }
-  } else if (dataScope.type === "employee") {
-    return { employeeId: { in: dataScope.employeeIds } }
-  }
-  return null
-}
-
-// --- Helper Functions ---
-
-/**
- * Converts minutes from midnight to HH:MM string.
- * Port of Go timeutil.MinutesToString().
- */
-function minutesToTimeString(minutes: number): string {
-  const h = Math.floor(minutes / 60)
-  const m = minutes % 60
-  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`
-}
-
 // --- Router ---
 
 export const evaluationsRouter = createTRPCRouter({
@@ -279,94 +217,17 @@ export const evaluationsRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const { page, pageSize } = input
-      const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+      try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const dataScopeWhere = evalService.buildDataScopeWhere(dataScope)
 
-      const where: Record<string, unknown> = { tenantId }
-
-      // Date range filter (required)
-      where.valueDate = {
-        gte: new Date(input.fromDate),
-        lte: new Date(input.toDate),
-      }
-
-      // Optional filters
-      if (input.employeeId) {
-        where.employeeId = input.employeeId
-      }
-
-      if (input.hasErrors !== undefined) {
-        where.hasError = input.hasErrors
-      }
-
-      // Department filter (via employee relation)
-      if (input.departmentId) {
-        where.employee = {
-          ...((where.employee as Record<string, unknown>) || {}),
-          departmentId: input.departmentId,
-        }
-      }
-
-      // Apply data scope filtering
-      const scopeWhere = buildDataScopeWhere(dataScope)
-      if (scopeWhere) {
-        if (scopeWhere.employee && where.employee) {
-          where.employee = {
-            ...((where.employee as Record<string, unknown>) || {}),
-            ...((scopeWhere.employee as Record<string, unknown>) || {}),
-          }
-        } else {
-          Object.assign(where, scopeWhere)
-        }
-      }
-
-      const [items, total] = await Promise.all([
-        ctx.prisma.dailyValue.findMany({
-          where,
-          include: evalDailyValueInclude,
-          skip: (page - 1) * pageSize,
-          take: pageSize,
-          orderBy: { valueDate: "asc" },
-        }),
-        ctx.prisma.dailyValue.count({ where }),
-      ])
-
-      return {
-        items: items.map((record) => {
-          const r = record as unknown as Record<string, unknown>
-          const overtime = (r.overtime as number) ?? 0
-          const undertime = (r.undertime as number) ?? 0
-          const employee = r.employee as Record<string, unknown> | null | undefined
-
-          return {
-            id: r.id as string,
-            employeeId: r.employeeId as string,
-            valueDate: r.valueDate as Date,
-            status: (r.status as string) || "pending",
-            targetMinutes: (r.targetTime as number) ?? 0,
-            grossMinutes: (r.grossTime as number) ?? 0,
-            netMinutes: (r.netTime as number) ?? 0,
-            breakMinutes: (r.breakTime as number) ?? 0,
-            overtimeMinutes: overtime,
-            undertimeMinutes: undertime,
-            balanceMinutes: overtime - undertime,
-            bookingCount: (r.bookingCount as number) ?? 0,
-            hasErrors: (r.hasError as boolean) ?? false,
-            firstCome: (r.firstCome as number | null) ?? null,
-            lastGo: (r.lastGo as number | null) ?? null,
-            employee: employee
-              ? {
-                  id: employee.id as string,
-                  personnelNumber: employee.personnelNumber as string,
-                  firstName: employee.firstName as string,
-                  lastName: employee.lastName as string,
-                  isActive: employee.isActive as boolean,
-                }
-              : null,
-          }
-        }),
-        total,
+        return await evalService.listDailyValues(
+          ctx.prisma,
+          ctx.tenantId!,
+          { ...input, dataScopeWhere }
+        )
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -391,112 +252,17 @@ export const evaluationsRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const { page, pageSize } = input
-      const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+      try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const dataScopeWhere = evalService.buildDataScopeWhere(dataScope)
 
-      const where: Record<string, unknown> = { tenantId }
-
-      // Date range filter (required)
-      where.bookingDate = {
-        gte: new Date(input.fromDate),
-        lte: new Date(input.toDate),
-      }
-
-      // Optional filters
-      if (input.employeeId) {
-        where.employeeId = input.employeeId
-      }
-
-      if (input.bookingTypeId) {
-        where.bookingTypeId = input.bookingTypeId
-      }
-
-      if (input.source) {
-        where.source = input.source
-      }
-
-      // Direction filter via bookingType relation
-      if (input.direction) {
-        where.bookingType = {
-          ...((where.bookingType as Record<string, unknown>) || {}),
-          direction: input.direction,
-        }
-      }
-
-      // Department filter (via employee relation)
-      if (input.departmentId) {
-        where.employee = {
-          ...((where.employee as Record<string, unknown>) || {}),
-          departmentId: input.departmentId,
-        }
-      }
-
-      // Apply data scope filtering
-      const scopeWhere = buildDataScopeWhere(dataScope)
-      if (scopeWhere) {
-        if (scopeWhere.employee && where.employee) {
-          where.employee = {
-            ...((where.employee as Record<string, unknown>) || {}),
-            ...((scopeWhere.employee as Record<string, unknown>) || {}),
-          }
-        } else {
-          Object.assign(where, scopeWhere)
-        }
-      }
-
-      const [items, total] = await Promise.all([
-        ctx.prisma.booking.findMany({
-          where,
-          include: evalBookingInclude,
-          skip: (page - 1) * pageSize,
-          take: pageSize,
-          orderBy: [{ bookingDate: "desc" }, { editedTime: "desc" }],
-        }),
-        ctx.prisma.booking.count({ where }),
-      ])
-
-      return {
-        items: items.map((record) => {
-          const r = record as unknown as Record<string, unknown>
-          const employee = r.employee as Record<string, unknown> | null | undefined
-          const bookingType = r.bookingType as Record<string, unknown> | null | undefined
-          const editedTime = (r.editedTime as number) ?? 0
-
-          return {
-            id: r.id as string,
-            employeeId: r.employeeId as string,
-            bookingDate: r.bookingDate as Date,
-            bookingTypeId: r.bookingTypeId as string,
-            originalTime: (r.originalTime as number) ?? 0,
-            editedTime,
-            calculatedTime: (r.calculatedTime as number | null) ?? null,
-            timeString: minutesToTimeString(editedTime),
-            pairId: (r.pairId as string | null) ?? null,
-            terminalId: (r.terminalId as string | null) ?? null,
-            source: (r.source as string | null) ?? null,
-            notes: (r.notes as string | null) ?? null,
-            createdAt: r.createdAt as Date,
-            employee: employee
-              ? {
-                  id: employee.id as string,
-                  personnelNumber: employee.personnelNumber as string,
-                  firstName: employee.firstName as string,
-                  lastName: employee.lastName as string,
-                  isActive: employee.isActive as boolean,
-                }
-              : null,
-            bookingType: bookingType
-              ? {
-                  id: bookingType.id as string,
-                  code: bookingType.code as string,
-                  name: bookingType.name as string,
-                  direction: bookingType.direction as string,
-                }
-              : null,
-          }
-        }),
-        total,
+        return await evalService.listBookings(
+          ctx.prisma,
+          ctx.tenantId!,
+          { ...input, dataScopeWhere }
+        )
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -521,100 +287,17 @@ export const evaluationsRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const { page, pageSize } = input
-      const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+      try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const dataScopeWhere = evalService.buildDataScopeWhere(dataScope)
 
-      const where: Record<string, unknown> = { tenantId }
-
-      // Date range filter (required)
-      where.bookingDate = {
-        gte: new Date(input.fromDate),
-        lte: new Date(input.toDate),
-      }
-
-      // Hardcoded terminal source filter
-      where.source = "terminal"
-
-      // Optional filters
-      if (input.employeeId) {
-        where.employeeId = input.employeeId
-      }
-
-      // Department filter (via employee relation)
-      if (input.departmentId) {
-        where.employee = {
-          ...((where.employee as Record<string, unknown>) || {}),
-          departmentId: input.departmentId,
-        }
-      }
-
-      // Apply data scope filtering
-      const scopeWhere = buildDataScopeWhere(dataScope)
-      if (scopeWhere) {
-        if (scopeWhere.employee && where.employee) {
-          where.employee = {
-            ...((where.employee as Record<string, unknown>) || {}),
-            ...((scopeWhere.employee as Record<string, unknown>) || {}),
-          }
-        } else {
-          Object.assign(where, scopeWhere)
-        }
-      }
-
-      const [items, total] = await Promise.all([
-        ctx.prisma.booking.findMany({
-          where,
-          include: evalBookingInclude,
-          skip: (page - 1) * pageSize,
-          take: pageSize,
-          orderBy: [{ bookingDate: "desc" }, { editedTime: "desc" }],
-        }),
-        ctx.prisma.booking.count({ where }),
-      ])
-
-      return {
-        items: items.map((record) => {
-          const r = record as unknown as Record<string, unknown>
-          const employee = r.employee as Record<string, unknown> | null | undefined
-          const bookingType = r.bookingType as Record<string, unknown> | null | undefined
-          const originalTime = (r.originalTime as number) ?? 0
-          const editedTime = (r.editedTime as number) ?? 0
-
-          return {
-            id: r.id as string,
-            employeeId: r.employeeId as string,
-            bookingDate: r.bookingDate as Date,
-            bookingTypeId: r.bookingTypeId as string,
-            originalTime,
-            editedTime,
-            calculatedTime: (r.calculatedTime as number | null) ?? null,
-            wasEdited: originalTime !== editedTime,
-            originalTimeString: minutesToTimeString(originalTime),
-            editedTimeString: minutesToTimeString(editedTime),
-            source: (r.source as string | null) ?? null,
-            terminalId: (r.terminalId as string | null) ?? null,
-            createdAt: r.createdAt as Date,
-            employee: employee
-              ? {
-                  id: employee.id as string,
-                  personnelNumber: employee.personnelNumber as string,
-                  firstName: employee.firstName as string,
-                  lastName: employee.lastName as string,
-                  isActive: employee.isActive as boolean,
-                }
-              : null,
-            bookingType: bookingType
-              ? {
-                  id: bookingType.id as string,
-                  code: bookingType.code as string,
-                  name: bookingType.name as string,
-                  direction: bookingType.direction as string,
-                }
-              : null,
-          }
-        }),
-        total,
+        return await evalService.listTerminalBookings(
+          ctx.prisma,
+          ctx.tenantId!,
+          { ...input, dataScopeWhere }
+        )
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -638,67 +321,14 @@ export const evaluationsRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const { page, pageSize } = input
-
-      const where: Record<string, unknown> = { tenantId }
-
-      // Date range filter with end-of-day adjustment
-      // Matches Go: f.To.Add(23*time.Hour + 59*time.Minute + 59*time.Second)
-      const toEnd = new Date(input.toDate)
-      toEnd.setHours(23, 59, 59, 999)
-      where.performedAt = {
-        gte: new Date(input.fromDate),
-        lte: toEnd,
-      }
-
-      // Optional filters
-      if (input.entityType) {
-        where.entityType = input.entityType
-      }
-
-      if (input.action) {
-        where.action = input.action
-      }
-
-      if (input.userId) {
-        where.userId = input.userId
-      }
-
-      const [items, total] = await Promise.all([
-        ctx.prisma.auditLog.findMany({
-          where,
-          include: evalLogInclude,
-          skip: (page - 1) * pageSize,
-          take: pageSize,
-          orderBy: { performedAt: "desc" },
-        }),
-        ctx.prisma.auditLog.count({ where }),
-      ])
-
-      return {
-        items: items.map((record) => {
-          const r = record as unknown as Record<string, unknown>
-          const user = r.user as Record<string, unknown> | null | undefined
-
-          return {
-            id: r.id as string,
-            action: r.action as string,
-            entityType: r.entityType as string,
-            entityId: r.entityId as string,
-            entityName: (r.entityName as string | null) ?? null,
-            changes: r.changes ?? null,
-            performedAt: r.performedAt as Date,
-            userId: (r.userId as string | null) ?? null,
-            user: user
-              ? {
-                  id: user.id as string,
-                  displayName: user.displayName as string,
-                }
-              : null,
-          }
-        }),
-        total,
+      try {
+        return await evalService.listLogs(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -725,65 +355,14 @@ export const evaluationsRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const { page, pageSize } = input
-
-      const where: Record<string, unknown> = { tenantId }
-
-      // Date range filter with end-of-day adjustment
-      const toEnd = new Date(input.toDate)
-      toEnd.setHours(23, 59, 59, 999)
-      where.performedAt = {
-        gte: new Date(input.fromDate),
-        lte: toEnd,
-      }
-
-      // Default entity types for workflow (when not specified)
-      const entityTypes = input.entityType
-        ? [input.entityType]
-        : ["absence", "monthly_value"]
-      where.entityType = { in: entityTypes }
-
-      // Default actions for workflow (when not specified)
-      const actions = input.action
-        ? [input.action]
-        : ["create", "approve", "reject", "close", "reopen"]
-      where.action = { in: actions }
-
-      const [items, total] = await Promise.all([
-        ctx.prisma.auditLog.findMany({
-          where,
-          include: evalLogInclude,
-          skip: (page - 1) * pageSize,
-          take: pageSize,
-          orderBy: { performedAt: "desc" },
-        }),
-        ctx.prisma.auditLog.count({ where }),
-      ])
-
-      return {
-        items: items.map((record) => {
-          const r = record as unknown as Record<string, unknown>
-          const user = r.user as Record<string, unknown> | null | undefined
-
-          return {
-            id: r.id as string,
-            action: r.action as string,
-            entityType: r.entityType as string,
-            entityId: r.entityId as string,
-            entityName: (r.entityName as string | null) ?? null,
-            metadata: r.metadata ?? null,
-            performedAt: r.performedAt as Date,
-            userId: (r.userId as string | null) ?? null,
-            user: user
-              ? {
-                  id: user.id as string,
-                  displayName: user.displayName as string,
-                }
-              : null,
-          }
-        }),
-        total,
+      try {
+        return await evalService.listWorkflowHistory(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 })

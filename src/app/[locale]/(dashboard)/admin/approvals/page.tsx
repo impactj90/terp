@@ -14,7 +14,7 @@ import {
   useTeams,
   useTeamMembers,
   type DailyValue,
-} from '@/hooks/api'
+} from '@/hooks'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'

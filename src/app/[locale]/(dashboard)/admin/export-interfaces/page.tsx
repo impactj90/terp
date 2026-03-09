@@ -9,7 +9,7 @@ import { useHasPermission } from '@/hooks'
 import {
   useExportInterfaces,
   useDeleteExportInterface,
-} from '@/hooks/api/use-export-interfaces'
+} from '@/hooks/use-export-interfaces'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { SearchInput } from '@/components/ui/search-input'

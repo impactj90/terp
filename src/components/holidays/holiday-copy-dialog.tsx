@@ -16,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { useCopyHolidays } from '@/hooks/api'
+import { useCopyHolidays } from '@/hooks'
 
 interface HolidayCopyDialogProps {
   open: boolean

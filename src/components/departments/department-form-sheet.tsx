@@ -29,7 +29,7 @@ import {
   useCreateDepartment,
   useUpdateDepartment,
   useDepartments,
-} from '@/hooks/api'
+} from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type Department = components['schemas']['Department']

@@ -6,7 +6,7 @@ import { Calendar, AlertCircle, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
-import { useDailyValues } from '@/hooks/api'
+import { useDailyValues } from '@/hooks'
 import {
   formatMinutes,
   formatDuration,

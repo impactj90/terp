@@ -19,7 +19,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { useUpdateAbsence } from '@/hooks/api'
+import { useUpdateAbsence } from '@/hooks'
 import { parseISODate } from '@/lib/time-utils'
 import type { components } from '@/types/legacy-api-types'
 

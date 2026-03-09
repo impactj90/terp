@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { useCopyDayPlan } from '@/hooks/api'
+import { useCopyDayPlan } from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type DayPlan = components['schemas']['DayPlan']

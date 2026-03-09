@@ -5,7 +5,7 @@ import { useTranslations, useLocale } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useDailyValues, useMonthlyValues } from '@/hooks/api'
+import { useDailyValues, useMonthlyValues } from '@/hooks'
 import {
   formatDate,
   getMonthDates,

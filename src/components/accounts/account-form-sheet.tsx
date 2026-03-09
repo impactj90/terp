@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useCreateAccount, useUpdateAccount } from '@/hooks/api'
+import { useCreateAccount, useUpdateAccount } from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type Account = components['schemas']['Account']

@@ -13,10 +13,11 @@
  * @see apps/api/internal/service/travel_allowance_rule_set.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as travelAllowanceRuleSetService from "@/lib/services/travel-allowance-rule-set-service"
 
 // --- Permission Constants ---
 
@@ -66,6 +67,40 @@ const updateRuleSetInputSchema = z.object({
   sortOrder: z.number().int().optional(),
 })
 
+// --- Helpers ---
+
+function mapRuleSet(rs: {
+  id: string
+  tenantId: string
+  code: string
+  name: string
+  description: string | null
+  validFrom: Date | null
+  validTo: Date | null
+  calculationBasis: string
+  distanceRule: string
+  isActive: boolean
+  sortOrder: number
+  createdAt: Date
+  updatedAt: Date
+}) {
+  return {
+    id: rs.id,
+    tenantId: rs.tenantId,
+    code: rs.code,
+    name: rs.name,
+    description: rs.description,
+    validFrom: rs.validFrom,
+    validTo: rs.validTo,
+    calculationBasis: rs.calculationBasis,
+    distanceRule: rs.distanceRule,
+    isActive: rs.isActive,
+    sortOrder: rs.sortOrder,
+    createdAt: rs.createdAt,
+    updatedAt: rs.updatedAt,
+  }
+}
+
 // --- Router ---
 
 export const travelAllowanceRuleSetsRouter = createTRPCRouter({
@@ -81,29 +116,14 @@ export const travelAllowanceRuleSetsRouter = createTRPCRouter({
     .input(z.void().optional())
     .output(z.object({ data: z.array(travelAllowanceRuleSetOutputSchema) }))
     .query(async ({ ctx }) => {
-      const tenantId = ctx.tenantId!
-
-      const ruleSets = await ctx.prisma.travelAllowanceRuleSet.findMany({
-        where: { tenantId },
-        orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
-      })
-
-      return {
-        data: ruleSets.map((rs) => ({
-          id: rs.id,
-          tenantId: rs.tenantId,
-          code: rs.code,
-          name: rs.name,
-          description: rs.description,
-          validFrom: rs.validFrom,
-          validTo: rs.validTo,
-          calculationBasis: rs.calculationBasis,
-          distanceRule: rs.distanceRule,
-          isActive: rs.isActive,
-          sortOrder: rs.sortOrder,
-          createdAt: rs.createdAt,
-          updatedAt: rs.updatedAt,
-        })),
+      try {
+        const ruleSets = await travelAllowanceRuleSetService.list(
+          ctx.prisma,
+          ctx.tenantId!
+        )
+        return { data: ruleSets.map(mapRuleSet) }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -117,33 +137,15 @@ export const travelAllowanceRuleSetsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(travelAllowanceRuleSetOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const rs = await ctx.prisma.travelAllowanceRuleSet.findFirst({
-        where: { id: input.id, tenantId },
-      })
-
-      if (!rs) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Travel allowance rule set not found",
-        })
-      }
-
-      return {
-        id: rs.id,
-        tenantId: rs.tenantId,
-        code: rs.code,
-        name: rs.name,
-        description: rs.description,
-        validFrom: rs.validFrom,
-        validTo: rs.validTo,
-        calculationBasis: rs.calculationBasis,
-        distanceRule: rs.distanceRule,
-        isActive: rs.isActive,
-        sortOrder: rs.sortOrder,
-        createdAt: rs.createdAt,
-        updatedAt: rs.updatedAt,
+      try {
+        const rs = await travelAllowanceRuleSetService.getById(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id
+        )
+        return mapRuleSet(rs)
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -161,74 +163,15 @@ export const travelAllowanceRuleSetsRouter = createTRPCRouter({
     .input(createRuleSetInputSchema)
     .output(travelAllowanceRuleSetOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Trim and validate code
-      const code = input.code.trim()
-      if (code.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Rule set code is required",
-        })
-      }
-
-      // Trim and validate name
-      const name = input.name.trim()
-      if (name.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Rule set name is required",
-        })
-      }
-
-      // Check code uniqueness within tenant
-      const existingByCode = await ctx.prisma.travelAllowanceRuleSet.findFirst({
-        where: { tenantId, code },
-      })
-      if (existingByCode) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Rule set code already exists",
-        })
-      }
-
-      // Parse dates if provided
-      const validFrom = input.validFrom
-        ? new Date(input.validFrom + "T00:00:00.000Z")
-        : null
-      const validTo = input.validTo
-        ? new Date(input.validTo + "T00:00:00.000Z")
-        : null
-
-      const rs = await ctx.prisma.travelAllowanceRuleSet.create({
-        data: {
-          tenantId,
-          code,
-          name,
-          description: input.description?.trim() || null,
-          validFrom,
-          validTo,
-          calculationBasis: input.calculationBasis ?? "per_day",
-          distanceRule: input.distanceRule ?? "longest",
-          isActive: true,
-          sortOrder: input.sortOrder ?? 0,
-        },
-      })
-
-      return {
-        id: rs.id,
-        tenantId: rs.tenantId,
-        code: rs.code,
-        name: rs.name,
-        description: rs.description,
-        validFrom: rs.validFrom,
-        validTo: rs.validTo,
-        calculationBasis: rs.calculationBasis,
-        distanceRule: rs.distanceRule,
-        isActive: rs.isActive,
-        sortOrder: rs.sortOrder,
-        createdAt: rs.createdAt,
-        updatedAt: rs.updatedAt,
+      try {
+        const rs = await travelAllowanceRuleSetService.create(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+        return mapRuleSet(rs)
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -244,85 +187,15 @@ export const travelAllowanceRuleSetsRouter = createTRPCRouter({
     .input(updateRuleSetInputSchema)
     .output(travelAllowanceRuleSetOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify rule set exists (tenant-scoped)
-      const existing = await ctx.prisma.travelAllowanceRuleSet.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Travel allowance rule set not found",
-        })
-      }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      if (input.name !== undefined) {
-        const name = input.name.trim()
-        if (name.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Rule set name is required",
-          })
-        }
-        data.name = name
-      }
-
-      if (input.description !== undefined) {
-        data.description =
-          input.description === null ? null : input.description.trim()
-      }
-
-      if (input.validFrom !== undefined) {
-        data.validFrom = input.validFrom
-          ? new Date(input.validFrom + "T00:00:00.000Z")
-          : null
-      }
-
-      if (input.validTo !== undefined) {
-        data.validTo = input.validTo
-          ? new Date(input.validTo + "T00:00:00.000Z")
-          : null
-      }
-
-      if (input.calculationBasis !== undefined) {
-        data.calculationBasis = input.calculationBasis
-      }
-
-      if (input.distanceRule !== undefined) {
-        data.distanceRule = input.distanceRule
-      }
-
-      if (input.isActive !== undefined) {
-        data.isActive = input.isActive
-      }
-
-      if (input.sortOrder !== undefined) {
-        data.sortOrder = input.sortOrder
-      }
-
-      const rs = await ctx.prisma.travelAllowanceRuleSet.update({
-        where: { id: input.id },
-        data,
-      })
-
-      return {
-        id: rs.id,
-        tenantId: rs.tenantId,
-        code: rs.code,
-        name: rs.name,
-        description: rs.description,
-        validFrom: rs.validFrom,
-        validTo: rs.validTo,
-        calculationBasis: rs.calculationBasis,
-        distanceRule: rs.distanceRule,
-        isActive: rs.isActive,
-        sortOrder: rs.sortOrder,
-        createdAt: rs.createdAt,
-        updatedAt: rs.updatedAt,
+      try {
+        const rs = await travelAllowanceRuleSetService.update(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+        return mapRuleSet(rs)
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -338,23 +211,15 @@ export const travelAllowanceRuleSetsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify rule set exists (tenant-scoped)
-      const existing = await ctx.prisma.travelAllowanceRuleSet.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Travel allowance rule set not found",
-        })
+      try {
+        await travelAllowanceRuleSetService.remove(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id
+        )
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      await ctx.prisma.travelAllowanceRuleSet.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 })

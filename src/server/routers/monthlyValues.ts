@@ -28,7 +28,8 @@ import {
   type DataScope,
 } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
-import { MonthlyCalcService } from "../services/monthly-calc"
+import { handleServiceError } from "@/trpc/errors"
+import * as monthlyValuesService from "@/lib/services/monthly-values-service"
 import type { MonthSummary } from "../services/monthly-calc.types"
 import {
   ERR_FUTURE_MONTH,
@@ -177,21 +178,6 @@ const recalculateInputSchema = z.object({
   employeeId: z.string().uuid().optional(),
 })
 
-// --- Prisma Include for Admin List ---
-
-const monthlyValueListInclude = {
-  employee: {
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      personnelNumber: true,
-      isActive: true,
-      departmentId: true,
-    },
-  },
-} as const
-
 // --- Data Scope Helpers ---
 
 /**
@@ -244,6 +230,7 @@ function checkMonthlyValueDataScope(
 
 /**
  * Maps service error messages to TRPCError with appropriate codes.
+ * Used for MonthlyCalcService errors which use message-based error strings.
  */
 function mapServiceError(err: unknown): never {
   const message = err instanceof Error ? err.message : String(err)
@@ -373,9 +360,13 @@ export const monthlyValuesRouter = createTRPCRouter({
     .output(monthSummaryOutputSchema)
     .query(async ({ ctx, input }) => {
       const { employeeId, year, month } = input
-      const monthlyCalcService = new MonthlyCalcService(ctx.prisma)
       try {
-        const summary = await monthlyCalcService.getMonthSummary(employeeId, year, month)
+        const summary = await monthlyValuesService.forEmployee(
+          ctx.prisma,
+          employeeId,
+          year,
+          month
+        )
         return mapMonthSummaryToOutput(summary)
       } catch (err) {
         mapServiceError(err)
@@ -402,9 +393,12 @@ export const monthlyValuesRouter = createTRPCRouter({
     .output(z.array(monthSummaryOutputSchema))
     .query(async ({ ctx, input }) => {
       const { employeeId, year } = input
-      const monthlyCalcService = new MonthlyCalcService(ctx.prisma)
       try {
-        const summaries = await monthlyCalcService.getYearOverview(employeeId, year)
+        const summaries = await monthlyValuesService.yearOverview(
+          ctx.prisma,
+          employeeId,
+          year
+        )
         return summaries.map(mapMonthSummaryToOutput)
       } catch (err) {
         mapServiceError(err)
@@ -435,65 +429,32 @@ export const monthlyValuesRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!
-      const page = input.page ?? 1
-      const pageSize = input.pageSize ?? 50
       const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+      const dataScopeWhere = buildMonthlyValueDataScopeWhere(dataScope)
 
-      const where: Record<string, unknown> = {
-        tenantId,
-        year: input.year,
-        month: input.month,
-      }
-
-      // Status filter (Go mapping: "closed" -> isClosed=true; "open"/"calculated" -> isClosed=false)
-      if (input.status === "closed") {
-        where.isClosed = true
-      } else if (input.status === "open" || input.status === "calculated") {
-        where.isClosed = false
-      }
-
-      // Employee filter
-      if (input.employeeId) {
-        where.employeeId = input.employeeId
-      }
-
-      // Department filter (via employee relation)
-      if (input.departmentId) {
-        where.employee = {
-          ...((where.employee as Record<string, unknown>) || {}),
-          departmentId: input.departmentId,
-        }
-      }
-
-      // Apply data scope
-      const scopeWhere = buildMonthlyValueDataScopeWhere(dataScope)
-      if (scopeWhere) {
-        if (scopeWhere.employee && where.employee) {
-          where.employee = {
-            ...((where.employee as Record<string, unknown>) || {}),
-            ...((scopeWhere.employee as Record<string, unknown>) || {}),
+      try {
+        const { items, total } = await monthlyValuesService.list(
+          ctx.prisma,
+          tenantId,
+          {
+            year: input.year,
+            month: input.month,
+            page: input.page,
+            pageSize: input.pageSize,
+            status: input.status,
+            departmentId: input.departmentId,
+            employeeId: input.employeeId,
+            dataScopeWhere,
           }
-        } else {
-          Object.assign(where, scopeWhere)
+        )
+        return {
+          items: items.map((item) =>
+            mapMonthlyValueToOutput(item as unknown as Record<string, unknown>)
+          ),
+          total,
         }
-      }
-
-      const [items, total] = await Promise.all([
-        ctx.prisma.monthlyValue.findMany({
-          where,
-          include: monthlyValueListInclude,
-          skip: (page - 1) * pageSize,
-          take: pageSize,
-          orderBy: [{ year: "desc" }, { month: "desc" }],
-        }),
-        ctx.prisma.monthlyValue.count({ where }),
-      ])
-
-      return {
-        items: items.map((item) =>
-          mapMonthlyValueToOutput(item as unknown as Record<string, unknown>)
-        ),
-        total,
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -511,20 +472,16 @@ export const monthlyValuesRouter = createTRPCRouter({
     .output(monthlyValueOutputSchema)
     .query(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!
-
-      const mv = await ctx.prisma.monthlyValue.findFirst({
-        where: { id: input.id, tenantId },
-        include: monthlyValueListInclude,
-      })
-
-      if (!mv) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Monthly value not found",
-        })
+      try {
+        const mv = await monthlyValuesService.getById(
+          ctx.prisma,
+          tenantId,
+          input.id
+        )
+        return mapMonthlyValueToOutput(mv as unknown as Record<string, unknown>)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapMonthlyValueToOutput(mv as unknown as Record<string, unknown>)
     }),
 
   /**
@@ -543,44 +500,19 @@ export const monthlyValuesRouter = createTRPCRouter({
     .output(monthlyValueOutputSchema)
     .mutation(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!
-
-      // 1. Look up the monthly value
-      let mv
-      if ("id" in input) {
-        mv = await ctx.prisma.monthlyValue.findFirst({
-          where: { id: input.id, tenantId },
-          include: monthlyValueListInclude,
-        })
-      } else {
-        mv = await ctx.prisma.monthlyValue.findFirst({
-          where: {
-            employeeId: input.employeeId,
-            year: input.year,
-            month: input.month,
-            tenantId,
-          },
-          include: monthlyValueListInclude,
-        })
-      }
-
-      if (!mv) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Monthly value not found" })
-      }
-
-      // 2. Close via service
-      const monthlyCalcService = new MonthlyCalcService(ctx.prisma)
       try {
-        await monthlyCalcService.closeMonth(mv.employeeId, mv.year, mv.month, ctx.user!.id)
+        const updated = await monthlyValuesService.close(
+          ctx.prisma,
+          tenantId,
+          input,
+          ctx.user!.id
+        )
+        return mapMonthlyValueToOutput(
+          updated as unknown as Record<string, unknown>
+        )
       } catch (err) {
         mapServiceError(err)
       }
-
-      // 3. Re-fetch and return updated record
-      const updated = await ctx.prisma.monthlyValue.findFirst({
-        where: { id: mv.id, tenantId },
-        include: monthlyValueListInclude,
-      })
-      return mapMonthlyValueToOutput(updated as unknown as Record<string, unknown>)
     }),
 
   /**
@@ -599,44 +531,19 @@ export const monthlyValuesRouter = createTRPCRouter({
     .output(monthlyValueOutputSchema)
     .mutation(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!
-
-      // 1. Look up the monthly value
-      let mv
-      if ("id" in input) {
-        mv = await ctx.prisma.monthlyValue.findFirst({
-          where: { id: input.id, tenantId },
-          include: monthlyValueListInclude,
-        })
-      } else {
-        mv = await ctx.prisma.monthlyValue.findFirst({
-          where: {
-            employeeId: input.employeeId,
-            year: input.year,
-            month: input.month,
-            tenantId,
-          },
-          include: monthlyValueListInclude,
-        })
-      }
-
-      if (!mv) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Monthly value not found" })
-      }
-
-      // 2. Reopen via service
-      const monthlyCalcService = new MonthlyCalcService(ctx.prisma)
       try {
-        await monthlyCalcService.reopenMonth(mv.employeeId, mv.year, mv.month, ctx.user!.id)
+        const updated = await monthlyValuesService.reopen(
+          ctx.prisma,
+          tenantId,
+          input,
+          ctx.user!.id
+        )
+        return mapMonthlyValueToOutput(
+          updated as unknown as Record<string, unknown>
+        )
       } catch (err) {
         mapServiceError(err)
       }
-
-      // 3. Re-fetch and return updated record
-      const updated = await ctx.prisma.monthlyValue.findFirst({
-        where: { id: mv.id, tenantId },
-        include: monthlyValueListInclude,
-      })
-      return mapMonthlyValueToOutput(updated as unknown as Record<string, unknown>)
     }),
 
   /**
@@ -668,69 +575,15 @@ export const monthlyValuesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!
       const userId = ctx.user!.id
-      const { year, month, recalculate } = input
-
-      // 1. Determine which employees to close
-      let employeeIds = input.employeeIds ?? []
-      if (employeeIds.length === 0) {
-        // Get active employees (optionally filtered by department)
-        const empWhere: Record<string, unknown> = {
+      try {
+        return await monthlyValuesService.closeBatch(
+          ctx.prisma,
           tenantId,
-          isActive: true,
-        }
-        if (input.departmentId) {
-          empWhere.departmentId = input.departmentId
-        }
-        const employees = await ctx.prisma.employee.findMany({
-          where: empWhere,
-          select: { id: true },
-        })
-        employeeIds = employees.map((e) => e.id)
-      }
-
-      // 2. Optionally recalculate before closing
-      const monthlyCalcService = new MonthlyCalcService(ctx.prisma)
-      if (recalculate) {
-        await monthlyCalcService.calculateMonthBatch(employeeIds, year, month)
-      }
-
-      // 3. Close each employee's month
-      let closedCount = 0
-      let skippedCount = 0
-      const errors: { employeeId: string; reason: string }[] = []
-
-      for (const empId of employeeIds) {
-        const mv = await ctx.prisma.monthlyValue.findUnique({
-          where: {
-            employeeId_year_month: { employeeId: empId, year, month },
-          },
-        })
-
-        if (!mv) {
-          skippedCount++
-          continue
-        }
-        if (mv.isClosed) {
-          skippedCount++
-          continue
-        }
-
-        try {
-          await monthlyCalcService.closeMonth(empId, year, month, userId)
-          closedCount++
-        } catch (err) {
-          errors.push({
-            employeeId: empId,
-            reason: err instanceof Error ? err.message : String(err),
-          })
-        }
-      }
-
-      return {
-        closedCount,
-        skippedCount,
-        errorCount: errors.length,
-        errors,
+          input,
+          userId
+        )
+      } catch (err) {
+        mapServiceError(err)
       }
     }),
 
@@ -755,26 +608,14 @@ export const monthlyValuesRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!
-      const { year, month, employeeId } = input
-
-      // Determine which employees to recalculate
-      let employeeIds: string[]
-      if (employeeId) {
-        employeeIds = [employeeId]
-      } else {
-        const employees = await ctx.prisma.employee.findMany({
-          where: { tenantId, isActive: true },
-          select: { id: true },
-        })
-        employeeIds = employees.map((e) => e.id)
-      }
-
-      const monthlyCalcService = new MonthlyCalcService(ctx.prisma)
-      const result = await monthlyCalcService.calculateMonthBatch(employeeIds, year, month)
-
-      return {
-        message: "Recalculation started",
-        affectedEmployees: result.processedMonths,
+      try {
+        return await monthlyValuesService.recalculate(
+          ctx.prisma,
+          tenantId,
+          input
+        )
+      } catch (err) {
+        mapServiceError(err)
       }
     }),
 })

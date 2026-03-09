@@ -13,7 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useEmployeeTariffAssignments } from '@/hooks/api'
+import { useEmployeeTariffAssignments } from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type TariffAssignment = components['schemas']['EmployeeTariffAssignment']

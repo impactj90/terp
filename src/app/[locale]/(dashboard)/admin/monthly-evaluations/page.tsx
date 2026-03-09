@@ -10,7 +10,7 @@ import {
   useMonthlyEvaluations,
   useDeleteMonthlyEvaluation,
   useSetDefaultMonthlyEvaluation,
-} from '@/hooks/api/use-monthly-evaluations'
+} from '@/hooks/use-monthly-evaluations'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { SearchInput } from '@/components/ui/search-input'

@@ -23,8 +23,8 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { usePayrollExportPreview } from '@/hooks/api'
-import type { PayrollExportLine } from '@/hooks/api'
+import { usePayrollExportPreview } from '@/hooks'
+import type { PayrollExportLine } from '@/hooks'
 
 interface PayrollExportPreviewProps {
   exportId: string | undefined

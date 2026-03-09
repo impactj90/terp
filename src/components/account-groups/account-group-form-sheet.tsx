@@ -18,7 +18,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { useCreateAccountGroup, useUpdateAccountGroup } from '@/hooks/api'
+import { useCreateAccountGroup, useUpdateAccountGroup } from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type AccountGroup = components['schemas']['AccountGroup']

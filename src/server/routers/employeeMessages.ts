@@ -13,10 +13,11 @@
  * @see apps/api/internal/service/employee_message.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as service from "@/lib/services/employee-messages-service"
 
 // --- Permission Constants ---
 
@@ -95,51 +96,14 @@ export const employeeMessagesRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const limit = input?.limit ?? 20
-      const offset = input?.offset ?? 0
-      const status = input?.status
-
-      // Build where clause
-      const where: Record<string, unknown> = { tenantId }
-      if (status) {
-        where.recipients = {
-          some: { status },
-        }
-      }
-
-      const [messages, total] = await Promise.all([
-        ctx.prisma.employeeMessage.findMany({
-          where,
-          include: { recipients: true },
-          orderBy: { createdAt: "desc" },
-          take: limit,
-          skip: offset,
-        }),
-        ctx.prisma.employeeMessage.count({ where }),
-      ])
-
-      return {
-        items: messages.map((m) => ({
-          id: m.id,
-          tenantId: m.tenantId,
-          senderId: m.senderId,
-          subject: m.subject,
-          body: m.body,
-          createdAt: m.createdAt,
-          updatedAt: m.updatedAt,
-          recipients: m.recipients.map((r) => ({
-            id: r.id,
-            messageId: r.messageId,
-            employeeId: r.employeeId,
-            status: r.status,
-            sentAt: r.sentAt,
-            errorMessage: r.errorMessage,
-            createdAt: r.createdAt,
-            updatedAt: r.updatedAt,
-          })),
-        })),
-        total,
+      try {
+        return await service.listMessages(ctx.prisma, ctx.tenantId!, {
+          status: input?.status,
+          limit: input?.limit ?? 20,
+          offset: input?.offset ?? 0,
+        })
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -153,38 +117,10 @@ export const employeeMessagesRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(employeeMessageOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const message = await ctx.prisma.employeeMessage.findFirst({
-        where: { id: input.id, tenantId },
-        include: { recipients: true },
-      })
-
-      if (!message) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Employee message not found",
-        })
-      }
-
-      return {
-        id: message.id,
-        tenantId: message.tenantId,
-        senderId: message.senderId,
-        subject: message.subject,
-        body: message.body,
-        createdAt: message.createdAt,
-        updatedAt: message.updatedAt,
-        recipients: message.recipients.map((r) => ({
-          id: r.id,
-          messageId: r.messageId,
-          employeeId: r.employeeId,
-          status: r.status,
-          sentAt: r.sentAt,
-          errorMessage: r.errorMessage,
-          createdAt: r.createdAt,
-          updatedAt: r.updatedAt,
-        })),
+      try {
+        return await service.getMessageById(ctx.prisma, ctx.tenantId!, input.id)
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -211,53 +147,15 @@ export const employeeMessagesRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Find messages where this employee is a recipient
-      const [recipients, total] = await Promise.all([
-        ctx.prisma.employeeMessageRecipient.findMany({
-          where: {
-            employeeId: input.employeeId,
-            message: { tenantId },
-          },
-          include: {
-            message: {
-              include: { recipients: true },
-            },
-          },
-          orderBy: { createdAt: "desc" },
-          take: input.limit,
-          skip: input.offset,
-        }),
-        ctx.prisma.employeeMessageRecipient.count({
-          where: {
-            employeeId: input.employeeId,
-            message: { tenantId },
-          },
-        }),
-      ])
-
-      return {
-        items: recipients.map((r) => ({
-          id: r.message.id,
-          tenantId: r.message.tenantId,
-          senderId: r.message.senderId,
-          subject: r.message.subject,
-          body: r.message.body,
-          createdAt: r.message.createdAt,
-          updatedAt: r.message.updatedAt,
-          recipients: r.message.recipients.map((rec) => ({
-            id: rec.id,
-            messageId: rec.messageId,
-            employeeId: rec.employeeId,
-            status: rec.status,
-            sentAt: rec.sentAt,
-            errorMessage: rec.errorMessage,
-            createdAt: rec.createdAt,
-            updatedAt: rec.updatedAt,
-          })),
-        })),
-        total,
+      try {
+        return await service.listMessagesForEmployee(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.employeeId,
+          { limit: input.limit, offset: input.offset }
+        )
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -274,72 +172,15 @@ export const employeeMessagesRouter = createTRPCRouter({
     .input(createMessageInputSchema)
     .output(employeeMessageOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const senderId = ctx.user!.id
-
-      // Trim and validate
-      const subject = input.subject.trim()
-      if (subject.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Subject is required",
-        })
-      }
-
-      const body = input.body.trim()
-      if (body.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Body is required",
-        })
-      }
-
-      // Create message + recipients atomically
-      const message = await ctx.prisma.$transaction(async (tx) => {
-        const msg = await tx.employeeMessage.create({
-          data: {
-            tenantId,
-            senderId,
-            subject,
-            body,
-          },
-        })
-
-        await tx.employeeMessageRecipient.createMany({
-          data: input.employeeIds.map((employeeId) => ({
-            messageId: msg.id,
-            employeeId,
-            status: "pending",
-          })),
-        })
-
-        return msg
-      })
-
-      // Re-fetch with recipients
-      const result = await ctx.prisma.employeeMessage.findFirst({
-        where: { id: message.id, tenantId },
-        include: { recipients: true },
-      })
-
-      return {
-        id: result!.id,
-        tenantId: result!.tenantId,
-        senderId: result!.senderId,
-        subject: result!.subject,
-        body: result!.body,
-        createdAt: result!.createdAt,
-        updatedAt: result!.updatedAt,
-        recipients: result!.recipients.map((r) => ({
-          id: r.id,
-          messageId: r.messageId,
-          employeeId: r.employeeId,
-          status: r.status,
-          sentAt: r.sentAt,
-          errorMessage: r.errorMessage,
-          createdAt: r.createdAt,
-          updatedAt: r.updatedAt,
-        })),
+      try {
+        return await service.createMessage(
+          ctx.prisma,
+          ctx.tenantId!,
+          ctx.user!.id,
+          input
+        )
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -360,78 +201,10 @@ export const employeeMessagesRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(sendResultOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Fetch message with recipients
-      const message = await ctx.prisma.employeeMessage.findFirst({
-        where: { id: input.id, tenantId },
-        include: { recipients: true },
-      })
-
-      if (!message) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Employee message not found",
-        })
-      }
-
-      // Filter to pending recipients
-      const pendingRecipients = message.recipients.filter(
-        (r) => r.status === "pending"
-      )
-
-      let sentCount = 0
-      let failedCount = 0
-
-      for (const recipient of pendingRecipients) {
-        try {
-          // Look up the employee to find their linked user
-          const employee = await ctx.prisma.employee.findFirst({
-            where: { id: recipient.employeeId },
-            include: { user: true },
-          })
-
-          if (employee?.user) {
-            // Create notification for the employee's user
-            await ctx.prisma.notification.create({
-              data: {
-                tenantId,
-                userId: employee.user.id,
-                type: "system",
-                title: message.subject,
-                message: message.body,
-              },
-            })
-          }
-
-          // Update recipient status to sent
-          await ctx.prisma.employeeMessageRecipient.update({
-            where: { id: recipient.id },
-            data: {
-              status: "sent",
-              sentAt: new Date(),
-            },
-          })
-          sentCount++
-        } catch (err) {
-          // Update recipient status to failed
-          const errorMsg =
-            err instanceof Error ? err.message : "Unknown error"
-          await ctx.prisma.employeeMessageRecipient.update({
-            where: { id: recipient.id },
-            data: {
-              status: "failed",
-              errorMessage: errorMsg,
-            },
-          })
-          failedCount++
-        }
-      }
-
-      return {
-        messageId: message.id,
-        sent: sentCount,
-        failed: failedCount,
+      try {
+        return await service.sendMessage(ctx.prisma, ctx.tenantId!, input.id)
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 })

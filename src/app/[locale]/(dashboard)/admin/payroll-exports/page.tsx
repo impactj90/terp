@@ -10,7 +10,7 @@ import {
   usePayrollExport,
   useDeletePayrollExport,
   useDownloadPayrollExport,
-} from '@/hooks/api'
+} from '@/hooks'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'

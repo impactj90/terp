@@ -13,7 +13,7 @@ import {
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
-import { useDailyValues } from '@/hooks/api'
+import { useDailyValues } from '@/hooks'
 import { formatDate, formatRelativeDate } from '@/lib/time-utils'
 
 interface PendingActionsProps {

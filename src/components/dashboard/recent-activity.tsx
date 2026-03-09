@@ -14,7 +14,7 @@ import {
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
-import { useBookings } from '@/hooks/api'
+import { useBookings } from '@/hooks'
 import { formatDate, formatRelativeDate, formatTime } from '@/lib/time-utils'
 
 interface RecentActivityProps {

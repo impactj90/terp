@@ -12,10 +12,12 @@
  * @see apps/api/internal/service/location.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
+import { handleServiceError } from "@/trpc/errors"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import * as locationService from "@/lib/services/location-service"
+import type { PrismaClient } from "@/generated/prisma/client"
 
 // --- Permission Constants ---
 
@@ -121,20 +123,18 @@ export const locationsRouter = createTRPCRouter({
     )
     .output(z.object({ data: z.array(locationOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const where: Record<string, unknown> = { tenantId }
-
-      if (input?.isActive !== undefined) {
-        where.isActive = input.isActive
-      }
-
-      const locations = await ctx.prisma.location.findMany({
-        where,
-        orderBy: { code: "asc" },
-      })
-
-      return {
-        data: locations.map(mapLocationToOutput),
+      try {
+        const tenantId = ctx.tenantId!
+        const locations = await locationService.list(
+          ctx.prisma as unknown as PrismaClient,
+          tenantId,
+          input
+        )
+        return {
+          data: locations.map(mapLocationToOutput),
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -150,19 +150,17 @@ export const locationsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(locationOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const location = await ctx.prisma.location.findFirst({
-        where: { id: input.id, tenantId },
-      })
-
-      if (!location) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Location not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        const location = await locationService.getById(
+          ctx.prisma as unknown as PrismaClient,
+          tenantId,
+          input.id
+        )
+        return mapLocationToOutput(location)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapLocationToOutput(location)
     }),
 
   /**
@@ -178,53 +176,17 @@ export const locationsRouter = createTRPCRouter({
     .input(createLocationInputSchema)
     .output(locationOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Trim and validate code
-      const code = input.code.trim()
-      if (code.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Location code is required",
-        })
-      }
-
-      // Trim and validate name
-      const name = input.name.trim()
-      if (name.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Location name is required",
-        })
-      }
-
-      // Check code uniqueness within tenant
-      const existingByCode = await ctx.prisma.location.findFirst({
-        where: { tenantId, code },
-      })
-      if (existingByCode) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Location code already exists",
-        })
-      }
-
-      // Create location with defaults for address fields
-      const location = await ctx.prisma.location.create({
-        data: {
+      try {
+        const tenantId = ctx.tenantId!
+        const location = await locationService.create(
+          ctx.prisma as unknown as PrismaClient,
           tenantId,
-          code,
-          name,
-          description: input.description?.trim() ?? "",
-          address: input.address?.trim() ?? "",
-          city: input.city?.trim() ?? "",
-          country: input.country?.trim() ?? "",
-          timezone: input.timezone?.trim() ?? "",
-          isActive: true,
-        },
-      })
-
-      return mapLocationToOutput(location)
+          input
+        )
+        return mapLocationToOutput(location)
+      } catch (err) {
+        handleServiceError(err)
+      }
     }),
 
   /**
@@ -239,90 +201,17 @@ export const locationsRouter = createTRPCRouter({
     .input(updateLocationInputSchema)
     .output(locationOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify location exists (tenant-scoped)
-      const existing = await ctx.prisma.location.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Location not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        const location = await locationService.update(
+          ctx.prisma as unknown as PrismaClient,
+          tenantId,
+          input
+        )
+        return mapLocationToOutput(location)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      // Handle code update
-      if (input.code !== undefined) {
-        const code = input.code.trim()
-        if (code.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Location code is required",
-          })
-        }
-        // Check uniqueness if changed
-        if (code !== existing.code) {
-          const existingByCode = await ctx.prisma.location.findFirst({
-            where: {
-              tenantId,
-              code,
-              NOT: { id: input.id },
-            },
-          })
-          if (existingByCode) {
-            throw new TRPCError({
-              code: "CONFLICT",
-              message: "Location code already exists",
-            })
-          }
-        }
-        data.code = code
-      }
-
-      // Handle name update
-      if (input.name !== undefined) {
-        const name = input.name.trim()
-        if (name.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Location name is required",
-          })
-        }
-        data.name = name
-      }
-
-      // Handle address field updates
-      if (input.description !== undefined) {
-        data.description = input.description.trim()
-      }
-      if (input.address !== undefined) {
-        data.address = input.address.trim()
-      }
-      if (input.city !== undefined) {
-        data.city = input.city.trim()
-      }
-      if (input.country !== undefined) {
-        data.country = input.country.trim()
-      }
-      if (input.timezone !== undefined) {
-        data.timezone = input.timezone.trim()
-      }
-
-      // Handle isActive update
-      if (input.isActive !== undefined) {
-        data.isActive = input.isActive
-      }
-
-      const location = await ctx.prisma.location.update({
-        where: { id: input.id },
-        data,
-      })
-
-      return mapLocationToOutput(location)
     }),
 
   /**
@@ -335,24 +224,16 @@ export const locationsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify location exists (tenant-scoped)
-      const existing = await ctx.prisma.location.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Location not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        await locationService.remove(
+          ctx.prisma as unknown as PrismaClient,
+          tenantId,
+          input.id
+        )
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Hard delete
-      await ctx.prisma.location.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 })

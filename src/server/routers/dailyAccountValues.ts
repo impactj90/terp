@@ -16,6 +16,8 @@ import { z } from "zod"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as dailyAccountValuesService from "@/lib/services/daily-account-values-service"
 
 // --- Permission Constants ---
 const ACCOUNTS_MANAGE = permissionIdByKey("accounts.manage")!
@@ -61,22 +63,6 @@ const listInputSchema = z
   })
   .optional()
 
-// --- Prisma Include Objects ---
-
-const dailyAccountValueInclude = {
-  account: {
-    select: {
-      id: true,
-      code: true,
-      name: true,
-      accountType: true,
-      unit: true,
-      isSystem: true,
-      isActive: true,
-    },
-  },
-} as const
-
 // --- Router ---
 
 export const dailyAccountValuesRouter = createTRPCRouter({
@@ -95,64 +81,14 @@ export const dailyAccountValuesRouter = createTRPCRouter({
     .input(listInputSchema)
     .output(z.object({ items: z.array(dailyAccountValueOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const where: Record<string, unknown> = { tenantId }
-
-      if (input?.employeeId) {
-        where.employeeId = input.employeeId
-      }
-
-      if (input?.accountId) {
-        where.accountId = input.accountId
-      }
-
-      if (input?.source) {
-        where.source = input.source
-      }
-
-      // Date range filters
-      if (input?.fromDate || input?.toDate) {
-        const valueDate: Record<string, unknown> = {}
-        if (input?.fromDate) {
-          valueDate.gte = new Date(input.fromDate)
-        }
-        if (input?.toDate) {
-          valueDate.lte = new Date(input.toDate)
-        }
-        where.valueDate = valueDate
-      }
-
-      const items = await ctx.prisma.dailyAccountValue.findMany({
-        where,
-        include: dailyAccountValueInclude,
-        orderBy: [{ valueDate: "asc" }, { source: "asc" }],
-      })
-
-      return {
-        items: items.map((item) => ({
-          id: item.id,
-          tenantId: item.tenantId,
-          employeeId: item.employeeId,
-          accountId: item.accountId,
-          valueDate: item.valueDate,
-          valueMinutes: item.valueMinutes,
-          source: item.source,
-          dayPlanId: item.dayPlanId,
-          createdAt: item.createdAt,
-          updatedAt: item.updatedAt,
-          account: item.account
-            ? {
-                id: item.account.id,
-                code: item.account.code,
-                name: item.account.name,
-                accountType: item.account.accountType,
-                unit: item.account.unit,
-                isSystem: item.account.isSystem,
-                isActive: item.account.isActive,
-              }
-            : null,
-        })),
+      try {
+        return await dailyAccountValuesService.list(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 })

@@ -13,7 +13,7 @@
  */
 
 import type { PrismaClient } from "@/generated/prisma/client"
-import { executeAction } from "@/server/routers/macros"
+import { executeAction } from "@/lib/services/macros-service"
 
 // --- Exported Types ---
 

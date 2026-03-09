@@ -15,10 +15,11 @@
  * @see apps/api/internal/service/bookingtypegroup.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as bookingTypeGroupService from "@/lib/services/booking-type-group-service"
 
 // --- Permission Constants ---
 
@@ -69,25 +70,6 @@ const updateBookingTypeGroupInputSchema = z.object({
   isActive: z.boolean().optional(),
   bookingTypeIds: z.array(z.string().uuid()).optional(),
 })
-
-// --- Prisma include for members ---
-
-const groupInclude = {
-  members: {
-    orderBy: { sortOrder: "asc" as const },
-    include: {
-      bookingType: {
-        select: {
-          id: true,
-          code: true,
-          name: true,
-          direction: true,
-          category: true,
-        },
-      },
-    },
-  },
-} as const
 
 // --- Types for Prisma results with includes ---
 
@@ -160,21 +142,20 @@ export const bookingTypeGroupsRouter = createTRPCRouter({
     )
     .output(z.object({ data: z.array(bookingTypeGroupOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const where: Record<string, unknown> = { tenantId }
-
-      if (input?.isActive !== undefined) {
-        where.isActive = input.isActive
-      }
-
-      const groups = await ctx.prisma.bookingTypeGroup.findMany({
-        where,
-        orderBy: { code: "asc" },
-        include: groupInclude,
-      })
-
-      return {
-        data: (groups as unknown as PrismaGroupWithMembers[]).map(mapToOutput),
+      try {
+        const tenantId = ctx.tenantId!
+        const groups = await bookingTypeGroupService.list(
+          ctx.prisma,
+          tenantId,
+          input ?? undefined
+        )
+        return {
+          data: (groups as unknown as PrismaGroupWithMembers[]).map(
+            mapToOutput
+          ),
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -191,20 +172,17 @@ export const bookingTypeGroupsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(bookingTypeGroupOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const group = await ctx.prisma.bookingTypeGroup.findFirst({
-        where: { id: input.id, tenantId },
-        include: groupInclude,
-      })
-
-      if (!group) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Booking type group not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        const group = await bookingTypeGroupService.getById(
+          ctx.prisma,
+          tenantId,
+          input.id
+        )
+        return mapToOutput(group as unknown as PrismaGroupWithMembers)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapToOutput(group as unknown as PrismaGroupWithMembers)
     }),
 
   /**
@@ -222,69 +200,17 @@ export const bookingTypeGroupsRouter = createTRPCRouter({
     .input(createBookingTypeGroupInputSchema)
     .output(bookingTypeGroupOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Trim and validate code
-      const code = input.code.trim()
-      if (code.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Booking type group code is required",
-        })
-      }
-
-      // Trim and validate name
-      const name = input.name.trim()
-      if (name.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Booking type group name is required",
-        })
-      }
-
-      // Check code uniqueness within tenant
-      const existingByCode = await ctx.prisma.bookingTypeGroup.findFirst({
-        where: { tenantId, code },
-      })
-      if (existingByCode) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Booking type group code already exists",
-        })
-      }
-
-      // Trim description if provided
-      const description = input.description?.trim() || null
-
-      // Create group
-      const created = await ctx.prisma.bookingTypeGroup.create({
-        data: {
+      try {
+        const tenantId = ctx.tenantId!
+        const group = await bookingTypeGroupService.create(
+          ctx.prisma,
           tenantId,
-          code,
-          name,
-          description,
-          isActive: true,
-        },
-      })
-
-      // Create members if bookingTypeIds provided
-      if (input.bookingTypeIds && input.bookingTypeIds.length > 0) {
-        await ctx.prisma.bookingTypeGroupMember.createMany({
-          data: input.bookingTypeIds.map((btId, idx) => ({
-            groupId: created.id,
-            bookingTypeId: btId,
-            sortOrder: idx,
-          })),
-        })
+          input
+        )
+        return mapToOutput(group as unknown as PrismaGroupWithMembers)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Re-fetch with includes for response
-      const group = await ctx.prisma.bookingTypeGroup.findUniqueOrThrow({
-        where: { id: created.id },
-        include: groupInclude,
-      })
-
-      return mapToOutput(group as unknown as PrismaGroupWithMembers)
     }),
 
   /**
@@ -302,78 +228,17 @@ export const bookingTypeGroupsRouter = createTRPCRouter({
     .input(updateBookingTypeGroupInputSchema)
     .output(bookingTypeGroupOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify group exists (tenant-scoped)
-      const existing = await ctx.prisma.bookingTypeGroup.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Booking type group not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        const group = await bookingTypeGroupService.update(
+          ctx.prisma,
+          tenantId,
+          input
+        )
+        return mapToOutput(group as unknown as PrismaGroupWithMembers)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      // Handle name update
-      if (input.name !== undefined) {
-        const name = input.name.trim()
-        if (name.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Booking type group name is required",
-          })
-        }
-        data.name = name
-      }
-
-      // Handle description update
-      if (input.description !== undefined) {
-        data.description =
-          input.description === null ? null : input.description.trim()
-      }
-
-      // Handle isActive update
-      if (input.isActive !== undefined) {
-        data.isActive = input.isActive
-      }
-
-      // Update group fields
-      if (Object.keys(data).length > 0) {
-        await ctx.prisma.bookingTypeGroup.update({
-          where: { id: input.id },
-          data,
-        })
-      }
-
-      // Replace members if bookingTypeIds is provided (not undefined)
-      if (input.bookingTypeIds !== undefined) {
-        // Delete all existing members
-        await ctx.prisma.bookingTypeGroupMember.deleteMany({
-          where: { groupId: input.id },
-        })
-        // Create new members
-        if (input.bookingTypeIds.length > 0) {
-          await ctx.prisma.bookingTypeGroupMember.createMany({
-            data: input.bookingTypeIds.map((btId, idx) => ({
-              groupId: input.id,
-              bookingTypeId: btId,
-              sortOrder: idx,
-            })),
-          })
-        }
-      }
-
-      // Re-fetch with includes for response
-      const group = await ctx.prisma.bookingTypeGroup.findUniqueOrThrow({
-        where: { id: input.id },
-        include: groupInclude,
-      })
-
-      return mapToOutput(group as unknown as PrismaGroupWithMembers)
     }),
 
   /**
@@ -388,24 +253,12 @@ export const bookingTypeGroupsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify group exists (tenant-scoped)
-      const existing = await ctx.prisma.bookingTypeGroup.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Booking type group not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        await bookingTypeGroupService.remove(ctx.prisma, tenantId, input.id)
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Hard delete (members cascade via FK)
-      await ctx.prisma.bookingTypeGroup.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 })

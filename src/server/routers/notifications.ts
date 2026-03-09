@@ -18,8 +18,9 @@
  * @see apps/api/internal/service/notification.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
+import { handleServiceError } from "@/trpc/errors"
+import * as notificationService from "@/lib/services/notification-service"
 
 // No permission middleware -- notifications are user-scoped.
 // Any authenticated user with tenant access can manage their own notifications.
@@ -81,6 +82,58 @@ const updatePreferencesInputSchema = z.object({
   systemEnabled: z.boolean().optional(),
 })
 
+// --- Helpers ---
+
+function mapNotification(n: {
+  id: string
+  tenantId: string
+  userId: string
+  type: string
+  title: string
+  message: string
+  link: string | null
+  readAt: Date | null
+  createdAt: Date
+  updatedAt: Date
+}) {
+  return {
+    id: n.id,
+    tenantId: n.tenantId,
+    userId: n.userId,
+    type: n.type,
+    title: n.title,
+    message: n.message,
+    link: n.link ?? null,
+    readAt: n.readAt ?? null,
+    createdAt: n.createdAt,
+    updatedAt: n.updatedAt,
+  }
+}
+
+function mapPreferences(p: {
+  id: string
+  tenantId: string
+  userId: string
+  approvalsEnabled: boolean
+  errorsEnabled: boolean
+  remindersEnabled: boolean
+  systemEnabled: boolean
+  createdAt: Date
+  updatedAt: Date
+}) {
+  return {
+    id: p.id,
+    tenantId: p.tenantId,
+    userId: p.userId,
+    approvalsEnabled: p.approvalsEnabled,
+    errorsEnabled: p.errorsEnabled,
+    remindersEnabled: p.remindersEnabled,
+    systemEnabled: p.systemEnabled,
+    createdAt: p.createdAt,
+    updatedAt: p.updatedAt,
+  }
+}
+
 // --- Router ---
 
 export const notificationsRouter = createTRPCRouter({
@@ -103,62 +156,29 @@ export const notificationsRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const userId = ctx.user.id
-      const page = input?.page ?? 1
-      const pageSize = input?.pageSize ?? 20
-
-      // Build dynamic where clause (always scoped to tenant + user)
-      const where: Record<string, unknown> = { tenantId, userId }
-
-      if (input?.type) {
-        where.type = input.type
-      }
-      if (input?.unread === true) {
-        where.readAt = null
-      } else if (input?.unread === false) {
-        where.readAt = { not: null }
-      }
-      if (input?.fromDate || input?.toDate) {
-        const createdAt: Record<string, Date> = {}
-        if (input.fromDate) {
-          createdAt.gte = new Date(input.fromDate)
+      try {
+        const { items, total, unreadCount } = await notificationService.list(
+          ctx.prisma,
+          ctx.tenantId!,
+          ctx.user.id,
+          input
+            ? {
+                type: input.type,
+                unread: input.unread,
+                fromDate: input.fromDate,
+                toDate: input.toDate,
+                page: input.page,
+                pageSize: input.pageSize,
+              }
+            : undefined
+        )
+        return {
+          items: items.map(mapNotification),
+          total,
+          unreadCount,
         }
-        if (input.toDate) {
-          createdAt.lte = new Date(input.toDate)
-        }
-        where.createdAt = createdAt
-      }
-
-      // Run three queries in parallel
-      const [items, total, unreadCount] = await Promise.all([
-        ctx.prisma.notification.findMany({
-          where,
-          orderBy: { createdAt: "desc" },
-          skip: (page - 1) * pageSize,
-          take: pageSize,
-        }),
-        ctx.prisma.notification.count({ where }),
-        ctx.prisma.notification.count({
-          where: { tenantId, userId, readAt: null },
-        }),
-      ])
-
-      return {
-        items: items.map((n) => ({
-          id: n.id,
-          tenantId: n.tenantId,
-          userId: n.userId,
-          type: n.type,
-          title: n.title,
-          message: n.message,
-          link: n.link ?? null,
-          readAt: n.readAt ?? null,
-          createdAt: n.createdAt,
-          updatedAt: n.updatedAt,
-        })),
-        total,
-        unreadCount,
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -174,36 +194,25 @@ export const notificationsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const userId = ctx.user.id
+      try {
+        const userId = ctx.user.id
+        const { newCount } = await notificationService.markRead(
+          ctx.prisma,
+          ctx.tenantId!,
+          userId,
+          input.id
+        )
 
-      // Verify notification exists and belongs to this user
-      const notification = await ctx.prisma.notification.findFirst({
-        where: { id: input.id, tenantId, userId },
-      })
+        // Publish unread count update via PubSub
+        const { getHub } = await import('@/lib/pubsub/singleton')
+        const { userTopic } = await import('@/lib/pubsub/topics')
+        const hub = getHub()
+        await hub.publish(userTopic(userId), { event: 'unread_count', unread_count: newCount }, true)
 
-      if (!notification) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Notification not found",
-        })
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      await ctx.prisma.notification.update({
-        where: { id: input.id },
-        data: { readAt: new Date() },
-      })
-
-      // Publish unread count update via PubSub
-      const { getHub } = await import('@/lib/pubsub/singleton')
-      const { userTopic } = await import('@/lib/pubsub/topics')
-      const hub = getHub()
-      const newCount = await ctx.prisma.notification.count({
-        where: { tenantId, userId, readAt: null },
-      })
-      await hub.publish(userTopic(userId), { event: 'unread_count', unread_count: newCount }, true)
-
-      return { success: true }
     }),
 
   /**
@@ -217,21 +226,24 @@ export const notificationsRouter = createTRPCRouter({
   markAllRead: tenantProcedure
     .output(z.object({ success: z.boolean(), count: z.number() }))
     .mutation(async ({ ctx }) => {
-      const tenantId = ctx.tenantId!
-      const userId = ctx.user.id
+      try {
+        const userId = ctx.user.id
+        const { count } = await notificationService.markAllRead(
+          ctx.prisma,
+          ctx.tenantId!,
+          userId
+        )
 
-      const result = await ctx.prisma.notification.updateMany({
-        where: { tenantId, userId, readAt: null },
-        data: { readAt: new Date() },
-      })
+        // Publish unread count update via PubSub (count is now 0)
+        const { getHub } = await import('@/lib/pubsub/singleton')
+        const { userTopic } = await import('@/lib/pubsub/topics')
+        const hub = getHub()
+        await hub.publish(userTopic(userId), { event: 'unread_count', unread_count: 0 }, true)
 
-      // Publish unread count update via PubSub (count is now 0)
-      const { getHub } = await import('@/lib/pubsub/singleton')
-      const { userTopic } = await import('@/lib/pubsub/topics')
-      const hub = getHub()
-      await hub.publish(userTopic(userId), { event: 'unread_count', unread_count: 0 }, true)
-
-      return { success: true, count: result.count }
+        return { success: true, count }
+      } catch (err) {
+        handleServiceError(err)
+      }
     }),
 
   /**
@@ -244,12 +256,16 @@ export const notificationsRouter = createTRPCRouter({
    */
   unreadCount: tenantProcedure
     .query(async ({ ctx }) => {
-      const tenantId = ctx.tenantId!
-      const userId = ctx.user.id
-      const count = await ctx.prisma.notification.count({
-        where: { tenantId, userId, readAt: null },
-      })
-      return { unread_count: count }
+      try {
+        const count = await notificationService.unreadCount(
+          ctx.prisma,
+          ctx.tenantId!,
+          ctx.user.id
+        )
+        return { unread_count: count }
+      } catch (err) {
+        handleServiceError(err)
+      }
     }),
 
   /**
@@ -271,9 +287,11 @@ export const notificationsRouter = createTRPCRouter({
     // Yield initial connected event with unread count
     let unreadCount = 0
     try {
-      unreadCount = await ctx.prisma.notification.count({
-        where: { tenantId, userId, readAt: null },
-      })
+      unreadCount = await notificationService.unreadCount(
+        ctx.prisma,
+        tenantId,
+        userId
+      )
     } catch {
       // Silently ignore
     }
@@ -322,46 +340,15 @@ export const notificationsRouter = createTRPCRouter({
   preferences: tenantProcedure
     .output(notificationPreferencesOutputSchema)
     .query(async ({ ctx }) => {
-      const tenantId = ctx.tenantId!
-      const userId = ctx.user.id
-
-      // getOrCreate pattern
-      const existing =
-        await ctx.prisma.notificationPreference.findUnique({
-          where: {
-            tenantId_userId: { tenantId, userId },
-          },
-        })
-
-      if (existing) {
-        return {
-          id: existing.id,
-          tenantId: existing.tenantId,
-          userId: existing.userId,
-          approvalsEnabled: existing.approvalsEnabled,
-          errorsEnabled: existing.errorsEnabled,
-          remindersEnabled: existing.remindersEnabled,
-          systemEnabled: existing.systemEnabled,
-          createdAt: existing.createdAt,
-          updatedAt: existing.updatedAt,
-        }
-      }
-
-      // Create with defaults
-      const created = await ctx.prisma.notificationPreference.create({
-        data: { tenantId, userId },
-      })
-
-      return {
-        id: created.id,
-        tenantId: created.tenantId,
-        userId: created.userId,
-        approvalsEnabled: created.approvalsEnabled,
-        errorsEnabled: created.errorsEnabled,
-        remindersEnabled: created.remindersEnabled,
-        systemEnabled: created.systemEnabled,
-        createdAt: created.createdAt,
-        updatedAt: created.updatedAt,
+      try {
+        const prefs = await notificationService.getPreferences(
+          ctx.prisma,
+          ctx.tenantId!,
+          ctx.user.id
+        )
+        return mapPreferences(prefs)
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -376,31 +363,16 @@ export const notificationsRouter = createTRPCRouter({
     .input(updatePreferencesInputSchema)
     .output(notificationPreferencesOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const userId = ctx.user.id
-
-      const result = await ctx.prisma.notificationPreference.upsert({
-        where: {
-          tenantId_userId: { tenantId, userId },
-        },
-        update: input,
-        create: {
-          tenantId,
-          userId,
-          ...input,
-        },
-      })
-
-      return {
-        id: result.id,
-        tenantId: result.tenantId,
-        userId: result.userId,
-        approvalsEnabled: result.approvalsEnabled,
-        errorsEnabled: result.errorsEnabled,
-        remindersEnabled: result.remindersEnabled,
-        systemEnabled: result.systemEnabled,
-        createdAt: result.createdAt,
-        updatedAt: result.updatedAt,
+      try {
+        const result = await notificationService.updatePreferences(
+          ctx.prisma,
+          ctx.tenantId!,
+          ctx.user.id,
+          input
+        )
+        return mapPreferences(result)
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 })

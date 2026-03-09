@@ -19,12 +19,11 @@
  * @see apps/api/internal/repository/correction.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
-import type { PrismaClient } from "@/generated/prisma/client"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
-import { RecalcService } from "../services/recalc"
+import { handleServiceError } from "@/trpc/errors"
+import * as correctionService from "@/lib/services/correction-service"
 
 // --- Permission Constants ---
 // Matching Go route registration at apps/api/internal/handler/routes.go:1595-1618
@@ -102,23 +101,6 @@ const updateInputSchema = z.object({
   reason: z.string().optional(),
 })
 
-// --- Prisma Include Objects ---
-
-const correctionInclude = {
-  employee: {
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      personnelNumber: true,
-      departmentId: true,
-    },
-  },
-  account: {
-    select: { id: true, code: true, name: true },
-  },
-} as const
-
 // --- Helper Functions ---
 
 /**
@@ -181,32 +163,6 @@ function mapToOutput(record: Record<string, unknown>): CorrectionOutput {
   return result
 }
 
-// --- Recalculation Helper ---
-
-/**
- * Triggers recalculation for a specific employee/day.
- * Best effort -- errors are logged but do not fail the parent operation.
- * Uses RecalcService which triggers both daily calc AND monthly recalc.
- *
- * @see ZMI-TICKET-243
- */
-async function triggerRecalc(
-  prisma: PrismaClient,
-  tenantId: string,
-  employeeId: string,
-  correctionDate: Date
-): Promise<void> {
-  try {
-    const service = new RecalcService(prisma)
-    await service.triggerRecalc(tenantId, employeeId, correctionDate)
-  } catch (error) {
-    console.error(
-      `Recalc failed for employee ${employeeId} on ${correctionDate.toISOString().split("T")[0]}:`,
-      error
-    )
-  }
-}
-
 // --- Router ---
 
 export const correctionsRouter = createTRPCRouter({
@@ -229,53 +185,20 @@ export const correctionsRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const page = input?.page ?? 1
-      const pageSize = input?.pageSize ?? 50
-
-      const where: Record<string, unknown> = { tenantId }
-
-      // Optional filters
-      if (input?.employeeId) {
-        where.employeeId = input.employeeId
-      }
-
-      if (input?.correctionType) {
-        where.correctionType = input.correctionType
-      }
-
-      if (input?.status) {
-        where.status = input.status
-      }
-
-      // Date range filters
-      if (input?.fromDate || input?.toDate) {
-        const correctionDate: Record<string, unknown> = {}
-        if (input?.fromDate) {
-          correctionDate.gte = new Date(input.fromDate)
+      try {
+        const { items, total } = await correctionService.list(
+          ctx.prisma,
+          ctx.tenantId!,
+          input ?? undefined
+        )
+        return {
+          items: items.map((item) =>
+            mapToOutput(item as unknown as Record<string, unknown>)
+          ),
+          total,
         }
-        if (input?.toDate) {
-          correctionDate.lte = new Date(input.toDate)
-        }
-        where.correctionDate = correctionDate
-      }
-
-      const [items, total] = await Promise.all([
-        ctx.prisma.correction.findMany({
-          where,
-          include: correctionInclude,
-          skip: (page - 1) * pageSize,
-          take: pageSize,
-          orderBy: [{ correctionDate: "desc" }, { createdAt: "desc" }],
-        }),
-        ctx.prisma.correction.count({ where }),
-      ])
-
-      return {
-        items: items.map((item) =>
-          mapToOutput(item as unknown as Record<string, unknown>)
-        ),
-        total,
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -291,21 +214,16 @@ export const correctionsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(correctionOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const correction = await ctx.prisma.correction.findFirst({
-        where: { id: input.id, tenantId },
-        include: correctionInclude,
-      })
-
-      if (!correction) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Correction not found",
-        })
+      try {
+        const correction = await correctionService.getById(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id
+        )
+        return mapToOutput(correction as unknown as Record<string, unknown>)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapToOutput(correction as unknown as Record<string, unknown>)
     }),
 
   /**
@@ -322,49 +240,17 @@ export const correctionsRouter = createTRPCRouter({
     .input(createInputSchema)
     .output(correctionOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Validate employee exists in tenant
-      const employee = await ctx.prisma.employee.findFirst({
-        where: { id: input.employeeId, tenantId },
-      })
-      if (!employee) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Employee not found",
-        })
+      try {
+        const correction = await correctionService.create(
+          ctx.prisma,
+          ctx.tenantId!,
+          input,
+          ctx.user!.id
+        )
+        return mapToOutput(correction as unknown as Record<string, unknown>)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Validate account exists in tenant (if provided)
-      if (input.accountId) {
-        const account = await ctx.prisma.account.findFirst({
-          where: { id: input.accountId, tenantId },
-        })
-        if (!account) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Account not found",
-          })
-        }
-      }
-
-      // Create correction
-      const correction = await ctx.prisma.correction.create({
-        data: {
-          tenantId,
-          employeeId: input.employeeId,
-          correctionDate: new Date(input.correctionDate),
-          correctionType: input.correctionType,
-          accountId: input.accountId || null,
-          valueMinutes: input.valueMinutes,
-          reason: input.reason,
-          status: "pending",
-          createdBy: ctx.user!.id,
-        },
-        include: correctionInclude,
-      })
-
-      return mapToOutput(correction as unknown as Record<string, unknown>)
     }),
 
   /**
@@ -381,46 +267,16 @@ export const correctionsRouter = createTRPCRouter({
     .input(updateInputSchema)
     .output(correctionOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Fetch existing (tenant-scoped)
-      const existing = await ctx.prisma.correction.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Correction not found",
-        })
+      try {
+        const correction = await correctionService.update(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+        return mapToOutput(correction as unknown as Record<string, unknown>)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Check status is pending
-      if (existing.status !== "pending") {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Can only update pending corrections",
-        })
-      }
-
-      // Build partial update data
-      const data: Record<string, unknown> = { updatedAt: new Date() }
-
-      if (input.valueMinutes !== undefined) {
-        data.valueMinutes = input.valueMinutes
-      }
-
-      if (input.reason !== undefined) {
-        data.reason = input.reason
-      }
-
-      // Update with includes
-      const correction = await ctx.prisma.correction.update({
-        where: { id: input.id },
-        data,
-        include: correctionInclude,
-      })
-
-      return mapToOutput(correction as unknown as Record<string, unknown>)
     }),
 
   /**
@@ -436,32 +292,12 @@ export const correctionsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Fetch existing (tenant-scoped)
-      const existing = await ctx.prisma.correction.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Correction not found",
-        })
+      try {
+        await correctionService.remove(ctx.prisma, ctx.tenantId!, input.id)
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Cannot delete approved corrections
-      if (existing.status === "approved") {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Cannot delete approved corrections",
-        })
-      }
-
-      await ctx.prisma.correction.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 
   /**
@@ -477,48 +313,17 @@ export const correctionsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(correctionOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Fetch existing (tenant-scoped)
-      const existing = await ctx.prisma.correction.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Correction not found",
-        })
+      try {
+        const correction = await correctionService.approve(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id,
+          ctx.user!.id
+        )
+        return mapToOutput(correction as unknown as Record<string, unknown>)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Check status is pending
-      if (existing.status !== "pending") {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Correction is not in pending status",
-        })
-      }
-
-      // Update to approved
-      const correction = await ctx.prisma.correction.update({
-        where: { id: input.id },
-        data: {
-          status: "approved",
-          approvedBy: ctx.user!.id,
-          approvedAt: new Date(),
-          updatedAt: new Date(),
-        },
-        include: correctionInclude,
-      })
-
-      // Trigger recalculation for the correction date (best effort)
-      await triggerRecalc(
-        ctx.prisma,
-        tenantId,
-        existing.employeeId,
-        existing.correctionDate
-      )
-
-      return mapToOutput(correction as unknown as Record<string, unknown>)
     }),
 
   /**
@@ -534,40 +339,17 @@ export const correctionsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(correctionOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Fetch existing (tenant-scoped)
-      const existing = await ctx.prisma.correction.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Correction not found",
-        })
+      try {
+        const correction = await correctionService.reject(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id,
+          ctx.user!.id
+        )
+        return mapToOutput(correction as unknown as Record<string, unknown>)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Check status is pending
-      if (existing.status !== "pending") {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Correction is not in pending status",
-        })
-      }
-
-      // Update to rejected (Go uses approvedBy for rejector too)
-      const correction = await ctx.prisma.correction.update({
-        where: { id: input.id },
-        data: {
-          status: "rejected",
-          approvedBy: ctx.user!.id,
-          approvedAt: new Date(),
-          updatedAt: new Date(),
-        },
-        include: correctionInclude,
-      })
-
-      return mapToOutput(correction as unknown as Record<string, unknown>)
     }),
 })
 

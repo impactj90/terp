@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { useEmployeeMessage } from '@/hooks/api'
+import { useEmployeeMessage } from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type EmployeeMessageRecipient = components['schemas']['EmployeeMessageRecipient']

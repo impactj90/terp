@@ -16,7 +16,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { useEmploymentType } from '@/hooks/api'
+import { useEmploymentType } from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type EmploymentType = components['schemas']['EmploymentType']

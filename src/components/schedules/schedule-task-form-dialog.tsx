@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { useTranslations } from 'next-intl'
 import { Loader2 } from 'lucide-react'
-import { useCreateScheduleTask, useUpdateScheduleTask, useTaskCatalog } from '@/hooks/api'
+import { useCreateScheduleTask, useUpdateScheduleTask, useTaskCatalog } from '@/hooks'
 import {
   Dialog,
   DialogContent,

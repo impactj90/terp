@@ -31,7 +31,7 @@ import {
   useDayPlans,
   useShifts,
   useBulkCreateEmployeeDayPlans,
-} from '@/hooks/api'
+} from '@/hooks'
 import { formatDate } from '@/lib/time-utils'
 import type { components } from '@/types/legacy-api-types'
 

@@ -11,7 +11,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { useEmployeeVacationBalance } from '@/hooks/api'
+import { useEmployeeVacationBalance } from '@/hooks'
 
 interface BalanceBreakdownProps {
   employeeId: string

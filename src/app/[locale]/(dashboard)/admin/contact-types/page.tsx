@@ -10,7 +10,7 @@ import {
   useContactKinds,
   useDeleteContactType,
   useDeleteContactKind,
-} from '@/hooks/api'
+} from '@/hooks'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   ContactTypeListPanel,

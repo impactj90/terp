@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { formatMinutes } from '@/lib/time-utils'
-import type { TeamDailyValuesResult } from '@/hooks/api/use-team-daily-values'
+import type { TeamDailyValuesResult } from '@/hooks/use-team-daily-values'
 import type { components } from '@/types/legacy-api-types'
 
 type TeamMember = components['schemas']['TeamMember']

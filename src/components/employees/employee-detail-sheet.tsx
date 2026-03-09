@@ -17,7 +17,7 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet'
 import { StatusBadge } from './status-badge'
-import { useEmployee } from '@/hooks/api'
+import { useEmployee } from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type Employee = components['schemas']['Employee']

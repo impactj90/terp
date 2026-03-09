@@ -17,7 +17,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { useReopenMonthById } from '@/hooks/api'
+import { useReopenMonthById } from '@/hooks'
 
 interface BatchReopenDialogProps {
   open: boolean

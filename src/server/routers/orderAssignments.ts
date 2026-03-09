@@ -15,10 +15,11 @@
  * @see apps/api/internal/service/order_assignment.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as orderAssignmentService from "@/lib/services/order-assignment-service"
 
 // --- Permission Constants ---
 
@@ -74,20 +75,6 @@ const updateOrderAssignmentInputSchema = z.object({
   isActive: z.boolean().optional(),
 })
 
-// --- Prisma include for relation preloads ---
-
-const assignmentInclude = {
-  order: { select: { id: true, code: true, name: true } },
-  employee: {
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      personnelNumber: true,
-    },
-  },
-} as const
-
 // --- Helpers ---
 
 /**
@@ -130,25 +117,6 @@ function mapAssignmentToOutput(
   }
 }
 
-/**
- * Parses an ISO date string ("2026-01-15") into a Date at midnight UTC.
- */
-function parseDate(dateStr: string): Date {
-  return new Date(dateStr + "T00:00:00Z")
-}
-
-/**
- * Checks if a Prisma error is a unique constraint violation (P2002).
- */
-function isUniqueConstraintError(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code: string }).code === "P2002"
-  )
-}
-
 // --- Router ---
 
 export const orderAssignmentsRouter = createTRPCRouter({
@@ -173,24 +141,19 @@ export const orderAssignmentsRouter = createTRPCRouter({
     )
     .output(z.object({ data: z.array(orderAssignmentOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const where: Record<string, unknown> = { tenantId }
-
-      if (input?.orderId !== undefined) {
-        where.orderId = input.orderId
-      }
-      if (input?.employeeId !== undefined) {
-        where.employeeId = input.employeeId
-      }
-
-      const assignments = await ctx.prisma.orderAssignment.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        include: assignmentInclude,
-      })
-
-      return {
-        data: assignments.map(mapAssignmentToOutput),
+      try {
+        const tenantId = ctx.tenantId!
+        const assignments = await orderAssignmentService.list(
+          ctx.prisma,
+          tenantId,
+          {
+            orderId: input?.orderId,
+            employeeId: input?.employeeId,
+          }
+        )
+        return { data: assignments.map(mapAssignmentToOutput) }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -206,20 +169,17 @@ export const orderAssignmentsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(orderAssignmentOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const assignment = await ctx.prisma.orderAssignment.findFirst({
-        where: { id: input.id, tenantId },
-        include: assignmentInclude,
-      })
-
-      if (!assignment) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Order assignment not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        const assignment = await orderAssignmentService.getById(
+          ctx.prisma,
+          tenantId,
+          input.id
+        )
+        return mapAssignmentToOutput(assignment)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapAssignmentToOutput(assignment)
     }),
 
   /**
@@ -235,16 +195,16 @@ export const orderAssignmentsRouter = createTRPCRouter({
     .input(z.object({ orderId: z.string().uuid() }))
     .output(z.object({ data: z.array(orderAssignmentOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const assignments = await ctx.prisma.orderAssignment.findMany({
-        where: { tenantId, orderId: input.orderId },
-        orderBy: [{ role: "asc" }, { createdAt: "desc" }],
-        include: assignmentInclude,
-      })
-
-      return {
-        data: assignments.map(mapAssignmentToOutput),
+      try {
+        const tenantId = ctx.tenantId!
+        const assignments = await orderAssignmentService.byOrder(
+          ctx.prisma,
+          tenantId,
+          input.orderId
+        )
+        return { data: assignments.map(mapAssignmentToOutput) }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -262,39 +222,17 @@ export const orderAssignmentsRouter = createTRPCRouter({
     .input(createOrderAssignmentInputSchema)
     .output(orderAssignmentOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      let created: { id: string }
       try {
-        created = await ctx.prisma.orderAssignment.create({
-          data: {
-            tenantId,
-            orderId: input.orderId,
-            employeeId: input.employeeId,
-            role: input.role || "worker",
-            isActive: true,
-            validFrom: input.validFrom ? parseDate(input.validFrom) : undefined,
-            validTo: input.validTo ? parseDate(input.validTo) : undefined,
-          },
-        })
-      } catch (error: unknown) {
-        if (isUniqueConstraintError(error)) {
-          throw new TRPCError({
-            code: "CONFLICT",
-            message:
-              "Order assignment already exists for this employee, order, and role",
-          })
-        }
-        throw error
+        const tenantId = ctx.tenantId!
+        const assignment = await orderAssignmentService.create(
+          ctx.prisma,
+          tenantId,
+          input
+        )
+        return mapAssignmentToOutput(assignment)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Re-fetch with relation preloads
-      const assignment = await ctx.prisma.orderAssignment.findUniqueOrThrow({
-        where: { id: created.id },
-        include: assignmentInclude,
-      })
-
-      return mapAssignmentToOutput(assignment)
     }),
 
   /**
@@ -310,49 +248,17 @@ export const orderAssignmentsRouter = createTRPCRouter({
     .input(updateOrderAssignmentInputSchema)
     .output(orderAssignmentOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify assignment exists (tenant-scoped)
-      const existing = await ctx.prisma.orderAssignment.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Order assignment not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        const assignment = await orderAssignmentService.update(
+          ctx.prisma,
+          tenantId,
+          input
+        )
+        return mapAssignmentToOutput(assignment)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      if (input.role !== undefined) {
-        data.role = input.role
-      }
-      if (input.validFrom !== undefined) {
-        data.validFrom =
-          input.validFrom === null ? null : parseDate(input.validFrom)
-      }
-      if (input.validTo !== undefined) {
-        data.validTo =
-          input.validTo === null ? null : parseDate(input.validTo)
-      }
-      if (input.isActive !== undefined) {
-        data.isActive = input.isActive
-      }
-
-      await ctx.prisma.orderAssignment.update({
-        where: { id: input.id },
-        data,
-      })
-
-      // Re-fetch with relation preloads
-      const assignment = await ctx.prisma.orderAssignment.findUniqueOrThrow({
-        where: { id: input.id },
-        include: assignmentInclude,
-      })
-
-      return mapAssignmentToOutput(assignment)
     }),
 
   /**
@@ -365,24 +271,12 @@ export const orderAssignmentsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify assignment exists (tenant-scoped)
-      const existing = await ctx.prisma.orderAssignment.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Order assignment not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        await orderAssignmentService.remove(ctx.prisma, tenantId, input.id)
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Hard delete
-      await ctx.prisma.orderAssignment.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 })

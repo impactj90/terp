@@ -22,7 +22,7 @@ import {
   useCreateEmploymentType,
   useUpdateEmploymentType,
   useVacationCalculationGroups,
-} from '@/hooks/api'
+} from '@/hooks'
 import {
   Select,
   SelectContent,

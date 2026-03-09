@@ -34,7 +34,7 @@ import {
   useTariffs,
   useCreateEmployeeTariffAssignment,
   useUpdateEmployeeTariffAssignment,
-} from '@/hooks/api'
+} from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type TariffAssignment = components['schemas']['EmployeeTariffAssignment']

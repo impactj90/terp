@@ -16,7 +16,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { useDepartment } from '@/hooks/api'
+import { useDepartment } from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type Department = components['schemas']['Department']

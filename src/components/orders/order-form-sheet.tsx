@@ -29,7 +29,7 @@ import {
   useCreateOrder,
   useUpdateOrder,
   useCostCenters,
-} from '@/hooks/api'
+} from '@/hooks'
 interface Order {
   id: string
   code: string

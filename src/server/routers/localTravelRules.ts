@@ -13,10 +13,11 @@
  * @see apps/api/internal/service/local_travel_rule.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as localTravelRuleService from "@/lib/services/local-travel-rule-service"
 
 // --- Permission Constants ---
 
@@ -78,6 +79,39 @@ function decToNumReq(val: unknown): number {
   return Number(val)
 }
 
+/** Maps a Prisma LocalTravelRule to the output shape */
+function mapToOutput(r: {
+  id: string
+  tenantId: string
+  ruleSetId: string
+  minDistanceKm: unknown
+  maxDistanceKm: unknown
+  minDurationMinutes: number
+  maxDurationMinutes: number | null
+  taxFreeAmount: unknown
+  taxableAmount: unknown
+  isActive: boolean
+  sortOrder: number
+  createdAt: Date
+  updatedAt: Date
+}) {
+  return {
+    id: r.id,
+    tenantId: r.tenantId,
+    ruleSetId: r.ruleSetId,
+    minDistanceKm: decToNumReq(r.minDistanceKm),
+    maxDistanceKm: decToNum(r.maxDistanceKm),
+    minDurationMinutes: r.minDurationMinutes,
+    maxDurationMinutes: r.maxDurationMinutes,
+    taxFreeAmount: decToNumReq(r.taxFreeAmount),
+    taxableAmount: decToNumReq(r.taxableAmount),
+    isActive: r.isActive,
+    sortOrder: r.sortOrder,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
+  }
+}
+
 // --- Router ---
 
 export const localTravelRulesRouter = createTRPCRouter({
@@ -94,34 +128,18 @@ export const localTravelRulesRouter = createTRPCRouter({
     .input(z.object({ ruleSetId: z.string().uuid().optional() }).optional())
     .output(z.object({ data: z.array(localTravelRuleOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const where: Record<string, unknown> = { tenantId }
-      if (input?.ruleSetId) {
-        where.ruleSetId = input.ruleSetId
-      }
-
-      const rules = await ctx.prisma.localTravelRule.findMany({
-        where,
-        orderBy: [{ sortOrder: "asc" }, { minDistanceKm: "asc" }],
-      })
-
-      return {
-        data: rules.map((r) => ({
-          id: r.id,
-          tenantId: r.tenantId,
-          ruleSetId: r.ruleSetId,
-          minDistanceKm: decToNumReq(r.minDistanceKm),
-          maxDistanceKm: decToNum(r.maxDistanceKm),
-          minDurationMinutes: r.minDurationMinutes,
-          maxDurationMinutes: r.maxDurationMinutes,
-          taxFreeAmount: decToNumReq(r.taxFreeAmount),
-          taxableAmount: decToNumReq(r.taxableAmount),
-          isActive: r.isActive,
-          sortOrder: r.sortOrder,
-          createdAt: r.createdAt,
-          updatedAt: r.updatedAt,
-        })),
+      try {
+        const tenantId = ctx.tenantId!
+        const rules = await localTravelRuleService.list(
+          ctx.prisma,
+          tenantId,
+          input ?? undefined
+        )
+        return {
+          data: rules.map(mapToOutput),
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -135,33 +153,16 @@ export const localTravelRulesRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(localTravelRuleOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const rule = await ctx.prisma.localTravelRule.findFirst({
-        where: { id: input.id, tenantId },
-      })
-
-      if (!rule) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Local travel rule not found",
-        })
-      }
-
-      return {
-        id: rule.id,
-        tenantId: rule.tenantId,
-        ruleSetId: rule.ruleSetId,
-        minDistanceKm: decToNumReq(rule.minDistanceKm),
-        maxDistanceKm: decToNum(rule.maxDistanceKm),
-        minDurationMinutes: rule.minDurationMinutes,
-        maxDurationMinutes: rule.maxDurationMinutes,
-        taxFreeAmount: decToNumReq(rule.taxFreeAmount),
-        taxableAmount: decToNumReq(rule.taxableAmount),
-        isActive: rule.isActive,
-        sortOrder: rule.sortOrder,
-        createdAt: rule.createdAt,
-        updatedAt: rule.updatedAt,
+      try {
+        const tenantId = ctx.tenantId!
+        const rule = await localTravelRuleService.getById(
+          ctx.prisma,
+          tenantId,
+          input.id
+        )
+        return mapToOutput(rule)
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -177,48 +178,16 @@ export const localTravelRulesRouter = createTRPCRouter({
     .input(createLocalTravelRuleInputSchema)
     .output(localTravelRuleOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Validate ruleSetId FK
-      const ruleSet = await ctx.prisma.travelAllowanceRuleSet.findFirst({
-        where: { id: input.ruleSetId, tenantId },
-      })
-      if (!ruleSet) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Rule set not found",
-        })
-      }
-
-      const rule = await ctx.prisma.localTravelRule.create({
-        data: {
+      try {
+        const tenantId = ctx.tenantId!
+        const rule = await localTravelRuleService.create(
+          ctx.prisma,
           tenantId,
-          ruleSetId: input.ruleSetId,
-          minDistanceKm: input.minDistanceKm ?? 0,
-          maxDistanceKm: input.maxDistanceKm ?? null,
-          minDurationMinutes: input.minDurationMinutes ?? 0,
-          maxDurationMinutes: input.maxDurationMinutes ?? null,
-          taxFreeAmount: input.taxFreeAmount ?? 0,
-          taxableAmount: input.taxableAmount ?? 0,
-          isActive: true,
-          sortOrder: input.sortOrder ?? 0,
-        },
-      })
-
-      return {
-        id: rule.id,
-        tenantId: rule.tenantId,
-        ruleSetId: rule.ruleSetId,
-        minDistanceKm: decToNumReq(rule.minDistanceKm),
-        maxDistanceKm: decToNum(rule.maxDistanceKm),
-        minDurationMinutes: rule.minDurationMinutes,
-        maxDurationMinutes: rule.maxDurationMinutes,
-        taxFreeAmount: decToNumReq(rule.taxFreeAmount),
-        taxableAmount: decToNumReq(rule.taxableAmount),
-        isActive: rule.isActive,
-        sortOrder: rule.sortOrder,
-        createdAt: rule.createdAt,
-        updatedAt: rule.updatedAt,
+          input
+        )
+        return mapToOutput(rule)
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -234,73 +203,16 @@ export const localTravelRulesRouter = createTRPCRouter({
     .input(updateLocalTravelRuleInputSchema)
     .output(localTravelRuleOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify rule exists (tenant-scoped)
-      const existing = await ctx.prisma.localTravelRule.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Local travel rule not found",
-        })
-      }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      if (input.minDistanceKm !== undefined) {
-        data.minDistanceKm = input.minDistanceKm
-      }
-
-      if (input.maxDistanceKm !== undefined) {
-        data.maxDistanceKm = input.maxDistanceKm
-      }
-
-      if (input.minDurationMinutes !== undefined) {
-        data.minDurationMinutes = input.minDurationMinutes
-      }
-
-      if (input.maxDurationMinutes !== undefined) {
-        data.maxDurationMinutes = input.maxDurationMinutes
-      }
-
-      if (input.taxFreeAmount !== undefined) {
-        data.taxFreeAmount = input.taxFreeAmount
-      }
-
-      if (input.taxableAmount !== undefined) {
-        data.taxableAmount = input.taxableAmount
-      }
-
-      if (input.isActive !== undefined) {
-        data.isActive = input.isActive
-      }
-
-      if (input.sortOrder !== undefined) {
-        data.sortOrder = input.sortOrder
-      }
-
-      const rule = await ctx.prisma.localTravelRule.update({
-        where: { id: input.id },
-        data,
-      })
-
-      return {
-        id: rule.id,
-        tenantId: rule.tenantId,
-        ruleSetId: rule.ruleSetId,
-        minDistanceKm: decToNumReq(rule.minDistanceKm),
-        maxDistanceKm: decToNum(rule.maxDistanceKm),
-        minDurationMinutes: rule.minDurationMinutes,
-        maxDurationMinutes: rule.maxDurationMinutes,
-        taxFreeAmount: decToNumReq(rule.taxFreeAmount),
-        taxableAmount: decToNumReq(rule.taxableAmount),
-        isActive: rule.isActive,
-        sortOrder: rule.sortOrder,
-        createdAt: rule.createdAt,
-        updatedAt: rule.updatedAt,
+      try {
+        const tenantId = ctx.tenantId!
+        const rule = await localTravelRuleService.update(
+          ctx.prisma,
+          tenantId,
+          input
+        )
+        return mapToOutput(rule)
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -314,23 +226,12 @@ export const localTravelRulesRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify rule exists (tenant-scoped)
-      const existing = await ctx.prisma.localTravelRule.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Local travel rule not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        await localTravelRuleService.remove(ctx.prisma, tenantId, input.id)
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      await ctx.prisma.localTravelRule.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 })

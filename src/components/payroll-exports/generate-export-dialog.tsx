@@ -24,7 +24,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { useGeneratePayrollExport, useExportInterfaces } from '@/hooks/api'
+import { useGeneratePayrollExport, useExportInterfaces } from '@/hooks'
 import { parseApiError } from '@/lib/api/errors'
 import { Link } from '@/i18n/navigation'
 

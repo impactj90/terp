@@ -13,10 +13,11 @@
  * @see apps/api/internal/service/employee_access_assignment.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as employeeAccessAssignmentService from "@/lib/services/employee-access-assignment-service"
 
 // --- Permission Constants ---
 
@@ -141,29 +142,14 @@ export const employeeAccessAssignmentsRouter = createTRPCRouter({
       z.object({ data: z.array(employeeAccessAssignmentOutputSchema) })
     )
     .query(async ({ ctx }) => {
-      const tenantId = ctx.tenantId!
-
-      const assignments =
-        await ctx.prisma.employeeAccessAssignment.findMany({
-          where: { tenantId },
-          orderBy: { createdAt: "desc" },
-          include: {
-            employee: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                personnelNumber: true,
-              },
-            },
-            accessProfile: {
-              select: { id: true, code: true, name: true },
-            },
-          },
-        })
-
-      return {
-        data: assignments.map(mapAssignment),
+      try {
+        const assignments = await employeeAccessAssignmentService.list(
+          ctx.prisma,
+          ctx.tenantId!
+        )
+        return { data: assignments.map(mapAssignment) }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -179,34 +165,16 @@ export const employeeAccessAssignmentsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(employeeAccessAssignmentOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const assignment =
-        await ctx.prisma.employeeAccessAssignment.findFirst({
-          where: { id: input.id, tenantId },
-          include: {
-            employee: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                personnelNumber: true,
-              },
-            },
-            accessProfile: {
-              select: { id: true, code: true, name: true },
-            },
-          },
-        })
-
-      if (!assignment) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Employee access assignment not found",
-        })
+      try {
+        const assignment = await employeeAccessAssignmentService.getById(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id
+        )
+        return mapAssignment(assignment)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapAssignment(assignment)
     }),
 
   /**
@@ -221,58 +189,16 @@ export const employeeAccessAssignmentsRouter = createTRPCRouter({
     .input(createEmployeeAccessAssignmentInputSchema)
     .output(employeeAccessAssignmentOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify employee exists in same tenant
-      const employee = await ctx.prisma.employee.findFirst({
-        where: { id: input.employeeId, tenantId },
-      })
-      if (!employee) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Employee not found",
-        })
+      try {
+        const assignment = await employeeAccessAssignmentService.create(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+        return mapAssignment(assignment)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Verify access profile exists in same tenant
-      const accessProfile = await ctx.prisma.accessProfile.findFirst({
-        where: { id: input.accessProfileId, tenantId },
-      })
-      if (!accessProfile) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Access profile not found",
-        })
-      }
-
-      const assignment =
-        await ctx.prisma.employeeAccessAssignment.create({
-          data: {
-            tenantId,
-            employeeId: input.employeeId,
-            accessProfileId: input.accessProfileId,
-            validFrom: input.validFrom
-              ? new Date(input.validFrom)
-              : null,
-            validTo: input.validTo ? new Date(input.validTo) : null,
-            isActive: true,
-          },
-          include: {
-            employee: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                personnelNumber: true,
-              },
-            },
-            accessProfile: {
-              select: { id: true, code: true, name: true },
-            },
-          },
-        })
-
-      return mapAssignment(assignment)
     }),
 
   /**
@@ -287,57 +213,16 @@ export const employeeAccessAssignmentsRouter = createTRPCRouter({
     .input(updateEmployeeAccessAssignmentInputSchema)
     .output(employeeAccessAssignmentOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify assignment exists (tenant-scoped)
-      const existing =
-        await ctx.prisma.employeeAccessAssignment.findFirst({
-          where: { id: input.id, tenantId },
-        })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Employee access assignment not found",
-        })
+      try {
+        const assignment = await employeeAccessAssignmentService.update(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+        return mapAssignment(assignment)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      if (input.validFrom !== undefined) {
-        data.validFrom =
-          input.validFrom === null ? null : new Date(input.validFrom)
-      }
-
-      if (input.validTo !== undefined) {
-        data.validTo =
-          input.validTo === null ? null : new Date(input.validTo)
-      }
-
-      if (input.isActive !== undefined) {
-        data.isActive = input.isActive
-      }
-
-      const assignment =
-        await ctx.prisma.employeeAccessAssignment.update({
-          where: { id: input.id },
-          data,
-          include: {
-            employee: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                personnelNumber: true,
-              },
-            },
-            accessProfile: {
-              select: { id: true, code: true, name: true },
-            },
-          },
-        })
-
-      return mapAssignment(assignment)
     }),
 
   /**
@@ -350,25 +235,15 @@ export const employeeAccessAssignmentsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify assignment exists (tenant-scoped)
-      const existing =
-        await ctx.prisma.employeeAccessAssignment.findFirst({
-          where: { id: input.id, tenantId },
-        })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Employee access assignment not found",
-        })
+      try {
+        await employeeAccessAssignmentService.remove(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id
+        )
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Hard delete
-      await ctx.prisma.employeeAccessAssignment.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 })

@@ -22,7 +22,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { useAccount, useAccountUsage } from '@/hooks/api'
+import { useAccount, useAccountUsage } from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type Account = components['schemas']['Account']

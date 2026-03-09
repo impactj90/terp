@@ -37,7 +37,7 @@ import {
   useCostCenters,
   useEmploymentTypes,
   useTariffs,
-} from '@/hooks/api'
+} from '@/hooks'
 import { cn } from '@/lib/utils'
 import type { components } from '@/types/legacy-api-types'
 

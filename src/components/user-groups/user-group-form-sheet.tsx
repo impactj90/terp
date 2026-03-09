@@ -19,7 +19,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { useCreateUserGroup, usePermissions, useUpdateUserGroup } from '@/hooks/api'
+import { useCreateUserGroup, usePermissions, useUpdateUserGroup } from '@/hooks'
 import type { AppRouter } from '@/trpc/routers/_app'
 import type { inferRouterOutputs } from '@trpc/server'
 

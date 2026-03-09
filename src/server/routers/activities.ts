@@ -12,10 +12,12 @@
  * @see apps/api/internal/service/activity.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
+import { handleServiceError } from "@/trpc/errors"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import * as activityService from "@/lib/services/activity-service"
+import type { PrismaClient } from "@/generated/prisma/client"
 
 // --- Permission Constants ---
 
@@ -101,20 +103,18 @@ export const activitiesRouter = createTRPCRouter({
     )
     .output(z.object({ data: z.array(activityOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const where: Record<string, unknown> = { tenantId }
-
-      if (input?.isActive !== undefined) {
-        where.isActive = input.isActive
-      }
-
-      const activities = await ctx.prisma.activity.findMany({
-        where,
-        orderBy: { code: "asc" },
-      })
-
-      return {
-        data: activities.map(mapActivityToOutput),
+      try {
+        const tenantId = ctx.tenantId!
+        const activities = await activityService.list(
+          ctx.prisma as unknown as PrismaClient,
+          tenantId,
+          input
+        )
+        return {
+          data: activities.map(mapActivityToOutput),
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -130,19 +130,17 @@ export const activitiesRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(activityOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const activity = await ctx.prisma.activity.findFirst({
-        where: { id: input.id, tenantId },
-      })
-
-      if (!activity) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Activity not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        const activity = await activityService.getById(
+          ctx.prisma as unknown as PrismaClient,
+          tenantId,
+          input.id
+        )
+        return mapActivityToOutput(activity)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapActivityToOutput(activity)
     }),
 
   /**
@@ -159,52 +157,17 @@ export const activitiesRouter = createTRPCRouter({
     .input(createActivityInputSchema)
     .output(activityOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Trim and validate code
-      const code = input.code.trim()
-      if (code.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Activity code is required",
-        })
-      }
-
-      // Trim and validate name
-      const name = input.name.trim()
-      if (name.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Activity name is required",
-        })
-      }
-
-      // Check code uniqueness within tenant
-      const existingByCode = await ctx.prisma.activity.findFirst({
-        where: { tenantId, code },
-      })
-      if (existingByCode) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Activity code already exists",
-        })
-      }
-
-      // Trim description if provided
-      const description = input.description?.trim() || null
-
-      // Create activity -- always isActive: true (matching Go behavior)
-      const activity = await ctx.prisma.activity.create({
-        data: {
+      try {
+        const tenantId = ctx.tenantId!
+        const activity = await activityService.create(
+          ctx.prisma as unknown as PrismaClient,
           tenantId,
-          code,
-          name,
-          description,
-          isActive: true,
-        },
-      })
-
-      return mapActivityToOutput(activity)
+          input
+        )
+        return mapActivityToOutput(activity)
+      } catch (err) {
+        handleServiceError(err)
+      }
     }),
 
   /**
@@ -220,79 +183,17 @@ export const activitiesRouter = createTRPCRouter({
     .input(updateActivityInputSchema)
     .output(activityOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify activity exists (tenant-scoped)
-      const existing = await ctx.prisma.activity.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Activity not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        const activity = await activityService.update(
+          ctx.prisma as unknown as PrismaClient,
+          tenantId,
+          input
+        )
+        return mapActivityToOutput(activity)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      // Handle code update
-      if (input.code !== undefined) {
-        const code = input.code.trim()
-        if (code.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Activity code is required",
-          })
-        }
-        // Check uniqueness only if code actually changed
-        if (code !== existing.code) {
-          const existingByCode = await ctx.prisma.activity.findFirst({
-            where: {
-              tenantId,
-              code,
-              NOT: { id: input.id },
-            },
-          })
-          if (existingByCode) {
-            throw new TRPCError({
-              code: "CONFLICT",
-              message: "Activity code already exists",
-            })
-          }
-        }
-        data.code = code
-      }
-
-      // Handle name update
-      if (input.name !== undefined) {
-        const name = input.name.trim()
-        if (name.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Activity name is required",
-          })
-        }
-        data.name = name
-      }
-
-      // Handle description update
-      if (input.description !== undefined) {
-        data.description =
-          input.description === null ? null : input.description.trim()
-      }
-
-      // Handle isActive update
-      if (input.isActive !== undefined) {
-        data.isActive = input.isActive
-      }
-
-      const activity = await ctx.prisma.activity.update({
-        where: { id: input.id },
-        data,
-      })
-
-      return mapActivityToOutput(activity)
     }),
 
   /**
@@ -307,35 +208,16 @@ export const activitiesRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify activity exists (tenant-scoped)
-      const existing = await ctx.prisma.activity.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Activity not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        await activityService.remove(
+          ctx.prisma as unknown as PrismaClient,
+          tenantId,
+          input.id
+        )
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Check for employees with defaultActivityId
-      const employeeCount = await ctx.prisma.employee.count({
-        where: { defaultActivityId: input.id },
-      })
-      if (employeeCount > 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Cannot delete activity with assigned employees",
-        })
-      }
-
-      // Hard delete
-      await ctx.prisma.activity.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 })

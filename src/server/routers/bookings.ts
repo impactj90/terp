@@ -21,16 +21,15 @@
  * @see apps/api/internal/repository/booking.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
-import type { PrismaClient } from "@/generated/prisma/client"
 import {
   requirePermission,
   applyDataScope,
   type DataScope,
 } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
-import { RecalcService } from "../services/recalc"
+import { handleServiceError } from "@/trpc/errors"
+import * as bookingsService from "@/lib/services/bookings-service"
 
 // --- Permission Constants ---
 // Matching Go route registration at apps/api/internal/handler/routes.go:401-465
@@ -39,10 +38,6 @@ const VIEW_OWN = permissionIdByKey("time_tracking.view_own")!
 const VIEW_ALL = permissionIdByKey("time_tracking.view_all")!
 const EDIT = permissionIdByKey("time_tracking.edit")!
 const DELETE_BOOKINGS = permissionIdByKey("booking_overview.delete_bookings")!
-
-// --- Constants ---
-
-const MAX_TIME_MINUTES = 1439 // 23:59
 
 // --- Output Schemas ---
 
@@ -133,66 +128,7 @@ const updateInputSchema = z.object({
   notes: z.string().nullable().optional(),
 })
 
-// --- Prisma Include Objects ---
-
-const bookingListInclude = {
-  bookingType: {
-    select: { id: true, code: true, name: true, direction: true },
-  },
-  bookingReason: {
-    select: { id: true, code: true, label: true },
-  },
-  employee: {
-    select: {
-      id: true,
-      personnelNumber: true,
-      firstName: true,
-      lastName: true,
-      departmentId: true,
-    },
-  },
-} as const
-
-const bookingDetailInclude = {
-  ...bookingListInclude,
-} as const
-
-// --- Helper Functions ---
-
-/**
- * Converts HH:MM time string to minutes from midnight.
- */
-function parseTimeString(time: string): number {
-  const [hoursStr, minutesStr] = time.split(":")
-  const hours = parseInt(hoursStr!, 10)
-  const minutes = parseInt(minutesStr!, 10)
-  if (
-    isNaN(hours) ||
-    isNaN(minutes) ||
-    hours < 0 ||
-    hours > 23 ||
-    minutes < 0 ||
-    minutes > 59
-  ) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "Invalid time format, expected HH:MM (00:00 - 23:59)",
-    })
-  }
-  return hours * 60 + minutes
-}
-
-/**
- * Validates that minutes from midnight is within valid range.
- */
-function validateTime(minutes: number): void {
-  if (minutes < 0 || minutes > MAX_TIME_MINUTES) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: `Time must be between 0 and ${MAX_TIME_MINUTES} minutes (00:00 - 23:59)`,
-    })
-  }
-}
+// --- Mapping Functions ---
 
 /**
  * Maps a Prisma Booking record (with relations) to the output schema shape.
@@ -276,215 +212,6 @@ function mapToOutput(record: Record<string, unknown>): BookingOutput {
   return result
 }
 
-// --- Data Scope Helpers ---
-
-/**
- * Builds a Prisma WHERE clause addition for booking data scope filtering.
- * Bookings are scoped via the employee relation.
- */
-function buildBookingDataScopeWhere(
-  dataScope: DataScope
-): Record<string, unknown> | null {
-  if (dataScope.type === "department") {
-    return { employee: { departmentId: { in: dataScope.departmentIds } } }
-  } else if (dataScope.type === "employee") {
-    return { employeeId: { in: dataScope.employeeIds } }
-  }
-  return null
-}
-
-/**
- * Checks that a booking falls within the user's data scope.
- * Throws FORBIDDEN if not.
- */
-function checkBookingDataScope(
-  dataScope: DataScope,
-  booking: {
-    employeeId: string
-    employee?: { departmentId: string | null } | null
-  }
-): void {
-  if (dataScope.type === "department") {
-    if (
-      !booking.employee?.departmentId ||
-      !dataScope.departmentIds.includes(booking.employee.departmentId)
-    ) {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "Booking not within data scope",
-      })
-    }
-  } else if (dataScope.type === "employee") {
-    if (!dataScope.employeeIds.includes(booking.employeeId)) {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "Booking not within data scope",
-      })
-    }
-  }
-}
-
-// --- Derived Booking Logic ---
-
-/**
- * Resolves the reference time for derived booking creation.
- * Port of Go resolveReferenceTime (service/booking.go:372-412).
- */
-async function resolveReferenceTime(
-  prisma: PrismaClient,
-  reason: {
-    referenceTime: string | null
-    offsetMinutes: number | null
-  },
-  original: {
-    employeeId: string
-    bookingDate: Date
-    editedTime: number
-  }
-): Promise<number | null> {
-  if (!reason.referenceTime) return null
-
-  switch (reason.referenceTime) {
-    case "booking_time":
-      return original.editedTime
-
-    case "plan_start": {
-      const edp = await prisma.employeeDayPlan.findFirst({
-        where: {
-          employeeId: original.employeeId,
-          planDate: original.bookingDate,
-        },
-        include: { dayPlan: true },
-      })
-      if (!edp?.dayPlan?.comeFrom) return original.editedTime // Fallback
-      return edp.dayPlan.comeFrom
-    }
-
-    case "plan_end": {
-      const edp = await prisma.employeeDayPlan.findFirst({
-        where: {
-          employeeId: original.employeeId,
-          planDate: original.bookingDate,
-        },
-        include: { dayPlan: true },
-      })
-      if (!edp?.dayPlan?.goFrom) return original.editedTime // Fallback
-      return edp.dayPlan.goFrom
-    }
-
-    default:
-      return null
-  }
-}
-
-/**
- * Creates a derived booking if the original booking's reason has adjustment config.
- * Port of Go createDerivedBookingIfNeeded (service/booking.go:304-368).
- *
- * Best-effort: errors are logged but do not fail the original booking.
- */
-async function createDerivedBookingIfNeeded(
-  prisma: PrismaClient,
-  original: {
-    id: string
-    tenantId: string
-    employeeId: string
-    bookingDate: Date
-    bookingTypeId: string
-    editedTime: number
-    bookingReasonId: string | null
-  },
-  createdBy: string | null
-): Promise<void> {
-  if (!original.bookingReasonId) return
-
-  // Load reason with adjustment fields
-  const reason = await prisma.bookingReason.findFirst({
-    where: { id: original.bookingReasonId, tenantId: original.tenantId },
-  })
-  if (!reason) return
-  if (!reason.referenceTime || reason.offsetMinutes === null) return // No adjustment configured
-
-  // Resolve reference time
-  const refMinutes = await resolveReferenceTime(prisma, reason, original)
-  if (refMinutes === null) return
-
-  // Calculate derived time = reference + offset, clamped to 0-1439
-  let derivedTime = refMinutes + reason.offsetMinutes
-  if (derivedTime < 0) derivedTime = 0
-  if (derivedTime > MAX_TIME_MINUTES) derivedTime = MAX_TIME_MINUTES
-
-  // Determine derived booking type
-  const derivedBookingTypeId =
-    reason.adjustmentBookingTypeId || original.bookingTypeId
-
-  // Idempotent: check if a derived booking already exists
-  const existingDerived = await prisma.booking.findFirst({
-    where: { originalBookingId: original.id },
-  })
-
-  if (existingDerived) {
-    // Update existing derived booking
-    await prisma.booking.update({
-      where: { id: existingDerived.id },
-      data: {
-        editedTime: derivedTime,
-        originalTime: derivedTime,
-        bookingTypeId: derivedBookingTypeId,
-        calculatedTime: null,
-      },
-    })
-    return
-  }
-
-  // Create new derived booking
-  await prisma.booking.create({
-    data: {
-      tenantId: original.tenantId,
-      employeeId: original.employeeId,
-      bookingDate: original.bookingDate,
-      bookingTypeId: derivedBookingTypeId,
-      originalTime: derivedTime,
-      editedTime: derivedTime,
-      source: "derived",
-      isAutoGenerated: true,
-      originalBookingId: original.id,
-      bookingReasonId: original.bookingReasonId,
-      notes: `Auto-generated from reason: ${reason.code}`,
-      createdBy: createdBy,
-      updatedBy: createdBy,
-    },
-  })
-}
-
-// --- Recalculation Helper ---
-
-/**
- * Triggers recalculation for a specific employee/day.
- * Best effort -- errors are logged but do not fail the parent operation.
- * Uses RecalcService which triggers both daily calc AND monthly recalc.
- * Mirrors Go: `_, _ = s.recalcSvc.TriggerRecalc(ctx, tenantID, employeeID, date)`
- *
- * @see ZMI-TICKET-235
- * @see ZMI-TICKET-243
- */
-async function triggerRecalc(
-  prisma: PrismaClient,
-  tenantId: string,
-  employeeId: string,
-  bookingDate: Date
-): Promise<void> {
-  try {
-    const service = new RecalcService(prisma)
-    await service.triggerRecalc(tenantId, employeeId, bookingDate)
-  } catch (error) {
-    console.error(
-      `Recalc failed for employee ${employeeId} on ${bookingDate.toISOString().split("T")[0]}:`,
-      error
-    )
-  }
-}
-
 // --- Router ---
 
 export const bookingsRouter = createTRPCRouter({
@@ -508,62 +235,33 @@ export const bookingsRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const page = input?.page ?? 1
-      const pageSize = input?.pageSize ?? 50
-      const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+      try {
+        const tenantId = ctx.tenantId!
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
 
-      const where: Record<string, unknown> = {
-        tenantId,
-      }
+        const { items, total } = await bookingsService.list(
+          ctx.prisma,
+          tenantId,
+          {
+            page: input?.page ?? 1,
+            pageSize: input?.pageSize ?? 50,
+            employeeId: input?.employeeId,
+            fromDate: input?.fromDate,
+            toDate: input?.toDate,
+            bookingTypeId: input?.bookingTypeId,
+            source: input?.source,
+            dataScope,
+          }
+        )
 
-      // Optional filters
-      if (input?.employeeId) {
-        where.employeeId = input.employeeId
-      }
-
-      // Date range filters
-      if (input?.fromDate || input?.toDate) {
-        const bookingDate: Record<string, unknown> = {}
-        if (input?.fromDate) {
-          bookingDate.gte = new Date(input.fromDate)
+        return {
+          items: items.map((item) =>
+            mapToOutput(item as unknown as Record<string, unknown>)
+          ),
+          total,
         }
-        if (input?.toDate) {
-          bookingDate.lte = new Date(input.toDate)
-        }
-        where.bookingDate = bookingDate
-      }
-
-      if (input?.bookingTypeId) {
-        where.bookingTypeId = input.bookingTypeId
-      }
-
-      if (input?.source) {
-        where.source = input.source
-      }
-
-      // Apply data scope filtering
-      const scopeWhere = buildBookingDataScopeWhere(dataScope)
-      if (scopeWhere) {
-        Object.assign(where, scopeWhere)
-      }
-
-      const [items, total] = await Promise.all([
-        ctx.prisma.booking.findMany({
-          where,
-          include: bookingListInclude,
-          skip: (page - 1) * pageSize,
-          take: pageSize,
-          orderBy: [{ bookingDate: "desc" }, { editedTime: "desc" }],
-        }),
-        ctx.prisma.booking.count({ where }),
-      ])
-
-      return {
-        items: items.map((item) =>
-          mapToOutput(item as unknown as Record<string, unknown>)
-        ),
-        total,
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -581,25 +279,21 @@ export const bookingsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(bookingOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+      try {
+        const tenantId = ctx.tenantId!
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
 
-      const booking = await ctx.prisma.booking.findFirst({
-        where: { id: input.id, tenantId },
-        include: bookingDetailInclude,
-      })
+        const booking = await bookingsService.getById(
+          ctx.prisma,
+          tenantId,
+          input.id,
+          dataScope
+        )
 
-      if (!booking) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Booking not found",
-        })
+        return mapToOutput(booking as unknown as Record<string, unknown>)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Check data scope after fetch
-      checkBookingDataScope(dataScope, booking)
-
-      return mapToOutput(booking as unknown as Record<string, unknown>)
     }),
 
   /**
@@ -619,93 +313,22 @@ export const bookingsRouter = createTRPCRouter({
     .input(createInputSchema)
     .output(bookingOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
-
-      // Parse and validate time
-      const minutes = parseTimeString(input.time)
-      validateTime(minutes)
-
-      // Validate employee exists in tenant and is within data scope
-      const employee = await ctx.prisma.employee.findFirst({
-        where: { id: input.employeeId, tenantId },
-      })
-      if (!employee) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Employee not found",
-        })
-      }
-      checkBookingDataScope(dataScope, {
-        employeeId: employee.id,
-        employee,
-      })
-
-      // Validate booking type exists and is accessible by tenant
-      const bookingType = await ctx.prisma.bookingType.findFirst({
-        where: {
-          id: input.bookingTypeId,
-          OR: [{ tenantId }, { tenantId: null }],
-          isActive: true,
-        },
-      })
-      if (!bookingType) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Invalid booking type",
-        })
-      }
-
-      // Validate booking reason if provided
-      if (input.bookingReasonId) {
-        const reason = await ctx.prisma.bookingReason.findFirst({
-          where: { id: input.bookingReasonId, tenantId },
-        })
-        if (!reason) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Invalid booking reason",
-          })
-        }
-      }
-
-      // Create booking
-      const booking = await ctx.prisma.booking.create({
-        data: {
-          tenantId,
-          employeeId: input.employeeId,
-          bookingDate: new Date(input.bookingDate),
-          bookingTypeId: input.bookingTypeId,
-          originalTime: minutes,
-          editedTime: minutes,
-          source: "web",
-          notes: input.notes || null,
-          bookingReasonId: input.bookingReasonId || null,
-          createdBy: ctx.user!.id,
-          updatedBy: ctx.user!.id,
-        },
-        include: bookingDetailInclude,
-      })
-
-      // Create derived booking if needed (best effort)
       try {
-        await createDerivedBookingIfNeeded(
+        const tenantId = ctx.tenantId!
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+
+        const booking = await bookingsService.createBooking(
           ctx.prisma,
-          booking,
+          tenantId,
+          input,
+          dataScope,
           ctx.user!.id
         )
-      } catch {
-        // Best effort -- derived booking creation failure should not fail the main booking
-        console.error(
-          "Failed to create derived booking for booking",
-          booking.id
-        )
+
+        return mapToOutput(booking as unknown as Record<string, unknown>)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Trigger recalculation for the affected day (best effort)
-      await triggerRecalc(ctx.prisma, tenantId, input.employeeId, new Date(input.bookingDate))
-
-      return mapToOutput(booking as unknown as Record<string, unknown>)
     }),
 
   /**
@@ -723,49 +346,22 @@ export const bookingsRouter = createTRPCRouter({
     .input(updateInputSchema)
     .output(bookingOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+      try {
+        const tenantId = ctx.tenantId!
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
 
-      // Fetch existing booking (tenant-scoped) with employee
-      const existing = await ctx.prisma.booking.findFirst({
-        where: { id: input.id, tenantId },
-        include: { employee: { select: { id: true, departmentId: true } } },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Booking not found",
-        })
+        const updated = await bookingsService.updateBooking(
+          ctx.prisma,
+          tenantId,
+          input,
+          dataScope,
+          ctx.user!.id
+        )
+
+        return mapToOutput(updated as unknown as Record<string, unknown>)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Check data scope
-      checkBookingDataScope(dataScope, existing)
-
-      // Build partial update data
-      const data: Record<string, unknown> = { updatedBy: ctx.user!.id }
-
-      if (input.time !== undefined) {
-        const minutes = parseTimeString(input.time)
-        validateTime(minutes)
-        data.editedTime = minutes
-        data.calculatedTime = null // Clear calculated time when edited
-      }
-
-      if (input.notes !== undefined) {
-        data.notes = input.notes
-      }
-
-      // Update and return with includes
-      const updated = await ctx.prisma.booking.update({
-        where: { id: input.id },
-        data,
-        include: bookingDetailInclude,
-      })
-
-      // Trigger recalculation for the affected day (best effort)
-      await triggerRecalc(ctx.prisma, tenantId, existing.employeeId, existing.bookingDate)
-
-      return mapToOutput(updated as unknown as Record<string, unknown>)
     }),
 
   /**
@@ -783,40 +379,20 @@ export const bookingsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+      try {
+        const tenantId = ctx.tenantId!
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
 
-      // Fetch existing booking (tenant-scoped) with employee
-      const existing = await ctx.prisma.booking.findFirst({
-        where: { id: input.id, tenantId },
-        include: { employee: { select: { id: true, departmentId: true } } },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Booking not found",
-        })
+        await bookingsService.deleteBooking(
+          ctx.prisma,
+          tenantId,
+          input.id,
+          dataScope
+        )
+
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Check data scope
-      checkBookingDataScope(dataScope, existing)
-
-      // Delete derived bookings first, then delete the booking in a transaction
-      await ctx.prisma.$transaction(async (tx) => {
-        // Delete any derived bookings pointing to this one
-        await tx.booking.deleteMany({
-          where: { originalBookingId: input.id },
-        })
-        // Delete the booking itself
-        await tx.booking.delete({
-          where: { id: input.id },
-        })
-      })
-
-      // Trigger recalculation for the affected day (best effort)
-      // Note: must capture employee/date before deletion (already done via `existing`)
-      await triggerRecalc(ctx.prisma, tenantId, existing.employeeId, existing.bookingDate)
-
-      return { success: true }
     }),
 })

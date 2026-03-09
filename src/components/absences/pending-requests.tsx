@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useEmployeeAbsences } from '@/hooks/api'
+import { useEmployeeAbsences } from '@/hooks'
 import { formatDate, parseISODate } from '@/lib/time-utils'
 import type { components } from '@/types/legacy-api-types'
 

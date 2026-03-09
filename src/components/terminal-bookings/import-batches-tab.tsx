@@ -9,7 +9,7 @@ import { useHasPermission } from '@/hooks'
 import {
   useImportBatches,
   useTriggerTerminalImport,
-} from '@/hooks/api'
+} from '@/hooks'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'

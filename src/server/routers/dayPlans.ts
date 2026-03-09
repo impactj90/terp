@@ -19,11 +19,11 @@
  * @see apps/api/internal/service/dayplan.go
  */
 import { z } from "zod"
-import { Prisma } from "@/generated/prisma/client"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as dayPlansService from "@/lib/services/day-plans-service"
 
 // --- Permission Constants ---
 
@@ -55,7 +55,6 @@ const DAY_CHANGE_BEHAVIORS = [
 ] as const
 const BREAK_TYPES = ["fixed", "variable", "minimum"] as const
 const CALCULATION_TYPES = ["fixed", "per_minute", "percentage"] as const
-const RESERVED_CODES = ["U", "K", "S"]
 
 // --- Output Schemas ---
 
@@ -288,90 +287,7 @@ const deleteBonusInputSchema = z.object({
   bonusId: z.string().uuid(),
 })
 
-// --- Prisma include for detail views ---
-
-const dayPlanDetailInclude = {
-  breaks: { orderBy: { sortOrder: "asc" as const } },
-  bonuses: { orderBy: { sortOrder: "asc" as const } },
-} as const
-
-// --- Helpers ---
-
-/**
- * Checks if a day plan code is reserved (case-insensitive).
- * Reserved codes: U, K, S
- */
-function isReservedCode(code: string): boolean {
-  return RESERVED_CODES.includes(code.toUpperCase())
-}
-
-/**
- * Normalizes fields for flextime plans per ZMI Section 6.2.
- * When planType is "flextime", zeros out toleranceComePlus,
- * toleranceGoMinus, and variableWorkTime.
- */
-function normalizeFlextimeFields(
-  data: Record<string, unknown>,
-  planType: string
-): void {
-  if (planType === "flextime") {
-    data.toleranceComePlus = 0
-    data.toleranceGoMinus = 0
-    data.variableWorkTime = false
-  }
-}
-
-/**
- * Validates break configuration based on break type.
- * - fixed: requires startTime and endTime, startTime < endTime
- * - minimum: requires afterWorkMinutes
- * - variable: no time requirements
- * - All types: duration > 0 (enforced by Zod schema)
- */
-function validateBreak(
-  breakType: string,
-  startTime: number | undefined,
-  endTime: number | undefined,
-  afterWorkMinutes: number | undefined
-): void {
-  if (breakType === "fixed") {
-    if (startTime === undefined || endTime === undefined) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "Fixed break requires start time and end time",
-      })
-    }
-    if (startTime >= endTime) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "Break start time must be before end time",
-      })
-    }
-  }
-
-  if (breakType === "minimum") {
-    if (afterWorkMinutes === undefined) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "Minimum break requires after work minutes",
-      })
-    }
-  }
-}
-
-/**
- * Validates bonus configuration.
- * - timeFrom < timeTo
- * - valueMinutes > 0 (enforced by Zod schema)
- */
-function validateBonus(timeFrom: number, timeTo: number): void {
-  if (timeFrom >= timeTo) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "Bonus time from must be before time to",
-    })
-  }
-}
+// --- Mapping Functions ---
 
 /**
  * Maps a Prisma DayPlan record to the output schema shape.
@@ -496,25 +412,20 @@ export const dayPlansRouter = createTRPCRouter({
     )
     .output(z.object({ data: z.array(dayPlanOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const where: Record<string, unknown> = { tenantId }
+      try {
+        const plans = await dayPlansService.list(
+          ctx.prisma,
+          ctx.tenantId!,
+          input ?? undefined
+        )
 
-      if (input?.isActive !== undefined) {
-        where.isActive = input.isActive
-      }
-      if (input?.planType !== undefined) {
-        where.planType = input.planType
-      }
-
-      const plans = await ctx.prisma.dayPlan.findMany({
-        where,
-        orderBy: { code: "asc" },
-      })
-
-      return {
-        data: plans.map((p) =>
-          mapDayPlanToOutput(p as unknown as Record<string, unknown>)
-        ),
+        return {
+          data: plans.map((p) =>
+            mapDayPlanToOutput(p as unknown as Record<string, unknown>)
+          ),
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -531,20 +442,17 @@ export const dayPlansRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(dayPlanOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const plan = await ctx.prisma.dayPlan.findFirst({
-        where: { id: input.id, tenantId },
-        include: dayPlanDetailInclude,
-      })
+      try {
+        const plan = await dayPlansService.getById(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id
+        )
 
-      if (!plan) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Day plan not found",
-        })
+        return mapDayPlanToOutput(plan as unknown as Record<string, unknown>)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapDayPlanToOutput(plan as unknown as Record<string, unknown>)
     }),
 
   /**
@@ -562,125 +470,17 @@ export const dayPlansRouter = createTRPCRouter({
     .input(createDayPlanInputSchema)
     .output(dayPlanOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
+      try {
+        const plan = await dayPlansService.create(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
 
-      // Trim and validate code
-      const code = input.code.trim()
-      if (code.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Day plan code is required",
-        })
+        return mapDayPlanToOutput(plan as unknown as Record<string, unknown>)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Check reserved codes
-      if (isReservedCode(code)) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Day plan code is reserved",
-        })
-      }
-
-      // Trim and validate name
-      const name = input.name.trim()
-      if (name.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Day plan name is required",
-        })
-      }
-
-      // Validate regularHours
-      const regularHours = input.regularHours ?? 480
-      if (regularHours <= 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Regular hours must be positive",
-        })
-      }
-
-      // Check code uniqueness within tenant
-      const existingByCode = await ctx.prisma.dayPlan.findFirst({
-        where: { tenantId, code },
-      })
-      if (existingByCode) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Day plan code already exists",
-        })
-      }
-
-      // Trim description
-      const description = input.description?.trim() || null
-
-      // Build create data
-      const planType = input.planType || "fixed"
-      const data: Record<string, unknown> = {
-        tenantId,
-        code,
-        name,
-        description,
-        planType,
-        regularHours,
-        isActive: true,
-        comeFrom: input.comeFrom,
-        comeTo: input.comeTo,
-        goFrom: input.goFrom,
-        goTo: input.goTo,
-        coreStart: input.coreStart,
-        coreEnd: input.coreEnd,
-        regularHours2: input.regularHours2,
-        fromEmployeeMaster: input.fromEmployeeMaster ?? false,
-        toleranceComePlus: input.toleranceComePlus ?? 0,
-        toleranceComeMinus: input.toleranceComeMinus ?? 0,
-        toleranceGoPlus: input.toleranceGoPlus ?? 0,
-        toleranceGoMinus: input.toleranceGoMinus ?? 0,
-        variableWorkTime: input.variableWorkTime ?? false,
-        roundingComeType: input.roundingComeType,
-        roundingComeInterval: input.roundingComeInterval,
-        roundingGoType: input.roundingGoType,
-        roundingGoInterval: input.roundingGoInterval,
-        minWorkTime: input.minWorkTime,
-        maxNetWorkTime: input.maxNetWorkTime,
-        roundAllBookings: input.roundAllBookings ?? false,
-        roundingComeAddValue: input.roundingComeAddValue,
-        roundingGoAddValue: input.roundingGoAddValue,
-        holidayCreditCat1: input.holidayCreditCat1,
-        holidayCreditCat2: input.holidayCreditCat2,
-        holidayCreditCat3: input.holidayCreditCat3,
-        vacationDeduction:
-          input.vacationDeduction !== undefined
-            ? new Prisma.Decimal(input.vacationDeduction)
-            : new Prisma.Decimal(1.0),
-        noBookingBehavior: input.noBookingBehavior || "error",
-        dayChangeBehavior: input.dayChangeBehavior || "none",
-        shiftDetectArriveFrom: input.shiftDetectArriveFrom,
-        shiftDetectArriveTo: input.shiftDetectArriveTo,
-        shiftDetectDepartFrom: input.shiftDetectDepartFrom,
-        shiftDetectDepartTo: input.shiftDetectDepartTo,
-        shiftAltPlan1: input.shiftAltPlan1,
-        shiftAltPlan2: input.shiftAltPlan2,
-        shiftAltPlan3: input.shiftAltPlan3,
-        shiftAltPlan4: input.shiftAltPlan4,
-        shiftAltPlan5: input.shiftAltPlan5,
-        shiftAltPlan6: input.shiftAltPlan6,
-        netAccountId: input.netAccountId,
-        capAccountId: input.capAccountId,
-      }
-
-      // Apply flextime normalization
-      normalizeFlextimeFields(data, planType)
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const created = await ctx.prisma.dayPlan.create({ data: data as any })
-
-      // Re-fetch with detail include
-      const plan = await ctx.prisma.dayPlan.findUniqueOrThrow({
-        where: { id: created.id },
-        include: dayPlanDetailInclude,
-      })
-
-      return mapDayPlanToOutput(plan as unknown as Record<string, unknown>)
     }),
 
   /**
@@ -696,201 +496,17 @@ export const dayPlansRouter = createTRPCRouter({
     .input(updateDayPlanInputSchema)
     .output(dayPlanOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
+      try {
+        const plan = await dayPlansService.update(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
 
-      // Verify day plan exists (tenant-scoped)
-      const existing = await ctx.prisma.dayPlan.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Day plan not found",
-        })
+        return mapDayPlanToOutput(plan as unknown as Record<string, unknown>)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      // Handle code update
-      if (input.code !== undefined) {
-        const code = input.code.trim()
-        if (code.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Day plan code is required",
-          })
-        }
-        if (isReservedCode(code)) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Day plan code is reserved",
-          })
-        }
-        // Check uniqueness if changed
-        if (code !== existing.code) {
-          const existingByCode = await ctx.prisma.dayPlan.findFirst({
-            where: {
-              tenantId,
-              code,
-              NOT: { id: input.id },
-            },
-          })
-          if (existingByCode) {
-            throw new TRPCError({
-              code: "CONFLICT",
-              message: "Day plan code already exists",
-            })
-          }
-        }
-        data.code = code
-      }
-
-      // Handle name update
-      if (input.name !== undefined) {
-        const name = input.name.trim()
-        if (name.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Day plan name is required",
-          })
-        }
-        data.name = name
-      }
-
-      // Handle description update
-      if (input.description !== undefined) {
-        data.description =
-          input.description === null ? null : input.description.trim()
-      }
-
-      // Handle planType update
-      if (input.planType !== undefined) {
-        data.planType = input.planType
-      }
-
-      // Handle nullable integer fields
-      const nullableIntFields = [
-        "comeFrom",
-        "comeTo",
-        "goFrom",
-        "goTo",
-        "coreStart",
-        "coreEnd",
-        "regularHours2",
-        "roundingComeInterval",
-        "roundingGoInterval",
-        "minWorkTime",
-        "maxNetWorkTime",
-        "roundingComeAddValue",
-        "roundingGoAddValue",
-        "holidayCreditCat1",
-        "holidayCreditCat2",
-        "holidayCreditCat3",
-        "shiftDetectArriveFrom",
-        "shiftDetectArriveTo",
-        "shiftDetectDepartFrom",
-        "shiftDetectDepartTo",
-      ] as const
-
-      for (const field of nullableIntFields) {
-        if (input[field] !== undefined) {
-          data[field] = input[field]
-        }
-      }
-
-      // Handle non-nullable integer fields
-      if (input.regularHours !== undefined) {
-        if (input.regularHours <= 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Regular hours must be positive",
-          })
-        }
-        data.regularHours = input.regularHours
-      }
-
-      if (input.toleranceComePlus !== undefined) {
-        data.toleranceComePlus = input.toleranceComePlus
-      }
-      if (input.toleranceComeMinus !== undefined) {
-        data.toleranceComeMinus = input.toleranceComeMinus
-      }
-      if (input.toleranceGoPlus !== undefined) {
-        data.toleranceGoPlus = input.toleranceGoPlus
-      }
-      if (input.toleranceGoMinus !== undefined) {
-        data.toleranceGoMinus = input.toleranceGoMinus
-      }
-
-      // Handle boolean fields
-      if (input.fromEmployeeMaster !== undefined) {
-        data.fromEmployeeMaster = input.fromEmployeeMaster
-      }
-      if (input.variableWorkTime !== undefined) {
-        data.variableWorkTime = input.variableWorkTime
-      }
-      if (input.roundAllBookings !== undefined) {
-        data.roundAllBookings = input.roundAllBookings
-      }
-      if (input.isActive !== undefined) {
-        data.isActive = input.isActive
-      }
-
-      // Handle nullable string fields
-      if (input.roundingComeType !== undefined) {
-        data.roundingComeType = input.roundingComeType
-      }
-      if (input.roundingGoType !== undefined) {
-        data.roundingGoType = input.roundingGoType
-      }
-      if (input.noBookingBehavior !== undefined) {
-        data.noBookingBehavior = input.noBookingBehavior
-      }
-      if (input.dayChangeBehavior !== undefined) {
-        data.dayChangeBehavior = input.dayChangeBehavior
-      }
-
-      // Handle nullable UUID fields
-      const nullableUuidFields = [
-        "shiftAltPlan1",
-        "shiftAltPlan2",
-        "shiftAltPlan3",
-        "shiftAltPlan4",
-        "shiftAltPlan5",
-        "shiftAltPlan6",
-        "netAccountId",
-        "capAccountId",
-      ] as const
-
-      for (const field of nullableUuidFields) {
-        if (input[field] !== undefined) {
-          data[field] = input[field]
-        }
-      }
-
-      // Handle vacationDeduction
-      if (input.vacationDeduction !== undefined) {
-        data.vacationDeduction = new Prisma.Decimal(input.vacationDeduction)
-      }
-
-      // Determine effective planType for normalization
-      const effectivePlanType =
-        (data.planType as string) || existing.planType
-      normalizeFlextimeFields(data, effectivePlanType)
-
-      await ctx.prisma.dayPlan.update({
-        where: { id: input.id },
-        data,
-      })
-
-      // Re-fetch with detail include
-      const plan = await ctx.prisma.dayPlan.findUniqueOrThrow({
-        where: { id: input.id },
-        include: dayPlanDetailInclude,
-      })
-
-      return mapDayPlanToOutput(plan as unknown as Record<string, unknown>)
     }),
 
   /**
@@ -906,38 +522,12 @@ export const dayPlansRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify day plan exists (tenant-scoped)
-      const existing = await ctx.prisma.dayPlan.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Day plan not found",
-        })
+      try {
+        await dayPlansService.remove(ctx.prisma, ctx.tenantId!, input.id)
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Check if any week plans reference this day plan
-      const result = await ctx.prisma.$queryRawUnsafe<[{ count: number }]>(
-        `SELECT COUNT(*)::int as count FROM week_plans WHERE monday_day_plan_id = $1 OR tuesday_day_plan_id = $1 OR wednesday_day_plan_id = $1 OR thursday_day_plan_id = $1 OR friday_day_plan_id = $1 OR saturday_day_plan_id = $1 OR sunday_day_plan_id = $1`,
-        input.id
-      )
-      if (result[0] && result[0].count > 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message:
-            "Cannot delete day plan that is referenced by week plans",
-        })
-      }
-
-      // Hard delete (breaks and bonuses cascade via FK)
-      await ctx.prisma.dayPlan.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 
   /**
@@ -953,152 +543,17 @@ export const dayPlansRouter = createTRPCRouter({
     .input(copyDayPlanInputSchema)
     .output(dayPlanOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
+      try {
+        const plan = await dayPlansService.copy(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
 
-      // Trim and validate newCode
-      const newCode = input.newCode.trim()
-      if (newCode.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "New code is required",
-        })
+        return mapDayPlanToOutput(plan as unknown as Record<string, unknown>)
+      } catch (err) {
+        handleServiceError(err)
       }
-      if (isReservedCode(newCode)) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Day plan code is reserved",
-        })
-      }
-
-      // Trim and validate newName
-      const newName = input.newName.trim()
-      if (newName.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "New name is required",
-        })
-      }
-
-      // Fetch original with details
-      const original = await ctx.prisma.dayPlan.findFirst({
-        where: { id: input.id, tenantId },
-        include: dayPlanDetailInclude,
-      })
-      if (!original) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Day plan not found",
-        })
-      }
-
-      // Check code uniqueness
-      const existingByCode = await ctx.prisma.dayPlan.findFirst({
-        where: { tenantId, code: newCode },
-      })
-      if (existingByCode) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Day plan code already exists",
-        })
-      }
-
-      // Create copy with all fields except id, code, name, timestamps
-      const copy = await ctx.prisma.dayPlan.create({
-        data: {
-          tenantId,
-          code: newCode,
-          name: newName,
-          description: original.description,
-          planType: original.planType,
-          comeFrom: original.comeFrom,
-          comeTo: original.comeTo,
-          goFrom: original.goFrom,
-          goTo: original.goTo,
-          coreStart: original.coreStart,
-          coreEnd: original.coreEnd,
-          regularHours: original.regularHours,
-          regularHours2: original.regularHours2,
-          fromEmployeeMaster: original.fromEmployeeMaster,
-          toleranceComePlus: original.toleranceComePlus,
-          toleranceComeMinus: original.toleranceComeMinus,
-          toleranceGoPlus: original.toleranceGoPlus,
-          toleranceGoMinus: original.toleranceGoMinus,
-          roundingComeType: original.roundingComeType,
-          roundingComeInterval: original.roundingComeInterval,
-          roundingGoType: original.roundingGoType,
-          roundingGoInterval: original.roundingGoInterval,
-          minWorkTime: original.minWorkTime,
-          maxNetWorkTime: original.maxNetWorkTime,
-          variableWorkTime: original.variableWorkTime,
-          roundAllBookings: original.roundAllBookings,
-          roundingComeAddValue: original.roundingComeAddValue,
-          roundingGoAddValue: original.roundingGoAddValue,
-          holidayCreditCat1: original.holidayCreditCat1,
-          holidayCreditCat2: original.holidayCreditCat2,
-          holidayCreditCat3: original.holidayCreditCat3,
-          vacationDeduction: original.vacationDeduction,
-          noBookingBehavior: original.noBookingBehavior,
-          dayChangeBehavior: original.dayChangeBehavior,
-          shiftDetectArriveFrom: original.shiftDetectArriveFrom,
-          shiftDetectArriveTo: original.shiftDetectArriveTo,
-          shiftDetectDepartFrom: original.shiftDetectDepartFrom,
-          shiftDetectDepartTo: original.shiftDetectDepartTo,
-          shiftAltPlan1: original.shiftAltPlan1,
-          shiftAltPlan2: original.shiftAltPlan2,
-          shiftAltPlan3: original.shiftAltPlan3,
-          shiftAltPlan4: original.shiftAltPlan4,
-          shiftAltPlan5: original.shiftAltPlan5,
-          shiftAltPlan6: original.shiftAltPlan6,
-          netAccountId: original.netAccountId,
-          capAccountId: original.capAccountId,
-          isActive: original.isActive,
-        },
-      })
-
-      // Copy breaks
-      for (const brk of original.breaks) {
-        await ctx.prisma.dayPlanBreak.create({
-          data: {
-            dayPlanId: copy.id,
-            breakType: brk.breakType,
-            startTime: brk.startTime,
-            endTime: brk.endTime,
-            duration: brk.duration,
-            afterWorkMinutes: brk.afterWorkMinutes,
-            autoDeduct: brk.autoDeduct,
-            isPaid: brk.isPaid,
-            minutesDifference: brk.minutesDifference,
-            sortOrder: brk.sortOrder,
-          },
-        })
-      }
-
-      // Copy bonuses
-      for (const bonus of original.bonuses) {
-        await ctx.prisma.dayPlanBonus.create({
-          data: {
-            dayPlanId: copy.id,
-            accountId: bonus.accountId,
-            timeFrom: bonus.timeFrom,
-            timeTo: bonus.timeTo,
-            calculationType: bonus.calculationType,
-            valueMinutes: bonus.valueMinutes,
-            minWorkMinutes: bonus.minWorkMinutes,
-            appliesOnHoliday: bonus.appliesOnHoliday,
-            sortOrder: bonus.sortOrder,
-          },
-        })
-      }
-
-      // Re-fetch with detail include
-      const result = await ctx.prisma.dayPlan.findUniqueOrThrow({
-        where: { id: copy.id },
-        include: dayPlanDetailInclude,
-      })
-
-      return mapDayPlanToOutput(
-        result as unknown as Record<string, unknown>
-      )
     }),
 
   /**
@@ -1113,56 +568,30 @@ export const dayPlansRouter = createTRPCRouter({
     .input(createBreakInputSchema)
     .output(dayPlanBreakOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
+      try {
+        const brk = await dayPlansService.createBreak(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
 
-      // Verify parent day plan exists and belongs to tenant
-      const dayPlan = await ctx.prisma.dayPlan.findFirst({
-        where: { id: input.dayPlanId, tenantId },
-      })
-      if (!dayPlan) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Day plan not found",
-        })
-      }
-
-      // Validate break config
-      validateBreak(
-        input.breakType,
-        input.startTime,
-        input.endTime,
-        input.afterWorkMinutes
-      )
-
-      const brk = await ctx.prisma.dayPlanBreak.create({
-        data: {
-          dayPlanId: input.dayPlanId,
-          breakType: input.breakType,
-          startTime: input.startTime,
-          endTime: input.endTime,
-          duration: input.duration,
-          afterWorkMinutes: input.afterWorkMinutes,
-          autoDeduct: input.autoDeduct ?? true,
-          isPaid: input.isPaid ?? false,
-          minutesDifference: input.minutesDifference ?? false,
-          sortOrder: input.sortOrder ?? 0,
-        },
-      })
-
-      return {
-        id: brk.id,
-        dayPlanId: brk.dayPlanId,
-        breakType: brk.breakType,
-        startTime: brk.startTime,
-        endTime: brk.endTime,
-        duration: brk.duration,
-        afterWorkMinutes: brk.afterWorkMinutes,
-        autoDeduct: brk.autoDeduct,
-        isPaid: brk.isPaid,
-        minutesDifference: brk.minutesDifference,
-        sortOrder: brk.sortOrder,
-        createdAt: brk.createdAt,
-        updatedAt: brk.updatedAt,
+        return {
+          id: brk.id,
+          dayPlanId: brk.dayPlanId,
+          breakType: brk.breakType,
+          startTime: brk.startTime,
+          endTime: brk.endTime,
+          duration: brk.duration,
+          afterWorkMinutes: brk.afterWorkMinutes,
+          autoDeduct: brk.autoDeduct,
+          isPaid: brk.isPaid,
+          minutesDifference: brk.minutesDifference,
+          sortOrder: brk.sortOrder,
+          createdAt: brk.createdAt,
+          updatedAt: brk.updatedAt,
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -1176,35 +605,12 @@ export const dayPlansRouter = createTRPCRouter({
     .input(deleteBreakInputSchema)
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify parent day plan exists and belongs to tenant
-      const dayPlan = await ctx.prisma.dayPlan.findFirst({
-        where: { id: input.dayPlanId, tenantId },
-      })
-      if (!dayPlan) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Day plan not found",
-        })
+      try {
+        await dayPlansService.removeBreak(ctx.prisma, ctx.tenantId!, input)
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Verify break exists and belongs to the day plan
-      const brk = await ctx.prisma.dayPlanBreak.findFirst({
-        where: { id: input.breakId, dayPlanId: input.dayPlanId },
-      })
-      if (!brk) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Break not found",
-        })
-      }
-
-      await ctx.prisma.dayPlanBreak.delete({
-        where: { id: input.breakId },
-      })
-
-      return { success: true }
     }),
 
   /**
@@ -1219,49 +625,29 @@ export const dayPlansRouter = createTRPCRouter({
     .input(createBonusInputSchema)
     .output(dayPlanBonusOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
+      try {
+        const bonus = await dayPlansService.createBonusFn(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
 
-      // Verify parent day plan exists and belongs to tenant
-      const dayPlan = await ctx.prisma.dayPlan.findFirst({
-        where: { id: input.dayPlanId, tenantId },
-      })
-      if (!dayPlan) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Day plan not found",
-        })
-      }
-
-      // Validate bonus
-      validateBonus(input.timeFrom, input.timeTo)
-
-      const bonus = await ctx.prisma.dayPlanBonus.create({
-        data: {
-          dayPlanId: input.dayPlanId,
-          accountId: input.accountId,
-          timeFrom: input.timeFrom,
-          timeTo: input.timeTo,
-          calculationType: input.calculationType,
-          valueMinutes: input.valueMinutes,
-          minWorkMinutes: input.minWorkMinutes,
-          appliesOnHoliday: input.appliesOnHoliday ?? false,
-          sortOrder: input.sortOrder ?? 0,
-        },
-      })
-
-      return {
-        id: bonus.id,
-        dayPlanId: bonus.dayPlanId,
-        accountId: bonus.accountId,
-        timeFrom: bonus.timeFrom,
-        timeTo: bonus.timeTo,
-        calculationType: bonus.calculationType,
-        valueMinutes: bonus.valueMinutes,
-        minWorkMinutes: bonus.minWorkMinutes,
-        appliesOnHoliday: bonus.appliesOnHoliday,
-        sortOrder: bonus.sortOrder,
-        createdAt: bonus.createdAt,
-        updatedAt: bonus.updatedAt,
+        return {
+          id: bonus.id,
+          dayPlanId: bonus.dayPlanId,
+          accountId: bonus.accountId,
+          timeFrom: bonus.timeFrom,
+          timeTo: bonus.timeTo,
+          calculationType: bonus.calculationType,
+          valueMinutes: bonus.valueMinutes,
+          minWorkMinutes: bonus.minWorkMinutes,
+          appliesOnHoliday: bonus.appliesOnHoliday,
+          sortOrder: bonus.sortOrder,
+          createdAt: bonus.createdAt,
+          updatedAt: bonus.updatedAt,
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -1275,34 +661,11 @@ export const dayPlansRouter = createTRPCRouter({
     .input(deleteBonusInputSchema)
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify parent day plan exists and belongs to tenant
-      const dayPlan = await ctx.prisma.dayPlan.findFirst({
-        where: { id: input.dayPlanId, tenantId },
-      })
-      if (!dayPlan) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Day plan not found",
-        })
+      try {
+        await dayPlansService.removeBonus(ctx.prisma, ctx.tenantId!, input)
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Verify bonus exists and belongs to the day plan
-      const bonus = await ctx.prisma.dayPlanBonus.findFirst({
-        where: { id: input.bonusId, dayPlanId: input.dayPlanId },
-      })
-      if (!bonus) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Bonus not found",
-        })
-      }
-
-      await ctx.prisma.dayPlanBonus.delete({
-        where: { id: input.bonusId },
-      })
-
-      return { success: true }
     }),
 })

@@ -11,10 +11,11 @@
  * @see apps/api/internal/handler/employee.go (contact handlers)
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as service from "@/lib/services/employee-contacts-service"
 
 // --- Permission Constants ---
 // Contacts use employee permissions per Go handler pattern
@@ -36,37 +37,6 @@ const employeeContactOutputSchema = z.object({
   updatedAt: z.date(),
 })
 
-type EmployeeContactOutput = z.infer<typeof employeeContactOutputSchema>
-
-// --- Helpers ---
-
-/**
- * Maps a Prisma EmployeeContact record to the output schema shape.
- */
-function mapContactToOutput(c: {
-  id: string
-  employeeId: string
-  contactType: string
-  value: string
-  label: string | null
-  isPrimary: boolean
-  contactKindId: string | null
-  createdAt: Date
-  updatedAt: Date
-}): EmployeeContactOutput {
-  return {
-    id: c.id,
-    employeeId: c.employeeId,
-    contactType: c.contactType,
-    value: c.value,
-    label: c.label,
-    isPrimary: c.isPrimary,
-    contactKindId: c.contactKindId,
-    createdAt: c.createdAt,
-    updatedAt: c.updatedAt,
-  }
-}
-
 // --- Router ---
 
 export const employeeContactsRouter = createTRPCRouter({
@@ -82,27 +52,14 @@ export const employeeContactsRouter = createTRPCRouter({
     .input(z.object({ employeeId: z.string().uuid() }))
     .output(z.object({ data: z.array(employeeContactOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify employee exists and belongs to tenant
-      const employee = await ctx.prisma.employee.findFirst({
-        where: { id: input.employeeId, tenantId, deletedAt: null },
-        select: { id: true },
-      })
-      if (!employee) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Employee not found",
-        })
-      }
-
-      const contacts = await ctx.prisma.employeeContact.findMany({
-        where: { employeeId: input.employeeId },
-        orderBy: { createdAt: "asc" },
-      })
-
-      return {
-        data: contacts.map(mapContactToOutput),
+      try {
+        return await service.listContacts(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.employeeId
+        )
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -128,49 +85,11 @@ export const employeeContactsRouter = createTRPCRouter({
     )
     .output(employeeContactOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify employee exists and belongs to tenant
-      const employee = await ctx.prisma.employee.findFirst({
-        where: { id: input.employeeId, tenantId, deletedAt: null },
-        select: { id: true },
-      })
-      if (!employee) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Employee not found",
-        })
+      try {
+        return await service.createContact(ctx.prisma, ctx.tenantId!, input)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Trim and validate
-      const contactType = input.contactType.trim()
-      if (contactType.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Contact type is required",
-        })
-      }
-
-      const value = input.value.trim()
-      if (value.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Contact value is required",
-        })
-      }
-
-      const contact = await ctx.prisma.employeeContact.create({
-        data: {
-          employeeId: input.employeeId,
-          contactType,
-          value,
-          label: input.label?.trim() || null,
-          isPrimary: input.isPrimary ?? false,
-          contactKindId: input.contactKindId ?? null,
-        },
-      })
-
-      return mapContactToOutput(contact)
     }),
 
   /**
@@ -186,37 +105,10 @@ export const employeeContactsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Fetch contact with employee relation to check tenant
-      const contact = await ctx.prisma.employeeContact.findUnique({
-        where: { id: input.id },
-        include: {
-          employee: {
-            select: { tenantId: true },
-          },
-        },
-      })
-
-      if (!contact) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Contact not found",
-        })
+      try {
+        return await service.deleteContact(ctx.prisma, ctx.tenantId!, input.id)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Verify employee belongs to tenant
-      if (contact.employee.tenantId !== tenantId) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Contact not found",
-        })
-      }
-
-      await ctx.prisma.employeeContact.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 })

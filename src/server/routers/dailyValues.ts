@@ -14,7 +14,6 @@
  * @see apps/api/internal/repository/dailyvalue.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import {
   requirePermission,
@@ -23,6 +22,8 @@ import {
   type DataScope,
 } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as dailyValueService from "@/lib/services/daily-value-service"
 
 // --- Permission Constants ---
 // Matching Go route registration at apps/api/internal/handler/routes.go:484-501
@@ -97,70 +98,6 @@ const listAllInputSchema = z
 const approveInputSchema = z.object({
   id: z.string().uuid(),
 })
-
-// --- Prisma Include Objects ---
-
-const dailyValueListAllInclude = {
-  employee: {
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      personnelNumber: true,
-      isActive: true,
-      departmentId: true,
-      tariffId: true,
-    },
-  },
-} as const
-
-// --- Data Scope Helpers ---
-
-/**
- * Builds a Prisma WHERE clause for daily value data scope filtering.
- * Daily values are scoped via the employee relation (same as bookings).
- */
-function buildDailyValueDataScopeWhere(
-  dataScope: DataScope
-): Record<string, unknown> | null {
-  if (dataScope.type === "department") {
-    return { employee: { departmentId: { in: dataScope.departmentIds } } }
-  } else if (dataScope.type === "employee") {
-    return { employeeId: { in: dataScope.employeeIds } }
-  }
-  return null
-}
-
-/**
- * Checks that a daily value falls within the user's data scope.
- * Throws FORBIDDEN if not.
- */
-function checkDailyValueDataScope(
-  dataScope: DataScope,
-  dailyValue: {
-    employeeId: string
-    employee?: { departmentId: string | null } | null
-  }
-): void {
-  if (dataScope.type === "department") {
-    if (
-      !dailyValue.employee?.departmentId ||
-      !dataScope.departmentIds.includes(dailyValue.employee.departmentId)
-    ) {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "Daily value not within data scope",
-      })
-    }
-  } else if (dataScope.type === "employee") {
-    if (!dataScope.employeeIds.includes(dailyValue.employeeId)) {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "Daily value not within data scope",
-      })
-    }
-  }
-}
 
 // --- Helper Functions ---
 
@@ -242,25 +179,19 @@ export const dailyValuesRouter = createTRPCRouter({
     .input(listInputSchema)
     .output(z.array(dailyValueOutputSchema))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const { employeeId, year, month } = input
+      try {
+        const values = await dailyValueService.list(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
 
-      // Build date range for the month
-      const from = new Date(year, month - 1, 1) // first day of month
-      const to = new Date(year, month, 0) // last day of month
-
-      const values = await ctx.prisma.dailyValue.findMany({
-        where: {
-          tenantId,
-          employeeId,
-          valueDate: { gte: from, lte: to },
-        },
-        orderBy: { valueDate: "asc" },
-      })
-
-      return values.map((v) =>
-        mapDailyValueToOutput(v as unknown as Record<string, unknown>)
-      )
+        return values.map((v) =>
+          mapDailyValueToOutput(v as unknown as Record<string, unknown>)
+        )
+      } catch (err) {
+        handleServiceError(err)
+      }
     }),
 
   /**
@@ -287,76 +218,27 @@ export const dailyValuesRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const page = input?.page ?? 1
-      const pageSize = input?.pageSize ?? 50
-      const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+      try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope })
+          .dataScope
 
-      const where: Record<string, unknown> = { tenantId }
+        const result = await dailyValueService.listAll(
+          ctx.prisma,
+          ctx.tenantId!,
+          dataScope,
+          input ?? undefined
+        )
 
-      // Optional filters
-      if (input?.employeeId) {
-        where.employeeId = input.employeeId
-      }
-
-      if (input?.status) {
-        where.status = input.status
-      }
-
-      if (input?.hasErrors !== undefined) {
-        where.hasError = input.hasErrors
-      }
-
-      // Department filter (via employee relation)
-      if (input?.departmentId) {
-        where.employee = {
-          ...((where.employee as Record<string, unknown>) || {}),
-          departmentId: input.departmentId,
+        return {
+          items: result.items.map((item) =>
+            mapDailyValueToOutput(
+              item as unknown as Record<string, unknown>
+            )
+          ),
+          total: result.total,
         }
-      }
-
-      // Date range filters
-      if (input?.fromDate || input?.toDate) {
-        const valueDate: Record<string, unknown> = {}
-        if (input?.fromDate) {
-          valueDate.gte = new Date(input.fromDate)
-        }
-        if (input?.toDate) {
-          valueDate.lte = new Date(input.toDate)
-        }
-        where.valueDate = valueDate
-      }
-
-      // Apply data scope filtering
-      const scopeWhere = buildDailyValueDataScopeWhere(dataScope)
-      if (scopeWhere) {
-        // Merge with existing employee filter if present
-        if (scopeWhere.employee && where.employee) {
-          where.employee = {
-            ...((where.employee as Record<string, unknown>) || {}),
-            ...((scopeWhere.employee as Record<string, unknown>) || {}),
-          }
-        } else {
-          Object.assign(where, scopeWhere)
-        }
-      }
-
-      const [items, total] = await Promise.all([
-        ctx.prisma.dailyValue.findMany({
-          where,
-          include: dailyValueListAllInclude,
-          skip: (page - 1) * pageSize,
-          take: pageSize,
-          orderBy: { valueDate: "asc" },
-        }),
-        ctx.prisma.dailyValue.count({ where }),
-      ])
-
-      return {
-        items: items.map((item) =>
-          mapDailyValueToOutput(item as unknown as Record<string, unknown>)
-        ),
-        total,
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -379,90 +261,22 @@ export const dailyValuesRouter = createTRPCRouter({
     .input(approveInputSchema)
     .output(dailyValueOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
-
-      // 1. Fetch the daily value with employee relation (for data scope check)
-      const dv = await ctx.prisma.dailyValue.findFirst({
-        where: { id: input.id, tenantId },
-        include: {
-          employee: {
-            select: { id: true, departmentId: true },
-          },
-        },
-      })
-
-      if (!dv) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Daily value not found",
-        })
-      }
-
-      // 2. Check data scope
-      checkDailyValueDataScope(dataScope, dv)
-
-      // 3. Validate approval rules (port of Go Approve logic)
-      if (dv.hasError || dv.status === "error") {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Daily value has errors and cannot be approved",
-        })
-      }
-
-      if (dv.status === "approved") {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Daily value is already approved",
-        })
-      }
-
-      // 4. Update status to approved
-      const updated = await ctx.prisma.dailyValue.update({
-        where: { id: input.id },
-        data: { status: "approved" },
-        include: dailyValueListAllInclude,
-      })
-
-      // 5. Send notification (best effort, matches Go notifyTimesheetApproved)
       try {
-        const dateLabel = dv.valueDate.toISOString().split("T")[0]
-        const link = `/timesheet?view=day&date=${dateLabel}`
+        const dataScope = (ctx as unknown as { dataScope: DataScope })
+          .dataScope
 
-        // Look up the user ID for this employee
-        const userTenant = await ctx.prisma.$queryRaw<
-          { user_id: string }[]
-        >`
-          SELECT ut.user_id
-          FROM user_tenants ut
-          JOIN users u ON u.id = ut.user_id
-          WHERE ut.tenant_id = ${tenantId}::uuid
-            AND u.employee_id = ${dv.employeeId}::uuid
-          LIMIT 1
-        `
-
-        if (userTenant && userTenant.length > 0) {
-          await ctx.prisma.notification.create({
-            data: {
-              tenantId,
-              userId: userTenant[0]!.user_id,
-              type: "approvals",
-              title: "Timesheet approved",
-              message: `Your timesheet for ${dateLabel} was approved.`,
-              link,
-            },
-          })
-        }
-      } catch {
-        // Best effort -- notification failure should not fail the approval
-        console.error(
-          "Failed to send approval notification for daily value",
+        const updated = await dailyValueService.approve(
+          ctx.prisma,
+          ctx.tenantId!,
+          dataScope,
           input.id
         )
-      }
 
-      return mapDailyValueToOutput(
-        updated as unknown as Record<string, unknown>
-      )
+        return mapDailyValueToOutput(
+          updated as unknown as Record<string, unknown>
+        )
+      } catch (err) {
+        handleServiceError(err)
+      }
     }),
 })

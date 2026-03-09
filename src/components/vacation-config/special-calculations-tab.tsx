@@ -10,7 +10,7 @@ import {
   useCreateVacationSpecialCalculation,
   useUpdateVacationSpecialCalculation,
   useDeleteVacationSpecialCalculation,
-} from '@/hooks/api'
+} from '@/hooks'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { SearchInput } from '@/components/ui/search-input'

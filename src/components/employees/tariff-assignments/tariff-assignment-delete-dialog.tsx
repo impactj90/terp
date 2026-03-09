@@ -4,7 +4,7 @@ import * as React from 'react'
 import { useTranslations } from 'next-intl'
 import { format } from 'date-fns'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { useDeleteEmployeeTariffAssignment } from '@/hooks/api'
+import { useDeleteEmployeeTariffAssignment } from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type TariffAssignment = components['schemas']['EmployeeTariffAssignment']

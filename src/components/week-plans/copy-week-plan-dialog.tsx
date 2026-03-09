@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { useCreateWeekPlan } from '@/hooks/api'
+import { useCreateWeekPlan } from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type WeekPlan = components['schemas']['WeekPlan']

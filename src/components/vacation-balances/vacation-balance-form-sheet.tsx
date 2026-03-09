@@ -27,7 +27,7 @@ import {
   useCreateVacationBalance,
   useUpdateVacationBalance,
   useEmployees,
-} from '@/hooks/api'
+} from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type VacationBalance = components['schemas']['VacationBalance']

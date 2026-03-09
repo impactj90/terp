@@ -15,10 +15,11 @@
  * @see apps/api/internal/service/bookingtype.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as bookingTypeService from "@/lib/services/booking-type-service"
 
 // --- Permission Constants ---
 
@@ -132,25 +133,15 @@ export const bookingTypesRouter = createTRPCRouter({
     )
     .output(z.object({ data: z.array(bookingTypeOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const where: Record<string, unknown> = {
-        OR: [{ tenantId }, { tenantId: null }],
-      }
-
-      if (input?.isActive !== undefined) {
-        where.isActive = input.isActive
-      }
-      if (input?.direction !== undefined) {
-        where.direction = input.direction
-      }
-
-      const types = await ctx.prisma.bookingType.findMany({
-        where,
-        orderBy: [{ isSystem: "desc" }, { code: "asc" }],
-      })
-
-      return {
-        data: types.map(mapToOutput),
+      try {
+        const tenantId = ctx.tenantId!
+        const types = await bookingTypeService.list(ctx.prisma, tenantId, {
+          isActive: input?.isActive,
+          direction: input?.direction,
+        })
+        return { data: types.map(mapToOutput) }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -166,22 +157,17 @@ export const bookingTypesRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(bookingTypeOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const bt = await ctx.prisma.bookingType.findFirst({
-        where: {
-          id: input.id,
-          OR: [{ tenantId }, { tenantId: null }],
-        },
-      })
-
-      if (!bt) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Booking type not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        const bt = await bookingTypeService.getById(
+          ctx.prisma,
+          tenantId,
+          input.id
+        )
+        return mapToOutput(bt)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapToOutput(bt)
     }),
 
   /**
@@ -198,75 +184,13 @@ export const bookingTypesRouter = createTRPCRouter({
     .input(createBookingTypeInputSchema)
     .output(bookingTypeOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Trim and validate code
-      const code = input.code.trim()
-      if (code.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Booking type code is required",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        const bt = await bookingTypeService.create(ctx.prisma, tenantId, input)
+        return mapToOutput(bt)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Trim and validate name
-      const name = input.name.trim()
-      if (name.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Booking type name is required",
-        })
-      }
-
-      // Validate direction
-      const direction = input.direction.trim()
-      if (!VALID_DIRECTIONS.includes(direction as (typeof VALID_DIRECTIONS)[number])) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `Direction must be one of: ${VALID_DIRECTIONS.join(", ")}`,
-        })
-      }
-
-      // Validate category
-      const category = input.category?.trim() || "work"
-      if (!VALID_CATEGORIES.includes(category as (typeof VALID_CATEGORIES)[number])) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `Category must be one of: ${VALID_CATEGORIES.join(", ")}`,
-        })
-      }
-
-      // Check code uniqueness within tenant (not system types)
-      const existingByCode = await ctx.prisma.bookingType.findFirst({
-        where: { tenantId, code },
-      })
-      if (existingByCode) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Booking type code already exists",
-        })
-      }
-
-      // Trim description if provided
-      const description = input.description?.trim() || null
-
-      // Create booking type -- always isSystem: false, isActive: true
-      const bt = await ctx.prisma.bookingType.create({
-        data: {
-          tenantId,
-          code,
-          name,
-          description,
-          direction,
-          category,
-          accountId: input.accountId || undefined,
-          requiresReason: input.requiresReason ?? false,
-          isSystem: false,
-          isActive: true,
-        },
-      })
-
-      return mapToOutput(bt)
     }),
 
   /**
@@ -284,91 +208,13 @@ export const bookingTypesRouter = createTRPCRouter({
     .input(updateBookingTypeInputSchema)
     .output(bookingTypeOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify booking type exists
-      const existing = await ctx.prisma.bookingType.findFirst({
-        where: {
-          id: input.id,
-          OR: [{ tenantId }, { tenantId: null }],
-        },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Booking type not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        const bt = await bookingTypeService.update(ctx.prisma, tenantId, input)
+        return mapToOutput(bt)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Block modification of system types
-      if (existing.isSystem) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Cannot modify system booking types",
-        })
-      }
-
-      // Verify tenant ownership
-      if (existing.tenantId !== tenantId) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Booking type not found",
-        })
-      }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      // Handle name update
-      if (input.name !== undefined) {
-        const name = input.name.trim()
-        if (name.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Booking type name is required",
-          })
-        }
-        data.name = name
-      }
-
-      // Handle description update
-      if (input.description !== undefined) {
-        data.description =
-          input.description === null ? null : input.description.trim()
-      }
-
-      // Handle isActive update
-      if (input.isActive !== undefined) {
-        data.isActive = input.isActive
-      }
-
-      // Handle category update
-      if (input.category !== undefined) {
-        if (!VALID_CATEGORIES.includes(input.category as (typeof VALID_CATEGORIES)[number])) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `Category must be one of: ${VALID_CATEGORIES.join(", ")}`,
-          })
-        }
-        data.category = input.category
-      }
-
-      // Handle accountId update (nullable -- null clears it)
-      if (input.accountId !== undefined) {
-        data.accountId = input.accountId
-      }
-
-      // Handle requiresReason update
-      if (input.requiresReason !== undefined) {
-        data.requiresReason = input.requiresReason
-      }
-
-      const bt = await ctx.prisma.bookingType.update({
-        where: { id: input.id },
-        data,
-      })
-
-      return mapToOutput(bt)
     }),
 
   /**
@@ -384,54 +230,12 @@ export const bookingTypesRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify booking type exists
-      const existing = await ctx.prisma.bookingType.findFirst({
-        where: {
-          id: input.id,
-          OR: [{ tenantId }, { tenantId: null }],
-        },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Booking type not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        await bookingTypeService.remove(ctx.prisma, tenantId, input.id)
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Block deletion of system types
-      if (existing.isSystem) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Cannot delete system booking types",
-        })
-      }
-
-      // Verify tenant ownership
-      if (existing.tenantId !== tenantId) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Booking type not found",
-        })
-      }
-
-      // Check usage in bookings table
-      const bookingCount = await ctx.prisma.booking.count({
-        where: { bookingTypeId: input.id },
-      })
-      if (bookingCount > 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Cannot delete booking type that is in use",
-        })
-      }
-
-      // Hard delete
-      await ctx.prisma.bookingType.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 })

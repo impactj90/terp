@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { useDeleteMacroAssignment, useUpdateMacroAssignment, useTariffs, useEmployees } from '@/hooks/api'
+import { useDeleteMacroAssignment, useUpdateMacroAssignment, useTariffs, useEmployees } from '@/hooks'
 import { MacroAssignmentFormDialog } from './macro-assignment-form-dialog'
 import type { components } from '@/types/legacy-api-types'
 

@@ -15,7 +15,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { useReopenMonth } from '@/hooks/api'
+import { useReopenMonth } from '@/hooks'
 
 interface ReopenMonthSheetProps {
   open: boolean

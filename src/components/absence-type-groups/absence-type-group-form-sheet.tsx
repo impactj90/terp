@@ -18,7 +18,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { useCreateAbsenceTypeGroup, useUpdateAbsenceTypeGroup } from '@/hooks/api'
+import { useCreateAbsenceTypeGroup, useUpdateAbsenceTypeGroup } from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type AbsenceTypeGroup = components['schemas']['AbsenceTypeGroup']

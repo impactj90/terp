@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { useEmployeeDayView } from '@/hooks/api'
+import { useEmployeeDayView } from '@/hooks'
 import { formatMinutes, formatTime, getToday } from '@/lib/time-utils'
 
 interface TodayScheduleCardProps {

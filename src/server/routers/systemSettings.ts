@@ -14,12 +14,11 @@
  * @see apps/api/internal/service/systemsettings.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
-import type { PrismaClient } from "@/generated/prisma/client"
-import { RecalcService } from "../services/recalc"
+import { handleServiceError } from "@/trpc/errors"
+import * as settingsService from "@/lib/services/system-settings-service"
 
 // --- Permission Constants ---
 
@@ -103,24 +102,6 @@ const cleanupOrdersInputSchema = z.object({
 // --- Helpers ---
 
 /**
- * Singleton getOrCreate pattern for system settings.
- * Returns existing settings for the tenant, or creates defaults.
- */
-async function getOrCreateSettings(
-  prisma: PrismaClient,
-  tenantId: string
-) {
-  const existing = await prisma.systemSetting.findUnique({
-    where: { tenantId },
-  })
-  if (existing) return existing
-
-  return prisma.systemSetting.create({
-    data: { tenantId },
-  })
-}
-
-/**
  * Maps a SystemSetting record to the output shape, omitting proxyPassword.
  */
 function mapToOutput(s: Record<string, unknown>) {
@@ -150,153 +131,6 @@ function mapToOutput(s: Record<string, unknown>) {
   }
 }
 
-/**
- * Validates a cleanup date range: dateFrom <= dateTo, range <= 366 days.
- */
-function validateDateRange(dateFrom: string, dateTo: string) {
-  const from = new Date(dateFrom)
-  const to = new Date(dateTo)
-
-  if (from > to) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "dateFrom must be before or equal to dateTo",
-    })
-  }
-
-  const diffMs = to.getTime() - from.getTime()
-  const diffDays = diffMs / (1000 * 60 * 60 * 24)
-  if (diffDays > 366) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "Date range must not exceed 366 days",
-    })
-  }
-}
-
-/**
- * Deletes bookings for a tenant within a date range, with optional employee filter.
- */
-async function deleteBookings(
-  prisma: PrismaClient,
-  tenantId: string,
-  dateFrom: string,
-  dateTo: string,
-  employeeIds?: string[]
-): Promise<number> {
-  const where: Record<string, unknown> = {
-    tenantId,
-    bookingDate: {
-      gte: new Date(dateFrom),
-      lte: new Date(dateTo),
-    },
-  }
-  if (employeeIds && employeeIds.length > 0) {
-    where.employeeId = { in: employeeIds }
-  }
-  const result = await prisma.booking.deleteMany({ where })
-  return result.count
-}
-
-/**
- * Counts bookings for a tenant within a date range, with optional employee filter.
- */
-async function countBookings(
-  prisma: PrismaClient,
-  tenantId: string,
-  dateFrom: string,
-  dateTo: string,
-  employeeIds?: string[]
-): Promise<number> {
-  const where: Record<string, unknown> = {
-    tenantId,
-    bookingDate: {
-      gte: new Date(dateFrom),
-      lte: new Date(dateTo),
-    },
-  }
-  if (employeeIds && employeeIds.length > 0) {
-    where.employeeId = { in: employeeIds }
-  }
-  return prisma.booking.count({ where })
-}
-
-/**
- * Deletes daily_values for a tenant within a date range, with optional employee filter.
- * Fixes pre-existing bug: raw SQL referenced column 'date' but actual column is 'value_date'.
- */
-async function deleteDailyValues(
-  prisma: PrismaClient,
-  tenantId: string,
-  dateFrom: string,
-  dateTo: string,
-  employeeIds?: string[]
-): Promise<number> {
-  const where: Record<string, unknown> = {
-    tenantId,
-    valueDate: {
-      gte: new Date(dateFrom),
-      lte: new Date(dateTo),
-    },
-  }
-  if (employeeIds && employeeIds.length > 0) {
-    where.employeeId = { in: employeeIds }
-  }
-  const result = await prisma.dailyValue.deleteMany({ where })
-  return result.count
-}
-
-/**
- * Counts daily_values for a tenant within a date range, with optional employee filter.
- * Fixes pre-existing bug: raw SQL referenced column 'date' but actual column is 'value_date'.
- */
-async function countDailyValues(
-  prisma: PrismaClient,
-  tenantId: string,
-  dateFrom: string,
-  dateTo: string,
-  employeeIds?: string[]
-): Promise<number> {
-  const where: Record<string, unknown> = {
-    tenantId,
-    valueDate: {
-      gte: new Date(dateFrom),
-      lte: new Date(dateTo),
-    },
-  }
-  if (employeeIds && employeeIds.length > 0) {
-    where.employeeId = { in: employeeIds }
-  }
-  return prisma.dailyValue.count({ where })
-}
-
-/**
- * Deletes employee_day_plans for a tenant within a date range, with optional employee filter.
- * Uses Prisma model instead of raw SQL.
- */
-async function deleteEmployeeDayPlans(
-  prisma: PrismaClient,
-  tenantId: string,
-  dateFrom: string,
-  dateTo: string,
-  employeeIds?: string[]
-): Promise<number> {
-  const where: Record<string, unknown> = {
-    tenantId,
-    planDate: {
-      gte: new Date(dateFrom),
-      lte: new Date(dateTo),
-    },
-  }
-
-  if (employeeIds && employeeIds.length > 0) {
-    where.employeeId = { in: employeeIds }
-  }
-
-  const result = await prisma.employeeDayPlan.deleteMany({ where })
-  return result.count
-}
-
 // --- Router ---
 
 export const systemSettingsRouter = createTRPCRouter({
@@ -312,9 +146,12 @@ export const systemSettingsRouter = createTRPCRouter({
     .use(requirePermission(SETTINGS_MANAGE))
     .output(systemSettingsOutputSchema)
     .query(async ({ ctx }) => {
-      const tenantId = ctx.tenantId!
-      const settings = await getOrCreateSettings(ctx.prisma, tenantId)
-      return mapToOutput(settings as unknown as Record<string, unknown>)
+      try {
+        const settings = await settingsService.get(ctx.prisma, ctx.tenantId!)
+        return mapToOutput(settings as unknown as Record<string, unknown>)
+      } catch (err) {
+        handleServiceError(err)
+      }
     }),
 
   /**
@@ -330,70 +167,16 @@ export const systemSettingsRouter = createTRPCRouter({
     .input(updateSettingsInputSchema)
     .output(systemSettingsOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Ensure settings exist
-      const existing = await getOrCreateSettings(ctx.prisma, tenantId)
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      if (input.roundingRelativeToPlan !== undefined) {
-        data.roundingRelativeToPlan = input.roundingRelativeToPlan
+      try {
+        const updated = await settingsService.update(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+        return mapToOutput(updated as unknown as Record<string, unknown>)
+      } catch (err) {
+        handleServiceError(err)
       }
-      if (input.errorListEnabled !== undefined) {
-        data.errorListEnabled = input.errorListEnabled
-      }
-      if (input.trackedErrorCodes !== undefined) {
-        data.trackedErrorCodes = input.trackedErrorCodes
-      }
-      if (input.autoFillOrderEndBookings !== undefined) {
-        data.autoFillOrderEndBookings = input.autoFillOrderEndBookings
-      }
-      if (input.birthdayWindowDaysBefore !== undefined) {
-        data.birthdayWindowDaysBefore = input.birthdayWindowDaysBefore
-      }
-      if (input.birthdayWindowDaysAfter !== undefined) {
-        data.birthdayWindowDaysAfter = input.birthdayWindowDaysAfter
-      }
-      if (input.followUpEntriesEnabled !== undefined) {
-        data.followUpEntriesEnabled = input.followUpEntriesEnabled
-      }
-      if (input.proxyHost !== undefined) {
-        data.proxyHost = input.proxyHost
-      }
-      if (input.proxyPort !== undefined) {
-        data.proxyPort = input.proxyPort
-      }
-      if (input.proxyUsername !== undefined) {
-        data.proxyUsername = input.proxyUsername
-      }
-      if (input.proxyPassword !== undefined) {
-        data.proxyPassword = input.proxyPassword
-      }
-      if (input.proxyEnabled !== undefined) {
-        data.proxyEnabled = input.proxyEnabled
-      }
-      if (input.serverAliveEnabled !== undefined) {
-        data.serverAliveEnabled = input.serverAliveEnabled
-      }
-      if (input.serverAliveExpectedCompletionTime !== undefined) {
-        data.serverAliveExpectedCompletionTime =
-          input.serverAliveExpectedCompletionTime
-      }
-      if (input.serverAliveThresholdMinutes !== undefined) {
-        data.serverAliveThresholdMinutes = input.serverAliveThresholdMinutes
-      }
-      if (input.serverAliveNotifyAdmins !== undefined) {
-        data.serverAliveNotifyAdmins = input.serverAliveNotifyAdmins
-      }
-
-      const updated = await ctx.prisma.systemSetting.update({
-        where: { id: existing.id },
-        data,
-      })
-
-      return mapToOutput(updated as unknown as Record<string, unknown>)
     }),
 
   /**
@@ -409,39 +192,14 @@ export const systemSettingsRouter = createTRPCRouter({
     .input(cleanupDateRangeInputSchema)
     .output(cleanupResultSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      validateDateRange(input.dateFrom, input.dateTo)
-
-      if (!input.confirm) {
-        // Preview mode: count bookings
-        const count = await countBookings(
+      try {
+        return await settingsService.cleanupDeleteBookings(
           ctx.prisma,
-          tenantId,
-          input.dateFrom,
-          input.dateTo,
-          input.employeeIds
+          ctx.tenantId!,
+          input
         )
-
-        return {
-          operation: "delete_bookings",
-          affectedCount: count,
-          preview: true,
-        }
-      }
-
-      // Execute mode: delete bookings
-      const deleted = await deleteBookings(
-        ctx.prisma,
-        tenantId,
-        input.dateFrom,
-        input.dateTo,
-        input.employeeIds
-      )
-
-      return {
-        operation: "delete_bookings",
-        affectedCount: deleted,
-        preview: false,
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -459,74 +217,14 @@ export const systemSettingsRouter = createTRPCRouter({
     .input(cleanupDateRangeInputSchema)
     .output(cleanupResultSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      validateDateRange(input.dateFrom, input.dateTo)
-
-      if (!input.confirm) {
-        // Preview mode: count bookings + daily values
-        const [bookingsCount, dailyValuesCount] = await Promise.all([
-          countBookings(
-            ctx.prisma,
-            tenantId,
-            input.dateFrom,
-            input.dateTo,
-            input.employeeIds
-          ),
-          countDailyValues(
-            ctx.prisma,
-            tenantId,
-            input.dateFrom,
-            input.dateTo,
-            input.employeeIds
-          ),
-        ])
-
-        return {
-          operation: "delete_booking_data",
-          affectedCount: bookingsCount + dailyValuesCount,
-          preview: true,
-          details: {
-            bookings: bookingsCount,
-            dailyValues: dailyValuesCount,
-          },
-        }
-      }
-
-      // Execute mode: delete bookings + daily values + employee day plans
-      const [deletedBookings, deletedDailyValues, deletedEdps] =
-        await Promise.all([
-          deleteBookings(
-            ctx.prisma,
-            tenantId,
-            input.dateFrom,
-            input.dateTo,
-            input.employeeIds
-          ),
-          deleteDailyValues(
-            ctx.prisma,
-            tenantId,
-            input.dateFrom,
-            input.dateTo,
-            input.employeeIds
-          ),
-          deleteEmployeeDayPlans(
-            ctx.prisma,
-            tenantId,
-            input.dateFrom,
-            input.dateTo,
-            input.employeeIds
-          ),
-        ])
-
-      return {
-        operation: "delete_booking_data",
-        affectedCount: deletedBookings + deletedDailyValues + deletedEdps,
-        preview: false,
-        details: {
-          bookings: deletedBookings,
-          dailyValues: deletedDailyValues,
-          employeeDayPlans: deletedEdps,
-        },
+      try {
+        return await settingsService.cleanupDeleteBookingData(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -534,7 +232,7 @@ export const systemSettingsRouter = createTRPCRouter({
    * systemSettings.cleanupReReadBookings -- Re-read bookings in a date range.
    *
    * Preview mode: returns count of bookings.
-   * Execute mode: NOT_IMPLEMENTED (recalculation service not yet ported).
+   * Execute mode: recalculates bookings via RecalcService.
    *
    * Requires: settings.manage permission
    */
@@ -543,53 +241,14 @@ export const systemSettingsRouter = createTRPCRouter({
     .input(cleanupDateRangeInputSchema)
     .output(cleanupResultSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      validateDateRange(input.dateFrom, input.dateTo)
-
-      if (!input.confirm) {
-        // Preview mode: count bookings
-        const count = await countBookings(
+      try {
+        return await settingsService.cleanupReReadBookings(
           ctx.prisma,
-          tenantId,
-          input.dateFrom,
-          input.dateTo,
-          input.employeeIds
+          ctx.tenantId!,
+          input
         )
-
-        return {
-          operation: "re_read_bookings",
-          affectedCount: count,
-          preview: true,
-        }
-      }
-
-      // Execute mode: recalculate bookings
-      // @see ZMI-TICKET-243
-      const recalcService = new RecalcService(ctx.prisma)
-
-      const fromDate = new Date(input.dateFrom)
-      const toDate = new Date(input.dateTo)
-
-      let result
-      if (input.employeeIds && input.employeeIds.length > 0) {
-        result = await recalcService.triggerRecalcBatch(
-          tenantId,
-          input.employeeIds,
-          fromDate,
-          toDate,
-        )
-      } else {
-        result = await recalcService.triggerRecalcAll(
-          tenantId,
-          fromDate,
-          toDate,
-        )
-      }
-
-      return {
-        operation: "re_read_bookings",
-        affectedCount: result.processedDays,
-        preview: false,
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -607,36 +266,14 @@ export const systemSettingsRouter = createTRPCRouter({
     .input(cleanupOrdersInputSchema)
     .output(cleanupResultSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      if (!input.confirm) {
-        // Preview mode: count orders
-        const count = await ctx.prisma.order.count({
-          where: {
-            id: { in: input.orderIds },
-            tenantId,
-          },
-        })
-
-        return {
-          operation: "mark_delete_orders",
-          affectedCount: count,
-          preview: true,
-        }
-      }
-
-      // Execute mode: delete orders
-      const result = await ctx.prisma.order.deleteMany({
-        where: {
-          id: { in: input.orderIds },
-          tenantId,
-        },
-      })
-
-      return {
-        operation: "mark_delete_orders",
-        affectedCount: result.count,
-        preview: false,
+      try {
+        return await settingsService.cleanupMarkDeleteOrders(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 })

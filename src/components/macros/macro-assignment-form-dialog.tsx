@@ -8,7 +8,7 @@ import {
   useUpdateMacroAssignment,
   useTariffs,
   useEmployees,
-} from '@/hooks/api'
+} from '@/hooks'
 import {
   Dialog,
   DialogContent,

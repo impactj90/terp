@@ -29,7 +29,7 @@ import {
   useCreateShift,
   useUpdateShift,
   useDayPlans,
-} from '@/hooks/api'
+} from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type Shift = components['schemas']['Shift']

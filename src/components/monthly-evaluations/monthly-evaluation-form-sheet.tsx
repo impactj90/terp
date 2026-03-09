@@ -21,7 +21,7 @@ import {
 import {
   useCreateMonthlyEvaluation,
   useUpdateMonthlyEvaluation,
-} from '@/hooks/api/use-monthly-evaluations'
+} from '@/hooks/use-monthly-evaluations'
 import { formatDuration } from '@/lib/time-utils'
 
 interface MonthlyEvaluation {

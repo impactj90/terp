@@ -24,7 +24,7 @@ import {
   useCreateBookingTypeGroup,
   useUpdateBookingTypeGroup,
   useBookingTypes,
-} from '@/hooks/api'
+} from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type BookingTypeGroup = components['schemas']['BookingTypeGroup']

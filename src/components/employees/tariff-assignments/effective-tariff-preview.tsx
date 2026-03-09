@@ -15,7 +15,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
-import { useEffectiveTariff } from '@/hooks/api'
+import { useEffectiveTariff } from '@/hooks'
 
 interface EffectiveTariffPreviewProps {
   employeeId: string

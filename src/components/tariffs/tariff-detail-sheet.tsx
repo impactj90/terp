@@ -37,7 +37,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { DurationInput } from '@/components/ui/duration-input'
-import { useTariff, useCreateTariffBreak, useDeleteTariffBreak } from '@/hooks/api'
+import { useTariff, useCreateTariffBreak, useDeleteTariffBreak } from '@/hooks'
 import { formatDate, formatDuration, parseISODate } from '@/lib/time-utils'
 import type { components } from '@/types/legacy-api-types'
 

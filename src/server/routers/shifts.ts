@@ -13,10 +13,11 @@
  * @see apps/api/internal/service/shift.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as shiftService from "@/lib/services/shift-service"
 
 // --- Permission Constants ---
 
@@ -63,6 +64,38 @@ const updateShiftInputSchema = z.object({
   sortOrder: z.number().int().optional(),
 })
 
+// --- Helpers ---
+
+function mapShift(s: {
+  id: string
+  tenantId: string
+  code: string
+  name: string
+  description: string | null
+  dayPlanId: string | null
+  color: string | null
+  qualification: string | null
+  isActive: boolean
+  sortOrder: number
+  createdAt: Date
+  updatedAt: Date
+}) {
+  return {
+    id: s.id,
+    tenantId: s.tenantId,
+    code: s.code,
+    name: s.name,
+    description: s.description,
+    dayPlanId: s.dayPlanId,
+    color: s.color,
+    qualification: s.qualification,
+    isActive: s.isActive,
+    sortOrder: s.sortOrder,
+    createdAt: s.createdAt,
+    updatedAt: s.updatedAt,
+  }
+}
+
 // --- Router ---
 
 export const shiftsRouter = createTRPCRouter({
@@ -78,28 +111,11 @@ export const shiftsRouter = createTRPCRouter({
     .input(z.void().optional())
     .output(z.object({ data: z.array(shiftOutputSchema) }))
     .query(async ({ ctx }) => {
-      const tenantId = ctx.tenantId!
-
-      const shifts = await ctx.prisma.shift.findMany({
-        where: { tenantId },
-        orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
-      })
-
-      return {
-        data: shifts.map((s) => ({
-          id: s.id,
-          tenantId: s.tenantId,
-          code: s.code,
-          name: s.name,
-          description: s.description,
-          dayPlanId: s.dayPlanId,
-          color: s.color,
-          qualification: s.qualification,
-          isActive: s.isActive,
-          sortOrder: s.sortOrder,
-          createdAt: s.createdAt,
-          updatedAt: s.updatedAt,
-        })),
+      try {
+        const shifts = await shiftService.list(ctx.prisma, ctx.tenantId!)
+        return { data: shifts.map(mapShift) }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -113,32 +129,15 @@ export const shiftsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(shiftOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const shift = await ctx.prisma.shift.findFirst({
-        where: { id: input.id, tenantId },
-      })
-
-      if (!shift) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Shift not found",
-        })
-      }
-
-      return {
-        id: shift.id,
-        tenantId: shift.tenantId,
-        code: shift.code,
-        name: shift.name,
-        description: shift.description,
-        dayPlanId: shift.dayPlanId,
-        color: shift.color,
-        qualification: shift.qualification,
-        isActive: shift.isActive,
-        sortOrder: shift.sortOrder,
-        createdAt: shift.createdAt,
-        updatedAt: shift.updatedAt,
+      try {
+        const shift = await shiftService.getById(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id
+        )
+        return mapShift(shift)
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -155,77 +154,15 @@ export const shiftsRouter = createTRPCRouter({
     .input(createShiftInputSchema)
     .output(shiftOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Trim and validate code
-      const code = input.code.trim()
-      if (code.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Shift code is required",
-        })
-      }
-
-      // Trim and validate name
-      const name = input.name.trim()
-      if (name.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Shift name is required",
-        })
-      }
-
-      // Check code uniqueness within tenant
-      const existingByCode = await ctx.prisma.shift.findFirst({
-        where: { tenantId, code },
-      })
-      if (existingByCode) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Shift code already exists",
-        })
-      }
-
-      // Validate dayPlanId FK if provided
-      if (input.dayPlanId) {
-        const dp = await ctx.prisma.dayPlan.findFirst({
-          where: { id: input.dayPlanId, tenantId },
-        })
-        if (!dp) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Invalid day plan reference",
-          })
-        }
-      }
-
-      const shift = await ctx.prisma.shift.create({
-        data: {
-          tenantId,
-          code,
-          name,
-          description: input.description?.trim() || null,
-          dayPlanId: input.dayPlanId || null,
-          color: input.color || null,
-          qualification: input.qualification || null,
-          isActive: true,
-          sortOrder: input.sortOrder ?? 0,
-        },
-      })
-
-      return {
-        id: shift.id,
-        tenantId: shift.tenantId,
-        code: shift.code,
-        name: shift.name,
-        description: shift.description,
-        dayPlanId: shift.dayPlanId,
-        color: shift.color,
-        qualification: shift.qualification,
-        isActive: shift.isActive,
-        sortOrder: shift.sortOrder,
-        createdAt: shift.createdAt,
-        updatedAt: shift.updatedAt,
+      try {
+        const shift = await shiftService.create(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+        return mapShift(shift)
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -241,89 +178,15 @@ export const shiftsRouter = createTRPCRouter({
     .input(updateShiftInputSchema)
     .output(shiftOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify shift exists (tenant-scoped)
-      const existing = await ctx.prisma.shift.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Shift not found",
-        })
-      }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      if (input.name !== undefined) {
-        const name = input.name.trim()
-        if (name.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Shift name is required",
-          })
-        }
-        data.name = name
-      }
-
-      if (input.description !== undefined) {
-        data.description =
-          input.description === null ? null : input.description.trim()
-      }
-
-      if (input.dayPlanId !== undefined) {
-        if (input.dayPlanId === null) {
-          data.dayPlanId = null
-        } else {
-          const dp = await ctx.prisma.dayPlan.findFirst({
-            where: { id: input.dayPlanId, tenantId },
-          })
-          if (!dp) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Invalid day plan reference",
-            })
-          }
-          data.dayPlanId = input.dayPlanId
-        }
-      }
-
-      if (input.color !== undefined) {
-        data.color = input.color
-      }
-
-      if (input.qualification !== undefined) {
-        data.qualification = input.qualification
-      }
-
-      if (input.isActive !== undefined) {
-        data.isActive = input.isActive
-      }
-
-      if (input.sortOrder !== undefined) {
-        data.sortOrder = input.sortOrder
-      }
-
-      const shift = await ctx.prisma.shift.update({
-        where: { id: input.id },
-        data,
-      })
-
-      return {
-        id: shift.id,
-        tenantId: shift.tenantId,
-        code: shift.code,
-        name: shift.name,
-        description: shift.description,
-        dayPlanId: shift.dayPlanId,
-        color: shift.color,
-        qualification: shift.qualification,
-        isActive: shift.isActive,
-        sortOrder: shift.sortOrder,
-        createdAt: shift.createdAt,
-        updatedAt: shift.updatedAt,
+      try {
+        const shift = await shiftService.update(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+        return mapShift(shift)
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -340,42 +203,11 @@ export const shiftsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify shift exists (tenant-scoped)
-      const existing = await ctx.prisma.shift.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Shift not found",
-        })
+      try {
+        await shiftService.remove(ctx.prisma, ctx.tenantId!, input.id)
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Check if shift is in use via employee_day_plans
-      const dayPlanCount = await ctx.prisma.employeeDayPlan.count({
-        where: { shiftId: input.id },
-      })
-      const inUseByDayPlans = dayPlanCount > 0
-
-      // Check shift_assignments via Prisma
-      const assignmentCount = await ctx.prisma.shiftAssignment.count({
-        where: { shiftId: input.id },
-      })
-
-      if (inUseByDayPlans || assignmentCount > 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Cannot delete shift that is in use",
-        })
-      }
-
-      // Hard delete
-      await ctx.prisma.shift.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 })

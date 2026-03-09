@@ -20,7 +20,7 @@ import {
 import {
   useCreateExportInterface,
   useUpdateExportInterface,
-} from '@/hooks/api/use-export-interfaces'
+} from '@/hooks/use-export-interfaces'
 import type { components } from '@/types/legacy-api-types'
 
 type ExportInterface = components['schemas']['ExportInterface']

@@ -11,10 +11,11 @@
  * @see apps/api/internal/handler/employee.go (card handlers)
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as service from "@/lib/services/employee-cards-service"
 
 // --- Permission Constants ---
 // Cards use employee permissions per Go handler pattern
@@ -39,43 +40,6 @@ const employeeCardOutputSchema = z.object({
   updatedAt: z.date(),
 })
 
-type EmployeeCardOutput = z.infer<typeof employeeCardOutputSchema>
-
-// --- Helpers ---
-
-/**
- * Maps a Prisma EmployeeCard record to the output schema shape.
- */
-function mapCardToOutput(card: {
-  id: string
-  tenantId: string
-  employeeId: string
-  cardNumber: string
-  cardType: string
-  validFrom: Date
-  validTo: Date | null
-  isActive: boolean
-  deactivatedAt: Date | null
-  deactivationReason: string | null
-  createdAt: Date
-  updatedAt: Date
-}): EmployeeCardOutput {
-  return {
-    id: card.id,
-    tenantId: card.tenantId,
-    employeeId: card.employeeId,
-    cardNumber: card.cardNumber,
-    cardType: card.cardType,
-    validFrom: card.validFrom,
-    validTo: card.validTo,
-    isActive: card.isActive,
-    deactivatedAt: card.deactivatedAt,
-    deactivationReason: card.deactivationReason,
-    createdAt: card.createdAt,
-    updatedAt: card.updatedAt,
-  }
-}
-
 // --- Router ---
 
 export const employeeCardsRouter = createTRPCRouter({
@@ -91,27 +55,14 @@ export const employeeCardsRouter = createTRPCRouter({
     .input(z.object({ employeeId: z.string().uuid() }))
     .output(z.object({ data: z.array(employeeCardOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify employee exists and belongs to tenant
-      const employee = await ctx.prisma.employee.findFirst({
-        where: { id: input.employeeId, tenantId, deletedAt: null },
-        select: { id: true },
-      })
-      if (!employee) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Employee not found",
-        })
-      }
-
-      const cards = await ctx.prisma.employeeCard.findMany({
-        where: { employeeId: input.employeeId },
-        orderBy: { createdAt: "desc" },
-      })
-
-      return {
-        data: cards.map(mapCardToOutput),
+      try {
+        return await service.listCards(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.employeeId
+        )
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -138,53 +89,11 @@ export const employeeCardsRouter = createTRPCRouter({
     )
     .output(employeeCardOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify employee exists and belongs to tenant
-      const employee = await ctx.prisma.employee.findFirst({
-        where: { id: input.employeeId, tenantId, deletedAt: null },
-        select: { id: true },
-      })
-      if (!employee) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Employee not found",
-        })
+      try {
+        return await service.createCard(ctx.prisma, ctx.tenantId!, input)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Trim and validate card number
-      const cardNumber = input.cardNumber.trim()
-      if (cardNumber.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Card number is required",
-        })
-      }
-
-      // Check card number uniqueness per tenant
-      const existingCard = await ctx.prisma.employeeCard.findFirst({
-        where: { tenantId, cardNumber },
-      })
-      if (existingCard) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Card number already exists",
-        })
-      }
-
-      const card = await ctx.prisma.employeeCard.create({
-        data: {
-          tenantId,
-          employeeId: input.employeeId,
-          cardNumber,
-          cardType: input.cardType?.trim() || "rfid",
-          validFrom: input.validFrom ?? new Date(),
-          validTo: input.validTo ?? null,
-          isActive: true,
-        },
-      })
-
-      return mapCardToOutput(card)
     }),
 
   /**
@@ -205,28 +114,10 @@ export const employeeCardsRouter = createTRPCRouter({
     )
     .output(employeeCardOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Fetch card and verify tenant
-      const existing = await ctx.prisma.employeeCard.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Card not found",
-        })
+      try {
+        return await service.deactivateCard(ctx.prisma, ctx.tenantId!, input)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      const card = await ctx.prisma.employeeCard.update({
-        where: { id: input.id },
-        data: {
-          isActive: false,
-          deactivatedAt: new Date(),
-          deactivationReason: input.reason?.trim() ?? null,
-        },
-      })
-
-      return mapCardToOutput(card)
     }),
 })

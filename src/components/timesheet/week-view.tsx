@@ -14,7 +14,7 @@ import {
   TableRow,
   TableFooter,
 } from '@/components/ui/table'
-import { useDailyValues } from '@/hooks/api'
+import { useDailyValues } from '@/hooks'
 import {
   formatDate,
   getWeekDates,

@@ -11,10 +11,11 @@
  * @see apps/api/internal/service/auditlog.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as auditLogsService from "@/lib/services/audit-logs-service"
 
 // --- Permission Constants ---
 
@@ -61,34 +62,6 @@ const listInputSchema = z
   })
   .optional()
 
-// --- Helpers ---
-
-/**
- * Maps a Prisma AuditLog record to the output shape.
- */
-function mapToOutput(log: Record<string, unknown>) {
-  const user = log.user as
-    | { id: string; email: string; displayName: string }
-    | null
-    | undefined
-
-  return {
-    id: log.id as string,
-    tenantId: log.tenantId as string,
-    userId: (log.userId as string | null) ?? null,
-    action: log.action as string,
-    entityType: log.entityType as string,
-    entityId: log.entityId as string,
-    entityName: (log.entityName as string | null) ?? null,
-    changes: (log.changes as unknown) ?? null,
-    metadata: (log.metadata as unknown) ?? null,
-    ipAddress: (log.ipAddress as string | null) ?? null,
-    userAgent: (log.userAgent as string | null) ?? null,
-    performedAt: log.performedAt as Date,
-    ...(user !== undefined ? { user: user ?? null } : {}),
-  }
-}
-
 // --- Router ---
 
 export const auditLogsRouter = createTRPCRouter({
@@ -111,57 +84,10 @@ export const auditLogsRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const page = input?.page ?? 1
-      const pageSize = input?.pageSize ?? 20
-
-      // Build dynamic where clause
-      const where: Record<string, unknown> = { tenantId }
-
-      if (input?.userId) {
-        where.userId = input.userId
-      }
-      if (input?.entityType) {
-        where.entityType = input.entityType
-      }
-      if (input?.entityId) {
-        where.entityId = input.entityId
-      }
-      if (input?.action) {
-        where.action = input.action
-      }
-      if (input?.fromDate || input?.toDate) {
-        const performedAt: Record<string, Date> = {}
-        if (input.fromDate) {
-          performedAt.gte = new Date(input.fromDate)
-        }
-        if (input.toDate) {
-          performedAt.lte = new Date(input.toDate)
-        }
-        where.performedAt = performedAt
-      }
-
-      // Run findMany + count in parallel
-      const [items, total] = await Promise.all([
-        ctx.prisma.auditLog.findMany({
-          where,
-          include: {
-            user: {
-              select: { id: true, email: true, displayName: true },
-            },
-          },
-          orderBy: { performedAt: "desc" },
-          skip: (page - 1) * pageSize,
-          take: pageSize,
-        }),
-        ctx.prisma.auditLog.count({ where }),
-      ])
-
-      return {
-        items: items.map((item) =>
-          mapToOutput(item as unknown as Record<string, unknown>)
-        ),
-        total,
+      try {
+        return await auditLogsService.list(ctx.prisma, ctx.tenantId!, input)
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -178,24 +104,14 @@ export const auditLogsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(auditLogOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const log = await ctx.prisma.auditLog.findFirst({
-        where: { id: input.id, tenantId },
-        include: {
-          user: {
-            select: { id: true, email: true, displayName: true },
-          },
-        },
-      })
-
-      if (!log) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Audit log not found",
-        })
+      try {
+        return await auditLogsService.getById(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id
+        )
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapToOutput(log as unknown as Record<string, unknown>)
     }),
 })

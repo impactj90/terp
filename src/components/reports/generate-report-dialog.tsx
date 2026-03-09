@@ -32,7 +32,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
-import { useGenerateReport, useEmployees, useDepartments, useCostCenters, useTeams } from '@/hooks/api'
+import { useGenerateReport, useEmployees, useDepartments, useCostCenters, useTeams } from '@/hooks'
 import { parseApiError } from '@/lib/api/errors'
 import type { components } from '@/types/legacy-api-types'
 

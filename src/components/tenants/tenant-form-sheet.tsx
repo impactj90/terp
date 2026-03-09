@@ -25,7 +25,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { useCreateTenant, useUpdateTenant } from '@/hooks/api'
+import { useCreateTenant, useUpdateTenant } from '@/hooks'
 import type { AppRouter } from '@/trpc/routers/_app'
 import type { inferRouterOutputs } from '@trpc/server'
 

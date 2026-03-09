@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { useSendEmployeeMessage } from '@/hooks/api'
+import { useSendEmployeeMessage } from '@/hooks'
 
 interface SendConfirmationDialogProps {
   open: boolean

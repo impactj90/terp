@@ -21,10 +21,14 @@
  * @see apps/api/internal/service/macro.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as macrosService from "@/lib/services/macros-service"
+
+// Re-export executeAction so existing consumers don't break
+export { executeAction } from "@/lib/services/macros-service"
 
 // --- Permission Constants ---
 
@@ -123,87 +127,99 @@ const updateAssignmentInputSchema = z.object({
   isActive: z.boolean().optional(),
 })
 
-// --- Helpers ---
+// --- Mapping Functions ---
 
-/**
- * Validates executionDay based on macroType.
- * Weekly: 0-6 (Sun-Sat). Monthly: 1-31.
- */
-function validateExecutionDay(macroType: string, day: number): void {
-  if (macroType === "weekly" && (day < 0 || day > 6)) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "Weekly execution day must be 0-6 (Sun-Sat)",
-    })
-  }
-  if (macroType === "monthly" && (day < 1 || day > 31)) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "Monthly execution day must be 1-31",
-    })
-  }
-}
-
-/**
- * Executes a macro action and returns the result.
- * Port of Go executeAction (service/macro.go lines 479-528).
- */
-export async function executeAction(macro: {
+function mapMacroToOutput(m: {
   id: string
+  tenantId: string
   name: string
+  description: string | null
   macroType: string
   actionType: string
   actionParams: unknown
-}): Promise<{ result: unknown; error: string | null }> {
-  const executedAt = new Date().toISOString()
-  switch (macro.actionType) {
-    case "log_message":
-      return {
-        result: {
-          action: "log_message",
-          macro_name: macro.name,
-          macro_type: macro.macroType,
-          executed_at: executedAt,
-        },
-        error: null,
-      }
-    case "recalculate_target_hours":
-      return {
-        result: {
-          action: "recalculate_target_hours",
-          status: "placeholder",
-          executed_at: executedAt,
-        },
-        error: null,
-      }
-    case "reset_flextime":
-      return {
-        result: {
-          action: "reset_flextime",
-          status: "placeholder",
-          executed_at: executedAt,
-        },
-        error: null,
-      }
-    case "carry_forward_balance":
-      return {
-        result: {
-          action: "carry_forward_balance",
-          status: "placeholder",
-          executed_at: executedAt,
-        },
-        error: null,
-      }
-    default:
-      return { result: {}, error: `Unknown action type: ${macro.actionType}` }
+  isActive: boolean
+  createdAt: Date
+  updatedAt: Date
+  assignments: Array<{
+    id: string
+    tenantId: string
+    macroId: string
+    tariffId: string | null
+    employeeId: string | null
+    executionDay: number
+    isActive: boolean
+    createdAt: Date
+    updatedAt: Date
+  }>
+}) {
+  return {
+    id: m.id,
+    tenantId: m.tenantId,
+    name: m.name,
+    description: m.description,
+    macroType: m.macroType,
+    actionType: m.actionType,
+    actionParams: m.actionParams,
+    isActive: m.isActive,
+    createdAt: m.createdAt,
+    updatedAt: m.updatedAt,
+    assignments: m.assignments.map(mapAssignmentToOutput),
   }
 }
 
-// --- Prisma Include Objects ---
+function mapAssignmentToOutput(a: {
+  id: string
+  tenantId: string
+  macroId: string
+  tariffId: string | null
+  employeeId: string | null
+  executionDay: number
+  isActive: boolean
+  createdAt: Date
+  updatedAt: Date
+}) {
+  return {
+    id: a.id,
+    tenantId: a.tenantId,
+    macroId: a.macroId,
+    tariffId: a.tariffId,
+    employeeId: a.employeeId,
+    executionDay: a.executionDay,
+    isActive: a.isActive,
+    createdAt: a.createdAt,
+    updatedAt: a.updatedAt,
+  }
+}
 
-const macroWithAssignments = {
-  assignments: { orderBy: { createdAt: "asc" as const } },
-} as const
+function mapExecutionToOutput(e: {
+  id: string
+  tenantId: string
+  macroId: string
+  assignmentId: string | null
+  status: string
+  triggerType: string
+  triggeredBy: string | null
+  startedAt: Date | null
+  completedAt: Date | null
+  result: unknown
+  errorMessage: string | null
+  createdAt: Date
+}) {
+  return {
+    id: e.id,
+    tenantId: e.tenantId,
+    macroId: e.macroId,
+    assignmentId: e.assignmentId,
+    status: e.status,
+    triggerType: e.triggerType,
+    triggeredBy: e.triggeredBy,
+    startedAt: e.startedAt,
+    completedAt: e.completedAt,
+    result: e.result,
+    errorMessage: e.errorMessage,
+    createdAt: e.createdAt,
+  }
+}
 
 // --- Router ---
 
@@ -222,38 +238,11 @@ export const macrosRouter = createTRPCRouter({
     .input(z.void().optional())
     .output(z.object({ data: z.array(macroOutputSchema) }))
     .query(async ({ ctx }) => {
-      const tenantId = ctx.tenantId!
-
-      const macros = await ctx.prisma.macro.findMany({
-        where: { tenantId },
-        include: macroWithAssignments,
-        orderBy: { name: "asc" },
-      })
-
-      return {
-        data: macros.map((m) => ({
-          id: m.id,
-          tenantId: m.tenantId,
-          name: m.name,
-          description: m.description,
-          macroType: m.macroType,
-          actionType: m.actionType,
-          actionParams: m.actionParams,
-          isActive: m.isActive,
-          createdAt: m.createdAt,
-          updatedAt: m.updatedAt,
-          assignments: m.assignments.map((a) => ({
-            id: a.id,
-            tenantId: a.tenantId,
-            macroId: a.macroId,
-            tariffId: a.tariffId,
-            employeeId: a.employeeId,
-            executionDay: a.executionDay,
-            isActive: a.isActive,
-            createdAt: a.createdAt,
-            updatedAt: a.updatedAt,
-          })),
-        })),
+      try {
+        const macros = await macrosService.list(ctx.prisma, ctx.tenantId!)
+        return { data: macros.map(mapMacroToOutput) }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -267,42 +256,15 @@ export const macrosRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(macroOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const macro = await ctx.prisma.macro.findFirst({
-        where: { id: input.id, tenantId },
-        include: macroWithAssignments,
-      })
-
-      if (!macro) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Macro not found",
-        })
-      }
-
-      return {
-        id: macro.id,
-        tenantId: macro.tenantId,
-        name: macro.name,
-        description: macro.description,
-        macroType: macro.macroType,
-        actionType: macro.actionType,
-        actionParams: macro.actionParams,
-        isActive: macro.isActive,
-        createdAt: macro.createdAt,
-        updatedAt: macro.updatedAt,
-        assignments: macro.assignments.map((a) => ({
-          id: a.id,
-          tenantId: a.tenantId,
-          macroId: a.macroId,
-          tariffId: a.tariffId,
-          employeeId: a.employeeId,
-          executionDay: a.executionDay,
-          isActive: a.isActive,
-          createdAt: a.createdAt,
-          updatedAt: a.updatedAt,
-        })),
+      try {
+        const macro = await macrosService.getById(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id
+        )
+        return mapMacroToOutput(macro)
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -319,68 +281,15 @@ export const macrosRouter = createTRPCRouter({
     .input(createMacroInputSchema)
     .output(macroOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Trim and validate name
-      const name = input.name.trim()
-      if (name.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Macro name is required",
-        })
-      }
-
-      // Check name uniqueness within tenant
-      const existingByName = await ctx.prisma.macro.findFirst({
-        where: { tenantId, name },
-      })
-      if (existingByName) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Macro name already exists",
-        })
-      }
-
-      const macro = await ctx.prisma.macro.create({
-        data: {
-          tenantId,
-          name,
-          description: input.description?.trim() || null,
-          macroType: input.macroType,
-          actionType: input.actionType,
-          actionParams: (input.actionParams as object) ?? {},
-          isActive: true,
-        },
-      })
-
-      // Re-fetch with assignments
-      const result = await ctx.prisma.macro.findFirst({
-        where: { id: macro.id, tenantId },
-        include: macroWithAssignments,
-      })
-
-      return {
-        id: result!.id,
-        tenantId: result!.tenantId,
-        name: result!.name,
-        description: result!.description,
-        macroType: result!.macroType,
-        actionType: result!.actionType,
-        actionParams: result!.actionParams,
-        isActive: result!.isActive,
-        createdAt: result!.createdAt,
-        updatedAt: result!.updatedAt,
-        assignments: result!.assignments.map((a) => ({
-          id: a.id,
-          tenantId: a.tenantId,
-          macroId: a.macroId,
-          tariffId: a.tariffId,
-          employeeId: a.employeeId,
-          executionDay: a.executionDay,
-          isActive: a.isActive,
-          createdAt: a.createdAt,
-          updatedAt: a.updatedAt,
-        })),
+      try {
+        const macro = await macrosService.create(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+        return mapMacroToOutput(macro)
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -396,99 +305,15 @@ export const macrosRouter = createTRPCRouter({
     .input(updateMacroInputSchema)
     .output(macroOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify macro exists (tenant-scoped)
-      const existing = await ctx.prisma.macro.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Macro not found",
-        })
-      }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      if (input.name !== undefined) {
-        const name = input.name.trim()
-        if (name.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Macro name is required",
-          })
-        }
-        // Check uniqueness if name changed
-        if (name !== existing.name) {
-          const conflict = await ctx.prisma.macro.findFirst({
-            where: { tenantId, name },
-          })
-          if (conflict) {
-            throw new TRPCError({
-              code: "CONFLICT",
-              message: "Macro name already exists",
-            })
-          }
-        }
-        data.name = name
-      }
-
-      if (input.description !== undefined) {
-        data.description =
-          input.description === null ? null : input.description.trim()
-      }
-
-      if (input.macroType !== undefined) {
-        data.macroType = input.macroType
-      }
-
-      if (input.actionType !== undefined) {
-        data.actionType = input.actionType
-      }
-
-      if (input.actionParams !== undefined) {
-        data.actionParams = input.actionParams as object
-      }
-
-      if (input.isActive !== undefined) {
-        data.isActive = input.isActive
-      }
-
-      await ctx.prisma.macro.update({
-        where: { id: input.id },
-        data,
-      })
-
-      // Re-fetch with assignments
-      const result = await ctx.prisma.macro.findFirst({
-        where: { id: input.id, tenantId },
-        include: macroWithAssignments,
-      })
-
-      return {
-        id: result!.id,
-        tenantId: result!.tenantId,
-        name: result!.name,
-        description: result!.description,
-        macroType: result!.macroType,
-        actionType: result!.actionType,
-        actionParams: result!.actionParams,
-        isActive: result!.isActive,
-        createdAt: result!.createdAt,
-        updatedAt: result!.updatedAt,
-        assignments: result!.assignments.map((a) => ({
-          id: a.id,
-          tenantId: a.tenantId,
-          macroId: a.macroId,
-          tariffId: a.tariffId,
-          employeeId: a.employeeId,
-          executionDay: a.executionDay,
-          isActive: a.isActive,
-          createdAt: a.createdAt,
-          updatedAt: a.updatedAt,
-        })),
+      try {
+        const macro = await macrosService.update(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+        return mapMacroToOutput(macro)
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -504,25 +329,12 @@ export const macrosRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify macro exists (tenant-scoped)
-      const existing = await ctx.prisma.macro.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Macro not found",
-        })
+      try {
+        await macrosService.remove(ctx.prisma, ctx.tenantId!, input.id)
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Hard delete (cascades to assignments and executions via FK)
-      await ctx.prisma.macro.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 
   // ==================== Assignment Management ====================
@@ -537,36 +349,15 @@ export const macrosRouter = createTRPCRouter({
     .input(z.object({ macroId: z.string().uuid() }))
     .output(z.object({ data: z.array(macroAssignmentOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify macro exists in tenant
-      const macro = await ctx.prisma.macro.findFirst({
-        where: { id: input.macroId, tenantId },
-      })
-      if (!macro) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Macro not found",
-        })
-      }
-
-      const assignments = await ctx.prisma.macroAssignment.findMany({
-        where: { macroId: input.macroId },
-        orderBy: { createdAt: "asc" },
-      })
-
-      return {
-        data: assignments.map((a) => ({
-          id: a.id,
-          tenantId: a.tenantId,
-          macroId: a.macroId,
-          tariffId: a.tariffId,
-          employeeId: a.employeeId,
-          executionDay: a.executionDay,
-          isActive: a.isActive,
-          createdAt: a.createdAt,
-          updatedAt: a.updatedAt,
-        })),
+      try {
+        const assignments = await macrosService.listAssignments(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.macroId
+        )
+        return { data: assignments.map(mapAssignmentToOutput) }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -583,54 +374,15 @@ export const macrosRouter = createTRPCRouter({
     .input(createAssignmentInputSchema)
     .output(macroAssignmentOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify macro exists in tenant
-      const macro = await ctx.prisma.macro.findFirst({
-        where: { id: input.macroId, tenantId },
-      })
-      if (!macro) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Macro not found",
-        })
-      }
-
-      // Validate exactly one of tariffId/employeeId
-      const hasTariff = !!input.tariffId
-      const hasEmployee = !!input.employeeId
-      if (hasTariff === hasEmployee) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message:
-            "Exactly one of tariffId or employeeId must be provided",
-        })
-      }
-
-      // Validate executionDay based on macroType
-      validateExecutionDay(macro.macroType, input.executionDay)
-
-      const assignment = await ctx.prisma.macroAssignment.create({
-        data: {
-          tenantId,
-          macroId: input.macroId,
-          tariffId: input.tariffId || null,
-          employeeId: input.employeeId || null,
-          executionDay: input.executionDay,
-          isActive: true,
-        },
-      })
-
-      return {
-        id: assignment.id,
-        tenantId: assignment.tenantId,
-        macroId: assignment.macroId,
-        tariffId: assignment.tariffId,
-        employeeId: assignment.employeeId,
-        executionDay: assignment.executionDay,
-        isActive: assignment.isActive,
-        createdAt: assignment.createdAt,
-        updatedAt: assignment.updatedAt,
+      try {
+        const assignment = await macrosService.createAssignment(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+        return mapAssignmentToOutput(assignment)
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -647,57 +399,15 @@ export const macrosRouter = createTRPCRouter({
     .input(updateAssignmentInputSchema)
     .output(macroAssignmentOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify macro exists in tenant
-      const macro = await ctx.prisma.macro.findFirst({
-        where: { id: input.macroId, tenantId },
-      })
-      if (!macro) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Macro not found",
-        })
-      }
-
-      // Verify assignment exists AND belongs to macro
-      const existing = await ctx.prisma.macroAssignment.findFirst({
-        where: { id: input.assignmentId, macroId: input.macroId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Macro assignment not found",
-        })
-      }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      if (input.executionDay !== undefined) {
-        validateExecutionDay(macro.macroType, input.executionDay)
-        data.executionDay = input.executionDay
-      }
-
-      if (input.isActive !== undefined) {
-        data.isActive = input.isActive
-      }
-
-      const assignment = await ctx.prisma.macroAssignment.update({
-        where: { id: input.assignmentId },
-        data,
-      })
-
-      return {
-        id: assignment.id,
-        tenantId: assignment.tenantId,
-        macroId: assignment.macroId,
-        tariffId: assignment.tariffId,
-        employeeId: assignment.employeeId,
-        executionDay: assignment.executionDay,
-        isActive: assignment.isActive,
-        createdAt: assignment.createdAt,
-        updatedAt: assignment.updatedAt,
+      try {
+        const assignment = await macrosService.updateAssignment(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+        return mapAssignmentToOutput(assignment)
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -718,35 +428,17 @@ export const macrosRouter = createTRPCRouter({
     )
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify macro exists in tenant
-      const macro = await ctx.prisma.macro.findFirst({
-        where: { id: input.macroId, tenantId },
-      })
-      if (!macro) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Macro not found",
-        })
+      try {
+        await macrosService.deleteAssignment(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.macroId,
+          input.assignmentId
+        )
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Verify assignment exists AND belongs to macro
-      const existing = await ctx.prisma.macroAssignment.findFirst({
-        where: { id: input.assignmentId, macroId: input.macroId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Macro assignment not found",
-        })
-      }
-
-      await ctx.prisma.macroAssignment.delete({
-        where: { id: input.assignmentId },
-      })
-
-      return { success: true }
     }),
 
   // ==================== Execution ====================
@@ -763,73 +455,16 @@ export const macrosRouter = createTRPCRouter({
     .input(z.object({ macroId: z.string().uuid() }))
     .output(macroExecutionOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const userId = ctx.user!.id
-
-      // Fetch macro (verify tenantId + id)
-      const macro = await ctx.prisma.macro.findFirst({
-        where: { id: input.macroId, tenantId },
-      })
-      if (!macro) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Macro not found",
-        })
-      }
-
-      // Check isActive
-      if (!macro.isActive) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Cannot execute inactive macro",
-        })
-      }
-
-      // Create execution record
-      const execution = await ctx.prisma.macroExecution.create({
-        data: {
-          tenantId,
-          macroId: input.macroId,
-          status: "running",
-          triggerType: "manual",
-          triggeredBy: userId,
-          startedAt: new Date(),
-        },
-      })
-
-      // Run action
-      const actionResult = await executeAction({
-        id: macro.id,
-        name: macro.name,
-        macroType: macro.macroType,
-        actionType: macro.actionType,
-        actionParams: macro.actionParams,
-      })
-
-      // Update execution record
-      const updated = await ctx.prisma.macroExecution.update({
-        where: { id: execution.id },
-        data: {
-          completedAt: new Date(),
-          status: actionResult.error ? "failed" : "completed",
-          result: (actionResult.result as object) ?? {},
-          errorMessage: actionResult.error,
-        },
-      })
-
-      return {
-        id: updated.id,
-        tenantId: updated.tenantId,
-        macroId: updated.macroId,
-        assignmentId: updated.assignmentId,
-        status: updated.status,
-        triggerType: updated.triggerType,
-        triggeredBy: updated.triggeredBy,
-        startedAt: updated.startedAt,
-        completedAt: updated.completedAt,
-        result: updated.result,
-        errorMessage: updated.errorMessage,
-        createdAt: updated.createdAt,
+      try {
+        const execution = await macrosService.triggerExecution(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.macroId,
+          ctx.user!.id
+        )
+        return mapExecutionToOutput(execution)
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -850,40 +485,16 @@ export const macrosRouter = createTRPCRouter({
     )
     .output(z.object({ data: z.array(macroExecutionOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify macro exists in tenant
-      const macro = await ctx.prisma.macro.findFirst({
-        where: { id: input.macroId, tenantId },
-      })
-      if (!macro) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Macro not found",
-        })
-      }
-
-      const executions = await ctx.prisma.macroExecution.findMany({
-        where: { macroId: input.macroId },
-        orderBy: { createdAt: "desc" },
-        take: input.limit,
-      })
-
-      return {
-        data: executions.map((e) => ({
-          id: e.id,
-          tenantId: e.tenantId,
-          macroId: e.macroId,
-          assignmentId: e.assignmentId,
-          status: e.status,
-          triggerType: e.triggerType,
-          triggeredBy: e.triggeredBy,
-          startedAt: e.startedAt,
-          completedAt: e.completedAt,
-          result: e.result,
-          errorMessage: e.errorMessage,
-          createdAt: e.createdAt,
-        })),
+      try {
+        const executions = await macrosService.listExecutions(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.macroId,
+          input.limit
+        )
+        return { data: executions.map(mapExecutionToOutput) }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -897,32 +508,15 @@ export const macrosRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(macroExecutionOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const execution = await ctx.prisma.macroExecution.findFirst({
-        where: { id: input.id, tenantId },
-      })
-
-      if (!execution) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Macro execution not found",
-        })
-      }
-
-      return {
-        id: execution.id,
-        tenantId: execution.tenantId,
-        macroId: execution.macroId,
-        assignmentId: execution.assignmentId,
-        status: execution.status,
-        triggerType: execution.triggerType,
-        triggeredBy: execution.triggeredBy,
-        startedAt: execution.startedAt,
-        completedAt: execution.completedAt,
-        result: execution.result,
-        errorMessage: execution.errorMessage,
-        createdAt: execution.createdAt,
+      try {
+        const execution = await macrosService.getExecution(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id
+        )
+        return mapExecutionToOutput(execution)
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 })

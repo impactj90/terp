@@ -33,7 +33,7 @@ import {
 } from '@/components/ui/sheet'
 import { TeamStatusBadge } from './team-status-badge'
 import { MemberRoleBadge } from './member-role-badge'
-import { useBulkAssignTariff, useTariffs, useTeam } from '@/hooks/api'
+import { useBulkAssignTariff, useTariffs, useTeam } from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type Team = components['schemas']['Team']

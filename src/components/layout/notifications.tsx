@@ -24,7 +24,7 @@ import {
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
   useNotifications,
-} from '@/hooks/api'
+} from '@/hooks'
 import { useUnreadCount } from '@/hooks/use-unread-count'
 import { useAuth } from '@/providers/auth-provider'
 import { formatRelativeTime } from '@/lib/time-utils'

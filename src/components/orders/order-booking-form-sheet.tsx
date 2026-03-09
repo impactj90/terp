@@ -29,7 +29,7 @@ import {
   useUpdateOrderBooking,
   useEmployees,
   useActivities,
-} from '@/hooks/api'
+} from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type OrderBooking = components['schemas']['OrderBooking']

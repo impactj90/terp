@@ -13,10 +13,11 @@
  * @see apps/api/internal/service/vehicle_route.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as vehicleRouteService from "@/lib/services/vehicle-route-service"
 
 // --- Permission Constants ---
 
@@ -63,6 +64,33 @@ function decToNum(val: unknown): number | null {
   return val != null ? Number(val) : null
 }
 
+/** Map a Prisma VehicleRoute to the output shape */
+function mapToOutput(r: {
+  id: string
+  tenantId: string
+  code: string
+  name: string
+  description: string | null
+  distanceKm: unknown
+  isActive: boolean
+  sortOrder: number
+  createdAt: Date
+  updatedAt: Date
+}) {
+  return {
+    id: r.id,
+    tenantId: r.tenantId,
+    code: r.code,
+    name: r.name,
+    description: r.description,
+    distanceKm: decToNum(r.distanceKm),
+    isActive: r.isActive,
+    sortOrder: r.sortOrder,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
+  }
+}
+
 // --- Router ---
 
 export const vehicleRoutesRouter = createTRPCRouter({
@@ -78,26 +106,12 @@ export const vehicleRoutesRouter = createTRPCRouter({
     .input(z.void().optional())
     .output(z.object({ data: z.array(vehicleRouteOutputSchema) }))
     .query(async ({ ctx }) => {
-      const tenantId = ctx.tenantId!
-
-      const routes = await ctx.prisma.vehicleRoute.findMany({
-        where: { tenantId },
-        orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
-      })
-
-      return {
-        data: routes.map((r) => ({
-          id: r.id,
-          tenantId: r.tenantId,
-          code: r.code,
-          name: r.name,
-          description: r.description,
-          distanceKm: decToNum(r.distanceKm),
-          isActive: r.isActive,
-          sortOrder: r.sortOrder,
-          createdAt: r.createdAt,
-          updatedAt: r.updatedAt,
-        })),
+      try {
+        const tenantId = ctx.tenantId!
+        const routes = await vehicleRouteService.list(ctx.prisma, tenantId)
+        return { data: routes.map(mapToOutput) }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -111,30 +125,16 @@ export const vehicleRoutesRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(vehicleRouteOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const route = await ctx.prisma.vehicleRoute.findFirst({
-        where: { id: input.id, tenantId },
-      })
-
-      if (!route) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Vehicle route not found",
-        })
-      }
-
-      return {
-        id: route.id,
-        tenantId: route.tenantId,
-        code: route.code,
-        name: route.name,
-        description: route.description,
-        distanceKm: decToNum(route.distanceKm),
-        isActive: route.isActive,
-        sortOrder: route.sortOrder,
-        createdAt: route.createdAt,
-        updatedAt: route.updatedAt,
+      try {
+        const tenantId = ctx.tenantId!
+        const route = await vehicleRouteService.getById(
+          ctx.prisma,
+          tenantId,
+          input.id
+        )
+        return mapToOutput(route)
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -150,61 +150,16 @@ export const vehicleRoutesRouter = createTRPCRouter({
     .input(createVehicleRouteInputSchema)
     .output(vehicleRouteOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Trim and validate code
-      const code = input.code.trim()
-      if (code.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Vehicle route code is required",
-        })
-      }
-
-      // Trim and validate name
-      const name = input.name.trim()
-      if (name.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Vehicle route name is required",
-        })
-      }
-
-      // Check code uniqueness within tenant
-      const existingByCode = await ctx.prisma.vehicleRoute.findFirst({
-        where: { tenantId, code },
-      })
-      if (existingByCode) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Vehicle route code already exists",
-        })
-      }
-
-      const route = await ctx.prisma.vehicleRoute.create({
-        data: {
+      try {
+        const tenantId = ctx.tenantId!
+        const route = await vehicleRouteService.create(
+          ctx.prisma,
           tenantId,
-          code,
-          name,
-          description: input.description?.trim() || null,
-          distanceKm:
-            input.distanceKm !== undefined ? input.distanceKm : null,
-          isActive: true,
-          sortOrder: input.sortOrder ?? 0,
-        },
-      })
-
-      return {
-        id: route.id,
-        tenantId: route.tenantId,
-        code: route.code,
-        name: route.name,
-        description: route.description,
-        distanceKm: decToNum(route.distanceKm),
-        isActive: route.isActive,
-        sortOrder: route.sortOrder,
-        createdAt: route.createdAt,
-        updatedAt: route.updatedAt,
+          input
+        )
+        return mapToOutput(route)
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -220,66 +175,16 @@ export const vehicleRoutesRouter = createTRPCRouter({
     .input(updateVehicleRouteInputSchema)
     .output(vehicleRouteOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify route exists (tenant-scoped)
-      const existing = await ctx.prisma.vehicleRoute.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Vehicle route not found",
-        })
-      }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      if (input.name !== undefined) {
-        const name = input.name.trim()
-        if (name.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Vehicle route name is required",
-          })
-        }
-        data.name = name
-      }
-
-      if (input.description !== undefined) {
-        data.description =
-          input.description === null ? null : input.description.trim()
-      }
-
-      if (input.distanceKm !== undefined) {
-        data.distanceKm = input.distanceKm
-      }
-
-      if (input.isActive !== undefined) {
-        data.isActive = input.isActive
-      }
-
-      if (input.sortOrder !== undefined) {
-        data.sortOrder = input.sortOrder
-      }
-
-      const route = await ctx.prisma.vehicleRoute.update({
-        where: { id: input.id },
-        data,
-      })
-
-      return {
-        id: route.id,
-        tenantId: route.tenantId,
-        code: route.code,
-        name: route.name,
-        description: route.description,
-        distanceKm: decToNum(route.distanceKm),
-        isActive: route.isActive,
-        sortOrder: route.sortOrder,
-        createdAt: route.createdAt,
-        updatedAt: route.updatedAt,
+      try {
+        const tenantId = ctx.tenantId!
+        const route = await vehicleRouteService.update(
+          ctx.prisma,
+          tenantId,
+          input
+        )
+        return mapToOutput(route)
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -295,34 +200,12 @@ export const vehicleRoutesRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify route exists (tenant-scoped)
-      const existing = await ctx.prisma.vehicleRoute.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Vehicle route not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        await vehicleRouteService.remove(ctx.prisma, tenantId, input.id)
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Check if route has trip records
-      const tripCount = await ctx.prisma.tripRecord.count({
-        where: { routeId: input.id },
-      })
-      if (tripCount > 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Cannot delete vehicle route that has trip records",
-        })
-      }
-
-      await ctx.prisma.vehicleRoute.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 })

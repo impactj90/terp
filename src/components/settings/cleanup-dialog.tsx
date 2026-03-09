@@ -21,7 +21,7 @@ import {
   useCleanupDeleteBookingData,
   useCleanupReReadBookings,
   useCleanupMarkDeleteOrders,
-} from '@/hooks/api'
+} from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type CleanupResult = components['schemas']['CleanupResult']

@@ -4,7 +4,7 @@ import * as React from 'react'
 import { useTranslations } from 'next-intl'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { useEmployeeVacationBalance } from '@/hooks/api'
+import { useEmployeeVacationBalance } from '@/hooks'
 
 interface VacationBalanceCardProps {
   /** Employee ID to show balance for */

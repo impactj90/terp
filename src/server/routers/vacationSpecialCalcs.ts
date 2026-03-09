@@ -15,10 +15,11 @@
  */
 import { z } from "zod"
 import { Prisma } from "@/generated/prisma/client"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as vacationSpecialCalcService from "@/lib/services/vacation-special-calc-service"
 
 // --- Permission Constants ---
 
@@ -116,27 +117,20 @@ export const vacationSpecialCalcsRouter = createTRPCRouter({
     )
     .output(z.object({ data: z.array(vacationSpecialCalcOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const where: Record<string, unknown> = { tenantId }
-
-      if (input?.isActive !== undefined) {
-        where.isActive = input.isActive
-      }
-
-      if (input?.type !== undefined) {
-        where.type = input.type
-      }
-
-      const items = await ctx.prisma.vacationSpecialCalculation.findMany({
-        where,
-        orderBy: [{ type: "asc" }, { threshold: "asc" }],
-      })
-
-      return {
-        data: items.map((item) =>
-          mapToOutput(item as unknown as Record<string, unknown>)
-        ),
+      try {
+        const tenantId = ctx.tenantId!
+        const items = await vacationSpecialCalcService.list(
+          ctx.prisma,
+          tenantId,
+          input ?? undefined
+        )
+        return {
+          data: items.map((item) =>
+            mapToOutput(item as unknown as Record<string, unknown>)
+          ),
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -150,20 +144,17 @@ export const vacationSpecialCalcsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(vacationSpecialCalcOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const item = await ctx.prisma.vacationSpecialCalculation.findFirst({
-        where: { id: input.id, tenantId },
-      })
-
-      if (!item) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Vacation special calculation not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        const item = await vacationSpecialCalcService.getById(
+          ctx.prisma,
+          tenantId,
+          input.id
+        )
+        return mapToOutput(item as unknown as Record<string, unknown>)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapToOutput(item as unknown as Record<string, unknown>)
     }),
 
   /**
@@ -182,53 +173,17 @@ export const vacationSpecialCalcsRouter = createTRPCRouter({
     .input(createVacationSpecialCalcInputSchema)
     .output(vacationSpecialCalcOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Validate threshold vs type
-      if (input.type === "disability" && input.threshold !== 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Threshold must be 0 for disability type",
-        })
-      }
-
-      if (
-        (input.type === "age" || input.type === "tenure") &&
-        input.threshold <= 0
-      ) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `Threshold must be positive for ${input.type} type`,
-        })
-      }
-
-      // Check uniqueness by type + threshold
-      const existing =
-        await ctx.prisma.vacationSpecialCalculation.findFirst({
-          where: { tenantId, type: input.type, threshold: input.threshold },
-        })
-      if (existing) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message:
-            "A special calculation with this type and threshold already exists",
-        })
-      }
-
-      const description = input.description?.trim() || null
-
-      const created = await ctx.prisma.vacationSpecialCalculation.create({
-        data: {
+      try {
+        const tenantId = ctx.tenantId!
+        const created = await vacationSpecialCalcService.create(
+          ctx.prisma,
           tenantId,
-          type: input.type,
-          threshold: input.threshold,
-          bonusDays: new Prisma.Decimal(input.bonusDays),
-          description,
-          isActive: input.isActive,
-        },
-      })
-
-      return mapToOutput(created as unknown as Record<string, unknown>)
+          input
+        )
+        return mapToOutput(created as unknown as Record<string, unknown>)
+      } catch (err) {
+        handleServiceError(err)
+      }
     }),
 
   /**
@@ -243,56 +198,17 @@ export const vacationSpecialCalcsRouter = createTRPCRouter({
     .input(updateVacationSpecialCalcInputSchema)
     .output(vacationSpecialCalcOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const existing =
-        await ctx.prisma.vacationSpecialCalculation.findFirst({
-          where: { id: input.id, tenantId },
-        })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Vacation special calculation not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        const updated = await vacationSpecialCalcService.update(
+          ctx.prisma,
+          tenantId,
+          input
+        )
+        return mapToOutput(updated as unknown as Record<string, unknown>)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Validate threshold against type
-      if (input.threshold !== undefined) {
-        if (existing.type === "disability" && input.threshold !== 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Threshold must be 0 for disability type",
-          })
-        }
-        if (
-          (existing.type === "age" || existing.type === "tenure") &&
-          input.threshold <= 0
-        ) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `Threshold must be positive for ${existing.type} type`,
-          })
-        }
-      }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      if (input.threshold !== undefined) data.threshold = input.threshold
-      if (input.bonusDays !== undefined)
-        data.bonusDays = new Prisma.Decimal(input.bonusDays)
-      if (input.description !== undefined) {
-        data.description =
-          input.description === null ? null : input.description.trim()
-      }
-      if (input.isActive !== undefined) data.isActive = input.isActive
-
-      const updated = await ctx.prisma.vacationSpecialCalculation.update({
-        where: { id: input.id },
-        data,
-      })
-
-      return mapToOutput(updated as unknown as Record<string, unknown>)
     }),
 
   /**
@@ -307,36 +223,16 @@ export const vacationSpecialCalcsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const existing =
-        await ctx.prisma.vacationSpecialCalculation.findFirst({
-          where: { id: input.id, tenantId },
-        })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Vacation special calculation not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        await vacationSpecialCalcService.remove(
+          ctx.prisma,
+          tenantId,
+          input.id
+        )
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Check usage in calc groups
-      const usageCount =
-        await ctx.prisma.vacationCalcGroupSpecialCalc.count({
-          where: { specialCalculationId: input.id },
-        })
-      if (usageCount > 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message:
-            "Cannot delete special calculation that is assigned to calculation groups",
-        })
-      }
-
-      await ctx.prisma.vacationSpecialCalculation.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 })

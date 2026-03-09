@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/providers/auth-provider'
-import { useEmployee } from '@/hooks/api'
+import { useEmployee } from '@/hooks'
 import { Skeleton } from '@/components/ui/skeleton'
 import { UserX } from 'lucide-react'
 import {

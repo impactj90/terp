@@ -15,10 +15,11 @@
  */
 import { z } from "zod"
 import { Prisma } from "@/generated/prisma/client"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as vacationCappingRuleService from "@/lib/services/vacation-capping-rule-service"
 
 // --- Permission Constants ---
 
@@ -124,27 +125,20 @@ export const vacationCappingRulesRouter = createTRPCRouter({
     )
     .output(z.object({ data: z.array(vacationCappingRuleOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const where: Record<string, unknown> = { tenantId }
-
-      if (input?.isActive !== undefined) {
-        where.isActive = input.isActive
-      }
-
-      if (input?.ruleType !== undefined) {
-        where.ruleType = input.ruleType
-      }
-
-      const items = await ctx.prisma.vacationCappingRule.findMany({
-        where,
-        orderBy: { code: "asc" },
-      })
-
-      return {
-        data: items.map((item) =>
-          mapToOutput(item as unknown as Record<string, unknown>)
-        ),
+      try {
+        const tenantId = ctx.tenantId!
+        const items = await vacationCappingRuleService.list(
+          ctx.prisma,
+          tenantId,
+          input ?? undefined
+        )
+        return {
+          data: items.map((item) =>
+            mapToOutput(item as unknown as Record<string, unknown>)
+          ),
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -158,20 +152,17 @@ export const vacationCappingRulesRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(vacationCappingRuleOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const item = await ctx.prisma.vacationCappingRule.findFirst({
-        where: { id: input.id, tenantId },
-      })
-
-      if (!item) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Vacation capping rule not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        const item = await vacationCappingRuleService.getById(
+          ctx.prisma,
+          tenantId,
+          input.id
+        )
+        return mapToOutput(item as unknown as Record<string, unknown>)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapToOutput(item as unknown as Record<string, unknown>)
     }),
 
   /**
@@ -186,54 +177,17 @@ export const vacationCappingRulesRouter = createTRPCRouter({
     .input(createVacationCappingRuleInputSchema)
     .output(vacationCappingRuleOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Trim and validate code
-      const code = input.code.trim()
-      if (code.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Code is required",
-        })
-      }
-
-      // Trim and validate name
-      const name = input.name.trim()
-      if (name.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Name is required",
-        })
-      }
-
-      // Check code uniqueness
-      const existingByCode = await ctx.prisma.vacationCappingRule.findFirst({
-        where: { tenantId, code },
-      })
-      if (existingByCode) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Capping rule code already exists",
-        })
-      }
-
-      const description = input.description?.trim() || null
-
-      const created = await ctx.prisma.vacationCappingRule.create({
-        data: {
+      try {
+        const tenantId = ctx.tenantId!
+        const created = await vacationCappingRuleService.create(
+          ctx.prisma,
           tenantId,
-          code,
-          name,
-          description,
-          ruleType: input.ruleType,
-          cutoffMonth: input.cutoffMonth,
-          cutoffDay: input.cutoffDay,
-          capValue: new Prisma.Decimal(input.capValue),
-          isActive: input.isActive,
-        },
-      })
-
-      return mapToOutput(created as unknown as Record<string, unknown>)
+          input
+        )
+        return mapToOutput(created as unknown as Record<string, unknown>)
+      } catch (err) {
+        handleServiceError(err)
+      }
     }),
 
   /**
@@ -248,49 +202,17 @@ export const vacationCappingRulesRouter = createTRPCRouter({
     .input(updateVacationCappingRuleInputSchema)
     .output(vacationCappingRuleOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const existing = await ctx.prisma.vacationCappingRule.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Vacation capping rule not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        const updated = await vacationCappingRuleService.update(
+          ctx.prisma,
+          tenantId,
+          input
+        )
+        return mapToOutput(updated as unknown as Record<string, unknown>)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      if (input.name !== undefined) {
-        const name = input.name.trim()
-        if (name.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Name is required",
-          })
-        }
-        data.name = name
-      }
-
-      if (input.description !== undefined) {
-        data.description =
-          input.description === null ? null : input.description.trim()
-      }
-      if (input.ruleType !== undefined) data.ruleType = input.ruleType
-      if (input.cutoffMonth !== undefined) data.cutoffMonth = input.cutoffMonth
-      if (input.cutoffDay !== undefined) data.cutoffDay = input.cutoffDay
-      if (input.capValue !== undefined)
-        data.capValue = new Prisma.Decimal(input.capValue)
-      if (input.isActive !== undefined) data.isActive = input.isActive
-
-      const updated = await ctx.prisma.vacationCappingRule.update({
-        where: { id: input.id },
-        data,
-      })
-
-      return mapToOutput(updated as unknown as Record<string, unknown>)
     }),
 
   /**
@@ -305,35 +227,16 @@ export const vacationCappingRulesRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const existing = await ctx.prisma.vacationCappingRule.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Vacation capping rule not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        await vacationCappingRuleService.remove(
+          ctx.prisma,
+          tenantId,
+          input.id
+        )
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Check usage in capping rule groups
-      const usageCount =
-        await ctx.prisma.vacationCappingRuleGroupRule.count({
-          where: { cappingRuleId: input.id },
-        })
-      if (usageCount > 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message:
-            "Cannot delete capping rule that is assigned to capping rule groups",
-        })
-      }
-
-      await ctx.prisma.vacationCappingRule.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 })

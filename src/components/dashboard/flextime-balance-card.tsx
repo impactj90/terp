@@ -5,7 +5,7 @@ import { TrendingUp, AlertCircle, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
-import { useMonthlyValues } from '@/hooks/api'
+import { useMonthlyValues } from '@/hooks'
 import { formatBalance, formatMinutes } from '@/lib/time-utils'
 
 interface FlextimeBalanceCardProps {

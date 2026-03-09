@@ -6,7 +6,7 @@ import { TrendingUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatDate, formatDisplayDate, parseISODate } from '@/lib/time-utils'
-import type { TeamDailyValuesResult } from '@/hooks/api/use-team-daily-values'
+import type { TeamDailyValuesResult } from '@/hooks/use-team-daily-values'
 
 interface AttendancePoint {
   date: Date

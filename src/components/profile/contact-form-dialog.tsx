@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useCreateEmployeeContact } from '@/hooks/api'
+import { useCreateEmployeeContact } from '@/hooks'
 import { AlertCircle } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 

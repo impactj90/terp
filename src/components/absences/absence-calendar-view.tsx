@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { useTranslations } from 'next-intl'
 import { Calendar, type DateRange } from '@/components/ui/calendar'
-import { useHolidays, useEmployeeAbsences } from '@/hooks/api'
+import { useHolidays, useEmployeeAbsences } from '@/hooks'
 import { formatDate, parseISODate, getMonthRange } from '@/lib/time-utils'
 
 interface AbsenceCalendarViewProps {

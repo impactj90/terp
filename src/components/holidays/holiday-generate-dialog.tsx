@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useGenerateHolidays } from '@/hooks/api'
+import { useGenerateHolidays } from '@/hooks'
 
 interface HolidayGenerateDialogProps {
   open: boolean

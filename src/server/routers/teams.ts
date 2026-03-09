@@ -18,10 +18,11 @@
  * @see apps/api/internal/handler/team.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as teamService from "@/lib/services/teams-service"
 
 // --- Permission Constants ---
 
@@ -221,49 +222,21 @@ export const teamsRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      // ctx.tenantId is guaranteed non-null by tenantProcedure
       const tenantId = ctx.tenantId!
-      const page = input?.page ?? 1
-      const pageSize = input?.pageSize ?? 20
-
-      const where: Record<string, unknown> = {
-        tenantId,
-      }
-
-      if (input?.isActive !== undefined) {
-        where.isActive = input.isActive
-      }
-
-      if (input?.departmentId !== undefined) {
-        where.departmentId = input.departmentId
-      }
-
-      if (input?.search) {
-        where.name = { contains: input.search, mode: "insensitive" }
-      }
-
-      const [teams, total] = await Promise.all([
-        ctx.prisma.team.findMany({
-          where,
-          skip: (page - 1) * pageSize,
-          take: pageSize,
-          orderBy: { name: "asc" },
-          include: {
-            department: {
-              select: { id: true, name: true, code: true },
-            },
-            leader: {
-              select: { id: true, firstName: true, lastName: true },
-            },
-            _count: { select: { members: true } },
-          },
-        }),
-        ctx.prisma.team.count({ where }),
-      ])
-
-      return {
-        items: teams.map((t) => mapTeamToOutput(t)),
-        total,
+      try {
+        const { teams, total } = await teamService.list(ctx.prisma, tenantId, {
+          page: input?.page,
+          pageSize: input?.pageSize,
+          search: input?.search,
+          isActive: input?.isActive,
+          departmentId: input?.departmentId,
+        })
+        return {
+          items: teams.map((t) => mapTeamToOutput(t)),
+          total,
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -285,57 +258,36 @@ export const teamsRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      // ctx.tenantId is guaranteed non-null by tenantProcedure
       const tenantId = ctx.tenantId!
+      try {
+        const team = await teamService.getById(
+          ctx.prisma,
+          tenantId,
+          input.id,
+          input.includeMembers
+        )
+        const result = mapTeamToOutput(team)
+        const members =
+          "members" in team && Array.isArray(team.members)
+            ? (
+                team.members as Array<{
+                  teamId: string
+                  employeeId: string
+                  role: string
+                  joinedAt: Date
+                  employee: {
+                    id: string
+                    firstName: string
+                    lastName: string
+                  } | null
+                }>
+              ).map(mapTeamMemberToOutput)
+            : undefined
 
-      const team = await ctx.prisma.team.findFirst({
-        where: { id: input.id, tenantId },
-        include: {
-          department: {
-            select: { id: true, name: true, code: true },
-          },
-          leader: {
-            select: { id: true, firstName: true, lastName: true },
-          },
-          _count: { select: { members: true } },
-          ...(input.includeMembers
-            ? {
-                members: {
-                  include: {
-                    employee: {
-                      select: {
-                        id: true,
-                        firstName: true,
-                        lastName: true,
-                      },
-                    },
-                  },
-                  orderBy: { joinedAt: "asc" as const },
-                },
-              }
-            : {}),
-        },
-      })
-
-      if (!team) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Team not found",
-        })
+        return { ...result, members }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      const result = mapTeamToOutput(team)
-      const members = "members" in team && Array.isArray(team.members)
-        ? (team.members as Array<{
-            teamId: string
-            employeeId: string
-            role: string
-            joinedAt: Date
-            employee: { id: string; firstName: string; lastName: string } | null
-          }>).map(mapTeamMemberToOutput)
-        : undefined
-
-      return { ...result, members }
     }),
 
   /**
@@ -353,45 +305,13 @@ export const teamsRouter = createTRPCRouter({
     .input(createTeamInputSchema)
     .output(teamOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      // ctx.tenantId is guaranteed non-null by tenantProcedure
       const tenantId = ctx.tenantId!
-
-      // Trim and validate name
-      const name = input.name.trim()
-      if (name.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Team name is required",
-        })
+      try {
+        const team = await teamService.create(ctx.prisma, tenantId, input)
+        return mapTeamToOutput(team, 0)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Check name uniqueness within tenant
-      const existingByName = await ctx.prisma.team.findFirst({
-        where: { tenantId, name },
-      })
-      if (existingByName) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Team name already exists",
-        })
-      }
-
-      // Trim description if provided
-      const description = input.description?.trim() || null
-
-      // Create team
-      const team = await ctx.prisma.team.create({
-        data: {
-          tenantId,
-          name,
-          description,
-          departmentId: input.departmentId ?? null,
-          leaderEmployeeId: input.leaderEmployeeId ?? null,
-          isActive: true,
-        },
-      })
-
-      return mapTeamToOutput(team, 0)
     }),
 
   /**
@@ -408,87 +328,13 @@ export const teamsRouter = createTRPCRouter({
     .input(updateTeamInputSchema)
     .output(teamOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      // ctx.tenantId is guaranteed non-null by tenantProcedure
       const tenantId = ctx.tenantId!
-
-      // Verify team exists (tenant-scoped)
-      const existing = await ctx.prisma.team.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Team not found",
-        })
+      try {
+        const team = await teamService.update(ctx.prisma, tenantId, input)
+        return mapTeamToOutput(team)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      // Handle name update
-      if (input.name !== undefined) {
-        const name = input.name.trim()
-        if (name.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Team name is required",
-          })
-        }
-        // Check uniqueness if changed
-        if (name !== existing.name) {
-          const existingByName = await ctx.prisma.team.findFirst({
-            where: {
-              tenantId,
-              name,
-              NOT: { id: input.id },
-            },
-          })
-          if (existingByName) {
-            throw new TRPCError({
-              code: "CONFLICT",
-              message: "Team name already exists",
-            })
-          }
-        }
-        data.name = name
-      }
-
-      // Handle description update
-      if (input.description !== undefined) {
-        data.description =
-          input.description === null ? null : input.description.trim()
-      }
-
-      // Handle departmentId update
-      if (input.departmentId !== undefined) {
-        data.departmentId = input.departmentId
-      }
-
-      // Handle leaderEmployeeId update
-      if (input.leaderEmployeeId !== undefined) {
-        data.leaderEmployeeId = input.leaderEmployeeId
-      }
-
-      // Handle isActive update
-      if (input.isActive !== undefined) {
-        data.isActive = input.isActive
-      }
-
-      const team = await ctx.prisma.team.update({
-        where: { id: input.id },
-        data,
-        include: {
-          department: {
-            select: { id: true, name: true, code: true },
-          },
-          leader: {
-            select: { id: true, firstName: true, lastName: true },
-          },
-          _count: { select: { members: true } },
-        },
-      })
-
-      return mapTeamToOutput(team)
     }),
 
   /**
@@ -505,26 +351,13 @@ export const teamsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      // ctx.tenantId is guaranteed non-null by tenantProcedure
       const tenantId = ctx.tenantId!
-
-      // Verify team exists (tenant-scoped)
-      const existing = await ctx.prisma.team.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Team not found",
-        })
+      try {
+        await teamService.remove(ctx.prisma, tenantId, input.id)
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Hard delete (members cascade via DB FK)
-      await ctx.prisma.team.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 
   /**
@@ -541,32 +374,18 @@ export const teamsRouter = createTRPCRouter({
     .input(z.object({ teamId: z.string().uuid() }))
     .output(z.object({ items: z.array(teamMemberOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      // ctx.tenantId is guaranteed non-null by tenantProcedure
       const tenantId = ctx.tenantId!
-
-      // Verify team exists (tenant-scoped)
-      const team = await ctx.prisma.team.findFirst({
-        where: { id: input.teamId, tenantId },
-      })
-      if (!team) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Team not found",
-        })
-      }
-
-      const members = await ctx.prisma.teamMember.findMany({
-        where: { teamId: input.teamId },
-        include: {
-          employee: {
-            select: { id: true, firstName: true, lastName: true },
-          },
-        },
-        orderBy: { joinedAt: "asc" },
-      })
-
-      return {
-        items: members.map(mapTeamMemberToOutput),
+      try {
+        const members = await teamService.getMembers(
+          ctx.prisma,
+          tenantId,
+          input.teamId
+        )
+        return {
+          items: members.map(mapTeamMemberToOutput),
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -584,51 +403,13 @@ export const teamsRouter = createTRPCRouter({
     .input(addMemberInputSchema)
     .output(teamMemberOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      // ctx.tenantId is guaranteed non-null by tenantProcedure
       const tenantId = ctx.tenantId!
-
-      // Verify team exists (tenant-scoped)
-      const team = await ctx.prisma.team.findFirst({
-        where: { id: input.teamId, tenantId },
-      })
-      if (!team) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Team not found",
-        })
+      try {
+        const member = await teamService.addMember(ctx.prisma, tenantId, input)
+        return mapTeamMemberToOutput(member)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Check if member already exists
-      const existingMember = await ctx.prisma.teamMember.findUnique({
-        where: {
-          teamId_employeeId: {
-            teamId: input.teamId,
-            employeeId: input.employeeId,
-          },
-        },
-      })
-      if (existingMember) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Employee is already a team member",
-        })
-      }
-
-      // Create team member
-      const member = await ctx.prisma.teamMember.create({
-        data: {
-          teamId: input.teamId,
-          employeeId: input.employeeId,
-          role: input.role,
-        },
-        include: {
-          employee: {
-            select: { id: true, firstName: true, lastName: true },
-          },
-        },
-      })
-
-      return mapTeamMemberToOutput(member)
     }),
 
   /**
@@ -643,42 +424,16 @@ export const teamsRouter = createTRPCRouter({
     .input(updateMemberInputSchema)
     .output(teamMemberOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      // ctx.tenantId is guaranteed non-null by tenantProcedure
       const tenantId = ctx.tenantId!
-
-      // Verify team exists (tenant-scoped)
-      const team = await ctx.prisma.team.findFirst({
-        where: { id: input.teamId, tenantId },
-      })
-      if (!team) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Team not found",
-        })
-      }
-
       try {
-        const member = await ctx.prisma.teamMember.update({
-          where: {
-            teamId_employeeId: {
-              teamId: input.teamId,
-              employeeId: input.employeeId,
-            },
-          },
-          data: { role: input.role },
-          include: {
-            employee: {
-              select: { id: true, firstName: true, lastName: true },
-            },
-          },
-        })
-
+        const member = await teamService.updateMemberRole(
+          ctx.prisma,
+          tenantId,
+          input
+        )
         return mapTeamMemberToOutput(member)
-      } catch {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Team member not found",
-        })
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -694,36 +449,12 @@ export const teamsRouter = createTRPCRouter({
     .input(removeMemberInputSchema)
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      // ctx.tenantId is guaranteed non-null by tenantProcedure
       const tenantId = ctx.tenantId!
-
-      // Verify team exists (tenant-scoped)
-      const team = await ctx.prisma.team.findFirst({
-        where: { id: input.teamId, tenantId },
-      })
-      if (!team) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Team not found",
-        })
-      }
-
       try {
-        await ctx.prisma.teamMember.delete({
-          where: {
-            teamId_employeeId: {
-              teamId: input.teamId,
-              employeeId: input.employeeId,
-            },
-          },
-        })
-
+        await teamService.removeMember(ctx.prisma, tenantId, input)
         return { success: true }
-      } catch {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Team member not found",
-        })
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -739,25 +470,16 @@ export const teamsRouter = createTRPCRouter({
     .input(z.object({ employeeId: z.string().uuid() }))
     .output(z.object({ items: z.array(teamOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const memberships = await ctx.prisma.teamMember.findMany({
-        where: { employeeId: input.employeeId },
-        include: {
-          team: {
-            include: {
-              department: {
-                select: { id: true, name: true, code: true },
-              },
-              leader: {
-                select: { id: true, firstName: true, lastName: true },
-              },
-              _count: { select: { members: true } },
-            },
-          },
-        },
-      })
-
-      return {
-        items: memberships.map((m) => mapTeamToOutput(m.team)),
+      try {
+        const teams = await teamService.getByEmployee(
+          ctx.prisma,
+          input.employeeId
+        )
+        return {
+          items: teams.map((t) => mapTeamToOutput(t)),
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 })

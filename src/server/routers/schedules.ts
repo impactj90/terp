@@ -23,10 +23,11 @@
  * @see apps/api/internal/service/scheduler_catalog.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as schedulesService from "@/lib/services/schedules-service"
 
 // --- Permission Constants ---
 
@@ -187,240 +188,6 @@ const updateTaskInputSchema = z.object({
   isEnabled: z.boolean().optional(),
 })
 
-// --- Prisma Include Objects ---
-
-const withTasksSorted = {
-  tasks: { orderBy: { sortOrder: "asc" as const } },
-} as const
-
-const withTaskExecutionsSorted = {
-  taskExecutions: { orderBy: { sortOrder: "asc" as const } },
-} as const
-
-// --- Timing Computation Helpers ---
-
-/**
- * Computes the next run time based on timing type and config.
- * Port of Go computeNextRun (schedule.go lines 434-533).
- */
-function computeNextRun(
-  timingType: string,
-  timingConfig: unknown,
-  now: Date
-): Date | null {
-  const config = timingConfig as {
-    interval?: number
-    time?: string
-    day_of_week?: number
-    day_of_month?: number
-  } | null
-
-  switch (timingType) {
-    case "seconds": {
-      const interval =
-        config?.interval && config.interval > 0 ? config.interval : 60
-      return new Date(now.getTime() + interval * 1000)
-    }
-    case "minutes": {
-      const interval =
-        config?.interval && config.interval > 0 ? config.interval : 5
-      return new Date(now.getTime() + interval * 60 * 1000)
-    }
-    case "hours": {
-      const interval =
-        config?.interval && config.interval > 0 ? config.interval : 1
-      return new Date(now.getTime() + interval * 60 * 60 * 1000)
-    }
-    case "daily":
-      return computeNextDailyRun(now, config?.time)
-    case "weekly":
-      return computeNextWeeklyRun(
-        now,
-        config?.day_of_week ?? 0,
-        config?.time
-      )
-    case "monthly":
-      return computeNextMonthlyRun(
-        now,
-        config?.day_of_month ?? 1,
-        config?.time
-      )
-    case "manual":
-      return null
-    default:
-      return null
-  }
-}
-
-function parseTimeOfDay(timeStr?: string): [number, number] {
-  if (!timeStr) return [2, 0] // default 02:00
-  const parts = timeStr.split(":")
-  return [parseInt(parts[0] ?? "2", 10), parseInt(parts[1] ?? "0", 10)]
-}
-
-function computeNextDailyRun(now: Date, timeStr?: string): Date {
-  const [h, m] = parseTimeOfDay(timeStr)
-  const next = new Date(now)
-  next.setHours(h, m, 0, 0)
-  if (next <= now) {
-    next.setDate(next.getDate() + 1)
-  }
-  return next
-}
-
-function computeNextWeeklyRun(
-  now: Date,
-  dayOfWeek: number,
-  timeStr?: string
-): Date {
-  const [h, m] = parseTimeOfDay(timeStr)
-  const next = new Date(now)
-  next.setHours(h, m, 0, 0)
-  let daysUntil = (dayOfWeek - now.getDay() + 7) % 7
-  if (daysUntil === 0 && next <= now) {
-    daysUntil = 7
-  }
-  next.setDate(next.getDate() + daysUntil)
-  return next
-}
-
-function computeNextMonthlyRun(
-  now: Date,
-  dayOfMonth: number,
-  timeStr?: string
-): Date {
-  const [h, m] = parseTimeOfDay(timeStr)
-  let day = dayOfMonth
-  if (day <= 0) day = 1
-  if (day > 28) day = 28 // safe for all months
-
-  const next = new Date(now.getFullYear(), now.getMonth(), day, h, m, 0, 0)
-  if (next <= now) {
-    next.setMonth(next.getMonth() + 1)
-  }
-  return next
-}
-
-// --- Task Catalog Helper ---
-
-/**
- * Returns the list of available task types with their metadata.
- * Port of Go GetTaskCatalog (scheduler_catalog.go).
- *
- * Only includes task types valid per DB CHECK constraint (migration 000089).
- */
-function getTaskCatalog() {
-  return [
-    {
-      taskType: "calculate_days",
-      name: "Calculate Days",
-      description:
-        "Recalculates daily values for all employees for a given date range. Default: yesterday.",
-      parameterSchema: {
-        type: "object",
-        properties: {
-          date_range: {
-            type: "string",
-            enum: ["yesterday", "today", "last_7_days", "current_month"],
-            description: "Which date range to recalculate",
-            default: "yesterday",
-          },
-        },
-      },
-    },
-    {
-      taskType: "calculate_months",
-      name: "Calculate Months",
-      description:
-        "Recalculates monthly aggregations for a specific year/month. Default: previous month.",
-      parameterSchema: {
-        type: "object",
-        properties: {
-          year: {
-            type: "integer",
-            description: "Target year (default: current year)",
-          },
-          month: {
-            type: "integer",
-            description: "Target month 1-12 (default: previous month)",
-            minimum: 1,
-            maximum: 12,
-          },
-        },
-      },
-    },
-    {
-      taskType: "backup_database",
-      name: "Backup Database",
-      description:
-        "Triggers a database backup (placeholder - logs execution only).",
-      parameterSchema: { type: "object", properties: {} },
-    },
-    {
-      taskType: "send_notifications",
-      name: "Send Notifications",
-      description:
-        "Processes all pending employee message recipients and delivers notifications.",
-      parameterSchema: { type: "object", properties: {} },
-    },
-    {
-      taskType: "export_data",
-      name: "Export Data",
-      description:
-        "Exports data via configured export interfaces (placeholder - logs execution only).",
-      parameterSchema: {
-        type: "object",
-        properties: {
-          export_interface_id: {
-            type: "string",
-            format: "uuid",
-            description: "Export interface to use",
-          },
-        },
-      },
-    },
-    {
-      taskType: "alive_check",
-      name: "Alive Check",
-      description:
-        "Simple heartbeat task that confirms the scheduler is running.",
-      parameterSchema: { type: "object", properties: {} },
-    },
-    {
-      taskType: "execute_macros",
-      name: "Execute Macros",
-      description:
-        "Executes all due weekly and monthly macros for the current date.",
-      parameterSchema: {
-        type: "object",
-        properties: {
-          date: {
-            type: "string",
-            format: "date",
-            description: "Target date (YYYY-MM-DD). Default: today.",
-          },
-        },
-      },
-    },
-    {
-      taskType: "generate_day_plans",
-      name: "Generate Day Plans",
-      description:
-        "Expands tariff week plans into employee day plans for upcoming period.",
-      parameterSchema: {
-        type: "object",
-        properties: {
-          days_ahead: {
-            type: "integer",
-            description: "How many days ahead to generate (default: 14)",
-            default: 14,
-          },
-        },
-      },
-    },
-  ]
-}
-
 // --- Output Mappers ---
 
 function mapTask(t: {
@@ -572,16 +339,14 @@ export const schedulesRouter = createTRPCRouter({
     .input(z.void().optional())
     .output(z.object({ data: z.array(scheduleOutputSchema) }))
     .query(async ({ ctx }) => {
-      const tenantId = ctx.tenantId!
-
-      const schedules = await ctx.prisma.schedule.findMany({
-        where: { tenantId },
-        include: withTasksSorted,
-        orderBy: { name: "asc" },
-      })
-
-      return {
-        data: schedules.map(mapSchedule),
+      try {
+        const schedules = await schedulesService.list(
+          ctx.prisma,
+          ctx.tenantId!
+        )
+        return { data: schedules.map(mapSchedule) }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -595,21 +360,16 @@ export const schedulesRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(scheduleOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const schedule = await ctx.prisma.schedule.findFirst({
-        where: { id: input.id, tenantId },
-        include: withTasksSorted,
-      })
-
-      if (!schedule) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Schedule not found",
-        })
+      try {
+        const schedule = await schedulesService.getById(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id
+        )
+        return mapSchedule(schedule)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapSchedule(schedule)
     }),
 
   /**
@@ -626,70 +386,16 @@ export const schedulesRouter = createTRPCRouter({
     .input(createScheduleInputSchema)
     .output(scheduleOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Trim and validate name
-      const name = input.name.trim()
-      if (name.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Schedule name is required",
-        })
+      try {
+        const schedule = await schedulesService.create(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+        return mapSchedule(schedule)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Check name uniqueness within tenant
-      const existingByName = await ctx.prisma.schedule.findFirst({
-        where: { tenantId, name },
-      })
-      if (existingByName) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Schedule name already exists",
-        })
-      }
-
-      // Compute nextRunAt
-      const isEnabled = input.isEnabled ?? true
-      const timingConfig = (input.timingConfig as object) ?? {}
-      let nextRunAt: Date | null = null
-      if (isEnabled && input.timingType !== "manual") {
-        nextRunAt = computeNextRun(input.timingType, timingConfig, new Date())
-      }
-
-      const schedule = await ctx.prisma.schedule.create({
-        data: {
-          tenantId,
-          name,
-          description: input.description?.trim() || null,
-          timingType: input.timingType,
-          timingConfig,
-          isEnabled,
-          nextRunAt,
-        },
-      })
-
-      // Create tasks if provided
-      if (input.tasks && input.tasks.length > 0) {
-        for (const task of input.tasks) {
-          await ctx.prisma.scheduleTask.create({
-            data: {
-              scheduleId: schedule.id,
-              taskType: task.taskType,
-              sortOrder: task.sortOrder,
-              parameters: (task.parameters as object) ?? {},
-              isEnabled: task.isEnabled ?? true,
-            },
-          })
-        }
-      }
-
-      // Re-fetch with tasks
-      const result = await ctx.prisma.schedule.findFirst({
-        where: { id: schedule.id, tenantId },
-        include: withTasksSorted,
-      })
-
-      return mapSchedule(result!)
     }),
 
   /**
@@ -705,94 +411,16 @@ export const schedulesRouter = createTRPCRouter({
     .input(updateScheduleInputSchema)
     .output(scheduleOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify schedule exists (tenant-scoped)
-      const existing = await ctx.prisma.schedule.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Schedule not found",
-        })
-      }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      if (input.name !== undefined) {
-        const name = input.name.trim()
-        if (name.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Schedule name is required",
-          })
-        }
-        // Check uniqueness if name changed
-        if (name !== existing.name) {
-          const conflict = await ctx.prisma.schedule.findFirst({
-            where: { tenantId, name },
-          })
-          if (conflict) {
-            throw new TRPCError({
-              code: "CONFLICT",
-              message: "Schedule name already exists",
-            })
-          }
-        }
-        data.name = name
-      }
-
-      if (input.description !== undefined) {
-        data.description =
-          input.description === null ? null : input.description.trim()
-      }
-
-      if (input.timingType !== undefined) {
-        data.timingType = input.timingType
-      }
-
-      if (input.timingConfig !== undefined) {
-        data.timingConfig = input.timingConfig as object
-      }
-
-      if (input.isEnabled !== undefined) {
-        data.isEnabled = input.isEnabled
-      }
-
-      // Recompute nextRunAt based on final state
-      const finalEnabled =
-        input.isEnabled !== undefined ? input.isEnabled : existing.isEnabled
-      const finalTimingType =
-        input.timingType !== undefined ? input.timingType : existing.timingType
-      const finalTimingConfig =
-        input.timingConfig !== undefined
-          ? input.timingConfig
-          : existing.timingConfig
-
-      if (!finalEnabled || finalTimingType === "manual") {
-        data.nextRunAt = null
-      } else {
-        data.nextRunAt = computeNextRun(
-          finalTimingType,
-          finalTimingConfig,
-          new Date()
+      try {
+        const schedule = await schedulesService.update(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
         )
+        return mapSchedule(schedule)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      await ctx.prisma.schedule.update({
-        where: { id: input.id },
-        data,
-      })
-
-      // Re-fetch with tasks
-      const result = await ctx.prisma.schedule.findFirst({
-        where: { id: input.id, tenantId },
-        include: withTasksSorted,
-      })
-
-      return mapSchedule(result!)
     }),
 
   /**
@@ -807,25 +435,12 @@ export const schedulesRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify schedule exists (tenant-scoped)
-      const existing = await ctx.prisma.schedule.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Schedule not found",
-        })
+      try {
+        await schedulesService.remove(ctx.prisma, ctx.tenantId!, input.id)
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Hard delete (cascades to tasks and executions via FK)
-      await ctx.prisma.schedule.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 
   // ==================== Task Management ====================
@@ -840,26 +455,15 @@ export const schedulesRouter = createTRPCRouter({
     .input(z.object({ scheduleId: z.string().uuid() }))
     .output(z.object({ data: z.array(scheduleTaskOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify schedule exists in tenant
-      const schedule = await ctx.prisma.schedule.findFirst({
-        where: { id: input.scheduleId, tenantId },
-      })
-      if (!schedule) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Schedule not found",
-        })
-      }
-
-      const tasks = await ctx.prisma.scheduleTask.findMany({
-        where: { scheduleId: input.scheduleId },
-        orderBy: { sortOrder: "asc" },
-      })
-
-      return {
-        data: tasks.map(mapTask),
+      try {
+        const tasks = await schedulesService.listTasks(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.scheduleId
+        )
+        return { data: tasks.map(mapTask) }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -873,30 +477,16 @@ export const schedulesRouter = createTRPCRouter({
     .input(createTaskInputSchema)
     .output(scheduleTaskOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify schedule exists in tenant
-      const schedule = await ctx.prisma.schedule.findFirst({
-        where: { id: input.scheduleId, tenantId },
-      })
-      if (!schedule) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Schedule not found",
-        })
+      try {
+        const task = await schedulesService.createTask(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+        return mapTask(task)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      const task = await ctx.prisma.scheduleTask.create({
-        data: {
-          scheduleId: input.scheduleId,
-          taskType: input.taskType,
-          sortOrder: input.sortOrder,
-          parameters: (input.parameters as object) ?? {},
-          isEnabled: input.isEnabled ?? true,
-        },
-      })
-
-      return mapTask(task)
     }),
 
   /**
@@ -911,55 +501,16 @@ export const schedulesRouter = createTRPCRouter({
     .input(updateTaskInputSchema)
     .output(scheduleTaskOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify schedule exists in tenant
-      const schedule = await ctx.prisma.schedule.findFirst({
-        where: { id: input.scheduleId, tenantId },
-      })
-      if (!schedule) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Schedule not found",
-        })
+      try {
+        const task = await schedulesService.updateTask(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
+        return mapTask(task)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Verify task exists AND belongs to schedule
-      const existing = await ctx.prisma.scheduleTask.findFirst({
-        where: { id: input.taskId, scheduleId: input.scheduleId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Schedule task not found",
-        })
-      }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      if (input.taskType !== undefined) {
-        data.taskType = input.taskType
-      }
-
-      if (input.sortOrder !== undefined) {
-        data.sortOrder = input.sortOrder
-      }
-
-      if (input.parameters !== undefined) {
-        data.parameters = input.parameters as object
-      }
-
-      if (input.isEnabled !== undefined) {
-        data.isEnabled = input.isEnabled
-      }
-
-      const task = await ctx.prisma.scheduleTask.update({
-        where: { id: input.taskId },
-        data,
-      })
-
-      return mapTask(task)
     }),
 
   /**
@@ -979,35 +530,17 @@ export const schedulesRouter = createTRPCRouter({
     )
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify schedule exists in tenant
-      const schedule = await ctx.prisma.schedule.findFirst({
-        where: { id: input.scheduleId, tenantId },
-      })
-      if (!schedule) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Schedule not found",
-        })
+      try {
+        await schedulesService.removeTask(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.scheduleId,
+          input.taskId
+        )
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Verify task exists AND belongs to schedule
-      const existing = await ctx.prisma.scheduleTask.findFirst({
-        where: { id: input.taskId, scheduleId: input.scheduleId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Schedule task not found",
-        })
-      }
-
-      await ctx.prisma.scheduleTask.delete({
-        where: { id: input.taskId },
-      })
-
-      return { success: true }
     }),
 
   // ==================== Execution ====================
@@ -1025,138 +558,17 @@ export const schedulesRouter = createTRPCRouter({
     .input(z.object({ scheduleId: z.string().uuid() }))
     .output(scheduleExecutionOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const userId = ctx.user!.id
-
-      // Fetch schedule with tasks (tenant-scoped)
-      const schedule = await ctx.prisma.schedule.findFirst({
-        where: { id: input.scheduleId, tenantId },
-        include: withTasksSorted,
-      })
-      if (!schedule) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Schedule not found",
-        })
+      try {
+        const execution = await schedulesService.execute(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.scheduleId,
+          ctx.user!.id
+        )
+        return mapExecution(execution)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Check isEnabled
-      if (!schedule.isEnabled) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Cannot execute disabled schedule",
-        })
-      }
-
-      // Create execution record
-      const enabledTasks = schedule.tasks.filter((t) => t.isEnabled)
-
-      const execution = await ctx.prisma.scheduleExecution.create({
-        data: {
-          tenantId,
-          scheduleId: input.scheduleId,
-          status: "running",
-          triggerType: "manual",
-          triggeredBy: userId,
-          startedAt: new Date(),
-          tasksTotal: enabledTasks.length,
-        },
-      })
-
-      // Execute tasks
-      let tasksSucceeded = 0
-      let tasksFailed = 0
-
-      for (const task of enabledTasks) {
-        // Create task execution record
-        const taskExecution = await ctx.prisma.scheduleTaskExecution.create({
-          data: {
-            executionId: execution.id,
-            taskType: task.taskType,
-            sortOrder: task.sortOrder,
-            status: "running",
-            startedAt: new Date(),
-          },
-        })
-
-        // Execute placeholder handler
-        try {
-          const executedAt = new Date().toISOString()
-          const result = {
-            action: task.taskType,
-            status: "executed_manually",
-            executed_at: executedAt,
-          }
-
-          await ctx.prisma.scheduleTaskExecution.update({
-            where: { id: taskExecution.id },
-            data: {
-              status: "completed",
-              completedAt: new Date(),
-              result: result as object,
-            },
-          })
-
-          tasksSucceeded++
-        } catch (err) {
-          const errorMessage =
-            err instanceof Error ? err.message : "Unknown error"
-
-          await ctx.prisma.scheduleTaskExecution.update({
-            where: { id: taskExecution.id },
-            data: {
-              status: "failed",
-              completedAt: new Date(),
-              errorMessage,
-            },
-          })
-
-          tasksFailed++
-        }
-      }
-
-      // Determine overall status
-      let overallStatus: string
-      if (tasksFailed === 0) {
-        overallStatus = "completed"
-      } else if (tasksSucceeded === 0) {
-        overallStatus = "failed"
-      } else {
-        overallStatus = "partial"
-      }
-
-      // Update execution record
-      await ctx.prisma.scheduleExecution.update({
-        where: { id: execution.id },
-        data: {
-          status: overallStatus,
-          completedAt: new Date(),
-          tasksSucceeded,
-          tasksFailed,
-        },
-      })
-
-      // Update schedule's lastRunAt and recompute nextRunAt
-      const nextRunAt = computeNextRun(
-        schedule.timingType,
-        schedule.timingConfig,
-        new Date()
-      )
-      await ctx.prisma.schedule.update({
-        where: { id: input.scheduleId },
-        data: {
-          lastRunAt: new Date(),
-          nextRunAt,
-        },
-      })
-
-      // Re-fetch execution with task executions
-      const result = await ctx.prisma.scheduleExecution.findFirst({
-        where: { id: execution.id, tenantId },
-        include: withTaskExecutionsSorted,
-      })
-
-      return mapExecution(result!)
     }),
 
   /**
@@ -1176,28 +588,16 @@ export const schedulesRouter = createTRPCRouter({
     )
     .output(z.object({ data: z.array(scheduleExecutionOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify schedule exists in tenant
-      const schedule = await ctx.prisma.schedule.findFirst({
-        where: { id: input.scheduleId, tenantId },
-      })
-      if (!schedule) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Schedule not found",
-        })
-      }
-
-      const executions = await ctx.prisma.scheduleExecution.findMany({
-        where: { scheduleId: input.scheduleId },
-        orderBy: { createdAt: "desc" },
-        take: input.limit,
-        include: withTaskExecutionsSorted,
-      })
-
-      return {
-        data: executions.map(mapExecution),
+      try {
+        const executions = await schedulesService.listExecutions(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.scheduleId,
+          input.limit
+        )
+        return { data: executions.map(mapExecution) }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -1211,21 +611,16 @@ export const schedulesRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(scheduleExecutionOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const execution = await ctx.prisma.scheduleExecution.findFirst({
-        where: { id: input.id, tenantId },
-        include: withTaskExecutionsSorted,
-      })
-
-      if (!execution) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Schedule execution not found",
-        })
+      try {
+        const execution = await schedulesService.getExecutionById(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id
+        )
+        return mapExecution(execution)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapExecution(execution)
     }),
 
   // ==================== Task Catalog ====================
@@ -1241,11 +636,11 @@ export const schedulesRouter = createTRPCRouter({
     .output(z.object({ data: z.array(taskCatalogEntrySchema) }))
     .query(async () => {
       return {
-        data: getTaskCatalog(),
+        data: schedulesService.getTaskCatalog(),
       }
     }),
 })
 
 // Export helpers for testing
-export { computeNextRun as _computeNextRun }
-export { getTaskCatalog as _getTaskCatalog }
+export { computeNextRun as _computeNextRun } from "@/lib/services/schedules-service"
+export { getTaskCatalog as _getTaskCatalog } from "@/lib/services/schedules-service"

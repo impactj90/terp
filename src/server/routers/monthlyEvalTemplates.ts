@@ -16,10 +16,11 @@
  * @see apps/api/internal/service/monthly_evaluation_template.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as monthlyEvalTemplateService from "@/lib/services/monthly-eval-template-service"
 
 // --- Permission Constants ---
 
@@ -105,19 +106,16 @@ export const monthlyEvalTemplatesRouter = createTRPCRouter({
     .input(z.object({ isActive: z.boolean().optional() }).optional())
     .output(z.object({ data: z.array(templateOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const where: Record<string, unknown> = { tenantId }
-      if (input?.isActive !== undefined) {
-        where.isActive = input.isActive
+      try {
+        const templates = await monthlyEvalTemplateService.list(
+          ctx.prisma,
+          ctx.tenantId!,
+          input ? { isActive: input.isActive } : undefined
+        )
+        return { data: templates.map(mapTemplate) }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      const templates = await ctx.prisma.monthlyEvaluationTemplate.findMany({
-        where,
-        orderBy: { name: "asc" },
-      })
-
-      return { data: templates.map(mapTemplate) }
     }),
 
   /**
@@ -130,20 +128,16 @@ export const monthlyEvalTemplatesRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(templateOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const template = await ctx.prisma.monthlyEvaluationTemplate.findFirst({
-        where: { id: input.id, tenantId },
-      })
-
-      if (!template) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Monthly evaluation template not found",
-        })
+      try {
+        const template = await monthlyEvalTemplateService.getById(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id
+        )
+        return mapTemplate(template)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapTemplate(template)
     }),
 
   /**
@@ -156,20 +150,15 @@ export const monthlyEvalTemplatesRouter = createTRPCRouter({
     .input(z.void())
     .output(templateOutputSchema)
     .query(async ({ ctx }) => {
-      const tenantId = ctx.tenantId!
-
-      const template = await ctx.prisma.monthlyEvaluationTemplate.findFirst({
-        where: { tenantId, isDefault: true },
-      })
-
-      if (!template) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "No default monthly evaluation template found",
-        })
+      try {
+        const template = await monthlyEvalTemplateService.getDefault(
+          ctx.prisma,
+          ctx.tenantId!
+        )
+        return mapTemplate(template)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapTemplate(template)
     }),
 
   /**
@@ -184,44 +173,16 @@ export const monthlyEvalTemplatesRouter = createTRPCRouter({
     .input(createInputSchema)
     .output(templateOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const name = input.name.trim()
-      if (name.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Template name is required",
-        })
-      }
-
-      const data = {
-        tenantId,
-        name,
-        description: input.description?.trim() ?? "",
-        flextimeCapPositive: input.flextimeCapPositive ?? 0,
-        flextimeCapNegative: input.flextimeCapNegative ?? 0,
-        overtimeThreshold: input.overtimeThreshold ?? 0,
-        maxCarryoverVacation: input.maxCarryoverVacation ?? 0,
-        isDefault: input.isDefault ?? false,
-        isActive: input.isActive ?? true,
-      }
-
-      if (data.isDefault) {
-        // Use transaction to clear existing defaults and create new
-        const template = await ctx.prisma.$transaction(async (tx) => {
-          await tx.monthlyEvaluationTemplate.updateMany({
-            where: { tenantId, isDefault: true },
-            data: { isDefault: false },
-          })
-          return tx.monthlyEvaluationTemplate.create({ data })
-        })
+      try {
+        const template = await monthlyEvalTemplateService.create(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
         return mapTemplate(template)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      const template = await ctx.prisma.monthlyEvaluationTemplate.create({
-        data,
-      })
-      return mapTemplate(template)
     }),
 
   /**
@@ -236,75 +197,16 @@ export const monthlyEvalTemplatesRouter = createTRPCRouter({
     .input(updateInputSchema)
     .output(templateOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify exists with tenant scope
-      const existing = await ctx.prisma.monthlyEvaluationTemplate.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Monthly evaluation template not found",
-        })
-      }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      if (input.name !== undefined) {
-        const name = input.name.trim()
-        if (name.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Template name is required",
-          })
-        }
-        data.name = name
-      }
-
-      if (input.description !== undefined) {
-        data.description = input.description.trim()
-      }
-      if (input.flextimeCapPositive !== undefined) {
-        data.flextimeCapPositive = input.flextimeCapPositive
-      }
-      if (input.flextimeCapNegative !== undefined) {
-        data.flextimeCapNegative = input.flextimeCapNegative
-      }
-      if (input.overtimeThreshold !== undefined) {
-        data.overtimeThreshold = input.overtimeThreshold
-      }
-      if (input.maxCarryoverVacation !== undefined) {
-        data.maxCarryoverVacation = input.maxCarryoverVacation
-      }
-      if (input.isActive !== undefined) {
-        data.isActive = input.isActive
-      }
-      if (input.isDefault !== undefined) {
-        data.isDefault = input.isDefault
-      }
-
-      if (input.isDefault === true) {
-        // Use transaction to clear existing defaults and update
-        const template = await ctx.prisma.$transaction(async (tx) => {
-          await tx.monthlyEvaluationTemplate.updateMany({
-            where: { tenantId, isDefault: true },
-            data: { isDefault: false },
-          })
-          return tx.monthlyEvaluationTemplate.update({
-            where: { id: input.id },
-            data,
-          })
-        })
+      try {
+        const template = await monthlyEvalTemplateService.update(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
         return mapTemplate(template)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      const template = await ctx.prisma.monthlyEvaluationTemplate.update({
-        where: { id: input.id },
-        data,
-      })
-      return mapTemplate(template)
     }),
 
   /**
@@ -319,30 +221,16 @@ export const monthlyEvalTemplatesRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const existing = await ctx.prisma.monthlyEvaluationTemplate.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Monthly evaluation template not found",
-        })
+      try {
+        await monthlyEvalTemplateService.remove(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id
+        )
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      if (existing.isDefault) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Cannot delete default evaluation template",
-        })
-      }
-
-      await ctx.prisma.monthlyEvaluationTemplate.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 
   /**
@@ -357,30 +245,15 @@ export const monthlyEvalTemplatesRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(templateOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify exists with tenant scope
-      const existing = await ctx.prisma.monthlyEvaluationTemplate.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Monthly evaluation template not found",
-        })
+      try {
+        const template = await monthlyEvalTemplateService.setDefault(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id
+        )
+        return mapTemplate(template)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      const template = await ctx.prisma.$transaction(async (tx) => {
-        await tx.monthlyEvaluationTemplate.updateMany({
-          where: { tenantId, isDefault: true },
-          data: { isDefault: false },
-        })
-        return tx.monthlyEvaluationTemplate.update({
-          where: { id: input.id },
-          data: { isDefault: true },
-        })
-      })
-
-      return mapTemplate(template)
     }),
 })

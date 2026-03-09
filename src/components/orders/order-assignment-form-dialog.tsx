@@ -25,7 +25,7 @@ import {
   useCreateOrderAssignment,
   useUpdateOrderAssignment,
   useEmployees,
-} from '@/hooks/api'
+} from '@/hooks'
 interface OrderAssignment {
   id: string
   employeeId?: string

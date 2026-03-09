@@ -9,7 +9,7 @@ import {
   useAdminMonthlyValues,
   useEmployees,
   useDepartments,
-} from '@/hooks/api'
+} from '@/hooks'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   MonthlyValuesDataTable,

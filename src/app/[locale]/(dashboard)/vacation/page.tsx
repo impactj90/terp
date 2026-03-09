@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useEmployeeVacationBalance } from '@/hooks/api'
+import { useEmployeeVacationBalance } from '@/hooks'
 import {
   YearSelector,
   BalanceBreakdown,

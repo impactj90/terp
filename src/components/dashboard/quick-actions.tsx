@@ -8,7 +8,7 @@ import {
   useEmployeeDayView,
   useCreateBooking,
   useBookingTypes,
-} from '@/hooks/api'
+} from '@/hooks'
 import { getToday, formatDate, getCurrentTimeString } from '@/lib/time-utils'
 
 interface QuickActionsProps {

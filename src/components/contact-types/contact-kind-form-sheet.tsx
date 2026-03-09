@@ -20,7 +20,7 @@ import {
 import {
   useCreateContactKind,
   useUpdateContactKind,
-} from '@/hooks/api'
+} from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type ContactType = components['schemas']['ContactType']

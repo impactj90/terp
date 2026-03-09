@@ -5,7 +5,7 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/providers/auth-provider'
 import { useHasPermission } from '@/hooks'
-import { useDepartments, useEmployees } from '@/hooks/api'
+import { useDepartments, useEmployees } from '@/hooks'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   EvaluationsSkeleton,

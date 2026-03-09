@@ -14,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { useRecalculateMonthlyValues } from '@/hooks/api'
+import { useRecalculateMonthlyValues } from '@/hooks'
 
 interface RecalculateDialogProps {
   open: boolean

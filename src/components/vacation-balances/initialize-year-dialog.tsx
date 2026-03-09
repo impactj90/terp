@@ -16,7 +16,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { useInitializeVacationBalances } from '@/hooks/api'
+import { useInitializeVacationBalances } from '@/hooks'
 
 interface InitializeYearDialogProps {
   open: boolean

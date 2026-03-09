@@ -14,7 +14,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { useWeekPlan } from '@/hooks/api'
+import { useWeekPlan } from '@/hooks'
 import { cn } from '@/lib/utils'
 import type { components } from '@/types/legacy-api-types'
 

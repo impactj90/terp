@@ -16,7 +16,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { useShift, useDayPlan } from '@/hooks/api'
+import { useShift, useDayPlan } from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type Shift = components['schemas']['Shift']

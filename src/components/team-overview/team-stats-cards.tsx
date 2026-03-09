@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { Users, Clock, CalendarOff, AlertTriangle } from 'lucide-react'
 import { StatsCard } from '@/components/dashboard'
 import { formatMinutes, formatBalance } from '@/lib/time-utils'
-import type { TeamDailyValuesResult } from '@/hooks/api/use-team-daily-values'
+import type { TeamDailyValuesResult } from '@/hooks/use-team-daily-values'
 import type { components } from '@/types/legacy-api-types'
 
 type TeamMember = components['schemas']['TeamMember']

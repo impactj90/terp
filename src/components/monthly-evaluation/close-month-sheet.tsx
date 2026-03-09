@@ -16,7 +16,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { useCloseMonth } from '@/hooks/api'
+import { useCloseMonth } from '@/hooks'
 
 interface CloseMonthSheetProps {
   open: boolean

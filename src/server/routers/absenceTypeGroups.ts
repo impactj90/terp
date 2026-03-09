@@ -12,10 +12,11 @@
  * @see apps/api/internal/service/absencetypegroup.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as absenceTypeGroupService from "@/lib/services/absence-type-group-service"
 
 // --- Permission Constants ---
 
@@ -101,20 +102,18 @@ export const absenceTypeGroupsRouter = createTRPCRouter({
     )
     .output(z.object({ data: z.array(absenceTypeGroupOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const where: Record<string, unknown> = { tenantId }
-
-      if (input?.isActive !== undefined) {
-        where.isActive = input.isActive
-      }
-
-      const groups = await ctx.prisma.absenceTypeGroup.findMany({
-        where,
-        orderBy: { code: "asc" },
-      })
-
-      return {
-        data: groups.map(mapToOutput),
+      try {
+        const tenantId = ctx.tenantId!
+        const groups = await absenceTypeGroupService.list(
+          ctx.prisma,
+          tenantId,
+          input ?? undefined
+        )
+        return {
+          data: groups.map(mapToOutput),
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -130,19 +129,17 @@ export const absenceTypeGroupsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(absenceTypeGroupOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const group = await ctx.prisma.absenceTypeGroup.findFirst({
-        where: { id: input.id, tenantId },
-      })
-
-      if (!group) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Absence type group not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        const group = await absenceTypeGroupService.getById(
+          ctx.prisma,
+          tenantId,
+          input.id
+        )
+        return mapToOutput(group)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapToOutput(group)
     }),
 
   /**
@@ -159,52 +156,17 @@ export const absenceTypeGroupsRouter = createTRPCRouter({
     .input(createAbsenceTypeGroupInputSchema)
     .output(absenceTypeGroupOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Trim and validate code
-      const code = input.code.trim()
-      if (code.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Absence type group code is required",
-        })
-      }
-
-      // Trim and validate name
-      const name = input.name.trim()
-      if (name.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Absence type group name is required",
-        })
-      }
-
-      // Check code uniqueness within tenant
-      const existingByCode = await ctx.prisma.absenceTypeGroup.findFirst({
-        where: { tenantId, code },
-      })
-      if (existingByCode) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Absence type group code already exists",
-        })
-      }
-
-      // Trim description if provided
-      const description = input.description?.trim() || null
-
-      // Create group -- always isActive: true
-      const group = await ctx.prisma.absenceTypeGroup.create({
-        data: {
+      try {
+        const tenantId = ctx.tenantId!
+        const group = await absenceTypeGroupService.create(
+          ctx.prisma,
           tenantId,
-          code,
-          name,
-          description,
-          isActive: true,
-        },
-      })
-
-      return mapToOutput(group)
+          input
+        )
+        return mapToOutput(group)
+      } catch (err) {
+        handleServiceError(err)
+      }
     }),
 
   /**
@@ -220,79 +182,17 @@ export const absenceTypeGroupsRouter = createTRPCRouter({
     .input(updateAbsenceTypeGroupInputSchema)
     .output(absenceTypeGroupOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify group exists (tenant-scoped)
-      const existing = await ctx.prisma.absenceTypeGroup.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Absence type group not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        const group = await absenceTypeGroupService.update(
+          ctx.prisma,
+          tenantId,
+          input
+        )
+        return mapToOutput(group)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      // Handle code update
-      if (input.code !== undefined) {
-        const code = input.code.trim()
-        if (code.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Absence type group code is required",
-          })
-        }
-        // Check uniqueness only if code actually changed
-        if (code !== existing.code) {
-          const existingByCode = await ctx.prisma.absenceTypeGroup.findFirst({
-            where: {
-              tenantId,
-              code,
-              NOT: { id: input.id },
-            },
-          })
-          if (existingByCode) {
-            throw new TRPCError({
-              code: "CONFLICT",
-              message: "Absence type group code already exists",
-            })
-          }
-        }
-        data.code = code
-      }
-
-      // Handle name update
-      if (input.name !== undefined) {
-        const name = input.name.trim()
-        if (name.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Absence type group name is required",
-          })
-        }
-        data.name = name
-      }
-
-      // Handle description update
-      if (input.description !== undefined) {
-        data.description =
-          input.description === null ? null : input.description.trim()
-      }
-
-      // Handle isActive update
-      if (input.isActive !== undefined) {
-        data.isActive = input.isActive
-      }
-
-      const group = await ctx.prisma.absenceTypeGroup.update({
-        where: { id: input.id },
-        data,
-      })
-
-      return mapToOutput(group)
     }),
 
   /**
@@ -305,24 +205,12 @@ export const absenceTypeGroupsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify group exists (tenant-scoped)
-      const existing = await ctx.prisma.absenceTypeGroup.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Absence type group not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        await absenceTypeGroupService.remove(ctx.prisma, tenantId, input.id)
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Hard delete
-      await ctx.prisma.absenceTypeGroup.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 })

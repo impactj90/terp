@@ -14,18 +14,15 @@
  * @see apps/api/internal/service/bookingreason.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as bookingReasonService from "@/lib/services/booking-reason-service"
 
 // --- Permission Constants ---
 
 const BOOKING_TYPES_MANAGE = permissionIdByKey("booking_types.manage")!
-
-// --- Constants ---
-
-const VALID_REFERENCE_TIMES = ["plan_start", "plan_end", "booking_time"] as const
 
 // --- Output Schemas ---
 
@@ -104,37 +101,6 @@ function mapToOutput(r: {
   }
 }
 
-/**
- * Validates that reference_time and offset_minutes are consistently set.
- * Both must be set or both must be null.
- */
-function validateAdjustmentFields(
-  referenceTime: string | null | undefined,
-  offsetMinutes: number | null | undefined
-): void {
-  const hasRef = referenceTime !== null && referenceTime !== undefined
-  const hasOffset = offsetMinutes !== null && offsetMinutes !== undefined
-  if (hasRef !== hasOffset) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message:
-        "reference_time and offset_minutes must both be set or both be null",
-    })
-  }
-  if (hasRef) {
-    if (
-      !VALID_REFERENCE_TIMES.includes(
-        referenceTime as (typeof VALID_REFERENCE_TIMES)[number]
-      )
-    ) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: `reference_time must be one of: ${VALID_REFERENCE_TIMES.join(", ")}`,
-      })
-    }
-  }
-}
-
 // --- Router ---
 
 export const bookingReasonsRouter = createTRPCRouter({
@@ -157,20 +123,18 @@ export const bookingReasonsRouter = createTRPCRouter({
     )
     .output(z.object({ data: z.array(bookingReasonOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const where: Record<string, unknown> = { tenantId }
-
-      if (input?.bookingTypeId !== undefined) {
-        where.bookingTypeId = input.bookingTypeId
-      }
-
-      const reasons = await ctx.prisma.bookingReason.findMany({
-        where,
-        orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
-      })
-
-      return {
-        data: reasons.map(mapToOutput),
+      try {
+        const tenantId = ctx.tenantId!
+        const reasons = await bookingReasonService.list(
+          ctx.prisma,
+          tenantId,
+          input ?? undefined
+        )
+        return {
+          data: reasons.map(mapToOutput),
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -186,19 +150,17 @@ export const bookingReasonsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(bookingReasonOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const reason = await ctx.prisma.bookingReason.findFirst({
-        where: { id: input.id, tenantId },
-      })
-
-      if (!reason) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Booking reason not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        const reason = await bookingReasonService.getById(
+          ctx.prisma,
+          tenantId,
+          input.id
+        )
+        return mapToOutput(reason)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapToOutput(reason)
     }),
 
   /**
@@ -216,59 +178,17 @@ export const bookingReasonsRouter = createTRPCRouter({
     .input(createBookingReasonInputSchema)
     .output(bookingReasonOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Trim and validate code
-      const code = input.code.trim()
-      if (code.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Booking reason code is required",
-        })
-      }
-
-      // Trim and validate label
-      const label = input.label.trim()
-      if (label.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Booking reason label is required",
-        })
-      }
-
-      // Validate adjustment fields consistency
-      validateAdjustmentFields(
-        input.referenceTime ?? null,
-        input.offsetMinutes ?? null
-      )
-
-      // Check code uniqueness within (tenantId, bookingTypeId)
-      const existingByCode = await ctx.prisma.bookingReason.findFirst({
-        where: { tenantId, bookingTypeId: input.bookingTypeId, code },
-      })
-      if (existingByCode) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Booking reason code already exists for this booking type",
-        })
-      }
-
-      // Create booking reason -- always isActive: true
-      const reason = await ctx.prisma.bookingReason.create({
-        data: {
+      try {
+        const tenantId = ctx.tenantId!
+        const reason = await bookingReasonService.create(
+          ctx.prisma,
           tenantId,
-          bookingTypeId: input.bookingTypeId,
-          code,
-          label,
-          isActive: true,
-          sortOrder: input.sortOrder ?? 0,
-          referenceTime: input.referenceTime || null,
-          offsetMinutes: input.offsetMinutes ?? null,
-          adjustmentBookingTypeId: input.adjustmentBookingTypeId || null,
-        },
-      })
-
-      return mapToOutput(reason)
+          input
+        )
+        return mapToOutput(reason)
+      } catch (err) {
+        handleServiceError(err)
+      }
     }),
 
   /**
@@ -287,80 +207,17 @@ export const bookingReasonsRouter = createTRPCRouter({
     .input(updateBookingReasonInputSchema)
     .output(bookingReasonOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify reason exists (tenant-scoped)
-      const existing = await ctx.prisma.bookingReason.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Booking reason not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        const reason = await bookingReasonService.update(
+          ctx.prisma,
+          tenantId,
+          input
+        )
+        return mapToOutput(reason)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      // Handle label update
-      if (input.label !== undefined) {
-        const label = input.label.trim()
-        if (label.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Booking reason label is required",
-          })
-        }
-        data.label = label
-      }
-
-      // Handle isActive update
-      if (input.isActive !== undefined) {
-        data.isActive = input.isActive
-      }
-
-      // Handle sortOrder update
-      if (input.sortOrder !== undefined) {
-        data.sortOrder = input.sortOrder
-      }
-
-      // Handle clearAdjustment flag -- clears all three adjustment fields
-      if (input.clearAdjustment) {
-        data.referenceTime = null
-        data.offsetMinutes = null
-        data.adjustmentBookingTypeId = null
-      } else {
-        // Handle individual adjustment field updates
-        if (input.referenceTime !== undefined) {
-          data.referenceTime = input.referenceTime
-        }
-        if (input.offsetMinutes !== undefined) {
-          data.offsetMinutes = input.offsetMinutes
-        }
-        if (input.adjustmentBookingTypeId !== undefined) {
-          data.adjustmentBookingTypeId = input.adjustmentBookingTypeId
-        }
-      }
-
-      // Re-validate adjustment consistency after building update data
-      // Merge existing values with update values to check final state
-      const finalRefTime =
-        "referenceTime" in data
-          ? (data.referenceTime as string | null)
-          : existing.referenceTime
-      const finalOffset =
-        "offsetMinutes" in data
-          ? (data.offsetMinutes as number | null)
-          : existing.offsetMinutes
-      validateAdjustmentFields(finalRefTime, finalOffset)
-
-      const reason = await ctx.prisma.bookingReason.update({
-        where: { id: input.id },
-        data,
-      })
-
-      return mapToOutput(reason)
     }),
 
   /**
@@ -373,24 +230,12 @@ export const bookingReasonsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify reason exists (tenant-scoped)
-      const existing = await ctx.prisma.bookingReason.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Booking reason not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        await bookingReasonService.remove(ctx.prisma, tenantId, input.id)
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Hard delete
-      await ctx.prisma.bookingReason.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 })

@@ -12,10 +12,11 @@
  * @see apps/api/internal/service/absencetype.go
  */
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as absenceTypeService from "@/lib/services/absence-type-service"
 
 // --- Permission Constants ---
 
@@ -95,23 +96,6 @@ const updateAbsenceTypeInputSchema = z.object({
 // --- Helpers ---
 
 /**
- * Code prefix validation per category.
- * U = vacation/unpaid, K = illness, S = special
- */
-const CATEGORY_CODE_PREFIX: Record<string, string> = {
-  vacation: "U",
-  unpaid: "U",
-  illness: "K",
-  special: "S",
-}
-
-function validateCodePrefix(code: string, category: string): boolean {
-  const requiredPrefix = CATEGORY_CODE_PREFIX[category]
-  if (!requiredPrefix) return true
-  return code.toUpperCase().startsWith(requiredPrefix)
-}
-
-/**
  * Maps a Prisma AbsenceType record to the output schema shape.
  */
 function mapToOutput(a: {
@@ -185,33 +169,16 @@ export const absenceTypesRouter = createTRPCRouter({
     )
     .output(z.object({ data: z.array(absenceTypeOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Build the where clause -- include tenant types and system types (tenantId = null)
-      const where: Record<string, unknown> = {
-        OR: [{ tenantId }, { tenantId: null }],
-      }
-
-      if (input?.isActive !== undefined) {
-        where.isActive = input.isActive
-      }
-
-      if (input?.category !== undefined) {
-        where.category = input.category
-      }
-
-      // If includeSystem is explicitly false, exclude system types
-      if (input?.includeSystem === false) {
-        where.isSystem = false
-      }
-
-      const types = await ctx.prisma.absenceType.findMany({
-        where,
-        orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
-      })
-
-      return {
-        data: types.map(mapToOutput),
+      try {
+        const tenantId = ctx.tenantId!
+        const types = await absenceTypeService.list(ctx.prisma, tenantId, {
+          isActive: input?.isActive,
+          category: input?.category,
+          includeSystem: input?.includeSystem,
+        })
+        return { data: types.map(mapToOutput) }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -227,22 +194,17 @@ export const absenceTypesRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(absenceTypeOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-      const type = await ctx.prisma.absenceType.findFirst({
-        where: {
-          id: input.id,
-          OR: [{ tenantId }, { tenantId: null }],
-        },
-      })
-
-      if (!type) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Absence type not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        const type = await absenceTypeService.getById(
+          ctx.prisma,
+          tenantId,
+          input.id
+        )
+        return mapToOutput(type)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapToOutput(type)
     }),
 
   /**
@@ -260,73 +222,17 @@ export const absenceTypesRouter = createTRPCRouter({
     .input(createAbsenceTypeInputSchema)
     .output(absenceTypeOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Trim and validate code
-      const code = input.code.trim()
-      if (code.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Absence type code is required",
-        })
-      }
-
-      // Trim and validate name
-      const name = input.name.trim()
-      if (name.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Absence type name is required",
-        })
-      }
-
-      // Validate code prefix matches category
-      if (!validateCodePrefix(code, input.category)) {
-        const expectedPrefix = CATEGORY_CODE_PREFIX[input.category] ?? ""
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `Code must start with '${expectedPrefix}' for category '${input.category}'`,
-        })
-      }
-
-      // Check code uniqueness within tenant
-      const existingByCode = await ctx.prisma.absenceType.findFirst({
-        where: { tenantId, code },
-      })
-      if (existingByCode) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Absence type code already exists",
-        })
-      }
-
-      // Trim description if provided
-      const description = input.description?.trim() || null
-
-      // Create type -- always isSystem: false, isActive: true
-      const type = await ctx.prisma.absenceType.create({
-        data: {
+      try {
+        const tenantId = ctx.tenantId!
+        const type = await absenceTypeService.create(
+          ctx.prisma,
           tenantId,
-          code,
-          name,
-          description,
-          category: input.category,
-          portion: input.portion,
-          holidayCode: input.holidayCode || null,
-          priority: input.priority,
-          deductsVacation: input.deductsVacation,
-          requiresApproval: input.requiresApproval,
-          requiresDocument: input.requiresDocument,
-          color: input.color,
-          sortOrder: input.sortOrder,
-          isSystem: false,
-          isActive: true,
-          absenceTypeGroupId: input.absenceTypeGroupId || undefined,
-          calculationRuleId: input.calculationRuleId || undefined,
-        },
-      })
-
-      return mapToOutput(type)
+          input
+        )
+        return mapToOutput(type)
+      } catch (err) {
+        handleServiceError(err)
+      }
     }),
 
   /**
@@ -342,90 +248,17 @@ export const absenceTypesRouter = createTRPCRouter({
     .input(updateAbsenceTypeInputSchema)
     .output(absenceTypeOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify type exists (tenant-scoped)
-      const existing = await ctx.prisma.absenceType.findFirst({
-        where: {
-          id: input.id,
-          OR: [{ tenantId }, { tenantId: null }],
-        },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Absence type not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        const type = await absenceTypeService.update(
+          ctx.prisma,
+          tenantId,
+          input
+        )
+        return mapToOutput(type)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Block modification of system types
-      if (existing.isSystem) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Cannot modify system absence type",
-        })
-      }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      // Handle name update
-      if (input.name !== undefined) {
-        const name = input.name.trim()
-        if (name.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Absence type name is required",
-          })
-        }
-        data.name = name
-      }
-
-      // Handle description update
-      if (input.description !== undefined) {
-        data.description =
-          input.description === null ? null : input.description.trim()
-      }
-
-      // Handle category update
-      if (input.category !== undefined) {
-        // Validate code prefix matches new category
-        if (!validateCodePrefix(existing.code, input.category)) {
-          const expectedPrefix = CATEGORY_CODE_PREFIX[input.category] ?? ""
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `Code '${existing.code}' does not match prefix '${expectedPrefix}' for category '${input.category}'`,
-          })
-        }
-        data.category = input.category
-      }
-
-      // Handle simple field updates
-      if (input.portion !== undefined) data.portion = input.portion
-      if (input.priority !== undefined) data.priority = input.priority
-      if (input.deductsVacation !== undefined)
-        data.deductsVacation = input.deductsVacation
-      if (input.requiresApproval !== undefined)
-        data.requiresApproval = input.requiresApproval
-      if (input.requiresDocument !== undefined)
-        data.requiresDocument = input.requiresDocument
-      if (input.color !== undefined) data.color = input.color
-      if (input.sortOrder !== undefined) data.sortOrder = input.sortOrder
-      if (input.isActive !== undefined) data.isActive = input.isActive
-
-      // Handle nullable FK updates
-      if (input.holidayCode !== undefined) data.holidayCode = input.holidayCode
-      if (input.absenceTypeGroupId !== undefined)
-        data.absenceTypeGroupId = input.absenceTypeGroupId
-      if (input.calculationRuleId !== undefined)
-        data.calculationRuleId = input.calculationRuleId
-
-      const type = await ctx.prisma.absenceType.update({
-        where: { id: input.id },
-        data,
-      })
-
-      return mapToOutput(type)
     }),
 
   /**
@@ -441,47 +274,12 @@ export const absenceTypesRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Verify type exists (tenant-scoped)
-      const existing = await ctx.prisma.absenceType.findFirst({
-        where: {
-          id: input.id,
-          OR: [{ tenantId }, { tenantId: null }],
-        },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Absence type not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        await absenceTypeService.remove(ctx.prisma, tenantId, input.id)
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Block deletion of system types
-      if (existing.isSystem) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Cannot delete system absence type",
-        })
-      }
-
-      // Check usage in absence_days table
-      const absenceDayCount = await ctx.prisma.absenceDay.count({
-        where: { absenceTypeId: input.id },
-      })
-      if (absenceDayCount > 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message:
-            "Cannot delete absence type that is in use by absence days",
-        })
-      }
-
-      // Hard delete
-      await ctx.prisma.absenceType.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 })

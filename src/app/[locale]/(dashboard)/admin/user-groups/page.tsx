@@ -18,7 +18,7 @@ import {
   useUpdateUserGroup,
   useUserGroups,
   useUsers,
-} from '@/hooks/api'
+} from '@/hooks'
 import { UserGroupFormSheet } from '@/components/user-groups'
 import { Button } from '@/components/ui/button'
 import {

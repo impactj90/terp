@@ -16,7 +16,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { useCostCenter } from '@/hooks/api'
+import { useCostCenter } from '@/hooks'
 import type { components } from '@/types/legacy-api-types'
 
 type CostCenter = components['schemas']['CostCenter']
