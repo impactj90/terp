@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
-import { createCallerFactory } from "../trpc"
+import { createCallerFactory } from "@/trpc/init"
 import { notificationsRouter } from "../routers/notifications"
 import {
   createMockContext,

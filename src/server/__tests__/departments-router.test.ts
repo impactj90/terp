@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
-import { createCallerFactory } from "../trpc"
+import { createCallerFactory } from "@/trpc/init"
 import { departmentsRouter } from "../routers/departments"
 import { buildDepartmentTree } from "../routers/departments"
 import type { DepartmentTreeNode } from "../routers/departments"

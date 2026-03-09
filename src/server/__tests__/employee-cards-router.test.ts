@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
-import { createCallerFactory } from "../trpc"
+import { createCallerFactory } from "@/trpc/init"
 import { employeeCardsRouter } from "../routers/employeeCards"
 import { permissionIdByKey } from "../lib/permission-catalog"
 import {

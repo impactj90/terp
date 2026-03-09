@@ -9,7 +9,7 @@
  * - usePermissionChecker hook (catalog lookup)
  */
 import { z } from "zod"
-import { createTRPCRouter, protectedProcedure } from "../trpc"
+import { createTRPCRouter, protectedProcedure } from "@/trpc/init"
 import { listPermissions } from "../lib/permission-catalog"
 
 const permissionSchema = z.object({

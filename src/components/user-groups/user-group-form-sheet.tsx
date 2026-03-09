@@ -20,7 +20,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { useCreateUserGroup, usePermissions, useUpdateUserGroup } from '@/hooks/api'
-import type { AppRouter } from '@/server/root'
+import type { AppRouter } from '@/trpc/routers/_app'
 import type { inferRouterOutputs } from '@trpc/server'
 
 const CATEGORY_DEFINITIONS = [

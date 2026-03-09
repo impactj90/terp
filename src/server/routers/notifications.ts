@@ -19,7 +19,7 @@
  */
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
-import { createTRPCRouter, tenantProcedure } from "../trpc"
+import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 
 // No permission middleware -- notifications are user-scoped.
 // Any authenticated user with tenant access can manage their own notifications.

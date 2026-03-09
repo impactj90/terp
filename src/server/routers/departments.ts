@@ -15,8 +15,8 @@
  */
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
-import { createTRPCRouter, tenantProcedure } from "../trpc"
-import type { TRPCContext } from "../trpc"
+import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
+import type { TRPCContext } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
 

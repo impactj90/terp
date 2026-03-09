@@ -1,4 +1,6 @@
-export { appRouter, type AppRouter, createCaller } from "./root"
+// Re-export from new locations for backward compatibility
+// This file will be removed in TICKET-326 (final cleanup)
+export { appRouter, type AppRouter, createCaller } from "@/trpc/routers/_app"
 export {
   createTRPCContext,
   createTRPCRouter,
@@ -6,7 +8,7 @@ export {
   publicProcedure,
   protectedProcedure,
   tenantProcedure,
-} from "./trpc"
+} from "@/trpc/init"
 export {
   requirePermission,
   requireSelfOrPermission,

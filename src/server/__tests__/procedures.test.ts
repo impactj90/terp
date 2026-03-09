@@ -6,8 +6,8 @@ import {
   protectedProcedure,
   tenantProcedure,
   createCallerFactory,
-} from "../trpc"
-import type { TRPCContext, ContextUser } from "../trpc"
+} from "@/trpc/init"
+import type { TRPCContext, ContextUser } from "@/trpc/init"
 import type { Session, User as SupabaseUser } from "@supabase/supabase-js"
 
 /**

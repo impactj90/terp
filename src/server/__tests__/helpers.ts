@@ -4,7 +4,7 @@
  * Provides mock factories for ContextUser, Session, TRPCContext, and UserGroup
  * to avoid duplication across test files.
  */
-import type { TRPCContext, ContextUser } from "../trpc"
+import type { TRPCContext, ContextUser } from "@/trpc/init"
 import type { Session, User as SupabaseUser } from "@supabase/supabase-js"
 import type {
   UserGroup,

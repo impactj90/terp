@@ -16,7 +16,7 @@
  * @see apps/api/internal/handler/evaluation.go
  */
 import { z } from "zod"
-import { createTRPCRouter, tenantProcedure } from "../trpc"
+import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import {
   requirePermission,
   applyDataScope,

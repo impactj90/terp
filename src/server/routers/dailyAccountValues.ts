@@ -13,7 +13,7 @@
  * @see apps/api/internal/repository/daily_account_value.go
  */
 import { z } from "zod"
-import { createTRPCRouter, tenantProcedure } from "../trpc"
+import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
 

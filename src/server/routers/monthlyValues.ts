@@ -20,7 +20,7 @@
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { Decimal } from "@prisma/client/runtime/client"
-import { createTRPCRouter, tenantProcedure } from "../trpc"
+import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import {
   requirePermission,
   requireEmployeePermission,

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { createTRPCRouter, createCallerFactory } from "../trpc"
+import { createTRPCRouter, createCallerFactory } from "@/trpc/init"
 import { permissionsRouter } from "../routers/permissions"
 import { ALL_PERMISSIONS } from "../lib/permission-catalog"
 import {

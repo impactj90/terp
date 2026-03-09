@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { createCaller } from "../root"
-import type { TRPCContext } from "../trpc"
+import type { TRPCContext } from "@/trpc/init"
 
 function createMockContext(overrides: Partial<TRPCContext> = {}): TRPCContext {
   return {

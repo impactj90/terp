@@ -6,7 +6,7 @@ import {
   protectedProcedure,
   tenantProcedure,
   createCallerFactory,
-} from "../trpc"
+} from "@/trpc/init"
 import {
   requirePermission,
   requireSelfOrPermission,

@@ -5,7 +5,7 @@
  * end-to-end, including database connectivity.
  */
 import { z } from "zod"
-import { createTRPCRouter, publicProcedure } from "../trpc"
+import { createTRPCRouter, publicProcedure } from "@/trpc/init"
 
 export const healthRouter = createTRPCRouter({
   check: publicProcedure

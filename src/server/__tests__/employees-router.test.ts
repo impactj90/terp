@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest"
 import { Prisma } from "@/generated/prisma/client"
-import { createCallerFactory } from "../trpc"
+import { createCallerFactory } from "@/trpc/init"
 import { employeesRouter } from "../routers/employees"
 import { permissionIdByKey } from "../lib/permission-catalog"
 import {

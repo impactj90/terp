@@ -16,7 +16,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { useChangeUserPassword } from '@/hooks/api'
-import type { AppRouter } from '@/server/root'
+import type { AppRouter } from '@/trpc/routers/_app'
 import type { inferRouterOutputs } from '@trpc/server'
 
 type RouterOutput = inferRouterOutputs<AppRouter>

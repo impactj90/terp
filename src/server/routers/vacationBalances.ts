@@ -16,7 +16,7 @@
 import { z } from "zod"
 import type { Prisma } from "@/generated/prisma/client"
 import { TRPCError } from "@trpc/server"
-import { createTRPCRouter, tenantProcedure } from "../trpc"
+import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import {
   requirePermission,
   applyDataScope,

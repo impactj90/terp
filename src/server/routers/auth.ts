@@ -12,7 +12,7 @@
  * - POST /auth/logout
  */
 import { z } from "zod"
-import { createTRPCRouter, protectedProcedure } from "../trpc"
+import { createTRPCRouter, protectedProcedure } from "@/trpc/init"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { resolvePermissions, isUserAdmin } from "../lib/permissions"
 

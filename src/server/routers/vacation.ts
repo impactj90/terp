@@ -20,7 +20,7 @@
 import { z } from "zod"
 import type { PrismaClient } from "@/generated/prisma/client"
 import { TRPCError } from "@trpc/server"
-import { createTRPCRouter, tenantProcedure } from "../trpc"
+import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "../middleware/authorization"
 import { permissionIdByKey } from "../lib/permission-catalog"
 import { calculateVacation } from "../lib/vacation-calculation"

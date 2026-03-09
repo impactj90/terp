@@ -14,7 +14,7 @@
  * be adopted incrementally in future tickets.
  */
 import "server-only"
-import { createCaller } from "@/server"
+import { createCaller } from "@/trpc/routers/_app"
 
 /**
  * Creates a server-side tRPC caller with a minimal context.

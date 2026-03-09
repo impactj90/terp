@@ -7,8 +7,8 @@
  * @see https://trpc.io/docs/server/adapters/fetch
  */
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch"
-import { appRouter } from "@/server/root"
-import { createTRPCContext } from "@/server/trpc"
+import { appRouter } from "@/trpc/routers/_app"
+import { createTRPCContext } from "@/trpc/init"
 
 const handler = (req: Request) =>
   fetchRequestHandler({
