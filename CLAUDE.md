@@ -4,18 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Structure
 
-Go monorepo using `go.work` workspace:
+Next.js app with tRPC backend:
 
-- `apps/api/` - Go backend (Chi router, GORM ORM, PostgreSQL)
-- `apps/web/` - Next.js frontend (placeholder)
-- `api/` - Multi-file OpenAPI spec (Swagger 2.0)
-- `db/migrations/` - SQL migrations (golang-migrate)
+- `src/` - Next.js app (tRPC API, Prisma ORM, Supabase Auth, PostgreSQL)
+- `supabase/` - Supabase configuration and migrations
 - `docker/` - Docker Compose dev environment
 
 ## Commands
 
 ```bash
-make install-tools    # Install dev tools (run first on new machine)
+make install          # Install dependencies
 make dev              # Start Supabase + Docker services
 make dev-down         # Stop Docker services (Supabase keeps running)
 make dev-logs         # Follow logs
@@ -25,42 +23,47 @@ make db-stop          # Stop Supabase
 make db-reset         # Reset DB (drops all data, reruns migrations + seed)
 make db-status        # Show Supabase connection info
 make db-migrate-new name=foo  # Create new Supabase migration
-make swagger-bundle   # Bundle multi-file OpenAPI into single file
-make generate         # Generate Go models from OpenAPI spec
-make test             # Run tests with race detection
-make lint             # Run golangci-lint
-make fmt              # Format code (gofmt + goimports)
+make db-generate      # Regenerate Prisma client
+make test             # Run tests
+make lint             # Run ESLint
+make typecheck        # Type-check with TypeScript
+make build            # Build the Next.js app
 ```
 
-Run single test: `cd apps/api && go test -v -run TestName ./internal/service/...`
+Run single test: `pnpm vitest run src/server/routers/__tests__/TestName.test.ts`
 
 ## Architecture
 
-Clean architecture in `apps/api/internal/`:
+Next.js App Router with tRPC:
 
 ```
-handler/   → HTTP handlers (request parsing, response formatting)
-service/   → Business logic (validation, orchestration)
-repository/→ Data access (GORM queries, DB wrapper)
-model/     → Domain models (GORM structs)
-middleware/→ Auth, tenant context injection
-auth/      → JWT management, dev user simulation
-config/    → Environment config loading
+src/trpc/routers/     -> tRPC routers (thin wrappers calling services)
+src/trpc/init.ts      -> tRPC context, router factory, middleware
+src/trpc/routers/_app.ts -> Root router (merges all sub-routers)
+src/trpc/errors.ts    -> handleServiceError utility
+src/lib/services/     -> Service + repository files (business logic + data access)
+src/lib/auth/         -> Auth helpers, permissions, authorization middleware
+src/app/api/trpc/     -> Next.js API route handler for tRPC
+src/app/api/cron/     -> Vercel Cron job routes
+src/hooks/            -> React hooks wrapping tRPC queries/mutations
+src/components/       -> React components (UI)
+src/providers/        -> Context providers (auth, tenant, theme)
+src/trpc/client.tsx   -> tRPC React provider
+src/trpc/server.tsx   -> Server-side tRPC caller
+prisma/schema.prisma  -> Database schema (Prisma)
 ```
 
-**Multi-tenancy**: Routes require `X-Tenant-ID` header. Tenant context injected via middleware.
+**Multi-tenancy**: tRPC context injects tenant from `x-tenant-id` header. Middleware validates access.
 
-**Route registration**: Handlers have `Register*Routes(r chi.Router, h *Handler)` functions called from `cmd/server/main.go`.
+**Auth**: Supabase Auth with JWT. tRPC context extracts user from Supabase session.
 
-## API Design
-
-- OpenAPI-first: Define endpoints in `api/paths/*.yaml`, schemas in `api/schemas/*.yaml`
-- Bundle with `make swagger-bundle` → outputs `api/openapi.bundled.yaml`
-- Generate Go models with `make generate` → outputs to `apps/api/gen/models/`
-- Swagger UI available at `/swagger/` in dev mode
+**Database**: Prisma ORM with PostgreSQL (Supabase). Migrations via `supabase migration new`.
 
 ## Important
 
-- When creating handlers always make sure that they match the openapi spec before implementing them.
-- Always you the generated models from the `gen/models` folder when dealing with request and response payloads instead of creating new structs.
-- If you have any open questions about implementing/researching a new feature from a ticket,
+- All new backend logic uses service + repository pattern in `src/lib/services/`
+- tRPC routers in `src/trpc/routers/` are thin wrappers (input validation + call service)
+- Use Prisma client for all database access (not raw SQL unless necessary)
+- Frontend hooks that wrap tRPC calls go in `src/hooks/`
+- Types come from Prisma generated client (`@prisma/client`) for DB models
+- Legacy OpenAPI types exist in `src/types/legacy-api-types.ts` -- prefer Prisma types for new code

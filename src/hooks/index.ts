@@ -1,0 +1,10 @@
+// Auth hooks (User type re-exported from auth-provider for backward compatibility)
+export { type User } from './use-auth'
+export {
+  useHasRole,
+  useHasMinRole,
+  useUserRole,
+  USER_ROLES,
+  type UserRole,
+} from './use-has-role'
+export { useHasPermission, usePermissionChecker } from './use-has-permission'

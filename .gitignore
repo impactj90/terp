@@ -1,37 +1,11 @@
-# Binaries
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-bin/
-dist/
-
-# Go build artifacts
-*.o
-*.a
-*.test
-*.out
-*.prof
-coverage.out
-coverage.html
-
-# Go workspace (optional - uncomment if you don't want to commit)
-# go.work
-# go.work.sum
-
-# Dependency directories
-vendor/
-
 # Next.js
-apps/web/.next/
-apps/web/out/
-apps/web/node_modules/
-apps/web/.pnpm-store/
+.next/
+out/
 node_modules/
+.pnpm-store/
 
 # Prisma generated client (regenerate with `pnpm db:generate`)
-apps/web/src/generated/
+src/generated/
 
 # Next.js build output
 .vercel
@@ -85,14 +59,7 @@ tmp/
 temp/
 *.tmp
 *.temp
-apps/web/tsconfig.tsbuildinfo
-
-# Generated OpenAPI bundle (regenerate with make swagger-bundle)
-# Uncomment if you prefer to regenerate rather than commit
-# api/openapi.bundled.yaml
-
-# Air (Go hot reload)
-tmp/
+tsconfig.tsbuildinfo
 
 # Database files
 *.db
