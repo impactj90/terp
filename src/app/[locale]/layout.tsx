@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import '../globals.css'
-import { TRPCReactProvider } from '@/trpc/provider'
+import { TRPCReactProvider } from '@/trpc/client'
 import { AuthProvider } from '@/providers/auth-provider'
 import { ThemeProvider } from '@/providers/theme-provider'
 import { NextIntlClientProvider } from 'next-intl'

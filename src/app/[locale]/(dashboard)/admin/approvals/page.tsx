@@ -84,7 +84,7 @@ export default function ApprovalsPage() {
     enabled,
   })
 
-  const teams = (teamsData?.items ?? []) as Team[]
+  const teams = (teamsData?.items ?? []) as unknown as Team[]
 
   const { data: teamMembersData, isLoading: teamMembersLoading } =
     useTeamMembers(teamId ?? '', enabled && !!teamId)
@@ -93,8 +93,8 @@ export default function ApprovalsPage() {
     const ids = new Set<string>()
     const members = teamMembersData?.items ?? []
     for (const member of members) {
-      if (member.employee_id) {
-        ids.add(member.employee_id)
+      if (member.employeeId) {
+        ids.add(member.employeeId)
       }
     }
     return ids

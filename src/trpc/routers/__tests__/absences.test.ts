@@ -6,7 +6,6 @@
  */
 
 import { describe, it, expect } from "vitest"
-import { TRPCError } from "@trpc/server"
 import { Decimal } from "@prisma/client/runtime/client"
 import {
   mapAbsenceDayToOutput,
@@ -14,6 +13,7 @@ import {
   checkAbsenceDataScope,
   shouldSkipDate,
 } from "../absences"
+import { AbsenceForbiddenError } from "@/lib/services/absences-service"
 import type { DataScope } from "@/lib/auth/middleware"
 
 // --- Test Data Factories ---
@@ -257,12 +257,12 @@ describe("checkAbsenceDataScope", () => {
       employeeId: EMPLOYEE_ID,
       employee: { departmentId: "other-dept" },
     }
-    expect(() => checkAbsenceDataScope(scope, item)).toThrow(TRPCError)
+    expect(() => checkAbsenceDataScope(scope, item)).toThrow(AbsenceForbiddenError)
     try {
       checkAbsenceDataScope(scope, item)
     } catch (err) {
-      expect((err as TRPCError).code).toBe("FORBIDDEN")
-      expect((err as TRPCError).message).toBe(
+      expect((err as AbsenceForbiddenError).name).toBe("AbsenceForbiddenError")
+      expect((err as AbsenceForbiddenError).message).toBe(
         "Absence not within data scope"
       )
     }
@@ -277,7 +277,7 @@ describe("checkAbsenceDataScope", () => {
       employeeId: EMPLOYEE_ID,
       employee: { departmentId: null },
     }
-    expect(() => checkAbsenceDataScope(scope, item)).toThrow(TRPCError)
+    expect(() => checkAbsenceDataScope(scope, item)).toThrow(AbsenceForbiddenError)
   })
 
   it("throws FORBIDDEN when employee relation is missing in department scope", () => {
@@ -286,7 +286,7 @@ describe("checkAbsenceDataScope", () => {
       departmentIds: [DEPT_ID],
     })
     const item = { employeeId: EMPLOYEE_ID }
-    expect(() => checkAbsenceDataScope(scope, item)).toThrow(TRPCError)
+    expect(() => checkAbsenceDataScope(scope, item)).toThrow(AbsenceForbiddenError)
   })
 
   it("passes when employee is in employee scope", () => {
@@ -304,11 +304,11 @@ describe("checkAbsenceDataScope", () => {
       employeeIds: ["other-emp"],
     })
     const item = { employeeId: EMPLOYEE_ID }
-    expect(() => checkAbsenceDataScope(scope, item)).toThrow(TRPCError)
+    expect(() => checkAbsenceDataScope(scope, item)).toThrow(AbsenceForbiddenError)
     try {
       checkAbsenceDataScope(scope, item)
     } catch (err) {
-      expect((err as TRPCError).code).toBe("FORBIDDEN")
+      expect((err as AbsenceForbiddenError).name).toBe("AbsenceForbiddenError")
     }
   })
 })

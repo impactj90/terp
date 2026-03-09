@@ -40,13 +40,13 @@ vi.mock("@/lib/db/prisma", () => ({
   },
 }))
 
-vi.mock("@/server/services/employee-day-plan-generator", () => ({
+vi.mock("@/lib/services/employee-day-plan-generator", () => ({
   EmployeeDayPlanGenerator: class MockEmployeeDayPlanGenerator {
     generateFromTariff = mockGenerateFromTariff
   },
 }))
 
-vi.mock("@/server/services/cron-execution-logger", () => ({
+vi.mock("@/lib/services/cron-execution-logger", () => ({
   CronExecutionLogger: class MockCronExecutionLogger {
     ensureSchedule = mockEnsureSchedule
     startExecution = mockStartExecution

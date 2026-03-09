@@ -282,9 +282,11 @@ describe("systemSettings.cleanupMarkDeleteOrders", () => {
 // --- systemSettings.cleanupDeleteBookings tests ---
 
 describe("systemSettings.cleanupDeleteBookings", () => {
-  it("preview returns count via raw SQL", async () => {
+  it("preview returns count", async () => {
     const mockPrisma = {
-      $queryRawUnsafe: vi.fn().mockResolvedValue([{ count: 42 }]),
+      booking: {
+        count: vi.fn().mockResolvedValue(42),
+      },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.cleanupDeleteBookings({
@@ -296,12 +298,14 @@ describe("systemSettings.cleanupDeleteBookings", () => {
     expect(result.operation).toBe("delete_bookings")
     expect(result.affectedCount).toBe(42)
     expect(result.preview).toBe(true)
-    expect(mockPrisma.$queryRawUnsafe).toHaveBeenCalled()
+    expect(mockPrisma.booking.count).toHaveBeenCalled()
   })
 
-  it("execute deletes bookings via raw SQL", async () => {
+  it("execute deletes bookings", async () => {
     const mockPrisma = {
-      $executeRawUnsafe: vi.fn().mockResolvedValue(42),
+      booking: {
+        deleteMany: vi.fn().mockResolvedValue({ count: 42 }),
+      },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.cleanupDeleteBookings({
@@ -345,7 +349,9 @@ describe("systemSettings.cleanupDeleteBookings", () => {
 describe("systemSettings.cleanupReReadBookings", () => {
   it("preview returns count", async () => {
     const mockPrisma = {
-      $queryRawUnsafe: vi.fn().mockResolvedValue([{ count: 10 }]),
+      booking: {
+        count: vi.fn().mockResolvedValue(10),
+      },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.cleanupReReadBookings({
@@ -391,10 +397,12 @@ describe("systemSettings.cleanupReReadBookings", () => {
 describe("systemSettings.cleanupDeleteBookingData", () => {
   it("preview returns combined count", async () => {
     const mockPrisma = {
-      $queryRawUnsafe: vi
-        .fn()
-        .mockResolvedValueOnce([{ count: 10 }]) // bookings
-        .mockResolvedValueOnce([{ count: 5 }]), // daily values
+      booking: {
+        count: vi.fn().mockResolvedValue(10),
+      },
+      dailyValue: {
+        count: vi.fn().mockResolvedValue(5),
+      },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.cleanupDeleteBookingData({
@@ -414,11 +422,15 @@ describe("systemSettings.cleanupDeleteBookingData", () => {
 
   it("execute deletes all three entity types", async () => {
     const mockPrisma = {
-      $executeRawUnsafe: vi
-        .fn()
-        .mockResolvedValueOnce(10) // bookings
-        .mockResolvedValueOnce(5) // daily values
-        .mockResolvedValueOnce(3), // employee day plans
+      booking: {
+        deleteMany: vi.fn().mockResolvedValue({ count: 10 }),
+      },
+      dailyValue: {
+        deleteMany: vi.fn().mockResolvedValue({ count: 5 }),
+      },
+      employeeDayPlan: {
+        deleteMany: vi.fn().mockResolvedValue({ count: 3 }),
+      },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.cleanupDeleteBookingData({

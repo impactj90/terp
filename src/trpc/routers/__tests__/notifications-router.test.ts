@@ -187,6 +187,7 @@ describe("notifications.markRead", () => {
       notification: {
         findFirst: vi.fn().mockResolvedValue(notification),
         update: vi.fn().mockResolvedValue({ ...notification, readAt: new Date() }),
+        count: vi.fn().mockResolvedValue(0),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))

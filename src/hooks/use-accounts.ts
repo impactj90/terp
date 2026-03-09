@@ -1,4 +1,5 @@
-import { useApiQuery, useApiMutation } from '@/hooks'
+import { useApiQuery } from './use-api-query'
+import { useApiMutation } from './use-api-mutation'
 
 interface UseAccountsOptions {
   accountType?: 'bonus' | 'tracking' | 'balance'

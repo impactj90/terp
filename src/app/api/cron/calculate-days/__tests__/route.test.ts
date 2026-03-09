@@ -94,13 +94,13 @@ vi.mock("@/lib/db/prisma", () => ({
   },
 }))
 
-vi.mock("@/server/services/recalc", () => ({
+vi.mock("@/lib/services/recalc", () => ({
   RecalcService: class MockRecalcService {
     triggerRecalcAll = mockTriggerRecalcAll
   },
 }))
 
-vi.mock("@/server/services/cron-execution-logger", () => ({
+vi.mock("@/lib/services/cron-execution-logger", () => ({
   CronExecutionLogger: class MockCronExecutionLogger {
     ensureSchedule = mockEnsureSchedule
     startExecution = mockStartExecution
@@ -364,8 +364,8 @@ describe("CronExecutionLogger", () => {
   it("can be instantiated with a PrismaClient", async () => {
     // Direct import (not mocked) to verify the class shape
     const { CronExecutionLogger } = await vi.importActual<
-      typeof import("@/server/services/cron-execution-logger")
-    >("@/server/services/cron-execution-logger")
+      typeof import("@/lib/services/cron-execution-logger")
+    >("@/lib/services/cron-execution-logger")
 
     const mockPrisma = {} as any
     const logger = new CronExecutionLogger(mockPrisma)
@@ -375,8 +375,8 @@ describe("CronExecutionLogger", () => {
 
   it("ensureSchedule upserts with correct parameters", async () => {
     const { CronExecutionLogger } = await vi.importActual<
-      typeof import("@/server/services/cron-execution-logger")
-    >("@/server/services/cron-execution-logger")
+      typeof import("@/lib/services/cron-execution-logger")
+    >("@/lib/services/cron-execution-logger")
 
     const mockUpsert = vi.fn().mockResolvedValue({ id: "schedule-123" })
     const mockPrisma = {
@@ -415,8 +415,8 @@ describe("CronExecutionLogger", () => {
 
   it("startExecution creates execution with running status", async () => {
     const { CronExecutionLogger } = await vi.importActual<
-      typeof import("@/server/services/cron-execution-logger")
-    >("@/server/services/cron-execution-logger")
+      typeof import("@/lib/services/cron-execution-logger")
+    >("@/lib/services/cron-execution-logger")
 
     const mockCreate = vi.fn().mockResolvedValue({
       id: "exec-123",
@@ -451,8 +451,8 @@ describe("CronExecutionLogger", () => {
 
   it("completeExecution updates all records in transaction", async () => {
     const { CronExecutionLogger } = await vi.importActual<
-      typeof import("@/server/services/cron-execution-logger")
-    >("@/server/services/cron-execution-logger")
+      typeof import("@/lib/services/cron-execution-logger")
+    >("@/lib/services/cron-execution-logger")
 
     const mockTransaction = vi.fn().mockResolvedValue([{}, {}, {}])
     const mockPrisma = {
@@ -480,8 +480,8 @@ describe("CronExecutionLogger", () => {
 
   it("completeExecution sets tasksFailed=1 when status is 'failed'", async () => {
     const { CronExecutionLogger } = await vi.importActual<
-      typeof import("@/server/services/cron-execution-logger")
-    >("@/server/services/cron-execution-logger")
+      typeof import("@/lib/services/cron-execution-logger")
+    >("@/lib/services/cron-execution-logger")
 
     const mockTransaction = vi.fn().mockResolvedValue([{}, {}, {}])
     const mockPrisma = {

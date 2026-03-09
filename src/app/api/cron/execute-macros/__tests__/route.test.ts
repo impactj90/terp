@@ -39,13 +39,13 @@ vi.mock("@/lib/db/prisma", () => ({
   },
 }))
 
-vi.mock("@/server/services/macro-executor", () => ({
+vi.mock("@/lib/services/macro-executor", () => ({
   MacroExecutor: class MockMacroExecutor {
     executeDueMacros = mockExecuteDueMacros
   },
 }))
 
-vi.mock("@/server/services/cron-execution-logger", () => ({
+vi.mock("@/lib/services/cron-execution-logger", () => ({
   CronExecutionLogger: class MockCronExecutionLogger {
     ensureSchedule = mockEnsureSchedule
     startExecution = mockStartExecution
