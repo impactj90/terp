@@ -18,12 +18,13 @@ const globalForPrisma = globalThis as unknown as {
 }
 
 function createPrismaClient(): PrismaClient {
+  const connectionString = process.env.DATABASE_URL!
+  const isRemote = connectionString.includes("supabase.co") || connectionString.includes("pooler.supabase.com")
+
   const adapter = new PrismaPg({
-    connectionString: process.env.DATABASE_URL!,
+    connectionString,
     options: {
-      ssl: process.env.NODE_ENV === "production"
-        ? { rejectUnauthorized: false }
-        : undefined,
+      ssl: isRemote ? { rejectUnauthorized: false } : undefined,
     },
   })
 
