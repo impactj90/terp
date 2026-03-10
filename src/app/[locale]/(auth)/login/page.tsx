@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/providers/auth-provider'
 import { createClient } from '@/lib/supabase/client'
+import { isDev } from '@/lib/config'
 
 function LoginPageContent() {
   const router = useRouter()
@@ -148,30 +149,32 @@ function LoginPageContent() {
           <p className="mt-4 text-center text-sm text-destructive">{error}</p>
         )}
 
-        {/* Dev login buttons */}
-        <div className="mt-6 border-t pt-6">
-          <p className="mb-3 text-center text-xs text-muted-foreground">
-            {t('devModeQuickLogin')}
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => handleDevLogin('user')}
-              disabled={isPageLoading}
-            >
-              {t('loginAsUser')}
-            </Button>
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => handleDevLogin('admin')}
-              disabled={isPageLoading}
-            >
-              {t('loginAsAdmin')}
-            </Button>
+        {/* Dev login buttons - only shown in development */}
+        {isDev && (
+          <div className="mt-6 border-t pt-6">
+            <p className="mb-3 text-center text-xs text-muted-foreground">
+              {t('devModeQuickLogin')}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => handleDevLogin('user')}
+                disabled={isPageLoading}
+              >
+                {t('loginAsUser')}
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => handleDevLogin('admin')}
+                disabled={isPageLoading}
+              >
+                {t('loginAsAdmin')}
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Footer links */}
