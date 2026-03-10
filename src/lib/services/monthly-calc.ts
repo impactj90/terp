@@ -522,6 +522,9 @@ export class MonthlyCalcService {
     year: number,
     month: number,
   ): Promise<MonthSummary> {
+    const { from, to } = this.monthDateRange(year, month)
+
+    // Load employee first (needed for tariffId), then parallelize the rest
     const employee = await this.prisma.employee.findUnique({
       where: { id: employeeId },
     })
@@ -529,39 +532,27 @@ export class MonthlyCalcService {
       throw new Error(ERR_EMPLOYEE_NOT_FOUND)
     }
 
-    const { from, to } = this.monthDateRange(year, month)
-
-    // Get previous month carryover
-    const prevMonth = await this.getPreviousMonth(employeeId, year, month)
+    // All remaining queries are independent — run in parallel
+    const [prevMonth, dailyValues, absences, tariff] = await Promise.all([
+      this.getPreviousMonth(employeeId, year, month),
+      this.prisma.dailyValue.findMany({
+        where: {
+          employeeId,
+          valueDate: { gte: from, lte: to },
+        },
+      }),
+      this.prisma.absenceDay.findMany({
+        where: {
+          employeeId,
+          absenceDate: { gte: from, lte: to },
+        },
+        include: { absenceType: true },
+      }),
+      employee.tariffId !== null
+        ? this.prisma.tariff.findUnique({ where: { id: employee.tariffId } }).catch(() => null)
+        : Promise.resolve(null),
+    ])
     const previousCarryover = prevMonth !== null ? prevMonth.flextimeEnd : 0
-
-    // Get daily values and absences
-    const dailyValues = await this.prisma.dailyValue.findMany({
-      where: {
-        employeeId,
-        valueDate: { gte: from, lte: to },
-      },
-    })
-
-    const absences = await this.prisma.absenceDay.findMany({
-      where: {
-        employeeId,
-        absenceDate: { gte: from, lte: to },
-      },
-      include: { absenceType: true },
-    })
-
-    // Load tariff (optional)
-    let tariff: Tariff | null = null
-    if (employee.tariffId !== null) {
-      try {
-        tariff = await this.prisma.tariff.findUnique({
-          where: { id: employee.tariffId },
-        })
-      } catch {
-        tariff = null
-      }
-    }
 
     // Build and run calculation
     const calcInput = this.buildMonthlyCalcInput(

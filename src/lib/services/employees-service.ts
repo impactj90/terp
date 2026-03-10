@@ -752,22 +752,13 @@ export async function getDayView(
   employeeId: string,
   date: Date
 ) {
-  // 1. Load bookings for the day (with bookingType + bookingReason relations)
-  const bookings = await repo.findBookingsForDay(
-    prisma,
-    tenantId,
-    employeeId,
-    date
-  )
-
-  // 2. Load daily value (may be null)
-  const dailyValue = await repo.findDailyValue(prisma, employeeId, date)
-
-  // 3. Load employee day plan with day plan details
-  const empDayPlan = await repo.findEmployeeDayPlan(prisma, employeeId, date)
-
-  // 4. Check for holiday
-  const holiday = await repo.findHoliday(prisma, tenantId, date)
+  // Load all day data in parallel (all queries are independent)
+  const [bookings, dailyValue, empDayPlan, holiday] = await Promise.all([
+    repo.findBookingsForDay(prisma, tenantId, employeeId, date),
+    repo.findDailyValue(prisma, employeeId, date),
+    repo.findEmployeeDayPlan(prisma, employeeId, date),
+    repo.findHoliday(prisma, tenantId, date),
+  ])
   const isHoliday = holiday !== null
 
   // 5. Build error list from daily value
