@@ -24,6 +24,14 @@ function createPrismaClient(): PrismaClient {
   const adapter = new PrismaPg({
     connectionString,
     ssl: isRemote ? { rejectUnauthorized: false } : undefined,
+    // Serverless-optimized: single connection pass-through to avoid
+    // pool-on-pool conflicts with Supabase pgbouncer
+    ...(isRemote && {
+      max: 1,
+      idleTimeoutMillis: 20_000,
+      allowExitOnIdle: true,
+      statement_timeout: 30_000,
+    }),
   })
 
   return new PrismaClient({
