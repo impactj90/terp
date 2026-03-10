@@ -27,7 +27,7 @@ function createPrismaClient(): PrismaClient {
     // Serverless-optimized: single connection pass-through to avoid
     // pool-on-pool conflicts with Supabase pgbouncer
     ...(isRemote && {
-      max: 1,
+      max: 5,
       idleTimeoutMillis: 20_000,
       allowExitOnIdle: true,
       statement_timeout: 30_000,
