@@ -38,6 +38,7 @@ export function MobileNav({ className, onMoreClick }: MobileNavProps) {
           <Link
             key={item.href}
             href={item.href}
+            prefetch={false}
             className={cn(
               'flex flex-1 flex-col items-center justify-center gap-1 py-2 text-xs font-medium transition-colors',
               'hover:text-primary',
