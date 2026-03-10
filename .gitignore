@@ -15,6 +15,7 @@ src/generated/
 .env.local
 .env.*.local
 .env.development
+.env.staging
 .env.production
 !.env.example
 

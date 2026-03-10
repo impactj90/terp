@@ -1,5 +1,5 @@
 -- Travel allowance rule sets (configuration containers per ZMI manual 10.14)
-CREATE TABLE IF NOT EXISTS travel_allowance_rule_sets (
+CREATE TABLE travel_allowance_rule_sets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     code VARCHAR(50) NOT NULL,
@@ -16,9 +16,8 @@ CREATE TABLE IF NOT EXISTS travel_allowance_rule_sets (
     UNIQUE(tenant_id, code)
 );
 
-CREATE INDEX IF NOT EXISTS idx_travel_allowance_rule_sets_tenant ON travel_allowance_rule_sets(tenant_id);
+CREATE INDEX idx_travel_allowance_rule_sets_tenant ON travel_allowance_rule_sets(tenant_id);
 
-DROP TRIGGER IF EXISTS update_travel_allowance_rule_sets_updated_at ON travel_allowance_rule_sets;
 CREATE TRIGGER update_travel_allowance_rule_sets_updated_at
     BEFORE UPDATE ON travel_allowance_rule_sets
     FOR EACH ROW
@@ -27,7 +26,7 @@ CREATE TRIGGER update_travel_allowance_rule_sets_updated_at
 COMMENT ON TABLE travel_allowance_rule_sets IS 'Travel allowance (Ausloese) rule set containers with validity period and calculation options (ZMI manual 10.14)';
 
 -- Local travel rules (Nahmontage - same-day trips, ZMI manual 10.14.1)
-CREATE TABLE IF NOT EXISTS local_travel_rules (
+CREATE TABLE local_travel_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     rule_set_id UUID NOT NULL REFERENCES travel_allowance_rule_sets(id) ON DELETE CASCADE,
@@ -43,10 +42,9 @@ CREATE TABLE IF NOT EXISTS local_travel_rules (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_local_travel_rules_tenant ON local_travel_rules(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_local_travel_rules_rule_set ON local_travel_rules(rule_set_id);
+CREATE INDEX idx_local_travel_rules_tenant ON local_travel_rules(tenant_id);
+CREATE INDEX idx_local_travel_rules_rule_set ON local_travel_rules(rule_set_id);
 
-DROP TRIGGER IF EXISTS update_local_travel_rules_updated_at ON local_travel_rules;
 CREATE TRIGGER update_local_travel_rules_updated_at
     BEFORE UPDATE ON local_travel_rules
     FOR EACH ROW
@@ -55,7 +53,7 @@ CREATE TRIGGER update_local_travel_rules_updated_at
 COMMENT ON TABLE local_travel_rules IS 'Local travel (Nahmontage) rules: distance/duration ranges with tax-free and taxable amounts (ZMI manual 10.14.1)';
 
 -- Extended travel rules (Fernmontage - multi-day trips, ZMI manual 10.14.2)
-CREATE TABLE IF NOT EXISTS extended_travel_rules (
+CREATE TABLE extended_travel_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     rule_set_id UUID NOT NULL REFERENCES travel_allowance_rule_sets(id) ON DELETE CASCADE,
@@ -74,10 +72,9 @@ CREATE TABLE IF NOT EXISTS extended_travel_rules (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_extended_travel_rules_tenant ON extended_travel_rules(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_extended_travel_rules_rule_set ON extended_travel_rules(rule_set_id);
+CREATE INDEX idx_extended_travel_rules_tenant ON extended_travel_rules(tenant_id);
+CREATE INDEX idx_extended_travel_rules_rule_set ON extended_travel_rules(rule_set_id);
 
-DROP TRIGGER IF EXISTS update_extended_travel_rules_updated_at ON extended_travel_rules;
 CREATE TRIGGER update_extended_travel_rules_updated_at
     BEFORE UPDATE ON extended_travel_rules
     FOR EACH ROW

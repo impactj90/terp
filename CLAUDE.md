@@ -13,21 +13,36 @@ Next.js app with tRPC backend:
 ## Commands
 
 ```bash
-make install          # Install dependencies
-make dev              # Start Supabase + Docker services
-make dev-down         # Stop Docker services (Supabase keeps running)
-make dev-logs         # Follow logs
-make dev-ps           # Check service status
-make db-start         # Start Supabase (local Postgres + Studio)
-make db-stop          # Stop Supabase
-make db-reset         # Reset DB (drops all data, reruns migrations + seed)
-make db-status        # Show Supabase connection info
-make db-migrate-new name=foo  # Create new Supabase migration
-make db-generate      # Regenerate Prisma client
-make test             # Run tests
-make lint             # Run ESLint
-make typecheck        # Type-check with TypeScript
-make build            # Build the Next.js app
+pnpm install              # Install dependencies
+pnpm dev                  # Start Next.js dev server (port 3001)
+pnpm build                # Build the Next.js app
+pnpm test                 # Run tests
+pnpm test:watch           # Run tests in watch mode
+pnpm lint                 # Run ESLint
+pnpm typecheck            # Type-check with TypeScript
+pnpm clean                # Remove build artifacts
+
+# Docker
+pnpm docker:dev           # Start Supabase + Docker services
+pnpm docker:down          # Stop Docker services
+pnpm docker:clean         # Force remove all containers, volumes, stop Supabase
+pnpm docker:logs          # Follow logs
+pnpm docker:ps            # Check service status
+
+# Database
+pnpm db:start             # Start Supabase (local Postgres + Studio)
+pnpm db:stop              # Stop Supabase
+pnpm db:reset             # Reset DB (drops all data, reruns migrations + seed)
+pnpm db:status            # Show Supabase connection info
+pnpm db:migrate:new <name>  # Create new Supabase migration
+pnpm db:generate          # Regenerate Prisma client
+pnpm db:studio            # Open Prisma Studio
+pnpm db:push:staging      # Push migrations to staging Supabase
+
+# Demo
+pnpm demo:dev             # Start demo with public tunnel
+pnpm demo:down            # Stop demo environment
+pnpm demo:logs            # Follow demo logs
 ```
 
 Run single test: `pnpm vitest run src/trpc/routers/__tests__/TestName.test.ts`

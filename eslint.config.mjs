@@ -5,7 +5,7 @@ import nextPlugin from '@next/eslint-plugin-next'
 import tseslint from 'typescript-eslint'
 
 export default [{
-  ignores: ['node_modules/', '.next/', 'out/', 'storybook-static/'],
+  ignores: ['node_modules/', '.next/', 'out/', 'storybook-static/', 'apps/'],
 }, ...tseslint.configs.recommended, {
   plugins: {
     '@next/next': nextPlugin,
@@ -13,7 +13,7 @@ export default [{
   rules: {
     ...nextPlugin.configs.recommended.rules,
     ...nextPlugin.configs['core-web-vitals'].rules,
-    '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+    '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', destructuredArrayIgnorePattern: '^_' }],
     '@typescript-eslint/consistent-type-imports': [
       'error',
       { prefer: 'type-imports' },

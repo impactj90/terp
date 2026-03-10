@@ -1,18 +1,36 @@
 services:
+  lb:
+    image: nginx:alpine
+    container_name: terp-lb
+    ports:
+      - "3080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - web
+
   web:
-    image: node:22-alpine
+    build:
+      context: ..
+      dockerfile: docker/web.dev.Dockerfile
     container_name: terp-web
     ports:
       - "3001:3001"
-    working_dir: /app
-    volumes:
-      - ../:/app
-      - web_node_modules:/app/node_modules
-    command: sh -c "corepack enable && pnpm install && pnpm dev"
     environment:
-      - NEXT_TELEMETRY_DISABLED=1
+      NEXT_PUBLIC_ENV: development  # development | production
+      # Database (Supabase local Postgres via host network)
+      DATABASE_URL: postgresql://postgres:postgres@host.docker.internal:54322/postgres
+      # JWT
+      JWT_SECRET: dev-secret-change-in-production
+      # Supabase (local dev keys from `npx supabase status`)
+      # NEXT_PUBLIC_ = browser-facing (localhost), SUPABASE_URL = server-side (container→host)
+      SUPABASE_URL: http://host.docker.internal:54321
+      NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
     extra_hosts:
       - "host.docker.internal:host-gateway"
-
-volumes:
-  web_node_modules:
+    volumes:
+      - ..:/app
+      - /app/node_modules
+      - /app/.next
