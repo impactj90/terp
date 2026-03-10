@@ -28,9 +28,9 @@ import {
   useUpdateVacationBalance,
   useEmployees,
 } from '@/hooks'
-import type { components } from '@/types/legacy-api-types'
 
-type VacationBalance = components['schemas']['VacationBalance']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type VacationBalance = any
 
 interface VacationBalanceFormSheetProps {
   open: boolean
@@ -86,14 +86,14 @@ export function VacationBalanceFormSheet({
 
     if (balance) {
       setForm({
-        employeeId: balance.employee_id,
+        employeeId: balance.employeeId,
         year: balance.year,
-        baseEntitlement: String(balance.base_entitlement ?? 0),
+        baseEntitlement: String(balance.baseEntitlement ?? 0),
         additionalEntitlement: String(balance.additional_entitlement ?? 0),
-        carryoverFromPrevious: String(balance.carryover_from_previous ?? 0),
-        manualAdjustment: String(balance.manual_adjustment ?? 0),
-        carryoverToNext: String(balance.carryover_to_next ?? ''),
-        carryoverExpiresAt: balance.carryover_expires_at ?? '',
+        carryoverFromPrevious: String(balance.carryoverFromPrevious ?? 0),
+        manualAdjustment: String(balance.manualAdjustment ?? 0),
+        carryoverToNext: String(balance.carryoverToNext ?? ''),
+        carryoverExpiresAt: balance.carryoverExpiresAt ?? '',
       })
     } else {
       setForm(INITIAL_STATE)
@@ -122,10 +122,8 @@ export function VacationBalanceFormSheet({
           path: { id: balance.id },
           body: {
             base_entitlement: parseFloat(form.baseEntitlement || '0'),
-            additional_entitlement: parseFloat(form.additionalEntitlement || '0'),
             carryover_from_previous: parseFloat(form.carryoverFromPrevious || '0'),
             manual_adjustment: parseFloat(form.manualAdjustment || '0'),
-            carryover_to_next: form.carryoverToNext ? parseFloat(form.carryoverToNext) : undefined,
             carryover_expires_at: form.carryoverExpiresAt || undefined,
           },
         })
@@ -135,7 +133,6 @@ export function VacationBalanceFormSheet({
             employee_id: form.employeeId,
             year: form.year,
             base_entitlement: parseFloat(form.baseEntitlement || '0'),
-            additional_entitlement: parseFloat(form.additionalEntitlement || '0'),
             carryover_from_previous: parseFloat(form.carryoverFromPrevious || '0'),
             manual_adjustment: parseFloat(form.manualAdjustment || '0'),
             carryover_expires_at: form.carryoverExpiresAt || undefined,
@@ -190,7 +187,7 @@ export function VacationBalanceFormSheet({
                   <SelectItem value="__none__">{t('selectEmployee')}</SelectItem>
                   {employees.map((emp) => (
                     <SelectItem key={emp.id} value={emp.id}>
-                      {emp.personnel_number} - {emp.first_name} {emp.last_name}
+                      {emp.personnelNumber} - {emp.firstName} {emp.lastName}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -1,3 +1,4 @@
+import { describe, it, expect } from "vitest"
 import type { ToleranceConfig } from "../types"
 import { applyComeTolerance, applyGoTolerance, validateTimeWindow, validateCoreHours } from "../tolerance"
 import { ERR_MISSED_CORE_START, ERR_MISSED_CORE_END } from "../errors"

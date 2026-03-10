@@ -33,15 +33,14 @@ import {
 } from '@/hooks'
 import { cn } from '@/lib/utils'
 import { formatDuration } from '@/lib/time-utils'
-import type { components } from '@/types/legacy-api-types'
 
-type WeekPlan = components['schemas']['WeekPlan']
-type DayPlan = components['schemas']['DayPlan']
+type WeekPlanData = NonNullable<ReturnType<typeof useWeekPlan>['data']>
+type DayPlanItem = NonNullable<ReturnType<typeof useDayPlans>['data']>['data'][number]
 
 interface WeekPlanFormSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  weekPlan?: WeekPlan | null
+  weekPlan?: WeekPlanData | null
   onSuccess?: () => void
 }
 
@@ -135,14 +134,14 @@ export function WeekPlanFormSheet({
           code: fullWeekPlan.code,
           name: fullWeekPlan.name,
           description: fullWeekPlan.description ?? '',
-          mondayDayPlanId: fullWeekPlan.monday_day_plan_id ?? null,
-          tuesdayDayPlanId: fullWeekPlan.tuesday_day_plan_id ?? null,
-          wednesdayDayPlanId: fullWeekPlan.wednesday_day_plan_id ?? null,
-          thursdayDayPlanId: fullWeekPlan.thursday_day_plan_id ?? null,
-          fridayDayPlanId: fullWeekPlan.friday_day_plan_id ?? null,
-          saturdayDayPlanId: fullWeekPlan.saturday_day_plan_id ?? null,
-          sundayDayPlanId: fullWeekPlan.sunday_day_plan_id ?? null,
-          isActive: fullWeekPlan.is_active ?? true,
+          mondayDayPlanId: fullWeekPlan.mondayDayPlanId ?? null,
+          tuesdayDayPlanId: fullWeekPlan.tuesdayDayPlanId ?? null,
+          wednesdayDayPlanId: fullWeekPlan.wednesdayDayPlanId ?? null,
+          thursdayDayPlanId: fullWeekPlan.thursdayDayPlanId ?? null,
+          fridayDayPlanId: fullWeekPlan.fridayDayPlanId ?? null,
+          saturdayDayPlanId: fullWeekPlan.saturdayDayPlanId ?? null,
+          sundayDayPlanId: fullWeekPlan.sundayDayPlanId ?? null,
+          isActive: fullWeekPlan.isActive ?? true,
         })
       } else if (!isEdit) {
         setForm(INITIAL_STATE)
@@ -168,7 +167,7 @@ export function WeekPlanFormSheet({
     dayPlanIds.forEach((id) => {
       if (id) {
         const dp = dayPlans.find((d) => d.id === id)
-        if (dp) totalMinutes += dp.regular_hours
+        if (dp) totalMinutes += dp.regularHours
       }
     })
 
@@ -186,27 +185,29 @@ export function WeekPlanFormSheet({
     }
 
     try {
-      const body = {
-        code: form.code,
+      const fields = {
         name: form.name,
         description: form.description || undefined,
-        monday_day_plan_id: form.mondayDayPlanId || undefined,
-        tuesday_day_plan_id: form.tuesdayDayPlanId || undefined,
-        wednesday_day_plan_id: form.wednesdayDayPlanId || undefined,
-        thursday_day_plan_id: form.thursdayDayPlanId || undefined,
-        friday_day_plan_id: form.fridayDayPlanId || undefined,
-        saturday_day_plan_id: form.saturdayDayPlanId || undefined,
-        sunday_day_plan_id: form.sundayDayPlanId || undefined,
-        is_active: form.isActive,
+        mondayDayPlanId: form.mondayDayPlanId!,
+        tuesdayDayPlanId: form.tuesdayDayPlanId!,
+        wednesdayDayPlanId: form.wednesdayDayPlanId!,
+        thursdayDayPlanId: form.thursdayDayPlanId!,
+        fridayDayPlanId: form.fridayDayPlanId!,
+        saturdayDayPlanId: form.saturdayDayPlanId!,
+        sundayDayPlanId: form.sundayDayPlanId!,
+        isActive: form.isActive,
       }
 
       if (isEdit && weekPlan) {
         await updateMutation.mutateAsync({
-          path: { id: weekPlan.id },
-          body,
+          id: weekPlan.id,
+          ...fields,
         })
       } else {
-        await createMutation.mutateAsync({ body })
+        await createMutation.mutateAsync({
+          code: form.code,
+          ...fields,
+        })
       }
       onSuccess?.()
     } catch (err) {
@@ -355,7 +356,7 @@ function DayPlanSelector({
   dayLabelKey: string
   value: string | null
   onChange: (id: string | null) => void
-  dayPlans: DayPlan[]
+  dayPlans: DayPlanItem[]
   isWeekend: boolean
 }) {
   const t = useTranslations('adminWeekPlans')
@@ -385,7 +386,7 @@ function DayPlanSelector({
                 <span className="font-mono text-xs">{dp.code}</span>
                 <span>{dp.name}</span>
                 <Badge variant="outline" className="text-xs ml-auto">
-                  {dp.plan_type === 'fixed' ? t('typeFixed') : t('typeFlex')}
+                  {dp.planType === 'fixed' ? t('typeFixed') : t('typeFlex')}
                 </Badge>
               </div>
             </SelectItem>
@@ -394,7 +395,7 @@ function DayPlanSelector({
       </Select>
       {selectedPlan && (
         <span className="text-xs text-muted-foreground whitespace-nowrap">
-          {formatDuration(selectedPlan.regular_hours)}
+          {formatDuration(selectedPlan.regularHours)}
         </span>
       )}
     </div>

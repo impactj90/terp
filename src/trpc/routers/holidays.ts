@@ -28,13 +28,13 @@ const HOLIDAYS_MANAGE = permissionIdByKey("holidays.manage")!
 // --- Output Schemas ---
 
 const holidayOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   holidayDate: z.date(),
   name: z.string(),
   holidayCategory: z.number().int().min(1).max(3),
   appliesToAll: z.boolean(),
-  departmentId: z.string().uuid().nullable(),
+  departmentId: z.string().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
 })
@@ -48,16 +48,16 @@ const createHolidayInputSchema = z.object({
   name: z.string().min(1, "Name is required"),
   holidayCategory: z.number().int().min(1).max(3),
   appliesToAll: z.boolean().optional(),
-  departmentId: z.string().uuid().nullable().optional(),
+  departmentId: z.string().nullable().optional(),
 })
 
 const updateHolidayInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   holidayDate: z.string().optional(),
   name: z.string().min(1).optional(),
   holidayCategory: z.number().int().min(1).max(3).optional(),
   appliesToAll: z.boolean().optional(),
-  departmentId: z.string().uuid().nullable().optional(),
+  departmentId: z.string().nullable().optional(),
 })
 
 const generateHolidaysInputSchema = z.object({
@@ -129,7 +129,7 @@ export const holidaysRouter = createTRPCRouter({
           year: z.number().int().optional(),
           from: z.string().optional(),
           to: z.string().optional(),
-          departmentId: z.string().uuid().optional(),
+          departmentId: z.string().optional(),
         })
         .optional()
     )
@@ -156,7 +156,7 @@ export const holidaysRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(HOLIDAYS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(holidayOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -226,7 +226,7 @@ export const holidaysRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(HOLIDAYS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

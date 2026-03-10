@@ -22,9 +22,18 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { components } from '@/types/legacy-api-types'
 
-type AccountGroup = components['schemas']['AccountGroup']
+type AccountGroup = {
+  id: string
+  tenantId: string
+  code: string
+  name: string
+  description: string | null
+  sortOrder: number
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
 
 interface AccountGroupDataTableProps {
   groups: AccountGroup[]
@@ -82,11 +91,11 @@ export function AccountGroupDataTable({
                 : '-'}
             </TableCell>
             <TableCell className="text-sm text-muted-foreground">
-              {group.sort_order ?? 0}
+              {group.sortOrder ?? 0}
             </TableCell>
             <TableCell>
               <div className="flex items-center gap-2">
-                {group.is_active ? (
+                {group.isActive ? (
                   <Badge variant="default" className="text-xs">
                     {t('statusActive')}
                   </Badge>
@@ -97,7 +106,7 @@ export function AccountGroupDataTable({
                 )}
                 {onToggleActive && (
                   <Switch
-                    checked={group.is_active ?? true}
+                    checked={group.isActive ?? true}
                     onCheckedChange={(checked) => onToggleActive(group, checked)}
                   />
                 )}

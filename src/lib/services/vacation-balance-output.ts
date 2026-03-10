@@ -13,9 +13,9 @@ import type { Prisma } from "@/generated/prisma/client"
 // --- Output Schema ---
 
 export const vacationBalanceOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  employeeId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
+  employeeId: z.string(),
   year: z.number(),
   entitlement: z.number(),
   carryover: z.number(),
@@ -28,12 +28,12 @@ export const vacationBalanceOutputSchema = z.object({
   updatedAt: z.date(),
   employee: z
     .object({
-      id: z.string().uuid(),
+      id: z.string(),
       firstName: z.string(),
       lastName: z.string(),
       personnelNumber: z.string(),
       isActive: z.boolean(),
-      departmentId: z.string().uuid().nullable(),
+      departmentId: z.string().nullable(),
     })
     .nullable()
     .optional(),

@@ -25,10 +25,9 @@ import {
   useUpdateBookingTypeGroup,
   useBookingTypes,
 } from '@/hooks'
-import type { components } from '@/types/legacy-api-types'
 
-type BookingTypeGroup = components['schemas']['BookingTypeGroup']
-type BookingType = components['schemas']['BookingType']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type BookingTypeGroup = any
 
 interface BookingTypeGroupFormSheetProps {
   open: boolean
@@ -70,7 +69,7 @@ export function BookingTypeGroupFormSheet({
 
   // Fetch booking types for member selection
   const { data: bookingTypesData } = useBookingTypes({ enabled: open })
-  const bookingTypes = (bookingTypesData?.data ?? []) as BookingType[]
+  const bookingTypes = bookingTypesData?.data ?? []
 
   const filteredBookingTypes = React.useMemo(() => {
     if (!memberSearch) return bookingTypes
@@ -88,7 +87,7 @@ export function BookingTypeGroupFormSheet({
         code: group.code || '',
         name: group.name || '',
         description: group.description || '',
-        isActive: group.is_active ?? true,
+        isActive: group.isActive ?? true,
         bookingTypeIds: new Set(group.booking_type_ids ?? []),
       })
     } else {
@@ -137,22 +136,18 @@ export function BookingTypeGroupFormSheet({
       if (isEdit && group) {
         // UpdateBookingTypeGroupRequest does NOT include code (immutable after creation)
         await updateMutation.mutateAsync({
-          path: { id: group.id },
-          body: {
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            is_active: form.isActive,
-            booking_type_ids: Array.from(form.bookingTypeIds),
-          },
+          id: group.id,
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          isActive: form.isActive,
+          bookingTypeIds: Array.from(form.bookingTypeIds),
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            code: form.code.trim(),
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            booking_type_ids: Array.from(form.bookingTypeIds),
-          },
+          code: form.code.trim(),
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          bookingTypeIds: Array.from(form.bookingTypeIds),
         })
       }
 

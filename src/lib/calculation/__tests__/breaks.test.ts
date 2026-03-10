@@ -1,4 +1,5 @@
-import type { BookingPair, BreakConfig, BookingInput } from "../types"
+import { describe, it, expect } from "vitest"
+import type { BookingPair, BreakConfig } from "../types"
 import {
   calculateBreakDeduction,
   calculateOverlap,

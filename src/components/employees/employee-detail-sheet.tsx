@@ -18,9 +18,8 @@ import {
 } from '@/components/ui/sheet'
 import { StatusBadge } from './status-badge'
 import { useEmployee } from '@/hooks'
-import type { components } from '@/types/legacy-api-types'
 
-type Employee = components['schemas']['Employee']
+type EmployeeData = NonNullable<ReturnType<typeof useEmployee>['data']>
 
 export interface EmployeeDetailSheetProps {
   /** Employee ID to fetch details for */
@@ -30,9 +29,9 @@ export interface EmployeeDetailSheetProps {
   /** Callback when open state changes */
   onOpenChange: (open: boolean) => void
   /** Callback when edit is clicked */
-  onEdit: (employee: Employee) => void
+  onEdit: (employee: EmployeeData) => void
   /** Callback when delete is clicked */
-  onDelete: (employee: Employee) => void
+  onDelete: (employee: EmployeeData) => void
 }
 
 interface DetailRowProps {
@@ -105,7 +104,7 @@ export function EmployeeDetailSheet({
   }
 
   const initials = employee
-    ? `${employee.first_name[0]}${employee.last_name[0]}`
+    ? `${employee.firstName[0]}${employee.lastName[0]}`
     : '??'
 
   return (
@@ -123,15 +122,15 @@ export function EmployeeDetailSheet({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <SheetTitle className="truncate">
-                      {employee.first_name} {employee.last_name}
+                      {employee.firstName} {employee.lastName}
                     </SheetTitle>
                     <StatusBadge
-                      isActive={employee.is_active}
-                      exitDate={employee.exit_date}
+                      isActive={employee.isActive}
+                      exitDate={employee.exitDate as unknown as string}
                     />
                   </div>
                   <SheetDescription className="truncate">
-                    {employee.personnel_number}
+                    {employee.personnelNumber}
                   </SheetDescription>
                 </div>
               </div>
@@ -161,35 +160,31 @@ export function EmployeeDetailSheet({
                 <DetailRow
                   label={t('labelCostCenter')}
                   value={
-                    employee.cost_center
-                      ? `${employee.cost_center.name} (${employee.cost_center.code})`
+                    employee.costCenter
+                      ? `${employee.costCenter.name} (${employee.costCenter.code})`
                       : undefined
                   }
                 />
                 <DetailRow
                   label={t('labelEmploymentType')}
-                  value={employee.employment_type?.name}
+                  value={employee.employmentType?.name}
                 />
                 <DetailRow
                   label={t('labelTariff')}
-                  value={
-                    employee.tariff
-                      ? `${employee.tariff.code} - ${employee.tariff.name}`
-                      : undefined
-                  }
+                  value={employee.tariffId || undefined}
                 />
-                <DetailRow label={t('labelEntryDate')} value={formatDate(employee.entry_date)} />
-                <DetailRow label={t('labelExitDate')} value={formatDate(employee.exit_date)} />
+                <DetailRow label={t('labelEntryDate')} value={formatDate(employee.entryDate as unknown as string)} />
+                <DetailRow label={t('labelExitDate')} value={formatDate(employee.exitDate as unknown as string)} />
 
                 {/* Contract Details */}
                 <SectionHeader>{t('sectionContract')}</SectionHeader>
                 <DetailRow
                   label={t('labelWeeklyHours')}
-                  value={employee.weekly_hours ? t('weeklyHoursValue', { hours: employee.weekly_hours }) : undefined}
+                  value={employee.weeklyHours ? t('weeklyHoursValue', { hours: employee.weeklyHours }) : undefined}
                 />
                 <DetailRow
                   label={t('labelVacationDays')}
-                  value={employee.vacation_days_per_year ? t('vacationDaysValue', { days: employee.vacation_days_per_year }) : undefined}
+                  value={employee.vacationDaysPerYear ? t('vacationDaysValue', { days: employee.vacationDaysPerYear }) : undefined}
                 />
 
                 {/* Access Cards */}
@@ -203,19 +198,19 @@ export function EmployeeDetailSheet({
                           className="flex items-center justify-between p-2 rounded-md bg-muted/50"
                         >
                           <div>
-                            <p className="text-sm font-medium">{card.card_number}</p>
+                            <p className="text-sm font-medium">{card.cardNumber}</p>
                             <p className="text-xs text-muted-foreground capitalize">
-                              {card.card_type}
+                              {card.cardType}
                             </p>
                           </div>
                           <span
                             className={`text-xs px-2 py-0.5 rounded-full ${
-                              card.is_active
+                              card.isActive
                                 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                                 : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
                             }`}
                           >
-                            {card.is_active ? t('statusActive') : t('statusInactive')}
+                            {card.isActive ? t('statusActive') : t('statusInactive')}
                           </span>
                         </div>
                       ))}
@@ -236,10 +231,10 @@ export function EmployeeDetailSheet({
                           <div>
                             <p className="text-sm font-medium">{contact.value}</p>
                             <p className="text-xs text-muted-foreground">
-                              {contact.label || contact.contact_type}
+                              {contact.label || contact.contactType}
                             </p>
                           </div>
-                          {contact.is_primary && (
+                          {contact.isPrimary && (
                             <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
                               {t('primary')}
                             </span>

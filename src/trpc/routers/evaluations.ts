@@ -36,7 +36,7 @@ const REPORTS_VIEW = permissionIdByKey("reports.view")!
 
 const employeeSummarySchema = z
   .object({
-    id: z.string().uuid(),
+    id: z.string(),
     personnelNumber: z.string(),
     firstName: z.string(),
     lastName: z.string(),
@@ -46,7 +46,7 @@ const employeeSummarySchema = z
 
 const bookingTypeSummarySchema = z
   .object({
-    id: z.string().uuid(),
+    id: z.string(),
     code: z.string(),
     name: z.string(),
     direction: z.string(),
@@ -55,7 +55,7 @@ const bookingTypeSummarySchema = z
 
 const userSummarySchema = z
   .object({
-    id: z.string().uuid(),
+    id: z.string(),
     displayName: z.string(),
   })
   .nullable()
@@ -63,8 +63,8 @@ const userSummarySchema = z
 // --- Output Schemas ---
 
 const dailyValueEvalOutputSchema = z.object({
-  id: z.string().uuid(),
-  employeeId: z.string().uuid(),
+  id: z.string(),
+  employeeId: z.string(),
   valueDate: z.date(),
   status: z.string(),
   targetMinutes: z.number().int(),
@@ -82,16 +82,16 @@ const dailyValueEvalOutputSchema = z.object({
 })
 
 const bookingEvalOutputSchema = z.object({
-  id: z.string().uuid(),
-  employeeId: z.string().uuid(),
+  id: z.string(),
+  employeeId: z.string(),
   bookingDate: z.date(),
-  bookingTypeId: z.string().uuid(),
+  bookingTypeId: z.string(),
   originalTime: z.number().int(),
   editedTime: z.number().int(),
   calculatedTime: z.number().int().nullable(),
   timeString: z.string(),
-  pairId: z.string().uuid().nullable(),
-  terminalId: z.string().uuid().nullable(),
+  pairId: z.string().nullable(),
+  terminalId: z.string().nullable(),
   source: z.string().nullable(),
   notes: z.string().nullable(),
   createdAt: z.date(),
@@ -100,10 +100,10 @@ const bookingEvalOutputSchema = z.object({
 })
 
 const terminalBookingEvalOutputSchema = z.object({
-  id: z.string().uuid(),
-  employeeId: z.string().uuid(),
+  id: z.string(),
+  employeeId: z.string(),
   bookingDate: z.date(),
-  bookingTypeId: z.string().uuid(),
+  bookingTypeId: z.string(),
   originalTime: z.number().int(),
   editedTime: z.number().int(),
   calculatedTime: z.number().int().nullable(),
@@ -111,33 +111,33 @@ const terminalBookingEvalOutputSchema = z.object({
   originalTimeString: z.string(),
   editedTimeString: z.string(),
   source: z.string().nullable(),
-  terminalId: z.string().uuid().nullable(),
+  terminalId: z.string().nullable(),
   createdAt: z.date(),
   employee: employeeSummarySchema.optional(),
   bookingType: bookingTypeSummarySchema.optional(),
 })
 
 const logEvalOutputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   action: z.string(),
   entityType: z.string(),
-  entityId: z.string().uuid(),
+  entityId: z.string(),
   entityName: z.string().nullable(),
   changes: z.unknown().nullable(),
   performedAt: z.date(),
-  userId: z.string().uuid().nullable(),
+  userId: z.string().nullable(),
   user: userSummarySchema.optional(),
 })
 
 const workflowEvalOutputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   action: z.string(),
   entityType: z.string(),
-  entityId: z.string().uuid(),
+  entityId: z.string(),
   entityName: z.string().nullable(),
   metadata: z.unknown().nullable(),
   performedAt: z.date(),
-  userId: z.string().uuid().nullable(),
+  userId: z.string().nullable(),
   user: userSummarySchema.optional(),
 })
 
@@ -146,8 +146,8 @@ const workflowEvalOutputSchema = z.object({
 const dailyValuesInputSchema = z.object({
   fromDate: z.string().date(),
   toDate: z.string().date(),
-  employeeId: z.string().uuid().optional(),
-  departmentId: z.string().uuid().optional(),
+  employeeId: z.string().optional(),
+  departmentId: z.string().optional(),
   hasErrors: z.boolean().optional(),
   page: z.number().int().positive().optional().default(1),
   pageSize: z.number().int().min(1).max(100).optional().default(50),
@@ -156,9 +156,9 @@ const dailyValuesInputSchema = z.object({
 const bookingsInputSchema = z.object({
   fromDate: z.string().date(),
   toDate: z.string().date(),
-  employeeId: z.string().uuid().optional(),
-  departmentId: z.string().uuid().optional(),
-  bookingTypeId: z.string().uuid().optional(),
+  employeeId: z.string().optional(),
+  departmentId: z.string().optional(),
+  bookingTypeId: z.string().optional(),
   source: z.string().optional(),
   direction: z.string().optional(),
   page: z.number().int().positive().optional().default(1),
@@ -168,8 +168,8 @@ const bookingsInputSchema = z.object({
 const terminalBookingsInputSchema = z.object({
   fromDate: z.string().date(),
   toDate: z.string().date(),
-  employeeId: z.string().uuid().optional(),
-  departmentId: z.string().uuid().optional(),
+  employeeId: z.string().optional(),
+  departmentId: z.string().optional(),
   page: z.number().int().positive().optional().default(1),
   pageSize: z.number().int().min(1).max(100).optional().default(50),
 })
@@ -179,7 +179,7 @@ const logsInputSchema = z.object({
   toDate: z.string().date(),
   entityType: z.string().optional(),
   action: z.string().optional(),
-  userId: z.string().uuid().optional(),
+  userId: z.string().optional(),
   page: z.number().int().positive().optional().default(1),
   pageSize: z.number().int().min(1).max(100).optional().default(50),
 })

@@ -27,8 +27,8 @@ const ACCESS_CONTROL_MANAGE = permissionIdByKey("access_control.manage")!
 // --- Output Schemas ---
 
 const accessProfileOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   code: z.string(),
   name: z.string(),
   description: z.string().nullable(),
@@ -46,7 +46,7 @@ const createAccessProfileInputSchema = z.object({
 })
 
 const updateAccessProfileInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   // Code is NOT updatable (immutable after creation)
   name: z.string().min(1).max(255).optional(),
   description: z.string().nullable().optional(),
@@ -98,7 +98,7 @@ export const accessProfilesRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(ACCESS_CONTROL_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(accessProfileOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -200,7 +200,7 @@ export const accessProfilesRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(ACCESS_CONTROL_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

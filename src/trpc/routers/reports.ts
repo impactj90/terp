@@ -50,8 +50,8 @@ const reportFormatEnum = z.enum(["csv", "json"])
 // --- Output Schemas ---
 
 const reportOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   reportType: z.string(),
   name: z.string().nullable(),
   description: z.string().nullable(),
@@ -64,7 +64,7 @@ const reportOutputSchema = z.object({
   requestedAt: z.date(),
   startedAt: z.date().nullable(),
   completedAt: z.date().nullable(),
-  createdBy: z.string().uuid().nullable(),
+  createdBy: z.string().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
 })
@@ -86,7 +86,7 @@ export const reportsRouter = createTRPCRouter({
         reportType: reportTypeEnum.optional(),
         status: reportStatusEnum.optional(),
         limit: z.number().int().min(1).max(100).default(20),
-        cursor: z.string().uuid().optional(),
+        cursor: z.string().optional(),
       }).optional()
     )
     .output(
@@ -94,7 +94,7 @@ export const reportsRouter = createTRPCRouter({
         data: z.array(reportOutputSchema),
         meta: z.object({
           hasMore: z.boolean(),
-          nextCursor: z.string().uuid().optional(),
+          nextCursor: z.string().optional(),
         }),
       })
     )
@@ -115,7 +115,7 @@ export const reportsRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(REPORTS_VIEW))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(reportOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -143,10 +143,10 @@ export const reportsRouter = createTRPCRouter({
         parameters: z.object({
           fromDate: z.string().optional(),
           toDate: z.string().optional(),
-          employeeIds: z.array(z.string().uuid()).optional(),
-          departmentIds: z.array(z.string().uuid()).optional(),
-          costCenterIds: z.array(z.string().uuid()).optional(),
-          teamIds: z.array(z.string().uuid()).optional(),
+          employeeIds: z.array(z.string()).optional(),
+          departmentIds: z.array(z.string()).optional(),
+          costCenterIds: z.array(z.string()).optional(),
+          teamIds: z.array(z.string()).optional(),
         }).optional(),
       })
     )
@@ -172,7 +172,7 @@ export const reportsRouter = createTRPCRouter({
    */
   download: tenantProcedure
     .use(requirePermission(REPORTS_VIEW))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(
       z.object({
         content: z.string(),
@@ -199,7 +199,7 @@ export const reportsRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(REPORTS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

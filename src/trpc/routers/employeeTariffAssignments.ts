@@ -29,10 +29,10 @@ const EMPLOYEES_EDIT = permissionIdByKey("employees.edit")!
 // --- Output Schemas ---
 
 const employeeTariffAssignmentOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  employeeId: z.string().uuid(),
-  tariffId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
+  employeeId: z.string(),
+  tariffId: z.string(),
   effectiveFrom: z.date(),
   effectiveTo: z.date().nullable(),
   overwriteBehavior: z.string(),
@@ -47,9 +47,9 @@ type EmployeeTariffAssignmentOutput = z.infer<
 >
 
 const effectiveTariffOutputSchema = z.object({
-  tariffId: z.string().uuid().nullable(),
+  tariffId: z.string().nullable(),
   source: z.enum(["assignment", "default", "none"]),
-  assignmentId: z.string().uuid().nullable(),
+  assignmentId: z.string().nullable(),
 })
 
 // --- Helpers ---
@@ -138,7 +138,7 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
     .use(requirePermission(EMPLOYEES_VIEW))
     .input(
       z.object({
-        employeeId: z.string().uuid(),
+        employeeId: z.string(),
         isActive: z.boolean().optional(),
       })
     )
@@ -188,8 +188,8 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
     .use(requirePermission(EMPLOYEES_VIEW))
     .input(
       z.object({
-        employeeId: z.string().uuid(),
-        id: z.string().uuid(),
+        employeeId: z.string(),
+        id: z.string(),
       })
     )
     .output(employeeTariffAssignmentOutputSchema)
@@ -229,8 +229,8 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
     .use(requirePermission(EMPLOYEES_EDIT))
     .input(
       z.object({
-        employeeId: z.string().uuid(),
-        tariffId: z.string().uuid(),
+        employeeId: z.string(),
+        tariffId: z.string(),
         effectiveFrom: z.coerce.date(),
         effectiveTo: z.coerce.date().optional(),
         overwriteBehavior: z.string().optional(),
@@ -307,8 +307,8 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
     .use(requirePermission(EMPLOYEES_EDIT))
     .input(
       z.object({
-        employeeId: z.string().uuid(),
-        id: z.string().uuid(),
+        employeeId: z.string(),
+        id: z.string(),
         effectiveFrom: z.coerce.date().optional(),
         effectiveTo: z.coerce.date().nullable().optional(),
         overwriteBehavior: z.string().optional(),
@@ -413,8 +413,8 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
     .use(requirePermission(EMPLOYEES_EDIT))
     .input(
       z.object({
-        employeeId: z.string().uuid(),
-        id: z.string().uuid(),
+        employeeId: z.string(),
+        id: z.string(),
       })
     )
     .output(z.object({ success: z.boolean() }))
@@ -460,7 +460,7 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
     .use(requirePermission(EMPLOYEES_VIEW))
     .input(
       z.object({
-        employeeId: z.string().uuid(),
+        employeeId: z.string(),
         date: z.string(),
       })
     )

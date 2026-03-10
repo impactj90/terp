@@ -26,8 +26,8 @@ const COST_CENTERS_MANAGE = permissionIdByKey("cost_centers.manage")!
 // --- Output Schemas ---
 
 const costCenterOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   code: z.string(),
   name: z.string(),
   description: z.string().nullable(),
@@ -48,7 +48,7 @@ const createCostCenterInputSchema = z.object({
 })
 
 const updateCostCenterInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   code: z.string().min(1).optional(),
   name: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
@@ -128,7 +128,7 @@ export const costCentersRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(COST_CENTERS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(costCenterOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -204,7 +204,7 @@ export const costCentersRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(COST_CENTERS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

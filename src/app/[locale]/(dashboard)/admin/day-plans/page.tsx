@@ -23,9 +23,9 @@ import { DayPlanDataTable } from '@/components/day-plans/day-plan-data-table'
 import { DayPlanFormSheet } from '@/components/day-plans/day-plan-form-sheet'
 import { DayPlanDetailSheet } from '@/components/day-plans/day-plan-detail-sheet'
 import { CopyDayPlanDialog } from '@/components/day-plans/copy-day-plan-dialog'
-import type { components } from '@/types/legacy-api-types'
+import type { useDayPlan } from '@/hooks'
 
-type DayPlan = components['schemas']['DayPlan']
+type DayPlanData = NonNullable<ReturnType<typeof useDayPlan>['data']>
 
 export default function DayPlansPage() {
   const router = useRouter()
@@ -40,10 +40,10 @@ export default function DayPlansPage() {
 
   // Dialog state
   const [createOpen, setCreateOpen] = React.useState(false)
-  const [editDayPlan, setEditDayPlan] = React.useState<DayPlan | null>(null)
-  const [viewDayPlan, setViewDayPlan] = React.useState<DayPlan | null>(null)
-  const [deleteDayPlan, setDeleteDayPlan] = React.useState<DayPlan | null>(null)
-  const [copyDayPlan, setCopyDayPlan] = React.useState<DayPlan | null>(null)
+  const [editDayPlanData, setEditDayPlanData] = React.useState<DayPlanData | null>(null)
+  const [viewDayPlanData, setViewDayPlanData] = React.useState<DayPlanData | null>(null)
+  const [deleteDayPlanData, setDeleteDayPlanData] = React.useState<DayPlanData | null>(null)
+  const [copyDayPlanData, setCopyDayPlanData] = React.useState<DayPlanData | null>(null)
 
   // Fetch day plans
   const { data, isLoading, isFetching } = useDayPlans({
@@ -75,30 +75,30 @@ export default function DayPlansPage() {
     return plans
   }, [data?.data, search])
 
-  const handleView = (dayPlan: DayPlan) => {
-    setViewDayPlan(dayPlan)
+  const handleView = (dayPlan: DayPlanData) => {
+    setViewDayPlanData(dayPlan)
   }
 
-  const handleEdit = (dayPlan: DayPlan) => {
-    setEditDayPlan(dayPlan)
-    setViewDayPlan(null)
+  const handleEdit = (dayPlan: DayPlanData) => {
+    setEditDayPlanData(dayPlan)
+    setViewDayPlanData(null)
   }
 
-  const handleDelete = (dayPlan: DayPlan) => {
-    setDeleteDayPlan(dayPlan)
+  const handleDelete = (dayPlan: DayPlanData) => {
+    setDeleteDayPlanData(dayPlan)
   }
 
-  const handleCopy = (dayPlan: DayPlan) => {
-    setCopyDayPlan(dayPlan)
+  const handleCopy = (dayPlan: DayPlanData) => {
+    setCopyDayPlanData(dayPlan)
   }
 
   const handleConfirmDelete = async () => {
-    if (!deleteDayPlan) return
+    if (!deleteDayPlanData) return
     try {
       await deleteMutation.mutateAsync({
-        id: deleteDayPlan.id,
+        id: deleteDayPlanData.id,
       })
-      setDeleteDayPlan(null)
+      setDeleteDayPlanData(null)
     } catch {
       // Error handled by mutation
     }
@@ -106,7 +106,7 @@ export default function DayPlansPage() {
 
   const handleFormSuccess = () => {
     setCreateOpen(false)
-    setEditDayPlan(null)
+    setEditDayPlanData(null)
   }
 
   const hasFilters = Boolean(search) || activeFilter !== undefined || typeFilter !== undefined
@@ -206,7 +206,7 @@ export default function DayPlansPage() {
             <EmptyState hasFilters={hasFilters} onCreateClick={() => setCreateOpen(true)} />
           ) : (
             <DayPlanDataTable
-              dayPlans={dayPlans as unknown as DayPlan[]}
+              dayPlans={dayPlans as unknown as DayPlanData[]}
               isLoading={isLoading}
               onView={handleView}
               onEdit={handleEdit}
@@ -219,23 +219,23 @@ export default function DayPlansPage() {
 
       {/* Create/Edit Form */}
       <DayPlanFormSheet
-        open={createOpen || !!editDayPlan}
+        open={createOpen || !!editDayPlanData}
         onOpenChange={(open) => {
           if (!open) {
             setCreateOpen(false)
-            setEditDayPlan(null)
+            setEditDayPlanData(null)
           }
         }}
-        dayPlan={editDayPlan}
+        dayPlan={editDayPlanData}
         onSuccess={handleFormSuccess}
       />
 
       {/* Detail View */}
       <DayPlanDetailSheet
-        dayPlanId={viewDayPlan?.id ?? null}
-        open={!!viewDayPlan}
+        dayPlanId={viewDayPlanData?.id ?? null}
+        open={!!viewDayPlanData}
         onOpenChange={(open) => {
-          if (!open) setViewDayPlan(null)
+          if (!open) setViewDayPlanData(null)
         }}
         onEdit={handleEdit}
         onDelete={handleDelete}
@@ -244,23 +244,23 @@ export default function DayPlansPage() {
 
       {/* Copy Dialog */}
       <CopyDayPlanDialog
-        dayPlan={copyDayPlan}
-        open={!!copyDayPlan}
+        dayPlan={copyDayPlanData}
+        open={!!copyDayPlanData}
         onOpenChange={(open) => {
-          if (!open) setCopyDayPlan(null)
+          if (!open) setCopyDayPlanData(null)
         }}
       />
 
       {/* Delete Confirmation */}
       <ConfirmDialog
-        open={!!deleteDayPlan}
+        open={!!deleteDayPlanData}
         onOpenChange={(open) => {
-          if (!open) setDeleteDayPlan(null)
+          if (!open) setDeleteDayPlanData(null)
         }}
         title={t('deleteDayPlan')}
         description={
-          deleteDayPlan
-            ? t('deleteDescription', { name: deleteDayPlan.name, code: deleteDayPlan.code })
+          deleteDayPlanData
+            ? t('deleteDescription', { name: deleteDayPlanData.name, code: deleteDayPlanData.code })
             : ''
         }
         confirmLabel={t('delete')}

@@ -43,6 +43,120 @@ function buildVacationBalanceDataScopeWhere(
   return null
 }
 
+// --- Initialize Functions ---
+
+/**
+ * Initializes vacation balances for all active employees for a given year.
+ * Optionally carries over balances from the previous year.
+ *
+ * Port of Go VacationBalanceHandler.Initialize + VacationService.InitializeYear
+ */
+export async function initializeBalances(
+  prisma: PrismaClient,
+  tenantId: string,
+  input: { year: number; carryover?: boolean }
+) {
+  const year = input.year
+  const doCarryover = input.carryover ?? true
+
+  // Get all active employees for tenant
+  const employees = await prisma.employee.findMany({
+    where: { tenantId, isActive: true, deletedAt: null },
+    select: { id: true },
+  })
+
+  let createdCount = 0
+  for (const emp of employees) {
+    try {
+      // Optionally carryover from previous year
+      if (doCarryover) {
+        await carryoverFromPreviousYear(prisma, tenantId, emp.id, year)
+      }
+
+      // Create balance if it doesn't exist
+      const existing = await repo.findBalanceByEmployeeAndYear(
+        prisma,
+        tenantId,
+        emp.id,
+        year
+      )
+      if (!existing) {
+        await repo.createBalance(prisma, {
+          tenantId,
+          employeeId: emp.id,
+          year,
+          entitlement: 0,
+          carryover: 0,
+          adjustments: 0,
+          taken: 0,
+          carryoverExpiresAt: null,
+        })
+        createdCount++
+      }
+    } catch {
+      // Continue on individual errors (matches Go behavior)
+    }
+  }
+
+  return {
+    message: "Vacation balances initialized",
+    createdCount,
+  }
+}
+
+/**
+ * Carries over available balance from previous year to current year.
+ * Simplified version -- creates/updates current year carryover field.
+ */
+async function carryoverFromPreviousYear(
+  prisma: PrismaClient,
+  tenantId: string,
+  employeeId: string,
+  year: number
+) {
+  const prevBalance = await repo.findBalanceByEmployeeAndYear(
+    prisma,
+    tenantId,
+    employeeId,
+    year - 1
+  )
+  if (!prevBalance) return
+
+  // Calculate available = entitlement + carryover + adjustments - taken
+  const entitlement = Number(prevBalance.entitlement)
+  const carryover = Number(prevBalance.carryover)
+  const adjustments = Number(prevBalance.adjustments)
+  const taken = Number(prevBalance.taken)
+  const available = entitlement + carryover + adjustments - taken
+
+  if (available <= 0) return
+
+  // Get or create current year balance
+  const currentBalance = await repo.findBalanceByEmployeeAndYear(
+    prisma,
+    tenantId,
+    employeeId,
+    year
+  )
+
+  if (currentBalance) {
+    await repo.updateBalance(prisma, currentBalance.id, {
+      carryover: available,
+    })
+  } else {
+    await repo.createBalance(prisma, {
+      tenantId,
+      employeeId,
+      year,
+      entitlement: 0,
+      carryover: available,
+      adjustments: 0,
+      taken: 0,
+      carryoverExpiresAt: null,
+    })
+  }
+}
+
 // --- Service Functions ---
 
 /**

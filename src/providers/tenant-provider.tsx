@@ -66,8 +66,19 @@ export function TenantProvider({ children }: TenantProviderProps) {
     )
   )
 
-  const tenants = (tenantsData?.data ?? []) as Tenant[]
+  const tenants = (tenantsData ?? []) as Tenant[]
   const currentTenant = tenants.find((t) => t.id === currentTenantId) ?? null
+
+  // Clear stale tenant ID if it's not in the available tenants list
+  useEffect(() => {
+    if (!isInitialized || isLoadingTenants) return
+    if (!currentTenantId || tenants.length === 0) return
+    const isValid = tenants.some((t) => t.id === currentTenantId)
+    if (!isValid) {
+      tenantIdStorage.clearTenantId()
+      setCurrentTenantId(null)
+    }
+  }, [isInitialized, isLoadingTenants, tenants, currentTenantId])
 
   // Auto-select if there's only one tenant and none is selected
   useEffect(() => {

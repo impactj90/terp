@@ -26,9 +26,9 @@ const EMPLOYEES_EDIT = permissionIdByKey("employees.edit")!
 // --- Output Schemas ---
 
 const employeeCardOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  employeeId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
+  employeeId: z.string(),
   cardNumber: z.string(),
   cardType: z.string(),
   validFrom: z.date(),
@@ -52,7 +52,7 @@ export const employeeCardsRouter = createTRPCRouter({
    */
   list: tenantProcedure
     .use(requirePermission(EMPLOYEES_VIEW))
-    .input(z.object({ employeeId: z.string().uuid() }))
+    .input(z.object({ employeeId: z.string() }))
     .output(z.object({ data: z.array(employeeCardOutputSchema) }))
     .query(async ({ ctx, input }) => {
       try {
@@ -80,7 +80,7 @@ export const employeeCardsRouter = createTRPCRouter({
     .use(requirePermission(EMPLOYEES_EDIT))
     .input(
       z.object({
-        employeeId: z.string().uuid(),
+        employeeId: z.string(),
         cardNumber: z.string().min(1, "Card number is required"),
         cardType: z.string().optional(),
         validFrom: z.coerce.date().optional(),
@@ -108,7 +108,7 @@ export const employeeCardsRouter = createTRPCRouter({
     .use(requirePermission(EMPLOYEES_EDIT))
     .input(
       z.object({
-        id: z.string().uuid(),
+        id: z.string(),
         reason: z.string().optional(),
       })
     )

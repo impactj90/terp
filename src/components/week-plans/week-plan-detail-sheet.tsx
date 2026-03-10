@@ -16,39 +16,38 @@ import {
 } from '@/components/ui/sheet'
 import { useWeekPlan } from '@/hooks'
 import { cn } from '@/lib/utils'
-import type { components } from '@/types/legacy-api-types'
 
-type WeekPlan = components['schemas']['WeekPlan']
-type DayPlanSummary = components['schemas']['DayPlanSummary']
+type WeekPlanData = NonNullable<ReturnType<typeof useWeekPlan>['data']>
+type DayPlanSummary = NonNullable<WeekPlanData['mondayDayPlan']>
 
 interface WeekPlanDetailSheetProps {
   weekPlanId: string | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  onEdit: (weekPlan: WeekPlan) => void
-  onDelete: (weekPlan: WeekPlan) => void
-  onCopy: (weekPlan: WeekPlan) => void
+  onEdit: (weekPlan: WeekPlanData) => void
+  onDelete: (weekPlan: WeekPlanData) => void
+  onCopy: (weekPlan: WeekPlanData) => void
 }
 
 const DAYS = [
-  { key: 'monday', labelKey: 'monday' as const, shortKey: 'mon' as const, planKey: 'monday_day_plan' as const, weekend: false },
-  { key: 'tuesday', labelKey: 'tuesday' as const, shortKey: 'tue' as const, planKey: 'tuesday_day_plan' as const, weekend: false },
-  { key: 'wednesday', labelKey: 'wednesday' as const, shortKey: 'wed' as const, planKey: 'wednesday_day_plan' as const, weekend: false },
-  { key: 'thursday', labelKey: 'thursday' as const, shortKey: 'thu' as const, planKey: 'thursday_day_plan' as const, weekend: false },
-  { key: 'friday', labelKey: 'friday' as const, shortKey: 'fri' as const, planKey: 'friday_day_plan' as const, weekend: false },
-  { key: 'saturday', labelKey: 'saturday' as const, shortKey: 'sat' as const, planKey: 'saturday_day_plan' as const, weekend: true },
-  { key: 'sunday', labelKey: 'sunday' as const, shortKey: 'sun' as const, planKey: 'sunday_day_plan' as const, weekend: true },
+  { key: 'monday', labelKey: 'monday' as const, shortKey: 'mon' as const, planKey: 'mondayDayPlan' as const, weekend: false },
+  { key: 'tuesday', labelKey: 'tuesday' as const, shortKey: 'tue' as const, planKey: 'tuesdayDayPlan' as const, weekend: false },
+  { key: 'wednesday', labelKey: 'wednesday' as const, shortKey: 'wed' as const, planKey: 'wednesdayDayPlan' as const, weekend: false },
+  { key: 'thursday', labelKey: 'thursday' as const, shortKey: 'thu' as const, planKey: 'thursdayDayPlan' as const, weekend: false },
+  { key: 'friday', labelKey: 'friday' as const, shortKey: 'fri' as const, planKey: 'fridayDayPlan' as const, weekend: false },
+  { key: 'saturday', labelKey: 'saturday' as const, shortKey: 'sat' as const, planKey: 'saturdayDayPlan' as const, weekend: true },
+  { key: 'sunday', labelKey: 'sunday' as const, shortKey: 'sun' as const, planKey: 'sundayDayPlan' as const, weekend: true },
 ]
 
-function countWorkDays(weekPlan: WeekPlan): number {
+function countWorkDays(weekPlan: WeekPlanData): number {
   const days = [
-    weekPlan.monday_day_plan_id,
-    weekPlan.tuesday_day_plan_id,
-    weekPlan.wednesday_day_plan_id,
-    weekPlan.thursday_day_plan_id,
-    weekPlan.friday_day_plan_id,
-    weekPlan.saturday_day_plan_id,
-    weekPlan.sunday_day_plan_id,
+    weekPlan.mondayDayPlanId,
+    weekPlan.tuesdayDayPlanId,
+    weekPlan.wednesdayDayPlanId,
+    weekPlan.thursdayDayPlanId,
+    weekPlan.fridayDayPlanId,
+    weekPlan.saturdayDayPlanId,
+    weekPlan.sundayDayPlanId,
   ]
   return days.filter(Boolean).length
 }
@@ -76,8 +75,8 @@ export function WeekPlanDetailSheet({
                 <div>
                   <SheetTitle className="flex items-center gap-2">
                     {weekPlan.name}
-                    <Badge variant={weekPlan.is_active ? 'default' : 'secondary'}>
-                      {weekPlan.is_active ? t('statusActive') : t('statusInactive')}
+                    <Badge variant={weekPlan.isActive ? 'default' : 'secondary'}>
+                      {weekPlan.isActive ? t('statusActive') : t('statusInactive')}
                     </Badge>
                   </SheetTitle>
                   <SheetDescription className="mt-1">
@@ -133,7 +132,7 @@ export function WeekPlanDetailSheet({
   )
 }
 
-function WeekGrid({ weekPlan }: { weekPlan: WeekPlan }) {
+function WeekGrid({ weekPlan }: { weekPlan: WeekPlanData }) {
   return (
     <div className="grid grid-cols-7 gap-2">
       {DAYS.map((day) => {
@@ -174,7 +173,7 @@ function DayCard({
             {dayPlan.name}
           </div>
           <div className="text-xs text-muted-foreground">
-            {dayPlan.plan_type === 'fixed' ? t('typeFixed') : t('typeFlex')}
+            {dayPlan.planType === 'fixed' ? t('typeFixed') : t('typeFlex')}
           </div>
         </div>
       ) : (

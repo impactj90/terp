@@ -35,9 +35,9 @@ const payrollExportTypeEnum = z.enum(["standard", "datev", "sage", "custom"])
 // --- Output Schemas ---
 
 const payrollExportOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  exportInterfaceId: z.string().uuid().nullable(),
+  id: z.string(),
+  tenantId: z.string(),
+  exportInterfaceId: z.string().nullable(),
   year: z.number(),
   month: z.number(),
   status: z.string(),
@@ -53,13 +53,13 @@ const payrollExportOutputSchema = z.object({
   requestedAt: z.date(),
   startedAt: z.date().nullable(),
   completedAt: z.date().nullable(),
-  createdBy: z.string().uuid().nullable(),
+  createdBy: z.string().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
 })
 
 const previewLineSchema = z.object({
-  employeeId: z.string().uuid(),
+  employeeId: z.string(),
   personnelNumber: z.string(),
   firstName: z.string(),
   lastName: z.string(),
@@ -92,7 +92,7 @@ export const payrollExportsRouter = createTRPCRouter({
         month: z.number().optional(),
         status: payrollExportStatusEnum.optional(),
         limit: z.number().int().min(1).max(100).default(20),
-        cursor: z.string().uuid().optional(),
+        cursor: z.string().optional(),
       }).optional()
     )
     .output(
@@ -100,7 +100,7 @@ export const payrollExportsRouter = createTRPCRouter({
         data: z.array(payrollExportOutputSchema),
         meta: z.object({
           hasMore: z.boolean(),
-          nextCursor: z.string().uuid().optional(),
+          nextCursor: z.string().optional(),
         }),
       })
     )
@@ -125,7 +125,7 @@ export const payrollExportsRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(PAYROLL_VIEW))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(payrollExportOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -155,11 +155,11 @@ export const payrollExportsRouter = createTRPCRouter({
         month: z.number().int().min(1).max(12),
         format: payrollExportFormatEnum.default("csv"),
         exportType: payrollExportTypeEnum.default("standard"),
-        exportInterfaceId: z.string().uuid().optional(),
+        exportInterfaceId: z.string().optional(),
         parameters: z.object({
-          employeeIds: z.array(z.string().uuid()).optional(),
-          departmentIds: z.array(z.string().uuid()).optional(),
-          includeAccounts: z.array(z.string().uuid()).optional(),
+          employeeIds: z.array(z.string()).optional(),
+          departmentIds: z.array(z.string()).optional(),
+          includeAccounts: z.array(z.string()).optional(),
         }).optional(),
       })
     )
@@ -186,7 +186,7 @@ export const payrollExportsRouter = createTRPCRouter({
    */
   preview: tenantProcedure
     .use(requirePermission(PAYROLL_VIEW))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(
       z.object({
         lines: z.array(previewLineSchema),
@@ -216,7 +216,7 @@ export const payrollExportsRouter = createTRPCRouter({
    */
   download: tenantProcedure
     .use(requirePermission(PAYROLL_VIEW))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(
       z.object({
         content: z.string(),
@@ -243,7 +243,7 @@ export const payrollExportsRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(PAYROLL_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

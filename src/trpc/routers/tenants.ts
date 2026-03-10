@@ -29,7 +29,7 @@ const vacationBasisEnum = z.enum(["calendar_year", "entry_date"])
 // --- Output Schema ---
 
 const tenantOutputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   name: z.string(),
   slug: z.string(),
   isActive: z.boolean().nullable(),
@@ -66,7 +66,7 @@ const createTenantInputSchema = z.object({
 // --- Input: Update ---
 
 const updateTenantInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   name: z.string().min(1).optional(),
   addressStreet: z.string().min(1).optional(),
   addressZip: z.string().min(1).optional(),
@@ -167,7 +167,7 @@ export const tenantsRouter = createTRPCRouter({
    */
   getById: protectedProcedure
     .use(requirePermission(TENANTS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(tenantOutputSchema)
     .query(async ({ ctx, input }) => {
       const tenant = await ctx.prisma.tenant.findUnique({
@@ -467,7 +467,7 @@ export const tenantsRouter = createTRPCRouter({
    */
   deactivate: protectedProcedure
     .use(requirePermission(TENANTS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       // Verify tenant exists

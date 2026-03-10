@@ -41,22 +41,10 @@ import { ShiftPalette } from './shift-palette'
 import { ShiftAssignmentFormDialog } from './shift-assignment-form-dialog'
 import { BulkAssignDialog } from './bulk-assign-dialog'
 import { DeleteRangeDialog } from './delete-range-dialog'
-import type { components } from '@/types/legacy-api-types'
+import type { useShift } from '@/hooks'
 
-type Shift = components['schemas']['Shift']
-
-interface EmployeeDayPlan {
-  id: string
-  tenant_id: string
-  employee_id: string
-  plan_date: string
-  day_plan_id?: string
-  shift_id?: string
-  source: 'tariff' | 'manual' | 'holiday'
-  notes?: string
-  day_plan?: { id: string; code: string; name: string }
-  shift?: Shift
-}
+type Shift = NonNullable<ReturnType<typeof useShift>['data']>
+type EmployeeDayPlan = NonNullable<ReturnType<typeof useEmployeeDayPlans>['data']>['data'][number]
 
 type ViewMode = 'week' | 'twoWeeks' | 'month'
 
@@ -220,7 +208,7 @@ export function ShiftPlanningBoard({ enabled }: ShiftPlanningBoardProps) {
     to: formatDate(rangeEnd),
     enabled,
   })
-  const dayPlans = ((edpData as { data?: EmployeeDayPlan[] })?.data ?? []) as EmployeeDayPlan[]
+  const dayPlans = edpData?.data ?? []
 
   const createPlanMutation = useBulkCreateEmployeeDayPlans()
 
@@ -228,9 +216,9 @@ export function ShiftPlanningBoard({ enabled }: ShiftPlanningBoardProps) {
   const planMap = React.useMemo(() => {
     const map = new Map<string, EmployeeDayPlan>()
     for (const plan of dayPlans) {
-      if (!plan.employee_id) continue
-      const dateStr = String(plan.plan_date).substring(0, 10)
-      const key = `${plan.employee_id}-${dateStr}`
+      if (!plan.employeeId) continue
+      const dateStr = String(plan.planDate).substring(0, 10)
+      const key = `${plan.employeeId}-${dateStr}`
       map.set(key, plan)
     }
     return map
@@ -253,7 +241,7 @@ export function ShiftPlanningBoard({ enabled }: ShiftPlanningBoardProps) {
   ) => {
     const employee = employees.find((e) => e.id === employeeId)
     const employeeName = employee
-      ? `${employee.last_name}, ${employee.first_name}`
+      ? `${employee.lastName}, ${employee.firstName}`
       : ''
     setEditCell({ employeeId, employeeName, date, existingPlan })
   }
@@ -288,17 +276,15 @@ export function ShiftPlanningBoard({ enabled }: ShiftPlanningBoardProps) {
     // Directly assign shift via bulk upsert (handles both create and update)
     try {
       await createPlanMutation.mutateAsync({
-        body: {
-          plans: [
-            {
-              employee_id: employeeId,
-              plan_date: formatDate(date),
-              day_plan_id: shift.day_plan_id || undefined,
-              shift_id: shift.id,
-              source: 'manual',
-            },
-          ],
-        },
+        entries: [
+          {
+            employeeId: employeeId,
+            planDate: formatDate(date),
+            dayPlanId: shift.dayPlanId || undefined,
+            shiftId: shift.id,
+            source: 'manual',
+          },
+        ],
       })
     } catch {
       // Error handled by mutation
@@ -493,11 +479,11 @@ export function ShiftPlanningBoard({ enabled }: ShiftPlanningBoardProps) {
                         <div className="sticky left-0 z-10 bg-card px-3 py-1 flex items-center min-h-[42px] border-r">
                           <div className="truncate">
                             <span className="text-sm font-medium">
-                              {employee.last_name}, {employee.first_name}
+                              {employee.lastName}, {employee.firstName}
                             </span>
-                            {employee.personnel_number && (
+                            {employee.personnelNumber && (
                               <span className="ml-1.5 text-xs text-muted-foreground">
-                                ({employee.personnel_number})
+                                ({employee.personnelNumber})
                               </span>
                             )}
                           </div>
@@ -507,8 +493,8 @@ export function ShiftPlanningBoard({ enabled }: ShiftPlanningBoardProps) {
                           const dateStr = formatDate(date)
                           const key = `${employee.id}-${dateStr}`
                           const plan = planMap.get(key) ?? null
-                          const shift = plan?.shift_id
-                            ? (plan.shift ?? shiftMap.get(plan.shift_id) ?? null)
+                          const shift = plan?.shiftId
+                            ? ((plan.shift ?? shiftMap.get(plan.shiftId) ?? null) as Shift | null)
                             : null
                           const weekend = isWeekend(date)
 
@@ -645,8 +631,8 @@ function DroppableShiftCell({
   // Label: show shift code or day plan code
   const label = shift
     ? shift.code
-    : plan?.day_plan
-      ? plan.day_plan.code
+    : plan?.dayPlan
+      ? plan.dayPlan.code
       : plan
         ? '-'
         : ''
@@ -687,7 +673,7 @@ function DroppableShiftCell({
       }
       title={
         plan
-          ? `${plan.source}${plan.day_plan ? ': ' + plan.day_plan.name : ''}${plan.notes ? ' - ' + plan.notes : ''}`
+          ? `${plan.source}${plan.dayPlan ? ': ' + plan.dayPlan.name : ''}${plan.notes ? ' - ' + plan.notes : ''}`
           : undefined
       }
     >

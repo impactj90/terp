@@ -89,8 +89,8 @@ describe("accessProfiles.list", () => {
     const result = await caller.list()
 
     expect(result.data).toHaveLength(2)
-    expect(result.data[0].code).toBe("PROF-A")
-    expect(result.data[1].code).toBe("PROF-B")
+    expect(result.data[0]!.code).toBe("PROF-A")
+    expect(result.data[1]!.code).toBe("PROF-B")
     expect(mockPrisma.accessProfile.findMany).toHaveBeenCalledWith({
       where: { tenantId: TENANT_ID },
       orderBy: { code: "asc" },

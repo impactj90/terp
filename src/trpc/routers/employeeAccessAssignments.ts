@@ -26,10 +26,10 @@ const ACCESS_CONTROL_MANAGE = permissionIdByKey("access_control.manage")!
 // --- Output Schemas ---
 
 const employeeAccessAssignmentOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  employeeId: z.string().uuid(),
-  accessProfileId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
+  employeeId: z.string(),
+  accessProfileId: z.string(),
   validFrom: z.date().nullable(),
   validTo: z.date().nullable(),
   isActive: z.boolean(),
@@ -37,7 +37,7 @@ const employeeAccessAssignmentOutputSchema = z.object({
   updatedAt: z.date(),
   employee: z
     .object({
-      id: z.string().uuid(),
+      id: z.string(),
       firstName: z.string(),
       lastName: z.string(),
       personnelNumber: z.string().nullable(),
@@ -45,7 +45,7 @@ const employeeAccessAssignmentOutputSchema = z.object({
     .optional(),
   accessProfile: z
     .object({
-      id: z.string().uuid(),
+      id: z.string(),
       code: z.string(),
       name: z.string(),
     })
@@ -55,14 +55,14 @@ const employeeAccessAssignmentOutputSchema = z.object({
 // --- Input Schemas ---
 
 const createEmployeeAccessAssignmentInputSchema = z.object({
-  employeeId: z.string().uuid(),
-  accessProfileId: z.string().uuid(),
+  employeeId: z.string(),
+  accessProfileId: z.string(),
   validFrom: z.string().date().optional(),
   validTo: z.string().date().optional(),
 })
 
 const updateEmployeeAccessAssignmentInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   // EmployeeID and AccessProfileID are NOT updatable
   validFrom: z.string().date().nullable().optional(),
   validTo: z.string().date().nullable().optional(),
@@ -162,7 +162,7 @@ export const employeeAccessAssignmentsRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(ACCESS_CONTROL_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(employeeAccessAssignmentOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -232,7 +232,7 @@ export const employeeAccessAssignmentsRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(ACCESS_CONTROL_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

@@ -31,9 +31,9 @@ import * as notificationService from "@/lib/services/notification-service"
 // --- Output Schemas ---
 
 const notificationOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  userId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
+  userId: z.string(),
   type: z.string(),
   title: z.string(),
   message: z.string(),
@@ -44,9 +44,9 @@ const notificationOutputSchema = z.object({
 })
 
 const notificationPreferencesOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  userId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
+  userId: z.string(),
   approvalsEnabled: z.boolean(),
   errorsEnabled: z.boolean(),
   remindersEnabled: z.boolean(),
@@ -191,7 +191,7 @@ export const notificationsRouter = createTRPCRouter({
    * No additional permission required -- user-scoped.
    */
   markRead: tenantProcedure
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -206,7 +206,7 @@ export const notificationsRouter = createTRPCRouter({
         // Publish unread count update via PubSub
         const { getHub } = await import('@/lib/pubsub/singleton')
         const { userTopic } = await import('@/lib/pubsub/topics')
-        const hub = getHub()
+        const hub = await getHub()
         await hub.publish(userTopic(userId), { event: 'unread_count', unread_count: newCount }, true)
 
         return { success: true }
@@ -237,7 +237,7 @@ export const notificationsRouter = createTRPCRouter({
         // Publish unread count update via PubSub (count is now 0)
         const { getHub } = await import('@/lib/pubsub/singleton')
         const { userTopic } = await import('@/lib/pubsub/topics')
-        const hub = getHub()
+        const hub = await getHub()
         await hub.publish(userTopic(userId), { event: 'unread_count', unread_count: 0 }, true)
 
         return { success: true, count }
@@ -280,7 +280,7 @@ export const notificationsRouter = createTRPCRouter({
   onEvent: tenantProcedure.subscription(async function* ({ ctx, signal }) {
     const { getHub } = await import('@/lib/pubsub/singleton')
     const { userTopic } = await import('@/lib/pubsub/topics')
-    const hub = getHub()
+    const hub = await getHub()
     const userId = ctx.user.id
     const tenantId = ctx.tenantId!
 

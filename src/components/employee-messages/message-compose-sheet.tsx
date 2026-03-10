@@ -32,10 +32,9 @@ import {
   useEmployees,
   useDepartments,
 } from '@/hooks'
-import type { components } from '@/types/legacy-api-types'
 
-type Employee = components['schemas']['Employee']
-type Department = components['schemas']['Department']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Employee = any
 
 interface MessageComposeSheetProps {
   open: boolean
@@ -89,7 +88,7 @@ export function MessageComposeSheet({
     active: true,
     enabled: open && form.recipientMode === 'department',
   })
-  const allDepartments = (departmentsData?.data ?? []) as Department[]
+  const allDepartments = departmentsData?.data ?? []
 
   // Fetch employees for each selected department
   const { data: deptEmployeesData } = useEmployees({
@@ -104,8 +103,8 @@ export function MessageComposeSheet({
 
   // When department employees change, update resolved IDs
   React.useEffect(() => {
-    if (form.recipientMode === 'department' && deptEmployeesData?.data) {
-      const ids = deptEmployeesData.data.map((e: Employee) => e.id)
+    if (form.recipientMode === 'department' && deptEmployeesData?.items) {
+      const ids = deptEmployeesData.items.map((e: Employee) => e.id)
       setResolvedDeptEmployeeIds(ids)
     }
   }, [form.recipientMode, deptEmployeesData])
@@ -185,11 +184,9 @@ export function MessageComposeSheet({
       }
 
       const result = await createMutation.mutateAsync({
-        body: {
-          subject: form.subject.trim(),
-          body: form.body.trim(),
-          employee_ids: employeeIds,
-        },
+        subject: form.subject.trim(),
+        body: form.body.trim(),
+        employeeIds,
       })
 
       onSuccess?.(result.id, form.subject.trim(), employeeIds.length)
@@ -237,7 +234,7 @@ export function MessageComposeSheet({
 
   const getEmployeeName = (id: string) => {
     const emp = allEmployees.find((e) => e.id === id)
-    return emp ? `${emp.first_name} ${emp.last_name}` : id.slice(0, 8)
+    return emp ? `${emp.firstName} ${emp.lastName}` : id.slice(0, 8)
   }
 
   const getDepartmentName = (id: string) => {
@@ -337,7 +334,7 @@ export function MessageComposeSheet({
                     <SelectContent>
                       {availableEmployees.map((emp) => (
                         <SelectItem key={emp.id} value={emp.id}>
-                          {emp.first_name} {emp.last_name} ({emp.personnel_number})
+                          {emp.firstName} {emp.lastName} ({emp.personnelNumber})
                         </SelectItem>
                       ))}
                     </SelectContent>

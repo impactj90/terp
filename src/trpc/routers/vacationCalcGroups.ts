@@ -31,15 +31,15 @@ const VACATION_BASES = ["calendar_year", "entry_date"] as const
 // --- Output Schemas ---
 
 const specialCalcSummarySchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   type: z.string(),
   threshold: z.number(),
   bonusDays: z.number(),
 })
 
 const vacationCalcGroupOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   code: z.string(),
   name: z.string(),
   description: z.string().nullable(),
@@ -60,16 +60,16 @@ const createVacationCalcGroupInputSchema = z.object({
   description: z.string().optional(),
   basis: z.enum(VACATION_BASES).optional().default("calendar_year"),
   isActive: z.boolean().optional().default(true),
-  specialCalculationIds: z.array(z.string().uuid()).optional(),
+  specialCalculationIds: z.array(z.string()).optional(),
 })
 
 const updateVacationCalcGroupInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   name: z.string().min(1).max(255).optional(),
   description: z.string().nullable().optional(),
   basis: z.enum(VACATION_BASES).optional(),
   isActive: z.boolean().optional(),
-  specialCalculationIds: z.array(z.string().uuid()).optional(),
+  specialCalculationIds: z.array(z.string()).optional(),
 })
 
 // --- Prisma Include Objects ---
@@ -173,7 +173,7 @@ export const vacationCalcGroupsRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(VACATION_CONFIG_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(vacationCalcGroupOutputSchema)
     .query(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!
@@ -396,7 +396,7 @@ export const vacationCalcGroupsRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(VACATION_CONFIG_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!

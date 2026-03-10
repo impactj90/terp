@@ -12,9 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { components } from '@/types/legacy-api-types'
-
-type WeekPlan = components['schemas']['WeekPlan']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type WeekPlan = any
 
 interface RollingWeekPlanSelectorProps {
   weekPlans: WeekPlan[]

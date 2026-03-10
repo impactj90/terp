@@ -23,9 +23,27 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { useAccount, useAccountUsage } from '@/hooks'
-import type { components } from '@/types/legacy-api-types'
 
-type Account = components['schemas']['Account']
+type Account = {
+  id: string
+  tenantId: string | null
+  code: string
+  name: string
+  accountType: string
+  unit: string
+  isSystem: boolean
+  isActive: boolean
+  description: string | null
+  isPayrollRelevant: boolean
+  payrollCode: string | null
+  sortOrder: number
+  yearCarryover: boolean
+  accountGroupId: string | null
+  displayFormat: string
+  bonusFactor: number | null
+  createdAt: string
+  updatedAt: string
+}
 
 interface AccountDetailSheetProps {
   accountId: string | null
@@ -96,18 +114,17 @@ export function AccountDetailSheet({
     return format(new Date(date), 'dd.MM.yyyy HH:mm')
   }
 
-  const isSystem = account?.is_system ?? false
+  const isSystem = account?.isSystem ?? false
 
   // Get type info from runtime data
-  const typeKey = (account as Record<string, unknown> | undefined)?.account_type as string || 'tracking'
+  const typeKey = account?.accountType || 'tracking'
   const typeInfo = accountTypeConfig[typeKey] ?? { labelKey: typeKey, icon: BarChart3, variant: 'secondary' as const, color: 'bg-muted' }
   const TypeIcon = typeInfo.icon
 
-  // Unit from runtime (may not be in TS types)
-  const unit = (account as Record<string, unknown> | undefined)?.unit as string | undefined
-  const yearCarryover = (account as Record<string, unknown> | undefined)?.year_carryover as boolean | undefined
-  const usagePlans = (usageData as { day_plans?: Array<{ id: string; code: string; name: string }> } | undefined)?.day_plans ?? []
-  const usageCount = (usageData as { usage_count?: number } | undefined)?.usage_count ?? 0
+  const unit = account?.unit
+  const yearCarryover = account?.yearCarryover
+  const usagePlans = usageData?.dayPlans ?? []
+  const usageCount = usageData?.usageCount ?? 0
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -150,8 +167,8 @@ export function AccountDetailSheet({
                     {account.code}
                   </p>
                 </div>
-                <Badge variant={account.is_active ? 'default' : 'secondary'}>
-                  {account.is_active ? t('statusActive') : t('statusInactive')}
+                <Badge variant={account.isActive ? 'default' : 'secondary'}>
+                  {account.isActive ? t('statusActive') : t('statusInactive')}
                 </Badge>
               </div>
 
@@ -188,10 +205,10 @@ export function AccountDetailSheet({
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">{t('fieldPayrollRelevant')}</span>
-                    <BooleanBadge value={account.is_payroll_relevant} trueLabel={t('yes')} falseLabel={t('no')} />
+                    <BooleanBadge value={account.isPayrollRelevant} trueLabel={t('yes')} falseLabel={t('no')} />
                   </div>
-                  <DetailRow label={t('fieldPayrollCode')} value={account.payroll_code} />
-                  <DetailRow label={t('fieldSortOrder')} value={account.sort_order?.toString()} />
+                  <DetailRow label={t('fieldPayrollCode')} value={account.payrollCode} />
+                  <DetailRow label={t('fieldSortOrder')} value={account.sortOrder?.toString()} />
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">{t('fieldYearCarryover')}</span>
                     <BooleanBadge value={yearCarryover} trueLabel={t('yes')} falseLabel={t('no')} />
@@ -203,8 +220,8 @@ export function AccountDetailSheet({
               <div className="space-y-2">
                 <h4 className="text-sm font-medium text-muted-foreground">{t('timestampsSection')}</h4>
                 <div className="rounded-lg border p-4">
-                  <DetailRow label={t('labelCreated')} value={formatDateTime(account.created_at)} />
-                  <DetailRow label={t('labelLastUpdated')} value={formatDateTime(account.updated_at)} />
+                  <DetailRow label={t('labelCreated')} value={formatDateTime(account.createdAt)} />
+                  <DetailRow label={t('labelLastUpdated')} value={formatDateTime(account.updatedAt)} />
                 </div>
               </div>
 

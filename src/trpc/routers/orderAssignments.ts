@@ -28,23 +28,23 @@ const ORDER_ASSIGNMENTS_MANAGE = permissionIdByKey("order_assignments.manage")!
 // --- Output Schemas ---
 
 const orderIncludeSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   code: z.string(),
   name: z.string(),
 })
 
 const employeeIncludeSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   firstName: z.string(),
   lastName: z.string(),
   personnelNumber: z.string(),
 })
 
 const orderAssignmentOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  orderId: z.string().uuid(),
-  employeeId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
+  orderId: z.string(),
+  employeeId: z.string(),
   role: z.string(),
   validFrom: z.date().nullable(),
   validTo: z.date().nullable(),
@@ -60,15 +60,15 @@ type OrderAssignmentOutput = z.infer<typeof orderAssignmentOutputSchema>
 // --- Input Schemas ---
 
 const createOrderAssignmentInputSchema = z.object({
-  orderId: z.string().uuid(),
-  employeeId: z.string().uuid(),
+  orderId: z.string(),
+  employeeId: z.string(),
   role: z.string().optional(),
   validFrom: z.string().optional(),
   validTo: z.string().optional(),
 })
 
 const updateOrderAssignmentInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   role: z.string().optional(),
   validFrom: z.string().nullable().optional(),
   validTo: z.string().nullable().optional(),
@@ -134,8 +134,8 @@ export const orderAssignmentsRouter = createTRPCRouter({
     .input(
       z
         .object({
-          orderId: z.string().uuid().optional(),
-          employeeId: z.string().uuid().optional(),
+          orderId: z.string().optional(),
+          employeeId: z.string().optional(),
         })
         .optional()
     )
@@ -166,7 +166,7 @@ export const orderAssignmentsRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(ORDER_ASSIGNMENTS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(orderAssignmentOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -192,7 +192,7 @@ export const orderAssignmentsRouter = createTRPCRouter({
    */
   byOrder: tenantProcedure
     .use(requirePermission(ORDER_ASSIGNMENTS_MANAGE))
-    .input(z.object({ orderId: z.string().uuid() }))
+    .input(z.object({ orderId: z.string() }))
     .output(z.object({ data: z.array(orderAssignmentOutputSchema) }))
     .query(async ({ ctx, input }) => {
       try {
@@ -268,7 +268,7 @@ export const orderAssignmentsRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(ORDER_ASSIGNMENTS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

@@ -11,12 +11,12 @@ export function setHub(hub: PubSubHub): void {
   ;(globalThis as Record<symbol, unknown>)[HUB_KEY] = hub
 }
 
-export function getHub(): PubSubHub {
+export async function getHub(): Promise<PubSubHub> {
   let h = (globalThis as Record<symbol, unknown>)[HUB_KEY] as PubSubHub | undefined
   if (!h) {
     let supabaseClient = undefined
     try {
-      const { createClient } = require('@supabase/supabase-js')
+      const { createClient } = await import('@supabase/supabase-js')
       const url = process.env.NEXT_PUBLIC_SUPABASE_URL
       const key = process.env.SUPABASE_SERVICE_ROLE_KEY
       if (url && key) {

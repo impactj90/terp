@@ -8,17 +8,38 @@ import type { PrismaClient } from "@/generated/prisma/client"
 
 export type GroupType = "employee" | "workflow" | "activity"
 
+/** Shape shared by EmployeeGroup, WorkflowGroup, ActivityGroup records */
+export interface GroupRecord {
+  id: string
+  tenantId: string
+  code: string
+  name: string
+  description: string | null
+  isActive: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+
+/** Common delegate shape shared by EmployeeGroup, WorkflowGroup, ActivityGroup */
+type GroupDelegate = {
+  findMany: (args: { where: Record<string, unknown>; orderBy: Record<string, string> }) => Promise<GroupRecord[]>
+  findFirst: (args: { where: Record<string, unknown> }) => Promise<GroupRecord | null>
+  create: (args: { data: Record<string, unknown> }) => Promise<GroupRecord>
+  update: (args: { where: Record<string, unknown>; data: Record<string, unknown> }) => Promise<GroupRecord>
+  delete: (args: { where: Record<string, unknown> }) => Promise<GroupRecord>
+}
+
 /**
  * Returns the correct Prisma delegate based on the group type.
  */
-function getGroupDelegate(prisma: PrismaClient, type: GroupType) {
+function getGroupDelegate(prisma: PrismaClient, type: GroupType): GroupDelegate {
   switch (type) {
     case "employee":
-      return prisma.employeeGroup
+      return prisma.employeeGroup as unknown as GroupDelegate
     case "workflow":
-      return prisma.workflowGroup
+      return prisma.workflowGroup as unknown as GroupDelegate
     case "activity":
-      return prisma.activityGroup
+      return prisma.activityGroup as unknown as GroupDelegate
   }
 }
 
@@ -49,7 +70,7 @@ export async function findMany(
     where.isActive = params.isActive
   }
 
-  return (delegate as any).findMany({
+  return delegate.findMany({
     where,
     orderBy: { code: "asc" },
   })
@@ -62,7 +83,7 @@ export async function findById(
   id: string
 ) {
   const delegate = getGroupDelegate(prisma, type)
-  return (delegate as any).findFirst({
+  return delegate.findFirst({
     where: { id, tenantId },
   })
 }
@@ -79,7 +100,7 @@ export async function findByCode(
   if (excludeId) {
     where.NOT = { id: excludeId }
   }
-  return (delegate as any).findFirst({ where })
+  return delegate.findFirst({ where })
 }
 
 export async function create(
@@ -94,7 +115,7 @@ export async function create(
   }
 ) {
   const delegate = getGroupDelegate(prisma, type)
-  return (delegate as any).create({ data })
+  return delegate.create({ data })
 }
 
 export async function update(
@@ -104,7 +125,7 @@ export async function update(
   data: Record<string, unknown>
 ) {
   const delegate = getGroupDelegate(prisma, type)
-  return (delegate as any).update({
+  return delegate.update({
     where: { id },
     data,
   })
@@ -116,7 +137,7 @@ export async function deleteById(
   id: string
 ) {
   const delegate = getGroupDelegate(prisma, type)
-  return (delegate as any).delete({
+  return delegate.delete({
     where: { id },
   })
 }

@@ -16,12 +16,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useCreateWeekPlan } from '@/hooks'
-import type { components } from '@/types/legacy-api-types'
+import type { useWeekPlan } from '@/hooks'
 
-type WeekPlan = components['schemas']['WeekPlan']
+type WeekPlanData = NonNullable<ReturnType<typeof useWeekPlan>['data']>
 
 interface CopyWeekPlanDialogProps {
-  weekPlan: WeekPlan | null
+  weekPlan: WeekPlanData | null
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -60,18 +60,16 @@ export function CopyWeekPlanDialog({ weekPlan, open, onOpenChange }: CopyWeekPla
 
     try {
       await createMutation.mutateAsync({
-        body: {
-          code: newCode.trim(),
-          name: newName.trim(),
-          description: weekPlan.description ?? undefined,
-          monday_day_plan_id: weekPlan.monday_day_plan_id ?? undefined,
-          tuesday_day_plan_id: weekPlan.tuesday_day_plan_id ?? undefined,
-          wednesday_day_plan_id: weekPlan.wednesday_day_plan_id ?? undefined,
-          thursday_day_plan_id: weekPlan.thursday_day_plan_id ?? undefined,
-          friday_day_plan_id: weekPlan.friday_day_plan_id ?? undefined,
-          saturday_day_plan_id: weekPlan.saturday_day_plan_id ?? undefined,
-          sunday_day_plan_id: weekPlan.sunday_day_plan_id ?? undefined,
-        },
+        code: newCode.trim(),
+        name: newName.trim(),
+        description: weekPlan.description ?? undefined,
+        mondayDayPlanId: weekPlan.mondayDayPlanId ?? '',
+        tuesdayDayPlanId: weekPlan.tuesdayDayPlanId ?? '',
+        wednesdayDayPlanId: weekPlan.wednesdayDayPlanId ?? '',
+        thursdayDayPlanId: weekPlan.thursdayDayPlanId ?? '',
+        fridayDayPlanId: weekPlan.fridayDayPlanId ?? '',
+        saturdayDayPlanId: weekPlan.saturdayDayPlanId ?? '',
+        sundayDayPlanId: weekPlan.sundayDayPlanId ?? '',
       })
       onOpenChange(false)
     } catch (err) {

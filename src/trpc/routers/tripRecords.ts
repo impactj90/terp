@@ -25,10 +25,10 @@ const VEHICLE_DATA_MANAGE = permissionIdByKey("vehicle_data.manage")!
 // --- Output Schemas ---
 
 const tripRecordOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  vehicleId: z.string().uuid(),
-  routeId: z.string().uuid().nullable(),
+  id: z.string(),
+  tenantId: z.string(),
+  vehicleId: z.string(),
+  routeId: z.string().nullable(),
   tripDate: z.date(),
   startMileage: z.number().nullable(),
   endMileage: z.number().nullable(),
@@ -38,14 +38,14 @@ const tripRecordOutputSchema = z.object({
   updatedAt: z.date(),
   vehicle: z
     .object({
-      id: z.string().uuid(),
+      id: z.string(),
       code: z.string(),
       name: z.string(),
     })
     .optional(),
   vehicleRoute: z
     .object({
-      id: z.string().uuid(),
+      id: z.string(),
       code: z.string(),
       name: z.string(),
     })
@@ -56,8 +56,8 @@ const tripRecordOutputSchema = z.object({
 // --- Input Schemas ---
 
 const createTripRecordInputSchema = z.object({
-  vehicleId: z.string().uuid(),
-  routeId: z.string().uuid().optional(),
+  vehicleId: z.string(),
+  routeId: z.string().optional(),
   tripDate: z.string().min(1, "Trip date is required"),
   startMileage: z.number().optional(),
   endMileage: z.number().optional(),
@@ -66,8 +66,8 @@ const createTripRecordInputSchema = z.object({
 })
 
 const updateTripRecordInputSchema = z.object({
-  id: z.string().uuid(),
-  routeId: z.string().uuid().nullable().optional(),
+  id: z.string(),
+  routeId: z.string().nullable().optional(),
   tripDate: z.string().optional(),
   startMileage: z.number().nullable().optional(),
   endMileage: z.number().nullable().optional(),
@@ -97,7 +97,7 @@ export const tripRecordsRouter = createTRPCRouter({
     .use(requirePermission(VEHICLE_DATA_MANAGE))
     .input(
       z.object({
-        vehicleId: z.string().uuid().optional(),
+        vehicleId: z.string().optional(),
         fromDate: z.string().optional(),
         toDate: z.string().optional(),
         limit: z.number().int().min(1).max(250).default(50),
@@ -183,7 +183,7 @@ export const tripRecordsRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(VEHICLE_DATA_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(tripRecordOutputSchema)
     .query(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!
@@ -421,7 +421,7 @@ export const tripRecordsRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(VEHICLE_DATA_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!

@@ -65,17 +65,7 @@ interface AbsenceType {
   updatedAt: Date | string
 }
 
-/** AbsenceTypeGroup shape from tRPC absenceTypeGroups.list */
-interface AbsenceTypeGroup {
-  id: string
-  tenantId: string
-  code: string
-  name: string
-  description: string | null
-  isActive: boolean
-  createdAt: Date | string
-  updatedAt: Date | string
-}
+
 
 const CATEGORY_OPTIONS = [
   { value: 'all', labelKey: 'allCategories' },

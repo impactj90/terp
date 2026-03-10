@@ -64,7 +64,7 @@ describe("vehicles.list", () => {
     const result = await caller.list()
 
     expect(result.data).toHaveLength(1)
-    expect(result.data[0].id).toBe(VEHICLE_ID)
+    expect(result.data[0]!.id).toBe(VEHICLE_ID)
     expect(mockPrisma.vehicle.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { tenantId: TENANT_ID },

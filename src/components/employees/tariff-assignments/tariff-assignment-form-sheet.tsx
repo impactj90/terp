@@ -143,24 +143,20 @@ export function TariffAssignmentFormSheet({
     try {
       if (isEdit && assignment) {
         await updateMutation.mutateAsync({
-          path: { id: employeeId, assignmentId: assignment.id },
-          body: {
-            effective_from: formatDateForApi(form.effectiveFrom),
-            effective_to: formatDateForApi(form.effectiveTo),
-            overwrite_behavior: form.overwriteBehavior,
-            notes: form.notes.trim() || undefined,
-          },
+          employeeId, id: assignment.id,
+          effectiveFrom: formatDateForApi(form.effectiveFrom),
+          effectiveTo: formatDateForApi(form.effectiveTo),
+          overwriteBehavior: form.overwriteBehavior,
+          notes: form.notes.trim() || undefined,
         })
       } else {
         await createMutation.mutateAsync({
-          path: { id: employeeId },
-          body: {
-            tariff_id: form.tariffId,
-            effective_from: formatDateForApi(form.effectiveFrom)!,
-            overwrite_behavior: form.overwriteBehavior,
-            effective_to: formatDateForApi(form.effectiveTo),
-            notes: form.notes.trim() || undefined,
-          },
+          employeeId,
+          tariffId: form.tariffId,
+          effectiveFrom: formatDateForApi(form.effectiveFrom)!,
+          overwriteBehavior: form.overwriteBehavior,
+          effectiveTo: formatDateForApi(form.effectiveTo),
+          notes: form.notes.trim() || undefined,
         })
       }
       onSuccess?.()

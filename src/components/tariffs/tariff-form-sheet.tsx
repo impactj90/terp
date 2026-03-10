@@ -39,14 +39,13 @@ import { useCreateTariff, useUpdateTariff, useTariff, useWeekPlans, useDayPlans,
 import { parseISODate } from '@/lib/time-utils'
 import { RollingWeekPlanSelector } from './rolling-week-plan-selector'
 import { XDaysRhythmConfig } from './x-days-rhythm-config'
-import type { components } from '@/types/legacy-api-types'
 
-type Tariff = components['schemas']['Tariff']
+type TariffData = NonNullable<ReturnType<typeof useTariff>['data']>
 
 interface TariffFormSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  tariff?: Tariff | null
+  tariff?: TariffData | null
   onSuccess?: () => void
 }
 
@@ -184,42 +183,42 @@ export function TariffFormSheet({
           code: fullTariff.code,
           name: fullTariff.name,
           description: fullTariff.description ?? '',
-          isActive: fullTariff.is_active ?? true,
+          isActive: fullTariff.isActive ?? true,
 
           // Week Plan / Rhythm
-          weekPlanId: fullTariff.week_plan_id ?? '',
-          validFrom: fullTariff.valid_from ? parseISODate(fullTariff.valid_from) : undefined,
-          validTo: fullTariff.valid_to ? parseISODate(fullTariff.valid_to) : undefined,
-          rhythmType: fullTariff.rhythm_type ?? 'weekly',
-          cycleDays: fullTariff.cycle_days ?? null,
-          rhythmStartDate: fullTariff.rhythm_start_date
-            ? parseISODate(fullTariff.rhythm_start_date)
+          weekPlanId: fullTariff.weekPlanId ?? '',
+          validFrom: fullTariff.validFrom ? parseISODate(fullTariff.validFrom as unknown as string) : undefined,
+          validTo: fullTariff.validTo ? parseISODate(fullTariff.validTo as unknown as string) : undefined,
+          rhythmType: (fullTariff.rhythmType as FormState['rhythmType']) ?? 'weekly',
+          cycleDays: fullTariff.cycleDays ?? null,
+          rhythmStartDate: fullTariff.rhythmStartDate
+            ? parseISODate(fullTariff.rhythmStartDate as unknown as string)
             : undefined,
-          weekPlanIds: fullTariff.tariff_week_plans?.map((twp) => twp.week_plan_id) ?? [],
+          weekPlanIds: fullTariff.tariffWeekPlans?.map((twp) => twp.weekPlanId) ?? [],
           dayPlans:
-            fullTariff.tariff_day_plans?.map((tdp) => ({
-              dayPosition: tdp.day_position,
-              dayPlanId: tdp.day_plan_id ?? null,
+            fullTariff.tariffDayPlans?.map((tdp) => ({
+              dayPosition: tdp.dayPosition,
+              dayPlanId: tdp.dayPlanId ?? null,
             })) ?? [],
 
           // Vacation
-          annualVacationDays: fullTariff.annual_vacation_days ?? null,
-          workDaysPerWeek: fullTariff.work_days_per_week ?? 5,
-          vacationBasis: fullTariff.vacation_basis ?? 'calendar_year',
-          vacationCappingRuleGroupId: fullTariff.vacation_capping_rule_group_id ?? '',
+          annualVacationDays: fullTariff.annualVacationDays ?? null,
+          workDaysPerWeek: fullTariff.workDaysPerWeek ?? 5,
+          vacationBasis: (fullTariff.vacationBasis as FormState['vacationBasis']) ?? 'calendar_year',
+          vacationCappingRuleGroupId: fullTariff.vacationCappingRuleGroupId ?? '',
 
           // Target Hours
-          dailyTargetHours: fullTariff.daily_target_hours ?? null,
-          weeklyTargetHours: fullTariff.weekly_target_hours ?? null,
-          monthlyTargetHours: fullTariff.monthly_target_hours ?? null,
-          annualTargetHours: fullTariff.annual_target_hours ?? null,
+          dailyTargetHours: fullTariff.dailyTargetHours ?? null,
+          weeklyTargetHours: fullTariff.weeklyTargetHours ?? null,
+          monthlyTargetHours: fullTariff.monthlyTargetHours ?? null,
+          annualTargetHours: fullTariff.annualTargetHours ?? null,
 
           // Flextime
-          maxFlextimePerMonth: fullTariff.max_flextime_per_month ?? null,
-          upperLimitAnnual: fullTariff.upper_limit_annual ?? null,
-          lowerLimitAnnual: fullTariff.lower_limit_annual ?? null,
-          flextimeThreshold: fullTariff.flextime_threshold ?? null,
-          creditType: fullTariff.credit_type ?? 'no_evaluation',
+          maxFlextimePerMonth: fullTariff.maxFlextimePerMonth ?? null,
+          upperLimitAnnual: fullTariff.upperLimitAnnual ?? null,
+          lowerLimitAnnual: fullTariff.lowerLimitAnnual ?? null,
+          flextimeThreshold: fullTariff.flextimeThreshold ?? null,
+          creditType: (fullTariff.creditType as FormState['creditType']) ?? 'no_evaluation',
         })
       } else if (!isEdit) {
         setForm(INITIAL_STATE)
@@ -267,73 +266,71 @@ export function TariffFormSheet({
       const commonFields = {
         name: form.name.trim(),
         description: form.description.trim() || undefined,
-        valid_from: form.validFrom ? format(form.validFrom, 'yyyy-MM-dd') : undefined,
-        valid_to: form.validTo ? format(form.validTo, 'yyyy-MM-dd') : undefined,
+        validFrom: form.validFrom ? format(form.validFrom, 'yyyy-MM-dd') : undefined,
+        validTo: form.validTo ? format(form.validTo, 'yyyy-MM-dd') : undefined,
 
         // Rhythm fields
-        rhythm_type: form.rhythmType,
-        cycle_days:
+        rhythmType: form.rhythmType,
+        cycleDays:
           form.rhythmType === 'x_days' ? nullToUndefined(form.cycleDays) : undefined,
-        rhythm_start_date:
+        rhythmStartDate:
           form.rhythmType !== 'weekly' && form.rhythmStartDate
             ? format(form.rhythmStartDate, 'yyyy-MM-dd')
             : undefined,
 
         // Week plan (for weekly rhythm)
-        week_plan_id: form.rhythmType === 'weekly' ? form.weekPlanId || undefined : undefined,
+        weekPlanId: form.rhythmType === 'weekly' ? form.weekPlanId || undefined : undefined,
 
         // Week plan IDs (for rolling_weekly)
-        week_plan_ids: form.rhythmType === 'rolling_weekly' ? form.weekPlanIds : undefined,
+        weekPlanIds: form.rhythmType === 'rolling_weekly' ? form.weekPlanIds : undefined,
 
         // Day plans (for x_days)
-        day_plans:
+        dayPlans:
           form.rhythmType === 'x_days'
             ? form.dayPlans.map((dp) => ({
-                day_position: dp.dayPosition,
-                day_plan_id: nullToUndefined(dp.dayPlanId),
+                dayPosition: dp.dayPosition,
+                dayPlanId: nullToUndefined(dp.dayPlanId),
               }))
             : undefined,
 
         // Vacation fields
-        annual_vacation_days: nullToUndefined(form.annualVacationDays),
-        work_days_per_week: nullToUndefined(form.workDaysPerWeek),
-        vacation_basis: form.vacationBasis,
-        vacation_capping_rule_group_id: form.vacationCappingRuleGroupId || undefined,
+        annualVacationDays: nullToUndefined(form.annualVacationDays),
+        workDaysPerWeek: nullToUndefined(form.workDaysPerWeek),
+        vacationBasis: form.vacationBasis,
+        vacationCappingRuleGroupId: form.vacationCappingRuleGroupId || undefined,
 
         // Target hours
-        daily_target_hours: nullToUndefined(form.dailyTargetHours),
-        weekly_target_hours: nullToUndefined(form.weeklyTargetHours),
-        monthly_target_hours: nullToUndefined(form.monthlyTargetHours),
-        annual_target_hours: nullToUndefined(form.annualTargetHours),
+        dailyTargetHours: nullToUndefined(form.dailyTargetHours),
+        weeklyTargetHours: nullToUndefined(form.weeklyTargetHours),
+        monthlyTargetHours: nullToUndefined(form.monthlyTargetHours),
+        annualTargetHours: nullToUndefined(form.annualTargetHours),
 
         // Flextime
-        max_flextime_per_month: nullToUndefined(form.maxFlextimePerMonth),
-        upper_limit_annual: nullToUndefined(form.upperLimitAnnual),
-        lower_limit_annual: nullToUndefined(form.lowerLimitAnnual),
-        flextime_threshold: nullToUndefined(form.flextimeThreshold),
-        credit_type: form.creditType,
+        maxFlextimePerMonth: nullToUndefined(form.maxFlextimePerMonth),
+        upperLimitAnnual: nullToUndefined(form.upperLimitAnnual),
+        lowerLimitAnnual: nullToUndefined(form.lowerLimitAnnual),
+        flextimeThreshold: nullToUndefined(form.flextimeThreshold),
+        creditType: form.creditType,
       }
 
       if (isEdit && tariff) {
         await updateMutation.mutateAsync({
-          path: { id: tariff.id },
-          body: {
-            ...commonFields,
-            is_active: form.isActive,
-          },
-        })
+          id: tariff.id,
+          ...commonFields,
+          isActive: form.isActive,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any)
       } else {
         await createMutation.mutateAsync({
-          body: {
-            code: form.code.trim(),
-            ...commonFields,
-          },
-        })
+          code: form.code.trim(),
+          ...commonFields,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any)
       }
 
       // Regenerate employee day plans so timesheet/day views reflect the updated tariff.
       // Runs in background - don't block the form from closing.
-      generateFromTariff.mutate({ overwrite_tariff_source: true })
+      generateFromTariff.mutate({ overwriteTariffSource: true })
 
       onSuccess?.()
     } catch (err) {

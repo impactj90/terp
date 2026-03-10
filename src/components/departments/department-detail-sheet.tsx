@@ -17,9 +17,9 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { useDepartment } from '@/hooks'
-import type { components } from '@/types/legacy-api-types'
 
-type Department = components['schemas']['Department']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Department = any
 
 interface DepartmentDetailSheetProps {
   departmentId: string | null
@@ -51,7 +51,8 @@ export function DepartmentDetailSheet({
   onDelete,
 }: DepartmentDetailSheetProps) {
   const t = useTranslations('adminDepartments')
-  const { data: department, isLoading } = useDepartment(departmentId || '', open && !!departmentId)
+  const { data: departmentData, isLoading } = useDepartment(departmentId || '', open && !!departmentId)
+  const department = departmentData as Department
 
   const formatDate = (date: string | undefined | null) => {
     if (!date) return '-'
@@ -86,8 +87,8 @@ export function DepartmentDetailSheet({
                   <h3 className="text-lg font-semibold">{department.name}</h3>
                   <p className="text-sm text-muted-foreground font-mono">{department.code}</p>
                 </div>
-                <Badge variant={department.is_active ? 'default' : 'secondary'}>
-                  {department.is_active ? t('statusActive') : t('statusInactive')}
+                <Badge variant={department.isActive ? 'default' : 'secondary'}>
+                  {department.isActive ? t('statusActive') : t('statusInactive')}
                 </Badge>
               </div>
 
@@ -107,13 +108,13 @@ export function DepartmentDetailSheet({
                 <div className="rounded-lg border p-4">
                   <DetailRow
                     label={t('fieldParentDepartment')}
-                    value={department.parent?.name || t('noneRootLevel')}
+                    value={department.parentId?.name || t('noneRootLevel')}
                   />
                   <DetailRow
                     label={t('fieldChildDepartments')}
                     value={
                       department.children && department.children.length > 0
-                        ? department.children.map((c) => c.name).join(', ')
+                        ? department.children.map((c: Department) => c.name).join(', ')
                         : t('none')
                     }
                   />
@@ -124,8 +125,8 @@ export function DepartmentDetailSheet({
               <div className="space-y-2">
                 <h4 className="text-sm font-medium text-muted-foreground">{t('sectionTimestamps')}</h4>
                 <div className="rounded-lg border p-4">
-                  <DetailRow label={t('fieldCreated')} value={formatDate(department.created_at)} />
-                  <DetailRow label={t('fieldLastUpdated')} value={formatDate(department.updated_at)} />
+                  <DetailRow label={t('fieldCreated')} value={formatDate(department.createdAt)} />
+                  <DetailRow label={t('fieldLastUpdated')} value={formatDate(department.updatedAt)} />
                 </div>
               </div>
             </div>

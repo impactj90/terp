@@ -29,9 +29,19 @@ import {
   useCreateContactType,
   useUpdateContactType,
 } from '@/hooks'
-import type { components } from '@/types/legacy-api-types'
 
-type ContactType = components['schemas']['ContactType']
+type ContactType = {
+  id: string
+  tenantId: string
+  code: string
+  name: string
+  dataType: string
+  description: string | null
+  isActive: boolean
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
 
 interface ContactTypeFormSheetProps {
   open: boolean
@@ -78,12 +88,12 @@ export function ContactTypeFormSheet({
         setForm({
           code: contactType.code || '',
           name: contactType.name || '',
-          dataType: contactType.data_type || 'text',
+          dataType: (contactType.dataType as 'text' | 'email' | 'phone' | 'url') || 'text',
           description: contactType.description || '',
-          sortOrder: contactType.sort_order !== undefined && contactType.sort_order !== null
-            ? String(contactType.sort_order)
+          sortOrder: contactType.sortOrder !== undefined && contactType.sortOrder !== null
+            ? String(contactType.sortOrder)
             : '',
-          isActive: contactType.is_active ?? true,
+          isActive: contactType.isActive ?? true,
         })
       } else {
         setForm(INITIAL_STATE)
@@ -124,23 +134,19 @@ export function ContactTypeFormSheet({
     try {
       if (isEdit && contactType) {
         await updateMutation.mutateAsync({
-          path: { id: contactType.id },
-          body: {
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            is_active: form.isActive,
-            sort_order: form.sortOrder ? parseInt(form.sortOrder, 10) : undefined,
-          },
+          id: contactType.id,
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          isActive: form.isActive,
+          sortOrder: form.sortOrder ? parseInt(form.sortOrder, 10) : undefined,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            code: form.code.trim(),
-            name: form.name.trim(),
-            data_type: form.dataType,
-            description: form.description.trim() || undefined,
-            sort_order: form.sortOrder ? parseInt(form.sortOrder, 10) : undefined,
-          },
+          code: form.code.trim(),
+          name: form.name.trim(),
+          dataType: form.dataType,
+          description: form.description.trim() || undefined,
+          sortOrder: form.sortOrder ? parseInt(form.sortOrder, 10) : undefined,
         })
       }
 

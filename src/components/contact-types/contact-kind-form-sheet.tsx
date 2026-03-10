@@ -21,10 +21,30 @@ import {
   useCreateContactKind,
   useUpdateContactKind,
 } from '@/hooks'
-import type { components } from '@/types/legacy-api-types'
 
-type ContactType = components['schemas']['ContactType']
-type ContactKind = components['schemas']['ContactKind']
+type ContactType = {
+  id: string
+  tenantId: string
+  code: string
+  name: string
+  dataType: string
+  description: string | null
+  isActive: boolean
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
+type ContactKind = {
+  id: string
+  tenantId: string
+  contactTypeId: string
+  code: string
+  label: string
+  isActive: boolean
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
 
 interface ContactKindFormSheetProps {
   open: boolean
@@ -69,10 +89,10 @@ export function ContactKindFormSheet({
         setForm({
           code: contactKind.code || '',
           label: contactKind.label || '',
-          sortOrder: contactKind.sort_order !== undefined && contactKind.sort_order !== null
-            ? String(contactKind.sort_order)
+          sortOrder: contactKind.sortOrder !== undefined && contactKind.sortOrder !== null
+            ? String(contactKind.sortOrder)
             : '',
-          isActive: contactKind.is_active ?? true,
+          isActive: contactKind.isActive ?? true,
         })
       } else {
         setForm(INITIAL_STATE)
@@ -109,21 +129,17 @@ export function ContactKindFormSheet({
     try {
       if (isEdit && contactKind) {
         await updateMutation.mutateAsync({
-          path: { id: contactKind.id },
-          body: {
-            label: form.label.trim(),
-            is_active: form.isActive,
-            sort_order: form.sortOrder ? parseInt(form.sortOrder, 10) : undefined,
-          },
+          id: contactKind.id,
+          label: form.label.trim(),
+          isActive: form.isActive,
+          sortOrder: form.sortOrder ? parseInt(form.sortOrder, 10) : undefined,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            contact_type_id: contactType.id,
-            code: form.code.trim(),
-            label: form.label.trim(),
-            sort_order: form.sortOrder ? parseInt(form.sortOrder, 10) : undefined,
-          },
+          contactTypeId: contactType.id,
+          code: form.code.trim(),
+          label: form.label.trim(),
+          sortOrder: form.sortOrder ? parseInt(form.sortOrder, 10) : undefined,
         })
       }
 

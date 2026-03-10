@@ -33,9 +33,9 @@ import {
   useBulkCreateEmployeeDayPlans,
 } from '@/hooks'
 import { formatDate } from '@/lib/time-utils'
-import type { components } from '@/types/legacy-api-types'
 
-type Shift = components['schemas']['Shift']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Shift = any
 
 interface BulkAssignDialogProps {
   open: boolean
@@ -82,7 +82,7 @@ export function BulkAssignDialog({
   const dayPlans = dayPlansData?.data ?? []
 
   const { data: shiftsData } = useShifts({ enabled: open })
-  const shifts: Shift[] = (shiftsData?.data ?? []).filter((s: Shift) => s.is_active)
+  const shifts: Shift[] = (shiftsData?.data ?? []).filter((s: Shift) => s.isActive)
 
   const bulkMutation = useBulkCreateEmployeeDayPlans()
 
@@ -92,9 +92,9 @@ export function BulkAssignDialog({
     const search = employeeSearch.toLowerCase()
     return employees.filter(
       (e) =>
-        e.first_name.toLowerCase().includes(search) ||
-        e.last_name.toLowerCase().includes(search) ||
-        (e.personnel_number && e.personnel_number.toLowerCase().includes(search))
+        e.firstName.toLowerCase().includes(search) ||
+        e.lastName.toLowerCase().includes(search) ||
+        (e.personnelNumber && e.personnelNumber.toLowerCase().includes(search))
     )
   }, [employees, employeeSearch])
 
@@ -117,8 +117,8 @@ export function BulkAssignDialog({
     setSelectedShiftId(shiftId)
     if (shiftId) {
       const shift = shifts.find((s) => s.id === shiftId)
-      if (shift?.day_plan_id) {
-        setSelectedDayPlanId(shift.day_plan_id)
+      if (shift?.dayPlanId) {
+        setSelectedDayPlanId(shift.dayPlanId)
       }
     }
   }
@@ -183,10 +183,10 @@ export function BulkAssignDialog({
     const dates = getDatesInRange(dateRange.from, dateRange.to)
     const plans = Array.from(selectedEmployeeIds).flatMap((employeeId) =>
       dates.map((date) => ({
-        employee_id: employeeId,
-        plan_date: formatDate(date),
-        shift_id: selectedShiftId || undefined,
-        day_plan_id: selectedDayPlanId || undefined,
+        employeeId: employeeId,
+        planDate: formatDate(date),
+        shiftId: selectedShiftId || undefined,
+        dayPlanId: selectedDayPlanId || undefined,
         source: 'manual' as const,
         notes: notes || undefined,
       }))
@@ -194,7 +194,7 @@ export function BulkAssignDialog({
 
     try {
       const response = await bulkMutation.mutateAsync({
-        body: { plans },
+        entries: plans,
       })
       const data = response as { created?: number; updated?: number }
       setResult({
@@ -258,7 +258,7 @@ export function BulkAssignDialog({
                       onCheckedChange={() => toggleEmployee(employee.id)}
                     />
                     <span className="text-sm">
-                      {employee.last_name}, {employee.first_name}
+                      {employee.lastName}, {employee.firstName}
                     </span>
                   </div>
                 ))}

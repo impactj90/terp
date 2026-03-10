@@ -25,19 +25,19 @@ const USERS_MANAGE = permissionIdByKey("users.manage")!
 
 const auditLogUserSchema = z
   .object({
-    id: z.string().uuid(),
+    id: z.string(),
     email: z.string(),
     displayName: z.string(),
   })
   .nullable()
 
 const auditLogOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  userId: z.string().uuid().nullable(),
+  id: z.string(),
+  tenantId: z.string(),
+  userId: z.string().nullable(),
   action: z.string(),
   entityType: z.string(),
-  entityId: z.string().uuid(),
+  entityId: z.string(),
   entityName: z.string().nullable(),
   changes: z.unknown().nullable(),
   metadata: z.unknown().nullable(),
@@ -53,9 +53,9 @@ const listInputSchema = z
   .object({
     page: z.number().int().min(1).optional().default(1),
     pageSize: z.number().int().min(1).max(100).optional().default(20),
-    userId: z.string().uuid().optional(),
+    userId: z.string().optional(),
     entityType: z.string().optional(),
-    entityId: z.string().uuid().optional(),
+    entityId: z.string().optional(),
     action: z.string().optional(),
     fromDate: z.string().datetime().optional(),
     toDate: z.string().datetime().optional(),
@@ -101,7 +101,7 @@ export const auditLogsRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(USERS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(auditLogOutputSchema)
     .query(async ({ ctx, input }) => {
       try {

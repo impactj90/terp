@@ -33,7 +33,7 @@ const breakdownItemSchema = z.object({
 
 const previewOutputSchema = z.object({
   tripType: z.string(),
-  ruleSetId: z.string().uuid(),
+  ruleSetId: z.string(),
   ruleSetName: z.string(),
   taxFreeTotal: z.number(),
   taxableTotal: z.number(),
@@ -44,7 +44,7 @@ const previewOutputSchema = z.object({
 // --- Input Schemas ---
 
 const previewInputSchema = z.object({
-  ruleSetId: z.string().uuid(),
+  ruleSetId: z.string(),
   tripType: z.enum(["local", "extended"]),
   distanceKm: z.number().optional().default(0),
   durationMinutes: z.number().int().optional().default(0),

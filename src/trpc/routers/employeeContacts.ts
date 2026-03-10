@@ -26,13 +26,13 @@ const EMPLOYEES_EDIT = permissionIdByKey("employees.edit")!
 // --- Output Schemas ---
 
 const employeeContactOutputSchema = z.object({
-  id: z.string().uuid(),
-  employeeId: z.string().uuid(),
+  id: z.string(),
+  employeeId: z.string(),
   contactType: z.string(),
   value: z.string(),
   label: z.string().nullable(),
   isPrimary: z.boolean(),
-  contactKindId: z.string().uuid().nullable(),
+  contactKindId: z.string().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
 })
@@ -49,7 +49,7 @@ export const employeeContactsRouter = createTRPCRouter({
    */
   list: tenantProcedure
     .use(requirePermission(EMPLOYEES_VIEW))
-    .input(z.object({ employeeId: z.string().uuid() }))
+    .input(z.object({ employeeId: z.string() }))
     .output(z.object({ data: z.array(employeeContactOutputSchema) }))
     .query(async ({ ctx, input }) => {
       try {
@@ -75,12 +75,12 @@ export const employeeContactsRouter = createTRPCRouter({
     .use(requirePermission(EMPLOYEES_EDIT))
     .input(
       z.object({
-        employeeId: z.string().uuid(),
+        employeeId: z.string(),
         contactType: z.string().min(1, "Contact type is required"),
         value: z.string().min(1, "Value is required"),
         label: z.string().optional(),
         isPrimary: z.boolean().optional(),
-        contactKindId: z.string().uuid().optional(),
+        contactKindId: z.string().optional(),
       })
     )
     .output(employeeContactOutputSchema)
@@ -102,7 +102,7 @@ export const employeeContactsRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(EMPLOYEES_EDIT))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

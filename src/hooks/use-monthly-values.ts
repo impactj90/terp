@@ -51,11 +51,6 @@ interface UseMonthlyValuesOptions {
   enabled?: boolean
 }
 
-interface CloseMonthParams {
-  employeeId: string
-  year: number
-  month: number
-}
 
 interface UseYearOverviewOptions {
   employeeId?: string

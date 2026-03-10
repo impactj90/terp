@@ -46,12 +46,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import type { components } from '@/types/legacy-api-types'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type TranslationFn = (key: string, values?: Record<string, any>) => string
 
-type AccessZone = components['schemas']['AccessZone']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AccessZone = any
 
 interface FormState {
   code: string
@@ -88,7 +88,7 @@ export function ZonesTab() {
     enabled: !authLoading && !permLoading && canAccess,
   })
   const deleteMutation = useDeleteAccessZone()
-  const items = (zoneData?.data ?? []) as AccessZone[]
+  const items = zoneData?.data ?? []
 
   // Filtering
   const filteredItems = React.useMemo(() => {
@@ -110,7 +110,7 @@ export function ZonesTab() {
     if (!deleteItem) return
     setDeleteError(null)
     try {
-      await deleteMutation.mutateAsync({ path: { id: deleteItem.id } })
+      await deleteMutation.mutateAsync({ id: deleteItem.id })
       setDeleteItem(null)
     } catch (err) {
       const apiError = err as { status?: number; detail?: string; message?: string }
@@ -205,10 +205,10 @@ export function ZonesTab() {
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">{item.code}</TableCell>
                     <TableCell>{item.name}</TableCell>
-                    <TableCell>{item.sort_order ?? 0}</TableCell>
+                    <TableCell>{item.sortOrder ?? 0}</TableCell>
                     <TableCell>
-                      <Badge variant={item.is_active ? 'default' : 'secondary'}>
-                        {item.is_active
+                      <Badge variant={item.isActive ? 'default' : 'secondary'}>
+                        {item.isActive
                           ? t('zones.statusActive')
                           : t('zones.statusInactive')}
                       </Badge>
@@ -319,8 +319,8 @@ function ZoneFormSheet({
         code: item.code,
         name: item.name,
         description: item.description ?? '',
-        sortOrder: String(item.sort_order ?? 0),
-        isActive: item.is_active ?? true,
+        sortOrder: String(item.sortOrder ?? 0),
+        isActive: item.isActive ?? true,
       })
     } else {
       setForm(INITIAL_FORM)
@@ -343,22 +343,18 @@ function ZoneFormSheet({
     try {
       if (isEdit && item) {
         await updateMutation.mutateAsync({
-          path: { id: item.id },
-          body: {
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            sort_order: parseInt(form.sortOrder, 10) || 0,
-            is_active: form.isActive,
-          },
+          id: item.id,
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          sortOrder: parseInt(form.sortOrder, 10) || 0,
+          isActive: form.isActive,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            code: form.code.trim(),
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            sort_order: parseInt(form.sortOrder, 10) || 0,
-          },
+          code: form.code.trim(),
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          sortOrder: parseInt(form.sortOrder, 10) || 0,
         })
       }
       onSuccess?.()

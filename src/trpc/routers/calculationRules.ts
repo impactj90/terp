@@ -26,12 +26,12 @@ const ABSENCE_TYPES_MANAGE = permissionIdByKey("absence_types.manage")!
 // --- Output Schemas ---
 
 const calculationRuleOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   code: z.string(),
   name: z.string(),
   description: z.string().nullable(),
-  accountId: z.string().uuid().nullable(),
+  accountId: z.string().nullable(),
   value: z.number(),
   factor: z.number(),
   isActive: z.boolean(),
@@ -47,16 +47,16 @@ const createCalculationRuleInputSchema = z.object({
   code: z.string().min(1, "Code is required"),
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  accountId: z.string().uuid().optional(),
+  accountId: z.string().optional(),
   value: z.number().optional(),
   factor: z.number().optional(),
 })
 
 const updateCalculationRuleInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   name: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
-  accountId: z.string().uuid().nullable().optional(),
+  accountId: z.string().nullable().optional(),
   value: z.number().optional(),
   factor: z.number().optional(),
   isActive: z.boolean().optional(),
@@ -139,7 +139,7 @@ export const calculationRulesRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(ABSENCE_TYPES_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(calculationRuleOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -217,7 +217,7 @@ export const calculationRulesRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(ABSENCE_TYPES_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

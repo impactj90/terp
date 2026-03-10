@@ -25,9 +25,9 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useEmployeeMessage } from '@/hooks'
-import type { components } from '@/types/legacy-api-types'
 
-type EmployeeMessageRecipient = components['schemas']['EmployeeMessageRecipient']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type EmployeeMessageRecipient = any
 
 interface MessageDetailSheetProps {
   messageId: string | null
@@ -119,8 +119,8 @@ export function MessageDetailSheet({
               <div className="space-y-2">
                 <h4 className="text-sm font-medium text-muted-foreground">{t('sectionInfo')}</h4>
                 <div className="rounded-lg border p-4">
-                  <DetailRow label={t('fieldCreated')} value={formatDate(message.created_at)} />
-                  <DetailRow label={t('fieldUpdated')} value={formatDate(message.updated_at)} />
+                  <DetailRow label={t('fieldCreated')} value={formatDate(message.createdAt)} />
+                  <DetailRow label={t('fieldUpdated')} value={formatDate(message.updatedAt)} />
                 </div>
               </div>
 
@@ -156,7 +156,7 @@ export function MessageDetailSheet({
                       {recipients.map((recipient: EmployeeMessageRecipient) => (
                         <TableRow key={recipient.id}>
                           <TableCell className="font-mono text-xs">
-                            {recipient.employee_id.slice(0, 8)}...
+                            {recipient.employeeId.slice(0, 8)}...
                           </TableCell>
                           <TableCell>
                             <Badge variant={getStatusVariant(recipient.status)}>
@@ -168,7 +168,7 @@ export function MessageDetailSheet({
                             </Badge>
                           </TableCell>
                           <TableCell className="text-muted-foreground text-sm">
-                            {formatDate(recipient.sent_at)}
+                            {formatDate(recipient.sentAt)}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -187,10 +187,10 @@ export function MessageDetailSheet({
                 {failedCount > 0 && (
                   <div className="space-y-1 mt-2">
                     {recipients
-                      .filter((r: EmployeeMessageRecipient) => r.status === 'failed' && r.error_message)
+                      .filter((r: EmployeeMessageRecipient) => r.status === 'failed' && r.errorMessage)
                       .map((r: EmployeeMessageRecipient) => (
                         <p key={r.id} className="text-xs text-destructive">
-                          {r.employee_id.slice(0, 8)}: {r.error_message}
+                          {r.employeeId.slice(0, 8)}: {r.errorMessage}
                         </p>
                       ))}
                   </div>

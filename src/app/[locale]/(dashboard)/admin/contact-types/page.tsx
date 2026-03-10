@@ -19,10 +19,29 @@ import {
   ContactKindFormSheet,
   ContactTypePageSkeleton,
 } from '@/components/contact-types'
-import type { components } from '@/types/legacy-api-types'
-
-type ContactType = components['schemas']['ContactType']
-type ContactKind = components['schemas']['ContactKind']
+type ContactType = {
+  id: string
+  tenantId: string
+  code: string
+  name: string
+  dataType: string
+  description: string | null
+  isActive: boolean
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
+type ContactKind = {
+  id: string
+  tenantId: string
+  contactTypeId: string
+  code: string
+  label: string
+  isActive: boolean
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
 
 export default function ContactTypesPage() {
   const router = useRouter()
@@ -82,7 +101,7 @@ export default function ContactTypesPage() {
     if (!deleteType) return
     setDeleteTypeError(null)
     try {
-      await deleteTypeMutation.mutateAsync({ path: { id: deleteType.id } })
+      await deleteTypeMutation.mutateAsync({ id: deleteType.id })
       // If deleted type was selected, clear selection
       if (selectedType?.id === deleteType.id) {
         setSelectedType(null)
@@ -101,7 +120,7 @@ export default function ContactTypesPage() {
   const handleConfirmDeleteKind = async () => {
     if (!deleteKind) return
     try {
-      await deleteKindMutation.mutateAsync({ path: { id: deleteKind.id } })
+      await deleteKindMutation.mutateAsync({ id: deleteKind.id })
       setDeleteKind(null)
     } catch {
       // Error handled by mutation

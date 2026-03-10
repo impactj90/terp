@@ -32,7 +32,6 @@ import type {
 } from "@/lib/calculation/monthly"
 import type {
   MonthlyCalcResult,
-  MonthlyCalcError,
   MonthSummary,
   AbsenceDayWithType,
 } from "./monthly-calc.types"

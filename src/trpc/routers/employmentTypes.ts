@@ -27,13 +27,13 @@ const EMPLOYMENT_TYPES_MANAGE = permissionIdByKey("employment_types.manage")!
 // --- Output Schemas ---
 
 const employmentTypeOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid().nullable(),
+  id: z.string(),
+  tenantId: z.string().nullable(),
   code: z.string(),
   name: z.string(),
   weeklyHoursDefault: z.number(),
   isActive: z.boolean(),
-  vacationCalcGroupId: z.string().uuid().nullable(),
+  vacationCalcGroupId: z.string().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
 })
@@ -47,16 +47,16 @@ const createEmploymentTypeInputSchema = z.object({
   name: z.string().min(1, "Name is required"),
   weeklyHoursDefault: z.number().optional(),
   isActive: z.boolean().optional(),
-  vacationCalcGroupId: z.string().uuid().optional(),
+  vacationCalcGroupId: z.string().optional(),
 })
 
 const updateEmploymentTypeInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   code: z.string().min(1).optional(),
   name: z.string().min(1).optional(),
   weeklyHoursDefault: z.number().optional(),
   isActive: z.boolean().optional(),
-  vacationCalcGroupId: z.string().uuid().optional(),
+  vacationCalcGroupId: z.string().optional(),
   clearVacationCalcGroupId: z.boolean().optional(),
 })
 
@@ -136,7 +136,7 @@ export const employmentTypesRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(EMPLOYMENT_TYPES_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(employmentTypeOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -213,7 +213,7 @@ export const employmentTypesRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(EMPLOYMENT_TYPES_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

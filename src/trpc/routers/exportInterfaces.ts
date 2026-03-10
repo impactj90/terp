@@ -28,13 +28,13 @@ const PAYROLL_MANAGE = permissionIdByKey("payroll.manage")!
 // --- Output Schemas ---
 
 const accountOutputSchema = z.object({
-  id: z.string().uuid(),
-  exportInterfaceId: z.string().uuid(),
-  accountId: z.string().uuid(),
+  id: z.string(),
+  exportInterfaceId: z.string(),
+  accountId: z.string(),
   sortOrder: z.number(),
   createdAt: z.date(),
   account: z.object({
-    id: z.string().uuid(),
+    id: z.string(),
     code: z.string(),
     name: z.string(),
     payrollCode: z.string().nullable(),
@@ -42,8 +42,8 @@ const accountOutputSchema = z.object({
 })
 
 const exportInterfaceOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   interfaceNumber: z.number(),
   name: z.string(),
   mandantNumber: z.string().nullable(),
@@ -68,7 +68,7 @@ const createInputSchema = z.object({
 })
 
 const updateInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   interfaceNumber: z.number().int().min(1).optional(),
   name: z.string().min(1).max(255).optional(),
   mandantNumber: z.string().max(50).nullable().optional(),
@@ -126,7 +126,7 @@ export const exportInterfacesRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(PAYROLL_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(exportInterfaceOutputSchema)
     .query(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!
@@ -317,7 +317,7 @@ export const exportInterfacesRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(PAYROLL_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!
@@ -358,7 +358,7 @@ export const exportInterfacesRouter = createTRPCRouter({
    */
   listAccounts: tenantProcedure
     .use(requirePermission(PAYROLL_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ data: z.array(accountOutputSchema) }))
     .query(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!
@@ -397,8 +397,8 @@ export const exportInterfacesRouter = createTRPCRouter({
   setAccounts: tenantProcedure
     .use(requirePermission(PAYROLL_MANAGE))
     .input(z.object({
-      id: z.string().uuid(),
-      accountIds: z.array(z.string().uuid()),
+      id: z.string(),
+      accountIds: z.array(z.string()),
     }))
     .output(z.object({ data: z.array(accountOutputSchema) }))
     .mutation(async ({ ctx, input }) => {

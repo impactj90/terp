@@ -4,7 +4,6 @@ import { exportInterfacesRouter } from "../exportInterfaces"
 import {
   createMockContext,
   createMockSession,
-  createMockUser,
   createMockUserTenant,
   createUserWithPermissions,
 } from "./helpers"

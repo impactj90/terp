@@ -105,27 +105,25 @@ export function GenerateExportDialog({
     }
 
     const parameters: {
-      employee_ids?: string[]
-      department_ids?: string[]
-      include_accounts?: string[]
+      employeeIds?: string[]
+      departmentIds?: string[]
+      includeAccounts?: string[]
     } = {}
     const empIds = parseIdList(employeeIds)
     const deptIds = parseIdList(departmentIds)
     const acctIds = parseIdList(accountIds)
-    if (empIds.length > 0) parameters.employee_ids = empIds
-    if (deptIds.length > 0) parameters.department_ids = deptIds
-    if (acctIds.length > 0) parameters.include_accounts = acctIds
+    if (empIds.length > 0) parameters.employeeIds = empIds
+    if (deptIds.length > 0) parameters.departmentIds = deptIds
+    if (acctIds.length > 0) parameters.includeAccounts = acctIds
 
     try {
       await generateMutation.mutateAsync({
-        body: {
-          year,
-          month,
-          format,
-          export_type: exportType,
-          ...(interfaceId ? { export_interface_id: interfaceId } : {}),
-          ...(Object.keys(parameters).length > 0 ? { parameters } : {}),
-        },
+        year,
+        month,
+        format: format as 'csv' | 'xlsx' | 'xml' | 'json',
+        exportType: exportType as 'standard' | 'datev' | 'sage' | 'custom',
+        ...(interfaceId ? { exportInterfaceId: interfaceId } : {}),
+        ...(Object.keys(parameters).length > 0 ? { parameters } : {}),
       })
       handleClose()
     } catch (err) {

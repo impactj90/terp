@@ -110,21 +110,17 @@ export function BookingTypeFormSheet({
     try {
       if (isEdit && bookingType) {
         await updateMutation.mutateAsync({
-          path: { id: bookingType.id },
-          body: {
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            is_active: form.isActive,
-          },
+          id: bookingType.id,
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          isActive: form.isActive,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            code: form.code.trim(),
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            direction: form.direction as Direction,
-          },
+          code: form.code.trim(),
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          direction: form.direction as Direction,
         })
       }
 

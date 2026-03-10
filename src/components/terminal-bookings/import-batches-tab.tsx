@@ -35,12 +35,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import type { components } from '@/types/legacy-api-types'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type TranslationFn = (key: string, values?: Record<string, any>) => string
 
-type ImportBatch = components['schemas']['ImportBatch']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ImportBatch = any
 
 type StatusFilter = 'all' | 'pending' | 'processing' | 'completed' | 'failed'
 
@@ -78,7 +78,7 @@ export function ImportBatchesTab() {
     enabled: !authLoading && !permLoading && canAccess,
   })
 
-  const batches = (batchData?.data ?? []) as ImportBatch[]
+  const batches = batchData?.data ?? []
 
   const hasFilters = statusFilter !== 'all'
 
@@ -155,25 +155,25 @@ export function ImportBatchesTab() {
                   const statusConfig = BATCH_STATUS_CONFIG[batch.status] || BATCH_STATUS_CONFIG.pending
                   return (
                     <TableRow key={batch.id}>
-                      <TableCell className="font-medium">{batch.batch_reference}</TableCell>
+                      <TableCell className="font-medium">{batch.batchReference}</TableCell>
                       <TableCell>{batch.source ?? '-'}</TableCell>
-                      <TableCell>{batch.terminal_id ?? '-'}</TableCell>
+                      <TableCell>{batch.terminalId ?? '-'}</TableCell>
                       <TableCell>
                         <Badge variant="secondary" className={statusConfig!.className}>
                           {t(statusConfig!.labelKey as Parameters<typeof t>[0])}
                         </Badge>
                       </TableCell>
-                      <TableCell>{batch.records_total ?? '-'}</TableCell>
-                      <TableCell>{batch.records_imported ?? '-'}</TableCell>
-                      <TableCell>{batch.records_failed ?? '-'}</TableCell>
+                      <TableCell>{batch.recordsTotal ?? '-'}</TableCell>
+                      <TableCell>{batch.recordsImported ?? '-'}</TableCell>
+                      <TableCell>{batch.recordsFailed ?? '-'}</TableCell>
                       <TableCell className="whitespace-nowrap">
-                        {batch.started_at
-                          ? format(new Date(batch.started_at), 'dd.MM.yyyy HH:mm')
+                        {batch.startedAt
+                          ? format(new Date(batch.startedAt), 'dd.MM.yyyy HH:mm')
                           : '-'}
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
-                        {batch.completed_at
-                          ? format(new Date(batch.completed_at), 'dd.MM.yyyy HH:mm')
+                        {batch.completedAt
+                          ? format(new Date(batch.completedAt), 'dd.MM.yyyy HH:mm')
                           : '-'}
                       </TableCell>
                     </TableRow>
@@ -247,7 +247,7 @@ function TriggerImportDialog({
     }
 
     // Parse booking lines
-    const bookings: Array<{ employee_pin: string; raw_timestamp: string; raw_booking_code: string }> = []
+    const bookings: Array<{ employeePin: string; rawTimestamp: string; rawBookingCode: string }> = []
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]!
       const parts = line.split(',').map((s) => s.trim())
@@ -256,9 +256,9 @@ function TriggerImportDialog({
         break
       }
       bookings.push({
-        employee_pin: parts[0]!,
-        raw_timestamp: parts[1]!,
-        raw_booking_code: parts[2]!,
+        employeePin: parts[0]!,
+        rawTimestamp: parts[1]!,
+        rawBookingCode: parts[2]!,
       })
     }
 
@@ -269,11 +269,9 @@ function TriggerImportDialog({
 
     try {
       const response = await importMutation.mutateAsync({
-        body: {
-          batch_reference: batchReference.trim(),
-          terminal_id: terminalId.trim(),
-          bookings,
-        },
+        batchReference: batchReference.trim(),
+        terminalId: terminalId.trim(),
+        bookings,
       })
       setResult(response as unknown as ImportResult)
     } catch (err) {
@@ -299,15 +297,15 @@ function TriggerImportDialog({
             <div className="grid grid-cols-3 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">{t('import.resultTotal')}</p>
-                <p className="text-lg font-semibold">{result.batch.records_total ?? 0}</p>
+                <p className="text-lg font-semibold">{result.batch.recordsTotal ?? 0}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">{t('import.resultImported')}</p>
-                <p className="text-lg font-semibold text-green-600">{result.batch.records_imported ?? 0}</p>
+                <p className="text-lg font-semibold text-green-600">{result.batch.recordsImported ?? 0}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">{t('import.resultFailed')}</p>
-                <p className="text-lg font-semibold text-red-600">{result.batch.records_failed ?? 0}</p>
+                <p className="text-lg font-semibold text-red-600">{result.batch.recordsFailed ?? 0}</p>
               </div>
             </div>
             {result.was_duplicate && (

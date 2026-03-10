@@ -133,8 +133,8 @@ async function ensureDefaults(prisma: PrismaClient, tenantId: string): Promise<v
 // --- Output Schemas ---
 
 const correctionMessageOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   code: z.string(),
   defaultText: z.string(),
   customText: z.string().nullable(),
@@ -154,10 +154,10 @@ const correctionAssistantErrorSchema = z.object({
 })
 
 const correctionAssistantItemSchema = z.object({
-  dailyValueId: z.string().uuid(),
-  employeeId: z.string().uuid(),
+  dailyValueId: z.string(),
+  employeeId: z.string(),
   employeeName: z.string(),
-  departmentId: z.string().uuid().nullable(),
+  departmentId: z.string().nullable(),
   departmentName: z.string().nullable(),
   valueDate: z.string(),
   errors: z.array(correctionAssistantErrorSchema),
@@ -238,7 +238,7 @@ export const correctionAssistantRouter = createTRPCRouter({
    */
   getMessage: tenantProcedure
     .use(requirePermission(TIME_TRACKING_VIEW_ALL))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(correctionMessageOutputSchema)
     .query(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!
@@ -268,7 +268,7 @@ export const correctionAssistantRouter = createTRPCRouter({
   updateMessage: tenantProcedure
     .use(requirePermission(TIME_TRACKING_EDIT))
     .input(z.object({
-      id: z.string().uuid(),
+      id: z.string(),
       customText: z.string().nullable().optional(),
       severity: z.enum(["error", "hint"]).optional(),
       isActive: z.boolean().optional(),
@@ -331,8 +331,8 @@ export const correctionAssistantRouter = createTRPCRouter({
       z.object({
         from: z.string().optional(),
         to: z.string().optional(),
-        employeeId: z.string().uuid().optional(),
-        departmentId: z.string().uuid().optional(),
+        employeeId: z.string().optional(),
+        departmentId: z.string().optional(),
         severity: z.enum(["error", "hint"]).optional(),
         errorCode: z.string().optional(),
         limit: z.number().int().min(1).max(500).optional(),

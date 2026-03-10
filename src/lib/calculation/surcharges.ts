@@ -13,7 +13,6 @@
 import type {
   BookingPair,
   SurchargeConfig,
-  SurchargeResult,
   SurchargeCalculationResult,
   TimePeriod,
 } from "./types"

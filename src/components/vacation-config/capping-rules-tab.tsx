@@ -54,9 +54,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import type { components } from '@/types/legacy-api-types'
-
-type VacationCappingRule = components['schemas']['VacationCappingRule']
+type VacationCappingRule = NonNullable<ReturnType<typeof useVacationCappingRules>['data']>['data'][number]
 type RuleTypeFilter = 'all' | 'year_end' | 'mid_year'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -114,11 +112,11 @@ export function CappingRulesTab() {
     enabled: !authLoading && !permLoading && canAccess,
   })
   const deleteMutation = useDeleteVacationCappingRule()
-  const items = (rulesData?.data ?? []) as VacationCappingRule[]
+  const items = rulesData?.data ?? []
 
   const filteredItems = React.useMemo(() => {
     return items.filter((item) => {
-      if (ruleTypeFilter !== 'all' && item.rule_type !== ruleTypeFilter) return false
+      if (ruleTypeFilter !== 'all' && item.ruleType !== ruleTypeFilter) return false
       if (search) {
         const s = search.toLowerCase()
         if (!item.code?.toLowerCase().includes(s) && !item.name?.toLowerCase().includes(s)) return false
@@ -131,7 +129,7 @@ export function CappingRulesTab() {
     if (!deleteItem) return
     setDeleteError(null)
     try {
-      await deleteMutation.mutateAsync({ path: { id: deleteItem.id } })
+      await deleteMutation.mutateAsync({ id: deleteItem.id })
       setDeleteItem(null)
     } catch (err) {
       const apiError = err as { status?: number; detail?: string; message?: string }
@@ -220,19 +218,19 @@ export function CappingRulesTab() {
                       <Badge
                         variant="secondary"
                         className={
-                          item.rule_type === 'year_end'
+                          item.ruleType === 'year_end'
                             ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
                             : 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400'
                         }
                       >
-                        {item.rule_type === 'year_end' ? t('cappingRule.ruleTypeYearEnd') : t('cappingRule.ruleTypeMidYear')}
+                        {item.ruleType === 'year_end' ? t('cappingRule.ruleTypeYearEnd') : t('cappingRule.ruleTypeMidYear')}
                       </Badge>
                     </TableCell>
-                    <TableCell>{formatCutoffDate(item.cutoff_month, item.cutoff_day)}</TableCell>
-                    <TableCell>{item.cap_value}</TableCell>
+                    <TableCell>{formatCutoffDate(item.cutoffMonth, item.cutoffDay)}</TableCell>
+                    <TableCell>{item.capValue}</TableCell>
                     <TableCell>
-                      <Badge variant={item.is_active ? 'default' : 'secondary'}>
-                        {item.is_active ? t('cappingRule.statusActive') : t('cappingRule.statusInactive')}
+                      <Badge variant={item.isActive ? 'default' : 'secondary'}>
+                        {item.isActive ? t('cappingRule.statusActive') : t('cappingRule.statusInactive')}
                       </Badge>
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
@@ -319,11 +317,11 @@ function CappingRuleFormSheet({ open, onOpenChange, rule, onSuccess }: CappingRu
         code: rule.code || '',
         name: rule.name || '',
         description: rule.description || '',
-        ruleType: rule.rule_type,
-        cutoffMonth: String(rule.cutoff_month),
-        cutoffDay: String(rule.cutoff_day),
-        capValue: String(rule.cap_value),
-        isActive: rule.is_active ?? true,
+        ruleType: rule.ruleType as 'year_end' | 'mid_year',
+        cutoffMonth: String(rule.cutoffMonth),
+        cutoffDay: String(rule.cutoffDay),
+        capValue: String(rule.capValue),
+        isActive: rule.isActive ?? true,
       })
     } else {
       setForm(INITIAL_FORM)
@@ -349,28 +347,24 @@ function CappingRuleFormSheet({ open, onOpenChange, rule, onSuccess }: CappingRu
     try {
       if (isEdit && rule) {
         await updateMutation.mutateAsync({
-          path: { id: rule.id },
-          body: {
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            rule_type: form.ruleType,
-            cutoff_month: cutoffMonth,
-            cutoff_day: cutoffDay,
-            cap_value: isNaN(capValue) ? 0 : capValue,
-            is_active: form.isActive,
-          },
+          id: rule.id,
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          ruleType: form.ruleType,
+          cutoffMonth: cutoffMonth,
+          cutoffDay: cutoffDay,
+          capValue: isNaN(capValue) ? 0 : capValue,
+          isActive: form.isActive,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            code: form.code.trim(),
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            rule_type: form.ruleType,
-            cutoff_month: cutoffMonth,
-            cutoff_day: cutoffDay,
-            cap_value: isNaN(capValue) ? 0 : capValue,
-          },
+          code: form.code.trim(),
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          ruleType: form.ruleType,
+          cutoffMonth: cutoffMonth,
+          cutoffDay: cutoffDay,
+          capValue: isNaN(capValue) ? 0 : capValue,
         })
       }
       onSuccess?.()

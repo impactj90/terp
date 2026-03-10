@@ -29,8 +29,8 @@ const MONTHLY_EVAL_MANAGE = permissionIdByKey("monthly_evaluations.manage")!
 // --- Output Schema ---
 
 const templateOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   name: z.string(),
   description: z.string(),
   flextimeCapPositive: z.number(),
@@ -57,7 +57,7 @@ const createInputSchema = z.object({
 })
 
 const updateInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   name: z.string().min(1).max(100).optional(),
   description: z.string().max(1000).optional(),
   flextimeCapPositive: z.number().int().min(0).optional(),
@@ -125,7 +125,7 @@ export const monthlyEvalTemplatesRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(MONTHLY_EVAL_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(templateOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -218,7 +218,7 @@ export const monthlyEvalTemplatesRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(MONTHLY_EVAL_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -242,7 +242,7 @@ export const monthlyEvalTemplatesRouter = createTRPCRouter({
    */
   setDefault: tenantProcedure
     .use(requirePermission(MONTHLY_EVAL_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(templateOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {

@@ -120,26 +120,22 @@ export function ExportInterfaceFormSheet({
     try {
       if (isEdit && item) {
         await updateMutation.mutateAsync({
-          path: { id: item.id },
-          body: {
-            name: form.name.trim(),
-            mandant_number: form.mandantNumber.trim() || undefined,
-            export_script: form.exportScript.trim() || undefined,
-            export_path: form.exportPath.trim() || undefined,
-            output_filename: form.outputFilename.trim() || undefined,
-            is_active: form.isActive,
-          },
+          id: item.id,
+          name: form.name.trim(),
+          mandantNumber: form.mandantNumber.trim() || undefined,
+          exportScript: form.exportScript.trim() || undefined,
+          exportPath: form.exportPath.trim() || undefined,
+          outputFilename: form.outputFilename.trim() || undefined,
+          isActive: form.isActive,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            interface_number: form.interfaceNumber,
-            name: form.name.trim(),
-            mandant_number: form.mandantNumber.trim() || undefined,
-            export_script: form.exportScript.trim() || undefined,
-            export_path: form.exportPath.trim() || undefined,
-            output_filename: form.outputFilename.trim() || undefined,
-          },
+          interfaceNumber: form.interfaceNumber,
+          name: form.name.trim(),
+          mandantNumber: form.mandantNumber.trim() || undefined,
+          exportScript: form.exportScript.trim() || undefined,
+          exportPath: form.exportPath.trim() || undefined,
+          outputFilename: form.outputFilename.trim() || undefined,
         })
       }
 

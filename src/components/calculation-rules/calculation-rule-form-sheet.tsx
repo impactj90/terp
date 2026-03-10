@@ -116,26 +116,22 @@ export function CalculationRuleFormSheet({
     try {
       if (isEdit && rule) {
         await updateMutation.mutateAsync({
-          path: { id: rule.id },
-          body: {
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            value: form.value,
-            factor: form.factor,
-            account_id: form.accountId || null,
-            is_active: form.isActive,
-          },
+          id: rule.id,
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          value: form.value,
+          factor: form.factor,
+          accountId: form.accountId || null,
+          isActive: form.isActive,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            code: form.code.trim(),
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            value: form.value,
-            factor: form.factor,
-            account_id: form.accountId || undefined,
-          },
+          code: form.code.trim(),
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          value: form.value,
+          factor: form.factor,
+          accountId: form.accountId || undefined,
         })
       }
 

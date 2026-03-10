@@ -55,11 +55,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import type { components } from '@/types/legacy-api-types'
-
-type EmployeeCappingException = components['schemas']['EmployeeCappingException']
-type VacationCappingRule = components['schemas']['VacationCappingRule']
-type Employee = components['schemas']['Employee']
+type EmployeeCappingException = NonNullable<ReturnType<typeof useEmployeeCappingExceptions>['data']>['data'][number]
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type TranslationFn = (key: string, values?: Record<string, any>) => string
@@ -99,24 +95,24 @@ export function EmployeeExceptionsTab() {
     enabled: !authLoading && !permLoading && canAccess,
   })
   const deleteMutation = useDeleteEmployeeCappingException()
-  const items = (exceptionsData?.data ?? []) as EmployeeCappingException[]
+  const items = exceptionsData?.data ?? []
 
   // Lookup data
   const { data: employeesData } = useEmployees({ pageSize: 200, isActive: true, enabled: !authLoading && !permLoading && canAccess })
-  const employees = (employeesData?.items ?? []) as Employee[]
+  const employees = employeesData?.items ?? []
   const employeeMap = React.useMemo(() => new Map(employees.map((e) => [e.id, e])), [employees])
 
   const { data: cappingRulesData } = useVacationCappingRules({ enabled: !authLoading && !permLoading && canAccess })
-  const cappingRules = (cappingRulesData?.data ?? []) as VacationCappingRule[]
+  const cappingRules = cappingRulesData?.data ?? []
   const cappingRuleMap = React.useMemo(() => new Map(cappingRules.map((r) => [r.id, r])), [cappingRules])
 
   const filteredItems = React.useMemo(() => {
     if (!search) return items
     const s = search.toLowerCase()
     return items.filter((item) => {
-      const emp = employeeMap.get(item.employee_id)
-      const empName = emp ? `${emp.first_name} ${emp.last_name}`.toLowerCase() : ''
-      const rule = cappingRuleMap.get(item.capping_rule_id)
+      const emp = employeeMap.get(item.employeeId)
+      const empName = emp ? `${emp.firstName} ${emp.lastName}`.toLowerCase() : ''
+      const rule = cappingRuleMap.get(item.cappingRuleId)
       const ruleName = rule ? rule.name.toLowerCase() : ''
       return empName.includes(s) || ruleName.includes(s) || (item.notes ?? '').toLowerCase().includes(s)
     })
@@ -126,7 +122,7 @@ export function EmployeeExceptionsTab() {
     if (!deleteItem) return
     setDeleteError(null)
     try {
-      await deleteMutation.mutateAsync({ path: { id: deleteItem.id } })
+      await deleteMutation.mutateAsync({ id: deleteItem.id })
       setDeleteItem(null)
     } catch (err) {
       const apiError = err as { status?: number; detail?: string; message?: string }
@@ -143,7 +139,7 @@ export function EmployeeExceptionsTab() {
 
   const getEmployeeName = (employeeId: string) => {
     const emp = employeeMap.get(employeeId)
-    return emp ? `${emp.first_name} ${emp.last_name}` : employeeId
+    return emp ? `${emp.firstName} ${emp.lastName}` : employeeId
   }
 
   const getCappingRuleName = (ruleId: string) => {
@@ -212,25 +208,25 @@ export function EmployeeExceptionsTab() {
               <TableBody>
                 {filteredItems.map((item) => (
                   <TableRow key={item.id}>
-                    <TableCell>{getEmployeeName(item.employee_id)}</TableCell>
-                    <TableCell>{getCappingRuleName(item.capping_rule_id)}</TableCell>
+                    <TableCell>{getEmployeeName(item.employeeId)}</TableCell>
+                    <TableCell>{getCappingRuleName(item.cappingRuleId)}</TableCell>
                     <TableCell>{item.year ?? t('exception.yearAll')}</TableCell>
                     <TableCell>
                       <Badge
                         variant="secondary"
                         className={
-                          item.exemption_type === 'full'
+                          item.exemptionType === 'full'
                             ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                             : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
                         }
                       >
-                        {item.exemption_type === 'full' ? t('exception.exemptionFull') : t('exception.exemptionPartial')}
+                        {item.exemptionType === 'full' ? t('exception.exemptionFull') : t('exception.exemptionPartial')}
                       </Badge>
                     </TableCell>
-                    <TableCell>{item.retain_days != null ? item.retain_days : '-'}</TableCell>
+                    <TableCell>{item.retainDays != null ? item.retainDays : '-'}</TableCell>
                     <TableCell>
-                      <Badge variant={item.is_active ? 'default' : 'secondary'}>
-                        {item.is_active ? t('exception.statusActive') : t('exception.statusInactive')}
+                      <Badge variant={item.isActive ? 'default' : 'secondary'}>
+                        {item.isActive ? t('exception.statusActive') : t('exception.statusInactive')}
                       </Badge>
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
@@ -304,22 +300,22 @@ function ExceptionFormSheet({ open, onOpenChange, exception, onSuccess }: Except
   const updateMutation = useUpdateEmployeeCappingException()
 
   const { data: employeesData } = useEmployees({ pageSize: 200, isActive: true, enabled: open })
-  const employees = (employeesData?.items ?? []) as Employee[]
+  const employees = employeesData?.items ?? []
 
   const { data: cappingRulesData } = useVacationCappingRules({ enabled: open })
-  const cappingRules = (cappingRulesData?.data ?? []) as VacationCappingRule[]
+  const cappingRules = cappingRulesData?.data ?? []
 
   React.useEffect(() => {
     if (!open) return
     if (exception) {
       setForm({
-        employeeId: exception.employee_id,
-        cappingRuleId: exception.capping_rule_id,
+        employeeId: exception.employeeId,
+        cappingRuleId: exception.cappingRuleId,
         year: exception.year != null ? String(exception.year) : '',
-        exemptionType: exception.exemption_type,
-        retainDays: exception.retain_days != null ? String(exception.retain_days) : '',
+        exemptionType: exception.exemptionType as 'full' | 'partial',
+        retainDays: exception.retainDays != null ? String(exception.retainDays) : '',
         notes: exception.notes ?? '',
-        isActive: exception.is_active ?? true,
+        isActive: exception.isActive ?? true,
       })
     } else {
       setForm(INITIAL_FORM)
@@ -347,25 +343,21 @@ function ExceptionFormSheet({ open, onOpenChange, exception, onSuccess }: Except
     try {
       if (isEdit && exception) {
         await updateMutation.mutateAsync({
-          path: { id: exception.id },
-          body: {
-            exemption_type: form.exemptionType,
-            retain_days: form.exemptionType === 'partial' ? retainDays : undefined,
-            year,
-            notes: form.notes.trim() || undefined,
-            is_active: form.isActive,
-          },
+          id: exception.id,
+          exemptionType: form.exemptionType,
+          retainDays: form.exemptionType === 'partial' ? retainDays : undefined,
+          year,
+          notes: form.notes.trim() || undefined,
+          isActive: form.isActive,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            employee_id: form.employeeId,
-            capping_rule_id: form.cappingRuleId,
-            exemption_type: form.exemptionType,
-            retain_days: form.exemptionType === 'partial' ? retainDays : undefined,
-            year,
-            notes: form.notes.trim() || undefined,
-          },
+          employeeId: form.employeeId,
+          cappingRuleId: form.cappingRuleId,
+          exemptionType: form.exemptionType,
+          retainDays: form.exemptionType === 'partial' ? retainDays : undefined,
+          year,
+          notes: form.notes.trim() || undefined,
         })
       }
       onSuccess?.()
@@ -404,7 +396,7 @@ function ExceptionFormSheet({ open, onOpenChange, exception, onSuccess }: Except
                     <SelectItem value="__none__">{t('exception.selectEmployee')}</SelectItem>
                     {employees.map((emp) => (
                       <SelectItem key={emp.id} value={emp.id}>
-                        {emp.personnel_number} - {emp.first_name} {emp.last_name}
+                        {emp.personnelNumber} - {emp.firstName} {emp.lastName}
                       </SelectItem>
                     ))}
                   </SelectContent>

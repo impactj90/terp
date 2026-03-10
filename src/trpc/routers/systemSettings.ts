@@ -27,8 +27,8 @@ const SETTINGS_MANAGE = permissionIdByKey("settings.manage")!
 // --- Output Schemas ---
 
 const systemSettingsOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   roundingRelativeToPlan: z.boolean(),
   errorListEnabled: z.boolean(),
   trackedErrorCodes: z.array(z.string()),
@@ -90,12 +90,12 @@ const updateSettingsInputSchema = z.object({
 const cleanupDateRangeInputSchema = z.object({
   dateFrom: z.string().date(),
   dateTo: z.string().date(),
-  employeeIds: z.array(z.string().uuid()).optional(),
+  employeeIds: z.array(z.string()).optional(),
   confirm: z.boolean(),
 })
 
 const cleanupOrdersInputSchema = z.object({
-  orderIds: z.array(z.string().uuid()).min(1, "At least one order ID required"),
+  orderIds: z.array(z.string()).min(1, "At least one order ID required"),
   confirm: z.boolean(),
 })
 

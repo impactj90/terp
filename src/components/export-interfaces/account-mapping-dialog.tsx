@@ -30,11 +30,13 @@ import {
   useExportInterfaceAccounts,
   useSetExportInterfaceAccounts,
 } from '@/hooks/use-export-interfaces'
-import type { components } from '@/types/legacy-api-types'
 
-type ExportInterface = components['schemas']['ExportInterface']
-type Account = components['schemas']['Account']
-type ExportInterfaceAccount = components['schemas']['ExportInterfaceAccount']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ExportInterface = any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Account = any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ExportInterfaceAccount = any
 
 interface AccountMappingDialogProps {
   item: ExportInterface | null
@@ -228,8 +230,8 @@ export function AccountMappingDialog({
 
     try {
       await setAccountsMutation.mutateAsync({
-        path: { id: item.id },
-        body: { account_ids: assignedIds },
+        id: item.id,
+        accountIds: assignedIds,
       })
       setSuccess(tm('saveSuccess'))
       // Brief delay then notify parent

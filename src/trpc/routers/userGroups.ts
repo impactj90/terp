@@ -29,7 +29,7 @@ const USERS_MANAGE = permissionIdByKey("users.manage")!
 // --- Output Schemas ---
 
 const permissionOutputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   key: z.string(),
   resource: z.string(),
   action: z.string(),
@@ -37,8 +37,8 @@ const permissionOutputSchema = z.object({
 })
 
 const userGroupOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid().nullable(),
+  id: z.string(),
+  tenantId: z.string().nullable(),
   name: z.string(),
   code: z.string(),
   description: z.string().nullable(),
@@ -56,17 +56,17 @@ const createUserGroupInputSchema = z.object({
   name: z.string().min(1, "Name is required"),
   code: z.string().optional(),
   description: z.string().optional(),
-  permissions: z.array(z.string().uuid()).default([]),
+  permissions: z.array(z.string()).default([]),
   isAdmin: z.boolean().default(false),
   isActive: z.boolean().default(true),
 })
 
 const updateUserGroupInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   name: z.string().min(1).optional(),
   code: z.string().min(1).optional(),
   description: z.string().optional(),
-  permissions: z.array(z.string().uuid()).optional(),
+  permissions: z.array(z.string()).optional(),
   isAdmin: z.boolean().optional(),
   isActive: z.boolean().optional(),
 })
@@ -176,7 +176,7 @@ export const userGroupsRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(USERS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(
       userGroupOutputSchema.extend({ usersCount: z.number() })
     )
@@ -261,7 +261,7 @@ export const userGroupsRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(USERS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

@@ -1,8 +1,10 @@
-import { useApiQuery } from './use-api-query'
-import { useApiMutation } from './use-api-mutation'
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+
+// ==================== Query Hooks ====================
 
 interface UseAccountsOptions {
-  accountType?: 'bonus' | 'tracking' | 'balance'
+  accountType?: string
   active?: boolean
   includeSystem?: boolean
   enabled?: boolean
@@ -18,20 +20,18 @@ interface UseAccountsOptions {
  *   active: true,
  *   includeSystem: true,
  * })
+ * const accounts = data?.data ?? []
  * ```
  */
 export function useAccounts(options: UseAccountsOptions = {}) {
   const { accountType, active, includeSystem, enabled = true } = options
-
-  return useApiQuery('/accounts', {
-    params: {
-      account_type: accountType,
-      active,
-      // Handler reads include_system param (not in OpenAPI spec but handler supports it)
-      ...(includeSystem !== undefined ? { include_system: includeSystem } : {}),
-    } as Record<string, unknown>,
-    enabled,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.accounts.list.queryOptions(
+      { accountType, active, includeSystem },
+      { enabled }
+    )
+  )
 }
 
 /**
@@ -43,28 +43,37 @@ export function useAccounts(options: UseAccountsOptions = {}) {
  * ```
  */
 export function useAccount(id: string, enabled = true) {
-  return useApiQuery('/accounts/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.accounts.getById.queryOptions({ id }, { enabled: enabled && !!id })
+  )
 }
 
 /**
  * Hook to fetch account usage by ID.
  */
 export function useAccountUsage(id: string, enabled = true) {
-  return useApiQuery('/accounts/{id}/usage', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.accounts.getUsage.queryOptions({ id }, { enabled: enabled && !!id })
+  )
 }
+
+// ==================== Mutation Hooks ====================
 
 /**
  * Hook to create a new account.
  */
 export function useCreateAccount() {
-  return useApiMutation('/accounts', 'post', {
-    invalidateKeys: [['/accounts']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.accounts.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.accounts.list.queryKey(),
+      })
+    },
   })
 }
 
@@ -72,12 +81,15 @@ export function useCreateAccount() {
  * Hook to update an existing account.
  */
 export function useUpdateAccount() {
-  return useApiMutation('/accounts/{id}', 'patch', {
-    invalidateKeys: [
-      ['/accounts'],
-      ['/accounts/{id}'],
-      ['/accounts/{id}/usage'],
-    ],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.accounts.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.accounts.list.queryKey(),
+      })
+    },
   })
 }
 
@@ -85,11 +97,14 @@ export function useUpdateAccount() {
  * Hook to delete an account.
  */
 export function useDeleteAccount() {
-  return useApiMutation('/accounts/{id}', 'delete', {
-    invalidateKeys: [
-      ['/accounts'],
-      ['/accounts/{id}'],
-      ['/accounts/{id}/usage'],
-    ],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.accounts.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.accounts.list.queryKey(),
+      })
+    },
   })
 }

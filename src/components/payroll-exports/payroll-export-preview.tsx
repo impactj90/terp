@@ -24,7 +24,6 @@ import {
 } from '@/components/ui/sheet'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { usePayrollExportPreview } from '@/hooks'
-import type { PayrollExportLine } from '@/hooks'
 
 interface PayrollExportPreviewProps {
   exportId: string | undefined
@@ -50,14 +49,12 @@ export function PayrollExportPreview({
   )
 
   const lines = previewData?.lines ?? []
-  const summary = previewData?.summary
-
   // Collect all unique account codes from all lines
   const accountCodes = React.useMemo(() => {
     const codes = new Set<string>()
     for (const line of lines) {
-      if (line.account_values) {
-        Object.keys(line.account_values).forEach((code) => codes.add(code))
+      if (line.accountValues) {
+        Object.keys(line.accountValues).forEach((code) => codes.add(code))
       }
     }
     return Array.from(codes).sort()
@@ -77,23 +74,23 @@ export function PayrollExportPreview({
   // Compute summary totals for the footer
   const totals = React.useMemo(() => {
     const result = {
-      target_hours: 0,
-      worked_hours: 0,
-      overtime_hours: 0,
-      vacation_days: 0,
-      sick_days: 0,
-      other_absence_days: 0,
+      targetHours: 0,
+      workedHours: 0,
+      overtimeHours: 0,
+      vacationDays: 0,
+      sickDays: 0,
+      otherAbsenceDays: 0,
       accounts: {} as Record<string, number>,
     }
     for (const line of lines) {
-      result.target_hours += line.target_hours ?? 0
-      result.worked_hours += line.worked_hours ?? 0
-      result.overtime_hours += line.overtime_hours ?? 0
-      result.vacation_days += line.vacation_days ?? 0
-      result.sick_days += line.sick_days ?? 0
-      result.other_absence_days += line.other_absence_days ?? 0
-      if (line.account_values) {
-        for (const [code, value] of Object.entries(line.account_values)) {
+      result.targetHours += line.targetHours ?? 0
+      result.workedHours += line.workedHours ?? 0
+      result.overtimeHours += line.overtimeHours ?? 0
+      result.vacationDays += line.vacationDays ?? 0
+      result.sickDays += line.sickDays ?? 0
+      result.otherAbsenceDays += line.otherAbsenceDays ?? 0
+      if (line.accountValues) {
+        for (const [code, value] of Object.entries(line.accountValues)) {
           result.accounts[code] = (result.accounts[code] ?? 0) + value
         }
       }
@@ -155,21 +152,21 @@ export function PayrollExportPreview({
                 </TableHeader>
                 <TableBody>
                   {lines.map((line, index) => (
-                    <TableRow key={line.employee_id ?? index}>
-                      <TableCell className="font-mono text-sm">{line.personnel_number}</TableCell>
-                      <TableCell>{line.first_name ?? ''}</TableCell>
-                      <TableCell>{line.last_name ?? ''}</TableCell>
-                      <TableCell>{line.department_code ?? ''}</TableCell>
-                      <TableCell>{line.cost_center_code ?? ''}</TableCell>
-                      <TableCell className="text-right">{formatDecimal(line.target_hours)}</TableCell>
-                      <TableCell className="text-right">{formatDecimal(line.worked_hours)}</TableCell>
-                      <TableCell className="text-right">{formatDecimal(line.overtime_hours)}</TableCell>
-                      <TableCell className="text-right">{formatDecimal(line.vacation_days)}</TableCell>
-                      <TableCell className="text-right">{formatDecimal(line.sick_days)}</TableCell>
-                      <TableCell className="text-right">{formatDecimal(line.other_absence_days)}</TableCell>
+                    <TableRow key={line.employeeId ?? index}>
+                      <TableCell className="font-mono text-sm">{line.personnelNumber}</TableCell>
+                      <TableCell>{line.firstName ?? ''}</TableCell>
+                      <TableCell>{line.lastName ?? ''}</TableCell>
+                      <TableCell>{line.departmentCode ?? ''}</TableCell>
+                      <TableCell>{line.costCenterCode ?? ''}</TableCell>
+                      <TableCell className="text-right">{formatDecimal(line.targetHours)}</TableCell>
+                      <TableCell className="text-right">{formatDecimal(line.workedHours)}</TableCell>
+                      <TableCell className="text-right">{formatDecimal(line.overtimeHours)}</TableCell>
+                      <TableCell className="text-right">{formatDecimal(line.vacationDays)}</TableCell>
+                      <TableCell className="text-right">{formatDecimal(line.sickDays)}</TableCell>
+                      <TableCell className="text-right">{formatDecimal(line.otherAbsenceDays)}</TableCell>
                       {accountCodes.map((code) => (
                         <TableCell key={code} className="text-right">
-                          {formatDecimal(line.account_values?.[code])}
+                          {formatDecimal(line.accountValues?.[code])}
                         </TableCell>
                       ))}
                     </TableRow>
@@ -180,12 +177,12 @@ export function PayrollExportPreview({
                     <TableCell colSpan={5} className="text-right">
                       {t('preview.summaryRow')}
                     </TableCell>
-                    <TableCell className="text-right">{formatDecimal(totals.target_hours)}</TableCell>
-                    <TableCell className="text-right">{formatDecimal(totals.worked_hours)}</TableCell>
-                    <TableCell className="text-right">{formatDecimal(totals.overtime_hours)}</TableCell>
-                    <TableCell className="text-right">{formatDecimal(totals.vacation_days)}</TableCell>
-                    <TableCell className="text-right">{formatDecimal(totals.sick_days)}</TableCell>
-                    <TableCell className="text-right">{formatDecimal(totals.other_absence_days)}</TableCell>
+                    <TableCell className="text-right">{formatDecimal(totals.targetHours)}</TableCell>
+                    <TableCell className="text-right">{formatDecimal(totals.workedHours)}</TableCell>
+                    <TableCell className="text-right">{formatDecimal(totals.overtimeHours)}</TableCell>
+                    <TableCell className="text-right">{formatDecimal(totals.vacationDays)}</TableCell>
+                    <TableCell className="text-right">{formatDecimal(totals.sickDays)}</TableCell>
+                    <TableCell className="text-right">{formatDecimal(totals.otherAbsenceDays)}</TableCell>
                     {accountCodes.map((code) => (
                       <TableCell key={code} className="text-right">
                         {formatDecimal(totals.accounts[code])}

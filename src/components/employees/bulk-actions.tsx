@@ -59,7 +59,7 @@ export function BulkActions({
 
   const bulkAssignTariff = useBulkAssignTariff()
   const { data: tariffsData, isLoading: loadingTariffs } = useTariffs({
-    active: true,
+    isActive: true,
     enabled: assignOpen,
   })
 
@@ -93,21 +93,10 @@ export function BulkActions({
     setError(null)
 
     try {
-      const body: Record<string, unknown> = {
-        tariff_id: tariffId === '__none__' ? null : tariffId,
-      }
-
-      if (assignScope === 'selected') {
-        body.employee_ids = Array.from(selectedIds)
-      } else {
-        const filter: Record<string, unknown> = {}
-        if (filters?.search) filter.q = filters.search
-        if (filters?.departmentId) filter.department_id = filters.departmentId
-        if (filters?.isActive !== undefined) filter.is_active = filters.isActive
-        body.filter = filter
-      }
-
-      await bulkAssignTariff.mutateAsync({ body })
+      await bulkAssignTariff.mutateAsync({
+        employeeIds: Array.from(selectedIds),
+        tariffId: tariffId === '__none__' ? null : tariffId,
+      })
       setAssignOpen(false)
       onClear()
     } catch (err) {

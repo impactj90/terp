@@ -137,24 +137,20 @@ export function OrderBookingFormSheet({
     try {
       if (isEdit && booking) {
         await updateMutation.mutateAsync({
-          path: { id: booking.id },
-          body: {
-            activity_id: form.activityId || undefined,
-            booking_date: form.bookingDate,
-            time_minutes: timeMinutes,
-            description: form.description.trim() || undefined,
-          },
+          id: booking.id,
+          activityId: form.activityId || undefined,
+          bookingDate: form.bookingDate,
+          timeMinutes: timeMinutes,
+          description: form.description.trim() || undefined,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            order_id: orderId,
-            employee_id: form.employeeId,
-            activity_id: form.activityId || undefined,
-            booking_date: form.bookingDate,
-            time_minutes: timeMinutes,
-            description: form.description.trim() || undefined,
-          },
+          orderId: orderId,
+          employeeId: form.employeeId,
+          activityId: form.activityId || undefined,
+          bookingDate: form.bookingDate,
+          timeMinutes: timeMinutes,
+          description: form.description.trim() || undefined,
         })
       }
 

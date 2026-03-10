@@ -25,9 +25,9 @@ import {
   TeamDetailSheet,
   MemberManagementSheet,
 } from '@/components/teams'
-import type { components } from '@/types/legacy-api-types'
+import type { useTeam } from '@/hooks'
 
-type Team = components['schemas']['Team']
+type Team = NonNullable<ReturnType<typeof useTeam>['data']>
 
 export default function TeamsPage() {
   const router = useRouter()

@@ -38,10 +38,37 @@ import {
   AccountGroupDataTable,
   AccountGroupFormSheet,
 } from '@/components/account-groups'
-import type { components } from '@/types/legacy-api-types'
-
-type Account = components['schemas']['Account']
-type AccountGroup = components['schemas']['AccountGroup']
+type Account = {
+  id: string
+  tenantId: string | null
+  code: string
+  name: string
+  accountType: string
+  unit: string
+  isSystem: boolean
+  isActive: boolean
+  description: string | null
+  isPayrollRelevant: boolean
+  payrollCode: string | null
+  sortOrder: number
+  yearCarryover: boolean
+  accountGroupId: string | null
+  displayFormat: string
+  bonusFactor: number | null
+  createdAt: string
+  updatedAt: string
+}
+type AccountGroup = {
+  id: string
+  tenantId: string
+  code: string
+  name: string
+  description: string | null
+  isActive: boolean
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
 
 const TYPE_OPTIONS = [
   { value: 'all', labelKey: 'allTypes' },
@@ -110,10 +137,10 @@ export default function AccountsPage() {
   }, [authLoading, permLoading, canAccess, router])
 
   // Extract accounts from wrapped response
-  const accounts = (accountsData as { data?: Account[] })?.data ?? []
+  const accounts = accountsData?.data ?? ([] as Account[])
 
   // Extract groups
-  const accountGroupsList = (groupsData as { data?: AccountGroup[] })?.data ?? []
+  const accountGroupsList = groupsData?.data ?? ([] as AccountGroup[])
 
   // Client-side filtering for accounts
   const filteredAccounts = React.useMemo(() => {
@@ -128,14 +155,13 @@ export default function AccountsPage() {
         }
       }
       if (typeFilter !== 'all') {
-        const accountType = (a as Record<string, unknown>).account_type as string
-        if (accountType !== typeFilter) {
+        if (a.accountType !== typeFilter) {
           return false
         }
       }
-      if (statusFilter === 'active' && !a.is_active) return false
-      if (statusFilter === 'inactive' && a.is_active) return false
-      if (!showSystem && a.is_system) return false
+      if (statusFilter === 'active' && !a.isActive) return false
+      if (statusFilter === 'inactive' && a.isActive) return false
+      if (!showSystem && a.isSystem) return false
       return true
     })
   }, [accounts, search, typeFilter, statusFilter, showSystem])
@@ -167,7 +193,7 @@ export default function AccountsPage() {
 
     try {
       await deleteMutation.mutateAsync({
-        path: { id: deleteItem.id },
+        id: deleteItem.id,
       })
       setDeleteItem(null)
       setViewItem(null)
@@ -178,20 +204,9 @@ export default function AccountsPage() {
 
   const handleToggleActive = async (account: Account, isActive: boolean) => {
     try {
-      const unit = (account as Record<string, unknown>).unit as 'minutes' | 'hours' | 'days' | undefined
-      const yearCarryover = (account as Record<string, unknown>).year_carryover as boolean | undefined
       await updateMutation.mutateAsync({
-        path: { id: account.id },
-        body: {
-          name: account.name,
-          description: account.description ?? undefined,
-          is_payroll_relevant: account.is_payroll_relevant ?? false,
-          payroll_code: account.payroll_code ?? undefined,
-          sort_order: account.sort_order ?? 0,
-          unit: unit ?? 'minutes',
-          year_carryover: yearCarryover ?? true,
-          is_active: isActive,
-        },
+        id: account.id,
+        isActive,
       })
     } catch {
       // Error handled by mutation
@@ -213,7 +228,7 @@ export default function AccountsPage() {
 
     try {
       await deleteGroupMutation.mutateAsync({
-        path: { id: deleteGroupItem.id },
+        id: deleteGroupItem.id,
       })
       setDeleteGroupItem(null)
     } catch {
@@ -230,7 +245,7 @@ export default function AccountsPage() {
       balance: [],
     }
     filteredAccounts.forEach((account) => {
-      const accountType = (account as Record<string, unknown>).account_type as string || 'tracking'
+      const accountType = account.accountType || 'tracking'
       if (!groups[accountType]) groups[accountType] = []
       groups[accountType].push(account)
     })

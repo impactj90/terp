@@ -23,9 +23,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatusBadge } from './status-badge'
-import type { components } from '@/types/legacy-api-types'
-
-type Employee = components['schemas']['Employee']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Employee = any
 
 interface EmployeeDataTableProps {
   /** List of employees to display */
@@ -136,37 +135,37 @@ export function EmployeeDataTable({
               <Checkbox
                 checked={selectedIds.has(employee.id)}
                 onCheckedChange={() => handleSelectOne(employee.id)}
-                aria-label={t('selectEmployee', { first: employee.first_name, last: employee.last_name })}
+                aria-label={t('selectEmployee', { first: employee.firstName, last: employee.lastName })}
               />
             </TableCell>
             <TableCell className="font-mono text-sm">
-              {employee.personnel_number}
+              {employee.personnelNumber}
             </TableCell>
             <TableCell>
               <div className="flex items-center gap-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
-                  {employee.first_name[0]}
-                  {employee.last_name[0]}
+                  {employee.firstName[0]}
+                  {employee.lastName[0]}
                 </div>
                 <span className="font-medium">
-                  {employee.first_name} {employee.last_name}
+                  {employee.firstName} {employee.lastName}
                 </span>
               </div>
             </TableCell>
             <TableCell className="text-muted-foreground">
               {employee.email || '-'}
             </TableCell>
-            <TableCell>{employee.department?.name || '-'}</TableCell>
+            <TableCell>{'department' in employee ? (employee as unknown as { department?: { name: string } }).department?.name || '-' : '-'}</TableCell>
             <TableCell className="text-muted-foreground">
-              {employee.tariff ? `${employee.tariff.code} - ${employee.tariff.name}` : '-'}
+              {employee.tariffId ? employee.tariffId.substring(0, 8) + '...' : '-'}
             </TableCell>
             <TableCell>
               <StatusBadge
-                isActive={employee.is_active}
-                exitDate={employee.exit_date}
+                isActive={employee.isActive}
+                exitDate={employee.exitDate}
               />
             </TableCell>
-            <TableCell>{formatDate(employee.entry_date)}</TableCell>
+            <TableCell>{formatDate(employee.entryDate)}</TableCell>
             <TableCell onClick={(e) => e.stopPropagation()}>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

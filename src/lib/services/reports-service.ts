@@ -143,7 +143,7 @@ function generateReportJSON(data: ReportRow): string {
 function stripFileContent<T extends { fileContent?: unknown }>(
   record: T
 ): Omit<T, "fileContent"> {
-  const { fileContent: _, ...rest } = record
+  const { fileContent: _fileContent, ...rest } = record
   return rest
 }
 

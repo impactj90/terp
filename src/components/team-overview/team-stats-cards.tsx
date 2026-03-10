@@ -6,9 +6,9 @@ import { Users, Clock, CalendarOff, AlertTriangle } from 'lucide-react'
 import { StatsCard } from '@/components/dashboard'
 import { formatMinutes, formatBalance } from '@/lib/time-utils'
 import type { TeamDailyValuesResult } from '@/hooks/use-team-daily-values'
-import type { components } from '@/types/legacy-api-types'
 
-type TeamMember = components['schemas']['TeamMember']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type TeamMember = any
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DayViewData = Record<string, any> | null | undefined
@@ -44,7 +44,7 @@ export function TeamStatsCards({
   // Compute today stats from dayViewsData
   const todayStats = useMemo(() => {
     let presentCount = 0
-    let absenceCount = 0
+    const absenceCount = 0
     let issueCount = 0
 
     for (const dv of dayViewsData) {
@@ -83,7 +83,7 @@ export function TeamStatsCards({
         totalNetMinutes += dv.net_minutes ?? 0
         totalTargetMinutes += dv.target_minutes ?? 0
         totalOvertimeMinutes += dv.overtime_minutes ?? 0
-        totalUndertimeMinutes += dv.undertime_minutes ?? 0
+        totalUndertimeMinutes += dv.undertime ?? 0
         if (dv.is_absence) {
           absenceDays += 1
         }

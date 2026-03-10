@@ -88,8 +88,8 @@ describe("accessZones.list", () => {
     const result = await caller.list()
 
     expect(result.data).toHaveLength(2)
-    expect(result.data[0].code).toBe("ZONE-A")
-    expect(result.data[1].code).toBe("ZONE-B")
+    expect(result.data[0]!.code).toBe("ZONE-A")
+    expect(result.data[1]!.code).toBe("ZONE-B")
     expect(mockPrisma.accessZone.findMany).toHaveBeenCalledWith({
       where: { tenantId: TENANT_ID },
       orderBy: [{ sortOrder: "asc" }, { code: "asc" }],

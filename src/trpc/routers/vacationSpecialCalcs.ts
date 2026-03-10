@@ -32,8 +32,8 @@ const SPECIAL_CALC_TYPES = ["age", "tenure", "disability"] as const
 // --- Output Schemas ---
 
 const vacationSpecialCalcOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   type: z.string(),
   threshold: z.number(),
   bonusDays: z.number(),
@@ -56,7 +56,7 @@ const createVacationSpecialCalcInputSchema = z.object({
 })
 
 const updateVacationSpecialCalcInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   threshold: z.number().int().min(0).optional(),
   bonusDays: z.number().positive().optional(),
   description: z.string().nullable().optional(),
@@ -141,7 +141,7 @@ export const vacationSpecialCalcsRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(VACATION_CONFIG_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(vacationSpecialCalcOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -220,7 +220,7 @@ export const vacationSpecialCalcsRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(VACATION_CONFIG_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

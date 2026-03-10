@@ -26,9 +26,9 @@ const TRAVEL_ALLOWANCE_MANAGE = permissionIdByKey("travel_allowance.manage")!
 // --- Output Schemas ---
 
 const localTravelRuleOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  ruleSetId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
+  ruleSetId: z.string(),
   minDistanceKm: z.number(),
   maxDistanceKm: z.number().nullable(),
   minDurationMinutes: z.number(),
@@ -44,7 +44,7 @@ const localTravelRuleOutputSchema = z.object({
 // --- Input Schemas ---
 
 const createLocalTravelRuleInputSchema = z.object({
-  ruleSetId: z.string().uuid(),
+  ruleSetId: z.string(),
   minDistanceKm: z.number().optional(),
   maxDistanceKm: z.number().optional(),
   minDurationMinutes: z.number().int().optional(),
@@ -55,7 +55,7 @@ const createLocalTravelRuleInputSchema = z.object({
 })
 
 const updateLocalTravelRuleInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   // ruleSetId is NOT updatable
   minDistanceKm: z.number().optional(),
   maxDistanceKm: z.number().nullable().optional(),
@@ -125,7 +125,7 @@ export const localTravelRulesRouter = createTRPCRouter({
    */
   list: tenantProcedure
     .use(requirePermission(TRAVEL_ALLOWANCE_MANAGE))
-    .input(z.object({ ruleSetId: z.string().uuid().optional() }).optional())
+    .input(z.object({ ruleSetId: z.string().optional() }).optional())
     .output(z.object({ data: z.array(localTravelRuleOutputSchema) }))
     .query(async ({ ctx, input }) => {
       try {
@@ -150,7 +150,7 @@ export const localTravelRulesRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(TRAVEL_ALLOWANCE_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(localTravelRuleOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -223,7 +223,7 @@ export const localTravelRulesRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(TRAVEL_ALLOWANCE_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

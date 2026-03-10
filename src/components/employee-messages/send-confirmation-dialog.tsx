@@ -59,7 +59,7 @@ export function SendConfirmationDialog({
 
     try {
       const response = await sendMutation.mutateAsync({
-        path: { id: messageId },
+        id: messageId,
       })
 
       setResult({

@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { NextResponse } from 'next/server'
 import { getHub } from '@/lib/pubsub/singleton'
 import { userTopic } from '@/lib/pubsub/topics'
 
@@ -16,7 +17,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing userId or event' }, { status: 400 })
   }
 
-  const hub = getHub()
+  const hub = await getHub()
   await hub.publish(userTopic(userId), event, true)
 
   return NextResponse.json({ ok: true })

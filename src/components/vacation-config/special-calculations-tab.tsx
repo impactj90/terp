@@ -54,12 +54,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import type { components } from '@/types/legacy-api-types'
+import type { useVacationSpecialCalculation } from '@/hooks'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type TranslationFn = (key: string, values?: Record<string, any>) => string
 
-type VacationSpecialCalculation = components['schemas']['VacationSpecialCalculation']
+type VacationSpecialCalculation = NonNullable<ReturnType<typeof useVacationSpecialCalculation>['data']>
 type SpecialCalcType = 'age' | 'tenure' | 'disability'
 type TypeFilter = 'all' | SpecialCalcType
 
@@ -114,7 +114,7 @@ export function SpecialCalculationsTab() {
     enabled: !authLoading && !permLoading && canAccess,
   })
   const deleteMutation = useDeleteVacationSpecialCalculation()
-  const items = (calcData?.data ?? []) as VacationSpecialCalculation[]
+  const items = calcData?.data ?? []
 
   // Filtering
   const filteredItems = React.useMemo(() => {
@@ -137,7 +137,7 @@ export function SpecialCalculationsTab() {
     if (!deleteItem) return
     setDeleteError(null)
     try {
-      await deleteMutation.mutateAsync({ path: { id: deleteItem.id } })
+      await deleteMutation.mutateAsync({ id: deleteItem.id })
       setDeleteItem(null)
     } catch (err) {
       const apiError = err as { status?: number; detail?: string; message?: string }
@@ -239,7 +239,7 @@ export function SpecialCalculationsTab() {
               </TableHeader>
               <TableBody>
                 {filteredItems.map((item) => {
-                  const typeConfig = TYPE_BADGE_CONFIG[item.type]
+                  const typeConfig = TYPE_BADGE_CONFIG[item.type as SpecialCalcType]
                   return (
                     <TableRow key={item.id}>
                       <TableCell>
@@ -252,10 +252,10 @@ export function SpecialCalculationsTab() {
                           ? '-'
                           : (t as TranslationFn)('specialCalc.thresholdYears', { count: item.threshold })}
                       </TableCell>
-                      <TableCell>+{item.bonus_days}</TableCell>
+                      <TableCell>+{item.bonusDays}</TableCell>
                       <TableCell>
-                        <Badge variant={item.is_active ? 'default' : 'secondary'}>
-                          {item.is_active
+                        <Badge variant={item.isActive ? 'default' : 'secondary'}>
+                          {item.isActive
                             ? t('specialCalc.statusActive')
                             : t('specialCalc.statusInactive')}
                         </Badge>
@@ -323,7 +323,7 @@ export function SpecialCalculationsTab() {
             ? deleteError
             : deleteItem
               ? (t as TranslationFn)('specialCalc.deleteDescription', {
-                  type: t(TYPE_BADGE_CONFIG[deleteItem.type].labelKey as Parameters<typeof t>[0]),
+                  type: t(TYPE_BADGE_CONFIG[deleteItem.type as SpecialCalcType].labelKey as Parameters<typeof t>[0]),
                   threshold: deleteItem.threshold,
                 })
               : ''
@@ -365,11 +365,11 @@ function SpecialCalculationFormSheet({
 
     if (item) {
       setForm({
-        type: item.type,
+        type: item.type as SpecialCalcType,
         threshold: String(item.threshold),
-        bonusDays: String(item.bonus_days),
+        bonusDays: String(item.bonusDays),
         description: item.description ?? '',
-        isActive: item.is_active ?? true,
+        isActive: item.isActive ?? true,
       })
     } else {
       setForm(INITIAL_FORM)
@@ -404,22 +404,18 @@ function SpecialCalculationFormSheet({
     try {
       if (isEdit && item) {
         await updateMutation.mutateAsync({
-          path: { id: item.id },
-          body: {
-            threshold,
-            bonus_days: bonusDays,
-            description: form.description.trim() || undefined,
-            is_active: form.isActive,
-          },
+          id: item.id,
+          threshold,
+          bonusDays: bonusDays,
+          description: form.description.trim() || undefined,
+          isActive: form.isActive,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            type: form.type,
-            threshold,
-            bonus_days: bonusDays,
-            description: form.description.trim() || undefined,
-          },
+          type: form.type,
+          threshold,
+          bonusDays: bonusDays,
+          description: form.description.trim() || undefined,
         })
       }
       onSuccess?.()

@@ -34,7 +34,6 @@ import {
 import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
 import { useGenerateReport, useEmployees, useDepartments, useCostCenters, useTeams } from '@/hooks'
 import { parseApiError } from '@/lib/api/errors'
-import type { components } from '@/types/legacy-api-types'
 
 interface GenerateReportDialogProps {
   open: boolean
@@ -219,22 +218,27 @@ export function GenerateReportDialog({
       return
     }
 
-    const parameters: components['schemas']['GenerateReportRequest']['parameters'] = {}
-    if (dateRange?.from) parameters.from_date = formatDateParam(dateRange.from)
-    if (dateRange?.to) parameters.to_date = formatDateParam(dateRange.to)
-    if (employeeIds.length > 0) parameters.employee_ids = employeeIds
-    if (departmentIds.length > 0) parameters.department_ids = departmentIds
-    if (costCenterIds.length > 0) parameters.cost_center_ids = costCenterIds
-    if (teamIds.length > 0) parameters.team_ids = teamIds
+    const parameters: {
+      fromDate?: string
+      toDate?: string
+      employeeIds?: string[]
+      departmentIds?: string[]
+      costCenterIds?: string[]
+      teamIds?: string[]
+    } = {}
+    if (dateRange?.from) parameters.fromDate = formatDateParam(dateRange.from)
+    if (dateRange?.to) parameters.toDate = formatDateParam(dateRange.to)
+    if (employeeIds.length > 0) parameters.employeeIds = employeeIds
+    if (departmentIds.length > 0) parameters.departmentIds = departmentIds
+    if (costCenterIds.length > 0) parameters.costCenterIds = costCenterIds
+    if (teamIds.length > 0) parameters.teamIds = teamIds
 
     try {
       await generateMutation.mutateAsync({
-        body: {
-          report_type: reportType as components['schemas']['GenerateReportRequest']['report_type'],
-          format: format as components['schemas']['GenerateReportRequest']['format'],
-          ...(name ? { name } : {}),
-          ...(Object.keys(parameters).length > 0 ? { parameters } : {}),
-        },
+        reportType: reportType as 'custom' | 'daily_overview' | 'weekly_overview' | 'monthly_overview' | 'employee_timesheet' | 'department_summary' | 'absence_report' | 'vacation_report' | 'overtime_report' | 'account_balances',
+        format: format as 'csv' | 'json',
+        ...(name ? { name } : {}),
+        ...(Object.keys(parameters).length > 0 ? { parameters } : {}),
       })
       handleClose()
     } catch (err) {

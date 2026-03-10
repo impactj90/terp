@@ -25,8 +25,8 @@ const ABSENCE_TYPES_MANAGE = permissionIdByKey("absence_types.manage")!
 // --- Output Schemas ---
 
 const absenceTypeGroupOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   code: z.string(),
   name: z.string(),
   description: z.string().nullable(),
@@ -46,7 +46,7 @@ const createAbsenceTypeGroupInputSchema = z.object({
 })
 
 const updateAbsenceTypeGroupInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   code: z.string().min(1).optional(),
   name: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
@@ -126,7 +126,7 @@ export const absenceTypeGroupsRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(ABSENCE_TYPES_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(absenceTypeGroupOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -202,7 +202,7 @@ export const absenceTypeGroupsRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(ABSENCE_TYPES_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

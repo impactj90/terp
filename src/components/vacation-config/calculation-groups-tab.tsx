@@ -55,10 +55,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import type { components } from '@/types/legacy-api-types'
-
-type VacationCalculationGroup = components['schemas']['VacationCalculationGroup']
-type VacationSpecialCalculation = components['schemas']['VacationSpecialCalculation']
+type VacationCalculationGroup = NonNullable<ReturnType<typeof useVacationCalculationGroups>['data']>['data'][number]
+type VacationSpecialCalculation = NonNullable<ReturnType<typeof useVacationSpecialCalculations>['data']>['data'][number]
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type TranslationFn = (key: string, values?: Record<string, any>) => string
@@ -96,7 +94,7 @@ export function CalculationGroupsTab() {
     enabled: !authLoading && !permLoading && canAccess,
   })
   const deleteMutation = useDeleteVacationCalculationGroup()
-  const items = (groupsData?.data ?? []) as VacationCalculationGroup[]
+  const items = groupsData?.data ?? []
 
   const filteredItems = React.useMemo(() => {
     if (!search) return items
@@ -111,7 +109,7 @@ export function CalculationGroupsTab() {
     if (!deleteItem) return
     setDeleteError(null)
     try {
-      await deleteMutation.mutateAsync({ path: { id: deleteItem.id } })
+      await deleteMutation.mutateAsync({ id: deleteItem.id })
       setDeleteItem(null)
     } catch (err) {
       const apiError = err as { status?: number; detail?: string; message?: string }
@@ -206,10 +204,10 @@ export function CalculationGroupsTab() {
                           : t('calcGroup.basisEntryDate')}
                       </Badge>
                     </TableCell>
-                    <TableCell>{item.special_calculations?.length ?? 0}</TableCell>
+                    <TableCell>{item.specialCalculations?.length ?? 0}</TableCell>
                     <TableCell>
-                      <Badge variant={item.is_active ? 'default' : 'secondary'}>
-                        {item.is_active ? t('calcGroup.statusActive') : t('calcGroup.statusInactive')}
+                      <Badge variant={item.isActive ? 'default' : 'secondary'}>
+                        {item.isActive ? t('calcGroup.statusActive') : t('calcGroup.statusInactive')}
                       </Badge>
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
@@ -290,7 +288,7 @@ function CalculationGroupFormSheet({ open, onOpenChange, group, onSuccess }: Cal
   const updateMutation = useUpdateVacationCalculationGroup()
 
   const { data: specialCalcsData } = useVacationSpecialCalculations({ enabled: open })
-  const specialCalcs = (specialCalcsData?.data ?? []) as VacationSpecialCalculation[]
+  const specialCalcs = specialCalcsData?.data ?? []
 
   const filteredSpecialCalcs = React.useMemo(() => {
     if (!memberSearch) return specialCalcs
@@ -307,9 +305,9 @@ function CalculationGroupFormSheet({ open, onOpenChange, group, onSuccess }: Cal
         code: group.code || '',
         name: group.name || '',
         description: group.description || '',
-        basis: group.basis,
-        isActive: group.is_active ?? true,
-        specialCalcIds: new Set((group.special_calculations ?? []).map((sc) => sc.id)),
+        basis: group.basis as 'calendar_year' | 'entry_date',
+        isActive: group.isActive ?? true,
+        specialCalcIds: new Set((group.specialCalculations ?? []).map((sc) => sc.id)),
       })
     } else {
       setForm(INITIAL_FORM)
@@ -346,9 +344,9 @@ function CalculationGroupFormSheet({ open, onOpenChange, group, onSuccess }: Cal
         ? t('specialCalc.typeTenure')
         : t('specialCalc.typeDisability')
     if (sc.type === 'disability') {
-      return (t as TranslationFn)('calcGroup.memberLabelDisability', { type: typeLabel, days: sc.bonus_days })
+      return (t as TranslationFn)('calcGroup.memberLabelDisability', { type: typeLabel, days: sc.bonusDays })
     }
-    return (t as TranslationFn)('calcGroup.memberLabelThreshold', { type: typeLabel, threshold: sc.threshold, days: sc.bonus_days })
+    return (t as TranslationFn)('calcGroup.memberLabelThreshold', { type: typeLabel, threshold: sc.threshold, days: sc.bonusDays })
   }
 
   const handleSubmit = async () => {
@@ -365,24 +363,20 @@ function CalculationGroupFormSheet({ open, onOpenChange, group, onSuccess }: Cal
     try {
       if (isEdit && group) {
         await updateMutation.mutateAsync({
-          path: { id: group.id },
-          body: {
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            basis: form.basis,
-            is_active: form.isActive,
-            special_calculation_ids: Array.from(form.specialCalcIds),
-          },
+          id: group.id,
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          basis: form.basis,
+          isActive: form.isActive,
+          specialCalculationIds: Array.from(form.specialCalcIds),
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            code: form.code.trim(),
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            basis: form.basis,
-            special_calculation_ids: Array.from(form.specialCalcIds),
-          },
+          code: form.code.trim(),
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          basis: form.basis,
+          specialCalculationIds: Array.from(form.specialCalcIds),
         })
       }
       onSuccess?.()

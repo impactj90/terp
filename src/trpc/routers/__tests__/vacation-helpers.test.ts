@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
-import type { Prisma } from "@/generated/prisma/client"
+import type { Prisma, PrismaClient } from "@/generated/prisma/client"
 import {
   resolveVacationBasis,
   buildCalcInput,
@@ -129,14 +129,14 @@ describe("buildCalcInput", () => {
           specialCalculation: {
             type: "age",
             threshold: 50,
-            bonusDays: { toString: () => "2", valueOf: () => 2, [Symbol.toPrimitive]: () => 2 } as unknown as import("@/generated/prisma/client").Prisma.Decimal,
+            bonusDays: { toString: () => "2", valueOf: () => 2, [Symbol.toPrimitive]: () => 2 } as unknown as Prisma.Decimal,
           },
         },
         {
           specialCalculation: {
             type: "tenure",
             threshold: 10,
-            bonusDays: { toString: () => "3", valueOf: () => 3, [Symbol.toPrimitive]: () => 3 } as unknown as import("@/generated/prisma/client").Prisma.Decimal,
+            bonusDays: { toString: () => "3", valueOf: () => 3, [Symbol.toPrimitive]: () => 3 } as unknown as Prisma.Decimal,
           },
         },
       ],
@@ -160,7 +160,7 @@ describe("resolveVacationBasis", () => {
           tenantBasis ? { vacationBasis: tenantBasis } : null
         ),
       },
-    } as unknown as import("@/generated/prisma/client").PrismaClient
+    } as unknown as PrismaClient
   }
 
   it("returns calendar_year as default when no overrides", async () => {

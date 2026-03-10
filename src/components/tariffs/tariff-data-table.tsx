@@ -22,9 +22,9 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatDate, parseISODate } from '@/lib/time-utils'
-import type { components } from '@/types/legacy-api-types'
+import type { useTariff } from '@/hooks'
 
-type Tariff = components['schemas']['Tariff']
+type Tariff = NonNullable<ReturnType<typeof useTariff>['data']>
 
 interface TariffDataTableProps {
   tariffs: Tariff[]
@@ -75,22 +75,22 @@ export function TariffDataTable({
             <TableCell className="font-mono text-sm">{tariff.code}</TableCell>
             <TableCell className="font-medium">{tariff.name}</TableCell>
             <TableCell className="text-sm text-muted-foreground">
-              {tariff.week_plan ? (
-                <span>{tariff.week_plan.code} - {tariff.week_plan.name}</span>
+              {tariff.weekPlan ? (
+                <span>{tariff.weekPlan.code} - {tariff.weekPlan.name}</span>
               ) : (
                 <span className="text-muted-foreground/60">-</span>
               )}
             </TableCell>
             <TableCell className="text-sm text-muted-foreground">
-              {tariff.valid_from ? formatDate(parseISODate(tariff.valid_from)) : '-'}
+              {tariff.validFrom ? formatDate(parseISODate(tariff.validFrom)) : '-'}
             </TableCell>
             <TableCell className="text-sm text-muted-foreground">
-              {tariff.valid_to ? formatDate(parseISODate(tariff.valid_to)) : '-'}
+              {tariff.validTo ? formatDate(parseISODate(tariff.validTo)) : '-'}
             </TableCell>
             <TableCell>{tariff.breaks?.length ?? 0}</TableCell>
             <TableCell>
-              <Badge variant={tariff.is_active ? 'default' : 'secondary'}>
-                {tariff.is_active ? t('statusActive') : t('statusInactive')}
+              <Badge variant={tariff.isActive ? 'default' : 'secondary'}>
+                {tariff.isActive ? t('statusActive') : t('statusInactive')}
               </Badge>
             </TableCell>
             <TableCell onClick={(e) => e.stopPropagation()}>

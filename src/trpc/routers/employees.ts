@@ -46,8 +46,8 @@ const TIME_TRACKING_EDIT = permissionIdByKey("time_tracking.edit")!
 // --- Output Schemas ---
 
 const employeeOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   personnelNumber: z.string(),
   pin: z.string(),
   firstName: z.string(),
@@ -56,10 +56,10 @@ const employeeOutputSchema = z.object({
   phone: z.string().nullable(),
   entryDate: z.date(),
   exitDate: z.date().nullable(),
-  departmentId: z.string().uuid().nullable(),
-  costCenterId: z.string().uuid().nullable(),
-  employmentTypeId: z.string().uuid().nullable(),
-  tariffId: z.string().uuid().nullable(),
+  departmentId: z.string().nullable(),
+  costCenterId: z.string().nullable(),
+  employmentTypeId: z.string().nullable(),
+  tariffId: z.string().nullable(),
   weeklyHours: z.number(),
   vacationDaysPerYear: z.number(),
   isActive: z.boolean(),
@@ -81,12 +81,12 @@ const employeeOutputSchema = z.object({
   roomNumber: z.string().nullable(),
   photoUrl: z.string().nullable(),
   // Group FKs
-  employeeGroupId: z.string().uuid().nullable(),
-  workflowGroupId: z.string().uuid().nullable(),
-  activityGroupId: z.string().uuid().nullable(),
+  employeeGroupId: z.string().nullable(),
+  workflowGroupId: z.string().nullable(),
+  activityGroupId: z.string().nullable(),
   // Order FKs
-  defaultOrderId: z.string().uuid().nullable(),
-  defaultActivityId: z.string().uuid().nullable(),
+  defaultOrderId: z.string().nullable(),
+  defaultActivityId: z.string().nullable(),
   // Tariff overrides
   partTimePercent: z.number().nullable(),
   dailyTargetHours: z.number().nullable(),
@@ -105,43 +105,43 @@ type EmployeeOutput = z.infer<typeof employeeOutputSchema>
 const employeeDetailOutputSchema = employeeOutputSchema.extend({
   department: z
     .object({
-      id: z.string().uuid(),
+      id: z.string(),
       name: z.string(),
       code: z.string(),
     })
     .nullable(),
   costCenter: z
     .object({
-      id: z.string().uuid(),
+      id: z.string(),
       code: z.string(),
       name: z.string(),
     })
     .nullable(),
   employmentType: z
     .object({
-      id: z.string().uuid(),
+      id: z.string(),
       code: z.string(),
       name: z.string(),
     })
     .nullable(),
   contacts: z.array(
     z.object({
-      id: z.string().uuid(),
-      employeeId: z.string().uuid(),
+      id: z.string(),
+      employeeId: z.string(),
       contactType: z.string(),
       value: z.string(),
       label: z.string().nullable(),
       isPrimary: z.boolean(),
-      contactKindId: z.string().uuid().nullable(),
+      contactKindId: z.string().nullable(),
       createdAt: z.date(),
       updatedAt: z.date(),
     })
   ),
   cards: z.array(
     z.object({
-      id: z.string().uuid(),
-      tenantId: z.string().uuid(),
-      employeeId: z.string().uuid(),
+      id: z.string(),
+      tenantId: z.string(),
+      employeeId: z.string(),
       cardNumber: z.string(),
       cardType: z.string(),
       validFrom: z.date(),
@@ -156,7 +156,7 @@ const employeeDetailOutputSchema = employeeOutputSchema.extend({
 })
 
 const employeeSearchOutputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   personnelNumber: z.string(),
   firstName: z.string(),
   lastName: z.string(),
@@ -167,11 +167,11 @@ const employeeSearchOutputSchema = z.object({
 const listEmployeesInputSchema = z
   .object({
     page: z.number().int().positive().optional().default(1),
-    pageSize: z.number().int().min(1).max(100).optional().default(20),
+    pageSize: z.number().int().min(1).max(500).optional().default(20),
     search: z.string().optional(),
-    departmentId: z.string().uuid().optional(),
-    costCenterId: z.string().uuid().optional(),
-    employmentTypeId: z.string().uuid().optional(),
+    departmentId: z.string().optional(),
+    costCenterId: z.string().optional(),
+    employmentTypeId: z.string().optional(),
     isActive: z.boolean().optional(),
     hasExitDate: z.boolean().optional(),
   })
@@ -186,10 +186,10 @@ const createEmployeeInputSchema = z.object({
   phone: z.string().optional(),
   entryDate: z.coerce.date(),
   exitDate: z.coerce.date().optional(),
-  departmentId: z.string().uuid().optional(),
-  costCenterId: z.string().uuid().optional(),
-  employmentTypeId: z.string().uuid().optional(),
-  tariffId: z.string().uuid().optional(),
+  departmentId: z.string().optional(),
+  costCenterId: z.string().optional(),
+  employmentTypeId: z.string().optional(),
+  tariffId: z.string().optional(),
   weeklyHours: z.number().optional(),
   vacationDaysPerYear: z.number().optional(),
   isActive: z.boolean().optional(),
@@ -211,12 +211,12 @@ const createEmployeeInputSchema = z.object({
   roomNumber: z.string().optional(),
   photoUrl: z.string().optional(),
   // Group FKs
-  employeeGroupId: z.string().uuid().optional(),
-  workflowGroupId: z.string().uuid().optional(),
-  activityGroupId: z.string().uuid().optional(),
+  employeeGroupId: z.string().optional(),
+  workflowGroupId: z.string().optional(),
+  activityGroupId: z.string().optional(),
   // Order FKs
-  defaultOrderId: z.string().uuid().optional(),
-  defaultActivityId: z.string().uuid().optional(),
+  defaultOrderId: z.string().optional(),
+  defaultActivityId: z.string().optional(),
   // Tariff overrides
   partTimePercent: z.number().optional(),
   dailyTargetHours: z.number().optional(),
@@ -229,7 +229,7 @@ const createEmployeeInputSchema = z.object({
 })
 
 const updateEmployeeInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   personnelNumber: z.string().min(1).optional(),
   firstName: z.string().min(1).optional(),
   lastName: z.string().min(1).optional(),
@@ -238,10 +238,10 @@ const updateEmployeeInputSchema = z.object({
   phone: z.string().nullable().optional(),
   entryDate: z.coerce.date().optional(),
   exitDate: z.coerce.date().nullable().optional(),
-  departmentId: z.string().uuid().optional(),
-  costCenterId: z.string().uuid().optional(),
-  employmentTypeId: z.string().uuid().optional(),
-  tariffId: z.string().uuid().optional(),
+  departmentId: z.string().optional(),
+  costCenterId: z.string().optional(),
+  employmentTypeId: z.string().optional(),
+  tariffId: z.string().optional(),
   weeklyHours: z.number().optional(),
   vacationDaysPerYear: z.number().optional(),
   isActive: z.boolean().optional(),
@@ -263,12 +263,12 @@ const updateEmployeeInputSchema = z.object({
   roomNumber: z.string().nullable().optional(),
   photoUrl: z.string().nullable().optional(),
   // Group FKs
-  employeeGroupId: z.string().uuid().optional(),
-  workflowGroupId: z.string().uuid().optional(),
-  activityGroupId: z.string().uuid().optional(),
+  employeeGroupId: z.string().optional(),
+  workflowGroupId: z.string().optional(),
+  activityGroupId: z.string().optional(),
   // Order FKs
-  defaultOrderId: z.string().uuid().optional(),
-  defaultActivityId: z.string().uuid().optional(),
+  defaultOrderId: z.string().optional(),
+  defaultActivityId: z.string().optional(),
   // Tariff overrides
   partTimePercent: z.number().nullable().optional(),
   dailyTargetHours: z.number().nullable().optional(),
@@ -413,9 +413,9 @@ const dayViewDailyErrorSchema = z.object({
 })
 
 const dayViewDailyValueSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  employeeId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
+  employeeId: z.string(),
   valueDate: z.date(),
   status: z.string(),
   grossTime: z.number().int(),
@@ -435,53 +435,53 @@ const dayViewDailyValueSchema = z.object({
 })
 
 const dayViewDayPlanSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   code: z.string(),
   name: z.string(),
   planType: z.string(),
 }).nullable()
 
 const dayViewHolidaySchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   name: z.string(),
 }).nullable()
 
 const dayViewBookingSchema = z.object({
-  id: z.string().uuid(),
-  employeeId: z.string().uuid(),
+  id: z.string(),
+  employeeId: z.string(),
   bookingDate: z.date(),
-  bookingTypeId: z.string().uuid(),
+  bookingTypeId: z.string(),
   originalTime: z.number().int(),
   editedTime: z.number().int(),
   calculatedTime: z.number().int().nullable(),
-  pairId: z.string().uuid().nullable(),
+  pairId: z.string().nullable(),
   source: z.string().nullable(),
   notes: z.string().nullable(),
-  bookingReasonId: z.string().uuid().nullable(),
+  bookingReasonId: z.string().nullable(),
   isAutoGenerated: z.boolean(),
-  originalBookingId: z.string().uuid().nullable(),
+  originalBookingId: z.string().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
   bookingType: z.object({
-    id: z.string().uuid(),
+    id: z.string(),
     code: z.string(),
     name: z.string(),
     direction: z.string(),
   }).nullable(),
   bookingReason: z.object({
-    id: z.string().uuid(),
+    id: z.string(),
     code: z.string(),
     label: z.string(),
   }).nullable(),
 })
 
 const dayViewInputSchema = z.object({
-  employeeId: z.string().uuid(),
+  employeeId: z.string(),
   date: z.string().date(), // YYYY-MM-DD
 })
 
 const dayViewOutputSchema = z.object({
-  employeeId: z.string().uuid(),
+  employeeId: z.string(),
   date: z.string(), // YYYY-MM-DD
   bookings: z.array(dayViewBookingSchema),
   dailyValue: dayViewDailyValueSchema.nullable(),
@@ -591,7 +591,7 @@ export const employeesRouter = createTRPCRouter({
   getById: tenantProcedure
     .use(requirePermission(EMPLOYEES_VIEW))
     .use(applyDataScope())
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(employeeDetailOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -729,7 +729,7 @@ export const employeesRouter = createTRPCRouter({
   delete: tenantProcedure
     .use(requirePermission(EMPLOYEES_DELETE))
     .use(applyDataScope())
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -789,8 +789,8 @@ export const employeesRouter = createTRPCRouter({
     .use(applyDataScope())
     .input(
       z.object({
-        employeeIds: z.array(z.string().uuid()),
-        tariffId: z.string().uuid().nullable(),
+        employeeIds: z.array(z.string()),
+        tariffId: z.string().nullable(),
         clearTariff: z.boolean().optional(),
       })
     )

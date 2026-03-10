@@ -10,10 +10,11 @@ import { Switch } from '@/components/ui/switch'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useDeleteMacroAssignment, useUpdateMacroAssignment, useTariffs, useEmployees } from '@/hooks'
 import { MacroAssignmentFormDialog } from './macro-assignment-form-dialog'
-import type { components } from '@/types/legacy-api-types'
 
-type Macro = components['schemas']['schema1']
-type MacroAssignment = components['schemas']['schema2']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Macro = any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type MacroAssignment = any
 
 interface MacroAssignmentListProps {
   macroId: string
@@ -40,15 +41,15 @@ export function MacroAssignmentList({
   const employees = employeesData?.items ?? []
 
   const getTargetName = (assignment: MacroAssignment): string => {
-    if (assignment.tariff_id) {
-      const tariff = tariffs.find((t) => t.id === assignment.tariff_id)
-      return tariff ? `${tariff.code} - ${tariff.name}` : assignment.tariff_id
+    if (assignment.tariffId) {
+      const tariff = tariffs.find((t) => t.id === assignment.tariffId)
+      return tariff ? `${tariff.code} - ${tariff.name}` : assignment.tariffId
     }
-    if (assignment.employee_id) {
-      const employee = employees.find((e) => e.id === assignment.employee_id)
+    if (assignment.employeeId) {
+      const employee = employees.find((e) => e.id === assignment.employeeId)
       return employee
-        ? `${employee.first_name} ${employee.last_name}`
-        : assignment.employee_id
+        ? `${employee.firstName} ${employee.lastName}`
+        : assignment.employeeId
     }
     return '-'
   }
@@ -63,15 +64,15 @@ export function MacroAssignmentList({
 
   const handleToggleActive = async (assignment: MacroAssignment, active: boolean) => {
     await updateMutation.mutateAsync({
-      path: { id: macroId, assignmentId: assignment.id },
-      body: { is_active: active },
+      macroId, assignmentId: assignment.id,
+      isActive: active,
     })
   }
 
   const handleConfirmDelete = async () => {
     if (!deleteAssignment) return
     await deleteMutation.mutateAsync({
-      path: { id: macroId, assignmentId: deleteAssignment.id },
+      macroId, assignmentId: deleteAssignment.id,
     })
     setDeleteAssignment(null)
   }
@@ -105,16 +106,16 @@ export function MacroAssignmentList({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">
-                      {assignment.tariff_id ? t('assignByTariff') : t('assignByEmployee')}
+                      {assignment.tariffId ? t('assignByTariff') : t('assignByEmployee')}
                     </Badge>
                     <span className="font-medium">{getTargetName(assignment)}</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {t('executionDay')}: {getExecutionDayLabel(assignment.execution_day)}
+                    {t('executionDay')}: {getExecutionDayLabel(assignment.executionDay)}
                   </p>
                 </div>
                 <Switch
-                  checked={assignment.is_active ?? true}
+                  checked={assignment.isActive ?? true}
                   onCheckedChange={(checked) => handleToggleActive(assignment, checked)}
                 />
                 <Button

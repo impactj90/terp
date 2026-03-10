@@ -37,12 +37,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import type { components } from '@/types/legacy-api-types'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type TranslationFn = (key: string, values?: Record<string, any>) => string
-
-type RawTerminalBooking = components['schemas']['RawTerminalBooking']
 
 const STATUS_BADGE_CONFIG: Record<string, { className: string; labelKey: string }> = {
   pending: {
@@ -91,10 +88,10 @@ export function BookingsTab() {
   const { data: bookingsData, isLoading } = useTerminalBookings({
     from: dateFrom,
     to: dateTo,
-    terminal_id: terminalId || undefined,
-    employee_id: employeeId !== 'all' ? employeeId : undefined,
+    terminalId: terminalId || undefined,
+    employeeId: employeeId !== 'all' ? employeeId : undefined,
     status: status !== 'all' ? (status as 'pending' | 'processed' | 'failed' | 'skipped') : undefined,
-    import_batch_id: importBatchId || undefined,
+    importBatchId: importBatchId || undefined,
     enabled: !authLoading && !permLoading && canAccess && !!dateFrom && !!dateTo,
   })
   const { data: employeesData } = useEmployees({
@@ -102,7 +99,7 @@ export function BookingsTab() {
     enabled: !authLoading && !permLoading && canAccess,
   })
 
-  const bookings = (bookingsData?.data ?? []) as RawTerminalBooking[]
+  const bookings = bookingsData?.data ?? []
   const employees = employeesData?.items ?? []
 
   const hasFilters =
@@ -157,7 +154,7 @@ export function BookingsTab() {
               <SelectItem value="all">{t('bookings.filterAllEmployees')}</SelectItem>
               {employees.map((emp) => (
                 <SelectItem key={emp.id} value={emp.id}>
-                  {emp.first_name} {emp.last_name}
+                  {emp.firstName} {emp.lastName}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -251,19 +248,19 @@ export function BookingsTab() {
                     return (
                       <TableRow key={booking.id}>
                         <TableCell className="whitespace-nowrap">
-                          {booking.raw_timestamp
-                            ? format(new Date(booking.raw_timestamp), 'dd.MM.yyyy HH:mm:ss')
+                          {booking.rawTimestamp
+                            ? format(new Date(booking.rawTimestamp), 'dd.MM.yyyy HH:mm:ss')
                             : '-'}
                         </TableCell>
-                        <TableCell>{booking.employee_pin}</TableCell>
-                        <TableCell>{booking.terminal_id}</TableCell>
+                        <TableCell>{booking.employeePin}</TableCell>
+                        <TableCell>{booking.terminalId}</TableCell>
                         <TableCell>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className="cursor-help">{booking.raw_booking_code}</span>
+                              <span className="cursor-help">{booking.rawBookingCode}</span>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>{booking.raw_booking_code}</p>
+                              <p>{booking.rawBookingCode}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TableCell>
@@ -274,19 +271,19 @@ export function BookingsTab() {
                         </TableCell>
                         <TableCell>
                           {booking.employee
-                            ? `${booking.employee.first_name} ${booking.employee.last_name}`
+                            ? `${booking.employee.firstName} ${booking.employee.lastName}`
                             : '-'}
                         </TableCell>
                         <TableCell>
-                          {booking.status === 'failed' && booking.error_message ? (
+                          {booking.status === 'failed' && booking.errorMessage ? (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span className="text-destructive cursor-help truncate max-w-[200px] inline-block">
-                                  {booking.error_message}
+                                  {booking.errorMessage}
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent className="max-w-sm">
-                                <p>{booking.error_message}</p>
+                                <p>{booking.errorMessage}</p>
                               </TooltipContent>
                             </Tooltip>
                           ) : (

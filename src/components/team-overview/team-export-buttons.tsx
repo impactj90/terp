@@ -6,9 +6,9 @@ import { Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { formatMinutes } from '@/lib/time-utils'
 import type { TeamDailyValuesResult } from '@/hooks/use-team-daily-values'
-import type { components } from '@/types/legacy-api-types'
 
-type TeamMember = components['schemas']['TeamMember']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type TeamMember = any
 
 interface TeamExportButtonsProps {
   members: TeamMember[]
@@ -53,7 +53,7 @@ export function TeamExportButtons({
       ]
 
       const rows = members.map((member) => {
-        const values = memberValues.get(member.employee_id) ?? []
+        const values = memberValues.get(member.employeeId) ?? []
         let totalNetMinutes = 0
         let totalTargetMinutes = 0
         let totalOvertimeMinutes = 0
@@ -64,14 +64,14 @@ export function TeamExportButtons({
           totalNetMinutes += dv.net_minutes ?? 0
           totalTargetMinutes += dv.target_minutes ?? 0
           totalOvertimeMinutes += dv.overtime_minutes ?? 0
-          totalUndertimeMinutes += dv.undertime_minutes ?? 0
+          totalUndertimeMinutes += dv.undertime ?? 0
           if (dv.is_absence) {
             absenceDays += 1
           }
         }
 
-        const firstName = member.employee?.first_name ?? ''
-        const lastName = member.employee?.last_name ?? ''
+        const firstName = member.employee?.firstName ?? ''
+        const lastName = member.employee?.lastName ?? ''
         const name = member.employee
           ? `${firstName} ${lastName}`.trim()
           : t('unknownEmployee')

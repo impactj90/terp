@@ -117,28 +117,24 @@ export function ShiftFormSheet({
     try {
       if (isEdit && shift) {
         await updateMutation.mutateAsync({
-          path: { id: shift.id },
-          body: {
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            day_plan_id: form.dayPlanId || undefined,
-            color: form.color || undefined,
-            qualification: form.qualification.trim() || undefined,
-            sort_order: form.sortOrder,
-            is_active: form.isActive,
-          },
+          id: shift.id,
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          dayPlanId: form.dayPlanId || undefined,
+          color: form.color || undefined,
+          qualification: form.qualification.trim() || undefined,
+          sortOrder: form.sortOrder,
+          isActive: form.isActive,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            code: form.code.trim(),
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            day_plan_id: form.dayPlanId || undefined,
-            color: form.color || undefined,
-            qualification: form.qualification.trim() || undefined,
-            sort_order: form.sortOrder,
-          },
+          code: form.code.trim(),
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          dayPlanId: form.dayPlanId || undefined,
+          color: form.color || undefined,
+          qualification: form.qualification.trim() || undefined,
+          sortOrder: form.sortOrder,
         })
       }
 

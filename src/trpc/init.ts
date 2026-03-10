@@ -81,7 +81,7 @@ export async function createTRPCContext(
     try {
       // Create a Supabase client with the service role to validate tokens
       const supabase = createClient(
-        clientEnv.supabaseUrl,
+        serverEnv.supabaseUrl || clientEnv.supabaseUrl,
         serverEnv.supabaseServiceRoleKey,
         {
           auth: { autoRefreshToken: false, persistSession: false },

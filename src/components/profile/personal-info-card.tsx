@@ -14,26 +14,26 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert } from '@/components/ui/alert'
 import { useUpdateEmployee } from '@/hooks'
+import type { useEmployee } from '@/hooks'
 import { Pencil, X, Check, AlertCircle, CheckCircle } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import type { components } from '@/types/legacy-api-types'
 
-type Employee = components['schemas']['Employee']
+type EmployeeData = NonNullable<ReturnType<typeof useEmployee>['data']>
 
 interface PersonalInfoCardProps {
-  employee: Employee
+  employee: EmployeeData
 }
 
 interface FormData {
-  first_name: string
-  last_name: string
+  firstName: string
+  lastName: string
   email: string
   phone: string
 }
 
 interface FormErrors {
-  first_name?: string
-  last_name?: string
+  firstName?: string
+  lastName?: string
   email?: string
 }
 
@@ -46,8 +46,8 @@ export function PersonalInfoCard({ employee }: PersonalInfoCardProps) {
 
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState<FormData>({
-    first_name: '',
-    last_name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     phone: '',
   })
@@ -60,8 +60,8 @@ export function PersonalInfoCard({ employee }: PersonalInfoCardProps) {
   // Initialize form data when employee changes
   useEffect(() => {
     setFormData({
-      first_name: employee.first_name,
-      last_name: employee.last_name,
+      firstName: employee.firstName,
+      lastName: employee.lastName,
       email: employee.email ?? '',
       phone: employee.phone ?? '',
     })
@@ -79,16 +79,16 @@ export function PersonalInfoCard({ employee }: PersonalInfoCardProps) {
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {}
 
-    if (!formData.first_name.trim()) {
-      newErrors.first_name = t('firstNameRequired')
-    } else if (formData.first_name.length > 100) {
-      newErrors.first_name = t('firstNameMaxLength')
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = t('firstNameRequired')
+    } else if (formData.firstName.length > 100) {
+      newErrors.firstName = t('firstNameMaxLength')
     }
 
-    if (!formData.last_name.trim()) {
-      newErrors.last_name = t('lastNameRequired')
-    } else if (formData.last_name.length > 100) {
-      newErrors.last_name = t('lastNameMaxLength')
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = t('lastNameRequired')
+    } else if (formData.lastName.length > 100) {
+      newErrors.lastName = t('lastNameMaxLength')
     }
 
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
@@ -101,8 +101,8 @@ export function PersonalInfoCard({ employee }: PersonalInfoCardProps) {
 
   const handleCancel = () => {
     setFormData({
-      first_name: employee.first_name,
-      last_name: employee.last_name,
+      firstName: employee.firstName,
+      lastName: employee.lastName,
       email: employee.email ?? '',
       phone: employee.phone ?? '',
     })
@@ -115,18 +115,16 @@ export function PersonalInfoCard({ employee }: PersonalInfoCardProps) {
 
     try {
       await updateEmployee.mutateAsync({
-        path: { id: employee.id },
-        body: {
-          first_name: formData.first_name.trim(),
-          last_name: formData.last_name.trim(),
-          email: formData.email.trim() || undefined,
-          phone: formData.phone.trim() || undefined,
-        },
+        id: employee.id,
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        email: formData.email.trim() || undefined,
+        phone: formData.phone.trim() || undefined,
       })
       setIsEditing(false)
       setSuccessMessage(t('personalInfoUpdated'))
     } catch {
-      setErrors({ first_name: failedToSaveMsg })
+      setErrors({ firstName: failedToSaveMsg })
     }
   }
 
@@ -173,10 +171,10 @@ export function PersonalInfoCard({ employee }: PersonalInfoCardProps) {
           </Alert>
         )}
 
-        {errors.first_name && errors.first_name === failedToSaveMsg && (
+        {errors.firstName && errors.firstName === failedToSaveMsg && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
-            <span className="ml-2">{errors.first_name}</span>
+            <span className="ml-2">{errors.firstName}</span>
           </Alert>
         )}
 
@@ -188,18 +186,18 @@ export function PersonalInfoCard({ employee }: PersonalInfoCardProps) {
               <>
                 <Input
                   id="firstName"
-                  value={formData.first_name}
+                  value={formData.firstName}
                   onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, first_name: e.target.value }))
+                    setFormData((prev) => ({ ...prev, firstName: e.target.value }))
                   }
-                  className={errors.first_name && errors.first_name !== failedToSaveMsg ? 'border-destructive' : ''}
+                  className={errors.firstName && errors.firstName !== failedToSaveMsg ? 'border-destructive' : ''}
                 />
-                {errors.first_name && errors.first_name !== failedToSaveMsg && (
-                  <p className="text-xs text-destructive">{errors.first_name}</p>
+                {errors.firstName && errors.firstName !== failedToSaveMsg && (
+                  <p className="text-xs text-destructive">{errors.firstName}</p>
                 )}
               </>
             ) : (
-              <p className="text-sm font-medium">{employee.first_name}</p>
+              <p className="text-sm font-medium">{employee.firstName}</p>
             )}
           </div>
 
@@ -210,18 +208,18 @@ export function PersonalInfoCard({ employee }: PersonalInfoCardProps) {
               <>
                 <Input
                   id="lastName"
-                  value={formData.last_name}
+                  value={formData.lastName}
                   onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, last_name: e.target.value }))
+                    setFormData((prev) => ({ ...prev, lastName: e.target.value }))
                   }
-                  className={errors.last_name ? 'border-destructive' : ''}
+                  className={errors.lastName ? 'border-destructive' : ''}
                 />
-                {errors.last_name && (
-                  <p className="text-xs text-destructive">{errors.last_name}</p>
+                {errors.lastName && (
+                  <p className="text-xs text-destructive">{errors.lastName}</p>
                 )}
               </>
             ) : (
-              <p className="text-sm font-medium">{employee.last_name}</p>
+              <p className="text-sm font-medium">{employee.lastName}</p>
             )}
           </div>
 

@@ -34,35 +34,35 @@ const CORRECTIONS_MANAGE = permissionIdByKey("corrections.manage")!
 
 const employeeSummarySchema = z
   .object({
-    id: z.string().uuid(),
+    id: z.string(),
     firstName: z.string(),
     lastName: z.string(),
     personnelNumber: z.string(),
-    departmentId: z.string().uuid().nullable(),
+    departmentId: z.string().nullable(),
   })
   .nullable()
 
 const accountSummarySchema = z
   .object({
-    id: z.string().uuid(),
+    id: z.string(),
     code: z.string(),
     name: z.string(),
   })
   .nullable()
 
 const correctionOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  employeeId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
+  employeeId: z.string(),
   correctionDate: z.date(),
   correctionType: z.string(),
-  accountId: z.string().uuid().nullable(),
+  accountId: z.string().nullable(),
   valueMinutes: z.number().int(),
   reason: z.string(),
   status: z.string(),
-  approvedBy: z.string().uuid().nullable(),
+  approvedBy: z.string().nullable(),
   approvedAt: z.date().nullable(),
-  createdBy: z.string().uuid().nullable(),
+  createdBy: z.string().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
   // Nested relations (included in list/getById)
@@ -78,7 +78,7 @@ const listInputSchema = z
   .object({
     page: z.number().int().positive().optional().default(1),
     pageSize: z.number().int().min(1).max(100).optional().default(50),
-    employeeId: z.string().uuid().optional(),
+    employeeId: z.string().optional(),
     fromDate: z.string().date().optional(), // YYYY-MM-DD
     toDate: z.string().date().optional(), // YYYY-MM-DD
     correctionType: z.string().optional(),
@@ -87,16 +87,16 @@ const listInputSchema = z
   .optional()
 
 const createInputSchema = z.object({
-  employeeId: z.string().uuid(),
+  employeeId: z.string(),
   correctionDate: z.string().date(), // YYYY-MM-DD
   correctionType: z.string().min(1),
-  accountId: z.string().uuid().optional(),
+  accountId: z.string().optional(),
   valueMinutes: z.number().int(),
   reason: z.string().optional().default(""),
 })
 
 const updateInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   valueMinutes: z.number().int().optional(),
   reason: z.string().optional(),
 })
@@ -211,7 +211,7 @@ export const correctionsRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(CORRECTIONS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(correctionOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -289,7 +289,7 @@ export const correctionsRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(CORRECTIONS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -310,7 +310,7 @@ export const correctionsRouter = createTRPCRouter({
    */
   approve: tenantProcedure
     .use(requirePermission(CORRECTIONS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(correctionOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
@@ -336,7 +336,7 @@ export const correctionsRouter = createTRPCRouter({
    */
   reject: tenantProcedure
     .use(requirePermission(CORRECTIONS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(correctionOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {

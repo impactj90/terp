@@ -26,9 +26,27 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useCreateAccount, useUpdateAccount } from '@/hooks'
-import type { components } from '@/types/legacy-api-types'
 
-type Account = components['schemas']['Account']
+type Account = {
+  id: string
+  tenantId: string | null
+  code: string
+  name: string
+  accountType: string
+  unit: string
+  isSystem: boolean
+  isActive: boolean
+  description: string | null
+  isPayrollRelevant: boolean
+  payrollCode: string | null
+  sortOrder: number
+  yearCarryover: boolean
+  accountGroupId: string | null
+  displayFormat: string
+  bonusFactor: number | null
+  createdAt: string
+  updatedAt: string
+}
 
 interface AccountFormSheetProps {
   open: boolean
@@ -83,7 +101,7 @@ export function AccountFormSheet({
 }: AccountFormSheetProps) {
   const t = useTranslations('adminAccounts')
   const isEdit = !!account
-  const isSystem = account?.is_system ?? false
+  const isSystem = account?.isSystem ?? false
   const [form, setForm] = React.useState<FormState>(INITIAL_STATE)
   const [error, setError] = React.useState<string | null>(null)
 
@@ -99,13 +117,13 @@ export function AccountFormSheet({
           code: account.code || '',
           name: account.name || '',
           description: account.description || '',
-          accountType: account.account_type || 'tracking',
-          unit: (account as Record<string, unknown>).unit as string || 'minutes',
-          yearCarryover: (account as Record<string, unknown>).year_carryover as boolean ?? true,
-          isPayrollRelevant: account.is_payroll_relevant ?? false,
-          payrollCode: account.payroll_code || '',
-          sortOrder: account.sort_order ?? 0,
-          isActive: account.is_active ?? true,
+          accountType: account.accountType || 'tracking',
+          unit: account.unit || 'minutes',
+          yearCarryover: account.yearCarryover ?? true,
+          isPayrollRelevant: account.isPayrollRelevant ?? false,
+          payrollCode: account.payrollCode || '',
+          sortOrder: account.sortOrder ?? 0,
+          isActive: account.isActive ?? true,
         })
       } else {
         setForm(INITIAL_STATE)
@@ -131,31 +149,27 @@ export function AccountFormSheet({
     try {
       if (isEdit && account) {
         await updateMutation.mutateAsync({
-          path: { id: account.id },
-          body: {
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            is_payroll_relevant: form.isPayrollRelevant,
-            payroll_code: form.payrollCode.trim() || undefined,
-            sort_order: form.sortOrder,
-            unit: form.unit as 'minutes' | 'hours' | 'days',
-            year_carryover: form.yearCarryover,
-            is_active: form.isActive,
-          },
+          id: account.id,
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          isPayrollRelevant: form.isPayrollRelevant,
+          payrollCode: form.payrollCode.trim() || undefined,
+          sortOrder: form.sortOrder,
+          unit: form.unit as 'minutes' | 'hours' | 'days',
+          yearCarryover: form.yearCarryover,
+          isActive: form.isActive,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            code: form.code.trim(),
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            account_type: form.accountType as 'bonus' | 'day' | 'month',
-            is_payroll_relevant: form.isPayrollRelevant,
-            payroll_code: form.payrollCode.trim() || undefined,
-            sort_order: form.sortOrder,
-            unit: form.unit as 'minutes' | 'hours' | 'days',
-            year_carryover: form.yearCarryover,
-          },
+          code: form.code.trim(),
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          accountType: form.accountType as 'bonus' | 'day' | 'month',
+          isPayrollRelevant: form.isPayrollRelevant,
+          payrollCode: form.payrollCode.trim() || undefined,
+          sortOrder: form.sortOrder,
+          unit: form.unit as 'minutes' | 'hours' | 'days',
+          yearCarryover: form.yearCarryover,
         })
       }
 

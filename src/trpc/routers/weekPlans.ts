@@ -29,7 +29,7 @@ const WEEK_PLANS_MANAGE = permissionIdByKey("week_plans.manage")!
 
 const dayPlanSummarySchema = z
   .object({
-    id: z.string().uuid(),
+    id: z.string(),
     code: z.string(),
     name: z.string(),
     planType: z.string(),
@@ -37,18 +37,18 @@ const dayPlanSummarySchema = z
   .nullable()
 
 const weekPlanOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   code: z.string(),
   name: z.string(),
   description: z.string().nullable(),
-  mondayDayPlanId: z.string().uuid().nullable(),
-  tuesdayDayPlanId: z.string().uuid().nullable(),
-  wednesdayDayPlanId: z.string().uuid().nullable(),
-  thursdayDayPlanId: z.string().uuid().nullable(),
-  fridayDayPlanId: z.string().uuid().nullable(),
-  saturdayDayPlanId: z.string().uuid().nullable(),
-  sundayDayPlanId: z.string().uuid().nullable(),
+  mondayDayPlanId: z.string().nullable(),
+  tuesdayDayPlanId: z.string().nullable(),
+  wednesdayDayPlanId: z.string().nullable(),
+  thursdayDayPlanId: z.string().nullable(),
+  fridayDayPlanId: z.string().nullable(),
+  saturdayDayPlanId: z.string().nullable(),
+  sundayDayPlanId: z.string().nullable(),
   mondayDayPlan: dayPlanSummarySchema,
   tuesdayDayPlan: dayPlanSummarySchema,
   wednesdayDayPlan: dayPlanSummarySchema,
@@ -69,27 +69,27 @@ const createWeekPlanInputSchema = z.object({
   code: z.string().min(1, "Code is required"),
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  mondayDayPlanId: z.string().uuid(),
-  tuesdayDayPlanId: z.string().uuid(),
-  wednesdayDayPlanId: z.string().uuid(),
-  thursdayDayPlanId: z.string().uuid(),
-  fridayDayPlanId: z.string().uuid(),
-  saturdayDayPlanId: z.string().uuid(),
-  sundayDayPlanId: z.string().uuid(),
+  mondayDayPlanId: z.string(),
+  tuesdayDayPlanId: z.string(),
+  wednesdayDayPlanId: z.string(),
+  thursdayDayPlanId: z.string(),
+  fridayDayPlanId: z.string(),
+  saturdayDayPlanId: z.string(),
+  sundayDayPlanId: z.string(),
 })
 
 const updateWeekPlanInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   code: z.string().min(1).optional(),
   name: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
-  mondayDayPlanId: z.string().uuid().nullable().optional(),
-  tuesdayDayPlanId: z.string().uuid().nullable().optional(),
-  wednesdayDayPlanId: z.string().uuid().nullable().optional(),
-  thursdayDayPlanId: z.string().uuid().nullable().optional(),
-  fridayDayPlanId: z.string().uuid().nullable().optional(),
-  saturdayDayPlanId: z.string().uuid().nullable().optional(),
-  sundayDayPlanId: z.string().uuid().nullable().optional(),
+  mondayDayPlanId: z.string().nullable().optional(),
+  tuesdayDayPlanId: z.string().nullable().optional(),
+  wednesdayDayPlanId: z.string().nullable().optional(),
+  thursdayDayPlanId: z.string().nullable().optional(),
+  fridayDayPlanId: z.string().nullable().optional(),
+  saturdayDayPlanId: z.string().nullable().optional(),
+  sundayDayPlanId: z.string().nullable().optional(),
   isActive: z.boolean().optional(),
 })
 
@@ -226,7 +226,7 @@ export const weekPlansRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(WEEK_PLANS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(weekPlanOutputSchema)
     .query(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!
@@ -480,7 +480,7 @@ export const weekPlansRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(WEEK_PLANS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!

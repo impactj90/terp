@@ -194,28 +194,24 @@ export function LocationFormSheet({
     try {
       if (isEdit && location) {
         await updateMutation.mutateAsync({
-          path: { id: location.id },
-          body: {
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            address: form.address.trim() || undefined,
-            city: form.city.trim() || undefined,
-            country: form.country.trim() || undefined,
-            timezone: form.timezone || undefined,
-            is_active: form.isActive,
-          },
+          id: location.id,
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          address: form.address.trim() || undefined,
+          city: form.city.trim() || undefined,
+          country: form.country.trim() || undefined,
+          timezone: form.timezone || undefined,
+          isActive: form.isActive,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            code: form.code.trim(),
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            address: form.address.trim() || undefined,
-            city: form.city.trim() || undefined,
-            country: form.country.trim() || undefined,
-            timezone: form.timezone || undefined,
-          },
+          code: form.code.trim(),
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          address: form.address.trim() || undefined,
+          city: form.city.trim() || undefined,
+          country: form.country.trim() || undefined,
+          timezone: form.timezone || undefined,
         })
       }
 

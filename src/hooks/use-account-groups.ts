@@ -1,29 +1,46 @@
-import { useApiQuery } from './use-api-query'
-import { useApiMutation } from './use-api-mutation'
+import { useTRPC } from "@/trpc"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+
+// ==================== Query Hooks ====================
 
 interface UseAccountGroupsOptions {
+  isActive?: boolean
   enabled?: boolean
 }
 
 /**
  * Hook to fetch account groups.
+ *
+ * @example
+ * ```tsx
+ * const { data } = useAccountGroups()
+ * const groups = data?.data ?? []
+ * ```
  */
 export function useAccountGroups(options: UseAccountGroupsOptions = {}) {
-  const { enabled = true } = options
-
-  return useApiQuery('/account-groups', {
-    enabled,
-  })
+  const { isActive, enabled = true } = options
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.accountGroups.list.queryOptions({ isActive }, { enabled })
+  )
 }
 
 /**
  * Hook to fetch a single account group by ID.
+ *
+ * @example
+ * ```tsx
+ * const { data: group } = useAccountGroup(groupId)
+ * ```
  */
 export function useAccountGroup(id: string, enabled = true) {
-  return useApiQuery('/account-groups/{id}', {
-    path: { id },
-    enabled: enabled && !!id,
-  })
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.accountGroups.getById.queryOptions(
+      { id },
+      { enabled: enabled && !!id }
+    )
+  )
 }
 
 // ==================== Mutation Hooks ====================
@@ -32,8 +49,15 @@ export function useAccountGroup(id: string, enabled = true) {
  * Hook to create a new account group.
  */
 export function useCreateAccountGroup() {
-  return useApiMutation('/account-groups', 'post', {
-    invalidateKeys: [['/account-groups']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.accountGroups.create.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.accountGroups.list.queryKey(),
+      })
+    },
   })
 }
 
@@ -41,8 +65,15 @@ export function useCreateAccountGroup() {
  * Hook to update an existing account group.
  */
 export function useUpdateAccountGroup() {
-  return useApiMutation('/account-groups/{id}', 'patch', {
-    invalidateKeys: [['/account-groups'], ['/account-groups/{id}']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.accountGroups.update.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.accountGroups.list.queryKey(),
+      })
+    },
   })
 }
 
@@ -50,7 +81,14 @@ export function useUpdateAccountGroup() {
  * Hook to delete an account group.
  */
 export function useDeleteAccountGroup() {
-  return useApiMutation('/account-groups/{id}', 'delete', {
-    invalidateKeys: [['/account-groups'], ['/account-groups/{id}']],
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.accountGroups.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.accountGroups.list.queryKey(),
+      })
+    },
   })
 }

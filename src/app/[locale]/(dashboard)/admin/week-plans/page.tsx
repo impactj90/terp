@@ -23,9 +23,9 @@ import { WeekPlanDataTable } from '@/components/week-plans/week-plan-data-table'
 import { WeekPlanFormSheet } from '@/components/week-plans/week-plan-form-sheet'
 import { WeekPlanDetailSheet } from '@/components/week-plans/week-plan-detail-sheet'
 import { CopyWeekPlanDialog } from '@/components/week-plans/copy-week-plan-dialog'
-import type { components } from '@/types/legacy-api-types'
+import type { useWeekPlan } from '@/hooks'
 
-type WeekPlan = components['schemas']['WeekPlan']
+type WeekPlan = NonNullable<ReturnType<typeof useWeekPlan>['data']>
 
 export default function WeekPlansPage() {
   const router = useRouter()

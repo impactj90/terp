@@ -27,7 +27,7 @@ const VACATION_CONFIG_MANAGE = permissionIdByKey("vacation_config.manage")!
 // --- Output Schemas ---
 
 const cappingRuleSummarySchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   code: z.string(),
   name: z.string(),
   ruleType: z.string(),
@@ -35,8 +35,8 @@ const cappingRuleSummarySchema = z.object({
 })
 
 const vacationCappingRuleGroupOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   code: z.string(),
   name: z.string(),
   description: z.string().nullable(),
@@ -57,15 +57,15 @@ const createVacationCappingRuleGroupInputSchema = z.object({
   name: z.string().min(1, "Name is required").max(255),
   description: z.string().optional(),
   isActive: z.boolean().optional().default(true),
-  cappingRuleIds: z.array(z.string().uuid()).optional(),
+  cappingRuleIds: z.array(z.string()).optional(),
 })
 
 const updateVacationCappingRuleGroupInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   name: z.string().min(1).max(255).optional(),
   description: z.string().nullable().optional(),
   isActive: z.boolean().optional(),
-  cappingRuleIds: z.array(z.string().uuid()).optional(),
+  cappingRuleIds: z.array(z.string()).optional(),
 })
 
 // --- Prisma Include Objects ---
@@ -187,7 +187,7 @@ export const vacationCappingRuleGroupsRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(VACATION_CONFIG_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(vacationCappingRuleGroupOutputSchema)
     .query(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!
@@ -405,7 +405,7 @@ export const vacationCappingRuleGroupsRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(VACATION_CONFIG_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!

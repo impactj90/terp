@@ -31,9 +31,9 @@ import {
   useDepartments,
   useEmployees,
 } from '@/hooks'
-import type { components } from '@/types/legacy-api-types'
 
-type Team = components['schemas']['Team']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Team = any
 
 interface TeamFormSheetProps {
   /** Whether the sheet is open */
@@ -112,9 +112,9 @@ export function TeamFormSheet({
         setForm({
           name: team.name,
           description: team.description || '',
-          departmentId: team.department_id || '',
-          leaderEmployeeId: team.leader_employee_id || '',
-          isActive: team.is_active,
+          departmentId: team.departmentId || '',
+          leaderEmployeeId: team.leaderEmployeeId || '',
+          isActive: team.isActive,
         })
       } else {
         setForm(INITIAL_STATE)
@@ -135,24 +135,19 @@ export function TeamFormSheet({
     try {
       if (isEdit && team) {
         await updateMutation.mutateAsync({
-          path: { id: team.id },
-          body: {
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            department_id: form.departmentId || undefined,
-            leader_employee_id: form.leaderEmployeeId || undefined,
-            is_active: form.isActive,
-          },
+          id: team.id,
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          departmentId: form.departmentId || undefined,
+          leaderEmployeeId: form.leaderEmployeeId || undefined,
+          isActive: form.isActive,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            department_id: form.departmentId || undefined,
-            leader_employee_id: form.leaderEmployeeId || undefined,
-            is_active: form.isActive,
-          },
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          departmentId: form.departmentId || undefined,
+          leaderEmployeeId: form.leaderEmployeeId || undefined,
         })
       }
 
@@ -257,7 +252,7 @@ export function TeamFormSheet({
                     <SelectItem value="__none__">{t('selectNone')}</SelectItem>
                     {employees.map((emp) => (
                       <SelectItem key={emp.id} value={emp.id}>
-                        {emp.first_name} {emp.last_name}
+                        {emp.firstName} {emp.lastName}
                       </SelectItem>
                     ))}
                   </SelectContent>

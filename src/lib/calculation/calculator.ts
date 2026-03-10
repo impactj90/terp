@@ -14,7 +14,6 @@ import type {
   CalculationInput,
   CalculationResult,
   DayPlanInput,
-  RoundingConfig,
 } from "./types"
 import {
   ERR_NO_BOOKINGS,

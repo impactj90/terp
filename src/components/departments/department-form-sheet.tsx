@@ -137,23 +137,19 @@ export function DepartmentFormSheet({
     try {
       if (isEdit && department) {
         await updateMutation.mutateAsync({
-          path: { id: department.id },
-          body: {
-            name: form.name.trim(),
-            code: form.code.trim(),
-            description: form.description.trim() || undefined,
-            parent_id: form.parentId || undefined,
-            is_active: form.isActive,
-          },
+          id: department.id,
+          name: form.name.trim(),
+          code: form.code.trim(),
+          description: form.description.trim() || undefined,
+          parentId: form.parentId || undefined,
+          isActive: form.isActive,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            name: form.name.trim(),
-            code: form.code.trim(),
-            description: form.description.trim() || undefined,
-            parent_id: form.parentId || undefined,
-          },
+          name: form.name.trim(),
+          code: form.code.trim(),
+          description: form.description.trim() || undefined,
+          parentId: form.parentId || undefined,
         })
       }
 

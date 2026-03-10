@@ -31,12 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import type { components } from '@/types/legacy-api-types'
-
-type Employee = components['schemas']['Employee']
-type VacationEntitlementPreview = components['schemas']['VacationEntitlementPreview']
-type VacationCarryoverPreview = components['schemas']['VacationCarryoverPreview']
-type CappingRuleApplication = components['schemas']['CappingRuleApplication']
+type Employee = NonNullable<ReturnType<typeof useEmployees>['data']>['items'][number]
 
 function DetailRow({ label, value, bold = false }: { label: string; value: React.ReactNode; bold?: boolean }) {
   return (
@@ -57,7 +52,7 @@ export function VacationPreviewsTab() {
   const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['absence_types.manage'])
 
   const { data: employeesData } = useEmployees({ pageSize: 200, isActive: true, enabled: !authLoading && !permLoading && canAccess })
-  const employees = (employeesData?.items ?? []) as Employee[]
+  const employees = employeesData?.items ?? []
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -77,17 +72,14 @@ function EntitlementPreviewCard({ employees }: { employees: Employee[] }) {
   const [error, setError] = React.useState<string | null>(null)
 
   const entitlementMutation = useVacationEntitlementPreview()
-  const preview = entitlementMutation.data as { data?: VacationEntitlementPreview } | undefined
 
   const handleCalculate = async () => {
     if (!employeeId) return
     setError(null)
     try {
       await entitlementMutation.mutateAsync({
-        body: {
-          employee_id: employeeId,
-          year: parseInt(year, 10),
-        },
+        employeeId: employeeId,
+        year: parseInt(year, 10),
       })
     } catch (err) {
       const apiError = err as { detail?: string; message?: string }
@@ -95,7 +87,7 @@ function EntitlementPreviewCard({ employees }: { employees: Employee[] }) {
     }
   }
 
-  const result = preview?.data
+  const result = entitlementMutation.data
 
   return (
     <Card>
@@ -119,7 +111,7 @@ function EntitlementPreviewCard({ employees }: { employees: Employee[] }) {
                 <SelectItem value="__none__">{t('preview.selectEmployee')}</SelectItem>
                 {employees.map((emp) => (
                   <SelectItem key={emp.id} value={emp.id}>
-                    {emp.personnel_number} - {emp.first_name} {emp.last_name}
+                    {emp.personnelNumber} - {emp.firstName} {emp.lastName}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -161,7 +153,7 @@ function EntitlementPreviewCard({ employees }: { employees: Employee[] }) {
             <div className="space-y-2">
               <h4 className="text-sm font-medium text-muted-foreground">{t('preview.sectionDetails')}</h4>
               <div className="rounded-lg border p-4">
-                <DetailRow label={t('preview.calculationGroup')} value={result.calculation_group_name ?? '-'} />
+                <DetailRow label={t('preview.calculationGroup')} value={result.calcGroupName ?? '-'} />
                 <DetailRow
                   label={t('preview.basis')}
                   value={
@@ -172,12 +164,12 @@ function EntitlementPreviewCard({ employees }: { employees: Employee[] }) {
                         : '-'
                   }
                 />
-                <DetailRow label={t('preview.monthsEmployed')} value={result.months_employed} />
-                <DetailRow label={t('preview.ageAtReference')} value={result.age_at_reference} />
-                <DetailRow label={t('preview.tenureYears')} value={result.tenure_years} />
-                <DetailRow label={t('preview.weeklyHours')} value={formatDecimal(result.weekly_hours)} />
-                <DetailRow label={t('preview.standardWeeklyHours')} value={formatDecimal(result.standard_weekly_hours)} />
-                <DetailRow label={t('preview.partTimeFactor')} value={formatDecimal(result.part_time_factor)} />
+                <DetailRow label={t('preview.monthsEmployed')} value={result.monthsEmployed} />
+                <DetailRow label={t('preview.ageAtReference')} value={result.ageAtReference} />
+                <DetailRow label={t('preview.tenureYears')} value={result.tenureYears} />
+                <DetailRow label={t('preview.weeklyHours')} value={formatDecimal(result.weeklyHours)} />
+                <DetailRow label={t('preview.standardWeeklyHours')} value={formatDecimal(result.standardWeeklyHours)} />
+                <DetailRow label={t('preview.partTimeFactor')} value={formatDecimal(result.partTimeFactor)} />
               </div>
             </div>
 
@@ -185,14 +177,14 @@ function EntitlementPreviewCard({ employees }: { employees: Employee[] }) {
             <div className="space-y-2">
               <h4 className="text-sm font-medium text-muted-foreground">{t('preview.sectionBreakdown')}</h4>
               <div className="rounded-lg border p-4">
-                <DetailRow label={t('preview.baseEntitlement')} value={formatDecimal(result.base_entitlement)} />
-                <DetailRow label={t('preview.proRatedEntitlement')} value={formatDecimal(result.pro_rated_entitlement)} />
-                <DetailRow label={t('preview.partTimeAdjustment')} value={formatDecimal(result.part_time_adjustment)} />
-                <DetailRow label={t('preview.ageBonus')} value={result.age_bonus ? `+${formatDecimal(result.age_bonus)}` : '0.0'} />
-                <DetailRow label={t('preview.tenureBonus')} value={result.tenure_bonus ? `+${formatDecimal(result.tenure_bonus)}` : '0.0'} />
-                <DetailRow label={t('preview.disabilityBonus')} value={result.disability_bonus ? `+${formatDecimal(result.disability_bonus)}` : '0.0'} />
+                <DetailRow label={t('preview.baseEntitlement')} value={formatDecimal(result.baseEntitlement)} />
+                <DetailRow label={t('preview.proRatedEntitlement')} value={formatDecimal(result.proRatedEntitlement)} />
+                <DetailRow label={t('preview.partTimeAdjustment')} value={formatDecimal(result.partTimeAdjustment)} />
+                <DetailRow label={t('preview.ageBonus')} value={result.ageBonus ? `+${formatDecimal(result.ageBonus)}` : '0.0'} />
+                <DetailRow label={t('preview.tenureBonus')} value={result.tenureBonus ? `+${formatDecimal(result.tenureBonus)}` : '0.0'} />
+                <DetailRow label={t('preview.disabilityBonus')} value={result.disabilityBonus ? `+${formatDecimal(result.disabilityBonus)}` : '0.0'} />
                 <div className="border-t mt-2 pt-2">
-                  <DetailRow label={t('preview.totalEntitlement')} value={formatDecimal(result.total_entitlement)} bold />
+                  <DetailRow label={t('preview.totalEntitlement')} value={formatDecimal(result.totalEntitlement)} bold />
                 </div>
               </div>
             </div>
@@ -218,17 +210,14 @@ function CarryoverPreviewCard({ employees }: { employees: Employee[] }) {
   const [error, setError] = React.useState<string | null>(null)
 
   const carryoverMutation = useVacationCarryoverPreview()
-  const preview = carryoverMutation.data as { data?: VacationCarryoverPreview } | undefined
 
   const handleCalculate = async () => {
     if (!employeeId) return
     setError(null)
     try {
       await carryoverMutation.mutateAsync({
-        body: {
-          employee_id: employeeId,
-          year: parseInt(year, 10),
-        },
+        employeeId: employeeId,
+        year: parseInt(year, 10),
       })
     } catch (err) {
       const apiError = err as { detail?: string; message?: string }
@@ -236,7 +225,7 @@ function CarryoverPreviewCard({ employees }: { employees: Employee[] }) {
     }
   }
 
-  const result = preview?.data
+  const result = carryoverMutation.data
 
   return (
     <Card>
@@ -260,7 +249,7 @@ function CarryoverPreviewCard({ employees }: { employees: Employee[] }) {
                 <SelectItem value="__none__">{t('preview.selectEmployee')}</SelectItem>
                 {employees.map((emp) => (
                   <SelectItem key={emp.id} value={emp.id}>
-                    {emp.personnel_number} - {emp.first_name} {emp.last_name}
+                    {emp.personnelNumber} - {emp.firstName} {emp.lastName}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -299,7 +288,7 @@ function CarryoverPreviewCard({ employees }: { employees: Employee[] }) {
         {result && (
           <div className="space-y-4 pt-2">
             {/* Exception notice */}
-            {result.has_exception && (
+            {result.hasException && (
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>{t('preview.hasException')}</AlertDescription>
@@ -310,13 +299,13 @@ function CarryoverPreviewCard({ employees }: { employees: Employee[] }) {
             <div className="space-y-2">
               <h4 className="text-sm font-medium text-muted-foreground">{t('preview.sectionSummary')}</h4>
               <div className="rounded-lg border p-4">
-                <DetailRow label={t('preview.availableDays')} value={formatDecimal(result.available_days)} />
-                <DetailRow label={t('preview.cappedCarryover')} value={formatDecimal(result.capped_carryover)} bold />
+                <DetailRow label={t('preview.availableDays')} value={formatDecimal(result.availableDays)} />
+                <DetailRow label={t('preview.cappedCarryover')} value={formatDecimal(result.cappedCarryover)} bold />
                 <DetailRow
                   label={t('preview.forfeitedDays')}
                   value={
-                    <span className={(result.forfeited_days ?? 0) > 0 ? 'text-red-600 dark:text-red-400' : ''}>
-                      {formatDecimal(result.forfeited_days)}
+                    <span className={(result.forfeitedDays ?? 0) > 0 ? 'text-red-600 dark:text-red-400' : ''}>
+                      {formatDecimal(result.forfeitedDays)}
                     </span>
                   }
                 />
@@ -324,7 +313,7 @@ function CarryoverPreviewCard({ employees }: { employees: Employee[] }) {
             </div>
 
             {/* Rules Applied */}
-            {result.rules_applied && result.rules_applied.length > 0 && (
+            {result.rulesApplied && result.rulesApplied.length > 0 && (
               <div className="space-y-2">
                 <h4 className="text-sm font-medium text-muted-foreground">{t('preview.sectionRules')}</h4>
                 <div className="rounded-lg border overflow-hidden">
@@ -339,24 +328,24 @@ function CarryoverPreviewCard({ employees }: { employees: Employee[] }) {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {result.rules_applied.map((rule: CappingRuleApplication, idx: number) => (
-                        <TableRow key={rule.rule_id ?? idx}>
-                          <TableCell className="text-sm">{rule.rule_name ?? '-'}</TableCell>
+                      {result.rulesApplied.map((rule, idx) => (
+                        <TableRow key={rule.ruleId ?? idx}>
+                          <TableCell className="text-sm">{rule.ruleName ?? '-'}</TableCell>
                           <TableCell>
-                            {rule.rule_type && (
+                            {rule.ruleType && (
                               <Badge
                                 variant="secondary"
                                 className={
-                                  rule.rule_type === 'year_end'
+                                  rule.ruleType === 'year_end'
                                     ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
                                     : 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400'
                                 }
                               >
-                                {rule.rule_type === 'year_end' ? t('cappingRule.ruleTypeYearEnd') : t('cappingRule.ruleTypeMidYear')}
+                                {rule.ruleType === 'year_end' ? t('cappingRule.ruleTypeYearEnd') : t('cappingRule.ruleTypeMidYear')}
                               </Badge>
                             )}
                           </TableCell>
-                          <TableCell>{rule.cap_value ?? '-'}</TableCell>
+                          <TableCell>{rule.capValue ?? '-'}</TableCell>
                           <TableCell>
                             {rule.applied ? (
                               <Check className="h-4 w-4 text-green-600" />
@@ -365,7 +354,7 @@ function CarryoverPreviewCard({ employees }: { employees: Employee[] }) {
                             )}
                           </TableCell>
                           <TableCell>
-                            {rule.exception_active ? (
+                            {rule.exceptionActive ? (
                               <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
                                 {t('preview.exceptionActive')}
                               </Badge>

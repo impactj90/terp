@@ -43,36 +43,36 @@ const ABSENCE_MANAGE = permissionIdByKey("absences.manage")!
 // --- Output Schemas ---
 
 const absenceDayOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  employeeId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
+  employeeId: z.string(),
   absenceDate: z.string(), // YYYY-MM-DD string for dates
-  absenceTypeId: z.string().uuid(),
+  absenceTypeId: z.string(),
   duration: z.number(), // Decimal -> number
   halfDayPeriod: z.string().nullable(),
   status: z.string(), // "pending" | "approved" | "rejected" | "cancelled"
-  approvedBy: z.string().uuid().nullable(),
+  approvedBy: z.string().nullable(),
   approvedAt: z.date().nullable(),
   rejectionReason: z.string().nullable(),
   notes: z.string().nullable(),
-  createdBy: z.string().uuid().nullable(),
+  createdBy: z.string().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
   // Nested relations (included in list/getById)
   employee: z
     .object({
-      id: z.string().uuid(),
+      id: z.string(),
       firstName: z.string(),
       lastName: z.string(),
       personnelNumber: z.string(),
       isActive: z.boolean(),
-      departmentId: z.string().uuid().nullable(),
+      departmentId: z.string().nullable(),
     })
     .nullable()
     .optional(),
   absenceType: z
     .object({
-      id: z.string().uuid(),
+      id: z.string(),
       code: z.string(),
       name: z.string(),
       category: z.string(),
@@ -88,8 +88,8 @@ const absenceDayOutputSchema = z.object({
 const listInputSchema = z.object({
   page: z.number().int().positive().optional().default(1),
   pageSize: z.number().int().min(1).max(100).optional().default(50),
-  employeeId: z.string().uuid().optional(),
-  absenceTypeId: z.string().uuid().optional(),
+  employeeId: z.string().optional(),
+  absenceTypeId: z.string().optional(),
   status: z
     .enum(["pending", "approved", "rejected", "cancelled"])
     .optional(),
@@ -98,7 +98,7 @@ const listInputSchema = z.object({
 })
 
 const forEmployeeInputSchema = z.object({
-  employeeId: z.string().uuid(),
+  employeeId: z.string(),
   fromDate: z.string().date().optional(),
   toDate: z.string().date().optional(),
   status: z
@@ -107,12 +107,12 @@ const forEmployeeInputSchema = z.object({
 })
 
 const getByIdInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
 })
 
 const createRangeInputSchema = z.object({
-  employeeId: z.string().uuid(),
-  absenceTypeId: z.string().uuid(),
+  employeeId: z.string(),
+  absenceTypeId: z.string(),
   fromDate: z.string().date(), // YYYY-MM-DD
   toDate: z.string().date(), // YYYY-MM-DD
   duration: z.number().min(0.5).max(1).default(1),
@@ -126,27 +126,27 @@ const createRangeOutputSchema = z.object({
 })
 
 const updateInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   duration: z.number().min(0.5).max(1).optional(),
   halfDayPeriod: z.enum(["morning", "afternoon"]).nullable().optional(),
   notes: z.string().nullable().optional(),
 })
 
 const deleteInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
 })
 
 const approveInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
 })
 
 const rejectInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   reason: z.string().optional(),
 })
 
 const cancelInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
 })
 
 // --- Helper Functions ---

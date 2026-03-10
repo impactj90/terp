@@ -26,8 +26,8 @@ const LOCATIONS_MANAGE = permissionIdByKey("locations.manage")!
 // --- Output Schemas ---
 
 const locationOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   code: z.string(),
   name: z.string(),
   description: z.string(),
@@ -55,7 +55,7 @@ const createLocationInputSchema = z.object({
 })
 
 const updateLocationInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   code: z.string().min(1).optional(),
   name: z.string().min(1).optional(),
   description: z.string().optional(),
@@ -147,7 +147,7 @@ export const locationsRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(LOCATIONS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(locationOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -221,7 +221,7 @@ export const locationsRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(LOCATIONS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

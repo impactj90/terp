@@ -7,13 +7,13 @@
  */
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { clientEnv } from '@/lib/config'
+import { clientEnv, serverEnv } from '@/lib/config'
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
-    clientEnv.supabaseUrl,
+    serverEnv.supabaseUrl || clientEnv.supabaseUrl,
     clientEnv.supabaseAnonKey,
     {
       cookies: {

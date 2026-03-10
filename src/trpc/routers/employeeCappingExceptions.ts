@@ -31,10 +31,10 @@ const EXEMPTION_TYPES = ["full", "partial"] as const
 // --- Output Schemas ---
 
 const employeeCappingExceptionOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  employeeId: z.string().uuid(),
-  cappingRuleId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
+  employeeId: z.string(),
+  cappingRuleId: z.string(),
   exemptionType: z.string(),
   retainDays: z.number().nullable(),
   year: z.number().nullable(),
@@ -51,8 +51,8 @@ type EmployeeCappingExceptionOutput = z.infer<
 // --- Input Schemas ---
 
 const createEmployeeCappingExceptionInputSchema = z.object({
-  employeeId: z.string().uuid(),
-  cappingRuleId: z.string().uuid(),
+  employeeId: z.string(),
+  cappingRuleId: z.string(),
   exemptionType: z.enum(EXEMPTION_TYPES),
   retainDays: z.number().min(0).optional(),
   year: z.number().int().optional(),
@@ -61,7 +61,7 @@ const createEmployeeCappingExceptionInputSchema = z.object({
 })
 
 const updateEmployeeCappingExceptionInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   exemptionType: z.enum(EXEMPTION_TYPES).optional(),
   retainDays: z.number().min(0).nullable().optional(),
   year: z.number().int().nullable().optional(),
@@ -115,8 +115,8 @@ export const employeeCappingExceptionsRouter = createTRPCRouter({
     .input(
       z
         .object({
-          employeeId: z.string().uuid().optional(),
-          cappingRuleId: z.string().uuid().optional(),
+          employeeId: z.string().optional(),
+          cappingRuleId: z.string().optional(),
           year: z.number().int().optional(),
         })
         .optional()
@@ -154,7 +154,7 @@ export const employeeCappingExceptionsRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(VACATION_CONFIG_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(employeeCappingExceptionOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -228,7 +228,7 @@ export const employeeCappingExceptionsRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(VACATION_CONFIG_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

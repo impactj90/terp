@@ -29,21 +29,21 @@ const ORDERS_MANAGE = permissionIdByKey("orders.manage")!
 
 const costCenterIncludeSchema = z
   .object({
-    id: z.string().uuid(),
+    id: z.string(),
     code: z.string(),
     name: z.string(),
   })
   .nullable()
 
 const orderOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   code: z.string(),
   name: z.string(),
   description: z.string().nullable(),
   status: z.string(),
   customer: z.string().nullable(),
-  costCenterId: z.string().uuid().nullable(),
+  costCenterId: z.string().nullable(),
   costCenter: costCenterIncludeSchema,
   billingRatePerHour: z.number().nullable(),
   validFrom: z.date().nullable(),
@@ -63,20 +63,20 @@ const createOrderInputSchema = z.object({
   description: z.string().optional(),
   status: z.string().optional(),
   customer: z.string().optional(),
-  costCenterId: z.string().uuid().optional(),
+  costCenterId: z.string().optional(),
   billingRatePerHour: z.number().optional(),
   validFrom: z.string().optional(),
   validTo: z.string().optional(),
 })
 
 const updateOrderInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   code: z.string().min(1).optional(),
   name: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
   status: z.string().optional(),
   customer: z.string().nullable().optional(),
-  costCenterId: z.string().uuid().nullable().optional(),
+  costCenterId: z.string().nullable().optional(),
   billingRatePerHour: z.number().nullable().optional(),
   validFrom: z.string().nullable().optional(),
   validTo: z.string().nullable().optional(),
@@ -171,7 +171,7 @@ export const ordersRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(ORDERS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(orderOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -248,7 +248,7 @@ export const ordersRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(ORDERS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

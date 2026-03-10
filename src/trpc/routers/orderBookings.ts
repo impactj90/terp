@@ -31,17 +31,17 @@ const OB_MANAGE = permissionIdByKey("order_bookings.manage")!
 
 const employeeSummarySchema = z
   .object({
-    id: z.string().uuid(),
+    id: z.string(),
     firstName: z.string(),
     lastName: z.string(),
     personnelNumber: z.string(),
-    departmentId: z.string().uuid().nullable(),
+    departmentId: z.string().nullable(),
   })
   .nullable()
 
 const orderSummarySchema = z
   .object({
-    id: z.string().uuid(),
+    id: z.string(),
     code: z.string(),
     name: z.string(),
   })
@@ -49,26 +49,26 @@ const orderSummarySchema = z
 
 const activitySummarySchema = z
   .object({
-    id: z.string().uuid(),
+    id: z.string(),
     code: z.string(),
     name: z.string(),
   })
   .nullable()
 
 const orderBookingOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  employeeId: z.string().uuid(),
-  orderId: z.string().uuid(),
-  activityId: z.string().uuid().nullable(),
+  id: z.string(),
+  tenantId: z.string(),
+  employeeId: z.string(),
+  orderId: z.string(),
+  activityId: z.string().nullable(),
   bookingDate: z.date(),
   timeMinutes: z.number().int(),
   description: z.string().nullable(),
   source: z.string(),
   createdAt: z.date(),
   updatedAt: z.date(),
-  createdBy: z.string().uuid().nullable(),
-  updatedBy: z.string().uuid().nullable(),
+  createdBy: z.string().nullable(),
+  updatedBy: z.string().nullable(),
   // Nested relations (included in list/getById)
   employee: employeeSummarySchema.optional(),
   order: orderSummarySchema.optional(),
@@ -83,26 +83,26 @@ const listInputSchema = z
   .object({
     page: z.number().int().positive().optional().default(1),
     pageSize: z.number().int().min(1).max(100).optional().default(50),
-    employeeId: z.string().uuid().optional(),
-    orderId: z.string().uuid().optional(),
+    employeeId: z.string().optional(),
+    orderId: z.string().optional(),
     fromDate: z.string().date().optional(), // YYYY-MM-DD
     toDate: z.string().date().optional(), // YYYY-MM-DD
   })
   .optional()
 
 const createInputSchema = z.object({
-  employeeId: z.string().uuid(),
-  orderId: z.string().uuid(),
-  activityId: z.string().uuid().optional(),
+  employeeId: z.string(),
+  orderId: z.string(),
+  activityId: z.string().optional(),
   bookingDate: z.string().date(), // YYYY-MM-DD
   timeMinutes: z.number().int().positive("Time in minutes must be positive"),
   description: z.string().optional(),
 })
 
 const updateInputSchema = z.object({
-  id: z.string().uuid(),
-  orderId: z.string().uuid().optional(),
-  activityId: z.string().uuid().nullable().optional(),
+  id: z.string(),
+  orderId: z.string().optional(),
+  activityId: z.string().nullable().optional(),
   bookingDate: z.string().date().optional(),
   timeMinutes: z.number().int().positive().optional(),
   description: z.string().nullable().optional(),
@@ -281,7 +281,7 @@ export const orderBookingsRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(OB_VIEW))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(orderBookingOutputSchema)
     .query(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!
@@ -473,7 +473,7 @@ export const orderBookingsRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(OB_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!

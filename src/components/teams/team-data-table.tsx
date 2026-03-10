@@ -22,9 +22,9 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TeamStatusBadge } from './team-status-badge'
-import type { components } from '@/types/legacy-api-types'
+import type { useTeam } from '@/hooks'
 
-type Team = components['schemas']['Team']
+type Team = NonNullable<ReturnType<typeof useTeam>['data']>
 
 interface TeamDataTableProps {
   /** List of teams to display */
@@ -147,11 +147,11 @@ export function TeamDataTable({
               {team.leader ? (
                 <div className="flex items-center gap-2">
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-medium">
-                    {team.leader.first_name[0]}
-                    {team.leader.last_name[0]}
+                    {team.leader.firstName[0]}
+                    {team.leader.lastName[0]}
                   </div>
                   <span className="text-sm">
-                    {team.leader.first_name} {team.leader.last_name}
+                    {team.leader.firstName} {team.leader.lastName}
                   </span>
                 </div>
               ) : (
@@ -161,11 +161,11 @@ export function TeamDataTable({
             <TableCell>
               <div className="flex items-center gap-1.5">
                 <Users className="h-4 w-4 text-muted-foreground" />
-                <span>{team.member_count ?? team.members?.length ?? 0}</span>
+                <span>{team.memberCount ?? team.members?.length ?? 0}</span>
               </div>
             </TableCell>
             <TableCell>
-              <TeamStatusBadge isActive={team.is_active} />
+              <TeamStatusBadge isActive={team.isActive} />
             </TableCell>
             <TableCell onClick={(e) => e.stopPropagation()}>
               <DropdownMenu>

@@ -25,9 +25,9 @@ import {
   TariffDetailSheet,
   CopyTariffDialog,
 } from '@/components/tariffs'
-import type { components } from '@/types/legacy-api-types'
+import type { useTariff } from '@/hooks'
 
-type Tariff = components['schemas']['Tariff']
+type Tariff = NonNullable<ReturnType<typeof useTariff>['data']>
 
 export default function TariffsPage() {
   const router = useRouter()

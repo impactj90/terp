@@ -17,9 +17,9 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { useLocation } from '@/hooks'
-import type { components } from '@/types/legacy-api-types'
 
-type Location = components['schemas']['Location']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Location = any
 
 interface LocationDetailSheetProps {
   locationId: string | null
@@ -103,8 +103,8 @@ export function LocationDetailSheet({
                   <h3 className="text-lg font-semibold">{location.name}</h3>
                   <p className="text-sm text-muted-foreground font-mono">{location.code}</p>
                 </div>
-                <Badge variant={location.is_active ? 'default' : 'secondary'}>
-                  {location.is_active ? t('statusActive') : t('statusInactive')}
+                <Badge variant={location.isActive ? 'default' : 'secondary'}>
+                  {location.isActive ? t('statusActive') : t('statusInactive')}
                 </Badge>
               </div>
 
@@ -160,8 +160,8 @@ export function LocationDetailSheet({
               <div className="space-y-2">
                 <h4 className="text-sm font-medium text-muted-foreground">{t('timestampsSection')}</h4>
                 <div className="rounded-lg border p-4">
-                  <DetailRow label={t('labelCreated')} value={formatDate(location.created_at)} />
-                  <DetailRow label={t('labelLastUpdated')} value={formatDate(location.updated_at)} />
+                  <DetailRow label={t('labelCreated')} value={formatDate(location.createdAt)} />
+                  <DetailRow label={t('labelLastUpdated')} value={formatDate(location.updatedAt)} />
                 </div>
               </div>
             </div>

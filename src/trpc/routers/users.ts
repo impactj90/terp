@@ -40,14 +40,14 @@ const dataScopeTypeEnum = z.enum([
 // --- Output Schemas ---
 
 const userOutputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   email: z.string(),
   displayName: z.string(),
   avatarUrl: z.string().nullable(),
   role: z.string(),
-  tenantId: z.string().uuid().nullable(),
-  userGroupId: z.string().uuid().nullable(),
-  employeeId: z.string().uuid().nullable(),
+  tenantId: z.string().nullable(),
+  userGroupId: z.string().nullable(),
+  employeeId: z.string().nullable(),
   username: z.string().nullable(),
   ssoId: z.string().nullable(),
   isActive: z.boolean().nullable(),
@@ -81,47 +81,47 @@ const userWithRelationsOutputSchema = userOutputSchema.extend({
 const createUserInputSchema = z.object({
   email: z.string().email(),
   displayName: z.string().min(1),
-  tenantId: z.string().uuid().optional(),
+  tenantId: z.string().optional(),
   username: z.string().optional(),
-  userGroupId: z.string().uuid().optional(),
-  employeeId: z.string().uuid().optional(),
+  userGroupId: z.string().optional(),
+  employeeId: z.string().optional(),
   password: z.string().optional(),
   ssoId: z.string().optional(),
   isActive: z.boolean().optional().default(true),
   isLocked: z.boolean().optional().default(false),
   dataScopeType: dataScopeTypeEnum.optional().default("all"),
   dataScopeTenantIds: z
-    .array(z.string().uuid())
+    .array(z.string())
     .optional()
     .default([]),
   dataScopeDepartmentIds: z
-    .array(z.string().uuid())
+    .array(z.string())
     .optional()
     .default([]),
   dataScopeEmployeeIds: z
-    .array(z.string().uuid())
+    .array(z.string())
     .optional()
     .default([]),
 })
 
 const updateUserInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   displayName: z.string().min(1).optional(),
   avatarUrl: z.string().nullable().optional(),
-  userGroupId: z.string().uuid().nullable().optional(),
+  userGroupId: z.string().nullable().optional(),
   username: z.string().nullable().optional(),
-  employeeId: z.string().uuid().nullable().optional(),
+  employeeId: z.string().nullable().optional(),
   ssoId: z.string().nullable().optional(),
   isActive: z.boolean().optional(),
   isLocked: z.boolean().optional(),
   dataScopeType: dataScopeTypeEnum.optional(),
-  dataScopeTenantIds: z.array(z.string().uuid()).optional(),
-  dataScopeDepartmentIds: z.array(z.string().uuid()).optional(),
-  dataScopeEmployeeIds: z.array(z.string().uuid()).optional(),
+  dataScopeTenantIds: z.array(z.string()).optional(),
+  dataScopeDepartmentIds: z.array(z.string()).optional(),
+  dataScopeEmployeeIds: z.array(z.string()).optional(),
 })
 
 const changePasswordInputSchema = z.object({
-  userId: z.string().uuid(),
+  userId: z.string(),
   newPassword: z.string().min(1, "New password is required"),
 })
 
@@ -224,7 +224,7 @@ export const usersRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(USERS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(userWithRelationsOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -337,7 +337,7 @@ export const usersRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(USERS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

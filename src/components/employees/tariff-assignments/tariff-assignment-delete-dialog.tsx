@@ -41,7 +41,7 @@ export function TariffAssignmentDeleteDialog({
     if (!assignment) return
     try {
       await deleteMutation.mutateAsync({
-        path: { id: employeeId, assignmentId: assignment.id },
+        employeeId, id: assignment.id,
       })
       onSuccess?.()
       onOpenChange(false)

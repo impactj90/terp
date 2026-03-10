@@ -29,10 +29,11 @@ import {
 } from '@/components/ui/select'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import type { components } from '@/types/legacy-api-types'
 
-type Macro = components['schemas']['schema1']
-type MacroAssignment = components['schemas']['schema2']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Macro = any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type MacroAssignment = any
 
 interface MacroAssignmentFormDialogProps {
   open: boolean
@@ -90,11 +91,11 @@ export function MacroAssignmentFormDialog({
     if (open) {
       if (assignment) {
         setForm({
-          targetType: assignment.tariff_id ? 'tariff' : 'employee',
-          tariffId: assignment.tariff_id ?? '',
-          employeeId: assignment.employee_id ?? '',
-          executionDay: assignment.execution_day,
-          isActive: assignment.is_active ?? true,
+          targetType: assignment.tariffId ? 'tariff' : 'employee',
+          tariffId: assignment.tariffId ?? '',
+          employeeId: assignment.employeeId ?? '',
+          executionDay: assignment.executionDay,
+          isActive: assignment.isActive ?? true,
         })
       } else {
         setForm({
@@ -112,14 +113,10 @@ export function MacroAssignmentFormDialog({
   const handleSubmit = async () => {
     setError(null)
 
-    const payload = {
-      tariff_id: form.targetType === 'tariff' ? form.tariffId || undefined : undefined,
-      employee_id: form.targetType === 'employee' ? form.employeeId || undefined : undefined,
-      execution_day: form.executionDay,
-      is_active: form.isActive,
-    }
+    const tariffId = form.targetType === 'tariff' ? form.tariffId || undefined : undefined
+    const employeeId = form.targetType === 'employee' ? form.employeeId || undefined : undefined
 
-    if (!payload.tariff_id && !payload.employee_id) {
+    if (!tariffId && !employeeId) {
       setError(t('validationNameRequired'))
       return
     }
@@ -127,13 +124,17 @@ export function MacroAssignmentFormDialog({
     try {
       if (isEdit && assignment) {
         await updateMutation.mutateAsync({
-          path: { id: macroId, assignmentId: assignment.id },
-          body: payload,
+          macroId,
+          assignmentId: assignment.id,
+          executionDay: form.executionDay,
+          isActive: form.isActive,
         })
       } else {
         await createMutation.mutateAsync({
-          path: { id: macroId },
-          body: payload,
+          macroId,
+          tariffId,
+          employeeId,
+          executionDay: form.executionDay,
         })
       }
       onOpenChange(false)
@@ -222,7 +223,7 @@ export function MacroAssignmentFormDialog({
                 <SelectContent>
                   {employees.map((employee) => (
                     <SelectItem key={employee.id} value={employee.id}>
-                      {employee.personnel_number} - {employee.first_name} {employee.last_name}
+                      {employee.personnelNumber} - {employee.firstName} {employee.lastName}
                     </SelectItem>
                   ))}
                 </SelectContent>

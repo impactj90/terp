@@ -267,7 +267,7 @@ describe("payrollExports.preview", () => {
     const result = await caller.preview({ id: EXPORT_ID })
 
     expect(result.lines).toHaveLength(1)
-    expect(result.lines[0].personnelNumber).toBe("001")
+    expect(result.lines[0]!.personnelNumber).toBe("001")
     expect(result.summary.employeeCount).toBe(1)
     expect(result.summary.totalHours).toBeGreaterThan(0)
   })

@@ -33,11 +33,11 @@ const ABSENCES_MANAGE = permissionIdByKey("absences.manage")!
 // --- Output Schemas ---
 
 const entitlementPreviewOutputSchema = z.object({
-  employeeId: z.string().uuid(),
+  employeeId: z.string(),
   employeeName: z.string(),
   year: z.number(),
   basis: z.string(),
-  calcGroupId: z.string().uuid().nullable(),
+  calcGroupId: z.string().nullable(),
   calcGroupName: z.string().nullable(),
   weeklyHours: z.number(),
   standardWeeklyHours: z.number(),
@@ -55,7 +55,7 @@ const entitlementPreviewOutputSchema = z.object({
 })
 
 const carryoverPreviewOutputSchema = z.object({
-  employeeId: z.string().uuid(),
+  employeeId: z.string(),
   year: z.number(),
   availableDays: z.number(),
   cappedCarryover: z.number(),
@@ -63,7 +63,7 @@ const carryoverPreviewOutputSchema = z.object({
   hasException: z.boolean(),
   rulesApplied: z.array(
     z.object({
-      ruleId: z.string().uuid(),
+      ruleId: z.string(),
       ruleName: z.string(),
       ruleType: z.string(),
       capValue: z.number(),
@@ -88,9 +88,9 @@ export const vacationRouter = createTRPCRouter({
     .use(requirePermission(VACATION_CONFIG_MANAGE))
     .input(
       z.object({
-        employeeId: z.string().uuid(),
+        employeeId: z.string(),
         year: z.number().int().min(1900).max(2200),
-        calcGroupId: z.string().uuid().optional(),
+        calcGroupId: z.string().optional(),
       })
     )
     .output(entitlementPreviewOutputSchema)
@@ -118,7 +118,7 @@ export const vacationRouter = createTRPCRouter({
     .use(requirePermission(VACATION_CONFIG_MANAGE))
     .input(
       z.object({
-        employeeId: z.string().uuid(),
+        employeeId: z.string(),
         year: z.number().int(),
       })
     )
@@ -149,7 +149,7 @@ export const vacationRouter = createTRPCRouter({
     .use(requirePermission(ABSENCES_MANAGE))
     .input(
       z.object({
-        employeeId: z.string().uuid(),
+        employeeId: z.string(),
         year: z.number().int().min(1900).max(2200),
       })
     )
@@ -180,7 +180,7 @@ export const vacationRouter = createTRPCRouter({
     .use(requirePermission(ABSENCES_MANAGE))
     .input(
       z.object({
-        employeeId: z.string().uuid(),
+        employeeId: z.string(),
         year: z.number().int().min(1900).max(2200),
       })
     )
@@ -210,7 +210,7 @@ export const vacationRouter = createTRPCRouter({
     .use(requirePermission(ABSENCES_MANAGE))
     .input(
       z.object({
-        employeeId: z.string().uuid(),
+        employeeId: z.string(),
         year: z.number().int().min(1900).max(2200),
         adjustment: z.number(),
         notes: z.string().optional(),
@@ -243,7 +243,7 @@ export const vacationRouter = createTRPCRouter({
     .use(requirePermission(ABSENCES_MANAGE))
     .input(
       z.object({
-        employeeId: z.string().uuid(),
+        employeeId: z.string(),
         year: z.number().int().min(1901).max(2200),
       })
     )

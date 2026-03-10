@@ -53,11 +53,11 @@ void TRIGGER_TYPES
 // --- Output Schemas ---
 
 const macroAssignmentOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  macroId: z.string().uuid(),
-  tariffId: z.string().uuid().nullable(),
-  employeeId: z.string().uuid().nullable(),
+  id: z.string(),
+  tenantId: z.string(),
+  macroId: z.string(),
+  tariffId: z.string().nullable(),
+  employeeId: z.string().nullable(),
   executionDay: z.number(),
   isActive: z.boolean(),
   createdAt: z.date(),
@@ -65,8 +65,8 @@ const macroAssignmentOutputSchema = z.object({
 })
 
 const macroOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   name: z.string(),
   description: z.string().nullable(),
   macroType: z.string(),
@@ -79,13 +79,13 @@ const macroOutputSchema = z.object({
 })
 
 const macroExecutionOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  macroId: z.string().uuid(),
-  assignmentId: z.string().uuid().nullable(),
+  id: z.string(),
+  tenantId: z.string(),
+  macroId: z.string(),
+  assignmentId: z.string().nullable(),
   status: z.string(),
   triggerType: z.string(),
-  triggeredBy: z.string().uuid().nullable(),
+  triggeredBy: z.string().nullable(),
   startedAt: z.date().nullable(),
   completedAt: z.date().nullable(),
   result: z.unknown(),
@@ -104,7 +104,7 @@ const createMacroInputSchema = z.object({
 })
 
 const updateMacroInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   name: z.string().min(1).max(255).optional(),
   description: z.string().nullable().optional(),
   macroType: z.enum(MACRO_TYPES).optional(),
@@ -114,15 +114,15 @@ const updateMacroInputSchema = z.object({
 })
 
 const createAssignmentInputSchema = z.object({
-  macroId: z.string().uuid(),
-  tariffId: z.string().uuid().optional(),
-  employeeId: z.string().uuid().optional(),
+  macroId: z.string(),
+  tariffId: z.string().optional(),
+  employeeId: z.string().optional(),
   executionDay: z.number().int(),
 })
 
 const updateAssignmentInputSchema = z.object({
-  macroId: z.string().uuid(),
-  assignmentId: z.string().uuid(),
+  macroId: z.string(),
+  assignmentId: z.string(),
   executionDay: z.number().int().optional(),
   isActive: z.boolean().optional(),
 })
@@ -253,7 +253,7 @@ export const macrosRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(MACROS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(macroOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -326,7 +326,7 @@ export const macrosRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(MACROS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -346,7 +346,7 @@ export const macrosRouter = createTRPCRouter({
    */
   listAssignments: tenantProcedure
     .use(requirePermission(MACROS_MANAGE))
-    .input(z.object({ macroId: z.string().uuid() }))
+    .input(z.object({ macroId: z.string() }))
     .output(z.object({ data: z.array(macroAssignmentOutputSchema) }))
     .query(async ({ ctx, input }) => {
       try {
@@ -422,8 +422,8 @@ export const macrosRouter = createTRPCRouter({
     .use(requirePermission(MACROS_MANAGE))
     .input(
       z.object({
-        macroId: z.string().uuid(),
-        assignmentId: z.string().uuid(),
+        macroId: z.string(),
+        assignmentId: z.string(),
       })
     )
     .output(z.object({ success: z.boolean() }))
@@ -452,7 +452,7 @@ export const macrosRouter = createTRPCRouter({
    */
   triggerExecution: tenantProcedure
     .use(requirePermission(MACROS_MANAGE))
-    .input(z.object({ macroId: z.string().uuid() }))
+    .input(z.object({ macroId: z.string() }))
     .output(macroExecutionOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
@@ -479,7 +479,7 @@ export const macrosRouter = createTRPCRouter({
     .use(requirePermission(MACROS_MANAGE))
     .input(
       z.object({
-        macroId: z.string().uuid(),
+        macroId: z.string(),
         limit: z.number().int().min(1).max(100).optional().default(20),
       })
     )
@@ -505,7 +505,7 @@ export const macrosRouter = createTRPCRouter({
    */
   getExecution: tenantProcedure
     .use(requirePermission(MACROS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(macroExecutionOutputSchema)
     .query(async ({ ctx, input }) => {
       try {

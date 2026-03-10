@@ -19,19 +19,19 @@ import * as authService from "@/lib/services/auth-service"
 // --- Output Schemas ---
 
 const userOutputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   email: z.string(),
   displayName: z.string(),
   avatarUrl: z.string().nullable(),
   role: z.string(),
-  tenantId: z.string().uuid().nullable(),
-  userGroupId: z.string().uuid().nullable(),
-  employeeId: z.string().uuid().nullable(),
+  tenantId: z.string().nullable(),
+  userGroupId: z.string().nullable(),
+  employeeId: z.string().nullable(),
   isActive: z.boolean().nullable(),
 })
 
 const tenantOutputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   name: z.string(),
   slug: z.string(),
 })

@@ -105,20 +105,16 @@ export function CostCenterFormSheet({
     try {
       if (isEdit && costCenter) {
         await updateMutation.mutateAsync({
-          path: { id: costCenter.id },
-          body: {
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            is_active: form.isActive,
-          },
+          id: costCenter.id,
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          isActive: form.isActive,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            code: form.code.trim(),
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-          },
+          code: form.code.trim(),
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
         })
       }
 

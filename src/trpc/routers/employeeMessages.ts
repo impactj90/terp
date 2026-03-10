@@ -30,9 +30,9 @@ const RECIPIENT_STATUSES = ["pending", "sent", "failed"] as const
 // --- Output Schemas ---
 
 const recipientOutputSchema = z.object({
-  id: z.string().uuid(),
-  messageId: z.string().uuid(),
-  employeeId: z.string().uuid(),
+  id: z.string(),
+  messageId: z.string(),
+  employeeId: z.string(),
   status: z.string(),
   sentAt: z.date().nullable(),
   errorMessage: z.string().nullable(),
@@ -41,9 +41,9 @@ const recipientOutputSchema = z.object({
 })
 
 const employeeMessageOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  senderId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
+  senderId: z.string(),
   subject: z.string(),
   body: z.string(),
   createdAt: z.date(),
@@ -52,7 +52,7 @@ const employeeMessageOutputSchema = z.object({
 })
 
 const sendResultOutputSchema = z.object({
-  messageId: z.string().uuid(),
+  messageId: z.string(),
   sent: z.number(),
   failed: z.number(),
 })
@@ -63,7 +63,7 @@ const createMessageInputSchema = z.object({
   subject: z.string().min(1, "Subject is required").max(255),
   body: z.string().min(1, "Body is required"),
   employeeIds: z
-    .array(z.string().uuid())
+    .array(z.string())
     .min(1, "At least one recipient is required"),
 })
 
@@ -114,7 +114,7 @@ export const employeeMessagesRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(NOTIFICATIONS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(employeeMessageOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -135,7 +135,7 @@ export const employeeMessagesRouter = createTRPCRouter({
     .use(requirePermission(NOTIFICATIONS_MANAGE))
     .input(
       z.object({
-        employeeId: z.string().uuid(),
+        employeeId: z.string(),
         limit: z.number().int().min(1).max(100).optional().default(20),
         offset: z.number().int().min(0).optional().default(0),
       })
@@ -198,7 +198,7 @@ export const employeeMessagesRouter = createTRPCRouter({
    */
   send: tenantProcedure
     .use(requirePermission(NOTIFICATIONS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(sendResultOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {

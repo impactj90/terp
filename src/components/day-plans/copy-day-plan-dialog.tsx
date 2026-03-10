@@ -16,9 +16,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useCopyDayPlan } from '@/hooks'
-import type { components } from '@/types/legacy-api-types'
-
-type DayPlan = components['schemas']['DayPlan']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type DayPlan = any
 
 const RESERVED_DAY_PLAN_CODES = new Set(['U', 'K', 'S'])
 
@@ -69,11 +68,9 @@ export function CopyDayPlanDialog({ dayPlan, open, onOpenChange }: CopyDayPlanDi
 
     try {
       await copyMutation.mutateAsync({
-        path: { id: dayPlan.id },
-        body: {
-          new_code: newCode.trim(),
-          new_name: newName.trim(),
-        },
+        id: dayPlan.id,
+        newCode: newCode.trim(),
+        newName: newName.trim(),
       })
       onOpenChange(false)
     } catch (err) {

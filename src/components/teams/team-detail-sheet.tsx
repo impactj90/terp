@@ -34,9 +34,8 @@ import {
 import { TeamStatusBadge } from './team-status-badge'
 import { MemberRoleBadge } from './member-role-badge'
 import { useBulkAssignTariff, useTariffs, useTeam } from '@/hooks'
-import type { components } from '@/types/legacy-api-types'
 
-type Team = components['schemas']['Team']
+type TeamData = NonNullable<ReturnType<typeof useTeam>['data']>
 
 export interface TeamDetailSheetProps {
   /** Team ID to fetch details for */
@@ -46,11 +45,11 @@ export interface TeamDetailSheetProps {
   /** Callback when open state changes */
   onOpenChange: (open: boolean) => void
   /** Callback when edit is clicked */
-  onEdit: (team: Team) => void
+  onEdit: (team: TeamData) => void
   /** Callback when delete is clicked */
-  onDelete: (team: Team) => void
+  onDelete: (team: TeamData) => void
   /** Callback when manage members is clicked */
-  onManageMembers: (team: Team) => void
+  onManageMembers: (team: TeamData) => void
 }
 
 interface DetailRowProps {
@@ -100,7 +99,7 @@ export function TeamDetailSheet({
 
   const bulkAssignTariff = useBulkAssignTariff()
   const { data: tariffsData, isLoading: loadingTariffs } = useTariffs({
-    active: true,
+    isActive: true,
     enabled: assignOpen,
   })
   const tariffs = tariffsData?.data ?? []
@@ -109,8 +108,8 @@ export function TeamDetailSheet({
     if (!team?.members) return []
     const unique = new Set<string>()
     team.members.forEach((member) => {
-      if (member.employee_id) {
-        unique.add(member.employee_id)
+      if (member.employeeId) {
+        unique.add(member.employeeId)
       }
     })
     return Array.from(unique)
@@ -152,10 +151,8 @@ export function TeamDetailSheet({
     setAssignError(null)
     try {
       await bulkAssignTariff.mutateAsync({
-        body: {
-          employee_ids: memberIds,
-          tariff_id: tariffId === '__none__' ? null : tariffId,
-        },
+        employeeIds: memberIds,
+        tariffId: tariffId === '__none__' ? null : tariffId,
       })
       setAssignOpen(false)
     } catch (err) {
@@ -176,7 +173,7 @@ export function TeamDetailSheet({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <SheetTitle className="truncate">{team.name}</SheetTitle>
-                    <TeamStatusBadge isActive={team.is_active} />
+                    <TeamStatusBadge isActive={team.isActive} />
                   </div>
                   {team.description && (
                     <SheetDescription className="line-clamp-2 mt-1">
@@ -200,7 +197,7 @@ export function TeamDetailSheet({
                   label={t('fieldTeamLeader')}
                   value={
                     team.leader
-                      ? `${team.leader.first_name} ${team.leader.last_name}`
+                      ? `${team.leader.firstName} ${team.leader.lastName}`
                       : undefined
                   }
                 />
@@ -237,22 +234,22 @@ export function TeamDetailSheet({
                   <div className="space-y-2">
                     {team.members.map((member) => (
                       <div
-                        key={member.employee_id}
+                        key={member.employeeId}
                         className="flex items-center justify-between p-2 rounded-md bg-muted/50"
                       >
                         <div className="flex items-center gap-3">
                           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-background text-sm font-medium">
-                            {member.employee?.first_name?.[0] ?? '?'}
-                            {member.employee?.last_name?.[0] ?? '?'}
+                            {member.employee?.firstName?.[0] ?? '?'}
+                            {member.employee?.lastName?.[0] ?? '?'}
                           </div>
                           <div>
                             <p className="text-sm font-medium">
                               {member.employee
-                                ? `${member.employee.first_name} ${member.employee.last_name}`
+                                ? `${member.employee.firstName} ${member.employee.lastName}`
                                 : t('unknownEmployee')}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {member.employee?.department?.name || t('noDepartment')}
+                              {t('noDepartment')}
                             </p>
                           </div>
                         </div>

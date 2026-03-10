@@ -80,9 +80,9 @@ export function VacationBalanceCard({
   }
 
   const totalEntitlement = data.total_entitlement ?? 0
-  const remainingDays = data.remaining_days ?? 0
-  const usedDays = data.used_days ?? 0
-  const plannedDays = data.planned_days ?? 0
+  const remainingDays = data.available ?? 0
+  const usedDays = data.taken ?? 0
+  const plannedDays = 0
 
   // Calculate progress
   const usedPercent = totalEntitlement > 0

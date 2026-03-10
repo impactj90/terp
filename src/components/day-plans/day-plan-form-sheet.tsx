@@ -28,16 +28,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TimeInput } from '@/components/ui/time-input'
 import { DurationInput } from '@/components/ui/duration-input'
 import { useCreateDayPlan, useUpdateDayPlan, useDayPlan } from '@/hooks'
-import type { components } from '@/types/legacy-api-types'
 
-type DayPlan = components['schemas']['DayPlan']
-type CreateDayPlanRequest = components['schemas']['CreateDayPlanRequest']
-type UpdateDayPlanRequest = components['schemas']['UpdateDayPlanRequest']
+type DayPlanData = NonNullable<ReturnType<typeof useDayPlan>['data']>
 
 interface DayPlanFormSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  dayPlan?: DayPlan | null
+  dayPlan?: DayPlanData | null
   onSuccess?: () => void
 }
 
@@ -156,37 +153,37 @@ export function DayPlanFormSheet({
           code: fullDayPlan.code,
           name: fullDayPlan.name,
           description: fullDayPlan.description ?? '',
-          planType: fullDayPlan.plan_type,
-          comeFrom: fullDayPlan.come_from ?? null,
-          comeTo: fullDayPlan.come_to ?? null,
-          goFrom: fullDayPlan.go_from ?? null,
-          goTo: fullDayPlan.go_to ?? null,
-          coreStart: fullDayPlan.core_start ?? null,
-          coreEnd: fullDayPlan.core_end ?? null,
-          regularHours: fullDayPlan.regular_hours,
-          regularHours2: fullDayPlan.regular_hours_2 ?? null,
-          fromEmployeeMaster: fullDayPlan.from_employee_master ?? false,
-          toleranceComePlus: fullDayPlan.tolerance_come_plus ?? 0,
-          toleranceComeMinus: fullDayPlan.tolerance_come_minus ?? 0,
-          toleranceGoPlus: fullDayPlan.tolerance_go_plus ?? 0,
-          toleranceGoMinus: fullDayPlan.tolerance_go_minus ?? 0,
-          variableWorkTime: fullDayPlan.variable_work_time ?? false,
-          roundingComeType: fullDayPlan.rounding_come_type ?? 'none',
-          roundingComeInterval: fullDayPlan.rounding_come_interval ?? null,
-          roundingComeAddValue: fullDayPlan.rounding_come_add_value ?? null,
-          roundingGoType: fullDayPlan.rounding_go_type ?? 'none',
-          roundingGoInterval: fullDayPlan.rounding_go_interval ?? null,
-          roundingGoAddValue: fullDayPlan.rounding_go_add_value ?? null,
-          roundAllBookings: fullDayPlan.round_all_bookings ?? false,
-          minWorkTime: fullDayPlan.min_work_time ?? null,
-          maxNetWorkTime: fullDayPlan.max_net_work_time ?? null,
-          holidayCreditCat1: fullDayPlan.holiday_credit_cat1 ?? null,
-          holidayCreditCat2: fullDayPlan.holiday_credit_cat2 ?? null,
-          holidayCreditCat3: fullDayPlan.holiday_credit_cat3 ?? null,
-          vacationDeduction: fullDayPlan.vacation_deduction ?? 1.0,
-          noBookingBehavior: fullDayPlan.no_booking_behavior ?? 'error',
-          dayChangeBehavior: fullDayPlan.day_change_behavior ?? 'none',
-          isActive: fullDayPlan.is_active ?? true,
+          planType: (fullDayPlan.planType as FormState['planType']) ?? 'fixed',
+          comeFrom: fullDayPlan.comeFrom ?? null,
+          comeTo: fullDayPlan.comeTo ?? null,
+          goFrom: fullDayPlan.goFrom ?? null,
+          goTo: fullDayPlan.goTo ?? null,
+          coreStart: fullDayPlan.coreStart ?? null,
+          coreEnd: fullDayPlan.coreEnd ?? null,
+          regularHours: fullDayPlan.regularHours,
+          regularHours2: fullDayPlan.regularHours2 ?? null,
+          fromEmployeeMaster: fullDayPlan.fromEmployeeMaster ?? false,
+          toleranceComePlus: fullDayPlan.toleranceComePlus ?? 0,
+          toleranceComeMinus: fullDayPlan.toleranceComeMinus ?? 0,
+          toleranceGoPlus: fullDayPlan.toleranceGoPlus ?? 0,
+          toleranceGoMinus: fullDayPlan.toleranceGoMinus ?? 0,
+          variableWorkTime: fullDayPlan.variableWorkTime ?? false,
+          roundingComeType: fullDayPlan.roundingComeType ?? 'none',
+          roundingComeInterval: fullDayPlan.roundingComeInterval ?? null,
+          roundingComeAddValue: fullDayPlan.roundingComeAddValue ?? null,
+          roundingGoType: fullDayPlan.roundingGoType ?? 'none',
+          roundingGoInterval: fullDayPlan.roundingGoInterval ?? null,
+          roundingGoAddValue: fullDayPlan.roundingGoAddValue ?? null,
+          roundAllBookings: fullDayPlan.roundAllBookings ?? false,
+          minWorkTime: fullDayPlan.minWorkTime ?? null,
+          maxNetWorkTime: fullDayPlan.maxNetWorkTime ?? null,
+          holidayCreditCat1: fullDayPlan.holidayCreditCat1 ?? null,
+          holidayCreditCat2: fullDayPlan.holidayCreditCat2 ?? null,
+          holidayCreditCat3: fullDayPlan.holidayCreditCat3 ?? null,
+          vacationDeduction: fullDayPlan.vacationDeduction ?? 1.0,
+          noBookingBehavior: fullDayPlan.noBookingBehavior ?? 'error',
+          dayChangeBehavior: fullDayPlan.dayChangeBehavior ?? 'none',
+          isActive: fullDayPlan.isActive ?? true,
         })
       } else if (!isEdit) {
         setForm(INITIAL_STATE)
@@ -253,81 +250,51 @@ export function DayPlanFormSheet({
               variableWorkTime: false,
             }),
       }
+      const commonFields = {
+          name: submissionForm.name,
+          description: submissionForm.description || undefined,
+          planType: submissionForm.planType,
+          comeFrom: submissionForm.comeFrom ?? undefined,
+          comeTo: submissionForm.comeTo ?? undefined,
+          goFrom: submissionForm.goFrom ?? undefined,
+          goTo: submissionForm.goTo ?? undefined,
+          coreStart: submissionForm.coreStart ?? undefined,
+          coreEnd: submissionForm.coreEnd ?? undefined,
+          regularHours: submissionForm.regularHours,
+          regularHours2: submissionForm.regularHours2 ?? undefined,
+          fromEmployeeMaster: submissionForm.fromEmployeeMaster,
+          toleranceComePlus: submissionForm.toleranceComePlus,
+          toleranceComeMinus: submissionForm.toleranceComeMinus,
+          toleranceGoPlus: submissionForm.toleranceGoPlus,
+          toleranceGoMinus: submissionForm.toleranceGoMinus,
+          variableWorkTime: submissionForm.variableWorkTime,
+          roundingComeType: submissionForm.roundingComeType as 'none' | 'up' | 'down' | 'nearest' | 'add' | 'subtract',
+          roundingComeInterval: submissionForm.roundingComeInterval ?? undefined,
+          roundingComeAddValue: submissionForm.roundingComeAddValue ?? undefined,
+          roundingGoType: submissionForm.roundingGoType as 'none' | 'up' | 'down' | 'nearest' | 'add' | 'subtract',
+          roundingGoInterval: submissionForm.roundingGoInterval ?? undefined,
+          roundingGoAddValue: submissionForm.roundingGoAddValue ?? undefined,
+          roundAllBookings: submissionForm.roundAllBookings,
+          minWorkTime: submissionForm.minWorkTime ?? undefined,
+          maxNetWorkTime: submissionForm.maxNetWorkTime ?? undefined,
+          holidayCreditCat1: submissionForm.holidayCreditCat1 ?? undefined,
+          holidayCreditCat2: submissionForm.holidayCreditCat2 ?? undefined,
+          holidayCreditCat3: submissionForm.holidayCreditCat3 ?? undefined,
+          vacationDeduction: submissionForm.vacationDeduction,
+          noBookingBehavior: submissionForm.noBookingBehavior as 'error' | 'deduct_target' | 'adopt_target' | 'vocational_school' | 'target_with_order',
+          dayChangeBehavior: submissionForm.dayChangeBehavior as 'none' | 'at_arrival' | 'at_departure' | 'auto_complete',
+      }
       if (isEdit && dayPlan) {
-        const body: UpdateDayPlanRequest = {
-          name: submissionForm.name,
-          description: submissionForm.description || undefined,
-          plan_type: submissionForm.planType,
-          come_from: submissionForm.comeFrom ?? undefined,
-          come_to: submissionForm.comeTo ?? undefined,
-          go_from: submissionForm.goFrom ?? undefined,
-          go_to: submissionForm.goTo ?? undefined,
-          core_start: submissionForm.coreStart ?? undefined,
-          core_end: submissionForm.coreEnd ?? undefined,
-          regular_hours: submissionForm.regularHours,
-          regular_hours_2: submissionForm.regularHours2 ?? undefined,
-          from_employee_master: submissionForm.fromEmployeeMaster,
-          tolerance_come_plus: submissionForm.toleranceComePlus,
-          tolerance_come_minus: submissionForm.toleranceComeMinus,
-          tolerance_go_plus: submissionForm.toleranceGoPlus,
-          tolerance_go_minus: submissionForm.toleranceGoMinus,
-          variable_work_time: submissionForm.variableWorkTime,
-          rounding_come_type: submissionForm.roundingComeType as UpdateDayPlanRequest['rounding_come_type'],
-          rounding_come_interval: submissionForm.roundingComeInterval ?? undefined,
-          rounding_come_add_value: submissionForm.roundingComeAddValue ?? undefined,
-          rounding_go_type: submissionForm.roundingGoType as UpdateDayPlanRequest['rounding_go_type'],
-          rounding_go_interval: submissionForm.roundingGoInterval ?? undefined,
-          rounding_go_add_value: submissionForm.roundingGoAddValue ?? undefined,
-          round_all_bookings: submissionForm.roundAllBookings,
-          min_work_time: submissionForm.minWorkTime ?? undefined,
-          max_net_work_time: submissionForm.maxNetWorkTime ?? undefined,
-          holiday_credit_cat1: submissionForm.holidayCreditCat1 ?? undefined,
-          holiday_credit_cat2: submissionForm.holidayCreditCat2 ?? undefined,
-          holiday_credit_cat3: submissionForm.holidayCreditCat3 ?? undefined,
-          vacation_deduction: submissionForm.vacationDeduction,
-          no_booking_behavior: submissionForm.noBookingBehavior as UpdateDayPlanRequest['no_booking_behavior'],
-          day_change_behavior: submissionForm.dayChangeBehavior as UpdateDayPlanRequest['day_change_behavior'],
-          is_active: submissionForm.isActive,
-        }
-        await updateMutation.mutateAsync({ path: { id: dayPlan.id }, body })
+        await updateMutation.mutateAsync({
+          id: dayPlan.id,
+          ...commonFields,
+          isActive: submissionForm.isActive,
+        })
       } else {
-        const body: CreateDayPlanRequest = {
+        await createMutation.mutateAsync({
           code: submissionForm.code,
-          name: submissionForm.name,
-          description: submissionForm.description || undefined,
-          plan_type: submissionForm.planType,
-          come_from: submissionForm.comeFrom ?? undefined,
-          come_to: submissionForm.comeTo ?? undefined,
-          go_from: submissionForm.goFrom ?? undefined,
-          go_to: submissionForm.goTo ?? undefined,
-          core_start: submissionForm.coreStart ?? undefined,
-          core_end: submissionForm.coreEnd ?? undefined,
-          regular_hours: submissionForm.regularHours,
-          regular_hours_2: submissionForm.regularHours2 ?? undefined,
-          from_employee_master: submissionForm.fromEmployeeMaster,
-          tolerance_come_plus: submissionForm.toleranceComePlus,
-          tolerance_come_minus: submissionForm.toleranceComeMinus,
-          tolerance_go_plus: submissionForm.toleranceGoPlus,
-          tolerance_go_minus: submissionForm.toleranceGoMinus,
-          variable_work_time: submissionForm.variableWorkTime,
-          rounding_come_type: submissionForm.roundingComeType as CreateDayPlanRequest['rounding_come_type'],
-          rounding_come_interval: submissionForm.roundingComeInterval ?? undefined,
-          rounding_come_add_value: submissionForm.roundingComeAddValue ?? undefined,
-          rounding_go_type: submissionForm.roundingGoType as CreateDayPlanRequest['rounding_go_type'],
-          rounding_go_interval: submissionForm.roundingGoInterval ?? undefined,
-          rounding_go_add_value: submissionForm.roundingGoAddValue ?? undefined,
-          round_all_bookings: submissionForm.roundAllBookings,
-          min_work_time: submissionForm.minWorkTime ?? undefined,
-          max_net_work_time: submissionForm.maxNetWorkTime ?? undefined,
-          holiday_credit_cat1: submissionForm.holidayCreditCat1 ?? undefined,
-          holiday_credit_cat2: submissionForm.holidayCreditCat2 ?? undefined,
-          holiday_credit_cat3: submissionForm.holidayCreditCat3 ?? undefined,
-          vacation_deduction: submissionForm.vacationDeduction,
-          no_booking_behavior: submissionForm.noBookingBehavior as CreateDayPlanRequest['no_booking_behavior'],
-          day_change_behavior: submissionForm.dayChangeBehavior as CreateDayPlanRequest['day_change_behavior'],
-          is_active: submissionForm.isActive,
-        }
-        await createMutation.mutateAsync({ body })
+          ...commonFields,
+        })
       }
       onSuccess?.()
     } catch (err) {

@@ -55,6 +55,17 @@ export async function findManyWithFilters(
   return { items, total }
 }
 
+export async function findById(
+  prisma: PrismaClient,
+  tenantId: string,
+  id: string
+) {
+  return prisma.dailyValue.findFirst({
+    where: { id, tenantId },
+    include: dailyValueListAllInclude,
+  })
+}
+
 export async function findByIdWithEmployee(
   prisma: PrismaClient,
   tenantId: string,

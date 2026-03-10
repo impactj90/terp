@@ -36,7 +36,7 @@ const EDP_SOURCES = ["tariff", "manual", "holiday"] as const
 
 const dayPlanSummarySchema = z
   .object({
-    id: z.string().uuid(),
+    id: z.string(),
     code: z.string(),
     name: z.string(),
     planType: z.string(),
@@ -45,19 +45,19 @@ const dayPlanSummarySchema = z
 
 const shiftSummarySchema = z
   .object({
-    id: z.string().uuid(),
+    id: z.string(),
     code: z.string(),
     name: z.string(),
   })
   .nullable()
 
 const employeeDayPlanOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  employeeId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
+  employeeId: z.string(),
   planDate: z.date(),
-  dayPlanId: z.string().uuid().nullable(),
-  shiftId: z.string().uuid().nullable(),
+  dayPlanId: z.string().nullable(),
+  shiftId: z.string().nullable(),
   source: z.string().nullable(),
   notes: z.string().nullable(),
   createdAt: z.date(),
@@ -69,39 +69,39 @@ const employeeDayPlanOutputSchema = z.object({
 // --- Input Schemas ---
 
 const listInputSchema = z.object({
-  employeeId: z.string().uuid().optional(),
+  employeeId: z.string().optional(),
   from: z.string().date(),
   to: z.string().date(),
 })
 
 const forEmployeeInputSchema = z.object({
-  employeeId: z.string().uuid(),
+  employeeId: z.string(),
   from: z.string().date(),
   to: z.string().date(),
 })
 
 const createInputSchema = z.object({
-  employeeId: z.string().uuid(),
+  employeeId: z.string(),
   planDate: z.string().date(),
-  dayPlanId: z.string().uuid().optional(),
-  shiftId: z.string().uuid().optional(),
+  dayPlanId: z.string().optional(),
+  shiftId: z.string().optional(),
   source: z.enum(EDP_SOURCES),
   notes: z.string().optional(),
 })
 
 const updateInputSchema = z.object({
-  id: z.string().uuid(),
-  dayPlanId: z.string().uuid().nullable().optional(),
-  shiftId: z.string().uuid().nullable().optional(),
+  id: z.string(),
+  dayPlanId: z.string().nullable().optional(),
+  shiftId: z.string().nullable().optional(),
   source: z.enum(EDP_SOURCES).optional(),
   notes: z.string().nullable().optional(),
 })
 
 const bulkCreateEntrySchema = z.object({
-  employeeId: z.string().uuid(),
+  employeeId: z.string(),
   planDate: z.string().date(),
-  dayPlanId: z.string().uuid().optional(),
-  shiftId: z.string().uuid().optional(),
+  dayPlanId: z.string().optional(),
+  shiftId: z.string().optional(),
   source: z.enum(EDP_SOURCES),
   notes: z.string().optional(),
 })
@@ -111,13 +111,13 @@ const bulkCreateInputSchema = z.object({
 })
 
 const deleteRangeInputSchema = z.object({
-  employeeId: z.string().uuid(),
+  employeeId: z.string(),
   from: z.string().date(),
   to: z.string().date(),
 })
 
 const generateFromTariffInputSchema = z.object({
-  employeeIds: z.array(z.string().uuid()).optional(),
+  employeeIds: z.array(z.string()).optional(),
   from: z.string().date().optional(),
   to: z.string().date().optional(),
   overwriteTariffSource: z.boolean().optional(),
@@ -175,7 +175,7 @@ export const employeeDayPlansRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(TIME_PLANS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(employeeDayPlanOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -234,7 +234,7 @@ export const employeeDayPlansRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(TIME_PLANS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

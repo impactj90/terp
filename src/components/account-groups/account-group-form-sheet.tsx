@@ -19,9 +19,18 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { useCreateAccountGroup, useUpdateAccountGroup } from '@/hooks'
-import type { components } from '@/types/legacy-api-types'
 
-type AccountGroup = components['schemas']['AccountGroup']
+type AccountGroup = {
+  id: string
+  tenantId: string
+  code: string
+  name: string
+  description: string | null
+  sortOrder: number
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
 
 interface AccountGroupFormSheetProps {
   open: boolean
@@ -68,8 +77,8 @@ export function AccountGroupFormSheet({
         code: group.code || '',
         name: group.name || '',
         description: group.description || '',
-        sortOrder: group.sort_order ?? 0,
-        isActive: group.is_active ?? true,
+        sortOrder: group.sortOrder ?? 0,
+        isActive: group.isActive ?? true,
       })
     } else {
       setForm(INITIAL_STATE)
@@ -94,23 +103,19 @@ export function AccountGroupFormSheet({
     try {
       if (isEdit && group) {
         await updateMutation.mutateAsync({
-          path: { id: group.id },
-          body: {
-            code: form.code.trim(),
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            sort_order: form.sortOrder,
-            is_active: form.isActive,
-          },
+          id: group.id,
+          code: form.code.trim(),
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          sortOrder: form.sortOrder,
+          isActive: form.isActive,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            code: form.code.trim(),
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            sort_order: form.sortOrder,
-          },
+          code: form.code.trim(),
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          sortOrder: form.sortOrder,
         })
       }
 

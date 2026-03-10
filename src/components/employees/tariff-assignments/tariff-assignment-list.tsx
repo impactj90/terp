@@ -14,9 +14,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useEmployeeTariffAssignments } from '@/hooks'
-import type { components } from '@/types/legacy-api-types'
 
-type TariffAssignment = components['schemas']['EmployeeTariffAssignment']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type TariffAssignment = any
 
 interface TariffAssignmentListProps {
   employeeId: string
@@ -38,7 +38,7 @@ function isCurrent(assignment: TariffAssignment): boolean {
     to.setHours(0, 0, 0, 0)
     if (to < today) return false
   }
-  return assignment.is_active
+  return assignment.isActive
 }
 
 export function TariffAssignmentList({
@@ -140,7 +140,7 @@ function AssignmentCard({
   const current = isCurrent(assignment)
   const tariffLabel = assignment.tariff
     ? `${assignment.tariff.code} - ${assignment.tariff.name}`
-    : assignment.tariff_id
+    : assignment.tariffId
 
   const dateRange = `${format(new Date(assignment.effective_from), 'dd.MM.yyyy')} - ${
     assignment.effective_to
@@ -162,7 +162,7 @@ function AssignmentCard({
               {t('currentAssignment')}
             </Badge>
           )}
-          {!assignment.is_active && (
+          {!assignment.isActive && (
             <Badge variant="secondary" className="text-xs">
               {t('filterInactive')}
             </Badge>

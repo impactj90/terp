@@ -26,7 +26,7 @@ const ACCOUNTS_MANAGE = permissionIdByKey("accounts.manage")!
 
 const accountSummarySchema = z
   .object({
-    id: z.string().uuid(),
+    id: z.string(),
     code: z.string(),
     name: z.string(),
     accountType: z.string(),
@@ -37,14 +37,14 @@ const accountSummarySchema = z
   .nullable()
 
 const dailyAccountValueOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  employeeId: z.string().uuid(),
-  accountId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
+  employeeId: z.string(),
+  accountId: z.string(),
   valueDate: z.date(),
   valueMinutes: z.number().int(),
   source: z.string(), // "net_time" | "capped_time" | "surcharge"
-  dayPlanId: z.string().uuid().nullable(),
+  dayPlanId: z.string().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
   // Nested account details
@@ -55,8 +55,8 @@ const dailyAccountValueOutputSchema = z.object({
 
 const listInputSchema = z
   .object({
-    employeeId: z.string().uuid().optional(),
-    accountId: z.string().uuid().optional(),
+    employeeId: z.string().optional(),
+    accountId: z.string().optional(),
     fromDate: z.string().date().optional(), // YYYY-MM-DD
     toDate: z.string().date().optional(), // YYYY-MM-DD
     source: z.enum(["net_time", "capped_time", "surcharge"]).optional(),

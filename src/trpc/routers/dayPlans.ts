@@ -59,8 +59,8 @@ const CALCULATION_TYPES = ["fixed", "per_minute", "percentage"] as const
 // --- Output Schemas ---
 
 const dayPlanBreakOutputSchema = z.object({
-  id: z.string().uuid(),
-  dayPlanId: z.string().uuid(),
+  id: z.string(),
+  dayPlanId: z.string(),
   breakType: z.string(),
   startTime: z.number().nullable(),
   endTime: z.number().nullable(),
@@ -75,9 +75,9 @@ const dayPlanBreakOutputSchema = z.object({
 })
 
 const dayPlanBonusOutputSchema = z.object({
-  id: z.string().uuid(),
-  dayPlanId: z.string().uuid(),
-  accountId: z.string().uuid(),
+  id: z.string(),
+  dayPlanId: z.string(),
+  accountId: z.string(),
   timeFrom: z.number(),
   timeTo: z.number(),
   calculationType: z.string(),
@@ -90,8 +90,8 @@ const dayPlanBonusOutputSchema = z.object({
 })
 
 const dayPlanOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   code: z.string(),
   name: z.string(),
   description: z.string().nullable(),
@@ -129,14 +129,14 @@ const dayPlanOutputSchema = z.object({
   shiftDetectArriveTo: z.number().nullable(),
   shiftDetectDepartFrom: z.number().nullable(),
   shiftDetectDepartTo: z.number().nullable(),
-  shiftAltPlan1: z.string().uuid().nullable(),
-  shiftAltPlan2: z.string().uuid().nullable(),
-  shiftAltPlan3: z.string().uuid().nullable(),
-  shiftAltPlan4: z.string().uuid().nullable(),
-  shiftAltPlan5: z.string().uuid().nullable(),
-  shiftAltPlan6: z.string().uuid().nullable(),
-  netAccountId: z.string().uuid().nullable(),
-  capAccountId: z.string().uuid().nullable(),
+  shiftAltPlan1: z.string().nullable(),
+  shiftAltPlan2: z.string().nullable(),
+  shiftAltPlan3: z.string().nullable(),
+  shiftAltPlan4: z.string().nullable(),
+  shiftAltPlan5: z.string().nullable(),
+  shiftAltPlan6: z.string().nullable(),
+  netAccountId: z.string().nullable(),
+  capAccountId: z.string().nullable(),
   isActive: z.boolean(),
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -186,18 +186,18 @@ const createDayPlanInputSchema = z.object({
   shiftDetectArriveTo: z.number().int().optional(),
   shiftDetectDepartFrom: z.number().int().optional(),
   shiftDetectDepartTo: z.number().int().optional(),
-  shiftAltPlan1: z.string().uuid().optional(),
-  shiftAltPlan2: z.string().uuid().optional(),
-  shiftAltPlan3: z.string().uuid().optional(),
-  shiftAltPlan4: z.string().uuid().optional(),
-  shiftAltPlan5: z.string().uuid().optional(),
-  shiftAltPlan6: z.string().uuid().optional(),
-  netAccountId: z.string().uuid().optional(),
-  capAccountId: z.string().uuid().optional(),
+  shiftAltPlan1: z.string().optional(),
+  shiftAltPlan2: z.string().optional(),
+  shiftAltPlan3: z.string().optional(),
+  shiftAltPlan4: z.string().optional(),
+  shiftAltPlan5: z.string().optional(),
+  shiftAltPlan6: z.string().optional(),
+  netAccountId: z.string().optional(),
+  capAccountId: z.string().optional(),
 })
 
 const updateDayPlanInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   code: z.string().min(1).optional(),
   name: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
@@ -235,25 +235,25 @@ const updateDayPlanInputSchema = z.object({
   shiftDetectArriveTo: z.number().int().nullable().optional(),
   shiftDetectDepartFrom: z.number().int().nullable().optional(),
   shiftDetectDepartTo: z.number().int().nullable().optional(),
-  shiftAltPlan1: z.string().uuid().nullable().optional(),
-  shiftAltPlan2: z.string().uuid().nullable().optional(),
-  shiftAltPlan3: z.string().uuid().nullable().optional(),
-  shiftAltPlan4: z.string().uuid().nullable().optional(),
-  shiftAltPlan5: z.string().uuid().nullable().optional(),
-  shiftAltPlan6: z.string().uuid().nullable().optional(),
-  netAccountId: z.string().uuid().nullable().optional(),
-  capAccountId: z.string().uuid().nullable().optional(),
+  shiftAltPlan1: z.string().nullable().optional(),
+  shiftAltPlan2: z.string().nullable().optional(),
+  shiftAltPlan3: z.string().nullable().optional(),
+  shiftAltPlan4: z.string().nullable().optional(),
+  shiftAltPlan5: z.string().nullable().optional(),
+  shiftAltPlan6: z.string().nullable().optional(),
+  netAccountId: z.string().nullable().optional(),
+  capAccountId: z.string().nullable().optional(),
   isActive: z.boolean().optional(),
 })
 
 const copyDayPlanInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   newCode: z.string().min(1, "New code is required"),
   newName: z.string().min(1, "New name is required"),
 })
 
 const createBreakInputSchema = z.object({
-  dayPlanId: z.string().uuid(),
+  dayPlanId: z.string(),
   breakType: z.enum(BREAK_TYPES),
   startTime: z.number().int().optional(),
   endTime: z.number().int().optional(),
@@ -266,13 +266,13 @@ const createBreakInputSchema = z.object({
 })
 
 const deleteBreakInputSchema = z.object({
-  dayPlanId: z.string().uuid(),
-  breakId: z.string().uuid(),
+  dayPlanId: z.string(),
+  breakId: z.string(),
 })
 
 const createBonusInputSchema = z.object({
-  dayPlanId: z.string().uuid(),
-  accountId: z.string().uuid(),
+  dayPlanId: z.string(),
+  accountId: z.string(),
   timeFrom: z.number().int(),
   timeTo: z.number().int(),
   calculationType: z.enum(CALCULATION_TYPES),
@@ -283,8 +283,8 @@ const createBonusInputSchema = z.object({
 })
 
 const deleteBonusInputSchema = z.object({
-  dayPlanId: z.string().uuid(),
-  bonusId: z.string().uuid(),
+  dayPlanId: z.string(),
+  bonusId: z.string(),
 })
 
 // --- Mapping Functions ---
@@ -439,7 +439,7 @@ export const dayPlansRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(DAY_PLANS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(dayPlanOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -519,7 +519,7 @@ export const dayPlansRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(DAY_PLANS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

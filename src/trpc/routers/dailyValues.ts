@@ -36,20 +36,20 @@ const TIME_TRACKING_APPROVE = permissionIdByKey("time_tracking.approve")!
 
 const employeeSummarySchema = z
   .object({
-    id: z.string().uuid(),
+    id: z.string(),
     firstName: z.string(),
     lastName: z.string(),
     personnelNumber: z.string(),
     isActive: z.boolean(),
-    departmentId: z.string().uuid().nullable(),
-    tariffId: z.string().uuid().nullable(),
+    departmentId: z.string().nullable(),
+    tariffId: z.string().nullable(),
   })
   .nullable()
 
 const dailyValueOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  employeeId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
+  employeeId: z.string(),
   valueDate: z.date(),
   status: z.string(),
   grossTime: z.number().int(),
@@ -75,7 +75,7 @@ const dailyValueOutputSchema = z.object({
 // --- Input Schemas ---
 
 const listInputSchema = z.object({
-  employeeId: z.string().uuid(),
+  employeeId: z.string(),
   year: z.number().int().min(2000).max(2100),
   month: z.number().int().min(1).max(12),
 })
@@ -84,8 +84,8 @@ const listAllInputSchema = z
   .object({
     page: z.number().int().positive().optional().default(1),
     pageSize: z.number().int().min(1).max(100).optional().default(50),
-    employeeId: z.string().uuid().optional(),
-    departmentId: z.string().uuid().optional(),
+    employeeId: z.string().optional(),
+    departmentId: z.string().optional(),
     fromDate: z.string().date().optional(), // YYYY-MM-DD
     toDate: z.string().date().optional(), // YYYY-MM-DD
     status: z
@@ -96,7 +96,7 @@ const listAllInputSchema = z
   .optional()
 
 const approveInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
 })
 
 // --- Helper Functions ---
@@ -237,6 +237,72 @@ export const dailyValuesRouter = createTRPCRouter({
           ),
           total: result.total,
         }
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  /**
+   * dailyValues.getById -- Returns a single daily value by ID.
+   *
+   * Tenant-scoped. Data scope enforced after fetch.
+   *
+   * Replaces: GET /daily-values/{id}
+   *
+   * Requires: time_tracking.view_own or time_tracking.view_all
+   */
+  getById: tenantProcedure
+    .use(requirePermission(TIME_TRACKING_VIEW_OWN, TIME_TRACKING_VIEW_ALL))
+    .use(applyDataScope())
+    .input(z.object({ id: z.string() }))
+    .output(dailyValueOutputSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const dv = await dailyValueService.getById(
+          ctx.prisma,
+          ctx.tenantId!,
+          dataScope,
+          input.id
+        )
+        return mapDailyValueToOutput(dv as unknown as Record<string, unknown>)
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  /**
+   * dailyValues.recalculate -- Recalculates daily values for a date range.
+   *
+   * Optionally targets a single employee. If no employeeId is provided,
+   * recalculates for all active employees in the tenant.
+   *
+   * Replaces: POST /daily-values/recalculate
+   *
+   * Requires: booking_overview.calculate_day permission
+   */
+  recalculate: tenantProcedure
+    .use(requirePermission(permissionIdByKey("booking_overview.calculate_day")!))
+    .input(
+      z.object({
+        from: z.string().date(), // YYYY-MM-DD
+        to: z.string().date(), // YYYY-MM-DD
+        employeeId: z.string().optional(),
+      })
+    )
+    .output(
+      z.object({
+        message: z.string(),
+        affectedDays: z.number().int(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await dailyValueService.recalculate(
+          ctx.prisma,
+          ctx.tenantId!,
+          input
+        )
       } catch (err) {
         handleServiceError(err)
       }

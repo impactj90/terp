@@ -64,7 +64,7 @@ describe("vehicleRoutes.list", () => {
     const result = await caller.list()
 
     expect(result.data).toHaveLength(1)
-    expect(result.data[0].id).toBe(ROUTE_ID)
+    expect(result.data[0]!.id).toBe(ROUTE_ID)
     expect(mockPrisma.vehicleRoute.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { tenantId: TENANT_ID },
@@ -84,8 +84,8 @@ describe("vehicleRoutes.list", () => {
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.list()
 
-    expect(result.data[0].distanceKm).toBe(42.5)
-    expect(typeof result.data[0].distanceKm).toBe("number")
+    expect(result.data[0]!.distanceKm).toBe(42.5)
+    expect(typeof result.data[0]!.distanceKm).toBe("number")
   })
 
   it("handles null distanceKm", async () => {
@@ -98,7 +98,7 @@ describe("vehicleRoutes.list", () => {
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.list()
 
-    expect(result.data[0].distanceKm).toBeNull()
+    expect(result.data[0]!.distanceKm).toBeNull()
   })
 
   it("orders by sortOrder then code", async () => {

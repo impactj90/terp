@@ -1,9 +1,9 @@
-import type { BookingInput, CalculationInput, DayPlanInput, ToleranceConfig, RoundingConfig, BreakConfig } from "../types"
+import { describe, it, expect } from "vitest"
+import type { BookingInput, CalculationInput, DayPlanInput } from "../types"
 import { calculate } from "../calculator"
 import {
   ERR_NO_BOOKINGS,
   ERR_MISSING_GO,
-  ERR_MISSING_COME,
   ERR_LATE_COME,
   ERR_EARLY_COME,
   ERR_MISSED_CORE_START,

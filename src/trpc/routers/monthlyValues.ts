@@ -52,7 +52,7 @@ const TIME_TRACKING_VIEW_ALL = permissionIdByKey("time_tracking.view_all")!
 // --- Output Schemas ---
 
 const monthSummaryOutputSchema = z.object({
-  employeeId: z.string().uuid(),
+  employeeId: z.string(),
   year: z.number().int(),
   month: z.number().int(),
   totalGrossTime: z.number().int(),
@@ -72,27 +72,27 @@ const monthSummaryOutputSchema = z.object({
   daysWithErrors: z.number().int(),
   isClosed: z.boolean(),
   closedAt: z.date().nullable(),
-  closedBy: z.string().uuid().nullable(),
+  closedBy: z.string().nullable(),
   reopenedAt: z.date().nullable(),
-  reopenedBy: z.string().uuid().nullable(),
+  reopenedBy: z.string().nullable(),
   warnings: z.array(z.string()),
 })
 
 const employeeSummarySchema = z
   .object({
-    id: z.string().uuid(),
+    id: z.string(),
     firstName: z.string(),
     lastName: z.string(),
     personnelNumber: z.string(),
     isActive: z.boolean(),
-    departmentId: z.string().uuid().nullable(),
+    departmentId: z.string().nullable(),
   })
   .nullable()
 
 const monthlyValueOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  employeeId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
+  employeeId: z.string(),
   year: z.number().int(),
   month: z.number().int(),
   status: z.string(), // "calculated" or "closed"
@@ -113,9 +113,9 @@ const monthlyValueOutputSchema = z.object({
   workDays: z.number().int(),
   daysWithErrors: z.number().int(),
   closedAt: z.date().nullable(),
-  closedBy: z.string().uuid().nullable(),
+  closedBy: z.string().nullable(),
   reopenedAt: z.date().nullable(),
-  reopenedBy: z.string().uuid().nullable(),
+  reopenedBy: z.string().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
   employee: employeeSummarySchema.optional(),
@@ -125,14 +125,14 @@ const monthlyValueOutputSchema = z.object({
 
 // forEmployee
 const forEmployeeInputSchema = z.object({
-  employeeId: z.string().uuid(),
+  employeeId: z.string(),
   year: z.number().int().min(2000).max(2100),
   month: z.number().int().min(1).max(12),
 })
 
 // yearOverview
 const yearOverviewInputSchema = z.object({
-  employeeId: z.string().uuid(),
+  employeeId: z.string(),
   year: z.number().int().min(2000).max(2100),
 })
 
@@ -143,15 +143,15 @@ const listInputSchema = z.object({
   year: z.number().int().min(2000).max(2100),
   month: z.number().int().min(1).max(12),
   status: z.enum(["open", "calculated", "closed"]).optional(),
-  departmentId: z.string().uuid().optional(),
-  employeeId: z.string().uuid().optional(),
+  departmentId: z.string().optional(),
+  employeeId: z.string().optional(),
 })
 
 // close/reopen -- accept either { id } or { employeeId, year, month }
 const closeReopenInputSchema = z.union([
-  z.object({ id: z.string().uuid() }),
+  z.object({ id: z.string() }),
   z.object({
-    employeeId: z.string().uuid(),
+    employeeId: z.string(),
     year: z.number().int(),
     month: z.number().int(),
   }),
@@ -159,15 +159,15 @@ const closeReopenInputSchema = z.union([
 
 // getById
 const byIdInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
 })
 
 // closeBatch -- match Go handler behavior (used by frontend batch-close-dialog.tsx)
 const closeBatchInputSchema = z.object({
   year: z.number().int().min(2000).max(2100),
   month: z.number().int().min(1).max(12),
-  employeeIds: z.array(z.string().uuid()).optional(),
-  departmentId: z.string().uuid().optional(),
+  employeeIds: z.array(z.string()).optional(),
+  departmentId: z.string().optional(),
   recalculate: z.boolean().optional().default(true),
 })
 
@@ -175,7 +175,7 @@ const closeBatchInputSchema = z.object({
 const recalculateInputSchema = z.object({
   year: z.number().int().min(2000).max(2100),
   month: z.number().int().min(1).max(12),
-  employeeId: z.string().uuid().optional(),
+  employeeId: z.string().optional(),
 })
 
 // --- Data Scope Helpers ---
@@ -566,7 +566,7 @@ export const monthlyValuesRouter = createTRPCRouter({
         errorCount: z.number().int(),
         errors: z.array(
           z.object({
-            employeeId: z.string().uuid(),
+            employeeId: z.string(),
             reason: z.string(),
           })
         ),

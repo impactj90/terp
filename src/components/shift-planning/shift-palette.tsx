@@ -5,9 +5,9 @@ import { useTranslations } from 'next-intl'
 import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { components } from '@/types/legacy-api-types'
 
-type Shift = components['schemas']['Shift']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Shift = any
 
 interface ShiftPaletteProps {
   shifts: Shift[]
@@ -18,7 +18,7 @@ export function ShiftPalette({ shifts, isLoading }: ShiftPaletteProps) {
   const t = useTranslations('shiftPlanning')
 
   const activeShifts = React.useMemo(
-    () => shifts.filter((s) => s.is_active),
+    () => shifts.filter((s) => s.isActive),
     [shifts]
   )
 

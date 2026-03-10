@@ -67,6 +67,54 @@ function checkDataScope(
 
 // --- Service Functions ---
 
+export async function getById(
+  prisma: PrismaClient,
+  tenantId: string,
+  dataScope: DataScope,
+  id: string
+) {
+  const dv = await repo.findById(prisma, tenantId, id)
+  if (!dv) {
+    throw new DailyValueNotFoundError()
+  }
+  // Check data scope
+  checkDataScope(dataScope, dv as { employeeId: string; employee?: { departmentId: string | null } | null })
+  return dv
+}
+
+export async function recalculate(
+  prisma: PrismaClient,
+  tenantId: string,
+  input: { from: string; to: string; employeeId?: string }
+) {
+  const fromDate = new Date(input.from)
+  const toDate = new Date(input.to)
+
+  if (fromDate > toDate) {
+    throw new DailyValueValidationError("from must be before or equal to to")
+  }
+
+  const { RecalcService } = await import("./recalc")
+  const recalcService = new RecalcService(prisma as PrismaClient)
+
+  let result
+  if (input.employeeId) {
+    result = await recalcService.triggerRecalcRange(
+      tenantId,
+      input.employeeId,
+      fromDate,
+      toDate
+    )
+  } else {
+    result = await recalcService.triggerRecalcAll(tenantId, fromDate, toDate)
+  }
+
+  return {
+    message: "Recalculation started",
+    affectedDays: result.processedDays,
+  }
+}
+
 export async function list(
   prisma: PrismaClient,
   tenantId: string,

@@ -37,9 +37,27 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { components } from '@/types/legacy-api-types'
 
-type Account = components['schemas']['Account']
+type Account = {
+  id: string
+  tenantId: string | null
+  code: string
+  name: string
+  accountType: string
+  unit: string
+  isSystem: boolean
+  isActive: boolean
+  description: string | null
+  isPayrollRelevant: boolean
+  payrollCode: string | null
+  sortOrder: number
+  yearCarryover: boolean
+  accountGroupId: string | null
+  displayFormat: string
+  bonusFactor: number | null
+  createdAt: string
+  updatedAt: string
+}
 
 interface AccountDataTableProps {
   accounts: Account[]
@@ -102,12 +120,10 @@ export function AccountDataTable({
       </TableHeader>
       <TableBody>
         {accounts.map((account) => {
-          const typeKey = (account as Record<string, unknown>).account_type as string || 'tracking'
+          const typeKey = account.accountType || 'tracking'
           const typeInfo = accountTypeConfig[typeKey] ?? { labelKey: typeKey, icon: BarChart3, variant: 'secondary' as const }
           const TypeIcon = typeInfo.icon
-          // unit field comes from runtime but may not be in TS types
-          const unit = (account as Record<string, unknown>).unit as string | undefined
-          const usageCount = (account as Record<string, unknown>).usage_count as number | undefined
+          const unit = account.unit
 
           return (
             <TableRow
@@ -133,22 +149,22 @@ export function AccountDataTable({
                 {unit ? (unitLabelKeys[unit] ? t(unitLabelKeys[unit] as Parameters<typeof t>[0]) : unit) : '-'}
               </TableCell>
               <TableCell className="text-sm text-muted-foreground">
-                {usageCount ?? 0}
+                -
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
-                  {account.is_system && (
+                  {account.isSystem && (
                     <Badge variant="outline" className="text-xs">
                       <Lock className="mr-1 h-3 w-3" />
                       {t('statusSystem')}
                     </Badge>
                   )}
-                  {!account.is_active && (
+                  {!account.isActive && (
                     <Badge variant="secondary" className="text-xs">
                       {t('statusInactive')}
                     </Badge>
                   )}
-                  {account.is_active && !account.is_system && (
+                  {account.isActive && !account.isSystem && (
                     <Badge variant="default" className="text-xs">
                       {t('statusActive')}
                     </Badge>
@@ -156,9 +172,9 @@ export function AccountDataTable({
                   {onToggleActive && (
                     <div onClick={(event) => event.stopPropagation()}>
                       <Switch
-                        checked={account.is_active}
+                        checked={account.isActive}
                         onCheckedChange={(checked) => onToggleActive(account, checked)}
-                        disabled={account.is_system}
+                        disabled={account.isSystem}
                       />
                     </div>
                   )}
@@ -177,7 +193,7 @@ export function AccountDataTable({
                       <Eye className="mr-2 h-4 w-4" />
                       {t('viewDetails')}
                     </DropdownMenuItem>
-                    {account.is_system ? (
+                    {account.isSystem ? (
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -198,7 +214,7 @@ export function AccountDataTable({
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuSeparator />
-                    {account.is_system ? (
+                    {account.isSystem ? (
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>

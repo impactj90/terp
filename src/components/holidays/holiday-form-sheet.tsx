@@ -134,24 +134,20 @@ export function HolidayFormSheet({
     try {
       if (isEdit && holiday) {
         await updateMutation.mutateAsync({
-          path: { id: holiday.id },
-          body: {
-            holiday_date: formatDate(form.holidayDate!),
-            name: form.name.trim(),
-            category: form.category as 1 | 2 | 3,
-            applies_to_all: form.appliesToAll,
-            department_id: form.appliesToAll ? undefined : form.departmentId || undefined,
-          },
+          id: holiday.id,
+          holidayDate: formatDate(form.holidayDate!),
+          name: form.name.trim(),
+          holidayCategory: form.category as 1 | 2 | 3,
+          appliesToAll: form.appliesToAll,
+          departmentId: form.appliesToAll ? undefined : form.departmentId || undefined,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            holiday_date: formatDate(form.holidayDate!),
-            name: form.name.trim(),
-            category: form.category as 1 | 2 | 3,
-            applies_to_all: form.appliesToAll,
-            department_id: form.appliesToAll ? undefined : form.departmentId || undefined,
-          },
+          holidayDate: formatDate(form.holidayDate!),
+          name: form.name.trim(),
+          holidayCategory: form.category as 1 | 2 | 3,
+          appliesToAll: form.appliesToAll,
+          departmentId: form.appliesToAll ? undefined : form.departmentId || undefined,
         })
       }
 

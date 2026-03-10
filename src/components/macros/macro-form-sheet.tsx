@@ -121,23 +121,25 @@ export function MacroFormSheet({
       return
     }
 
-    const payload = {
-      name: form.name.trim(),
-      description: form.description.trim() || undefined,
-      macro_type: form.macroType,
-      action_type: form.actionType,
-      action_params: parsedParams,
-      is_active: form.isActive,
-    }
-
     try {
       if (isEdit && macro) {
         await updateMutation.mutateAsync({
-          path: { id: macro.id },
-          body: payload,
+          id: macro.id,
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          macroType: form.macroType,
+          actionType: form.actionType,
+          actionParams: parsedParams,
+          isActive: form.isActive,
         })
       } else {
-        await createMutation.mutateAsync({ body: payload })
+        await createMutation.mutateAsync({
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          macroType: form.macroType,
+          actionType: form.actionType,
+          actionParams: parsedParams,
+        })
       }
       onSuccess?.()
       onOpenChange(false)

@@ -14,10 +14,29 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import type { components } from '@/types/legacy-api-types'
-
-type ContactType = components['schemas']['ContactType']
-type ContactKind = components['schemas']['ContactKind']
+type ContactType = {
+  id: string
+  tenantId: string
+  code: string
+  name: string
+  dataType: string
+  description: string | null
+  isActive: boolean
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
+type ContactKind = {
+  id: string
+  tenantId: string
+  contactTypeId: string
+  code: string
+  label: string
+  isActive: boolean
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
 
 interface ContactKindListPanelProps {
   contactKinds: ContactKind[]
@@ -76,15 +95,15 @@ export function ContactKindListPanel({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-sm truncate">{kind.label}</span>
-                    <Badge variant={kind.is_active ? 'default' : 'secondary'} className="shrink-0">
-                      {kind.is_active ? t('statusActive') : t('statusInactive')}
+                    <Badge variant={kind.isActive ? 'default' : 'secondary'} className="shrink-0">
+                      {kind.isActive ? t('statusActive') : t('statusInactive')}
                     </Badge>
                   </div>
                   <div className="flex items-center gap-2 mt-1">
                     <span className="font-mono text-xs text-muted-foreground">{kind.code}</span>
-                    {kind.sort_order !== undefined && kind.sort_order !== null && (
+                    {kind.sortOrder !== undefined && kind.sortOrder !== null && (
                       <span className="text-xs text-muted-foreground">
-                        #{kind.sort_order}
+                        #{kind.sortOrder}
                       </span>
                     )}
                   </div>

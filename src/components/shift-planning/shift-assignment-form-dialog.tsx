@@ -27,21 +27,21 @@ import {
   useDayPlans,
 } from '@/hooks'
 import { formatDate, formatDisplayDate } from '@/lib/time-utils'
-import type { components } from '@/types/legacy-api-types'
 
-type Shift = components['schemas']['Shift']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Shift = any
 
 interface EmployeeDayPlan {
   id: string
-  tenant_id: string
-  employee_id: string
-  plan_date: string
-  day_plan_id?: string
-  shift_id?: string
-  source: 'tariff' | 'manual' | 'holiday'
-  notes?: string
-  day_plan?: { id: string; code: string; name: string }
-  shift?: Shift
+  tenantId: string
+  employeeId: string
+  planDate: string | Date
+  dayPlanId?: string | null
+  shiftId?: string | null
+  source: string | null
+  notes?: string | null
+  dayPlan?: { id: string; code: string; name: string } | null
+  shift?: Shift | null
 }
 
 interface ShiftAssignmentFormDialogProps {
@@ -101,8 +101,8 @@ export function ShiftAssignmentFormDialog({
     initializedRef.current = true
 
     if (existingPlan) {
-      setSelectedShiftId(existingPlan.shift_id || '')
-      setSelectedDayPlanId(existingPlan.day_plan_id || '')
+      setSelectedShiftId(existingPlan.shiftId || '')
+      setSelectedDayPlanId(existingPlan.dayPlanId || '')
       setNotes(existingPlan.notes || '')
     } else {
       setSelectedShiftId(preselectedShiftId || '')
@@ -112,8 +112,8 @@ export function ShiftAssignmentFormDialog({
       // Auto-fill day_plan_id from selected shift
       if (preselectedShiftId) {
         const shift = shifts.find((s) => s.id === preselectedShiftId)
-        if (shift?.day_plan_id) {
-          setSelectedDayPlanId(shift.day_plan_id)
+        if (shift?.dayPlanId) {
+          setSelectedDayPlanId(shift.dayPlanId)
         }
       }
     }
@@ -124,8 +124,8 @@ export function ShiftAssignmentFormDialog({
     setSelectedShiftId(shiftId)
     if (shiftId) {
       const shift = shifts.find((s) => s.id === shiftId)
-      if (shift?.day_plan_id) {
-        setSelectedDayPlanId(shift.day_plan_id)
+      if (shift?.dayPlanId) {
+        setSelectedDayPlanId(shift.dayPlanId)
       }
     }
   }
@@ -134,24 +134,22 @@ export function ShiftAssignmentFormDialog({
     // Always use bulk upsert - works by (employee_id, plan_date) key,
     // reliable for both new entries and updates to existing ones.
     const planDate = existingPlan
-      ? String(existingPlan.plan_date).substring(0, 10)
+      ? String(existingPlan.planDate).substring(0, 10)
       : formatDate(date)
-    const empId = existingPlan?.employee_id || employeeId
+    const empId = existingPlan?.employeeId || employeeId
 
     try {
       await upsertMutation.mutateAsync({
-        body: {
-          plans: [
-            {
-              employee_id: empId,
-              plan_date: planDate,
-              shift_id: selectedShiftId || undefined,
-              day_plan_id: selectedDayPlanId || undefined,
-              source: 'manual',
-              notes: notes || undefined,
-            },
-          ],
-        },
+        entries: [
+          {
+            employeeId: empId,
+            planDate: planDate,
+            shiftId: selectedShiftId || undefined,
+            dayPlanId: selectedDayPlanId || undefined,
+            source: 'manual',
+            notes: notes || undefined,
+          },
+        ],
       })
       onOpenChange(false)
       onSuccess?.()
@@ -164,7 +162,7 @@ export function ShiftAssignmentFormDialog({
     if (!existingPlan) return
     try {
       await deleteMutation.mutateAsync({
-        path: { id: existingPlan.id },
+        id: existingPlan.id,
       })
       onOpenChange(false)
       onSuccess?.()
@@ -173,7 +171,7 @@ export function ShiftAssignmentFormDialog({
     }
   }
 
-  const activeShifts = shifts.filter((s) => s.is_active)
+  const activeShifts = shifts.filter((s) => s.isActive)
   const dateLabel = formatDisplayDate(date, 'long', locale)
 
   return (

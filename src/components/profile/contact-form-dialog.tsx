@@ -34,10 +34,10 @@ interface ContactFormDialogProps {
 }
 
 interface FormData {
-  contact_type: ContactType
+  contactType: ContactType
   value: string
   label: string
-  is_primary: boolean
+  isPrimary: boolean
 }
 
 const contactTypeLabelKeys: Record<ContactType, string> = {
@@ -60,10 +60,10 @@ export function ContactFormDialog({
   const tc = useTranslations('common')
 
   const [formData, setFormData] = useState<FormData>({
-    contact_type: 'emergency',
+    contactType: 'emergency',
     value: '',
     label: '',
-    is_primary: false,
+    isPrimary: false,
   })
   const [error, setError] = useState<string | null>(null)
 
@@ -73,10 +73,10 @@ export function ContactFormDialog({
   useEffect(() => {
     if (open) {
       setFormData({
-        contact_type: 'emergency',
+        contactType: 'emergency',
         value: '',
         label: '',
-        is_primary: false,
+        isPrimary: false,
       })
       setError(null)
     }
@@ -104,13 +104,11 @@ export function ContactFormDialog({
 
     try {
       await createContact.mutateAsync({
-        path: { id: employeeId },
-        body: {
-          contact_type: formData.contact_type,
-          value: formData.value.trim(),
-          label: formData.label.trim() || undefined,
-          is_primary: formData.is_primary,
-        },
+        employeeId,
+        contactType: formData.contactType,
+        value: formData.value.trim(),
+        label: formData.label.trim() || undefined,
+        isPrimary: formData.isPrimary,
       })
       onOpenChange(false)
       onSuccess?.()
@@ -140,9 +138,9 @@ export function ContactFormDialog({
           <div className="space-y-2">
             <Label htmlFor="contactType">{t('contactType')}</Label>
             <Select
-              value={formData.contact_type}
+              value={formData.contactType}
               onValueChange={(value: ContactType) =>
-                setFormData((prev) => ({ ...prev, contact_type: value }))
+                setFormData((prev) => ({ ...prev, contactType: value }))
               }
             >
               <SelectTrigger id="contactType">
@@ -167,7 +165,7 @@ export function ContactFormDialog({
                 setFormData((prev) => ({ ...prev, value: e.target.value }))
               }
               placeholder={
-                formData.contact_type === 'email'
+                formData.contactType === 'email'
                   ? t('emailPlaceholder')
                   : t('phonePlaceholder')
               }
@@ -193,9 +191,9 @@ export function ContactFormDialog({
             <input
               type="checkbox"
               id="isPrimary"
-              checked={formData.is_primary}
+              checked={formData.isPrimary}
               onChange={(e) =>
-                setFormData((prev) => ({ ...prev, is_primary: e.target.checked }))
+                setFormData((prev) => ({ ...prev, isPrimary: e.target.checked }))
               }
               className="h-4 w-4 rounded border-gray-300"
             />

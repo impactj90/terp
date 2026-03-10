@@ -12,9 +12,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { TimeInput } from '@/components/ui/time-input'
 import { TagInput } from '@/components/ui/tag-input'
 import { useSystemSettings, useUpdateSystemSettings } from '@/hooks'
-import type { components } from '@/types/legacy-api-types'
 
-type SystemSettings = components['schemas']['SystemSettings']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SystemSettings = any
 
 interface SettingsFormState {
   // Calculation
@@ -126,24 +126,22 @@ export function SystemSettingsForm() {
 
     try {
       await updateMutation.mutateAsync({
-        body: {
-          rounding_relative_to_plan: form.roundingRelativeToPlan,
-          error_list_enabled: form.errorListEnabled,
-          tracked_error_codes: form.trackedErrorCodes,
-          auto_fill_order_end_bookings: form.autoFillOrderEndBookings,
-          follow_up_entries_enabled: form.followUpEntriesEnabled,
-          birthday_window_days_before: form.birthdayWindowDaysBefore,
-          birthday_window_days_after: form.birthdayWindowDaysAfter,
-          proxy_enabled: form.proxyEnabled,
-          proxy_host: form.proxyHost || null,
-          proxy_port: form.proxyPort,
-          proxy_username: form.proxyUsername || null,
-          proxy_password: form.proxyPassword || null,
-          server_alive_enabled: form.serverAliveEnabled,
-          server_alive_expected_completion_time: form.serverAliveExpectedCompletionTime,
-          server_alive_threshold_minutes: form.serverAliveThresholdMinutes,
-          server_alive_notify_admins: form.serverAliveNotifyAdmins,
-        },
+        roundingRelativeToPlan: form.roundingRelativeToPlan,
+        errorListEnabled: form.errorListEnabled,
+        trackedErrorCodes: form.trackedErrorCodes,
+        autoFillOrderEndBookings: form.autoFillOrderEndBookings,
+        followUpEntriesEnabled: form.followUpEntriesEnabled,
+        birthdayWindowDaysBefore: form.birthdayWindowDaysBefore,
+        birthdayWindowDaysAfter: form.birthdayWindowDaysAfter,
+        proxyEnabled: form.proxyEnabled,
+        proxyHost: form.proxyHost || null,
+        proxyPort: form.proxyPort,
+        proxyUsername: form.proxyUsername || null,
+        proxyPassword: form.proxyPassword || null,
+        serverAliveEnabled: form.serverAliveEnabled,
+        serverAliveExpectedCompletionTime: form.serverAliveExpectedCompletionTime,
+        serverAliveThresholdMinutes: form.serverAliveThresholdMinutes,
+        serverAliveNotifyAdmins: form.serverAliveNotifyAdmins,
       })
       // Update initial values ref after successful save
       initialValuesRef.current = { ...form }

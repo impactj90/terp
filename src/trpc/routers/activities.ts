@@ -26,8 +26,8 @@ const ACTIVITIES_MANAGE = permissionIdByKey("activities.manage")!
 // --- Output Schemas ---
 
 const activityOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   code: z.string(),
   name: z.string(),
   description: z.string().nullable(),
@@ -47,7 +47,7 @@ const createActivityInputSchema = z.object({
 })
 
 const updateActivityInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   code: z.string().min(1).optional(),
   name: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
@@ -127,7 +127,7 @@ export const activitiesRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(ACTIVITIES_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(activityOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -205,7 +205,7 @@ export const activitiesRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(ACTIVITIES_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

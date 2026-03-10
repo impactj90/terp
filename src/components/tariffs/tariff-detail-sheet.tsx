@@ -39,18 +39,17 @@ import {
 import { DurationInput } from '@/components/ui/duration-input'
 import { useTariff, useCreateTariffBreak, useDeleteTariffBreak } from '@/hooks'
 import { formatDate, formatDuration, parseISODate } from '@/lib/time-utils'
-import type { components } from '@/types/legacy-api-types'
 
-type Tariff = components['schemas']['Tariff']
-type TariffBreak = components['schemas']['TariffBreak']
+type TariffData = NonNullable<ReturnType<typeof useTariff>['data']>
+type TariffBreakData = NonNullable<TariffData['breaks']>[number]
 
 interface TariffDetailSheetProps {
   tariffId: string | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  onEdit: (tariff: Tariff) => void
-  onDelete: (tariff: Tariff) => void
-  onCopy: (tariff: Tariff) => void
+  onEdit: (tariff: TariffData) => void
+  onDelete: (tariff: TariffData) => void
+  onCopy: (tariff: TariffData) => void
 }
 
 const BREAK_TYPE_LABEL_KEYS = {
@@ -119,13 +118,11 @@ export function TariffDetailSheet({
     if (!tariff) return
     try {
       await createBreakMutation.mutateAsync({
-        path: { id: tariff.id },
-        body: {
-          break_type: newBreak.breakType,
-          after_work_minutes: newBreak.breakType === 'minimum' ? newBreak.afterWorkMinutes : undefined,
-          duration: newBreak.duration,
-          is_paid: newBreak.isPaid,
-        },
+        tariffId: tariff.id,
+        breakType: newBreak.breakType,
+        afterWorkMinutes: newBreak.breakType === 'minimum' ? newBreak.afterWorkMinutes : undefined,
+        duration: newBreak.duration,
+        isPaid: newBreak.isPaid,
       })
       setShowAddBreak(false)
       setNewBreak({ breakType: 'minimum', afterWorkMinutes: 300, duration: 30, isPaid: false })
@@ -135,11 +132,12 @@ export function TariffDetailSheet({
     }
   }
 
-  const handleDeleteBreak = async (breakItem: TariffBreak) => {
+  const handleDeleteBreak = async (breakItem: TariffBreakData) => {
     if (!tariff) return
     try {
       await deleteBreakMutation.mutateAsync({
-        path: { id: tariff.id, breakId: breakItem.id },
+        tariffId: tariff.id,
+        breakId: breakItem.id,
       })
       refetch()
     } catch {
@@ -159,8 +157,8 @@ export function TariffDetailSheet({
                 <div>
                   <SheetTitle className="flex items-center gap-2">
                     {tariff.name}
-                    <Badge variant={tariff.is_active ? 'default' : 'secondary'}>
-                      {tariff.is_active ? t('statusActive') : t('statusInactive')}
+                    <Badge variant={tariff.isActive ? 'default' : 'secondary'}>
+                      {tariff.isActive ? t('statusActive') : t('statusInactive')}
                     </Badge>
                   </SheetTitle>
                   <SheetDescription className="mt-1">
@@ -183,18 +181,18 @@ export function TariffDetailSheet({
                 <Section title={t('tabSchedule')} icon={Repeat}>
                   <DetailRow
                     label={t('fieldRhythmType')}
-                    value={t((RHYTHM_TYPE_LABEL_KEYS[tariff.rhythm_type as keyof typeof RHYTHM_TYPE_LABEL_KEYS] ?? 'rhythmWeekly') as Parameters<typeof t>[0])}
+                    value={t((RHYTHM_TYPE_LABEL_KEYS[tariff.rhythmType as keyof typeof RHYTHM_TYPE_LABEL_KEYS] ?? 'rhythmWeekly') as Parameters<typeof t>[0])}
                   />
 
                   {/* Weekly: Show single week plan */}
-                  {(tariff.rhythm_type === 'weekly' || !tariff.rhythm_type) && (
+                  {(tariff.rhythmType === 'weekly' || !tariff.rhythmType) && (
                     <DetailRow
                       label={t('fieldWeekPlan')}
                       value={
-                        tariff.week_plan ? (
+                        tariff.weekPlan ? (
                           <span>
-                            <span className="font-mono">{tariff.week_plan.code}</span> -{' '}
-                            {tariff.week_plan.name}
+                            <span className="font-mono">{tariff.weekPlan.code}</span> -{' '}
+                            {tariff.weekPlan.name}
                           </span>
                         ) : (
                           <span className="text-muted-foreground">{t('none')}</span>
@@ -204,17 +202,17 @@ export function TariffDetailSheet({
                   )}
 
                   {/* Rolling Weekly: Show week plan list */}
-                  {tariff.rhythm_type === 'rolling_weekly' &&
-                    tariff.tariff_week_plans &&
-                    tariff.tariff_week_plans.length > 0 && (
+                  {tariff.rhythmType === 'rolling_weekly' &&
+                    tariff.tariffWeekPlans &&
+                    tariff.tariffWeekPlans.length > 0 && (
                       <div className="space-y-2 mt-2">
                         <span className="text-sm text-muted-foreground">{t('weekPlansInOrder')}:</span>
                         <div className="space-y-1 ml-2">
-                          {tariff.tariff_week_plans.map((twp, idx) => (
+                          {tariff.tariffWeekPlans.map((twp, idx) => (
                             <div key={twp.id} className="text-sm">
                               <span className="font-medium">{t('weekNumber', { number: idx + 1 })}:</span>{' '}
-                              <span className="font-mono">{twp.week_plan?.code}</span> -{' '}
-                              {twp.week_plan?.name}
+                              <span className="font-mono">{twp.weekPlan?.code}</span> -{' '}
+                              {twp.weekPlan?.name}
                             </div>
                           ))}
                         </div>
@@ -222,21 +220,21 @@ export function TariffDetailSheet({
                     )}
 
                   {/* X-Days: Show cycle info and day plans */}
-                  {tariff.rhythm_type === 'x_days' && (
+                  {tariff.rhythmType === 'x_days' && (
                     <>
                       <DetailRow
                         label={t('detailCycleLength')}
-                        value={tariff.cycle_days ? t('daysValue', { count: tariff.cycle_days }) : '-'}
+                        value={tariff.cycleDays ? t('daysValue', { count: tariff.cycleDays }) : '-'}
                       />
-                      {tariff.tariff_day_plans && tariff.tariff_day_plans.length > 0 && (
+                      {tariff.tariffDayPlans && tariff.tariffDayPlans.length > 0 && (
                         <div className="space-y-2 mt-2">
                           <span className="text-sm text-muted-foreground">{t('dayPlanAssignments')}:</span>
                           <div className="grid grid-cols-2 gap-1 ml-2 text-sm">
-                            {tariff.tariff_day_plans.map((tdp) => (
+                            {tariff.tariffDayPlans.map((tdp) => (
                               <div key={tdp.id}>
-                                <span className="font-medium">{t('dayNumber', { number: tdp.day_position })}:</span>{' '}
-                                {tdp.day_plan ? (
-                                  <span>{tdp.day_plan.code}</span>
+                                <span className="font-medium">{t('dayNumber', { number: tdp.dayPosition })}:</span>{' '}
+                                {tdp.dayPlan ? (
+                                  <span>{tdp.dayPlan.code}</span>
                                 ) : (
                                   <span className="text-muted-foreground">{t('off')}</span>
                                 )}
@@ -249,12 +247,12 @@ export function TariffDetailSheet({
                   )}
 
                   {/* Rhythm Start Date */}
-                  {tariff.rhythm_type && tariff.rhythm_type !== 'weekly' && (
+                  {tariff.rhythmType && tariff.rhythmType !== 'weekly' && (
                     <DetailRow
                       label={t('fieldRhythmStartDate')}
                       value={
-                        tariff.rhythm_start_date
-                          ? formatDate(parseISODate(tariff.rhythm_start_date))
+                        tariff.rhythmStartDate
+                          ? formatDate(parseISODate(tariff.rhythmStartDate as unknown as string))
                           : t('notSet')
                       }
                     />
@@ -265,11 +263,11 @@ export function TariffDetailSheet({
                 <Section title={t('sectionValidityPeriod')} icon={Calendar}>
                   <DetailRow
                     label={t('columnValidFrom')}
-                    value={tariff.valid_from ? formatDate(parseISODate(tariff.valid_from)) : t('notSet')}
+                    value={tariff.validFrom ? formatDate(parseISODate(tariff.validFrom as unknown as string)) : t('notSet')}
                   />
                   <DetailRow
                     label={t('columnValidTo')}
-                    value={tariff.valid_to ? formatDate(parseISODate(tariff.valid_to)) : t('notSet')}
+                    value={tariff.validTo ? formatDate(parseISODate(tariff.validTo as unknown as string)) : t('notSet')}
                   />
                 </Section>
 
@@ -277,61 +275,61 @@ export function TariffDetailSheet({
                 <Section title={t('tabVacation')} icon={Palmtree}>
                   <DetailRow
                     label={t('fieldAnnualVacationDays')}
-                    value={tariff.annual_vacation_days != null ? t('daysValue', { count: tariff.annual_vacation_days }) : '-'}
+                    value={tariff.annualVacationDays != null ? t('daysValue', { count: tariff.annualVacationDays }) : '-'}
                   />
                   <DetailRow
                     label={t('fieldWorkDaysPerWeek')}
-                    value={tariff.work_days_per_week != null ? t('daysValue', { count: tariff.work_days_per_week }) : '-'}
+                    value={tariff.workDaysPerWeek != null ? t('daysValue', { count: tariff.workDaysPerWeek }) : '-'}
                   />
                   <DetailRow
                     label={t('fieldVacationYearBasis')}
-                    value={t((VACATION_BASIS_LABEL_KEYS[tariff.vacation_basis as keyof typeof VACATION_BASIS_LABEL_KEYS] ?? 'vacationBasisCalendarYear') as Parameters<typeof t>[0])}
+                    value={t((VACATION_BASIS_LABEL_KEYS[tariff.vacationBasis as keyof typeof VACATION_BASIS_LABEL_KEYS] ?? 'vacationBasisCalendarYear') as Parameters<typeof t>[0])}
                   />
                 </Section>
 
                 {/* Target Hours */}
                 <Section title={t('tabTargetHours')} icon={Target}>
-                  <DetailRow label={t('detailDaily')} value={formatHours(tariff.daily_target_hours)} />
-                  <DetailRow label={t('detailWeekly')} value={formatHours(tariff.weekly_target_hours)} />
-                  <DetailRow label={t('detailMonthly')} value={formatHours(tariff.monthly_target_hours)} />
-                  <DetailRow label={t('detailAnnual')} value={formatHours(tariff.annual_target_hours)} />
+                  <DetailRow label={t('detailDaily')} value={formatHours(tariff.dailyTargetHours)} />
+                  <DetailRow label={t('detailWeekly')} value={formatHours(tariff.weeklyTargetHours)} />
+                  <DetailRow label={t('detailMonthly')} value={formatHours(tariff.monthlyTargetHours)} />
+                  <DetailRow label={t('detailAnnual')} value={formatHours(tariff.annualTargetHours)} />
                 </Section>
 
                 {/* Flextime / Monthly Evaluation */}
                 <Section title={t('tabFlextime')} icon={Timer}>
                   <DetailRow
                     label={t('fieldCreditType')}
-                    value={t((CREDIT_TYPE_LABEL_KEYS[tariff.credit_type as keyof typeof CREDIT_TYPE_LABEL_KEYS] ?? 'creditNoEvaluation') as Parameters<typeof t>[0])}
+                    value={t((CREDIT_TYPE_LABEL_KEYS[tariff.creditType as keyof typeof CREDIT_TYPE_LABEL_KEYS] ?? 'creditNoEvaluation') as Parameters<typeof t>[0])}
                   />
                   <DetailRow
                     label={t('fieldMaxFlextimePerMonth')}
                     value={
-                      tariff.max_flextime_per_month != null
-                        ? formatDuration(tariff.max_flextime_per_month)
+                      tariff.maxFlextimePerMonth != null
+                        ? formatDuration(tariff.maxFlextimePerMonth)
                         : '-'
                     }
                   />
                   <DetailRow
                     label={t('fieldFlextimeThreshold')}
                     value={
-                      tariff.flextime_threshold != null
-                        ? formatDuration(tariff.flextime_threshold)
+                      tariff.flextimeThreshold != null
+                        ? formatDuration(tariff.flextimeThreshold)
                         : '-'
                     }
                   />
                   <DetailRow
                     label={t('fieldUpperLimitAnnual')}
                     value={
-                      tariff.upper_limit_annual != null
-                        ? formatDuration(tariff.upper_limit_annual)
+                      tariff.upperLimitAnnual != null
+                        ? formatDuration(tariff.upperLimitAnnual)
                         : '-'
                     }
                   />
                   <DetailRow
                     label={t('fieldLowerLimitAnnual')}
                     value={
-                      tariff.lower_limit_annual != null
-                        ? formatDuration(tariff.lower_limit_annual)
+                      tariff.lowerLimitAnnual != null
+                        ? formatDuration(tariff.lowerLimitAnnual)
                         : '-'
                     }
                   />
@@ -344,7 +342,7 @@ export function TariffDetailSheet({
                       {tariff.breaks.map((brk) => (
                         <div key={brk.id} className="border rounded-lg p-3 text-sm">
                           <div className="flex items-center justify-between mb-2">
-                            <Badge variant="outline">{t((BREAK_TYPE_LABEL_KEYS[brk.break_type as keyof typeof BREAK_TYPE_LABEL_KEYS] ?? 'breakMinimum') as Parameters<typeof t>[0])}</Badge>
+                            <Badge variant="outline">{t((BREAK_TYPE_LABEL_KEYS[brk.breakType as keyof typeof BREAK_TYPE_LABEL_KEYS] ?? 'breakMinimum') as Parameters<typeof t>[0])}</Badge>
                             <div className="flex items-center gap-2">
                               <span className="font-medium">{formatDuration(brk.duration)}</span>
                               <Button
@@ -358,13 +356,13 @@ export function TariffDetailSheet({
                               </Button>
                             </div>
                           </div>
-                          {brk.break_type === 'minimum' && brk.after_work_minutes != null && (
+                          {brk.breakType === 'minimum' && brk.afterWorkMinutes != null && (
                             <div className="text-muted-foreground">
-                              {t('afterWorkTime', { duration: formatDuration(brk.after_work_minutes) })}
+                              {t('afterWorkTime', { duration: formatDuration(brk.afterWorkMinutes) })}
                             </div>
                           )}
                           <div className="flex gap-3 text-xs text-muted-foreground mt-1">
-                            {brk.is_paid && <span>{t('paidBreak')}</span>}
+                            {brk.isPaid && <span>{t('paidBreak')}</span>}
                           </div>
                         </div>
                       ))}

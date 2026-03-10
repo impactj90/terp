@@ -27,13 +27,13 @@ const DEPARTMENTS_MANAGE = permissionIdByKey("departments.manage")!
 // --- Output Schemas ---
 
 const departmentOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  parentId: z.string().uuid().nullable(),
+  id: z.string(),
+  tenantId: z.string(),
+  parentId: z.string().nullable(),
   code: z.string(),
   name: z.string(),
   description: z.string().nullable(),
-  managerEmployeeId: z.string().uuid().nullable(),
+  managerEmployeeId: z.string().nullable(),
   isActive: z.boolean(),
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -53,17 +53,17 @@ const createDepartmentInputSchema = z.object({
   code: z.string().min(1, "Code is required"),
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  parentId: z.string().uuid().optional(),
-  managerEmployeeId: z.string().uuid().optional(),
+  parentId: z.string().optional(),
+  managerEmployeeId: z.string().optional(),
 })
 
 const updateDepartmentInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   code: z.string().min(1).optional(),
   name: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
-  parentId: z.string().uuid().nullable().optional(),
-  managerEmployeeId: z.string().uuid().nullable().optional(),
+  parentId: z.string().nullable().optional(),
+  managerEmployeeId: z.string().nullable().optional(),
   isActive: z.boolean().optional(),
 })
 
@@ -180,7 +180,7 @@ export const departmentsRouter = createTRPCRouter({
       z
         .object({
           isActive: z.boolean().optional(),
-          parentId: z.string().uuid().optional(),
+          parentId: z.string().optional(),
         })
         .optional()
     )
@@ -245,7 +245,7 @@ export const departmentsRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(DEPARTMENTS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(departmentOutputSchema)
     .query(async ({ ctx, input }) => {
       // ctx.tenantId is guaranteed non-null by tenantProcedure
@@ -493,7 +493,7 @@ export const departmentsRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(DEPARTMENTS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       // ctx.tenantId is guaranteed non-null by tenantProcedure

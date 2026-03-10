@@ -26,8 +26,8 @@ const TRAVEL_ALLOWANCE_MANAGE = permissionIdByKey("travel_allowance.manage")!
 // --- Output Schemas ---
 
 const travelAllowanceRuleSetOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   code: z.string(),
   name: z.string(),
   description: z.string().nullable(),
@@ -55,7 +55,7 @@ const createRuleSetInputSchema = z.object({
 })
 
 const updateRuleSetInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   // Code is NOT updatable (immutable after creation)
   name: z.string().min(1).max(255).optional(),
   description: z.string().nullable().optional(),
@@ -134,7 +134,7 @@ export const travelAllowanceRuleSetsRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(TRAVEL_ALLOWANCE_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(travelAllowanceRuleSetOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -208,7 +208,7 @@ export const travelAllowanceRuleSetsRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(TRAVEL_ALLOWANCE_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

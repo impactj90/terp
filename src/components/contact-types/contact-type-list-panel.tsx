@@ -16,9 +16,19 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { DataTypeBadge } from './data-type-badge'
-import type { components } from '@/types/legacy-api-types'
 
-type ContactType = components['schemas']['ContactType']
+type ContactType = {
+  id: string
+  tenantId: string
+  code: string
+  name: string
+  dataType: string
+  description: string | null
+  isActive: boolean
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
 
 interface ContactTypeListPanelProps {
   contactTypes: ContactType[]
@@ -77,13 +87,13 @@ export function ContactTypeListPanel({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-sm truncate">{type.name}</span>
-                    <Badge variant={type.is_active ? 'default' : 'secondary'} className="shrink-0">
-                      {type.is_active ? t('statusActive') : t('statusInactive')}
+                    <Badge variant={type.isActive ? 'default' : 'secondary'} className="shrink-0">
+                      {type.isActive ? t('statusActive') : t('statusInactive')}
                     </Badge>
                   </div>
                   <div className="flex items-center gap-2 mt-1">
                     <span className="font-mono text-xs text-muted-foreground">{type.code}</span>
-                    <DataTypeBadge dataType={type.data_type} />
+                    <DataTypeBadge dataType={type.dataType as 'text' | 'email' | 'phone' | 'url'} />
                   </div>
                 </div>
                 <div onClick={(e) => e.stopPropagation()}>

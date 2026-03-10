@@ -7,7 +7,7 @@
  * Ported from Go: apps/api/internal/calculation/monthly.go (250 lines)
  */
 
-import { Decimal } from "@prisma/client/runtime/client"
+import type { Decimal } from "@prisma/client/runtime/client"
 import {
   WARN_MONTHLY_CAP_REACHED,
   WARN_FLEXTIME_CAPPED,

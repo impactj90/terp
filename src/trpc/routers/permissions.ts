@@ -13,7 +13,7 @@ import { createTRPCRouter, protectedProcedure } from "@/trpc/init"
 import { listPermissions } from "@/lib/auth/permission-catalog"
 
 const permissionSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   key: z.string(),
   resource: z.string(),
   action: z.string(),

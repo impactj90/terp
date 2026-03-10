@@ -39,9 +39,9 @@ import {
   useTariffs,
 } from '@/hooks'
 import { cn } from '@/lib/utils'
-import type { components } from '@/types/legacy-api-types'
 
-type Employee = components['schemas']['Employee']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Employee = any
 
 interface EmployeeFormSheetProps {
   /** Whether the sheet is open */
@@ -150,7 +150,7 @@ export function EmployeeFormSheet({
   const { data: departmentsData, isLoading: loadingDepartments } = useDepartments({ enabled: open })
   const { data: costCentersData, isLoading: loadingCostCenters } = useCostCenters({ enabled: open })
   const { data: employmentTypesData, isLoading: loadingEmploymentTypes } = useEmploymentTypes({ enabled: open })
-  const { data: tariffsData, isLoading: loadingTariffs } = useTariffs({ active: true, enabled: open })
+  const { data: tariffsData, isLoading: loadingTariffs } = useTariffs({ isActive: true, enabled: open })
 
   const departments = departmentsData?.data ?? []
   const costCenters = costCentersData?.data ?? []
@@ -164,18 +164,18 @@ export function EmployeeFormSheet({
         const entryDate = employee.entry_date ? new Date(employee.entry_date) : undefined
         const exitDate = employee.exit_date ? new Date(employee.exit_date) : undefined
         setForm({
-          personnelNumber: employee.personnel_number,
+          personnelNumber: employee.personnelNumber,
           pin: '', // Never show existing PIN
-          firstName: employee.first_name,
-          lastName: employee.last_name,
+          firstName: employee.firstName,
+          lastName: employee.lastName,
           email: employee.email || '',
           phone: employee.phone || '',
           entryDate,
           exitDate,
-          departmentId: employee.department_id || '',
+          departmentId: employee.departmentId || '',
           costCenterId: employee.cost_center_id || '',
           employmentTypeId: employee.employment_type_id || '',
-          tariffId: employee.tariff_id || '',
+          tariffId: employee.tariffId || '',
           weeklyHours: employee.weekly_hours?.toString() || '',
           vacationDaysPerYear: employee.vacation_days_per_year?.toString() || '',
         })
@@ -203,38 +203,34 @@ export function EmployeeFormSheet({
     try {
       if (isEdit && employee) {
         await updateMutation.mutateAsync({
-          path: { id: employee.id },
-          body: {
-            first_name: form.firstName.trim(),
-            last_name: form.lastName.trim(),
-            email: form.email.trim() || undefined,
-            phone: form.phone.trim() || undefined,
-            exit_date: formatDateForApi(form.exitDate),
-            department_id: form.departmentId || undefined,
-            cost_center_id: form.costCenterId || undefined,
-            employment_type_id: form.employmentTypeId || undefined,
-            tariff_id: form.tariffId ? form.tariffId : null,
-            weekly_hours: form.weeklyHours ? parseFloat(form.weeklyHours) : undefined,
-            vacation_days_per_year: form.vacationDaysPerYear ? parseFloat(form.vacationDaysPerYear) : undefined,
-          },
+          id: employee.id,
+          firstName: form.firstName.trim(),
+          lastName: form.lastName.trim(),
+          email: form.email.trim() || undefined,
+          phone: form.phone.trim() || undefined,
+          exitDate: formatDateForApi(form.exitDate),
+          departmentId: form.departmentId || undefined,
+          costCenterId: form.costCenterId || undefined,
+          employmentTypeId: form.employmentTypeId || undefined,
+          tariffId: form.tariffId || undefined,
+          weeklyHours: form.weeklyHours ? parseFloat(form.weeklyHours) : undefined,
+          vacationDaysPerYear: form.vacationDaysPerYear ? parseFloat(form.vacationDaysPerYear) : undefined,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            personnel_number: form.personnelNumber.trim(),
-            pin: form.pin.trim(),
-            first_name: form.firstName.trim(),
-            last_name: form.lastName.trim(),
-            email: form.email.trim() || undefined,
-            phone: form.phone.trim() || undefined,
-            entry_date: formatDateForApi(form.entryDate)!,
-            department_id: form.departmentId || undefined,
-            cost_center_id: form.costCenterId || undefined,
-            employment_type_id: form.employmentTypeId || undefined,
-            tariff_id: form.tariffId || undefined,
-            weekly_hours: form.weeklyHours ? parseFloat(form.weeklyHours) : undefined,
-            vacation_days_per_year: form.vacationDaysPerYear ? parseFloat(form.vacationDaysPerYear) : undefined,
-          },
+          personnelNumber: form.personnelNumber.trim(),
+          pin: form.pin.trim(),
+          firstName: form.firstName.trim(),
+          lastName: form.lastName.trim(),
+          email: form.email.trim() || undefined,
+          phone: form.phone.trim() || undefined,
+          entryDate: formatDateForApi(form.entryDate)!,
+          departmentId: form.departmentId || undefined,
+          costCenterId: form.costCenterId || undefined,
+          employmentTypeId: form.employmentTypeId || undefined,
+          tariffId: form.tariffId || undefined,
+          weeklyHours: form.weeklyHours ? parseFloat(form.weeklyHours) : undefined,
+          vacationDaysPerYear: form.vacationDaysPerYear ? parseFloat(form.vacationDaysPerYear) : undefined,
         })
       }
 

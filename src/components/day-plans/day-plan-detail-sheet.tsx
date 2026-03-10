@@ -28,17 +28,16 @@ import {
 } from '@/components/ui/sheet'
 import { useDayPlan, useCreateDayPlanBonus, useDeleteDayPlanBonus, useAccounts } from '@/hooks'
 import { formatTime, formatDuration } from '@/lib/time-utils'
-import type { components } from '@/types/legacy-api-types'
 
-type DayPlan = components['schemas']['DayPlan']
+type DayPlanData = NonNullable<ReturnType<typeof useDayPlan>['data']>
 
 interface DayPlanDetailSheetProps {
   dayPlanId: string | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  onEdit: (dayPlan: DayPlan) => void
-  onDelete: (dayPlan: DayPlan) => void
-  onCopy: (dayPlan: DayPlan) => void
+  onEdit: (dayPlan: DayPlanData) => void
+  onDelete: (dayPlan: DayPlanData) => void
+  onCopy: (dayPlan: DayPlanData) => void
 }
 
 const ROUNDING_LABEL_KEYS = {
@@ -115,16 +114,14 @@ export function DayPlanDetailSheet({
     if (!dayPlan || !newBonus.accountId) return
     try {
       await createBonusMutation.mutateAsync({
-        path: { id: dayPlan.id },
-        body: {
-          account_id: newBonus.accountId,
-          time_from: newBonus.timeFrom,
-          time_to: newBonus.timeTo,
-          calculation_type: newBonus.calculationType,
-          value_minutes: newBonus.valueMinutes,
-          min_work_minutes: newBonus.minWorkMinutes ?? undefined,
-          applies_on_holiday: newBonus.appliesOnHoliday,
-        },
+        dayPlanId: dayPlan.id,
+        accountId: newBonus.accountId,
+        timeFrom: newBonus.timeFrom,
+        timeTo: newBonus.timeTo,
+        calculationType: newBonus.calculationType,
+        valueMinutes: newBonus.valueMinutes,
+        minWorkMinutes: newBonus.minWorkMinutes ?? undefined,
+        appliesOnHoliday: newBonus.appliesOnHoliday,
       })
       setShowAddBonus(false)
       setNewBonus({
@@ -146,7 +143,8 @@ export function DayPlanDetailSheet({
     if (!dayPlan) return
     try {
       await deleteBonusMutation.mutateAsync({
-        path: { id: dayPlan.id, bonusId },
+        dayPlanId: dayPlan.id,
+        bonusId,
       })
       refetch()
     } catch {
@@ -166,15 +164,15 @@ export function DayPlanDetailSheet({
                 <div>
                   <SheetTitle className="flex items-center gap-2">
                     {dayPlan.name}
-                    <Badge variant={dayPlan.is_active ? 'default' : 'secondary'}>
-                      {dayPlan.is_active ? t('statusActive') : t('statusInactive')}
+                    <Badge variant={dayPlan.isActive ? 'default' : 'secondary'}>
+                      {dayPlan.isActive ? t('statusActive') : t('statusInactive')}
                     </Badge>
                   </SheetTitle>
                   <SheetDescription className="mt-1">
                     <span className="font-mono">{dayPlan.code}</span>
                     {' '}&bull;{' '}
                     <Badge variant="outline">
-                      {dayPlan.plan_type === 'fixed' ? t('typeFixed') : t('typeFlextime')}
+                      {dayPlan.planType === 'fixed' ? t('typeFixed') : t('typeFlextime')}
                     </Badge>
                   </SheetDescription>
                 </div>
@@ -185,54 +183,54 @@ export function DayPlanDetailSheet({
               <div className="space-y-6">
                 {/* Time Window Section */}
                 <Section title={t('sectionTimeWindow')} icon={Clock}>
-                  <DetailRow label={t('labelArriveFrom')} value={dayPlan.come_from != null ? formatTime(dayPlan.come_from) : '-'} />
-                  {dayPlan.plan_type === 'flextime' && (
-                    <DetailRow label={t('labelArriveUntil')} value={dayPlan.come_to != null ? formatTime(dayPlan.come_to) : '-'} />
+                  <DetailRow label={t('labelArriveFrom')} value={dayPlan.comeFrom != null ? formatTime(dayPlan.comeFrom) : '-'} />
+                  {dayPlan.planType === 'flextime' && (
+                    <DetailRow label={t('labelArriveUntil')} value={dayPlan.comeTo != null ? formatTime(dayPlan.comeTo) : '-'} />
                   )}
-                  {dayPlan.plan_type === 'fixed' ? (
-                    <DetailRow label={t('labelLeaveFrom')} value={dayPlan.go_from != null ? formatTime(dayPlan.go_from) : '-'} />
+                  {dayPlan.planType === 'fixed' ? (
+                    <DetailRow label={t('labelLeaveFrom')} value={dayPlan.goFrom != null ? formatTime(dayPlan.goFrom) : '-'} />
                   ) : (
                     <>
-                      <DetailRow label={t('labelLeaveFrom')} value={dayPlan.go_from != null ? formatTime(dayPlan.go_from) : '-'} />
-                      <DetailRow label={t('labelLeaveUntil')} value={dayPlan.go_to != null ? formatTime(dayPlan.go_to) : '-'} />
+                      <DetailRow label={t('labelLeaveFrom')} value={dayPlan.goFrom != null ? formatTime(dayPlan.goFrom) : '-'} />
+                      <DetailRow label={t('labelLeaveUntil')} value={dayPlan.goTo != null ? formatTime(dayPlan.goTo) : '-'} />
                     </>
                   )}
-                  {dayPlan.plan_type === 'flextime' && dayPlan.core_start != null && (
+                  {dayPlan.planType === 'flextime' && dayPlan.coreStart != null && (
                     <>
-                      <DetailRow label={t('labelCoreStart')} value={formatTime(dayPlan.core_start)} />
-                      <DetailRow label={t('labelCoreEnd')} value={dayPlan.core_end != null ? formatTime(dayPlan.core_end) : '-'} />
+                      <DetailRow label={t('labelCoreStart')} value={formatTime(dayPlan.coreStart)} />
+                      <DetailRow label={t('labelCoreEnd')} value={dayPlan.coreEnd != null ? formatTime(dayPlan.coreEnd) : '-'} />
                     </>
                   )}
                 </Section>
 
                 {/* Target Hours Section */}
                 <Section title={t('sectionTargetHours')} icon={Calendar}>
-                  <DetailRow label={t('labelRegularHours')} value={formatDuration(dayPlan.regular_hours)} />
-                  {dayPlan.regular_hours_2 != null && (
-                    <DetailRow label={t('labelAbsenceDayHours')} value={formatDuration(dayPlan.regular_hours_2)} />
+                  <DetailRow label={t('labelRegularHours')} value={formatDuration(dayPlan.regularHours)} />
+                  {dayPlan.regularHours2 != null && (
+                    <DetailRow label={t('labelAbsenceDayHours')} value={formatDuration(dayPlan.regularHours2)} />
                   )}
                   <DetailRow
                     label={t('labelFromEmployeeMaster')}
-                    value={dayPlan.from_employee_master ? t('yes') : t('no')}
+                    value={dayPlan.fromEmployeeMaster ? t('yes') : t('no')}
                   />
-                  {dayPlan.min_work_time != null && (
-                    <DetailRow label={t('labelMinWorkTime')} value={formatDuration(dayPlan.min_work_time)} />
+                  {dayPlan.minWorkTime != null && (
+                    <DetailRow label={t('labelMinWorkTime')} value={formatDuration(dayPlan.minWorkTime)} />
                   )}
-                  {dayPlan.max_net_work_time != null && (
-                    <DetailRow label={t('labelMaxNetWorkTime')} value={formatDuration(dayPlan.max_net_work_time)} />
+                  {dayPlan.maxNetWorkTime != null && (
+                    <DetailRow label={t('labelMaxNetWorkTime')} value={formatDuration(dayPlan.maxNetWorkTime)} />
                   )}
                 </Section>
 
                 {/* Tolerance Section */}
                 <Section title={t('sectionTolerance')} icon={Settings}>
-                  <DetailRow label={t('labelArriveEarly')} value={t('minuteValue', { count: dayPlan.tolerance_come_minus ?? 0 })} />
-                  <DetailRow label={t('labelArriveLate')} value={t('minuteValue', { count: dayPlan.tolerance_come_plus ?? 0 })} />
-                  <DetailRow label={t('labelLeaveEarly')} value={t('minuteValue', { count: dayPlan.tolerance_go_minus ?? 0 })} />
-                  <DetailRow label={t('labelLeaveLate')} value={t('minuteValue', { count: dayPlan.tolerance_go_plus ?? 0 })} />
-                  {dayPlan.plan_type === 'fixed' && (
+                  <DetailRow label={t('labelArriveEarly')} value={t('minuteValue', { count: dayPlan.toleranceComeMinus ?? 0 })} />
+                  <DetailRow label={t('labelArriveLate')} value={t('minuteValue', { count: dayPlan.toleranceComePlus ?? 0 })} />
+                  <DetailRow label={t('labelLeaveEarly')} value={t('minuteValue', { count: dayPlan.toleranceGoMinus ?? 0 })} />
+                  <DetailRow label={t('labelLeaveLate')} value={t('minuteValue', { count: dayPlan.toleranceGoPlus ?? 0 })} />
+                  {dayPlan.planType === 'fixed' && (
                     <DetailRow
                       label={t('labelVariableWorkTime')}
-                      value={dayPlan.variable_work_time ? t('yes') : t('no')}
+                      value={dayPlan.variableWorkTime ? t('yes') : t('no')}
                     />
                   )}
                 </Section>
@@ -241,21 +239,21 @@ export function DayPlanDetailSheet({
                 <Section title={t('sectionRounding')} icon={Settings}>
                   <DetailRow
                     label={t('labelArrivalRounding')}
-                    value={t(ROUNDING_LABEL_KEYS[dayPlan.rounding_come_type as keyof typeof ROUNDING_LABEL_KEYS] ?? 'roundingNone' as Parameters<typeof t>[0])}
+                    value={t(ROUNDING_LABEL_KEYS[dayPlan.roundingComeType as keyof typeof ROUNDING_LABEL_KEYS] ?? 'roundingNone' as Parameters<typeof t>[0])}
                   />
-                  {dayPlan.rounding_come_interval != null && (
-                    <DetailRow label={t('labelArrivalInterval')} value={t('minuteValue', { count: dayPlan.rounding_come_interval })} />
+                  {dayPlan.roundingComeInterval != null && (
+                    <DetailRow label={t('labelArrivalInterval')} value={t('minuteValue', { count: dayPlan.roundingComeInterval })} />
                   )}
                   <DetailRow
                     label={t('labelDepartureRounding')}
-                    value={t(ROUNDING_LABEL_KEYS[dayPlan.rounding_go_type as keyof typeof ROUNDING_LABEL_KEYS] ?? 'roundingNone' as Parameters<typeof t>[0])}
+                    value={t(ROUNDING_LABEL_KEYS[dayPlan.roundingGoType as keyof typeof ROUNDING_LABEL_KEYS] ?? 'roundingNone' as Parameters<typeof t>[0])}
                   />
-                  {dayPlan.rounding_go_interval != null && (
-                    <DetailRow label={t('labelDepartureInterval')} value={t('minuteValue', { count: dayPlan.rounding_go_interval })} />
+                  {dayPlan.roundingGoInterval != null && (
+                    <DetailRow label={t('labelDepartureInterval')} value={t('minuteValue', { count: dayPlan.roundingGoInterval })} />
                   )}
                   <DetailRow
                     label={t('labelRoundAllBookings')}
-                    value={dayPlan.round_all_bookings ? t('yes') : t('no')}
+                    value={dayPlan.roundAllBookings ? t('yes') : t('no')}
                   />
                 </Section>
 
@@ -263,28 +261,28 @@ export function DayPlanDetailSheet({
                 <Section title={t('sectionSpecialSettings')} icon={Settings}>
                   <DetailRow
                     label={t('labelNoBookingBehavior')}
-                    value={t(NO_BOOKING_LABEL_KEYS[dayPlan.no_booking_behavior as keyof typeof NO_BOOKING_LABEL_KEYS] ?? 'noBookingError' as Parameters<typeof t>[0])}
+                    value={t(NO_BOOKING_LABEL_KEYS[dayPlan.noBookingBehavior as keyof typeof NO_BOOKING_LABEL_KEYS] ?? 'noBookingError' as Parameters<typeof t>[0])}
                   />
                   <DetailRow
                     label={t('labelDayChangeBehavior')}
-                    value={t(DAY_CHANGE_LABEL_KEYS[dayPlan.day_change_behavior as keyof typeof DAY_CHANGE_LABEL_KEYS] ?? 'dayChangeNone' as Parameters<typeof t>[0])}
+                    value={t(DAY_CHANGE_LABEL_KEYS[dayPlan.dayChangeBehavior as keyof typeof DAY_CHANGE_LABEL_KEYS] ?? 'dayChangeNone' as Parameters<typeof t>[0])}
                   />
-                  <DetailRow label={t('labelVacationDeduction')} value={t('vacationDays', { count: dayPlan.vacation_deduction ?? 1 })} />
+                  <DetailRow label={t('labelVacationDeduction')} value={t('vacationDays', { count: dayPlan.vacationDeduction ?? 1 })} />
                 </Section>
 
                 {/* Holiday Credits Section */}
-                {(dayPlan.holiday_credit_cat1 != null ||
-                  dayPlan.holiday_credit_cat2 != null ||
-                  dayPlan.holiday_credit_cat3 != null) && (
+                {(dayPlan.holidayCreditCat1 != null ||
+                  dayPlan.holidayCreditCat2 != null ||
+                  dayPlan.holidayCreditCat3 != null) && (
                   <Section title={t('sectionHolidayCredits')} icon={Calendar}>
-                    {dayPlan.holiday_credit_cat1 != null && (
-                      <DetailRow label={t('fieldFullHoliday')} value={formatDuration(dayPlan.holiday_credit_cat1)} />
+                    {dayPlan.holidayCreditCat1 != null && (
+                      <DetailRow label={t('fieldFullHoliday')} value={formatDuration(dayPlan.holidayCreditCat1)} />
                     )}
-                    {dayPlan.holiday_credit_cat2 != null && (
-                      <DetailRow label={t('fieldHalfHoliday')} value={formatDuration(dayPlan.holiday_credit_cat2)} />
+                    {dayPlan.holidayCreditCat2 != null && (
+                      <DetailRow label={t('fieldHalfHoliday')} value={formatDuration(dayPlan.holidayCreditCat2)} />
                     )}
-                    {dayPlan.holiday_credit_cat3 != null && (
-                      <DetailRow label={t('fieldCategory3')} value={formatDuration(dayPlan.holiday_credit_cat3)} />
+                    {dayPlan.holidayCreditCat3 != null && (
+                      <DetailRow label={t('fieldCategory3')} value={formatDuration(dayPlan.holidayCreditCat3)} />
                     )}
                   </Section>
                 )}
@@ -293,26 +291,26 @@ export function DayPlanDetailSheet({
                 {dayPlan.breaks && dayPlan.breaks.length > 0 && (
                   <Section title={t('sectionBreaks')} icon={Clock}>
                     <div className="space-y-3">
-                      {dayPlan.breaks.map((brk) => (
+                      {dayPlan.breaks.map((brk: NonNullable<DayPlanData['breaks']>[number]) => (
                         <div key={brk.id} className="border rounded-lg p-3 text-sm">
                           <div className="flex items-center justify-between mb-2">
-                            <Badge variant="outline">{t(BREAK_TYPE_LABEL_KEYS[brk.break_type as keyof typeof BREAK_TYPE_LABEL_KEYS] as Parameters<typeof t>[0])}</Badge>
+                            <Badge variant="outline">{t(BREAK_TYPE_LABEL_KEYS[brk.breakType as keyof typeof BREAK_TYPE_LABEL_KEYS] as Parameters<typeof t>[0])}</Badge>
                             <span className="font-medium">{formatDuration(brk.duration)}</span>
                           </div>
-                          {brk.start_time != null && brk.end_time != null && (
+                          {brk.startTime != null && brk.endTime != null && (
                             <div className="text-muted-foreground">
-                              {formatTime(brk.start_time)} - {formatTime(brk.end_time)}
+                              {formatTime(brk.startTime)} - {formatTime(brk.endTime)}
                             </div>
                           )}
-                          {brk.after_work_minutes != null && (
+                          {brk.afterWorkMinutes != null && (
                             <div className="text-muted-foreground">
-                              {t('afterWork', { duration: formatDuration(brk.after_work_minutes) })}
+                              {t('afterWork', { duration: formatDuration(brk.afterWorkMinutes) })}
                             </div>
                           )}
                           <div className="flex gap-3 text-xs text-muted-foreground mt-1">
-                            {brk.auto_deduct && <span>{t('autoDeduct')}</span>}
-                            {brk.is_paid && <span>{t('paid')}</span>}
-                            {brk.minutes_difference && <span>{t('proportional')}</span>}
+                            {brk.autoDeduct && <span>{t('autoDeduct')}</span>}
+                            {brk.isPaid && <span>{t('paid')}</span>}
+                            {brk.minutesDifference && <span>{t('proportional')}</span>}
                           </div>
                         </div>
                       ))}
@@ -324,12 +322,12 @@ export function DayPlanDetailSheet({
                 <Section title={t('sectionBonuses')} icon={Settings}>
                   {dayPlan.bonuses && dayPlan.bonuses.length > 0 ? (
                     <div className="space-y-3">
-                      {dayPlan.bonuses.map((bonus) => (
+                      {dayPlan.bonuses.map((bonus: NonNullable<DayPlanData['bonuses']>[number]) => (
                         <div key={bonus.id} className="border rounded-lg p-3 text-sm">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium">{bonus.account?.name ?? t('unknownAccount')}</span>
+                            <span className="font-medium">{(bonus as { accountId?: string | null; account?: { name: string } | null }).account?.name ?? t('unknownAccount')}</span>
                             <div className="flex items-center gap-2">
-                              <span>{formatDuration(bonus.value_minutes)}</span>
+                              <span>{formatDuration(bonus.valueMinutes)}</span>
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -342,13 +340,13 @@ export function DayPlanDetailSheet({
                             </div>
                           </div>
                           <div className="text-muted-foreground">
-                            {formatTime(bonus.time_from)} - {formatTime(bonus.time_to)}
+                            {formatTime(bonus.timeFrom)} - {formatTime(bonus.timeTo)}
                           </div>
                           <div className="text-xs text-muted-foreground mt-1">
-                            {bonus.calculation_type === 'fixed' && t('bonusCalculationFixed')}
-                            {bonus.calculation_type === 'per_minute' && t('bonusCalculationPerMinute')}
-                            {bonus.calculation_type === 'percentage' && t('bonusCalculationPercentage')}
-                            {bonus.applies_on_holiday && ` | ${t('bonusAppliesOnHoliday')}`}
+                            {bonus.calculationType === 'fixed' && t('bonusCalculationFixed')}
+                            {bonus.calculationType === 'per_minute' && t('bonusCalculationPerMinute')}
+                            {bonus.calculationType === 'percentage' && t('bonusCalculationPercentage')}
+                            {bonus.appliesOnHoliday && ` | ${t('bonusAppliesOnHoliday')}`}
                           </div>
                         </div>
                       ))}
@@ -372,7 +370,7 @@ export function DayPlanDetailSheet({
                             <SelectValue placeholder={t('selectAccount')} />
                           </SelectTrigger>
                           <SelectContent>
-                            {accountsData?.data?.map((account) => (
+                            {accountsData?.data?.map((account: { id: string; name: string }) => (
                               <SelectItem key={account.id} value={account.id}>
                                 {account.name}
                               </SelectItem>

@@ -3,7 +3,7 @@
  *
  * Pure Prisma data-access functions for the EmploymentType model.
  */
-import type { PrismaClient } from "@/generated/prisma/client"
+import type { PrismaClient, Prisma } from "@/generated/prisma/client"
 
 export async function findMany(
   prisma: PrismaClient,
@@ -51,12 +51,12 @@ export async function create(
     tenantId: string
     code: string
     name: string
-    weeklyHoursDefault: unknown
+    weeklyHoursDefault: Prisma.Decimal | number | string
     isActive: boolean
     vacationCalcGroupId: string | null
   }
 ) {
-  return prisma.employmentType.create({ data: data as any })
+  return prisma.employmentType.create({ data: data as Prisma.EmploymentTypeCreateInput })
 }
 
 export async function update(

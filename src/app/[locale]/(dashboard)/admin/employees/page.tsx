@@ -24,9 +24,8 @@ import { EmployeeDataTable } from '@/components/employees/employee-data-table'
 import { EmployeeFormSheet } from '@/components/employees/employee-form-sheet'
 import { EmployeeDetailSheet } from '@/components/employees/employee-detail-sheet'
 import { BulkActions } from '@/components/employees/bulk-actions'
-import type { components } from '@/types/legacy-api-types'
 
-type Employee = components['schemas']['Employee']
+type Employee = NonNullable<ReturnType<typeof useEmployees>['data']>['items'][number]
 
 export default function EmployeesPage() {
   const router = useRouter()
@@ -288,7 +287,7 @@ export default function EmployeesPage() {
         title={t('deactivateEmployee')}
         description={
           deleteEmployee
-            ? t('deactivateDescription', { firstName: deleteEmployee.first_name, lastName: deleteEmployee.last_name })
+            ? t('deactivateDescription', { firstName: deleteEmployee.firstName, lastName: deleteEmployee.lastName })
             : ''
         }
         confirmLabel={t('deactivate')}

@@ -26,8 +26,8 @@ const VEHICLE_DATA_MANAGE = permissionIdByKey("vehicle_data.manage")!
 // --- Output Schemas ---
 
 const vehicleRouteOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   code: z.string(),
   name: z.string(),
   description: z.string().nullable(),
@@ -49,7 +49,7 @@ const createVehicleRouteInputSchema = z.object({
 })
 
 const updateVehicleRouteInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   name: z.string().min(1).max(255).optional(),
   description: z.string().nullable().optional(),
   distanceKm: z.number().nullable().optional(),
@@ -122,7 +122,7 @@ export const vehicleRoutesRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(VEHICLE_DATA_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(vehicleRouteOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -197,7 +197,7 @@ export const vehicleRoutesRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(VEHICLE_DATA_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

@@ -87,9 +87,9 @@ export function EffectiveTariffPreview({ employeeId }: EffectiveTariffPreviewPro
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">{t('previewTariffLabel')}:</span>
-            {data.tariff ? (
+            {data.tariffId ? (
               <span className="text-sm font-medium">
-                {data.tariff.code} - {data.tariff.name}
+                {data.tariffId}
               </span>
             ) : (
               <span className="text-sm text-muted-foreground italic">
@@ -104,19 +104,6 @@ export function EffectiveTariffPreview({ employeeId }: EffectiveTariffPreviewPro
               {sourceLabel}
             </Badge>
           </div>
-
-          {data.assignment && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">{t('previewDateRange')}:</span>
-              <span className="text-sm">
-                {format(new Date(data.assignment.effective_from), 'dd.MM.yyyy')} -{' '}
-                {data.assignment.effective_to
-                  ? format(new Date(data.assignment.effective_to), 'dd.MM.yyyy')
-                  : t('openEnded')
-                }
-              </span>
-            </div>
-          )}
         </div>
       ) : null}
     </div>

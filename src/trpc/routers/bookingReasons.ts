@@ -27,16 +27,16 @@ const BOOKING_TYPES_MANAGE = permissionIdByKey("booking_types.manage")!
 // --- Output Schemas ---
 
 const bookingReasonOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  bookingTypeId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
+  bookingTypeId: z.string(),
   code: z.string(),
   label: z.string(),
   isActive: z.boolean(),
   sortOrder: z.number(),
   referenceTime: z.string().nullable(),
   offsetMinutes: z.number().nullable(),
-  adjustmentBookingTypeId: z.string().uuid().nullable(),
+  adjustmentBookingTypeId: z.string().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
 })
@@ -46,23 +46,23 @@ type BookingReasonOutput = z.infer<typeof bookingReasonOutputSchema>
 // --- Input Schemas ---
 
 const createBookingReasonInputSchema = z.object({
-  bookingTypeId: z.string().uuid(),
+  bookingTypeId: z.string(),
   code: z.string().min(1, "Code is required"),
   label: z.string().min(1, "Label is required"),
   sortOrder: z.number().optional(),
   referenceTime: z.string().optional(),
   offsetMinutes: z.number().optional(),
-  adjustmentBookingTypeId: z.string().uuid().optional(),
+  adjustmentBookingTypeId: z.string().optional(),
 })
 
 const updateBookingReasonInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   label: z.string().min(1).optional(),
   isActive: z.boolean().optional(),
   sortOrder: z.number().optional(),
   referenceTime: z.string().nullable().optional(),
   offsetMinutes: z.number().nullable().optional(),
-  adjustmentBookingTypeId: z.string().uuid().nullable().optional(),
+  adjustmentBookingTypeId: z.string().nullable().optional(),
   clearAdjustment: z.boolean().optional(),
 })
 
@@ -117,7 +117,7 @@ export const bookingReasonsRouter = createTRPCRouter({
     .input(
       z
         .object({
-          bookingTypeId: z.string().uuid().optional(),
+          bookingTypeId: z.string().optional(),
         })
         .optional()
     )
@@ -147,7 +147,7 @@ export const bookingReasonsRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(BOOKING_TYPES_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(bookingReasonOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -227,7 +227,7 @@ export const bookingReasonsRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(BOOKING_TYPES_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

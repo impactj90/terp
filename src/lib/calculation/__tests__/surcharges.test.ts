@@ -1,3 +1,4 @@
+import { describe, it, expect } from "vitest"
 import type { SurchargeConfig, TimePeriod, BookingPair } from "../types"
 import {
   calculateSurcharges,

@@ -1,0 +1,27 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build outputs
+.next
+**/dist
+
+# Development files
+*.log
+.env*.local
+
+# IDE
+.idea
+.vscode
+
+# Not needed in Docker build context
+docker
+supabase
+scripts
+context
+thoughts
+infra
+.github
+.git
+apps
+db

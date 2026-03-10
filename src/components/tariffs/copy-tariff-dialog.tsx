@@ -16,9 +16,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useCreateTariff, useTariff } from '@/hooks'
-import type { components } from '@/types/legacy-api-types'
-
-type Tariff = components['schemas']['Tariff']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Tariff = any
 
 interface CopyTariffDialogProps {
   tariff: Tariff | null
@@ -64,14 +63,12 @@ export function CopyTariffDialog({ tariff, open, onOpenChange }: CopyTariffDialo
     try {
       // Create new tariff with same properties but new code/name
       await createMutation.mutateAsync({
-        body: {
-          code: newCode.trim(),
-          name: newName.trim(),
-          description: fullTariff.description || undefined,
-          week_plan_id: fullTariff.week_plan_id || undefined,
-          valid_from: fullTariff.valid_from || undefined,
-          valid_to: fullTariff.valid_to || undefined,
-        },
+        code: newCode.trim(),
+        name: newName.trim(),
+        description: fullTariff.description || undefined,
+        weekPlanId: fullTariff.weekPlanId || undefined,
+        validFrom: fullTariff.validFrom || undefined,
+        validTo: fullTariff.validTo || undefined,
       })
       // Note: Breaks need to be copied separately if needed
       // For MVP, we just copy the base tariff

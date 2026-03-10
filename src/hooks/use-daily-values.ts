@@ -94,10 +94,11 @@ export function transformToLegacyDailyValue(
     })
   }
 
-  const valueDate =
+  const rawDate =
     dv.valueDate instanceof Date
-      ? dv.valueDate.toISOString().split("T")[0]!
+      ? dv.valueDate.toISOString()
       : String(dv.valueDate)
+  const valueDate = rawDate.split("T")[0]!
 
   // Map employee relation if present (camelCase -> snake_case)
   const employee = dv.employee as Record<string, unknown> | undefined | null

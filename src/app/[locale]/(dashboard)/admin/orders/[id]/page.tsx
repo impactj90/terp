@@ -28,7 +28,6 @@ import {
   OrderBookingDataTable,
   OrderBookingFormSheet,
 } from '@/components/orders'
-import type { components } from '@/types/legacy-api-types'
 
 interface OrderAssignment {
   id: string
@@ -41,7 +40,6 @@ interface OrderAssignment {
   valid_to?: string | null
 }
 
-type OrderBooking = components['schemas']['OrderBooking']
 
 export default function OrderDetailPage() {
   const params = useParams<{ id: string }>()

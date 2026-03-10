@@ -35,19 +35,19 @@ const teamMemberRoleEnum = z.enum(["member", "lead", "deputy"])
 // --- Output Schemas ---
 
 const teamOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  departmentId: z.string().uuid().nullable(),
+  id: z.string(),
+  tenantId: z.string(),
+  departmentId: z.string().nullable(),
   name: z.string(),
   description: z.string().nullable(),
-  leaderEmployeeId: z.string().uuid().nullable(),
+  leaderEmployeeId: z.string().nullable(),
   isActive: z.boolean(),
   memberCount: z.number(),
   createdAt: z.date(),
   updatedAt: z.date(),
   department: z
     .object({
-      id: z.string().uuid(),
+      id: z.string(),
       name: z.string(),
       code: z.string(),
     })
@@ -55,7 +55,7 @@ const teamOutputSchema = z.object({
     .optional(),
   leader: z
     .object({
-      id: z.string().uuid(),
+      id: z.string(),
       firstName: z.string(),
       lastName: z.string(),
     })
@@ -64,13 +64,13 @@ const teamOutputSchema = z.object({
 })
 
 const teamMemberOutputSchema = z.object({
-  teamId: z.string().uuid(),
-  employeeId: z.string().uuid(),
+  teamId: z.string(),
+  employeeId: z.string(),
   role: teamMemberRoleEnum,
   joinedAt: z.date(),
   employee: z
     .object({
-      id: z.string().uuid(),
+      id: z.string(),
       firstName: z.string(),
       lastName: z.string(),
     })
@@ -82,16 +82,16 @@ const teamMemberOutputSchema = z.object({
 const createTeamInputSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  departmentId: z.string().uuid().optional(),
-  leaderEmployeeId: z.string().uuid().optional(),
+  departmentId: z.string().optional(),
+  leaderEmployeeId: z.string().optional(),
 })
 
 const updateTeamInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   name: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
-  departmentId: z.string().uuid().nullable().optional(),
-  leaderEmployeeId: z.string().uuid().nullable().optional(),
+  departmentId: z.string().nullable().optional(),
+  leaderEmployeeId: z.string().nullable().optional(),
   isActive: z.boolean().optional(),
 })
 
@@ -101,25 +101,25 @@ const listTeamsInputSchema = z
     pageSize: z.number().int().min(1).max(100).optional().default(20),
     search: z.string().optional(),
     isActive: z.boolean().optional(),
-    departmentId: z.string().uuid().optional(),
+    departmentId: z.string().optional(),
   })
   .optional()
 
 const addMemberInputSchema = z.object({
-  teamId: z.string().uuid(),
-  employeeId: z.string().uuid(),
+  teamId: z.string(),
+  employeeId: z.string(),
   role: teamMemberRoleEnum.optional().default("member"),
 })
 
 const updateMemberInputSchema = z.object({
-  teamId: z.string().uuid(),
-  employeeId: z.string().uuid(),
+  teamId: z.string(),
+  employeeId: z.string(),
   role: teamMemberRoleEnum,
 })
 
 const removeMemberInputSchema = z.object({
-  teamId: z.string().uuid(),
-  employeeId: z.string().uuid(),
+  teamId: z.string(),
+  employeeId: z.string(),
 })
 
 // --- Helpers ---
@@ -253,7 +253,7 @@ export const teamsRouter = createTRPCRouter({
     .use(requirePermission(TEAMS_MANAGE))
     .input(
       z.object({
-        id: z.string().uuid(),
+        id: z.string(),
         includeMembers: z.boolean().optional(),
       })
     )
@@ -348,7 +348,7 @@ export const teamsRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(TEAMS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!
@@ -371,7 +371,7 @@ export const teamsRouter = createTRPCRouter({
    */
   getMembers: tenantProcedure
     .use(requirePermission(TEAMS_MANAGE))
-    .input(z.object({ teamId: z.string().uuid() }))
+    .input(z.object({ teamId: z.string() }))
     .output(z.object({ items: z.array(teamMemberOutputSchema) }))
     .query(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!
@@ -467,7 +467,7 @@ export const teamsRouter = createTRPCRouter({
    */
   getByEmployee: tenantProcedure
     .use(requirePermission(TEAMS_MANAGE))
-    .input(z.object({ employeeId: z.string().uuid() }))
+    .input(z.object({ employeeId: z.string() }))
     .output(z.object({ items: z.array(teamOutputSchema) }))
     .query(async ({ ctx, input }) => {
       try {

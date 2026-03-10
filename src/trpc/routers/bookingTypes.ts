@@ -25,22 +25,17 @@ import * as bookingTypeService from "@/lib/services/booking-type-service"
 
 const BOOKING_TYPES_MANAGE = permissionIdByKey("booking_types.manage")!
 
-// --- Constants ---
-
-const VALID_DIRECTIONS = ["in", "out"] as const
-const VALID_CATEGORIES = ["work", "break", "business_trip", "other"] as const
-
 // --- Output Schemas ---
 
 const bookingTypeOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid().nullable(),
+  id: z.string(),
+  tenantId: z.string().nullable(),
   code: z.string(),
   name: z.string(),
   description: z.string().nullable(),
   direction: z.string(),
   category: z.string(),
-  accountId: z.string().uuid().nullable(),
+  accountId: z.string().nullable(),
   requiresReason: z.boolean(),
   isSystem: z.boolean(),
   isActive: z.boolean(),
@@ -58,17 +53,17 @@ const createBookingTypeInputSchema = z.object({
   description: z.string().optional(),
   direction: z.string().min(1, "Direction is required"),
   category: z.string().optional(),
-  accountId: z.string().uuid().optional(),
+  accountId: z.string().optional(),
   requiresReason: z.boolean().optional(),
 })
 
 const updateBookingTypeInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   name: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
   isActive: z.boolean().optional(),
   category: z.string().optional(),
-  accountId: z.string().uuid().nullable().optional(),
+  accountId: z.string().nullable().optional(),
   requiresReason: z.boolean().optional(),
 })
 
@@ -154,7 +149,7 @@ export const bookingTypesRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(BOOKING_TYPES_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(bookingTypeOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -227,7 +222,7 @@ export const bookingTypesRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(BOOKING_TYPES_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

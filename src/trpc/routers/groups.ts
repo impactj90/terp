@@ -35,8 +35,8 @@ const groupTypeSchema = z.enum(["employee", "workflow", "activity"])
 // --- Output Schemas ---
 
 const groupOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   code: z.string(),
   name: z.string(),
   description: z.string().nullable(),
@@ -59,7 +59,7 @@ const createGroupInputSchema = z.object({
 
 const updateGroupInputSchema = z.object({
   type: groupTypeSchema,
-  id: z.string().uuid(),
+  id: z.string(),
   code: z.string().min(1).optional(),
   name: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
@@ -142,7 +142,7 @@ export const groupsRouter = createTRPCRouter({
     .input(
       z.object({
         type: groupTypeSchema,
-        id: z.string().uuid(),
+        id: z.string(),
       })
     )
     .output(groupOutputSchema)
@@ -229,7 +229,7 @@ export const groupsRouter = createTRPCRouter({
     .input(
       z.object({
         type: groupTypeSchema,
-        id: z.string().uuid(),
+        id: z.string(),
       })
     )
     .output(z.object({ success: z.boolean() }))

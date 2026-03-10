@@ -80,8 +80,8 @@ void TRIGGER_TYPES
 // --- Output Schemas ---
 
 const scheduleTaskOutputSchema = z.object({
-  id: z.string().uuid(),
-  scheduleId: z.string().uuid(),
+  id: z.string(),
+  scheduleId: z.string(),
   taskType: z.string(),
   sortOrder: z.number(),
   parameters: z.unknown(),
@@ -91,8 +91,8 @@ const scheduleTaskOutputSchema = z.object({
 })
 
 const scheduleOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   name: z.string(),
   description: z.string().nullable(),
   timingType: z.string(),
@@ -106,8 +106,8 @@ const scheduleOutputSchema = z.object({
 })
 
 const scheduleTaskExecutionOutputSchema = z.object({
-  id: z.string().uuid(),
-  executionId: z.string().uuid(),
+  id: z.string(),
+  executionId: z.string(),
   taskType: z.string(),
   sortOrder: z.number(),
   status: z.string(),
@@ -119,12 +119,12 @@ const scheduleTaskExecutionOutputSchema = z.object({
 })
 
 const scheduleExecutionOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  scheduleId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
+  scheduleId: z.string(),
   status: z.string(),
   triggerType: z.string(),
-  triggeredBy: z.string().uuid().nullable(),
+  triggeredBy: z.string().nullable(),
   startedAt: z.date().nullable(),
   completedAt: z.date().nullable(),
   errorMessage: z.string().nullable(),
@@ -163,7 +163,7 @@ const createScheduleInputSchema = z.object({
 })
 
 const updateScheduleInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   name: z.string().min(1).max(255).optional(),
   description: z.string().nullable().optional(),
   timingType: z.enum(TIMING_TYPES).optional(),
@@ -172,7 +172,7 @@ const updateScheduleInputSchema = z.object({
 })
 
 const createTaskInputSchema = z.object({
-  scheduleId: z.string().uuid(),
+  scheduleId: z.string(),
   taskType: z.enum(TASK_TYPES),
   sortOrder: z.number().int().default(0),
   parameters: z.unknown().optional(),
@@ -180,8 +180,8 @@ const createTaskInputSchema = z.object({
 })
 
 const updateTaskInputSchema = z.object({
-  scheduleId: z.string().uuid(),
-  taskId: z.string().uuid(),
+  scheduleId: z.string(),
+  taskId: z.string(),
   taskType: z.enum(TASK_TYPES).optional(),
   sortOrder: z.number().int().optional(),
   parameters: z.unknown().optional(),
@@ -357,7 +357,7 @@ export const schedulesRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(SCHEDULES_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(scheduleOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -432,7 +432,7 @@ export const schedulesRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(SCHEDULES_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -452,7 +452,7 @@ export const schedulesRouter = createTRPCRouter({
    */
   tasks: tenantProcedure
     .use(requirePermission(SCHEDULES_MANAGE))
-    .input(z.object({ scheduleId: z.string().uuid() }))
+    .input(z.object({ scheduleId: z.string() }))
     .output(z.object({ data: z.array(scheduleTaskOutputSchema) }))
     .query(async ({ ctx, input }) => {
       try {
@@ -524,8 +524,8 @@ export const schedulesRouter = createTRPCRouter({
     .use(requirePermission(SCHEDULES_MANAGE))
     .input(
       z.object({
-        scheduleId: z.string().uuid(),
-        taskId: z.string().uuid(),
+        scheduleId: z.string(),
+        taskId: z.string(),
       })
     )
     .output(z.object({ success: z.boolean() }))
@@ -555,7 +555,7 @@ export const schedulesRouter = createTRPCRouter({
    */
   execute: tenantProcedure
     .use(requirePermission(SCHEDULES_MANAGE))
-    .input(z.object({ scheduleId: z.string().uuid() }))
+    .input(z.object({ scheduleId: z.string() }))
     .output(scheduleExecutionOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
@@ -582,7 +582,7 @@ export const schedulesRouter = createTRPCRouter({
     .use(requirePermission(SCHEDULES_MANAGE))
     .input(
       z.object({
-        scheduleId: z.string().uuid(),
+        scheduleId: z.string(),
         limit: z.number().int().min(1).max(100).optional().default(20),
       })
     )
@@ -608,7 +608,7 @@ export const schedulesRouter = createTRPCRouter({
    */
   execution: tenantProcedure
     .use(requirePermission(SCHEDULES_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(scheduleExecutionOutputSchema)
     .query(async ({ ctx, input }) => {
       try {

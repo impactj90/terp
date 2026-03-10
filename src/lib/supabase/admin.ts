@@ -11,7 +11,7 @@ import { clientEnv, serverEnv } from '@/lib/config'
 
 export function createAdminClient() {
   return createClient(
-    clientEnv.supabaseUrl,
+    serverEnv.supabaseUrl || clientEnv.supabaseUrl,
     serverEnv.supabaseServiceRoleKey,
     {
       auth: {

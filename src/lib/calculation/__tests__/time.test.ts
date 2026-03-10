@@ -1,3 +1,4 @@
+import { describe, it, expect } from "vitest"
 import { normalizeCrossMidnight, isValidTimeOfDay, MINUTES_PER_DAY, MAX_MINUTES_FROM_MIDNIGHT } from "../time"
 
 describe("constants", () => {

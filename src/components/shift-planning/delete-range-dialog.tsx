@@ -75,7 +75,7 @@ export function DeleteRangeDialog({
       return defaultEmployeeName
     }
     const employee = employees.find((e) => e.id === selectedEmployeeId)
-    return employee ? `${employee.last_name}, ${employee.first_name}` : ''
+    return employee ? `${employee.lastName}, ${employee.firstName}` : ''
   }, [selectedEmployeeId, employees, defaultEmployeeId, defaultEmployeeName])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -94,11 +94,9 @@ export function DeleteRangeDialog({
 
     try {
       const response = await deleteMutation.mutateAsync({
-        body: {
-          employee_id: selectedEmployeeId,
-          from: formatDate(dateRange.from),
-          to: formatDate(dateRange.to),
-        },
+        employeeId: selectedEmployeeId,
+        from: formatDate(dateRange.from),
+        to: formatDate(dateRange.to),
       })
       const data = response as { deleted?: number }
       setResult({ deleted: data.deleted ?? 0 })
@@ -146,7 +144,7 @@ export function DeleteRangeDialog({
                   </SelectItem>
                   {employees.map((employee) => (
                     <SelectItem key={employee.id} value={employee.id}>
-                      {employee.last_name}, {employee.first_name}
+                      {employee.lastName}, {employee.firstName}
                     </SelectItem>
                   ))}
                 </SelectContent>

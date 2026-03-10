@@ -25,8 +25,8 @@ const TERMINAL_BOOKINGS_MANAGE = permissionIdByKey("terminal_bookings.manage")!
 // --- Output Schemas ---
 
 const importBatchOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   batchReference: z.string(),
   source: z.string(),
   terminalId: z.string().nullable(),
@@ -42,24 +42,24 @@ const importBatchOutputSchema = z.object({
 })
 
 const rawTerminalBookingOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  importBatchId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
+  importBatchId: z.string(),
   terminalId: z.string(),
   employeePin: z.string(),
-  employeeId: z.string().uuid().nullable(),
+  employeeId: z.string().nullable(),
   rawTimestamp: z.date(),
   rawBookingCode: z.string(),
   bookingDate: z.date(),
-  bookingTypeId: z.string().uuid().nullable(),
-  processedBookingId: z.string().uuid().nullable(),
+  bookingTypeId: z.string().nullable(),
+  processedBookingId: z.string().nullable(),
   status: z.string(),
   errorMessage: z.string().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
   employee: z
     .object({
-      id: z.string().uuid(),
+      id: z.string(),
       firstName: z.string(),
       lastName: z.string(),
       personnelNumber: z.string(),
@@ -68,7 +68,7 @@ const rawTerminalBookingOutputSchema = z.object({
     .optional(),
   bookingType: z
     .object({
-      id: z.string().uuid(),
+      id: z.string(),
       code: z.string(),
       name: z.string(),
     })
@@ -94,8 +94,8 @@ export const terminalBookingsRouter = createTRPCRouter({
         from: z.string().optional(),
         to: z.string().optional(),
         terminalId: z.string().optional(),
-        employeeId: z.string().uuid().optional(),
-        importBatchId: z.string().uuid().optional(),
+        employeeId: z.string().optional(),
+        importBatchId: z.string().optional(),
         status: z
           .enum(["pending", "processed", "failed", "skipped"])
           .optional(),
@@ -396,7 +396,7 @@ export const terminalBookingsRouter = createTRPCRouter({
    */
   batch: tenantProcedure
     .use(requirePermission(TERMINAL_BOOKINGS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(importBatchOutputSchema)
     .query(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!

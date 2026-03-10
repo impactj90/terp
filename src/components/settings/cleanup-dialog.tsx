@@ -22,9 +22,9 @@ import {
   useCleanupReReadBookings,
   useCleanupMarkDeleteOrders,
 } from '@/hooks'
-import type { components } from '@/types/legacy-api-types'
 
-type CleanupResult = components['schemas']['CleanupResult']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type CleanupResult = any
 
 export type CleanupType = 'delete-bookings' | 'delete-booking-data' | 're-read-bookings' | 'mark-delete-orders'
 

@@ -28,15 +28,14 @@ import {
   useUpdateTeamMember,
   useRemoveTeamMember,
 } from '@/hooks'
-import type { components } from '@/types/legacy-api-types'
 
-type Team = components['schemas']['Team']
-type TeamMember = components['schemas']['TeamMember']
-type TeamMemberRole = components['schemas']['TeamMemberRole']
+type TeamData = NonNullable<ReturnType<typeof useTeam>['data']>
+type TeamMember = NonNullable<TeamData['members']>[number]
+type TeamMemberRole = 'member' | 'lead' | 'deputy'
 
 interface MemberManagementSheetProps {
   /** Team to manage members for */
-  team: Team | null
+  team: TeamData | null
   /** Whether the sheet is open */
   open: boolean
   /** Callback when open state changes */
@@ -71,7 +70,7 @@ export function MemberManagementSheet({
   const removeMemberMutation = useRemoveTeamMember()
 
   const members = teamData?.members ?? []
-  const memberIds = new Set(members.map((m) => m.employee_id))
+  const memberIds = new Set(members.map((m) => m.employeeId))
   const allEmployees = employeesData?.items ?? []
 
   // Filter employees not already in team
@@ -79,9 +78,9 @@ export function MemberManagementSheet({
     (emp) =>
       !memberIds.has(emp.id) &&
       (search === '' ||
-        emp.first_name.toLowerCase().includes(search.toLowerCase()) ||
-        emp.last_name.toLowerCase().includes(search.toLowerCase()) ||
-        emp.personnel_number.toLowerCase().includes(search.toLowerCase()))
+        emp.firstName.toLowerCase().includes(search.toLowerCase()) ||
+        emp.lastName.toLowerCase().includes(search.toLowerCase()) ||
+        emp.personnelNumber.toLowerCase().includes(search.toLowerCase()))
   )
 
   // Reset state when opening
@@ -98,8 +97,9 @@ export function MemberManagementSheet({
 
     try {
       await addMemberMutation.mutateAsync({
-        path: { id: team.id },
-        body: { employee_id: employeeId, role },
+        teamId: team.id,
+        employeeId,
+        role,
       })
     } catch (err) {
       const apiError = err as { detail?: string; message?: string }
@@ -113,8 +113,9 @@ export function MemberManagementSheet({
 
     try {
       await updateMemberMutation.mutateAsync({
-        path: { id: team.id, employee_id: employeeId },
-        body: { role: newRole },
+        teamId: team.id,
+        employeeId,
+        role: newRole,
       })
     } catch (err) {
       const apiError = err as { detail?: string; message?: string }
@@ -128,7 +129,8 @@ export function MemberManagementSheet({
 
     try {
       await removeMemberMutation.mutateAsync({
-        path: { id: team.id, employee_id: employeeId },
+        teamId: team.id,
+        employeeId,
       })
     } catch (err) {
       const apiError = err as { detail?: string; message?: string }
@@ -171,10 +173,10 @@ export function MemberManagementSheet({
                 <div className="p-2 space-y-2">
                   {members.map((member) => (
                     <MemberRow
-                      key={member.employee_id}
+                      key={member.employeeId}
                       member={member}
-                      onRoleChange={(role) => handleUpdateRole(member.employee_id, role)}
-                      onRemove={() => handleRemoveMember(member.employee_id)}
+                      onRoleChange={(role) => handleUpdateRole(member.employeeId, role)}
+                      onRemove={() => handleRemoveMember(member.employeeId)}
                       disabled={isMutating}
                     />
                   ))}
@@ -228,15 +230,15 @@ export function MemberManagementSheet({
                     >
                       <div className="flex items-center gap-3">
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
-                          {employee.first_name[0]}
-                          {employee.last_name[0]}
+                          {employee.firstName[0]}
+                          {employee.lastName[0]}
                         </div>
                         <div>
                           <p className="text-sm font-medium">
-                            {employee.first_name} {employee.last_name}
+                            {employee.firstName} {employee.lastName}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {employee.department?.name || employee.personnel_number}
+                            {employee.personnelNumber}
                           </p>
                         </div>
                       </div>
@@ -275,13 +277,13 @@ function MemberRow({ member, onRoleChange, onRemove, disabled }: MemberRowProps)
     <div className="flex items-center justify-between p-2 rounded-md bg-muted/50">
       <div className="flex items-center gap-3">
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-background text-sm font-medium">
-          {member.employee?.first_name?.[0] ?? '?'}
-          {member.employee?.last_name?.[0] ?? '?'}
+          {member.employee?.firstName?.[0] ?? '?'}
+          {member.employee?.lastName?.[0] ?? '?'}
         </div>
         <div>
           <p className="text-sm font-medium">
             {member.employee
-              ? `${member.employee.first_name} ${member.employee.last_name}`
+              ? `${member.employee.firstName} ${member.employee.lastName}`
               : t('unknown')}
           </p>
         </div>

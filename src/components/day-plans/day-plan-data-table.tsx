@@ -22,9 +22,9 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatTime, formatDuration } from '@/lib/time-utils'
-import type { components } from '@/types/legacy-api-types'
+import type { useDayPlan } from '@/hooks'
 
-type DayPlan = components['schemas']['DayPlan']
+type DayPlan = NonNullable<ReturnType<typeof useDayPlan>['data']>
 
 interface DayPlanDataTableProps {
   dayPlans: DayPlan[]
@@ -75,20 +75,20 @@ export function DayPlanDataTable({
             <TableCell className="font-mono text-sm">{dayPlan.code}</TableCell>
             <TableCell className="font-medium">{dayPlan.name}</TableCell>
             <TableCell>
-              <Badge variant={dayPlan.plan_type === 'fixed' ? 'secondary' : 'outline'}>
-                {dayPlan.plan_type === 'fixed' ? t('typeFixed') : t('typeFlextime')}
+              <Badge variant={dayPlan.planType === 'fixed' ? 'secondary' : 'outline'}>
+                {dayPlan.planType === 'fixed' ? t('typeFixed') : t('typeFlextime')}
               </Badge>
             </TableCell>
             <TableCell className="text-sm text-muted-foreground">
-              {dayPlan.come_from !== null && dayPlan.come_from !== undefined
-                ? `${formatTime(dayPlan.come_from)} - ${formatTime(dayPlan.go_to ?? 0)}`
+              {dayPlan.comeFrom !== null && dayPlan.comeFrom !== undefined
+                ? `${formatTime(dayPlan.comeFrom)} - ${formatTime(dayPlan.goTo ?? 0)}`
                 : '-'}
             </TableCell>
-            <TableCell>{formatDuration(dayPlan.regular_hours)}</TableCell>
+            <TableCell>{formatDuration(dayPlan.regularHours)}</TableCell>
             <TableCell>{dayPlan.breaks?.length ?? 0}</TableCell>
             <TableCell>
-              <Badge variant={dayPlan.is_active ? 'default' : 'secondary'}>
-                {dayPlan.is_active ? t('statusActive') : t('statusInactive')}
+              <Badge variant={dayPlan.isActive ? 'default' : 'secondary'}>
+                {dayPlan.isActive ? t('statusActive') : t('statusInactive')}
               </Badge>
             </TableCell>
             <TableCell onClick={(e) => e.stopPropagation()}>

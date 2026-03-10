@@ -59,7 +59,7 @@ export function EmergencyContactsCard({ employeeId }: EmergencyContactsCardProps
 
     try {
       await deleteContact.mutateAsync({
-        path: { id: employeeId, contactId },
+        id: contactId,
       })
       setSuccessMessage(t('contactDeleted'))
       refetch()

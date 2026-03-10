@@ -189,10 +189,10 @@ describe("tripRecords.list", () => {
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.list({})
 
-    expect(result.data[0].startMileage).toBe(10000)
-    expect(result.data[0].endMileage).toBe(10050)
-    expect(result.data[0].distanceKm).toBe(50)
-    expect(typeof result.data[0].startMileage).toBe("number")
+    expect(result.data[0]!.startMileage).toBe(10000)
+    expect(result.data[0]!.endMileage).toBe(10050)
+    expect(result.data[0]!.distanceKm).toBe(50)
+    expect(typeof result.data[0]!.startMileage).toBe("number")
   })
 
   it("handles null Decimal fields", async () => {
@@ -212,9 +212,9 @@ describe("tripRecords.list", () => {
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.list({})
 
-    expect(result.data[0].startMileage).toBeNull()
-    expect(result.data[0].endMileage).toBeNull()
-    expect(result.data[0].distanceKm).toBeNull()
+    expect(result.data[0]!.startMileage).toBeNull()
+    expect(result.data[0]!.endMileage).toBeNull()
+    expect(result.data[0]!.distanceKm).toBeNull()
   })
 })
 

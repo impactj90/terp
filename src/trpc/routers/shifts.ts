@@ -26,12 +26,12 @@ const SHIFT_PLANNING_MANAGE = permissionIdByKey("shift_planning.manage")!
 // --- Output Schemas ---
 
 const shiftOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   code: z.string(),
   name: z.string(),
   description: z.string().nullable(),
-  dayPlanId: z.string().uuid().nullable(),
+  dayPlanId: z.string().nullable(),
   color: z.string().nullable(),
   qualification: z.string().nullable(),
   isActive: z.boolean(),
@@ -46,18 +46,18 @@ const createShiftInputSchema = z.object({
   code: z.string().min(1, "Code is required").max(50),
   name: z.string().min(1, "Name is required").max(255),
   description: z.string().optional(),
-  dayPlanId: z.string().uuid().optional(),
+  dayPlanId: z.string().optional(),
   color: z.string().max(7).optional(),
   qualification: z.string().optional(),
   sortOrder: z.number().int().optional(),
 })
 
 const updateShiftInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   // Code is NOT updatable (immutable after creation)
   name: z.string().min(1).max(255).optional(),
   description: z.string().nullable().optional(),
-  dayPlanId: z.string().uuid().nullable().optional(),
+  dayPlanId: z.string().nullable().optional(),
   color: z.string().max(7).nullable().optional(),
   qualification: z.string().nullable().optional(),
   isActive: z.boolean().optional(),
@@ -126,7 +126,7 @@ export const shiftsRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(SHIFT_PLANNING_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(shiftOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -200,7 +200,7 @@ export const shiftsRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(SHIFT_PLANNING_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

@@ -42,8 +42,8 @@ const BREAK_TYPES = ["fixed", "variable", "minimum"] as const
 // --- Output Schemas ---
 
 const tariffBreakOutputSchema = z.object({
-  id: z.string().uuid(),
-  tariffId: z.string().uuid(),
+  id: z.string(),
+  tariffId: z.string(),
   breakType: z.string(),
   afterWorkMinutes: z.number().nullable(),
   duration: z.number(),
@@ -54,27 +54,27 @@ const tariffBreakOutputSchema = z.object({
 })
 
 const tariffWeekPlanOutputSchema = z.object({
-  id: z.string().uuid(),
-  tariffId: z.string().uuid(),
-  weekPlanId: z.string().uuid(),
+  id: z.string(),
+  tariffId: z.string(),
+  weekPlanId: z.string(),
   sequenceOrder: z.number(),
   createdAt: z.date(),
   weekPlan: z.object({
-    id: z.string().uuid(),
+    id: z.string(),
     code: z.string(),
     name: z.string(),
   }),
 })
 
 const tariffDayPlanOutputSchema = z.object({
-  id: z.string().uuid(),
-  tariffId: z.string().uuid(),
+  id: z.string(),
+  tariffId: z.string(),
   dayPosition: z.number(),
-  dayPlanId: z.string().uuid().nullable(),
+  dayPlanId: z.string().nullable(),
   createdAt: z.date(),
   dayPlan: z
     .object({
-      id: z.string().uuid(),
+      id: z.string(),
       code: z.string(),
       name: z.string(),
       planType: z.string(),
@@ -83,12 +83,12 @@ const tariffDayPlanOutputSchema = z.object({
 })
 
 const tariffOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   code: z.string(),
   name: z.string(),
   description: z.string().nullable(),
-  weekPlanId: z.string().uuid().nullable(),
+  weekPlanId: z.string().nullable(),
   validFrom: z.date().nullable(),
   validTo: z.date().nullable(),
   isActive: z.boolean(),
@@ -112,13 +112,13 @@ const tariffOutputSchema = z.object({
   cycleDays: z.number().nullable(),
   rhythmStartDate: z.date().nullable(),
   // Vacation capping
-  vacationCappingRuleGroupId: z.string().uuid().nullable(),
+  vacationCappingRuleGroupId: z.string().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
   // Optional relations (included in detail views)
   weekPlan: z
     .object({
-      id: z.string().uuid(),
+      id: z.string(),
       code: z.string(),
       name: z.string(),
     })
@@ -137,7 +137,7 @@ const createTariffInputSchema = z.object({
   code: z.string().min(1, "Code is required").max(20),
   name: z.string().min(1, "Name is required").max(255),
   description: z.string().optional(),
-  weekPlanId: z.string().uuid().optional(),
+  weekPlanId: z.string().optional(),
   validFrom: z.string().date().optional(),
   validTo: z.string().date().optional(),
   isActive: z.boolean().optional().default(true),
@@ -145,7 +145,7 @@ const createTariffInputSchema = z.object({
   annualVacationDays: z.number().optional(),
   workDaysPerWeek: z.number().int().min(1).max(7).optional(),
   vacationBasis: z.enum(VACATION_BASES).optional(),
-  vacationCappingRuleGroupId: z.string().uuid().optional(),
+  vacationCappingRuleGroupId: z.string().optional(),
   // Target hours
   dailyTargetHours: z.number().optional(),
   weeklyTargetHours: z.number().optional(),
@@ -162,23 +162,23 @@ const createTariffInputSchema = z.object({
   cycleDays: z.number().int().min(1).max(365).optional(),
   rhythmStartDate: z.string().date().optional(),
   // Rhythm sub-records
-  weekPlanIds: z.array(z.string().uuid()).optional(),
+  weekPlanIds: z.array(z.string()).optional(),
   dayPlans: z
     .array(
       z.object({
         dayPosition: z.number().int(),
-        dayPlanId: z.string().uuid().nullable(),
+        dayPlanId: z.string().nullable(),
       })
     )
     .optional(),
 })
 
 const updateTariffInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   // Code is NOT updatable (immutable after creation)
   name: z.string().min(1).max(255).optional(),
   description: z.string().nullable().optional(),
-  weekPlanId: z.string().uuid().nullable().optional(),
+  weekPlanId: z.string().nullable().optional(),
   validFrom: z.string().date().nullable().optional(),
   validTo: z.string().date().nullable().optional(),
   isActive: z.boolean().optional(),
@@ -186,7 +186,7 @@ const updateTariffInputSchema = z.object({
   annualVacationDays: z.number().nullable().optional(),
   workDaysPerWeek: z.number().int().min(1).max(7).nullable().optional(),
   vacationBasis: z.enum(VACATION_BASES).nullable().optional(),
-  vacationCappingRuleGroupId: z.string().uuid().nullable().optional(),
+  vacationCappingRuleGroupId: z.string().nullable().optional(),
   // Target hours
   dailyTargetHours: z.number().nullable().optional(),
   weeklyTargetHours: z.number().nullable().optional(),
@@ -203,19 +203,19 @@ const updateTariffInputSchema = z.object({
   cycleDays: z.number().int().min(1).max(365).nullable().optional(),
   rhythmStartDate: z.string().date().nullable().optional(),
   // Rhythm sub-records
-  weekPlanIds: z.array(z.string().uuid()).optional(),
+  weekPlanIds: z.array(z.string()).optional(),
   dayPlans: z
     .array(
       z.object({
         dayPosition: z.number().int(),
-        dayPlanId: z.string().uuid().nullable(),
+        dayPlanId: z.string().nullable(),
       })
     )
     .optional(),
 })
 
 const createBreakInputSchema = z.object({
-  tariffId: z.string().uuid(),
+  tariffId: z.string(),
   breakType: z.enum(BREAK_TYPES),
   afterWorkMinutes: z.number().int().optional(),
   duration: z.number().int().min(1, "Duration must be positive"),
@@ -223,8 +223,8 @@ const createBreakInputSchema = z.object({
 })
 
 const deleteBreakInputSchema = z.object({
-  tariffId: z.string().uuid(),
-  breakId: z.string().uuid(),
+  tariffId: z.string(),
+  breakId: z.string(),
 })
 
 // --- Helpers ---
@@ -406,7 +406,7 @@ export const tariffsRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(TARIFFS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(tariffOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -490,7 +490,7 @@ export const tariffsRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(TARIFFS_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

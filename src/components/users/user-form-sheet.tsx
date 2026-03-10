@@ -118,7 +118,7 @@ export function UserFormSheet({ open, onOpenChange, user, onSuccess }: UserFormS
 
   const groups = groupsData?.data ?? []
   const employees = employeesData?.items ?? []
-  const tenants = tenantsData?.data ?? []
+  const tenants = tenantsData ?? []
   const departments = departmentsData?.data ?? []
   const scopeEmployees = scopeEmployeesData?.items ?? []
 
@@ -371,7 +371,7 @@ export function UserFormSheet({ open, onOpenChange, user, onSuccess }: UserFormS
                     <SelectItem value="__none__">{t('noEmployee')}</SelectItem>
                     {employees.map((emp) => (
                       <SelectItem key={emp.id} value={emp.id}>
-                        {emp.personnel_number} - {emp.first_name} {emp.last_name}
+                        {emp.personnelNumber} - {emp.firstName} {emp.lastName}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -480,7 +480,7 @@ export function UserFormSheet({ open, onOpenChange, user, onSuccess }: UserFormS
                       <Label>{t('fieldDataScopeIds')}</Label>
                       <p className="text-xs text-muted-foreground">{t('scopeIdsHint')}</p>
                       <div className="max-h-48 overflow-y-auto rounded-lg border p-3 space-y-2">
-                        {tenants.map((tenant) => (
+                        {tenants.map((tenant: { id: string; name: string }) => (
                           <label
                             key={tenant.id}
                             htmlFor={`scope-tenant-${tenant.id}`}
@@ -555,7 +555,7 @@ export function UserFormSheet({ open, onOpenChange, user, onSuccess }: UserFormS
                               disabled={isSubmitting}
                             />
                             <span className="text-sm">
-                              {emp.personnel_number} - {emp.first_name} {emp.last_name}
+                              {emp.personnelNumber} - {emp.firstName} {emp.lastName}
                             </span>
                           </label>
                         ))}

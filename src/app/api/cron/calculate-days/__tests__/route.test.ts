@@ -11,6 +11,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import type { PrismaClient } from "@/generated/prisma/client"
+import type * as CronLoggerModule from "@/lib/services/cron-execution-logger"
 import { computeDateRange } from "../route"
 
 // ---- computeDateRange unit tests ----
@@ -363,25 +365,21 @@ describe("CronExecutionLogger", () => {
 
   it("can be instantiated with a PrismaClient", async () => {
     // Direct import (not mocked) to verify the class shape
-    const { CronExecutionLogger } = await vi.importActual<
-      typeof import("@/lib/services/cron-execution-logger")
-    >("@/lib/services/cron-execution-logger")
+    const { CronExecutionLogger } = await vi.importActual<typeof CronLoggerModule>("@/lib/services/cron-execution-logger")
 
-    const mockPrisma = {} as any
+    const mockPrisma = {} as unknown as PrismaClient
     const logger = new CronExecutionLogger(mockPrisma)
     expect(logger).toBeDefined()
     expect(logger).toBeInstanceOf(CronExecutionLogger)
   })
 
   it("ensureSchedule upserts with correct parameters", async () => {
-    const { CronExecutionLogger } = await vi.importActual<
-      typeof import("@/lib/services/cron-execution-logger")
-    >("@/lib/services/cron-execution-logger")
+    const { CronExecutionLogger } = await vi.importActual<typeof CronLoggerModule>("@/lib/services/cron-execution-logger")
 
     const mockUpsert = vi.fn().mockResolvedValue({ id: "schedule-123" })
     const mockPrisma = {
       schedule: { upsert: mockUpsert },
-    } as any
+    } as unknown as PrismaClient
 
     const logger = new CronExecutionLogger(mockPrisma)
     const id = await logger.ensureSchedule(
@@ -414,9 +412,7 @@ describe("CronExecutionLogger", () => {
   })
 
   it("startExecution creates execution with running status", async () => {
-    const { CronExecutionLogger } = await vi.importActual<
-      typeof import("@/lib/services/cron-execution-logger")
-    >("@/lib/services/cron-execution-logger")
+    const { CronExecutionLogger } = await vi.importActual<typeof CronLoggerModule>("@/lib/services/cron-execution-logger")
 
     const mockCreate = vi.fn().mockResolvedValue({
       id: "exec-123",
@@ -424,7 +420,7 @@ describe("CronExecutionLogger", () => {
     })
     const mockPrisma = {
       scheduleExecution: { create: mockCreate },
-    } as any
+    } as unknown as PrismaClient
 
     const logger = new CronExecutionLogger(mockPrisma)
     const result = await logger.startExecution(
@@ -450,9 +446,7 @@ describe("CronExecutionLogger", () => {
   })
 
   it("completeExecution updates all records in transaction", async () => {
-    const { CronExecutionLogger } = await vi.importActual<
-      typeof import("@/lib/services/cron-execution-logger")
-    >("@/lib/services/cron-execution-logger")
+    const { CronExecutionLogger } = await vi.importActual<typeof CronLoggerModule>("@/lib/services/cron-execution-logger")
 
     const mockTransaction = vi.fn().mockResolvedValue([{}, {}, {}])
     const mockPrisma = {
@@ -462,7 +456,7 @@ describe("CronExecutionLogger", () => {
       },
       scheduleExecution: { update: vi.fn().mockReturnValue("exec-update-op") },
       schedule: { update: vi.fn().mockReturnValue("schedule-update-op") },
-    } as any
+    } as unknown as PrismaClient
 
     const logger = new CronExecutionLogger(mockPrisma)
     await logger.completeExecution("exec-1", "task-exec-1", "schedule-1", {
@@ -479,9 +473,7 @@ describe("CronExecutionLogger", () => {
   })
 
   it("completeExecution sets tasksFailed=1 when status is 'failed'", async () => {
-    const { CronExecutionLogger } = await vi.importActual<
-      typeof import("@/lib/services/cron-execution-logger")
-    >("@/lib/services/cron-execution-logger")
+    const { CronExecutionLogger } = await vi.importActual<typeof CronLoggerModule>("@/lib/services/cron-execution-logger")
 
     const mockTransaction = vi.fn().mockResolvedValue([{}, {}, {}])
     const mockPrisma = {
@@ -495,7 +487,7 @@ describe("CronExecutionLogger", () => {
       schedule: {
         update: vi.fn().mockReturnValue("schedule-update-op"),
       },
-    } as any
+    } as unknown as PrismaClient
 
     const logger = new CronExecutionLogger(mockPrisma)
     await logger.completeExecution("exec-1", "task-exec-1", "schedule-1", {

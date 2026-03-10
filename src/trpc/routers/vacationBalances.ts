@@ -49,9 +49,9 @@ export const vacationBalancesRouter = createTRPCRouter({
         .object({
           page: z.number().int().positive().optional(),
           pageSize: z.number().int().min(1).max(100).optional(),
-          employeeId: z.string().uuid().optional(),
+          employeeId: z.string().optional(),
           year: z.number().int().optional(),
-          departmentId: z.string().uuid().optional(),
+          departmentId: z.string().optional(),
         })
         .optional()
         .default({})
@@ -85,7 +85,7 @@ export const vacationBalancesRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(ABSENCES_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(vacationBalanceOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -107,7 +107,7 @@ export const vacationBalancesRouter = createTRPCRouter({
     .use(requirePermission(ABSENCES_MANAGE))
     .input(
       z.object({
-        employeeId: z.string().uuid(),
+        employeeId: z.string(),
         year: z.number().int().min(1900).max(2200),
         entitlement: z.number().default(0),
         carryover: z.number().default(0),
@@ -125,6 +125,38 @@ export const vacationBalancesRouter = createTRPCRouter({
     }),
 
   /**
+   * vacationBalances.initialize -- Initializes vacation balances for all active employees.
+   *
+   * For each active employee:
+   * 1. Optionally carries over remaining balance from previous year
+   * 2. Creates a new balance record for the target year (if not exists)
+   *
+   * Port of Go VacationBalanceHandler.Initialize
+   * Requires: absences.manage permission
+   */
+  initialize: tenantProcedure
+    .use(requirePermission(ABSENCES_MANAGE))
+    .input(
+      z.object({
+        year: z.number().int().min(1900).max(2200),
+        carryover: z.boolean().optional().default(true),
+      })
+    )
+    .output(
+      z.object({
+        message: z.string(),
+        createdCount: z.number().int(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await service.initializeBalances(ctx.prisma, ctx.tenantId!, input)
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  /**
    * vacationBalances.update -- Partially updates an existing vacation balance.
    *
    * Port of Go VacationBalanceService.Update()
@@ -134,7 +166,7 @@ export const vacationBalancesRouter = createTRPCRouter({
     .use(requirePermission(ABSENCES_MANAGE))
     .input(
       z.object({
-        id: z.string().uuid(),
+        id: z.string(),
         entitlement: z.number().optional(),
         carryover: z.number().optional(),
         adjustments: z.number().optional(),

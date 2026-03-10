@@ -28,11 +28,11 @@ const BOOKING_TYPES_MANAGE = permissionIdByKey("booking_types.manage")!
 // --- Output Schemas ---
 
 const memberOutputSchema = z.object({
-  id: z.string().uuid(),
-  bookingTypeId: z.string().uuid(),
+  id: z.string(),
+  bookingTypeId: z.string(),
   sortOrder: z.number(),
   bookingType: z.object({
-    id: z.string().uuid(),
+    id: z.string(),
     code: z.string(),
     name: z.string(),
     direction: z.string(),
@@ -41,8 +41,8 @@ const memberOutputSchema = z.object({
 })
 
 const bookingTypeGroupOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   code: z.string(),
   name: z.string(),
   description: z.string().nullable(),
@@ -60,15 +60,15 @@ const createBookingTypeGroupInputSchema = z.object({
   code: z.string().min(1, "Code is required"),
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  bookingTypeIds: z.array(z.string().uuid()).optional(),
+  bookingTypeIds: z.array(z.string()).optional(),
 })
 
 const updateBookingTypeGroupInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   name: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
   isActive: z.boolean().optional(),
-  bookingTypeIds: z.array(z.string().uuid()).optional(),
+  bookingTypeIds: z.array(z.string()).optional(),
 })
 
 // --- Types for Prisma results with includes ---
@@ -169,7 +169,7 @@ export const bookingTypeGroupsRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(BOOKING_TYPES_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(bookingTypeGroupOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -250,7 +250,7 @@ export const bookingTypeGroupsRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(BOOKING_TYPES_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

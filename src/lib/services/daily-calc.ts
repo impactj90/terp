@@ -26,7 +26,6 @@ import type {
   CalculationResult,
   BookingPair,
   BookingInput,
-  DayPlanInput,
   BreakConfig,
   RoundingConfig,
   ToleranceConfig,
@@ -64,9 +63,7 @@ import {
   sameDate,
   addDays,
   dateOnly,
-  isBreakBooking,
   isBreakBookingType,
-  bookingDirection,
   effectiveTime,
   sortedBookingsFromMap,
   filterBookingsByDate,
@@ -1253,7 +1250,6 @@ export class DailyCalcService {
    */
   private createShiftDetectionLoader(): DayPlanLoader {
     const cache = new Map<string, ShiftDetectionInput | null>()
-    const prisma = this.prisma
 
     return {
       loadShiftDetectionInput(id: string): ShiftDetectionInput | null {

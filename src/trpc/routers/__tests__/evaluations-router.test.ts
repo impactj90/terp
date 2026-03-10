@@ -590,7 +590,7 @@ describe("evaluations.logs", () => {
       toDate: "2026-03-31",
     })
 
-    const callArgs = mockPrisma.auditLog.findMany.mock.calls[0][0]
+    const callArgs = mockPrisma.auditLog.findMany.mock.calls[0]![0]!
     const performedAt = callArgs.where.performedAt as {
       gte: Date
       lte: Date
@@ -615,7 +615,7 @@ describe("evaluations.logs", () => {
       toDate: "2026-03-31",
     })
 
-    const callArgs = mockPrisma.auditLog.findMany.mock.calls[0][0]
+    const callArgs = mockPrisma.auditLog.findMany.mock.calls[0]![0]!
     // Should not have employee or employeeId in where clause
     expect(callArgs.where.employee).toBeUndefined()
     expect(callArgs.where.employeeId).toBeUndefined()
@@ -804,7 +804,7 @@ describe("evaluations.workflowHistory", () => {
       toDate: "2026-03-31",
     })
 
-    const callArgs = mockPrisma.auditLog.findMany.mock.calls[0][0]
+    const callArgs = mockPrisma.auditLog.findMany.mock.calls[0]![0]!
     const performedAt = callArgs.where.performedAt as {
       gte: Date
       lte: Date
@@ -829,7 +829,7 @@ describe("evaluations.workflowHistory", () => {
       toDate: "2026-03-31",
     })
 
-    const callArgs = mockPrisma.auditLog.findMany.mock.calls[0][0]
+    const callArgs = mockPrisma.auditLog.findMany.mock.calls[0]![0]!
     expect(callArgs.where.employee).toBeUndefined()
     expect(callArgs.where.employeeId).toBeUndefined()
   })

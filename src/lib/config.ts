@@ -7,14 +7,21 @@
 // Server-side only
 export const serverEnv = {
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
+  // Internal Supabase URL for server-side requests (e.g., inside Docker).
+  // Falls back to NEXT_PUBLIC_SUPABASE_URL when not set.
+  supabaseUrl: process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
 } as const
 
 // Client-side accessible
 export const clientEnv = {
   appName: process.env.NEXT_PUBLIC_APP_NAME ?? 'Terp',
+  env: (process.env.NEXT_PUBLIC_ENV ?? 'development') as 'development' | 'production',
   supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
   supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
 } as const
+
+export const isDev = clientEnv.env === 'development'
+export const isProd = clientEnv.env === 'production'
 
 /**
  * Validates that required environment variables are set.

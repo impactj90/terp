@@ -125,24 +125,18 @@ export function EmploymentTypeFormSheet({
     try {
       if (isEdit && employmentType) {
         await updateMutation.mutateAsync({
-          path: { id: employmentType.id },
-          body: {
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            default_weekly_hours: form.defaultWeeklyHours ? parseFloat(form.defaultWeeklyHours) : undefined,
-            is_active: form.isActive,
-            vacation_calc_group_id: form.vacationCalcGroupId || undefined,
-          },
+          id: employmentType.id,
+          name: form.name.trim(),
+          weeklyHoursDefault: form.defaultWeeklyHours ? parseFloat(form.defaultWeeklyHours) : undefined,
+          isActive: form.isActive,
+          vacationCalcGroupId: form.vacationCalcGroupId || undefined,
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            code: form.code.trim(),
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            default_weekly_hours: form.defaultWeeklyHours ? parseFloat(form.defaultWeeklyHours) : undefined,
-            vacation_calc_group_id: form.vacationCalcGroupId || undefined,
-          },
+          code: form.code.trim(),
+          name: form.name.trim(),
+          weeklyHoursDefault: form.defaultWeeklyHours ? parseFloat(form.defaultWeeklyHours) : undefined,
+          vacationCalcGroupId: form.vacationCalcGroupId || undefined,
         })
       }
 

@@ -27,9 +27,9 @@ import {
 import {
   useExportInterface,
 } from '@/hooks/use-export-interfaces'
-import type { components } from '@/types/legacy-api-types'
 
-type ExportInterface = components['schemas']['ExportInterface']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ExportInterface = any
 
 interface ExportInterfaceDetailSheetProps {
   itemId: string | null
@@ -100,11 +100,11 @@ export function ExportInterfaceDetailSheet({
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold">{item.name}</h3>
                   <p className="text-sm text-muted-foreground font-mono">
-                    #{item.interface_number}
+                    #{item.interfaceNumber}
                   </p>
                 </div>
-                <Badge variant={item.is_active ? 'default' : 'secondary'}>
-                  {item.is_active ? t('statusActive') : t('statusInactive')}
+                <Badge variant={item.isActive ? 'default' : 'secondary'}>
+                  {item.isActive ? t('statusActive') : t('statusInactive')}
                 </Badge>
               </div>
 
@@ -114,7 +114,7 @@ export function ExportInterfaceDetailSheet({
                 <div className="rounded-lg border p-4">
                   <DetailRow
                     label={t('fieldNumber')}
-                    value={<span className="font-mono">{item.interface_number}</span>}
+                    value={<span className="font-mono">{item.interfaceNumber}</span>}
                   />
                   <DetailRow label={t('fieldName')} value={item.name} />
                 </div>
@@ -124,10 +124,10 @@ export function ExportInterfaceDetailSheet({
               <div className="space-y-2">
                 <h4 className="text-sm font-medium text-muted-foreground">{t('sectionExportConfig')}</h4>
                 <div className="rounded-lg border p-4">
-                  <DetailRow label={t('fieldMandant')} value={item.mandant_number} />
-                  <DetailRow label={t('fieldExportScript')} value={item.export_script} />
-                  <DetailRow label={t('fieldExportPath')} value={item.export_path} />
-                  <DetailRow label={t('fieldOutputFilename')} value={item.output_filename} />
+                  <DetailRow label={t('fieldMandant')} value={item.mandantNumber} />
+                  <DetailRow label={t('fieldExportScript')} value={item.exportScript} />
+                  <DetailRow label={t('fieldExportPath')} value={item.exportPath} />
+                  <DetailRow label={t('fieldOutputFilename')} value={item.outputFilename} />
                 </div>
               </div>
 
@@ -148,15 +148,15 @@ export function ExportInterfaceDetailSheet({
                       </TableHeader>
                       <TableBody>
                         {accounts.map((account) => (
-                          <TableRow key={account.account_id}>
+                          <TableRow key={account.accountId}>
                             <TableCell className="font-mono text-sm">
-                              {account.account_code}
+                              {account.account?.code}
                             </TableCell>
                             <TableCell className="text-sm">
-                              {account.account_name}
+                              {account.account?.name}
                             </TableCell>
                             <TableCell className="text-sm text-muted-foreground">
-                              {account.payroll_code || '-'}
+                              {account.account?.payrollCode || '-'}
                             </TableCell>
                           </TableRow>
                         ))}
@@ -170,8 +170,8 @@ export function ExportInterfaceDetailSheet({
               <div className="space-y-2">
                 <h4 className="text-sm font-medium text-muted-foreground">{t('sectionTimestamps')}</h4>
                 <div className="rounded-lg border p-4">
-                  <DetailRow label={t('labelCreated')} value={formatDateTime(item.created_at)} />
-                  <DetailRow label={t('labelLastUpdated')} value={formatDateTime(item.updated_at)} />
+                  <DetailRow label={t('labelCreated')} value={formatDateTime(item.createdAt)} />
+                  <DetailRow label={t('labelLastUpdated')} value={formatDateTime(item.updatedAt)} />
                 </div>
               </div>
             </div>

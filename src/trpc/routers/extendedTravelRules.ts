@@ -25,9 +25,9 @@ const TRAVEL_ALLOWANCE_MANAGE = permissionIdByKey("travel_allowance.manage")!
 // --- Output Schemas ---
 
 const extendedTravelRuleOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  ruleSetId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
+  ruleSetId: z.string(),
   arrivalDayTaxFree: z.number(),
   arrivalDayTaxable: z.number(),
   departureDayTaxFree: z.number(),
@@ -46,7 +46,7 @@ const extendedTravelRuleOutputSchema = z.object({
 // --- Input Schemas ---
 
 const createExtendedTravelRuleInputSchema = z.object({
-  ruleSetId: z.string().uuid(),
+  ruleSetId: z.string(),
   arrivalDayTaxFree: z.number().optional(),
   arrivalDayTaxable: z.number().optional(),
   departureDayTaxFree: z.number().optional(),
@@ -60,7 +60,7 @@ const createExtendedTravelRuleInputSchema = z.object({
 })
 
 const updateExtendedTravelRuleInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   // ruleSetId is NOT updatable
   arrivalDayTaxFree: z.number().optional(),
   arrivalDayTaxable: z.number().optional(),
@@ -95,7 +95,7 @@ export const extendedTravelRulesRouter = createTRPCRouter({
    */
   list: tenantProcedure
     .use(requirePermission(TRAVEL_ALLOWANCE_MANAGE))
-    .input(z.object({ ruleSetId: z.string().uuid().optional() }).optional())
+    .input(z.object({ ruleSetId: z.string().optional() }).optional())
     .output(z.object({ data: z.array(extendedTravelRuleOutputSchema) }))
     .query(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!
@@ -139,7 +139,7 @@ export const extendedTravelRulesRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(TRAVEL_ALLOWANCE_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(extendedTravelRuleOutputSchema)
     .query(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!
@@ -342,7 +342,7 @@ export const extendedTravelRulesRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(TRAVEL_ALLOWANCE_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!

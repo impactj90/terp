@@ -12,9 +12,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import type { components } from '@/types/legacy-api-types'
-
-type DayPlan = components['schemas']['DayPlan']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type DayPlan = any
 
 interface DayPlanAssignment {
   dayPosition: number

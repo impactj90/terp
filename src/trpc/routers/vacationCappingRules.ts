@@ -32,8 +32,8 @@ const CAPPING_RULE_TYPES = ["year_end", "mid_year"] as const
 // --- Output Schemas ---
 
 const vacationCappingRuleOutputSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  id: z.string(),
+  tenantId: z.string(),
   code: z.string(),
   name: z.string(),
   description: z.string().nullable(),
@@ -66,7 +66,7 @@ const createVacationCappingRuleInputSchema = z.object({
 })
 
 const updateVacationCappingRuleInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   name: z.string().min(1).max(255).optional(),
   description: z.string().nullable().optional(),
   ruleType: z.enum(CAPPING_RULE_TYPES).optional(),
@@ -149,7 +149,7 @@ export const vacationCappingRulesRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(VACATION_CONFIG_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(vacationCappingRuleOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -224,7 +224,7 @@ export const vacationCappingRulesRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(VACATION_CONFIG_MANAGE))
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

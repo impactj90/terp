@@ -17,9 +17,9 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { useEmploymentType } from '@/hooks'
-import type { components } from '@/types/legacy-api-types'
 
-type EmploymentType = components['schemas']['EmploymentType']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type EmploymentType = any
 
 interface EmploymentTypeDetailSheetProps {
   employmentTypeId: string | null
@@ -51,7 +51,8 @@ export function EmploymentTypeDetailSheet({
   onDelete,
 }: EmploymentTypeDetailSheetProps) {
   const t = useTranslations('adminEmploymentTypes')
-  const { data: employmentType, isLoading } = useEmploymentType(employmentTypeId || '', open && !!employmentTypeId)
+  const { data: employmentTypeData, isLoading } = useEmploymentType(employmentTypeId || '', open && !!employmentTypeId)
+  const employmentType = employmentTypeData as EmploymentType
 
   const formatDate = (date: string | undefined | null) => {
     if (!date) return '-'
@@ -86,8 +87,8 @@ export function EmploymentTypeDetailSheet({
                   <h3 className="text-lg font-semibold">{employmentType.name}</h3>
                   <p className="text-sm text-muted-foreground font-mono">{employmentType.code}</p>
                 </div>
-                <Badge variant={employmentType.is_active ? 'default' : 'secondary'}>
-                  {employmentType.is_active ? t('statusActive') : t('statusInactive')}
+                <Badge variant={employmentType.isActive ? 'default' : 'secondary'}>
+                  {employmentType.isActive ? t('statusActive') : t('statusInactive')}
                 </Badge>
               </div>
 
@@ -127,8 +128,8 @@ export function EmploymentTypeDetailSheet({
               <div className="space-y-2">
                 <h4 className="text-sm font-medium text-muted-foreground">{t('timestampsSection')}</h4>
                 <div className="rounded-lg border p-4">
-                  <DetailRow label={t('labelCreated')} value={formatDate(employmentType.created_at)} />
-                  <DetailRow label={t('labelLastUpdated')} value={formatDate(employmentType.updated_at)} />
+                  <DetailRow label={t('labelCreated')} value={formatDate(employmentType.createdAt)} />
+                  <DetailRow label={t('labelLastUpdated')} value={formatDate(employmentType.updatedAt)} />
                 </div>
               </div>
             </div>

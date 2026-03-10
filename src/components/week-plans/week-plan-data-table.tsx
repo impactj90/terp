@@ -22,10 +22,10 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import type { components } from '@/types/legacy-api-types'
+import type { useWeekPlan } from '@/hooks'
 
-type WeekPlan = components['schemas']['WeekPlan']
-type DayPlanSummary = components['schemas']['DayPlanSummary']
+type WeekPlan = NonNullable<ReturnType<typeof useWeekPlan>['data']>
+type DayPlanSummary = NonNullable<WeekPlan['mondayDayPlan']>
 
 interface WeekPlanDataTableProps {
   weekPlans: WeekPlan[]
@@ -39,13 +39,13 @@ interface WeekPlanDataTableProps {
 // Helper function to count work days
 function countWorkDays(weekPlan: WeekPlan): number {
   const days = [
-    weekPlan.monday_day_plan_id,
-    weekPlan.tuesday_day_plan_id,
-    weekPlan.wednesday_day_plan_id,
-    weekPlan.thursday_day_plan_id,
-    weekPlan.friday_day_plan_id,
-    weekPlan.saturday_day_plan_id,
-    weekPlan.sunday_day_plan_id,
+    weekPlan.mondayDayPlanId,
+    weekPlan.tuesdayDayPlanId,
+    weekPlan.wednesdayDayPlanId,
+    weekPlan.thursdayDayPlanId,
+    weekPlan.fridayDayPlanId,
+    weekPlan.saturdayDayPlanId,
+    weekPlan.sundayDayPlanId,
   ]
   return days.filter(Boolean).length
 }
@@ -120,32 +120,32 @@ export function WeekPlanDataTable({
             <TableCell className="font-mono text-sm">{weekPlan.code}</TableCell>
             <TableCell className="font-medium">{weekPlan.name}</TableCell>
             <TableCell className="text-center">
-              <DayPlanCell dayPlan={weekPlan.monday_day_plan} isWeekend={false} />
+              <DayPlanCell dayPlan={weekPlan.mondayDayPlan} isWeekend={false} />
             </TableCell>
             <TableCell className="text-center">
-              <DayPlanCell dayPlan={weekPlan.tuesday_day_plan} isWeekend={false} />
+              <DayPlanCell dayPlan={weekPlan.tuesdayDayPlan} isWeekend={false} />
             </TableCell>
             <TableCell className="text-center">
-              <DayPlanCell dayPlan={weekPlan.wednesday_day_plan} isWeekend={false} />
+              <DayPlanCell dayPlan={weekPlan.wednesdayDayPlan} isWeekend={false} />
             </TableCell>
             <TableCell className="text-center">
-              <DayPlanCell dayPlan={weekPlan.thursday_day_plan} isWeekend={false} />
+              <DayPlanCell dayPlan={weekPlan.thursdayDayPlan} isWeekend={false} />
             </TableCell>
             <TableCell className="text-center">
-              <DayPlanCell dayPlan={weekPlan.friday_day_plan} isWeekend={false} />
+              <DayPlanCell dayPlan={weekPlan.fridayDayPlan} isWeekend={false} />
             </TableCell>
             <TableCell className="text-center">
-              <DayPlanCell dayPlan={weekPlan.saturday_day_plan} isWeekend={true} />
+              <DayPlanCell dayPlan={weekPlan.saturdayDayPlan} isWeekend={true} />
             </TableCell>
             <TableCell className="text-center">
-              <DayPlanCell dayPlan={weekPlan.sunday_day_plan} isWeekend={true} />
+              <DayPlanCell dayPlan={weekPlan.sundayDayPlan} isWeekend={true} />
             </TableCell>
             <TableCell className="text-center text-sm text-muted-foreground">
               {countWorkDays(weekPlan)}/7
             </TableCell>
             <TableCell>
-              <Badge variant={weekPlan.is_active ? 'default' : 'secondary'}>
-                {weekPlan.is_active ? t('statusActive') : t('statusInactive')}
+              <Badge variant={weekPlan.isActive ? 'default' : 'secondary'}>
+                {weekPlan.isActive ? t('statusActive') : t('statusInactive')}
               </Badge>
             </TableCell>
             <TableCell onClick={(e) => e.stopPropagation()}>

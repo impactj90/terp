@@ -48,10 +48,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import type { components } from '@/types/legacy-api-types'
-
-type VacationCappingRuleGroup = components['schemas']['VacationCappingRuleGroup']
-type VacationCappingRule = components['schemas']['VacationCappingRule']
+type VacationCappingRuleGroup = NonNullable<ReturnType<typeof useVacationCappingRuleGroups>['data']>['data'][number]
+type VacationCappingRule = NonNullable<ReturnType<typeof useVacationCappingRules>['data']>['data'][number]
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type TranslationFn = (key: string, values?: Record<string, any>) => string
@@ -87,7 +85,7 @@ export function CappingRuleGroupsTab() {
     enabled: !authLoading && !permLoading && canAccess,
   })
   const deleteMutation = useDeleteVacationCappingRuleGroup()
-  const items = (groupsData?.data ?? []) as VacationCappingRuleGroup[]
+  const items = groupsData?.data ?? []
 
   const filteredItems = React.useMemo(() => {
     if (!search) return items
@@ -101,7 +99,7 @@ export function CappingRuleGroupsTab() {
     if (!deleteItem) return
     setDeleteError(null)
     try {
-      await deleteMutation.mutateAsync({ path: { id: deleteItem.id } })
+      await deleteMutation.mutateAsync({ id: deleteItem.id })
       setDeleteItem(null)
     } catch (err) {
       const apiError = err as { status?: number; detail?: string; message?: string }
@@ -181,10 +179,10 @@ export function CappingRuleGroupsTab() {
                   <TableRow key={item.id}>
                     <TableCell className="font-mono text-sm">{item.code}</TableCell>
                     <TableCell>{item.name}</TableCell>
-                    <TableCell>{item.capping_rules?.length ?? 0}</TableCell>
+                    <TableCell>{item.cappingRules?.length ?? 0}</TableCell>
                     <TableCell>
-                      <Badge variant={item.is_active ? 'default' : 'secondary'}>
-                        {item.is_active ? t('cappingRuleGroup.statusActive') : t('cappingRuleGroup.statusInactive')}
+                      <Badge variant={item.isActive ? 'default' : 'secondary'}>
+                        {item.isActive ? t('cappingRuleGroup.statusActive') : t('cappingRuleGroup.statusInactive')}
                       </Badge>
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
@@ -265,7 +263,7 @@ function CappingRuleGroupFormSheet({ open, onOpenChange, group, onSuccess }: Cap
   const updateMutation = useUpdateVacationCappingRuleGroup()
 
   const { data: cappingRulesData } = useVacationCappingRules({ enabled: open })
-  const cappingRules = (cappingRulesData?.data ?? []) as VacationCappingRule[]
+  const cappingRules = cappingRulesData?.data ?? []
 
   const filteredCappingRules = React.useMemo(() => {
     if (!memberSearch) return cappingRules
@@ -282,8 +280,8 @@ function CappingRuleGroupFormSheet({ open, onOpenChange, group, onSuccess }: Cap
         code: group.code || '',
         name: group.name || '',
         description: group.description || '',
-        isActive: group.is_active ?? true,
-        cappingRuleIds: new Set((group.capping_rules ?? []).map((r) => r.id)),
+        isActive: group.isActive ?? true,
+        cappingRuleIds: new Set((group.cappingRules ?? []).map((r) => r.id)),
       })
     } else {
       setForm(INITIAL_FORM)
@@ -314,14 +312,14 @@ function CappingRuleGroupFormSheet({ open, onOpenChange, group, onSuccess }: Cap
   }
 
   const formatCappingRuleLabel = (rule: VacationCappingRule) => {
-    const ruleType = rule.rule_type === 'year_end'
+    const ruleType = rule.ruleType === 'year_end'
       ? t('cappingRule.ruleTypeYearEnd')
       : t('cappingRule.ruleTypeMidYear')
     return (t as TranslationFn)('cappingRuleGroup.memberLabel', {
       code: rule.code,
       name: rule.name,
       ruleType,
-      capValue: rule.cap_value,
+      capValue: rule.capValue,
     })
   }
 
@@ -339,22 +337,18 @@ function CappingRuleGroupFormSheet({ open, onOpenChange, group, onSuccess }: Cap
     try {
       if (isEdit && group) {
         await updateMutation.mutateAsync({
-          path: { id: group.id },
-          body: {
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            is_active: form.isActive,
-            capping_rule_ids: Array.from(form.cappingRuleIds),
-          },
+          id: group.id,
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          isActive: form.isActive,
+          cappingRuleIds: Array.from(form.cappingRuleIds),
         })
       } else {
         await createMutation.mutateAsync({
-          body: {
-            code: form.code.trim(),
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            capping_rule_ids: Array.from(form.cappingRuleIds),
-          },
+          code: form.code.trim(),
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          cappingRuleIds: Array.from(form.cappingRuleIds),
         })
       }
       onSuccess?.()
