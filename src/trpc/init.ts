@@ -80,8 +80,12 @@ export async function createTRPCContext(
   if (authToken) {
     try {
       // Create a Supabase client with the service role to validate tokens
+      const supabaseUrl = serverEnv.supabaseUrl || clientEnv.supabaseUrl
+      console.log("[auth-debug] supabaseUrl:", supabaseUrl)
+      console.log("[auth-debug] hasServiceRoleKey:", !!serverEnv.supabaseServiceRoleKey)
+
       const supabase = createClient(
-        serverEnv.supabaseUrl || clientEnv.supabaseUrl,
+        supabaseUrl,
         serverEnv.supabaseServiceRoleKey,
         {
           auth: { autoRefreshToken: false, persistSession: false },
@@ -93,6 +97,8 @@ export async function createTRPCContext(
         data: { user: supabaseUser },
         error,
       } = await supabase.auth.getUser(authToken)
+
+      console.log("[auth-debug] supabaseUser:", supabaseUser?.id ?? "null", "error:", error?.message ?? "none")
 
       if (supabaseUser && !error) {
         // Look up the full user from public.users with relations
@@ -106,6 +112,8 @@ export async function createTRPCContext(
           },
         })
 
+        console.log("[auth-debug] dbUser:", dbUser?.id ?? "null", "isActive:", dbUser?.isActive, "isLocked:", dbUser?.isLocked)
+
         if (dbUser && dbUser.isActive !== false && !dbUser.isLocked) {
           user = dbUser as ContextUser
           // Construct a minimal session object for downstream use
@@ -115,7 +123,8 @@ export async function createTRPCContext(
           } as Session
         }
       }
-    } catch {
+    } catch (err) {
+      console.error("[auth-debug] context error:", err)
       // Token validation failed — user remains null (unauthenticated)
     }
   }
