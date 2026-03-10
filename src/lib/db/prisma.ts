@@ -23,9 +23,7 @@ function createPrismaClient(): PrismaClient {
 
   const adapter = new PrismaPg({
     connectionString,
-    options: {
-      ssl: isRemote ? { rejectUnauthorized: false } : undefined,
-    },
+    ssl: isRemote ? { rejectUnauthorized: false } : undefined,
   })
 
   return new PrismaClient({
