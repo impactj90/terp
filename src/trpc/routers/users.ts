@@ -299,13 +299,13 @@ export const usersRouter = createTRPCRouter({
    * Replaces: PATCH /users/{id} (Go UserHandler.Update + UserService.Update)
    */
   update: tenantProcedure
+    .input(updateUserInputSchema)
     .use(
       requireSelfOrPermission(
         (input) => (input as { id: string }).id,
         USERS_MANAGE
       )
     )
-    .input(updateUserInputSchema)
     .output(userOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {

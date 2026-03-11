@@ -73,7 +73,8 @@ export function requireSelfOrPermission(
   userIdGetter: (input: unknown) => string,
   permissionId: string
 ) {
-  return createMiddleware(async ({ ctx, input, next }) => {
+  return createMiddleware(async (opts) => {
+    const { ctx, next } = opts
     const user = (ctx as AuthenticatedContext).user
     if (!user) {
       throw new TRPCError({
@@ -82,7 +83,12 @@ export function requireSelfOrPermission(
       })
     }
 
-    const targetUserId = userIdGetter(input)
+    // Resolve input: use parsed input if available, otherwise fall back to
+    // getRawInput() (needed when middleware runs before .input() in the chain)
+    const resolvedInput =
+      opts.input ?? (await (opts as unknown as { getRawInput: () => Promise<unknown> }).getRawInput())
+
+    const targetUserId = userIdGetter(resolvedInput)
 
     // Self-access: user's own ID matches target
     if (user.id === targetUserId) {
@@ -120,7 +126,8 @@ export function requireEmployeePermission(
   ownPermission: string,
   allPermission: string
 ) {
-  return createMiddleware(async ({ ctx, input, next }) => {
+  return createMiddleware(async (opts) => {
+    const { ctx, next } = opts
     const user = (ctx as AuthenticatedContext).user
     if (!user) {
       throw new TRPCError({
@@ -134,7 +141,12 @@ export function requireEmployeePermission(
       return next({ ctx })
     }
 
-    const targetEmployeeId = employeeIdGetter(input)
+    // Resolve input: use parsed input if available, otherwise fall back to
+    // getRawInput() (needed when middleware runs before .input() in the chain)
+    const resolvedInput =
+      opts.input ?? (await (opts as unknown as { getRawInput: () => Promise<unknown> }).getRawInput())
+
+    const targetEmployeeId = employeeIdGetter(resolvedInput)
 
     // Own employee check
     if (user.employeeId && user.employeeId === targetEmployeeId) {

@@ -1,0 +1,72 @@
+/**
+ * Global setup: Clean E2E test data before running the suite.
+ * This ensures tests are idempotent across repeated runs without needing db:reset.
+ */
+import { execSync } from "node:child_process";
+import { writeFileSync, unlinkSync } from "node:fs";
+import { join } from "node:path";
+
+const CLEANUP_SQL = `
+-- Child records first (FK dependencies)
+DELETE FROM macro_assignments WHERE macro_id IN (SELECT id FROM macros WHERE name LIKE 'E2E%');
+DELETE FROM macro_executions WHERE macro_id IN (SELECT id FROM macros WHERE name LIKE 'E2E%');
+DELETE FROM schedule_task_executions WHERE execution_id IN (SELECT id FROM schedule_executions WHERE schedule_id IN (SELECT id FROM schedules WHERE name LIKE 'E2E%'));
+DELETE FROM schedule_executions WHERE schedule_id IN (SELECT id FROM schedules WHERE name LIKE 'E2E%');
+DELETE FROM schedule_tasks WHERE schedule_id IN (SELECT id FROM schedules WHERE name LIKE 'E2E%');
+DELETE FROM order_assignments WHERE order_id IN (SELECT id FROM orders WHERE code LIKE 'E2E%');
+DELETE FROM order_bookings WHERE order_id IN (SELECT id FROM orders WHERE code LIKE 'E2E%');
+DELETE FROM employee_access_assignments WHERE access_profile_id IN (SELECT id FROM access_profiles WHERE code LIKE 'E2E%');
+DELETE FROM employee_tariff_assignments WHERE employee_id IN (SELECT id FROM employees WHERE personnel_number LIKE 'E2E%');
+DELETE FROM employee_contacts WHERE employee_id IN (SELECT id FROM employees WHERE personnel_number LIKE 'E2E%');
+DELETE FROM employee_cards WHERE employee_id IN (SELECT id FROM employees WHERE personnel_number LIKE 'E2E%');
+DELETE FROM team_members WHERE employee_id IN (SELECT id FROM employees WHERE personnel_number LIKE 'E2E%');
+DELETE FROM shift_assignments WHERE employee_id IN (SELECT id FROM employees WHERE personnel_number LIKE 'E2E%');
+
+-- Parent records (specs 08-12)
+DELETE FROM macros WHERE name LIKE 'E2E%';
+DELETE FROM schedules WHERE name LIKE 'E2E%';
+DELETE FROM orders WHERE code LIKE 'E2E%';
+DELETE FROM access_profiles WHERE code LIKE 'E2E%';
+DELETE FROM access_zones WHERE code LIKE 'E2E%';
+DELETE FROM shifts WHERE code LIKE 'E2E%';
+DELETE FROM employees WHERE personnel_number LIKE 'E2E%';
+DELETE FROM calculation_rules WHERE code LIKE 'E2E%';
+
+-- Parent records (specs 01-03)
+DELETE FROM locations WHERE code LIKE 'E2E%';
+DELETE FROM cost_centers WHERE code LIKE 'E2E%';
+DELETE FROM employment_types WHERE code LIKE 'E2E%';
+DELETE FROM contact_types WHERE code LIKE 'E2E%';
+DELETE FROM booking_types WHERE code LIKE 'E2E%';
+DELETE FROM absence_types WHERE code LIKE 'UE2E%' OR code LIKE 'E2E%';
+DELETE FROM day_plans WHERE code LIKE 'E2E%';
+DELETE FROM week_plans WHERE code LIKE 'E2E%';
+DELETE FROM tariffs WHERE code LIKE 'E2E%';
+DELETE FROM accounts WHERE code LIKE 'E2E%';
+DELETE FROM departments WHERE code LIKE 'E2E%';
+DELETE FROM teams WHERE name LIKE 'E2E%';
+DELETE FROM user_tenants WHERE user_id IN (SELECT id FROM users WHERE email = 'e2e-test@dev.local');
+DELETE FROM users WHERE email = 'e2e-test@dev.local';
+DELETE FROM user_groups WHERE code = 'E2E-GRP';
+DELETE FROM holidays WHERE tenant_id = '10000000-0000-0000-0000-000000000001' AND holiday_date >= '2027-01-01' AND holiday_date < '2028-01-01';
+`;
+
+export default function globalSetup() {
+  const tmpFile = join(__dirname, ".cleanup.sql");
+  try {
+    writeFileSync(tmpFile, CLEANUP_SQL);
+    execSync(
+      `psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f "${tmpFile}"`,
+      { stdio: "pipe", timeout: 10_000 },
+    );
+  } catch (err) {
+    console.log(
+      "[global-setup] Could not clean E2E data:",
+      (err as Error).message?.slice(0, 200),
+    );
+  } finally {
+    try {
+      unlinkSync(tmpFile);
+    } catch {}
+  }
+}
