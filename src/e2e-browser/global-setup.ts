@@ -45,6 +45,24 @@ DELETE FROM tariffs WHERE code LIKE 'E2E%';
 DELETE FROM accounts WHERE code LIKE 'E2E%';
 DELETE FROM departments WHERE code LIKE 'E2E%';
 DELETE FROM teams WHERE name LIKE 'E2E%';
+
+-- Data-hydration test cleanup (spec 13)
+UPDATE absence_days
+SET status = 'pending', approved_by = NULL, approved_at = NULL
+WHERE employee_id = '00000000-0000-0000-0000-000000000013'
+  AND absence_date IN ('2026-01-29', '2026-01-30');
+UPDATE vacation_balances SET taken = (
+  SELECT COALESCE(SUM(ad.duration), 0)
+  FROM absence_days ad
+  JOIN absence_types at ON ad.absence_type_id = at.id
+  WHERE ad.employee_id = vacation_balances.employee_id
+    AND EXTRACT(YEAR FROM ad.absence_date) = vacation_balances.year
+    AND ad.status = 'approved'
+    AND at.deducts_vacation = true
+) WHERE employee_id = '00000000-0000-0000-0000-000000000013' AND year = 2026;
+DELETE FROM absence_days WHERE notes LIKE 'E2E%';
+DELETE FROM bookings WHERE notes LIKE 'E2E%';
+
 DELETE FROM user_tenants WHERE user_id IN (SELECT id FROM users WHERE email = 'e2e-test@dev.local');
 DELETE FROM users WHERE email = 'e2e-test@dev.local';
 DELETE FROM user_groups WHERE code = 'E2E-GRP';

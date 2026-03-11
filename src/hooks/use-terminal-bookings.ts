@@ -1,5 +1,6 @@
 import { useTRPC } from "@/trpc"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useTimeDataInvalidation } from "./use-time-data-invalidation"
 
 // --- Terminal Bookings ---
 
@@ -52,6 +53,7 @@ export function useTerminalBookings(
 export function useTriggerTerminalImport() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
   return useMutation({
     ...trpc.terminalBookings.import.mutationOptions(),
     onSuccess: () => {
@@ -61,6 +63,14 @@ export function useTriggerTerminalImport() {
       queryClient.invalidateQueries({
         queryKey: trpc.terminalBookings.batches.queryKey(),
       })
+      // Terminal import creates bookings and triggers recalc
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookings.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookings.getById.queryKey(),
+      })
+      invalidateTimeData()
     },
   })
 }

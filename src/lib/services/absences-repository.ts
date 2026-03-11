@@ -284,6 +284,30 @@ export async function update(
   })
 }
 
+/**
+ * Atomically updates an absence only if it has the expected status.
+ * Returns the updated record, or null if the status didn't match (already changed).
+ */
+export async function updateIfStatus(
+  prisma: PrismaClient,
+  tenantId: string,
+  id: string,
+  expectedStatus: string,
+  data: Record<string, unknown>
+) {
+  const { count } = await prisma.absenceDay.updateMany({
+    where: { id, tenantId, status: expectedStatus },
+    data,
+  })
+  if (count === 0) {
+    return null
+  }
+  return prisma.absenceDay.findFirst({
+    where: { id, tenantId },
+    include: absenceDayListInclude,
+  })
+}
+
 export async function deleteById(prisma: PrismaClient, id: string) {
   return prisma.absenceDay.delete({ where: { id } })
 }

@@ -123,12 +123,13 @@ export async function findEmployeesWithRelations(
 
 export async function findMonthlyValue(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string,
   year: number,
   month: number
 ) {
   return prisma.monthlyValue.findFirst({
-    where: { employeeId, year, month },
+    where: { tenantId, employeeId, year, month },
   })
 }
 

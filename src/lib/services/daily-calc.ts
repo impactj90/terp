@@ -1510,32 +1510,36 @@ export class DailyCalcService {
       dailyValue.netTime
     )
 
-    // Post each surcharge to its account
-    for (const sr of surchargeResult.surcharges) {
-      await this.prisma.dailyAccountValue.upsert({
-        where: {
-          employeeId_valueDate_accountId_source: {
-            employeeId,
-            valueDate: date,
-            accountId: sr.accountId,
-            source: DAV_SOURCE_SURCHARGE,
-          },
-        },
-        create: {
-          tenantId,
-          employeeId,
-          accountId: sr.accountId,
-          valueDate: date,
-          valueMinutes: sr.minutes,
-          source: DAV_SOURCE_SURCHARGE,
-          dayPlanId: dayPlan.id,
-        },
-        update: {
-          valueMinutes: sr.minutes,
-          dayPlanId: dayPlan.id,
-          updatedAt: new Date(),
-        },
-      })
+    // Post all surcharges in a single batch transaction
+    if (surchargeResult.surcharges.length > 0) {
+      await this.prisma.$transaction(
+        surchargeResult.surcharges.map((sr) =>
+          this.prisma.dailyAccountValue.upsert({
+            where: {
+              employeeId_valueDate_accountId_source: {
+                employeeId,
+                valueDate: date,
+                accountId: sr.accountId,
+                source: DAV_SOURCE_SURCHARGE,
+              },
+            },
+            create: {
+              tenantId,
+              employeeId,
+              accountId: sr.accountId,
+              valueDate: date,
+              valueMinutes: sr.minutes,
+              source: DAV_SOURCE_SURCHARGE,
+              dayPlanId: dayPlan.id,
+            },
+            update: {
+              valueMinutes: sr.minutes,
+              dayPlanId: dayPlan.id,
+              updatedAt: new Date(),
+            },
+          }),
+        ),
+      )
     }
   }
 

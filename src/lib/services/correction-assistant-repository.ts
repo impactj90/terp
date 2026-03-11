@@ -59,13 +59,18 @@ export async function findMessageById(
 
 export async function updateMessage(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.correctionMessage.update({
-    where: { id },
+  const { count } = await prisma.correctionMessage.updateMany({
+    where: { id, tenantId },
     data,
   })
+  if (count === 0) {
+    return null
+  }
+  return prisma.correctionMessage.findFirst({ where: { id, tenantId } })
 }
 
 export async function findActiveMessages(

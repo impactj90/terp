@@ -1,5 +1,6 @@
 import { useTRPC } from "@/trpc"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useTimeDataInvalidation } from "./use-time-data-invalidation"
 
 interface UseCorrectionsOptions {
   employeeId?: string
@@ -126,6 +127,7 @@ export function useDeleteCorrection() {
 export function useApproveCorrection() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
   return useMutation({
     ...trpc.corrections.approve.mutationOptions(),
     onSuccess: () => {
@@ -138,10 +140,8 @@ export function useApproveCorrection() {
       queryClient.invalidateQueries({
         queryKey: trpc.correctionAssistant.listItems.queryKey(),
       })
-      // Approve triggers recalc which changes daily values
-      queryClient.invalidateQueries({
-        queryKey: trpc.dailyValues.list.queryKey(),
-      })
+      // Approve triggers recalc — invalidate dayView, dailyValues, monthlyValues
+      invalidateTimeData()
     },
   })
 }

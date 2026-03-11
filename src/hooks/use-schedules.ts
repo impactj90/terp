@@ -106,6 +106,9 @@ export function useCreateScheduleTask() {
       queryClient.invalidateQueries({
         queryKey: trpc.schedules.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.schedules.tasks.queryKey(),
+      })
     },
   })
 }
@@ -122,6 +125,9 @@ export function useUpdateScheduleTask() {
       queryClient.invalidateQueries({
         queryKey: trpc.schedules.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.schedules.tasks.queryKey(),
+      })
     },
   })
 }
@@ -137,6 +143,9 @@ export function useDeleteScheduleTask() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.schedules.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.schedules.tasks.queryKey(),
       })
     },
   })

@@ -4,6 +4,7 @@ import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Users, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { toast } from 'sonner'
 import { useAuth } from '@/providers/auth-provider'
 import { useHasPermission } from '@/hooks'
 import { useEmployees, useDeleteEmployee } from '@/hooks'
@@ -116,7 +117,7 @@ export default function EmployeesPage() {
         setSelectedIds(newSet)
       }
     } catch {
-      // Error handled by mutation
+      toast.error(t('deactivateFailed'))
     }
   }
 

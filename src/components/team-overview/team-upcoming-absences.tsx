@@ -8,11 +8,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Calendar } from '@/components/ui/calendar'
+import { QueryError } from '@/components/ui/query-error'
 import { useTRPC } from '@/trpc'
 import { formatDate, formatRelativeDate, parseISODate } from '@/lib/time-utils'
-import type { components } from '@/types/legacy-api-types'
-
-type TeamMember = components['schemas']['TeamMember']
+interface TeamMember {
+  teamId: string
+  employeeId: string
+  role: string
+  joinedAt: Date | string
+  employee?: {
+    id: string
+    firstName: string
+    lastName: string
+  }
+}
 
 interface TeamUpcomingAbsencesProps {
   members: TeamMember[]
@@ -50,8 +59,8 @@ export function TeamUpcomingAbsences({ members, from, to }: TeamUpcomingAbsences
   // Fetch absences per member in parallel via tRPC
   const absenceQueries = useQueries({
     queries: members.map((m) => {
-      const firstName = m.employee?.first_name ?? ''
-      const lastName = m.employee?.last_name ?? ''
+      const firstName = m.employee?.firstName ?? ''
+      const lastName = m.employee?.lastName ?? ''
       const employeeName = m.employee
         ? `${firstName} ${lastName}`
         : t('unknown')
@@ -59,12 +68,12 @@ export function TeamUpcomingAbsences({ members, from, to }: TeamUpcomingAbsences
       return {
         ...trpc.absences.forEmployee.queryOptions(
           {
-            employeeId: m.employee_id,
+            employeeId: m.employeeId,
             fromDate,
             toDate,
           },
           {
-            enabled: members.length > 0 && !!m.employee_id,
+            enabled: members.length > 0 && !!m.employeeId,
           }
         ),
         staleTime: 60 * 1000, // 1 minute stale time
@@ -77,6 +86,7 @@ export function TeamUpcomingAbsences({ members, from, to }: TeamUpcomingAbsences
   })
 
   const isLoading = absenceQueries.some((q) => q.isLoading)
+  const hasError = absenceQueries.some((q) => q.isError)
 
   // Merge all absences into a single sorted list
   const allAbsences = useMemo(() => {
@@ -114,6 +124,25 @@ export function TeamUpcomingAbsences({ members, from, to }: TeamUpcomingAbsences
 
   const displayedAbsences = allAbsences.slice(0, MAX_ENTRIES)
   const hasMore = allAbsences.length > MAX_ENTRIES
+
+  if (hasError) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CalendarOff className="h-5 w-5" />
+            {t('upcomingAbsences')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <QueryError
+            message={t('loadFailed')}
+            onRetry={() => absenceQueries.forEach((q) => q.refetch())}
+          />
+        </CardContent>
+      </Card>
+    )
+  }
 
   if (isLoading && members.length > 0) {
     return (

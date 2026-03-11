@@ -12,6 +12,7 @@
  */
 
 import type { PrismaClient } from "@/generated/prisma/client"
+import { mapWithConcurrency } from "@/lib/async"
 import { DailyCalcService } from "./daily-calc"
 import { MonthlyCalcService } from "./monthly-calc"
 import type { RecalcResult } from "./recalc.types"
@@ -119,14 +120,18 @@ export class RecalcService {
     from: Date,
     to: Date,
   ): Promise<RecalcResult> {
+    const empResults = await mapWithConcurrency(
+      employeeIds,
+      5,
+      (empId) => this.triggerRecalcRange(tenantId, empId, from, to),
+    )
+
     const result: RecalcResult = {
       processedDays: 0,
       failedDays: 0,
       errors: [],
     }
-
-    for (const empId of employeeIds) {
-      const empResult = await this.triggerRecalcRange(tenantId, empId, from, to)
+    for (const empResult of empResults) {
       result.processedDays += empResult.processedDays
       result.failedDays += empResult.failedDays
       result.errors.push(...empResult.errors)

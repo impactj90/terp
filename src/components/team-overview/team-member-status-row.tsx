@@ -8,9 +8,17 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { MemberRoleBadge } from '@/components/teams/member-role-badge'
 import { formatMinutes, formatTime } from '@/lib/time-utils'
 import { cn } from '@/lib/utils'
-import type { components } from '@/types/legacy-api-types'
-
-type TeamMember = components['schemas']['TeamMember']
+interface TeamMember {
+  teamId: string
+  employeeId: string
+  role: string
+  joinedAt: Date | string
+  employee?: {
+    id: string
+    firstName: string
+    lastName: string
+  }
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DayViewData = Record<string, any> | null | undefined
@@ -150,13 +158,13 @@ export function TeamMemberStatusRow({ member, dayView, isLoading }: TeamMemberSt
     )
   }
 
-  const firstName = member.employee?.first_name ?? ''
-  const lastName = member.employee?.last_name ?? ''
+  const firstName = member.employee?.firstName ?? ''
+  const lastName = member.employee?.lastName ?? ''
   const initials = `${firstName[0] ?? '?'}${lastName[0] ?? '?'}`
   const fullName = member.employee
     ? `${firstName} ${lastName}`
     : t('unknownEmployee')
-  const department = member.employee?.department?.name ?? ''
+  const department = ''
 
   const status = getAttendanceStatus(dayView)
   const config = statusConfigMap[status]
@@ -178,14 +186,9 @@ export function TeamMemberStatusRow({ member, dayView, isLoading }: TeamMemberSt
         onClick={toggleExpanded}
         onKeyDown={handleKeyDown}
       >
-        {/* Avatar with status dot */}
-        <div className="relative">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-sm font-medium">
-            {initials}
-          </div>
-          <div
-            className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background ${config.dotClass}`}
-          />
+        {/* Avatar */}
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-sm font-medium">
+          {initials}
         </div>
 
         {/* Name and department */}

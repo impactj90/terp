@@ -116,6 +116,9 @@ export function useUpdateEmployee() {
       queryClient.invalidateQueries({
         queryKey: trpc.employees.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.getById.queryKey(),
+      })
     },
   })
 }
@@ -137,6 +140,9 @@ export function useDeleteEmployee() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.employees.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.getById.queryKey(),
       })
     },
   })

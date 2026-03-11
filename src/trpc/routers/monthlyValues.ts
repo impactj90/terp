@@ -45,6 +45,7 @@ import {
 // Matching Go route registration at apps/api/internal/handler/routes.go:571-599,1641-1661
 
 const REPORTS_VIEW = permissionIdByKey("reports.view")!
+const REPORTS_MANAGE = permissionIdByKey("reports.manage")!
 const CALCULATE_MONTH = permissionIdByKey("booking_overview.calculate_month")!
 const TIME_TRACKING_VIEW_OWN = permissionIdByKey("time_tracking.view_own")!
 const TIME_TRACKING_VIEW_ALL = permissionIdByKey("time_tracking.view_all")!
@@ -492,10 +493,10 @@ export const monthlyValuesRouter = createTRPCRouter({
    * Used by: admin close button, employee close-month-sheet.
    * Replaces: POST /monthly-values/{id}/close, POST /employees/{id}/months/{year}/{month}/close
    *
-   * Requires: reports.view permission
+   * Requires: reports.manage permission
    */
   close: tenantProcedure
-    .use(requirePermission(REPORTS_VIEW))
+    .use(requirePermission(REPORTS_MANAGE))
     .input(closeReopenInputSchema)
     .output(monthlyValueOutputSchema)
     .mutation(async ({ ctx, input }) => {
@@ -523,10 +524,10 @@ export const monthlyValuesRouter = createTRPCRouter({
    * Used by: admin reopen button, employee reopen-month-sheet.
    * Replaces: POST /monthly-values/{id}/reopen, POST /employees/{id}/months/{year}/{month}/reopen
    *
-   * Requires: reports.view permission
+   * Requires: reports.manage permission
    */
   reopen: tenantProcedure
-    .use(requirePermission(REPORTS_VIEW))
+    .use(requirePermission(REPORTS_MANAGE))
     .input(closeReopenInputSchema)
     .output(monthlyValueOutputSchema)
     .mutation(async ({ ctx, input }) => {
@@ -554,10 +555,10 @@ export const monthlyValuesRouter = createTRPCRouter({
    *
    * Replaces: POST /monthly-values/close-batch
    *
-   * Requires: reports.view permission
+   * Requires: reports.manage permission
    */
   closeBatch: tenantProcedure
-    .use(requirePermission(REPORTS_VIEW))
+    .use(requirePermission(REPORTS_MANAGE))
     .input(closeBatchInputSchema)
     .output(
       z.object({

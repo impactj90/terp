@@ -6,9 +6,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TeamMemberStatusRow } from './team-member-status-row'
 import { formatDisplayDate, parseISODate } from '@/lib/time-utils'
-import type { components } from '@/types/legacy-api-types'
-
-type TeamMember = components['schemas']['TeamMember']
+interface TeamMember {
+  teamId: string
+  employeeId: string
+  role: string
+  joinedAt: Date | string
+  employee?: {
+    id: string
+    firstName: string
+    lastName: string
+  }
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DayViewData = Record<string, any> | null | undefined
@@ -107,7 +115,7 @@ export function TeamAttendanceList({
     }
 
     for (const member of members) {
-      const dayView = dayViewMap.get(member.employee_id)
+      const dayView = dayViewMap.get(member.employeeId)
       const group = classifyMember(dayView)
       result[group].push({ member, dayView, group })
     }
@@ -158,7 +166,7 @@ export function TeamAttendanceList({
                 <div className="divide-y">
                   {groupMembers.map(({ member, dayView }) => (
                     <TeamMemberStatusRow
-                      key={member.employee_id}
+                      key={member.employeeId}
                       member={member}
                       dayView={dayView}
                       isLoading={dayViewsLoading}

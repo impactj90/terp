@@ -86,19 +86,29 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.department.update({
-    where: { id },
+  const { count } = await prisma.department.updateMany({
+    where: { id, tenantId },
     data,
   })
+  if (count === 0) {
+    return null
+  }
+  return prisma.department.findFirst({ where: { id, tenantId } })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.department.delete({
-    where: { id },
+export async function deleteById(
+  prisma: PrismaClient,
+  tenantId: string,
+  id: string
+) {
+  const { count } = await prisma.department.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 export async function countChildren(

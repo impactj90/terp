@@ -470,9 +470,11 @@ export const teamsRouter = createTRPCRouter({
     .input(z.object({ employeeId: z.string() }))
     .output(z.object({ items: z.array(teamOutputSchema) }))
     .query(async ({ ctx, input }) => {
+      const tenantId = ctx.tenantId!
       try {
         const teams = await teamService.getByEmployee(
           ctx.prisma,
+          tenantId,
           input.employeeId
         )
         return {

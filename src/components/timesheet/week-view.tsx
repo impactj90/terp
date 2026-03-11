@@ -22,6 +22,7 @@ import {
   isToday,
   isWeekend,
 } from '@/lib/time-utils'
+import { QueryError } from '@/components/ui/query-error'
 import { ErrorBadge } from './error-badge'
 import { TimeDisplay } from './time-display'
 
@@ -56,7 +57,7 @@ export function WeekView({
   const dates = useMemo(() => getWeekDates(startDate), [startDate])
 
   // Fetch daily values for the week
-  const { data: dailyValuesData, isLoading: isLoadingDailyValues } = useDailyValues({
+  const { data: dailyValuesData, isLoading: isLoadingDailyValues, isError, refetch } = useDailyValues({
     employeeId,
     from: formatDate(startDate),
     to: formatDate(endDate),
@@ -96,6 +97,10 @@ export function WeekView({
   }, [dailyValuesData])
 
   const isLoading = isLoadingDailyValues
+
+  if (isError) {
+    return <QueryError message={t('loadFailed')} onRetry={() => refetch()} />
+  }
 
   return (
     <div className="space-y-4">

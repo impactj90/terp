@@ -39,7 +39,7 @@
 
 INSERT INTO auth.users (
   id, instance_id, aud, role, email, encrypted_password,
-  email_confirmed_at, raw_user_meta_data,
+  email_confirmed_at, raw_user_meta_data, raw_app_meta_data,
   created_at, updated_at,
   confirmation_token, recovery_token,
   email_change, email_change_token_new, email_change_token_current
@@ -50,8 +50,10 @@ INSERT INTO auth.users (
   'admin@dev.local',
   crypt('dev-password-admin', gen_salt('bf')),
   NOW(), '{"display_name": "Dev Admin"}'::jsonb,
+  '{"provider": "email", "providers": ["email"]}'::jsonb,
   NOW(), NOW(),
-  '', '', '', '', ''
+  '', '',
+  '', '', ''
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO auth.identities (
@@ -67,7 +69,7 @@ INSERT INTO auth.identities (
 
 INSERT INTO auth.users (
   id, instance_id, aud, role, email, encrypted_password,
-  email_confirmed_at, raw_user_meta_data,
+  email_confirmed_at, raw_user_meta_data, raw_app_meta_data,
   created_at, updated_at,
   confirmation_token, recovery_token,
   email_change, email_change_token_new, email_change_token_current
@@ -78,8 +80,10 @@ INSERT INTO auth.users (
   'user@dev.local',
   crypt('dev-password-user', gen_salt('bf')),
   NOW(), '{"display_name": "Dev User"}'::jsonb,
+  '{"provider": "email", "providers": ["email"]}'::jsonb,
   NOW(), NOW(),
-  '', '', '', '', ''
+  '', '',
+  '', '', ''
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO auth.identities (
@@ -183,6 +187,11 @@ ON CONFLICT (user_id, tenant_id) DO NOTHING;
 --   Maria:  00000000-0000-0000-0000-000000000013
 --   Thomas: 00000000-0000-0000-0000-000000000014
 --   Anna:   00000000-0000-0000-0000-000000000015
+--   Sabine: 00000000-0000-0000-0000-000000000016
+--   Markus: 00000000-0000-0000-0000-000000000017
+--   Julia:  00000000-0000-0000-0000-000000000018
+--   Stefan: 00000000-0000-0000-0000-000000000019
+--   Petra:  00000000-0000-0000-0000-00000000001a
 
 INSERT INTO employees (id, tenant_id, personnel_number, pin, first_name, last_name, email, entry_date, weekly_hours, vacation_days_per_year, is_active, created_at, updated_at)
 VALUES
@@ -190,7 +199,12 @@ VALUES
   ('00000000-0000-0000-0000-000000000012', '10000000-0000-0000-0000-000000000001', 'EMP002', '1002', 'Regular', 'User', 'user@dev.local', '2021-03-15', 40.00, 28.00, true, NOW(), NOW()),
   ('00000000-0000-0000-0000-000000000013', '10000000-0000-0000-0000-000000000001', 'EMP003', '1003', 'Maria', 'Schmidt', 'maria.schmidt@dev.local', '2022-06-01', 20.00, 15.00, true, NOW(), NOW()),
   ('00000000-0000-0000-0000-000000000014', '10000000-0000-0000-0000-000000000001', 'EMP004', '1004', 'Thomas', 'Mueller', 'thomas.mueller@dev.local', '2024-01-15', 40.00, 30.00, true, NOW(), NOW()),
-  ('00000000-0000-0000-0000-000000000015', '10000000-0000-0000-0000-000000000001', 'EMP005', '1005', 'Anna', 'Weber', 'anna.weber@dev.local', '2015-09-01', 35.00, 32.00, true, NOW(), NOW())
+  ('00000000-0000-0000-0000-000000000015', '10000000-0000-0000-0000-000000000001', 'EMP005', '1005', 'Anna', 'Weber', 'anna.weber@dev.local', '2015-09-01', 35.00, 32.00, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000016', '10000000-0000-0000-0000-000000000001', 'EMP006', '1006', 'Sabine', 'Fischer', 'sabine.fischer@dev.local', '2023-01-15', 40.00, 30.00, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000017', '10000000-0000-0000-0000-000000000001', 'EMP007', '1007', 'Markus', 'Braun', 'markus.braun@dev.local', '2023-06-01', 40.00, 30.00, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000018', '10000000-0000-0000-0000-000000000001', 'EMP008', '1008', 'Julia', 'Hoffmann', 'julia.hoffmann@dev.local', '2022-03-01', 38.00, 30.00, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000019', '10000000-0000-0000-0000-000000000001', 'EMP009', '1009', 'Stefan', 'Lang', 'stefan.lang@dev.local', '2024-09-01', 40.00, 30.00, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-00000000001a', '10000000-0000-0000-0000-000000000001', 'EMP010', '1010', 'Petra', 'Neumann', 'petra.neumann@dev.local', '2025-02-01', 20.00, 15.00, true, NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================
@@ -324,7 +338,12 @@ VALUES
   (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000012', '00000000-0000-0000-0000-000000000703', '2021-03-15', NULL, 'preserve_manual', true, NOW(), NOW()),
   (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000013', '00000000-0000-0000-0000-000000000704', '2022-06-01', NULL, 'preserve_manual', true, NOW(), NOW()),
   (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000014', '00000000-0000-0000-0000-000000000701', '2024-01-15', NULL, 'preserve_manual', true, NOW(), NOW()),
-  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000015', '00000000-0000-0000-0000-000000000702', '2015-09-01', NULL, 'preserve_manual', true, NOW(), NOW())
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000015', '00000000-0000-0000-0000-000000000702', '2015-09-01', NULL, 'preserve_manual', true, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000016', '00000000-0000-0000-0000-000000000703', '2023-01-15', NULL, 'preserve_manual', true, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000017', '00000000-0000-0000-0000-000000000701', '2023-06-01', NULL, 'preserve_manual', true, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000018', '00000000-0000-0000-0000-000000000702', '2022-03-01', NULL, 'preserve_manual', true, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000019', '00000000-0000-0000-0000-000000000701', '2024-09-01', NULL, 'preserve_manual', true, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001a', '00000000-0000-0000-0000-000000000704', '2025-02-01', NULL, 'preserve_manual', true, NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 
 -- Also set tariff_id on the employees directly
@@ -333,6 +352,11 @@ UPDATE employees SET tariff_id = '00000000-0000-0000-0000-000000000703' WHERE id
 UPDATE employees SET tariff_id = '00000000-0000-0000-0000-000000000704' WHERE id = '00000000-0000-0000-0000-000000000013';
 UPDATE employees SET tariff_id = '00000000-0000-0000-0000-000000000701' WHERE id = '00000000-0000-0000-0000-000000000014';
 UPDATE employees SET tariff_id = '00000000-0000-0000-0000-000000000702' WHERE id = '00000000-0000-0000-0000-000000000015';
+UPDATE employees SET tariff_id = '00000000-0000-0000-0000-000000000703' WHERE id = '00000000-0000-0000-0000-000000000016';
+UPDATE employees SET tariff_id = '00000000-0000-0000-0000-000000000701' WHERE id = '00000000-0000-0000-0000-000000000017';
+UPDATE employees SET tariff_id = '00000000-0000-0000-0000-000000000702' WHERE id = '00000000-0000-0000-0000-000000000018';
+UPDATE employees SET tariff_id = '00000000-0000-0000-0000-000000000701' WHERE id = '00000000-0000-0000-0000-000000000019';
+UPDATE employees SET tariff_id = '00000000-0000-0000-0000-000000000704' WHERE id = '00000000-0000-0000-0000-00000000001a';
 
 -- =============================================================
 -- 13. Holidays (Bavaria 2026)
@@ -365,7 +389,8 @@ VALUES
   ('00000000-0000-0000-0000-000000000902', '10000000-0000-0000-0000-000000000001', 'Frontend Team', 'Frontend web and mobile development', '00000000-0000-0000-0000-000000000806', '00000000-0000-0000-0000-000000000015', true, NOW(), NOW()),
   ('00000000-0000-0000-0000-000000000903', '10000000-0000-0000-0000-000000000001', 'DevOps Team', 'DevOps, CI/CD, and cloud infrastructure', '00000000-0000-0000-0000-000000000807', NULL, true, NOW(), NOW()),
   ('00000000-0000-0000-0000-000000000904', '10000000-0000-0000-0000-000000000001', 'HR Core Team', 'Core HR operations and employee relations', '00000000-0000-0000-0000-000000000803', NULL, true, NOW(), NOW()),
-  ('00000000-0000-0000-0000-000000000905', '10000000-0000-0000-0000-000000000001', 'Accounting Team', 'Financial accounting and reporting', '00000000-0000-0000-0000-000000000804', NULL, true, NOW(), NOW())
+  ('00000000-0000-0000-0000-000000000905', '10000000-0000-0000-0000-000000000001', 'Accounting Team', 'Financial accounting and reporting', '00000000-0000-0000-0000-000000000804', NULL, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000906', '10000000-0000-0000-0000-000000000001', 'Betrieb', 'Betrieb und Facility Management', '00000000-0000-0000-0000-000000000805', NULL, true, NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO team_members (team_id, employee_id, role, joined_at)
@@ -377,12 +402,18 @@ VALUES
   -- Frontend Team
   ('00000000-0000-0000-0000-000000000902', '00000000-0000-0000-0000-000000000015', 'lead', NOW()),
   ('00000000-0000-0000-0000-000000000902', '00000000-0000-0000-0000-000000000012', 'member', NOW()),
+  ('00000000-0000-0000-0000-000000000902', '00000000-0000-0000-0000-000000000017', 'member', NOW()),
   -- DevOps Team
   ('00000000-0000-0000-0000-000000000903', '00000000-0000-0000-0000-000000000014', 'member', NOW()),
+  ('00000000-0000-0000-0000-000000000903', '00000000-0000-0000-0000-000000000016', 'member', NOW()),
   -- HR Core Team
   ('00000000-0000-0000-0000-000000000904', '00000000-0000-0000-0000-000000000013', 'deputy', NOW()),
+  ('00000000-0000-0000-0000-000000000904', '00000000-0000-0000-0000-000000000018', 'lead', NOW()),
   -- Accounting Team
-  ('00000000-0000-0000-0000-000000000905', '00000000-0000-0000-0000-000000000015', 'member', NOW())
+  ('00000000-0000-0000-0000-000000000905', '00000000-0000-0000-0000-000000000015', 'member', NOW()),
+  ('00000000-0000-0000-0000-000000000905', '00000000-0000-0000-0000-000000000019', 'member', NOW()),
+  -- Betrieb
+  ('00000000-0000-0000-0000-000000000906', '00000000-0000-0000-0000-00000000001a', 'member', NOW())
 ON CONFLICT (team_id, employee_id) DO NOTHING;
 
 -- =============================================================
@@ -862,7 +893,12 @@ VALUES
   ('00000000-0000-0000-0000-000000016001', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000012', 2026, 28.00, 5.00, 0.00, 0.00, NOW(), NOW()),
   ('00000000-0000-0000-0000-000000016002', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000013', 2026, 15.00, 2.00, 0.00, 0.00, NOW(), NOW()),
   ('00000000-0000-0000-0000-000000016003', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000014', 2026, 30.00, 0.00, 0.00, 0.00, NOW(), NOW()),
-  ('00000000-0000-0000-0000-000000016004', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000015', 2026, 32.00, 4.00, 0.00, 0.50, NOW(), NOW())
+  ('00000000-0000-0000-0000-000000016004', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000015', 2026, 32.00, 4.00, 0.00, 0.50, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000016005', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000016', 2026, 30.00, 2.00, 0.00, 0.00, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000016006', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000017', 2026, 30.00, 3.00, 0.00, 0.00, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000016007', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000018', 2026, 30.00, 5.00, 0.00, 0.00, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000016008', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000019', 2026, 30.00, 0.00, 0.00, 0.00, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000016009', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001a', 2026, 15.00, 2.00, 0.00, 0.00, NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================
@@ -991,22 +1027,16 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================
--- 22. Employee day plans (January 2026 only)
+-- 22. Employee day plans (Jan 1 -> CURRENT_DATE, all 10 employees)
 -- =============================================================
--- Employee -> WeekPlan mapping:
---   Admin:  WEEK-40H  -> Mon-Fri: STD-8H (502),  Sat-Sun: NULL
---   User:   WEEK-FLEX -> Mon-Fri: FLEX-8H (504), Sat-Sun: NULL
---   Maria:  WEEK-20H  -> Mon-Fri: PART-4H (503), Sat-Sun: NULL
---   Thomas: WEEK-40H  -> Mon-Fri: STD-8H (502),  Sat-Sun: NULL
---   Anna:   WEEK-38H  -> Mon-Thu: STD-8H (502),  Fri: FRI-6H (505), Sat-Sun: NULL
 
--- Generate employee day plans for January 2026 using a DO block
 DO $$
 DECLARE
   t_id uuid := '10000000-0000-0000-0000-000000000001';
   d date;
   dow int;
   emp record;
+  is_holiday boolean;
 BEGIN
   FOR emp IN
     SELECT * FROM (VALUES
@@ -1014,29 +1044,729 @@ BEGIN
       ('00000000-0000-0000-0000-000000000012'::uuid, '00000000-0000-0000-0000-000000000504'::uuid, '00000000-0000-0000-0000-000000000504'::uuid),
       ('00000000-0000-0000-0000-000000000013'::uuid, '00000000-0000-0000-0000-000000000503'::uuid, '00000000-0000-0000-0000-000000000503'::uuid),
       ('00000000-0000-0000-0000-000000000014'::uuid, '00000000-0000-0000-0000-000000000502'::uuid, '00000000-0000-0000-0000-000000000502'::uuid),
-      ('00000000-0000-0000-0000-000000000015'::uuid, '00000000-0000-0000-0000-000000000502'::uuid, '00000000-0000-0000-0000-000000000505'::uuid)
+      ('00000000-0000-0000-0000-000000000015'::uuid, '00000000-0000-0000-0000-000000000502'::uuid, '00000000-0000-0000-0000-000000000505'::uuid),
+      ('00000000-0000-0000-0000-000000000016'::uuid, '00000000-0000-0000-0000-000000000504'::uuid, '00000000-0000-0000-0000-000000000504'::uuid),
+      ('00000000-0000-0000-0000-000000000017'::uuid, '00000000-0000-0000-0000-000000000502'::uuid, '00000000-0000-0000-0000-000000000502'::uuid),
+      ('00000000-0000-0000-0000-000000000018'::uuid, '00000000-0000-0000-0000-000000000502'::uuid, '00000000-0000-0000-0000-000000000505'::uuid),
+      ('00000000-0000-0000-0000-000000000019'::uuid, '00000000-0000-0000-0000-000000000502'::uuid, '00000000-0000-0000-0000-000000000502'::uuid),
+      ('00000000-0000-0000-0000-00000000001a'::uuid, '00000000-0000-0000-0000-000000000503'::uuid, '00000000-0000-0000-0000-000000000503'::uuid)
     ) AS t(employee_id, mon_thu_plan, fri_plan)
   LOOP
     d := '2026-01-01';
-    WHILE d <= '2026-01-31' LOOP
-      dow := EXTRACT(ISODOW FROM d)::int; -- 1=Mon, 7=Sun
+    WHILE d <= CURRENT_DATE LOOP
+      dow := EXTRACT(ISODOW FROM d)::int;
+      is_holiday := EXISTS (SELECT 1 FROM holidays WHERE holiday_date = d AND tenant_id = t_id);
       INSERT INTO employee_day_plans (id, tenant_id, employee_id, plan_date, day_plan_id, source, created_at, updated_at)
       VALUES (
         gen_random_uuid(), t_id, emp.employee_id, d,
         CASE
-          -- Holidays: Jan 1 (Neujahr), Jan 6 (Heilige Drei Koenige)
-          WHEN d IN ('2026-01-01', '2026-01-06') THEN NULL
-          WHEN dow IN (6, 7) THEN NULL  -- Weekend
-          WHEN dow = 5 THEN emp.fri_plan  -- Friday
-          ELSE emp.mon_thu_plan           -- Mon-Thu
+          WHEN is_holiday THEN NULL
+          WHEN dow IN (6, 7) THEN NULL
+          WHEN dow = 5 THEN emp.fri_plan
+          ELSE emp.mon_thu_plan
         END,
-        CASE
-          WHEN d IN ('2026-01-01', '2026-01-06') THEN 'holiday'
-          ELSE 'tariff'
-        END,
+        CASE WHEN is_holiday THEN 'holiday' ELSE 'tariff' END,
         NOW(), NOW()
       ) ON CONFLICT (employee_id, plan_date) DO NOTHING;
       d := d + 1;
     END LOOP;
   END LOOP;
 END $$;
+
+-- =============================================================
+-- PART A: Admin Routes Data
+-- =============================================================
+
+-- A1. Locations
+INSERT INTO locations (id, tenant_id, code, name, description, address, city, country, timezone, is_active, created_at, updated_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000d01', '10000000-0000-0000-0000-000000000001', 'MUC', 'Muenchen Zentrale', 'Hauptsitz', 'Leopoldstr. 10, 80802', 'Muenchen', 'DE', 'Europe/Berlin', true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000d02', '10000000-0000-0000-0000-000000000001', 'BER', 'Berlin Buero', 'Zweigniederlassung Berlin', 'Friedrichstr. 50, 10117', 'Berlin', 'DE', 'Europe/Berlin', true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000d03', '10000000-0000-0000-0000-000000000001', 'REMOTE', 'Remote / Homeoffice', 'Homeoffice und mobiles Arbeiten', '', '', 'DE', 'Europe/Berlin', true, NOW(), NOW())
+ON CONFLICT (tenant_id, code) DO NOTHING;
+
+-- A2. Cost Centers
+INSERT INTO cost_centers (id, tenant_id, code, name, description, is_active, created_at, updated_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000c01', '10000000-0000-0000-0000-000000000001', 'CC-100', 'Entwicklung', 'Software-Entwicklung und Engineering', true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000c02', '10000000-0000-0000-0000-000000000001', 'CC-200', 'Verwaltung', 'Verwaltung und HR', true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000c03', '10000000-0000-0000-0000-000000000001', 'CC-300', 'Vertrieb', 'Vertrieb und Kundenbetreuung', true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000c04', '10000000-0000-0000-0000-000000000001', 'CC-400', 'Infrastruktur', 'IT-Infrastruktur und Betrieb', true, NOW(), NOW())
+ON CONFLICT (tenant_id, code) DO NOTHING;
+
+-- A3. Contact Types + Contact Kinds
+INSERT INTO contact_types (id, tenant_id, code, name, data_type, sort_order, is_active, created_at, updated_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000e01', '10000000-0000-0000-0000-000000000001', 'PHONE', 'Telefon', 'text', 1, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000e02', '10000000-0000-0000-0000-000000000001', 'EMAIL', 'E-Mail', 'text', 2, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000e03', '10000000-0000-0000-0000-000000000001', 'ADDRESS', 'Adresse', 'text', 3, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000e04', '10000000-0000-0000-0000-000000000001', 'MSGR', 'Messenger', 'text', 4, true, NOW(), NOW())
+ON CONFLICT (tenant_id, code) DO NOTHING;
+
+INSERT INTO contact_kinds (id, tenant_id, contact_type_id, code, label, sort_order, is_active, created_at, updated_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000f01', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000e01', 'MOBIL', 'Mobil', 1, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000f02', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000e01', 'FESTNETZ', 'Festnetz', 2, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000f03', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000e01', 'NOTFALL', 'Notfall', 3, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000f04', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000e02', 'GESCH', 'Geschaeftlich', 1, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000f05', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000e02', 'PRIVAT', 'Privat', 2, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000f06', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000e03', 'HAUPT', 'Hauptwohnsitz', 1, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000f07', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000e03', 'NEBEN', 'Nebenwohnsitz', 2, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000f08', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000e04', 'TEAMS', 'Teams', 1, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000f09', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000e04', 'SLACK', 'Slack', 2, true, NOW(), NOW())
+ON CONFLICT (tenant_id, code) DO NOTHING;
+
+-- A4. Calculation Rules
+INSERT INTO calculation_rules (id, tenant_id, code, name, description, value, factor, is_active, created_at, updated_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000a01', '10000000-0000-0000-0000-000000000001', 'RULE-STD', 'Standard Tagesberechnung', 'Standardmaessige Berechnung der Tageswerte', 0, 1.00, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000a02', '10000000-0000-0000-0000-000000000001', 'RULE-FLEX', 'Gleitzeit Berechnung', 'Gleitzeitberechnung mit Rahmenzeit', 0, 1.00, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000a03', '10000000-0000-0000-0000-000000000001', 'RULE-PART', 'Teilzeit Berechnung', 'Berechnung fuer Teilzeitkraefte', 0, 0.50, true, NOW(), NOW())
+ON CONFLICT (tenant_id, code) DO NOTHING;
+
+-- A5. Orders + Activities + Order Assignments
+INSERT INTO activities (id, tenant_id, code, name, description, is_active, created_at, updated_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000b01', '10000000-0000-0000-0000-000000000001', 'ACT-DEV', 'Entwicklung', 'Software-Entwicklungsarbeit', true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000b02', '10000000-0000-0000-0000-000000000001', 'ACT-TEST', 'Testing', 'Qualitaetssicherung und Tests', true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000b03', '10000000-0000-0000-0000-000000000001', 'ACT-MEET', 'Besprechung', 'Meetings und Abstimmungen', true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000b04', '10000000-0000-0000-0000-000000000001', 'ACT-ADMIN', 'Administration', 'Administrative Taetigkeiten', true, NOW(), NOW())
+ON CONFLICT (tenant_id, code) DO NOTHING;
+
+INSERT INTO orders (id, tenant_id, code, name, description, status, customer, cost_center_id, valid_from, is_active, created_at, updated_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000b10', '10000000-0000-0000-0000-000000000001', 'ORD-001', 'Projekt Alpha', 'Hauptentwicklungsprojekt', 'active', 'Kunde A GmbH', '00000000-0000-0000-0000-000000000c01', '2025-06-01', true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000b11', '10000000-0000-0000-0000-000000000001', 'ORD-002', 'Wartung Portal', 'Laufende Wartung des Kundenportals', 'active', 'Kunde B AG', '00000000-0000-0000-0000-000000000c01', '2025-01-01', true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000b12', '10000000-0000-0000-0000-000000000001', 'ORD-003', 'Bueroausstattung', 'Bueroausstattung und Einrichtung', 'completed', NULL, '00000000-0000-0000-0000-000000000c04', '2025-03-01', true, NOW(), NOW())
+ON CONFLICT (tenant_id, code) DO NOTHING;
+
+INSERT INTO order_assignments (id, tenant_id, order_id, employee_id, role, is_active, created_at, updated_at)
+VALUES
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000b10', '00000000-0000-0000-0000-000000000011', 'leader', true, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000b10', '00000000-0000-0000-0000-000000000012', 'worker', true, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000b10', '00000000-0000-0000-0000-000000000017', 'worker', true, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000b11', '00000000-0000-0000-0000-000000000014', 'worker', true, NOW(), NOW())
+ON CONFLICT (order_id, employee_id, role) DO NOTHING;
+
+-- A6. Shifts
+INSERT INTO shifts (id, tenant_id, code, name, description, day_plan_id, color, sort_order, is_active, created_at, updated_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000a10', '10000000-0000-0000-0000-000000000001', 'FRUEH', 'Fruehschicht', '06:00-14:00', '00000000-0000-0000-0000-000000000502', '#4CAF50', 1, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000a11', '10000000-0000-0000-0000-000000000001', 'SPAET', 'Spaetschicht', '14:00-22:00', '00000000-0000-0000-0000-000000000502', '#FF9800', 2, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000a12', '10000000-0000-0000-0000-000000000001', 'NORMAL', 'Normalschicht', '08:00-17:00', '00000000-0000-0000-0000-000000000502', '#2196F3', 3, true, NOW(), NOW())
+ON CONFLICT (tenant_id, code) DO NOTHING;
+
+-- A7. Access Control
+INSERT INTO access_zones (id, tenant_id, code, name, description, sort_order, is_active, created_at, updated_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000a20', '10000000-0000-0000-0000-000000000001', 'ZONE-HQ', 'Hauptgebaeude', 'Zugang zum Hauptgebaeude', 1, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000a21', '10000000-0000-0000-0000-000000000001', 'ZONE-SERVER', 'Serverraum', 'Zugang zum Serverraum (eingeschraenkt)', 2, true, NOW(), NOW())
+ON CONFLICT (tenant_id, code) DO NOTHING;
+
+INSERT INTO access_profiles (id, tenant_id, code, name, description, is_active, created_at, updated_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000a30', '10000000-0000-0000-0000-000000000001', 'PROF-STD', 'Standard Mitarbeiter', 'Zugang nur zum Hauptgebaeude', true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000a31', '10000000-0000-0000-0000-000000000001', 'PROF-IT', 'IT Mitarbeiter', 'Zugang zum Hauptgebaeude und Serverraum', true, NOW(), NOW())
+ON CONFLICT (tenant_id, code) DO NOTHING;
+
+INSERT INTO employee_access_assignments (id, tenant_id, employee_id, access_profile_id, is_active, created_at, updated_at)
+VALUES
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000000a31', true, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000012', '00000000-0000-0000-0000-000000000a31', true, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000013', '00000000-0000-0000-0000-000000000a30', true, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000014', '00000000-0000-0000-0000-000000000a31', true, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000015', '00000000-0000-0000-0000-000000000a31', true, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000016', '00000000-0000-0000-0000-000000000a31', true, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000017', '00000000-0000-0000-0000-000000000a31', true, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000018', '00000000-0000-0000-0000-000000000a30', true, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000019', '00000000-0000-0000-0000-000000000a30', true, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001a', '00000000-0000-0000-0000-000000000a30', true, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- A8. Export Interfaces
+INSERT INTO export_interfaces (id, tenant_id, interface_number, name, mandant_number, export_path, output_filename, is_active, created_at, updated_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000a40', '10000000-0000-0000-0000-000000000001', 1, 'Lohnexport DATEV', '1001', '/exports/datev/', 'lohn_export.csv', true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000a41', '10000000-0000-0000-0000-000000000001', 2, 'Fibu Export', '1001', '/exports/fibu/', 'fibu_export.csv', true, NOW(), NOW())
+ON CONFLICT (tenant_id, interface_number) DO NOTHING;
+
+-- A9. Schedules + Tasks
+INSERT INTO schedules (id, tenant_id, name, description, timing_type, timing_config, is_enabled, created_at, updated_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000a50', '10000000-0000-0000-0000-000000000001', 'Tageswertberechnung', 'Taegliche Berechnung der Tageswerte um 02:00', 'daily', '{"hour": 2, "minute": 0}'::jsonb, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000a51', '10000000-0000-0000-0000-000000000001', 'Monatlicher Report', 'Monatlicher Report am 1. des Monats um 06:00', 'monthly', '{"dayOfMonth": 1, "hour": 6, "minute": 0}'::jsonb, true, NOW(), NOW())
+ON CONFLICT (tenant_id, name) DO NOTHING;
+
+INSERT INTO schedule_tasks (id, schedule_id, task_type, sort_order, parameters, is_enabled, created_at, updated_at)
+VALUES
+  (gen_random_uuid(), '00000000-0000-0000-0000-000000000a50', 'calculate_days', 1, '{}'::jsonb, true, NOW(), NOW()),
+  (gen_random_uuid(), '00000000-0000-0000-0000-000000000a51', 'export_data', 1, '{"format": "xlsx"}'::jsonb, true, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- A10. Macros
+INSERT INTO macros (id, tenant_id, name, description, macro_type, action_type, action_params, is_active, created_at, updated_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000a60', '10000000-0000-0000-0000-000000000001', 'Massenkorrektur Pausenzeit', 'Korrektur fehlender Pausen fuer alle Mitarbeiter', 'monthly', 'log_message', '{"message": "Pausenkorrektur durchgefuehrt"}'::jsonb, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000a61', '10000000-0000-0000-0000-000000000001', 'Monatsabschluss Vorbereitung', 'Vorbereitung des Monatsabschlusses', 'monthly', 'recalculate_target_hours', '{}'::jsonb, true, NOW(), NOW())
+ON CONFLICT (tenant_id, name) DO NOTHING;
+
+-- A11. System Settings
+INSERT INTO system_settings (id, tenant_id, rounding_relative_to_plan, error_list_enabled, tracked_error_codes, auto_fill_order_end_bookings, birthday_window_days_before, birthday_window_days_after, follow_up_entries_enabled, proxy_enabled, server_alive_enabled, created_at, updated_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000a70', '10000000-0000-0000-0000-000000000001', false, true, ARRAY['MISSING_BREAK','MISSING_CLOCK_OUT','HIGH_OVERTIME'], false, 7, 7, false, false, false, NOW(), NOW())
+ON CONFLICT (tenant_id) DO NOTHING;
+
+-- A12. Employee Messages
+INSERT INTO employee_messages (id, tenant_id, sender_id, subject, body, created_at, updated_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000a80', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'Betriebsversammlung am 20.03.2026', 'Liebe Kolleginnen und Kollegen, am 20.03.2026 findet um 14:00 Uhr eine Betriebsversammlung im Konferenzraum statt. Mit freundlichen Gruessen, Die Geschaeftsleitung', NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000a81', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'Neue Zeiterfassungsregeln ab April', 'Ab dem 01.04.2026 gelten neue Regeln fuer die Zeiterfassung. Bitte beachten Sie die aktualisierte Betriebsvereinbarung im Intranet.', NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO employee_message_recipients (id, message_id, employee_id, status, sent_at, created_at, updated_at)
+SELECT gen_random_uuid(), m.id, e.id, 'sent', NOW(), NOW(), NOW()
+FROM employee_messages m
+CROSS JOIN employees e
+WHERE m.tenant_id = '10000000-0000-0000-0000-000000000001'
+  AND e.tenant_id = '10000000-0000-0000-0000-000000000001'
+  AND e.is_active = true
+  AND NOT EXISTS (
+    SELECT 1 FROM employee_message_recipients r WHERE r.message_id = m.id AND r.employee_id = e.id
+  );
+
+-- A13. Reports
+INSERT INTO reports (id, tenant_id, report_type, name, description, status, format, parameters, requested_at, started_at, completed_at, created_by, created_at, updated_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000a90', '10000000-0000-0000-0000-000000000001', 'monthly_overview', 'Monatsuebersicht Januar 2026', 'Monatliche Uebersicht aller Mitarbeiter', 'completed', 'xlsx', '{"year": 2026, "month": 1}'::jsonb, '2026-02-01 08:00:00+00', '2026-02-01 08:00:05+00', '2026-02-01 08:00:12+00', '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000a91', '10000000-0000-0000-0000-000000000001', 'absence_report', 'Abwesenheitsbericht Januar 2026', 'Abwesenheiten aller Mitarbeiter', 'completed', 'xlsx', '{"year": 2026, "month": 1}'::jsonb, '2026-02-01 09:00:00+00', '2026-02-01 09:00:03+00', '2026-02-01 09:00:08+00', '00000000-0000-0000-0000-000000000001', NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- A14. Payroll Exports
+INSERT INTO payroll_exports (id, tenant_id, export_interface_id, year, month, status, export_type, format, parameters, employee_count, total_hours, requested_at, started_at, completed_at, created_by, created_at, updated_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000aa0', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000a40', 2026, 1, 'completed', 'standard', 'csv', '{}'::jsonb, 5, 800.50, '2026-02-01 10:00:00+00', '2026-02-01 10:00:02+00', '2026-02-01 10:00:15+00', '00000000-0000-0000-0000-000000000001', NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- A15. Notifications
+INSERT INTO notifications (id, tenant_id, user_id, type, title, message, link, read_at, created_at, updated_at)
+VALUES
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'approval', 'Urlaubsantrag genehmigt', 'Der Urlaubsantrag von Anna Weber wurde genehmigt.', '/admin/approvals', NOW() - INTERVAL '2 days', NOW() - INTERVAL '3 days', NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'error', 'Fehlbuchung am 21.01', 'Admin User hat am 21.01.2026 eine fehlende Pause.', '/admin/correction-assistant', NULL, NOW() - INTERVAL '1 day', NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', 'approval', 'Urlaub genehmigt', 'Ihr Urlaubsantrag wurde genehmigt.', '/absences', NOW() - INTERVAL '5 days', NOW() - INTERVAL '7 days', NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', 'info', 'Monatsabschluss Januar', 'Der Monatsabschluss fuer Januar 2026 wurde durchgefuehrt.', '/monthly-evaluation', NULL, NOW() - INTERVAL '1 day', NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================
+-- PART B: Employee Enrichment
+-- =============================================================
+
+DO $$
+DECLARE
+  t_id uuid := '10000000-0000-0000-0000-000000000001';
+  et_vz uuid;
+  et_tz uuid;
+BEGIN
+  SELECT id INTO et_vz FROM employment_types WHERE code = 'VZ' LIMIT 1;
+  SELECT id INTO et_tz FROM employment_types WHERE code = 'TZ' LIMIT 1;
+
+  UPDATE employees SET department_id = '00000000-0000-0000-0000-000000000806', cost_center_id = '00000000-0000-0000-0000-000000000c01', employment_type_id = et_vz,
+    birth_date = '1985-03-15', gender = 'male', address_street = 'Leopoldstr. 1', address_zip = '80802', address_city = 'Muenchen'
+    WHERE id = '00000000-0000-0000-0000-000000000011' AND tenant_id = t_id;
+  UPDATE employees SET department_id = '00000000-0000-0000-0000-000000000806', cost_center_id = '00000000-0000-0000-0000-000000000c01', employment_type_id = et_vz,
+    birth_date = '1990-07-22', gender = 'male', address_street = 'Schillerstr. 5', address_zip = '80336', address_city = 'Muenchen'
+    WHERE id = '00000000-0000-0000-0000-000000000012' AND tenant_id = t_id;
+  UPDATE employees SET department_id = '00000000-0000-0000-0000-000000000803', cost_center_id = '00000000-0000-0000-0000-000000000c02', employment_type_id = et_tz,
+    birth_date = '1988-11-08', gender = 'female', address_street = 'Maximilianstr. 12', address_zip = '80539', address_city = 'Muenchen'
+    WHERE id = '00000000-0000-0000-0000-000000000013' AND tenant_id = t_id;
+  UPDATE employees SET department_id = '00000000-0000-0000-0000-000000000806', cost_center_id = '00000000-0000-0000-0000-000000000c01', employment_type_id = et_vz,
+    birth_date = '1992-04-30', gender = 'male', address_street = 'Arnulfstr. 20', address_zip = '80335', address_city = 'Muenchen'
+    WHERE id = '00000000-0000-0000-0000-000000000014' AND tenant_id = t_id;
+  UPDATE employees SET department_id = '00000000-0000-0000-0000-000000000806', cost_center_id = '00000000-0000-0000-0000-000000000c01', employment_type_id = et_vz,
+    birth_date = '1980-12-17', gender = 'female', address_street = 'Isarring 8', address_zip = '81675', address_city = 'Muenchen'
+    WHERE id = '00000000-0000-0000-0000-000000000015' AND tenant_id = t_id;
+  UPDATE employees SET department_id = '00000000-0000-0000-0000-000000000807', cost_center_id = '00000000-0000-0000-0000-000000000c04', employment_type_id = et_vz,
+    birth_date = '1987-06-25', gender = 'female', address_street = 'Bayerstr. 3', address_zip = '80335', address_city = 'Muenchen'
+    WHERE id = '00000000-0000-0000-0000-000000000016' AND tenant_id = t_id;
+  UPDATE employees SET department_id = '00000000-0000-0000-0000-000000000806', cost_center_id = '00000000-0000-0000-0000-000000000c01', employment_type_id = et_vz,
+    birth_date = '1993-02-14', gender = 'male', address_street = 'Theresienstr. 7', address_zip = '80333', address_city = 'Muenchen'
+    WHERE id = '00000000-0000-0000-0000-000000000017' AND tenant_id = t_id;
+  UPDATE employees SET department_id = '00000000-0000-0000-0000-000000000803', cost_center_id = '00000000-0000-0000-0000-000000000c02', employment_type_id = et_vz,
+    birth_date = '1986-09-03', gender = 'female', address_street = 'Ludwigstr. 15', address_zip = '80539', address_city = 'Muenchen'
+    WHERE id = '00000000-0000-0000-0000-000000000018' AND tenant_id = t_id;
+  UPDATE employees SET department_id = '00000000-0000-0000-0000-000000000804', cost_center_id = '00000000-0000-0000-0000-000000000c03', employment_type_id = et_vz,
+    birth_date = '1991-01-19', gender = 'male', address_street = 'Sonnenstr. 22', address_zip = '80331', address_city = 'Muenchen'
+    WHERE id = '00000000-0000-0000-0000-000000000019' AND tenant_id = t_id;
+  UPDATE employees SET department_id = '00000000-0000-0000-0000-000000000805', cost_center_id = '00000000-0000-0000-0000-000000000c04', employment_type_id = et_tz,
+    birth_date = '1995-08-11', gender = 'female', address_street = 'Prinzregentenstr. 4', address_zip = '81675', address_city = 'Muenchen'
+    WHERE id = '00000000-0000-0000-0000-00000000001a' AND tenant_id = t_id;
+END $$;
+
+-- Employee Contacts
+INSERT INTO employee_contacts (id, employee_id, contact_type, value, label, is_primary, contact_kind_id, created_at, updated_at)
+VALUES
+  (gen_random_uuid(), '00000000-0000-0000-0000-000000000011', 'phone', '+49 176 10010001', 'Mobil', true, '00000000-0000-0000-0000-000000000f01', NOW(), NOW()),
+  (gen_random_uuid(), '00000000-0000-0000-0000-000000000011', 'email', 'admin@dev.local', 'Geschaeftlich', true, '00000000-0000-0000-0000-000000000f04', NOW(), NOW()),
+  (gen_random_uuid(), '00000000-0000-0000-0000-000000000012', 'phone', '+49 176 10020002', 'Mobil', true, '00000000-0000-0000-0000-000000000f01', NOW(), NOW()),
+  (gen_random_uuid(), '00000000-0000-0000-0000-000000000012', 'email', 'user@dev.local', 'Geschaeftlich', true, '00000000-0000-0000-0000-000000000f04', NOW(), NOW()),
+  (gen_random_uuid(), '00000000-0000-0000-0000-000000000013', 'phone', '+49 176 10030003', 'Mobil', true, '00000000-0000-0000-0000-000000000f01', NOW(), NOW()),
+  (gen_random_uuid(), '00000000-0000-0000-0000-000000000014', 'phone', '+49 176 10040004', 'Mobil', true, '00000000-0000-0000-0000-000000000f01', NOW(), NOW()),
+  (gen_random_uuid(), '00000000-0000-0000-0000-000000000015', 'phone', '+49 176 10050005', 'Mobil', true, '00000000-0000-0000-0000-000000000f01', NOW(), NOW()),
+  (gen_random_uuid(), '00000000-0000-0000-0000-000000000016', 'phone', '+49 176 10060006', 'Mobil', true, '00000000-0000-0000-0000-000000000f01', NOW(), NOW()),
+  (gen_random_uuid(), '00000000-0000-0000-0000-000000000016', 'email', 'sabine.fischer@dev.local', 'Geschaeftlich', true, '00000000-0000-0000-0000-000000000f04', NOW(), NOW()),
+  (gen_random_uuid(), '00000000-0000-0000-0000-000000000017', 'phone', '+49 176 10070007', 'Mobil', true, '00000000-0000-0000-0000-000000000f01', NOW(), NOW()),
+  (gen_random_uuid(), '00000000-0000-0000-0000-000000000018', 'phone', '+49 176 10080008', 'Mobil', true, '00000000-0000-0000-0000-000000000f01', NOW(), NOW()),
+  (gen_random_uuid(), '00000000-0000-0000-0000-000000000019', 'phone', '+49 176 10090009', 'Mobil', true, '00000000-0000-0000-0000-000000000f01', NOW(), NOW()),
+  (gen_random_uuid(), '00000000-0000-0000-0000-00000000001a', 'phone', '+49 176 10100010', 'Mobil', true, '00000000-0000-0000-0000-000000000f01', NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================
+-- B3. Historical 2025 monthly values for new employees
+-- =============================================================
+
+DO $$
+DECLARE
+  t_id uuid := '10000000-0000-0000-0000-000000000001';
+  emp record;
+  m int;
+  flex_start int;
+  flex_change int;
+  flex_end int;
+  target int;
+  wd int;
+  brk int;
+  base_wd int[] := ARRAY[21,20,22,20,19,20,23,21,22,21,20,20];
+BEGIN
+  FOR emp IN
+    SELECT * FROM (VALUES
+      ('00000000-0000-0000-0000-000000000016'::uuid, 480, 30,
+       ARRAY[0,0,2,0,0,2,0,10,0,0,2,1]::int[], ARRAY[0,0,0,0,0,0,3,0,0,0,0,0]::int[],
+       ARRAY[30,30,-15,30,15,30,-15,30,15,30,15,45]::int[]),
+      ('00000000-0000-0000-0000-000000000017'::uuid, 480, 30,
+       ARRAY[0,0,0,3,0,5,0,10,0,0,2,3]::int[], ARRAY[0,0,2,0,0,0,0,0,1,0,0,0]::int[],
+       ARRAY[15,15,15,15,15,15,-30,15,15,15,15,30]::int[]),
+      ('00000000-0000-0000-0000-000000000018'::uuid, 456, 30,
+       ARRAY[0,0,0,0,5,0,5,10,0,5,0,2]::int[], ARRAY[0,0,1,0,0,0,0,0,0,0,0,0]::int[],
+       ARRAY[15,-15,15,15,-15,15,15,15,-15,15,15,15]::int[]),
+      ('00000000-0000-0000-0000-000000000019'::uuid, 480, 30,
+       ARRAY[0,0,3,0,0,5,0,10,3,0,0,2]::int[], ARRAY[0,3,0,0,0,0,2,0,0,3,0,0]::int[],
+       ARRAY[45,15,30,30,-15,30,15,-30,15,15,15,45]::int[]),
+      ('00000000-0000-0000-0000-00000000001a'::uuid, 240, 0,
+       ARRAY[0,0,0,2,0,0,5,3,0,2,0,0]::int[], ARRAY[0,0,1,0,0,0,0,0,0,0,0,0]::int[],
+       ARRAY[15,-15,15,-15,15,-15,15,-15,15,-15,15,15]::int[])
+    ) AS t(emp_id, daily_target, brk_per_day, vacations, sicks, changes)
+  LOOP
+    flex_start := 0;
+    FOR m IN 1..12 LOOP
+      flex_change := emp.changes[m];
+      flex_end := flex_start + flex_change;
+      wd := base_wd[m] - emp.vacations[m] - emp.sicks[m];
+      target := wd * emp.daily_target;
+      brk := wd * emp.brk_per_day;
+      INSERT INTO monthly_values (id, tenant_id, employee_id, year, month,
+        total_gross_time, total_net_time, total_target_time,
+        total_overtime, total_undertime, total_break_time,
+        flextime_start, flextime_change, flextime_end,
+        vacation_taken, sick_days, other_absence_days,
+        work_days, days_with_errors, is_closed, created_at, updated_at)
+      VALUES (gen_random_uuid(), t_id, emp.emp_id, 2025, m,
+        target + brk + flex_change, target + flex_change, target,
+        GREATEST(0, flex_change), GREATEST(0, -flex_change), brk,
+        flex_start, flex_change, flex_end,
+        emp.vacations[m], emp.sicks[m], 0,
+        wd, CASE WHEN m IN (3,7) THEN 1 ELSE 0 END,
+        true, NOW(), NOW())
+      ON CONFLICT (employee_id, year, month) DO NOTHING;
+      flex_start := flex_end;
+    END LOOP;
+    -- January 2026 placeholder
+    wd := 16; target := wd * emp.daily_target; brk := wd * emp.brk_per_day;
+    INSERT INTO monthly_values (id, tenant_id, employee_id, year, month,
+      total_gross_time, total_net_time, total_target_time,
+      total_overtime, total_undertime, total_break_time,
+      flextime_start, flextime_change, flextime_end,
+      vacation_taken, sick_days, other_absence_days,
+      work_days, days_with_errors, is_closed, created_at, updated_at)
+    VALUES (gen_random_uuid(), t_id, emp.emp_id, 2026, 1,
+      target + brk + 30, target + 30, target,
+      30, 0, brk,
+      flex_start, 30, flex_start + 30,
+      0, 0, 0, wd, 0, false, NOW(), NOW())
+    ON CONFLICT (employee_id, year, month) DO NOTHING;
+  END LOOP;
+END $$;
+
+-- =============================================================
+-- PART C: Dynamic Data (CURRENT_DATE-based)
+-- =============================================================
+
+-- C2. Additional absences (Feb-March 2026 + CURRENT_DATE-relative)
+DO $$
+DECLARE
+  at_u  uuid;
+  at_k  uuid;
+  t_id  uuid := '10000000-0000-0000-0000-000000000001';
+BEGIN
+  SELECT id INTO at_u FROM absence_types WHERE code = 'U' LIMIT 1;
+  SELECT id INTO at_k FROM absence_types WHERE code = 'K' LIMIT 1;
+
+  -- Admin: 2 vacation days mid-Feb
+  INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, status, approved_by, approved_at, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000011', '2026-02-16', at_u, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', '2026-02-10 10:00+00', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000011', '2026-02-17', at_u, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', '2026-02-10 10:00+00', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- User: 1 sick day Feb, 3 vacation days early March
+  INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, status, approved_by, approved_at, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000012', '2026-02-10', at_k, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', '2026-02-10 08:00+00', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000012', '2026-03-02', at_u, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', '2026-02-25 10:00+00', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000012', '2026-03-03', at_u, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', '2026-02-25 10:00+00', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000012', '2026-03-04', at_u, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', '2026-02-25 10:00+00', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Maria: 1 vacation day Feb
+  INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, status, approved_by, approved_at, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000013', '2026-02-13', at_u, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', '2026-02-09 10:00+00', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Thomas: 2 sick days Feb
+  INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, status, approved_by, approved_at, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000014', '2026-02-19', at_k, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', '2026-02-19 08:00+00', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000014', '2026-02-20', at_k, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', '2026-02-19 08:00+00', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Anna: 5 vacation days Mon-Fri early March
+  INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, status, approved_by, approved_at, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000015', '2026-03-02', at_u, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', '2026-02-20 10:00+00', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000015', '2026-03-03', at_u, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', '2026-02-20 10:00+00', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000015', '2026-03-04', at_u, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', '2026-02-20 10:00+00', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000015', '2026-03-05', at_u, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', '2026-02-20 10:00+00', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000015', '2026-03-06', at_u, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', '2026-02-20 10:00+00', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- New employees: scattered absences
+  INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, status, approved_by, approved_at, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000016', '2026-02-25', at_u, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', '2026-02-20 10:00+00', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000017', '2026-02-11', at_k, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', '2026-02-11 08:00+00', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000018', '2026-03-09', at_u, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', '2026-03-05 10:00+00', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000019', '2026-02-26', at_k, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', '2026-02-26 08:00+00', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000019', '2026-02-27', at_k, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', '2026-02-26 08:00+00', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- CURRENT_DATE-relative absences
+  -- Thomas: on leave today + tomorrow
+  INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, status, approved_by, approved_at, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000014', CURRENT_DATE, at_u, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', NOW() - INTERVAL '3 days', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000014', CURRENT_DATE + 1, at_u, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', NOW() - INTERVAL '3 days', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Maria: vacation CURRENT_DATE+3 to +4
+  INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, status, approved_by, approved_at, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000013', CURRENT_DATE + 3, at_u, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', NOW() - INTERVAL '5 days', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000013', CURRENT_DATE + 4, at_u, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', NOW() - INTERVAL '5 days', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- User: pending vacation CURRENT_DATE+7 to +9
+  INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, status, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000012', CURRENT_DATE + 7, at_u, 1.00, 'pending', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000012', CURRENT_DATE + 8, at_u, 1.00, 'pending', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000012', CURRENT_DATE + 9, at_u, 1.00, 'pending', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Sabine: approved vacation CURRENT_DATE+10 to +14
+  INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, status, approved_by, approved_at, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000016', CURRENT_DATE + 10, at_u, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', NOW() - INTERVAL '2 days', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000016', CURRENT_DATE + 11, at_u, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', NOW() - INTERVAL '2 days', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000016', CURRENT_DATE + 12, at_u, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', NOW() - INTERVAL '2 days', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000016', CURRENT_DATE + 13, at_u, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', NOW() - INTERVAL '2 days', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000016', CURRENT_DATE + 14, at_u, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', NOW() - INTERVAL '2 days', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+END $$;
+
+-- =============================================================
+-- C3. Dynamic bookings + daily values (Jan 2 -> yesterday)
+-- =============================================================
+
+DO $$
+DECLARE
+  bt_a1 uuid; bt_a2 uuid; bt_p1 uuid; bt_p2 uuid;
+  t_id uuid := '10000000-0000-0000-0000-000000000001';
+  emp record;
+  d date;
+  dow int;
+  h int;
+  come_time int;
+  go_time int;
+  break_start int;
+  break_dur int;
+  target int;
+  gross int;
+  net int;
+  is_err boolean;
+  err_type int;
+  pair_id uuid;
+  brk_pair uuid;
+  v_has_error boolean;
+  v_error_codes text[];
+  bk_count int;
+BEGIN
+  SELECT id INTO bt_a1 FROM booking_types WHERE code = 'A1' LIMIT 1;
+  SELECT id INTO bt_a2 FROM booking_types WHERE code = 'A2' LIMIT 1;
+  SELECT id INTO bt_p1 FROM booking_types WHERE code = 'P1' LIMIT 1;
+  SELECT id INTO bt_p2 FROM booking_types WHERE code = 'P2' LIMIT 1;
+
+  FOR emp IN
+    SELECT * FROM (VALUES
+      ('00000000-0000-0000-0000-000000000011'::uuid, 'terminal', 480, 480, 480, true),
+      ('00000000-0000-0000-0000-000000000012'::uuid, 'web',      540, 480, 480, true),
+      ('00000000-0000-0000-0000-000000000013'::uuid, 'terminal', 540, 240, 240, false),
+      ('00000000-0000-0000-0000-000000000014'::uuid, 'terminal', 480, 480, 480, true),
+      ('00000000-0000-0000-0000-000000000015'::uuid, 'terminal', 480, 480, 360, true),
+      ('00000000-0000-0000-0000-000000000016'::uuid, 'web',      540, 480, 480, true),
+      ('00000000-0000-0000-0000-000000000017'::uuid, 'terminal', 495, 480, 480, true),
+      ('00000000-0000-0000-0000-000000000018'::uuid, 'terminal', 525, 480, 360, true),
+      ('00000000-0000-0000-0000-000000000019'::uuid, 'terminal', 450, 480, 480, true),
+      ('00000000-0000-0000-0000-00000000001a'::uuid, 'terminal', 540, 240, 240, false)
+    ) AS t(emp_id, src, base_come, mt_target, fri_target, needs_break)
+  LOOP
+    d := '2026-01-02';
+    WHILE d < CURRENT_DATE LOOP
+      dow := EXTRACT(ISODOW FROM d)::int;
+      IF dow IN (6, 7) THEN d := d + 1; CONTINUE; END IF;
+      IF EXISTS (SELECT 1 FROM holidays WHERE holiday_date = d AND tenant_id = t_id) THEN d := d + 1; CONTINUE; END IF;
+      IF EXISTS (SELECT 1 FROM bookings WHERE employee_id = emp.emp_id AND booking_date = d) THEN d := d + 1; CONTINUE; END IF;
+
+      target := CASE WHEN dow = 5 THEN emp.fri_target ELSE emp.mt_target END;
+
+      IF EXISTS (SELECT 1 FROM absence_days WHERE employee_id = emp.emp_id AND absence_date = d AND status = 'approved') THEN
+        INSERT INTO daily_values (id, tenant_id, employee_id, value_date, gross_time, net_time, target_time, overtime, undertime, break_time, has_error, first_come, last_go, booking_count, status, created_at, updated_at)
+        VALUES (gen_random_uuid(), t_id, emp.emp_id, d, 0, 0, target, 0, target, 0, false, NULL, NULL, 0, 'calculated', NOW(), NOW())
+        ON CONFLICT (employee_id, value_date) DO NOTHING;
+        d := d + 1; CONTINUE;
+      END IF;
+
+      h := (hashtext(emp.emp_id::text || d::text) % 31) - 15;
+      come_time := emp.base_come + h;
+      is_err := (abs(hashtext(emp.emp_id::text || d::text || 'e')) % 20) = 0;
+      err_type := abs(hashtext(emp.emp_id::text || d::text || 't')) % 2;
+
+      pair_id := gen_random_uuid();
+      break_dur := 0;
+      v_has_error := false;
+      v_error_codes := NULL;
+      bk_count := 0;
+
+      INSERT INTO bookings (id, tenant_id, employee_id, booking_date, booking_type_id, original_time, edited_time, pair_id, source, created_at, updated_at)
+      VALUES (gen_random_uuid(), t_id, emp.emp_id, d, bt_a1, come_time, come_time, pair_id, emp.src, NOW(), NOW());
+      bk_count := 1;
+
+      IF emp.needs_break AND NOT (is_err AND err_type = 0) THEN
+        break_start := 720 + (h % 15);
+        break_dur := 30;
+        brk_pair := gen_random_uuid();
+        INSERT INTO bookings (id, tenant_id, employee_id, booking_date, booking_type_id, original_time, edited_time, pair_id, source, created_at, updated_at)
+        VALUES (gen_random_uuid(), t_id, emp.emp_id, d, bt_p1, break_start, break_start, brk_pair, emp.src, NOW(), NOW());
+        INSERT INTO bookings (id, tenant_id, employee_id, booking_date, booking_type_id, original_time, edited_time, pair_id, source, created_at, updated_at)
+        VALUES (gen_random_uuid(), t_id, emp.emp_id, d, bt_p2, break_start + 30, break_start + 30, brk_pair, emp.src, NOW(), NOW());
+        bk_count := bk_count + 2;
+      END IF;
+
+      IF NOT (is_err AND err_type = 1) THEN
+        go_time := come_time + target + break_dur + (abs(h) % 10);
+        INSERT INTO bookings (id, tenant_id, employee_id, booking_date, booking_type_id, original_time, edited_time, pair_id, source, created_at, updated_at)
+        VALUES (gen_random_uuid(), t_id, emp.emp_id, d, bt_a2, go_time, go_time, pair_id, emp.src, NOW(), NOW());
+        bk_count := bk_count + 1;
+
+        gross := go_time - come_time;
+        net := gross - break_dur;
+        IF is_err AND err_type = 0 AND emp.needs_break THEN
+          v_has_error := true;
+          v_error_codes := ARRAY['MISSING_BREAK'];
+        END IF;
+
+        INSERT INTO daily_values (id, tenant_id, employee_id, value_date, gross_time, net_time, target_time, overtime, undertime, break_time, has_error, error_codes, first_come, last_go, booking_count, status, created_at, updated_at)
+        VALUES (gen_random_uuid(), t_id, emp.emp_id, d, gross, net, target,
+          GREATEST(0, net - target), GREATEST(0, target - net),
+          break_dur, v_has_error, v_error_codes,
+          come_time, go_time, bk_count, 'calculated', NOW(), NOW())
+        ON CONFLICT (employee_id, value_date) DO NOTHING;
+      ELSE
+        INSERT INTO daily_values (id, tenant_id, employee_id, value_date, gross_time, net_time, target_time, overtime, undertime, break_time, has_error, error_codes, first_come, last_go, booking_count, status, created_at, updated_at)
+        VALUES (gen_random_uuid(), t_id, emp.emp_id, d, 0, 0, target, 0, 0, 0, true, ARRAY['MISSING_CLOCK_OUT'],
+          come_time, NULL, bk_count, 'calculated', NOW(), NOW())
+        ON CONFLICT (employee_id, value_date) DO NOTHING;
+      END IF;
+
+      d := d + 1;
+    END LOOP;
+  END LOOP;
+END $$;
+
+-- =============================================================
+-- C6. Today's partial state
+-- =============================================================
+
+DO $$
+DECLARE
+  bt_a1 uuid; bt_a2 uuid; bt_p1 uuid; bt_p2 uuid;
+  t_id uuid := '10000000-0000-0000-0000-000000000001';
+  today date := CURRENT_DATE;
+  pair_id uuid;
+  brk_pair uuid;
+BEGIN
+  SELECT id INTO bt_a1 FROM booking_types WHERE code = 'A1' LIMIT 1;
+  SELECT id INTO bt_a2 FROM booking_types WHERE code = 'A2' LIMIT 1;
+  SELECT id INTO bt_p1 FROM booking_types WHERE code = 'P1' LIMIT 1;
+  SELECT id INTO bt_p2 FROM booking_types WHERE code = 'P2' LIMIT 1;
+
+  IF EXTRACT(ISODOW FROM today)::int IN (6, 7) THEN RETURN; END IF;
+  IF EXISTS (SELECT 1 FROM holidays WHERE holiday_date = today AND tenant_id = t_id) THEN RETURN; END IF;
+
+  -- Admin: clocked in, past break
+  pair_id := gen_random_uuid(); brk_pair := gen_random_uuid();
+  INSERT INTO bookings (id, tenant_id, employee_id, booking_date, booking_type_id, original_time, edited_time, pair_id, source, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000011', today, bt_a1, 470, 470, pair_id, 'terminal', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000011', today, bt_p1, 720, 720, brk_pair, 'terminal', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000011', today, bt_p2, 750, 750, brk_pair, 'terminal', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- User: clocked in, past break
+  pair_id := gen_random_uuid(); brk_pair := gen_random_uuid();
+  INSERT INTO bookings (id, tenant_id, employee_id, booking_date, booking_type_id, original_time, edited_time, pair_id, source, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000012', today, bt_a1, 555, 555, pair_id, 'web', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000012', today, bt_p1, 765, 765, brk_pair, 'web', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000012', today, bt_p2, 795, 795, brk_pair, 'web', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Maria: completed part-time
+  pair_id := gen_random_uuid();
+  INSERT INTO bookings (id, tenant_id, employee_id, booking_date, booking_type_id, original_time, edited_time, pair_id, source, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000013', today, bt_a1, 510, 510, pair_id, 'terminal', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000013', today, bt_a2, 750, 750, pair_id, 'terminal', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Anna: clocked in
+  pair_id := gen_random_uuid();
+  INSERT INTO bookings (id, tenant_id, employee_id, booking_date, booking_type_id, original_time, edited_time, pair_id, source, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000015', today, bt_a1, 480, 480, pair_id, 'terminal', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Markus: clocked in, on break
+  pair_id := gen_random_uuid(); brk_pair := gen_random_uuid();
+  INSERT INTO bookings (id, tenant_id, employee_id, booking_date, booking_type_id, original_time, edited_time, pair_id, source, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000017', today, bt_a1, 495, 495, pair_id, 'terminal', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000017', today, bt_p1, 720, 720, brk_pair, 'terminal', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Julia: clocked in
+  pair_id := gen_random_uuid();
+  INSERT INTO bookings (id, tenant_id, employee_id, booking_date, booking_type_id, original_time, edited_time, pair_id, source, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000018', today, bt_a1, 525, 525, pair_id, 'terminal', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Stefan: clocked in, past break
+  pair_id := gen_random_uuid(); brk_pair := gen_random_uuid();
+  INSERT INTO bookings (id, tenant_id, employee_id, booking_date, booking_type_id, original_time, edited_time, pair_id, source, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000019', today, bt_a1, 450, 450, pair_id, 'terminal', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000019', today, bt_p1, 735, 735, brk_pair, 'terminal', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000019', today, bt_p2, 765, 765, brk_pair, 'terminal', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Petra: completed part-time
+  pair_id := gen_random_uuid();
+  INSERT INTO bookings (id, tenant_id, employee_id, booking_date, booking_type_id, original_time, edited_time, pair_id, source, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001a', today, bt_a1, 540, 540, pair_id, 'terminal', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001a', today, bt_a2, 780, 780, pair_id, 'terminal', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+END $$;
+
+-- =============================================================
+-- C5. Dynamic monthly values (Feb 2026 -> current month)
+-- =============================================================
+
+DO $$
+DECLARE
+  t_id uuid := '10000000-0000-0000-0000-000000000001';
+  emp_id uuid;
+  m_year int;
+  m_month int;
+  prev_flex int;
+  v_gross int; v_net int; v_target int; v_ot int; v_ut int; v_break int;
+  v_work_days int; v_error_days int;
+  v_vac numeric; v_sick numeric;
+  cur_year int := EXTRACT(YEAR FROM CURRENT_DATE)::int;
+  cur_month int := EXTRACT(MONTH FROM CURRENT_DATE)::int;
+BEGIN
+  FOR emp_id IN
+    SELECT e.id FROM employees e WHERE e.tenant_id = t_id AND e.is_active = true
+  LOOP
+    SELECT COALESCE(flextime_end, 0) INTO prev_flex
+    FROM monthly_values WHERE employee_id = emp_id AND year = 2026 AND month = 1;
+    IF prev_flex IS NULL THEN prev_flex := 0; END IF;
+
+    m_year := 2026; m_month := 2;
+    WHILE (m_year < cur_year) OR (m_year = cur_year AND m_month <= cur_month) LOOP
+      IF EXISTS (SELECT 1 FROM monthly_values WHERE employee_id = emp_id AND year = m_year AND month = m_month) THEN
+        SELECT flextime_end INTO prev_flex FROM monthly_values WHERE employee_id = emp_id AND year = m_year AND month = m_month;
+        m_month := m_month + 1; IF m_month > 12 THEN m_year := m_year + 1; m_month := 1; END IF;
+        CONTINUE;
+      END IF;
+
+      SELECT
+        COALESCE(SUM(gross_time), 0), COALESCE(SUM(net_time), 0),
+        COALESCE(SUM(target_time), 0), COALESCE(SUM(overtime), 0),
+        COALESCE(SUM(undertime), 0), COALESCE(SUM(break_time), 0),
+        COUNT(*) FILTER (WHERE gross_time > 0 OR has_error),
+        COUNT(*) FILTER (WHERE has_error = true)
+      INTO v_gross, v_net, v_target, v_ot, v_ut, v_break, v_work_days, v_error_days
+      FROM daily_values
+      WHERE employee_id = emp_id
+        AND EXTRACT(YEAR FROM value_date) = m_year
+        AND EXTRACT(MONTH FROM value_date) = m_month;
+
+      SELECT
+        COALESCE(SUM(CASE WHEN at2.code LIKE 'U%' THEN ad.duration ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN at2.code LIKE 'K%' THEN ad.duration ELSE 0 END), 0)
+      INTO v_vac, v_sick
+      FROM absence_days ad
+      JOIN absence_types at2 ON ad.absence_type_id = at2.id
+      WHERE ad.employee_id = emp_id
+        AND EXTRACT(YEAR FROM ad.absence_date) = m_year
+        AND EXTRACT(MONTH FROM ad.absence_date) = m_month
+        AND ad.status = 'approved';
+
+      INSERT INTO monthly_values (id, tenant_id, employee_id, year, month,
+        total_gross_time, total_net_time, total_target_time,
+        total_overtime, total_undertime, total_break_time,
+        flextime_start, flextime_change, flextime_end,
+        vacation_taken, sick_days, other_absence_days,
+        work_days, days_with_errors,
+        is_closed, created_at, updated_at)
+      VALUES (gen_random_uuid(), t_id, emp_id, m_year, m_month,
+        v_gross, v_net, v_target, v_ot, v_ut, v_break,
+        prev_flex, v_net - v_target, prev_flex + (v_net - v_target),
+        v_vac, v_sick, 0,
+        v_work_days, v_error_days,
+        CASE WHEN (m_year < cur_year) OR (m_year = cur_year AND m_month < cur_month)
+          THEN true ELSE false END,
+        NOW(), NOW())
+      ON CONFLICT (employee_id, year, month) DO NOTHING;
+
+      prev_flex := prev_flex + (v_net - v_target);
+      m_month := m_month + 1; IF m_month > 12 THEN m_year := m_year + 1; m_month := 1; END IF;
+    END LOOP;
+  END LOOP;
+END $$;
+
+-- =============================================================
+-- C7. Vacation balance reconciliation
+-- =============================================================
+
+UPDATE vacation_balances SET taken = (
+  SELECT COALESCE(SUM(ad.duration), 0)
+  FROM absence_days ad
+  JOIN absence_types at2 ON ad.absence_type_id = at2.id
+  WHERE ad.employee_id = vacation_balances.employee_id
+    AND EXTRACT(YEAR FROM ad.absence_date) = vacation_balances.year
+    AND at2.code LIKE 'U%'
+    AND ad.status IN ('approved', 'pending')
+) WHERE year = 2026;

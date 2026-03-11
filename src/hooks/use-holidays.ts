@@ -71,6 +71,9 @@ export function useCreateHoliday() {
       queryClient.invalidateQueries({
         queryKey: trpc.holidays.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.dayView.queryKey(),
+      })
     },
   })
 }
@@ -92,6 +95,9 @@ export function useUpdateHoliday() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.holidays.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.dayView.queryKey(),
       })
     },
   })
@@ -115,6 +121,9 @@ export function useDeleteHoliday() {
       queryClient.invalidateQueries({
         queryKey: trpc.holidays.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.dayView.queryKey(),
+      })
     },
   })
 }
@@ -137,6 +146,9 @@ export function useGenerateHolidays() {
       queryClient.invalidateQueries({
         queryKey: trpc.holidays.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.dayView.queryKey(),
+      })
     },
   })
 }
@@ -158,6 +170,9 @@ export function useCopyHolidays() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.holidays.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.dayView.queryKey(),
       })
     },
   })

@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useEmployeeDayView } from '@/hooks'
 import { formatDate, formatDisplayDate, isToday, isWeekend } from '@/lib/time-utils'
+import { QueryError } from '@/components/ui/query-error'
 import { BookingList } from './booking-list'
 import { DailySummary } from './daily-summary'
 import { ErrorBadge } from './error-badge'
@@ -41,6 +42,10 @@ export function DayView({
   const errors = dayView.data?.errors ?? null
 
   const isLoading = dayView.isLoading
+
+  if (dayView.isError) {
+    return <QueryError message={t('loadFailed')} onRetry={() => dayView.refetch()} />
+  }
 
   // Transform bookings to the format expected by BookingList (snake_case interface)
   const transformedBookings = bookings.map((b) => ({

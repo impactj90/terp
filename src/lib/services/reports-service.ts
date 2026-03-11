@@ -151,6 +151,7 @@ function stripFileContent<T extends { fileContent?: unknown }>(
 
 async function gatherMonthlyOverview(
   prisma: PrismaClient,
+  tenantId: string,
   params: ReportParameters,
   employees: EmployeeScope[]
 ): Promise<ReportRow> {
@@ -174,7 +175,7 @@ async function gatherMonthlyOverview(
     })
 
     for (const { year, month } of months) {
-      const mv = await repo.findMonthlyValue(prisma, emp.id, year, month)
+      const mv = await repo.findMonthlyValue(prisma, tenantId, emp.id, year, month)
       if (!mv) continue
 
       const targetHours = (mv.totalTargetTime / 60).toFixed(2)
@@ -206,6 +207,7 @@ async function gatherMonthlyOverview(
 
 async function gatherOvertimeReport(
   prisma: PrismaClient,
+  tenantId: string,
   params: ReportParameters,
   employees: EmployeeScope[]
 ): Promise<ReportRow> {
@@ -228,7 +230,7 @@ async function gatherOvertimeReport(
     })
 
     for (const { year, month } of months) {
-      const mv = await repo.findMonthlyValue(prisma, emp.id, year, month)
+      const mv = await repo.findMonthlyValue(prisma, tenantId, emp.id, year, month)
       if (!mv) continue
 
       data.values.push([
@@ -250,6 +252,7 @@ async function gatherOvertimeReport(
 
 async function gatherDepartmentSummary(
   prisma: PrismaClient,
+  tenantId: string,
   params: ReportParameters,
   employees: EmployeeScope[]
 ): Promise<ReportRow> {
@@ -285,7 +288,7 @@ async function gatherDepartmentSummary(
       })
 
       for (const { year, month } of months) {
-        const mv = await repo.findMonthlyValue(prisma, emp.id, year, month)
+        const mv = await repo.findMonthlyValue(prisma, tenantId, emp.id, year, month)
         if (!mv) continue
         totalTarget += mv.totalTargetTime / 60
         totalWorked += mv.totalNetTime / 60
@@ -307,6 +310,7 @@ async function gatherDepartmentSummary(
 
 async function gatherAccountBalances(
   prisma: PrismaClient,
+  tenantId: string,
   params: ReportParameters,
   employees: EmployeeScope[]
 ): Promise<ReportRow> {
@@ -328,7 +332,7 @@ async function gatherAccountBalances(
     })
 
     for (const { year, month } of months) {
-      const mv = await repo.findMonthlyValue(prisma, emp.id, year, month)
+      const mv = await repo.findMonthlyValue(prisma, tenantId, emp.id, year, month)
       if (!mv) continue
 
       data.values.push([
@@ -349,6 +353,7 @@ async function gatherAccountBalances(
 
 async function gatherVacationReport(
   prisma: PrismaClient,
+  tenantId: string,
   params: ReportParameters,
   employees: EmployeeScope[]
 ): Promise<ReportRow> {
@@ -370,7 +375,7 @@ async function gatherVacationReport(
   }
 
   for (const emp of employees) {
-    const vb = await repo.findVacationBalance(prisma, emp.id, year)
+    const vb = await repo.findVacationBalance(prisma, tenantId, emp.id, year)
     if (!vb) continue
 
     const entitlement = decimalToNumber(vb.entitlement)
@@ -592,19 +597,19 @@ export async function generate(
 
     switch (input.reportType) {
       case "monthly_overview":
-        data = await gatherMonthlyOverview(prisma, params, employees)
+        data = await gatherMonthlyOverview(prisma, tenantId, params, employees)
         break
       case "overtime_report":
-        data = await gatherOvertimeReport(prisma, params, employees)
+        data = await gatherOvertimeReport(prisma, tenantId, params, employees)
         break
       case "department_summary":
-        data = await gatherDepartmentSummary(prisma, params, employees)
+        data = await gatherDepartmentSummary(prisma, tenantId, params, employees)
         break
       case "account_balances":
-        data = await gatherAccountBalances(prisma, params, employees)
+        data = await gatherAccountBalances(prisma, tenantId, params, employees)
         break
       case "vacation_report":
-        data = await gatherVacationReport(prisma, params, employees)
+        data = await gatherVacationReport(prisma, tenantId, params, employees)
         break
       case "daily_overview":
       case "weekly_overview":

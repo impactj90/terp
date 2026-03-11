@@ -119,20 +119,52 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.correction.update({
-    where: { id },
+  const { count } = await prisma.correction.updateMany({
+    where: { id, tenantId },
     data,
+  })
+  if (count === 0) {
+    return null
+  }
+  return prisma.correction.findFirst({
+    where: { id, tenantId },
     include: correctionInclude,
   })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.correction.delete({
-    where: { id },
+/**
+ * Atomically updates a correction only if it has the expected status.
+ * Returns the updated record, or null if the status didn't match (already changed).
+ */
+export async function updateIfStatus(
+  prisma: PrismaClient,
+  tenantId: string,
+  id: string,
+  expectedStatus: string,
+  data: Record<string, unknown>
+) {
+  const { count } = await prisma.correction.updateMany({
+    where: { id, tenantId, status: expectedStatus },
+    data,
   })
+  if (count === 0) {
+    return null
+  }
+  return prisma.correction.findFirst({
+    where: { id, tenantId },
+    include: correctionInclude,
+  })
+}
+
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.correction.deleteMany({
+    where: { id, tenantId },
+  })
+  return count > 0
 }
 
 export async function employeeExists(

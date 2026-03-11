@@ -106,6 +106,9 @@ export function useCreateMacroAssignment() {
       queryClient.invalidateQueries({
         queryKey: trpc.macros.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.macros.listAssignments.queryKey(),
+      })
     },
   })
 }
@@ -122,6 +125,9 @@ export function useUpdateMacroAssignment() {
       queryClient.invalidateQueries({
         queryKey: trpc.macros.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.macros.listAssignments.queryKey(),
+      })
     },
   })
 }
@@ -137,6 +143,9 @@ export function useDeleteMacroAssignment() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.macros.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.macros.listAssignments.queryKey(),
       })
     },
   })

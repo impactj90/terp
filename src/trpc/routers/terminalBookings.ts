@@ -91,8 +91,8 @@ export const terminalBookingsRouter = createTRPCRouter({
     .use(requirePermission(TERMINAL_BOOKINGS_MANAGE))
     .input(
       z.object({
-        from: z.string().optional(),
-        to: z.string().optional(),
+        from: z.string().date().optional(),
+        to: z.string().date().optional(),
         terminalId: z.string().optional(),
         employeeId: z.string().optional(),
         importBatchId: z.string().optional(),

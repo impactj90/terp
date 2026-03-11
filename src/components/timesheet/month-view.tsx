@@ -13,6 +13,7 @@ import {
   isToday,
   isWeekend,
 } from '@/lib/time-utils'
+import { QueryError } from '@/components/ui/query-error'
 import { ErrorBadge } from './error-badge'
 import { TimeDisplay } from './time-display'
 import { DailySummary } from './daily-summary'
@@ -52,7 +53,7 @@ export function MonthView({
   const dates = useMemo(() => getMonthDates(referenceDate), [referenceDate])
 
   // Fetch daily values for the month
-  const { data: dailyValuesData, isLoading: isLoadingDailyValues } = useDailyValues({
+  const { data: dailyValuesData, isLoading: isLoadingDailyValues, isError: isDailyError, refetch: refetchDaily } = useDailyValues({
     employeeId,
     from: formatDate(start),
     to: formatDate(end),
@@ -60,7 +61,7 @@ export function MonthView({
   })
 
   // Fetch monthly value
-  const { data: monthlyValuesData, isLoading: isLoadingMonthlyValues } = useMonthlyValues({
+  const { data: monthlyValuesData, isLoading: isLoadingMonthlyValues, isError: isMonthlyError, refetch: refetchMonthly } = useMonthlyValues({
     employeeId,
     year,
     month,
@@ -109,6 +110,15 @@ export function MonthView({
   }, [year, month, dates])
 
   const isLoading = isLoadingDailyValues || isLoadingMonthlyValues
+
+  if (isDailyError || isMonthlyError) {
+    return (
+      <QueryError
+        message={t('loadFailed')}
+        onRetry={() => { refetchDaily(); refetchMonthly() }}
+      />
+    )
+  }
 
   // Generate localized abbreviated weekday names (Mon-Sun starting from Monday)
   const weekDays = useMemo(() => {

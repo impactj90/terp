@@ -21,6 +21,7 @@ import type {
   DailyValue,
   Tariff,
 } from "@/generated/prisma/client"
+import { mapWithConcurrency } from "@/lib/async"
 import { Decimal } from "@prisma/client/runtime/client"
 import { calculateMonth } from "@/lib/calculation/monthly"
 import type {
@@ -121,7 +122,7 @@ export class MonthlyCalcService {
       return result
     }
 
-    for (const empId of employeeIds) {
+    await mapWithConcurrency(employeeIds, 5, async (empId) => {
       try {
         await this.recalculateMonth(empId, year, month)
         result.processedMonths++
@@ -138,7 +139,7 @@ export class MonthlyCalcService {
           })
         }
       }
-    }
+    })
 
     return result
   }
@@ -219,7 +220,7 @@ export class MonthlyCalcService {
       errors: [],
     }
 
-    for (const empId of employeeIds) {
+    await mapWithConcurrency(employeeIds, 5, async (empId) => {
       const empResult = await this.recalculateFromMonth(
         empId,
         startYear,
@@ -229,7 +230,7 @@ export class MonthlyCalcService {
       result.skippedMonths += empResult.skippedMonths
       result.failedMonths += empResult.failedMonths
       result.errors.push(...empResult.errors)
-    }
+    })
 
     return result
   }

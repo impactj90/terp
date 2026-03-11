@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
+import { toast } from 'sonner'
 import { LogIn, LogOut, CalendarPlus, FileText, Clock, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -62,9 +63,8 @@ export function QuickActions({ employeeId }: QuickActionsProps) {
         bookingTypeId: clockInType.id,
         time: getCurrentTimeString(),
       })
-    } catch (error) {
-      // Error is handled by React Query
-      console.error('Failed to clock in:', error)
+    } catch {
+      toast.error(t('clockInFailed'))
     }
   }
 
@@ -78,8 +78,8 @@ export function QuickActions({ employeeId }: QuickActionsProps) {
         bookingTypeId: clockOutType.id,
         time: getCurrentTimeString(),
       })
-    } catch (error) {
-      console.error('Failed to clock out:', error)
+    } catch {
+      toast.error(t('clockOutFailed'))
     }
   }
 

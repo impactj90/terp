@@ -17,6 +17,7 @@ import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
 import type { PrismaClient } from "@/generated/prisma/client"
 
 // --- Permission Constants ---
@@ -208,27 +209,31 @@ export const correctionAssistantRouter = createTRPCRouter({
     )
     .output(z.object({ data: z.array(correctionMessageOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
+      try {
+        const tenantId = ctx.tenantId!
 
-      await ensureDefaults(ctx.prisma, tenantId)
+        await ensureDefaults(ctx.prisma, tenantId)
 
-      const where: Record<string, unknown> = { tenantId }
-      if (input?.severity !== undefined) {
-        where.severity = input.severity
+        const where: Record<string, unknown> = { tenantId }
+        if (input?.severity !== undefined) {
+          where.severity = input.severity
+        }
+        if (input?.isActive !== undefined) {
+          where.isActive = input.isActive
+        }
+        if (input?.code !== undefined) {
+          where.code = input.code
+        }
+
+        const messages = await ctx.prisma.correctionMessage.findMany({
+          where,
+          orderBy: [{ severity: "asc" }, { code: "asc" }],
+        })
+
+        return { data: messages.map(mapMessage) }
+      } catch (err) {
+        handleServiceError(err)
       }
-      if (input?.isActive !== undefined) {
-        where.isActive = input.isActive
-      }
-      if (input?.code !== undefined) {
-        where.code = input.code
-      }
-
-      const messages = await ctx.prisma.correctionMessage.findMany({
-        where,
-        orderBy: [{ severity: "asc" }, { code: "asc" }],
-      })
-
-      return { data: messages.map(mapMessage) }
     }),
 
   /**
@@ -241,20 +246,24 @@ export const correctionAssistantRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .output(correctionMessageOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
+      try {
+        const tenantId = ctx.tenantId!
 
-      const message = await ctx.prisma.correctionMessage.findFirst({
-        where: { id: input.id, tenantId },
-      })
-
-      if (!message) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Correction message not found",
+        const message = await ctx.prisma.correctionMessage.findFirst({
+          where: { id: input.id, tenantId },
         })
-      }
 
-      return mapMessage(message)
+        if (!message) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Correction message not found",
+          })
+        }
+
+        return mapMessage(message)
+      } catch (err) {
+        handleServiceError(err)
+      }
     }),
 
   /**
@@ -275,45 +284,49 @@ export const correctionAssistantRouter = createTRPCRouter({
     }))
     .output(correctionMessageOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
+      try {
+        const tenantId = ctx.tenantId!
 
-      // Verify exists with tenant scope
-      const existing = await ctx.prisma.correctionMessage.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Correction message not found",
+        // Verify exists with tenant scope
+        const existing = await ctx.prisma.correctionMessage.findFirst({
+          where: { id: input.id, tenantId },
         })
-      }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      if (input.customText !== undefined) {
-        if (input.customText === null || input.customText === "") {
-          data.customText = null
-        } else {
-          const trimmed = input.customText.trim()
-          data.customText = trimmed === "" ? null : trimmed
+        if (!existing) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Correction message not found",
+          })
         }
+
+        // Build partial update data
+        const data: Record<string, unknown> = {}
+
+        if (input.customText !== undefined) {
+          if (input.customText === null || input.customText === "") {
+            data.customText = null
+          } else {
+            const trimmed = input.customText.trim()
+            data.customText = trimmed === "" ? null : trimmed
+          }
+        }
+
+        if (input.severity !== undefined) {
+          data.severity = input.severity
+        }
+
+        if (input.isActive !== undefined) {
+          data.isActive = input.isActive
+        }
+
+        const updated = await ctx.prisma.correctionMessage.update({
+          where: { id: input.id },
+          data,
+        })
+
+        return mapMessage(updated)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      if (input.severity !== undefined) {
-        data.severity = input.severity
-      }
-
-      if (input.isActive !== undefined) {
-        data.isActive = input.isActive
-      }
-
-      const updated = await ctx.prisma.correctionMessage.update({
-        where: { id: input.id },
-        data,
-      })
-
-      return mapMessage(updated)
     }),
 
   /**
@@ -329,8 +342,8 @@ export const correctionAssistantRouter = createTRPCRouter({
     .use(requirePermission(TIME_TRACKING_VIEW_ALL))
     .input(
       z.object({
-        from: z.string().optional(),
-        to: z.string().optional(),
+        from: z.string().date().optional(),
+        to: z.string().date().optional(),
         employeeId: z.string().optional(),
         departmentId: z.string().optional(),
         severity: z.enum(["error", "hint"]).optional(),
@@ -349,176 +362,180 @@ export const correctionAssistantRouter = createTRPCRouter({
       }),
     }))
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
+      try {
+        const tenantId = ctx.tenantId!
 
-      await ensureDefaults(ctx.prisma, tenantId)
+        await ensureDefaults(ctx.prisma, tenantId)
 
-      // Calculate date range
-      const now = new Date()
-      let fromDate: Date
-      let toDate: Date
+        // Calculate date range
+        const now = new Date()
+        let fromDate: Date
+        let toDate: Date
 
-      if (input?.from) {
-        fromDate = new Date(input.from)
-      } else {
-        // First day of previous month
-        fromDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-      }
+        if (input?.from) {
+          fromDate = new Date(input.from)
+        } else {
+          // First day of previous month
+          fromDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+        }
 
-      if (input?.to) {
-        toDate = new Date(input.to)
-      } else {
-        // Last day of current month
-        toDate = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-      }
+        if (input?.to) {
+          toDate = new Date(input.to)
+        } else {
+          // Last day of current month
+          toDate = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+        }
 
-      // Load message catalog for resolution
-      const activeMessages = await ctx.prisma.correctionMessage.findMany({
-        where: { tenantId, isActive: true },
-      })
-      const messageMap = new Map(activeMessages.map((m) => [m.code, m]))
+        // Load message catalog for resolution
+        const activeMessages = await ctx.prisma.correctionMessage.findMany({
+          where: { tenantId, isActive: true },
+        })
+        const messageMap = new Map(activeMessages.map((m) => [m.code, m]))
 
-      // Build Prisma query with dynamic filters
-      const dvWhere: Record<string, unknown> = {
-        tenantId,
-        hasError: true,
-        valueDate: {
-          gte: fromDate,
-          lte: toDate,
-        },
-      }
+        // Build Prisma query with dynamic filters
+        const dvWhere: Record<string, unknown> = {
+          tenantId,
+          hasError: true,
+          valueDate: {
+            gte: fromDate,
+            lte: toDate,
+          },
+        }
 
-      if (input?.employeeId) {
-        dvWhere.employeeId = input.employeeId
-      }
+        if (input?.employeeId) {
+          dvWhere.employeeId = input.employeeId
+        }
 
-      if (input?.departmentId) {
-        dvWhere.employee = { departmentId: input.departmentId }
-      }
+        if (input?.departmentId) {
+          dvWhere.employee = { departmentId: input.departmentId }
+        }
 
-      const rows = await ctx.prisma.dailyValue.findMany({
-        where: dvWhere,
-        include: {
-          employee: {
-            select: {
-              firstName: true,
-              lastName: true,
-              departmentId: true,
-              department: {
-                select: { name: true },
+        const rows = await ctx.prisma.dailyValue.findMany({
+          where: dvWhere,
+          include: {
+            employee: {
+              select: {
+                firstName: true,
+                lastName: true,
+                departmentId: true,
+                department: {
+                  select: { name: true },
+                },
               },
             },
           },
-        },
-        orderBy: { valueDate: "asc" },
-      })
-
-      // Build correction assistant items
-      const severityFilter = input?.severity
-      const codeFilter = input?.errorCode
-
-      interface CorrectionAssistantError {
-        code: string
-        severity: string
-        message: string
-        errorType: string
-      }
-
-      interface CorrectionAssistantItem {
-        dailyValueId: string
-        employeeId: string
-        employeeName: string
-        departmentId: string | null
-        departmentName: string | null
-        valueDate: string
-        errors: CorrectionAssistantError[]
-      }
-
-      const items: CorrectionAssistantItem[] = []
-
-      for (const row of rows) {
-        const errors: CorrectionAssistantError[] = []
-
-        // Process error codes
-        if (row.errorCodes) {
-          for (const code of row.errorCodes) {
-            if (severityFilter && severityFilter !== "error") continue
-            if (codeFilter && codeFilter !== code) continue
-
-            let message = code // Fallback to raw code
-            let severity = "error"
-            const catalogEntry = messageMap.get(code)
-            if (catalogEntry) {
-              message = catalogEntry.customText || catalogEntry.defaultText
-              severity = catalogEntry.severity
-            }
-
-            errors.push({
-              code,
-              severity,
-              message,
-              errorType: mapCorrectionErrorType(code),
-            })
-          }
-        }
-
-        // Process warnings as "hint" severity
-        if (row.warnings) {
-          for (const code of row.warnings) {
-            if (severityFilter && severityFilter !== "hint") continue
-            if (codeFilter && codeFilter !== code) continue
-
-            let message = code // Fallback to raw code
-            let severity = "hint"
-            const catalogEntry = messageMap.get(code)
-            if (catalogEntry) {
-              message = catalogEntry.customText || catalogEntry.defaultText
-              severity = catalogEntry.severity
-            }
-
-            errors.push({
-              code,
-              severity,
-              message,
-              errorType: mapCorrectionErrorType(code),
-            })
-          }
-        }
-
-        if (errors.length === 0) continue
-
-        // Format date as YYYY-MM-DD string
-        const valueDate = row.valueDate instanceof Date
-          ? row.valueDate.toISOString().split("T")[0]!
-          : String(row.valueDate).split("T")[0]!
-
-        items.push({
-          dailyValueId: row.id,
-          employeeId: row.employeeId,
-          employeeName: `${row.employee.firstName} ${row.employee.lastName}`,
-          departmentId: row.employee.departmentId,
-          departmentName: row.employee.department?.name ?? null,
-          valueDate,
-          errors,
+          orderBy: { valueDate: "asc" },
         })
-      }
 
-      const total = items.length
-      const limit = input?.limit ?? 50
-      const offset = input?.offset ?? 0
+        // Build correction assistant items
+        const severityFilter = input?.severity
+        const codeFilter = input?.errorCode
 
-      // Apply pagination
-      const paginatedItems = items.slice(offset, offset + limit)
-      const hasMore = offset + limit < total
+        interface CorrectionAssistantError {
+          code: string
+          severity: string
+          message: string
+          errorType: string
+        }
 
-      return {
-        data: paginatedItems,
-        meta: {
-          total,
-          limit,
-          offset,
-          hasMore,
-        },
+        interface CorrectionAssistantItem {
+          dailyValueId: string
+          employeeId: string
+          employeeName: string
+          departmentId: string | null
+          departmentName: string | null
+          valueDate: string
+          errors: CorrectionAssistantError[]
+        }
+
+        const items: CorrectionAssistantItem[] = []
+
+        for (const row of rows) {
+          const errors: CorrectionAssistantError[] = []
+
+          // Process error codes
+          if (row.errorCodes) {
+            for (const code of row.errorCodes) {
+              if (severityFilter && severityFilter !== "error") continue
+              if (codeFilter && codeFilter !== code) continue
+
+              let message = code // Fallback to raw code
+              let severity = "error"
+              const catalogEntry = messageMap.get(code)
+              if (catalogEntry) {
+                message = catalogEntry.customText || catalogEntry.defaultText
+                severity = catalogEntry.severity
+              }
+
+              errors.push({
+                code,
+                severity,
+                message,
+                errorType: mapCorrectionErrorType(code),
+              })
+            }
+          }
+
+          // Process warnings as "hint" severity
+          if (row.warnings) {
+            for (const code of row.warnings) {
+              if (severityFilter && severityFilter !== "hint") continue
+              if (codeFilter && codeFilter !== code) continue
+
+              let message = code // Fallback to raw code
+              let severity = "hint"
+              const catalogEntry = messageMap.get(code)
+              if (catalogEntry) {
+                message = catalogEntry.customText || catalogEntry.defaultText
+                severity = catalogEntry.severity
+              }
+
+              errors.push({
+                code,
+                severity,
+                message,
+                errorType: mapCorrectionErrorType(code),
+              })
+            }
+          }
+
+          if (errors.length === 0) continue
+
+          // Format date as YYYY-MM-DD string
+          const valueDate = row.valueDate instanceof Date
+            ? row.valueDate.toISOString().split("T")[0]!
+            : String(row.valueDate).split("T")[0]!
+
+          items.push({
+            dailyValueId: row.id,
+            employeeId: row.employeeId,
+            employeeName: `${row.employee.firstName} ${row.employee.lastName}`,
+            departmentId: row.employee.departmentId,
+            departmentName: row.employee.department?.name ?? null,
+            valueDate,
+            errors,
+          })
+        }
+
+        const total = items.length
+        const limit = input?.limit ?? 50
+        const offset = input?.offset ?? 0
+
+        // Apply pagination
+        const paginatedItems = items.slice(offset, offset + limit)
+        const hasMore = offset + limit < total
+
+        return {
+          data: paginatedItems,
+          meta: {
+            total,
+            limit,
+            offset,
+            hasMore,
+          },
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 })

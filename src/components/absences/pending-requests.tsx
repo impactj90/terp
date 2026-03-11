@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { QueryError } from '@/components/ui/query-error'
 import { useEmployeeAbsences } from '@/hooks'
 import { formatDate, parseISODate } from '@/lib/time-utils'
 import type { components } from '@/types/legacy-api-types'
@@ -55,7 +56,7 @@ export function PendingRequests({
 
   // Fetch absences for current year and next year
   const currentYear = new Date().getFullYear()
-  const { data: absencesData, isLoading } = useEmployeeAbsences(
+  const { data: absencesData, isLoading, isError, refetch } = useEmployeeAbsences(
     employeeId ?? '',
     {
       from: formatDate(new Date(currentYear, 0, 1)),
@@ -97,6 +98,10 @@ export function PendingRequests({
 
     return { pending, approved, rejected, cancelled }
   }, [absences])
+
+  if (isError) {
+    return <QueryError message={t('loadFailed')} onRetry={() => refetch()} className={className} />
+  }
 
   if (isLoading) {
     return (

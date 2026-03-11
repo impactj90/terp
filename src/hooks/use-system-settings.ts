@@ -1,5 +1,6 @@
 import { useTRPC } from "@/trpc"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useTimeDataInvalidation } from "./use-time-data-invalidation"
 
 /**
  * Hook to fetch system settings (singleton per tenant, tRPC).
@@ -36,7 +37,20 @@ export function useUpdateSystemSettings() {
  */
 export function useCleanupDeleteBookings() {
   const trpc = useTRPC()
-  return useMutation(trpc.systemSettings.cleanupDeleteBookings.mutationOptions())
+  const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
+  return useMutation({
+    ...trpc.systemSettings.cleanupDeleteBookings.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookings.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookings.getById.queryKey(),
+      })
+      invalidateTimeData()
+    },
+  })
 }
 
 /**
@@ -44,9 +58,20 @@ export function useCleanupDeleteBookings() {
  */
 export function useCleanupDeleteBookingData() {
   const trpc = useTRPC()
-  return useMutation(
-    trpc.systemSettings.cleanupDeleteBookingData.mutationOptions()
-  )
+  const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
+  return useMutation({
+    ...trpc.systemSettings.cleanupDeleteBookingData.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookings.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookings.getById.queryKey(),
+      })
+      invalidateTimeData()
+    },
+  })
 }
 
 /**
@@ -54,9 +79,20 @@ export function useCleanupDeleteBookingData() {
  */
 export function useCleanupReReadBookings() {
   const trpc = useTRPC()
-  return useMutation(
-    trpc.systemSettings.cleanupReReadBookings.mutationOptions()
-  )
+  const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
+  return useMutation({
+    ...trpc.systemSettings.cleanupReReadBookings.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookings.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookings.getById.queryKey(),
+      })
+      invalidateTimeData()
+    },
+  })
 }
 
 /**

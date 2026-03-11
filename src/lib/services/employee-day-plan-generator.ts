@@ -293,7 +293,50 @@ export class EmployeeDayPlanGenerator {
     let plansUpdated = 0
     let employeesSkipped = 0
 
-    // Process each employee
+    // Batch-load tariffs: collect unique tariffIds, fetch all at once
+    const tariffIds = [
+      ...new Set(
+        employees
+          .map((e) => e.tariffId)
+          .filter((id): id is string => id !== null),
+      ),
+    ]
+
+    const tariffRows =
+      tariffIds.length > 0
+        ? await this.prisma.tariff.findMany({
+            where: { id: { in: tariffIds }, tenantId },
+            include: tariffGenerateInclude,
+          })
+        : []
+
+    const tariffMap = new Map(tariffRows.map((t) => [t.id, t]))
+
+    // Batch-load existing plans for all employees in the date range
+    const employeeIdsWithTariff = employees
+      .filter((e) => e.tariffId !== null)
+      .map((e) => e.id)
+
+    const allExistingPlans =
+      employeeIdsWithTariff.length > 0
+        ? await this.prisma.employeeDayPlan.findMany({
+            where: {
+              tenantId,
+              employeeId: { in: employeeIdsWithTariff },
+              planDate: { gte: fromDate, lte: toDate },
+            },
+          })
+        : []
+
+    // Group existing plans by employeeId
+    const existingPlansByEmployee = new Map<string, typeof allExistingPlans>()
+    for (const plan of allExistingPlans) {
+      const list = existingPlansByEmployee.get(plan.employeeId) ?? []
+      list.push(plan)
+      existingPlansByEmployee.set(plan.employeeId, list)
+    }
+
+    // Process each employee (no more per-employee DB queries)
     for (const employee of employees) {
       // Skip if no tariffId
       if (!employee.tariffId) {
@@ -301,12 +344,7 @@ export class EmployeeDayPlanGenerator {
         continue
       }
 
-      // Fetch tariff with full details
-      const tariff = await this.prisma.tariff.findFirst({
-        where: { id: employee.tariffId, tenantId },
-        include: tariffGenerateInclude,
-      })
-
+      const tariff = tariffMap.get(employee.tariffId)
       if (!tariff) {
         employeesSkipped++
         continue
@@ -324,17 +362,14 @@ export class EmployeeDayPlanGenerator {
         continue
       }
 
-      // Get existing EDPs in date range for this employee
-      const existingPlans = await this.prisma.employeeDayPlan.findMany({
-        where: {
-          tenantId,
-          employeeId: employee.id,
-          planDate: {
-            gte: window.start,
-            lte: window.end,
-          },
-        },
-      })
+      // Use pre-loaded existing plans, filtered to sync window
+      const existingPlans = (
+        existingPlansByEmployee.get(employee.id) ?? []
+      ).filter(
+        (p) =>
+          p.planDate.getTime() >= window.start.getTime() &&
+          p.planDate.getTime() <= window.end.getTime(),
+      )
 
       // Build skip map: dates to skip based on source
       const skipDates = new Set<string>()
@@ -378,7 +413,7 @@ export class EmployeeDayPlanGenerator {
         current.setUTCDate(current.getUTCDate() + 1)
       }
 
-      // Bulk upsert plans
+      // Bulk upsert plans using array-form $transaction (single DB round-trip)
       if (plansToUpsert.length > 0) {
         // Track which are new vs updates
         const existingDateKeys = new Set(
@@ -387,9 +422,9 @@ export class EmployeeDayPlanGenerator {
           ),
         )
 
-        await this.prisma.$transaction(async (tx) => {
-          for (const plan of plansToUpsert) {
-            await tx.employeeDayPlan.upsert({
+        await this.prisma.$transaction(
+          plansToUpsert.map((plan) =>
+            this.prisma.employeeDayPlan.upsert({
               where: {
                 employeeId_planDate: {
                   employeeId: plan.employeeId,
@@ -407,9 +442,9 @@ export class EmployeeDayPlanGenerator {
                 dayPlanId: plan.dayPlanId,
                 source: "tariff",
               },
-            })
-          }
-        })
+            }),
+          ),
+        )
 
         for (const plan of plansToUpsert) {
           const dateKey = plan.planDate.toISOString().split("T")[0]!

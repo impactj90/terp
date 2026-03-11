@@ -94,6 +94,25 @@ function normalizeOptionalString(
   return trimmed.length > 0 ? trimmed : null
 }
 
+// --- Helpers ---
+
+/**
+ * Verifies the authenticated user has access to the given tenant
+ * via the userTenants join table loaded in context.
+ */
+function assertUserHasTenantAccess(
+  userTenants: { tenantId: string }[],
+  tenantId: string
+) {
+  const hasAccess = userTenants.some((ut) => ut.tenantId === tenantId)
+  if (!hasAccess) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Access to tenant denied",
+    })
+  }
+}
+
 // --- Router ---
 
 export const tenantsRouter = createTRPCRouter({
@@ -170,6 +189,8 @@ export const tenantsRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .output(tenantOutputSchema)
     .query(async ({ ctx, input }) => {
+      assertUserHasTenantAccess(ctx.user!.userTenants, input.id)
+
       const tenant = await ctx.prisma.tenant.findUnique({
         where: { id: input.id },
       })
@@ -338,6 +359,8 @@ export const tenantsRouter = createTRPCRouter({
     .input(updateTenantInputSchema)
     .output(tenantOutputSchema)
     .mutation(async ({ ctx, input }) => {
+      assertUserHasTenantAccess(ctx.user!.userTenants, input.id)
+
       // Verify tenant exists
       const existing = await ctx.prisma.tenant.findUnique({
         where: { id: input.id },
@@ -470,6 +493,8 @@ export const tenantsRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
+      assertUserHasTenantAccess(ctx.user!.userTenants, input.id)
+
       // Verify tenant exists
       const existing = await ctx.prisma.tenant.findUnique({
         where: { id: input.id },

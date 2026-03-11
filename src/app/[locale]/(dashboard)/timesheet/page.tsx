@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { useSearchParams } from 'next/navigation'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { toast } from 'sonner'
 import { useAuth } from '@/providers/auth-provider'
 import { useHasPermission } from '@/hooks'
 import { Button } from '@/components/ui/button'
@@ -224,8 +225,8 @@ export default function TimesheetPage() {
       await deleteBooking.mutateAsync({ id: deletingBooking.id })
       setIsDeleteDialogOpen(false)
       setDeletingBooking(null)
-    } catch (error) {
-      console.error('Failed to delete booking:', error)
+    } catch {
+      toast.error(t('deleteBookingFailed'))
     }
   }
 

@@ -183,6 +183,7 @@ export async function generate(
     for (const emp of employees) {
       const mv = await repo.findMonthlyValue(
         prisma,
+        tenantId,
         emp.id,
         input.year,
         input.month
@@ -314,7 +315,7 @@ export async function preview(
   let totalOvertime = 0
 
   for (const emp of employees) {
-    const mv = await repo.findMonthlyValue(prisma, emp.id, pe.year, pe.month)
+    const mv = await repo.findMonthlyValue(prisma, tenantId, emp.id, pe.year, pe.month)
     if (!mv) continue
 
     const targetHours = mv.totalTargetTime / 60

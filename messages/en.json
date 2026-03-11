@@ -229,6 +229,8 @@
     "tipDescription": "Administrators can link your account by matching your email address to an employee record or by manually assigning you to an employee profile.",
     "clockIn": "Clock In",
     "clockOut": "Clock Out",
+    "clockInFailed": "Failed to clock in",
+    "clockOutFailed": "Failed to clock out",
     "requestTimeOff": "Request Time Off",
     "viewTimesheet": "View Timesheet",
     "flextimeBalance": "Flextime Balance",
@@ -390,7 +392,9 @@
     "weekend": "Weekend",
     "holiday": "Holiday",
     "absence": "Absence",
-    "notes": "Notes"
+    "notes": "Notes",
+    "deleteBookingFailed": "Failed to delete booking",
+    "loadFailed": "Failed to load timesheet data"
   },
   "absences": {
     "title": "Absences",
@@ -441,6 +445,7 @@
     "cancelConfirmation": "Are you sure you want to cancel this {type} absence on {date}? This action cannot be undone.",
     "confirmCancel": "Cancel Absence",
     "failedToCancel": "Failed to cancel absence",
+    "loadFailed": "Failed to load absence data",
     "absenceDetails": "Absence Details",
     "viewAbsenceInfo": "View absence request information",
     "rejectionReasonLabel": "Rejection reason",
@@ -849,7 +854,8 @@
     "collapseDetails": "Collapse details",
     "noDetailsAvailable": "No details available",
     "requestFailed": "Request failed",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "loadFailed": "Failed to load team data"
   },
   "adminEmployees": {
     "title": "Employees",
@@ -863,6 +869,7 @@
     "deactivateEmployee": "Deactivate Employee",
     "deactivateDescription": "Are you sure you want to deactivate {firstName} {lastName}? They will no longer be able to clock in or access the system.",
     "deactivate": "Deactivate",
+    "deactivateFailed": "Failed to deactivate employee",
     "emptyTitle": "No employees found",
     "emptyFilterHint": "Try adjusting your search or filters",
     "emptyGetStarted": "Get started by adding your first employee",
@@ -4928,5 +4935,13 @@
     "sendResultFailed": "Failed: {count}",
     "sendError": "Failed to send message",
     "done": "Done"
+  },
+  "errors": {
+    "globalTitle": "Something went wrong",
+    "globalDescription": "An unexpected error occurred. Please try reloading the page.",
+    "dashboardTitle": "Something went wrong",
+    "dashboardDescription": "An error occurred while loading this page.",
+    "reload": "Reload Page",
+    "goHome": "Go to Dashboard"
   }
 }

@@ -19,6 +19,7 @@ import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import type { TRPCContext } from "@/trpc/init"
 import { requirePermission } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
 
 // --- Permission Constants ---
 
@@ -186,27 +187,30 @@ export const departmentsRouter = createTRPCRouter({
     )
     .output(z.object({ data: z.array(departmentOutputSchema) }))
     .query(async ({ ctx, input }) => {
-      // ctx.tenantId is guaranteed non-null by tenantProcedure
-      const tenantId = ctx.tenantId!
-      const where: Record<string, unknown> = {
-        tenantId,
-      }
+      try {
+        const tenantId = ctx.tenantId!
+        const where: Record<string, unknown> = {
+          tenantId,
+        }
 
-      if (input?.isActive !== undefined) {
-        where.isActive = input.isActive
-      }
+        if (input?.isActive !== undefined) {
+          where.isActive = input.isActive
+        }
 
-      if (input?.parentId !== undefined) {
-        where.parentId = input.parentId
-      }
+        if (input?.parentId !== undefined) {
+          where.parentId = input.parentId
+        }
 
-      const departments = await ctx.prisma.department.findMany({
-        where,
-        orderBy: { code: "asc" },
-      })
+        const departments = await ctx.prisma.department.findMany({
+          where,
+          orderBy: { code: "asc" },
+        })
 
-      return {
-        data: departments.map(mapDepartmentToOutput),
+        return {
+          data: departments.map(mapDepartmentToOutput),
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -223,15 +227,18 @@ export const departmentsRouter = createTRPCRouter({
   getTree: tenantProcedure
     .use(requirePermission(DEPARTMENTS_MANAGE))
     .query(async ({ ctx }): Promise<DepartmentTreeNode[]> => {
-      // ctx.tenantId is guaranteed non-null by tenantProcedure
-      const tenantId = ctx.tenantId!
-      const departments = await ctx.prisma.department.findMany({
-        where: { tenantId },
-        orderBy: [{ name: "asc" }],
-      })
+      try {
+        const tenantId = ctx.tenantId!
+        const departments = await ctx.prisma.department.findMany({
+          where: { tenantId },
+          orderBy: [{ name: "asc" }],
+        })
 
-      const mapped = departments.map(mapDepartmentToOutput)
-      return buildDepartmentTree(mapped)
+        const mapped = departments.map(mapDepartmentToOutput)
+        return buildDepartmentTree(mapped)
+      } catch (err) {
+        handleServiceError(err)
+      }
     }),
 
   /**
@@ -248,20 +255,23 @@ export const departmentsRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .output(departmentOutputSchema)
     .query(async ({ ctx, input }) => {
-      // ctx.tenantId is guaranteed non-null by tenantProcedure
-      const tenantId = ctx.tenantId!
-      const department = await ctx.prisma.department.findFirst({
-        where: { id: input.id, tenantId },
-      })
-
-      if (!department) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Department not found",
+      try {
+        const tenantId = ctx.tenantId!
+        const department = await ctx.prisma.department.findFirst({
+          where: { id: input.id, tenantId },
         })
-      }
 
-      return mapDepartmentToOutput(department)
+        if (!department) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Department not found",
+          })
+        }
+
+        return mapDepartmentToOutput(department)
+      } catch (err) {
+        handleServiceError(err)
+      }
     }),
 
   /**
@@ -280,68 +290,71 @@ export const departmentsRouter = createTRPCRouter({
     .input(createDepartmentInputSchema)
     .output(departmentOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      // ctx.tenantId is guaranteed non-null by tenantProcedure
-      const tenantId = ctx.tenantId!
+      try {
+        const tenantId = ctx.tenantId!
 
-      // Trim and validate code
-      const code = input.code.trim()
-      if (code.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Department code is required",
-        })
-      }
-
-      // Trim and validate name
-      const name = input.name.trim()
-      if (name.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Department name is required",
-        })
-      }
-
-      // Check code uniqueness within tenant
-      const existingByCode = await ctx.prisma.department.findFirst({
-        where: { tenantId, code },
-      })
-      if (existingByCode) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Department code already exists",
-        })
-      }
-
-      // If parentId provided, verify parent exists and belongs to same tenant
-      if (input.parentId) {
-        const parentDept = await ctx.prisma.department.findFirst({
-          where: { id: input.parentId, tenantId },
-        })
-        if (!parentDept) {
+        // Trim and validate code
+        const code = input.code.trim()
+        if (code.length === 0) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "Parent department not found",
+            message: "Department code is required",
           })
         }
+
+        // Trim and validate name
+        const name = input.name.trim()
+        if (name.length === 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Department name is required",
+          })
+        }
+
+        // Check code uniqueness within tenant
+        const existingByCode = await ctx.prisma.department.findFirst({
+          where: { tenantId, code },
+        })
+        if (existingByCode) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Department code already exists",
+          })
+        }
+
+        // If parentId provided, verify parent exists and belongs to same tenant
+        if (input.parentId) {
+          const parentDept = await ctx.prisma.department.findFirst({
+            where: { id: input.parentId, tenantId },
+          })
+          if (!parentDept) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Parent department not found",
+            })
+          }
+        }
+
+        // Trim description if provided
+        const description = input.description?.trim() || null
+
+        // Create department
+        const department = await ctx.prisma.department.create({
+          data: {
+            tenantId,
+            code,
+            name,
+            description,
+            parentId: input.parentId ?? null,
+            managerEmployeeId: input.managerEmployeeId ?? null,
+            isActive: true,
+          },
+        })
+
+        return mapDepartmentToOutput(department)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Trim description if provided
-      const description = input.description?.trim() || null
-
-      // Create department
-      const department = await ctx.prisma.department.create({
-        data: {
-          tenantId,
-          code,
-          name,
-          description,
-          parentId: input.parentId ?? null,
-          managerEmployeeId: input.managerEmployeeId ?? null,
-          isActive: true,
-        },
-      })
-
-      return mapDepartmentToOutput(department)
     }),
 
   /**
@@ -359,127 +372,130 @@ export const departmentsRouter = createTRPCRouter({
     .input(updateDepartmentInputSchema)
     .output(departmentOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      // ctx.tenantId is guaranteed non-null by tenantProcedure
-      const tenantId = ctx.tenantId!
+      try {
+        const tenantId = ctx.tenantId!
 
-      // Verify department exists (tenant-scoped)
-      const existing = await ctx.prisma.department.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Department not found",
+        // Verify department exists (tenant-scoped)
+        const existing = await ctx.prisma.department.findFirst({
+          where: { id: input.id, tenantId },
         })
-      }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      // Handle code update
-      if (input.code !== undefined) {
-        const code = input.code.trim()
-        if (code.length === 0) {
+        if (!existing) {
           throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Department code is required",
+            code: "NOT_FOUND",
+            message: "Department not found",
           })
         }
-        // Check uniqueness if changed
-        if (code !== existing.code) {
-          const existingByCode = await ctx.prisma.department.findFirst({
-            where: {
-              tenantId,
-              code,
-              NOT: { id: input.id },
-            },
-          })
-          if (existingByCode) {
-            throw new TRPCError({
-              code: "CONFLICT",
-              message: "Department code already exists",
-            })
-          }
-        }
-        data.code = code
-      }
 
-      // Handle name update
-      if (input.name !== undefined) {
-        const name = input.name.trim()
-        if (name.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Department name is required",
-          })
-        }
-        data.name = name
-      }
+        // Build partial update data
+        const data: Record<string, unknown> = {}
 
-      // Handle description update
-      if (input.description !== undefined) {
-        data.description =
-          input.description === null ? null : input.description.trim()
-      }
-
-      // Handle parentId update
-      if (input.parentId !== undefined) {
-        if (input.parentId === null) {
-          // Clear parent
-          data.parentId = null
-        } else {
-          // Self-reference check
-          if (input.parentId === input.id) {
+        // Handle code update
+        if (input.code !== undefined) {
+          const code = input.code.trim()
+          if (code.length === 0) {
             throw new TRPCError({
               code: "BAD_REQUEST",
-              message: "Circular reference detected",
+              message: "Department code is required",
             })
           }
-
-          // Parent existence + same-tenant check
-          const parentDept = await ctx.prisma.department.findFirst({
-            where: { id: input.parentId, tenantId },
-          })
-          if (!parentDept) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Parent department not found",
+          // Check uniqueness if changed
+          if (code !== existing.code) {
+            const existingByCode = await ctx.prisma.department.findFirst({
+              where: {
+                tenantId,
+                code,
+                NOT: { id: input.id },
+              },
             })
+            if (existingByCode) {
+              throw new TRPCError({
+                code: "CONFLICT",
+                message: "Department code already exists",
+              })
+            }
           }
-
-          // Deep circular reference check
-          const isCircular = await checkCircularReference(
-            ctx.prisma,
-            input.id,
-            input.parentId
-          )
-          if (isCircular) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Circular reference detected",
-            })
-          }
-
-          data.parentId = input.parentId
+          data.code = code
         }
+
+        // Handle name update
+        if (input.name !== undefined) {
+          const name = input.name.trim()
+          if (name.length === 0) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Department name is required",
+            })
+          }
+          data.name = name
+        }
+
+        // Handle description update
+        if (input.description !== undefined) {
+          data.description =
+            input.description === null ? null : input.description.trim()
+        }
+
+        // Handle parentId update
+        if (input.parentId !== undefined) {
+          if (input.parentId === null) {
+            // Clear parent
+            data.parentId = null
+          } else {
+            // Self-reference check
+            if (input.parentId === input.id) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "Circular reference detected",
+              })
+            }
+
+            // Parent existence + same-tenant check
+            const parentDept = await ctx.prisma.department.findFirst({
+              where: { id: input.parentId, tenantId },
+            })
+            if (!parentDept) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "Parent department not found",
+              })
+            }
+
+            // Deep circular reference check
+            const isCircular = await checkCircularReference(
+              ctx.prisma,
+              input.id,
+              input.parentId
+            )
+            if (isCircular) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "Circular reference detected",
+              })
+            }
+
+            data.parentId = input.parentId
+          }
+        }
+
+        // Handle managerEmployeeId update
+        if (input.managerEmployeeId !== undefined) {
+          data.managerEmployeeId = input.managerEmployeeId
+        }
+
+        // Handle isActive update
+        if (input.isActive !== undefined) {
+          data.isActive = input.isActive
+        }
+
+        const department = await ctx.prisma.department.update({
+          where: { id: input.id },
+          data,
+        })
+
+        return mapDepartmentToOutput(department)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Handle managerEmployeeId update
-      if (input.managerEmployeeId !== undefined) {
-        data.managerEmployeeId = input.managerEmployeeId
-      }
-
-      // Handle isActive update
-      if (input.isActive !== undefined) {
-        data.isActive = input.isActive
-      }
-
-      const department = await ctx.prisma.department.update({
-        where: { id: input.id },
-        data,
-      })
-
-      return mapDepartmentToOutput(department)
     }),
 
   /**
@@ -496,47 +512,50 @@ export const departmentsRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      // ctx.tenantId is guaranteed non-null by tenantProcedure
-      const tenantId = ctx.tenantId!
+      try {
+        const tenantId = ctx.tenantId!
 
-      // Verify department exists (tenant-scoped)
-      const existing = await ctx.prisma.department.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Department not found",
+        // Verify department exists (tenant-scoped)
+        const existing = await ctx.prisma.department.findFirst({
+          where: { id: input.id, tenantId },
         })
-      }
+        if (!existing) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Department not found",
+          })
+        }
 
-      // Check for children
-      const childCount = await ctx.prisma.department.count({
-        where: { parentId: input.id },
-      })
-      if (childCount > 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Cannot delete department with child departments",
+        // Check for children
+        const childCount = await ctx.prisma.department.count({
+          where: { parentId: input.id },
         })
-      }
+        if (childCount > 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Cannot delete department with child departments",
+          })
+        }
 
-      // Check for employees
-      const employeeCount = await ctx.prisma.employee.count({
-        where: { departmentId: input.id },
-      })
-      if (employeeCount > 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Cannot delete department with assigned employees",
+        // Check for employees
+        const employeeCount = await ctx.prisma.employee.count({
+          where: { departmentId: input.id },
         })
+        if (employeeCount > 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Cannot delete department with assigned employees",
+          })
+        }
+
+        // Hard delete
+        await ctx.prisma.department.delete({
+          where: { id: input.id },
+        })
+
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Hard delete
-      await ctx.prisma.department.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 })

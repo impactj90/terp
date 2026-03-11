@@ -347,81 +347,94 @@ export async function createRange(
     throw new AbsenceNotFoundError("Absence type not found or inactive")
   }
 
-  // 3. Batch-fetch EmployeeDayPlan records for the date range
-  const dayPlans = await repo.findEmployeeDayPlans(prisma, employeeId, fromDate, toDate)
+  // 3-7. Wrap check-and-create in a transaction to prevent duplicate inserts
+  //       from concurrent requests for the same employee/date range.
+  const { toCreate, skippedDates, createdAbsences } = await prisma.$transaction(
+    async (tx) => {
+      const txPrisma = tx as unknown as PrismaClient
+      // 3. Batch-fetch EmployeeDayPlan records for the date range
+      const dayPlans = await repo.findEmployeeDayPlans(txPrisma, employeeId, fromDate, toDate)
 
-  const dayPlanMap = new Map<string, { dayPlanId: string | null }>()
-  for (const dp of dayPlans) {
-    const dateKey = dp.planDate.toISOString().split("T")[0]!
-    dayPlanMap.set(dateKey, { dayPlanId: dp.dayPlanId })
-  }
+      const dayPlanMap = new Map<string, { dayPlanId: string | null }>()
+      for (const dp of dayPlans) {
+        const dateKey = dp.planDate.toISOString().split("T")[0]!
+        dayPlanMap.set(dateKey, { dayPlanId: dp.dayPlanId })
+      }
 
-  // 4. Batch-fetch existing absences for employee in range where status != 'cancelled'
-  const existingAbsences = await repo.findExistingAbsences(prisma, employeeId, fromDate, toDate)
+      // 4. Batch-fetch existing absences for employee in range where status != 'cancelled'
+      const existingAbsences = await repo.findExistingAbsences(txPrisma, employeeId, fromDate, toDate)
 
-  const existingMap = new Set<string>()
-  for (const ea of existingAbsences) {
-    existingMap.add(ea.absenceDate.toISOString().split("T")[0]!)
-  }
+      const existingMap = new Set<string>()
+      for (const ea of existingAbsences) {
+        existingMap.add(ea.absenceDate.toISOString().split("T")[0]!)
+      }
 
-  // 5. Iterate day-by-day and build records to create
-  const toCreate: Array<{
-    tenantId: string
-    employeeId: string
-    absenceDate: Date
-    absenceTypeId: string
-    duration: number
-    halfDayPeriod: string | null
-    status: string
-    notes: string | null
-    createdBy: string | null
-  }> = []
-  const skippedDates: string[] = []
+      // 5. Iterate day-by-day and build records to create
+      const txToCreate: Array<{
+        tenantId: string
+        employeeId: string
+        absenceDate: Date
+        absenceTypeId: string
+        duration: number
+        halfDayPeriod: string | null
+        status: string
+        notes: string | null
+        createdBy: string | null
+      }> = []
+      const txSkippedDates: string[] = []
 
-  const currentDate = new Date(fromDate)
-  while (currentDate <= toDate) {
-    const dateKey = currentDate.toISOString().split("T")[0]!
+      const currentDate = new Date(fromDate)
+      while (currentDate <= toDate) {
+        const dateKey = currentDate.toISOString().split("T")[0]!
 
-    if (shouldSkipDate(currentDate, dayPlanMap)) {
-      skippedDates.push(dateKey)
-    } else if (existingMap.has(dateKey)) {
-      skippedDates.push(dateKey)
-    } else {
-      toCreate.push({
-        tenantId,
-        employeeId,
-        absenceDate: new Date(currentDate),
-        absenceTypeId,
-        duration,
-        halfDayPeriod: halfDayPeriod ?? null,
-        status: "pending",
-        notes: notes ?? null,
-        createdBy: userId,
-      })
+        if (shouldSkipDate(currentDate, dayPlanMap)) {
+          txSkippedDates.push(dateKey)
+        } else if (existingMap.has(dateKey)) {
+          txSkippedDates.push(dateKey)
+        } else {
+          txToCreate.push({
+            tenantId,
+            employeeId,
+            absenceDate: new Date(currentDate),
+            absenceTypeId,
+            duration,
+            halfDayPeriod: halfDayPeriod ?? null,
+            status: "pending",
+            notes: notes ?? null,
+            createdBy: userId,
+          })
+        }
+
+        // Advance to next day
+        currentDate.setUTCDate(currentDate.getUTCDate() + 1)
+      }
+
+      // 6. Batch create
+      if (txToCreate.length > 0) {
+        await repo.createMany(txPrisma, txToCreate)
+      }
+
+      // 7. Re-fetch created records with relations
+      const txCreatedAbsences =
+        txToCreate.length > 0
+          ? await repo.findCreatedAbsences(txPrisma, {
+              employeeId,
+              absenceTypeId,
+              fromDate,
+              toDate,
+              createdBy: userId ?? undefined,
+            })
+          : []
+
+      return {
+        toCreate: txToCreate,
+        skippedDates: txSkippedDates,
+        createdAbsences: txCreatedAbsences,
+      }
     }
+  )
 
-    // Advance to next day
-    currentDate.setUTCDate(currentDate.getUTCDate() + 1)
-  }
-
-  // 6. Batch create
-  if (toCreate.length > 0) {
-    await repo.createMany(prisma, toCreate)
-  }
-
-  // 7. Re-fetch created records with relations
-  const createdAbsences =
-    toCreate.length > 0
-      ? await repo.findCreatedAbsences(prisma, {
-          employeeId,
-          absenceTypeId,
-          fromDate,
-          toDate,
-          createdBy: userId ?? undefined,
-        })
-      : []
-
-  // 8. Trigger recalc range (best effort)
+  // 8. Trigger recalc range (best effort, outside transaction)
   if (toCreate.length > 0) {
     await triggerRecalcRange(prisma, tenantId, employeeId, fromDate, toDate)
   }
@@ -538,22 +551,21 @@ export async function approve(
   // 2. Check data scope
   checkAbsenceDataScope(dataScope, absence)
 
-  // 3. Validate status is pending
-  if (absence.status !== "pending") {
-    throw new AbsenceValidationError("Only pending absences can be approved")
-  }
-
-  // 4. Update status to approved
-  const updated = await repo.update(prisma, id, {
+  // 3. Atomically update only if status is still pending (prevents double-approve)
+  const updated = await repo.updateIfStatus(prisma, tenantId, id, "pending", {
     status: "approved",
     approvedBy: userId,
     approvedAt: new Date(),
   })
 
-  // 5. Trigger recalc (best effort)
+  if (!updated) {
+    throw new AbsenceValidationError("Only pending absences can be approved")
+  }
+
+  // 4. Trigger recalc (best effort)
   await triggerRecalc(prisma, tenantId, absence.employeeId, absence.absenceDate)
 
-  // 6. If deductsVacation, recalculate vacation balance (best effort)
+  // 5. If deductsVacation, recalculate vacation balance (best effort)
   if (absence.absenceType?.deductsVacation) {
     try {
       const absenceYear = absence.absenceDate.getUTCFullYear()
@@ -620,18 +632,17 @@ export async function reject(
   // 2. Check data scope
   checkAbsenceDataScope(dataScope, absence)
 
-  // 3. Validate status is pending
-  if (absence.status !== "pending") {
-    throw new AbsenceValidationError("Only pending absences can be rejected")
-  }
-
-  // 4. Update status to rejected
-  const updated = await repo.update(prisma, id, {
+  // 3. Atomically update only if status is still pending (prevents double-reject)
+  const updated = await repo.updateIfStatus(prisma, tenantId, id, "pending", {
     status: "rejected",
     rejectionReason: reason ?? null,
   })
 
-  // 5. Trigger recalc (best effort)
+  if (!updated) {
+    throw new AbsenceValidationError("Only pending absences can be rejected")
+  }
+
+  // 4. Trigger recalc (best effort)
   await triggerRecalc(prisma, tenantId, absence.employeeId, absence.absenceDate)
 
   // 6. Send rejection notification to employee (best effort)
@@ -683,13 +694,14 @@ export async function cancel(
   // 2. Check data scope
   checkAbsenceDataScope(dataScope, absence)
 
-  // 3. Validate status is approved (only approved can be cancelled)
-  if (absence.status !== "approved") {
+  // 3. Atomically update only if status is still approved (prevents double-cancel)
+  const updated = await repo.updateIfStatus(prisma, tenantId, id, "approved", {
+    status: "cancelled",
+  })
+
+  if (!updated) {
     throw new AbsenceValidationError("Only approved absences can be cancelled")
   }
-
-  // 4. Update status to cancelled
-  const updated = await repo.update(prisma, id, { status: "cancelled" })
 
   // 5. Trigger recalc (best effort)
   await triggerRecalc(prisma, tenantId, absence.employeeId, absence.absenceDate)

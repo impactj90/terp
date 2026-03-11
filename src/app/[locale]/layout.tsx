@@ -4,6 +4,7 @@ import '../globals.css'
 import { TRPCReactProvider } from '@/trpc/client'
 import { AuthProvider } from '@/providers/auth-provider'
 import { ThemeProvider } from '@/providers/theme-provider'
+import { Toaster } from 'sonner'
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages, getTranslations } from 'next-intl/server'
 import { hasLocale } from 'next-intl'
@@ -46,6 +47,7 @@ export default async function LocaleLayout({
             <TRPCReactProvider>
               <AuthProvider>
                 {children}
+                <Toaster richColors closeButton position="bottom-right" />
               </AuthProvider>
             </TRPCReactProvider>
           </ThemeProvider>

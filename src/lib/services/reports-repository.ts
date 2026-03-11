@@ -184,13 +184,14 @@ export async function findEmployeesInScope(
 
 export async function findMonthlyValue(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string,
   year: number,
   month: number
 ) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (prisma.monthlyValue as any).findFirst({
-    where: { employeeId, year, month },
+    where: { tenantId, employeeId, year, month },
   })
 }
 
@@ -198,12 +199,13 @@ export async function findMonthlyValue(
 
 export async function findVacationBalance(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string,
   year: number
 ) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (prisma.vacationBalance as any).findFirst({
-    where: { employeeId, year },
+    where: { tenantId, employeeId, year },
   })
 }
 
@@ -258,10 +260,11 @@ export async function findAbsenceDays(
   }
 ): Promise<AbsenceDayRow[]> {
   const employeeFilter = params.employeeIds && params.employeeIds.length > 0
-    ? `AND ad.employee_id = ANY($3::uuid[])`
+    ? `AND ad.employee_id = ANY($4::uuid[])`
     : ""
 
   const queryParams: unknown[] = [
+    tenantId,
     params.from.toISOString().slice(0, 10),
     params.to.toISOString().slice(0, 10),
   ]
@@ -276,9 +279,9 @@ export async function findAbsenceDays(
      FROM absence_days ad
      JOIN employees e ON e.id = ad.employee_id
      LEFT JOIN absence_types at ON at.id = ad.absence_type_id
-     WHERE ad.tenant_id = '${tenantId}'
-       AND ad.absence_date >= $1
-       AND ad.absence_date <= $2
+     WHERE ad.tenant_id = $1
+       AND ad.absence_date >= $2
+       AND ad.absence_date <= $3
        ${employeeFilter}
      ORDER BY ad.absence_date, e.personnel_number
      LIMIT 10000`,

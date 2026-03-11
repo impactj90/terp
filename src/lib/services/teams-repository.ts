@@ -118,20 +118,32 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.team.update({
-    where: { id },
+  const { count } = await prisma.team.updateMany({
+    where: { id, tenantId },
     data,
+  })
+  if (count === 0) {
+    return null
+  }
+  return prisma.team.findFirst({
+    where: { id, tenantId },
     include: teamRelationsInclude,
   })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.team.delete({
-    where: { id },
+export async function deleteById(
+  prisma: PrismaClient,
+  tenantId: string,
+  id: string
+) {
+  const { count } = await prisma.team.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 // --- TeamMember Functions ---
@@ -202,10 +214,11 @@ export async function deleteMember(
 
 export async function findTeamsByEmployee(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string
 ) {
   return prisma.teamMember.findMany({
-    where: { employeeId },
+    where: { employeeId, team: { tenantId } },
     include: {
       team: {
         include: teamRelationsInclude,

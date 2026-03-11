@@ -229,6 +229,8 @@
     "tipDescription": "Administratoren können Ihr Konto verknüpfen, indem sie Ihre E-Mail-Adresse mit einem Mitarbeiterdatensatz abgleichen oder Sie manuell einem Mitarbeiterprofil zuweisen.",
     "clockIn": "Einstempeln",
     "clockOut": "Ausstempeln",
+    "clockInFailed": "Einstempeln fehlgeschlagen",
+    "clockOutFailed": "Ausstempeln fehlgeschlagen",
     "requestTimeOff": "Abwesenheit beantragen",
     "viewTimesheet": "Zeitnachweis anzeigen",
     "flextimeBalance": "Gleitzeitsaldo",
@@ -390,7 +392,9 @@
     "weekend": "Wochenende",
     "holiday": "Feiertag",
     "absence": "Abwesenheit",
-    "notes": "Notizen"
+    "notes": "Notizen",
+    "deleteBookingFailed": "Buchung konnte nicht gelöscht werden",
+    "loadFailed": "Zeitnachweisdaten konnten nicht geladen werden"
   },
   "absences": {
     "title": "Abwesenheiten",
@@ -441,6 +445,7 @@
     "cancelConfirmation": "Möchten Sie diese {type}-Abwesenheit am {date} wirklich stornieren? Diese Aktion kann nicht rückgängig gemacht werden.",
     "confirmCancel": "Abwesenheit stornieren",
     "failedToCancel": "Abwesenheit konnte nicht storniert werden",
+    "loadFailed": "Abwesenheitsdaten konnten nicht geladen werden",
     "absenceDetails": "Abwesenheitsdetails",
     "viewAbsenceInfo": "Informationen zum Abwesenheitsantrag anzeigen",
     "rejectionReasonLabel": "Ablehnungsgrund",
@@ -849,7 +854,8 @@
     "collapseDetails": "Details reduzieren",
     "noDetailsAvailable": "Keine Details verfügbar",
     "requestFailed": "Anfrage fehlgeschlagen",
-    "unknown": "Unbekannt"
+    "unknown": "Unbekannt",
+    "loadFailed": "Teamdaten konnten nicht geladen werden"
   },
   "adminEmployees": {
     "title": "Mitarbeiter",
@@ -863,6 +869,7 @@
     "deactivateEmployee": "Mitarbeiter deaktivieren",
     "deactivateDescription": "Sind Sie sicher, dass Sie {firstName} {lastName} deaktivieren möchten? Die Person kann sich dann nicht mehr einstempeln oder auf das System zugreifen.",
     "deactivate": "Deaktivieren",
+    "deactivateFailed": "Mitarbeiter konnte nicht deaktiviert werden",
     "emptyTitle": "Keine Mitarbeiter gefunden",
     "emptyFilterHint": "Versuchen Sie, Ihre Suche oder Filter anzupassen",
     "emptyGetStarted": "Beginnen Sie mit dem Hinzufügen Ihres ersten Mitarbeiters",
@@ -4928,5 +4935,13 @@
     "sendResultFailed": "Fehlgeschlagen: {count}",
     "sendError": "Nachricht konnte nicht gesendet werden",
     "done": "Fertig"
+  },
+  "errors": {
+    "globalTitle": "Etwas ist schiefgelaufen",
+    "globalDescription": "Ein unerwarteter Fehler ist aufgetreten. Bitte laden Sie die Seite neu.",
+    "dashboardTitle": "Etwas ist schiefgelaufen",
+    "dashboardDescription": "Beim Laden dieser Seite ist ein Fehler aufgetreten.",
+    "reload": "Seite neu laden",
+    "goHome": "Zum Dashboard"
   }
 }

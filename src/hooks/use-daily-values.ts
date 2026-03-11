@@ -1,5 +1,6 @@
 import { useTRPC } from "@/trpc"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useTimeDataInvalidation } from "./use-time-data-invalidation"
 
 // Keep the existing DailyValue interface (snake_case) for backward compatibility
 export interface DailyValue {
@@ -240,19 +241,13 @@ export function useAllDailyValues(options: UseAllDailyValuesOptions = {}) {
  * Uses tRPC dailyValues.approve mutation.
  */
 export function useApproveDailyValue() {
-  const trpc = useTRPC()
-  const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
 
   return useMutation({
-    ...trpc.dailyValues.approve.mutationOptions(),
+    ...useTRPC().dailyValues.approve.mutationOptions(),
     onSuccess: () => {
-      // Invalidate daily values queries so lists refetch
-      queryClient.invalidateQueries({
-        queryKey: trpc.dailyValues.listAll.queryKey(),
-      })
-      queryClient.invalidateQueries({
-        queryKey: trpc.dailyValues.list.queryKey(),
-      })
+      // Approval changes day view, daily values, and monthly aggregates
+      invalidateTimeData()
     },
   })
 }

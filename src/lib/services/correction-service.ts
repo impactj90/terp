@@ -168,7 +168,7 @@ export async function update(
     data.reason = input.reason
   }
 
-  return repo.update(prisma, input.id, data)
+  return repo.update(prisma, tenantId, input.id, data)
 }
 
 export async function remove(
@@ -187,7 +187,7 @@ export async function remove(
     throw new CorrectionForbiddenError("Cannot delete approved corrections")
   }
 
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
 }
 
 export async function approve(
@@ -196,26 +196,25 @@ export async function approve(
   id: string,
   userId: string
 ) {
-  // Fetch existing (tenant-scoped)
+  // Fetch existing (tenant-scoped) for employee/date info needed for recalc
   const existing = await repo.findByIdBasic(prisma, tenantId, id)
   if (!existing) {
     throw new CorrectionNotFoundError()
   }
 
-  // Check status is pending
-  if (existing.status !== "pending") {
-    throw new CorrectionValidationError(
-      "Correction is not in pending status"
-    )
-  }
-
-  // Update to approved
-  const correction = await repo.update(prisma, id, {
+  // Atomically update only if status is still pending (prevents double-approve)
+  const correction = await repo.updateIfStatus(prisma, tenantId, id, "pending", {
     status: "approved",
     approvedBy: userId,
     approvedAt: new Date(),
     updatedAt: new Date(),
   })
+
+  if (!correction) {
+    throw new CorrectionValidationError(
+      "Correction is not in pending status"
+    )
+  }
 
   // Trigger recalculation for the correction date (best effort)
   await triggerRecalc(
@@ -234,24 +233,25 @@ export async function reject(
   id: string,
   userId: string
 ) {
-  // Fetch existing (tenant-scoped)
+  // Fetch existing (tenant-scoped) to verify it exists
   const existing = await repo.findByIdBasic(prisma, tenantId, id)
   if (!existing) {
     throw new CorrectionNotFoundError()
   }
 
-  // Check status is pending
-  if (existing.status !== "pending") {
-    throw new CorrectionValidationError(
-      "Correction is not in pending status"
-    )
-  }
-
-  // Update to rejected (Go uses approvedBy for rejector too)
-  return repo.update(prisma, id, {
+  // Atomically update only if status is still pending (prevents double-reject)
+  const correction = await repo.updateIfStatus(prisma, tenantId, id, "pending", {
     status: "rejected",
     approvedBy: userId,
     approvedAt: new Date(),
     updatedAt: new Date(),
   })
+
+  if (!correction) {
+    throw new CorrectionValidationError(
+      "Correction is not in pending status"
+    )
+  }
+
+  return correction
 }

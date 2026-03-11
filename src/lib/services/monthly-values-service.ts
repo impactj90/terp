@@ -5,6 +5,7 @@
  * Throws plain Error subclasses that are mapped by handleServiceError.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { mapWithConcurrency } from "@/lib/async"
 import { MonthlyCalcService } from "./monthly-calc"
 import * as repo from "./monthly-values-repository"
 
@@ -175,23 +176,33 @@ export async function closeBatch(
     await monthlyCalcService.calculateMonthBatch(employeeIds, year, month)
   }
 
-  // 3. Close each employee's month
-  let closedCount = 0
+  // 3. Batch-fetch all monthly values for the target month
+  const allMvs = await prisma.monthlyValue.findMany({
+    where: {
+      employeeId: { in: employeeIds },
+      year,
+      month,
+    },
+  })
+  const mvByEmployee = new Map(allMvs.map((mv) => [mv.employeeId, mv]))
+
+  // Partition into closeable vs skipped
+  const toClose: string[] = []
   let skippedCount = 0
-  const errors: { employeeId: string; reason: string }[] = []
-
   for (const empId of employeeIds) {
-    const mv = await repo.findByEmployeeYearMonth(prisma, empId, year, month)
-
-    if (!mv) {
+    const mv = mvByEmployee.get(empId)
+    if (!mv || mv.isClosed) {
       skippedCount++
-      continue
+    } else {
+      toClose.push(empId)
     }
-    if (mv.isClosed) {
-      skippedCount++
-      continue
-    }
+  }
 
+  // Close in parallel with concurrency limit
+  const errors: { employeeId: string; reason: string }[] = []
+  let closedCount = 0
+
+  await mapWithConcurrency(toClose, 5, async (empId) => {
     try {
       await monthlyCalcService.closeMonth(empId, year, month, userId)
       closedCount++
@@ -201,7 +212,7 @@ export async function closeBatch(
         reason: err instanceof Error ? err.message : String(err),
       })
     }
-  }
+  })
 
   return {
     closedCount,

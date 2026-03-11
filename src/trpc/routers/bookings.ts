@@ -21,12 +21,14 @@
  * @see apps/api/internal/repository/booking.go
  */
 import { z } from "zod"
+import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import {
   requirePermission,
   applyDataScope,
   type DataScope,
 } from "@/lib/auth/middleware"
+import { hasPermission } from "@/lib/auth/permissions"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
 import * as bookingsService from "@/lib/services/bookings-service"
@@ -427,6 +429,20 @@ export const bookingsRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       try {
+        // If user only has VIEW_OWN, verify booking belongs to their employee
+        if (!hasPermission(ctx.user!, VIEW_ALL)) {
+          const booking = await ctx.prisma.booking.findFirst({
+            where: { id: input.id, tenantId: ctx.tenantId! },
+            select: { employeeId: true },
+          })
+          if (!booking) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found" })
+          }
+          if (booking.employeeId !== ctx.user!.employeeId) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "Insufficient permissions" })
+          }
+        }
+
         const logs = await ctx.prisma.auditLog.findMany({
           where: {
             tenantId: ctx.tenantId!,

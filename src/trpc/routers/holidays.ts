@@ -44,7 +44,7 @@ type HolidayOutput = z.infer<typeof holidayOutputSchema>
 // --- Input Schemas ---
 
 const createHolidayInputSchema = z.object({
-  holidayDate: z.string().min(1, "Holiday date is required"),
+  holidayDate: z.string().date("Holiday date must be a valid YYYY-MM-DD date"),
   name: z.string().min(1, "Name is required"),
   holidayCategory: z.number().int().min(1).max(3),
   appliesToAll: z.boolean().optional(),
@@ -53,7 +53,7 @@ const createHolidayInputSchema = z.object({
 
 const updateHolidayInputSchema = z.object({
   id: z.string(),
-  holidayDate: z.string().optional(),
+  holidayDate: z.string().date().optional(),
   name: z.string().min(1).optional(),
   holidayCategory: z.number().int().min(1).max(3).optional(),
   appliesToAll: z.boolean().optional(),
@@ -127,8 +127,8 @@ export const holidaysRouter = createTRPCRouter({
       z
         .object({
           year: z.number().int().optional(),
-          from: z.string().optional(),
-          to: z.string().optional(),
+          from: z.string().date().optional(),
+          to: z.string().date().optional(),
           departmentId: z.string().optional(),
         })
         .optional()
