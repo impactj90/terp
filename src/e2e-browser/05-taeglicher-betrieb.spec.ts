@@ -219,8 +219,17 @@ test.describe("UC-034: Monthly Evaluation", () => {
   test("verify daily breakdown table loads", async ({ page }) => {
     await navigateTo(page, "/monthly-evaluation");
 
-    // Check for the daily breakdown table
     const main = page.locator("main#main-content");
+
+    // Admin users must select an employee before the table appears
+    const employeeSelect = main.getByRole("combobox").first();
+    if (await employeeSelect.isVisible({ timeout: 3_000 }).catch(() => false)) {
+      await employeeSelect.click();
+      const option = page.getByRole("option").first();
+      await option.click();
+    }
+
+    // Check for the daily breakdown table
     const table = main.locator("table");
     await expect(table.first()).toBeVisible({ timeout: 10_000 });
   });

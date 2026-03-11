@@ -7,7 +7,6 @@ import { useAuth } from '@/providers/auth-provider'
 import { useHasPermission } from '@/hooks'
 import {
   useAdminMonthlyValues,
-  useEmployees,
   useDepartments,
 } from '@/hooks'
 import { Card, CardContent } from '@/components/ui/card'
@@ -71,9 +70,6 @@ export default function MonthlyValuesPage() {
     enabled,
   })
 
-  // Employees (for frontend join - fetch all with high limit)
-  const { data: employeesData } = useEmployees({ pageSize: 1000, enabled })
-
   // Departments (for filter dropdown)
   const { data: departmentsData, isLoading: departmentsLoading } = useDepartments({ enabled })
   const departments = (departmentsData?.data ?? []).map((d: { id: string; name: string }) => ({
@@ -81,27 +77,12 @@ export default function MonthlyValuesPage() {
     name: d.name,
   }))
 
-  // Frontend join: enrich monthly values with employee names
+  // Map monthly values to table rows using embedded employee data
   const enrichedRows: MonthlyValueRow[] = React.useMemo(() => {
     const monthlyValues = mvData?.items ?? []
-    const employees = employeesData?.items ?? []
-
-    // Build employee lookup map
-    const employeeMap = new Map<
-      string,
-      { first_name: string; last_name: string; personnel_number: string }
-    >()
-    for (const emp of employees) {
-      employeeMap.set(emp.id, {
-        first_name: emp.firstName ?? '',
-        last_name: emp.lastName ?? '',
-        personnel_number: emp.personnelNumber ?? '',
-      })
-    }
 
     return monthlyValues.map((mv) => {
-      const emp = employeeMap.get(mv.employeeId ?? '')
-      // Compute derived fields from tRPC response (camelCase)
+      const emp = mv.employee
       const vacationTaken = mv.vacationTaken ?? 0
       const sickDays = mv.sickDays ?? 0
       const otherAbsenceDays = mv.otherAbsenceDays ?? 0
@@ -109,9 +90,9 @@ export default function MonthlyValuesPage() {
         id: mv.id ?? '',
         employee_id: mv.employeeId ?? '',
         employee_name: emp
-          ? `${emp.last_name}, ${emp.first_name}`
+          ? `${emp.lastName}, ${emp.firstName}`
           : (mv.employeeId ?? ''),
-        personnel_number: emp?.personnel_number ?? '',
+        personnel_number: emp?.personnelNumber ?? '',
         year: mv.year ?? year,
         month: mv.month ?? month,
         status: (mv.status ?? 'open') as MonthlyValueRow['status'],
@@ -125,7 +106,7 @@ export default function MonthlyValuesPage() {
         closed_at: mv.closedAt ? String(mv.closedAt) : null,
       }
     })
-  }, [mvData, employeesData, year, month])
+  }, [mvData, year, month])
 
   // Client-side search filter and status refinement
   const filteredRows = React.useMemo(() => {
