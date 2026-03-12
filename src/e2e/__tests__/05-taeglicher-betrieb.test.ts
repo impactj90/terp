@@ -119,6 +119,39 @@ describe("Phase 5: Taeglicher Betrieb", () => {
       .catch(() => {})
 
     await prisma.employeeDayPlan.createMany({ data: dayPlanData })
+
+    // Remove leftover non-seed absence days for test employees.
+    // Seed absence dates for employee 11 (admin): Jan 26-30, Feb 16-17
+    // Seed absence dates for employee 12 (user): Feb 10, Mar 2-4
+    // Anything else is residue from prior e2e runs.
+    const seedDates = [
+      "2026-01-26", "2026-01-27", "2026-01-28", "2026-01-29", "2026-01-30",
+      "2026-02-10", "2026-02-16", "2026-02-17",
+      "2026-03-02", "2026-03-03", "2026-03-04",
+    ]
+    await prisma.absenceDay
+      .deleteMany({
+        where: {
+          employeeId: { in: [ADMIN_EMPLOYEE_ID, USER_EMPLOYEE_ID] },
+          absenceDate: { notIn: seedDates.map((d) => new Date(d)) },
+        },
+      })
+      .catch(() => {})
+
+    // Recalculate vacation balance 'taken' to match actual remaining absence days.
+    // Mirrors the seed reconciliation logic (seed.sql C7).
+    await prisma.$executeRaw`
+      UPDATE vacation_balances SET taken = (
+        SELECT COALESCE(SUM(ad.duration), 0)
+        FROM absence_days ad
+        JOIN absence_types at2 ON ad.absence_type_id = at2.id
+        WHERE ad.employee_id = vacation_balances.employee_id
+          AND EXTRACT(YEAR FROM ad.absence_date) = vacation_balances.year
+          AND at2.code LIKE 'U%'
+          AND ad.status IN ('approved', 'pending')
+      ) WHERE employee_id IN (${ADMIN_EMPLOYEE_ID}::uuid, ${USER_EMPLOYEE_ID}::uuid)
+        AND year = 2026
+    `
   })
 
   afterAll(async () => {
@@ -661,9 +694,9 @@ describe("Phase 5: Taeglicher Betrieb", () => {
       expect(balance.year).toBe(2026)
       expect(balance.entitlement).toBe(28)
       expect(balance.carryover).toBe(5)
-      expect(balance.taken).toBe(0)
+      expect(balance.taken).toBe(3) // 3 approved vacation days in seed (March 2-4)
       expect(balance.total).toBe(33) // 28 + 5 + 0
-      expect(balance.available).toBe(33)
+      expect(balance.available).toBe(30) // 33 - 3
     })
 
     it("should compute available = total - taken correctly", async () => {

@@ -266,15 +266,15 @@ describe("calculationRules.delete", () => {
     const mockPrisma = {
       calculationRule: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       $queryRawUnsafe: vi.fn().mockResolvedValue([{ count: 0 }]),
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: RULE_ID })
     expect(result.success).toBe(true)
-    expect(mockPrisma.calculationRule.delete).toHaveBeenCalledWith({
-      where: { id: RULE_ID },
+    expect(mockPrisma.calculationRule.deleteMany).toHaveBeenCalledWith({
+      where: { id: RULE_ID, tenantId: TENANT_ID },
     })
   })
 

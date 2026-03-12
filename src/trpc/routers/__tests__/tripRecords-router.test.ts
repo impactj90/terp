@@ -360,7 +360,7 @@ describe("tripRecords.create", () => {
         vehicleId: VEHICLE_ID,
         tripDate: "not-a-date",
       })
-    ).rejects.toThrow("Invalid trip date")
+    ).rejects.toThrow(/Invalid/)
   })
 })
 

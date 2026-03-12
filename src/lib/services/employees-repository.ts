@@ -138,7 +138,7 @@ export async function getNextPin(
   tenantId: string
 ): Promise<string> {
   const result = await prisma.$queryRaw<[{ max_pin: string }]>(
-    Prisma.sql`SELECT COALESCE(MAX(pin::integer), 0) + 1 as max_pin FROM employees WHERE tenant_id = ${tenantId}::uuid AND pin ~ '^[0-9]+$' FOR UPDATE`
+    Prisma.sql`SELECT COALESCE(MAX(pin::integer), 0) + 1 as max_pin FROM employees WHERE tenant_id = ${tenantId}::uuid AND pin ~ '^[0-9]+$'`
   )
   return String(result[0]?.max_pin ?? "1")
 }

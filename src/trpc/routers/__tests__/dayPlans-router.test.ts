@@ -236,7 +236,7 @@ describe("dayPlans.create", () => {
       dayPlan: {
         findFirst: vi.fn().mockResolvedValue(null),
         create: vi.fn().mockResolvedValue(created),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(created),
+        findUnique: vi.fn().mockResolvedValue(created),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -261,7 +261,7 @@ describe("dayPlans.create", () => {
       dayPlan: {
         findFirst: vi.fn().mockResolvedValue(null),
         create: vi.fn().mockResolvedValue(created),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(created),
+        findUnique: vi.fn().mockResolvedValue(created),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -335,7 +335,7 @@ describe("dayPlans.create", () => {
       dayPlan: {
         findFirst: vi.fn().mockResolvedValue(null),
         create: vi.fn().mockResolvedValue(created),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(created),
+        findUnique: vi.fn().mockResolvedValue(created),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -362,7 +362,7 @@ describe("dayPlans.create", () => {
       dayPlan: {
         findFirst: vi.fn().mockResolvedValue(null),
         create: vi.fn().mockResolvedValue(created),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(created),
+        findUnique: vi.fn().mockResolvedValue(created),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -385,7 +385,7 @@ describe("dayPlans.update", () => {
       dayPlan: {
         findFirst: vi.fn().mockResolvedValue(existing),
         update: vi.fn().mockResolvedValue(updated),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(updated),
+        findUnique: vi.fn().mockResolvedValue(updated),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -443,7 +443,7 @@ describe("dayPlans.update", () => {
       dayPlan: {
         findFirst: vi.fn().mockResolvedValue(existing),
         update: vi.fn().mockResolvedValue(updated),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(updated),
+        findUnique: vi.fn().mockResolvedValue(updated),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -482,7 +482,7 @@ describe("dayPlans.update", () => {
       dayPlan: {
         findFirst: vi.fn().mockResolvedValue(existing),
         update: vi.fn().mockResolvedValue(updated),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(updated),
+        findUnique: vi.fn().mockResolvedValue(updated),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -500,7 +500,7 @@ describe("dayPlans.update", () => {
       dayPlan: {
         findFirst: vi.fn().mockResolvedValue(existing),
         update: vi.fn().mockResolvedValue(updated),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(updated),
+        findUnique: vi.fn().mockResolvedValue(updated),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -583,7 +583,7 @@ describe("dayPlans.copy", () => {
           .mockResolvedValueOnce(original) // fetch original
           .mockResolvedValueOnce(null), // code uniqueness check
         create: vi.fn().mockResolvedValue({ ...copyResult, id: DAY_PLAN_B_ID }),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(copyResult),
+        findUnique: vi.fn().mockResolvedValue(copyResult),
       },
       dayPlanBreak: {
         create: vi.fn().mockResolvedValue({}),

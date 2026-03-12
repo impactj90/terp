@@ -372,7 +372,7 @@ describe("employmentTypes.delete", () => {
     const mockPrisma = {
       employmentType: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       employee: {
         count: vi.fn().mockResolvedValue(0),
@@ -381,8 +381,8 @@ describe("employmentTypes.delete", () => {
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: ET_ID })
     expect(result.success).toBe(true)
-    expect(mockPrisma.employmentType.delete).toHaveBeenCalledWith({
-      where: { id: ET_ID },
+    expect(mockPrisma.employmentType.deleteMany).toHaveBeenCalledWith({
+      where: { id: ET_ID, tenantId: TENANT_ID },
     })
   })
 

@@ -346,14 +346,14 @@ describe("locations.delete", () => {
     const mockPrisma = {
       location: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: LOC_ID })
     expect(result.success).toBe(true)
-    expect(mockPrisma.location.delete).toHaveBeenCalledWith({
-      where: { id: LOC_ID },
+    expect(mockPrisma.location.deleteMany).toHaveBeenCalledWith({
+      where: { id: LOC_ID, tenantId: TENANT_ID },
     })
   })
 

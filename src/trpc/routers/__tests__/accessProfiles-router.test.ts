@@ -269,7 +269,7 @@ describe("accessProfiles.delete", () => {
     const mockPrisma = {
       accessProfile: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       employeeAccessAssignment: {
         count: vi.fn().mockResolvedValue(0),
@@ -282,8 +282,8 @@ describe("accessProfiles.delete", () => {
     expect(mockPrisma.employeeAccessAssignment.count).toHaveBeenCalledWith({
       where: { accessProfileId: PROFILE_ID },
     })
-    expect(mockPrisma.accessProfile.delete).toHaveBeenCalledWith({
-      where: { id: PROFILE_ID },
+    expect(mockPrisma.accessProfile.deleteMany).toHaveBeenCalledWith({
+      where: { id: PROFILE_ID, tenantId: TENANT_ID },
     })
   })
 

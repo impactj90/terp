@@ -288,15 +288,15 @@ describe("accessZones.delete", () => {
     const mockPrisma = {
       accessZone: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: ZONE_ID })
 
     expect(result.success).toBe(true)
-    expect(mockPrisma.accessZone.delete).toHaveBeenCalledWith({
-      where: { id: ZONE_ID },
+    expect(mockPrisma.accessZone.deleteMany).toHaveBeenCalledWith({
+      where: { id: ZONE_ID, tenantId: TENANT_ID },
     })
   })
 

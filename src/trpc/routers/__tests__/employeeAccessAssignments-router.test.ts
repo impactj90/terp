@@ -363,15 +363,15 @@ describe("employeeAccessAssignments.delete", () => {
     const mockPrisma = {
       employeeAccessAssignment: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: ASSIGNMENT_ID })
 
     expect(result.success).toBe(true)
-    expect(mockPrisma.employeeAccessAssignment.delete).toHaveBeenCalledWith({
-      where: { id: ASSIGNMENT_ID },
+    expect(mockPrisma.employeeAccessAssignment.deleteMany).toHaveBeenCalledWith({
+      where: { id: ASSIGNMENT_ID, employee: { tenantId: TENANT_ID } },
     })
   })
 

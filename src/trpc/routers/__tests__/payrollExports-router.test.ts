@@ -260,7 +260,7 @@ describe("payrollExports.preview", () => {
         findMany: vi.fn().mockResolvedValue([employee]),
       },
       monthlyValue: {
-        findFirst: vi.fn().mockResolvedValue(monthlyValue),
+        findMany: vi.fn().mockResolvedValue([{ ...monthlyValue, employeeId: EMPLOYEE_ID }]),
       },
     }
     const caller = createCaller(createViewContext(mockPrisma))

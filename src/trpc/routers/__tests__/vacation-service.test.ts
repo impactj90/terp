@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest"
 import { createCallerFactory } from "@/trpc/init"
 import { vacationRouter } from "../vacation"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
+import { Prisma } from "@/generated/prisma/client"
 import {
   createMockContext,
   createMockSession,
@@ -320,7 +321,12 @@ describe("vacation.adjustBalance", () => {
   it("throws NOT_FOUND for missing balance", async () => {
     const mockPrisma = {
       vacationBalance: {
-        findFirst: vi.fn().mockResolvedValue(null),
+        update: vi.fn().mockRejectedValue(
+          new Prisma.PrismaClientKnownRequestError("Record not found", {
+            code: "P2025",
+            clientVersion: "0.0.0",
+          })
+        ),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))

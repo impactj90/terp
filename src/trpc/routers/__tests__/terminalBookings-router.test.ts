@@ -181,7 +181,7 @@ describe("terminalBookings.import", () => {
     const createdBatch = makeBatch({ status: "processing" })
     const updatedBatch = makeBatch({ status: "completed", recordsImported: 1 })
 
-    const mockPrisma = {
+    const txMock = {
       importBatch: {
         findFirst: vi.fn().mockResolvedValue(null), // no existing
         create: vi.fn().mockResolvedValue(createdBatch),
@@ -190,12 +190,16 @@ describe("terminalBookings.import", () => {
       rawTerminalBooking: {
         createMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
+    }
+    const mockPrisma = {
+      ...txMock,
       employee: {
-        findFirst: vi.fn().mockResolvedValue(null),
+        findMany: vi.fn().mockResolvedValue([]),
       },
       bookingType: {
-        findFirst: vi.fn().mockResolvedValue(null),
+        findMany: vi.fn().mockResolvedValue([]),
       },
+      $transaction: vi.fn().mockImplementation((cb: any) => cb(txMock)),
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.import({
@@ -217,10 +221,20 @@ describe("terminalBookings.import", () => {
 
   it("returns existing batch for duplicate reference (idempotency)", async () => {
     const existingBatch = makeBatch()
-    const mockPrisma = {
+    const txMock = {
       importBatch: {
         findFirst: vi.fn().mockResolvedValue(existingBatch),
       },
+    }
+    const mockPrisma = {
+      ...txMock,
+      employee: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      bookingType: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      $transaction: vi.fn().mockImplementation((cb: any) => cb(txMock)),
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.import({
@@ -243,7 +257,7 @@ describe("terminalBookings.import", () => {
     const createdBatch = makeBatch({ status: "processing" })
     const updatedBatch = makeBatch({ status: "completed" })
 
-    const mockPrisma = {
+    const txMock = {
       importBatch: {
         findFirst: vi.fn().mockResolvedValue(null),
         create: vi.fn().mockResolvedValue(createdBatch),
@@ -252,12 +266,16 @@ describe("terminalBookings.import", () => {
       rawTerminalBooking: {
         createMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
+    }
+    const mockPrisma = {
+      ...txMock,
       employee: {
-        findFirst: vi.fn().mockResolvedValue({ id: EMPLOYEE_ID }),
+        findMany: vi.fn().mockResolvedValue([{ id: EMPLOYEE_ID, pin: "1234" }]),
       },
       bookingType: {
-        findFirst: vi.fn().mockResolvedValue(null),
+        findMany: vi.fn().mockResolvedValue([]),
       },
+      $transaction: vi.fn().mockImplementation((cb: any) => cb(txMock)),
     }
     const caller = createCaller(createTestContext(mockPrisma))
     await caller.import({
@@ -287,7 +305,7 @@ describe("terminalBookings.import", () => {
     const createdBatch = makeBatch({ status: "processing" })
     const updatedBatch = makeBatch({ status: "completed" })
 
-    const mockPrisma = {
+    const txMock = {
       importBatch: {
         findFirst: vi.fn().mockResolvedValue(null),
         create: vi.fn().mockResolvedValue(createdBatch),
@@ -296,12 +314,16 @@ describe("terminalBookings.import", () => {
       rawTerminalBooking: {
         createMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
+    }
+    const mockPrisma = {
+      ...txMock,
       employee: {
-        findFirst: vi.fn().mockResolvedValue(null),
+        findMany: vi.fn().mockResolvedValue([]),
       },
       bookingType: {
-        findFirst: vi.fn().mockResolvedValue({ id: BOOKING_TYPE_ID }),
+        findMany: vi.fn().mockResolvedValue([{ id: BOOKING_TYPE_ID, code: "COME" }]),
       },
+      $transaction: vi.fn().mockImplementation((cb: any) => cb(txMock)),
     }
     const caller = createCaller(createTestContext(mockPrisma))
     await caller.import({
@@ -330,7 +352,7 @@ describe("terminalBookings.import", () => {
   it("marks batch as failed on insert error", async () => {
     const createdBatch = makeBatch({ status: "processing" })
 
-    const mockPrisma = {
+    const txMock = {
       importBatch: {
         findFirst: vi.fn().mockResolvedValue(null),
         create: vi.fn().mockResolvedValue(createdBatch),
@@ -339,12 +361,16 @@ describe("terminalBookings.import", () => {
       rawTerminalBooking: {
         createMany: vi.fn().mockRejectedValue(new Error("DB error")),
       },
+    }
+    const mockPrisma = {
+      ...txMock,
       employee: {
-        findFirst: vi.fn().mockResolvedValue(null),
+        findMany: vi.fn().mockResolvedValue([]),
       },
       bookingType: {
-        findFirst: vi.fn().mockResolvedValue(null),
+        findMany: vi.fn().mockResolvedValue([]),
       },
+      $transaction: vi.fn().mockImplementation((cb: any) => cb(txMock)),
     }
     const caller = createCaller(createTestContext(mockPrisma))
     await expect(
@@ -361,7 +387,7 @@ describe("terminalBookings.import", () => {
       })
     ).rejects.toThrow("DB error")
 
-    expect(mockPrisma.importBatch.update).toHaveBeenCalledWith(
+    expect(txMock.importBatch.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           status: "failed",

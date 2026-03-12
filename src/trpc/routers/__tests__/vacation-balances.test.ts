@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest"
 import { createCallerFactory } from "@/trpc/init"
 import { vacationBalancesRouter } from "../vacationBalances"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
+import { Prisma } from "@/generated/prisma/client"
 import {
   createMockContext,
   createMockSession,
@@ -238,10 +239,14 @@ describe("vacationBalances.create", () => {
   })
 
   it("throws CONFLICT for duplicate employee+year", async () => {
-    const existing = makeBalance()
     const mockPrisma = {
       vacationBalance: {
-        findFirst: vi.fn().mockResolvedValue(existing),
+        create: vi.fn().mockRejectedValue(
+          new Prisma.PrismaClientKnownRequestError("Unique constraint failed", {
+            code: "P2002",
+            clientVersion: "0.0.0",
+          })
+        ),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))

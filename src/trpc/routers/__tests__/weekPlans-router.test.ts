@@ -164,7 +164,7 @@ describe("weekPlans.create", () => {
       weekPlan: {
         findFirst: vi.fn().mockResolvedValue(null), // code uniqueness
         create: vi.fn().mockResolvedValue(created),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(created),
+        findUnique: vi.fn().mockResolvedValue(created),
       },
       dayPlan: {
         findFirst: vi.fn().mockResolvedValue({ id: "exists" }), // all 7 validations pass
@@ -192,7 +192,7 @@ describe("weekPlans.create", () => {
       weekPlan: {
         findFirst: vi.fn().mockResolvedValue(null),
         create: vi.fn().mockResolvedValue(created),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(created),
+        findUnique: vi.fn().mockResolvedValue(created),
       },
       dayPlan: {
         findFirst: vi.fn().mockResolvedValue({ id: "exists" }),
@@ -310,8 +310,9 @@ describe("weekPlans.update", () => {
       weekPlan: {
         findFirst: vi.fn().mockResolvedValue(existing),
         update: vi.fn().mockResolvedValue(updated),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(updated),
+        findUnique: vi.fn().mockResolvedValue(updated),
       },
+      $transaction: vi.fn().mockImplementation((cb: any) => cb(mockPrisma)),
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({ id: WEEK_PLAN_ID, name: "Updated" })
@@ -342,8 +343,9 @@ describe("weekPlans.update", () => {
       weekPlan: {
         findFirst: vi.fn().mockResolvedValue(existing),
         update: vi.fn().mockResolvedValue(updated),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(updated),
+        findUnique: vi.fn().mockResolvedValue(updated),
       },
+      $transaction: vi.fn().mockImplementation((cb: any) => cb(mockPrisma)),
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({ id: WEEK_PLAN_ID, code: "WEEK-1" })
@@ -370,8 +372,9 @@ describe("weekPlans.update", () => {
       weekPlan: {
         findFirst: vi.fn().mockResolvedValue(existing),
         update: vi.fn().mockResolvedValue(incompleteUpdated),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(incompleteUpdated),
+        findUnique: vi.fn().mockResolvedValue(incompleteUpdated),
       },
+      $transaction: vi.fn().mockImplementation((cb: any) => cb(mockPrisma)),
     }
     const caller = createCaller(createTestContext(mockPrisma))
     await expect(

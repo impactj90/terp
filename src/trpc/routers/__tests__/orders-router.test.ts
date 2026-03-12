@@ -192,9 +192,11 @@ describe("orders.create", () => {
     const created = makeOrder()
     const mockPrisma = {
       order: {
-        findFirst: vi.fn().mockResolvedValue(null),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce(created),
         create: vi.fn().mockResolvedValue(created),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(created),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -213,9 +215,11 @@ describe("orders.create", () => {
     const created = makeOrder({ description: "Desc" })
     const mockPrisma = {
       order: {
-        findFirst: vi.fn().mockResolvedValue(null),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce(created),
         create: vi.fn().mockResolvedValue(created),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(created),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -262,9 +266,11 @@ describe("orders.create", () => {
     const created = makeOrder({ costCenterId: CC_ID })
     const mockPrisma = {
       order: {
-        findFirst: vi.fn().mockResolvedValue(null),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce(created),
         create: vi.fn().mockResolvedValue(created),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(created),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -283,9 +289,11 @@ describe("orders.create", () => {
     })
     const mockPrisma = {
       order: {
-        findFirst: vi.fn().mockResolvedValue(null),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce(created),
         create: vi.fn().mockResolvedValue(created),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(created),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -304,9 +312,11 @@ describe("orders.create", () => {
     })
     const mockPrisma = {
       order: {
-        findFirst: vi.fn().mockResolvedValue(null),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce(created),
         create: vi.fn().mockResolvedValue(created),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(created),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -329,9 +339,11 @@ describe("orders.update", () => {
     const updated = makeOrder({ name: "Updated" })
     const mockPrisma = {
       order: {
-        findFirst: vi.fn().mockResolvedValue(existing),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
         update: vi.fn().mockResolvedValue(updated),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(updated),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -387,15 +399,17 @@ describe("orders.update", () => {
     const updated = makeOrder({ code: "ORD001" })
     const mockPrisma = {
       order: {
-        findFirst: vi.fn().mockResolvedValue(existing),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
         update: vi.fn().mockResolvedValue(updated),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(updated),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({ id: ORDER_ID, code: "ORD001" })
     expect(result.code).toBe("ORD001")
-    expect(mockPrisma.order.findFirst).toHaveBeenCalledTimes(1)
+    expect(mockPrisma.order.findFirst).toHaveBeenCalledTimes(2)
   })
 
   it("throws NOT_FOUND for missing order", async () => {
@@ -415,9 +429,11 @@ describe("orders.update", () => {
     const updated = makeOrder({ status: "completed" })
     const mockPrisma = {
       order: {
-        findFirst: vi.fn().mockResolvedValue(existing),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
         update: vi.fn().mockResolvedValue(updated),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(updated),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -430,9 +446,11 @@ describe("orders.update", () => {
     const updated = makeOrder({ costCenterId: null })
     const mockPrisma = {
       order: {
-        findFirst: vi.fn().mockResolvedValue(existing),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
         update: vi.fn().mockResolvedValue(updated),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(updated),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -449,9 +467,11 @@ describe("orders.update", () => {
     const updated = makeOrder({ billingRatePerHour: null })
     const mockPrisma = {
       order: {
-        findFirst: vi.fn().mockResolvedValue(existing),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
         update: vi.fn().mockResolvedValue(updated),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(updated),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -473,14 +493,14 @@ describe("orders.delete", () => {
     const mockPrisma = {
       order: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: ORDER_ID })
     expect(result.success).toBe(true)
-    expect(mockPrisma.order.delete).toHaveBeenCalledWith({
-      where: { id: ORDER_ID },
+    expect(mockPrisma.order.deleteMany).toHaveBeenCalledWith({
+      where: { id: ORDER_ID, tenantId: TENANT_ID },
     })
   })
 

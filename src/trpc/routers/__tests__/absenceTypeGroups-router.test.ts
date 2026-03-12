@@ -317,14 +317,14 @@ describe("absenceTypeGroups.delete", () => {
     const mockPrisma = {
       absenceTypeGroup: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: GROUP_ID })
     expect(result.success).toBe(true)
-    expect(mockPrisma.absenceTypeGroup.delete).toHaveBeenCalledWith({
-      where: { id: GROUP_ID },
+    expect(mockPrisma.absenceTypeGroup.deleteMany).toHaveBeenCalledWith({
+      where: { id: GROUP_ID, tenantId: TENANT_ID },
     })
   })
 

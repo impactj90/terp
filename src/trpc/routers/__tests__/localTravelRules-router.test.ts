@@ -331,15 +331,15 @@ describe("localTravelRules.delete", () => {
     const mockPrisma = {
       localTravelRule: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: RULE_ID })
 
     expect(result.success).toBe(true)
-    expect(mockPrisma.localTravelRule.delete).toHaveBeenCalledWith({
-      where: { id: RULE_ID },
+    expect(mockPrisma.localTravelRule.deleteMany).toHaveBeenCalledWith({
+      where: { id: RULE_ID, tenantId: TENANT_ID },
     })
   })
 

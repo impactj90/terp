@@ -360,15 +360,15 @@ describe("travelAllowanceRuleSets.delete", () => {
     const mockPrisma = {
       travelAllowanceRuleSet: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: RULE_SET_ID })
 
     expect(result.success).toBe(true)
-    expect(mockPrisma.travelAllowanceRuleSet.delete).toHaveBeenCalledWith({
-      where: { id: RULE_SET_ID },
+    expect(mockPrisma.travelAllowanceRuleSet.deleteMany).toHaveBeenCalledWith({
+      where: { id: RULE_SET_ID, tenantId: TENANT_ID },
     })
   })
 

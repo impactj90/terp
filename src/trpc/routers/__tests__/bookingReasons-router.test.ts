@@ -339,14 +339,14 @@ describe("bookingReasons.delete", () => {
     const mockPrisma = {
       bookingReason: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: REASON_ID })
     expect(result.success).toBe(true)
-    expect(mockPrisma.bookingReason.delete).toHaveBeenCalledWith({
-      where: { id: REASON_ID },
+    expect(mockPrisma.bookingReason.deleteMany).toHaveBeenCalledWith({
+      where: { id: REASON_ID, tenantId: TENANT_ID },
     })
   })
 

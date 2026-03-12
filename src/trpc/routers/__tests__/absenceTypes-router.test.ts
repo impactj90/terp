@@ -501,15 +501,15 @@ describe("absenceTypes.delete", () => {
     const mockPrisma = {
       absenceType: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       absenceDay: { count: vi.fn().mockResolvedValue(0) },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: TYPE_ID })
     expect(result.success).toBe(true)
-    expect(mockPrisma.absenceType.delete).toHaveBeenCalledWith({
-      where: { id: TYPE_ID },
+    expect(mockPrisma.absenceType.deleteMany).toHaveBeenCalledWith({
+      where: { id: TYPE_ID, tenantId: TENANT_ID },
     })
   })
 

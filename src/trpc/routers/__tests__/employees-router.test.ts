@@ -727,11 +727,8 @@ describe("employees.bulkAssignTariff", () => {
     const emp2 = makeEmployee({ id: EMP_B_ID })
     const mockPrisma = {
       employee: {
-        findFirst: vi
-          .fn()
-          .mockResolvedValueOnce(emp1)
-          .mockResolvedValueOnce(emp2),
-        update: vi.fn().mockResolvedValue({}),
+        findMany: vi.fn().mockResolvedValue([emp1, emp2]),
+        updateMany: vi.fn().mockResolvedValue({ count: 2 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -751,11 +748,8 @@ describe("employees.bulkAssignTariff", () => {
     })
     const mockPrisma = {
       employee: {
-        findFirst: vi
-          .fn()
-          .mockResolvedValueOnce(emp1)
-          .mockResolvedValueOnce(emp2),
-        update: vi.fn().mockResolvedValue({}),
+        findMany: vi.fn().mockResolvedValue([emp1, emp2]),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const ctx = createTestContext(mockPrisma)
@@ -775,8 +769,8 @@ describe("employees.bulkAssignTariff", () => {
   it("skips employees not found", async () => {
     const mockPrisma = {
       employee: {
-        findFirst: vi.fn().mockResolvedValue(null),
-        update: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([]),
+        updateMany: vi.fn().mockResolvedValue({ count: 0 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))

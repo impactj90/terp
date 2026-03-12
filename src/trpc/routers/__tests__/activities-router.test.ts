@@ -337,7 +337,7 @@ describe("activities.delete", () => {
     const mockPrisma = {
       activity: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       employee: {
         count: vi.fn().mockResolvedValue(0),
@@ -346,8 +346,8 @@ describe("activities.delete", () => {
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: ACTIVITY_ID })
     expect(result.success).toBe(true)
-    expect(mockPrisma.activity.delete).toHaveBeenCalledWith({
-      where: { id: ACTIVITY_ID },
+    expect(mockPrisma.activity.deleteMany).toHaveBeenCalledWith({
+      where: { id: ACTIVITY_ID, tenantId: TENANT_ID },
     })
   })
 

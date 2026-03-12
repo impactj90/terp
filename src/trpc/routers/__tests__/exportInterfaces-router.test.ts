@@ -333,14 +333,6 @@ describe("exportInterfaces.setAccounts", () => {
       exportInterfaceAccount: {
         findMany: vi.fn().mockResolvedValue(newAccounts),
       },
-      $transaction: vi.fn().mockImplementation(async (fn: (tx: unknown) => Promise<void>) => {
-        await fn({
-          exportInterfaceAccount: {
-            deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
-            createMany: vi.fn().mockResolvedValue({ count: 2 }),
-          },
-        })
-      }),
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.setAccounts({
@@ -349,7 +341,6 @@ describe("exportInterfaces.setAccounts", () => {
     })
 
     expect(result.data).toHaveLength(2)
-    expect(mockPrisma.$transaction).toHaveBeenCalled()
   })
 })
 

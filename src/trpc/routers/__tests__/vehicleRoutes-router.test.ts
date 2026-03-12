@@ -347,7 +347,7 @@ describe("vehicleRoutes.delete", () => {
     const mockPrisma = {
       vehicleRoute: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       tripRecord: {
         count: vi.fn().mockResolvedValue(0),
@@ -357,8 +357,8 @@ describe("vehicleRoutes.delete", () => {
     const result = await caller.delete({ id: ROUTE_ID })
 
     expect(result.success).toBe(true)
-    expect(mockPrisma.vehicleRoute.delete).toHaveBeenCalledWith({
-      where: { id: ROUTE_ID },
+    expect(mockPrisma.vehicleRoute.deleteMany).toHaveBeenCalledWith({
+      where: { id: ROUTE_ID, tenantId: TENANT_ID },
     })
   })
 

@@ -408,14 +408,14 @@ describe("teams.delete", () => {
     const mockPrisma = {
       team: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: TEAM_ID })
     expect(result.success).toBe(true)
-    expect(mockPrisma.team.delete).toHaveBeenCalledWith({
-      where: { id: TEAM_ID },
+    expect(mockPrisma.team.deleteMany).toHaveBeenCalledWith({
+      where: { id: TEAM_ID, tenantId: TENANT_ID },
     })
   })
 
@@ -578,7 +578,7 @@ describe("teams.removeMember", () => {
         findFirst: vi.fn().mockResolvedValue(team),
       },
       teamMember: {
-        delete: vi.fn().mockResolvedValue(makeMember()),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
