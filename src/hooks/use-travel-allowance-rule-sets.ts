@@ -47,6 +47,9 @@ export function useCreateTravelAllowanceRuleSet() {
       queryClient.invalidateQueries({
         queryKey: trpc.travelAllowanceRuleSets.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.travelAllowanceRuleSets.getById.queryKey(),
+      })
     },
   })
 }
@@ -63,6 +66,9 @@ export function useUpdateTravelAllowanceRuleSet() {
       queryClient.invalidateQueries({
         queryKey: trpc.travelAllowanceRuleSets.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.travelAllowanceRuleSets.getById.queryKey(),
+      })
     },
   })
 }
@@ -78,6 +84,9 @@ export function useDeleteTravelAllowanceRuleSet() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.travelAllowanceRuleSets.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.travelAllowanceRuleSets.getById.queryKey(),
       })
     },
   })

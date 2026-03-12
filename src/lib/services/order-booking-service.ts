@@ -104,7 +104,11 @@ export async function create(
   })
 
   // Re-fetch with includes
-  return repo.findByIdWithInclude(prisma, created.id)
+  const result = await repo.findByIdWithInclude(prisma, tenantId, created.id)
+  if (!result) {
+    throw new OrderBookingNotFoundError()
+  }
+  return result
 }
 
 export async function update(
@@ -170,7 +174,11 @@ export async function update(
   await repo.update(prisma, input.id, data)
 
   // Re-fetch with includes
-  return repo.findByIdWithInclude(prisma, input.id)
+  const result = await repo.findByIdWithInclude(prisma, tenantId, input.id)
+  if (!result) {
+    throw new OrderBookingNotFoundError()
+  }
+  return result
 }
 
 export async function remove(

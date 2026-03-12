@@ -59,7 +59,6 @@ export async function create(
   input: {
     email: string
     displayName: string
-    tenantId?: string
     username?: string
     userGroupId?: string
     employeeId?: string
@@ -73,8 +72,6 @@ export async function create(
     dataScopeEmployeeIds?: string[]
   }
 ) {
-  const effectiveTenantId = input.tenantId ?? tenantId
-
   // Set defaults
   let role = "user"
   const isActive = input.isActive ?? true
@@ -100,7 +97,7 @@ export async function create(
     email: input.email,
     displayName: input.displayName.trim(),
     role,
-    tenantId: effectiveTenantId,
+    tenantId,
     userGroupId: input.userGroupId || null,
     employeeId: input.employeeId || null,
     username,
@@ -114,7 +111,7 @@ export async function create(
   })
 
   // Auto-add user to tenant
-  await repo.upsertUserTenant(prisma, user.id, effectiveTenantId)
+  await repo.upsertUserTenant(prisma, user.id, tenantId)
 
   return user
 }

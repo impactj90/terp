@@ -15,6 +15,7 @@
  */
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
+import { Prisma } from "@/generated/prisma/client"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import type { TRPCContext } from "@/trpc/init"
 import { requirePermission } from "@/lib/auth/middleware"
@@ -51,8 +52,8 @@ export type DepartmentTreeNode = {
 // --- Input Schemas ---
 
 const createDepartmentInputSchema = z.object({
-  code: z.string().min(1, "Code is required"),
-  name: z.string().min(1, "Name is required"),
+  code: z.string().min(1, "Code is required").max(50),
+  name: z.string().min(1, "Name is required").max(255),
   description: z.string().optional(),
   parentId: z.string().optional(),
   managerEmployeeId: z.string().optional(),
@@ -339,17 +340,28 @@ export const departmentsRouter = createTRPCRouter({
         const description = input.description?.trim() || null
 
         // Create department
-        const department = await ctx.prisma.department.create({
-          data: {
-            tenantId,
-            code,
-            name,
-            description,
-            parentId: input.parentId ?? null,
-            managerEmployeeId: input.managerEmployeeId ?? null,
-            isActive: true,
-          },
-        })
+        let department
+        try {
+          department = await ctx.prisma.department.create({
+            data: {
+              tenantId,
+              code,
+              name,
+              description,
+              parentId: input.parentId ?? null,
+              managerEmployeeId: input.managerEmployeeId ?? null,
+              isActive: true,
+            },
+          })
+        } catch (err) {
+          if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+            throw new TRPCError({
+              code: "CONFLICT",
+              message: "Department code already exists",
+            })
+          }
+          throw err
+        }
 
         return mapDepartmentToOutput(department)
       } catch (err) {

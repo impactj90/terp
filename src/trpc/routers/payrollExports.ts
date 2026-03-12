@@ -43,7 +43,7 @@ const payrollExportOutputSchema = z.object({
   status: z.string(),
   exportType: z.string(),
   format: z.string(),
-  parameters: z.unknown(),
+  parameters: z.unknown().nullable(),
   fileSize: z.number().nullable(),
   rowCount: z.number().nullable(),
   employeeCount: z.number().nullable(),

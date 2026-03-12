@@ -1,5 +1,6 @@
 import { useTRPC } from "@/trpc"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useTimeDataInvalidation } from "./use-time-data-invalidation"
 
 // Keep the existing MonthSummary interface (snake_case) for backward compatibility
 export interface MonthSummary {
@@ -218,6 +219,7 @@ export function useReopenMonth() {
 export function useRecalculateMonth() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
 
   return useMutation({
     ...trpc.monthlyValues.recalculate.mutationOptions(),
@@ -231,6 +233,8 @@ export function useRecalculateMonth() {
       queryClient.invalidateQueries({
         queryKey: trpc.monthlyValues.list.queryKey(),
       })
+      // Recalculate affects daily values too — invalidate dayView, dailyValues
+      invalidateTimeData()
     },
   })
 }

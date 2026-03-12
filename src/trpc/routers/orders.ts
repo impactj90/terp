@@ -65,8 +65,8 @@ const createOrderInputSchema = z.object({
   customer: z.string().optional(),
   costCenterId: z.string().optional(),
   billingRatePerHour: z.number().optional(),
-  validFrom: z.string().optional(),
-  validTo: z.string().optional(),
+  validFrom: z.string().date().optional(),
+  validTo: z.string().date().optional(),
 })
 
 const updateOrderInputSchema = z.object({
@@ -78,8 +78,8 @@ const updateOrderInputSchema = z.object({
   customer: z.string().nullable().optional(),
   costCenterId: z.string().nullable().optional(),
   billingRatePerHour: z.number().nullable().optional(),
-  validFrom: z.string().nullable().optional(),
-  validTo: z.string().nullable().optional(),
+  validFrom: z.string().date().nullable().optional(),
+  validTo: z.string().date().nullable().optional(),
   isActive: z.boolean().optional(),
 })
 

@@ -142,10 +142,11 @@ export async function create(
 
 export async function findByIdWithInclude(
   prisma: PrismaClient,
+  tenantId: string,
   id: string
 ) {
-  return prisma.orderBooking.findUniqueOrThrow({
-    where: { id },
+  return prisma.orderBooking.findFirst({
+    where: { id, tenantId },
     include: orderBookingInclude,
   })
 }

@@ -103,10 +103,11 @@ export async function create(
 
 export async function findByIdWithInclude(
   prisma: PrismaClient,
+  tenantId: string,
   id: string
 ) {
-  return prisma.weekPlan.findUniqueOrThrow({
-    where: { id },
+  return prisma.weekPlan.findFirst({
+    where: { id, tenantId },
     include: weekPlanInclude,
   })
 }

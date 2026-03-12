@@ -106,7 +106,11 @@ export async function create(
   }
 
   // Re-fetch with relation preloads
-  return repo.findByIdWithIncludes(prisma, created.id)
+  const result = await repo.findByIdWithIncludes(prisma, tenantId, created.id)
+  if (!result) {
+    throw new OrderAssignmentNotFoundError()
+  }
+  return result
 }
 
 export async function update(
@@ -147,7 +151,11 @@ export async function update(
   await repo.update(prisma, input.id, data)
 
   // Re-fetch with relation preloads
-  return repo.findByIdWithIncludes(prisma, input.id)
+  const result = await repo.findByIdWithIncludes(prisma, tenantId, input.id)
+  if (!result) {
+    throw new OrderAssignmentNotFoundError()
+  }
+  return result
 }
 
 export async function remove(

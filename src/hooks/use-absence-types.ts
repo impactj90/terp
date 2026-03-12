@@ -51,6 +51,9 @@ export function useCreateAbsenceType() {
       queryClient.invalidateQueries({
         queryKey: trpc.absenceTypes.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.absenceTypes.getById.queryKey(),
+      })
     },
   })
 }
@@ -67,6 +70,9 @@ export function useUpdateAbsenceType() {
       queryClient.invalidateQueries({
         queryKey: trpc.absenceTypes.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.absenceTypes.getById.queryKey(),
+      })
     },
   })
 }
@@ -82,6 +88,9 @@ export function useDeleteAbsenceType() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.absenceTypes.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.absenceTypes.getById.queryKey(),
       })
     },
   })

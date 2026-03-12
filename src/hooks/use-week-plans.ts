@@ -56,6 +56,9 @@ export function useCreateWeekPlan() {
       queryClient.invalidateQueries({
         queryKey: trpc.weekPlans.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.weekPlans.getById.queryKey(),
+      })
     },
   })
 }
@@ -72,6 +75,9 @@ export function useUpdateWeekPlan() {
       queryClient.invalidateQueries({
         queryKey: trpc.weekPlans.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.weekPlans.getById.queryKey(),
+      })
     },
   })
 }
@@ -87,6 +93,9 @@ export function useDeleteWeekPlan() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.weekPlans.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.weekPlans.getById.queryKey(),
       })
     },
   })

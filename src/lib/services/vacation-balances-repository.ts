@@ -93,6 +93,20 @@ export async function findBalanceByIdSimple(
 }
 
 /**
+ * Finds all vacation balances for a tenant and year.
+ * Used for batch operations to avoid N+1 queries.
+ */
+export async function findBalancesByTenantAndYear(
+  prisma: PrismaClient,
+  tenantId: string,
+  year: number
+) {
+  return prisma.vacationBalance.findMany({
+    where: { tenantId, year },
+  })
+}
+
+/**
  * Updates a vacation balance by ID with partial data.
  */
 export async function updateBalance(

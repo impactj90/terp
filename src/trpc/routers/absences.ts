@@ -117,7 +117,7 @@ const createRangeInputSchema = z.object({
   toDate: z.string().date(), // YYYY-MM-DD
   duration: z.number().min(0.5).max(1).default(1),
   halfDayPeriod: z.enum(["morning", "afternoon"]).optional(),
-  notes: z.string().optional(),
+  notes: z.string().max(2000).optional(),
 })
 
 const createRangeOutputSchema = z.object({
@@ -129,7 +129,7 @@ const updateInputSchema = z.object({
   id: z.string(),
   duration: z.number().min(0.5).max(1).optional(),
   halfDayPeriod: z.enum(["morning", "afternoon"]).nullable().optional(),
-  notes: z.string().nullable().optional(),
+  notes: z.string().max(2000).nullable().optional(),
 })
 
 const deleteInputSchema = z.object({
@@ -142,7 +142,7 @@ const approveInputSchema = z.object({
 
 const rejectInputSchema = z.object({
   id: z.string(),
-  reason: z.string().optional(),
+  reason: z.string().max(2000).optional(),
 })
 
 const cancelInputSchema = z.object({

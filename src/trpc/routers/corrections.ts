@@ -91,8 +91,8 @@ const createInputSchema = z.object({
   correctionDate: z.string().date(), // YYYY-MM-DD
   correctionType: z.string().min(1),
   accountId: z.string().optional(),
-  valueMinutes: z.number().int(),
-  reason: z.string().optional().default(""),
+  valueMinutes: z.number().int().min(-10080).max(10080),
+  reason: z.string().max(500).optional().default(""),
 })
 
 const updateInputSchema = z.object({

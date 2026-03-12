@@ -54,7 +54,7 @@ export async function list(
     throw new EmployeeNotFoundError()
   }
 
-  return repo.findMany(prisma, params.employeeId, {
+  return repo.findMany(prisma, tenantId, params.employeeId, {
     isActive: params.isActive,
   })
 }
@@ -248,6 +248,7 @@ export async function getEffective(
   // Find active assignment covering the date
   const assignment = await repo.findEffective(
     prisma,
+    tenantId,
     params.employeeId,
     date
   )

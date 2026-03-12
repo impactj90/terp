@@ -133,6 +133,19 @@ export async function findMonthlyValue(
   })
 }
 
+export async function findMonthlyValuesBatch(
+  prisma: PrismaClient,
+  tenantId: string,
+  employeeIds: string[],
+  year: number,
+  month: number
+) {
+  if (employeeIds.length === 0) return []
+  return prisma.monthlyValue.findMany({
+    where: { tenantId, employeeId: { in: employeeIds }, year, month },
+  })
+}
+
 export async function findExportInterfaceAccounts(
   prisma: PrismaClient,
   exportInterfaceId: string

@@ -69,6 +69,12 @@ export function useCleanupDeleteBookingData() {
       queryClient.invalidateQueries({
         queryKey: trpc.bookings.getById.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeDayPlans.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeDayPlans.forEmployee.queryKey(),
+      })
       invalidateTimeData()
     },
   })
@@ -100,7 +106,19 @@ export function useCleanupReReadBookings() {
  */
 export function useCleanupMarkDeleteOrders() {
   const trpc = useTRPC()
-  return useMutation(
-    trpc.systemSettings.cleanupMarkDeleteOrders.mutationOptions()
-  )
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.systemSettings.cleanupMarkDeleteOrders.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.orders.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.orderAssignments.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.orderBookings.list.queryKey(),
+      })
+    },
+  })
 }

@@ -167,15 +167,21 @@ async function gatherMonthlyOverview(
   }
 
   const { from, to } = parseDateRange(params.fromDate, params.toDate)
+  const months: Array<{ year: number; month: number }> = []
+  iterateMonths(from, to, (year, month) => {
+    months.push({ year, month })
+  })
+
+  const empIds = employees.map((e) => e.id)
+  const allMvs = await repo.findMonthlyValuesBatch(prisma, tenantId, empIds, months)
+  const mvMap = new Map<string, (typeof allMvs)[number]>()
+  for (const mv of allMvs) {
+    mvMap.set(`${mv.employeeId}-${mv.year}-${mv.month}`, mv)
+  }
 
   for (const emp of employees) {
-    const months: Array<{ year: number; month: number }> = []
-    iterateMonths(from, to, (year, month) => {
-      months.push({ year, month })
-    })
-
     for (const { year, month } of months) {
-      const mv = await repo.findMonthlyValue(prisma, tenantId, emp.id, year, month)
+      const mv = mvMap.get(`${emp.id}-${year}-${month}`)
       if (!mv) continue
 
       const targetHours = (mv.totalTargetTime / 60).toFixed(2)
@@ -222,15 +228,21 @@ async function gatherOvertimeReport(
   }
 
   const { from, to } = parseDateRange(params.fromDate, params.toDate)
+  const months: Array<{ year: number; month: number }> = []
+  iterateMonths(from, to, (year, month) => {
+    months.push({ year, month })
+  })
+
+  const empIds = employees.map((e) => e.id)
+  const allMvs = await repo.findMonthlyValuesBatch(prisma, tenantId, empIds, months)
+  const mvMap = new Map<string, (typeof allMvs)[number]>()
+  for (const mv of allMvs) {
+    mvMap.set(`${mv.employeeId}-${mv.year}-${mv.month}`, mv)
+  }
 
   for (const emp of employees) {
-    const months: Array<{ year: number; month: number }> = []
-    iterateMonths(from, to, (year, month) => {
-      months.push({ year, month })
-    })
-
     for (const { year, month } of months) {
-      const mv = await repo.findMonthlyValue(prisma, tenantId, emp.id, year, month)
+      const mv = mvMap.get(`${emp.id}-${year}-${month}`)
       if (!mv) continue
 
       data.values.push([
@@ -265,6 +277,17 @@ async function gatherDepartmentSummary(
   }
 
   const { from, to } = parseDateRange(params.fromDate, params.toDate)
+  const months: Array<{ year: number; month: number }> = []
+  iterateMonths(from, to, (year, month) => {
+    months.push({ year, month })
+  })
+
+  const empIds = employees.map((e) => e.id)
+  const allMvs = await repo.findMonthlyValuesBatch(prisma, tenantId, empIds, months)
+  const mvMap = new Map<string, (typeof allMvs)[number]>()
+  for (const mv of allMvs) {
+    mvMap.set(`${mv.employeeId}-${mv.year}-${mv.month}`, mv)
+  }
 
   // Group employees by department
   const deptMap = new Map<string, EmployeeScope[]>()
@@ -282,13 +305,8 @@ async function gatherDepartmentSummary(
     let totalOT = 0
 
     for (const emp of deptEmps) {
-      const months: Array<{ year: number; month: number }> = []
-      iterateMonths(from, to, (year, month) => {
-        months.push({ year, month })
-      })
-
       for (const { year, month } of months) {
-        const mv = await repo.findMonthlyValue(prisma, tenantId, emp.id, year, month)
+        const mv = mvMap.get(`${emp.id}-${year}-${month}`)
         if (!mv) continue
         totalTarget += mv.totalTargetTime / 60
         totalWorked += mv.totalNetTime / 60
@@ -324,15 +342,21 @@ async function gatherAccountBalances(
   }
 
   const { from, to } = parseDateRange(params.fromDate, params.toDate)
+  const months: Array<{ year: number; month: number }> = []
+  iterateMonths(from, to, (year, month) => {
+    months.push({ year, month })
+  })
+
+  const empIds = employees.map((e) => e.id)
+  const allMvs = await repo.findMonthlyValuesBatch(prisma, tenantId, empIds, months)
+  const mvMap = new Map<string, (typeof allMvs)[number]>()
+  for (const mv of allMvs) {
+    mvMap.set(`${mv.employeeId}-${mv.year}-${mv.month}`, mv)
+  }
 
   for (const emp of employees) {
-    const months: Array<{ year: number; month: number }> = []
-    iterateMonths(from, to, (year, month) => {
-      months.push({ year, month })
-    })
-
     for (const { year, month } of months) {
-      const mv = await repo.findMonthlyValue(prisma, tenantId, emp.id, year, month)
+      const mv = mvMap.get(`${emp.id}-${year}-${month}`)
       if (!mv) continue
 
       data.values.push([
@@ -374,8 +398,15 @@ async function gatherVacationReport(
     }
   }
 
+  const empIds = employees.map((e) => e.id)
+  const allVbs = await repo.findVacationBalancesBatch(prisma, tenantId, empIds, year)
+  const vbMap = new Map<string, (typeof allVbs)[number]>()
+  for (const vb of allVbs) {
+    vbMap.set(vb.employeeId, vb)
+  }
+
   for (const emp of employees) {
-    const vb = await repo.findVacationBalance(prisma, tenantId, emp.id, year)
+    const vb = vbMap.get(emp.id)
     if (!vb) continue
 
     const entitlement = decimalToNumber(vb.entitlement)

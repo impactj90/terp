@@ -17,6 +17,7 @@ import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
 
 // --- Permission Constants ---
 
@@ -114,58 +115,62 @@ export const terminalBookingsRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
+      try {
+        const tenantId = ctx.tenantId!
 
-      const where: Record<string, unknown> = { tenantId }
-      if (input.terminalId) {
-        where.terminalId = input.terminalId
-      }
-      if (input.employeeId) {
-        where.employeeId = input.employeeId
-      }
-      if (input.importBatchId) {
-        where.importBatchId = input.importBatchId
-      }
-      if (input.status) {
-        where.status = input.status
-      }
-      if (input.from && input.to) {
-        where.bookingDate = {
-          gte: new Date(input.from),
-          lte: new Date(input.to),
+        const where: Record<string, unknown> = { tenantId }
+        if (input.terminalId) {
+          where.terminalId = input.terminalId
         }
-      }
+        if (input.employeeId) {
+          where.employeeId = input.employeeId
+        }
+        if (input.importBatchId) {
+          where.importBatchId = input.importBatchId
+        }
+        if (input.status) {
+          where.status = input.status
+        }
+        if (input.from && input.to) {
+          where.bookingDate = {
+            gte: new Date(input.from),
+            lte: new Date(input.to),
+          }
+        }
 
-      const [data, total] = await Promise.all([
-        ctx.prisma.rawTerminalBooking.findMany({
-          where,
-          take: input.limit,
-          skip: (input.page - 1) * input.limit,
-          orderBy: { rawTimestamp: "desc" },
-          include: {
-            employee: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                personnelNumber: true,
+        const [data, total] = await Promise.all([
+          ctx.prisma.rawTerminalBooking.findMany({
+            where,
+            take: input.limit,
+            skip: (input.page - 1) * input.limit,
+            orderBy: { rawTimestamp: "desc" },
+            include: {
+              employee: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  personnelNumber: true,
+                },
+              },
+              bookingType: {
+                select: { id: true, code: true, name: true },
               },
             },
-            bookingType: {
-              select: { id: true, code: true, name: true },
-            },
-          },
-        }),
-        ctx.prisma.rawTerminalBooking.count({ where }),
-      ])
+          }),
+          ctx.prisma.rawTerminalBooking.count({ where }),
+        ])
 
-      return {
-        data,
-        meta: {
-          total,
-          limit: input.limit,
-          hasMore: input.page * input.limit < total,
-        },
+        return {
+          data,
+          meta: {
+            total,
+            limit: input.limit,
+            hasMore: input.page * input.limit < total,
+          },
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -186,12 +191,13 @@ export const terminalBookingsRouter = createTRPCRouter({
         bookings: z
           .array(
             z.object({
-              employeePin: z.string(),
+              employeePin: z.string().min(1),
               rawTimestamp: z.string(),
-              rawBookingCode: z.string(),
+              rawBookingCode: z.string().min(1),
             })
           )
-          .min(1, "At least one booking is required"),
+          .min(1, "At least one booking is required")
+          .max(5000, "Maximum 5000 bookings per import"),
       })
     )
     .output(
@@ -202,10 +208,11 @@ export const terminalBookingsRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
+      try {
+        const tenantId = ctx.tenantId!
 
-      // Validate input
-      const batchReference = input.batchReference.trim()
+        // Validate input
+        const batchReference = input.batchReference.trim()
       if (batchReference.length === 0) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -220,111 +227,114 @@ export const terminalBookingsRouter = createTRPCRouter({
         })
       }
 
-      // Idempotency check
-      const existing = await ctx.prisma.importBatch.findFirst({
-        where: { tenantId, batchReference },
-      })
-      if (existing) {
-        return {
-          batch: existing,
-          wasDuplicate: true,
-          message: `Batch '${batchReference}' already imported (${existing.recordsTotal} records)`,
-        }
-      }
+      // Pre-fetch employee/booking-type lookup maps to avoid N+1
+      const uniquePins = [...new Set(input.bookings.map((b) => b.employeePin))]
+      const uniqueCodes = [...new Set(input.bookings.map((b) => b.rawBookingCode))]
 
-      // Create import batch
-      const batch = await ctx.prisma.importBatch.create({
-        data: {
-          tenantId,
-          batchReference,
-          source: "terminal",
-          terminalId,
-          status: "processing",
-          recordsTotal: input.bookings.length,
-          startedAt: new Date(),
-        },
-      })
+      const [empsByPin, btsByCode] = await Promise.all([
+        ctx.prisma.employee.findMany({
+          where: { tenantId, pin: { in: uniquePins } },
+          select: { id: true, pin: true },
+        }),
+        ctx.prisma.bookingType.findMany({
+          where: {
+            OR: [
+              { tenantId, code: { in: uniqueCodes } },
+              { tenantId: null, code: { in: uniqueCodes } },
+            ],
+          },
+          select: { id: true, code: true },
+        }),
+      ])
+      const pinMap = new Map(empsByPin.map((e) => [e.pin, e.id]))
+      const codeMap = new Map(btsByCode.map((bt) => [bt.code, bt.id]))
 
-      try {
-        // Build raw booking records
-        const rawBookingData = []
-        for (const b of input.bookings) {
-          const rawTimestamp = new Date(b.rawTimestamp)
-          const bookingDate = new Date(
-            rawTimestamp.getFullYear(),
-            rawTimestamp.getMonth(),
-            rawTimestamp.getDate()
-          )
-
-          // Resolve employee by PIN (graceful)
-          let employeeId: string | null = null
-          const emp = await ctx.prisma.employee.findFirst({
-            where: { tenantId, pin: b.employeePin },
-          })
-          if (emp) {
-            employeeId = emp.id
+      // Use transaction for atomic idempotency check + batch creation
+      return ctx.prisma.$transaction(async (tx) => {
+        // Idempotency check inside transaction
+        const existing = await tx.importBatch.findFirst({
+          where: { tenantId, batchReference },
+        })
+        if (existing) {
+          return {
+            batch: existing,
+            wasDuplicate: true,
+            message: `Batch '${batchReference}' already imported (${existing.recordsTotal} records)`,
           }
+        }
 
-          // Resolve booking type by code (graceful)
-          let bookingTypeId: string | null = null
-          const bt = await ctx.prisma.bookingType.findFirst({
-            where: {
-              OR: [
-                { tenantId, code: b.rawBookingCode },
-                { tenantId: null, code: b.rawBookingCode },
-              ],
+        // Create import batch
+        const batch = await tx.importBatch.create({
+          data: {
+            tenantId,
+            batchReference,
+            source: "terminal",
+            terminalId,
+            status: "processing",
+            recordsTotal: input.bookings.length,
+            startedAt: new Date(),
+          },
+        })
+
+        try {
+          // Build raw booking records using pre-fetched maps
+          const rawBookingData = input.bookings.map((b) => {
+            const rawTimestamp = new Date(b.rawTimestamp)
+            const bookingDate = new Date(
+              rawTimestamp.getFullYear(),
+              rawTimestamp.getMonth(),
+              rawTimestamp.getDate()
+            )
+            return {
+              tenantId,
+              importBatchId: batch.id,
+              terminalId,
+              employeePin: b.employeePin,
+              employeeId: pinMap.get(b.employeePin) ?? null,
+              rawTimestamp,
+              rawBookingCode: b.rawBookingCode,
+              bookingDate,
+              bookingTypeId: codeMap.get(b.rawBookingCode) ?? null,
+              status: "pending",
+            }
+          })
+
+          // Batch insert raw bookings
+          await tx.rawTerminalBooking.createMany({
+            data: rawBookingData,
+          })
+
+          // Mark batch as completed
+          const updatedBatch = await tx.importBatch.update({
+            where: { id: batch.id },
+            data: {
+              status: "completed",
+              recordsImported: rawBookingData.length,
+              completedAt: new Date(),
             },
           })
-          if (bt) {
-            bookingTypeId = bt.id
+
+          return {
+            batch: updatedBatch,
+            wasDuplicate: false,
+            message: `Successfully imported ${rawBookingData.length} records from terminal '${terminalId}'`,
           }
-
-          rawBookingData.push({
-            tenantId,
-            importBatchId: batch.id,
-            terminalId,
-            employeePin: b.employeePin,
-            employeeId,
-            rawTimestamp,
-            rawBookingCode: b.rawBookingCode,
-            bookingDate,
-            bookingTypeId,
-            status: "pending",
+        } catch (error) {
+          // Mark batch as failed
+          await tx.importBatch.update({
+            where: { id: batch.id },
+            data: {
+              status: "failed",
+              errorMessage:
+                error instanceof Error ? error.message : "Unknown error",
+              completedAt: new Date(),
+            },
           })
+          throw error
         }
-
-        // Batch insert raw bookings
-        await ctx.prisma.rawTerminalBooking.createMany({
-          data: rawBookingData,
-        })
-
-        // Mark batch as completed
-        const updatedBatch = await ctx.prisma.importBatch.update({
-          where: { id: batch.id },
-          data: {
-            status: "completed",
-            recordsImported: rawBookingData.length,
-            completedAt: new Date(),
-          },
-        })
-
-        return {
-          batch: updatedBatch,
-          wasDuplicate: false,
-          message: `Successfully imported ${rawBookingData.length} records from terminal '${terminalId}'`,
-        }
-      } catch (error) {
-        // Mark batch as failed
-        await ctx.prisma.importBatch.update({
-          where: { id: batch.id },
-          data: {
-            status: "failed",
-            errorMessage:
-              error instanceof Error ? error.message : "Unknown error",
-            completedAt: new Date(),
-          },
-        })
-        throw error
+      })
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -359,33 +369,37 @@ export const terminalBookingsRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
+      try {
+        const tenantId = ctx.tenantId!
 
-      const where: Record<string, unknown> = { tenantId }
-      if (input.status) {
-        where.status = input.status
-      }
-      if (input.terminalId) {
-        where.terminalId = input.terminalId
-      }
+        const where: Record<string, unknown> = { tenantId }
+        if (input.status) {
+          where.status = input.status
+        }
+        if (input.terminalId) {
+          where.terminalId = input.terminalId
+        }
 
-      const [data, total] = await Promise.all([
-        ctx.prisma.importBatch.findMany({
-          where,
-          take: input.limit,
-          skip: (input.page - 1) * input.limit,
-          orderBy: { createdAt: "desc" },
-        }),
-        ctx.prisma.importBatch.count({ where }),
-      ])
+        const [data, total] = await Promise.all([
+          ctx.prisma.importBatch.findMany({
+            where,
+            take: input.limit,
+            skip: (input.page - 1) * input.limit,
+            orderBy: { createdAt: "desc" },
+          }),
+          ctx.prisma.importBatch.count({ where }),
+        ])
 
-      return {
-        data,
-        meta: {
-          total,
-          limit: input.limit,
-          hasMore: input.page * input.limit < total,
-        },
+        return {
+          data,
+          meta: {
+            total,
+            limit: input.limit,
+            hasMore: input.page * input.limit < total,
+          },
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -399,19 +413,23 @@ export const terminalBookingsRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .output(importBatchOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
+      try {
+        const tenantId = ctx.tenantId!
 
-      const batch = await ctx.prisma.importBatch.findFirst({
-        where: { id: input.id, tenantId },
-      })
-
-      if (!batch) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Import batch not found",
+        const batch = await ctx.prisma.importBatch.findFirst({
+          where: { id: input.id, tenantId },
         })
-      }
 
-      return batch
+        if (!batch) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Import batch not found",
+          })
+        }
+
+        return batch
+      } catch (err) {
+        handleServiceError(err)
+      }
     }),
 })

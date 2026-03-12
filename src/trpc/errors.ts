@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server"
+import { Prisma } from "@/generated/prisma/client"
 
 /**
  * Maps domain service errors to tRPC error responses.
@@ -58,10 +59,49 @@ export function handleServiceError(err: unknown): never {
     }
   }
 
+  // Prisma-specific error handling — prevent raw DB messages from leaking to clients
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    switch (err.code) {
+      case "P2025":
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Record not found",
+          cause: err,
+        })
+      case "P2002":
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "A record with this value already exists",
+          cause: err,
+        })
+      case "P2003":
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Referenced record does not exist",
+          cause: err,
+        })
+      default:
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "An unexpected error occurred",
+          cause: err,
+        })
+    }
+  }
+
+  if (err instanceof Prisma.PrismaClientValidationError) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Invalid query parameters",
+      cause: err,
+    })
+  }
+
   // Fallback: wrap unknown errors as INTERNAL_SERVER_ERROR
+  console.error("[handleServiceError] Unhandled error:", err)
   throw new TRPCError({
     code: "INTERNAL_SERVER_ERROR",
-    message: err instanceof Error ? err.message : "An unexpected error occurred",
+    message: "An unexpected error occurred",
     cause: err instanceof Error ? err : undefined,
   })
 }

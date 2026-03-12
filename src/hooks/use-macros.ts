@@ -43,6 +43,9 @@ export function useCreateMacro() {
       queryClient.invalidateQueries({
         queryKey: trpc.macros.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.macros.getById.queryKey(),
+      })
     },
   })
 }
@@ -59,6 +62,9 @@ export function useUpdateMacro() {
       queryClient.invalidateQueries({
         queryKey: trpc.macros.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.macros.getById.queryKey(),
+      })
     },
   })
 }
@@ -74,6 +80,9 @@ export function useDeleteMacro() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.macros.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.macros.getById.queryKey(),
       })
     },
   })
@@ -164,6 +173,12 @@ export function useExecuteMacro() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.macros.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.macros.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.macros.listExecutions.queryKey(),
       })
     },
   })

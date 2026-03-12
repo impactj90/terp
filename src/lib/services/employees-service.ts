@@ -262,77 +262,91 @@ export async function create(
     throw new EmployeeConflictError("PIN already exists")
   }
 
-  // Build create data
-  return repo.create(prisma, {
-    tenantId,
-    personnelNumber,
-    pin,
-    firstName,
-    lastName,
-    email: input.email?.trim() || null,
-    phone: input.phone?.trim() || null,
-    entryDate: input.entryDate,
-    exitDate: input.exitDate ?? null,
-    departmentId: input.departmentId ?? null,
-    costCenterId: input.costCenterId ?? null,
-    employmentTypeId: input.employmentTypeId ?? null,
-    tariffId: input.tariffId ?? null,
-    weeklyHours:
-      input.weeklyHours !== undefined
-        ? new Prisma.Decimal(input.weeklyHours)
-        : new Prisma.Decimal(40.0),
-    vacationDaysPerYear:
-      input.vacationDaysPerYear !== undefined
-        ? new Prisma.Decimal(input.vacationDaysPerYear)
-        : new Prisma.Decimal(30.0),
-    isActive: input.isActive ?? true,
-    disabilityFlag: input.disabilityFlag ?? false,
-    exitReason: input.exitReason?.trim() || null,
-    notes: input.notes?.trim() || null,
-    addressStreet: input.addressStreet?.trim() || null,
-    addressZip: input.addressZip?.trim() || null,
-    addressCity: input.addressCity?.trim() || null,
-    addressCountry: input.addressCountry?.trim() || null,
-    birthDate: input.birthDate ?? null,
-    gender: input.gender?.trim() || null,
-    nationality: input.nationality?.trim() || null,
-    religion: input.religion?.trim() || null,
-    maritalStatus: input.maritalStatus?.trim() || null,
-    birthPlace: input.birthPlace?.trim() || null,
-    birthCountry: input.birthCountry?.trim() || null,
-    roomNumber: input.roomNumber?.trim() || null,
-    photoUrl: input.photoUrl?.trim() || null,
-    employeeGroupId: input.employeeGroupId ?? null,
-    workflowGroupId: input.workflowGroupId ?? null,
-    activityGroupId: input.activityGroupId ?? null,
-    defaultOrderId: input.defaultOrderId ?? null,
-    defaultActivityId: input.defaultActivityId ?? null,
-    partTimePercent:
-      input.partTimePercent !== undefined
-        ? new Prisma.Decimal(input.partTimePercent)
-        : null,
-    dailyTargetHours:
-      input.dailyTargetHours !== undefined
-        ? new Prisma.Decimal(input.dailyTargetHours)
-        : null,
-    weeklyTargetHours:
-      input.weeklyTargetHours !== undefined
-        ? new Prisma.Decimal(input.weeklyTargetHours)
-        : null,
-    monthlyTargetHours:
-      input.monthlyTargetHours !== undefined
-        ? new Prisma.Decimal(input.monthlyTargetHours)
-        : null,
-    annualTargetHours:
-      input.annualTargetHours !== undefined
-        ? new Prisma.Decimal(input.annualTargetHours)
-        : null,
-    workDaysPerWeek:
-      input.workDaysPerWeek !== undefined
-        ? new Prisma.Decimal(input.workDaysPerWeek)
-        : null,
-    calculationStartDate: input.calculationStartDate ?? null,
-  })
+  // Build create data -- wrap in try/catch for P2002 unique constraint as safety net
+  try {
+    return await repo.create(prisma, {
+      tenantId,
+      personnelNumber,
+      pin,
+      firstName,
+      lastName,
+      email: input.email?.trim() || null,
+      phone: input.phone?.trim() || null,
+      entryDate: input.entryDate,
+      exitDate: input.exitDate ?? null,
+      departmentId: input.departmentId ?? null,
+      costCenterId: input.costCenterId ?? null,
+      employmentTypeId: input.employmentTypeId ?? null,
+      tariffId: input.tariffId ?? null,
+      weeklyHours:
+        input.weeklyHours !== undefined
+          ? new Prisma.Decimal(input.weeklyHours)
+          : new Prisma.Decimal(40.0),
+      vacationDaysPerYear:
+        input.vacationDaysPerYear !== undefined
+          ? new Prisma.Decimal(input.vacationDaysPerYear)
+          : new Prisma.Decimal(30.0),
+      isActive: input.isActive ?? true,
+      disabilityFlag: input.disabilityFlag ?? false,
+      exitReason: input.exitReason?.trim() || null,
+      notes: input.notes?.trim() || null,
+      addressStreet: input.addressStreet?.trim() || null,
+      addressZip: input.addressZip?.trim() || null,
+      addressCity: input.addressCity?.trim() || null,
+      addressCountry: input.addressCountry?.trim() || null,
+      birthDate: input.birthDate ?? null,
+      gender: input.gender?.trim() || null,
+      nationality: input.nationality?.trim() || null,
+      religion: input.religion?.trim() || null,
+      maritalStatus: input.maritalStatus?.trim() || null,
+      birthPlace: input.birthPlace?.trim() || null,
+      birthCountry: input.birthCountry?.trim() || null,
+      roomNumber: input.roomNumber?.trim() || null,
+      photoUrl: input.photoUrl?.trim() || null,
+      employeeGroupId: input.employeeGroupId ?? null,
+      workflowGroupId: input.workflowGroupId ?? null,
+      activityGroupId: input.activityGroupId ?? null,
+      defaultOrderId: input.defaultOrderId ?? null,
+      defaultActivityId: input.defaultActivityId ?? null,
+      partTimePercent:
+        input.partTimePercent !== undefined
+          ? new Prisma.Decimal(input.partTimePercent)
+          : null,
+      dailyTargetHours:
+        input.dailyTargetHours !== undefined
+          ? new Prisma.Decimal(input.dailyTargetHours)
+          : null,
+      weeklyTargetHours:
+        input.weeklyTargetHours !== undefined
+          ? new Prisma.Decimal(input.weeklyTargetHours)
+          : null,
+      monthlyTargetHours:
+        input.monthlyTargetHours !== undefined
+          ? new Prisma.Decimal(input.monthlyTargetHours)
+          : null,
+      annualTargetHours:
+        input.annualTargetHours !== undefined
+          ? new Prisma.Decimal(input.annualTargetHours)
+          : null,
+      workDaysPerWeek:
+        input.workDaysPerWeek !== undefined
+          ? new Prisma.Decimal(input.workDaysPerWeek)
+          : null,
+      calculationStartDate: input.calculationStartDate ?? null,
+    })
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      const target = (err.meta?.target as string[]) ?? []
+      if (target.includes('personnel_number')) {
+        throw new EmployeeConflictError("Personnel number already exists")
+      }
+      if (target.includes('pin')) {
+        throw new EmployeeConflictError("PIN already exists")
+      }
+      throw new EmployeeConflictError("Employee with these unique fields already exists")
+    }
+    throw err
+  }
 }
 
 export async function update(
@@ -719,28 +733,39 @@ export async function bulkAssignTariff(
     clearTariff?: boolean
   }
 ) {
-  let updated = 0
+  // Batch-fetch all employees to avoid N+1
+  const employees = await prisma.employee.findMany({
+    where: { id: { in: input.employeeIds }, tenantId, deletedAt: null },
+  })
+  const empMap = new Map(employees.map((e) => [e.id, e]))
+
+  const validIds: string[] = []
   let skipped = 0
 
   for (const employeeId of input.employeeIds) {
-    const employee = await repo.findById(prisma, tenantId, employeeId)
-
+    const employee = empMap.get(employeeId)
     if (!employee) {
       skipped++
       continue
     }
-
-    // Check data scope per employee
     try {
       checkDataScope(dataScope, employee)
+      validIds.push(employeeId)
     } catch {
       skipped++
-      continue
     }
+  }
 
-    const tariffValue = input.clearTariff ? null : input.tariffId
-    await repo.update(prisma, employeeId, { tariffId: tariffValue })
-    updated++
+  const tariffValue = input.clearTariff ? null : input.tariffId
+
+  // Batch update in a transaction
+  let updated = 0
+  if (validIds.length > 0) {
+    const result = await prisma.employee.updateMany({
+      where: { id: { in: validIds } },
+      data: { tariffId: tariffValue },
+    })
+    updated = result.count
   }
 
   return { updated, skipped }
@@ -755,8 +780,8 @@ export async function getDayView(
   // Load all day data in parallel (all queries are independent)
   const [bookings, dailyValue, empDayPlan, holiday] = await Promise.all([
     repo.findBookingsForDay(prisma, tenantId, employeeId, date),
-    repo.findDailyValue(prisma, employeeId, date),
-    repo.findEmployeeDayPlan(prisma, employeeId, date),
+    repo.findDailyValue(prisma, tenantId, employeeId, date),
+    repo.findEmployeeDayPlan(prisma, tenantId, employeeId, date),
     repo.findHoliday(prisma, tenantId, date),
   ])
   const isHoliday = holiday !== null

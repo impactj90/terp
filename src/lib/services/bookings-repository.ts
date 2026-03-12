@@ -181,10 +181,11 @@ export async function deleteWithDerived(
 
 export async function findDerivedByOriginalId(
   prisma: PrismaClient,
+  tenantId: string,
   originalBookingId: string
 ) {
   return prisma.booking.findFirst({
-    where: { originalBookingId },
+    where: { tenantId, originalBookingId },
   })
 }
 

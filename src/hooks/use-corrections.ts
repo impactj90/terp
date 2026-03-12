@@ -152,6 +152,7 @@ export function useApproveCorrection() {
 export function useRejectCorrection() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
   return useMutation({
     ...trpc.corrections.reject.mutationOptions(),
     onSuccess: () => {
@@ -164,6 +165,8 @@ export function useRejectCorrection() {
       queryClient.invalidateQueries({
         queryKey: trpc.correctionAssistant.listItems.queryKey(),
       })
+      // Reject may trigger recalc — invalidate dayView, dailyValues, monthlyValues
+      invalidateTimeData()
     },
   })
 }

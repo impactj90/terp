@@ -81,11 +81,10 @@ const userWithRelationsOutputSchema = userOutputSchema.extend({
 const createUserInputSchema = z.object({
   email: z.string().email(),
   displayName: z.string().min(1),
-  tenantId: z.string().optional(),
   username: z.string().optional(),
   userGroupId: z.string().optional(),
   employeeId: z.string().optional(),
-  password: z.string().optional(),
+  password: z.string().min(8).optional(),
   ssoId: z.string().optional(),
   isActive: z.boolean().optional().default(true),
   isLocked: z.boolean().optional().default(false),

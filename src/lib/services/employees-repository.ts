@@ -17,14 +17,15 @@ export async function findMany(
     take: number
   }
 ) {
+  const where = { tenantId, ...params.where }
   const [employees, total] = await Promise.all([
     prisma.employee.findMany({
-      where: params.where,
+      where,
       skip: params.skip,
       take: params.take,
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
     }),
-    prisma.employee.count({ where: params.where }),
+    prisma.employee.count({ where }),
   ])
   return { employees, total }
 }
@@ -137,7 +138,7 @@ export async function getNextPin(
   tenantId: string
 ): Promise<string> {
   const result = await prisma.$queryRaw<[{ max_pin: string }]>(
-    Prisma.sql`SELECT COALESCE(MAX(pin::integer), 0) + 1 as max_pin FROM employees WHERE tenant_id = ${tenantId}::uuid AND pin ~ '^[0-9]+$'`
+    Prisma.sql`SELECT COALESCE(MAX(pin::integer), 0) + 1 as max_pin FROM employees WHERE tenant_id = ${tenantId}::uuid AND pin ~ '^[0-9]+$' FOR UPDATE`
   )
   return String(result[0]?.max_pin ?? "1")
 }
@@ -186,21 +187,23 @@ export async function findBookingsForDay(
 
 export async function findDailyValue(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string,
   date: Date
 ) {
-  return prisma.dailyValue.findUnique({
-    where: { employeeId_valueDate: { employeeId, valueDate: date } },
+  return prisma.dailyValue.findFirst({
+    where: { employeeId, valueDate: date, employee: { tenantId } },
   })
 }
 
 export async function findEmployeeDayPlan(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string,
   date: Date
 ) {
-  return prisma.employeeDayPlan.findUnique({
-    where: { employeeId_planDate: { employeeId, planDate: date } },
+  return prisma.employeeDayPlan.findFirst({
+    where: { employeeId, planDate: date, employee: { tenantId } },
     include: {
       dayPlan: {
         select: { id: true, code: true, name: true, planType: true },

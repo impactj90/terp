@@ -335,10 +335,17 @@ export const weekPlansRouter = createTRPCRouter({
         })
 
         // Re-fetch with include
-        const plan = await ctx.prisma.weekPlan.findUniqueOrThrow({
+        const plan = await ctx.prisma.weekPlan.findUnique({
           where: { id: created.id },
           include: weekPlanInclude,
         })
+
+        if (!plan) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Week plan not found after creation",
+          })
+        }
 
         return mapWeekPlanToOutput(
           plan as unknown as Record<string, unknown>
@@ -454,33 +461,45 @@ export const weekPlansRouter = createTRPCRouter({
           data.isActive = input.isActive
         }
 
-        await ctx.prisma.weekPlan.update({
-          where: { id: input.id },
-          data,
-        })
-
-        // Re-fetch with include to check completeness and return
-        const updated = await ctx.prisma.weekPlan.findUniqueOrThrow({
-          where: { id: input.id },
-          include: weekPlanInclude,
-        })
-
-        // Verify completeness: all 7 days must have plans
-        if (
-          !updated.mondayDayPlanId ||
-          !updated.tuesdayDayPlanId ||
-          !updated.wednesdayDayPlanId ||
-          !updated.thursdayDayPlanId ||
-          !updated.fridayDayPlanId ||
-          !updated.saturdayDayPlanId ||
-          !updated.sundayDayPlanId
-        ) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message:
-              "Week plan must have a day plan assigned for all 7 days",
+        // Use transaction so validation failure rolls back the update
+        const updated = await ctx.prisma.$transaction(async (tx) => {
+          await tx.weekPlan.update({
+            where: { id: input.id },
+            data,
           })
-        }
+
+          // Re-fetch with include to check completeness and return
+          const plan = await tx.weekPlan.findUnique({
+            where: { id: input.id },
+            include: weekPlanInclude,
+          })
+
+          if (!plan) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "Week plan not found after update",
+            })
+          }
+
+          // Verify completeness: all 7 days must have plans
+          if (
+            !plan.mondayDayPlanId ||
+            !plan.tuesdayDayPlanId ||
+            !plan.wednesdayDayPlanId ||
+            !plan.thursdayDayPlanId ||
+            !plan.fridayDayPlanId ||
+            !plan.saturdayDayPlanId ||
+            !plan.sundayDayPlanId
+          ) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message:
+                "Week plan must have a day plan assigned for all 7 days",
+            })
+          }
+
+          return plan
+        })
 
         return mapWeekPlanToOutput(
           updated as unknown as Record<string, unknown>

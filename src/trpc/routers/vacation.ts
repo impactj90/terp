@@ -119,7 +119,7 @@ export const vacationRouter = createTRPCRouter({
     .input(
       z.object({
         employeeId: z.string(),
-        year: z.number().int(),
+        year: z.number().int().min(1900).max(2200),
       })
     )
     .output(carryoverPreviewOutputSchema)
@@ -212,7 +212,7 @@ export const vacationRouter = createTRPCRouter({
       z.object({
         employeeId: z.string(),
         year: z.number().int().min(1900).max(2200),
-        adjustment: z.number(),
+        adjustment: z.number().min(-365).max(365),
         notes: z.string().optional(),
       })
     )

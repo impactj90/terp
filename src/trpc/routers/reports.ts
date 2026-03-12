@@ -141,8 +141,8 @@ export const reportsRouter = createTRPCRouter({
         format: reportFormatEnum,
         name: z.string().max(255).optional(),
         parameters: z.object({
-          fromDate: z.string().optional(),
-          toDate: z.string().optional(),
+          fromDate: z.string().date().optional(),
+          toDate: z.string().date().optional(),
           employeeIds: z.array(z.string()).optional(),
           departmentIds: z.array(z.string()).optional(),
           costCenterIds: z.array(z.string()).optional(),

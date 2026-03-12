@@ -133,7 +133,11 @@ export async function create(
   })
 
   // Re-fetch with include
-  return repo.findByIdWithInclude(prisma, created.id)
+  const result = await repo.findByIdWithInclude(prisma, tenantId, created.id)
+  if (!result) {
+    throw new WeekPlanNotFoundError()
+  }
+  return result
 }
 
 export async function update(
@@ -231,7 +235,10 @@ export async function update(
   await repo.update(prisma, input.id, data)
 
   // Re-fetch with include to check completeness and return
-  const updated = await repo.findByIdWithInclude(prisma, input.id)
+  const updated = await repo.findByIdWithInclude(prisma, tenantId, input.id)
+  if (!updated) {
+    throw new WeekPlanNotFoundError()
+  }
 
   // Verify completeness: all 7 days must have plans
   if (

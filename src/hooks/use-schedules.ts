@@ -43,6 +43,9 @@ export function useCreateSchedule() {
       queryClient.invalidateQueries({
         queryKey: trpc.schedules.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.schedules.getById.queryKey(),
+      })
     },
   })
 }
@@ -59,6 +62,9 @@ export function useUpdateSchedule() {
       queryClient.invalidateQueries({
         queryKey: trpc.schedules.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.schedules.getById.queryKey(),
+      })
     },
   })
 }
@@ -74,6 +80,9 @@ export function useDeleteSchedule() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.schedules.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.schedules.getById.queryKey(),
       })
     },
   })

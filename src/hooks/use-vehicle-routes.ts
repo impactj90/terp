@@ -45,6 +45,9 @@ export function useCreateVehicleRoute() {
       queryClient.invalidateQueries({
         queryKey: trpc.vehicleRoutes.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.vehicleRoutes.getById.queryKey(),
+      })
     },
   })
 }
@@ -61,6 +64,9 @@ export function useUpdateVehicleRoute() {
       queryClient.invalidateQueries({
         queryKey: trpc.vehicleRoutes.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.vehicleRoutes.getById.queryKey(),
+      })
     },
   })
 }
@@ -76,6 +82,9 @@ export function useDeleteVehicleRoute() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.vehicleRoutes.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.vehicleRoutes.getById.queryKey(),
       })
     },
   })

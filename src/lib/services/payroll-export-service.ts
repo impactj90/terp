@@ -180,14 +180,13 @@ export async function generate(
     let totalWorked = 0
     let totalOT = 0
 
+    // Batch-fetch all monthly values
+    const empIds = employees.map((e) => e.id)
+    const allMvs = await repo.findMonthlyValuesBatch(prisma, tenantId, empIds, input.year, input.month)
+    const mvMap = new Map(allMvs.map((mv) => [mv.employeeId, mv]))
+
     for (const emp of employees) {
-      const mv = await repo.findMonthlyValue(
-        prisma,
-        tenantId,
-        emp.id,
-        input.year,
-        input.month
-      )
+      const mv = mvMap.get(emp.id)
       if (!mv) continue
 
       const targetHours = mv.totalTargetTime / 60
@@ -314,8 +313,13 @@ export async function preview(
   let totalHours = 0
   let totalOvertime = 0
 
+  // Batch-fetch all monthly values
+  const empIds = employees.map((e) => e.id)
+  const allMvs = await repo.findMonthlyValuesBatch(prisma, tenantId, empIds, pe.year, pe.month)
+  const mvMap = new Map(allMvs.map((mv) => [mv.employeeId, mv]))
+
   for (const emp of employees) {
-    const mv = await repo.findMonthlyValue(prisma, tenantId, emp.id, pe.year, pe.month)
+    const mv = mvMap.get(emp.id)
     if (!mv) continue
 
     const targetHours = mv.totalTargetTime / 60

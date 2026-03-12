@@ -88,6 +88,7 @@ async function calculateCappedCarryover(
       // Load employee exceptions
       const exceptions = await repo.findCappingExceptions(
         prisma,
+        tenantId,
         employee.id,
         prevYear
       )
@@ -275,6 +276,7 @@ export async function carryoverPreview(
   // Load employee exceptions
   const exceptions = await repo.findCappingExceptions(
     prisma,
+    tenantId,
     input.employeeId,
     input.year
   )
@@ -536,6 +538,92 @@ export async function initializeBatch(
   // 1. Get all active employees for tenant
   const employees = await repo.findActiveEmployees(prisma, tenantId)
 
+  // Pre-fetch shared data to avoid N+1
+  const empIds = employees.map((e) => e.id)
+  const prevBalances = input.carryover && input.year >= 1901
+    ? await prisma.vacationBalance.findMany({
+        where: { tenantId, employeeId: { in: empIds }, year: input.year - 1 },
+      })
+    : []
+  const prevBalanceMap = new Map(prevBalances.map((b) => [b.employeeId, b]))
+
+  // Batch-fetch tenant vacationBasis once (same for all employees)
+  const tenant = await prisma.tenant.findFirst({
+    where: { id: tenantId },
+    select: { vacationBasis: true },
+  })
+  const tenantVacationBasis = tenant?.vacationBasis ?? null
+
+  // Batch-fetch all unique calc groups referenced by employees
+  const uniqueCalcGroupIds = [
+    ...new Set(
+      employees
+        .map((e) => e.employmentType?.vacationCalcGroupId)
+        .filter((id): id is string => !!id)
+    ),
+  ]
+  const calcGroups =
+    uniqueCalcGroupIds.length > 0
+      ? await prisma.vacationCalculationGroup.findMany({
+          where: { id: { in: uniqueCalcGroupIds }, tenantId },
+          include: {
+            specialCalcLinks: {
+              include: {
+                specialCalculation: {
+                  select: { type: true, threshold: true, bonusDays: true },
+                },
+              },
+            },
+          },
+        })
+      : []
+  const calcGroupMap = new Map(calcGroups.map((g) => [g.id, g as ResolvedCalcGroup]))
+
+  // Batch-fetch tariff assignments for all employees
+  // Use end-of-year for past years, today for current/future years
+  let tariffRefDate = new Date(Date.UTC(input.year, 11, 31))
+  const now = new Date()
+  if (tariffRefDate > now) {
+    tariffRefDate = now
+  }
+
+  const tariffAssignments = await prisma.employeeTariffAssignment.findMany({
+    where: {
+      employeeId: { in: empIds },
+      isActive: true,
+      effectiveFrom: { lte: tariffRefDate },
+      OR: [
+        { effectiveTo: null },
+        { effectiveTo: { gte: tariffRefDate } },
+      ],
+    },
+    include: { tariff: true },
+    orderBy: { effectiveFrom: "desc" },
+  })
+  // Group by employeeId, take the first (most recent) per employee
+  const tariffAssignmentMap = new Map<string, (typeof tariffAssignments)[number]>()
+  for (const ta of tariffAssignments) {
+    if (!tariffAssignmentMap.has(ta.employeeId)) {
+      tariffAssignmentMap.set(ta.employeeId, ta)
+    }
+  }
+
+  // Batch-fetch fallback tariffs for employees without assignments
+  const fallbackTariffIds = [
+    ...new Set(
+      employees
+        .filter((e) => !tariffAssignmentMap.has(e.id) && e.tariffId)
+        .map((e) => e.tariffId!)
+    ),
+  ]
+  const fallbackTariffs =
+    fallbackTariffIds.length > 0
+      ? await prisma.tariff.findMany({
+          where: { id: { in: fallbackTariffIds }, tenantId },
+        })
+      : []
+  const fallbackTariffMap = new Map(fallbackTariffs.map((t) => [t.id, t]))
+
   let createdCount = 0
 
   // 2. For each employee
@@ -544,12 +632,7 @@ export async function initializeBatch(
       // a. If carryover requested, carry over from previous year (best effort)
       if (input.carryover && input.year >= 1901) {
         try {
-          const prevBalance = await repo.findBalance(
-            prisma,
-            tenantId,
-            employee.id,
-            input.year - 1
-          )
+          const prevBalance = prevBalanceMap.get(employee.id)
           if (prevBalance) {
             const available = calculateAvailable(prevBalance)
             const carryoverAmount = await calculateCappedCarryover(
@@ -574,21 +657,31 @@ export async function initializeBatch(
         }
       }
 
-      // b. Initialize year (calculate entitlement)
-      const calcGroup = await resolveCalcGroup(prisma, employee, tenantId)
-      const tariff = await resolveTariff(
-        prisma,
-        employee,
-        input.year,
-        tenantId
-      )
-      const basis = await resolveVacationBasis(
-        prisma,
-        employee,
-        tariff,
-        calcGroup,
-        tenantId
-      )
+      // b. Initialize year (calculate entitlement) using pre-fetched data
+      const calcGroupId = employee.employmentType?.vacationCalcGroupId
+      const calcGroup = calcGroupId
+        ? calcGroupMap.get(calcGroupId) ?? null
+        : null
+
+      // Resolve tariff from pre-fetched maps
+      const assignment = tariffAssignmentMap.get(employee.id)
+      let tariff = assignment?.tariff ?? null
+      if (!tariff && employee.tariffId) {
+        tariff = fallbackTariffMap.get(employee.tariffId) ?? null
+      }
+
+      // Resolve vacation basis from pre-fetched tenant + tariff + calcGroup
+      let basis: import("./vacation-calculation").VacationBasis = "calendar_year"
+      if (tenantVacationBasis) {
+        basis = tenantVacationBasis as typeof basis
+      }
+      if (tariff?.vacationBasis) {
+        basis = tariff.vacationBasis as typeof basis
+      }
+      if (calcGroup?.basis) {
+        basis = calcGroup.basis as typeof basis
+      }
+
       const { calcInput } = buildCalcInput(
         employee,
         input.year,

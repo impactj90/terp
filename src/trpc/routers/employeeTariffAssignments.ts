@@ -20,6 +20,7 @@ import type { PrismaClient } from "@/generated/prisma/client"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
 
 // --- Permission Constants ---
 
@@ -146,34 +147,38 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
       z.object({ data: z.array(employeeTariffAssignmentOutputSchema) })
     )
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
+      try {
+        const tenantId = ctx.tenantId!
 
-      // Verify employee exists and belongs to tenant
-      const employee = await ctx.prisma.employee.findFirst({
-        where: { id: input.employeeId, tenantId, deletedAt: null },
-        select: { id: true },
-      })
-      if (!employee) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Employee not found",
+        // Verify employee exists and belongs to tenant
+        const employee = await ctx.prisma.employee.findFirst({
+          where: { id: input.employeeId, tenantId, deletedAt: null },
+          select: { id: true },
         })
-      }
+        if (!employee) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Employee not found",
+          })
+        }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const where: Record<string, any> = { employeeId: input.employeeId }
-      if (input.isActive !== undefined) {
-        where.isActive = input.isActive
-      }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const where: Record<string, any> = { employeeId: input.employeeId }
+        if (input.isActive !== undefined) {
+          where.isActive = input.isActive
+        }
 
-      const assignments =
-        await ctx.prisma.employeeTariffAssignment.findMany({
-          where,
-          orderBy: { effectiveFrom: "desc" },
-        })
+        const assignments =
+          await ctx.prisma.employeeTariffAssignment.findMany({
+            where,
+            orderBy: { effectiveFrom: "desc" },
+          })
 
-      return {
-        data: assignments.map(mapAssignmentToOutput),
+        return {
+          data: assignments.map(mapAssignmentToOutput),
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -194,25 +199,29 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
     )
     .output(employeeTariffAssignmentOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
+      try {
+        const tenantId = ctx.tenantId!
 
-      const assignment =
-        await ctx.prisma.employeeTariffAssignment.findFirst({
-          where: {
-            id: input.id,
-            employeeId: input.employeeId,
-            tenantId,
-          },
-        })
+        const assignment =
+          await ctx.prisma.employeeTariffAssignment.findFirst({
+            where: {
+              id: input.id,
+              employeeId: input.employeeId,
+              tenantId,
+            },
+          })
 
-      if (!assignment) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Tariff assignment not found",
-        })
+        if (!assignment) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Tariff assignment not found",
+          })
+        }
+
+        return mapAssignmentToOutput(assignment)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      return mapAssignmentToOutput(assignment)
     }),
 
   /**
@@ -239,59 +248,63 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
     )
     .output(employeeTariffAssignmentOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
+      try {
+        const tenantId = ctx.tenantId!
 
-      // Verify employee exists and belongs to tenant
-      const employee = await ctx.prisma.employee.findFirst({
-        where: { id: input.employeeId, tenantId, deletedAt: null },
-        select: { id: true },
-      })
-      if (!employee) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Employee not found",
+        // Verify employee exists and belongs to tenant
+        const employee = await ctx.prisma.employee.findFirst({
+          where: { id: input.employeeId, tenantId, deletedAt: null },
+          select: { id: true },
         })
-      }
+        if (!employee) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Employee not found",
+          })
+        }
 
-      // Validate tariffId non-empty (zod guarantees this with uuid())
+        // Validate date range
+        const effectiveTo = input.effectiveTo ?? null
+        if (effectiveTo && effectiveTo < input.effectiveFrom) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Effective to date cannot be before effective from date",
+          })
+        }
 
-      // Validate date range
-      const effectiveTo = input.effectiveTo ?? null
-      if (effectiveTo && effectiveTo < input.effectiveFrom) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Effective to date cannot be before effective from date",
+        // Use transaction for atomic overlap check + create
+        const assignment = await ctx.prisma.$transaction(async (tx) => {
+          const overlap = await hasOverlap(
+            tx as unknown as PrismaClient,
+            input.employeeId,
+            input.effectiveFrom,
+            effectiveTo
+          )
+          if (overlap) {
+            throw new TRPCError({
+              code: "CONFLICT",
+              message: "Overlapping tariff assignment exists",
+            })
+          }
+
+          return tx.employeeTariffAssignment.create({
+            data: {
+              tenantId,
+              employeeId: input.employeeId,
+              tariffId: input.tariffId,
+              effectiveFrom: input.effectiveFrom,
+              effectiveTo,
+              overwriteBehavior: input.overwriteBehavior?.trim() || "preserve_manual",
+              notes: input.notes?.trim() || null,
+              isActive: true,
+            },
+          })
         })
+
+        return mapAssignmentToOutput(assignment)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Check for overlapping assignments
-      const overlap = await hasOverlap(
-        ctx.prisma,
-        input.employeeId,
-        input.effectiveFrom,
-        effectiveTo
-      )
-      if (overlap) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Overlapping tariff assignment exists",
-        })
-      }
-
-      const assignment = await ctx.prisma.employeeTariffAssignment.create({
-        data: {
-          tenantId,
-          employeeId: input.employeeId,
-          tariffId: input.tariffId,
-          effectiveFrom: input.effectiveFrom,
-          effectiveTo,
-          overwriteBehavior: input.overwriteBehavior?.trim() || "preserve_manual",
-          notes: input.notes?.trim() || null,
-          isActive: true,
-        },
-      })
-
-      return mapAssignmentToOutput(assignment)
     }),
 
   /**
@@ -318,86 +331,92 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
     )
     .output(employeeTariffAssignmentOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
+      try {
+        const tenantId = ctx.tenantId!
 
-      // Fetch existing assignment, verify tenant/employee match
-      const existing =
-        await ctx.prisma.employeeTariffAssignment.findFirst({
-          where: {
-            id: input.id,
-            employeeId: input.employeeId,
-            tenantId,
-          },
-        })
+        // Fetch existing assignment, verify tenant/employee match
+        const existing =
+          await ctx.prisma.employeeTariffAssignment.findFirst({
+            where: {
+              id: input.id,
+              employeeId: input.employeeId,
+              tenantId,
+            },
+          })
 
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Tariff assignment not found",
-        })
-      }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      if (input.effectiveFrom !== undefined) {
-        data.effectiveFrom = input.effectiveFrom
-      }
-      if (input.effectiveTo !== undefined) {
-        data.effectiveTo = input.effectiveTo
-      }
-      if (input.overwriteBehavior !== undefined) {
-        data.overwriteBehavior = input.overwriteBehavior.trim()
-      }
-      if (input.notes !== undefined) {
-        data.notes =
-          input.notes === null ? null : input.notes.trim() || null
-      }
-      if (input.isActive !== undefined) {
-        data.isActive = input.isActive
-      }
-
-      // If dates changed, validate and re-check overlap
-      const effectiveFrom =
-        (data.effectiveFrom as Date | undefined) ?? existing.effectiveFrom
-      const effectiveTo =
-        data.effectiveTo !== undefined
-          ? (data.effectiveTo as Date | null)
-          : existing.effectiveTo
-
-      if (effectiveTo && effectiveTo < effectiveFrom) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Effective to date cannot be before effective from date",
-        })
-      }
-
-      // Re-check overlap if dates changed (exclude self)
-      if (
-        input.effectiveFrom !== undefined ||
-        input.effectiveTo !== undefined
-      ) {
-        const overlap = await hasOverlap(
-          ctx.prisma,
-          input.employeeId,
-          effectiveFrom,
-          effectiveTo,
-          input.id
-        )
-        if (overlap) {
+        if (!existing) {
           throw new TRPCError({
-            code: "CONFLICT",
-            message: "Overlapping tariff assignment exists",
+            code: "NOT_FOUND",
+            message: "Tariff assignment not found",
           })
         }
+
+        // Build partial update data
+        const data: Record<string, unknown> = {}
+
+        if (input.effectiveFrom !== undefined) {
+          data.effectiveFrom = input.effectiveFrom
+        }
+        if (input.effectiveTo !== undefined) {
+          data.effectiveTo = input.effectiveTo
+        }
+        if (input.overwriteBehavior !== undefined) {
+          data.overwriteBehavior = input.overwriteBehavior.trim()
+        }
+        if (input.notes !== undefined) {
+          data.notes =
+            input.notes === null ? null : input.notes.trim() || null
+        }
+        if (input.isActive !== undefined) {
+          data.isActive = input.isActive
+        }
+
+        // If dates changed, validate and re-check overlap
+        const effectiveFrom =
+          (data.effectiveFrom as Date | undefined) ?? existing.effectiveFrom
+        const effectiveTo =
+          data.effectiveTo !== undefined
+            ? (data.effectiveTo as Date | null)
+            : existing.effectiveTo
+
+        if (effectiveTo && effectiveTo < effectiveFrom) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Effective to date cannot be before effective from date",
+          })
+        }
+
+        // Use transaction for atomic overlap check + update
+        const assignment = await ctx.prisma.$transaction(async (tx) => {
+          if (
+            input.effectiveFrom !== undefined ||
+            input.effectiveTo !== undefined
+          ) {
+            const overlap = await hasOverlap(
+              tx as unknown as PrismaClient,
+              input.employeeId,
+              effectiveFrom,
+              effectiveTo,
+              input.id
+            )
+            if (overlap) {
+              throw new TRPCError({
+                code: "CONFLICT",
+                message: "Overlapping tariff assignment exists",
+              })
+            }
+          }
+
+          return tx.employeeTariffAssignment.update({
+            where: { id: input.id },
+            data,
+          })
+        })
+
+        return mapAssignmentToOutput(assignment)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      const assignment = await ctx.prisma.employeeTariffAssignment.update({
-        where: { id: input.id },
-        data,
-      })
-
-      return mapAssignmentToOutput(assignment)
     }),
 
   /**
@@ -419,31 +438,35 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
     )
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
+      try {
+        const tenantId = ctx.tenantId!
 
-      // Fetch assignment, verify tenant/employee match
-      const existing =
-        await ctx.prisma.employeeTariffAssignment.findFirst({
-          where: {
-            id: input.id,
-            employeeId: input.employeeId,
-            tenantId,
-          },
+        // Fetch assignment, verify tenant/employee match
+        const existing =
+          await ctx.prisma.employeeTariffAssignment.findFirst({
+            where: {
+              id: input.id,
+              employeeId: input.employeeId,
+              tenantId,
+            },
+          })
+
+        if (!existing) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Tariff assignment not found",
+          })
+        }
+
+        // Hard delete
+        await ctx.prisma.employeeTariffAssignment.delete({
+          where: { id: input.id },
         })
 
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Tariff assignment not found",
-        })
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Hard delete
-      await ctx.prisma.employeeTariffAssignment.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 
   /**
@@ -461,71 +484,75 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
     .input(
       z.object({
         employeeId: z.string(),
-        date: z.string(),
+        date: z.string().date(),
       })
     )
     .output(effectiveTariffOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
+      try {
+        const tenantId = ctx.tenantId!
 
-      // Parse date
-      const date = new Date(input.date)
-      if (isNaN(date.getTime())) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Invalid date",
-        })
-      }
-
-      // Verify employee exists and belongs to tenant
-      const employee = await ctx.prisma.employee.findFirst({
-        where: { id: input.employeeId, tenantId, deletedAt: null },
-        select: { id: true, tariffId: true },
-      })
-      if (!employee) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Employee not found",
-        })
-      }
-
-      // Find active assignment covering the date
-      const assignment =
-        await ctx.prisma.employeeTariffAssignment.findFirst({
-          where: {
-            employeeId: input.employeeId,
-            isActive: true,
-            effectiveFrom: { lte: date },
-            OR: [
-              { effectiveTo: null },
-              { effectiveTo: { gte: date } },
-            ],
-          },
-          orderBy: { effectiveFrom: "desc" },
-        })
-
-      if (assignment) {
-        return {
-          tariffId: assignment.tariffId,
-          source: "assignment" as const,
-          assignmentId: assignment.id,
+        // Parse date
+        const date = new Date(input.date)
+        if (isNaN(date.getTime())) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid date",
+          })
         }
-      }
 
-      // Fall back to employee's default tariffId
-      if (employee.tariffId) {
+        // Verify employee exists and belongs to tenant
+        const employee = await ctx.prisma.employee.findFirst({
+          where: { id: input.employeeId, tenantId, deletedAt: null },
+          select: { id: true, tariffId: true },
+        })
+        if (!employee) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Employee not found",
+          })
+        }
+
+        // Find active assignment covering the date
+        const assignment =
+          await ctx.prisma.employeeTariffAssignment.findFirst({
+            where: {
+              employeeId: input.employeeId,
+              isActive: true,
+              effectiveFrom: { lte: date },
+              OR: [
+                { effectiveTo: null },
+                { effectiveTo: { gte: date } },
+              ],
+            },
+            orderBy: { effectiveFrom: "desc" },
+          })
+
+        if (assignment) {
+          return {
+            tariffId: assignment.tariffId,
+            source: "assignment" as const,
+            assignmentId: assignment.id,
+          }
+        }
+
+        // Fall back to employee's default tariffId
+        if (employee.tariffId) {
+          return {
+            tariffId: employee.tariffId,
+            source: "default" as const,
+            assignmentId: null,
+          }
+        }
+
+        // No tariff
         return {
-          tariffId: employee.tariffId,
-          source: "default" as const,
+          tariffId: null,
+          source: "none" as const,
           assignmentId: null,
         }
-      }
-
-      // No tariff
-      return {
-        tariffId: null,
-        source: "none" as const,
-        assignmentId: null,
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 })

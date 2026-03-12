@@ -52,6 +52,9 @@ export function useCreateExtendedTravelRule() {
       queryClient.invalidateQueries({
         queryKey: trpc.extendedTravelRules.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.extendedTravelRules.getById.queryKey(),
+      })
     },
   })
 }
@@ -68,6 +71,9 @@ export function useUpdateExtendedTravelRule() {
       queryClient.invalidateQueries({
         queryKey: trpc.extendedTravelRules.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.extendedTravelRules.getById.queryKey(),
+      })
     },
   })
 }
@@ -83,6 +89,9 @@ export function useDeleteExtendedTravelRule() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.extendedTravelRules.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.extendedTravelRules.getById.queryKey(),
       })
     },
   })

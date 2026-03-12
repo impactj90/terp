@@ -49,6 +49,9 @@ export function useCreateTariff() {
       queryClient.invalidateQueries({
         queryKey: trpc.tariffs.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.tariffs.getById.queryKey(),
+      })
     },
   })
 }
@@ -64,6 +67,9 @@ export function useUpdateTariff() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.tariffs.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.tariffs.getById.queryKey(),
       })
     },
   })
@@ -81,6 +87,9 @@ export function useDeleteTariff() {
       queryClient.invalidateQueries({
         queryKey: trpc.tariffs.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.tariffs.getById.queryKey(),
+      })
     },
   })
 }
@@ -97,6 +106,9 @@ export function useCreateTariffBreak() {
       queryClient.invalidateQueries({
         queryKey: trpc.tariffs.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.tariffs.getById.queryKey(),
+      })
     },
   })
 }
@@ -112,6 +124,9 @@ export function useDeleteTariffBreak() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.tariffs.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.tariffs.getById.queryKey(),
       })
     },
   })

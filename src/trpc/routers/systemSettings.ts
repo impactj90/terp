@@ -66,7 +66,7 @@ const updateSettingsInputSchema = z.object({
   birthdayWindowDaysAfter: z.number().int().min(0).max(90).optional(),
   followUpEntriesEnabled: z.boolean().optional(),
   proxyHost: z.string().max(255).nullable().optional(),
-  proxyPort: z.number().int().nullable().optional(),
+  proxyPort: z.number().int().min(1).max(65535).nullable().optional(),
   proxyUsername: z.string().max(255).nullable().optional(),
   proxyPassword: z.string().max(255).nullable().optional(),
   proxyEnabled: z.boolean().optional(),

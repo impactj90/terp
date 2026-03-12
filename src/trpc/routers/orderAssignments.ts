@@ -63,15 +63,15 @@ const createOrderAssignmentInputSchema = z.object({
   orderId: z.string(),
   employeeId: z.string(),
   role: z.string().optional(),
-  validFrom: z.string().optional(),
-  validTo: z.string().optional(),
+  validFrom: z.string().date().optional(),
+  validTo: z.string().date().optional(),
 })
 
 const updateOrderAssignmentInputSchema = z.object({
   id: z.string(),
   role: z.string().optional(),
-  validFrom: z.string().nullable().optional(),
-  validTo: z.string().nullable().optional(),
+  validFrom: z.string().date().nullable().optional(),
+  validTo: z.string().date().nullable().optional(),
   isActive: z.boolean().optional(),
 })
 

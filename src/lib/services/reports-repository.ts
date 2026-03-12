@@ -154,18 +154,13 @@ export async function findEmployeesInScope(
 
   // Filter by team IDs
   if (params.teamIds && params.teamIds.length > 0) {
-    const teamEmpIds = new Set<string>()
-    for (const teamId of params.teamIds) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const members = await (prisma.teamMember as any).findMany({
-        where: { teamId },
-        select: { employeeId: true },
-      })
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      for (const m of members as any[]) {
-        teamEmpIds.add(m.employeeId)
-      }
-    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const members = await (prisma.teamMember as any).findMany({
+      where: { teamId: { in: params.teamIds } },
+      select: { employeeId: true },
+    })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const teamEmpIds = new Set((members as any[]).map((m: any) => m.employeeId))
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     employees = employees.filter((emp: any) => teamEmpIds.has(emp.id))
   }
@@ -206,6 +201,36 @@ export async function findVacationBalance(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (prisma.vacationBalance as any).findFirst({
     where: { tenantId, employeeId, year },
+  })
+}
+
+export async function findMonthlyValuesBatch(
+  prisma: PrismaClient,
+  tenantId: string,
+  employeeIds: string[],
+  yearMonthPairs: Array<{ year: number; month: number }>
+) {
+  if (employeeIds.length === 0 || yearMonthPairs.length === 0) return []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (prisma.monthlyValue as any).findMany({
+    where: {
+      tenantId,
+      employeeId: { in: employeeIds },
+      OR: yearMonthPairs.map((ym) => ({ year: ym.year, month: ym.month })),
+    },
+  })
+}
+
+export async function findVacationBalancesBatch(
+  prisma: PrismaClient,
+  tenantId: string,
+  employeeIds: string[],
+  year: number
+) {
+  if (employeeIds.length === 0) return []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (prisma.vacationBalance as any).findMany({
+    where: { tenantId, employeeId: { in: employeeIds }, year },
   })
 }
 

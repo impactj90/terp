@@ -113,7 +113,7 @@ export async function findByIdWithMembers(
   prisma: PrismaClient,
   id: string
 ) {
-  return prisma.bookingTypeGroup.findUniqueOrThrow({
+  return prisma.bookingTypeGroup.findUnique({
     where: { id },
     include: groupInclude,
   })

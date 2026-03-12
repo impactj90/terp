@@ -182,7 +182,7 @@ const createEmployeeInputSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   pin: z.string().optional(),
-  email: z.string().optional(),
+  email: z.string().email().optional(),
   phone: z.string().optional(),
   entryDate: z.coerce.date(),
   exitDate: z.coerce.date().optional(),
@@ -190,8 +190,8 @@ const createEmployeeInputSchema = z.object({
   costCenterId: z.string().optional(),
   employmentTypeId: z.string().optional(),
   tariffId: z.string().optional(),
-  weeklyHours: z.number().optional(),
-  vacationDaysPerYear: z.number().optional(),
+  weeklyHours: z.number().min(0).optional(),
+  vacationDaysPerYear: z.number().min(0).optional(),
   isActive: z.boolean().optional(),
   disabilityFlag: z.boolean().optional(),
   // Extended fields
@@ -218,7 +218,7 @@ const createEmployeeInputSchema = z.object({
   defaultOrderId: z.string().optional(),
   defaultActivityId: z.string().optional(),
   // Tariff overrides
-  partTimePercent: z.number().optional(),
+  partTimePercent: z.number().min(0).max(100).optional(),
   dailyTargetHours: z.number().optional(),
   weeklyTargetHours: z.number().optional(),
   monthlyTargetHours: z.number().optional(),
@@ -234,7 +234,7 @@ const updateEmployeeInputSchema = z.object({
   firstName: z.string().min(1).optional(),
   lastName: z.string().min(1).optional(),
   pin: z.string().optional(),
-  email: z.string().nullable().optional(),
+  email: z.string().email().nullable().optional(),
   phone: z.string().nullable().optional(),
   entryDate: z.coerce.date().optional(),
   exitDate: z.coerce.date().nullable().optional(),
@@ -242,8 +242,8 @@ const updateEmployeeInputSchema = z.object({
   costCenterId: z.string().optional(),
   employmentTypeId: z.string().optional(),
   tariffId: z.string().optional(),
-  weeklyHours: z.number().optional(),
-  vacationDaysPerYear: z.number().optional(),
+  weeklyHours: z.number().min(0).optional(),
+  vacationDaysPerYear: z.number().min(0).optional(),
   isActive: z.boolean().optional(),
   disabilityFlag: z.boolean().optional(),
   // Extended fields
@@ -270,7 +270,7 @@ const updateEmployeeInputSchema = z.object({
   defaultOrderId: z.string().optional(),
   defaultActivityId: z.string().optional(),
   // Tariff overrides
-  partTimePercent: z.number().nullable().optional(),
+  partTimePercent: z.number().min(0).max(100).nullable().optional(),
   dailyTargetHours: z.number().nullable().optional(),
   weeklyTargetHours: z.number().nullable().optional(),
   monthlyTargetHours: z.number().nullable().optional(),
@@ -789,7 +789,7 @@ export const employeesRouter = createTRPCRouter({
     .use(applyDataScope())
     .input(
       z.object({
-        employeeIds: z.array(z.string()),
+        employeeIds: z.array(z.string()).min(1),
         tariffId: z.string().nullable(),
         clearTariff: z.boolean().optional(),
       })

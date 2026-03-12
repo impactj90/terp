@@ -291,35 +291,27 @@ export class MonthlyCalcService {
     const prevMonth = await this.getPreviousMonth(employeeId, year, month)
     const previousCarryover = prevMonth !== null ? prevMonth.flextimeEnd : 0
 
-    // Get daily values for the month
-    const dailyValues = await this.prisma.dailyValue.findMany({
-      where: {
-        employeeId,
-        valueDate: { gte: from, lte: to },
-      },
-    })
+    // Fetch daily values, absences, and tariff in parallel
+    const tariffPromise = employee.tariffId !== null
+      ? this.prisma.tariff.findUnique({ where: { id: employee.tariffId } }).catch(() => null)
+      : Promise.resolve(null)
 
-    // Get absences for the month
-    const absences = await this.prisma.absenceDay.findMany({
-      where: {
-        employeeId,
-        absenceDate: { gte: from, lte: to },
-      },
-      include: { absenceType: true },
-    })
-
-    // Fetch employee's tariff for evaluation rules
-    let tariff: Tariff | null = null
-    if (employee.tariffId !== null) {
-      try {
-        tariff = await this.prisma.tariff.findUnique({
-          where: { id: employee.tariffId },
-        })
-      } catch {
-        // Tariff might have been deleted -- continue with null
-        tariff = null
-      }
-    }
+    const [dailyValues, absences, tariff] = await Promise.all([
+      this.prisma.dailyValue.findMany({
+        where: {
+          employeeId,
+          valueDate: { gte: from, lte: to },
+        },
+      }),
+      this.prisma.absenceDay.findMany({
+        where: {
+          employeeId,
+          absenceDate: { gte: from, lte: to },
+        },
+        include: { absenceType: true },
+      }),
+      tariffPromise,
+    ])
 
     // Build calculation input
     const calcInput = this.buildMonthlyCalcInput(
@@ -356,6 +348,7 @@ export class MonthlyCalcService {
 
   /**
    * Closes a month, preventing further modifications.
+   * Uses atomic updateMany with isClosed condition to avoid race conditions.
    */
   async closeMonth(
     employeeId: string,
@@ -365,28 +358,30 @@ export class MonthlyCalcService {
   ): Promise<void> {
     this.validateYearMonth(year, month)
 
-    const existing = await this.getByEmployeeMonth(employeeId, year, month)
-    if (existing === null) {
-      throw new Error(ERR_MONTHLY_VALUE_NOT_FOUND)
-    }
-    if (existing.isClosed) {
-      throw new Error(ERR_MONTH_CLOSED)
-    }
-
-    await this.prisma.monthlyValue.update({
-      where: {
-        employeeId_year_month: { employeeId, year, month },
-      },
+    const result = await this.prisma.monthlyValue.updateMany({
+      where: { employeeId, year, month, isClosed: false },
       data: {
         isClosed: true,
         closedAt: new Date(),
         closedBy,
       },
     })
+
+    if (result.count === 0) {
+      // Either doesn't exist or already closed -- check which
+      const existing = await this.getByEmployeeMonth(employeeId, year, month)
+      if (existing === null) {
+        throw new Error(ERR_MONTHLY_VALUE_NOT_FOUND)
+      }
+      if (existing.isClosed) {
+        throw new Error(ERR_MONTH_CLOSED)
+      }
+    }
   }
 
   /**
    * Reopens a closed month, allowing modifications.
+   * Uses atomic updateMany with isClosed condition to avoid race conditions.
    */
   async reopenMonth(
     employeeId: string,
@@ -396,24 +391,25 @@ export class MonthlyCalcService {
   ): Promise<void> {
     this.validateYearMonth(year, month)
 
-    const existing = await this.getByEmployeeMonth(employeeId, year, month)
-    if (existing === null) {
-      throw new Error(ERR_MONTHLY_VALUE_NOT_FOUND)
-    }
-    if (!existing.isClosed) {
-      throw new Error(ERR_MONTH_NOT_CLOSED)
-    }
-
-    await this.prisma.monthlyValue.update({
-      where: {
-        employeeId_year_month: { employeeId, year, month },
-      },
+    const result = await this.prisma.monthlyValue.updateMany({
+      where: { employeeId, year, month, isClosed: true },
       data: {
         isClosed: false,
         reopenedAt: new Date(),
         reopenedBy,
       },
     })
+
+    if (result.count === 0) {
+      // Either doesn't exist or not closed -- check which
+      const existing = await this.getByEmployeeMonth(employeeId, year, month)
+      if (existing === null) {
+        throw new Error(ERR_MONTHLY_VALUE_NOT_FOUND)
+      }
+      if (!existing.isClosed) {
+        throw new Error(ERR_MONTH_NOT_CLOSED)
+      }
+    }
   }
 
   /**

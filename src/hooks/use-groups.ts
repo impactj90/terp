@@ -49,6 +49,7 @@ export function useCreateGroup() {
     ...trpc.groups.create.mutationOptions(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: trpc.groups.list.queryKey() })
+      queryClient.invalidateQueries({ queryKey: trpc.groups.getById.queryKey() })
     },
   })
 }
@@ -60,6 +61,7 @@ export function useUpdateGroup() {
     ...trpc.groups.update.mutationOptions(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: trpc.groups.list.queryKey() })
+      queryClient.invalidateQueries({ queryKey: trpc.groups.getById.queryKey() })
     },
   })
 }
@@ -71,6 +73,7 @@ export function useDeleteGroup() {
     ...trpc.groups.delete.mutationOptions(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: trpc.groups.list.queryKey() })
+      queryClient.invalidateQueries({ queryKey: trpc.groups.getById.queryKey() })
     },
   })
 }

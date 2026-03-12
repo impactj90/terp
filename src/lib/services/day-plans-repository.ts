@@ -96,7 +96,7 @@ export async function update(
 }
 
 export async function findByIdWithDetail(prisma: PrismaClient, id: string) {
-  return prisma.dayPlan.findUniqueOrThrow({
+  return prisma.dayPlan.findUnique({
     where: { id },
     include: dayPlanDetailInclude,
   })

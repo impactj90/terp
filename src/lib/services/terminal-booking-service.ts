@@ -104,47 +104,49 @@ export async function importBookings(
   })
 
   try {
-    // Build raw booking records
-    const rawBookingData = []
-    for (const b of input.bookings) {
+    // Pre-fetch lookup maps to avoid N+1
+    const uniquePins = [...new Set(input.bookings.map((b) => b.employeePin))]
+    const uniqueCodes = [...new Set(input.bookings.map((b) => b.rawBookingCode))]
+
+    const [empsByPin, btsByCode] = await Promise.all([
+      prisma.employee.findMany({
+        where: { tenantId, pin: { in: uniquePins } },
+        select: { id: true, pin: true },
+      }),
+      prisma.bookingType.findMany({
+        where: {
+          OR: [
+            { tenantId, code: { in: uniqueCodes } },
+            { tenantId: null, code: { in: uniqueCodes } },
+          ],
+        },
+        select: { id: true, code: true },
+      }),
+    ])
+    const pinMap = new Map(empsByPin.map((e) => [e.pin, e.id]))
+    const codeMap = new Map(btsByCode.map((bt) => [bt.code, bt.id]))
+
+    // Build raw booking records using pre-fetched maps
+    const rawBookingData = input.bookings.map((b) => {
       const rawTimestamp = new Date(b.rawTimestamp)
       const bookingDate = new Date(
         rawTimestamp.getFullYear(),
         rawTimestamp.getMonth(),
         rawTimestamp.getDate()
       )
-
-      // Resolve employee by PIN (graceful)
-      let employeeId: string | null = null
-      const emp = await repo.findEmployeeByPin(prisma, tenantId, b.employeePin)
-      if (emp) {
-        employeeId = emp.id
-      }
-
-      // Resolve booking type by code (graceful)
-      let bookingTypeId: string | null = null
-      const bt = await repo.findBookingTypeByCode(
-        prisma,
-        tenantId,
-        b.rawBookingCode
-      )
-      if (bt) {
-        bookingTypeId = bt.id
-      }
-
-      rawBookingData.push({
+      return {
         tenantId,
         importBatchId: batch.id,
         terminalId,
         employeePin: b.employeePin,
-        employeeId,
+        employeeId: pinMap.get(b.employeePin) ?? null,
         rawTimestamp,
         rawBookingCode: b.rawBookingCode,
         bookingDate,
-        bookingTypeId,
+        bookingTypeId: codeMap.get(b.rawBookingCode) ?? null,
         status: "pending",
-      })
-    }
+      }
+    })
 
     // Batch insert raw bookings
     await repo.createManyRawBookings(prisma, rawBookingData)

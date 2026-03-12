@@ -194,6 +194,7 @@ async function createDerivedBookingIfNeeded(
   // Idempotent: check if a derived booking already exists
   const existingDerived = await repo.findDerivedByOriginalId(
     prisma,
+    original.tenantId,
     original.id
   )
 

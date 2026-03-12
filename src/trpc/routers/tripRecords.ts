@@ -17,6 +17,7 @@ import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
 
 // --- Permission Constants ---
 
@@ -58,7 +59,7 @@ const tripRecordOutputSchema = z.object({
 const createTripRecordInputSchema = z.object({
   vehicleId: z.string(),
   routeId: z.string().optional(),
-  tripDate: z.string().min(1, "Trip date is required"),
+  tripDate: z.string().date(),
   startMileage: z.number().optional(),
   endMileage: z.number().optional(),
   distanceKm: z.number().optional(),
@@ -68,7 +69,7 @@ const createTripRecordInputSchema = z.object({
 const updateTripRecordInputSchema = z.object({
   id: z.string(),
   routeId: z.string().nullable().optional(),
-  tripDate: z.string().optional(),
+  tripDate: z.string().date().optional(),
   startMileage: z.number().nullable().optional(),
   endMileage: z.number().nullable().optional(),
   distanceKm: z.number().nullable().optional(),
@@ -98,8 +99,8 @@ export const tripRecordsRouter = createTRPCRouter({
     .input(
       z.object({
         vehicleId: z.string().optional(),
-        fromDate: z.string().optional(),
-        toDate: z.string().optional(),
+        fromDate: z.string().date().optional(),
+        toDate: z.string().date().optional(),
         limit: z.number().int().min(1).max(250).default(50),
         page: z.number().int().min(1).default(1),
       })
@@ -115,62 +116,66 @@ export const tripRecordsRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
+      try {
+        const tenantId = ctx.tenantId!
 
-      const where: Record<string, unknown> = { tenantId }
-      if (input.vehicleId) {
-        where.vehicleId = input.vehicleId
-      }
-      if (input.fromDate || input.toDate) {
-        const tripDate: Record<string, unknown> = {}
-        if (input.fromDate) {
-          tripDate.gte = new Date(input.fromDate)
+        const where: Record<string, unknown> = { tenantId }
+        if (input.vehicleId) {
+          where.vehicleId = input.vehicleId
         }
-        if (input.toDate) {
-          tripDate.lte = new Date(input.toDate)
+        if (input.fromDate || input.toDate) {
+          const tripDate: Record<string, unknown> = {}
+          if (input.fromDate) {
+            tripDate.gte = new Date(input.fromDate)
+          }
+          if (input.toDate) {
+            tripDate.lte = new Date(input.toDate)
+          }
+          where.tripDate = tripDate
         }
-        where.tripDate = tripDate
-      }
 
-      const [data, total] = await Promise.all([
-        ctx.prisma.tripRecord.findMany({
-          where,
-          take: input.limit,
-          skip: (input.page - 1) * input.limit,
-          orderBy: [{ tripDate: "desc" }, { createdAt: "desc" }],
-          include: {
-            vehicle: {
-              select: { id: true, code: true, name: true },
+        const [data, total] = await Promise.all([
+          ctx.prisma.tripRecord.findMany({
+            where,
+            take: input.limit,
+            skip: (input.page - 1) * input.limit,
+            orderBy: [{ tripDate: "desc" }, { createdAt: "desc" }],
+            include: {
+              vehicle: {
+                select: { id: true, code: true, name: true },
+              },
+              vehicleRoute: {
+                select: { id: true, code: true, name: true },
+              },
             },
-            vehicleRoute: {
-              select: { id: true, code: true, name: true },
-            },
+          }),
+          ctx.prisma.tripRecord.count({ where }),
+        ])
+
+        return {
+          data: data.map((r) => ({
+            id: r.id,
+            tenantId: r.tenantId,
+            vehicleId: r.vehicleId,
+            routeId: r.routeId,
+            tripDate: r.tripDate,
+            startMileage: decToNum(r.startMileage),
+            endMileage: decToNum(r.endMileage),
+            distanceKm: decToNum(r.distanceKm),
+            notes: r.notes,
+            createdAt: r.createdAt,
+            updatedAt: r.updatedAt,
+            vehicle: r.vehicle,
+            vehicleRoute: r.vehicleRoute,
+          })),
+          meta: {
+            total,
+            limit: input.limit,
+            hasMore: input.page * input.limit < total,
           },
-        }),
-        ctx.prisma.tripRecord.count({ where }),
-      ])
-
-      return {
-        data: data.map((r) => ({
-          id: r.id,
-          tenantId: r.tenantId,
-          vehicleId: r.vehicleId,
-          routeId: r.routeId,
-          tripDate: r.tripDate,
-          startMileage: decToNum(r.startMileage),
-          endMileage: decToNum(r.endMileage),
-          distanceKm: decToNum(r.distanceKm),
-          notes: r.notes,
-          createdAt: r.createdAt,
-          updatedAt: r.updatedAt,
-          vehicle: r.vehicle,
-          vehicleRoute: r.vehicleRoute,
-        })),
-        meta: {
-          total,
-          limit: input.limit,
-          hasMore: input.page * input.limit < total,
-        },
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -186,41 +191,45 @@ export const tripRecordsRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .output(tripRecordOutputSchema)
     .query(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
+      try {
+        const tenantId = ctx.tenantId!
 
-      const record = await ctx.prisma.tripRecord.findFirst({
-        where: { id: input.id, tenantId },
-        include: {
-          vehicle: {
-            select: { id: true, code: true, name: true },
+        const record = await ctx.prisma.tripRecord.findFirst({
+          where: { id: input.id, tenantId },
+          include: {
+            vehicle: {
+              select: { id: true, code: true, name: true },
+            },
+            vehicleRoute: {
+              select: { id: true, code: true, name: true },
+            },
           },
-          vehicleRoute: {
-            select: { id: true, code: true, name: true },
-          },
-        },
-      })
-
-      if (!record) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Trip record not found",
         })
-      }
 
-      return {
-        id: record.id,
-        tenantId: record.tenantId,
-        vehicleId: record.vehicleId,
-        routeId: record.routeId,
-        tripDate: record.tripDate,
-        startMileage: decToNum(record.startMileage),
-        endMileage: decToNum(record.endMileage),
-        distanceKm: decToNum(record.distanceKm),
-        notes: record.notes,
-        createdAt: record.createdAt,
-        updatedAt: record.updatedAt,
-        vehicle: record.vehicle,
-        vehicleRoute: record.vehicleRoute,
+        if (!record) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Trip record not found",
+          })
+        }
+
+        return {
+          id: record.id,
+          tenantId: record.tenantId,
+          vehicleId: record.vehicleId,
+          routeId: record.routeId,
+          tripDate: record.tripDate,
+          startMileage: decToNum(record.startMileage),
+          endMileage: decToNum(record.endMileage),
+          distanceKm: decToNum(record.distanceKm),
+          notes: record.notes,
+          createdAt: record.createdAt,
+          updatedAt: record.updatedAt,
+          vehicle: record.vehicle,
+          vehicleRoute: record.vehicleRoute,
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -236,79 +245,83 @@ export const tripRecordsRouter = createTRPCRouter({
     .input(createTripRecordInputSchema)
     .output(tripRecordOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
+      try {
+        const tenantId = ctx.tenantId!
 
-      // Validate tripDate
-      const tripDate = new Date(input.tripDate)
-      if (isNaN(tripDate.getTime())) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Invalid trip date",
-        })
-      }
-
-      // Validate vehicleId FK
-      const vehicle = await ctx.prisma.vehicle.findFirst({
-        where: { id: input.vehicleId, tenantId },
-      })
-      if (!vehicle) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Vehicle not found",
-        })
-      }
-
-      // Validate routeId FK if provided
-      if (input.routeId) {
-        const route = await ctx.prisma.vehicleRoute.findFirst({
-          where: { id: input.routeId, tenantId },
-        })
-        if (!route) {
+        // Validate tripDate
+        const tripDate = new Date(input.tripDate)
+        if (isNaN(tripDate.getTime())) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "Vehicle route not found",
+            message: "Invalid trip date",
           })
         }
-      }
 
-      const record = await ctx.prisma.tripRecord.create({
-        data: {
-          tenantId,
-          vehicleId: input.vehicleId,
-          routeId: input.routeId || null,
-          tripDate,
-          startMileage:
-            input.startMileage !== undefined ? input.startMileage : null,
-          endMileage:
-            input.endMileage !== undefined ? input.endMileage : null,
-          distanceKm:
-            input.distanceKm !== undefined ? input.distanceKm : null,
-          notes: input.notes?.trim() || null,
-        },
-        include: {
-          vehicle: {
-            select: { id: true, code: true, name: true },
-          },
-          vehicleRoute: {
-            select: { id: true, code: true, name: true },
-          },
-        },
-      })
+        // Validate vehicleId FK
+        const vehicle = await ctx.prisma.vehicle.findFirst({
+          where: { id: input.vehicleId, tenantId },
+        })
+        if (!vehicle) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Vehicle not found",
+          })
+        }
 
-      return {
-        id: record.id,
-        tenantId: record.tenantId,
-        vehicleId: record.vehicleId,
-        routeId: record.routeId,
-        tripDate: record.tripDate,
-        startMileage: decToNum(record.startMileage),
-        endMileage: decToNum(record.endMileage),
-        distanceKm: decToNum(record.distanceKm),
-        notes: record.notes,
-        createdAt: record.createdAt,
-        updatedAt: record.updatedAt,
-        vehicle: record.vehicle,
-        vehicleRoute: record.vehicleRoute,
+        // Validate routeId FK if provided
+        if (input.routeId) {
+          const route = await ctx.prisma.vehicleRoute.findFirst({
+            where: { id: input.routeId, tenantId },
+          })
+          if (!route) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Vehicle route not found",
+            })
+          }
+        }
+
+        const record = await ctx.prisma.tripRecord.create({
+          data: {
+            tenantId,
+            vehicleId: input.vehicleId,
+            routeId: input.routeId || null,
+            tripDate,
+            startMileage:
+              input.startMileage !== undefined ? input.startMileage : null,
+            endMileage:
+              input.endMileage !== undefined ? input.endMileage : null,
+            distanceKm:
+              input.distanceKm !== undefined ? input.distanceKm : null,
+            notes: input.notes?.trim() || null,
+          },
+          include: {
+            vehicle: {
+              select: { id: true, code: true, name: true },
+            },
+            vehicleRoute: {
+              select: { id: true, code: true, name: true },
+            },
+          },
+        })
+
+        return {
+          id: record.id,
+          tenantId: record.tenantId,
+          vehicleId: record.vehicleId,
+          routeId: record.routeId,
+          tripDate: record.tripDate,
+          startMileage: decToNum(record.startMileage),
+          endMileage: decToNum(record.endMileage),
+          distanceKm: decToNum(record.distanceKm),
+          notes: record.notes,
+          createdAt: record.createdAt,
+          updatedAt: record.updatedAt,
+          vehicle: record.vehicle,
+          vehicleRoute: record.vehicleRoute,
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -324,93 +337,97 @@ export const tripRecordsRouter = createTRPCRouter({
     .input(updateTripRecordInputSchema)
     .output(tripRecordOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
+      try {
+        const tenantId = ctx.tenantId!
 
-      // Verify record exists (tenant-scoped)
-      const existing = await ctx.prisma.tripRecord.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Trip record not found",
+        // Verify record exists (tenant-scoped)
+        const existing = await ctx.prisma.tripRecord.findFirst({
+          where: { id: input.id, tenantId },
         })
-      }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      if (input.routeId !== undefined) {
-        if (input.routeId === null) {
-          data.routeId = null
-        } else {
-          const route = await ctx.prisma.vehicleRoute.findFirst({
-            where: { id: input.routeId, tenantId },
+        if (!existing) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Trip record not found",
           })
-          if (!route) {
+        }
+
+        // Build partial update data
+        const data: Record<string, unknown> = {}
+
+        if (input.routeId !== undefined) {
+          if (input.routeId === null) {
+            data.routeId = null
+          } else {
+            const route = await ctx.prisma.vehicleRoute.findFirst({
+              where: { id: input.routeId, tenantId },
+            })
+            if (!route) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "Vehicle route not found",
+              })
+            }
+            data.routeId = input.routeId
+          }
+        }
+
+        if (input.tripDate !== undefined) {
+          const tripDate = new Date(input.tripDate)
+          if (isNaN(tripDate.getTime())) {
             throw new TRPCError({
               code: "BAD_REQUEST",
-              message: "Vehicle route not found",
+              message: "Invalid trip date",
             })
           }
-          data.routeId = input.routeId
+          data.tripDate = tripDate
         }
-      }
 
-      if (input.tripDate !== undefined) {
-        const tripDate = new Date(input.tripDate)
-        if (isNaN(tripDate.getTime())) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Invalid trip date",
-          })
+        if (input.startMileage !== undefined) {
+          data.startMileage = input.startMileage
         }
-        data.tripDate = tripDate
-      }
 
-      if (input.startMileage !== undefined) {
-        data.startMileage = input.startMileage
-      }
+        if (input.endMileage !== undefined) {
+          data.endMileage = input.endMileage
+        }
 
-      if (input.endMileage !== undefined) {
-        data.endMileage = input.endMileage
-      }
+        if (input.distanceKm !== undefined) {
+          data.distanceKm = input.distanceKm
+        }
 
-      if (input.distanceKm !== undefined) {
-        data.distanceKm = input.distanceKm
-      }
+        if (input.notes !== undefined) {
+          data.notes = input.notes === null ? null : input.notes.trim()
+        }
 
-      if (input.notes !== undefined) {
-        data.notes = input.notes === null ? null : input.notes.trim()
-      }
-
-      const record = await ctx.prisma.tripRecord.update({
-        where: { id: input.id },
-        data,
-        include: {
-          vehicle: {
-            select: { id: true, code: true, name: true },
+        const record = await ctx.prisma.tripRecord.update({
+          where: { id: input.id },
+          data,
+          include: {
+            vehicle: {
+              select: { id: true, code: true, name: true },
+            },
+            vehicleRoute: {
+              select: { id: true, code: true, name: true },
+            },
           },
-          vehicleRoute: {
-            select: { id: true, code: true, name: true },
-          },
-        },
-      })
+        })
 
-      return {
-        id: record.id,
-        tenantId: record.tenantId,
-        vehicleId: record.vehicleId,
-        routeId: record.routeId,
-        tripDate: record.tripDate,
-        startMileage: decToNum(record.startMileage),
-        endMileage: decToNum(record.endMileage),
-        distanceKm: decToNum(record.distanceKm),
-        notes: record.notes,
-        createdAt: record.createdAt,
-        updatedAt: record.updatedAt,
-        vehicle: record.vehicle,
-        vehicleRoute: record.vehicleRoute,
+        return {
+          id: record.id,
+          tenantId: record.tenantId,
+          vehicleId: record.vehicleId,
+          routeId: record.routeId,
+          tripDate: record.tripDate,
+          startMileage: decToNum(record.startMileage),
+          endMileage: decToNum(record.endMileage),
+          distanceKm: decToNum(record.distanceKm),
+          notes: record.notes,
+          createdAt: record.createdAt,
+          updatedAt: record.updatedAt,
+          vehicle: record.vehicle,
+          vehicleRoute: record.vehicleRoute,
+        }
+      } catch (err) {
+        handleServiceError(err)
       }
     }),
 
@@ -424,23 +441,27 @@ export const tripRecordsRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
+      try {
+        const tenantId = ctx.tenantId!
 
-      // Verify record exists (tenant-scoped)
-      const existing = await ctx.prisma.tripRecord.findFirst({
-        where: { id: input.id, tenantId },
-      })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Trip record not found",
+        // Verify record exists (tenant-scoped)
+        const existing = await ctx.prisma.tripRecord.findFirst({
+          where: { id: input.id, tenantId },
         })
+        if (!existing) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Trip record not found",
+          })
+        }
+
+        await ctx.prisma.tripRecord.delete({
+          where: { id: input.id },
+        })
+
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      await ctx.prisma.tripRecord.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 })

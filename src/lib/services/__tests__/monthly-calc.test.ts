@@ -30,6 +30,7 @@ function createMockPrisma() {
       findMany: vi.fn().mockResolvedValue([]),
       upsert: vi.fn().mockResolvedValue({}),
       update: vi.fn().mockResolvedValue({}),
+      updateMany: vi.fn().mockResolvedValue({ count: 0 }),
     },
     dailyValue: {
       findMany: vi.fn().mockResolvedValue([]),
@@ -688,15 +689,12 @@ describe("CloseMonth", () => {
     const { prisma, mocks } = createMockPrisma()
     const svc = new MonthlyCalcService(prisma)
 
-    mocks.monthlyValue.findUnique.mockResolvedValue(
-      makeMonthlyValue(2026, 1, { isClosed: false }),
-    )
-    mocks.monthlyValue.update.mockResolvedValue({})
+    mocks.monthlyValue.updateMany.mockResolvedValue({ count: 1 })
 
     await svc.closeMonth(EMPLOYEE_ID, 2026, 1, CLOSER_ID)
 
-    expect(mocks.monthlyValue.update).toHaveBeenCalledTimes(1)
-    const updateArg = mocks.monthlyValue.update.mock.calls[0]![0] as {
+    expect(mocks.monthlyValue.updateMany).toHaveBeenCalledTimes(1)
+    const updateArg = mocks.monthlyValue.updateMany.mock.calls[0]![0] as {
       data: Record<string, unknown>
     }
     expect(updateArg.data.isClosed).toBe(true)
@@ -707,6 +705,9 @@ describe("CloseMonth", () => {
     const { prisma, mocks } = createMockPrisma()
     const svc = new MonthlyCalcService(prisma)
 
+    // updateMany returns 0 (no rows matched isClosed: false)
+    mocks.monthlyValue.updateMany.mockResolvedValue({ count: 0 })
+    // fallback findUnique returns the closed record
     mocks.monthlyValue.findUnique.mockResolvedValue(
       makeMonthlyValue(2026, 1, { isClosed: true }),
     )
@@ -720,6 +721,8 @@ describe("CloseMonth", () => {
     const { prisma, mocks } = createMockPrisma()
     const svc = new MonthlyCalcService(prisma)
 
+    // updateMany returns 0, fallback findUnique returns null
+    mocks.monthlyValue.updateMany.mockResolvedValue({ count: 0 })
     mocks.monthlyValue.findUnique.mockResolvedValue(null)
 
     await expect(
@@ -744,15 +747,12 @@ describe("ReopenMonth", () => {
     const { prisma, mocks } = createMockPrisma()
     const svc = new MonthlyCalcService(prisma)
 
-    mocks.monthlyValue.findUnique.mockResolvedValue(
-      makeMonthlyValue(2026, 1, { isClosed: true }),
-    )
-    mocks.monthlyValue.update.mockResolvedValue({})
+    mocks.monthlyValue.updateMany.mockResolvedValue({ count: 1 })
 
     await svc.reopenMonth(EMPLOYEE_ID, 2026, 1, CLOSER_ID)
 
-    expect(mocks.monthlyValue.update).toHaveBeenCalledTimes(1)
-    const updateArg = mocks.monthlyValue.update.mock.calls[0]![0] as {
+    expect(mocks.monthlyValue.updateMany).toHaveBeenCalledTimes(1)
+    const updateArg = mocks.monthlyValue.updateMany.mock.calls[0]![0] as {
       data: Record<string, unknown>
     }
     expect(updateArg.data.isClosed).toBe(false)
@@ -763,6 +763,9 @@ describe("ReopenMonth", () => {
     const { prisma, mocks } = createMockPrisma()
     const svc = new MonthlyCalcService(prisma)
 
+    // updateMany returns 0 (no rows matched isClosed: true)
+    mocks.monthlyValue.updateMany.mockResolvedValue({ count: 0 })
+    // fallback findUnique returns the open record
     mocks.monthlyValue.findUnique.mockResolvedValue(
       makeMonthlyValue(2026, 1, { isClosed: false }),
     )
@@ -776,6 +779,8 @@ describe("ReopenMonth", () => {
     const { prisma, mocks } = createMockPrisma()
     const svc = new MonthlyCalcService(prisma)
 
+    // updateMany returns 0, fallback findUnique returns null
+    mocks.monthlyValue.updateMany.mockResolvedValue({ count: 0 })
     mocks.monthlyValue.findUnique.mockResolvedValue(null)
 
     await expect(
@@ -1427,13 +1432,10 @@ describe("Integration Scenarios", () => {
     ).rejects.toThrow(ERR_MONTH_CLOSED)
 
     // Step 2: Reopen the month
-    mocks.monthlyValue.findUnique.mockResolvedValueOnce(
-      makeMonthlyValue(year, month, { isClosed: true }),
-    )
-    mocks.monthlyValue.update.mockResolvedValue({})
+    mocks.monthlyValue.updateMany.mockResolvedValueOnce({ count: 1 })
 
     await svc.reopenMonth(EMPLOYEE_ID, year, month, reopenedBy)
-    expect(mocks.monthlyValue.update).toHaveBeenCalledTimes(1)
+    expect(mocks.monthlyValue.updateMany).toHaveBeenCalledTimes(1)
 
     // Step 3: Recalculate should now succeed (month is open)
     mocks.monthlyValue.findUnique.mockResolvedValueOnce(

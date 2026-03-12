@@ -19,11 +19,12 @@ export async function findEmployeeById(
 
 export async function findMany(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string,
   params?: { isActive?: boolean }
 ) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: Record<string, any> = { employeeId }
+  const where: Record<string, any> = { tenantId, employeeId }
   if (params?.isActive !== undefined) {
     where.isActive = params.isActive
   }
@@ -110,11 +111,13 @@ export async function deleteById(prisma: PrismaClient, id: string) {
 
 export async function findEffective(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string,
   date: Date
 ) {
   return prisma.employeeTariffAssignment.findFirst({
     where: {
+      tenantId,
       employeeId,
       isActive: true,
       effectiveFrom: { lte: date },

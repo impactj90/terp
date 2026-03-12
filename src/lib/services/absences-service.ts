@@ -156,6 +156,7 @@ async function recalculateVacationTaken(
 
   const absenceDays = await repo.findApprovedAbsenceDaysForYear(
     prisma,
+    tenantId,
     employeeId,
     typeIds,
     yearStart,
@@ -164,6 +165,7 @@ async function recalculateVacationTaken(
 
   const dayPlans = await repo.findEmployeeDayPlansWithVacationDeduction(
     prisma,
+    tenantId,
     employeeId,
     yearStart,
     yearEnd
@@ -353,7 +355,7 @@ export async function createRange(
     async (tx) => {
       const txPrisma = tx as unknown as PrismaClient
       // 3. Batch-fetch EmployeeDayPlan records for the date range
-      const dayPlans = await repo.findEmployeeDayPlans(txPrisma, employeeId, fromDate, toDate)
+      const dayPlans = await repo.findEmployeeDayPlans(txPrisma, tenantId, employeeId, fromDate, toDate)
 
       const dayPlanMap = new Map<string, { dayPlanId: string | null }>()
       for (const dp of dayPlans) {
@@ -362,7 +364,7 @@ export async function createRange(
       }
 
       // 4. Batch-fetch existing absences for employee in range where status != 'cancelled'
-      const existingAbsences = await repo.findExistingAbsences(txPrisma, employeeId, fromDate, toDate)
+      const existingAbsences = await repo.findExistingAbsences(txPrisma, tenantId, employeeId, fromDate, toDate)
 
       const existingMap = new Set<string>()
       for (const ea of existingAbsences) {

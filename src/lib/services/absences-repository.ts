@@ -197,6 +197,7 @@ export async function findActiveAbsenceType(
 
 export async function findEmployeeDayPlans(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string,
   fromDate: Date,
   toDate: Date
@@ -205,6 +206,7 @@ export async function findEmployeeDayPlans(
     where: {
       employeeId,
       planDate: { gte: fromDate, lte: toDate },
+      employee: { tenantId },
     },
     select: {
       planDate: true,
@@ -215,6 +217,7 @@ export async function findEmployeeDayPlans(
 
 export async function findExistingAbsences(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string,
   fromDate: Date,
   toDate: Date
@@ -224,6 +227,7 @@ export async function findExistingAbsences(
       employeeId,
       absenceDate: { gte: fromDate, lte: toDate },
       status: { not: "cancelled" },
+      employee: { tenantId },
     },
     select: { absenceDate: true },
   })
@@ -329,6 +333,7 @@ export async function findVacationDeductingTypes(
 
 export async function findApprovedAbsenceDaysForYear(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string,
   typeIds: string[],
   yearStart: Date,
@@ -340,6 +345,7 @@ export async function findApprovedAbsenceDaysForYear(
       absenceTypeId: { in: typeIds },
       status: "approved",
       absenceDate: { gte: yearStart, lte: yearEnd },
+      employee: { tenantId },
     },
     select: {
       absenceDate: true,
@@ -350,6 +356,7 @@ export async function findApprovedAbsenceDaysForYear(
 
 export async function findEmployeeDayPlansWithVacationDeduction(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string,
   yearStart: Date,
   yearEnd: Date
@@ -358,6 +365,7 @@ export async function findEmployeeDayPlansWithVacationDeduction(
     where: {
       employeeId,
       planDate: { gte: yearStart, lte: yearEnd },
+      employee: { tenantId },
     },
     include: {
       dayPlan: {
