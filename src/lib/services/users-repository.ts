@@ -117,10 +117,6 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  const existing = await prisma.user.findFirst({ where: { id, userTenants: { some: { tenantId } } } })
-  if (!existing) {
-    return null
-  }
   return prisma.user.update({ where: { id }, data })
 }
 

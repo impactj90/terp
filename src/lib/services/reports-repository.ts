@@ -102,10 +102,6 @@ export async function updateStatus(
   id: string,
   data: Record<string, unknown>
 ) {
-  const existing = await prisma.report.findFirst({ where: { id, tenantId } })
-  if (!existing) {
-    return null
-  }
   return prisma.report.update({ where: { id }, data })
 }
 

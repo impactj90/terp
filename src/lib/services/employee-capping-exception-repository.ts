@@ -103,10 +103,6 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  const existing = await prisma.employeeCappingException.findFirst({ where: { id, employee: { tenantId } } })
-  if (!existing) {
-    return null
-  }
   return prisma.employeeCappingException.update({ where: { id }, data })
 }
 

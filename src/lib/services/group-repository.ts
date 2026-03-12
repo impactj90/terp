@@ -126,8 +126,6 @@ export async function update(
   data: Record<string, unknown>
 ) {
   const delegate = getGroupDelegate(prisma, type)
-  const existing = await delegate.findFirst({ where: { id, tenantId } })
-  if (!existing) return null
   await delegate.updateMany({ where: { id, tenantId }, data })
   return delegate.findFirst({ where: { id, tenantId } })
 }

@@ -87,10 +87,6 @@ export async function updateStatus(
   id: string,
   status: string
 ) {
-  const existing = await prisma.dailyValue.findFirst({ where: { id, tenantId } })
-  if (!existing) {
-    return null
-  }
   return prisma.dailyValue.update({
     where: { id },
     data: { status },

@@ -83,10 +83,6 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  const existing = await prisma.employeeAccessAssignment.findFirst({ where: { id, employee: { tenantId } } })
-  if (!existing) {
-    return null
-  }
   return prisma.employeeAccessAssignment.update({
     where: { id },
     data,

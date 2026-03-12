@@ -64,10 +64,6 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  const existing = await prisma.absenceTypeGroup.findFirst({ where: { id, tenantId } })
-  if (!existing) {
-    return null
-  }
   return prisma.absenceTypeGroup.update({ where: { id }, data })
 }
 

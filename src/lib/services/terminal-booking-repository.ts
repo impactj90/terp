@@ -98,10 +98,6 @@ export async function updateImportBatch(
   id: string,
   data: Record<string, unknown>
 ) {
-  const existing = await prisma.importBatch.findFirst({ where: { id, tenantId } })
-  if (!existing) {
-    return null
-  }
   return prisma.importBatch.update({ where: { id }, data })
 }
 

@@ -88,10 +88,6 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  const existing = await prisma.absenceType.findFirst({ where: { id, tenantId } })
-  if (!existing) {
-    return null
-  }
   return prisma.absenceType.update({ where: { id }, data })
 }
 

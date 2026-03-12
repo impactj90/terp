@@ -74,8 +74,6 @@ export async function updateMacro(
   id: string,
   data: Record<string, unknown>
 ) {
-  const existing = await prisma.macro.findFirst({ where: { id, tenantId } })
-  if (!existing) return null
   return prisma.macro.update({ where: { id }, data })
 }
 
@@ -128,8 +126,6 @@ export async function updateAssignment(
   assignmentId: string,
   data: Record<string, unknown>
 ) {
-  const existing = await prisma.macroAssignment.findFirst({ where: { id: assignmentId, macro: { tenantId } } })
-  if (!existing) return null
   return prisma.macroAssignment.update({ where: { id: assignmentId }, data })
 }
 
@@ -193,7 +189,5 @@ export async function updateExecution(
     errorMessage: string | null
   }
 ) {
-  const existing = await prisma.macroExecution.findFirst({ where: { id, tenantId } })
-  if (!existing) return null
   return prisma.macroExecution.update({ where: { id }, data })
 }

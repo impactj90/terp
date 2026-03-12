@@ -123,10 +123,6 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  const existing = await prisma.tripRecord.findFirst({ where: { id, tenantId } })
-  if (!existing) {
-    return null
-  }
   return prisma.tripRecord.update({
     where: { id },
     data,

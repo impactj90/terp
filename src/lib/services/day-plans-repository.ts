@@ -90,10 +90,6 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  const existing = await prisma.dayPlan.findFirst({ where: { id, tenantId } })
-  if (!existing) {
-    return null
-  }
   return prisma.dayPlan.update({ where: { id }, data })
 }
 

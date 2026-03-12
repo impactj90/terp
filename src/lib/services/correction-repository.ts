@@ -123,10 +123,6 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  const existing = await prisma.correction.findFirst({ where: { id, tenantId } })
-  if (!existing) {
-    return null
-  }
   return prisma.correction.update({
     where: { id },
     data,
@@ -145,10 +141,6 @@ export async function updateIfStatus(
   expectedStatus: string,
   data: Record<string, unknown>
 ) {
-  const existing = await prisma.correction.findFirst({ where: { id, tenantId, status: expectedStatus } })
-  if (!existing) {
-    return null
-  }
   return prisma.correction.update({
     where: { id },
     data,

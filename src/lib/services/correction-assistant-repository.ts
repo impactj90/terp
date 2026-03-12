@@ -63,10 +63,6 @@ export async function updateMessage(
   id: string,
   data: Record<string, unknown>
 ) {
-  const existing = await prisma.correctionMessage.findFirst({ where: { id, tenantId } })
-  if (!existing) {
-    return null
-  }
   return prisma.correctionMessage.update({ where: { id }, data })
 }
 

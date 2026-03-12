@@ -73,8 +73,6 @@ export async function findByIdForUser(
 }
 
 export async function markRead(prisma: PrismaClient, tenantId: string, id: string) {
-  const existing = await prisma.notification.findFirst({ where: { id, tenantId } })
-  if (!existing) return null
   return prisma.notification.update({ where: { id }, data: { readAt: new Date() } })
 }
 

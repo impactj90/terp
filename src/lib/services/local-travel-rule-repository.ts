@@ -66,10 +66,6 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  const existing = await prisma.localTravelRule.findFirst({ where: { id, tenantId } })
-  if (!existing) {
-    return null
-  }
   return prisma.localTravelRule.update({ where: { id }, data })
 }
 

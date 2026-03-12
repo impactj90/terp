@@ -53,10 +53,6 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  const existing = await prisma.vehicleRoute.findFirst({ where: { id, tenantId } })
-  if (!existing) {
-    return null
-  }
   return prisma.vehicleRoute.update({ where: { id }, data })
 }
 

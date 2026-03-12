@@ -68,10 +68,6 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  const existing = await prisma.vacationSpecialCalculation.findFirst({ where: { id, tenantId } })
-  if (!existing) {
-    return null
-  }
   return prisma.vacationSpecialCalculation.update({ where: { id }, data })
 }
 

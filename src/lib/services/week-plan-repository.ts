@@ -118,10 +118,6 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  const existing = await prisma.weekPlan.findFirst({ where: { id, tenantId } })
-  if (!existing) {
-    return null
-  }
   return prisma.weekPlan.update({ where: { id }, data })
 }
 

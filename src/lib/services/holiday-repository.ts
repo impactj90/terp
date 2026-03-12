@@ -100,10 +100,6 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  const existing = await prisma.holiday.findFirst({ where: { id, tenantId } })
-  if (!existing) {
-    return null
-  }
   return prisma.holiday.update({ where: { id }, data })
 }
 

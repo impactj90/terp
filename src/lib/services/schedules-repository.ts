@@ -81,10 +81,6 @@ export async function updateSchedule(
   id: string,
   data: Record<string, unknown>
 ) {
-  const existing = await prisma.schedule.findFirst({ where: { id, tenantId } })
-  if (!existing) {
-    return null
-  }
   return prisma.schedule.update({ where: { id }, data })
 }
 
@@ -176,10 +172,6 @@ export async function updateExecution(
   id: string,
   data: Record<string, unknown>
 ) {
-  const existing = await prisma.scheduleExecution.findFirst({ where: { id, tenantId } })
-  if (!existing) {
-    return null
-  }
   return prisma.scheduleExecution.update({ where: { id }, data })
 }
 

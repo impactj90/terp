@@ -56,10 +56,6 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  const existing = await prisma.travelAllowanceRuleSet.findFirst({ where: { id, tenantId } })
-  if (!existing) {
-    return null
-  }
   return prisma.travelAllowanceRuleSet.update({ where: { id }, data })
 }
 

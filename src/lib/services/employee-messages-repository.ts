@@ -163,10 +163,6 @@ export async function updateRecipientStatus(
     errorMessage?: string
   }
 ) {
-  const existing = await prisma.employeeMessageRecipient.findFirst({ where: { id: recipientId, message: { tenantId } } })
-  if (!existing) {
-    return false
-  }
   await prisma.employeeMessageRecipient.update({
     where: { id: recipientId },
     data,

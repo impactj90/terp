@@ -105,10 +105,6 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  const existing = await prisma.orderAssignment.findFirst({ where: { id, order: { tenantId } } })
-  if (!existing) {
-    return null
-  }
   return prisma.orderAssignment.update({ where: { id }, data })
 }
 
