@@ -320,7 +320,7 @@ export async function update(
     data.notes = input.notes === null ? null : input.notes.trim()
   }
 
-  const plan = await repo.update(prisma, input.id, data)
+  const plan = (await repo.update(prisma, tenantId, input.id, data))!
 
   return mapToOutput(plan as unknown as Record<string, unknown>)
 }
@@ -339,7 +339,7 @@ export async function remove(
     throw new EmployeeDayPlanNotFoundError()
   }
 
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
   return { success: true }
 }
 
@@ -361,72 +361,80 @@ export async function bulkCreate(
     }>
   }
 ) {
-  // Validate all entries first
+  // Collect unique IDs for batch validation
+  const uniqueEmployeeIds = [...new Set(input.entries.map((e) => e.employeeId))]
+  const uniqueShiftIds = [...new Set(
+    input.entries.map((e) => e.shiftId).filter((id): id is string => !!id)
+  )]
+  const uniqueDayPlanIds = [...new Set(
+    input.entries.map((e) => e.dayPlanId).filter((id): id is string => !!id)
+  )]
+
+  // Batch fetch all referenced entities
+  const [foundEmployees, foundShifts, foundDayPlans] = await Promise.all([
+    prisma.employee.findMany({
+      where: { id: { in: uniqueEmployeeIds }, tenantId },
+      select: { id: true },
+    }),
+    uniqueShiftIds.length > 0
+      ? prisma.shift.findMany({
+          where: { id: { in: uniqueShiftIds }, tenantId },
+          select: { id: true, dayPlanId: true },
+        })
+      : Promise.resolve([]),
+    uniqueDayPlanIds.length > 0
+      ? prisma.dayPlan.findMany({
+          where: { id: { in: uniqueDayPlanIds }, tenantId },
+          select: { id: true },
+        })
+      : Promise.resolve([]),
+  ])
+
+  // Build lookup sets/maps
+  const employeeIdSet = new Set(foundEmployees.map((e) => e.id))
+  const shiftMap = new Map(foundShifts.map((s) => [s.id, s]))
+  const dayPlanIdSet = new Set(foundDayPlans.map((d) => d.id))
+
+  // Validate all entries against the maps
   for (const entry of input.entries) {
-    // Validate employee
-    const employee = await repo.findEmployeeForTenant(
-      prisma,
-      tenantId,
-      entry.employeeId
-    )
-    if (!employee) {
+    if (!employeeIdSet.has(entry.employeeId)) {
       throw new EmployeeDayPlanValidationError(
         `Invalid employee reference: ${entry.employeeId}`
       )
     }
-
-    // Validate shift if provided
-    if (entry.shiftId) {
-      const shift = await repo.findShiftForTenant(
-        prisma,
-        tenantId,
-        entry.shiftId
+    if (entry.shiftId && !shiftMap.has(entry.shiftId)) {
+      throw new EmployeeDayPlanValidationError(
+        `Invalid shift reference: ${entry.shiftId}`
       )
-      if (!shift) {
-        throw new EmployeeDayPlanValidationError(
-          `Invalid shift reference: ${entry.shiftId}`
-        )
-      }
     }
-
-    // Validate dayPlan if provided
-    if (entry.dayPlanId) {
-      const dp = await repo.findDayPlanForTenant(
-        prisma,
-        tenantId,
-        entry.dayPlanId
+    if (entry.dayPlanId && !dayPlanIdSet.has(entry.dayPlanId)) {
+      throw new EmployeeDayPlanValidationError(
+        `Invalid day plan reference: ${entry.dayPlanId}`
       )
-      if (!dp) {
-        throw new EmployeeDayPlanValidationError(
-          `Invalid day plan reference: ${entry.dayPlanId}`
-        )
-      }
     }
   }
 
   // Resolve dayPlanId from shift for entries without explicit dayPlanId
-  const resolvedEntries = await Promise.all(
-    input.entries.map(async (entry) => {
-      let dayPlanId = entry.dayPlanId || null
-      const shiftId = entry.shiftId || null
+  const resolvedEntries = input.entries.map((entry) => {
+    let dayPlanId = entry.dayPlanId || null
+    const shiftId = entry.shiftId || null
 
-      if (shiftId && !dayPlanId) {
-        const shift = await repo.findShiftForTenant(prisma, tenantId, shiftId)
-        if (shift?.dayPlanId) {
-          dayPlanId = shift.dayPlanId
-        }
+    if (shiftId && !dayPlanId) {
+      const shift = shiftMap.get(shiftId)
+      if (shift?.dayPlanId) {
+        dayPlanId = shift.dayPlanId
       }
+    }
 
-      return {
-        employeeId: entry.employeeId,
-        planDate: entry.planDate,
-        dayPlanId,
-        shiftId,
-        source: entry.source,
-        notes: entry.notes,
-      }
-    })
-  )
+    return {
+      employeeId: entry.employeeId,
+      planDate: entry.planDate,
+      dayPlanId,
+      shiftId,
+      source: entry.source,
+      notes: entry.notes,
+    }
+  })
 
   // Bulk upsert in transaction
   await repo.bulkUpsert(prisma, tenantId, resolvedEntries)

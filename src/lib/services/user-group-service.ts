@@ -217,7 +217,7 @@ export async function update(
   }
 
   // Update group
-  const group = await repo.update(prisma, input.id, data)
+  const group = (await repo.update(prisma, tenantId, input.id, data))!
 
   // If isAdmin changed, cascade role update to all users in this group
   if (
@@ -247,5 +247,5 @@ export async function remove(
     throw new UserGroupForbiddenError("Cannot delete system group")
   }
 
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
 }

@@ -83,9 +83,14 @@ export async function findByIdWithEmployee(
 
 export async function updateStatus(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   status: string
 ) {
+  const existing = await prisma.dailyValue.findFirst({ where: { id, tenantId } })
+  if (!existing) {
+    return null
+  }
   return prisma.dailyValue.update({
     where: { id },
     data: { status },

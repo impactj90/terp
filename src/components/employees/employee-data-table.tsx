@@ -144,8 +144,8 @@ export function EmployeeDataTable({
             <TableCell>
               <div className="flex items-center gap-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
-                  {employee.firstName[0]}
-                  {employee.lastName[0]}
+                  {employee.firstName?.[0] ?? '?'}
+                  {employee.lastName?.[0] ?? '?'}
                 </div>
                 <span className="font-medium">
                   {employee.firstName} {employee.lastName}

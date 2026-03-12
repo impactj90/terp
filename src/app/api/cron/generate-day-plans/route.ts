@@ -240,7 +240,12 @@ export async function executeGenerateDayPlans(
 export async function GET(request: Request) {
   // 1. CRON_SECRET validation
   const authHeader = request.headers.get("authorization")
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const cronSecret = process.env.CRON_SECRET
+  if (!cronSecret) {
+    console.error('[generate-day-plans] CRON_SECRET is not configured')
+    return NextResponse.json({ error: 'Service unavailable' }, { status: 503 })
+  }
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 

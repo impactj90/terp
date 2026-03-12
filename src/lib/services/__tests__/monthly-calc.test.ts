@@ -28,7 +28,7 @@ function createMockPrisma() {
     monthlyValue: {
       findUnique: vi.fn().mockResolvedValue(null),
       findMany: vi.fn().mockResolvedValue([]),
-      upsert: vi.fn().mockResolvedValue({}),
+      create: vi.fn().mockResolvedValue({}),
       update: vi.fn().mockResolvedValue({}),
       updateMany: vi.fn().mockResolvedValue({ count: 0 }),
     },
@@ -152,8 +152,6 @@ describe("CalculateMonth", () => {
       .mockResolvedValueOnce(null) // recalculateMonth: check if closed
       .mockResolvedValueOnce(null) // recalculateMonth: getPreviousMonth
       .mockResolvedValueOnce(mv) // calculateMonth: retrieve persisted
-    mocks.monthlyValue.upsert.mockResolvedValue(mv)
-
     const result = await svc.calculateMonth(EMPLOYEE_ID, year, month)
 
     expect(result.totalNetTime).toBe(9600)
@@ -199,8 +197,6 @@ describe("CalculateMonth", () => {
       .mockResolvedValueOnce(null) // check if closed
       .mockResolvedValueOnce(null) // getPreviousMonth
       .mockResolvedValueOnce(mv) // retrieve persisted
-    mocks.monthlyValue.upsert.mockResolvedValue(mv)
-
     const result = await svc.calculateMonth(EMPLOYEE_ID, year, month)
 
     expect(result.year).toBe(year)
@@ -223,7 +219,6 @@ describe("CalculateMonthBatch", () => {
 
     mocks.employee.findUnique.mockResolvedValue(makeEmployee())
     mocks.monthlyValue.findUnique.mockResolvedValue(null) // not closed, no previous
-    mocks.monthlyValue.upsert.mockResolvedValue({})
 
     const result = await svc.calculateMonthBatch(
       [emp1, emp2, emp3],
@@ -254,7 +249,6 @@ describe("CalculateMonthBatch", () => {
       },
     )
     mocks.monthlyValue.findUnique.mockResolvedValue(null)
-    mocks.monthlyValue.upsert.mockResolvedValue({})
 
     const result = await svc.calculateMonthBatch(
       [emp1, emp2, emp3],
@@ -292,7 +286,7 @@ describe("CalculateMonthBatch", () => {
         return null
       },
     )
-    mocks.monthlyValue.upsert.mockResolvedValue({})
+    // updateMany default returns { count: 0 }, create mock already set
 
     const result = await svc.calculateMonthBatch([emp1, emp2], year, month)
 
@@ -331,7 +325,7 @@ describe("RecalculateFromMonth", () => {
 
     mocks.employee.findUnique.mockResolvedValue(makeEmployee())
     mocks.monthlyValue.findUnique.mockResolvedValue(null)
-    mocks.monthlyValue.upsert.mockResolvedValue({})
+    // updateMany default returns { count: 0 }, create mock already set
 
     const result = await svc.recalculateFromMonth(
       EMPLOYEE_ID,
@@ -375,7 +369,7 @@ describe("RecalculateFromMonth", () => {
         return null
       },
     )
-    mocks.monthlyValue.upsert.mockResolvedValue({})
+    // updateMany default returns { count: 0 }, create mock already set
 
     const result = await svc.recalculateFromMonth(EMPLOYEE_ID, 2025, 10)
 
@@ -397,7 +391,7 @@ describe("RecalculateFromMonth", () => {
       return makeEmployee()
     })
     mocks.monthlyValue.findUnique.mockResolvedValue(null)
-    mocks.monthlyValue.upsert.mockResolvedValue({})
+    // updateMany default returns { count: 0 }, create mock already set
 
     const result = await svc.recalculateFromMonth(EMPLOYEE_ID, 2025, 10)
 
@@ -414,7 +408,7 @@ describe("RecalculateFromMonth", () => {
 
     mocks.employee.findUnique.mockResolvedValue(makeEmployee())
     mocks.monthlyValue.findUnique.mockResolvedValue(null)
-    mocks.monthlyValue.upsert.mockResolvedValue({})
+    // updateMany default returns { count: 0 }, create mock already set
 
     const result = await svc.recalculateFromMonth(EMPLOYEE_ID, 2025, 12)
 
@@ -432,7 +426,7 @@ describe("RecalculateFromMonth", () => {
 
     mocks.employee.findUnique.mockResolvedValue(makeEmployee())
     mocks.monthlyValue.findUnique.mockResolvedValue(null)
-    mocks.monthlyValue.upsert.mockResolvedValue({})
+    // updateMany default returns { count: 0 }, create mock already set
 
     const result = await svc.recalculateFromMonth(EMPLOYEE_ID, year, month)
 
@@ -467,7 +461,7 @@ describe("RecalculateFromMonthBatch", () => {
 
     mocks.employee.findUnique.mockResolvedValue(makeEmployee())
     mocks.monthlyValue.findUnique.mockResolvedValue(null)
-    mocks.monthlyValue.upsert.mockResolvedValue({})
+    // updateMany default returns { count: 0 }, create mock already set
 
     const result = await svc.recalculateFromMonthBatch(
       ["e-1", "e-2"],
@@ -501,7 +495,7 @@ describe("RecalculateFromMonthBatch", () => {
         return null
       },
     )
-    mocks.monthlyValue.upsert.mockResolvedValue({})
+    // updateMany default returns { count: 0 }, create mock already set
 
     const result = await svc.recalculateFromMonthBatch(
       ["e-1", "e-2"],
@@ -604,17 +598,18 @@ describe("RecalculateMonth", () => {
       makeDailyValue("2026-01-10"),
     ]
     mocks.dailyValue.findMany.mockResolvedValue(dailyValues)
-    mocks.monthlyValue.upsert.mockResolvedValue({})
+    // updateMany default returns { count: 0 }, create mock already set
 
     await svc.recalculateMonth(EMPLOYEE_ID, 2026, 1)
 
-    expect(mocks.monthlyValue.upsert).toHaveBeenCalledTimes(1)
-    const upsertArg = mocks.monthlyValue.upsert.mock.calls[0]![0] as {
-      create: Record<string, unknown>
+    // New flow: updateMany returns 0 → create is called
+    expect(mocks.monthlyValue.create).toHaveBeenCalledTimes(1)
+    const createArg = mocks.monthlyValue.create.mock.calls[0]![0] as {
+      data: Record<string, unknown>
     }
-    expect(upsertArg.create.totalNetTime).toBe(2400) // 5 * 480
-    expect(upsertArg.create.totalTargetTime).toBe(2400)
-    expect(upsertArg.create.workDays).toBe(5)
+    expect(createArg.data.totalNetTime).toBe(2400) // 5 * 480
+    expect(createArg.data.totalTargetTime).toBe(2400)
+    expect(createArg.data.workDays).toBe(5)
   })
 
   it("MonthClosed - throws ERR_MONTH_CLOSED", async () => {
@@ -636,26 +631,25 @@ describe("RecalculateMonth", () => {
     const svc = new MonthlyCalcService(prisma)
 
     mocks.employee.findUnique.mockResolvedValue(makeEmployee({ tariffId: null }))
-    // First call: getByEmployeeMonth for closed check (Feb 2026)
-    // Second call: getPreviousMonth (Jan 2026)
+    // New flow: getPreviousMonth is called first, then getByEmployeeMonth after updateMany=0
     mocks.monthlyValue.findUnique
-      .mockResolvedValueOnce(null) // Feb not closed
-      .mockResolvedValueOnce(makeMonthlyValue(2026, 1, { flextimeEnd: 60 })) // Jan carryover
+      .mockResolvedValueOnce(makeMonthlyValue(2026, 1, { flextimeEnd: 60 })) // getPreviousMonth: Jan carryover
+      .mockResolvedValueOnce(null) // getByEmployeeMonth: Feb not found → create
 
     const dailyValues = [
       makeDailyValue("2026-02-02", { overtime: 30 }),
     ]
     mocks.dailyValue.findMany.mockResolvedValue(dailyValues)
-    mocks.monthlyValue.upsert.mockResolvedValue({})
 
     await svc.recalculateMonth(EMPLOYEE_ID, 2026, 2)
 
-    const upsertArg = mocks.monthlyValue.upsert.mock.calls[0]![0] as {
-      create: Record<string, unknown>
+    // New flow: updateMany returns 0 → create is called
+    const createArg = mocks.monthlyValue.create.mock.calls[0]![0] as {
+      data: Record<string, unknown>
     }
-    expect(upsertArg.create.flextimeStart).toBe(60) // Previous month's end
-    expect(upsertArg.create.flextimeChange).toBe(30) // 30 min overtime
-    expect(upsertArg.create.flextimeEnd).toBe(90) // 60 + 30
+    expect(createArg.data.flextimeStart).toBe(60) // Previous month's end
+    expect(createArg.data.flextimeChange).toBe(30) // 30 min overtime
+    expect(createArg.data.flextimeEnd).toBe(90) // 60 + 30
   })
 
   it("EmployeeNotFound - throws ERR_EMPLOYEE_NOT_FOUND", async () => {
@@ -1248,18 +1242,18 @@ describe("Tariff Evaluation Rules", () => {
       }),
     ]
     mocks.dailyValue.findMany.mockResolvedValue(dailyValues)
-    mocks.monthlyValue.upsert.mockResolvedValue({})
+    // updateMany default returns { count: 0 }, create mock already set
 
     await svc.recalculateMonth(EMPLOYEE_ID, 2026, 1)
 
-    const upsertArg = mocks.monthlyValue.upsert.mock.calls[0]![0] as {
-      create: Record<string, unknown>
+    const createArg = mocks.monthlyValue.create.mock.calls[0]![0] as {
+      data: Record<string, unknown>
     }
-    expect(upsertArg.create.flextimeStart).toBe(0)
-    expect(upsertArg.create.flextimeChange).toBe(180)
+    expect(createArg.data.flextimeStart).toBe(0)
+    expect(createArg.data.flextimeChange).toBe(180)
     // Monthly cap 120 applied: credited = 120, forfeited = 60
-    expect(upsertArg.create.flextimeEnd).toBe(120)
-    expect(upsertArg.create.flextimeCarryover).toBe(120)
+    expect(createArg.data.flextimeEnd).toBe(120)
+    expect(createArg.data.flextimeCarryover).toBe(120)
   })
 
   it("AfterThreshold - threshold applied", async () => {
@@ -1286,14 +1280,14 @@ describe("Tariff Evaluation Rules", () => {
       }),
     ]
     mocks.dailyValue.findMany.mockResolvedValue(dailyValues)
-    mocks.monthlyValue.upsert.mockResolvedValue({})
+    // updateMany default returns { count: 0 }, create mock already set
 
     await svc.recalculateMonth(EMPLOYEE_ID, 2026, 1)
 
-    const upsertArg = mocks.monthlyValue.upsert.mock.calls[0]![0] as {
-      create: Record<string, unknown>
+    const createArg = mocks.monthlyValue.create.mock.calls[0]![0] as {
+      data: Record<string, unknown>
     }
-    expect(upsertArg.create.flextimeEnd).toBe(30) // 90 - 60 threshold
+    expect(createArg.data.flextimeEnd).toBe(30) // 90 - 60 threshold
   })
 
   it("NoCarryover - resets to 0", async () => {
@@ -1303,26 +1297,26 @@ describe("Tariff Evaluation Rules", () => {
     const tariff = makeTariff({ creditType: "no_carryover" })
 
     mocks.employee.findUnique.mockResolvedValue(makeEmployee())
-    // Has previous carryover of 60
+    // New flow: getPreviousMonth is called first, then getByEmployeeMonth after updateMany=0
     mocks.monthlyValue.findUnique
-      .mockResolvedValueOnce(null) // not closed
-      .mockResolvedValueOnce(makeMonthlyValue(2025, 12, { flextimeEnd: 60 })) // previous month
+      .mockResolvedValueOnce(makeMonthlyValue(2025, 12, { flextimeEnd: 60 })) // getPreviousMonth: Dec carryover
+      .mockResolvedValueOnce(null) // getByEmployeeMonth: not found → create
     mocks.tariff.findUnique.mockResolvedValue(tariff)
 
     const dailyValues = [
       makeDailyValue("2026-01-06", { overtime: 30 }),
     ]
     mocks.dailyValue.findMany.mockResolvedValue(dailyValues)
-    mocks.monthlyValue.upsert.mockResolvedValue({})
+    // updateMany default returns { count: 0 }, create mock already set
 
     await svc.recalculateMonth(EMPLOYEE_ID, 2026, 1)
 
-    const upsertArg = mocks.monthlyValue.upsert.mock.calls[0]![0] as {
-      create: Record<string, unknown>
+    const createArg = mocks.monthlyValue.create.mock.calls[0]![0] as {
+      data: Record<string, unknown>
     }
-    expect(upsertArg.create.flextimeStart).toBe(60) // Previous carryover
-    expect(upsertArg.create.flextimeEnd).toBe(0) // Reset to 0
-    expect(upsertArg.create.flextimeCarryover).toBe(0)
+    expect(createArg.data.flextimeStart).toBe(60) // Previous carryover
+    expect(createArg.data.flextimeEnd).toBe(0) // Reset to 0
+    expect(createArg.data.flextimeCarryover).toBe(0)
   })
 
   it("TariffNotFound - graceful fallback (direct transfer)", async () => {
@@ -1344,16 +1338,16 @@ describe("Tariff Evaluation Rules", () => {
       }),
     ]
     mocks.dailyValue.findMany.mockResolvedValue(dailyValues)
-    mocks.monthlyValue.upsert.mockResolvedValue({})
+    // updateMany default returns { count: 0 }, create mock already set
 
     await svc.recalculateMonth(EMPLOYEE_ID, 2026, 1)
 
-    const upsertArg = mocks.monthlyValue.upsert.mock.calls[0]![0] as {
-      create: Record<string, unknown>
+    const createArg = mocks.monthlyValue.create.mock.calls[0]![0] as {
+      data: Record<string, unknown>
     }
     // Direct transfer: flextime = overtime (60)
-    expect(upsertArg.create.flextimeEnd).toBe(60)
-    expect(upsertArg.create.flextimeChange).toBe(60)
+    expect(createArg.data.flextimeEnd).toBe(60)
+    expect(createArg.data.flextimeChange).toBe(60)
   })
 })
 
@@ -1372,15 +1366,15 @@ describe("buildEvaluationRules", () => {
 
     const dailyValues = [makeDailyValue("2026-01-06", { overtime: 60 })]
     mocks.dailyValue.findMany.mockResolvedValue(dailyValues)
-    mocks.monthlyValue.upsert.mockResolvedValue({})
+    // updateMany default returns { count: 0 }, create mock already set
 
     await svc.recalculateMonth(EMPLOYEE_ID, 2026, 1)
 
-    const upsertArg = mocks.monthlyValue.upsert.mock.calls[0]![0] as {
-      create: Record<string, unknown>
+    const createArg = mocks.monthlyValue.create.mock.calls[0]![0] as {
+      data: Record<string, unknown>
     }
     // no_evaluation = direct transfer, same as null
-    expect(upsertArg.create.flextimeEnd).toBe(60)
+    expect(createArg.data.flextimeEnd).toBe(60)
   })
 
   it("EmptyCreditType defaults to no_evaluation (null rules)", async () => {
@@ -1395,15 +1389,15 @@ describe("buildEvaluationRules", () => {
 
     const dailyValues = [makeDailyValue("2026-01-06", { overtime: 60 })]
     mocks.dailyValue.findMany.mockResolvedValue(dailyValues)
-    mocks.monthlyValue.upsert.mockResolvedValue({})
+    // updateMany default returns { count: 0 }, create mock already set
 
     await svc.recalculateMonth(EMPLOYEE_ID, 2026, 1)
 
-    const upsertArg = mocks.monthlyValue.upsert.mock.calls[0]![0] as {
-      create: Record<string, unknown>
+    const createArg = mocks.monthlyValue.create.mock.calls[0]![0] as {
+      data: Record<string, unknown>
     }
     // empty credit type defaults to no_evaluation = direct transfer
-    expect(upsertArg.create.flextimeEnd).toBe(60)
+    expect(createArg.data.flextimeEnd).toBe(60)
   })
 })
 
@@ -1423,9 +1417,11 @@ describe("Integration Scenarios", () => {
     )
 
     // Step 1: Month is closed -> recalculate should fail
-    mocks.monthlyValue.findUnique.mockResolvedValueOnce(
-      makeMonthlyValue(year, month, { isClosed: true }),
-    )
+    // New flow: getPreviousMonth first (returns null), then updateMany returns 0,
+    // then getByEmployeeMonth returns closed record → throws
+    mocks.monthlyValue.findUnique
+      .mockResolvedValueOnce(null) // getPreviousMonth: no previous
+      .mockResolvedValueOnce(makeMonthlyValue(year, month, { isClosed: true })) // getByEmployeeMonth: closed
 
     await expect(
       svc.recalculateMonth(EMPLOYEE_ID, year, month),
@@ -1435,18 +1431,16 @@ describe("Integration Scenarios", () => {
     mocks.monthlyValue.updateMany.mockResolvedValueOnce({ count: 1 })
 
     await svc.reopenMonth(EMPLOYEE_ID, year, month, reopenedBy)
-    expect(mocks.monthlyValue.updateMany).toHaveBeenCalledTimes(1)
+    // updateMany called once for recalculate step 1 (returned 0) + once for reopen (returned 1)
+    expect(mocks.monthlyValue.updateMany).toHaveBeenCalledTimes(2)
 
     // Step 3: Recalculate should now succeed (month is open)
-    mocks.monthlyValue.findUnique.mockResolvedValueOnce(
-      makeMonthlyValue(year, month, { isClosed: false }),
-    )
-    // getPreviousMonth
-    mocks.monthlyValue.findUnique.mockResolvedValueOnce(null)
-
-    mocks.monthlyValue.upsert.mockResolvedValue({})
+    // New flow: getPreviousMonth first, then updateMany returns 0, then getByEmployeeMonth
+    mocks.monthlyValue.findUnique
+      .mockResolvedValueOnce(null) // getPreviousMonth: no previous
+      .mockResolvedValueOnce(null) // getByEmployeeMonth: not found → create
 
     await svc.recalculateMonth(EMPLOYEE_ID, year, month)
-    expect(mocks.monthlyValue.upsert).toHaveBeenCalledTimes(1)
+    expect(mocks.monthlyValue.create).toHaveBeenCalled()
   })
 })

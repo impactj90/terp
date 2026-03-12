@@ -4,6 +4,7 @@
  * Provides mock factories for ContextUser, Session, TRPCContext, and UserGroup
  * to avoid duplication across test files.
  */
+import { vi } from "vitest"
 import type { TRPCContext, ContextUser } from "@/trpc/init"
 import type { Session, User as SupabaseUser } from "@supabase/supabase-js"
 import type {
@@ -11,6 +12,85 @@ import type {
   Tenant,
   UserTenant,
 } from "@/generated/prisma/client"
+
+/**
+ * Wraps a partial Prisma mock so that any undefined model or method
+ * automatically returns a vi.fn() stub. This prevents "X is not a function"
+ * errors when repository code calls methods not explicitly mocked in a test.
+ *
+ * Default return values:
+ *  - updateMany / deleteMany → { count: 1 }
+ *  - findMany → []
+ *  - count → 0
+ *  - Everything else → null
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function autoMockPrisma(partial: Record<string, any>): Record<string, any> {
+  function createModelProxy(model: Record<string, unknown>) {
+    return new Proxy(model, {
+      get(mTarget, methodName: string) {
+        if (methodName in mTarget) return mTarget[methodName]
+        // Auto-stub missing methods with sensible defaults
+        if (methodName === "updateMany" || methodName === "deleteMany") {
+          mTarget[methodName] = vi.fn().mockResolvedValue({ count: 1 })
+        } else if (methodName === "findMany") {
+          mTarget[methodName] = vi.fn().mockResolvedValue([])
+        } else if (methodName === "count") {
+          mTarget[methodName] = vi.fn().mockResolvedValue(0)
+        } else if (methodName === "createMany") {
+          mTarget[methodName] = vi.fn().mockResolvedValue({ count: 0 })
+        } else {
+          mTarget[methodName] = vi.fn().mockResolvedValue(null)
+        }
+        return mTarget[methodName]
+      },
+    })
+  }
+
+  const proxy: Record<string, unknown> = new Proxy(partial, {
+    get(target, prop: string) {
+      // Handle $transaction: wrap tx objects with auto-mocking
+      if (prop === "$transaction") {
+        if (prop in target) {
+          const originalTx = target[prop]
+          // If user defined their own $transaction, wrap the tx object it passes
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          return vi.fn().mockImplementation(async (fnOrArray: any) => {
+            if (typeof fnOrArray === "function") {
+              // Wrap the original implementation to auto-mock the tx object
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              return originalTx.getMockImplementation()!((tx: any) => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                return fnOrArray(autoMockPrisma(tx as Record<string, any>))
+              })
+            }
+            return Promise.all(fnOrArray)
+          })
+        }
+        target[prop] = vi.fn().mockImplementation(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          async (fnOrArray: ((tx: any) => Promise<any>) | any[]) => {
+            if (typeof fnOrArray === "function") {
+              return fnOrArray(proxy)
+            }
+            return Promise.all(fnOrArray)
+          }
+        )
+        return target[prop]
+      }
+
+      if (prop in target) {
+        const model = target[prop]
+        if (typeof model !== "object" || model === null) return model
+        return createModelProxy(model as Record<string, unknown>)
+      }
+      // Model doesn't exist at all — create a fully auto-stubbed model
+      target[prop] = {}
+      return createModelProxy(target[prop] as Record<string, unknown>)
+    },
+  })
+  return proxy
+}
 
 /**
  * Creates a mock ContextUser for tests.
@@ -64,7 +144,7 @@ export function createMockSession(): Session {
 export function createMockContext(
   overrides: Partial<TRPCContext> = {}
 ): TRPCContext {
-  return {
+  const ctx = {
     prisma: {} as TRPCContext["prisma"],
     authToken: null,
     user: null,
@@ -72,6 +152,11 @@ export function createMockContext(
     tenantId: null,
     ...overrides,
   }
+  // Auto-wrap prisma mock so undefined methods get auto-stubbed
+  if (ctx.prisma) {
+    ctx.prisma = autoMockPrisma(ctx.prisma as unknown as Record<string, unknown>) as unknown as TRPCContext["prisma"]
+  }
+  return ctx
 }
 
 /**

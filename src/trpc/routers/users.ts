@@ -361,13 +361,13 @@ export const usersRouter = createTRPCRouter({
    * Replaces: POST /users/{id}/password (Go UserHandler.ChangePassword)
    */
   changePassword: tenantProcedure
+    .input(changePasswordInputSchema)
     .use(
       requireSelfOrPermission(
         (input) => (input as { userId: string }).userId,
         USERS_MANAGE
       )
     )
-    .input(changePasswordInputSchema)
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {

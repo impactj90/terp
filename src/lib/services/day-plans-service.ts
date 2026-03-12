@@ -506,7 +506,7 @@ export async function update(
     (data.planType as string) || existing.planType
   normalizeFlextimeFields(data, effectivePlanType)
 
-  await repo.update(prisma, input.id, data)
+  await repo.update(prisma, tenantId, input.id, data)
 
   // Re-fetch with detail include
   return repo.findByIdWithDetail(prisma, input.id)
@@ -532,7 +532,7 @@ export async function remove(
   }
 
   // Hard delete (breaks and bonuses cascade via FK)
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
 }
 
 export async function copy(

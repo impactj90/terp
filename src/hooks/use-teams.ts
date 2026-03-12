@@ -127,6 +127,9 @@ export function useUpdateTeam() {
       queryClient.invalidateQueries({
         queryKey: trpc.teams.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.teams.getById.queryKey(),
+      })
     },
   })
 }
@@ -148,6 +151,9 @@ export function useDeleteTeam() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.teams.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.teams.getById.queryKey(),
       })
     },
   })

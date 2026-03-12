@@ -132,6 +132,7 @@ export async function createTariffWithSubRecords(
 
 export async function updateTariffWithSubRecords(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: {
     tariffData: Record<string, unknown>
@@ -142,10 +143,13 @@ export async function updateTariffWithSubRecords(
   }
 ) {
   return prisma.$transaction(async (tx) => {
-    await tx.tariff.update({
-      where: { id },
+    const { count } = await tx.tariff.updateMany({
+      where: { id, tenantId },
       data: data.tariffData,
     })
+    if (count === 0) {
+      throw new Error("Tariff not found")
+    }
 
     // Handle rhythm type changes -- clean up old sub-records
     if (data.rhythmTypeChanged) {
@@ -212,10 +216,11 @@ export async function updateTariffWithSubRecords(
   })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.tariff.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.tariff.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 // --- Usage checks ---

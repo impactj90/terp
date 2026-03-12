@@ -68,7 +68,7 @@ export function HolidayDataTable({
     return null
   }
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | string) => {
     return format(new Date(date), 'EEEE, MMMM d, yyyy')
   }
 

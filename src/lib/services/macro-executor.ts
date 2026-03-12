@@ -142,14 +142,28 @@ export class MacroExecutor {
       },
     })
 
-    // 2. Run the action
-    const actionResult = await executeAction({
-      id: macro.id,
-      name: macro.name,
-      macroType: macro.macroType,
-      actionType: macro.actionType,
-      actionParams: macro.actionParams,
-    })
+    // 2. Run the action (with try/finally to ensure execution record is always updated)
+    let actionResult
+    try {
+      actionResult = await executeAction({
+        id: macro.id,
+        name: macro.name,
+        macroType: macro.macroType,
+        actionType: macro.actionType,
+        actionParams: macro.actionParams,
+      })
+    } catch (err) {
+      // Unexpected throw — mark execution as failed so it doesn't stay "running"
+      await this.prisma.macroExecution.update({
+        where: { id: execution.id },
+        data: {
+          completedAt: new Date(),
+          status: "failed",
+          errorMessage: String(err),
+        },
+      })
+      throw err
+    }
 
     // 3. Update execution record
     await this.prisma.macroExecution.update({

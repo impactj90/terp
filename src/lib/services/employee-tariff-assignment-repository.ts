@@ -94,19 +94,22 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.employeeTariffAssignment.update({
-    where: { id },
-    data,
-  })
+  const existing = await prisma.employeeTariffAssignment.findFirst({ where: { id, employee: { tenantId } } })
+  if (!existing) {
+    return null
+  }
+  return prisma.employeeTariffAssignment.update({ where: { id }, data })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.employeeTariffAssignment.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.employeeTariffAssignment.deleteMany({
+    where: { id, employee: { tenantId } },
   })
+  return count > 0
 }
 
 export async function findEffective(

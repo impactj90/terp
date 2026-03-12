@@ -101,17 +101,20 @@ export async function findByIdWithIncludes(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.orderAssignment.update({
-    where: { id },
-    data,
-  })
+  const existing = await prisma.orderAssignment.findFirst({ where: { id, order: { tenantId } } })
+  if (!existing) {
+    return null
+  }
+  return prisma.orderAssignment.update({ where: { id }, data })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.orderAssignment.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.orderAssignment.deleteMany({
+    where: { id, order: { tenantId } },
   })
+  return count > 0
 }

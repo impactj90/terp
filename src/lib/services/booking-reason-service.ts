@@ -218,7 +218,7 @@ export async function update(
       : existing.offsetMinutes
   validateAdjustmentFields(finalRefTime, finalOffset)
 
-  return repo.update(prisma, input.id, data)
+  return (await repo.update(prisma, tenantId, input.id, data))!
 }
 
 export async function remove(
@@ -233,5 +233,5 @@ export async function remove(
   }
 
   // Hard delete
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { MutationCache, QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
 import { createTRPCClient, httpBatchLink, httpSubscriptionLink, splitLink } from "@trpc/client"
 import type { AppRouter } from "@/trpc/routers/_app"
@@ -14,6 +14,13 @@ import { tenantIdStorage } from "@/lib/storage"
  */
 function makeQueryClient() {
   return new QueryClient({
+    mutationCache: new MutationCache({
+      onError: (error) => {
+        // Global fallback for mutations without their own onError handler.
+        // Individual mutation hooks can still provide specific onError callbacks.
+        console.error('[Mutation Error]', error.message)
+      },
+    }),
     defaultOptions: {
       queries: {
         staleTime: 5 * 60 * 1000,

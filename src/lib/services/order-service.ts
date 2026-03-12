@@ -225,7 +225,7 @@ export async function update(
     data.isActive = input.isActive
   }
 
-  await repo.update(prisma, input.id, data)
+  await repo.update(prisma, tenantId, input.id, data)
 
   // Re-fetch with CostCenter preload
   const result = await repo.findByIdWithInclude(prisma, tenantId, input.id)
@@ -247,5 +247,5 @@ export async function remove(
   }
 
   // Hard delete (OrderAssignments cascade via FK)
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
 }

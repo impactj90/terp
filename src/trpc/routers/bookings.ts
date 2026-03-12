@@ -292,6 +292,13 @@ export const bookingsRouter = createTRPCRouter({
           dataScope
         )
 
+        // If user only has VIEW_OWN, verify the booking belongs to their employee
+        if (!hasPermission(ctx.user!, VIEW_ALL)) {
+          if ((booking as unknown as { employeeId: string }).employeeId !== ctx.user!.employeeId) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found" })
+          }
+        }
+
         return mapToOutput(booking as unknown as Record<string, unknown>)
       } catch (err) {
         handleServiceError(err)

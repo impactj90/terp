@@ -60,19 +60,22 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.activity.update({
-    where: { id },
-    data,
-  })
+  const existing = await prisma.activity.findFirst({ where: { id, tenantId } })
+  if (!existing) {
+    return null
+  }
+  return prisma.activity.update({ where: { id }, data })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.activity.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.activity.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 export async function countEmployees(

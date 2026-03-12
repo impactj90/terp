@@ -154,13 +154,15 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.employee.update({
-    where: { id },
-    data,
-  })
+  const existing = await prisma.employee.findFirst({ where: { id, tenantId } })
+  if (!existing) {
+    return null
+  }
+  return prisma.employee.update({ where: { id }, data })
 }
 
 // --- Day View Queries ---

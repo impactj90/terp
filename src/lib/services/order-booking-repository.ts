@@ -153,17 +153,20 @@ export async function findByIdWithInclude(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.orderBooking.update({
-    where: { id },
-    data,
-  })
+  const existing = await prisma.orderBooking.findFirst({ where: { id, tenantId } })
+  if (!existing) {
+    return null
+  }
+  return prisma.orderBooking.update({ where: { id }, data })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.orderBooking.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.orderBooking.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }

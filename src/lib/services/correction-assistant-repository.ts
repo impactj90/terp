@@ -63,14 +63,11 @@ export async function updateMessage(
   id: string,
   data: Record<string, unknown>
 ) {
-  const { count } = await prisma.correctionMessage.updateMany({
-    where: { id, tenantId },
-    data,
-  })
-  if (count === 0) {
+  const existing = await prisma.correctionMessage.findFirst({ where: { id, tenantId } })
+  if (!existing) {
     return null
   }
-  return prisma.correctionMessage.findFirst({ where: { id, tenantId } })
+  return prisma.correctionMessage.update({ where: { id }, data })
 }
 
 export async function findActiveMessages(

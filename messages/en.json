@@ -458,6 +458,7 @@
     "labelLastUpdated": "Last Updated",
     "vacationBalance": "Vacation Balance",
     "noBalanceConfigured": "No vacation balance configured",
+    "failedToLoadBalance": "Failed to load balance",
     "ofTotalDays": "/ {total} days",
     "daysUsed": "{count} days used",
     "dayUsed": "{count} day used",

@@ -174,6 +174,12 @@ export function useExecuteSchedule() {
       queryClient.invalidateQueries({
         queryKey: trpc.schedules.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.dayView.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeDayPlans.list.queryKey(),
+      })
     },
   })
 }

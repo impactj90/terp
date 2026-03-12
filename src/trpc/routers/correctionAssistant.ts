@@ -23,7 +23,7 @@ import type { PrismaClient } from "@/generated/prisma/client"
 // --- Permission Constants ---
 
 const TIME_TRACKING_VIEW_ALL = permissionIdByKey("time_tracking.view_all")!
-const TIME_TRACKING_EDIT = permissionIdByKey("time_tracking.edit")!
+const CORRECTIONS_MANAGE = permissionIdByKey("corrections.manage")!
 
 // --- Error Codes (from calculation/errors.go) ---
 
@@ -272,10 +272,10 @@ export const correctionAssistantRouter = createTRPCRouter({
    * Supports partial update of customText, severity, and isActive.
    * Setting customText to empty string clears it to null.
    *
-   * Requires: time_tracking.edit permission
+   * Requires: corrections.manage permission
    */
   updateMessage: tenantProcedure
-    .use(requirePermission(TIME_TRACKING_EDIT))
+    .use(requirePermission(CORRECTIONS_MANAGE))
     .input(z.object({
       id: z.string(),
       customText: z.string().nullable().optional(),

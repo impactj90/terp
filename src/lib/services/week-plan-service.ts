@@ -37,13 +37,16 @@ async function validateDayPlanIds(
   tenantId: string,
   ids: (string | null | undefined)[]
 ): Promise<void> {
-  for (const id of ids) {
-    if (id) {
-      const plan = await repo.findDayPlan(prisma, tenantId, id)
-      if (!plan) {
-        throw new WeekPlanValidationError("Invalid day plan reference")
-      }
-    }
+  const nonNullIds = ids.filter((id): id is string => !!id)
+  if (nonNullIds.length === 0) return
+
+  const uniqueIds = [...new Set(nonNullIds)]
+  const found = await prisma.dayPlan.findMany({
+    where: { id: { in: uniqueIds }, tenantId },
+    select: { id: true },
+  })
+  if (found.length !== uniqueIds.length) {
+    throw new WeekPlanValidationError("Invalid day plan reference")
   }
 }
 
@@ -232,7 +235,7 @@ export async function update(
     data.isActive = input.isActive
   }
 
-  await repo.update(prisma, input.id, data)
+  await repo.update(prisma, tenantId, input.id, data)
 
   // Re-fetch with include to check completeness and return
   const updated = await repo.findByIdWithInclude(prisma, tenantId, input.id)
@@ -270,5 +273,5 @@ export async function remove(
   }
 
   // Hard delete
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
 }

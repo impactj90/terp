@@ -228,6 +228,7 @@ export function useAllDailyValues(options: UseAllDailyValuesOptions = {}) {
       },
       { enabled }
     ),
+    staleTime: 30 * 1000,
     select: (data) => ({
       data: data.items.map((dv) =>
         transformToLegacyDailyValue(dv as unknown as Record<string, unknown>)

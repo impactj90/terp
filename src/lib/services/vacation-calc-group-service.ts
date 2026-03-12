@@ -88,6 +88,7 @@ export async function create(
   if (input.specialCalculationIds && input.specialCalculationIds.length > 0) {
     const found = await repo.findSpecialCalculations(
       prisma,
+      tenantId,
       input.specialCalculationIds
     )
     if (found.length !== input.specialCalculationIds.length) {
@@ -160,6 +161,7 @@ export async function update(
   ) {
     const found = await repo.findSpecialCalculations(
       prisma,
+      tenantId,
       input.specialCalculationIds
     )
     if (found.length !== input.specialCalculationIds.length) {
@@ -172,6 +174,7 @@ export async function update(
   // Update group + replace junction entries in transaction
   await repo.updateWithLinks(
     prisma,
+    tenantId,
     input.id,
     data,
     input.specialCalculationIds
@@ -200,5 +203,5 @@ export async function remove(
     )
   }
 
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
 }

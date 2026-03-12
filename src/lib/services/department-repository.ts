@@ -61,10 +61,11 @@ export async function findByCode(
 
 export async function findParentId(
   prisma: PrismaClient,
+  tenantId: string,
   id: string
 ) {
-  return prisma.department.findUnique({
-    where: { id },
+  return prisma.department.findFirst({
+    where: { id, tenantId },
     select: { parentId: true },
   })
 }
@@ -90,14 +91,11 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  const { count } = await prisma.department.updateMany({
-    where: { id, tenantId },
-    data,
-  })
-  if (count === 0) {
+  const existing = await prisma.department.findFirst({ where: { id, tenantId } })
+  if (!existing) {
     return null
   }
-  return prisma.department.findFirst({ where: { id, tenantId } })
+  return prisma.department.update({ where: { id }, data })
 }
 
 export async function deleteById(
@@ -113,18 +111,20 @@ export async function deleteById(
 
 export async function countChildren(
   prisma: PrismaClient,
+  tenantId: string,
   parentId: string
 ) {
   return prisma.department.count({
-    where: { parentId },
+    where: { parentId, tenantId },
   })
 }
 
 export async function countEmployees(
   prisma: PrismaClient,
+  tenantId: string,
   departmentId: string
 ) {
   return prisma.employee.count({
-    where: { departmentId },
+    where: { departmentId, tenantId },
   })
 }

@@ -419,7 +419,7 @@ export async function createRange(
       // 7. Re-fetch created records with relations
       const txCreatedAbsences =
         txToCreate.length > 0
-          ? await repo.findCreatedAbsences(txPrisma, {
+          ? await repo.findCreatedAbsences(txPrisma, tenantId, {
               employeeId,
               absenceTypeId,
               fromDate,
@@ -483,7 +483,7 @@ export async function update(
   }
 
   // 5. Update
-  const updated = await repo.update(prisma, input.id, updateData)
+  const updated = await repo.update(prisma, tenantId, input.id, updateData)
 
   // 6. Trigger recalc (best effort)
   await triggerRecalc(prisma, tenantId, absence.employeeId, absence.absenceDate)
@@ -513,7 +513,7 @@ export async function remove(
   const absenceYear = absenceDate.getUTCFullYear()
 
   // 3. Hard delete
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
 
   // 4. Trigger recalc (best effort)
   await triggerRecalc(prisma, tenantId, absence.employeeId, absenceDate)

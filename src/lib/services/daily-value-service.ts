@@ -88,7 +88,13 @@ export async function recalculate(
   input: { from: string; to: string; employeeId?: string }
 ) {
   const fromDate = new Date(input.from)
+  if (isNaN(fromDate.getTime())) {
+    throw new DailyValueValidationError("Invalid date: " + input.from)
+  }
   const toDate = new Date(input.to)
+  if (isNaN(toDate.getTime())) {
+    throw new DailyValueValidationError("Invalid date: " + input.to)
+  }
 
   if (fromDate > toDate) {
     throw new DailyValueValidationError("from must be before or equal to to")
@@ -228,8 +234,21 @@ export async function approve(
     throw new DailyValueValidationError("Daily value is already approved")
   }
 
-  // 4. Update status to approved
-  const updated = await repo.updateStatus(prisma, id, "approved")
+  // 4. Atomically update status to approved only if not already approved
+  const result = await prisma.dailyValue.updateMany({
+    where: { id, tenantId, status: { not: "approved" } },
+    data: { status: "approved" },
+  })
+
+  if (result.count === 0) {
+    throw new DailyValueValidationError("Daily value is already approved")
+  }
+
+  // Re-fetch the updated record with includes
+  const updated = await repo.findById(prisma, tenantId, id)
+  if (!updated) {
+    throw new DailyValueNotFoundError()
+  }
 
   // 5. Send notification (best effort)
   try {

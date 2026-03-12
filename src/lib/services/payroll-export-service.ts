@@ -141,10 +141,10 @@ export async function generate(
 
   try {
     // Update to generating status
-    pe = await repo.update(prisma, pe.id, {
+    pe = (await repo.update(prisma, tenantId, pe.id, {
       status: "generating",
       startedAt: new Date(),
-    })
+    }))!
 
     // Get active employees in scope
     const employees = await repo.findEmployeesWithRelations(
@@ -253,7 +253,7 @@ export async function generate(
     const csvContent = csvRows.join("\n") + "\n"
 
     // Update record as completed
-    pe = await repo.update(prisma, pe.id, {
+    pe = (await repo.update(prisma, tenantId, pe.id, {
       status: "completed",
       fileContent: csvContent,
       fileSize: csvContent.length,
@@ -262,16 +262,16 @@ export async function generate(
       totalHours: new Decimal(totalWorked.toFixed(2)),
       totalOvertime: new Decimal(totalOT.toFixed(2)),
       completedAt: new Date(),
-    })
+    }))!
   } catch (err) {
     // On error, set status to failed
     const errorMessage =
       err instanceof Error ? err.message : "Unknown error"
-    pe = await repo.update(prisma, pe.id, {
+    pe = (await repo.update(prisma, tenantId, pe.id, {
       status: "failed",
       errorMessage,
       completedAt: new Date(),
-    })
+    }))!
   }
 
   return stripFileContent(pe)
@@ -412,5 +412,5 @@ export async function remove(
     throw new PayrollExportNotFoundError()
   }
 
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
 }

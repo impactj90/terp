@@ -113,17 +113,20 @@ export async function upsertUserTenant(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.user.update({
-    where: { id },
-    data,
-  })
+  const existing = await prisma.user.findFirst({ where: { id, userTenants: { some: { tenantId } } } })
+  if (!existing) {
+    return null
+  }
+  return prisma.user.update({ where: { id }, data })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.user.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.user.deleteMany({
+    where: { id, userTenants: { some: { tenantId } } },
   })
+  return count > 0
 }

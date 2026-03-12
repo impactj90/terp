@@ -425,7 +425,7 @@ export async function update(
     )
   }
 
-  await repo.updateSchedule(prisma, input.id, data)
+  await repo.updateSchedule(prisma, tenantId, input.id, data)
 
   // Re-fetch with tasks
   const result = await repo.findScheduleById(prisma, tenantId, input.id)
@@ -444,7 +444,7 @@ export async function remove(
   }
 
   // Hard delete (cascades to tasks and executions via FK)
-  await repo.deleteSchedule(prisma, id)
+  await repo.deleteSchedule(prisma, tenantId, id)
 }
 
 // --- Task Management ---
@@ -544,7 +544,7 @@ export async function updateTask(
     data.isEnabled = input.isEnabled
   }
 
-  return repo.updateTask(prisma, input.taskId, data)
+  return (await repo.updateTask(prisma, tenantId, input.taskId, data))!
 }
 
 export async function removeTask(
@@ -569,7 +569,7 @@ export async function removeTask(
     throw new ScheduleTaskNotFoundError()
   }
 
-  await repo.deleteTask(prisma, taskId)
+  await repo.deleteTask(prisma, tenantId, taskId)
 }
 
 // --- Execution ---
@@ -627,7 +627,7 @@ export async function execute(
         executed_at: executedAt,
       }
 
-      await repo.updateTaskExecution(prisma, taskExecution.id, {
+      await repo.updateTaskExecution(prisma, tenantId, taskExecution.id, {
         status: "completed",
         completedAt: new Date(),
         result: result as object,
@@ -638,7 +638,7 @@ export async function execute(
       const errorMessage =
         err instanceof Error ? err.message : "Unknown error"
 
-      await repo.updateTaskExecution(prisma, taskExecution.id, {
+      await repo.updateTaskExecution(prisma, tenantId, taskExecution.id, {
         status: "failed",
         completedAt: new Date(),
         errorMessage,
@@ -659,7 +659,7 @@ export async function execute(
   }
 
   // Update execution record
-  await repo.updateExecution(prisma, execution.id, {
+  await repo.updateExecution(prisma, tenantId, execution.id, {
     status: overallStatus,
     completedAt: new Date(),
     tasksSucceeded,
@@ -672,7 +672,7 @@ export async function execute(
     schedule.timingConfig,
     new Date()
   )
-  await repo.updateSchedule(prisma, scheduleId, {
+  await repo.updateSchedule(prisma, tenantId, scheduleId, {
     lastRunAt: new Date(),
     nextRunAt,
   })

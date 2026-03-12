@@ -353,7 +353,7 @@ export async function update(
   }
 
   // Update tariff + rhythm sub-records in transaction
-  await repo.updateTariffWithSubRecords(prisma, input.id, {
+  await repo.updateTariffWithSubRecords(prisma, tenantId, input.id, {
     tariffData: data,
     rhythmType,
     rhythmTypeChanged: input.rhythmType !== undefined,
@@ -394,7 +394,7 @@ export async function remove(
   }
 
   // Hard delete (cascades to breaks, tariffWeekPlans, tariffDayPlans)
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
 }
 
 export async function createBreak(
@@ -486,7 +486,7 @@ async function validateRhythmForCreate(
       }
       break
 
-    case "rolling_weekly":
+    case "rolling_weekly": {
       // Require week plan IDs
       if (!input.weekPlanIds || input.weekPlanIds.length === 0) {
         throw new TariffValidationError(
@@ -499,16 +499,19 @@ async function validateRhythmForCreate(
           "rhythm_start_date is required for rolling_weekly and x_days rhythms"
         )
       }
-      // Validate all week plan IDs
-      for (const wpId of input.weekPlanIds) {
-        const wp = await repo.findWeekPlan(prisma, tenantId, wpId)
-        if (!wp) {
-          throw new TariffValidationError("Invalid week plan reference")
-        }
+      // Batch validate all week plan IDs
+      const uniqueWpIds = [...new Set(input.weekPlanIds)]
+      const foundWps = await prisma.weekPlan.findMany({
+        where: { id: { in: uniqueWpIds }, tenantId },
+        select: { id: true },
+      })
+      if (foundWps.length !== uniqueWpIds.length) {
+        throw new TariffValidationError("Invalid week plan reference")
       }
       break
+    }
 
-    case "x_days":
+    case "x_days": {
       // Require cycle days
       if (input.cycleDays === undefined || input.cycleDays === null) {
         throw new TariffValidationError(
@@ -523,6 +526,7 @@ async function validateRhythmForCreate(
       }
       // Validate day plans
       if (input.dayPlans) {
+        const dayPlanIds: string[] = []
         for (const dp of input.dayPlans) {
           if (dp.dayPosition < 1 || dp.dayPosition > input.cycleDays) {
             throw new TariffValidationError(
@@ -530,14 +534,23 @@ async function validateRhythmForCreate(
             )
           }
           if (dp.dayPlanId) {
-            const plan = await repo.findDayPlan(prisma, tenantId, dp.dayPlanId)
-            if (!plan) {
-              throw new TariffValidationError("Invalid day plan reference")
-            }
+            dayPlanIds.push(dp.dayPlanId)
+          }
+        }
+        // Batch validate all day plan IDs
+        if (dayPlanIds.length > 0) {
+          const uniqueDpIds = [...new Set(dayPlanIds)]
+          const foundDps = await prisma.dayPlan.findMany({
+            where: { id: { in: uniqueDpIds }, tenantId },
+            select: { id: true },
+          })
+          if (foundDps.length !== uniqueDpIds.length) {
+            throw new TariffValidationError("Invalid day plan reference")
           }
         }
       }
       break
+    }
   }
 }
 
@@ -553,16 +566,20 @@ async function validateRhythmForUpdate(
   }
 ) {
   switch (rhythmType) {
-    case "rolling_weekly":
+    case "rolling_weekly": {
       if (input.weekPlanIds && input.weekPlanIds.length > 0) {
-        for (const wpId of input.weekPlanIds) {
-          const wp = await repo.findWeekPlan(prisma, tenantId, wpId)
-          if (!wp) {
-            throw new TariffValidationError("Invalid week plan reference")
-          }
+        // Batch validate all week plan IDs
+        const uniqueWpIds = [...new Set(input.weekPlanIds)]
+        const foundWps = await prisma.weekPlan.findMany({
+          where: { id: { in: uniqueWpIds }, tenantId },
+          select: { id: true },
+        })
+        if (foundWps.length !== uniqueWpIds.length) {
+          throw new TariffValidationError("Invalid week plan reference")
         }
       }
       break
+    }
 
     case "x_days": {
       // Get effective cycle_days
@@ -576,6 +593,7 @@ async function validateRhythmForUpdate(
         input.dayPlans.length > 0 &&
         effectiveCycleDays
       ) {
+        const dayPlanIds: string[] = []
         for (const dp of input.dayPlans) {
           if (
             dp.dayPosition < 1 ||
@@ -586,10 +604,18 @@ async function validateRhythmForUpdate(
             )
           }
           if (dp.dayPlanId) {
-            const plan = await repo.findDayPlan(prisma, tenantId, dp.dayPlanId)
-            if (!plan) {
-              throw new TariffValidationError("Invalid day plan reference")
-            }
+            dayPlanIds.push(dp.dayPlanId)
+          }
+        }
+        // Batch validate all day plan IDs
+        if (dayPlanIds.length > 0) {
+          const uniqueDpIds = [...new Set(dayPlanIds)]
+          const foundDps = await prisma.dayPlan.findMany({
+            where: { id: { in: uniqueDpIds }, tenantId },
+            select: { id: true },
+          })
+          if (foundDps.length !== uniqueDpIds.length) {
+            throw new TariffValidationError("Invalid day plan reference")
           }
         }
       }

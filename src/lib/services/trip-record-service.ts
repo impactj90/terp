@@ -217,8 +217,8 @@ export async function update(
     data.notes = input.notes === null ? null : input.notes.trim()
   }
 
-  const record = await repo.update(prisma, input.id, data)
-  return mapRecord(record)
+  const record = await repo.update(prisma, tenantId, input.id, data)
+  return mapRecord(record!)
 }
 
 export async function remove(
@@ -232,5 +232,5 @@ export async function remove(
     throw new TripRecordNotFoundError()
   }
 
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
 }

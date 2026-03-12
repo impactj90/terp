@@ -164,7 +164,7 @@ export async function update(
     data.isActive = input.isActive
   }
 
-  return repo.update(prisma, tenantId, input.id, data)
+  return (await repo.update(prisma, tenantId, input.id, data))!
 }
 
 export async function remove(

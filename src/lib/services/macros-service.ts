@@ -230,7 +230,7 @@ export async function update(
     data.isActive = input.isActive
   }
 
-  await repo.updateMacro(prisma, input.id, data)
+  await repo.updateMacro(prisma, tenantId, input.id, data)
 
   // Re-fetch with assignments
   const result = await repo.findMacroById(prisma, tenantId, input.id)
@@ -249,7 +249,7 @@ export async function remove(
   }
 
   // Hard delete (cascades to assignments and executions via FK)
-  await repo.deleteMacro(prisma, id)
+  await repo.deleteMacro(prisma, tenantId, id)
 }
 
 // --- Assignment Management ---
@@ -344,7 +344,7 @@ export async function updateAssignment(
     data.isActive = input.isActive
   }
 
-  return repo.updateAssignment(prisma, input.assignmentId, data)
+  return (await repo.updateAssignment(prisma, tenantId, input.assignmentId, data))!
 }
 
 export async function deleteAssignment(
@@ -365,7 +365,7 @@ export async function deleteAssignment(
     throw new MacroAssignmentNotFoundError()
   }
 
-  await repo.deleteAssignment(prisma, assignmentId)
+  await repo.deleteAssignment(prisma, tenantId, assignmentId)
 }
 
 // --- Execution ---
@@ -407,12 +407,12 @@ export async function triggerExecution(
   })
 
   // Update execution record
-  const updated = await repo.updateExecution(prisma, execution.id, {
+  const updated = (await repo.updateExecution(prisma, tenantId, execution.id, {
     completedAt: new Date(),
     status: actionResult.error ? "failed" : "completed",
     result: (actionResult.result as object) ?? {},
     errorMessage: actionResult.error,
-  })
+  }))!
 
   return updated
 }

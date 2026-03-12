@@ -148,7 +148,7 @@ export async function update(
     data.isActive = input.isActive
   }
 
-  await repo.update(prisma, input.id, data)
+  await repo.update(prisma, tenantId, input.id, data)
 
   // Re-fetch with relation preloads
   const result = await repo.findByIdWithIncludes(prisma, tenantId, input.id)
@@ -169,5 +169,5 @@ export async function remove(
     throw new OrderAssignmentNotFoundError()
   }
 
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
 }

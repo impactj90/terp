@@ -171,7 +171,7 @@ export async function update(
   }
 
   // Update
-  await repo.update(prisma, input.id, data)
+  await repo.update(prisma, tenantId, input.id, data)
 
   // Re-fetch with includes
   const result = await repo.findByIdWithInclude(prisma, tenantId, input.id)
@@ -192,5 +192,5 @@ export async function remove(
     throw new OrderBookingNotFoundError()
   }
 
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
 }

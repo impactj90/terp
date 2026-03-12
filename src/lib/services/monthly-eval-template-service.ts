@@ -144,13 +144,13 @@ export async function update(
     data.isDefault = input.isDefault
   }
 
-  return repo.update(
+  return (await repo.update(
     prisma,
     tenantId,
     input.id,
     data,
     input.isDefault === true
-  )
+  ))!
 }
 
 export async function remove(
@@ -169,7 +169,7 @@ export async function remove(
     )
   }
 
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
 }
 
 export async function setDefault(
@@ -183,5 +183,5 @@ export async function setDefault(
     throw new MonthlyEvalTemplateNotFoundError()
   }
 
-  return repo.setDefault(prisma, tenantId, id)
+  return (await repo.setDefault(prisma, tenantId, id))!
 }

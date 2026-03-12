@@ -123,15 +123,13 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  const { count } = await prisma.correction.updateMany({
-    where: { id, tenantId },
-    data,
-  })
-  if (count === 0) {
+  const existing = await prisma.correction.findFirst({ where: { id, tenantId } })
+  if (!existing) {
     return null
   }
-  return prisma.correction.findFirst({
-    where: { id, tenantId },
+  return prisma.correction.update({
+    where: { id },
+    data,
     include: correctionInclude,
   })
 }
@@ -147,15 +145,13 @@ export async function updateIfStatus(
   expectedStatus: string,
   data: Record<string, unknown>
 ) {
-  const { count } = await prisma.correction.updateMany({
-    where: { id, tenantId, status: expectedStatus },
-    data,
-  })
-  if (count === 0) {
+  const existing = await prisma.correction.findFirst({ where: { id, tenantId, status: expectedStatus } })
+  if (!existing) {
     return null
   }
-  return prisma.correction.findFirst({
-    where: { id, tenantId },
+  return prisma.correction.update({
+    where: { id },
+    data,
     include: correctionInclude,
   })
 }

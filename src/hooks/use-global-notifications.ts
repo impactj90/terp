@@ -32,6 +32,8 @@ export function useGlobalNotifications(enabled: boolean = true) {
               trpc.notifications.unreadCount.queryKey(),
               { unread_count: event.unread_count },
             )
+          } else {
+            queryClient.invalidateQueries({ queryKey: trpc.notifications.unreadCount.queryKey() })
           }
           queryClient.invalidateQueries({ queryKey: trpc.notifications.list.queryKey() })
           playNotificationSound()

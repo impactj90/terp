@@ -278,12 +278,6 @@ export class MonthlyCalcService {
       throw new Error(ERR_EMPLOYEE_NOT_FOUND)
     }
 
-    // Check if month is closed
-    const existing = await this.getByEmployeeMonth(employeeId, year, month)
-    if (existing !== null && existing.isClosed) {
-      throw new Error(ERR_MONTH_CLOSED)
-    }
-
     // Get date range for the month
     const { from, to } = this.monthDateRange(year, month)
 
@@ -327,23 +321,37 @@ export class MonthlyCalcService {
     // Build monthly value data
     const monthlyData = this.buildMonthlyValue(calcOutput)
 
-    // Upsert the monthly value
-    await this.prisma.monthlyValue.upsert({
+    // Atomic upsert: try to update only if not closed, then fall back to create
+    const updateResult = await this.prisma.monthlyValue.updateMany({
       where: {
-        employeeId_year_month: { employeeId, year, month },
-      },
-      create: {
-        tenantId: employee.tenantId,
         employeeId,
         year,
         month,
-        ...monthlyData,
+        isClosed: false,
       },
-      update: {
+      data: {
         ...monthlyData,
         // Does NOT update: isClosed, closedAt, closedBy, reopenedAt, reopenedBy
       },
     })
+
+    if (updateResult.count === 0) {
+      // Either record doesn't exist or it's closed -- check which
+      const existing = await this.getByEmployeeMonth(employeeId, year, month)
+      if (existing !== null && existing.isClosed) {
+        throw new Error(ERR_MONTH_CLOSED)
+      }
+      // Record doesn't exist -- create it
+      await this.prisma.monthlyValue.create({
+        data: {
+          tenantId: employee.tenantId,
+          employeeId,
+          year,
+          month,
+          ...monthlyData,
+        },
+      })
+    }
   }
 
   /**

@@ -252,6 +252,7 @@ export async function createMany(
 
 export async function findCreatedAbsences(
   prisma: PrismaClient,
+  tenantId: string,
   params: {
     employeeId: string
     absenceTypeId: string
@@ -262,6 +263,7 @@ export async function findCreatedAbsences(
 ) {
   return prisma.absenceDay.findMany({
     where: {
+      tenantId,
       employeeId: params.employeeId,
       absenceTypeId: params.absenceTypeId,
       absenceDate: {
@@ -278,9 +280,14 @@ export async function findCreatedAbsences(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
+  const existing = await prisma.absenceDay.findFirst({ where: { id, tenantId } })
+  if (!existing) {
+    return null
+  }
   return prisma.absenceDay.update({
     where: { id },
     data,
@@ -299,21 +306,22 @@ export async function updateIfStatus(
   expectedStatus: string,
   data: Record<string, unknown>
 ) {
-  const { count } = await prisma.absenceDay.updateMany({
-    where: { id, tenantId, status: expectedStatus },
-    data,
-  })
-  if (count === 0) {
+  const existing = await prisma.absenceDay.findFirst({ where: { id, tenantId, status: expectedStatus } })
+  if (!existing) {
     return null
   }
-  return prisma.absenceDay.findFirst({
-    where: { id, tenantId },
+  return prisma.absenceDay.update({
+    where: { id },
+    data,
     include: absenceDayListInclude,
   })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.absenceDay.delete({ where: { id } })
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.absenceDay.deleteMany({
+    where: { id, tenantId },
+  })
+  return count > 0
 }
 
 // --- Vacation Balance Queries ---

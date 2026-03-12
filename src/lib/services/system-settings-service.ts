@@ -37,7 +37,13 @@ async function getOrCreateSettings(
  */
 function validateDateRange(dateFrom: string, dateTo: string) {
   const from = new Date(dateFrom)
+  if (isNaN(from.getTime())) {
+    throw new SystemSettingsValidationError("Invalid date: " + dateFrom)
+  }
   const to = new Date(dateTo)
+  if (isNaN(to.getTime())) {
+    throw new SystemSettingsValidationError("Invalid date: " + dateTo)
+  }
 
   if (from > to) {
     throw new SystemSettingsValidationError(
@@ -138,7 +144,7 @@ export async function update(
     data.serverAliveNotifyAdmins = input.serverAliveNotifyAdmins
   }
 
-  return repo.update(prisma, existing.id, data)
+  return (await repo.update(prisma, tenantId, existing.id, data))!
 }
 
 export async function cleanupDeleteBookings(

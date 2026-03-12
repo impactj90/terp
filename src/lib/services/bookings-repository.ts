@@ -151,9 +151,14 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
+  const existing = await prisma.booking.findFirst({ where: { id, tenantId } })
+  if (!existing) {
+    return null
+  }
   return prisma.booking.update({
     where: { id },
     data,
@@ -163,17 +168,21 @@ export async function update(
 
 export async function deleteWithDerived(
   prisma: PrismaClient,
+  tenantId: string,
   id: string
 ) {
   await prisma.$transaction(async (tx) => {
-    // Delete any derived bookings pointing to this one
+    // Delete any derived bookings pointing to this one (scoped by tenant)
     await tx.booking.deleteMany({
-      where: { originalBookingId: id },
+      where: { originalBookingId: id, tenantId },
     })
-    // Delete the booking itself
-    await tx.booking.delete({
-      where: { id },
+    // Delete the booking itself (scoped by tenant)
+    const { count } = await tx.booking.deleteMany({
+      where: { id, tenantId },
     })
+    if (count === 0) {
+      throw new Error("Booking not found")
+    }
   })
 }
 
@@ -212,6 +221,7 @@ export async function createDerived(
 
 export async function updateDerived(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: {
     editedTime: number
@@ -220,8 +230,8 @@ export async function updateDerived(
     calculatedTime: null
   }
 ) {
-  return prisma.booking.update({
-    where: { id },
+  await prisma.booking.updateMany({
+    where: { id, tenantId },
     data,
   })
 }

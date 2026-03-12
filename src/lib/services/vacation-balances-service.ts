@@ -89,32 +89,36 @@ export async function initializeBalances(
   let createdCount = 0
   for (const emp of employees) {
     try {
-      // Optionally carryover from previous year using pre-fetched balances
-      if (doCarryover) {
-        await carryoverFromPreviousYearBatch(
-          prisma,
-          tenantId,
-          emp.id,
-          year,
-          prevBalanceMap,
-          currentBalanceMap
-        )
-      }
+      // Wrap carryover + balance creation in a transaction to ensure atomicity
+      // per employee (prevents partial state if one operation fails or races)
+      await prisma.$transaction(async (tx) => {
+        // Optionally carryover from previous year using pre-fetched balances
+        if (doCarryover) {
+          await carryoverFromPreviousYearBatch(
+            tx as PrismaClient,
+            tenantId,
+            emp.id,
+            year,
+            prevBalanceMap,
+            currentBalanceMap
+          )
+        }
 
-      // Create balance if it doesn't exist
-      if (!existingSet.has(emp.id)) {
-        await repo.createBalance(prisma, {
-          tenantId,
-          employeeId: emp.id,
-          year,
-          entitlement: 0,
-          carryover: 0,
-          adjustments: 0,
-          taken: 0,
-          carryoverExpiresAt: null,
-        })
-        createdCount++
-      }
+        // Create balance if it doesn't exist
+        if (!existingSet.has(emp.id)) {
+          await repo.createBalance(tx as PrismaClient, {
+            tenantId,
+            employeeId: emp.id,
+            year,
+            entitlement: 0,
+            carryover: 0,
+            adjustments: 0,
+            taken: 0,
+            carryoverExpiresAt: null,
+          })
+          createdCount++
+        }
+      })
     } catch {
       // Continue on individual errors (matches Go behavior)
     }

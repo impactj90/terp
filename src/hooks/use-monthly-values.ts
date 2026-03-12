@@ -184,6 +184,9 @@ export function useCloseMonth() {
       queryClient.invalidateQueries({
         queryKey: trpc.monthlyValues.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.monthlyValues.getById.queryKey(),
+      })
     },
   })
 }
@@ -207,6 +210,9 @@ export function useReopenMonth() {
       })
       queryClient.invalidateQueries({
         queryKey: trpc.monthlyValues.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.monthlyValues.getById.queryKey(),
       })
     },
   })
@@ -232,6 +238,9 @@ export function useRecalculateMonth() {
       })
       queryClient.invalidateQueries({
         queryKey: trpc.monthlyValues.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.monthlyValues.getById.queryKey(),
       })
       // Recalculate affects daily values too — invalidate dayView, dailyValues
       invalidateTimeData()

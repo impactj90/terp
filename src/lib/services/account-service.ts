@@ -267,7 +267,7 @@ export async function update(
     data.accountGroupId = input.accountGroupId
   }
 
-  return repo.update(prisma, input.id, data)
+  return (await repo.update(prisma, tenantId, input.id, data))!
 }
 
 export async function remove(
@@ -286,7 +286,7 @@ export async function remove(
     throw new AccountValidationError("Cannot delete system accounts")
   }
 
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
 }
 
 export async function getUsage(

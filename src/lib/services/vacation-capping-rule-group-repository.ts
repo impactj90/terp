@@ -101,15 +101,19 @@ export async function createWithLinks(
 
 export async function updateWithLinks(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>,
   cappingRuleIds?: string[]
 ) {
   await prisma.$transaction(async (tx) => {
-    await tx.vacationCappingRuleGroup.update({
-      where: { id },
+    const { count } = await tx.vacationCappingRuleGroup.updateMany({
+      where: { id, tenantId },
       data,
     })
+    if (count === 0) {
+      throw new Error("Vacation capping rule group not found")
+    }
 
     // Replace junction entries if IDs provided
     if (cappingRuleIds !== undefined) {
@@ -128,10 +132,11 @@ export async function updateWithLinks(
   })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.vacationCappingRuleGroup.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.vacationCappingRuleGroup.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 export async function countTariffUsage(
@@ -145,10 +150,11 @@ export async function countTariffUsage(
 
 export async function findCappingRules(
   prisma: PrismaClient,
+  tenantId: string,
   ids: string[]
 ) {
   return prisma.vacationCappingRule.findMany({
-    where: { id: { in: ids } },
+    where: { id: { in: ids }, tenantId },
     select: { id: true },
   })
 }

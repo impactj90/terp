@@ -121,14 +121,15 @@ export async function createMessageWithRecipients(
 }
 
 /**
- * Finds an employee by ID, including the linked user.
+ * Finds an employee by ID within a tenant, including the linked user.
  */
 export async function findEmployeeWithUser(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string
 ) {
   return prisma.employee.findFirst({
-    where: { id: employeeId },
+    where: { id: employeeId, tenantId },
     include: { user: true },
   })
 }
@@ -150,10 +151,11 @@ export async function createNotification(
 }
 
 /**
- * Updates a message recipient's status.
+ * Updates a message recipient's status (scoped to tenant via message relation).
  */
 export async function updateRecipientStatus(
   prisma: PrismaClient,
+  tenantId: string,
   recipientId: string,
   data: {
     status: string
@@ -161,8 +163,13 @@ export async function updateRecipientStatus(
     errorMessage?: string
   }
 ) {
-  return prisma.employeeMessageRecipient.update({
+  const existing = await prisma.employeeMessageRecipient.findFirst({ where: { id: recipientId, message: { tenantId } } })
+  if (!existing) {
+    return false
+  }
+  await prisma.employeeMessageRecipient.update({
     where: { id: recipientId },
     data,
   })
+  return true
 }

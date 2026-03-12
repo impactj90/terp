@@ -122,10 +122,16 @@ export async function create(
     }
   }
 
+  // Validate correction date
+  const correctionDate = new Date(input.correctionDate)
+  if (isNaN(correctionDate.getTime())) {
+    throw new CorrectionValidationError("Invalid date: " + input.correctionDate)
+  }
+
   return repo.create(prisma, {
     tenantId,
     employeeId: input.employeeId,
-    correctionDate: new Date(input.correctionDate),
+    correctionDate,
     correctionType: input.correctionType,
     accountId: input.accountId || null,
     valueMinutes: input.valueMinutes,
@@ -168,7 +174,7 @@ export async function update(
     data.reason = input.reason
   }
 
-  return repo.update(prisma, tenantId, input.id, data)
+  return (await repo.update(prisma, tenantId, input.id, data))!
 }
 
 export async function remove(

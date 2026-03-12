@@ -34,6 +34,7 @@ export class DepartmentConflictError extends Error {
 
 async function checkCircularReference(
   prisma: PrismaClient,
+  tenantId: string,
   deptId: string,
   proposedParentId: string
 ): Promise<boolean> {
@@ -44,7 +45,7 @@ async function checkCircularReference(
     if (visited.has(current)) return true
     visited.add(current)
 
-    const record = await repo.findParentId(prisma, current)
+    const record = await repo.findParentId(prisma, tenantId, current)
     if (!record) break
     current = record.parentId
   }
@@ -212,6 +213,7 @@ export async function update(
       // Deep circular reference check
       const isCircular = await checkCircularReference(
         prisma,
+        tenantId,
         input.id,
         input.parentId
       )
@@ -233,7 +235,7 @@ export async function update(
     data.isActive = input.isActive
   }
 
-  return repo.update(prisma, tenantId, input.id, data)
+  return (await repo.update(prisma, tenantId, input.id, data))!
 }
 
 export async function remove(
@@ -248,7 +250,7 @@ export async function remove(
   }
 
   // Check for children
-  const childCount = await repo.countChildren(prisma, id)
+  const childCount = await repo.countChildren(prisma, tenantId, id)
   if (childCount > 0) {
     throw new DepartmentValidationError(
       "Cannot delete department with child departments"
@@ -256,7 +258,7 @@ export async function remove(
   }
 
   // Check for employees
-  const employeeCount = await repo.countEmployees(prisma, id)
+  const employeeCount = await repo.countEmployees(prisma, tenantId, id)
   if (employeeCount > 0) {
     throw new DepartmentValidationError(
       "Cannot delete department with assigned employees"

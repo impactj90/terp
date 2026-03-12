@@ -139,6 +139,6 @@ export async function deleteContact(
     throw new ContactNotFoundError()
   }
 
-  await repo.deleteContact(prisma, contactId)
+  await repo.deleteContact(prisma, tenantId, contactId)
   return { success: true }
 }

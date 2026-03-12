@@ -1,5 +1,6 @@
 import { useTRPC } from "@/trpc"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useTimeDataInvalidation } from "./use-time-data-invalidation"
 
 // ==================== Query Hooks ====================
 
@@ -65,15 +66,14 @@ export function useHoliday(id: string, enabled = true) {
 export function useCreateHoliday() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
   return useMutation({
     ...trpc.holidays.create.mutationOptions(),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.holidays.list.queryKey(),
       })
-      queryClient.invalidateQueries({
-        queryKey: trpc.employees.dayView.queryKey(),
-      })
+      invalidateTimeData()
     },
   })
 }
@@ -90,15 +90,14 @@ export function useCreateHoliday() {
 export function useUpdateHoliday() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
   return useMutation({
     ...trpc.holidays.update.mutationOptions(),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.holidays.list.queryKey(),
       })
-      queryClient.invalidateQueries({
-        queryKey: trpc.employees.dayView.queryKey(),
-      })
+      invalidateTimeData()
     },
   })
 }
@@ -115,15 +114,14 @@ export function useUpdateHoliday() {
 export function useDeleteHoliday() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
   return useMutation({
     ...trpc.holidays.delete.mutationOptions(),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.holidays.list.queryKey(),
       })
-      queryClient.invalidateQueries({
-        queryKey: trpc.employees.dayView.queryKey(),
-      })
+      invalidateTimeData()
     },
   })
 }
@@ -140,15 +138,14 @@ export function useDeleteHoliday() {
 export function useGenerateHolidays() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
   return useMutation({
     ...trpc.holidays.generate.mutationOptions(),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.holidays.list.queryKey(),
       })
-      queryClient.invalidateQueries({
-        queryKey: trpc.employees.dayView.queryKey(),
-      })
+      invalidateTimeData()
     },
   })
 }
@@ -165,15 +162,14 @@ export function useGenerateHolidays() {
 export function useCopyHolidays() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
   return useMutation({
     ...trpc.holidays.copy.mutationOptions(),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.holidays.list.queryKey(),
       })
-      queryClient.invalidateQueries({
-        queryKey: trpc.employees.dayView.queryKey(),
-      })
+      invalidateTimeData()
     },
   })
 }

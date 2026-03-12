@@ -72,19 +72,22 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.payrollExport.update({
-    where: { id },
-    data,
-  })
+  const existing = await prisma.payrollExport.findFirst({ where: { id, tenantId } })
+  if (!existing) {
+    return null
+  }
+  return prisma.payrollExport.update({ where: { id }, data })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.payrollExport.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.payrollExport.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 export async function findEmployeesWithRelations(

@@ -690,7 +690,7 @@ export async function update(
     data.calculationStartDate = input.calculationStartDate
   }
 
-  return repo.update(prisma, input.id, data)
+  return (await repo.update(prisma, tenantId, input.id, data))!
 }
 
 export async function deactivate(
@@ -709,7 +709,7 @@ export async function deactivate(
   checkDataScope(dataScope, existing)
 
   // Deactivate (not hard-delete) -- mirrors Go service.Deactivate()
-  await repo.update(prisma, id, {
+  await repo.update(prisma, tenantId, id, {
     isActive: false,
     exitDate: existing.exitDate ?? new Date(),
   })

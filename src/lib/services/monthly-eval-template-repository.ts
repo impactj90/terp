@@ -82,23 +82,28 @@ export async function update(
         where: { tenantId, isDefault: true },
         data: { isDefault: false },
       })
-      return tx.monthlyEvaluationTemplate.update({
-        where: { id },
+      const { count } = await tx.monthlyEvaluationTemplate.updateMany({
+        where: { id, tenantId },
         data,
       })
+      if (count === 0) return null
+      return tx.monthlyEvaluationTemplate.findFirst({ where: { id, tenantId } })
     })
   }
 
-  return prisma.monthlyEvaluationTemplate.update({
-    where: { id },
+  const { count } = await prisma.monthlyEvaluationTemplate.updateMany({
+    where: { id, tenantId },
     data,
   })
+  if (count === 0) return null
+  return prisma.monthlyEvaluationTemplate.findFirst({ where: { id, tenantId } })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.monthlyEvaluationTemplate.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.monthlyEvaluationTemplate.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 export async function setDefault(
@@ -111,9 +116,11 @@ export async function setDefault(
       where: { tenantId, isDefault: true },
       data: { isDefault: false },
     })
-    return tx.monthlyEvaluationTemplate.update({
-      where: { id },
+    const { count } = await tx.monthlyEvaluationTemplate.updateMany({
+      where: { id, tenantId },
       data: { isDefault: true },
     })
+    if (count === 0) return null
+    return tx.monthlyEvaluationTemplate.findFirst({ where: { id, tenantId } })
   })
 }

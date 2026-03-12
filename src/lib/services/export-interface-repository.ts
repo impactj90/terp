@@ -85,20 +85,28 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.exportInterface.update({
-    where: { id },
+  const { count } = await prisma.exportInterface.updateMany({
+    where: { id, tenantId },
     data,
+  })
+  if (count === 0) {
+    return null
+  }
+  return prisma.exportInterface.findFirst({
+    where: { id, tenantId },
     include: accountInclude,
   })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.exportInterface.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.exportInterface.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 export async function countPayrollExports(

@@ -119,9 +119,14 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
+  const existing = await prisma.tripRecord.findFirst({ where: { id, tenantId } })
+  if (!existing) {
+    return null
+  }
   return prisma.tripRecord.update({
     where: { id },
     data,
@@ -129,8 +134,9 @@ export async function update(
   })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.tripRecord.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.tripRecord.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }

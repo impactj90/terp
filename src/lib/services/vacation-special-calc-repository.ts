@@ -64,19 +64,22 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.vacationSpecialCalculation.update({
-    where: { id },
-    data,
-  })
+  const existing = await prisma.vacationSpecialCalculation.findFirst({ where: { id, tenantId } })
+  if (!existing) {
+    return null
+  }
+  return prisma.vacationSpecialCalculation.update({ where: { id }, data })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.vacationSpecialCalculation.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.vacationSpecialCalculation.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 export async function countCalcGroupUsages(

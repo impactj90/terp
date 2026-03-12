@@ -169,7 +169,7 @@ export async function update(
     )
   }
 
-  return repo.update(prisma, input.id, data)
+  return (await repo.update(prisma, tenantId, input.id, data))!
 }
 
 export async function remove(
@@ -182,5 +182,5 @@ export async function remove(
     throw new EmployeeCappingExceptionNotFoundError()
   }
 
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
 }

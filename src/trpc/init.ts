@@ -115,8 +115,9 @@ export async function createTRPCContext(
           } as Session
         }
       }
-    } catch {
+    } catch (err) {
       // Token validation failed — user remains null (unauthenticated)
+      console.error('[tRPC] Token validation error:', err)
     }
   }
 

@@ -18,13 +18,26 @@ export function VacationBalanceCard({
   className,
 }: VacationBalanceCardProps) {
   const currentYear = new Date().getFullYear()
-  const { data: balance, isLoading } = useEmployeeVacationBalance(
+  const { data: balance, isLoading, error } = useEmployeeVacationBalance(
     employeeId ?? '',
     currentYear,
     !!employeeId
   )
 
   const t = useTranslations('absences')
+
+  if (error) {
+    return (
+      <Card className={className}>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium">{t('vacationBalance')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-destructive text-sm">{t('failedToLoadBalance')}</p>
+        </CardContent>
+      </Card>
+    )
+  }
 
   if (isLoading) {
     return (

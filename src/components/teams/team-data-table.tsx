@@ -147,8 +147,8 @@ export function TeamDataTable({
               {team.leader ? (
                 <div className="flex items-center gap-2">
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-medium">
-                    {team.leader.firstName[0]}
-                    {team.leader.lastName[0]}
+                    {team.leader.firstName?.[0] ?? '?'}
+                    {team.leader.lastName?.[0] ?? '?'}
                   </div>
                   <span className="text-sm">
                     {team.leader.firstName} {team.leader.lastName}

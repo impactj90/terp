@@ -16,6 +16,11 @@ const handler = (req: Request) =>
     req,
     router: appRouter,
     createContext: createTRPCContext,
+    onError({ error, path }) {
+      if (error.code === "INTERNAL_SERVER_ERROR") {
+        console.error(`[tRPC] Internal server error on '${path}':`, error)
+      }
+    },
   })
 
 export { handler as GET, handler as POST }

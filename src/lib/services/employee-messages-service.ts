@@ -200,12 +200,20 @@ export async function sendMessage(
     (r) => r.status === "pending"
   )
 
+  // Batch fetch all employees with their users (scoped to tenant)
+  const employeeIds = pendingRecipients.map((r) => r.employeeId)
+  const employees = await prisma.employee.findMany({
+    where: { id: { in: employeeIds }, tenantId },
+    include: { user: true },
+  })
+  const employeeMap = new Map(employees.map((e) => [e.id, e]))
+
   let sentCount = 0
   let failedCount = 0
 
   for (const recipient of pendingRecipients) {
     try {
-      const employee = await repo.findEmployeeWithUser(prisma, recipient.employeeId)
+      const employee = employeeMap.get(recipient.employeeId)
 
       if (employee?.user) {
         await repo.createNotification(prisma, {
@@ -217,7 +225,7 @@ export async function sendMessage(
         })
       }
 
-      await repo.updateRecipientStatus(prisma, recipient.id, {
+      await repo.updateRecipientStatus(prisma, tenantId, recipient.id, {
         status: "sent",
         sentAt: new Date(),
       })
@@ -225,7 +233,7 @@ export async function sendMessage(
     } catch (err) {
       const errorMsg =
         err instanceof Error ? err.message : "Unknown error"
-      await repo.updateRecipientStatus(prisma, recipient.id, {
+      await repo.updateRecipientStatus(prisma, tenantId, recipient.id, {
         status: "failed",
         errorMessage: errorMsg,
       })

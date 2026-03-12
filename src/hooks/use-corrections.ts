@@ -72,6 +72,9 @@ export function useCreateCorrection() {
       queryClient.invalidateQueries({
         queryKey: trpc.correctionAssistant.listItems.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.dayView.queryKey(),
+      })
     },
   })
 }
@@ -94,6 +97,9 @@ export function useUpdateCorrection() {
       queryClient.invalidateQueries({
         queryKey: trpc.correctionAssistant.listItems.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.dayView.queryKey(),
+      })
     },
   })
 }
@@ -115,6 +121,9 @@ export function useDeleteCorrection() {
       })
       queryClient.invalidateQueries({
         queryKey: trpc.correctionAssistant.listItems.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.dayView.queryKey(),
       })
     },
   })

@@ -615,10 +615,10 @@ export async function generate(
 
   try {
     // Update to generating status
-    report = await repo.updateStatus(prisma, report.id, {
+    report = (await repo.updateStatus(prisma, tenantId, report.id, {
       status: "generating",
       startedAt: new Date(),
-    })
+    }))!
 
     // Get employees in scope
     const employees = await repo.findEmployeesInScope(prisma, tenantId, params)
@@ -671,21 +671,21 @@ export async function generate(
     const contentBuffer = Buffer.from(content)
 
     // Update record as completed
-    report = await repo.updateStatus(prisma, report.id, {
+    report = (await repo.updateStatus(prisma, tenantId, report.id, {
       status: "completed",
       fileContent: contentBuffer,
       fileSize: contentBuffer.length,
       rowCount: data.values.length,
       completedAt: new Date(),
-    })
+    }))!
   } catch (err) {
     // On error, set status to failed
     const errorMessage = err instanceof Error ? err.message : "Unknown error"
-    report = await repo.updateStatus(prisma, report.id, {
+    report = (await repo.updateStatus(prisma, tenantId, report.id, {
       status: "failed",
       errorMessage,
       completedAt: new Date(),
-    })
+    }))!
   }
 
   return stripFileContent(report)
@@ -747,5 +747,5 @@ export async function remove(
     throw new ReportNotFoundError()
   }
 
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
 }

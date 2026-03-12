@@ -122,15 +122,13 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  const { count } = await prisma.team.updateMany({
-    where: { id, tenantId },
-    data,
-  })
-  if (count === 0) {
+  const existing = await prisma.team.findFirst({ where: { id, tenantId } })
+  if (!existing) {
     return null
   }
-  return prisma.team.findFirst({
-    where: { id, tenantId },
+  return prisma.team.update({
+    where: { id },
+    data,
     include: teamRelationsInclude,
   })
 }

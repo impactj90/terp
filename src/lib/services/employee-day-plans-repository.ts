@@ -101,9 +101,12 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
+  const existing = await prisma.employeeDayPlan.findFirst({ where: { id, tenantId } })
+  if (!existing) return null
   return prisma.employeeDayPlan.update({
     where: { id },
     data,
@@ -111,10 +114,11 @@ export async function update(
   })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.employeeDayPlan.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.employeeDayPlan.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 export async function deleteRange(
@@ -176,10 +180,10 @@ export async function bulkUpsert(
     notes?: string
   }>
 ) {
-  await prisma.$transaction(async (tx) => {
-    for (const entry of entries) {
+  await prisma.$transaction(
+    entries.map((entry) => {
       const planDate = new Date(entry.planDate)
-      await tx.employeeDayPlan.upsert({
+      return prisma.employeeDayPlan.upsert({
         where: {
           employeeId_planDate: {
             employeeId: entry.employeeId,
@@ -202,6 +206,6 @@ export async function bulkUpsert(
           notes: entry.notes?.trim() || null,
         },
       })
-    }
-  })
+    })
+  )
 }

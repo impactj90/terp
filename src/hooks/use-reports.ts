@@ -101,7 +101,12 @@ export function useDownloadReport() {
       const result = await queryClient.fetchQuery(
         trpc.reports.download.queryOptions({ id })
       )
-      const byteString = atob(result.content)
+      let byteString: string
+      try {
+        byteString = atob(result.content)
+      } catch {
+        throw new Error('Failed to decode file content')
+      }
       const bytes = new Uint8Array(byteString.length)
       for (let i = 0; i < byteString.length; i++) {
         bytes[i] = byteString.charCodeAt(i)

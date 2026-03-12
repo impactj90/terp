@@ -85,7 +85,7 @@ export async function create(
 
   // Validate capping rule IDs
   if (input.cappingRuleIds && input.cappingRuleIds.length > 0) {
-    const found = await repo.findCappingRules(prisma, input.cappingRuleIds)
+    const found = await repo.findCappingRules(prisma, tenantId, input.cappingRuleIds)
     if (found.length !== input.cappingRuleIds.length) {
       throw new VacationCappingRuleGroupValidationError(
         "One or more capping rule IDs are invalid"
@@ -151,7 +151,7 @@ export async function update(
     input.cappingRuleIds !== undefined &&
     input.cappingRuleIds.length > 0
   ) {
-    const found = await repo.findCappingRules(prisma, input.cappingRuleIds)
+    const found = await repo.findCappingRules(prisma, tenantId, input.cappingRuleIds)
     if (found.length !== input.cappingRuleIds.length) {
       throw new VacationCappingRuleGroupValidationError(
         "One or more capping rule IDs are invalid"
@@ -160,7 +160,7 @@ export async function update(
   }
 
   // Update group + replace junction entries in transaction
-  await repo.updateWithLinks(prisma, input.id, data, input.cappingRuleIds)
+  await repo.updateWithLinks(prisma, tenantId, input.id, data, input.cappingRuleIds)
 
   // Re-fetch with includes
   const result = await repo.findById(prisma, tenantId, input.id)
@@ -185,5 +185,5 @@ export async function remove(
     )
   }
 
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
 }

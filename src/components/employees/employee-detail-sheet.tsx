@@ -4,7 +4,7 @@ import * as React from 'react'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
-import { Clock, Edit, Mail, Phone, User, UserX } from 'lucide-react'
+import { AlertCircle, Clock, Edit, Mail, Phone, RefreshCw, User, UserX } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -71,13 +71,14 @@ export function EmployeeDetailSheet({
   onDelete,
 }: EmployeeDetailSheetProps) {
   const t = useTranslations('adminEmployees')
+  const tc = useTranslations('common')
   const router = useRouter()
 
   // Fetch employee details
-  const { data: employee, isLoading, isFetching } = useEmployee(employeeId ?? '', open && !!employeeId)
+  const { data: employee, isLoading, isFetching, error, refetch } = useEmployee(employeeId ?? '', open && !!employeeId)
 
   // Show skeleton while loading or when we have an ID but data hasn't loaded yet
-  const showSkeleton = isLoading || isFetching || (employeeId && !employee)
+  const showSkeleton = !error && (isLoading || isFetching || (employeeId && !employee))
 
   const formatDate = (date: string | undefined | null) => {
     if (!date) return '-'
@@ -104,13 +105,33 @@ export function EmployeeDetailSheet({
   }
 
   const initials = employee
-    ? `${employee.firstName[0]}${employee.lastName[0]}`
+    ? `${employee.firstName?.[0] ?? '?'}${employee.lastName?.[0] ?? '?'}`
     : '??'
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-lg flex flex-col">
-        {showSkeleton ? (
+        {error ? (
+          <>
+            <SheetHeader>
+              <SheetTitle>{t('employeeDetails')}</SheetTitle>
+              <SheetDescription>{t('employeeInformation')}</SheetDescription>
+            </SheetHeader>
+            <div className="flex flex-col items-center justify-center flex-1 text-center py-12">
+              <AlertCircle className="h-12 w-12 text-destructive opacity-50" />
+              <p className="mt-4 text-destructive">{tc('failedToLoad')}</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => refetch()}
+                className="mt-2"
+              >
+                <RefreshCw className="mr-1 h-4 w-4" />
+                {tc('retry')}
+              </Button>
+            </div>
+          </>
+        ) : showSkeleton ? (
           <EmployeeDetailSkeleton />
         ) : employee ? (
           <>

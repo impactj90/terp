@@ -78,30 +78,43 @@ export async function importBookings(
     throw new TerminalBookingValidationError("Terminal ID is required")
   }
 
-  // Idempotency check
-  const existing = await repo.findBatchByReference(
-    prisma,
-    tenantId,
-    batchReference
-  )
-  if (existing) {
+  // Idempotency check + batch create in a transaction to prevent duplicates
+  const txResult = await prisma.$transaction(async (tx) => {
+    const existing = await repo.findBatchByReference(
+      tx as PrismaClient,
+      tenantId,
+      batchReference
+    )
+    if (existing) {
+      return {
+        batch: existing,
+        wasDuplicate: true as const,
+        message: `Batch '${batchReference}' already imported (${existing.recordsTotal} records)`,
+      }
+    }
+
+    const batch = await repo.createImportBatch(tx as PrismaClient, {
+      tenantId,
+      batchReference,
+      source: "terminal",
+      terminalId,
+      status: "processing",
+      recordsTotal: input.bookings.length,
+      startedAt: new Date(),
+    })
+
+    return { batch, wasDuplicate: false as const }
+  })
+
+  if (txResult.wasDuplicate) {
     return {
-      batch: existing,
+      batch: txResult.batch,
       wasDuplicate: true,
-      message: `Batch '${batchReference}' already imported (${existing.recordsTotal} records)`,
+      message: txResult.message,
     }
   }
 
-  // Create import batch
-  const batch = await repo.createImportBatch(prisma, {
-    tenantId,
-    batchReference,
-    source: "terminal",
-    terminalId,
-    status: "processing",
-    recordsTotal: input.bookings.length,
-    startedAt: new Date(),
-  })
+  const batch = txResult.batch
 
   try {
     // Pre-fetch lookup maps to avoid N+1
@@ -152,7 +165,7 @@ export async function importBookings(
     await repo.createManyRawBookings(prisma, rawBookingData)
 
     // Mark batch as completed
-    const updatedBatch = await repo.updateImportBatch(prisma, batch.id, {
+    const updatedBatch = await repo.updateImportBatch(prisma, tenantId, batch.id, {
       status: "completed",
       recordsImported: rawBookingData.length,
       completedAt: new Date(),
@@ -165,7 +178,7 @@ export async function importBookings(
     }
   } catch (error) {
     // Mark batch as failed
-    await repo.updateImportBatch(prisma, batch.id, {
+    await repo.updateImportBatch(prisma, tenantId, batch.id, {
       status: "failed",
       errorMessage:
         error instanceof Error ? error.message : "Unknown error",

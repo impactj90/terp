@@ -6,6 +6,7 @@
  * Throws plain Error subclasses that are mapped by handleServiceError.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { Prisma } from "@/generated/prisma/client"
 import { calculateVacation } from "./vacation-calculation"
 import {
   calculateCarryoverWithCapping,
@@ -433,26 +434,27 @@ export async function adjustBalance(
     notes?: string
   }
 ) {
-  // 1. Get existing balance (must exist)
-  const existing = await repo.findBalance(
-    prisma,
-    tenantId,
-    input.employeeId,
-    input.year
-  )
-  if (!existing) {
-    throw new VacationBalanceNotFoundError()
+  // Atomically increment adjustment; catch P2025 (record not found) to avoid
+  // the check-then-update race where the balance could be deleted between the
+  // existence check and the increment.
+  try {
+    const balance = await repo.incrementAdjustments(
+      prisma,
+      input.employeeId,
+      input.year,
+      input.adjustment
+    )
+
+    return mapBalanceToOutput(balance)
+  } catch (err) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2025"
+    ) {
+      throw new VacationBalanceNotFoundError()
+    }
+    throw err
   }
-
-  // 2-3. Accumulate adjustment
-  const balance = await repo.incrementAdjustments(
-    prisma,
-    input.employeeId,
-    input.year,
-    input.adjustment
-  )
-
-  return mapBalanceToOutput(balance)
 }
 
 /**

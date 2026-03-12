@@ -94,13 +94,15 @@ export async function createImportBatch(
 
 export async function updateImportBatch(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.importBatch.update({
-    where: { id },
-    data,
-  })
+  const existing = await prisma.importBatch.findFirst({ where: { id, tenantId } })
+  if (!existing) {
+    return null
+  }
+  return prisma.importBatch.update({ where: { id }, data })
 }
 
 export async function findEmployeeByPin(

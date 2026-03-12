@@ -51,7 +51,7 @@ export async function markRead(
     throw new NotificationNotFoundError()
   }
 
-  await repo.markRead(prisma, id)
+  await repo.markRead(prisma, tenantId, id)
 
   // Return new unread count for PubSub
   const newCount = await repo.countUnread(prisma, tenantId, userId)

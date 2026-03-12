@@ -193,7 +193,7 @@ export async function update(
     data.departmentId = input.departmentId
   }
 
-  return repo.update(prisma, input.id, data)
+  return (await repo.update(prisma, tenantId, input.id, data))!
 }
 
 export async function remove(
@@ -207,7 +207,7 @@ export async function remove(
     throw new HolidayNotFoundError()
   }
 
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
 }
 
 export async function generate(
@@ -234,23 +234,33 @@ export async function generate(
   const existing = await repo.findByYearRange(prisma, tenantId, input.year)
   const existingByDate = new Set(existing.map((h) => dateKey(h.holidayDate)))
 
-  // Create holidays
-  const created = []
-  for (const def of definitions) {
-    const key = dateKey(def.date)
-    if (input.skipExisting && existingByDate.has(key)) {
-      continue
-    }
-
-    const holiday = await repo.create(prisma, {
+  // Build records to create
+  const records = definitions
+    .filter((def) => {
+      const key = dateKey(def.date)
+      return !(input.skipExisting && existingByDate.has(key))
+    })
+    .map((def) => ({
       tenantId,
       holidayDate: normalizeDate(def.date),
       name: def.name,
       holidayCategory: 1,
       appliesToAll: true,
-    })
-    created.push(holiday)
-  }
+    }))
+
+  if (records.length === 0) return []
+
+  await prisma.holiday.createMany({ data: records })
+
+  // Fetch the created records to return them
+  const createdDates = records.map((r) => r.holidayDate)
+  const created = await prisma.holiday.findMany({
+    where: {
+      tenantId,
+      holidayDate: { in: createdDates },
+    },
+    orderBy: { holidayDate: "asc" },
+  })
 
   return created
 }
@@ -299,8 +309,16 @@ export async function copy(
     existingTarget.map((h) => dateKey(h.holidayDate))
   )
 
-  // Copy holidays
-  const copied = []
+  // Build records to copy
+  const records: Array<{
+    tenantId: string
+    holidayDate: Date
+    name: string
+    holidayCategory: number
+    appliesToAll: boolean
+    departmentId: string | null
+  }> = []
+
   for (const src of source) {
     const targetDate = dateWithYear(input.targetYear, src.holidayDate)
     if (!targetDate) {
@@ -316,7 +334,7 @@ export async function copy(
     const monthDay = `${String(targetDate.getUTCMonth() + 1).padStart(2, "0")}-${String(targetDate.getUTCDate()).padStart(2, "0")}`
     const category = overrideMap.get(monthDay) ?? src.holidayCategory
 
-    const holiday = await repo.create(prisma, {
+    records.push({
       tenantId,
       holidayDate: normalizeDate(targetDate),
       name: src.name,
@@ -324,8 +342,21 @@ export async function copy(
       appliesToAll: src.appliesToAll,
       departmentId: src.departmentId,
     })
-    copied.push(holiday)
   }
+
+  if (records.length === 0) return []
+
+  await prisma.holiday.createMany({ data: records })
+
+  // Fetch the created records to return them
+  const createdDates = records.map((r) => r.holidayDate)
+  const copied = await prisma.holiday.findMany({
+    where: {
+      tenantId,
+      holidayDate: { in: createdDates },
+    },
+    orderBy: { holidayDate: "asc" },
+  })
 
   return copied
 }

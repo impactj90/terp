@@ -174,7 +174,7 @@ export async function updateMessage(
     data.isActive = input.isActive
   }
 
-  return repo.updateMessage(prisma, tenantId, input.id, data)
+  return (await repo.updateMessage(prisma, tenantId, input.id, data))!
 }
 
 interface CorrectionAssistantError {

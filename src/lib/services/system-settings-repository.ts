@@ -25,13 +25,13 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.systemSetting.update({
-    where: { id },
-    data,
-  })
+  const existing = await prisma.systemSetting.findFirst({ where: { id, tenantId } })
+  if (!existing) return null
+  return prisma.systemSetting.update({ where: { id }, data })
 }
 
 // --- Booking Cleanup ---

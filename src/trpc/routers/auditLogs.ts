@@ -20,6 +20,7 @@ import * as auditLogsService from "@/lib/services/audit-logs-service"
 // --- Permission Constants ---
 
 const USERS_MANAGE = permissionIdByKey("users.manage")!
+const REPORTS_VIEW = permissionIdByKey("reports.view")!
 
 // --- Output Schemas ---
 
@@ -72,10 +73,10 @@ export const auditLogsRouter = createTRPCRouter({
    * Results are ordered by performedAt DESC.
    * Includes user relation (id, email, displayName).
    *
-   * Requires: users.manage permission
+   * Requires: users.manage OR reports.view permission
    */
   list: tenantProcedure
-    .use(requirePermission(USERS_MANAGE))
+    .use(requirePermission(USERS_MANAGE, REPORTS_VIEW))
     .input(listInputSchema)
     .output(
       z.object({
@@ -97,10 +98,10 @@ export const auditLogsRouter = createTRPCRouter({
    * Includes user relation (id, email, displayName).
    * Throws NOT_FOUND if audit log doesn't exist for this tenant.
    *
-   * Requires: users.manage permission
+   * Requires: users.manage OR reports.view permission
    */
   getById: tenantProcedure
-    .use(requirePermission(USERS_MANAGE))
+    .use(requirePermission(USERS_MANAGE, REPORTS_VIEW))
     .input(z.object({ id: z.string() }))
     .output(auditLogOutputSchema)
     .query(async ({ ctx, input }) => {

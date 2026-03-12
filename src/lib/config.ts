@@ -32,6 +32,8 @@ export function validateEnv() {
     'NEXT_PUBLIC_SUPABASE_URL',
     'NEXT_PUBLIC_SUPABASE_ANON_KEY',
     'SUPABASE_SERVICE_ROLE_KEY',
+    'CRON_SECRET',
+    'INTERNAL_API_KEY',
   ]
   const missing = required.filter((key) => !process.env[key])
 

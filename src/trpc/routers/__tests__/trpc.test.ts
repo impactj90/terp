@@ -27,11 +27,10 @@ describe("health router", () => {
     const result = await caller.health.check()
 
     expect(result.status).toBe("ok")
-    expect(result.database).toBe("connected")
     expect(result.timestamp).toBeDefined()
   })
 
-  it("health.check reports database error gracefully", async () => {
+  it("health.check still returns ok when database is unreachable", async () => {
     const mockPrisma = {
       $queryRaw: async () => {
         throw new Error("Connection refused")
@@ -46,6 +45,6 @@ describe("health router", () => {
     const result = await caller.health.check()
 
     expect(result.status).toBe("ok")
-    expect(result.database).toBe("error")
+    expect(result.timestamp).toBeDefined()
   })
 })

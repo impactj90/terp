@@ -1,5 +1,6 @@
 import { useTRPC } from "@/trpc"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useTimeDataInvalidation } from "./use-time-data-invalidation"
 
 /**
  * Hook to fetch list of tariffs (tRPC).
@@ -62,6 +63,7 @@ export function useCreateTariff() {
 export function useUpdateTariff() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
   return useMutation({
     ...trpc.tariffs.update.mutationOptions(),
     onSuccess: () => {
@@ -71,6 +73,7 @@ export function useUpdateTariff() {
       queryClient.invalidateQueries({
         queryKey: trpc.tariffs.getById.queryKey(),
       })
+      invalidateTimeData()
     },
   })
 }
@@ -81,6 +84,7 @@ export function useUpdateTariff() {
 export function useDeleteTariff() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
   return useMutation({
     ...trpc.tariffs.delete.mutationOptions(),
     onSuccess: () => {
@@ -90,6 +94,7 @@ export function useDeleteTariff() {
       queryClient.invalidateQueries({
         queryKey: trpc.tariffs.getById.queryKey(),
       })
+      invalidateTimeData()
     },
   })
 }
@@ -100,6 +105,7 @@ export function useDeleteTariff() {
 export function useCreateTariffBreak() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
   return useMutation({
     ...trpc.tariffs.createBreak.mutationOptions(),
     onSuccess: () => {
@@ -109,6 +115,7 @@ export function useCreateTariffBreak() {
       queryClient.invalidateQueries({
         queryKey: trpc.tariffs.getById.queryKey(),
       })
+      invalidateTimeData()
     },
   })
 }
@@ -119,6 +126,7 @@ export function useCreateTariffBreak() {
 export function useDeleteTariffBreak() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
   return useMutation({
     ...trpc.tariffs.deleteBreak.mutationOptions(),
     onSuccess: () => {
@@ -128,6 +136,7 @@ export function useDeleteTariffBreak() {
       queryClient.invalidateQueries({
         queryKey: trpc.tariffs.getById.queryKey(),
       })
+      invalidateTimeData()
     },
   })
 }

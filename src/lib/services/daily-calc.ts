@@ -541,7 +541,7 @@ export class DailyCalcService {
     direction: "in" | "out",
     existingBookings: BookingWithType[]
   ): Promise<{ booking: BookingWithType; created: boolean }> {
-    // Check for existing auto-complete booking
+    // Check in-memory list first (fast path)
     for (const b of existingBookings) {
       if (!sameDate(b.bookingDate, date)) continue
       if (b.source !== "correction" || b.notes !== AUTO_COMPLETE_NOTES || b.editedTime !== 0) continue
@@ -552,6 +552,24 @@ export class DailyCalcService {
       ) {
         return { booking: b, created: false }
       }
+    }
+
+    // Re-query DB to guard against concurrent creation (in-memory list may be stale)
+    const dbExisting = await this.prisma.booking.findFirst({
+      where: {
+        tenantId,
+        employeeId,
+        bookingDate: date,
+        bookingTypeId: bookingType.id,
+        source: "correction",
+        notes: AUTO_COMPLETE_NOTES,
+        editedTime: 0,
+      },
+      include: { bookingType: true },
+    })
+
+    if (dbExisting) {
+      return { booking: dbExisting, created: false }
     }
 
     // Create new auto-complete booking

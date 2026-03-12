@@ -231,7 +231,7 @@ export async function update(
     data.dataScopeEmployeeIds = input.dataScopeEmployeeIds
   }
 
-  return repo.update(prisma, input.id, data)
+  return (await repo.update(prisma, tenantId, input.id, data))!
 }
 
 export async function remove(
@@ -252,7 +252,7 @@ export async function remove(
   }
 
   // Hard delete to match Go behavior
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
 }
 
 export async function changePassword(

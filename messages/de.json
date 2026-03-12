@@ -458,6 +458,7 @@
     "labelLastUpdated": "Zuletzt aktualisiert",
     "vacationBalance": "Urlaubskonto",
     "noBalanceConfigured": "Kein Urlaubskonto konfiguriert",
+    "failedToLoadBalance": "Saldo konnte nicht geladen werden",
     "ofTotalDays": "/ {total} Tage",
     "daysUsed": "{count} Tage genommen",
     "dayUsed": "{count} Tag genommen",

@@ -79,9 +79,14 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
+  const existing = await prisma.employeeAccessAssignment.findFirst({ where: { id, employee: { tenantId } } })
+  if (!existing) {
+    return null
+  }
   return prisma.employeeAccessAssignment.update({
     where: { id },
     data,
@@ -89,8 +94,9 @@ export async function update(
   })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.employeeAccessAssignment.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.employeeAccessAssignment.deleteMany({
+    where: { id, employee: { tenantId } },
   })
+  return count > 0
 }
