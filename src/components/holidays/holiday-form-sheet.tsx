@@ -37,10 +37,16 @@ import {
   useDepartments,
 } from '@/hooks'
 import { cn } from '@/lib/utils'
-import { formatDate, parseISODate } from '@/lib/time-utils'
-import type { components } from '@/types/legacy-api-types'
+import { formatDate } from '@/lib/time-utils'
 
-type Holiday = components['schemas']['Holiday']
+interface Holiday {
+  id: string
+  holidayDate: Date | string
+  name: string
+  holidayCategory: number
+  appliesToAll: boolean
+  departmentId: string | null
+}
 
 interface HolidayFormSheetProps {
   open: boolean
@@ -95,13 +101,13 @@ export function HolidayFormSheet({
   React.useEffect(() => {
     if (open) {
       if (holiday) {
-        const date = parseISODate(holiday.holiday_date)
+        const date = new Date(holiday.holidayDate)
         setForm({
           holidayDate: date,
           name: holiday.name,
-          category: holiday.category ?? 1,
-          appliesToAll: holiday.applies_to_all ?? true,
-          departmentId: holiday.department_id || '',
+          category: holiday.holidayCategory ?? 1,
+          appliesToAll: holiday.appliesToAll ?? true,
+          departmentId: holiday.departmentId || '',
         })
         setMonth(date)
       } else {

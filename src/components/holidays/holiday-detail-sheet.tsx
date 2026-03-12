@@ -112,7 +112,7 @@ export function HolidayDetailSheet({
                   </p>
                 </div>
                 {(() => {
-                  const badge = getCategoryBadge(holiday.category ?? 1)
+                  const badge = getCategoryBadge(holiday.holidayCategory ?? 1)
                   return <Badge variant={badge.variant}>{badge.label}</Badge>
                 })()}
               </div>
@@ -127,7 +127,7 @@ export function HolidayDetailSheet({
                     label={t('fieldType')}
                     value={
                       (() => {
-                        const badge = getCategoryBadge(holiday.category ?? 1)
+                        const badge = getCategoryBadge(holiday.holidayCategory ?? 1)
                         return <Badge variant={badge.variant}>{badge.label}</Badge>
                       })()
                     }

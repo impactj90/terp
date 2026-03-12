@@ -4,10 +4,16 @@ import * as React from 'react'
 import { useTranslations } from 'next-intl'
 import { useLocale } from 'next-intl'
 import { cn } from '@/lib/utils'
-import { parseISODate, isWeekend, isToday } from '@/lib/time-utils'
-import type { components } from '@/types/legacy-api-types'
+import { isWeekend, isToday } from '@/lib/time-utils'
 
-type Holiday = components['schemas']['Holiday']
+interface Holiday {
+  id: string
+  holidayDate: Date | string
+  name: string
+  holidayCategory: number
+  appliesToAll: boolean
+  departmentId: string | null
+}
 
 interface HolidayYearCalendarProps {
   year: number
@@ -93,7 +99,7 @@ function MonthMiniCalendar({
   const holidayMap = React.useMemo(() => {
     const map = new Map<string, Holiday>()
     for (const h of holidays) {
-      const date = parseISODate(h.holiday_date)
+      const date = new Date(h.holidayDate)
       if (date.getMonth() === month && date.getFullYear() === year) {
         const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`
         map.set(key, h)
@@ -146,7 +152,7 @@ function MonthMiniCalendar({
 
               const holiday = getHoliday(date)
               const isHolidayDate = !!holiday
-              const holidayCategory = holiday?.category ?? 1
+              const holidayCategory = holiday?.holidayCategory ?? 1
               const weekend = isWeekend(date)
               const today = isToday(date)
 

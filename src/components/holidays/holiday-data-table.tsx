@@ -22,9 +22,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { components } from '@/types/legacy-api-types'
 
-type Holiday = components['schemas']['Holiday']
+interface Holiday {
+  id: string
+  holidayDate: Date | string
+  name: string
+  holidayCategory: number
+  appliesToAll: boolean
+  departmentId: string | null
+}
 
 interface HolidayDataTableProps {
   holidays: Holiday[]
@@ -62,8 +68,8 @@ export function HolidayDataTable({
     return null
   }
 
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'EEEE, MMMM d, yyyy')
+  const formatDate = (date: Date) => {
+    return format(new Date(date), 'EEEE, MMMM d, yyyy')
   }
 
   return (
@@ -87,7 +93,7 @@ export function HolidayDataTable({
             onClick={() => onView(holiday)}
           >
             <TableCell className="font-mono text-sm">
-              {formatDate(holiday.holiday_date)}
+              {formatDate(holiday.holidayDate)}
             </TableCell>
             <TableCell>
               <div className="flex items-center gap-3">
@@ -99,12 +105,12 @@ export function HolidayDataTable({
             </TableCell>
             <TableCell>
               {(() => {
-                const badge = getCategoryBadge(holiday.category ?? 1)
+                const badge = getCategoryBadge(holiday.holidayCategory ?? 1)
                 return <Badge variant={badge.variant}>{badge.label}</Badge>
               })()}
             </TableCell>
             <TableCell>
-              {holiday.applies_to_all ? (
+              {holiday.appliesToAll ? (
                 <span className="text-muted-foreground">{t('scopeAll')}</span>
               ) : (
                 <div className="flex items-center gap-1">
