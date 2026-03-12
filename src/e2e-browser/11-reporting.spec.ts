@@ -17,16 +17,16 @@ test.describe("UC-063: Generate Report", () => {
 
     await page.getByRole("button", { name: "Bericht erstellen" }).click();
 
-    // Wait for dialog to open
+    // Wait for dialog to open (Sheet renders with dialog ARIA role)
     const dialog = page.locator(
       '[data-slot="sheet-content"][data-state="open"]',
     );
-    await dialog.waitFor({ state: "visible" });
+    await dialog.waitFor({ state: "visible", timeout: 10_000 });
 
-    // Verify form fields exist
-    await expect(page.getByText("Berichtstyp", { exact: true })).toBeVisible();
-    await expect(page.getByText("Berichtsname")).toBeVisible();
-    await expect(page.getByText("Format", { exact: true })).toBeVisible();
+    // Verify form fields exist within the dialog
+    await expect(dialog.getByText("Berichtstyp", { exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(dialog.getByText("Berichtsname")).toBeVisible();
+    await expect(dialog.getByText("Format", { exact: true })).toBeVisible();
 
     // Close dialog without submitting
     await page.keyboard.press("Escape");

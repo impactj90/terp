@@ -14,7 +14,7 @@ export async function navigateViaSidebar(
 ): Promise<void> {
   await page
     .locator('nav[aria-label="Main navigation"]')
-    .locator(`a[href*="${href}"]`)
+    .locator(`a[href="${href}"]`)
     .click();
   await page.waitForURL(`**${href}`);
   await page.locator("main#main-content").waitFor({ state: "visible" });

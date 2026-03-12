@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 interface TeamMember {
   teamId: string
   employeeId: string
-  role: string
+  role: 'member' | 'lead' | 'deputy'
   joinedAt: Date | string
   employee?: {
     id: string

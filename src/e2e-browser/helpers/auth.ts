@@ -17,7 +17,9 @@ export async function loginAsAdmin(page: Page): Promise<void> {
   await page
     .getByRole("button", { name: /Login as Admin|Als Admin anmelden/i })
     .click();
-  await page.waitForURL("**/dashboard", { timeout: 15_000 });
+  // Wait for dashboard to load (URL may include locale prefix)
+  await page.waitForURL(/dashboard/, { timeout: 15_000 });
+  await page.locator("main#main-content, main").first().waitFor({ state: "visible", timeout: 10_000 });
 }
 
 export async function loginAsUser(page: Page): Promise<void> {

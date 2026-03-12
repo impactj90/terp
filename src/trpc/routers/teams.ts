@@ -18,6 +18,7 @@
  * @see apps/api/internal/handler/team.go
  */
 import { z } from "zod"
+import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
@@ -331,6 +332,7 @@ export const teamsRouter = createTRPCRouter({
       const tenantId = ctx.tenantId!
       try {
         const team = await teamService.update(ctx.prisma, tenantId, input)
+        if (!team) throw new TRPCError({ code: 'NOT_FOUND', message: 'Team not found' })
         return mapTeamToOutput(team)
       } catch (err) {
         handleServiceError(err)
