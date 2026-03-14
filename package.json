@@ -40,6 +40,7 @@
     "db:push:prod": "npx supabase db push --db-url \"$SUPABASE_DB_URL\"",
     "db:studio": "prisma studio",
     "seed:staging": "node --env-file=.env.staging ./scripts/seed-staging.ts",
+    "db:reset:staging": "node --env-file=.env.staging ./scripts/reset-staging.ts",
     "postinstall": "prisma generate",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"

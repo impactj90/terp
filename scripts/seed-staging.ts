@@ -16,10 +16,14 @@ if (!databaseUrl) {
   process.exit(1)
 }
 
-// Strip Supabase-specific query params that psql doesn't understand
+// Strip/fix query params that psql doesn't understand
 const url = new URL(databaseUrl)
 url.searchParams.delete('supa')
 url.searchParams.delete('pgbouncer')
+// psql doesn't support sslmode=no-verify, use sslmode=require instead
+if (url.searchParams.get('sslmode') === 'no-verify') {
+  url.searchParams.set('sslmode', 'require')
+}
 const cleanUrl = url.toString()
 
 const host = url.hostname
