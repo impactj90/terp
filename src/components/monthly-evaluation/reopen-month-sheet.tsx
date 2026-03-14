@@ -82,7 +82,7 @@ export function ReopenMonthSheet({
             {t('reopenMonth')}
           </SheetTitle>
           <SheetDescription>
-            {t('reopenDescription', { month: monthLabel })}
+            {t('reopenDescription', { monthLabel })}
           </SheetDescription>
         </SheetHeader>
 

@@ -51,6 +51,7 @@ export function CorrectionNotifyDialog({
     if (item && open) {
       const dateDisplay = formatDateDisplay(item.valueDate)
       const errorDescriptions = item.errors
+        .filter((e) => e.code !== 'MANUAL_BREAK')
         .map((e) => `- ${e.customText || t(`errorCodes.${e.code}` as Parameters<typeof t>[0])}`)
         .join('\n')
       setMessage(
