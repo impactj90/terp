@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 export type CorrectionAssistantError = {
   code: string
   severity: string
-  message: string
+  customText: string | null
   errorType: string
 }
 

@@ -150,7 +150,7 @@ const correctionMessageOutputSchema = z.object({
 const correctionAssistantErrorSchema = z.object({
   code: z.string(),
   severity: z.string(),
-  message: z.string(),
+  customText: z.string().nullable(),
   errorType: z.string(),
 })
 
@@ -434,7 +434,7 @@ export const correctionAssistantRouter = createTRPCRouter({
         interface CorrectionAssistantError {
           code: string
           severity: string
-          message: string
+          customText: string | null
           errorType: string
         }
 
@@ -459,18 +459,18 @@ export const correctionAssistantRouter = createTRPCRouter({
               if (severityFilter && severityFilter !== "error") continue
               if (codeFilter && codeFilter !== code) continue
 
-              let message = code // Fallback to raw code
               let severity = "error"
+              let customText: string | null = null
               const catalogEntry = messageMap.get(code)
               if (catalogEntry) {
-                message = catalogEntry.customText || catalogEntry.defaultText
                 severity = catalogEntry.severity
+                customText = catalogEntry.customText ?? null
               }
 
               errors.push({
                 code,
                 severity,
-                message,
+                customText,
                 errorType: mapCorrectionErrorType(code),
               })
             }
@@ -482,18 +482,18 @@ export const correctionAssistantRouter = createTRPCRouter({
               if (severityFilter && severityFilter !== "hint") continue
               if (codeFilter && codeFilter !== code) continue
 
-              let message = code // Fallback to raw code
               let severity = "hint"
+              let customText: string | null = null
               const catalogEntry = messageMap.get(code)
               if (catalogEntry) {
-                message = catalogEntry.customText || catalogEntry.defaultText
                 severity = catalogEntry.severity
+                customText = catalogEntry.customText ?? null
               }
 
               errors.push({
                 code,
                 severity,
-                message,
+                customText,
                 errorType: mapCorrectionErrorType(code),
               })
             }

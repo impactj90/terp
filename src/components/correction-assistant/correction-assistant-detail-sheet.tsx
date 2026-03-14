@@ -4,7 +4,7 @@ import * as React from 'react'
 
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
-import { User } from 'lucide-react'
+import { Mail, User } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -17,6 +17,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import type { CorrectionAssistantItem } from '@/hooks/use-correction-assistant'
+import { CorrectionNotifyDialog } from './correction-notify-dialog'
 
 interface CorrectionAssistantDetailSheetProps {
   item: CorrectionAssistantItem | null
@@ -37,6 +38,7 @@ export function CorrectionAssistantDetailSheet({
 }: CorrectionAssistantDetailSheetProps) {
   const t = useTranslations('correctionAssistant')
   const router = useRouter()
+  const [notifyOpen, setNotifyOpen] = React.useState(false)
 
   const handleGoToEmployee = () => {
     if (item) {
@@ -46,6 +48,7 @@ export function CorrectionAssistantDetailSheet({
   }
 
   return (
+    <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-lg flex flex-col">
         <SheetHeader>
@@ -96,7 +99,7 @@ export function CorrectionAssistantDetailSheet({
                         {error.severity === 'error' ? t('severity.error') : t('severity.hint')}
                       </Badge>
                     </div>
-                    <p className="text-sm">{error.message}</p>
+                    <p className="text-sm">{error.customText || t(`errorCodes.${error.code}` as Parameters<typeof t>[0])}</p>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground">{t('detail.errorType')}:</span>
                       <Badge variant="outline" className="text-xs">
@@ -114,6 +117,15 @@ export function CorrectionAssistantDetailSheet({
           <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
             {t('detail.close')}
           </Button>
+          <Button
+            variant="outline"
+            onClick={() => setNotifyOpen(true)}
+            disabled={!item}
+            className="flex-1"
+          >
+            <Mail className="mr-2 h-4 w-4" />
+            {t('detail.notifyEmployee')}
+          </Button>
           <Button onClick={handleGoToEmployee} disabled={!item} className="flex-1">
             <User className="mr-2 h-4 w-4" />
             {t('detail.goToEmployee')}
@@ -121,5 +133,12 @@ export function CorrectionAssistantDetailSheet({
         </SheetFooter>
       </SheetContent>
     </Sheet>
+
+    <CorrectionNotifyDialog
+      item={item}
+      open={notifyOpen}
+      onOpenChange={setNotifyOpen}
+    />
+    </>
   )
 }

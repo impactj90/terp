@@ -746,7 +746,7 @@ VALUES
   ('00000000-0000-0000-0000-000000003010', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '2026-01-16', 480, 450, 480, 0, 30, 30, false, NULL, NULL, 480, 960, 4, 'calculated', NOW(), NOW()),
   ('00000000-0000-0000-0000-000000003011', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '2026-01-19', 600, 570, 480, 90, 0, 30, false, NULL, '{"APPROACHING_WORK_LIMIT","HIGH_OVERTIME"}', 480, 1080, 4, 'calculated', NOW(), NOW()),
   ('00000000-0000-0000-0000-000000003012', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '2026-01-20', 540, 510, 480, 30, 0, 30, false, NULL, NULL, 480, 1020, 4, 'calculated', NOW(), NOW()),
-  ('00000000-0000-0000-0000-000000003013', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '2026-01-21', 540, 540, 480, 60, 0, 0, true, '{"MISSING_BREAK"}', NULL, 480, 1020, 2, 'calculated', NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000003013', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '2026-01-21', 540, 540, 480, 60, 0, 0, true, '{"NO_BREAK_RECORDED"}', NULL, 480, 1020, 2, 'calculated', NOW(), NOW()),
   ('00000000-0000-0000-0000-000000003014', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '2026-01-22', 540, 510, 480, 30, 0, 30, false, NULL, NULL, 480, 1020, 4, 'calculated', NOW(), NOW()),
   ('00000000-0000-0000-0000-000000003015', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '2026-01-23', 510, 480, 480, 0, 0, 30, false, NULL, NULL, 480, 990, 4, 'calculated', NOW(), NOW()),
 
@@ -758,7 +758,7 @@ VALUES
   ('00000000-0000-0000-0000-000000004004', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000012', '2026-01-08', 480, 450, 480, 0, 30, 30, false, NULL, NULL, 540, 1020, 4, 'calculated', NOW(), NOW()),
   ('00000000-0000-0000-0000-000000004005', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000012', '2026-01-09', 510, 480, 480, 0, 0, 30, false, NULL, NULL, 540, 1050, 4, 'calculated', NOW(), NOW()),
   ('00000000-0000-0000-0000-000000004006', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000012', '2026-01-12', 540, 510, 480, 30, 0, 30, false, NULL, NULL, 540, 1080, 4, 'calculated', NOW(), NOW()),
-  ('00000000-0000-0000-0000-000000004007', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000012', '2026-01-13', 0, 0, 480, 0, 0, 0, true, '{"MISSING_CLOCK_OUT"}', NULL, 540, NULL, 1, 'calculated', NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000004007', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000012', '2026-01-13', 0, 0, 480, 0, 0, 0, true, '{"MISSING_GO"}', NULL, 540, NULL, 1, 'calculated', NOW(), NOW()),
   ('00000000-0000-0000-0000-000000004008', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000012', '2026-01-14', 540, 510, 480, 30, 0, 30, false, NULL, NULL, 540, 1080, 4, 'calculated', NOW(), NOW()),
   ('00000000-0000-0000-0000-000000004009', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000012', '2026-01-15', 510, 480, 480, 0, 0, 30, false, NULL, NULL, 540, 1050, 4, 'calculated', NOW(), NOW()),
   ('00000000-0000-0000-0000-000000004010', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000012', '2026-01-16', 450, 420, 480, 0, 60, 30, false, NULL, NULL, 540, 990, 4, 'calculated', NOW(), NOW()),
@@ -1213,7 +1213,7 @@ ON CONFLICT (tenant_id, name) DO NOTHING;
 -- A11. System Settings
 INSERT INTO system_settings (id, tenant_id, rounding_relative_to_plan, error_list_enabled, tracked_error_codes, auto_fill_order_end_bookings, birthday_window_days_before, birthday_window_days_after, follow_up_entries_enabled, proxy_enabled, server_alive_enabled, created_at, updated_at)
 VALUES
-  ('00000000-0000-0000-0000-000000000a70', '10000000-0000-0000-0000-000000000001', false, true, ARRAY['MISSING_BREAK','MISSING_CLOCK_OUT','HIGH_OVERTIME'], false, 7, 7, false, false, false, NOW(), NOW())
+  ('00000000-0000-0000-0000-000000000a70', '10000000-0000-0000-0000-000000000001', false, true, ARRAY['NO_BREAK_RECORDED','MISSING_GO','HIGH_OVERTIME'], false, 7, 7, false, false, false, NOW(), NOW())
 ON CONFLICT (tenant_id) DO NOTHING;
 
 -- A12. Employee Messages
@@ -1580,7 +1580,7 @@ BEGIN
         net := gross - break_dur;
         IF is_err AND err_type = 0 AND emp.needs_break THEN
           v_has_error := true;
-          v_error_codes := ARRAY['MISSING_BREAK'];
+          v_error_codes := ARRAY['NO_BREAK_RECORDED'];
         END IF;
 
         INSERT INTO daily_values (id, tenant_id, employee_id, value_date, gross_time, net_time, target_time, overtime, undertime, break_time, has_error, error_codes, first_come, last_go, booking_count, status, created_at, updated_at)
@@ -1591,7 +1591,7 @@ BEGIN
         ON CONFLICT (employee_id, value_date) DO NOTHING;
       ELSE
         INSERT INTO daily_values (id, tenant_id, employee_id, value_date, gross_time, net_time, target_time, overtime, undertime, break_time, has_error, error_codes, first_come, last_go, booking_count, status, created_at, updated_at)
-        VALUES (gen_random_uuid(), t_id, emp.emp_id, d, 0, 0, target, 0, 0, 0, true, ARRAY['MISSING_CLOCK_OUT'],
+        VALUES (gen_random_uuid(), t_id, emp.emp_id, d, 0, 0, target, 0, 0, 0, true, ARRAY['MISSING_GO'],
           come_time, NULL, bk_count, 'calculated', NOW(), NOW())
         ON CONFLICT (employee_id, value_date) DO NOTHING;
       END IF;

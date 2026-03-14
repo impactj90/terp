@@ -191,11 +191,11 @@ export function DailyBreakdownTable({
                   <TableCell className="text-center">
                     {hasErrors && dailyValue?.error_codes && dailyValue.error_codes.length > 0 ? (
                       <Badge variant="destructive" className="text-xs">
-                        {dailyValue.error_codes.length} {dailyValue.error_codes.length === 1 ? t('error') : t('errors')}
+                        {dailyValue.error_codes.length === 1 ? t('error', { count: 1 }) : t('errors', { count: dailyValue.error_codes.length })}
                       </Badge>
                     ) : hasWarnings && dailyValue?.warnings ? (
                       <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-                        {dailyValue.warnings.length} {dailyValue.warnings.length === 1 ? t('warning') : t('warnings')}
+                        {dailyValue.warnings.length === 1 ? t('warning', { count: 1 }) : t('warnings', { count: dailyValue.warnings.length })}
                       </Badge>
                     ) : dailyValue ? (
                       <Badge variant="outline" className="text-xs">{t('ok')}</Badge>
