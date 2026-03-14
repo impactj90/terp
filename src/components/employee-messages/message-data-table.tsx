@@ -21,9 +21,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { components } from '@/types/legacy-api-types'
+import type { inferRouterOutputs } from '@trpc/server'
+import type { AppRouter } from '@/trpc/routers/_app'
 
-type EmployeeMessage = components['schemas']['EmployeeMessage']
+type EmployeeMessage = inferRouterOutputs<AppRouter>['employeeMessages']['list']['items'][number]
 
 interface MessageDataTableProps {
   messages: EmployeeMessage[]
@@ -108,7 +109,7 @@ export function MessageDataTable({
                 </div>
               </TableCell>
               <TableCell className="text-muted-foreground">
-                {format(new Date(message.created_at), 'dd.MM.yyyy HH:mm')}
+                {format(new Date(message.createdAt), 'dd.MM.yyyy HH:mm')}
               </TableCell>
               <TableCell onClick={(e) => e.stopPropagation()}>
                 <DropdownMenu>

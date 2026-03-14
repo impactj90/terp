@@ -17,9 +17,10 @@ import {
   MessageDetailSheet,
   SendConfirmationDialog,
 } from '@/components/employee-messages'
-import type { components } from '@/types/legacy-api-types'
+import type { inferRouterOutputs } from '@trpc/server'
+import type { AppRouter } from '@/trpc/routers/_app'
 
-type EmployeeMessage = components['schemas']['EmployeeMessage']
+type EmployeeMessage = inferRouterOutputs<AppRouter>['employeeMessages']['list']['items'][number]
 
 export default function EmployeeMessagesPage() {
   const router = useRouter()
@@ -123,7 +124,7 @@ export default function EmployeeMessagesPage() {
             <EmptyState hasFilters={hasFilters} onComposeClick={() => setComposeOpen(true)} />
           ) : (
             <MessageDataTable
-              messages={filteredMessages as unknown as EmployeeMessage[]}
+              messages={filteredMessages}
               isLoading={false}
               onView={handleView}
             />
