@@ -249,6 +249,7 @@
     "inLabel": "In:",
     "outLabel": "Out:",
     "worked": "Worked:",
+    "breakLabel": "Break:",
     "noWorkScheduled": "No work scheduled",
     "noBookingsYet": "No bookings yet",
     "needsAttention": "Needs attention",
@@ -2503,7 +2504,20 @@
       "errorsTitle": "Errors & Hints",
       "errorType": "Type",
       "close": "Close",
-      "goToEmployee": "Go to Employee"
+      "goToEmployee": "Go to Employee",
+      "notifyEmployee": "Notify"
+    },
+    "notify": {
+      "title": "Notify Employee",
+      "description": "Send a message to the employee about incorrect bookings",
+      "messageLabel": "Message",
+      "messageHint": "The employee will receive this as a notification",
+      "defaultMessage": "Please review your bookings on {date}:\n{errors}\n\nCorrect your times in the timesheet.",
+      "subject": "Booking correction required on {date}",
+      "send": "Send message",
+      "sending": "Sending...",
+      "success": "Message sent to {name}",
+      "failed": "Failed to send message"
     },
     "messages": {
       "columnCode": "Code",

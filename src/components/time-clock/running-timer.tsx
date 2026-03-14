@@ -30,17 +30,16 @@ export function RunningTimer({
       typeof startTime === 'string' ? new Date(startTime) : startTime
 
     // startTime is derived from editedTime (minutes from midnight) so it has
-    // minute-level precision. Truncate "now" to the same minute boundary so
-    // the timer starts at 0:00 instead of showing residual seconds.
-    const startMinute = Math.floor(start.getTime() / 60000) * 60000
-    const nowMinute = () => Math.floor(Date.now() / 60000) * 60000
+    // minute-level precision. Round start to the minute boundary so the timer
+    // starts cleanly, but use real Date.now() so seconds tick visibly.
+    const startMs = Math.floor(start.getTime() / 60000) * 60000
 
     // Calculate initial elapsed
-    setElapsed(nowMinute() - startMinute)
+    setElapsed(Date.now() - startMs)
 
     // Update every second
     const interval = setInterval(() => {
-      setElapsed(nowMinute() - startMinute)
+      setElapsed(Date.now() - startMs)
     }, 1000)
 
     return () => clearInterval(interval)

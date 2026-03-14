@@ -183,8 +183,8 @@ export default function TimeClockPage() {
 
             {/* Running Timer */}
             <RunningTimer
-              startTime={clockState.clockInTime}
-              isRunning={clockState.status === 'clocked_in'}
+              startTime={clockState.timerStartTime}
+              isRunning={clockState.status !== 'clocked_out'}
             />
 
             {/* Main Clock Button */}
@@ -218,7 +218,7 @@ export default function TimeClockPage() {
         />
 
         <BookingHistory
-          bookings={clockState.bookings as unknown as Parameters<typeof BookingHistory>[0]['bookings']}
+          bookings={clockState.bookings}
           isLoading={clockState.isLoading}
         />
       </div>
@@ -246,7 +246,7 @@ function PageHeader() {
 }
 
 interface EmployeeSelectorProps {
-  employees: Array<{ id?: string; first_name?: string; last_name?: string }>
+  employees: Array<{ id?: string; firstName?: string; lastName?: string }>
   selectedId: string
   onSelect: (id: string) => void
 }
@@ -255,7 +255,7 @@ function EmployeeSelector({ employees, selectedId, onSelect }: EmployeeSelectorP
   const t = useTranslations('timeClock')
   const selected = employees.find(e => e.id === selectedId)
   const selectedName = selected
-    ? `${selected.first_name} ${selected.last_name}`
+    ? `${selected.firstName} ${selected.lastName}`
     : t('selectEmployee')
 
   return (
@@ -271,7 +271,7 @@ function EmployeeSelector({ employees, selectedId, onSelect }: EmployeeSelectorP
             key={emp.id}
             onClick={() => emp.id && onSelect(emp.id)}
           >
-            {emp.first_name} {emp.last_name}
+            {emp.firstName} {emp.lastName}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

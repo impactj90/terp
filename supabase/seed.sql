@@ -1053,7 +1053,7 @@ BEGIN
     ) AS t(employee_id, mon_thu_plan, fri_plan)
   LOOP
     d := '2026-01-01';
-    WHILE d <= CURRENT_DATE LOOP
+    WHILE d <= CURRENT_DATE + 90 LOOP
       dow := EXTRACT(ISODOW FROM d)::int;
       is_holiday := EXISTS (SELECT 1 FROM holidays WHERE holiday_date = d AND tenant_id = t_id);
       INSERT INTO employee_day_plans (id, tenant_id, employee_id, plan_date, day_plan_id, source, created_at, updated_at)

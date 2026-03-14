@@ -249,6 +249,7 @@
     "inLabel": "Ein:",
     "outLabel": "Aus:",
     "worked": "Gearbeitet:",
+    "breakLabel": "Pause:",
     "noWorkScheduled": "Keine Arbeit geplant",
     "noBookingsYet": "Noch keine Buchungen",
     "needsAttention": "Aufmerksamkeit erforderlich",
@@ -2503,7 +2504,20 @@
       "errorsTitle": "Fehler & Hinweise",
       "errorType": "Typ",
       "close": "Schließen",
-      "goToEmployee": "Zum Mitarbeiter"
+      "goToEmployee": "Zum Mitarbeiter",
+      "notifyEmployee": "Benachrichtigen"
+    },
+    "notify": {
+      "title": "Mitarbeiter benachrichtigen",
+      "description": "Eine Nachricht an den Mitarbeiter senden, um auf fehlerhafte Buchungen hinzuweisen",
+      "messageLabel": "Nachricht",
+      "messageHint": "Der Mitarbeiter erhält diese Nachricht als Benachrichtigung",
+      "defaultMessage": "Bitte prüfe deine Buchungen am {date}:\n{errors}\n\nKorrigiere deine Zeiten im Zeitnachweis.",
+      "subject": "Buchungskorrektur erforderlich am {date}",
+      "send": "Nachricht senden",
+      "sending": "Wird gesendet...",
+      "success": "Nachricht an {name} gesendet",
+      "failed": "Nachricht konnte nicht gesendet werden"
     },
     "messages": {
       "columnCode": "Code",

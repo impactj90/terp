@@ -1,8 +1,6 @@
 'use client'
 
 import { useMemo, useCallback } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import { useTRPC } from '@/trpc'
 import { useCreateBooking } from '@/hooks/use-bookings'
 import { useBookingTypes } from '@/hooks/use-booking-types'
 import { useEmployeeDayView } from '@/hooks/use-employee-day'
@@ -31,8 +29,6 @@ interface UseClockStateOptions {
 }
 
 export function useClockState({ employeeId, enabled = true }: UseClockStateOptions) {
-  const trpc = useTRPC()
-  const queryClient = useQueryClient()
   const today = getToday()
 
   // Fetch today's data
@@ -59,11 +55,11 @@ export function useClockState({ employeeId, enabled = true }: UseClockStateOptio
   }, [bookingTypes.data])
 
   // Determine current status from bookings
-  const { status, clockInTime, lastBooking } = useMemo(() => {
+  const { status, timerStartTime, lastBooking } = useMemo(() => {
     const bookings = dayView.data?.bookings ?? []
 
     if (bookings.length === 0) {
-      return { status: 'clocked_out' as ClockStatus, clockInTime: null, lastBooking: null }
+      return { status: 'clocked_out' as ClockStatus, timerStartTime: null, lastBooking: null }
     }
 
     // Sort by time (ascending)
@@ -78,17 +74,9 @@ export function useClockState({ employeeId, enabled = true }: UseClockStateOptio
 
     // Determine status based on last booking
     let status: ClockStatus = 'clocked_out'
-    let clockInTime: Date | null = null
 
     if (lastCode === CLOCK_IN || lastCode === BREAK_END || lastCode === ERRAND_END) {
       status = 'clocked_in'
-      // Find the last clock in time for the timer
-      const clockIn = sorted.find(b => b.bookingType?.code === CLOCK_IN)
-      if (clockIn && clockIn.editedTime !== undefined) {
-        const todayDate = new Date()
-        todayDate.setHours(0, 0, 0, 0)
-        clockInTime = new Date(todayDate.getTime() + clockIn.editedTime * 60000)
-      }
     } else if (lastCode === BREAK_START) {
       status = 'on_break'
     } else if (lastCode === ERRAND_START) {
@@ -97,7 +85,18 @@ export function useClockState({ employeeId, enabled = true }: UseClockStateOptio
       status = 'clocked_out'
     }
 
-    return { status, clockInTime, lastBooking }
+    // Timer shows current phase duration:
+    // - clocked_in: time since last clock-in / break-end / errand-end
+    // - on_break: time since break started
+    // - on_errand: time since errand started
+    let timerStartTime: Date | null = null
+    if (status !== 'clocked_out' && lastBooking?.editedTime !== undefined) {
+      const todayDate = new Date()
+      todayDate.setHours(0, 0, 0, 0)
+      timerStartTime = new Date(todayDate.getTime() + lastBooking.editedTime * 60000)
+    }
+
+    return { status, timerStartTime, lastBooking }
   }, [dayView.data?.bookings])
 
   // Action handler
@@ -129,18 +128,16 @@ export function useClockState({ employeeId, enabled = true }: UseClockStateOptio
         time: getCurrentTimeString(),
       })
 
-      // Invalidate day view to refresh (tRPC query key)
-      queryClient.invalidateQueries({
-        queryKey: trpc.employees.dayView.queryKey(),
-      })
+      // Refetch day view to get updated bookings and daily values
+      await dayView.refetch()
     },
-    [employeeId, today, bookingTypeMap, createBooking, queryClient, trpc]
+    [employeeId, today, bookingTypeMap, createBooking, dayView.refetch]
   )
 
   return {
     // State
     status,
-    clockInTime,
+    timerStartTime,
     lastBooking,
     bookings: dayView.data?.bookings ?? [],
     dailyValue: dayView.data?.dailyValue,

@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { Clock, AlertCircle, RefreshCw, Sun, Moon } from 'lucide-react'
+import { Clock, AlertCircle, RefreshCw, Sun, Moon, Coffee } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
@@ -85,6 +85,7 @@ export function TodayScheduleCard({
   // Get target hours from daily value
   const targetMinutes = dailyValue?.targetTime ?? 0
   const netMinutes = dailyValue?.netTime ?? 0
+  const breakMinutes = dailyValue?.breakTime ?? 0
 
   // Format status badge
   const getStatusBadge = () => {
@@ -136,6 +137,13 @@ export function TodayScheduleCard({
               <span className="font-medium">
                 {formatTime(lastOut.editedTime)}
               </span>
+            </div>
+          )}
+          {breakMinutes > 0 && (
+            <div className="flex items-center gap-2 text-sm">
+              <Coffee className="h-3.5 w-3.5 text-orange-500" />
+              <span className="text-muted-foreground">{t('breakLabel')}</span>
+              <span className="font-medium">{formatMinutes(breakMinutes)}</span>
             </div>
           )}
           {netMinutes > 0 && (
