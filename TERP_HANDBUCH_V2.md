@@ -13,10 +13,14 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
 
 1. [Was ist Terp?](#1-was-ist-terp)
 2. [Aufbau der Benutzeroberfläche](#2-aufbau-der-benutzeroberfläche)
+   - [2.1 Profil-Seite](#21-profil-seite)
+   - [2.2 Benachrichtigungen](#22-benachrichtigungen)
 3. [Rollen & Berechtigungen](#3-rollen--berechtigungen)
 4. [Stammdaten — Was muss eingerichtet werden?](#4-stammdaten--was-muss-eingerichtet-werden)
    - [4.6.4 Praxisbeispiel: Arbeitszeitmodell für Büro-Mitarbeiter einrichten](#464-praxisbeispiel-arbeitszeitmodell-für-büro-mitarbeiter-einrichten)
 5. [Zeiterfassung — Täglicher Betrieb](#5-zeiterfassung--täglicher-betrieb)
+   - [5.6 Teamübersicht](#56-teamübersicht)
+   - [5.7 Jahresübersicht](#57-jahresübersicht)
 6. [Schichtplanung](#6-schichtplanung)
    - [6.6 Praxisbeispiel: 3-Schicht-Betrieb einrichten (Früh / Spät / Nacht)](#66-praxisbeispiel-3-schicht-betrieb-einrichten-früh--spät--nacht)
 7. [Urlaub & Abwesenheiten](#7-urlaub--abwesenheiten)
@@ -168,6 +172,115 @@ Die Seitenleiste ist in drei Bereiche gegliedert. Menüpunkte erscheinen nur, we
 
 Auf Smartphones und Tablets erscheint am unteren Bildschirmrand eine **Schnellnavigation** mit vier festen Einträgen:
 - Dashboard | Stempeluhr | Zeitnachweis | Abwesenheiten | „Mehr" (öffnet die vollständige Seitenleiste als Einblendung)
+
+### 2.1 Profil-Seite
+
+**Was ist es?** Die Profil-Seite zeigt die eigenen Stamm- und Beschäftigungsdaten und ermöglicht die Pflege persönlicher Informationen, Kontaktdaten und Kontoeinstellungen.
+
+📍 Benutzermenü (Avatar oben rechts) → **Profil**
+
+✅ Sie sehen eine Seite mit folgenden Karten:
+
+| Karte | Inhalt | Bearbeitbar? |
+|-------|--------|-------------|
+| **Kopfbereich** | Avatar, Name, Rolle (Admin/Mitarbeiter), Personalnummer, Abteilung, E-Mail | Nein (Avatar-Upload kommt demnächst) |
+| **Persönliche Daten** | Vorname, Nachname, E-Mail, Telefon | ✅ Ja — über Bearbeiten-Button |
+| **Beschäftigungsdetails** | Abteilung, Kostenstelle, Beschäftigungsart, Status, Eintrittsdatum, Austrittsdatum, Wochenstunden, Urlaubstage | Nein (nur Leseansicht) |
+| **Kontakte** | Liste eigener Kontakteinträge (Typ, Wert, Bezeichnung, Hauptkontakt) | ✅ Ja — Hinzufügen und Löschen |
+| **Zutrittskarten** | RFID-Karten, Barcodes, PINs mit Status und Gültigkeit | Nein (Kontakt Admin bei Bedarf) |
+| **Kontoeinstellungen** | E-Mail (nur lesen), Rolle (nur lesen), Anzeigename (bearbeitbar), Passwort ändern (kommt demnächst) | Teilweise |
+
+#### Persönliche Daten bearbeiten
+
+1. 📍 Profil → Karte **„Persönliche Daten"** → **„Bearbeiten"** (Stift-Symbol)
+2. Felder ändern: Vorname, Nachname, E-Mail, Telefon
+3. 📍 **„Speichern"**
+
+✅ Eine grüne Bestätigungsmeldung erscheint für 3 Sekunden. Die Felder wechseln zurück in den Leseansicht-Modus.
+
+#### Kontakt hinzufügen
+
+1. 📍 Profil → Karte **„Kontakte"** → **„+"** (Hinzufügen)
+2. Im Formular (Einblendung von rechts):
+   - **Typ** wählen (E-Mail / Telefon / Mobil / Notfallkontakt)
+   - **Wert** eingeben (z. B. `+49 170 1234567`)
+   - **Bezeichnung** (optional, z. B. „Privat")
+   - **Hauptkontakt** (Checkbox)
+3. 📍 **„Erstellen"**
+
+✅ Der Kontakt erscheint in der Kontaktliste mit Typ-Badge und Wert.
+
+#### Kontakt löschen
+
+📍 Karte „Kontakte" → Mülleimer-Symbol (🗑) neben dem Kontakt klicken → Kontakt wird entfernt.
+
+#### Anzeigename ändern
+
+📍 Profil → Karte **„Kontoeinstellungen"** → Feld **„Anzeigename"** → neuen Namen eingeben → 📍 **„Speichern"**
+
+#### Benachrichtigungseinstellungen öffnen
+
+📍 Profil → Karte „Kontoeinstellungen" → Link **„Benachrichtigungen verwalten"** → leitet zur Benachrichtigungsseite weiter (Tab „Einstellungen")
+
+#### Praxisbeispiel
+
+Ein Mitarbeiter möchte seine Mobilnummer und seinen Notfallkontakt hinterlegen:
+
+1. 📍 Benutzermenü → **Profil** → Karte „Kontakte" → **„+"**
+   - Typ: **Mobil**, Wert: `+49 170 9876543`, Bezeichnung: `Privat`, Hauptkontakt: ✅ → 📍 „Erstellen"
+2. 📍 **„+"** erneut
+   - Typ: **Notfallkontakt**, Wert: `+49 160 1111111`, Bezeichnung: `Ehepartner` → 📍 „Erstellen"
+3. ✅ Beide Kontakte erscheinen in der Kontaktliste. Der Mobilkontakt ist als Hauptkontakt markiert.
+
+💡 **Hinweis:** Die E-Mail-Adresse in den Kontoeinstellungen kann nicht geändert werden — sie ist an den Benutzeraccount gebunden. Kontakte auf der Profilseite sind persönliche Kontaktdaten und unabhängig von der Anmelde-E-Mail. Administratoren sehen die Kontakte eines Mitarbeiters unter 📍 Verwaltung → Mitarbeiter → Mitarbeiterdetails (nur Leseansicht).
+
+### 2.2 Benachrichtigungen
+
+**Was ist es?** Die Benachrichtigungsseite zeigt alle internen Benachrichtigungen (z. B. genehmigte Anträge, Fehlermeldungen, Erinnerungen, Systemmeldungen) und ermöglicht die Konfiguration der Benachrichtigungseinstellungen.
+
+📍 Glocke (🔔) in der Kopfzeile klicken
+
+✅ Seite mit zwei Tabs: **Alle** (Posteingang) und **Einstellungen**
+
+#### Tab „Alle" — Posteingang
+
+✅ Sie sehen eine Liste aller Benachrichtigungen mit: Typ-Symbol (✓ Genehmigungen, ⚠ Fehler, ⏰ Erinnerungen, ⚙ System), Titel, Zeitstempel, Nachrichtentext und einem „Ungelesen"-Badge.
+
+**Filter:**
+- **Typ** (Dropdown): Alle Typen / Genehmigungen / Fehler / Erinnerungen / System
+- **Nur ungelesene** (Umschaltbutton): Zeigt nur ungelesene Benachrichtigungen
+
+**Aktionen:**
+- 📍 **„Alle als gelesen markieren"** — markiert alle Benachrichtigungen als gelesen (deaktiviert wenn keine ungelesenen vorhanden)
+- 📍 Benachrichtigung anklicken — öffnet den verlinkten Bereich (z. B. den genehmigten Antrag) und markiert die Benachrichtigung automatisch als gelesen
+- 📍 **„Mehr laden"** — lädt die nächsten 20 Benachrichtigungen (erscheint am Ende der Liste)
+
+#### Tab „Einstellungen" — Benachrichtigungseinstellungen
+
+✅ Vier Kategorien mit jeweils einem Ein/Aus-Schalter:
+
+| Kategorie | Beschreibung |
+|-----------|-------------|
+| **Genehmigungen** | Benachrichtigungen über genehmigte/abgelehnte Anträge |
+| **Fehler** | Benachrichtigungen über fehlerhafte Tageswerte |
+| **Erinnerungen** | Erinnerungen an ausstehende Aufgaben |
+| **System** | Systemmeldungen und Wartungshinweise |
+
+1. 📍 Schalter für die gewünschten Kategorien ein- oder ausschalten
+2. 📍 **„Änderungen speichern"**
+
+✅ Die Einstellungen werden sofort wirksam. Deaktivierte Kategorien erzeugen keine neuen Benachrichtigungen mehr.
+
+#### Praxisbeispiel
+
+Ein Mitarbeiter möchte nur Genehmigungsbenachrichtigungen sehen und alle anderen deaktivieren:
+
+1. 📍 Glocke (🔔) → Tab **„Einstellungen"**
+2. Genehmigungen: ✅ | Fehler: ❌ | Erinnerungen: ❌ | System: ❌
+3. 📍 **„Änderungen speichern"**
+4. ✅ Ab sofort erscheinen nur noch Benachrichtigungen über genehmigte oder abgelehnte Anträge.
+
+💡 **Hinweis:** Der rote Badge an der Glocke (🔔) in der Kopfzeile zeigt die Anzahl ungelesener Benachrichtigungen. Ein Klick auf eine Benachrichtigung navigiert direkt zum relevanten Bereich (z. B. zum genehmigten Urlaubsantrag). Benachrichtigungen können auch über die Profil-Seite erreicht werden (📍 Profil → „Benachrichtigungen verwalten").
 
 ---
 
@@ -1299,6 +1412,25 @@ Szenario: Ein Standard-Büromitarbeiter soll Montag bis Freitag, 08:00–16:30 U
    - **Tarifzuweisungen**: Liste der zeitgebundenen Tarifzuweisungen mit Vorschau des aktuell geltenden Tarifs
 3. Kopfbereich-Buttons: ← Zurück, Zeitnachweis anzeigen, Bearbeiten, Deaktivieren
 
+#### Individuelle Tarifzuweisung anlegen (zeitgebunden)
+
+Auf der Mitarbeiter-Detailseite können unter dem Tab **„Tarifzuweisungen"** zeitgebundene Tarifzuweisungen angelegt werden — z. B. wenn ein Mitarbeiter ab einem bestimmten Datum einen anderen Tarif bekommt (Versetzung, Arbeitszeitänderung).
+
+1. 📍 Verwaltung → Mitarbeiter → Mitarbeiter anklicken → Tab **„Tarifzuweisungen"**
+2. ✅ Sie sehen eine Liste der bisherigen Zuweisungen mit: Tarif, Gültig ab, Gültig bis, Status. Oben wird der aktuell geltende Tarif hervorgehoben.
+3. 📍 **„Neue Zuweisung"** (oben rechts)
+4. Im Formular:
+   - **Tarif** (Dropdown aus aktiven Tarifen)
+   - **Gültig ab** (Pflicht, Datum)
+   - **Gültig bis** (optional — ohne Enddatum gilt der Tarif unbefristet)
+5. 📍 **„Speichern"**
+
+✅ Die neue Zuweisung erscheint in der Liste. Das System generiert automatisch die Tagespläne ab dem Gültigkeitsdatum.
+
+> **Beispiel:** Mitarbeiterin Meier wechselt am 01.04.2026 von Vollzeit (40h) auf Teilzeit (20h): 📍 Tab „Tarifzuweisungen" → „Neue Zuweisung" → Tarif: `TZ-20`, Gültig ab: `01.04.2026` → „Speichern". Ab dem 01.04. gelten die Tagespläne des Teilzeit-Tarifs.
+
+⚠️ Bei überlappenden Zuweisungen gilt die neueste Zuweisung. Die alte Zuweisung sollte ein Enddatum erhalten, um Überlappungen zu vermeiden.
+
 #### Tarife mehreren Mitarbeitern zuweisen
 
 1. 📍 Seitenleiste → Verwaltung → Mitarbeiter
@@ -1415,6 +1547,25 @@ Ein Unternehmen möchte Homeoffice-Zeiten separat erfassen:
 
 💡 **Hinweis:** Für die meisten Unternehmen reichen die sechs Systemtypen aus. Eigene Buchungstypen sind nur dann nötig, wenn Sie in Auswertungen und Berichten zwischen verschiedenen Arbeitsarten unterscheiden möchten (z. B. Homeoffice vs. Büro). Die Stempeluhr verwendet immer die Systemtypen A1/A2/P1/P2.
 
+#### Buchungstyp-Gruppen verwalten
+
+📍 Tab **„Gruppen"** auf der Buchungstypen-Seite
+
+✅ Tabelle mit Spalten: Code, Name, Beschreibung, Buchungstypen (Anzahl), Status.
+
+Gruppen bündeln mehrere Buchungstypen logisch zusammen — z. B. alle Homeoffice-Buchungstypen (HO1 + HO2) in einer Gruppe „Homeoffice". Gruppen dienen der Filterung in Auswertungen und Berichten.
+
+##### Neue Gruppe anlegen
+
+1. 📍 Tab „Gruppen" → **„Neue Gruppe"** (oben rechts)
+2. Ausfüllen: **Code** (Pflicht, Großbuchstaben), **Name** (Pflicht), Beschreibung
+3. Buchungstypen zuordnen: Checkboxen bei den gewünschten Buchungstypen setzen
+4. 📍 **„Erstellen"**
+
+✅ Die Gruppe erscheint in der Tabelle mit der Anzahl zugeordneter Buchungstypen.
+
+> **Beispiel:** Gruppe `HOMEOFFICE`, Name: `Homeoffice-Buchungen` → Buchungstypen `HO1` und `HO2` zuordnen. In den Auswertungen kann nun nach der Gruppe „Homeoffice" gefiltert werden.
+
 ### 4.10 Abwesenheitstypen
 
 **Was ist es?** Abwesenheitstypen klassifizieren die verschiedenen Gründe, warum ein Mitarbeiter nicht arbeitet — z. B. Jahresurlaub, Krankheit, Sonderurlaub, Fortbildung. Jeder Typ hat eine Kategorie, eine Farbe (für den Kalender) und Regeln (ob Urlaub abgezogen und ob eine Genehmigung erforderlich ist).
@@ -1498,6 +1649,25 @@ Ein Unternehmen möchte neben den Standardtypen einen „Sonderurlaub Umzug" anl
 2. Wenn ein Mitarbeiter einen Umzugstag beantragt (📍 Abwesenheiten → „Abwesenheit beantragen" → Typ `Sonderurlaub Umzug`), muss der Vorgesetzte genehmigen. Das Urlaubskonto bleibt unberührt.
 
 💡 **Hinweis:** Der Code-Präfix (U, K oder S) bestimmt die Zuordnung im System. Verwenden Sie `U` für Urlaubsarten und unbezahlte Abwesenheiten, `K` für Krankheit und `S` für Sonderfälle. Systemtypen (mit 🔒-Symbol) können nicht bearbeitet oder gelöscht werden — blenden Sie sie mit dem Schalter „Systemtypen anzeigen" ein.
+
+#### Abwesenheitsart-Gruppen verwalten
+
+📍 Tab **„Gruppen"** auf der Abwesenheitsarten-Seite
+
+✅ Tabelle mit Spalten: Code, Name, Beschreibung, Abwesenheitsarten (Anzahl), Status.
+
+Gruppen bündeln mehrere Abwesenheitsarten logisch zusammen — z. B. alle Urlaubsarten (U01, U02, U03) in einer Gruppe „Urlaub". Gruppen dienen der Filterung in Auswertungen und Berichten.
+
+##### Neue Gruppe anlegen
+
+1. 📍 Tab „Gruppen" → **„Neue Gruppe"** (oben rechts)
+2. Ausfüllen: **Code** (Pflicht, Großbuchstaben), **Name** (Pflicht), Beschreibung
+3. Abwesenheitsarten zuordnen: Checkboxen bei den gewünschten Typen setzen
+4. 📍 **„Erstellen"**
+
+✅ Die Gruppe erscheint in der Tabelle mit der Anzahl zugeordneter Abwesenheitsarten.
+
+> **Beispiel:** Gruppe `URLAUB-ALLE`, Name: `Alle Urlaubsarten` → Abwesenheitsarten `U01` (Jahresurlaub), `U02` (Sonderurlaub), `U03` (Sonderurlaub Umzug) zuordnen.
 
 ### 4.11 Feiertage
 
@@ -1654,6 +1824,25 @@ Ein Unternehmen möchte Nachtzuschläge und Sonntagszuschläge im Lohnexport aus
 > ⚠️ **Wichtig:** Damit die Konten NZ und SZ tatsächlich Werte enthalten, müssen Sie zusätzlich **Zuschläge am Tagesplan** konfigurieren (→ Abschnitt 4.6.1, „Zuschläge"). Ohne Zuschlagskonfiguration bleiben die Konten leer.
 
 💡 **Hinweis:** Konten müssen als **„Lohnrelevant"** markiert und einer **Exportschnittstelle zugeordnet** sein, damit sie im Lohnexport erscheinen. Die Reihenfolge in der Exportschnittstelle bestimmt die Spaltenreihenfolge in der CSV-Datei. Der **Lohncode** wird an den Steuerberater übermittelt und muss mit dem verwendeten Abrechnungsprogramm (z. B. DATEV) abgestimmt sein.
+
+#### Kontogruppen verwalten
+
+📍 Tab **„Gruppen"** auf der Kontenseite
+
+✅ Tabelle mit Spalten: Code, Name, Beschreibung, Konten (Anzahl), Status.
+
+Gruppen bündeln mehrere Konten logisch zusammen — z. B. alle Zuschlagskonten (Nachtzuschlag, Sonntagszuschlag, Feiertagszuschlag) in einer Gruppe „Zuschläge". Gruppen dienen der Organisation und Filterung.
+
+##### Neue Kontogruppe anlegen
+
+1. 📍 Tab „Gruppen" → **„Neue Gruppe"** (oben rechts)
+2. Ausfüllen: **Code** (Pflicht, Großbuchstaben), **Name** (Pflicht), Beschreibung
+3. Konten zuordnen: Checkboxen bei den gewünschten Konten setzen
+4. 📍 **„Erstellen"**
+
+✅ Die Gruppe erscheint in der Tabelle mit der Anzahl zugeordneter Konten.
+
+> **Beispiel:** Gruppe `ZUSCHL`, Name: `Zuschläge` → Konten `NZ` (Nachtzuschlag), `SZ` (Sonntagszuschlag), `FZ` (Feiertagszuschlag) zuordnen. Bei der Berichterstellung kann nach dieser Gruppe gefiltert werden.
 
 ### 4.13 Berechnungsregeln
 
@@ -1947,6 +2136,128 @@ Das Gleitzeitkonto sammelt die täglichen Plus- und Minusstunden über den Monat
 > - Dieser Monat: +3:30 Überstunden, −1:00 Fehlzeit → Veränderung +2:30
 > - Neues Saldo: +14:30
 > - Jahresgrenze: ±40:00 → 14:30 bleibt (unter der Grenze)
+
+### 5.6 Teamübersicht
+
+**Was ist es?** Die Teamübersicht zeigt den aktuellen Anwesenheitsstatus und die Arbeitszeitstatistiken eines Teams. Teammitglieder und Teamleiter sehen auf einen Blick, wer anwesend ist, wer in Pause ist, wer fehlt und wer noch nicht gekommen ist.
+
+**Wozu dient es?** Die Teamübersicht ersetzt die manuelle „Wer ist da?"-Abfrage. Ein Teamleiter sieht in Echtzeit den Anwesenheitsstatus seines Teams (Auto-Aktualisierung alle 30 Sekunden), Wochenstatistiken, Überstundenverteilung und kommende Abwesenheiten.
+
+📍 Seitenleiste → **Teamübersicht**
+
+✅ Sie sehen:
+
+**Oben:** Team-Dropdown, Datumsbereiche-Auswahl (Standard: aktuelle Woche), Aktualisieren-Button, Schnellaktionen (Abwesenheit beantragen, Teams verwalten, Zeitnachweis anzeigen)
+
+⚠️ Nicht-Admin-Benutzer sehen nur Teams, in denen sie **Mitglied** oder **Teamleiter** sind. Bei nur einem Team wird dieses automatisch ausgewählt.
+
+#### Statistik-Karten
+
+Nach Auswahl eines Teams erscheinen **8 Statistik-Karten**:
+
+| Karte | Bedeutung |
+|-------|-----------|
+| **Anwesend heute** | Anzahl der Teammitglieder mit mindestens einer Buchung heute |
+| **Team-Stunden** | Summe aller Nettominuten im gewählten Zeitraum |
+| **Ø Überstunden** | Durchschnittlicher Flexzeitsaldo pro Mitglied |
+| **Abwesend heute** | Anzahl abwesender Mitglieder heute |
+| **Abwesenheitstage** | Gesamte Abwesenheitstage im Zeitraum |
+| **Überstunden gesamt** | Gesamte Überstundenminuten im Zeitraum |
+| **Fehlzeit gesamt** | Gesamte Fehlzeitminuten im Zeitraum |
+| **Probleme** | Mitglieder mit Fehlern im Tageswert heute |
+
+#### Anwesenheitsliste
+
+Mitglieder werden nach Anwesenheitsstatus gruppiert (in dieser Reihenfolge):
+
+1. **Anwesend** (grün) — eingestempelt
+2. **Abwesend** (rot) — ausgestempelt
+3. **Im Urlaub** — genehmigte Abwesenheit
+4. **Noch nicht da** — keine Buchung heute
+
+Jede Zeile zeigt: Avatar mit Initialen, Name, Rollen-Badge (Mitglied/Leiter/Stellvertreter), Einstempelzeit, Nettostunden, Status-Badge.
+
+📍 Zeile anklicken → Aufklappbare Detailzeile mit: Erste Ankunft, Letztes Gehen, Nettozeit, Sollzeit, Überstunden, Fehlzeit.
+
+#### Anwesenheitsmuster (Diagramm)
+
+Ein Balkendiagramm zeigt, wie viele Teammitglieder an jedem Tag im gewählten Zeitraum anwesend waren. Bei bis zu 7 Tagen werden Wochentagsnamen angezeigt, bei mehr Tagen Kurzformate.
+
+#### Kommende Abwesenheiten
+
+Rechts unten zeigt eine Karte die nächsten 10 geplanten Abwesenheiten aller Teammitglieder (mit Mini-Kalender). Jeder Eintrag zeigt: Name, relatives Datum, Abwesenheitstyp-Badge und Halbtag-Markierung (falls zutreffend).
+
+#### Team-Export
+
+📍 **„Team-Bericht exportieren"** (oben rechts) → Generiert eine CSV-Datei mit Spalten: Mitglied, Netto gesamt, Soll gesamt, Überstunden gesamt, Fehlzeit gesamt, Abwesenheitstage. Dateiname: `team-report-{von}-to-{bis}.csv`.
+
+#### Praxisbeispiel
+
+Der Teamleiter Schmidt prüft am Montagmorgen sein Montageteam:
+
+1. 📍 Seitenleiste → **Teamübersicht** → Team: `Montageteam` (automatisch vorausgewählt, da einziges Team)
+2. ✅ Statistik-Karten zeigen: 4 von 5 Mitgliedern anwesend, 1 abwesend heute
+3. ✅ Anwesenheitsliste: Weber (eingestempelt 07:55), Fischer (eingestempelt 08:02), Müller (eingestempelt 07:58), Braun (eingestempelt 08:10) — alle grün. Krause fehlt (Status: „Im Urlaub").
+4. 📍 Zeile „Fischer" aufklappen → Detailansicht zeigt: Ankunft 08:02, Nettozeit bisher 2:15, Sollzeit 8:00
+5. 📍 „Kommende Abwesenheiten" → Krause hat diese Woche Urlaub (Mo–Fr), Müller hat nächsten Freitag frei
+6. 📍 Datumsbereiche auf `letzte 2 Wochen` ändern → Anwesenheitsmuster zeigt: Montag und Freitag sind die Tage mit der geringsten Besetzung
+
+💡 **Hinweis:** Die Anwesenheitsdaten aktualisieren sich automatisch alle 30 Sekunden. Klicken Sie auf „Aktualisieren" (↻), um eine sofortige Aktualisierung auszulösen. Der Export-Button generiert einen CSV-Bericht für den gewählten Zeitraum — nützlich für die wöchentliche Teamauswertung.
+
+### 5.7 Jahresübersicht
+
+**Was ist es?** Die Jahresübersicht zeigt eine Zusammenfassung der Arbeitszeitdaten eines Mitarbeiters für ein ganzes Jahr: Gesamtstunden, Flexzeitsaldo, Arbeitstage, Urlaubskontostand und eine monatliche Aufschlüsselungstabelle.
+
+**Wozu dient es?** Mitarbeiter sehen hier ihren Jahresverlauf: Wie hat sich das Flexzeitkonto entwickelt? Wie viele Überstunden wurden angesammelt? Wie viele Arbeitstage wurden geleistet? Manager können die Jahresübersicht anderer Mitarbeiter einsehen und als CSV oder PDF exportieren.
+
+📍 Seitenleiste → **Jahresübersicht**
+
+⚠️ Administratoren mit der Berechtigung „Alle Zeiten ansehen" sehen oben ein Mitarbeiter-Dropdown (bis 250 Mitarbeiter).
+
+✅ Seite mit Jahresnavigation (← Jahr →) und folgenden Bereichen:
+
+#### Zusammenfassungskarten
+
+Vier Karten mit den Jahreseckwerten:
+
+| Karte | Inhalt |
+|-------|--------|
+| **Gesamtzeit** | Soll-Stunden vs. Ist-Stunden + Jahresdifferenz (farbig: grün = Plus, rot = Minus) |
+| **Flexzeitsaldo** | Aktueller Flexzeitsaldo als große farbige Zahl mit Saldoindikator-Balken |
+| **Arbeitstage** | Geleistete Arbeitstage / geplante Arbeitstage mit Fortschrittsbalken |
+| **Urlaub** | Genommene Tage / Gesamtanspruch mit Fortschrittsbalken (blau). Ohne Urlaubskonto: Anzeige der Abwesenheitstage |
+
+#### Flexzeit-Diagramm
+
+Ein 12-Monats-Balkendiagramm zeigt den monatlichen Flexzeitsaldo. Balken über der Nulllinie sind grün (Plus), darunter rot (Minus). Beim Überfahren mit der Maus erscheint ein Tooltip mit Monatsname und Saldo.
+
+#### Monatstabelle
+
+Tabelle mit 12 Zeilen (eine pro Monat) und Spalten: Monat, Arbeitstage (geleistet/geplant), Soll, Ist, Saldo, Status (Badge: Offen/Berechnet/Abgeschlossen/Exportiert).
+
+📍 Zeile anklicken → springt zur Monatsauswertung dieses Monats (📍 `/monthly-evaluation?year=…&month=…`).
+
+Am Ende eine **Summenzeile** mit den Jahrestotalen.
+
+#### Export
+
+📍 Export-Button (oben rechts) → Dropdown mit zwei Optionen:
+- **CSV** — Datei `year-overview-export-{Jahr}.csv` mit Spalten: Monat, Arbeitstage, Geplante Tage, Soll-Stunden, Ist-Stunden, Saldo, Status + Summenzeile
+- **Drucken / PDF** — Öffnet eine druckoptimierte Ansicht im neuen Tab
+
+#### Praxisbeispiel
+
+Ein Mitarbeiter möchte seinen Jahresverlauf 2026 prüfen:
+
+1. 📍 Seitenleiste → **Jahresübersicht** → Jahr: **2026**
+2. ✅ Karte „Gesamtzeit": Soll 1.720:00, Ist 1.745:30, Differenz **+25:30** (grün)
+3. ✅ Karte „Flexzeitsaldo": **+12:45** (grün) — aktueller Stand
+4. ✅ Karte „Arbeitstage": 198 / 215 Tage geleistet (Fortschrittsbalken 92%)
+5. ✅ Karte „Urlaub": 22 / 30 Tage genommen (Fortschrittsbalken 73%)
+6. ✅ Flexzeit-Diagramm: März und November hatten die höchsten Plus-Saldos, August war im Minus (Urlaubsmonat)
+7. 📍 Zeile „März" anklicken → Monatsauswertung März 2026 öffnet sich mit der tagesgenauen Aufschlüsselung
+
+💡 **Hinweis:** Die Jahresübersicht zeigt immer vollständige Kalenderjahre. Monate ohne Daten (z. B. zukünftige Monate) werden mit „–" angezeigt. Das nächste Jahr ist das Maximum — weiter in die Zukunft kann nicht navigiert werden. Der CSV-Export ist nützlich für die jährliche Personalauswertung oder die Übergabe an den Steuerberater.
 
 ---
 
@@ -3785,6 +4096,8 @@ Am Ende des Tages liefert das Terminal-System eine Datei mit allen Stempelvorgä
 | Begriff | Erklärung | Wo in Terp |
 |---------|-----------|-----------|
 | **Abwesenheit** | Eintrag für einen Tag, an dem nicht gearbeitet wird (Urlaub, Krankheit usw.) | 📍 Abwesenheiten |
+| **Anwesenheitsmuster** | Balkendiagramm der täglichen Teambesetzung | 📍 Teamübersicht |
+| **Benachrichtigung** | Interne Systemmeldung an einen Benutzer (Genehmigung, Fehler, Erinnerung, System) | 📍 Glocke (🔔) / Benachrichtigungen |
 | **Abwesenheitstyp** | Kategorie einer Abwesenheit mit Regeln (Urlaubsabzug, Genehmigung) | 📍 Verwaltung → Abwesenheitsarten |
 | **Aktivität** | Art der Arbeit innerhalb eines Auftrags (z. B. Montage, Dokumentation) | 📍 Verwaltung → Aufträge → Tab Aktivitäten |
 | **Auftrag** | Projekt oder Kundenauftrag für die Projektzeiterfassung | 📍 Verwaltung → Aufträge |
@@ -3807,7 +4120,9 @@ Am Ende des Tages liefert das Terminal-System eine Datei mit allen Stempelvorgä
 | **Monatsabschluss** | Einfrieren der Monatswerte — danach keine Änderungen mehr | 📍 Monatsauswertung → „Monat abschließen" |
 | **Monatswert** | Aggregierte Arbeitszeitwerte eines Mitarbeiters für einen Monat | 📍 Verwaltung → Monatswerte |
 | **Nettoarbeitszeit** | Anrechenbare Arbeitszeit: Brutto minus Pausen | 📍 Zeitnachweis → Tageszusammenfassung |
+| **Kontogruppe** | Logische Bündelung mehrerer Konten (z. B. alle Zuschlagskonten) | 📍 Verwaltung → Konten → Tab Gruppen |
 | **Personalnummer** | Eindeutige Kennung je Mitarbeiter im Mandanten | 📍 Verwaltung → Mitarbeiter |
+| **Profil** | Eigene Stamm-, Beschäftigungs- und Kontaktdaten des angemeldeten Benutzers | 📍 Benutzermenü → Profil |
 | **PIN** | Persönliche Identifikationsnummer für das Terminal | Wird bei Mitarbeiteranlage automatisch vergeben |
 | **RFID-Karte** | Zutrittskarte mit Funkchip | 📍 Mitarbeiterdetail → Zutrittskarten |
 | **Rundung** | Automatisches Auf-/Abrunden von Stempelzeiten | 📍 Tagesplan → Tab Rundung |
@@ -3815,7 +4130,9 @@ Am Ende des Tages liefert das Terminal-System eine Datei mit allen Stempelvorgä
 | **Schichterkennung** | Automatische Schichtzuordnung anhand der Stempelzeiten | Konfiguriert im Tagesplan, Tab Spezial |
 | **Sollarbeitszeit** | Geplante Arbeitszeit laut Tagesplan | 📍 Zeitnachweis → Tagessollzeit |
 | **Standort** | Physischer Arbeitsort mit Adresse | 📍 Verwaltung → Standorte |
+| **Tarifzuweisung** | Zeitgebundene Zuordnung eines Tarifs zu einem Mitarbeiter (mit Gültigkeitszeitraum) | 📍 Verwaltung → Mitarbeiter → Mitarbeiterdetails → Tab Tarifzuweisungen |
 | **Tagesplan** | Arbeitszeitregeln für einen Tag (Fenster, Soll, Pausen, Toleranzen) | 📍 Verwaltung → Tagespläne |
+| **Teamübersicht** | Echtzeit-Anwesenheitsstatus und Statistiken eines Teams | 📍 Teamübersicht |
 | **Tageswert** | Berechnetes Ergebnis eines Arbeitstages | 📍 Zeitnachweis → Tagesansicht |
 | **Tarif** | Vollständiges Arbeitszeitmodell (Rhythmus + Urlaub + Flexzeit) | 📍 Verwaltung → Tarife |
 | **Toleranz** | Minutenpuffer für Stempelabweichungen | 📍 Tagesplan → Tab Toleranz |
