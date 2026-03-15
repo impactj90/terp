@@ -26,9 +26,15 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useCreateBookingType, useUpdateBookingType } from '@/hooks'
-import type { components } from '@/types/legacy-api-types'
-
-type BookingType = components['schemas']['BookingType']
+interface BookingType {
+  id: string
+  code: string
+  name: string
+  description: string | null
+  direction: string
+  isSystem: boolean
+  isActive: boolean
+}
 
 type Direction = 'in' | 'out'
 
@@ -68,7 +74,7 @@ export function BookingTypeFormSheet({
 }: BookingTypeFormSheetProps) {
   const t = useTranslations('adminBookingTypes')
   const isEdit = !!bookingType
-  const isSystem = bookingType?.is_system ?? false
+  const isSystem = bookingType?.isSystem ?? false
   const [form, setForm] = React.useState<FormState>(INITIAL_STATE)
   const [error, setError] = React.useState<string | null>(null)
 
@@ -84,7 +90,7 @@ export function BookingTypeFormSheet({
         name: bookingType.name || '',
         description: bookingType.description || '',
         direction: (bookingType.direction as Direction) || '',
-        isActive: bookingType.is_active ?? true,
+        isActive: bookingType.isActive ?? true,
       })
     } else {
       setForm(INITIAL_STATE)

@@ -35,9 +35,22 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { components } from '@/types/legacy-api-types'
-
-type BookingType = components['schemas']['BookingType']
+interface BookingType {
+  id: string
+  tenantId: string | null
+  code: string
+  name: string
+  description: string | null
+  direction: string
+  category: string
+  accountId: string | null
+  requiresReason: boolean
+  isSystem: boolean
+  isActive: boolean
+  createdAt: Date | string
+  updatedAt: Date | string
+  usage_count?: number
+}
 
 interface BookingTypeDataTableProps {
   bookingTypes: BookingType[]
@@ -95,7 +108,7 @@ export function BookingTypeDataTable({
           const directionKey = getDirectionKey(type.direction)
           const direction = directionConfig[directionKey]
           const DirectionIcon = direction.icon
-          const usageCount = (type as Record<string, unknown>).usage_count as number | undefined
+          const usageCount = type.usage_count
           const isInUse = (usageCount ?? 0) > 0
 
           return (
@@ -124,27 +137,27 @@ export function BookingTypeDataTable({
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
-                  {type.is_system && (
+                  {type.isSystem && (
                     <Badge variant="outline" className="text-xs">
                       <Lock className="mr-1 h-3 w-3" />
                       {t('statusSystem')}
                     </Badge>
                   )}
-                  {!type.is_active && (
+                  {!type.isActive && (
                     <Badge variant="secondary" className="text-xs">
                       {t('statusInactive')}
                     </Badge>
                   )}
-                  {type.is_active && !type.is_system && (
+                  {type.isActive && !type.isSystem && (
                     <Badge variant="default" className="text-xs">
                       {t('statusActive')}
                     </Badge>
                   )}
                   {onToggleActive && (
                     <Switch
-                      checked={type.is_active}
+                      checked={type.isActive}
                       onCheckedChange={(checked) => onToggleActive(type, checked)}
-                      disabled={type.is_system || togglingId === type.id}
+                      disabled={type.isSystem || togglingId === type.id}
                     />
                   )}
                 </div>
@@ -158,7 +171,7 @@ export function BookingTypeDataTable({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    {type.is_system ? (
+                    {type.isSystem ? (
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -179,7 +192,7 @@ export function BookingTypeDataTable({
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuSeparator />
-                    {type.is_system ? (
+                    {type.isSystem ? (
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>

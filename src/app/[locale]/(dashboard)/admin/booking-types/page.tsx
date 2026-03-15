@@ -29,7 +29,22 @@ import {
 } from '@/components/booking-type-groups'
 import type { components } from '@/types/legacy-api-types'
 
-type BookingType = components['schemas']['BookingType']
+type BookingType = {
+  id: string
+  tenantId: string | null
+  code: string
+  name: string
+  description: string | null
+  direction: string
+  category: string
+  accountId: string | null
+  requiresReason: boolean
+  isSystem: boolean
+  isActive: boolean
+  createdAt: Date | string
+  updatedAt: Date | string
+  usage_count?: number
+}
 type BookingTypeGroup = components['schemas']['BookingTypeGroup']
 
 type DirectionFilter = 'all' | 'in' | 'out'
@@ -250,7 +265,7 @@ export default function BookingTypesPage() {
                 />
               ) : (
                 <BookingTypeDataTable
-                  bookingTypes={filteredTypes as unknown as BookingType[]}
+                  bookingTypes={filteredTypes}
                   isLoading={false}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
