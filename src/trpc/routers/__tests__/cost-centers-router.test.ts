@@ -11,7 +11,7 @@ import {
 
 // --- Constants ---
 
-const COST_CENTERS_MANAGE = permissionIdByKey("cost_centers.manage")!
+const DEPARTMENTS_MANAGE = permissionIdByKey("departments.manage")!
 const TENANT_ID = "a0000000-0000-4000-a000-000000000100"
 const USER_ID = "a0000000-0000-4000-a000-000000000001"
 const CC_ID = "a0000000-0000-4000-a000-000000000300"
@@ -50,7 +50,7 @@ function createTestContext(prisma: Record<string, unknown>) {
   return createMockContext({
     prisma: prisma as unknown as ReturnType<typeof createMockContext>["prisma"],
     authToken: "test-token",
-    user: createUserWithPermissions([COST_CENTERS_MANAGE], {
+    user: createUserWithPermissions([DEPARTMENTS_MANAGE], {
       userTenants: [createMockUserTenant(USER_ID, TENANT_ID)],
     }),
     session: createMockSession(),
