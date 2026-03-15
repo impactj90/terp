@@ -517,36 +517,176 @@ Tagesplan  →  Wochenplan  →  Tarif
 ##### Neuen Tagesplan anlegen
 
 1. 📍 Seitenleiste → Verwaltung → Tagespläne → **„Neuer Tagesplan"** (oben rechts)
-2. Das Formular hat **5 Tabs**:
+2. Das Formular hat **5 Tabs** — jedes Feld wird nachfolgend im Detail erklärt:
+
+---
 
 **Tab „Basis":**
-- Code (Pflicht, bei Bearbeitung gesperrt)
-- Plantyp: Fest oder Gleitzeit
-- Name (Pflicht)
-- Sollarbeitszeit (Pflicht, z. B. 08:00 für 8 Stunden)
-- Alternative Sollzeit für Abwesenheitstage (optional)
-- „Aus Mitarbeiterstamm übernehmen" (Checkbox)
+
+| Feld | Pflicht? | Beschreibung |
+|------|----------|--------------|
+| **Code** | Ja | Eindeutiger Kurzcode für den Plan (max. 20 Zeichen). Wird nach dem Erstellen gesperrt und kann nicht mehr geändert werden. Die Codes `U`, `K` und `S` sind reserviert (Abwesenheitstypen) und dürfen nicht verwendet werden. |
+| **Plantyp** | Ja | Bestimmt das grundlegende Arbeitszeitmodell. Beeinflusst, welche Felder in den anderen Tabs sichtbar sind. |
+| **Name** | Ja | Beschreibender Name des Plans, der in Dropdowns und Tabellen angezeigt wird. |
+| **Beschreibung** | Nein | Optionaler Freitext für interne Notizen zum Plan. |
+| **Sollarbeitszeit** | Ja | Die geplante Nettoarbeitszeit pro Tag im Format HH:MM. Dies ist der Referenzwert für Über-/Unterzeitberechnung. |
+| **Abwesenheitsstunden** | Nein | Alternatives Tagessoll, das an Abwesenheitstagen (z. B. genehmigter Urlaub) anstelle der regulären Sollarbeitszeit verwendet wird. |
+| **Sollstunden aus Mitarbeiterstamm** | Nein | Wenn aktiviert, wird die Sollarbeitszeit nicht aus dem Tagesplan gelesen, sondern aus dem Feld „Tägliche Sollstunden" im Mitarbeiterstamm. |
+| **Aktiv** | — | Inaktive Pläne können nicht mehr neuen Wochenplänen zugewiesen werden, bestehende Zuweisungen bleiben erhalten. |
+
+> **Priorität der Sollzeit:** Mitarbeiterstamm (wenn Checkbox aktiv) → Abwesenheitsstunden (wenn Abwesenheitstag) → Sollarbeitszeit (Standard).
+
+> **Plantyp — Unterschiede:**
+>
+> | | Feste Arbeitszeit | Gleitzeit |
+> |---|---|---|
+> | Zeitfenster | Nur „Kommen ab" und „Gehen ab" (ein fester Zeitpunkt je Richtung) | „Kommen ab/bis" und „Gehen ab/bis" (jeweils ein Zeitkorridor) + optionale Kernzeit |
+> | Toleranz | Alle 4 Toleranzfelder + Variable Arbeitszeit | Nur „Kommen früh" und „Gehen spät" |
+> | Typischer Einsatz | Produktion, Schichtarbeit, feste Bürozeiten | Verwaltung, Büro mit flexiblen Arbeitszeiten |
+
+**Beispiel — Basis-Tab für einen 8-Stunden-Büroplan:**
+- Code: `BUERO`
+- Plantyp: Feste Arbeitszeit
+- Name: `Büro Vollzeit`
+- Sollarbeitszeit: `08:00`
+- Abwesenheitsstunden: `06:00` (Teilzeitkräfte, die an Abwesenheitstagen nur 6 Stunden gutgeschrieben bekommen)
+- Sollstunden aus Mitarbeiterstamm: ☐ (nicht aktiviert)
+
+---
 
 **Tab „Zeitfenster":**
-- Fester Plan: Kommen ab, Gehen ab
-- Gleitzeitplan: Kommen ab/bis, Gehen ab/bis, Kernzeit Anfang/Ende
-- Maximale Arbeitszeit, Mindestarbeitszeit
+
+Das Zeitfenster bestimmt, **wann** Arbeitszeit angerechnet wird. Buchungen außerhalb des Fensters werden abgeschnitten (Kappung).
+
+**Fester Plan** — 2 Felder:
+
+| Feld | Beschreibung | Beispiel |
+|------|--------------|---------|
+| **Kommen ab** | Frühester anerkannter Arbeitsbeginn. Stempelt ein Mitarbeiter vor dieser Uhrzeit, wird die Arbeitszeit erst ab hier gezählt. | `08:00` — Stempeln um 07:45 → Arbeitszeit beginnt um 08:00 |
+| **Gehen ab** | Frühester anerkannter Feierabend. Wird als Referenzpunkt für die Gehen-Toleranz und die Sollzeit-Prüfung verwendet. | `16:30` — Definiert den geplanten Feierabend |
+
+**Gleitzeitplan** — 4 + 2 Felder:
+
+| Feld | Beschreibung | Beispiel |
+|------|--------------|---------|
+| **Kommen ab** | Frühester anerkannter Arbeitsbeginn (Beginn des Gleitzeitkorridors). | `06:00` |
+| **Kommen bis** | Spätester erlaubter Arbeitsbeginn. Kommt ein Mitarbeiter nach dieser Zeit, wird ein Fehler „Zu spät gekommen" erzeugt. | `09:00` |
+| **Gehen ab** | Frühester erlaubter Feierabend. Geht ein Mitarbeiter vorher, wird ein Fehler „Zu früh gegangen" erzeugt. | `15:00` |
+| **Gehen bis** | Spätester anerkannter Feierabend (Ende des Gleitzeitkorridors). Buchungen danach werden gekappt. | `20:00` |
+| **Kernzeitbeginn** | Ab wann der Mitarbeiter **anwesend sein muss** (Pflichtzeitraum). Fehlt er, erscheint der Fehler „Kernzeit Beginn verpasst". | `09:00` |
+| **Kernzeitende** | Bis wann der Mitarbeiter **anwesend sein muss**. Geht er vorher, erscheint der Fehler „Kernzeit Ende verpasst". | `15:00` |
+
+**Beide Plantypen** — Arbeitszeitgrenzen:
+
+| Feld | Beschreibung | Beispiel |
+|------|--------------|---------|
+| **Mindestarbeitszeit** | Untergrenze für die Nettoarbeitszeit. Wird sie unterschritten, erscheint eine Warnung. | `04:00` — mindestens 4 Stunden pro Tag |
+| **Maximale Nettoarbeitszeit** | Obergrenze (Kappung). Arbeitszeit über diesem Wert wird abgeschnitten und ggf. auf ein Kappungskonto gebucht. | `10:00` — max. 10 Stunden, darüber wird gekappt |
+
+**Beispiel — Gleitzeitfenster:**
+- Kommen ab: `06:00`, Kommen bis: `09:30`
+- Gehen ab: `15:00`, Gehen bis: `20:00`
+- Kernzeit: `09:00` – `15:00`
+- → Mitarbeiter darf zwischen 06:00 und 09:30 kommen, muss ab 09:00 da sein, darf frühestens um 15:00 gehen, und Arbeitszeit wird maximal bis 20:00 gezählt.
+
+---
 
 **Tab „Toleranz":**
-- Fester Plan: Zu früh kommen, Zu spät kommen, Zu früh gehen, Zu spät gehen (jeweils in Minuten)
-- Gleitzeitplan: Nur „Zu früh kommen" und „Zu spät gehen"
-- Variable Arbeitszeit (Checkbox, nur bei festem Plan)
+
+Toleranzen sind **Minutenpuffer**, die kleine Abweichungen von den geplanten Zeiten automatisch korrigieren. Liegt die tatsächliche Stempelzeit innerhalb des Toleranzfensters, wird sie auf die geplante Zeit „geschnappt" — der Mitarbeiter bekommt weder Über- noch Unterzeit.
+
+**Fester Plan** — 4 Felder + 1 Checkbox:
+
+| Feld | Beschreibung | Beispiel |
+|------|--------------|---------|
+| **Kommen spät (plus)** | Wie viele Minuten **nach** dem geplanten Kommen noch als pünktlich gelten. | `5` Min → Kommen ab 08:00, Stempeln um 08:04 → wird als 08:00 gewertet |
+| **Kommen früh (minus)** | Wie viele Minuten **vor** dem geplanten Kommen als pünktlich gelten. Nur aktiv, wenn „Variable Arbeitszeit" aktiviert ist. | `15` Min → Kommen ab 08:00, Stempeln um 07:50 → wird als 08:00 gewertet |
+| **Gehen früh (minus)** | Wie viele Minuten **vor** dem geplanten Gehen noch als pünktlich gelten. | `5` Min → Gehen ab 16:30, Stempeln um 16:27 → wird als 16:30 gewertet |
+| **Gehen spät (plus)** | Wie viele Minuten **nach** dem geplanten Gehen noch als pünktlich gelten. | `10` Min → Gehen ab 16:30, Stempeln um 16:38 → wird als 16:30 gewertet |
+| **Variable Arbeitszeit** | Aktiviert das Feld „Kommen früh (minus)". Ohne diese Checkbox wird bei festen Plänen ein früheres Kommen nicht toleriert, sondern auf die „Kommen ab"-Zeit gekappt. | ☑ aktiviert → Frühkommen wird toleriert und ggf. angerechnet |
+
+**Gleitzeitplan** — 2 Felder (die anderen sind bei Gleitzeit nicht relevant, da das Zeitfenster bereits flexibel ist):
+
+| Feld | Beschreibung | Beispiel |
+|------|--------------|---------|
+| **Kommen früh (minus)** | Puffer vor „Kommen ab". Erweitert das Auswertungsfenster nach vorne. | `10` Min → Kommen ab 06:00, Stempeln um 05:52 → wird als 06:00 gewertet |
+| **Gehen spät (plus)** | Puffer nach „Gehen bis". Erweitert das Auswertungsfenster nach hinten. | `10` Min → Gehen bis 20:00, Stempeln um 20:07 → wird als 20:00 gewertet |
+
+**Beispiel — Fester Plan mit Toleranz:**
+- Kommen ab: 08:00, Toleranz „spät": 5 Min, Toleranz „früh": 0 Min, Variable Arbeitszeit: ☐
+- → Stempeln 07:55: gekappt auf 08:00 (kein Frühbonus). Stempeln 08:03: geschnappt auf 08:00 (kein Abzug). Stempeln 08:06: echte Verspätung, 6 Minuten Unterzeit.
+
+---
 
 **Tab „Rundung":**
-- Rundung Kommen: Typ (Keine/Aufrunden/Abrunden/Nächster Wert/Aufschlag/Abschlag), Intervall oder Wert
-- Rundung Gehen: Gleiche Optionen
-- „Alle Buchungen runden" (Checkbox)
+
+Rundung verändert die Buchungszeiten **nach** der Toleranzprüfung mathematisch. Standardmäßig wird nur die **erste Kommen-Buchung** und die **letzte Gehen-Buchung** gerundet.
+
+**Kommen-Rundung** und **Gehen-Rundung** haben identische Optionen:
+
+| Rundungstyp | Intervall/Wert | Beschreibung | Beispiel (Kommen) |
+|-------------|---------------|--------------|-------------------|
+| **Keine** | — | Keine Rundung, Buchungszeit bleibt unverändert. | 08:07 → 08:07 |
+| **Aufrunden** | Intervall (Min) | Rundet die Zeit auf das nächste Vielfache des Intervalls **nach oben**. | Intervall 15: 08:07 → 08:15 |
+| **Abrunden** | Intervall (Min) | Rundet auf das nächste Vielfache **nach unten**. | Intervall 15: 08:07 → 08:00 |
+| **Nächster Wert** | Intervall (Min) | Rundet auf das **nächstgelegene** Vielfache (kaufmännische Rundung). | Intervall 15: 08:07 → 08:00, 08:08 → 08:15 |
+| **Wert addieren** | Wert (Min) | Addiert einen festen Minutenwert zur Buchungszeit. | Wert 5: 08:07 → 08:12 |
+| **Wert subtrahieren** | Wert (Min) | Subtrahiert einen festen Minutenwert (minimal 00:00). | Wert 5: 08:07 → 08:02 |
+
+| Feld | Beschreibung |
+|------|--------------|
+| **Alle Buchungen runden** | Wenn aktiviert, werden **alle** Kommen- und Gehen-Buchungen gerundet — nicht nur die erste/letzte. Relevant bei Mitarbeitern mit mehreren Kommen-/Gehen-Paaren pro Tag (z. B. Dienstgang über Mittag). |
+
+> **Tipp:** Für die meisten Unternehmen ist „Aufrunden Kommen / Abrunden Gehen" mit Intervall 5 oder 15 Minuten sinnvoll — das rundet zugunsten des Arbeitgebers. „Abrunden Kommen / Aufrunden Gehen" rundet zugunsten des Mitarbeiters.
+
+**Beispiel — Rundung zugunsten des Arbeitgebers (15-Minuten-Takt):**
+- Kommen-Rundung: Aufrunden, Intervall 15
+- Gehen-Rundung: Abrunden, Intervall 15
+- → Stempeln 07:53 Kommen → gerundet auf 08:00. Stempeln 16:42 Gehen → gerundet auf 16:30. Angerechnete Arbeitszeit: 8:30 statt 8:49.
+
+---
 
 **Tab „Spezial":**
-- Feiertagsgutschriften: Voller Feiertag, Halber Feiertag, Kategorie 3 (jeweils in Stunden:Minuten)
-- Urlaubsabzug (Zahl, z. B. 1,0)
-- Verhalten ohne Buchung (Dropdown: Fehler/Soll abziehen/Soll gutschreiben/Berufsschule/Soll mit Auftrag)
-- Tageswechselverhalten (Dropdown: Kein/Bei Ankunft/Bei Abgang/Automatisch)
+
+**Feiertagsgutschriften** — Stunden, die an einem Feiertag **ohne Buchungen** automatisch gutgeschrieben werden (anstatt einen Fehler zu erzeugen). Die Kategorie wird im Feiertagskalender pro Feiertag festgelegt.
+
+| Feld | Beschreibung | Beispiel |
+|------|--------------|---------|
+| **Ganzer Feiertag** (Kategorie 1) | Gutschrift für volle Feiertage (z. B. Weihnachten, Neujahr). | `08:00` → 8 Stunden werden gutgeschrieben |
+| **Halber Feiertag** (Kategorie 2) | Gutschrift für halbe Feiertage (z. B. Heiligabend, Silvester in manchen Bundesländern). | `04:00` → 4 Stunden |
+| **Kategorie 3** | Gutschrift für eine dritte, frei definierbare Feiertagskategorie. | `06:00` |
+
+> **Hinweis:** Arbeitet ein Mitarbeiter an einem Feiertag und hat Buchungen, greift die normale Berechnung (nicht die Gutschrift). Die Gutschrift gilt nur für Feiertage **ohne** Buchungen und **ohne** eingetragene Abwesenheit.
+
+**Urlaubsabzug** — Faktor, mit dem ein Abwesenheitstag vom Urlaubskonto abgezogen wird.
+
+| Wert | Bedeutung | Typischer Einsatz |
+|------|-----------|-------------------|
+| `1,0` | Ein voller Urlaubstag wird abgezogen | Vollzeitkräfte (5-Tage-Woche) |
+| `0,5` | Ein halber Urlaubstag wird abgezogen | Teilzeitkräfte, die nur halbe Tage arbeiten |
+| `0,8` | 0,8 Tage werden abgezogen | 4-Tage-Woche (anteiliger Abzug) |
+
+**Verhalten ohne Buchung** — Was passiert, wenn an einem Arbeitstag **keine einzige Buchung** vorliegt (und es kein Feiertag/Abwesenheitstag ist):
+
+| Option | Beschreibung | Typischer Einsatz |
+|--------|--------------|-------------------|
+| **Fehler anzeigen** | Erzeugt den Fehler „Keine Buchungen". Der Tag wird rot markiert und muss manuell korrigiert werden. | Standard — Mitarbeiter müssen stempeln |
+| **Sollstunden abziehen** | Nettozeit = 0, Unterzeit = Sollarbeitszeit. Der Tag wird als vollständige Unterzeit verbucht. | Strenge Erfassung — fehlende Buchung = fehlende Arbeitszeit |
+| **Sollstunden gutschreiben** | Nettozeit = Sollarbeitszeit, Unterzeit = 0. Der Tag wird so gewertet, als hätte der Mitarbeiter die volle Sollzeit gearbeitet. | Vertrauensarbeitszeit, Außendienst |
+| **Berufsschultag** | Wie „Sollstunden gutschreiben", erzeugt zusätzlich automatisch eine Abwesenheit mit Code „SB" (Berufsschule). | Auszubildende mit regelmäßigem Berufsschultag |
+| **Soll mit Standardauftrag** | Wie „Sollstunden gutschreiben", bucht zusätzlich die Sollzeit auf den im Mitarbeiterstamm hinterlegten Standardauftrag. | Auftragsbezogene Zeiterfassung |
+
+**Tageswechselverhalten** — Regelt, wie Schichten behandelt werden, die **über Mitternacht** gehen (z. B. Nachtschicht 22:00–06:00):
+
+| Option | Beschreibung | Beispiel |
+|--------|--------------|---------|
+| **Kein Tageswechsel** | Jeder Tag wird isoliert betrachtet. Buchungen nach Mitternacht gehören zum Folgetag. | Standard für Tagschichten |
+| **Auswertung bei Ankunft** | Die gesamte Schicht wird dem Tag der **Ankunft** zugerechnet. Ein Kommen am Montag 22:00 und Gehen am Dienstag 06:00 wird komplett auf Montag gebucht. | Nachtschicht: der Ankunftstag „besitzt" die Schicht |
+| **Auswertung bei Gehen** | Die gesamte Schicht wird dem Tag des **Gehens** zugerechnet. Kommen Montag 22:00, Gehen Dienstag 06:00 → alles auf Dienstag. | Nachtschicht: der Abgangstag „besitzt" die Schicht |
+| **Auto-Abschluss um Mitternacht** | Das System fügt automatisch synthetische Buchungen um Mitternacht ein (Gehen 00:00, Kommen 00:00). Damit wird jeder Kalendertag separat abgerechnet. | Wenn jeder Kalendertag einzeln bewertet werden soll |
+
+> **Beispiel — Nachtschicht mit „Auswertung bei Ankunft":**
+> Mitarbeiter stempelt Montag 22:00 ein und Dienstag 05:30 aus. Die gesamte Arbeitszeit (7,5 Std.) wird dem **Montag** zugerechnet. Der Dienstag hat keine Buchung und bekommt — je nach „Verhalten ohne Buchung" — entweder einen Fehler oder eine Gutschrift.
 
 3. 📍 „Tagesplan erstellen"
 
