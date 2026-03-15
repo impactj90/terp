@@ -713,6 +713,86 @@ Rundung verändert die Buchungszeiten **nach** der Toleranzprüfung mathematisch
 > | Pausen | Pausenregeln | 30 Min. nach 6 Std. |
 > | Maximale Arbeitszeit | Obergrenze Nettozeit | 10 Stunden |
 
+##### Beispielkonfigurationen: Früh-, Spät- und Nachtschicht
+
+Die folgenden drei Tagespläne bilden ein typisches 3-Schicht-Modell in der Produktion ab (je 8 Stunden Soll, 30 Min. Pause). Alle Werte können direkt übernommen werden.
+
+**Frühschicht (FS) — 06:00 bis 14:00:**
+
+| Tab | Feld | Wert |
+|-----|------|------|
+| Basis | Code | `FS` |
+| Basis | Plantyp | Fest |
+| Basis | Name | `Frühschicht` |
+| Basis | Sollarbeitszeit | `08:00` |
+| Zeitfenster | Kommen ab | `06:00` |
+| Zeitfenster | Gehen ab | `14:00` |
+| Toleranz | Kommen spät (+) | `5` Min |
+| Toleranz | Kommen früh (−) | `5` Min |
+| Toleranz | Gehen früh (−) | `5` Min |
+| Toleranz | Gehen spät (+) | `5` Min |
+| Toleranz | Variable Arbeitszeit | ☑ |
+| Rundung | Kommen / Gehen | Keine |
+| Spezial | Feiertagsgutschrift (voll) | `08:00` |
+| Spezial | Urlaubsabzug | `1,0` |
+| Spezial | Verhalten ohne Buchung | Fehler |
+| Spezial | Tageswechselverhalten | **Kein** |
+| Pause | Dauer | `30` Min, nach `06:00` Arbeitszeit |
+
+---
+
+**Spätschicht (SS) — 14:00 bis 22:00:**
+
+| Tab | Feld | Wert |
+|-----|------|------|
+| Basis | Code | `SS` |
+| Basis | Plantyp | Fest |
+| Basis | Name | `Spätschicht` |
+| Basis | Sollarbeitszeit | `08:00` |
+| Zeitfenster | Kommen ab | `14:00` |
+| Zeitfenster | Gehen ab | `22:00` |
+| Toleranz | Kommen spät (+) | `5` Min |
+| Toleranz | Kommen früh (−) | `5` Min |
+| Toleranz | Gehen früh (−) | `5` Min |
+| Toleranz | Gehen spät (+) | `5` Min |
+| Toleranz | Variable Arbeitszeit | ☑ |
+| Rundung | Kommen / Gehen | Keine |
+| Spezial | Feiertagsgutschrift (voll) | `08:00` |
+| Spezial | Urlaubsabzug | `1,0` |
+| Spezial | Verhalten ohne Buchung | Fehler |
+| Spezial | Tageswechselverhalten | **Kein** |
+| Pause | Dauer | `30` Min, nach `06:00` Arbeitszeit |
+
+---
+
+**Nachtschicht (NS) — 22:00 bis 06:00 (über Mitternacht):**
+
+| Tab | Feld | Wert |
+|-----|------|------|
+| Basis | Code | `NS` |
+| Basis | Plantyp | Fest |
+| Basis | Name | `Nachtschicht` |
+| Basis | Sollarbeitszeit | `08:00` |
+| Zeitfenster | Kommen ab | `22:00` |
+| Zeitfenster | Gehen ab | `06:00` |
+| Toleranz | Kommen spät (+) | `5` Min |
+| Toleranz | Kommen früh (−) | `5` Min |
+| Toleranz | Gehen früh (−) | `5` Min |
+| Toleranz | Gehen spät (+) | `5` Min |
+| Toleranz | Variable Arbeitszeit | ☑ |
+| Rundung | Kommen / Gehen | Keine |
+| Spezial | Feiertagsgutschrift (voll) | `08:00` |
+| Spezial | Urlaubsabzug | `1,0` |
+| Spezial | Verhalten ohne Buchung | Fehler |
+| Spezial | **Tageswechselverhalten** | **Bei Ankunft** ⬅️ |
+| Pause | Dauer | `30` Min, nach `06:00` Arbeitszeit |
+
+> **Warum „Bei Ankunft" bei der Nachtschicht?** Die Schicht beginnt z. B. Montag 22:00 und endet Dienstag 06:00. Ohne Tageswechsel würde die Arbeitszeit auf zwei Tage gesplittet (2 Std. Montag + 6 Std. Dienstag) — das führt zu falschen Saldos. „Bei Ankunft" bucht die gesamten 8 Stunden auf Montag. Der Dienstag hat dann keine Buchung und bekommt — je nach „Verhalten ohne Buchung" — einen Fehler oder eine Gutschrift, die dann über den Wochenplan gesteuert wird (typischerweise hat der Folgetag der Nachtschicht keinen Tagesplan zugewiesen = frei).
+
+> **Alternative: „Auto-Abschluss um Mitternacht"** — Wenn jeder Kalendertag getrennt abgerechnet werden soll (z. B. für tagesgenaue Zuschlagsberechnung), kann stattdessen „Auto-Abschluss" gewählt werden. Das System erzeugt dann automatisch synthetische Buchungen um 00:00 (Gehen + Kommen), sodass Montag 2 Std. und Dienstag 6 Std. bekommt. Für die meisten Schichtbetriebe ist **„Bei Ankunft"** die empfohlene Einstellung.
+
+> **Tipp — Schichterkennung statt manuellem Wechsel:** Wenn Mitarbeiter zwischen Früh-, Spät- und Nachtschicht rotieren, können Sie im Tagesplan die **Schichterkennung** konfigurieren (Tab „Spezial"). Das System erkennt dann anhand der Ankunftszeit automatisch, welche Schicht gearbeitet wurde — auch wenn ein anderer Plan zugewiesen war (→ Abschnitt 6.5).
+
 #### 4.6.2 Wochenpläne
 
 ⚠️ Berechtigung: „Wochenpläne verwalten"
