@@ -57,6 +57,9 @@ export async function findByIdWithRelations(
       employmentType: {
         select: { id: true, code: true, name: true },
       },
+      location: {
+        select: { id: true, code: true, name: true },
+      },
       contacts: {
         orderBy: { createdAt: "asc" },
       },

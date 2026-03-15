@@ -37,6 +37,7 @@ import {
   useCostCenters,
   useEmploymentTypes,
   useTariffs,
+  useLocations,
 } from '@/hooks'
 import { cn } from '@/lib/utils'
 
@@ -66,6 +67,7 @@ interface FormState {
   departmentId: string
   costCenterId: string
   employmentTypeId: string
+  locationId: string
   tariffId: string
   weeklyHours: string
   vacationDaysPerYear: string
@@ -83,6 +85,7 @@ const INITIAL_STATE: FormState = {
   departmentId: '',
   costCenterId: '',
   employmentTypeId: '',
+  locationId: '',
   tariffId: '',
   weeklyHours: '',
   vacationDaysPerYear: '',
@@ -151,11 +154,13 @@ export function EmployeeFormSheet({
   const { data: costCentersData, isLoading: loadingCostCenters } = useCostCenters({ enabled: open })
   const { data: employmentTypesData, isLoading: loadingEmploymentTypes } = useEmploymentTypes({ enabled: open })
   const { data: tariffsData, isLoading: loadingTariffs } = useTariffs({ isActive: true, enabled: open })
+  const { data: locationsData, isLoading: loadingLocations } = useLocations({ isActive: true, enabled: open })
 
   const departments = departmentsData?.data ?? []
   const costCenters = costCentersData?.data ?? []
   const employmentTypes = employmentTypesData?.data ?? []
   const tariffs = tariffsData?.data ?? []
+  const locations = locationsData?.data ?? []
 
   // Reset form when opening/closing or employee changes
   React.useEffect(() => {
@@ -175,6 +180,7 @@ export function EmployeeFormSheet({
           departmentId: employee.departmentId || '',
           costCenterId: employee.cost_center_id || '',
           employmentTypeId: employee.employment_type_id || '',
+          locationId: employee.locationId || '',
           tariffId: employee.tariffId || '',
           weeklyHours: employee.weekly_hours?.toString() || '',
           vacationDaysPerYear: employee.vacation_days_per_year?.toString() || '',
@@ -212,6 +218,7 @@ export function EmployeeFormSheet({
           departmentId: form.departmentId || undefined,
           costCenterId: form.costCenterId || undefined,
           employmentTypeId: form.employmentTypeId || undefined,
+          locationId: form.locationId || undefined,
           tariffId: form.tariffId || undefined,
           weeklyHours: form.weeklyHours ? parseFloat(form.weeklyHours) : undefined,
           vacationDaysPerYear: form.vacationDaysPerYear ? parseFloat(form.vacationDaysPerYear) : undefined,
@@ -228,6 +235,7 @@ export function EmployeeFormSheet({
           departmentId: form.departmentId || undefined,
           costCenterId: form.costCenterId || undefined,
           employmentTypeId: form.employmentTypeId || undefined,
+          locationId: form.locationId || undefined,
           tariffId: form.tariffId || undefined,
           weeklyHours: form.weeklyHours ? parseFloat(form.weeklyHours) : undefined,
           vacationDaysPerYear: form.vacationDaysPerYear ? parseFloat(form.vacationDaysPerYear) : undefined,
@@ -246,7 +254,7 @@ export function EmployeeFormSheet({
   }
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending
-  const isLoadingReferenceData = loadingDepartments || loadingCostCenters || loadingEmploymentTypes || loadingTariffs
+  const isLoadingReferenceData = loadingDepartments || loadingCostCenters || loadingEmploymentTypes || loadingTariffs || loadingLocations
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -434,6 +442,27 @@ export function EmployeeFormSheet({
                     {departments.map((dept) => (
                       <SelectItem key={dept.id} value={dept.id}>
                         {dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>{t('fieldLocation')}</Label>
+                <Select
+                  value={form.locationId || '__none__'}
+                  onValueChange={(value) => setForm((prev) => ({ ...prev, locationId: value === '__none__' ? '' : value }))}
+                  disabled={isSubmitting || isLoadingReferenceData}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('selectLocation')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">{t('none')}</SelectItem>
+                    {locations.map((loc) => (
+                      <SelectItem key={loc.id} value={loc.id}>
+                        {loc.name} ({loc.code})
                       </SelectItem>
                     ))}
                   </SelectContent>

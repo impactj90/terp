@@ -59,6 +59,7 @@ const employeeOutputSchema = z.object({
   departmentId: z.string().nullable(),
   costCenterId: z.string().nullable(),
   employmentTypeId: z.string().nullable(),
+  locationId: z.string().nullable(),
   tariffId: z.string().nullable(),
   weeklyHours: z.number(),
   vacationDaysPerYear: z.number(),
@@ -124,6 +125,13 @@ const employeeDetailOutputSchema = employeeOutputSchema.extend({
       name: z.string(),
     })
     .nullable(),
+  location: z
+    .object({
+      id: z.string(),
+      code: z.string(),
+      name: z.string(),
+    })
+    .nullable(),
   contacts: z.array(
     z.object({
       id: z.string(),
@@ -172,6 +180,7 @@ const listEmployeesInputSchema = z
     departmentId: z.string().optional(),
     costCenterId: z.string().optional(),
     employmentTypeId: z.string().optional(),
+    locationId: z.string().optional(),
     isActive: z.boolean().optional(),
     hasExitDate: z.boolean().optional(),
   })
@@ -189,6 +198,7 @@ const createEmployeeInputSchema = z.object({
   departmentId: z.string().optional(),
   costCenterId: z.string().optional(),
   employmentTypeId: z.string().optional(),
+  locationId: z.string().optional(),
   tariffId: z.string().optional(),
   weeklyHours: z.number().min(0).optional(),
   vacationDaysPerYear: z.number().min(0).optional(),
@@ -241,6 +251,7 @@ const updateEmployeeInputSchema = z.object({
   departmentId: z.string().optional(),
   costCenterId: z.string().optional(),
   employmentTypeId: z.string().optional(),
+  locationId: z.string().optional(),
   tariffId: z.string().optional(),
   weeklyHours: z.number().min(0).optional(),
   vacationDaysPerYear: z.number().min(0).optional(),
@@ -282,6 +293,7 @@ const updateEmployeeInputSchema = z.object({
   clearDepartmentId: z.boolean().optional(),
   clearCostCenterId: z.boolean().optional(),
   clearEmploymentTypeId: z.boolean().optional(),
+  clearLocationId: z.boolean().optional(),
   clearTariffId: z.boolean().optional(),
   clearEmployeeGroupId: z.boolean().optional(),
   clearWorkflowGroupId: z.boolean().optional(),
@@ -318,6 +330,7 @@ function mapEmployeeToOutput(emp: {
   departmentId: string | null
   costCenterId: string | null
   employmentTypeId: string | null
+  locationId: string | null
   tariffId: string | null
   weeklyHours: Prisma.Decimal | number
   vacationDaysPerYear: Prisma.Decimal | number
@@ -367,6 +380,7 @@ function mapEmployeeToOutput(emp: {
     departmentId: emp.departmentId,
     costCenterId: emp.costCenterId,
     employmentTypeId: emp.employmentTypeId,
+    locationId: emp.locationId,
     tariffId: emp.tariffId,
     weeklyHours: Number(emp.weeklyHours),
     vacationDaysPerYear: Number(emp.vacationDaysPerYear),
@@ -627,6 +641,13 @@ export const employeesRouter = createTRPCRouter({
                 id: employee.employmentType.id,
                 code: employee.employmentType.code,
                 name: employee.employmentType.name,
+              }
+            : null,
+          location: employee.location
+            ? {
+                id: employee.location.id,
+                code: employee.location.code,
+                name: employee.location.name,
               }
             : null,
           contacts: employee.contacts.map((c) => ({

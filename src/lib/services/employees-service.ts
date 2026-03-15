@@ -85,6 +85,7 @@ export async function list(
     departmentId?: string
     costCenterId?: string
     employmentTypeId?: string
+    locationId?: string
     isActive?: boolean
     hasExitDate?: boolean
   }
@@ -109,6 +110,9 @@ export async function list(
   }
   if (input?.employmentTypeId !== undefined) {
     where.employmentTypeId = input.employmentTypeId
+  }
+  if (input?.locationId !== undefined) {
+    where.locationId = input.locationId
   }
   if (input?.hasExitDate !== undefined) {
     where.exitDate = input.hasExitDate ? { not: null } : null
@@ -174,6 +178,7 @@ export async function create(
     departmentId?: string
     costCenterId?: string
     employmentTypeId?: string
+    locationId?: string
     tariffId?: string
     weeklyHours?: number
     vacationDaysPerYear?: number
@@ -277,6 +282,7 @@ export async function create(
       departmentId: input.departmentId ?? null,
       costCenterId: input.costCenterId ?? null,
       employmentTypeId: input.employmentTypeId ?? null,
+      locationId: input.locationId ?? null,
       tariffId: input.tariffId ?? null,
       weeklyHours:
         input.weeklyHours !== undefined
@@ -366,6 +372,7 @@ export async function update(
     departmentId?: string
     costCenterId?: string
     employmentTypeId?: string
+    locationId?: string
     tariffId?: string
     weeklyHours?: number
     vacationDaysPerYear?: number
@@ -402,6 +409,7 @@ export async function update(
     clearDepartmentId?: boolean
     clearCostCenterId?: boolean
     clearEmploymentTypeId?: boolean
+    clearLocationId?: boolean
     clearTariffId?: boolean
     clearEmployeeGroupId?: boolean
     clearWorkflowGroupId?: boolean
@@ -526,6 +534,12 @@ export async function update(
     data.employmentTypeId = null
   } else if (input.employmentTypeId !== undefined) {
     data.employmentTypeId = input.employmentTypeId
+  }
+
+  if (input.clearLocationId) {
+    data.locationId = null
+  } else if (input.locationId !== undefined) {
+    data.locationId = input.locationId
   }
 
   if (input.clearTariffId) {

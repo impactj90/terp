@@ -20,10 +20,14 @@ interface EvaluationsSharedFiltersProps {
   onEmployeeChange: (id: string | null) => void
   departmentId: string | null
   onDepartmentChange: (id: string | null) => void
+  locationId?: string | null
+  onLocationChange?: (id: string | null) => void
   employees: Array<{ id: string; name: string }>
   departments: Array<{ id: string; name: string }>
+  locations?: Array<{ id: string; name: string }>
   isLoadingEmployees?: boolean
   isLoadingDepartments?: boolean
+  isLoadingLocations?: boolean
   onClearFilters: () => void
   hasFilters: boolean
 }
@@ -35,10 +39,14 @@ export function EvaluationsSharedFilters({
   onEmployeeChange,
   departmentId,
   onDepartmentChange,
+  locationId,
+  onLocationChange,
   employees,
   departments,
+  locations = [],
   isLoadingEmployees = false,
   isLoadingDepartments = false,
+  isLoadingLocations = false,
   onClearFilters,
   hasFilters,
 }: EvaluationsSharedFiltersProps) {
@@ -97,6 +105,31 @@ export function EvaluationsSharedFilters({
             </SelectContent>
           </Select>
         </div>
+
+        {onLocationChange && (
+          <div className="space-y-2">
+            <Label>{t('filters.location')}</Label>
+            <Select
+              value={locationId ?? 'all'}
+              onValueChange={(value) =>
+                onLocationChange(value === 'all' ? null : value)
+              }
+              disabled={isLoadingLocations}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={t('filters.allLocations')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('filters.allLocations')}</SelectItem>
+                {locations.map((loc) => (
+                  <SelectItem key={loc.id} value={loc.id}>
+                    {loc.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {hasFilters && (
           <div className="flex items-end">

@@ -283,7 +283,8 @@ model Location {
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id])
+  tenant    Tenant     @relation(fields: [tenantId], references: [id])
+  employees Employee[]
 
   // Indexes
   @@unique([tenantId, code], map: "locations_tenant_id_code_key")
@@ -593,11 +594,15 @@ model Employee {
   defaultOrderId    String? @map("default_order_id") @db.Uuid
   defaultActivityId String? @map("default_activity_id") @db.Uuid
 
+  // Added by migration 000091
+  locationId String? @map("location_id") @db.Uuid
+
   // Relations to models already in Prisma
   tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   department     Department?     @relation("EmployeeDepartment", fields: [departmentId], references: [id], onDelete: SetNull)
   costCenter     CostCenter?     @relation(fields: [costCenterId], references: [id], onDelete: SetNull)
   employmentType EmploymentType? @relation(fields: [employmentTypeId], references: [id], onDelete: SetNull)
+  location       Location?       @relation(fields: [locationId], references: [id], onDelete: SetNull)
 
   // Reverse relations (FK on other tables pointing to employees)
   user               User?
@@ -647,6 +652,7 @@ model Employee {
   @@index([activityGroupId], map: "idx_employees_activity_group")
   @@index([defaultOrderId], map: "idx_employees_default_order")
   @@index([defaultActivityId], map: "idx_employees_default_activity")
+  @@index([locationId], map: "idx_employees_location")
   @@map("employees")
 }
 

@@ -11,6 +11,7 @@ interface UseEmployeesOptions {
   departmentId?: string
   costCenterId?: string
   employmentTypeId?: string
+  locationId?: string
   isActive?: boolean
   hasExitDate?: boolean
 }

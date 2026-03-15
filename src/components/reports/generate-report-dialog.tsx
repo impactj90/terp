@@ -32,7 +32,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
-import { useGenerateReport, useEmployees, useDepartments, useCostCenters, useTeams } from '@/hooks'
+import { useGenerateReport, useEmployees, useDepartments, useCostCenters, useTeams, useLocations } from '@/hooks'
 import { parseApiError } from '@/lib/api/errors'
 
 interface GenerateReportDialogProps {
@@ -139,6 +139,7 @@ export function GenerateReportDialog({
   const [departmentIds, setDepartmentIds] = React.useState<string[]>([])
   const [costCenterIds, setCostCenterIds] = React.useState<string[]>([])
   const [teamIds, setTeamIds] = React.useState<string[]>([])
+  const [locationIds, setLocationIds] = React.useState<string[]>([])
   const [error, setError] = React.useState<string | null>(null)
 
   const generateMutation = useGenerateReport()
@@ -148,6 +149,7 @@ export function GenerateReportDialog({
   const { data: departmentsData } = useDepartments({ enabled: open })
   const { data: costCentersData } = useCostCenters({ enabled: open })
   const { data: teamsData } = useTeams({ limit: 200, enabled: open })
+  const { data: locationsData } = useLocations({ isActive: true, enabled: open })
 
   const employees = React.useMemo(() => {
     const items = employeesData?.items ?? []
@@ -181,6 +183,14 @@ export function GenerateReportDialog({
     }))
   }, [teamsData])
 
+  const reportLocations = React.useMemo(() => {
+    const items = locationsData?.data ?? []
+    return items.map((l) => ({
+      id: l.id ?? '',
+      label: l.name ?? l.code ?? '',
+    }))
+  }, [locationsData])
+
   const needsDateRange = reportType ? REQUIRES_DATE_RANGE.includes(reportType) : false
 
   // Reset form when opening
@@ -194,6 +204,7 @@ export function GenerateReportDialog({
       setDepartmentIds([])
       setCostCenterIds([])
       setTeamIds([])
+      setLocationIds([])
       setError(null)
     }
   }, [open])
@@ -225,6 +236,7 @@ export function GenerateReportDialog({
       departmentIds?: string[]
       costCenterIds?: string[]
       teamIds?: string[]
+      locationIds?: string[]
     } = {}
     if (dateRange?.from) parameters.fromDate = formatDateParam(dateRange.from)
     if (dateRange?.to) parameters.toDate = formatDateParam(dateRange.to)
@@ -232,6 +244,7 @@ export function GenerateReportDialog({
     if (departmentIds.length > 0) parameters.departmentIds = departmentIds
     if (costCenterIds.length > 0) parameters.costCenterIds = costCenterIds
     if (teamIds.length > 0) parameters.teamIds = teamIds
+    if (locationIds.length > 0) parameters.locationIds = locationIds
 
     try {
       await generateMutation.mutateAsync({
@@ -373,6 +386,14 @@ export function GenerateReportDialog({
                   selectedIds={teamIds}
                   onSelectedIdsChange={setTeamIds}
                   items={teams}
+                />
+
+                <MultiSelectPopover
+                  label={t('generate.locationFilterLabel')}
+                  placeholder={t('generate.locationFilterPlaceholder')}
+                  selectedIds={locationIds}
+                  onSelectedIdsChange={setLocationIds}
+                  items={reportLocations}
                 />
               </div>
             )}

@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import { useAuth } from '@/providers/auth-provider'
 import { useHasPermission } from '@/hooks'
-import { useEmployees, useDeleteEmployee } from '@/hooks'
+import { useEmployees, useDeleteEmployee, useDepartments, useLocations } from '@/hooks'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { SearchInput } from '@/components/ui/search-input'
@@ -39,6 +39,8 @@ export default function EmployeesPage() {
   const [limit, setLimit] = React.useState(20)
   const [search, setSearch] = React.useState('')
   const [activeFilter, setActiveFilter] = React.useState<boolean | undefined>(undefined)
+  const [departmentFilter, setDepartmentFilter] = React.useState<string | undefined>(undefined)
+  const [locationFilter, setLocationFilter] = React.useState<string | undefined>(undefined)
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set())
 
   // Dialogs state
@@ -48,13 +50,23 @@ export default function EmployeesPage() {
   const [deleteEmployee, setDeleteEmployee] = React.useState<Employee | null>(null)
 
   // Fetch employees
+  const enabled = !authLoading && !permLoading && canAccess
+
   const { data, isLoading, isFetching } = useEmployees({
     page,
     pageSize: limit,
     search: search || undefined,
     isActive: activeFilter,
-    enabled: !authLoading && !permLoading && canAccess,
+    departmentId: departmentFilter,
+    locationId: locationFilter,
+    enabled,
   })
+
+  // Reference data for filter dropdowns
+  const { data: departmentsData } = useDepartments({ enabled })
+  const { data: locationsData } = useLocations({ isActive: true, enabled })
+  const departments = departmentsData?.data ?? []
+  const locationsList = locationsData?.data ?? []
 
   // Delete mutation
   const deleteMutation = useDeleteEmployee()
@@ -62,12 +74,12 @@ export default function EmployeesPage() {
   // Reset page when filters change
   React.useEffect(() => {
     setPage(1)
-  }, [search, activeFilter])
+  }, [search, activeFilter, departmentFilter, locationFilter])
 
   // Clear selection when page changes
   React.useEffect(() => {
     setSelectedIds(new Set())
-  }, [page, search, activeFilter])
+  }, [page, search, activeFilter, departmentFilter, locationFilter])
 
   React.useEffect(() => {
     if (!authLoading && !permLoading && !canAccess) {
@@ -127,7 +139,7 @@ export default function EmployeesPage() {
   }
 
   // Check for any active filters
-  const hasFilters = Boolean(search) || activeFilter !== undefined
+  const hasFilters = Boolean(search) || activeFilter !== undefined || departmentFilter !== undefined || locationFilter !== undefined
 
   if (authLoading || permLoading) {
     return <EmployeesPageSkeleton />
@@ -183,6 +195,40 @@ export default function EmployeesPage() {
           </SelectContent>
         </Select>
 
+        <Select
+          value={departmentFilter ?? 'all'}
+          onValueChange={(value) => setDepartmentFilter(value === 'all' ? undefined : value)}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder={t('columnDepartment')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t('allDepartments')}</SelectItem>
+            {departments.map((dept) => (
+              <SelectItem key={dept.id} value={dept.id}>
+                {dept.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={locationFilter ?? 'all'}
+          onValueChange={(value) => setLocationFilter(value === 'all' ? undefined : value)}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder={t('columnLocation')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t('allLocations')}</SelectItem>
+            {locationsList.map((loc) => (
+              <SelectItem key={loc.id} value={loc.id}>
+                {loc.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         {hasFilters && (
           <Button
             variant="ghost"
@@ -190,6 +236,8 @@ export default function EmployeesPage() {
             onClick={() => {
               setSearch('')
               setActiveFilter(undefined)
+              setDepartmentFilter(undefined)
+              setLocationFilter(undefined)
             }}
           >
             <X className="mr-2 h-4 w-4" />
