@@ -67,9 +67,10 @@ export function EmploymentDetailsCard({ employee }: EmploymentDetailsCardProps) 
           <div className="space-y-1">
             <Label className="text-muted-foreground">{t('costCenter')}</Label>
             <p className="text-sm font-medium">
-              {employee.cost_center?.name || (
-                <span className="text-muted-foreground">{t('notAssigned')}</span>
-              )}
+              {employee.cost_center
+                ? `${employee.cost_center.name} (${employee.cost_center.code})`
+                : (<span className="text-muted-foreground">{t('notAssigned')}</span>)
+              }
             </p>
           </div>
 

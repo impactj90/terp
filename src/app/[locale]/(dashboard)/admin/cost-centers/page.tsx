@@ -20,7 +20,7 @@ type CostCenter = components['schemas']['CostCenter']
 export default function CostCentersPage() {
   const router = useRouter()
   const { isLoading: authLoading } = useAuth()
-  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['departments.manage'])
+  const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['cost_centers.manage'])
   const t = useTranslations('adminCostCenters')
 
   const [search, setSearch] = React.useState('')

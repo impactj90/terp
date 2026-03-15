@@ -39,6 +39,202 @@ function stripFileContent<T extends { fileContent?: unknown }>(
   return rest
 }
 
+// --- Account value aggregation helper ---
+
+async function buildAccountValueMap(
+  prisma: PrismaClient,
+  tenantId: string,
+  empIds: string[],
+  accountIds: string[],
+  year: number,
+  month: number,
+): Promise<Map<string, Map<string, number>>> {
+  const map = new Map<string, Map<string, number>>()
+  if (accountIds.length === 0 || empIds.length === 0) return map
+
+  const agg = await repo.aggregateDailyAccountValues(
+    prisma, tenantId, empIds, accountIds, year, month,
+  )
+  for (const row of agg) {
+    let empMap = map.get(row.employeeId)
+    if (!empMap) {
+      empMap = new Map()
+      map.set(row.employeeId, empMap)
+    }
+    empMap.set(row.accountId, row._sum.valueMinutes ?? 0)
+  }
+  return map
+}
+
+function resolveAccountValues(
+  empAccounts: Map<string, number> | undefined,
+  accountInfoMap: Record<string, { code: string; payrollCode: string | null }>,
+): Record<string, number> {
+  const accountValues: Record<string, number> = {}
+  if (empAccounts) {
+    for (const [accountId, totalMinutes] of empAccounts) {
+      const info = accountInfoMap[accountId]
+      if (info) accountValues[info.code] = totalMinutes / 60
+    }
+  }
+  return accountValues
+}
+
+// --- CSV/Format generation helpers ---
+
+function generateStandardCsv(lines: ExportLine[], accountCodeList: string[]): string {
+  const header = [
+    "PersonnelNumber",
+    "FirstName",
+    "LastName",
+    "DepartmentCode",
+    "CostCenterCode",
+    "TargetHours",
+    "WorkedHours",
+    "OvertimeHours",
+    "VacationDays",
+    "SickDays",
+    "OtherAbsenceDays",
+    ...accountCodeList.map((code) => `Account_${code}`),
+  ]
+
+  const csvRows = [header.join(";")]
+  for (const line of lines) {
+    const row = [
+      line.personnelNumber,
+      line.firstName,
+      line.lastName,
+      line.departmentCode,
+      line.costCenterCode,
+      line.targetHours.toFixed(2),
+      line.workedHours.toFixed(2),
+      line.overtimeHours.toFixed(2),
+      line.vacationDays.toFixed(2),
+      line.sickDays.toFixed(2),
+      line.otherAbsenceDays.toFixed(2),
+      ...accountCodeList.map((code) => {
+        const val = line.accountValues[code] ?? 0
+        return val.toFixed(2)
+      }),
+    ]
+    csvRows.push(row.join(";"))
+  }
+  return csvRows.join("\n") + "\n"
+}
+
+// DATEV LODAS default format — subject to change per customer accountant requirements
+function generateDatevLodas(
+  lines: ExportLine[],
+  accountInfoMap: Record<string, { code: string; payrollCode: string | null }>,
+): string {
+  const header = "Personalnummer;Nachname;Vorname;Lohnart;Stunden;Tage;Betrag;Kostenstelle"
+  const csvRows = [header]
+
+  // Fixed wage type codes
+  const baseLohnarten: { code: string; getValue: (l: ExportLine) => { hours: number; days: number } }[] = [
+    { code: "1000", getValue: (l) => ({ hours: l.targetHours, days: 0 }) },
+    { code: "1001", getValue: (l) => ({ hours: l.workedHours, days: 0 }) },
+    { code: "1002", getValue: (l) => ({ hours: l.overtimeHours, days: 0 }) },
+    { code: "2000", getValue: (l) => ({ hours: 0, days: l.vacationDays }) },
+    { code: "2001", getValue: (l) => ({ hours: 0, days: l.sickDays }) },
+    { code: "2002", getValue: (l) => ({ hours: 0, days: l.otherAbsenceDays }) },
+  ]
+
+  for (const line of lines) {
+    // Base wage types (only if value > 0)
+    for (const la of baseLohnarten) {
+      const { hours, days } = la.getValue(line)
+      if (hours > 0 || days > 0) {
+        csvRows.push([
+          line.personnelNumber,
+          line.lastName,
+          line.firstName,
+          la.code,
+          hours.toFixed(2),
+          days.toFixed(2),
+          "", // Betrag left empty for hour/day-based entries
+          line.costCenterCode,
+        ].join(";"))
+      }
+    }
+
+    // Account-based wage types (dynamic)
+    for (const [accountId, info] of Object.entries(accountInfoMap)) {
+      const hours = line.accountValues[info.code] ?? 0
+      if (hours > 0) {
+        const lohnart = info.payrollCode || info.code
+        csvRows.push([
+          line.personnelNumber,
+          line.lastName,
+          line.firstName,
+          lohnart,
+          hours.toFixed(2),
+          "0.00",
+          "",
+          line.costCenterCode,
+        ].join(";"))
+      }
+    }
+  }
+
+  return csvRows.join("\n") + "\n"
+}
+
+// --- Download format conversion helpers ---
+
+function parseCsv(csvContent: string): { headers: string[]; rows: string[][] } {
+  const lines = csvContent.trim().split("\n")
+  const headers = (lines[0] ?? "").split(";")
+  const rows = lines.slice(1).map((line) => line.split(";"))
+  return { headers, rows }
+}
+
+function convertToJson(headers: string[], rows: string[][]): string {
+  const objects = rows.map((row) => {
+    const obj: Record<string, string> = {}
+    for (let i = 0; i < headers.length; i++) {
+      const key = headers[i]
+      if (key) obj[key] = row[i] ?? ""
+    }
+    return obj
+  })
+  return JSON.stringify(objects, null, 2)
+}
+
+function convertToXml(headers: string[], rows: string[][]): string {
+  const xmlRows = rows.map((row) => {
+    const fields = headers.map((h, i) => {
+      const val = (row[i] ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      const tag = h.replace(/[^a-zA-Z0-9_]/g, "_")
+      return `      <${tag}>${val}</${tag}>`
+    })
+    return `    <Row>\n${fields.join("\n")}\n    </Row>`
+  })
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<PayrollExport>\n${xmlRows.join("\n")}\n</PayrollExport>\n`
+}
+
+async function convertToXlsx(headers: string[], rows: string[][]): Promise<Buffer> {
+  const ExcelJS = await import("exceljs")
+  const workbook = new ExcelJS.Workbook()
+  const sheet = workbook.addWorksheet("PayrollExport")
+
+  // Header row (bold)
+  const headerRow = sheet.addRow(headers)
+  headerRow.font = { bold: true }
+
+  // Data rows — attempt to parse numbers
+  for (const row of rows) {
+    const values = row.map((val) => {
+      const num = Number(val)
+      return !isNaN(num) && val.trim() !== "" ? num : val
+    })
+    sheet.addRow(values)
+  }
+
+  const buffer = await workbook.xlsx.writeBuffer()
+  return Buffer.from(buffer)
+}
+
 // --- Exported Types ---
 
 export interface ExportLine {
@@ -171,14 +367,21 @@ export async function generate(
       accountIds = ifaceAccounts.map((a) => a.accountId)
     }
 
-    // Build account code map
-    const accountCodeMap: Record<string, string> = {}
+    // Build account info map (code + payrollCode for DATEV)
+    const accountInfoMap: Record<string, { code: string; payrollCode: string | null }> = {}
     if (accountIds.length > 0) {
       const accounts = await repo.findAccountsByIds(prisma, accountIds)
       for (const acct of accounts) {
-        accountCodeMap[acct.id] = acct.code
+        accountInfoMap[acct.id] = { code: acct.code, payrollCode: acct.payrollCode }
       }
     }
+    const accountCodeList = Object.values(accountInfoMap).map((a) => a.code)
+
+    // Aggregate daily account values
+    const empIds = employees.map((e) => e.id)
+    const accountValueMap = await buildAccountValueMap(
+      prisma, tenantId, empIds, accountIds, input.year, input.month,
+    )
 
     // Generate export lines
     const lines: ExportLine[] = []
@@ -186,7 +389,6 @@ export async function generate(
     let totalOT = 0
 
     // Batch-fetch all monthly values
-    const empIds = employees.map((e) => e.id)
     const allMvs = await repo.findMonthlyValuesBatch(prisma, tenantId, empIds, input.year, input.month)
     const mvMap = new Map(allMvs.map((mv) => [mv.employeeId, mv]))
 
@@ -213,55 +415,26 @@ export async function generate(
         vacationDays: decimalToNumber(mv.vacationTaken),
         sickDays: mv.sickDays,
         otherAbsenceDays: mv.otherAbsenceDays,
-        accountValues: {},
+        accountValues: resolveAccountValues(accountValueMap.get(emp.id), accountInfoMap),
       })
     }
 
-    // Generate CSV content with semicolon delimiter
-    const accountCodeList = Object.values(accountCodeMap)
-    const header = [
-      "PersonnelNumber",
-      "FirstName",
-      "LastName",
-      "DepartmentCode",
-      "CostCenterCode",
-      "TargetHours",
-      "WorkedHours",
-      "OvertimeHours",
-      "VacationDays",
-      "SickDays",
-      "OtherAbsenceDays",
-      ...accountCodeList.map((code) => `Account_${code}`),
-    ]
-
-    const csvRows = [header.join(";")]
-    for (const line of lines) {
-      const row = [
-        line.personnelNumber,
-        line.firstName,
-        line.lastName,
-        line.departmentCode,
-        line.costCenterCode,
-        line.targetHours.toFixed(2),
-        line.workedHours.toFixed(2),
-        line.overtimeHours.toFixed(2),
-        line.vacationDays.toFixed(2),
-        line.sickDays.toFixed(2),
-        line.otherAbsenceDays.toFixed(2),
-        ...accountCodeList.map((code) => {
-          const val = line.accountValues[code] ?? 0
-          return val.toFixed(2)
-        }),
-      ]
-      csvRows.push(row.join(";"))
+    // Generate file content based on export type
+    let fileContent: string
+    switch (input.exportType) {
+      case "datev":
+        fileContent = generateDatevLodas(lines, accountInfoMap)
+        break
+      default: // 'standard', 'sage', 'custom'
+        fileContent = generateStandardCsv(lines, accountCodeList)
+        break
     }
-    const csvContent = csvRows.join("\n") + "\n"
 
     // Update record as completed
     pe = (await repo.update(prisma, tenantId, pe.id, {
       status: "completed",
-      fileContent: csvContent,
-      fileSize: csvContent.length,
+      fileContent,
+      fileSize: fileContent.length,
       rowCount: lines.length,
       employeeCount: lines.length,
       totalHours: new Decimal(totalWorked.toFixed(2)),
@@ -307,6 +480,7 @@ export async function preview(
   const params = pe.parameters as {
     employeeIds?: string[]
     departmentIds?: string[]
+    includeAccounts?: string[]
   } | null
 
   // Get active employees
@@ -319,12 +493,36 @@ export async function preview(
     scopeFilter
   )
 
+  // Determine which accounts to include
+  let accountIds = params?.includeAccounts ?? []
+  if (accountIds.length === 0 && pe.exportInterfaceId) {
+    const ifaceAccounts = await repo.findExportInterfaceAccounts(
+      prisma,
+      pe.exportInterfaceId
+    )
+    accountIds = ifaceAccounts.map((a) => a.accountId)
+  }
+
+  // Build account info map
+  const accountInfoMap: Record<string, { code: string; payrollCode: string | null }> = {}
+  if (accountIds.length > 0) {
+    const accounts = await repo.findAccountsByIds(prisma, accountIds)
+    for (const acct of accounts) {
+      accountInfoMap[acct.id] = { code: acct.code, payrollCode: acct.payrollCode }
+    }
+  }
+
+  // Aggregate daily account values
+  const empIds = employees.map((e) => e.id)
+  const accountValueMap = await buildAccountValueMap(
+    prisma, tenantId, empIds, accountIds, pe.year, pe.month,
+  )
+
   const lines: PreviewLine[] = []
   let totalHours = 0
   let totalOvertime = 0
 
   // Batch-fetch all monthly values
-  const empIds = employees.map((e) => e.id)
   const allMvs = await repo.findMonthlyValuesBatch(prisma, tenantId, empIds, pe.year, pe.month)
   const mvMap = new Map(allMvs.map((mv) => [mv.employeeId, mv]))
 
@@ -352,7 +550,7 @@ export async function preview(
       vacationDays: decimalToNumber(mv.vacationTaken),
       sickDays: mv.sickDays,
       otherAbsenceDays: mv.otherAbsenceDays,
-      accountValues: {},
+      accountValues: resolveAccountValues(accountValueMap.get(emp.id), accountInfoMap),
     })
   }
 
@@ -407,8 +605,30 @@ export async function download(
   }
 
   const filename = `payroll_export_${pe.year}_${String(pe.month).padStart(2, "0")}.${ext}`
-  const content = Buffer.from(pe.fileContent).toString("base64")
 
+  // Convert from canonical CSV storage to requested format
+  let outputBuffer: Buffer
+  switch (pe.format) {
+    case "xlsx": {
+      const parsed = parseCsv(pe.fileContent)
+      outputBuffer = await convertToXlsx(parsed.headers, parsed.rows)
+      break
+    }
+    case "json": {
+      const parsed = parseCsv(pe.fileContent)
+      outputBuffer = Buffer.from(convertToJson(parsed.headers, parsed.rows))
+      break
+    }
+    case "xml": {
+      const parsed = parseCsv(pe.fileContent)
+      outputBuffer = Buffer.from(convertToXml(parsed.headers, parsed.rows))
+      break
+    }
+    default:
+      outputBuffer = Buffer.from(pe.fileContent)
+  }
+
+  const content = outputBuffer.toString("base64")
   return { content, contentType, filename }
 }
 

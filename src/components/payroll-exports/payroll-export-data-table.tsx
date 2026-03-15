@@ -105,9 +105,9 @@ export function PayrollExportDataTable({
     }
   }
 
-  const formatHours = (hours?: number) => {
+  const formatHours = (hours?: number | unknown) => {
     if (hours == null) return '-'
-    return hours.toFixed(2)
+    return Number(hours).toFixed(2)
   }
 
   if (isLoading) {

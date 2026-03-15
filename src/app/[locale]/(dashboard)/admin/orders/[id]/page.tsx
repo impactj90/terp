@@ -218,7 +218,7 @@ export default function OrderDetailPage() {
                   />
                   <DetailRow
                     label={t('fieldCostCenter')}
-                    value={order.costCenter ? `${order.costCenter.code} - ${order.costCenter.name}` : undefined}
+                    value={order.costCenter ? `${order.costCenter.name} (${order.costCenter.code})` : undefined}
                   />
                 </div>
               </CardContent>

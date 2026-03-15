@@ -180,6 +180,29 @@ export async function findAccountsByIds(
 ) {
   return prisma.account.findMany({
     where: { id: { in: ids } },
-    select: { id: true, code: true },
+    select: { id: true, code: true, name: true, payrollCode: true },
+  })
+}
+
+export async function aggregateDailyAccountValues(
+  prisma: PrismaClient,
+  tenantId: string,
+  employeeIds: string[],
+  accountIds: string[],
+  year: number,
+  month: number,
+) {
+  if (employeeIds.length === 0 || accountIds.length === 0) return []
+  const fromDate = new Date(year, month - 1, 1)
+  const toDate = new Date(year, month, 0)
+  return prisma.dailyAccountValue.groupBy({
+    by: ['employeeId', 'accountId'],
+    where: {
+      tenantId,
+      employeeId: { in: employeeIds },
+      accountId: { in: accountIds },
+      valueDate: { gte: fromDate, lte: toDate },
+    },
+    _sum: { valueMinutes: true },
   })
 }
