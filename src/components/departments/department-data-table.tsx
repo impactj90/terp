@@ -21,9 +21,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { components } from '@/types/legacy-api-types'
+import type { DepartmentTreeNode } from '@/trpc/routers/departments'
 
-type Department = components['schemas']['Department']
+type Department = DepartmentTreeNode['department']
 
 interface DepartmentDataTableProps {
   departments: Department[]
@@ -83,8 +83,8 @@ export function DepartmentDataTable({
               {department.parent?.name || '-'}
             </TableCell>
             <TableCell>
-              <Badge variant={department.is_active ? 'default' : 'secondary'}>
-                {department.is_active ? t('statusActive') : t('statusInactive')}
+              <Badge variant={department.isActive ? 'default' : 'secondary'}>
+                {department.isActive ? t('statusActive') : t('statusInactive')}
               </Badge>
             </TableCell>
             <TableCell onClick={(e) => e.stopPropagation()}>

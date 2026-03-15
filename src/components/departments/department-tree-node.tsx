@@ -13,10 +13,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import type { components } from '@/types/legacy-api-types'
+import type { DepartmentTreeNode } from '@/trpc/routers/departments'
 
-type Department = components['schemas']['Department']
-type DepartmentNode = components['schemas']['DepartmentNode']
+type DepartmentNode = DepartmentTreeNode
+type Department = DepartmentTreeNode['department']
 
 interface DepartmentTreeNodeProps {
   node: DepartmentNode
@@ -88,8 +88,8 @@ export function DepartmentTreeNode({
         </div>
 
         {/* Status badge */}
-        <Badge variant={department.is_active ? 'default' : 'secondary'} className="shrink-0">
-          {department.is_active ? t('statusActive') : t('statusInactive')}
+        <Badge variant={department.isActive ? 'default' : 'secondary'} className="shrink-0">
+          {department.isActive ? t('statusActive') : t('statusInactive')}
         </Badge>
 
         {/* Children count */}
