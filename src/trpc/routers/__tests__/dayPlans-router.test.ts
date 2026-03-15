@@ -865,7 +865,7 @@ describe("dayPlans.createBonus", () => {
     expect(result.calculationType).toBe("per_minute")
   })
 
-  it("validates timeFrom < timeTo", async () => {
+  it("validates timeFrom !== timeTo", async () => {
     const mockPrisma = {
       dayPlan: {
         findFirst: vi.fn().mockResolvedValue(makeDayPlan()),
@@ -876,12 +876,36 @@ describe("dayPlans.createBonus", () => {
       caller.createBonus({
         dayPlanId: DAY_PLAN_ID,
         accountId: ACCOUNT_ID,
-        timeFrom: 1440,
+        timeFrom: 1320,
         timeTo: 1320,
         calculationType: "per_minute",
         valueMinutes: 15,
       })
-    ).rejects.toThrow("Bonus time from must be before time to")
+    ).rejects.toThrow("Bonus time from and time to must not be equal")
+  })
+
+  it("allows overnight bonus (timeFrom > timeTo)", async () => {
+    const bonus = makeBonus({ timeFrom: 1320, timeTo: 360 })
+    const mockPrisma = {
+      dayPlan: {
+        findFirst: vi.fn().mockResolvedValue(makeDayPlan()),
+      },
+      dayPlanBonus: {
+        create: vi.fn().mockResolvedValue(bonus),
+      },
+    }
+    const caller = createCaller(createTestContext(mockPrisma))
+    const result = await caller.createBonus({
+      dayPlanId: DAY_PLAN_ID,
+      accountId: ACCOUNT_ID,
+      timeFrom: 1320,
+      timeTo: 360,
+      calculationType: "per_minute",
+      valueMinutes: 15,
+    })
+    expect(result.id).toBe(BONUS_ID)
+    expect(result.timeFrom).toBe(1320)
+    expect(result.timeTo).toBe(360)
   })
 
   it("throws NOT_FOUND when parent day plan missing", async () => {

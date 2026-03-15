@@ -113,13 +113,14 @@ function validateBreak(
 
 /**
  * Validates bonus configuration.
- * - timeFrom < timeTo
+ * - timeFrom !== timeTo (zero-length window)
+ * - overnight windows (timeFrom > timeTo) are allowed (e.g. 22:00→06:00)
  * - valueMinutes > 0 (enforced by Zod schema)
  */
 function validateBonus(timeFrom: number, timeTo: number): void {
-  if (timeFrom >= timeTo) {
+  if (timeFrom === timeTo) {
     throw new DayPlanValidationError(
-      "Bonus time from must be before time to"
+      "Bonus time from and time to must not be equal"
     )
   }
 }

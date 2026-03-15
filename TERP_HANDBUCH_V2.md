@@ -713,6 +713,53 @@ Rundung verändert die Buchungszeiten **nach** der Toleranzprüfung mathematisch
 > | Pausen | Pausenregeln | 30 Min. nach 6 Std. |
 > | Maximale Arbeitszeit | Obergrenze Nettozeit | 10 Stunden |
 
+##### Zuschläge (Detailansicht)
+
+Zuschläge definieren Zeitfenster, in denen Arbeitszeit automatisch als Bonus auf ein Konto gebucht wird — z. B. Nachtzuschlag, Sonntagszuschlag oder Feiertagszuschlag. Ohne Zuschlagskonfiguration am Tagesplan bleiben die zugehörigen Bonus-Konten leer.
+
+**So konfigurieren Sie einen Zuschlag:**
+
+1. 📍 Verwaltung → **Tagespläne** → gewünschten Tagesplan anklicken → Detailansicht
+2. Abschnitt **„Zuschläge"** → 📍 **„Zuschlag hinzufügen"**
+3. Felder ausfüllen (siehe Tabelle) → 📍 **„Zuschlag hinzufügen"**
+
+| Feld | Pflicht? | Beschreibung |
+|------|----------|--------------|
+| **Konto** | Ja | Zielkonto vom Typ „Bonus" (→ Abschnitt 4.12). Nur aktive Bonus-Konten werden angezeigt. |
+| **Zeit von** | Ja | Beginn des Zuschlagsfensters (HH:MM). |
+| **Zeit bis** | Ja | Ende des Zuschlagsfensters. Darf vor „Zeit von" liegen (Mitternachtsüberschreitung, z. B. 22:00 → 06:00 — wird intern automatisch an Mitternacht gesplittet). |
+| **Berechnungsart** | Ja | Wie der Zuschlag berechnet wird (siehe Tabelle unten). |
+| **Wert** | Ja | Minutenwert oder Prozentwert je nach Berechnungsart. |
+| **Mindestarbeitszeit** | Nein | Der Zuschlag wird nur berechnet, wenn die Nettoarbeitszeit des Tages diesen Wert erreicht. |
+| **Gilt an Feiertagen** | Nein | Wenn aktiviert, wird der Zuschlag auch an Feiertagen berechnet. Wenn deaktiviert, nur an regulären Arbeitstagen. |
+
+**Berechnungsarten:**
+
+| Art | Beschreibung | Beispiel |
+|-----|--------------|---------|
+| **Pro Minute** | 1:1 — jede gearbeitete Minute im Fenster wird als Zuschlagsminute gebucht | 4 h im Fenster → 4 h Zuschlag |
+| **Festwert** | Fixer Bonus, sobald Überlappung mit dem Fenster existiert | Wert 60 → 1 h Zuschlag, egal ob 2 h oder 6 h im Fenster |
+| **Prozentual** | Prozentualer Anteil der Überlappung | Wert 25, 4 h im Fenster → 1 h Zuschlag |
+
+**Praxisbeispiel: Nachtzuschlag End-to-End**
+
+> **Szenario:** Nachtschicht-Mitarbeiter sollen einen Nachtzuschlag für Arbeit zwischen 22:00 und 06:00 erhalten. Der Steuerberater benötigt den Wert im Lohnexport unter Lohncode 1015.
+>
+> **Schritt 1 — Bonus-Konto anlegen** (einmalig):
+> 📍 Verwaltung → Konten → „Neues Konto"
+> - Code: `NZ`, Name: `Nachtzuschlag`, Kontotyp: **Bonus**, Einheit: **Stunden**, Lohnrelevant: ✓, Lohncode: `1015` → 📍 „Erstellen"
+>
+> **Schritt 2 — Konto der Exportschnittstelle zuordnen** (einmalig):
+> 📍 Administration → Exportschnittstellen → Schnittstelle → ⋯ → „Konten verwalten" → `NZ` nach rechts verschieben → 📍 „Speichern"
+>
+> **Schritt 3 — Zuschlag am Tagesplan konfigurieren**:
+> 📍 Verwaltung → Tagespläne → Nachtschicht-Plan anklicken → Detailansicht → Abschnitt „Zuschläge" → „Zuschlag hinzufügen"
+> - Konto: `NZ (Nachtzuschlag)`, Zeit von: `22:00`, Zeit bis: `06:00`, Berechnungsart: **Pro Minute**, Wert: `0`, Gilt an Feiertagen: ☐ → 📍 „Zuschlag hinzufügen"
+>
+> **Ergebnis:** Arbeitet ein Mitarbeiter mit diesem Tagesplan von 22:00 bis 06:00, berechnet das System automatisch 8 Stunden Nachtzuschlag und bucht sie auf das Konto NZ. Im Lohnexport erscheint der Wert unter Lohncode 1015.
+
+💡 **Hinweis:** Die Zuschlagsberechnung erfolgt bei jeder Buchungsänderung und zusätzlich nachts automatisch (→ Abschnitt 9.3).
+
 ##### Beispielkonfigurationen: Früh-, Spät- und Nachtschicht
 
 Die folgenden drei Tagespläne bilden ein typisches 3-Schicht-Modell in der Produktion ab (je 8 Stunden Soll, 30 Min. Pause). Alle Werte können direkt übernommen werden.
@@ -1603,6 +1650,8 @@ Ein Unternehmen möchte Nachtzuschläge und Sonntagszuschläge im Lohnexport aus
 3. 📍 Administration → **Exportschnittstellen** → Schnittstelle öffnen → ⋯ → **„Konten verwalten"** → `NZ` und `SZ` von links nach rechts verschieben → 📍 „Speichern"
 
 4. Beim nächsten Lohnexport (📍 Administration → Lohnexporte → Vorschau) erscheinen die Spalten `NZ` und `SZ` mit den Zuschlagsstunden pro Mitarbeiter.
+
+> ⚠️ **Wichtig:** Damit die Konten NZ und SZ tatsächlich Werte enthalten, müssen Sie zusätzlich **Zuschläge am Tagesplan** konfigurieren (→ Abschnitt 4.6.1, „Zuschläge"). Ohne Zuschlagskonfiguration bleiben die Konten leer.
 
 💡 **Hinweis:** Konten müssen als **„Lohnrelevant"** markiert und einer **Exportschnittstelle zugeordnet** sein, damit sie im Lohnexport erscheinen. Die Reihenfolge in der Exportschnittstelle bestimmt die Spaltenreihenfolge in der CSV-Datei. Der **Lohncode** wird an den Steuerberater übermittelt und muss mit dem verwendeten Abrechnungsprogramm (z. B. DATEV) abgestimmt sein.
 
