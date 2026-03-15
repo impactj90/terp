@@ -224,3 +224,17 @@
     font-feature-settings: 'rlig' 1, 'calt' 1;
   }
 }
+
+/* Hilfe / Handbook prose styles */
+.hilfe-content h1 {
+  @apply mt-10 mb-4 text-3xl font-bold tracking-tight text-foreground;
+}
+.hilfe-content h2 {
+  @apply mt-8 mb-3 text-2xl font-semibold tracking-tight text-foreground;
+}
+.hilfe-content h3 {
+  @apply mt-6 mb-2 text-xl font-semibold text-foreground;
+}
+.hilfe-content h4 {
+  @apply mt-4 mb-2 text-lg font-medium text-foreground;
+}

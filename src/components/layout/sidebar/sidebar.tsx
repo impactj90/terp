@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { BookOpen, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -62,6 +62,30 @@ export function Sidebar({ className }: SidebarProps) {
 
         {/* Navigation */}
         <SidebarNav />
+
+        {/* Help link */}
+        <div className="border-t px-3 py-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <a
+                href="/hilfe"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors',
+                  'hover:bg-accent hover:text-accent-foreground',
+                  isCollapsed && 'justify-center px-2'
+                )}
+              >
+                <BookOpen className="h-5 w-5 shrink-0" aria-hidden="true" />
+                {!isCollapsed && <span>{t('help')}</span>}
+              </a>
+            </TooltipTrigger>
+            {isCollapsed && (
+              <TooltipContent side="right">{t('help')}</TooltipContent>
+            )}
+          </Tooltip>
+        </div>
 
         {/* Collapse toggle button */}
         <div className="border-t p-2">

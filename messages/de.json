@@ -107,7 +107,8 @@
     "expand": "Ausklappen",
     "navigationMenu": "Navigationsmenü",
     "closeMenu": "Menü schließen",
-    "appName": "Terp Zeiterfassung"
+    "appName": "Terp Zeiterfassung",
+    "help": "Hilfe"
   },
   "header": {
     "search": "Suchen...",
@@ -118,7 +119,8 @@
     "markAllAsRead": "Alle als gelesen markieren",
     "viewAllNotifications": "Alle Benachrichtigungen anzeigen",
     "selectOrganization": "Organisation auswählen",
-    "organizations": "Organisationen"
+    "organizations": "Organisationen",
+    "help": "Hilfe"
   },
   "notifications": {
     "title": "Benachrichtigungen",

@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { Menu, Search } from 'lucide-react'
+import { CircleHelp, Menu, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { UserMenu } from './user-menu'
@@ -69,6 +69,22 @@ export function Header({ className, onMobileMenuClick }: HeaderProps) {
 
         {/* Language switcher */}
         <LocaleSwitcher />
+
+        {/* Help */}
+        <Button
+          variant="ghost"
+          size="icon"
+          asChild
+        >
+          <a
+            href="/hilfe"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={t('help')}
+          >
+            <CircleHelp className="h-5 w-5" />
+          </a>
+        </Button>
 
         {/* Theme toggle */}
         <ThemeToggle />

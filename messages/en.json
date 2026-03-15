@@ -107,7 +107,8 @@
     "expand": "Expand",
     "navigationMenu": "Navigation menu",
     "closeMenu": "Close menu",
-    "appName": "Terp Time Tracking"
+    "appName": "Terp Time Tracking",
+    "help": "Help"
   },
   "header": {
     "search": "Search...",
@@ -118,7 +119,8 @@
     "markAllAsRead": "Mark all as read",
     "viewAllNotifications": "View all notifications",
     "selectOrganization": "Select organization",
-    "organizations": "Organizations"
+    "organizations": "Organizations",
+    "help": "Help"
   },
   "notifications": {
     "title": "Notifications",
