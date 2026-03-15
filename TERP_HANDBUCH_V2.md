@@ -1382,36 +1382,61 @@ Ein Unternehmen möchte Homeoffice-Zeiten separat erfassen:
 
 Im Tab „Abwesenheitsarten" sehen Sie eine Tabelle mit Spalten: Farbe (farbiger Punkt), Code, Name, Kategorie (Badge), Urlaub (✓/✗), Genehmigung (✓/✗), Status.
 
-**Filter:** Suchfeld, Kategorie (Alle/Urlaub/Krankheit/Sonderfall/Unbezahlt), Status, „Systemtypen anzeigen" (Schalter, standardmäßig aus)
+**Filter:** Suchfeld, Kategorie (Alle Kategorien / Urlaub / Krankheit / Persönlicher Urlaub / Unbezahlter Urlaub), Status (Alle Status / Aktiv / Inaktiv), „Systemtypen anzeigen" (Schalter, standardmäßig ein)
 
-##### Neuen Abwesenheitstyp anlegen
+##### Neue Abwesenheitsart anlegen
 
-1. 📍 Tab „Abwesenheitsarten" → **„Neuer Abwesenheitstyp"** (oben rechts)
+1. 📍 Tab „Abwesenheitsarten" → **„Neue Abwesenheitsart"** (oben rechts)
 2. Ausfüllen:
    - **Code** (Pflicht, Großbuchstaben, muss mit U, K oder S beginnen)
    - **Farbe** (Hex-Farbcode mit Vorschau)
    - **Name** (Pflicht)
-   - **Kategorie** (Dropdown: Urlaub/Krankheit/Sonderfall/Unbezahlt)
-   - **Urlaub betroffen** (Schalter — ob vom Urlaubskonto abgezogen wird)
+   - **Kategorie** (Dropdown: Urlaub / Krankheit / Persönlicher Urlaub / Unbezahlter Urlaub)
+   - **Beeinflusst Urlaubssaldo** (Schalter — ob vom Urlaubskonto abgezogen wird)
    - **Genehmigung erforderlich** (Schalter)
-3. 📍 „Abwesenheitstyp erstellen"
+3. 📍 „Erstellen"
 
 | Kategorie | Code-Präfix | Beispiele |
 |-----------|-------------|-----------|
 | Urlaub | U | U01 (Jahresurlaub), U02 (Sonderurlaub) |
-| Unbezahlt | U | UO (Unbezahlter Urlaub) |
+| Unbezahlter Urlaub | U | UO (Unbezahlter Urlaub) |
 | Krankheit | K | K01 (Krankheit), K02 (Kind krank) |
-| Sonderfall | S | SB (Berufsschule), S01 (Fortbildung) |
+| Persönlicher Urlaub | S | SB (Berufsschule), S01 (Fortbildung) |
+
+#### Was passiert nach Genehmigung?
+
+Wenn ein Vorgesetzter eine Abwesenheit genehmigt, laufen automatisch zwei Berechnungen:
+
+**1. Stundenberechnung (Tagesberechnung)**
+
+Für jeden genehmigten Abwesenheitstag wird die Tagesberechnung neu ausgeführt. Die gutgeschriebenen Stunden kommen **nicht** pauschal (z. B. immer 8h), sondern aus dem Tagesplan des Mitarbeiters — mit folgender Priorität:
+
+1. Wenn der Tagesplan `fromEmployeeMaster = true` hat → die individuellen `dailyTargetHours` des Mitarbeiters werden verwendet
+2. Wenn `regularHours2` im Tagesplan gesetzt ist und ein genehmigter Abwesenheitstag vorliegt → `regularHours2` wird verwendet
+3. Sonst → `regularHours` des Tagesplans (Standard: 480 Min = 8h)
+
+Ein Mitarbeiter mit einer 20-Stunden-Woche hat also Tagespläne mit z. B. 240 Min (4h) statt 480 Min (8h). Die Sollstunden für Krankheitstage entsprechen dann automatisch den 4h — nicht 8h.
+
+> 💡 Die Wochenarbeitszeit im Tarif (`weeklyTargetHours`) wird **nicht** für die tägliche Stundenberechnung verwendet. Der Tarif definiert den **Rhythmus** (welcher Tagesplan an welchem Wochentag gilt), und der Tagesplan definiert die konkreten Sollstunden. Die `weeklyTargetHours` im Tarif fließen nur in die Urlaubsanspruch-Berechnung (Teilzeit-Faktor) ein.
+
+**2. Urlaubskonto-Abzug**
+
+Nur wenn der Abwesenheitstyp den Schalter **„Beeinflusst Urlaubssaldo"** aktiviert hat (`deductsVacation = true`):
+
+- Das System zählt alle genehmigten Abwesenheitstage dieses Typs im Kalenderjahr zusammen
+- Formel pro Tag: `Tagesplan.vacationDeduction × Abwesenheit.duration` (Standard: 1,0 × 1,0 = 1 ganzer Tag)
+- Die Summe wird in `VacationBalance.taken` geschrieben
+- Verfügbare Tage = Anspruch + Übertrag + Anpassungen − Genommene Tage
 
 #### Praxisbeispiel
 
 Ein Unternehmen möchte neben den Standardtypen einen „Sonderurlaub Umzug" anlegen:
 
-1. 📍 Verwaltung → Abwesenheitsarten → Tab „Abwesenheitsarten" → **„Neuer Abwesenheitstyp"**
+1. 📍 Verwaltung → Abwesenheitsarten → Tab „Abwesenheitsarten" → **„Neue Abwesenheitsart"**
    - Code: `U03`, Farbe: `#8B5CF6` (lila), Name: `Sonderurlaub Umzug`, Kategorie: **Urlaub**
-   - Urlaub betroffen: ❌ (wird nicht vom Urlaubskonto abgezogen — es ist ein Sondertag)
+   - Beeinflusst Urlaubssaldo: ❌ (wird nicht vom Urlaubskonto abgezogen — es ist ein Sondertag)
    - Genehmigung erforderlich: ✅
-   - 📍 „Abwesenheitstyp erstellen"
+   - 📍 „Erstellen"
 
 2. Wenn ein Mitarbeiter einen Umzugstag beantragt (📍 Abwesenheiten → „Abwesenheit beantragen" → Typ `Sonderurlaub Umzug`), muss der Vorgesetzte genehmigen. Das Urlaubskonto bleibt unberührt.
 
@@ -1419,7 +1444,7 @@ Ein Unternehmen möchte neben den Standardtypen einen „Sonderurlaub Umzug" anl
 
 ### 4.11 Feiertage
 
-**Was ist es?** Feiertage sind kalenderfeste Tage, an denen nicht gearbeitet wird. Terp kennt drei Kategorien: Ganzer Tag, Halber Tag und Sonderfall. Feiertage können für alle Mitarbeiter oder nur für bestimmte Abteilungen gelten.
+**Was ist es?** Feiertage sind kalenderfeste Tage, an denen nicht gearbeitet wird. Terp kennt drei Kategorien: Kategorie 1 (Voll), Kategorie 2 (Halb) und Kategorie 3 (Individuell). Feiertage können für alle Mitarbeiter oder nur für bestimmte Abteilungen gelten.
 
 **Wozu dient es?** An Feiertagen ohne Buchungen schreibt das System automatisch eine Feiertagsgutschrift (laut Tagesplan) gut, anstatt einen Fehler zu melden. Ohne konfigurierte Feiertage würde das System jeden Montag nach einem Feiertag eine „Keine Buchungen"-Meldung erzeugen. Die Generierung nach Bundesland spart die manuelle Eingabe aller 9–13 Feiertage pro Jahr.
 
@@ -1430,7 +1455,7 @@ Ein Unternehmen möchte neben den Standardtypen einen „Sonderurlaub Umzug" anl
 ✅ Seite mit Jahresauswahl oben und zwei Ansichten: **Kalender** (📅) und **Liste** (≡), umschaltbar oben rechts.
 
 - **Kalenderansicht**: Volljahreskalender mit markierten Feiertagen. Klick auf einen Feiertag öffnet die Detailansicht. Klick auf ein freies Datum öffnet das Formular mit vorausgefülltem Datum.
-- **Listenansicht**: Tabelle mit Spalten: Datum (mit Wochentag), Name, Typ (Badge: Ganzer Tag/Halber Tag/Sonderfall), Geltungsbereich (Alle oder Abteilung).
+- **Listenansicht**: Tabelle mit Spalten: Datum (mit Wochentag), Name, Kategorie (Badge: Kategorie 1 (Voll) / Kategorie 2 (Halb) / Kategorie 3 (Individuell)), Geltungsbereich (Alle oder Abteilung).
 
 **Filter:** Jahresauswahl, Suchfeld
 
@@ -1450,11 +1475,14 @@ Ein Unternehmen möchte neben den Standardtypen einen „Sonderurlaub Umzug" anl
 - Heilige Drei Könige: BW, BY, ST
 - Fronleichnam: BW, BY, HE, NW, RP, SL
 - Allerheiligen: BW, BY, NW, RP, SL
+- Ostersonntag + Pfingstsonntag: nur BB
 - Reformationstag: BB, MV, SN, ST, TH, HB, HH, NI, SH
 - Mariä Himmelfahrt: BY, SL
 - Internationaler Frauentag: BE, MV
 - Buß- und Bettag: nur SN
 - Weltkindertag: nur TH
+
+**Wie berechnet Terp die Feiertage?** Das System verwendet keine externe API, sondern berechnet alle Daten selbst. Feste Feiertage (z. B. Neujahr, Tag der Deutschen Einheit) haben ein fixes Datum. Bewegliche Feiertage (Karfreitag, Ostermontag, Christi Himmelfahrt, Pfingstmontag, Fronleichnam) werden als Offset zum Ostersonntag berechnet, der mit dem Gauß/Meeus-Algorithmus bestimmt wird. Der Buß- und Bettag wird als letzter Mittwoch vor dem 23. November berechnet.
 
 ##### Feiertage aus einem anderen Jahr kopieren
 
@@ -1466,7 +1494,7 @@ Ein Unternehmen möchte neben den Standardtypen einen „Sonderurlaub Umzug" anl
 ##### Einzelnen Feiertag anlegen
 
 1. 📍 **„Neuer Feiertag"** (+)
-2. Ausfüllen: Datum (Kalender), Name (Pflicht), Kategorie (Ganzer Tag / Halber Tag / Sonderfall), „Gilt für alle" (Schalter — wenn aus: Abteilung wählen)
+2. Ausfüllen: Datum (Kalender), Name (Pflicht), Kategorie (Kategorie 1 (Voll) / Kategorie 2 (Halb) / Kategorie 3 (Individuell)), „Gilt für alle" (Schalter — wenn aus: Abteilung wählen)
 3. 📍 „Feiertag erstellen"
 
 #### Praxisbeispiel
@@ -1477,8 +1505,8 @@ Jahreseinrichtung für ein Unternehmen in Bayern:
    ✅ 13 Feiertage werden angelegt (inkl. Heilige Drei Könige, Fronleichnam, Mariä Himmelfahrt, Allerheiligen)
 
 2. Zusätzlich Heiligabend und Silvester als halbe Tage:
-   📍 **„Neuer Feiertag"** → Datum: `24.12.2026`, Name: `Heiligabend`, Kategorie: **Halber Tag** → 📍 „Feiertag erstellen"
-   📍 **„Neuer Feiertag"** → Datum: `31.12.2026`, Name: `Silvester`, Kategorie: **Halber Tag** → 📍 „Feiertag erstellen"
+   📍 **„Neuer Feiertag"** → Datum: `24.12.2026`, Name: `Heiligabend`, Kategorie: **Kategorie 2 (Halb)** → 📍 „Feiertag erstellen"
+   📍 **„Neuer Feiertag"** → Datum: `31.12.2026`, Name: `Silvester`, Kategorie: **Kategorie 2 (Halb)** → 📍 „Feiertag erstellen"
 
 3. Nächstes Jahr: 📍 **„Kopieren"** (📋) → Quelljahr: `2026`, Zieljahr: `2027`, „Heiligabend als halber Tag" ✅, „Silvester als halber Tag" ✅ → 📍 „Kopieren"
 
@@ -2279,9 +2307,32 @@ Beantragt  →  Genehmigt  →  (Storniert)
 | Aktion | Wer | Was passiert |
 |--------|-----|-------------|
 | **Beantragen** | Mitarbeiter | Status „Beantragt", Tag wird berechnet |
-| **Genehmigen** | Vorgesetzter | Status „Genehmigt", Urlaubskonto wird aktualisiert, Benachrichtigung an Mitarbeiter |
+| **Genehmigen** | Vorgesetzter | Status „Genehmigt", Tagesberechnung + Urlaubskonto werden aktualisiert (siehe unten), Benachrichtigung an Mitarbeiter |
 | **Ablehnen** | Vorgesetzter | Status „Abgelehnt" mit Begründung, Benachrichtigung an Mitarbeiter |
 | **Stornieren** | Vorgesetzter | Nur für genehmigte Abwesenheiten, Urlaubskonto wird zurückgerechnet |
+
+#### Was passiert nach der Genehmigung im System?
+
+Nach der Genehmigung durch den Vorgesetzten laufen automatisch zwei Berechnungen:
+
+**1. Tagesberechnung (Stundenkredit)**
+
+Für jeden genehmigten Abwesenheitstag wird die Tagesberechnung neu ausgeführt. Die gutgeschriebenen Stunden kommen **nicht** pauschal (z. B. immer 8h), sondern aus dem Tagesplan des Mitarbeiters — mit folgender Priorität:
+
+1. Wenn der Tagesplan `Stunden vom Mitarbeiterstamm` aktiviert hat → die individuellen Tagessollstunden des Mitarbeiters
+2. Wenn `Abwesenheitsstunden` im Tagesplan gesetzt und ein genehmigter Abwesenheitstag vorliegt → Abwesenheitsstunden werden verwendet
+3. Sonst → die regulären Sollstunden des Tagesplans (Standard: 480 Min = 8h)
+
+> **Beispiel:** Ein Mitarbeiter mit 20-Stunden-Woche hat Tagespläne mit 240 Min (4h). Wird ein Krankheitstag genehmigt, werden 4h gutgeschrieben — nicht 8h. Die Stunden richten sich immer nach dem konkreten Tagesplan, der über den Tarif-Rhythmus dem Mitarbeiter zugewiesen ist.
+
+**2. Urlaubskonto-Aktualisierung**
+
+Nur bei Abwesenheitstypen mit aktiviertem Schalter „Beeinflusst Urlaubssaldo" (`deductsVacation`):
+
+- Das System summiert alle genehmigten Abwesenheitstage dieses Typs im Kalenderjahr
+- Pro Tag: `Tagesplan.vacationDeduction × Abwesenheit.duration` (Standard: 1,0 × 1,0 = 1 Tag)
+- Die Summe wird als „Genommene Tage" im Urlaubskonto hinterlegt
+- Bei Stornierung wird die gleiche Berechnung erneut ausgeführt — das Konto korrigiert sich automatisch
 
 ### 7.4 Wie das Urlaubskonto berechnet wird
 

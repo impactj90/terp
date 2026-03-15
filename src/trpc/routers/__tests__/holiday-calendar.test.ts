@@ -66,12 +66,12 @@ describe("generateHolidays", () => {
   it("generates 13 holidays for Bayern (BY)", () => {
     const holidays = generateHolidays(2026, "BY")
     expect(holidays).toHaveLength(13)
-    // 9 nationwide + Heilige Drei Koenige + Fronleichnam + Mariae Himmelfahrt + Allerheiligen
+    // 9 nationwide + Heilige Drei Könige + Fronleichnam + Mariä Himmelfahrt + Allerheiligen
     const names = holidays.map((h) => h.name)
     expect(names).toContain("Neujahr")
-    expect(names).toContain("Heilige Drei Koenige")
+    expect(names).toContain("Heilige Drei Könige")
     expect(names).toContain("Fronleichnam")
-    expect(names).toContain("Mariae Himmelfahrt")
+    expect(names).toContain("Mariä Himmelfahrt")
     expect(names).toContain("Allerheiligen")
   })
 
@@ -82,16 +82,16 @@ describe("generateHolidays", () => {
     const names = holidays.map((h) => h.name)
     expect(names).toContain("Internationaler Frauentag")
     expect(names).not.toContain("Reformationstag")
-    expect(names).not.toContain("Heilige Drei Koenige")
+    expect(names).not.toContain("Heilige Drei Könige")
   })
 
   it("generates 11 holidays for Sachsen (SN)", () => {
     const holidays = generateHolidays(2026, "SN")
     expect(holidays).toHaveLength(11)
-    // 9 nationwide + Reformationstag + Buss- und Bettag
+    // 9 nationwide + Reformationstag + Buß- und Bettag
     const names = holidays.map((h) => h.name)
     expect(names).toContain("Reformationstag")
-    expect(names).toContain("Buss- und Bettag")
+    expect(names).toContain("Buß- und Bettag")
   })
 
   it("generates 12 holidays for Brandenburg (BB)", () => {
@@ -132,12 +132,12 @@ describe("generateHolidays", () => {
   })
 })
 
-// --- Repentance Day (Buss- und Bettag) ---
+// --- Repentance Day (Buß- und Bettag) ---
 
 describe("repentanceDay", () => {
   it("is a Wednesday before Nov 23 for 2026", () => {
     const holidays = generateHolidays(2026, "SN")
-    const bbt = holidays.find((h) => h.name === "Buss- und Bettag")
+    const bbt = holidays.find((h) => h.name === "Buß- und Bettag")
     expect(bbt).toBeDefined()
     expect(bbt!.date.getUTCDay()).toBe(3) // Wednesday
     expect(bbt!.date.getUTCMonth()).toBe(10) // November
@@ -148,7 +148,7 @@ describe("repentanceDay", () => {
 
   it("is a Wednesday before Nov 23 for 2025", () => {
     const holidays = generateHolidays(2025, "SN")
-    const bbt = holidays.find((h) => h.name === "Buss- und Bettag")
+    const bbt = holidays.find((h) => h.name === "Buß- und Bettag")
     expect(bbt).toBeDefined()
     expect(bbt!.date.getUTCDay()).toBe(3) // Wednesday
     expect(bbt!.date.getUTCDate()).toBe(19) // Nov 19, 2025
@@ -156,7 +156,7 @@ describe("repentanceDay", () => {
 
   it("is a Wednesday before Nov 23 for 2024", () => {
     const holidays = generateHolidays(2024, "SN")
-    const bbt = holidays.find((h) => h.name === "Buss- und Bettag")
+    const bbt = holidays.find((h) => h.name === "Buß- und Bettag")
     expect(bbt).toBeDefined()
     expect(bbt!.date.getUTCDay()).toBe(3) // Wednesday
     expect(bbt!.date.getUTCDate()).toBe(20) // Nov 20, 2024
