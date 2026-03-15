@@ -2086,6 +2086,12 @@
     "viewAbsenceTypeInfo": "View absence type information",
     "viewDetails": "View Details",
     "yes": "Yes",
+    "sectionCalculation": "Calculation",
+    "fieldCalculationRule": "Calculation Rule",
+    "fieldCalculationRuleDescription": "Optional calculation rule that automatically posts hours to an account when absences are approved",
+    "calculationRuleNone": "No calculation rule",
+    "calculationRulePlaceholder": "Select calculation rule",
+    "columnCalculationRule": "Calculation Rule",
     "tabAbsenceTypes": "Absence Types",
     "tabGroups": "Groups"
   },

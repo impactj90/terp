@@ -2086,6 +2086,12 @@
     "viewAbsenceTypeInfo": "Abwesenheitsart-Informationen anzeigen",
     "viewDetails": "Details anzeigen",
     "yes": "Ja",
+    "sectionCalculation": "Berechnung",
+    "fieldCalculationRule": "Berechnungsregel",
+    "fieldCalculationRuleDescription": "Optionale Berechnungsregel, die bei genehmigten Abwesenheiten automatisch Stunden auf ein Konto bucht",
+    "calculationRuleNone": "Keine Berechnungsregel",
+    "calculationRulePlaceholder": "Berechnungsregel auswählen",
+    "columnCalculationRule": "Berechnungsregel",
     "tabAbsenceTypes": "Abwesenheitsarten",
     "tabGroups": "Gruppen"
   },

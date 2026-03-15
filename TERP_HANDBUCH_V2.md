@@ -1394,6 +1394,7 @@ Im Tab „Abwesenheitsarten" sehen Sie eine Tabelle mit Spalten: Farbe (farbiger
    - **Kategorie** (Dropdown: Urlaub / Krankheit / Persönlicher Urlaub / Unbezahlter Urlaub)
    - **Beeinflusst Urlaubssaldo** (Schalter — ob vom Urlaubskonto abgezogen wird)
    - **Genehmigung erforderlich** (Schalter — wenn deaktiviert, werden Abwesenheiten dieses Typs bei Erstellung automatisch genehmigt, ohne Genehmigungsworkflow)
+   - **Berechnungsregel** (optional, Dropdown — verknüpft eine Berechnungsregel, die bei Genehmigung automatisch Stunden auf ein Konto bucht)
 3. 📍 „Erstellen"
 
 | Kategorie | Code-Präfix | Beispiele |
@@ -1427,6 +1428,15 @@ Nur wenn der Abwesenheitstyp den Schalter **„Beeinflusst Urlaubssaldo"** aktiv
 - Formel pro Tag: `Tagesplan.vacationDeduction × Abwesenheit.duration` (Standard: 1,0 × 1,0 = 1 ganzer Tag)
 - Die Summe wird in `VacationBalance.taken` geschrieben
 - Verfügbare Tage = Anspruch + Übertrag + Anpassungen − Genommene Tage
+
+**3. Kontoberechnung (über Berechnungsregel)**
+
+Nur wenn dem Abwesenheitstyp eine **Berechnungsregel** zugeordnet ist:
+
+- Das System liest die Berechnungsregel (Wert, Faktor, Zielkonto) aus
+- Formel: `Wert × Faktor` (wenn Wert = 0, wird die Tagessollzeit verwendet)
+- Das Ergebnis wird als Kontobuchung mit Quelle `absence_rule` gespeichert
+- Beispiel: Krankheit mit Regel (Wert=0, Faktor=1,00, Konto=KR) → bei 8h-Sollzeit werden 480 Min auf Konto KR gebucht
 
 #### Praxisbeispiel
 
@@ -1615,8 +1625,8 @@ Wenn der **Wert = 0** ist, wird automatisch die **Tagessollzeit** des Mitarbeite
 #### Neue Berechnungsregel anlegen
 
 1. 📍 **„Neue Regel"** (oben rechts)
-2. Ausfüllen: Code (Pflicht), Name (Pflicht), Wert (0 = Tagessollzeit verwenden), Faktor, Konto (Dropdown aus aktiven Konten)
-3. 📍 „Speichern"
+2. Ausfüllen: Code (Pflicht), Name (Pflicht), Wert in Minuten (0 = Tagessollzeit verwenden), Faktor, Konto (Dropdown aus aktiven Konten)
+3. 📍 „Erstellen"
 
 Wird kein Konto gewählt, ist die Regel zwar angelegt, schreibt aber keinen Wert in ein Konto. Regeln, die von Abwesenheitsarten verwendet werden, können nicht gelöscht werden.
 
@@ -1636,12 +1646,13 @@ Ein Unternehmen möchte, dass bei Krankheit die volle Tagessollzeit als „Krank
    - Konto: `KR (Krankheitsstunden)`
    - 📍 „Speichern"
 
-3. **Abwesenheitstyp verknüpfen** (über die API, da die Verknüpfung aktuell nicht in der Oberfläche der Abwesenheitsarten sichtbar ist):
-   Der Abwesenheitstyp „Krankheit" (K01) wird mit der Berechnungsregel `BRK` verknüpft.
+3. **Abwesenheitstyp verknüpfen:**
+   📍 Verwaltung → Abwesenheitsarten → Abwesenheitsart „Krankheit" (K01) bearbeiten → **Berechnungsregel** → `BRK (Krankheit Vollzeit-Gutschrift)` auswählen → 📍 „Änderungen speichern"
 
-4. Wenn nun ein Mitarbeiter mit 8 Stunden Tagessollzeit einen Tag krank gemeldet wird, berechnet das System: **0 (= 8 Std. Sollzeit) × 1,00 = 8 Stunden** → werden auf das Konto `KR` gebucht.
+4. **Automatische Anwendung bei Tagesberechnung:**
+   Wenn ein Mitarbeiter mit 8 Stunden Tagessollzeit einen Tag krank gemeldet wird, berechnet das System bei der nächsten Tagesberechnung: **0 (= 480 Min. Sollzeit) × 1,00 = 480 Minuten** → werden automatisch auf das Konto `KR` gebucht. Die Buchung erscheint in den Kontobuchungen (📍 Verwaltung → Konten → ⋮ → „Buchungen anzeigen") mit der Quelle „Berechnungsregel".
 
-💡 **Hinweis:** Berechnungsregeln sind nur dann notwendig, wenn Sie Abwesenheitsstunden in einem eigenen Konto erfassen möchten (z. B. für den Lohnexport oder für statistische Auswertungen). Für die reine Urlaubskontoführung (Tage abziehen) werden keine Berechnungsregeln benötigt — das erledigt der Abwesenheitstyp selbst über die Einstellung „Urlaub betroffen".
+💡 **Hinweis:** Berechnungsregeln werden automatisch bei jeder Tagesberechnung angewendet — sowohl bei der Genehmigung einer Abwesenheit als auch beim nächtlichen Neuberechnungslauf. Der berechnete Wert wird als `DailyAccountValue` mit Quelle `absence_rule` gespeichert. Für die reine Urlaubskontoführung (Tage abziehen) werden keine Berechnungsregeln benötigt — das erledigt der Abwesenheitstyp selbst über die Einstellung „Urlaub betroffen".
 
 ### 4.14 Kontaktarten
 

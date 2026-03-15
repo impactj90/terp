@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useCreateAbsenceType, useUpdateAbsenceType } from '@/hooks'
+import { useCreateAbsenceType, useUpdateAbsenceType, useCalculationRules } from '@/hooks'
 
 /** AbsenceType shape from tRPC output */
 interface AbsenceType {
@@ -66,6 +66,7 @@ interface FormState {
   color: string
   deductsVacation: boolean
   requiresApproval: boolean
+  calculationRuleId: string
   isActive: boolean
 }
 
@@ -77,6 +78,7 @@ const INITIAL_STATE: FormState = {
   color: '#808080',
   deductsVacation: false,
   requiresApproval: true,
+  calculationRuleId: '',
   isActive: true,
 }
 
@@ -103,6 +105,10 @@ export function AbsenceTypeFormSheet({
   const createMutation = useCreateAbsenceType()
   const updateMutation = useUpdateAbsenceType()
 
+  // Load active calculation rules
+  const { data: rulesData } = useCalculationRules({ isActive: true, enabled: open })
+  const rules = rulesData?.data ?? []
+
   // Reset form when opening/closing or absenceType changes
   React.useEffect(() => {
     if (open) {
@@ -115,6 +121,7 @@ export function AbsenceTypeFormSheet({
           color: absenceType.color || '#808080',
           deductsVacation: absenceType.deductsVacation ?? false,
           requiresApproval: absenceType.requiresApproval ?? true,
+          calculationRuleId: absenceType.calculationRuleId || '',
           isActive: absenceType.isActive ?? true,
         })
       } else {
@@ -150,6 +157,7 @@ export function AbsenceTypeFormSheet({
           color: form.color,
           deductsVacation: form.deductsVacation,
           requiresApproval: form.requiresApproval,
+          calculationRuleId: form.calculationRuleId || null,
           isActive: form.isActive,
         })
       } else {
@@ -161,6 +169,7 @@ export function AbsenceTypeFormSheet({
           color: form.color,
           deductsVacation: form.deductsVacation,
           requiresApproval: form.requiresApproval,
+          calculationRuleId: form.calculationRuleId || undefined,
           portion: 1,
           priority: 0,
           sortOrder: 0,
@@ -333,6 +342,34 @@ export function AbsenceTypeFormSheet({
                   }
                   disabled={isSubmitting}
                 />
+              </div>
+            </div>
+
+            {/* Calculation Rule */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-muted-foreground">{t('sectionCalculation')}</h3>
+              <div className="space-y-2">
+                <Label>{t('fieldCalculationRule')}</Label>
+                <Select
+                  value={form.calculationRuleId || '__none__'}
+                  onValueChange={(value) =>
+                    setForm((prev) => ({ ...prev, calculationRuleId: value === '__none__' ? '' : value }))
+                  }
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('calculationRulePlaceholder')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">{t('calculationRuleNone')}</SelectItem>
+                    {rules.map((rule) => (
+                      <SelectItem key={rule.id} value={rule.id}>
+                        {rule.code} - {rule.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">{t('fieldCalculationRuleDescription')}</p>
               </div>
             </div>
 
