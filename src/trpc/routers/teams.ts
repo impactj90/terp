@@ -22,6 +22,7 @@ import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
+import { isUserAdmin } from "@/lib/auth/permissions"
 import { handleServiceError } from "@/trpc/errors"
 import * as teamService from "@/lib/services/teams-service"
 
@@ -482,6 +483,100 @@ export const teamsRouter = createTRPCRouter({
         return {
           items: teams.map((t) => mapTeamToOutput(t)),
         }
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  /**
+   * teams.myTeams -- Returns teams visible to the current user.
+   *
+   * Admin users see all teams. Non-admin users see only teams where they
+   * are a member or the designated leader (leaderEmployeeId).
+   */
+  myTeams: tenantProcedure
+    .input(z.object({ isActive: z.boolean().optional() }).optional())
+    .output(z.object({ items: z.array(teamOutputSchema), total: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const tenantId = ctx.tenantId!
+      try {
+        if (isUserAdmin(ctx.user!)) {
+          const { teams, total } = await teamService.list(ctx.prisma, tenantId, {
+            isActive: input?.isActive,
+            pageSize: 100,
+          })
+          return { items: teams.map((t) => mapTeamToOutput(t)), total }
+        }
+
+        const employeeId = ctx.user!.employeeId
+        if (!employeeId) {
+          return { items: [], total: 0 }
+        }
+
+        const { teams, total } = await teamService.getMyTeams(
+          ctx.prisma,
+          tenantId,
+          employeeId,
+          input?.isActive
+        )
+        return { items: teams.map((t) => mapTeamToOutput(t)), total }
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  /**
+   * teams.myTeamById -- Returns a single team if the current user has access.
+   *
+   * Admin users can access any team. Non-admin users must be a member or
+   * the designated leader of the team.
+   */
+  myTeamById: tenantProcedure
+    .input(z.object({ id: z.string(), includeMembers: z.boolean().optional() }))
+    .query(async ({ ctx, input }) => {
+      const tenantId = ctx.tenantId!
+      try {
+        const team = await teamService.getById(
+          ctx.prisma,
+          tenantId,
+          input.id,
+          input.includeMembers
+        )
+
+        if (!isUserAdmin(ctx.user!)) {
+          const employeeId = ctx.user!.employeeId
+          if (!employeeId) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "No team access" })
+          }
+          const isMember =
+            "members" in team &&
+            Array.isArray(team.members) &&
+            team.members.some((m: { employeeId: string }) => m.employeeId === employeeId)
+          const isLeader = team.leaderEmployeeId === employeeId
+          if (!isMember && !isLeader) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "No team access" })
+          }
+        }
+
+        const result = mapTeamToOutput(team)
+        const members =
+          "members" in team && Array.isArray(team.members)
+            ? (
+                team.members as Array<{
+                  teamId: string
+                  employeeId: string
+                  role: string
+                  joinedAt: Date
+                  employee: {
+                    id: string
+                    firstName: string
+                    lastName: string
+                  } | null
+                }>
+              ).map(mapTeamMemberToOutput)
+            : undefined
+
+        return { ...result, members }
       } catch (err) {
         handleServiceError(err)
       }

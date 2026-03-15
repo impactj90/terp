@@ -34,6 +34,7 @@ export async function findMany(
     search?: string
     isActive?: boolean
     departmentId?: string
+    leaderEmployeeId?: string
   }
 ) {
   const page = params?.page ?? 1
@@ -47,6 +48,10 @@ export async function findMany(
 
   if (params?.departmentId !== undefined) {
     where.departmentId = params.departmentId
+  }
+
+  if (params?.leaderEmployeeId !== undefined) {
+    where.leaderEmployeeId = params.leaderEmployeeId
   }
 
   if (params?.search) {
@@ -209,10 +214,15 @@ export async function deleteMember(
 export async function findTeamsByEmployee(
   prisma: PrismaClient,
   tenantId: string,
-  employeeId: string
+  employeeId: string,
+  isActive?: boolean
 ) {
+  const teamWhere: Record<string, unknown> = { tenantId }
+  if (isActive !== undefined) {
+    teamWhere.isActive = isActive
+  }
   return prisma.teamMember.findMany({
-    where: { employeeId, team: { tenantId } },
+    where: { employeeId, team: teamWhere },
     include: {
       team: {
         include: teamRelationsInclude,

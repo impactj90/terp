@@ -455,11 +455,13 @@ Ein Handwerksbetrieb hat drei Bereiche: Werkstatt, Verwaltung und Vertrieb. Für
 
 ### 4.5 Teams
 
-**Was ist es?** Ein Team ist eine Arbeitsgruppe innerhalb einer Abteilung. Jedes Team hat einen Teamleiter und beliebig viele Mitglieder. Ein Mitarbeiter kann mehreren Teams angehören.
+**Was ist es?** Ein Team ist eine organisatorische Arbeitsgruppe innerhalb einer Abteilung. Jedes Team hat einen Teamleiter und beliebig viele Mitglieder. Ein Mitarbeiter kann mehreren Teams angehören.
 
-**Wozu dient es?** Teams ergänzen die Abteilungsstruktur um eine feinere Gliederung. Teamleiter können in der Genehmigungsansicht die Anträge ihrer Teammitglieder sehen. In der Teamübersicht (📍 Teamübersicht) sieht man auf einen Blick, wer anwesend ist und wer fehlt.
+**Wozu dient es?** Teams ergänzen die Abteilungsstruktur um eine feinere Gliederung. In der Teamübersicht (📍 Teamübersicht) sehen Teammitglieder und Teamleiter auf einen Blick, wer anwesend ist und wer fehlt. Auf der Genehmigungsseite kann nach Team gefiltert werden, um die Anträge der eigenen Teammitglieder gezielt zu sehen.
 
-⚠️ Berechtigung: „Teams verwalten"
+**Sichtbarkeit:** Nicht-Admin-Benutzer sehen in der Teamübersicht und im Team-Filter der Genehmigungsseite nur Teams, in denen sie **Mitglied** oder **Teamleiter** sind. Administratoren sehen alle Teams.
+
+⚠️ Berechtigung: „Teams verwalten" (für Teamverwaltung unter Administration). Die Teamübersicht (📍 Teamübersicht) und der Team-Filter auf der Genehmigungsseite benötigen keine besondere Berechtigung — dort werden automatisch nur die eigenen Teams angezeigt.
 
 📍 Seitenleiste → **Verwaltung** → **Teams**
 
@@ -487,9 +489,9 @@ Die Abteilung „Produktion" hat ein Montageteam:
 
 1. 📍 Verwaltung → Teams → **„Neues Team"** → Name: `Montageteam`, Abteilung: `Produktion`, Teamleiter: `Schmidt, Thomas` → 📍 „Team erstellen"
 2. 📍 ⋯ → **„Mitglieder verwalten"** → „Weber, Lisa" hinzufügen → „Fischer, Jan" hinzufügen
-3. ✅ In der Teamübersicht (📍 Teamübersicht) sieht der Teamleiter Schmidt den Anwesenheitsstatus von Weber und Fischer.
+3. ✅ In der Teamübersicht (📍 Teamübersicht) sieht der Teamleiter Schmidt den Anwesenheitsstatus von Weber und Fischer. Andere Benutzer, die nicht Mitglied dieses Teams sind, sehen es nicht in ihrer Teamübersicht.
 
-💡 **Hinweis:** Teams sind optional. Sie sind vor allem dann sinnvoll, wenn Teamleiter die Abwesenheiten und Anwesenheiten ihrer Gruppe sehen und genehmigen sollen. Ohne Teams funktioniert die Genehmigung weiterhin über die Abteilungszuordnung.
+💡 **Hinweis:** Teams sind organisatorische Gruppierungen und schränken **nicht** die Datensichtbarkeit ein. Ein Teamleiter sieht in der Teamübersicht nur die Teams, denen er zugeordnet ist — aber die generelle Datensichtbarkeit (welche Mitarbeiter in Listen, Exporten usw. erscheinen) wird über den **Datensichtbereich** (siehe Abschnitt 4.2) gesteuert. Teams und Datensichtbereich sind zwei unabhängige Systeme.
 
 ### 4.6 Arbeitszeitmodelle einrichten
 

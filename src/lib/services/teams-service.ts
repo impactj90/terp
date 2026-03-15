@@ -281,8 +281,45 @@ export async function removeMember(
 export async function getByEmployee(
   prisma: PrismaClient,
   tenantId: string,
-  employeeId: string
+  employeeId: string,
+  isActive?: boolean
 ) {
-  const memberships = await repo.findTeamsByEmployee(prisma, tenantId, employeeId)
+  const memberships = await repo.findTeamsByEmployee(prisma, tenantId, employeeId, isActive)
   return memberships.map((m) => m.team)
+}
+
+export async function getMyTeams(
+  prisma: PrismaClient,
+  tenantId: string,
+  employeeId: string,
+  isActive?: boolean
+) {
+  const [memberTeams, { teams: leaderTeams }] = await Promise.all([
+    repo.findTeamsByEmployee(prisma, tenantId, employeeId, isActive),
+    repo.findMany(prisma, tenantId, {
+      leaderEmployeeId: employeeId,
+      isActive,
+      pageSize: 100,
+    }),
+  ])
+
+  // Merge + deduplicate
+  const seen = new Set<string>()
+  const teams: typeof leaderTeams = []
+
+  for (const m of memberTeams) {
+    if (!seen.has(m.team.id)) {
+      seen.add(m.team.id)
+      teams.push(m.team)
+    }
+  }
+  for (const t of leaderTeams) {
+    if (!seen.has(t.id)) {
+      seen.add(t.id)
+      teams.push(t)
+    }
+  }
+
+  teams.sort((a, b) => a.name.localeCompare(b.name))
+  return { teams, total: teams.length }
 }

@@ -182,6 +182,8 @@ export {
 export {
   useTeams,
   useTeam,
+  useMyTeams,
+  useMyTeam,
   useTeamMembers,
   useCreateTeam,
   useUpdateTeam,

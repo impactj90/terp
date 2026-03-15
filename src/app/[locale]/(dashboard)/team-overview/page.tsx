@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { RefreshCw } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/providers/auth-provider'
-import { useTeams, useTeam, useTeamDailyValues } from '@/hooks'
+import { useMyTeams, useMyTeam, useTeamDailyValues } from '@/hooks'
 import { useTeamDayViews } from '@/hooks/use-team-day-views'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -40,10 +40,9 @@ export default function TeamOverviewPage() {
   const rangeToDate = formatDate(rangeTo)
   const attendanceDate = formatDate(rangeTo)
 
-  // Fetch active teams for selector
-  const { data: teamsData, isLoading: teamsLoading } = useTeams({
+  // Fetch active teams for selector (scoped to user's teams)
+  const { data: teamsData, isLoading: teamsLoading } = useMyTeams({
     isActive: true,
-    limit: 100,
   })
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const teams = (teamsData?.items ?? []) as any[]
@@ -55,8 +54,8 @@ export default function TeamOverviewPage() {
     }
   }, [teams, selectedTeamId])
 
-  // Fetch selected team with members
-  const { data: team, isLoading: teamLoading } = useTeam(
+  // Fetch selected team with members (with membership check)
+  const { data: team, isLoading: teamLoading } = useMyTeam(
     selectedTeamId ?? '',
     !!selectedTeamId
   )

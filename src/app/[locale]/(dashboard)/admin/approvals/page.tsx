@@ -11,7 +11,7 @@ import {
   useRejectAbsence,
   useAllDailyValues,
   useApproveDailyValue,
-  useTeams,
+  useMyTeams,
   useTeamMembers,
   type DailyValue,
 } from '@/hooks'
@@ -78,8 +78,7 @@ export default function ApprovalsPage() {
   const from = dateRange?.from ? formatDate(dateRange.from) : undefined
   const to = dateRange?.to ? formatDate(dateRange.to) : undefined
 
-  const { data: teamsData, isLoading: teamsLoading } = useTeams({
-    limit: 100,
+  const { data: teamsData, isLoading: teamsLoading } = useMyTeams({
     isActive: true,
     enabled,
   })
