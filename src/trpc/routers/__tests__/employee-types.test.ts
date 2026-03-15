@@ -65,6 +65,7 @@ describe("Employee Prisma types", () => {
       calculationStartDate: null,
       defaultOrderId: null,
       defaultActivityId: null,
+      locationId: null,
     }
     expect(employee.id).toBeDefined()
     expect(employee.personnelNumber).toBe("EMP-001")

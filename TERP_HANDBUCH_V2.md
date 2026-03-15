@@ -295,6 +295,10 @@ Bevor das System produktiv genutzt werden kann, müssen Grunddaten angelegt werd
 
 ### 4.1 Mandant einrichten
 
+**Was ist es?** Ein Mandant ist die oberste Organisationseinheit in Terp — typischerweise ein Unternehmen, eine Niederlassung oder ein Standort. Alle Daten (Mitarbeiter, Abteilungen, Tarife, Buchungen) gehören zu genau einem Mandanten und sind von anderen Mandanten vollständig getrennt.
+
+**Wozu dient es?** Dienstleister, Steuerberater oder Unternehmensgruppen können mehrere Firmen in einer einzigen Terp-Installation verwalten, ohne dass sich die Daten vermischen. Jeder Mandant hat eigene Einstellungen, eigene Mitarbeiter und eigene Exporte.
+
 ⚠️ Nur für Administratoren mit der Berechtigung „Mandanten verwalten"
 
 📍 Seitenleiste → **Administration** → **Mandanten**
@@ -318,7 +322,21 @@ Bevor das System produktiv genutzt werden kann, müssen Grunddaten angelegt werd
 - 📍 Tabelle → ⋯-Menü → **Details anzeigen** → Detailansicht öffnet sich rechts
 - 📍 ⋯-Menü → **Deaktivieren** → Bestätigungsdialog → Mandant wird deaktiviert
 
+#### Praxisbeispiel
+
+Ein Steuerberater betreut zwei Unternehmen — „Müller Bau GmbH" und „Weber Logistik KG":
+
+1. 📍 Administration → Mandanten → **„Neuer Mandant"** → Name: `Müller Bau GmbH`, Ort: `München`, Land: `Deutschland`, Urlaubsbasis: **Kalenderjahr** → 📍 „Erstellen"
+2. 📍 **„Neuer Mandant"** → Name: `Weber Logistik KG`, Ort: `Hamburg`, Land: `Deutschland`, Urlaubsbasis: **Eintrittsdatum** → 📍 „Erstellen"
+3. In der Kopfzeile erscheint der **Mandanten-Umschalter** — der Steuerberater kann zwischen beiden Unternehmen wechseln, ohne sich ab- und wieder anzumelden.
+
+💡 **Hinweis:** Die meisten Unternehmen benötigen nur einen Mandanten. Ein zweiter Mandant ist nur dann sinnvoll, wenn zwei vollständig getrennte Firmen oder Niederlassungen mit eigenen Mitarbeiterstämmen verwaltet werden sollen. Unterschiedliche Abteilungen oder Standorte innerhalb eines Unternehmens bilden Sie besser über Abteilungen und Standorte ab.
+
 ### 4.2 Abteilungen
+
+**Was ist es?** Eine Abteilung ist eine organisatorische Einheit innerhalb eines Mandanten — z. B. „Produktion", „Verwaltung", „Vertrieb". Abteilungen können hierarchisch verschachtelt werden (z. B. „Produktion" → „Montage" → „Endmontage").
+
+**Wozu dient es?** Abteilungen strukturieren die Mitarbeiterverwaltung: Manager sehen nur Mitarbeiter ihrer Abteilung (via Datensichtbereich), Berichte können nach Abteilung gefiltert werden, und Feiertage können auf einzelne Abteilungen beschränkt werden. Ohne Abteilungen fehlt die organisatorische Gliederung für alle Listen und Auswertungen.
 
 ⚠️ Berechtigung: „Abteilungen verwalten"
 
@@ -345,7 +363,23 @@ Bevor das System produktiv genutzt werden kann, müssen Grunddaten angelegt werd
 
 > **Hinweis:** Abteilungen mit Unterabteilungen oder zugewiesenen Mitarbeitern können nicht gelöscht werden.
 
+#### Praxisbeispiel
+
+Ein Produktionsbetrieb hat drei Ebenen:
+
+1. 📍 Verwaltung → Abteilungen → **„Neue Abteilung"** → Code: `PROD`, Name: `Produktion` → 📍 „Abteilung erstellen"
+2. 📍 Baumansicht → `PROD` → ⋯ → **„Unterabteilung anlegen"** → Code: `MONTAGE`, Name: `Montage`, Übergeordnete Abteilung: `Produktion` → 📍 „Abteilung erstellen"
+3. 📍 Baumansicht → `MONTAGE` → ⋯ → **„Unterabteilung anlegen"** → Code: `ENDMONT`, Name: `Endmontage` → 📍 „Abteilung erstellen"
+
+✅ In der Baumansicht sehen Sie: Produktion → Montage → Endmontage. Ein Teamleiter mit Datensichtbereich „Abteilung: Produktion" sieht automatisch alle Mitarbeiter der Produktion einschließlich Montage und Endmontage.
+
+💡 **Hinweis:** Abteilungen sind für die meisten Unternehmen ab ca. 10 Mitarbeitern empfehlenswert. Kleine Betriebe ohne Abteilungsstruktur können diesen Schritt überspringen — alle Mitarbeiter erscheinen dann in einer einzigen Liste.
+
 ### 4.3 Standorte
+
+**Was ist es?** Ein Standort ist ein physischer Arbeitsort mit Adresse und Zeitzone — z. B. ein Bürogebäude, ein Werk oder eine Filiale.
+
+**Wozu dient es?** Standorte dienen der organisatorischen Zuordnung von Mitarbeitern zu physischen Arbeitsorten. Mitarbeiterlisten und Berichte können nach Standort gefiltert werden.
 
 ⚠️ Berechtigung: „Standorte verwalten"
 
@@ -366,7 +400,18 @@ Bevor das System produktiv genutzt werden kann, müssen Grunddaten angelegt werd
 
 > 💡 **Hinweis:** Mitarbeiter können einem Standort zugewiesen werden. Die Zuweisung erfolgt beim Anlegen oder Bearbeiten des Mitarbeiters (Verwaltung → Mitarbeiter → Bearbeiten → Standort). In der Mitarbeiterliste und in Berichten kann nach Standort gefiltert werden.
 
+#### Praxisbeispiel
+
+Ein Unternehmen hat zwei Standorte in Deutschland und Österreich:
+
+1. 📍 Verwaltung → Standorte → **„Neuer Standort"** → Code: `MUC`, Name: `München`, Stadt: `München`, Land: `Deutschland`, Zeitzone: `Europe/Berlin` → 📍 „Erstellen"
+2. 📍 **„Neuer Standort"** → Code: `VIE`, Name: `Wien`, Stadt: `Wien`, Land: `Österreich`, Zeitzone: `Europe/Vienna` → 📍 „Erstellen"
+
 ### 4.4 Kostenstellen
+
+**Was ist es?** Eine Kostenstelle ist eine betriebswirtschaftliche Zuordnung, die festlegt, welchem Kostenbereich ein Mitarbeiter oder ein Auftrag zugerechnet wird. In der Buchhaltung dient sie dazu, Personalkosten und Auftragsstunden den richtigen Unternehmensbereichen zuzuordnen.
+
+**Wozu dient es?** Ohne Kostenstellen müssten Personalkosten im Lohnexport manuell aufgeteilt werden. Terp ordnet jedem Mitarbeiter und jedem Auftrag eine Kostenstelle zu, sodass der DATEV-Export automatisch die richtige Kostenstellennummer pro Zeile enthält. Der Steuerberater kann die Daten dann direkt importieren, ohne nachzuarbeiten.
 
 ⚠️ Berechtigung: „Abteilungen verwalten"
 
@@ -380,7 +425,39 @@ Bevor das System produktiv genutzt werden kann, müssen Grunddaten angelegt werd
 2. **Code** (Pflicht, Großbuchstaben) und **Name** (Pflicht) eingeben
 3. 📍 „Erstellen"
 
+#### Wo Kostenstellen außerdem erscheinen
+
+| Ort | Pfad | Was angezeigt wird |
+|-----|------|--------------------|
+| Mitarbeiter anlegen/bearbeiten | 📍 Verwaltung → Mitarbeiter → Neuer Mitarbeiter / Bearbeiten | Dropdown „Kostenstelle" im Abschnitt „Beschäftigung" |
+| Mitarbeiterdetails | 📍 Verwaltung → Mitarbeiter → Zeile anklicken | Anzeige im Abschnitt „Beschäftigungsdetails" |
+| Eigenes Profil | 📍 Benutzermenü → Profil | Anzeige in der Karte „Beschäftigungsdetails" |
+| Auftrag anlegen/bearbeiten | 📍 Verwaltung → Aufträge → Neuer Auftrag / Bearbeiten | Dropdown „Kostenstelle" im Formular |
+| Auftragsdetails | 📍 Verwaltung → Aufträge → Zeile anklicken → Tab „Details" | Anzeige im Abschnitt „Abrechnung" |
+| Lohnexport-Vorschau | 📍 Administration → Lohnexporte → ⋯ → Vorschau | Spalte „Kostenstelle" pro Mitarbeiter |
+| Berichte generieren | 📍 Administration → Berichte → Bericht erstellen | Multi-Auswahl-Filter „Kostenstellen" |
+| Audit-Protokoll | 📍 Administration → Audit-Protokoll | Entitätstyp „Kostenstelle" im Filter |
+
+#### Praxisbeispiel
+
+Ein Handwerksbetrieb hat drei Bereiche: Werkstatt, Verwaltung und Vertrieb. Für jeden Bereich wird eine Kostenstelle angelegt:
+
+1. 📍 Seitenleiste → Verwaltung → **Kostenstellen** → **„Neue Kostenstelle"**
+   - Code: `KST-100`, Name: `Werkstatt` → 📍 „Erstellen"
+   - Code: `KST-200`, Name: `Verwaltung` → 📍 „Erstellen"
+   - Code: `KST-300`, Name: `Vertrieb` → 📍 „Erstellen"
+
+2. 📍 Seitenleiste → Verwaltung → **Mitarbeiter** → Mitarbeiter „Meier" bearbeiten → Kostenstelle: `Werkstatt (KST-100)` → „Änderungen speichern"
+
+3. Am Monatsende zeigt der Lohnexport (📍 Administration → Lohnexporte → Vorschau) automatisch die Spalte `KST-100` neben Meiers Zeile. Der Steuerberater erkennt sofort, dass die Kosten der Werkstatt zuzurechnen sind.
+
+💡 **Hinweis:** Kostenstellen sind optional. Kleine Unternehmen mit nur einem Kostenbereich können diesen Schritt überspringen — der Lohnexport funktioniert auch ohne Kostenstellen-Zuordnung. Für die Buchhaltung wird die Zuordnung aber empfohlen, sobald mehr als ein Bereich existiert.
+
 ### 4.5 Teams
+
+**Was ist es?** Ein Team ist eine Arbeitsgruppe innerhalb einer Abteilung. Jedes Team hat einen Teamleiter und beliebig viele Mitglieder. Ein Mitarbeiter kann mehreren Teams angehören.
+
+**Wozu dient es?** Teams ergänzen die Abteilungsstruktur um eine feinere Gliederung. Teamleiter können in der Genehmigungsansicht die Anträge ihrer Teammitglieder sehen. In der Teamübersicht (📍 Teamübersicht) sieht man auf einen Blick, wer anwesend ist und wer fehlt.
 
 ⚠️ Berechtigung: „Teams verwalten"
 
@@ -404,7 +481,21 @@ Bevor das System produktiv genutzt werden kann, müssen Grunddaten angelegt werd
    - **Mitglieder hinzufügen** — Suchfeld + Liste verfügbarer Mitarbeiter mit „Hinzufügen"-Button
 3. Änderungen werden sofort gespeichert
 
+#### Praxisbeispiel
+
+Die Abteilung „Produktion" hat ein Montageteam:
+
+1. 📍 Verwaltung → Teams → **„Neues Team"** → Name: `Montageteam`, Abteilung: `Produktion`, Teamleiter: `Schmidt, Thomas` → 📍 „Team erstellen"
+2. 📍 ⋯ → **„Mitglieder verwalten"** → „Weber, Lisa" hinzufügen → „Fischer, Jan" hinzufügen
+3. ✅ In der Teamübersicht (📍 Teamübersicht) sieht der Teamleiter Schmidt den Anwesenheitsstatus von Weber und Fischer.
+
+💡 **Hinweis:** Teams sind optional. Sie sind vor allem dann sinnvoll, wenn Teamleiter die Abwesenheiten und Anwesenheiten ihrer Gruppe sehen und genehmigen sollen. Ohne Teams funktioniert die Genehmigung weiterhin über die Abteilungszuordnung.
+
 ### 4.6 Arbeitszeitmodelle einrichten
+
+**Was ist es?** Arbeitszeitmodelle definieren, wann und wie lange ein Mitarbeiter arbeiten soll. Sie bestehen aus drei Bausteinen: **Tagesplan** (Regeln für einen Tag), **Wochenplan** (7 Tagespläne zu einer Woche) und **Tarif** (das Gesamtmodell mit Rhythmus, Urlaub und Flexzeit).
+
+**Wozu dient es?** Ohne Arbeitszeitmodell kann das System keine Soll-/Ist-Vergleiche berechnen, keine Über- oder Fehlzeiten erkennen und keine Tageswerte erzeugen. Das Modell ist die Berechnungsgrundlage für die gesamte Zeiterfassung.
 
 Die Arbeitszeitmodelle bilden eine dreistufige Hierarchie:
 
@@ -664,6 +755,10 @@ Szenario: Ein Standard-Büromitarbeiter soll Montag bis Freitag, 08:00–16:30 U
 
 ### 4.7 Mitarbeiter anlegen
 
+**Was ist es?** Der Mitarbeiterstamm enthält alle Personen, für die Arbeitszeiten erfasst werden. Jeder Mitarbeiter hat Stammdaten (Name, E-Mail), Beschäftigungsdaten (Personalnummer, Abteilung, Tarif) und Vertragsdaten (Wochenstunden, Urlaubstage).
+
+**Wozu dient es?** Ohne Mitarbeiterdatensatz kann keine Zeiterfassung stattfinden. Der Mitarbeiterstamm ist die zentrale Stelle, an der alle Zuordnungen zusammenlaufen: Tarif (→ Arbeitszeitmodell), Abteilung, Kostenstelle, Standort und Beschäftigungsart.
+
 ⚠️ Berechtigung: „Mitarbeiter ansehen" (für die Liste) bzw. „Mitarbeiter anlegen" (für neue Einträge)
 
 📍 Seitenleiste → **Verwaltung** → **Mitarbeiter**
@@ -704,7 +799,17 @@ Szenario: Ein Standard-Büromitarbeiter soll Montag bis Freitag, 08:00–16:30 U
 3. 📍 In der erscheinenden Massenaktionsleiste → **„Tarif zuweisen"**
 4. Tarif aus dem Dropdown wählen → „Anwenden"
 
+#### Praxisbeispiel
+
+Ein vollständiges Praxisbeispiel zum Anlegen eines Mitarbeiters mit Tarifzuweisung finden Sie in Abschnitt **4.6.4 Schritt 4**.
+
+💡 **Hinweis:** Das Eintrittsdatum bestimmt den Start der Urlaubsberechnung und der Tarifzuweisung. Die PIN wird automatisch vergeben und dient zur Identifizierung am Terminal. Mitarbeiter ohne Tarif erhalten keine automatisch generierten Tagespläne — sie können nur manuell im Zeitnachweis bebucht werden.
+
 ### 4.8 Beschäftigungsarten
+
+**Was ist es?** Beschäftigungsarten klassifizieren die Anstellungsverhältnisse Ihrer Mitarbeiter — z. B. Vollzeit, Teilzeit, Minijob, Werkstudent oder Auszubildender. Jede Art hat Standard-Wochenstunden und kann mit einer Urlaubsberechnungsgruppe verknüpft werden.
+
+**Wozu dient es?** Die Beschäftigungsart bestimmt automatisch die Wochenstunden im Mitarbeiterstamm und beeinflusst die Urlaubsberechnung (z. B. Teilzeitanpassung). Außerdem dient sie als Filter in Listen und Berichten: Sie können z. B. alle Minijobber auf einen Blick sehen.
 
 ⚠️ Berechtigung: „Mitarbeiter ansehen"
 
@@ -718,7 +823,28 @@ Szenario: Ein Standard-Büromitarbeiter soll Montag bis Freitag, 08:00–16:30 U
 2. Ausfüllen: Code (Pflicht, z. B. `VZ`), Name (Pflicht, z. B. „Vollzeit"), Beschreibung, Standard-Wochenstunden (Zahl), Urlaubsberechnungsgruppe (Dropdown)
 3. 📍 „Erstellen"
 
+Die Beschäftigungsart wird beim Anlegen oder Bearbeiten eines Mitarbeiters zugewiesen:
+📍 Verwaltung → Mitarbeiter → Neuer Mitarbeiter / Bearbeiten → Dropdown „Beschäftigungsart"
+
+#### Praxisbeispiel
+
+Ein Unternehmen mit drei Anstellungsformen:
+
+| Code | Name | Wochenstunden | Urlaubsberechnungsgruppe |
+|------|------|---------------|--------------------------|
+| `VZ` | Vollzeit | 40 | Standard |
+| `TZ` | Teilzeit | 20 | Standard |
+| `MJ` | Minijob | 10 | *(keine)* |
+
+Wenn ein Teilzeit-Mitarbeiter angelegt wird und die Beschäftigungsart `TZ` gewählt wird, übernimmt das System automatisch 20 Wochenstunden. Die Urlaubsberechnung passt den Anspruch anteilig an (z. B. 30 Tage × 20/40 = 15 Tage).
+
+💡 **Hinweis:** Beschäftigungsarten sind optional, aber empfehlenswert, sobald Sie unterschiedliche Anstellungsformen haben. Die Standard-Wochenstunden können im Mitarbeiterstamm individuell überschrieben werden.
+
 ### 4.9 Buchungstypen
+
+**Was ist es?** Buchungstypen definieren die Bedeutung jeder Stempelbuchung. Jede Buchung hat eine **Richtung** (Eingang oder Ausgang) und gehört zu einer **Kategorie** (Arbeit, Pause oder Dienstgang). Die Richtung bestimmt, ob die Buchung als „Kommen" oder „Gehen" interpretiert wird.
+
+**Wozu dient es?** Das System benötigt eindeutige Buchungstypen, um Arbeitspaare bilden zu können: Ein Kommen-Buchung (Eingang) + eine Gehen-Buchung (Ausgang) = ein Arbeitszeitraum. Ohne korrekt zugeordnete Typen könnte das System die Arbeitszeit nicht berechnen. Eigene Buchungstypen ermöglichen es, spezielle Stempelarten abzubilden (z. B. „Homeoffice Beginn", „Außendienst Ende").
 
 ⚠️ Berechtigung: „Buchungstypen verwalten"
 
@@ -736,9 +862,51 @@ Im Tab „Buchungstypen" sehen Sie eine Tabelle mit Spalten: Richtung (farbiges 
 2. Ausfüllen: Code (Pflicht, Großbuchstaben), Richtung (Pflicht: Ein/Aus — bei Bearbeitung gesperrt), Name (Pflicht), Beschreibung
 3. 📍 „Speichern"
 
-> **Systemtypen** (COME, GO, BREAK_START, BREAK_END) können nicht bearbeitet oder gelöscht werden. Typen mit aktiver Nutzung können ebenfalls nicht gelöscht werden.
+##### Systemtypen (vorinstalliert)
+
+Terp liefert sechs Systemtypen mit, die nicht bearbeitet oder gelöscht werden können:
+
+| Code | Name | Richtung | Kategorie | Bedeutung |
+|------|------|----------|-----------|-----------|
+| `A1` | Kommen | Eingang | Arbeit | Arbeitsbeginn (Einstempeln) |
+| `A2` | Gehen | Ausgang | Arbeit | Arbeitsende (Ausstempeln) |
+| `P1` | Pause Beginn | Ausgang | Pause | Pausenanfang |
+| `P2` | Pause Ende | Eingang | Pause | Pausenende |
+| `D1` | Dienstgang Beginn | Ausgang | Dienstgang | Beginn eines Dienstgangs |
+| `D2` | Dienstgang Ende | Eingang | Dienstgang | Ende eines Dienstgangs |
+
+> **Systemtypen** können nicht bearbeitet oder gelöscht werden. Typen mit aktiver Nutzung können ebenfalls nicht gelöscht werden.
+
+#### Wo Buchungstypen außerdem erscheinen
+
+| Ort | Pfad | Wie sie verwendet werden |
+|-----|------|--------------------------|
+| Stempeluhr | 📍 Stempeluhr | Die Buttons „Einstempeln" / „Ausstempeln" / „Pause" verwenden automatisch die Codes A1, A2, P1, P2, D1, D2 — der Benutzer wählt keinen Typ manuell |
+| Zeitnachweis — Buchung hinzufügen | 📍 Zeitnachweis → Tagesansicht → „Buchung hinzufügen" | Dropdown mit allen aktiven Buchungstypen zur Auswahl |
+| Zeitnachweis — Buchungsliste | 📍 Zeitnachweis → Tagesansicht | Jede Buchung zeigt den Typnamen; Eingang/Ausgang-Paare werden farblich gruppiert |
+| Dashboard | 📍 Dashboard | Status („Eingestempelt" / „Ausgestempelt") wird anhand der Richtung der letzten Buchung ermittelt |
+| Teamübersicht | 📍 Teamübersicht | Anwesenheitsstatus pro Mitarbeiter basiert auf der Richtung der letzten Arbeitsbuchung |
+| Auswertungen — Tab „Buchungen" | 📍 Verwaltung → Auswertungen → Tab „Buchungen" | Filterbare Tabelle mit Buchungstyp-Dropdown und Richtungsfilter |
+| Terminal-Import | 📍 Administration → Terminal-Buchungen → Import | Buchungscode in den Importdaten wird dem Buchungstyp zugeordnet |
+
+#### Praxisbeispiel
+
+Ein Unternehmen möchte Homeoffice-Zeiten separat erfassen:
+
+1. 📍 Verwaltung → **Buchungstypen** → **„Neuer Buchungstyp"**
+   - Code: `HO1`, Richtung: **Eingang**, Name: `Homeoffice Beginn` → 📍 „Speichern"
+2. 📍 **„Neuer Buchungstyp"**
+   - Code: `HO2`, Richtung: **Ausgang**, Name: `Homeoffice Ende` → 📍 „Speichern"
+
+3. Der Mitarbeiter kann nun im Zeitnachweis (📍 Zeitnachweis → Tagesansicht → „Buchung hinzufügen") die Typen `Homeoffice Beginn` und `Homeoffice Ende` wählen. Das System bildet daraus ein Arbeitspaar und berechnet die Arbeitszeit wie gewohnt.
+
+💡 **Hinweis:** Für die meisten Unternehmen reichen die sechs Systemtypen aus. Eigene Buchungstypen sind nur dann nötig, wenn Sie in Auswertungen und Berichten zwischen verschiedenen Arbeitsarten unterscheiden möchten (z. B. Homeoffice vs. Büro). Die Stempeluhr verwendet immer die Systemtypen A1/A2/P1/P2.
 
 ### 4.10 Abwesenheitstypen
+
+**Was ist es?** Abwesenheitstypen klassifizieren die verschiedenen Gründe, warum ein Mitarbeiter nicht arbeitet — z. B. Jahresurlaub, Krankheit, Sonderurlaub, Fortbildung. Jeder Typ hat eine Kategorie, eine Farbe (für den Kalender) und Regeln (ob Urlaub abgezogen und ob eine Genehmigung erforderlich ist).
+
+**Wozu dient es?** Das System muss wissen, wie ein Abwesenheitstag zu behandeln ist: Wird er vom Urlaubskonto abgezogen? Muss der Vorgesetzte genehmigen? Wie wird er im Lohnexport ausgewiesen? Ohne korrekt konfigurierte Typen könnte das System Urlaub und Krankheit nicht unterscheiden.
 
 ⚠️ Berechtigung: „Abwesenheitsarten verwalten"
 
@@ -769,7 +937,25 @@ Im Tab „Abwesenheitsarten" sehen Sie eine Tabelle mit Spalten: Farbe (farbiger
 | Krankheit | K | K01 (Krankheit), K02 (Kind krank) |
 | Sonderfall | S | SB (Berufsschule), S01 (Fortbildung) |
 
+#### Praxisbeispiel
+
+Ein Unternehmen möchte neben den Standardtypen einen „Sonderurlaub Umzug" anlegen:
+
+1. 📍 Verwaltung → Abwesenheitsarten → Tab „Abwesenheitsarten" → **„Neuer Abwesenheitstyp"**
+   - Code: `U03`, Farbe: `#8B5CF6` (lila), Name: `Sonderurlaub Umzug`, Kategorie: **Urlaub**
+   - Urlaub betroffen: ❌ (wird nicht vom Urlaubskonto abgezogen — es ist ein Sondertag)
+   - Genehmigung erforderlich: ✅
+   - 📍 „Abwesenheitstyp erstellen"
+
+2. Wenn ein Mitarbeiter einen Umzugstag beantragt (📍 Abwesenheiten → „Abwesenheit beantragen" → Typ `Sonderurlaub Umzug`), muss der Vorgesetzte genehmigen. Das Urlaubskonto bleibt unberührt.
+
+💡 **Hinweis:** Der Code-Präfix (U, K oder S) bestimmt die Zuordnung im System. Verwenden Sie `U` für Urlaubsarten und unbezahlte Abwesenheiten, `K` für Krankheit und `S` für Sonderfälle. Systemtypen (mit 🔒-Symbol) können nicht bearbeitet oder gelöscht werden — blenden Sie sie mit dem Schalter „Systemtypen anzeigen" ein.
+
 ### 4.11 Feiertage
+
+**Was ist es?** Feiertage sind kalenderfeste Tage, an denen nicht gearbeitet wird. Terp kennt drei Kategorien: Ganzer Tag, Halber Tag und Sonderfall. Feiertage können für alle Mitarbeiter oder nur für bestimmte Abteilungen gelten.
+
+**Wozu dient es?** An Feiertagen ohne Buchungen schreibt das System automatisch eine Feiertagsgutschrift (laut Tagesplan) gut, anstatt einen Fehler zu melden. Ohne konfigurierte Feiertage würde das System jeden Montag nach einem Feiertag eine „Keine Buchungen"-Meldung erzeugen. Die Generierung nach Bundesland spart die manuelle Eingabe aller 9–13 Feiertage pro Jahr.
 
 ⚠️ Berechtigung: „Feiertage verwalten"
 
@@ -817,7 +1003,32 @@ Im Tab „Abwesenheitsarten" sehen Sie eine Tabelle mit Spalten: Farbe (farbiger
 2. Ausfüllen: Datum (Kalender), Name (Pflicht), Kategorie (Ganzer Tag / Halber Tag / Sonderfall), „Gilt für alle" (Schalter — wenn aus: Abteilung wählen)
 3. 📍 „Feiertag erstellen"
 
+#### Praxisbeispiel
+
+Jahreseinrichtung für ein Unternehmen in Bayern:
+
+1. 📍 Verwaltung → Feiertage → **„Generieren"** (🪄) → Jahr: `2026`, Bundesland: **Bayern** → 📍 „Generieren"
+   ✅ 13 Feiertage werden angelegt (inkl. Heilige Drei Könige, Fronleichnam, Mariä Himmelfahrt, Allerheiligen)
+
+2. Zusätzlich Heiligabend und Silvester als halbe Tage:
+   📍 **„Neuer Feiertag"** → Datum: `24.12.2026`, Name: `Heiligabend`, Kategorie: **Halber Tag** → 📍 „Feiertag erstellen"
+   📍 **„Neuer Feiertag"** → Datum: `31.12.2026`, Name: `Silvester`, Kategorie: **Halber Tag** → 📍 „Feiertag erstellen"
+
+3. Nächstes Jahr: 📍 **„Kopieren"** (📋) → Quelljahr: `2026`, Zieljahr: `2027`, „Heiligabend als halber Tag" ✅, „Silvester als halber Tag" ✅ → 📍 „Kopieren"
+
+💡 **Hinweis:** Feiertage müssen jedes Jahr neu angelegt oder kopiert werden, da sich bewegliche Feiertage (Ostern, Pfingsten, Himmelfahrt) verschieben. Nutzen Sie die Generierungsfunktion — sie berechnet alle beweglichen Feiertage korrekt. Vergessen Sie nicht, ggf. auch das Folgejahr zu generieren, damit die Schichtplan-Generierung Feiertage korrekt berücksichtigt.
+
 ### 4.12 Konten
+
+**Was ist es?** Konten sind Sammelstellen für Zeitwerte. Jedes Konto speichert einen bestimmten Stundenwert pro Mitarbeiter und Monat — z. B. Gleitzeitstunden, Überstunden, Nachtzuschläge oder Feiertagszuschläge. Konten gibt es in drei Typen:
+
+| Kontotyp | Symbol | Bedeutung | Beispiel |
+|----------|--------|-----------|---------|
+| **Bonus** | 🏆 | Zusatzvergütung für bestimmte Arbeitszeiten | Nachtzuschlag, Feiertagszuschlag, Sonntagszuschlag |
+| **Erfassung** | 📊 | Aufzeichnung von Zeitwerten ohne Vergütungseffekt | Reisezeit, Bereitschaftszeit |
+| **Saldo** | ⚖️ | Laufendes Guthaben, das sich monatlich fortschreibt | Gleitzeitkonto, Überstundenkonto |
+
+**Wozu dient es?** Konten verbinden Zeiterfassung mit Lohnabrechnung. Die im Lohnexport enthaltenen Spalten werden aus den Konten gespeist: Ist ein Konto als „Lohnrelevant" markiert und einer Exportschnittstelle zugeordnet, erscheint sein Wert als eigene Spalte in der CSV-Datei. Ohne Konten würde der Lohnexport nur Soll- und Ist-Stunden enthalten — Zuschläge und Sonderstunden gingen verloren.
 
 ⚠️ Berechtigung: „Konten verwalten"
 
@@ -837,7 +1048,44 @@ Tabellenspalten: Typ-Symbol, Code, Name, Typ (Badge), Einheit (Minuten/Stunden/T
 
 **Wichtige Systemkonten:** FLEX (Gleitzeitkonto), OT (Überstundenkonto), VAC (Urlaubskonto) — diese können nicht gelöscht werden.
 
+#### Wo Konten außerdem erscheinen
+
+| Ort | Pfad | Was angezeigt wird |
+|-----|------|--------------------|
+| Exportschnittstelle — Konten zuordnen | 📍 Administration → Exportschnittstellen → ⋯ → „Konten verwalten" | Duale-Liste: verfügbare und zugeordnete Konten mit Sortierung |
+| Exportschnittstelle — Detailansicht | 📍 Administration → Exportschnittstellen → ⋯ → Details | Tabelle der zugeordneten Konten (Code, Name, Lohncode) |
+| Lohnexport — Vorschau | 📍 Administration → Lohnexporte → ⋯ → Vorschau | Jedes zugeordnete Konto wird als eigene Spalte angezeigt (Spaltenüberschrift = Konto-Code) |
+| Lohnexport — Erstellen | 📍 Administration → Lohnexporte → Export erstellen → Erweiterte Parameter | Optionaler Filter: nur bestimmte Konten-IDs einschließen |
+| Monatsauswertung | 📍 Monatsauswertung | Karte „Flexzeitsaldo" zeigt den FLEX-Kontostand am Monatsende |
+| Jahresübersicht | 📍 Jahresübersicht | Karte „Flexzeitsaldo" und Diagramm mit monatlichem Verlauf aus dem FLEX-Konto |
+| Berichte generieren | 📍 Administration → Berichte → Bericht erstellen | Berichtstyp „Kontostände" unter „Zeitanalyse" |
+| Berechnungsregeln | 📍 Verwaltung → Berechnungsregeln | Jede Regel verweist auf ein Zielkonto, in das der berechnete Wert geschrieben wird |
+
+#### Praxisbeispiel
+
+Ein Unternehmen möchte Nachtzuschläge und Sonntagszuschläge im Lohnexport ausweisen:
+
+1. 📍 Verwaltung → **Konten** → **„Neues Konto"**
+   - Code: `NZ`, Name: `Nachtzuschlag`, Kontotyp: **Bonus**, Einheit: **Stunden**, Lohnrelevant: ✓, Lohncode: `1015` → 📍 „Speichern"
+
+2. 📍 **„Neues Konto"**
+   - Code: `SZ`, Name: `Sonntagszuschlag`, Kontotyp: **Bonus**, Einheit: **Stunden**, Lohnrelevant: ✓, Lohncode: `1020` → 📍 „Speichern"
+
+3. 📍 Administration → **Exportschnittstellen** → Schnittstelle öffnen → ⋯ → **„Konten verwalten"** → `NZ` und `SZ` von links nach rechts verschieben → 📍 „Speichern"
+
+4. Beim nächsten Lohnexport (📍 Administration → Lohnexporte → Vorschau) erscheinen die Spalten `NZ` und `SZ` mit den Zuschlagsstunden pro Mitarbeiter.
+
+💡 **Hinweis:** Konten müssen als **„Lohnrelevant"** markiert und einer **Exportschnittstelle zugeordnet** sein, damit sie im Lohnexport erscheinen. Die Reihenfolge in der Exportschnittstelle bestimmt die Spaltenreihenfolge in der CSV-Datei. Der **Lohncode** wird an den Steuerberater übermittelt und muss mit dem verwendeten Abrechnungsprogramm (z. B. DATEV) abgestimmt sein.
+
 ### 4.13 Berechnungsregeln
+
+**Was ist es?** Eine Berechnungsregel definiert, wie viele Stunden bei einer Abwesenheit auf ein bestimmtes Konto gutgeschrieben werden. Die Formel lautet:
+
+> **Kontowert = Wert × Faktor**
+
+Wenn der **Wert = 0** ist, wird automatisch die **Tagessollzeit** des Mitarbeiters verwendet (z. B. 8 Stunden bei einem 8-Stunden-Plan). Der **Faktor** ist ein Multiplikator (z. B. 1,0 = volle Gutschrift, 0,5 = halbe Gutschrift).
+
+**Wozu dient es?** Berechnungsregeln sorgen dafür, dass bei Krankheit, Urlaub oder Sonderabwesenheiten automatisch der richtige Stundenwert auf das richtige Konto gebucht wird. Ohne Berechnungsregeln müsste ein Administrator jeden Abwesenheitstag manuell mit einem Stundenwert versehen.
 
 ⚠️ Berechtigung: „Abwesenheitsarten verwalten"
 
@@ -845,13 +1093,42 @@ Tabellenspalten: Typ-Symbol, Code, Name, Typ (Badge), Einheit (Minuten/Stunden/T
 
 ✅ Tabelle mit Spalten: Code, Name, Wert, Faktor, Konto, Status.
 
-Berechnungsregeln bestimmen, wie bei einer Abwesenheit Stunden auf ein Konto gutgeschrieben werden (Formel: Kontowert = Wert × Faktor).
+#### Neue Berechnungsregel anlegen
 
 1. 📍 **„Neue Regel"** (oben rechts)
-2. Ausfüllen: Code (Pflicht), Name (Pflicht), Wert (0 = Tagessollzeit verwenden), Faktor, Konto (Dropdown)
+2. Ausfüllen: Code (Pflicht), Name (Pflicht), Wert (0 = Tagessollzeit verwenden), Faktor, Konto (Dropdown aus aktiven Konten)
 3. 📍 „Speichern"
 
+Wird kein Konto gewählt, ist die Regel zwar angelegt, schreibt aber keinen Wert in ein Konto. Regeln, die von Abwesenheitsarten verwendet werden, können nicht gelöscht werden.
+
+#### Praxisbeispiel
+
+Ein Unternehmen möchte, dass bei Krankheit die volle Tagessollzeit als „Krankheitsstunden" auf ein eigenes Konto gebucht wird:
+
+1. **Konto anlegen** (falls nicht vorhanden):
+   📍 Verwaltung → Konten → „Neues Konto"
+   - Code: `KR`, Name: `Krankheitsstunden`, Kontotyp: **Erfassung**, Einheit: **Stunden**, Lohnrelevant: ✓ → 📍 „Speichern"
+
+2. **Berechnungsregel anlegen:**
+   📍 Verwaltung → **Berechnungsregeln** → **„Neue Regel"**
+   - Code: `BRK`, Name: `Krankheit Vollzeit-Gutschrift`
+   - Wert: `0` (= Tagessollzeit verwenden, z. B. 8 Stunden)
+   - Faktor: `1,00` (= volle Gutschrift)
+   - Konto: `KR (Krankheitsstunden)`
+   - 📍 „Speichern"
+
+3. **Abwesenheitstyp verknüpfen** (über die API, da die Verknüpfung aktuell nicht in der Oberfläche der Abwesenheitsarten sichtbar ist):
+   Der Abwesenheitstyp „Krankheit" (K01) wird mit der Berechnungsregel `BRK` verknüpft.
+
+4. Wenn nun ein Mitarbeiter mit 8 Stunden Tagessollzeit einen Tag krank gemeldet wird, berechnet das System: **0 (= 8 Std. Sollzeit) × 1,00 = 8 Stunden** → werden auf das Konto `KR` gebucht.
+
+💡 **Hinweis:** Berechnungsregeln sind nur dann notwendig, wenn Sie Abwesenheitsstunden in einem eigenen Konto erfassen möchten (z. B. für den Lohnexport oder für statistische Auswertungen). Für die reine Urlaubskontoführung (Tage abziehen) werden keine Berechnungsregeln benötigt — das erledigt der Abwesenheitstyp selbst über die Einstellung „Urlaub betroffen".
+
 ### 4.14 Kontaktarten
+
+**Was ist es?** Kontaktarten definieren die Kategorien, in denen Kontaktinformationen für Mitarbeiter gespeichert werden können (z. B. E-Mail, Telefon, Notfallkontakt). Jede Art hat einen **Datentyp** (Text, E-Mail, Telefon oder URL) und kann **Unterarten** enthalten (z. B. Art „Telefon" → Unterarten „Privat", „Geschäftlich", „Mobil").
+
+**Wozu dient es?** Kontaktarten strukturieren die Kontaktdaten Ihrer Mitarbeiter einheitlich. Statt eines einzigen Freitextfelds kann für jeden Mitarbeiter eine beliebige Anzahl typgerechter Kontakteinträge gespeichert werden — mit Validierung (z. B. E-Mail-Format) und Kennzeichnung des Hauptkontakts.
 
 ⚠️ Berechtigung: „Kontaktverwaltung"
 
@@ -859,15 +1136,54 @@ Berechnungsregeln bestimmen, wie bei einer Abwesenheit Stunden auf ein Konto gut
 
 ✅ Zweigeteilte Ansicht: Links **Kontaktarten**, rechts **Kontaktunterarten** (erscheinen nach Auswahl einer Art).
 
-1. 📍 Linke Spalte → **„Neuer Typ"** → Code, Name, Datentyp (Text/E-Mail/Telefon/URL), Beschreibung, Sortierung eingeben
+#### Kontaktarten und Unterarten anlegen
+
+1. 📍 Linke Spalte → **„Neuer Typ"** → Code, Name, Datentyp (Text/E-Mail/Telefon/URL), Beschreibung, Sortierung eingeben → 📍 „Speichern"
 2. 📍 Art anklicken → rechte Spalte zeigt deren Unterarten
-3. 📍 Rechte Spalte → **„Neue Unterart"** → Code, Bezeichnung, Sortierung eingeben
+3. 📍 Rechte Spalte → **„Neue Unterart"** → Code, Bezeichnung, Sortierung eingeben → 📍 „Speichern"
+
+Der Datentyp kann nach dem Anlegen nicht mehr geändert werden.
+
+#### Wo Kontakte außerdem erscheinen
+
+| Ort | Pfad | Was angezeigt wird |
+|-----|------|--------------------|
+| Eigenes Profil | 📍 Benutzermenü → Profil → Karte „Kontakte" | Liste der eigenen Kontakteinträge mit Typ-Badge, Wert und optionalem Label. Buttons zum Hinzufügen und Löschen von Kontakten |
+| Mitarbeiterdetails (Admin) | 📍 Verwaltung → Mitarbeiter → Zeile anklicken → Detailansicht | Abschnitt „Kontakte" zeigt alle Einträge (nur Leseansicht, kein Bearbeiten/Löschen) |
+
+**Kontakt auf dem eigenen Profil hinzufügen:**
+
+1. 📍 Benutzermenü → **Profil** → Karte „Kontakte" → **„+"** (Hinzufügen)
+2. Im Formular (Einblendung von rechts):
+   - **Typ** wählen (E-Mail / Telefon / Mobil / Notfallkontakt)
+   - **Wert** eingeben (z. B. E-Mail-Adresse oder Telefonnummer)
+   - **Bezeichnung** (optional, z. B. „Privat")
+   - **Hauptkontakt** (Checkbox)
+3. 📍 „Erstellen"
+
+#### Praxisbeispiel
+
+Ein Unternehmen möchte Notfallkontakte strukturiert erfassen:
+
+1. 📍 Verwaltung → **Kontaktarten** → Linke Spalte → **„Neuer Typ"**
+   - Code: `NOTFALL`, Name: `Notfallkontakt`, Datentyp: **Telefon** → 📍 „Speichern"
+2. 📍 `NOTFALL` anklicken → Rechte Spalte → **„Neue Unterart"**
+   - Code: `PARTNER`, Bezeichnung: `Lebenspartner` → 📍 „Speichern"
+   - Code: `ELTERN`, Bezeichnung: `Eltern` → 📍 „Speichern"
+
+3. Ein Mitarbeiter öffnet sein Profil (📍 Benutzermenü → Profil), klickt auf „+" in der Kontaktkarte, wählt Typ „Notfallkontakt", gibt die Telefonnummer ein und setzt „Hauptkontakt" als Checkbox.
+
+💡 **Hinweis:** Die Konfigurationsseite unter Verwaltung → Kontaktarten definiert die verfügbaren Kategorien. Die tatsächlichen Kontakteinträge der Mitarbeiter werden auf der Profilseite gepflegt. Kontaktarten sind optional — das System funktioniert auch ohne sie, aber Mitarbeiter können dann keine strukturierten Kontakte auf ihrem Profil hinterlegen.
 
 ---
 
 ## 5. Zeiterfassung — Täglicher Betrieb
 
 ### 5.1 Dashboard — Die Startseite
+
+**Was ist es?** Das Dashboard ist die Startseite nach der Anmeldung. Es zeigt auf einen Blick den aktuellen Arbeitstag: Zeitplan, Wochenstunden, Urlaubsrest, Flexzeitsaldo, offene Fehler und die letzten Aktivitäten.
+
+**Wozu dient es?** Mitarbeiter sehen sofort, ob sie eingestempelt sind, wie viele Stunden sie diese Woche gearbeitet haben und ob es offene Fehler gibt. Die Schnellaktionen ermöglichen direktes Ein-/Ausstempeln, ohne die Stempeluhr-Seite öffnen zu müssen.
 
 📍 Seitenleiste → **Dashboard** (oder Logo „T" anklicken)
 
@@ -878,7 +1194,17 @@ Berechnungsregeln bestimmen, wie bei einer Abwesenheit Stunden auf ein Konto gut
 - **Offene Aktionen**: Tage der letzten 14 Tage mit Fehlern oder offenem Status (klickbar → öffnet Zeitnachweis)
 - **Letzte Aktivitäten**: Die letzten 5 Buchungen mit Symbol, Uhrzeit und relativem Datum
 
+#### Praxisbeispiel
+
+Ein Mitarbeiter meldet sich morgens an und sieht auf dem Dashboard: Karte „Heutiger Zeitplan" zeigt `Büro (08:00–16:30)`, Karte „Wochenstunden" zeigt `24:00 / 40:00`, Karte „Urlaubsrest" zeigt `18 Tage`, Karte „Flexzeitsaldo" zeigt `+3:30`. Unter „Offene Aktionen" erscheint ein roter Eintrag für gestern — er hat vergessen auszustempeln. Ein Klick darauf öffnet den Zeitnachweis für gestern, wo er die fehlende Buchung nachtragen kann.
+
+💡 **Hinweis:** Die Karte „Offene Aktionen" zeigt nur die letzten 14 Tage. Ältere Fehler finden Sie im Korrekturassistenten (📍 Verwaltung → Korrekturassistent). Ein Klick auf einen fehlerhaften Tag in den offenen Aktionen springt direkt zum Zeitnachweis dieses Tages.
+
 ### 5.2 Stempeluhr — Ein- und Ausstempeln
+
+**Was ist es?** Die Stempeluhr ist die zentrale Seite für die tägliche Zeiterfassung. Sie zeigt eine große Digitaluhr, den aktuellen Status (eingestempelt / ausgestempelt / in Pause) und einen laufenden Timer seit dem letzten Einstempeln.
+
+**Wozu dient es?** Mitarbeiter erfassen hier ihre Arbeitszeit mit einem einzigen Klick. Das System erkennt automatisch die richtige Aktion (Einstempeln → Pause → Ausstempeln) anhand des aktuellen Status und erzeugt die passenden Buchungen mit den Systemtypen (A1/A2/P1/P2).
 
 📍 Seitenleiste → **Stempeluhr**
 
@@ -896,7 +1222,21 @@ Berechnungsregeln bestimmen, wie bei einer Abwesenheit Stunden auf ein Konto gut
 
 ⚠️ Administratoren sehen oben ein Dropdown zur Mitarbeiterauswahl, um für andere Mitarbeiter zu stempeln.
 
+#### Praxisbeispiel
+
+Ein typischer Arbeitstag:
+1. 08:02 — Mitarbeiter klickt **„Einstempeln"** → Status wechselt zu „Eingestempelt", Timer startet
+2. 12:00 — Klick auf **„Pause"** → Status wechselt zu „In Pause", Timer pausiert
+3. 12:30 — Klick auf **„Pause Ende"** → Timer läuft weiter
+4. 16:35 — Klick auf **„Ausstempeln"** → Tagesstatistiken zeigen: Brutto 08:33, Pause 00:30, Netto 08:03, Soll 08:00, Überstunden +00:03
+
+💡 **Hinweis:** Die Stempeluhr kann auch über die Schnellaktion auf dem Dashboard erreicht werden. Auf Mobilgeräten ist sie über die Schnellnavigation am unteren Bildschirmrand mit einem Klick erreichbar. Die Buttons „Pause" und „Dienstgang" erscheinen nur im Zustand „Eingestempelt".
+
 ### 5.3 Zeitnachweis — Buchungen und Tageswerte
+
+**Was ist es?** Der Zeitnachweis ist die detaillierte Ansicht aller Buchungen und berechneten Tageswerte eines Mitarbeiters. Er zeigt drei Ebenen: Tag (einzelne Buchungen), Woche (Tagesübersicht) und Monat (Monatsübersicht).
+
+**Wozu dient es?** Der Zeitnachweis ist die zentrale Stelle für die Überprüfung und Korrektur von Arbeitszeiten. Hier werden fehlende Buchungen nachgetragen, fehlerhafte Zeiten korrigiert und Tageswerte geprüft. Für Manager ist er das wichtigste Werkzeug neben dem Korrekturassistenten.
 
 📍 Seitenleiste → **Zeitnachweis**
 
@@ -944,6 +1284,16 @@ Berechnungsregeln bestimmen, wie bei einer Abwesenheit Stunden auf ein Konto gut
 📍 Zeitnachweis → Tab **„Woche"** oder **„Monat"**
 
 ✅ Tabelle mit Spalten: Tag, Soll, Brutto, Pausen, Netto, Saldo, Status. Am Ende eine Summenzeile. Klick auf eine Zeile springt zur Tagesansicht dieses Datums.
+
+#### Praxisbeispiel
+
+Ein Mitarbeiter hat vergessen, sich am Montag auszustempeln:
+
+1. 📍 Zeitnachweis → Tab „Tag" → Datum: Montag wählen → ✅ Nur eine Buchung sichtbar: Kommen 08:00. Status: „Fehler" (rot).
+2. 📍 **„Buchung hinzufügen"** → Buchungstyp: `Gehen`, Uhrzeit: `16:30`, Notizen: `Nachträglich ergänzt` → 📍 „Erstellen"
+3. ✅ Der Tag wird automatisch neu berechnet: Netto 08:00, Status wechselt zu „OK" (grün).
+
+💡 **Hinweis:** Der Zeitnachweis zeigt standardmäßig die eigenen Daten. Administratoren können oben im Dropdown einen anderen Mitarbeiter wählen (bis 250 Mitarbeiter). Buchungen können nur bearbeitet werden, wenn der Monat noch nicht abgeschlossen ist. In der Wochenansicht erkennen Sie fehlerhafte Tage an roten Status-Badges.
 
 ### 5.4 Wie ein Arbeitstag berechnet wird
 
@@ -1031,6 +1381,10 @@ Das Gleitzeitkonto sammelt die täglichen Plus- und Minusstunden über den Monat
 
 ### 6.1 Schichten definieren
 
+**Was ist es?** Eine Schicht ist ein benanntes Arbeitszeitpaket mit einer Farbe und einem optionalen Tagesplan. Schichten werden auf der Planungstafel als farbige Chips dargestellt und Mitarbeitern per Drag & Drop zugewiesen.
+
+**Wozu dient es?** Schichten ermöglichen es, Arbeitszeitpakete visuell zu planen, ohne jedes Mal den Tagesplan manuell zuweisen zu müssen. Der Schichtplaner (Planungstafel) zeigt auf einen Blick, wer wann arbeitet. Schichten können auch ohne Tagesplan existieren — dann dienen sie nur als visuelle Markierung.
+
 📍 Tab **„Schichten"**
 
 ✅ Tabelle mit Spalten: Farbe (farbiges Quadrat), Code, Name, Tagesplan (Verknüpft / –), Qualifikation, Status.
@@ -1048,7 +1402,25 @@ Das Gleitzeitkonto sammelt die täglichen Plus- und Minusstunden über den Monat
    - **Tagesplan** (Dropdown — optional, verbindet die Schicht mit einem Arbeitszeitplan)
 3. 📍 „Erstellen"
 
+#### Praxisbeispiel
+
+Drei Schichten für einen Produktionsbetrieb anlegen:
+
+| Code | Name | Farbe | Tagesplan |
+|------|------|-------|-----------|
+| `FS` | Frühschicht | Grün (#22C55E) | FS (Frühschicht) |
+| `SS` | Spätschicht | Orange (#F97316) | SS (Spätschicht) |
+| `NS` | Nachtschicht | Blau (#3B82F6) | NS (Nachtschicht) |
+
+Ein vollständiges Praxisbeispiel mit Schichtdefinition, Tarif-Konfiguration und Planungstafel finden Sie in Abschnitt **6.6**.
+
+💡 **Hinweis:** Die Verknüpfung mit einem Tagesplan ist optional. Ohne Tagesplan dient die Schicht nur als visuelle Markierung in der Planungstafel. Mit Tagesplan wird beim Zuweisen der Schicht automatisch der verknüpfte Arbeitszeitplan für den Mitarbeiter an diesem Tag aktiviert.
+
 ### 6.2 Planungstafel — Schichten zuweisen
+
+**Was ist es?** Die Planungstafel ist eine kalenderartige Ansicht, in der Zeilen Mitarbeiter und Spalten Tage darstellen. Farbige Schicht-Chips werden per Drag & Drop oder Klick in die Zellen gezogen.
+
+**Wozu dient es?** Die Planungstafel gibt dem Schichtplaner einen visuellen Überblick über den gesamten Einsatzplan. Im Vergleich zur automatischen Tarif-Rotation (Abschnitt 6.3) erlaubt sie manuelle Eingriffe — z. B. für Krankheitsvertretungen, Urlaubsabdeckung oder kurzfristige Planänderungen.
 
 📍 Tab **„Planungstafel"**
 
@@ -1078,6 +1450,16 @@ Das Gleitzeitkonto sammelt die täglichen Plus- und Minusstunden über den Monat
 1. 📍 **„Massenweise zuweisen"** in der Werkzeugleiste
 2. Mitarbeiter, Schicht und Datumsbereich wählen
 3. 📍 „Zuweisen"
+
+#### Praxisbeispiel
+
+Ein Mitarbeiter soll in KW 3 ausnahmsweise Frühschicht statt Spätschicht arbeiten:
+
+1. 📍 Planungstafel → Ansichtsmodus: **Woche** → zur KW 3 navigieren
+2. 📍 Zelle für den Mitarbeiter am gewünschten Tag anklicken → Schicht auf `FS` (Frühschicht) ändern → 📍 „Speichern"
+3. ✅ Die Zelle zeigt `FS` (grün) statt `SS` (orange). Alle anderen Tage bleiben unverändert.
+
+💡 **Hinweis:** Manuelle Änderungen in der Planungstafel werden bei der automatischen Schichtplan-Generierung (Sonntag 1:00 Uhr) **nicht überschrieben**. Nutzen Sie den Ansichtsmodus „Monat" für einen besseren Überblick, und den Abteilungsfilter, um nur relevante Mitarbeiter zu sehen.
 
 ### 6.3 Rollierende Schichtrhythmen
 
@@ -1352,6 +1734,10 @@ Wenn ein Nachtschicht-Mitarbeiter am 15.01.2026 um 22:00 einstempelt und am 16.0
 
 ### 7.1 Abwesenheit beantragen
 
+**Was ist es?** Die Abwesenheitsseite zeigt das eigene Urlaubskonto, alle bisherigen Anträge und einen Kalenderüberblick. Von hier aus werden neue Abwesenheitsanträge gestellt — egal ob Urlaub, Krankheit oder Sonderurlaub.
+
+**Wozu dient es?** Mitarbeiter beantragen hier ihre Abwesenheiten digital statt auf Papier. Das System prüft automatisch Wochenenden, Feiertage und bereits belegte Tage, berechnet die betroffenen Arbeitstage und zeigt eine Urlaubsvorschau mit dem neuen Kontostand.
+
 📍 Seitenleiste → **Abwesenheiten**
 
 ✅ Sie sehen eine zweigeteilte Seite: Links das Urlaubskonto und Ihre Anträge, rechts einen Kalenderüberblick.
@@ -1376,7 +1762,23 @@ Wenn ein Nachtschicht-Mitarbeiter am 15.01.2026 um 22:00 einstempelt und am 16.0
 - ✏️ **Bearbeiten** (nur bei Status „Beantragt") — Dauer und Notizen ändern
 - 🚫 **Stornieren** — Bestätigungsdialog → Antrag wird storniert
 
+#### Praxisbeispiel
+
+Ein Mitarbeiter möchte zwei Wochen Urlaub beantragen (23.03.–03.04.2026):
+
+1. 📍 Abwesenheiten → **„Abwesenheit beantragen"** (+)
+2. Typ: `Jahresurlaub` → Datumsbereich: `23.03.2026 – 03.04.2026` wählen
+3. ✅ Das System berechnet: 10 Arbeitstage (Wochenenden werden übersprungen). Die Urlaubsvorschau zeigt: 18 Tage verfügbar → 10 Tage beantragt → 8 Tage verbleibend.
+4. 📍 „Antrag absenden"
+5. ✅ Der Antrag erscheint links mit Status „Beantragt" (gelb). Der Vorgesetzte wird benachrichtigt.
+
+💡 **Hinweis:** Anträge können nur im Status „Beantragt" bearbeitet werden. Einmal genehmigte Anträge können nur noch storniert (nicht bearbeitet) werden. Wochenenden und Feiertage innerhalb des gewählten Datumsbereichs werden automatisch übersprungen und nicht als Abwesenheitstage gezählt.
+
 ### 7.2 Urlaub — Jahresübersicht des Urlaubskontos
+
+**Was ist es?** Die Urlaubsseite zeigt die Jahresübersicht des eigenen Urlaubskontos mit einem großen Saldo, einem Fortschrittsbalken und einer detaillierten Aufstellung (Anspruch, Übertrag, Genommen, Geplant, Verfügbar).
+
+**Wozu dient es?** Mitarbeiter sehen hier jederzeit, wie viele Urlaubstage ihnen noch zustehen. Die Buchungshistorie zeigt alle Urlaubstransaktionen chronologisch. Die Ansicht kann jahresweise gewechselt werden, um auch vergangene Jahre einzusehen.
 
 📍 Seitenleiste → **Urlaub**
 
@@ -1390,6 +1792,14 @@ Wenn ein Nachtschicht-Mitarbeiter am 15.01.2026 um 22:00 einstempelt und am 16.0
 **Rechts oben — Kommende Urlaube:** Genehmigte und beantragte Urlaube (nur aktuelles Jahr)
 
 **Rechts unten — Buchungshistorie:** Tabelle mit Spalten: Datum, Typ, Dauer, Status (Badge), Notizen
+
+#### Praxisbeispiel
+
+Ein Mitarbeiter prüft seinen Urlaubsstand für 2026:
+
+📍 Urlaub → Jahr: **2026** → ✅ Saldoübersicht zeigt: Anspruch 30, Übertrag 3, Genommen 15, Geplant 5, **Verfügbar: 13 Tage**. Der Fortschrittsbalken ist zur Hälfte grün (genommen) und zu einem Sechstel gelb (geplant).
+
+💡 **Hinweis:** Die Seite zeigt immer den Stand des gewählten Jahres. Vergangene Jahre können über die Jahresnavigation (←/→) eingesehen werden. Die Buchungshistorie listet jeden einzelnen Urlaubstag chronologisch auf.
 
 ### 7.3 Der Genehmigungsworkflow
 
@@ -1424,6 +1834,10 @@ Die Anspruchsberechnung berücksichtigt:
 
 ### 7.5 Urlaubskonfiguration
 
+**Was ist es?** Die Urlaubskonfiguration enthält alle Regeln, die bestimmen, wie Urlaubsansprüche berechnet, begrenzt und übertragen werden. Sie ist in sechs Bereiche gegliedert: Sonderberechnungen, Berechnungsgruppen, Kappungsregeln, Kappungsregelgruppen, Ausnahmen und Vorschauen.
+
+**Wozu dient es?** Hier werden komplexe Urlaubsregeln abgebildet: Zusatztage nach Alter oder Betriebszugehörigkeit, Kappung des Übertrags am Jahresende und individuelle Ausnahmen für einzelne Mitarbeiter. Ohne diese Konfiguration würde jeder Mitarbeiter den gleichen Grundanspruch erhalten.
+
 ⚠️ Berechtigung: „Abwesenheitsarten verwalten"
 
 📍 Seitenleiste → **Verwaltung** → **Urlaubskonfiguration**
@@ -1453,7 +1867,15 @@ Die Anspruchsberechnung berücksichtigt:
 3. 📍 „Berechnen"
 4. ✅ Verfügbare Tage, Gekappter Übertrag, Verfallene Tage, angewandte Regeln mit Ausnahmen
 
+Ein vollständiges Praxisbeispiel zur Urlaubskonfiguration (Kappungsregeln, Altersbonus, Jahreswechsel) finden Sie in Abschnitt **7.8**.
+
+💡 **Hinweis:** Die Urlaubskonfiguration ist nur für Unternehmen relevant, die komplexe Regeln abbilden müssen (Zusatztage nach Alter, Kappung des Übertrags). Für einfache Setups (alle Mitarbeiter gleicher Anspruch, voller Übertrag) reicht die Grundkonfiguration im Tarif aus.
+
 ### 7.6 Urlaubskonten verwalten
+
+**Was ist es?** Die Urlaubskontenverwaltung zeigt eine Tabelle aller Mitarbeiter mit deren Urlaubssalden für ein gewähltes Jahr. Hier werden Urlaubskonten initialisiert und individuelle Anpassungen vorgenommen.
+
+**Wozu dient es?** Am Jahresbeginn müssen die Urlaubskonten für das neue Jahr angelegt werden. Die Initialisierung berechnet automatisch den Anspruch jedes Mitarbeiters (inkl. Anteilsberechnung, Altersbonus, Teilzeitfaktor). Manuelle Anpassungen — z. B. für Sonderurlaub oder nachträgliche Korrekturen — werden ebenfalls hier vorgenommen.
 
 ⚠️ Berechtigung: „Abwesenheiten verwalten"
 
@@ -1476,6 +1898,18 @@ Die Anspruchsberechnung berücksichtigt:
 2. Felder: Basisanspruch, Zusatzanspruch, Übertrag, Manuelle Anpassung (jeweils in halben Tagen)
 3. ✅ Gesamtvorschau wird live berechnet (blau hervorgehoben)
 4. 📍 „Speichern"
+
+#### Praxisbeispiel
+
+Jahresinitialisierung für 2027:
+
+1. 📍 Verwaltung → Urlaubskonten → **„Jahr initialisieren"** → Jahr: `2027`, Übertrag: ✅ → 📍 „Initialisieren"
+2. ✅ Das System berechnet für jeden Mitarbeiter den Anspruch 2027 (inkl. Anteilsberechnung, Boni, Teilzeitfaktor) und den Übertrag aus 2026 (unter Berücksichtigung der Kappungsregeln).
+3. 📍 Mitarbeiter „Becker, Anna" → ⋯ → **„Saldo bearbeiten"** → Manuelle Anpassung: `+2` (Sonderurlaub Betriebsjubiläum) → 📍 „Speichern"
+
+Ein vollständiges Praxisbeispiel finden Sie in Abschnitt **7.8**.
+
+💡 **Hinweis:** Die Jahresinitialisierung muss nur einmal pro Jahr durchgeführt werden. Sie kann beliebig oft wiederholt werden — bestehende Konten werden aktualisiert, nicht dupliziert. Manuelle Anpassungen bleiben beim erneuten Initialisieren erhalten.
 
 ### 7.7 Was am Jahresende passiert
 
@@ -1597,6 +2031,10 @@ Alternativ die Vorschaufunktion nutzen:
 
 ### 8.1 Genehmigungen
 
+**Was ist es?** Die Genehmigungsseite zeigt alle ausstehenden Abwesenheitsanträge und Zeitnachweise, die auf eine Genehmigung durch den Vorgesetzten warten. Sie ist in zwei Tabs aufgeteilt: Zeitnachweise und Abwesenheiten.
+
+**Wozu dient es?** Manager bearbeiten hier die Anträge ihrer Mitarbeiter — genehmigen, ablehnen oder massenweise freigeben. Die Badges an den Tabs zeigen sofort, wie viele offene Anträge warten.
+
 ⚠️ Berechtigung: „Abwesenheiten genehmigen" bzw. „Zeiten genehmigen"
 
 📍 Seitenleiste → **Verwaltung** → **Genehmigungen**
@@ -1621,7 +2059,21 @@ Beide Tabs haben die gleiche Filterleiste: Team (Dropdown), Datumsbereich, Statu
 4. Einzeln genehmigen: 📍 Grünen ✓-Button klicken
 5. Massenweise: Checkboxen → „Ausgewählte genehmigen"
 
+#### Praxisbeispiel
+
+Am Monatsende genehmigt ein Manager alle offenen Urlaubsanträge:
+
+1. 📍 Verwaltung → Genehmigungen → Tab **„Abwesenheiten"** → Status: `Beantragt`
+2. ✅ 5 offene Anträge sichtbar. Checkbox **„Alle auswählen"** aktivieren.
+3. 📍 **„Ausgewählte genehmigen"** → Alle 5 Anträge wechseln sofort auf Status „Genehmigt" (grün).
+
+💡 **Hinweis:** Genehmigungen können nach Team gefiltert werden — so sieht ein Teamleiter nur die Anträge seiner Teammitglieder. Die Massengenehmigungs-Funktion (Checkboxen + „Ausgewählte genehmigen") spart Zeit am Monatsende, wenn viele Zeitnachweise gleichzeitig freigegeben werden müssen.
+
 ### 8.2 Korrekturassistent
+
+**Was ist es?** Der Korrekturassistent ist ein Diagnose-Werkzeug, das automatisch Fehler und Hinweise in den Tageswerten aller Mitarbeiter erkennt — z. B. fehlende Buchungen, Kernzeitverstöße oder Pausenregelverletzungen. Er zeigt eine filterbare Liste aller problematischen Tage.
+
+**Wozu dient es?** Vor dem Monatsabschluss muss sichergestellt werden, dass keine fehlerhaften Tage existieren. Der Korrekturassistent zeigt auf einen Blick, welche Mitarbeiter an welchen Tagen welche Probleme haben. Ohne dieses Werkzeug müsste der Manager den Zeitnachweis jedes Mitarbeiters einzeln durchgehen.
 
 ⚠️ Berechtigung: „Korrekturen verwalten" (`corrections.manage`)
 
@@ -1711,6 +2163,12 @@ Der Korrekturassistent zeigt Fehler an, aber die **eigentliche Korrektur** erfol
 - **„Auf Standard zurücksetzen"** — löscht den benutzerdefinierten Text
 
 ⚠️ Das Deaktivieren einer Meldung unterdrückt nur die **Anzeige** im Korrekturassistenten — der zugrunde liegende Fehler in den Tageswerten bleibt bestehen.
+
+#### Praxisbeispiel
+
+Der vollständige Ablauf „Fehler finden → korrigieren → Monat abschließen" ist in Abschnitt **8.3.1** als Praxisbeispiel beschrieben.
+
+💡 **Hinweis:** Prüfen Sie den Korrekturassistenten **vor** jedem Monatsabschluss. Nur **Fehler** (rot) müssen behoben werden — **Hinweise** (grau) sind informativ und erfordern keine Korrektur. Fehlercodes und ihre Texte können im Tab „Meldungen" unternehmensspezifisch angepasst werden.
 
 ### 8.3 Monatsauswertung und Monatsabschluss
 
@@ -1831,6 +2289,10 @@ Zusätzlich werden die Werte aller zugeordneten **Konten** als weitere Spalten a
 
 ### 8.4 Monatswerte (Massenbearbeitung)
 
+**Was ist es?** Die Monatswerte-Seite zeigt eine Tabelle aller Mitarbeiter mit deren aggregierten Monatswerten (Soll, Netto, Überstunden, Saldo, Abwesenheitstage) und dem Monatsabschlussstatus. Von hier aus können Monate massenweise abgeschlossen oder wieder geöffnet werden.
+
+**Wozu dient es?** Am Monatsende schließt der Manager hier alle Mitarbeitermonate auf einmal ab. Die Massenfunktionen (alle auswählen → abschließen) sparen gegenüber dem einzelnen Abschluss in der Monatsauswertung erheblich Zeit. Außerdem können hier Neuberechnungen für den gesamten Monat ausgelöst werden.
+
 ⚠️ Berechtigung: „Berichte ansehen"
 
 📍 Seitenleiste → **Verwaltung** → **Monatswerte**
@@ -1847,7 +2309,17 @@ Zusätzlich werden die Werte aller zugeordneten **Konten** als weitere Spalten a
 - **„Ausgewählte öffnen"** (🔓) — öffnet alle markierten Monate
 - **„Neu berechnen"** (↻) — berechnet den gesamten Monat für alle Mitarbeiter neu
 
+#### Praxisbeispiel
+
+Der vollständige Ablauf „Monatswerte prüfen → Korrekturassistent → Massenabschluss → Lohnexport" ist in Abschnitt **8.3.1** als Praxisbeispiel beschrieben.
+
+💡 **Hinweis:** Schließen Sie Monate erst ab, wenn alle Fehler im Korrekturassistenten behoben sind. Nach dem Abschluss können keine Buchungen mehr geändert werden. Falls doch eine Korrektur nötig ist: Einzelnen Mitarbeiter über ⋯ → „Wieder öffnen" → korrigieren → erneut abschließen.
+
 ### 8.5 Lohnexporte (DATEV/CSV)
+
+**Was ist es?** Lohnexporte generieren CSV-Dateien mit allen relevanten Arbeitszeitdaten eines Monats — aufgeschlüsselt nach Mitarbeiter, mit Soll-/Ist-Stunden, Überstunden, Urlaubs- und Krankheitstagen sowie den Werten aller zugeordneten Konten.
+
+**Wozu dient es?** Der Lohnexport ist die Brücke zwischen Zeiterfassung und Lohnabrechnung. Die generierte CSV-Datei wird an den Steuerberater oder das Lohnbüro weitergeleitet und dort in DATEV, Sage oder ein anderes Abrechnungsprogramm importiert. Damit entfällt die manuelle Erfassung aller Stunden in der Lohnabrechnung.
 
 ⚠️ Berechtigung: „Lohnexport ansehen" bzw. „Lohnexport verwalten"
 
@@ -1877,7 +2349,17 @@ Zusätzlich werden die Werte aller zugeordneten **Konten** als weitere Spalten a
 
 **CSV-Format:** Semikolon-getrennt, mit Spaltenüberschrift. Alle Zahlenwerte mit zwei Dezimalstellen. Importierbar in DATEV und andere Lohnabrechnungssysteme.
 
+#### Praxisbeispiel
+
+Der vollständige Ablauf zur Erstellung eines DATEV-Exports (inkl. Vorschau, Herunterladen und CSV-Format) ist in Abschnitt **8.3.1 Schritt 5–6** beschrieben.
+
+💡 **Hinweis:** Exporte können nur für vergangene Monate erstellt werden — der aktuelle und zukünftige Monate sind gesperrt. Die erweiterten Parameter (aufklappbar im Formular) ermöglichen es, den Export auf bestimmte Mitarbeiter, Abteilungen oder Konten einzuschränken. Für den regulären Monatslauf ist das nicht nötig — lassen Sie die Parameter leer, um alle Mitarbeiter einzuschließen.
+
 ### 8.6 Exportschnittstellen konfigurieren
+
+**Was ist es?** Eine Exportschnittstelle definiert das Spalten-Mapping zwischen Terp und einem externen Abrechnungsprogramm (z. B. DATEV). Sie legt fest, welche Konten (Zuschläge, Sonderstunden) in welcher Reihenfolge im Lohnexport erscheinen. Zusätzlich speichert sie technische Informationen wie Mandantennummer, Exportpfad und Dateiname.
+
+**Wozu dient es?** Verschiedene Steuerberater und Abrechnungsprogramme erwarten unterschiedliche CSV-Formate. Statt bei jedem Export die Spalten manuell anzupassen, konfigurieren Sie einmal eine Schnittstelle mit dem richtigen Konten-Mapping. Danach wählen Sie die Schnittstelle beim Erstellen des Lohnexports aus dem Dropdown — fertig.
 
 ⚠️ Berechtigung: „Lohnexport verwalten"
 
@@ -1888,7 +2370,13 @@ Zusätzlich werden die Werte aller zugeordneten **Konten** als weitere Spalten a
 #### Neue Schnittstelle anlegen
 
 1. 📍 **„Neue Schnittstelle"** (oben rechts)
-2. Ausfüllen: Nummer (Pflicht), Name (Pflicht), Mandantennummer, Exportskript, Exportpfad, Ausgabedateiname
+2. Ausfüllen:
+   - **Nummer** (Pflicht, eindeutig pro Mandant) — identifiziert die Schnittstelle
+   - **Name** (Pflicht) — z. B. „DATEV Steuerberater Müller"
+   - **Mandantennummer** (optional) — die Mandantennummer im externen System (z. B. DATEV-Mandant „12345")
+   - **Exportskript** (optional) — Name eines Export-Skripts (z. B. „export_datev.sh")
+   - **Exportpfad** (optional) — Dateipfad für den Export (z. B. „/exports/datev/")
+   - **Ausgabedateiname** (optional) — z. B. „lohnexport_januar.csv"
 3. 📍 „Erstellen"
 
 #### Konten zuordnen
@@ -1896,9 +2384,41 @@ Zusätzlich werden die Werte aller zugeordneten **Konten** als weitere Spalten a
 1. 📍 Tabelle → ⋯-Menü → **„Konten verwalten"**
 2. ✅ Duale-Liste-Ansicht: Links „Verfügbare Konten" mit Suchfeld und Checkboxen, rechts „Zugeordnete Konten" mit Reihenfolge-Buttons (↑↓). Zwischen beiden Spalten: Pfeil-Buttons zum Verschieben.
 3. Konten auswählen und mit → verschieben
-4. 📍 „Speichern"
+4. Reihenfolge mit ↑↓ anpassen (bestimmt die Spaltenreihenfolge in der CSV-Datei)
+5. 📍 „Speichern"
+
+#### Wo die Exportschnittstelle außerdem erscheint
+
+| Ort | Pfad | Wie sie verwendet wird |
+|-----|------|------------------------|
+| Lohnexport erstellen | 📍 Administration → Lohnexporte → „Export erstellen" | Dropdown „Exportschnittstelle" — wählt das Konten-Mapping für diesen Export |
+| Lohnexport-Vorschau | 📍 Administration → Lohnexporte → ⋯ → Vorschau | Die Spalten in der Vorschau entsprechen den zugeordneten Konten der Schnittstelle |
+
+#### Praxisbeispiel
+
+Der Steuerberater verwendet DATEV LODAS und benötigt im CSV-Export die Lohncodes für Nachtzuschlag (1015) und Feiertagszuschlag (1020) in genau dieser Reihenfolge:
+
+1. 📍 Administration → **Exportschnittstellen** → **„Neue Schnittstelle"**
+   - Nummer: `1`, Name: `DATEV LODAS — Stb. Müller`
+   - Mandantennummer: `12345`
+   - 📍 „Erstellen"
+
+2. 📍 Tabelle → ⋯ → **„Konten verwalten"**
+   - `NZ (Nachtzuschlag)` von links nach rechts verschieben → Position 1
+   - `FZ (Feiertagszuschlag)` von links nach rechts verschieben → Position 2
+   - 📍 „Speichern"
+
+3. Beim Lohnexport (📍 Administration → Lohnexporte → „Export erstellen") die Schnittstelle `DATEV LODAS — Stb. Müller` im Dropdown wählen → 📍 „Generieren"
+
+4. ✅ Die CSV-Datei enthält die Standardspalten (Personalnummer, Name, Soll, Ist, Überstunden, Urlaub, Krankheit) gefolgt von den Kontenspalten `NZ` und `FZ` in der festgelegten Reihenfolge.
+
+💡 **Hinweis: DATEV LODAS vs. Lohn und Gehalt** — Die beiden DATEV-Produkte erwarten unterschiedliche Spalten-Mappings. Fragen Sie Ihren Steuerberater, welches Produkt er verwendet, und legen Sie für jedes eine eigene Exportschnittstelle mit den passenden Konten und Lohncodes an. Falls der CSV-Import beim Steuerberater fehlschlägt, liegt es meist an einer falschen Lohncode-Zuordnung in den Konten oder an einer falschen Kontenreihenfolge in der Schnittstelle.
 
 ### 8.7 Berichte
+
+**Was ist es?** Berichte sind generierte Dokumente (PDF, XLSX, CSV oder JSON) mit zusammengefassten Arbeitszeitdaten. Terp bietet verschiedene Berichtstypen: Tages-/Wochen-/Monatsübersichten, Abwesenheits- und Urlaubsberichte, Überstundenberichte und Kontostände.
+
+**Wozu dient es?** Berichte dienen der Dokumentation und Auswertung. Sie können gefiltert (nach Mitarbeiter, Abteilung, Kostenstelle, Team) und in verschiedenen Formaten heruntergeladen werden — z. B. als PDF für die Ablage oder als XLSX für weitere Analysen in Excel.
 
 ⚠️ Berechtigung: „Berichte ansehen"
 
@@ -1928,7 +2448,21 @@ Zusätzlich werden die Werte aller zugeordneten **Konten** als weitere Spalten a
 
 📍 Tabelle → ⋯-Menü → **„Herunterladen"** (nur bei Status „Abgeschlossen")
 
+#### Praxisbeispiel
+
+Am Monatsende möchte der Manager eine Überstundenübersicht für die Abteilung „Produktion":
+
+1. 📍 Administration → Berichte → **„Bericht erstellen"**
+2. Berichtstyp: **Überstundenbericht**, Format: **PDF**, Datumsbereich: `01.01.2026 – 31.01.2026`, Abteilungen: `Produktion` ✓ → 📍 „Generieren"
+3. ✅ Der Bericht erscheint in der Tabelle. 📍 ⋯ → **„Herunterladen"** → PDF wird gespeichert.
+
+💡 **Hinweis:** Berichte werden im Hintergrund generiert und bleiben dauerhaft gespeichert. Sie können jederzeit erneut heruntergeladen werden. Für eine interaktive Auswertung (live filtern, einzelne Buchungen ansehen) nutzen Sie stattdessen die Auswertungen (📍 Verwaltung → Auswertungen).
+
 ### 8.8 Auswertungen (Detailansicht)
+
+**Was ist es?** Die Auswertungen sind eine interaktive, filterbare Detailansicht der Arbeitszeitdaten. Im Gegensatz zu Berichten (die als Datei generiert werden) zeigen Auswertungen die Daten live in fünf Tabs: Tageswerte, Buchungen, Terminal-Buchungen, Protokoll und Workflow-Historie.
+
+**Wozu dient es?** Auswertungen dienen der schnellen Analyse und Fehlersuche. Ein Manager kann hier z. B. alle Buchungen eines Mitarbeiters filtern, nur fehlerhafte Tage anzeigen lassen oder die Änderungshistorie eines bestimmten Datensatzes nachvollziehen.
 
 ⚠️ Berechtigung: „Berichte ansehen"
 
@@ -1948,7 +2482,21 @@ Tab „Tageswerte" hat Zusatzfilter: „Nur mit Fehlern" (Schalter), „Ohne Buc
 
 Tab „Buchungen" hat Zusatzfilter: Buchungstyp, Quelle, Richtung
 
+#### Praxisbeispiel
+
+Ein Manager möchte alle Buchungen eines Mitarbeiters im Januar prüfen:
+
+1. 📍 Verwaltung → Auswertungen → Datumsbereich: `01.01.2026 – 31.01.2026`, Mitarbeiter: `Weber, Lisa`
+2. 📍 Tab **„Buchungen"** → ✅ Alle Stempelbuchungen von Weber sind sichtbar mit Uhrzeit, Buchungstyp und Quelle (Web/Terminal/Korrektur).
+3. 📍 Tab **„Tageswerte"** → Schalter **„Nur mit Fehlern"** aktivieren → ✅ Nur fehlerhafte Tage werden angezeigt.
+
+💡 **Hinweis:** Im Tab „Tageswerte" können Sie mit dem Schalter „Nur mit Fehlern" schnell alle problematischen Tage finden — ähnlich wie im Korrekturassistenten, aber mit mehr Filteroptionen. Im Tab „Protokoll" sehen Sie alle Änderungen (Erstellen, Ändern, Löschen) mit Vorher/Nachher-Vergleich.
+
 ### 8.9 Auswertungsvorlagen
+
+**Was ist es?** Auswertungsvorlagen definieren die Regeln für den Monatsabschluss: Flexzeit-Kappungsgrenzen, Überstundenschwelle und maximalen Urlaubsübertrag. Eine Vorlage kann als Standard markiert werden und gilt dann für alle Monatsauswertungen.
+
+**Wozu dient es?** Verschiedene Mitarbeitergruppen können unterschiedliche Regeln haben. Mit Vorlagen definieren Sie einmal die Kappungsgrenzen und wenden sie dann konsistent auf alle Monatsabschlüsse an.
 
 ⚠️ Berechtigung: „Monatsauswertungen verwalten"
 
@@ -1962,7 +2510,19 @@ Tab „Buchungen" hat Zusatzfilter: Buchungstyp, Quelle, Richtung
 2. Ausfüllen: Name (Pflicht), Beschreibung, Flexzeit-Kappung positiv/negativ (Minuten mit Live-Daueranzeige), Überstundenschwelle, Max. Urlaubsübertrag (Tage), „Als Standard festlegen" (Schalter), Aktiv (Schalter)
 3. 📍 „Speichern"
 
+#### Praxisbeispiel
+
+Eine Vorlage für Produktionsmitarbeiter mit engeren Flexzeitgrenzen:
+
+📍 Administration → Auswertungsvorlagen → **„Neue Vorlage"** → Name: `Produktion`, Flexzeit-Kappung positiv: `1200` (= 20 Stunden), Flexzeit-Kappung negativ: `-600` (= −10 Stunden), „Als Standard festlegen": ❌ → 📍 „Speichern"
+
+💡 **Hinweis:** Die Standardvorlage (⭐) wird automatisch für alle Monatsauswertungen verwendet. Erstellen Sie zusätzliche Vorlagen nur, wenn Sie unterschiedliche Kappungsgrenzen für verschiedene Gruppen benötigen.
+
 ### 8.10 Mitarbeiternachrichten
+
+**Was ist es?** Mitarbeiternachrichten sind interne Benachrichtigungen, die ein Manager an einzelne Mitarbeiter, ganze Abteilungen oder alle aktiven Mitarbeiter senden kann. Die Nachrichten erscheinen beim Empfänger als Benachrichtigung (🔔-Symbol in der Kopfzeile).
+
+**Wozu dient es?** Manager können hier Informationen zentral verteilen — z. B. Hinweise auf Urlaubssperren, geänderte Arbeitszeiten oder organisatorische Ankündigungen — ohne externe E-Mail-Tools verwenden zu müssen.
 
 ⚠️ Berechtigung: „Benachrichtigungen verwalten"
 
@@ -1984,7 +2544,22 @@ Tab „Buchungen" hat Zusatzfilter: Buchungstyp, Quelle, Richtung
      - *Alle*: Checkbox „An alle aktiven Mitarbeiter senden"
 3. 📍 „Nachricht erstellen" → Bestätigungsdialog → „Senden"
 
+#### Praxisbeispiel
+
+Der Manager informiert alle Mitarbeiter der Produktion über eine Betriebsversammlung:
+
+1. 📍 Verwaltung → Mitarbeiternachrichten → **„Nachricht verfassen"**
+2. Betreff: `Betriebsversammlung am 20.03.`, Nachricht: `Am 20.03. findet um 14:00 Uhr eine Betriebsversammlung in der Kantine statt.`
+3. Empfänger: **Abteilung** → `Produktion` ✓ → 📍 „Nachricht erstellen" → Bestätigen
+4. ✅ Alle Mitarbeiter der Produktion erhalten eine Benachrichtigung (🔔).
+
+💡 **Hinweis:** Nachrichten können nach dem Senden nicht mehr bearbeitet oder zurückgerufen werden. Der Status pro Empfänger (Gesendet/Ausstehend/Fehlgeschlagen) ist in der Tabelle sichtbar. Verwenden Sie den Modus „Abteilung", um alle Mitarbeiter einer Abteilung gleichzeitig zu erreichen.
+
 ### 8.11 Audit-Protokoll
+
+**Was ist es?** Das Audit-Protokoll zeichnet alle Aktionen im System auf: Wer hat wann was erstellt, geändert, gelöscht, genehmigt oder abgelehnt? Jeder Eintrag zeigt den Benutzer, die Aktion, den betroffenen Datensatz und die IP-Adresse.
+
+**Wozu dient es?** Das Protokoll dient der Nachvollziehbarkeit und Revisionssicherheit. Bei Unstimmigkeiten können Manager prüfen, wer eine Buchung geändert, eine Abwesenheit genehmigt oder einen Mitarbeiter deaktiviert hat. Die Detailansicht zeigt den Vorher/Nachher-Vergleich als JSON.
 
 ⚠️ Berechtigung: „Benutzer verwalten"
 
@@ -1997,6 +2572,16 @@ Tab „Buchungen" hat Zusatzfilter: Buchungstyp, Quelle, Richtung
 Aktions-Badge-Farben: Grün = Erstellen/Genehmigen, Blau = Ändern, Rot = Löschen/Ablehnen, Lila = Abschließen, Orange = Wieder öffnen
 
 📍 Zeile anklicken oder Auge-Symbol → Detailansicht mit Abschnitt „Änderungen" (Vorher/Nachher JSON-Vergleich)
+
+#### Praxisbeispiel
+
+Ein Manager möchte herausfinden, wer eine Buchung gelöscht hat:
+
+1. 📍 Administration → Audit-Protokoll → Datumsbereich erweitern (z. B. letzte 7 Tage), Aktion: `Löschen`, Entitätstyp: `Buchung`
+2. ✅ Die Tabelle zeigt alle gelöschten Buchungen mit Benutzer, Zeitstempel und IP-Adresse.
+3. 📍 Auge-Symbol klicken → Die Detailansicht zeigt unter „Änderungen" die gelöschten Daten (Uhrzeit, Buchungstyp, Mitarbeiter).
+
+💡 **Hinweis:** Der Standardfilter zeigt die letzten 24 Stunden. Erweitern Sie den Datumsbereich, um ältere Einträge zu finden. Das Audit-Protokoll speichert alle Einträge dauerhaft — es gibt keine automatische Bereinigung. Für die Suche nach einem bestimmten Vorgang nutzen Sie den Filter „Entitäts-ID", wenn Sie die ID des betroffenen Datensatzes kennen.
 
 ---
 
@@ -2023,6 +2608,10 @@ Terp führt vier automatische Aufgaben aus, die regelmäßig im Hintergrund lauf
 **Was passiert:** Programmierte Automatisierungsregeln (Makros) werden geprüft und bei Fälligkeit ausgeführt.
 
 ### 9.5 Makros verwalten
+
+**Was ist es?** Makros sind konfigurierbare Automatisierungsregeln, die regelmäßig ausgeführt werden. Jeder Makro hat einen Typ (wöchentlich oder monatlich), eine Aktion (z. B. Flexzeit zurücksetzen) und wird einem Tarif oder einzelnen Mitarbeitern zugewiesen.
+
+**Wozu dient es?** Makros automatisieren wiederkehrende Aufgaben, die sonst manuell durchgeführt werden müssten — z. B. das monatliche Zurücksetzen des Flexzeitkontos für Minijobber oder das Vortragen von Salden am Monatsende.
 
 ⚠️ Berechtigung: „Makros verwalten"
 
@@ -2051,22 +2640,82 @@ Terp führt vier automatische Aufgaben aus, die regelmäßig im Hintergrund lauf
 
 > **Beispiel:** Ein monatlicher Makro „Flexzeit zurücksetzen" ist dem Tarif „Minijob" zugewiesen und läuft am 1. jeden Monats. Alle Minijob-Mitarbeiter starten jeden Monat mit Flexzeitkonto Null.
 
+💡 **Hinweis:** Makros laufen automatisch alle 15 Minuten (Abschnitt 9.4). Mit dem Button „Jetzt ausführen" (▶) auf der Detailseite können Sie einen Makro sofort auslösen, ohne auf den nächsten Automatisierungslauf zu warten. Das Ausführungsprotokoll im Tab „Ausführungen" zeigt, wann der Makro zuletzt gelaufen ist und ob Fehler aufgetreten sind.
+
 ### 9.6 Zeitpläne (technische Automatisierung)
+
+**Was ist es?** Zeitpläne sind die zentrale Steuerung für alle automatischen Hintergrundaufgaben in Terp. Jeder Zeitplan hat einen **Zeitplantyp** (wie oft er läuft), eine oder mehrere **Aufgaben** (was er tut) und ein **Ausführungsprotokoll** (wann er zuletzt lief und ob es erfolgreich war).
+
+**Wozu dient es?** Zeitpläne machen die in Abschnitt 9.1–9.4 beschriebenen Automatisierungen transparent und steuerbar. Ein Administrator kann sehen, wann die letzte Tagesberechnung lief, ob sie erfolgreich war, und bei Bedarf eine sofortige Ausführung auslösen — ohne auf den nächsten Cron-Lauf warten zu müssen.
 
 ⚠️ Berechtigung: „Zeitpläne verwalten"
 
 📍 Seitenleiste → **Administration** → **Zeitpläne**
 
-✅ Tabelle mit Spalten: Name, Zeitplantyp (Badge), Aktiviert (Schalter), Aufgaben (Anzahl), Letzte Ausführung.
+✅ Tabelle mit Spalten: Name, Zeitplantyp (Badge), Aktiviert (Schalter, inline umschaltbar), Aufgaben (Anzahl), Letzte Ausführung.
+
+#### Zeitplantypen
+
+| Typ | Badge-Farbe | Bedeutung | Konfiguration |
+|-----|-------------|-----------|---------------|
+| Sekunden | — | Alle N Sekunden | Intervall (Zahl) |
+| Minuten | — | Alle N Minuten | Intervall (Zahl) |
+| Stunden | — | Alle N Stunden | Intervall (Zahl) |
+| Täglich | — | Einmal pro Tag | Uhrzeit (HH:MM) |
+| Wöchentlich | — | Einmal pro Woche | Wochentag + Uhrzeit |
+| Monatlich | — | Einmal pro Monat | Tag des Monats (1–28) + Uhrzeit |
+| Manuell | — | Nur auf Knopfdruck | Keine Konfiguration |
+
+#### Aufgabentypen
+
+Jeder Zeitplan enthält eine oder mehrere Aufgaben. Verfügbare Aufgabentypen:
+
+| Aufgabentyp | Was er tut | Entspricht |
+|-------------|-----------|------------|
+| **Tage berechnen** | Tageswerte für alle Mitarbeiter berechnen | Abschnitt 9.1 |
+| **Monate berechnen** | Monatswerte aggregieren | Abschnitt 9.2 |
+| **Tagespläne generieren** | Tagespläne aus Tarifen für die nächsten Tage erzeugen | Abschnitt 9.3 |
+| **Makros ausführen** | Fällige Makros prüfen und ausführen | Abschnitt 9.4 |
+| **Benachrichtigungen senden** | Ausstehende Mitarbeiternachrichten zustellen | — |
+| **Daten exportieren** | Daten über eine Exportschnittstelle exportieren | — |
+| **Datenbank sichern** | Datenbanksicherung erstellen | — |
+| **Alive-Check** | Prüfung, ob das System erreichbar ist | — |
 
 #### Zeitplan-Detail
 
 1. 📍 Zeile anklicken → Detailseite
-2. **Tab „Aufgaben"**: Sortierte Liste der Aufgaben (mit Ziehgriff zum Umsortieren). Jede Aufgabe hat einen Typ: Tage berechnen / Monate berechnen / Datenbank sichern / Benachrichtigungen senden / Daten exportieren / Alive-Check / Makros ausführen / Tagespläne generieren
-3. **Tab „Ausführungen"**: Ausführungsprotokoll
-4. Buttons: „Jetzt ausführen" (▶), Bearbeiten, Löschen
+2. Kopfbereich: Name, Zeitplantyp-Badge, Aktiviert-Status, Buttons: **„Jetzt ausführen"** (▶), Bearbeiten, Löschen
+3. **Tab „Aufgaben"**: Sortierte Liste der Aufgaben (mit Ziehgriff zum Umsortieren). Jede Aufgabe hat: Sortierung-Badge, Aufgabentyp, Parameter, Aktiviert-Schalter, Bearbeiten-/Löschen-Buttons
+   - 📍 **„Aufgabe hinzufügen"** → Aufgabentyp aus Dropdown wählen, Parameter konfigurieren → 📍 „Speichern"
+4. **Tab „Ausführungen"**: Ausführungsprotokoll mit Spalten: Status-Badge (Abgeschlossen / Fehlgeschlagen / Teilweise), Auslöser-Badge (Geplant / Manuell), Startzeit, Dauer, Aufgaben (x/y abgeschlossen). Aufklappbare Detailzeilen pro Aufgabe.
+
+#### Vorinstallierte Zeitpläne
+
+Terp erstellt automatisch Zeitpläne für die vier Hintergrundaufgaben (Abschnitte 9.1–9.4). Diese werden beim ersten Cron-Lauf angelegt:
+
+| Zeitplan | Typ | Aufgabe | Ausführung |
+|----------|-----|---------|------------|
+| `calculate_days_cron` | Täglich | Tage berechnen | Jeden Tag um 2:00 Uhr |
+| `calculate_months_cron` | Monatlich | Monate berechnen | Am 2. des Monats um 3:00 Uhr |
+| `generate_day_plans_cron` | Wöchentlich | Tagespläne generieren | Jeden Sonntag um 1:00 Uhr |
+| `execute_macros_cron` | Minuten | Makros ausführen | Alle 15 Minuten |
+
+#### Praxisbeispiel
+
+Der Administrator möchte die Tagesberechnung sofort auslösen, weil mehrere Korrekturen vorgenommen wurden und die Ergebnisse sofort geprüft werden sollen:
+
+1. 📍 Seitenleiste → Administration → **Zeitpläne**
+2. 📍 Zeile `calculate_days_cron` anklicken → Detailseite
+3. 📍 **„Jetzt ausführen"** (▶) klicken
+4. ✅ Im Tab „Ausführungen" erscheint ein neuer Eintrag mit Auslöser „Manuell" und Status „Abgeschlossen" (grün)
+
+💡 **Hinweis:** Der Button „Jetzt ausführen" steht nur bei aktivierten Zeitplänen zur Verfügung. Die vorinstallierten Zeitpläne sollten nicht deaktiviert werden, da sonst die tägliche Berechnung, Monatsaggregation und Schichtplan-Generierung ausbleiben. Eigene Zeitpläne (z. B. für stündliche Neuberechnung) können zusätzlich angelegt werden.
 
 ### 9.7 Systemeinstellungen
+
+**Was ist es?** Die Systemeinstellungen enthalten globale Konfigurationsoptionen, die das Verhalten des gesamten Systems beeinflussen — von der Berechnungslogik über Auftragseinstellungen bis hin zur Server-Überwachung.
+
+**Wozu dient es?** Hier werden systemweite Schalter gesetzt, die für alle Mitarbeiter und alle Berechnungen gelten. Außerdem stehen Bereinigungswerkzeuge zur Verfügung, um fehlerhafte Daten zu korrigieren.
 
 ⚠️ Berechtigung: „Einstellungen verwalten"
 
@@ -2090,11 +2739,25 @@ Terp führt vier automatische Aufgaben aus, die regelmäßig im Hintergrund lauf
 
 Vier Bereinigungsaktionen: Buchungen löschen, Buchungsdaten löschen, Buchungen neu einlesen, Aufträge markieren und löschen.
 
+#### Praxisbeispiel
+
+Die automatische Füllung von Auftragsbuchungen aktivieren:
+
+📍 Administration → Einstellungen → Abschnitt **„Aufträge"** aufklappen → **„Auftragsbuchungen automatisch ausfüllen"**: ✅ → 📍 „Einstellungen speichern"
+
+✅ Ab sofort werden Stempelbuchungen automatisch dem Standardauftrag des Mitarbeiters zugeordnet (sofern ein Standardauftrag im Mitarbeiterstamm hinterlegt ist).
+
+💡 **Hinweis:** Die Bereinigungswerkzeuge sind destruktiv und unwiderruflich. Sie erfordern eine 3-Schritt-Bestätigung (Vorschau → Ausführen → Bestätigungsphrase eintippen). Nutzen Sie sie nur nach Rücksprache und immer mit vorheriger Datensicherung. Im Normalbetrieb werden diese Werkzeuge nicht benötigt.
+
 ---
 
 ## 10. Aufträge & Projektzeiterfassung
 
 ### 10.1 Aufträge verwalten
+
+**Was ist es?** Aufträge sind Projekte oder Kundenaufträge, auf die Mitarbeiter ihre Arbeitszeit buchen können. Jeder Auftrag hat einen Code, einen Kunden, einen Gültigkeitszeitraum und optional einen Stundensatz. Innerhalb eines Auftrags können Aktivitäten (z. B. Montage, Dokumentation) definiert werden.
+
+**Wozu dient es?** Die Auftragszeiterfassung ermöglicht es, Arbeitszeiten nicht nur als Anwesenheit, sondern auch inhaltlich zuzuordnen: Wer hat wie lange an welchem Projekt gearbeitet? Damit können Aufträge kalkuliert, Kunden abgerechnet und die Projektrentabilität analysiert werden.
 
 ⚠️ Berechtigung: „Aufträge verwalten"
 
@@ -2133,6 +2796,10 @@ Tabelle mit Spalten: Code, Name, Status (Badge), Kunde, Gültig ab, Gültig bis.
 1. 📍 **„Neue Buchung"** → Mitarbeiter, Aktivität, Datum, Stunden + Minuten, Beschreibung
 2. 📍 „Speichern"
 3. ✅ Tabelle zeigt: Datum, Mitarbeiter, Aktivität, Zeit (h:mm), Beschreibung, Quelle (Badge: Manuell/Auto/Import)
+
+Ein vollständiges Praxisbeispiel zum Anlegen eines Auftrags mit Aktivitäten, Mitarbeiterzuweisungen und Zeitbuchungen finden Sie in Abschnitt **10.1.1**.
+
+💡 **Hinweis:** Aufträge sind optional und nur für Unternehmen relevant, die Arbeitszeiten projektbezogen erfassen möchten (z. B. für Kundenabrechnung oder Projektkostenrechnung). Für die reine Arbeitszeiterfassung ohne Projektbezug können Aufträge ignoriert werden.
 
 #### Tab „Aktivitäten"
 
@@ -2270,6 +2937,10 @@ Für eine übergreifende Auswertung:
 
 ## 11. Zutrittskontrolle
 
+**Was ist es?** Die Zutrittskontrolle verwaltet, welche Mitarbeiter Zugang zu welchen physischen Bereichen (Zonen) haben. Sie besteht aus vier Bausteinen: **Zonen** (die Bereiche), **Profile** (Berechtigungsbündel), **Zuweisungen** (Mitarbeiter ↔ Profil) und **Zutrittskarten** (RFID-Karten, Barcodes, PINs).
+
+**Wozu dient es?** Unternehmen mit physischen Zugangssystemen (Türen, Drehkreuze, Schranken) müssen festlegen, wer wohin darf. Terp speichert diese Informationen zentral und stellt sie für externe Zugangshardware bereit. Gleichzeitig werden über Terminal-Buchungen die Stempeldaten aus physischen Terminals importiert.
+
 ⚠️ Berechtigung: „Zutrittskontrolle verwalten"
 
 📍 Seitenleiste → **Administration** → **Zutrittskontrolle**
@@ -2278,6 +2949,10 @@ Für eine übergreifende Auswertung:
 
 ### 11.1 Zugangszonen
 
+**Was ist es?** Eine Zugangszone repräsentiert einen physischen Bereich mit kontrolliertem Zutritt — z. B. ein Gebäude, eine Etage, ein Serverraum oder ein Lagerbereich.
+
+**Wozu dient es?** Zonen bilden die Grundlage der Zutrittskontrolle. Jede Zone kann in einem externen Zugangssystem (Kartenleser, Drehkreuz) referenziert werden. In Terp dienen sie als Referenzdaten zur Dokumentation der vorhandenen Zugangsbereiche.
+
 📍 Tab **„Zonen"**
 
 Tabelle mit Spalten: Code, Name, Sortierung, Status (Badge).
@@ -2285,21 +2960,41 @@ Tabelle mit Spalten: Code, Name, Sortierung, Status (Badge).
 #### Neue Zone anlegen
 
 1. 📍 **„Neue Zone"** (oben links)
-2. Code (Pflicht), Name (Pflicht), Beschreibung, Sortierung
+2. Code (Pflicht, Großbuchstaben — nach Anlage nicht mehr änderbar), Name (Pflicht), Beschreibung, Sortierung
 3. 📍 „Erstellen"
 
+#### Praxisbeispiel
+
+Zwei Zonen für ein Bürogebäude anlegen: `EG` (Erdgeschoss) und `SR` (Serverraum). Ein vollständiges Praxisbeispiel mit Zonen, Profilen, Zuweisungen und Kartenimport finden Sie in Abschnitt **11.7**.
+
+💡 **Hinweis:** Zonen können frei gelöscht werden. Der Code ist nach dem Anlegen gesperrt — wählen Sie ihn so, dass er zum externen Zugangssystem passt (z. B. der Türcode im Kartenlesersystem).
+
 ### 11.2 Zugangsprofile
+
+**Was ist es?** Ein Zugangsprofil ist ein benanntes Berechtigungsbündel, das einem Mitarbeiter zugewiesen werden kann. Es beschreibt eine Zugangsrolle (z. B. „Verwaltungsmitarbeiter", „Lagerpersonal", „Vollzugang").
+
+**Wozu dient es?** Statt jedem Mitarbeiter einzeln Zonen zuzuweisen, definieren Sie Profile als wiederverwendbare Vorlagen. Ein neuer Mitarbeiter bekommt ein Profil zugewiesen und hat damit sofort die richtigen Zugangsrechte.
 
 📍 Tab **„Profile"**
 
 Tabelle mit Spalten: Code, Name, Status (Badge).
 
-Ein Profil bündelt den Zugang zu mehreren Zonen (z. B. Profil „Verwaltung" = Haupteingang + Büroetage).
+#### Neues Profil anlegen
 
-1. 📍 **„Neues Profil"** → Code, Name, Beschreibung
+1. 📍 **„Neues Profil"** → Code (Pflicht, Großbuchstaben — nach Anlage nicht mehr änderbar), Name (Pflicht), Beschreibung
 2. 📍 „Erstellen"
 
+#### Praxisbeispiel
+
+Zwei Profile anlegen: `STANDARD` (nur Erdgeschoss) und `IT-VOLL` (inkl. Serverraum). Siehe Abschnitt **11.7 Schritt 2**.
+
+💡 **Hinweis:** Profile mit aktiven Zuweisungen können nicht gelöscht werden. Entfernen Sie zuerst alle Mitarbeiter-Zuweisungen. Erstellen Sie Profile nach dem Prinzip der minimalen Rechte — ein Profil pro Zugangsrolle.
+
 ### 11.3 Mitarbeiter-Zuweisungen
+
+**Was ist es?** Eine Zuweisung verbindet einen Mitarbeiter mit einem Zugangsprofil und legt den Gültigkeitszeitraum fest. So wird dokumentiert, welcher Mitarbeiter ab wann und bis wann welches Profil hat.
+
+**Wozu dient es?** Zuweisungen sind der operative Teil der Zutrittskontrolle: Sie bestimmen, wer aktuell Zugang hat. Über den Gültigkeitszeitraum können befristete Zugangsrechte abgebildet werden (z. B. für Zeitarbeiter oder Praktikanten).
 
 📍 Tab **„Zuweisungen"**
 
@@ -2307,20 +3002,54 @@ Tabelle mit Spalten: Mitarbeiter, Profil, Gültig ab, Gültig bis, Status (Badge
 
 **Filter:** Suchfeld, Profilfilter (Dropdown)
 
+#### Neue Zuweisung anlegen
+
 1. 📍 **„Neue Zuweisung"** → Mitarbeiter (Dropdown), Profil (Dropdown), Gültig ab/bis (Datum), Aktiv (Schalter)
 2. 📍 „Speichern"
 
+#### Praxisbeispiel
+
+Mitarbeiterin Meier dem Profil `STANDARD` zuweisen: Siehe Abschnitt **11.7 Schritt 3**.
+
+💡 **Hinweis:** Mitarbeiter und Profil können nach dem Anlegen nicht mehr geändert werden. Nur Gültigkeitszeitraum und Aktiv-Status sind bearbeitbar. Für einen Profilwechsel muss die alte Zuweisung deaktiviert und eine neue angelegt werden. Nutzen Sie den Gültigkeitszeitraum für befristete Zugangsrechte (z. B. Praktikanten).
+
 ### 11.4 RFID-Karten (Zutrittskarten)
 
-Zutrittskarten werden beim einzelnen Mitarbeiter verwaltet:
+**Was ist es?** Zutrittskarten sind physische Identifikationsmedien (RFID-Karten, Barcodes oder PINs), die einem Mitarbeiter zugeordnet werden. Jede Karte hat eine eindeutige Kartennummer und einen Gültigkeitszeitraum.
 
-📍 Seitenleiste → Verwaltung → **Mitarbeiter** → Mitarbeiter anklicken → Tab **„Übersicht"** → Karte „Zutrittskarten"
+**Wozu dient es?** Die Karten ermöglichen die Identifizierung eines Mitarbeiters am Terminal. Beim Scannen einer Karte ordnet das System die Kartennummer dem Mitarbeiter zu und erstellt eine Buchung.
+
+Zutrittskarten werden an zwei Stellen verwaltet:
+
+📍 Seitenleiste → Verwaltung → **Mitarbeiter** → Mitarbeiter anklicken → Tab **„Übersicht"** → Abschnitt „Zutrittskarten" (Admin-Ansicht, nur Leseansicht)
+
+📍 Benutzermenü → **Profil** → Karte „Zutrittskarten" (eigene Karten mit Icons: RFID = 💳, Barcode = |||, PIN = 🔑)
 
 ✅ Liste der Karten mit: Kartennummer, Kartentyp (Badge: RFID/Barcode/PIN), Gültigkeit, Status (Aktiv/Inaktiv/Abgelaufen)
 
-Neue Karten und Deaktivierung erfolgen über die Profil-Seite des Mitarbeiters.
+#### Neue Karte anlegen
+
+1. 📍 Profil → Karte „Zutrittskarten" → **„+"** (Hinzufügen)
+2. Ausfüllen: **Kartennummer** (Pflicht, eindeutig pro Mandant), Kartentyp (Standard: RFID), Gültig ab/bis (optional)
+3. 📍 „Erstellen"
+
+#### Karte deaktivieren
+
+1. 📍 Karte in der Liste → **Deaktivieren**-Button
+2. Optional: Deaktivierungsgrund eingeben
+3. ✅ Die Karte wird sofort deaktiviert. Eine deaktivierte Karte kann nicht reaktiviert werden — bei Verlust muss eine neue Karte angelegt werden.
+
+#### Praxisbeispiel
+
+Einem Mitarbeiter eine RFID-Karte zuordnen: Siehe Abschnitt **11.7 Schritt 4**.
+
+💡 **Hinweis:** Die Kartennummer muss im gesamten Mandanten eindeutig sein (nicht nur pro Mitarbeiter). Ein Mitarbeiter kann mehrere Karten haben (z. B. RFID für die Tür + PIN für das Terminal). Abgelaufene Karten (Gültig bis < heute) werden automatisch als „Abgelaufen" markiert.
 
 ### 11.5 Terminal-Buchungen
+
+**Was ist es?** Terminal-Buchungen sind Stempeldaten, die von physischen Zeiterfassungsterminals (Stempeluhren, Kartenleser, Zutrittssysteme) importiert werden. Jede Buchung enthält eine Mitarbeiter-PIN, einen Zeitstempel und einen Buchungscode (z. B. A1 für Kommen, A2 für Gehen).
+
+**Wozu dient es?** Unternehmen mit Hardwareterminals (z. B. am Werkstor) erfassen Stempelzeiten nicht über den Browser, sondern über physische Geräte. Die Terminal-Buchungen-Seite ermöglicht den Import dieser Daten in Terp, wo sie den Mitarbeitern zugeordnet und weiterverarbeitet werden.
 
 ⚠️ Berechtigung: „Terminal-Buchungen verwalten"
 
@@ -2338,7 +3067,7 @@ Tabelle (nur Lesezugriff): Zeitstempel, Mitarbeiter-PIN, Terminal-ID, Buchungsco
 
 1. 📍 Tab „Import-Batches" → **„Import auslösen"** (Upload-Symbol)
 2. Im Dialog:
-   - **Batch-Referenz** (Pflicht, eindeutige Kennung)
+   - **Batch-Referenz** (Pflicht, eindeutige Kennung — Schutz vor Doppelimport)
    - **Terminal-ID** (Pflicht)
    - **Buchungsdaten** (Pflicht, Textfeld — eine Zeile pro Buchung im Format: `PIN,Zeitstempel,Buchungscode`)
 3. 📍 „Importieren"
@@ -2354,14 +3083,96 @@ Tabelle (nur Lesezugriff): Zeitstempel, Mitarbeiter-PIN, Terminal-ID, Buchungsco
 
 Tabelle (nur Lesezugriff): Batch-Referenz, Quelle, Terminal-ID, Status (Badge), Gesamt, Importiert, Fehlgeschlagen, Gestartet, Abgeschlossen
 
+Ein vollständiges Praxisbeispiel zum Terminal-Import finden Sie in Abschnitt **11.7 Schritt 5–6**.
+
+💡 **Hinweis:** Terminal-Buchungen verwenden die **Mitarbeiter-PIN** (nicht die RFID-Kartennummer) zur Zuordnung. Die PIN wird beim Anlegen des Mitarbeiters automatisch vergeben und ist im Mitarbeiterstamm sichtbar (📍 Verwaltung → Mitarbeiter → Bearbeiten → Feld „PIN").
+
 ### 11.6 Wie der Import funktioniert
 
-1. Das System prüft die Batch-Referenz auf Duplikate (Schutz vor Doppelimport)
-2. Alle PINs werden den Mitarbeitern zugeordnet (unbekannte PINs → Fehler)
-3. Alle Buchungscodes werden den Buchungstypen zugeordnet
-4. Die Buchungen werden gespeichert und können dann weiterverarbeitet werden
+1. Das System prüft die Batch-Referenz auf Duplikate (Schutz vor Doppelimport — wird dieselbe Referenz erneut verwendet, wird der Import abgelehnt)
+2. Alle PINs werden den Mitarbeitern zugeordnet (die PIN stammt aus dem Mitarbeiterstamm, nicht aus der Zutrittskarte). Unbekannte PINs → die Buchung wird mit Fehler gespeichert
+3. Alle Buchungscodes werden den Buchungstypen zugeordnet (z. B. A1 → Kommen, A2 → Gehen)
+4. Die Buchungen werden als Rohdaten gespeichert und können dann weiterverarbeitet werden
 
 Pro Import können bis zu 5.000 Buchungen verarbeitet werden.
+
+### 11.7 Praxisbeispiel: Zutrittskontrolle für ein Bürogebäude einrichten
+
+Szenario: Ein Unternehmen hat ein Bürogebäude mit zwei Bereichen — Erdgeschoss (für alle) und Serverraum (nur für die IT-Abteilung). Am Eingang steht ein Kartenleser-Terminal, das Stempelzeiten erfasst.
+
+#### Schritt 1 — Zugangszonen anlegen
+
+📍 Seitenleiste → Administration → **Zutrittskontrolle** → Tab **„Zonen"**
+
+1. 📍 **„Neue Zone"**
+   - Code: `EG`, Name: `Erdgeschoss — Haupteingang` → 📍 „Erstellen"
+2. 📍 **„Neue Zone"**
+   - Code: `SR`, Name: `Serverraum` → 📍 „Erstellen"
+
+✅ Beide Zonen erscheinen in der Tabelle mit Status „Aktiv".
+
+#### Schritt 2 — Zugangsprofile anlegen
+
+📍 Tab **„Profile"**
+
+1. 📍 **„Neues Profil"**
+   - Code: `STANDARD`, Name: `Standardzugang (nur Erdgeschoss)` → 📍 „Erstellen"
+2. 📍 **„Neues Profil"**
+   - Code: `IT-VOLL`, Name: `IT-Vollzugang (inkl. Serverraum)` → 📍 „Erstellen"
+
+#### Schritt 3 — Mitarbeiter zuweisen
+
+📍 Tab **„Zuweisungen"**
+
+1. 📍 **„Neue Zuweisung"**
+   - Mitarbeiter: `Meier, Anna` (Verwaltung)
+   - Profil: `STANDARD`
+   - Gültig ab: `01.01.2026`
+   - 📍 „Speichern"
+
+2. 📍 **„Neue Zuweisung"**
+   - Mitarbeiter: `Schmidt, Thomas` (IT-Abteilung)
+   - Profil: `IT-VOLL`
+   - Gültig ab: `01.01.2026`
+   - 📍 „Speichern"
+
+#### Schritt 4 — RFID-Karten den Mitarbeitern zuordnen
+
+📍 Benutzermenü → **Profil** → Karte „Zutrittskarten" → **„+"**
+
+- Kartennummer: `RFID-00123`, Kartentyp: **RFID** → 📍 „Erstellen"
+
+(Alternativ als Administrator: 📍 Verwaltung → Mitarbeiter → Mitarbeiter anklicken → die Karte ist in der Detailansicht unter „Zutrittskarten" sichtbar.)
+
+#### Schritt 5 — Terminal-Stempeldaten importieren
+
+Am Ende des Tages liefert das Terminal-System eine Datei mit allen Stempelvorgängen:
+
+📍 Seitenleiste → Administration → **Terminal-Buchungen** → Tab **„Import-Batches"** → **„Import auslösen"**
+
+- Batch-Referenz: `TERM-2026-03-10-001`
+- Terminal-ID: `EINGANG-EG`
+- Buchungsdaten:
+  ```
+  1001,2026-03-10T08:02:00,A1
+  1001,2026-03-10T12:00:00,P1
+  1001,2026-03-10T12:30:00,P2
+  1001,2026-03-10T16:35:00,A2
+  1002,2026-03-10T07:55:00,A1
+  1002,2026-03-10T16:00:00,A2
+  ```
+
+📍 „Importieren"
+
+✅ Ergebnis: 6 gesamt / 6 importiert / 0 fehlgeschlagen. Die PINs `1001` und `1002` werden den Mitarbeitern Meier und Schmidt zugeordnet, die Buchungscodes `A1`, `P1`, `P2`, `A2` den entsprechenden Buchungstypen.
+
+#### Schritt 6 — Importierte Buchungen prüfen
+
+📍 Tab **„Buchungen"** → Filter: Datum `10.03.2026`
+
+✅ Sie sehen alle 6 Buchungen mit zugeordneten Mitarbeiternamen, Zeitstempeln und Status „Ausstehend" (zur Weiterverarbeitung).
+
+💡 **Hinweis:** Die Zutrittskontrolle in Terp ist ein **Referenzdatensystem**: Es speichert Zonen, Profile und Zuweisungen als Stammdaten. Die tatsächliche Zugangsprüfung (Tür öffnen / sperren) erfolgt im externen Hardwaresystem, das die Daten aus Terp liest. Terminal-Buchungen werden separat importiert und in die reguläre Zeiterfassung überführt.
 
 ---
 
@@ -2399,7 +3210,7 @@ Pro Import können bis zu 5.000 Buchungen verarbeitet werden.
 | **Schicht** | Benanntes Arbeitszeitpaket mit Farbe und Tagesplan | 📍 Verwaltung → Schichtplanung → Tab Schichten |
 | **Schichterkennung** | Automatische Schichtzuordnung anhand der Stempelzeiten | Konfiguriert im Tagesplan, Tab Spezial |
 | **Sollarbeitszeit** | Geplante Arbeitszeit laut Tagesplan | 📍 Zeitnachweis → Tagessollzeit |
-| **Standort** | Physischer Arbeitsort mit Adresse und Zeitzone | 📍 Verwaltung → Standorte |
+| **Standort** | Physischer Arbeitsort mit Adresse | 📍 Verwaltung → Standorte |
 | **Tagesplan** | Arbeitszeitregeln für einen Tag (Fenster, Soll, Pausen, Toleranzen) | 📍 Verwaltung → Tagespläne |
 | **Tageswert** | Berechnetes Ergebnis eines Arbeitstages | 📍 Zeitnachweis → Tagesansicht |
 | **Tarif** | Vollständiges Arbeitszeitmodell (Rhythmus + Urlaub + Flexzeit) | 📍 Verwaltung → Tarife |

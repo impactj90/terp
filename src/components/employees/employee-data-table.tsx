@@ -156,10 +156,10 @@ export function EmployeeDataTable({
             <TableCell className="text-muted-foreground">
               {employee.email || '-'}
             </TableCell>
-            <TableCell>{'department' in employee ? (employee as unknown as { department?: { name: string } }).department?.name || '-' : '-'}</TableCell>
-            <TableCell>{'location' in employee ? (employee as unknown as { location?: { name: string } }).location?.name || '-' : '-'}</TableCell>
+            <TableCell>{employee.department?.name || '-'}</TableCell>
+            <TableCell>{employee.location?.name || '-'}</TableCell>
             <TableCell className="text-muted-foreground">
-              {employee.tariffId ? employee.tariffId.substring(0, 8) + '...' : '-'}
+              {employee.tariff?.name || '-'}
             </TableCell>
             <TableCell>
               <StatusBadge

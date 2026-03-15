@@ -103,35 +103,24 @@ const employeeOutputSchema = z.object({
 
 type EmployeeOutput = z.infer<typeof employeeOutputSchema>
 
+const relationSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string(),
+}).nullable()
+
+const employeeListItemOutputSchema = employeeOutputSchema.extend({
+  department: relationSchema,
+  location: relationSchema,
+  tariff: relationSchema,
+})
+
 const employeeDetailOutputSchema = employeeOutputSchema.extend({
-  department: z
-    .object({
-      id: z.string(),
-      name: z.string(),
-      code: z.string(),
-    })
-    .nullable(),
-  costCenter: z
-    .object({
-      id: z.string(),
-      code: z.string(),
-      name: z.string(),
-    })
-    .nullable(),
-  employmentType: z
-    .object({
-      id: z.string(),
-      code: z.string(),
-      name: z.string(),
-    })
-    .nullable(),
-  location: z
-    .object({
-      id: z.string(),
-      code: z.string(),
-      name: z.string(),
-    })
-    .nullable(),
+  department: relationSchema,
+  costCenter: relationSchema,
+  employmentType: relationSchema,
+  location: relationSchema,
+  tariff: relationSchema,
   contacts: z.array(
     z.object({
       id: z.string(),
@@ -569,7 +558,7 @@ export const employeesRouter = createTRPCRouter({
     .input(listEmployeesInputSchema)
     .output(
       z.object({
-        items: z.array(employeeOutputSchema),
+        items: z.array(employeeListItemOutputSchema),
         total: z.number(),
       })
     )
@@ -586,7 +575,20 @@ export const employeesRouter = createTRPCRouter({
         )
 
         return {
-          items: employees.map(mapEmployeeToOutput),
+          items: employees.map((emp) => {
+            const base = mapEmployeeToOutput(emp)
+            const rel = emp as unknown as {
+              department?: { id: string; code: string; name: string } | null
+              location?: { id: string; code: string; name: string } | null
+              tariff?: { id: string; code: string; name: string } | null
+            }
+            return {
+              ...base,
+              department: rel.department ?? null,
+              location: rel.location ?? null,
+              tariff: rel.tariff ?? null,
+            }
+          }),
           total,
         }
       } catch (err) {
@@ -648,6 +650,13 @@ export const employeesRouter = createTRPCRouter({
                 id: employee.location.id,
                 code: employee.location.code,
                 name: employee.location.name,
+              }
+            : null,
+          tariff: employee.tariff
+            ? {
+                id: employee.tariff.id,
+                code: employee.tariff.code,
+                name: employee.tariff.name,
               }
             : null,
           contacts: employee.contacts.map((c) => ({

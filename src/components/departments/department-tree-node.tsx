@@ -13,13 +13,24 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import type { DepartmentTreeNode } from '@/trpc/routers/departments'
+export interface DepartmentData {
+  id: string
+  code: string
+  name: string
+  description: string | null
+  isActive: boolean
+  [key: string]: unknown
+}
 
-type DepartmentNode = DepartmentTreeNode
-type Department = DepartmentTreeNode['department']
+export interface DepartmentNodeType {
+  department: DepartmentData
+  children: DepartmentNodeType[]
+}
+
+type Department = DepartmentData
 
 interface DepartmentTreeNodeProps {
-  node: DepartmentNode
+  node: DepartmentNodeType
   depth: number
   expandedIds: Set<string>
   onToggle: (id: string) => void

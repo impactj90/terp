@@ -6,10 +6,10 @@ import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DepartmentTreeNode } from './department-tree-node'
-import type { DepartmentTreeNode as DepartmentTreeNodeType } from '@/trpc/routers/departments'
+import type { DepartmentNodeType, DepartmentData } from './department-tree-node'
 
-type DepartmentNode = DepartmentTreeNodeType
-type Department = DepartmentTreeNodeType['department']
+type DepartmentNode = DepartmentNodeType
+type Department = DepartmentData
 
 interface DepartmentTreeViewProps {
   data: DepartmentNode[]

@@ -26,10 +26,8 @@ import {
   DepartmentFormSheet,
   DepartmentDetailSheet,
 } from '@/components/departments'
-import type { components } from '@/types/legacy-api-types'
-
-type Department = components['schemas']['Department']
-type DepartmentNode = components['schemas']['DepartmentNode']
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Department = any
 
 export default function DepartmentsPage() {
   const router = useRouter()
@@ -75,18 +73,18 @@ export default function DepartmentsPage() {
   const departments = listData?.data ?? []
 
   // Filter tree by search (client-side for simplicity)
+  type TreeNode = (typeof tree)[number]
   const filteredTree = React.useMemo(() => {
-    const treeNodes = tree as unknown as DepartmentNode[]
-    if (!search.trim()) return treeNodes
+    if (!search.trim()) return tree
 
     const searchLower = search.toLowerCase()
-    const filterNodes = (nodes: DepartmentNode[]): DepartmentNode[] => {
+    const filterNodes = (nodes: TreeNode[]): TreeNode[] => {
       return nodes
         .map((node) => {
           const matchesSelf =
             node.department.name.toLowerCase().includes(searchLower) ||
             node.department.code.toLowerCase().includes(searchLower)
-          const filteredChildren = node.children ? filterNodes(node.children) : []
+          const filteredChildren = node.children ? filterNodes(node.children as TreeNode[]) : []
 
           if (matchesSelf || filteredChildren.length > 0) {
             return {
@@ -98,7 +96,7 @@ export default function DepartmentsPage() {
         })
         .filter((n): n is NonNullable<typeof n> => n !== null)
     }
-    return filterNodes(treeNodes)
+    return filterNodes(tree)
   }, [tree, search])
 
   // Filter list by search
@@ -266,7 +264,7 @@ export default function DepartmentsPage() {
             <EmptyState hasFilters={hasFilters} onCreateClick={() => setCreateOpen(true)} />
           ) : (
             <DepartmentDataTable
-              departments={filteredList as unknown as Department[]}
+              departments={filteredList}
               isLoading={false}
               onView={handleView}
               onEdit={handleEdit}

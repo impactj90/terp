@@ -148,7 +148,7 @@ export default function EmployeeDetailPage() {
                   <DetailRow label={t('labelDepartment')} value={employee.department?.name} />
                   <DetailRow label={t('labelCostCenter')} value={employee.costCenter ? `${employee.costCenter.name} (${employee.costCenter.code})` : undefined} />
                   <DetailRow label={t('labelEmploymentType')} value={employee.employmentType?.name} />
-                  <DetailRow label={t('labelTariff')} value={employee.tariffId ?? undefined} />
+                  <DetailRow label={t('labelTariff')} value={employee.tariff?.name} />
                   <DetailRow label={t('labelEntryDate')} value={formatDate(employee.entryDate)} />
                   <DetailRow label={t('labelExitDate')} value={formatDate(employee.exitDate)} />
                 </div>

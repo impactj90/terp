@@ -1270,33 +1270,43 @@ BEGIN
   SELECT id INTO et_tz FROM employment_types WHERE code = 'TZ' LIMIT 1;
 
   UPDATE employees SET department_id = '00000000-0000-0000-0000-000000000806', cost_center_id = '00000000-0000-0000-0000-000000000c01', employment_type_id = et_vz,
+    location_id = '00000000-0000-0000-0000-000000000d01',
     birth_date = '1985-03-15', gender = 'male', address_street = 'Leopoldstr. 1', address_zip = '80802', address_city = 'Muenchen'
     WHERE id = '00000000-0000-0000-0000-000000000011' AND tenant_id = t_id;
   UPDATE employees SET department_id = '00000000-0000-0000-0000-000000000806', cost_center_id = '00000000-0000-0000-0000-000000000c01', employment_type_id = et_vz,
+    location_id = '00000000-0000-0000-0000-000000000d01',
     birth_date = '1990-07-22', gender = 'male', address_street = 'Schillerstr. 5', address_zip = '80336', address_city = 'Muenchen'
     WHERE id = '00000000-0000-0000-0000-000000000012' AND tenant_id = t_id;
   UPDATE employees SET department_id = '00000000-0000-0000-0000-000000000803', cost_center_id = '00000000-0000-0000-0000-000000000c02', employment_type_id = et_tz,
+    location_id = '00000000-0000-0000-0000-000000000d01',
     birth_date = '1988-11-08', gender = 'female', address_street = 'Maximilianstr. 12', address_zip = '80539', address_city = 'Muenchen'
     WHERE id = '00000000-0000-0000-0000-000000000013' AND tenant_id = t_id;
   UPDATE employees SET department_id = '00000000-0000-0000-0000-000000000806', cost_center_id = '00000000-0000-0000-0000-000000000c01', employment_type_id = et_vz,
+    location_id = '00000000-0000-0000-0000-000000000d01',
     birth_date = '1992-04-30', gender = 'male', address_street = 'Arnulfstr. 20', address_zip = '80335', address_city = 'Muenchen'
     WHERE id = '00000000-0000-0000-0000-000000000014' AND tenant_id = t_id;
   UPDATE employees SET department_id = '00000000-0000-0000-0000-000000000806', cost_center_id = '00000000-0000-0000-0000-000000000c01', employment_type_id = et_vz,
+    location_id = '00000000-0000-0000-0000-000000000d02',
     birth_date = '1980-12-17', gender = 'female', address_street = 'Isarring 8', address_zip = '81675', address_city = 'Muenchen'
     WHERE id = '00000000-0000-0000-0000-000000000015' AND tenant_id = t_id;
   UPDATE employees SET department_id = '00000000-0000-0000-0000-000000000807', cost_center_id = '00000000-0000-0000-0000-000000000c04', employment_type_id = et_vz,
+    location_id = '00000000-0000-0000-0000-000000000d02',
     birth_date = '1987-06-25', gender = 'female', address_street = 'Bayerstr. 3', address_zip = '80335', address_city = 'Muenchen'
     WHERE id = '00000000-0000-0000-0000-000000000016' AND tenant_id = t_id;
   UPDATE employees SET department_id = '00000000-0000-0000-0000-000000000806', cost_center_id = '00000000-0000-0000-0000-000000000c01', employment_type_id = et_vz,
+    location_id = '00000000-0000-0000-0000-000000000d01',
     birth_date = '1993-02-14', gender = 'male', address_street = 'Theresienstr. 7', address_zip = '80333', address_city = 'Muenchen'
     WHERE id = '00000000-0000-0000-0000-000000000017' AND tenant_id = t_id;
   UPDATE employees SET department_id = '00000000-0000-0000-0000-000000000803', cost_center_id = '00000000-0000-0000-0000-000000000c02', employment_type_id = et_vz,
+    location_id = '00000000-0000-0000-0000-000000000d03',
     birth_date = '1986-09-03', gender = 'female', address_street = 'Ludwigstr. 15', address_zip = '80539', address_city = 'Muenchen'
     WHERE id = '00000000-0000-0000-0000-000000000018' AND tenant_id = t_id;
   UPDATE employees SET department_id = '00000000-0000-0000-0000-000000000804', cost_center_id = '00000000-0000-0000-0000-000000000c03', employment_type_id = et_vz,
+    location_id = '00000000-0000-0000-0000-000000000d01',
     birth_date = '1991-01-19', gender = 'male', address_street = 'Sonnenstr. 22', address_zip = '80331', address_city = 'Muenchen'
     WHERE id = '00000000-0000-0000-0000-000000000019' AND tenant_id = t_id;
   UPDATE employees SET department_id = '00000000-0000-0000-0000-000000000805', cost_center_id = '00000000-0000-0000-0000-000000000c04', employment_type_id = et_tz,
+    location_id = '00000000-0000-0000-0000-000000000d03',
     birth_date = '1995-08-11', gender = 'female', address_street = 'Prinzregentenstr. 4', address_zip = '81675', address_city = 'Muenchen'
     WHERE id = '00000000-0000-0000-0000-00000000001a' AND tenant_id = t_id;
 END $$;

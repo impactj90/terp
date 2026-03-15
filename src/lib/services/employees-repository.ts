@@ -24,6 +24,11 @@ export async function findMany(
       skip: params.skip,
       take: params.take,
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      include: {
+        department: { select: { id: true, name: true, code: true } },
+        location: { select: { id: true, name: true, code: true } },
+        tariff: { select: { id: true, name: true, code: true } },
+      },
     }),
     prisma.employee.count({ where }),
   ])
@@ -58,6 +63,9 @@ export async function findByIdWithRelations(
         select: { id: true, code: true, name: true },
       },
       location: {
+        select: { id: true, code: true, name: true },
+      },
+      tariff: {
         select: { id: true, code: true, name: true },
       },
       contacts: {

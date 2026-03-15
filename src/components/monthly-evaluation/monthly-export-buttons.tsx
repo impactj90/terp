@@ -55,7 +55,7 @@ export function MonthlyExportButtons({
   }
 
   const generateCSV = () => {
-    const headers = [t('date'), t('day'), t('target'), t('gross'), t('breaks'), t('net'), t('balance'), t('errors')]
+    const headers = [t('date'), t('day'), t('target'), t('gross'), t('breaks'), t('net'), t('balance'), t('errorsHeader')]
 
     const rows = monthDates.map((date) => {
       const dateString = formatDate(date)

@@ -21,9 +21,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { DepartmentTreeNode } from '@/trpc/routers/departments'
-
-type Department = DepartmentTreeNode['department']
+interface Department {
+  id: string
+  code: string
+  name: string
+  description: string | null
+  parentId: string | null
+  isActive: boolean
+  parent?: { name: string } | null
+  [key: string]: unknown
+}
 
 interface DepartmentDataTableProps {
   departments: Department[]
