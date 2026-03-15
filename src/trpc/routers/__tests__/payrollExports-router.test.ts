@@ -785,7 +785,8 @@ describe("payrollExports.download", () => {
     // Parse back with ExcelJS to verify structure
     const ExcelJS = await import("exceljs")
     const workbook = new ExcelJS.Workbook()
-    await workbook.xlsx.load(buffer)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await workbook.xlsx.load(buffer as any)
     const sheet = workbook.worksheets[0]!
     expect(sheet.rowCount).toBe(2) // header + 1 data row
 

@@ -172,14 +172,14 @@ describe("Phase 8: Schichtplanung & Automatisierung", () => {
     })
 
     it("should retrieve a shift by ID", async () => {
-      const result = await caller.shifts.getById({ id: state.shiftId })
-      expect(result.id).toBe(state.shiftId)
+      const result = await caller.shifts.getById({ id: state.shiftId! })
+      expect(result.id).toBe(state.shiftId!)
       expect(result.code).toBe("E2E-FRUEH")
     })
 
     it("should update a shift", async () => {
       const result = await caller.shifts.update({
-        id: state.shiftId,
+        id: state.shiftId!,
         name: "E2E Fruehschicht Updated",
         color: "#2196F3",
       })
@@ -236,15 +236,15 @@ describe("Phase 8: Schichtplanung & Automatisierung", () => {
     })
 
     it("should retrieve a macro by ID with assignments", async () => {
-      const result = await caller.macros.getById({ id: state.macroId })
-      expect(result.id).toBe(state.macroId)
+      const result = await caller.macros.getById({ id: state.macroId! })
+      expect(result.id).toBe(state.macroId!)
       expect(result.name).toBe("E2E Log Macro")
       expect(result.assignments).toBeDefined()
     })
 
     it("should update a macro", async () => {
       const result = await caller.macros.update({
-        id: state.macroId,
+        id: state.macroId!,
         name: "E2E Log Macro Updated",
         description: "Updated description",
       })
@@ -260,13 +260,13 @@ describe("Phase 8: Schichtplanung & Automatisierung", () => {
   describe("UC-053: Makro zuweisen und ausfuehren", () => {
     it("should create a macro assignment for an employee", async () => {
       const result = await caller.macros.createAssignment({
-        macroId: state.macroId,
+        macroId: state.macroId!,
         employeeId: SEED_EMPLOYEE_ID,
         executionDay: 1, // Monday for weekly macro
       })
 
       expect(result.id).toBeDefined()
-      expect(result.macroId).toBe(state.macroId)
+      expect(result.macroId).toBe(state.macroId!)
       expect(result.employeeId).toBe(SEED_EMPLOYEE_ID)
       expect(result.executionDay).toBe(1)
       expect(result.isActive).toBe(true)
@@ -276,18 +276,18 @@ describe("Phase 8: Schichtplanung & Automatisierung", () => {
 
     it("should list macro assignments", async () => {
       const { data } = await caller.macros.listAssignments({
-        macroId: state.macroId,
+        macroId: state.macroId!,
       })
       expect(data.length).toBeGreaterThanOrEqual(1)
-      const found = data.find((a: any) => a.id === state.assignmentId)
+      const found = data.find((a: any) => a.id === state.assignmentId!)
       expect(found).toBeDefined()
       expect(found!.employeeId).toBe(SEED_EMPLOYEE_ID)
     })
 
     it("should update a macro assignment", async () => {
       const result = await caller.macros.updateAssignment({
-        macroId: state.macroId,
-        assignmentId: state.assignmentId,
+        macroId: state.macroId!,
+        assignmentId: state.assignmentId!,
         executionDay: 5, // Friday
       })
 
@@ -296,11 +296,11 @@ describe("Phase 8: Schichtplanung & Automatisierung", () => {
 
     it("should trigger macro execution", async () => {
       const result = await caller.macros.triggerExecution({
-        macroId: state.macroId,
+        macroId: state.macroId!,
       })
 
       expect(result.id).toBeDefined()
-      expect(result.macroId).toBe(state.macroId)
+      expect(result.macroId).toBe(state.macroId!)
       expect(result.triggerType).toBe("manual")
       expect(result.triggeredBy).toBe(SEED.ADMIN_USER_ID)
       expect(["completed", "failed", "running", "pending"]).toContain(
@@ -312,25 +312,25 @@ describe("Phase 8: Schichtplanung & Automatisierung", () => {
 
     it("should list macro executions", async () => {
       const { data } = await caller.macros.listExecutions({
-        macroId: state.macroId,
+        macroId: state.macroId!,
       })
       expect(data.length).toBeGreaterThanOrEqual(1)
-      const found = data.find((e: any) => e.id === state.executionId)
+      const found = data.find((e: any) => e.id === state.executionId!)
       expect(found).toBeDefined()
     })
 
     it("should retrieve a single execution by ID", async () => {
       const result = await caller.macros.getExecution({
-        id: state.executionId,
+        id: state.executionId!,
       })
-      expect(result.id).toBe(state.executionId)
-      expect(result.macroId).toBe(state.macroId)
+      expect(result.id).toBe(state.executionId!)
+      expect(result.macroId).toBe(state.macroId!)
     })
 
     it("should delete a macro assignment", async () => {
       const result = await caller.macros.deleteAssignment({
-        macroId: state.macroId,
-        assignmentId: state.assignmentId,
+        macroId: state.macroId!,
+        assignmentId: state.assignmentId!,
       })
       expect(result.success).toBe(true)
     })
@@ -401,37 +401,37 @@ describe("Phase 8: Schichtplanung & Automatisierung", () => {
     })
 
     it("should retrieve a schedule by ID with tasks", async () => {
-      const result = await caller.schedules.getById({ id: state.scheduleId })
-      expect(result.id).toBe(state.scheduleId)
+      const result = await caller.schedules.getById({ id: state.scheduleId! })
+      expect(result.id).toBe(state.scheduleId!)
       expect(result.tasks).toBeDefined()
       expect(result.tasks!.length).toBe(2)
     })
 
     it("should add a task to an existing schedule", async () => {
       const result = await caller.schedules.createTask({
-        scheduleId: state.manualScheduleId,
+        scheduleId: state.manualScheduleId!,
         taskType: "execute_macros",
         sortOrder: 0,
       })
 
       expect(result.id).toBeDefined()
-      expect(result.scheduleId).toBe(state.manualScheduleId)
+      expect(result.scheduleId).toBe(state.manualScheduleId!)
       expect(result.taskType).toBe("execute_macros")
       state.taskId = result.id
     })
 
     it("should list tasks for a schedule", async () => {
       const { data } = await caller.schedules.tasks({
-        scheduleId: state.manualScheduleId,
+        scheduleId: state.manualScheduleId!,
       })
       expect(data.length).toBe(1)
-      expect(data[0].taskType).toBe("execute_macros")
+      expect(data[0]!.taskType).toBe("execute_macros")
     })
 
     it("should update a task", async () => {
       const result = await caller.schedules.updateTask({
-        scheduleId: state.manualScheduleId,
-        taskId: state.taskId,
+        scheduleId: state.manualScheduleId!,
+        taskId: state.taskId!,
         sortOrder: 10,
         isEnabled: false,
       })
@@ -442,7 +442,7 @@ describe("Phase 8: Schichtplanung & Automatisierung", () => {
 
     it("should update a schedule", async () => {
       const result = await caller.schedules.update({
-        id: state.scheduleId,
+        id: state.scheduleId!,
         description: "Updated daily calc",
       })
 
@@ -457,16 +457,16 @@ describe("Phase 8: Schichtplanung & Automatisierung", () => {
     it("should manually execute a schedule", async () => {
       // Enable the schedule first (it was created with isEnabled: false)
       await caller.schedules.update({
-        id: state.scheduleId,
+        id: state.scheduleId!,
         isEnabled: true,
       })
 
       const result = await caller.schedules.execute({
-        scheduleId: state.scheduleId,
+        scheduleId: state.scheduleId!,
       })
 
       expect(result.id).toBeDefined()
-      expect(result.scheduleId).toBe(state.scheduleId)
+      expect(result.scheduleId).toBe(state.scheduleId!)
       expect(result.triggerType).toBe("manual")
       expect(result.triggeredBy).toBe(SEED.ADMIN_USER_ID)
       expect(result.tasksTotal).toBeGreaterThanOrEqual(0)
@@ -479,12 +479,12 @@ describe("Phase 8: Schichtplanung & Automatisierung", () => {
 
     it("should list executions for a schedule", async () => {
       const { data } = await caller.schedules.executions({
-        scheduleId: state.scheduleId,
+        scheduleId: state.scheduleId!,
       })
       expect(data.length).toBeGreaterThanOrEqual(1)
 
       const found = data.find(
-        (e: any) => e.id === state.scheduleExecutionId
+        (e: any) => e.id === state.scheduleExecutionId!
       )
       expect(found).toBeDefined()
       expect(found!.triggerType).toBe("manual")
@@ -492,18 +492,18 @@ describe("Phase 8: Schichtplanung & Automatisierung", () => {
 
     it("should retrieve a single execution by ID with task details", async () => {
       const result = await caller.schedules.execution({
-        id: state.scheduleExecutionId,
+        id: state.scheduleExecutionId!,
       })
 
-      expect(result.id).toBe(state.scheduleExecutionId)
-      expect(result.scheduleId).toBe(state.scheduleId)
+      expect(result.id).toBe(state.scheduleExecutionId!)
+      expect(result.scheduleId).toBe(state.scheduleId!)
       // Task executions should be present
       expect(result.taskExecutions).toBeDefined()
     })
 
     it("should execute the manual schedule", async () => {
       const result = await caller.schedules.execute({
-        scheduleId: state.manualScheduleId,
+        scheduleId: state.manualScheduleId!,
       })
 
       expect(result.id).toBeDefined()
@@ -513,8 +513,8 @@ describe("Phase 8: Schichtplanung & Automatisierung", () => {
 
     it("should delete a task from a schedule", async () => {
       const result = await caller.schedules.deleteTask({
-        scheduleId: state.manualScheduleId,
-        taskId: state.taskId,
+        scheduleId: state.manualScheduleId!,
+        taskId: state.taskId!,
       })
       expect(result.success).toBe(true)
     })

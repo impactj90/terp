@@ -229,16 +229,16 @@ describe("Phase 2: Arbeitszeitmodelle", () => {
     })
 
     it("should get a day plan by ID with details", async () => {
-      const result = await caller.dayPlans.getById({ id: state.dayPlanId })
+      const result = await caller.dayPlans.getById({ id: state.dayPlanId! })
 
-      expect(result.id).toBe(state.dayPlanId)
+      expect(result.id).toBe(state.dayPlanId!)
       expect(result.code).toBe("E2E-NORM8")
       expect(result.tenantId).toBe(SEED.TENANT_ID)
     })
 
     it("should add a break rule to a day plan", async () => {
       const brk = await caller.dayPlans.createBreak({
-        dayPlanId: state.dayPlanId,
+        dayPlanId: state.dayPlanId!,
         breakType: "fixed",
         startTime: 720, // 12:00
         endTime: 750, // 12:30
@@ -247,7 +247,7 @@ describe("Phase 2: Arbeitszeitmodelle", () => {
       })
 
       expect(brk.id).toBeDefined()
-      expect(brk.dayPlanId).toBe(state.dayPlanId)
+      expect(brk.dayPlanId).toBe(state.dayPlanId!)
       expect(brk.breakType).toBe("fixed")
       expect(brk.duration).toBe(30)
       expect(brk.autoDeduct).toBe(true)
@@ -256,12 +256,12 @@ describe("Phase 2: Arbeitszeitmodelle", () => {
     })
 
     it("should include breaks when fetching day plan by ID", async () => {
-      const result = await caller.dayPlans.getById({ id: state.dayPlanId })
+      const result = await caller.dayPlans.getById({ id: state.dayPlanId! })
 
       expect(result.breaks).toBeDefined()
       expect(result.breaks!.length).toBeGreaterThanOrEqual(1)
       const brk = result.breaks!.find(
-        (b: any) => b.id === state.dayPlanBreakId
+        (b: any) => b.id === state.dayPlanBreakId!
       )
       expect(brk).toBeDefined()
       expect(brk!.duration).toBe(30)
@@ -269,26 +269,26 @@ describe("Phase 2: Arbeitszeitmodelle", () => {
 
     it("should delete a break from a day plan", async () => {
       const result = await caller.dayPlans.deleteBreak({
-        dayPlanId: state.dayPlanId,
-        breakId: state.dayPlanBreakId,
+        dayPlanId: state.dayPlanId!,
+        breakId: state.dayPlanBreakId!,
       })
 
       expect(result.success).toBe(true)
       // Remove from cleanup tracker since already deleted
       created.dayPlanBreakIds = created.dayPlanBreakIds.filter(
-        (id) => id !== state.dayPlanBreakId
+        (id) => id !== state.dayPlanBreakId!
       )
     })
 
     it("should copy a day plan as an independent copy", async () => {
       const copy = await caller.dayPlans.copy({
-        id: state.dayPlanId,
+        id: state.dayPlanId!,
         newCode: "E2E-NORM8-COPY",
         newName: "E2E Normalarbeitstag 8h (Kopie)",
       })
 
       expect(copy.id).toBeDefined()
-      expect(copy.id).not.toBe(state.dayPlanId)
+      expect(copy.id).not.toBe(state.dayPlanId!)
       expect(copy.code).toBe("E2E-NORM8-COPY")
       expect(copy.name).toBe("E2E Normalarbeitstag 8h (Kopie)")
       expect(copy.regularHours).toBe(480)
@@ -298,7 +298,7 @@ describe("Phase 2: Arbeitszeitmodelle", () => {
 
     it("should update a day plan", async () => {
       const updated = await caller.dayPlans.update({
-        id: state.dayPlanId,
+        id: state.dayPlanId!,
         name: "E2E Normalarbeitstag 8h (updated)",
         regularHours: 450, // 7.5h
       })
@@ -308,7 +308,7 @@ describe("Phase 2: Arbeitszeitmodelle", () => {
 
       // Revert for downstream tests
       await caller.dayPlans.update({
-        id: state.dayPlanId,
+        id: state.dayPlanId!,
         name: "E2E Normalarbeitstag 8h",
         regularHours: 480,
       })
@@ -323,13 +323,13 @@ describe("Phase 2: Arbeitszeitmodelle", () => {
       const result = await caller.weekPlans.create({
         code: "E2E-40H",
         name: "E2E Standard 40h-Woche",
-        mondayDayPlanId: state.dayPlanId,
-        tuesdayDayPlanId: state.dayPlanId,
-        wednesdayDayPlanId: state.dayPlanId,
-        thursdayDayPlanId: state.dayPlanId,
-        fridayDayPlanId: state.dayPlanId,
-        saturdayDayPlanId: state.freeDayPlanId,
-        sundayDayPlanId: state.freeDayPlanId,
+        mondayDayPlanId: state.dayPlanId!,
+        tuesdayDayPlanId: state.dayPlanId!,
+        wednesdayDayPlanId: state.dayPlanId!,
+        thursdayDayPlanId: state.dayPlanId!,
+        fridayDayPlanId: state.dayPlanId!,
+        saturdayDayPlanId: state.freeDayPlanId!,
+        sundayDayPlanId: state.freeDayPlanId!,
       })
 
       expect(result.id).toBeDefined()
@@ -338,19 +338,19 @@ describe("Phase 2: Arbeitszeitmodelle", () => {
       expect(result.tenantId).toBe(SEED.TENANT_ID)
       expect(result.isActive).toBe(true)
       // Verify all 7 days are configured
-      expect(result.mondayDayPlanId).toBe(state.dayPlanId)
-      expect(result.tuesdayDayPlanId).toBe(state.dayPlanId)
-      expect(result.wednesdayDayPlanId).toBe(state.dayPlanId)
-      expect(result.thursdayDayPlanId).toBe(state.dayPlanId)
-      expect(result.fridayDayPlanId).toBe(state.dayPlanId)
-      expect(result.saturdayDayPlanId).toBe(state.freeDayPlanId)
-      expect(result.sundayDayPlanId).toBe(state.freeDayPlanId)
+      expect(result.mondayDayPlanId).toBe(state.dayPlanId!)
+      expect(result.tuesdayDayPlanId).toBe(state.dayPlanId!)
+      expect(result.wednesdayDayPlanId).toBe(state.dayPlanId!)
+      expect(result.thursdayDayPlanId).toBe(state.dayPlanId!)
+      expect(result.fridayDayPlanId).toBe(state.dayPlanId!)
+      expect(result.saturdayDayPlanId).toBe(state.freeDayPlanId!)
+      expect(result.sundayDayPlanId).toBe(state.freeDayPlanId!)
       state.weekPlanId = result.id
       created.weekPlanIds.push(result.id)
     })
 
     it("should include day plan summaries in week plan", async () => {
-      const result = await caller.weekPlans.getById({ id: state.weekPlanId })
+      const result = await caller.weekPlans.getById({ id: state.weekPlanId! })
 
       expect(result.mondayDayPlan).toBeDefined()
       expect(result.mondayDayPlan!.code).toBe("E2E-NORM8")
@@ -363,13 +363,13 @@ describe("Phase 2: Arbeitszeitmodelle", () => {
         caller.weekPlans.create({
           code: "E2E-40H",
           name: "E2E Duplicate Week Plan",
-          mondayDayPlanId: state.dayPlanId,
-          tuesdayDayPlanId: state.dayPlanId,
-          wednesdayDayPlanId: state.dayPlanId,
-          thursdayDayPlanId: state.dayPlanId,
-          fridayDayPlanId: state.dayPlanId,
-          saturdayDayPlanId: state.freeDayPlanId,
-          sundayDayPlanId: state.freeDayPlanId,
+          mondayDayPlanId: state.dayPlanId!,
+          tuesdayDayPlanId: state.dayPlanId!,
+          wednesdayDayPlanId: state.dayPlanId!,
+          thursdayDayPlanId: state.dayPlanId!,
+          fridayDayPlanId: state.dayPlanId!,
+          saturdayDayPlanId: state.freeDayPlanId!,
+          sundayDayPlanId: state.freeDayPlanId!,
         })
       ).rejects.toThrow()
     })
@@ -380,12 +380,12 @@ describe("Phase 2: Arbeitszeitmodelle", () => {
           code: "E2E-INVALID",
           name: "E2E Invalid Refs",
           mondayDayPlanId: "00000000-0000-0000-0000-000000000000",
-          tuesdayDayPlanId: state.dayPlanId,
-          wednesdayDayPlanId: state.dayPlanId,
-          thursdayDayPlanId: state.dayPlanId,
-          fridayDayPlanId: state.dayPlanId,
-          saturdayDayPlanId: state.freeDayPlanId,
-          sundayDayPlanId: state.freeDayPlanId,
+          tuesdayDayPlanId: state.dayPlanId!,
+          wednesdayDayPlanId: state.dayPlanId!,
+          thursdayDayPlanId: state.dayPlanId!,
+          fridayDayPlanId: state.dayPlanId!,
+          saturdayDayPlanId: state.freeDayPlanId!,
+          sundayDayPlanId: state.freeDayPlanId!,
         })
       ).rejects.toThrow()
     })
@@ -399,7 +399,7 @@ describe("Phase 2: Arbeitszeitmodelle", () => {
 
     it("should update a week plan", async () => {
       const updated = await caller.weekPlans.update({
-        id: state.weekPlanId,
+        id: state.weekPlanId!,
         description: "E2E Standard work week",
       })
 
@@ -410,13 +410,13 @@ describe("Phase 2: Arbeitszeitmodelle", () => {
       const result = await caller.weekPlans.create({
         code: "E2E-FLEX-W",
         name: "E2E Gleitzeitwoche",
-        mondayDayPlanId: state.flextimeDayPlanId,
-        tuesdayDayPlanId: state.flextimeDayPlanId,
-        wednesdayDayPlanId: state.flextimeDayPlanId,
-        thursdayDayPlanId: state.flextimeDayPlanId,
-        fridayDayPlanId: state.flextimeDayPlanId,
-        saturdayDayPlanId: state.freeDayPlanId,
-        sundayDayPlanId: state.freeDayPlanId,
+        mondayDayPlanId: state.flextimeDayPlanId!,
+        tuesdayDayPlanId: state.flextimeDayPlanId!,
+        wednesdayDayPlanId: state.flextimeDayPlanId!,
+        thursdayDayPlanId: state.flextimeDayPlanId!,
+        fridayDayPlanId: state.flextimeDayPlanId!,
+        saturdayDayPlanId: state.freeDayPlanId!,
+        sundayDayPlanId: state.freeDayPlanId!,
       })
 
       expect(result.id).toBeDefined()
@@ -433,7 +433,7 @@ describe("Phase 2: Arbeitszeitmodelle", () => {
       const result = await caller.tariffs.create({
         code: "E2E-VZ40",
         name: "E2E Vollzeit 40h",
-        weekPlanId: state.weekPlanId,
+        weekPlanId: state.weekPlanId!,
         annualVacationDays: 30,
         workDaysPerWeek: 5,
         dailyTargetHours: 8,
@@ -449,7 +449,7 @@ describe("Phase 2: Arbeitszeitmodelle", () => {
       expect(result.name).toBe("E2E Vollzeit 40h")
       expect(result.tenantId).toBe(SEED.TENANT_ID)
       expect(result.isActive).toBe(true)
-      expect(result.weekPlanId).toBe(state.weekPlanId)
+      expect(result.weekPlanId).toBe(state.weekPlanId!)
       expect(result.annualVacationDays).toBe(30)
       expect(result.workDaysPerWeek).toBe(5)
       expect(result.dailyTargetHours).toBe(8)
@@ -471,16 +471,16 @@ describe("Phase 2: Arbeitszeitmodelle", () => {
     })
 
     it("should get tariff by ID with relations", async () => {
-      const result = await caller.tariffs.getById({ id: state.tariffId })
+      const result = await caller.tariffs.getById({ id: state.tariffId! })
 
-      expect(result.id).toBe(state.tariffId)
+      expect(result.id).toBe(state.tariffId!)
       expect(result.weekPlan).toBeDefined()
       expect(result.weekPlan!.code).toBe("E2E-40H")
     })
 
     it("should add a break to a tariff", async () => {
       const brk = await caller.tariffs.createBreak({
-        tariffId: state.tariffId,
+        tariffId: state.tariffId!,
         breakType: "variable",
         afterWorkMinutes: 360, // 6h
         duration: 30,
@@ -488,7 +488,7 @@ describe("Phase 2: Arbeitszeitmodelle", () => {
       })
 
       expect(brk.id).toBeDefined()
-      expect(brk.tariffId).toBe(state.tariffId)
+      expect(brk.tariffId).toBe(state.tariffId!)
       expect(brk.breakType).toBe("variable")
       expect(brk.duration).toBe(30)
       expect(brk.isPaid).toBe(false)
@@ -497,12 +497,12 @@ describe("Phase 2: Arbeitszeitmodelle", () => {
     })
 
     it("should include breaks when fetching tariff by ID", async () => {
-      const result = await caller.tariffs.getById({ id: state.tariffId })
+      const result = await caller.tariffs.getById({ id: state.tariffId! })
 
       expect(result.breaks).toBeDefined()
       expect(result.breaks!.length).toBeGreaterThanOrEqual(1)
       const brk = result.breaks!.find(
-        (b: any) => b.id === state.tariffBreakId
+        (b: any) => b.id === state.tariffBreakId!
       )
       expect(brk).toBeDefined()
       expect(brk!.duration).toBe(30)
@@ -510,13 +510,13 @@ describe("Phase 2: Arbeitszeitmodelle", () => {
 
     it("should delete a tariff break", async () => {
       const result = await caller.tariffs.deleteBreak({
-        tariffId: state.tariffId,
-        breakId: state.tariffBreakId,
+        tariffId: state.tariffId!,
+        breakId: state.tariffBreakId!,
       })
 
       expect(result.success).toBe(true)
       created.tariffBreakIds = created.tariffBreakIds.filter(
-        (id) => id !== state.tariffBreakId
+        (id) => id !== state.tariffBreakId!
       )
     })
 
@@ -529,7 +529,7 @@ describe("Phase 2: Arbeitszeitmodelle", () => {
 
     it("should update a tariff (name, vacation days)", async () => {
       const updated = await caller.tariffs.update({
-        id: state.tariffId,
+        id: state.tariffId!,
         name: "E2E Vollzeit 40h (updated)",
         annualVacationDays: 28,
       })
@@ -542,7 +542,7 @@ describe("Phase 2: Arbeitszeitmodelle", () => {
       const result = await caller.tariffs.create({
         code: "E2E-TZ20",
         name: "E2E Teilzeit 20h",
-        weekPlanId: state.weekPlanId,
+        weekPlanId: state.weekPlanId!,
         annualVacationDays: 30,
         workDaysPerWeek: 5,
         dailyTargetHours: 4,
@@ -647,17 +647,17 @@ describe("Phase 2: Arbeitszeitmodelle", () => {
 
     it("should get account usage", async () => {
       const usage = await caller.accounts.getUsage({
-        id: state.flextimeAccountId,
+        id: state.flextimeAccountId!,
       })
 
-      expect(usage.accountId).toBe(state.flextimeAccountId)
+      expect(usage.accountId).toBe(state.flextimeAccountId!)
       expect(usage.usageCount).toBeDefined()
       expect(usage.dayPlans).toBeInstanceOf(Array)
     })
 
     it("should update an account", async () => {
       const updated = await caller.accounts.update({
-        id: state.flextimeAccountId,
+        id: state.flextimeAccountId!,
         name: "E2E Flexzeit (updated)",
         description: "Flextime balance account",
       })
@@ -695,13 +695,13 @@ describe("Phase 2: Arbeitszeitmodelle", () => {
       const result = await caller.calculationRules.create({
         code: "E2E-CALC-FLEX",
         name: "E2E Flexzeitberechnung",
-        accountId: state.flextimeAccountId,
+        accountId: state.flextimeAccountId!,
         value: 0,
         factor: 1.0,
       })
 
       expect(result.id).toBeDefined()
-      expect(result.accountId).toBe(state.flextimeAccountId)
+      expect(result.accountId).toBe(state.flextimeAccountId!)
       created.calculationRuleIds.push(result.id)
     })
 
@@ -726,17 +726,17 @@ describe("Phase 2: Arbeitszeitmodelle", () => {
 
     it("should get a calculation rule by ID", async () => {
       const result = await caller.calculationRules.getById({
-        id: state.calculationRuleId,
+        id: state.calculationRuleId!,
       })
 
-      expect(result.id).toBe(state.calculationRuleId)
+      expect(result.id).toBe(state.calculationRuleId!)
       expect(result.code).toBe("E2E-CALC-OT")
       expect(result.factor).toBe(1.5)
     })
 
     it("should update a calculation rule", async () => {
       const updated = await caller.calculationRules.update({
-        id: state.calculationRuleId,
+        id: state.calculationRuleId!,
         name: "E2E Ueberstundenberechnung (updated)",
         factor: 2.0,
       })

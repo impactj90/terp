@@ -218,9 +218,9 @@ describe("Phase 4: Mitarbeiter", () => {
     })
 
     it("should get employee detail by ID with relations", async () => {
-      const result = await caller.employees.getById({ id: state.employeeId })
+      const result = await caller.employees.getById({ id: state.employeeId! })
 
-      expect(result.id).toBe(state.employeeId)
+      expect(result.id).toBe(state.employeeId!)
       expect(result.personnelNumber).toBe("E2E-001")
       expect(result.contacts).toBeInstanceOf(Array)
       expect(result.cards).toBeInstanceOf(Array)
@@ -259,7 +259,7 @@ describe("Phase 4: Mitarbeiter", () => {
   describe("UC-020: Kontakte zum Mitarbeiter hinzufuegen", () => {
     it("should add a contact to the employee", async () => {
       const result = await caller.employeeContacts.create({
-        employeeId: state.employeeId,
+        employeeId: state.employeeId!,
         contactType: "email",
         value: "e2e-private@test.local",
         label: "E2E Privat-Email",
@@ -267,7 +267,7 @@ describe("Phase 4: Mitarbeiter", () => {
       })
 
       expect(result.id).toBeDefined()
-      expect(result.employeeId).toBe(state.employeeId)
+      expect(result.employeeId).toBe(state.employeeId!)
       expect(result.contactType).toBe("email")
       expect(result.value).toBe("e2e-private@test.local")
       expect(result.isPrimary).toBe(true)
@@ -277,7 +277,7 @@ describe("Phase 4: Mitarbeiter", () => {
 
     it("should add a second contact (emergency phone)", async () => {
       const result = await caller.employeeContacts.create({
-        employeeId: state.employeeId,
+        employeeId: state.employeeId!,
         contactType: "phone",
         value: "+49 123 456789",
         label: "E2E Notfall",
@@ -291,7 +291,7 @@ describe("Phase 4: Mitarbeiter", () => {
 
     it("should list contacts for the employee", async () => {
       const { data } = await caller.employeeContacts.list({
-        employeeId: state.employeeId,
+        employeeId: state.employeeId!,
       })
 
       expect(data.length).toBeGreaterThanOrEqual(2)
@@ -301,18 +301,18 @@ describe("Phase 4: Mitarbeiter", () => {
 
     it("should delete a contact", async () => {
       const result = await caller.employeeContacts.delete({
-        id: state.contact2Id,
+        id: state.contact2Id!,
       })
 
       expect(result.success).toBe(true)
       // Remove from cleanup since already deleted
-      created.contactIds = created.contactIds.filter((id) => id !== state.contact2Id)
+      created.contactIds = created.contactIds.filter((id) => id !== state.contact2Id!)
 
       // Verify it was deleted
       const { data } = await caller.employeeContacts.list({
-        employeeId: state.employeeId,
+        employeeId: state.employeeId!,
       })
-      const found = data.find((c) => c.id === state.contact2Id)
+      const found = data.find((c) => c.id === state.contact2Id!)
       expect(found).toBeUndefined()
     })
   })
@@ -323,13 +323,13 @@ describe("Phase 4: Mitarbeiter", () => {
   describe("UC-021: Zutrittskarte zuweisen", () => {
     it("should assign a card to the employee", async () => {
       const result = await caller.employeeCards.create({
-        employeeId: state.employeeId,
+        employeeId: state.employeeId!,
         cardNumber: "E2E-CARD-001",
         cardType: "rfid",
       })
 
       expect(result.id).toBeDefined()
-      expect(result.employeeId).toBe(state.employeeId)
+      expect(result.employeeId).toBe(state.employeeId!)
       expect(result.cardNumber).toBe("E2E-CARD-001")
       expect(result.cardType).toBe("rfid")
       expect(result.isActive).toBe(true)
@@ -340,7 +340,7 @@ describe("Phase 4: Mitarbeiter", () => {
     it("should reject duplicate card numbers within the tenant", async () => {
       await expect(
         caller.employeeCards.create({
-          employeeId: state.employeeId,
+          employeeId: state.employeeId!,
           cardNumber: "E2E-CARD-001",
         })
       ).rejects.toThrow()
@@ -348,7 +348,7 @@ describe("Phase 4: Mitarbeiter", () => {
 
     it("should list cards for the employee", async () => {
       const { data } = await caller.employeeCards.list({
-        employeeId: state.employeeId,
+        employeeId: state.employeeId!,
       })
 
       expect(data.length).toBeGreaterThanOrEqual(1)
@@ -359,7 +359,7 @@ describe("Phase 4: Mitarbeiter", () => {
 
     it("should deactivate a card", async () => {
       const result = await caller.employeeCards.deactivate({
-        id: state.cardId,
+        id: state.cardId!,
         reason: "E2E test deactivation",
       })
 
@@ -379,14 +379,14 @@ describe("Phase 4: Mitarbeiter", () => {
 
     it("should create a tariff assignment for the employee", async () => {
       const result = await caller.employeeTariffAssignments.create({
-        employeeId: state.employeeId,
+        employeeId: state.employeeId!,
         tariffId: TARIFF_40H,
         effectiveFrom: new Date("2025-01-01"),
         notes: "E2E test assignment",
       })
 
       expect(result.id).toBeDefined()
-      expect(result.employeeId).toBe(state.employeeId)
+      expect(result.employeeId).toBe(state.employeeId!)
       expect(result.tariffId).toBe(TARIFF_40H)
       expect(result.isActive).toBe(true)
       expect(result.overwriteBehavior).toBe("preserve_manual")
@@ -397,7 +397,7 @@ describe("Phase 4: Mitarbeiter", () => {
     it("should reject overlapping tariff assignments", async () => {
       await expect(
         caller.employeeTariffAssignments.create({
-          employeeId: state.employeeId,
+          employeeId: state.employeeId!,
           tariffId: TARIFF_20H,
           effectiveFrom: new Date("2025-06-01"),
           notes: "E2E test assignment",
@@ -407,40 +407,40 @@ describe("Phase 4: Mitarbeiter", () => {
 
     it("should list tariff assignments for the employee", async () => {
       const { data } = await caller.employeeTariffAssignments.list({
-        employeeId: state.employeeId,
+        employeeId: state.employeeId!,
       })
 
       expect(data.length).toBeGreaterThanOrEqual(1)
-      const found = data.find((a) => a.id === state.tariffAssignmentId)
+      const found = data.find((a) => a.id === state.tariffAssignmentId!)
       expect(found).toBeDefined()
       expect(found!.tariffId).toBe(TARIFF_40H)
     })
 
     it("should retrieve a tariff assignment by ID", async () => {
       const result = await caller.employeeTariffAssignments.getById({
-        employeeId: state.employeeId,
-        id: state.tariffAssignmentId,
+        employeeId: state.employeeId!,
+        id: state.tariffAssignmentId!,
       })
 
-      expect(result.id).toBe(state.tariffAssignmentId)
+      expect(result.id).toBe(state.tariffAssignmentId!)
       expect(result.tariffId).toBe(TARIFF_40H)
     })
 
     it("should resolve effective tariff for a date within the assignment range", async () => {
       const result = await caller.employeeTariffAssignments.effective({
-        employeeId: state.employeeId,
+        employeeId: state.employeeId!,
         date: "2025-06-15",
       })
 
       expect(result.tariffId).toBe(TARIFF_40H)
       expect(result.source).toBe("assignment")
-      expect(result.assignmentId).toBe(state.tariffAssignmentId)
+      expect(result.assignmentId).toBe(state.tariffAssignmentId!)
     })
 
     it("should reject effectiveTo before effectiveFrom", async () => {
       await expect(
         caller.employeeTariffAssignments.create({
-          employeeId: state.employeeId,
+          employeeId: state.employeeId!,
           tariffId: TARIFF_20H,
           effectiveFrom: new Date("2025-12-01"),
           effectiveTo: new Date("2025-01-01"),
@@ -452,14 +452,14 @@ describe("Phase 4: Mitarbeiter", () => {
     it("should allow a non-overlapping assignment after closing the first", async () => {
       // End the first assignment
       await caller.employeeTariffAssignments.update({
-        employeeId: state.employeeId,
-        id: state.tariffAssignmentId,
+        employeeId: state.employeeId!,
+        id: state.tariffAssignmentId!,
         effectiveTo: new Date("2025-12-31"),
       })
 
       // Create a new assignment starting after the first ends
       const result = await caller.employeeTariffAssignments.create({
-        employeeId: state.employeeId,
+        employeeId: state.employeeId!,
         tariffId: TARIFF_20H,
         effectiveFrom: new Date("2026-01-01"),
         notes: "E2E test assignment",
@@ -473,13 +473,13 @@ describe("Phase 4: Mitarbeiter", () => {
 
     it("should resolve effective tariff to the newer assignment for a date in its range", async () => {
       const result = await caller.employeeTariffAssignments.effective({
-        employeeId: state.employeeId,
+        employeeId: state.employeeId!,
         date: "2026-06-15",
       })
 
       expect(result.tariffId).toBe(TARIFF_20H)
       expect(result.source).toBe("assignment")
-      expect(result.assignmentId).toBe(state.tariffAssignment2Id)
+      expect(result.assignmentId).toBe(state.tariffAssignment2Id!)
     })
   })
 
@@ -503,39 +503,39 @@ describe("Phase 4: Mitarbeiter", () => {
 
     it("should add employee as a team member", async () => {
       const result = await caller.teams.addMember({
-        teamId: state.teamId,
-        employeeId: state.employeeId,
+        teamId: state.teamId!,
+        employeeId: state.employeeId!,
         role: "member",
       })
 
-      expect(result.teamId).toBe(state.teamId)
-      expect(result.employeeId).toBe(state.employeeId)
+      expect(result.teamId).toBe(state.teamId!)
+      expect(result.employeeId).toBe(state.employeeId!)
       expect(result.role).toBe("member")
       created.teamMemberKeys.push({
-        teamId: state.teamId,
-        employeeId: state.employeeId,
+        teamId: state.teamId!,
+        employeeId: state.employeeId!,
       })
     })
 
     it("should add second employee as team leader", async () => {
       const result = await caller.teams.addMember({
-        teamId: state.teamId,
-        employeeId: state.employee2Id,
+        teamId: state.teamId!,
+        employeeId: state.employee2Id!,
         role: "lead",
       })
 
       expect(result.role).toBe("lead")
       created.teamMemberKeys.push({
-        teamId: state.teamId,
-        employeeId: state.employee2Id,
+        teamId: state.teamId!,
+        employeeId: state.employee2Id!,
       })
     })
 
     it("should reject adding the same employee to the same team again", async () => {
       await expect(
         caller.teams.addMember({
-          teamId: state.teamId,
-          employeeId: state.employeeId,
+          teamId: state.teamId!,
+          employeeId: state.employeeId!,
           role: "member",
         })
       ).rejects.toThrow()
@@ -543,7 +543,7 @@ describe("Phase 4: Mitarbeiter", () => {
 
     it("should list team members", async () => {
       const { items } = await caller.teams.getMembers({
-        teamId: state.teamId,
+        teamId: state.teamId!,
       })
 
       expect(items.length).toBe(2)
@@ -554,8 +554,8 @@ describe("Phase 4: Mitarbeiter", () => {
 
     it("should update a member's role", async () => {
       const result = await caller.teams.updateMemberRole({
-        teamId: state.teamId,
-        employeeId: state.employeeId,
+        teamId: state.teamId!,
+        employeeId: state.employeeId!,
         role: "deputy",
       })
 
@@ -564,29 +564,29 @@ describe("Phase 4: Mitarbeiter", () => {
 
     it("should get teams for an employee", async () => {
       const { items } = await caller.teams.getByEmployee({
-        employeeId: state.employeeId,
+        employeeId: state.employeeId!,
       })
 
       expect(items.length).toBeGreaterThanOrEqual(1)
-      const found = items.find((t) => t.id === state.teamId)
+      const found = items.find((t) => t.id === state.teamId!)
       expect(found).toBeDefined()
       expect(found!.name).toBe("E2E Test Team")
     })
 
     it("should remove a member from the team", async () => {
       const result = await caller.teams.removeMember({
-        teamId: state.teamId,
-        employeeId: state.employee2Id,
+        teamId: state.teamId!,
+        employeeId: state.employee2Id!,
       })
 
       expect(result.success).toBe(true)
       created.teamMemberKeys = created.teamMemberKeys.filter(
-        (k) => !(k.teamId === state.teamId && k.employeeId === state.employee2Id)
+        (k) => !(k.teamId === state.teamId! && k.employeeId === state.employee2Id!)
       )
 
       // Verify removal
       const { items } = await caller.teams.getMembers({
-        teamId: state.teamId,
+        teamId: state.teamId!,
       })
       expect(items.length).toBe(1)
     })
@@ -637,14 +637,14 @@ describe("Phase 4: Mitarbeiter", () => {
       // Link the user to the E2E employee
       const updated = await caller.users.update({
         id: newUser.id,
-        employeeId: state.employeeId,
+        employeeId: state.employeeId!,
       })
 
-      expect(updated.employeeId).toBe(state.employeeId)
+      expect(updated.employeeId).toBe(state.employeeId!)
 
       // Verify via getById
       const verified = await caller.users.getById({ id: newUser.id })
-      expect(verified.employeeId).toBe(state.employeeId)
+      expect(verified.employeeId).toBe(state.employeeId!)
       expect(verified.employee).toBeDefined()
       expect(verified.employee!.firstName).toBe("E2E")
 
@@ -666,7 +666,7 @@ describe("Phase 4: Mitarbeiter", () => {
   describe("UC-025: Urlaubssaldo initialisieren", () => {
     it("should create a vacation balance for the E2E employee", async () => {
       const result = await caller.vacationBalances.create({
-        employeeId: state.employeeId,
+        employeeId: state.employeeId!,
         year: 2027,
         entitlement: 30,
         carryover: 5,
@@ -674,7 +674,7 @@ describe("Phase 4: Mitarbeiter", () => {
       })
 
       expect(result.id).toBeDefined()
-      expect(result.employeeId).toBe(state.employeeId)
+      expect(result.employeeId).toBe(state.employeeId!)
       expect(result.year).toBe(2027)
       expect(result.entitlement).toBe(30)
       expect(result.carryover).toBe(5)
@@ -689,7 +689,7 @@ describe("Phase 4: Mitarbeiter", () => {
     it("should reject duplicate balance for the same employee and year", async () => {
       await expect(
         caller.vacationBalances.create({
-          employeeId: state.employeeId,
+          employeeId: state.employeeId!,
           year: 2027,
           entitlement: 20,
           carryover: 0,
@@ -700,12 +700,12 @@ describe("Phase 4: Mitarbeiter", () => {
 
     it("should list vacation balances and include the new one", async () => {
       const result = await caller.vacationBalances.list({
-        employeeId: state.employeeId,
+        employeeId: state.employeeId!,
         year: 2027,
       })
 
       expect(result.items.length).toBeGreaterThanOrEqual(1)
-      const found = result.items.find((b) => b.id === state.vacationBalanceId)
+      const found = result.items.find((b) => b.id === state.vacationBalanceId!)
       expect(found).toBeDefined()
       expect(found!.entitlement).toBe(30)
       expect(found!.total).toBe(35)
@@ -713,17 +713,17 @@ describe("Phase 4: Mitarbeiter", () => {
 
     it("should get vacation balance by ID", async () => {
       const result = await caller.vacationBalances.getById({
-        id: state.vacationBalanceId,
+        id: state.vacationBalanceId!,
       })
 
-      expect(result.id).toBe(state.vacationBalanceId)
+      expect(result.id).toBe(state.vacationBalanceId!)
       expect(result.year).toBe(2027)
       expect(result.available).toBe(35)
     })
 
     it("should update vacation balance adjustments", async () => {
       const result = await caller.vacationBalances.update({
-        id: state.vacationBalanceId,
+        id: state.vacationBalanceId!,
         adjustments: 2,
       })
 
@@ -755,14 +755,14 @@ describe("Phase 4: Mitarbeiter", () => {
   describe("UC-026: Tagesplaene fuer Mitarbeiter generieren", () => {
     it("should create a single employee day plan manually", async () => {
       const result = await caller.employeeDayPlans.create({
-        employeeId: state.employeeId,
+        employeeId: state.employeeId!,
         planDate: "2027-01-04",
         source: "manual",
         notes: "E2E manual day plan",
       })
 
       expect(result.id).toBeDefined()
-      expect(result.employeeId).toBe(state.employeeId)
+      expect(result.employeeId).toBe(state.employeeId!)
       expect(result.source).toBe("manual")
       state.dayPlanId = result.id
       created.employeeDayPlanIds.push(result.id)
@@ -770,19 +770,19 @@ describe("Phase 4: Mitarbeiter", () => {
 
     it("should list employee day plans for a date range", async () => {
       const { data } = await caller.employeeDayPlans.list({
-        employeeId: state.employeeId,
+        employeeId: state.employeeId!,
         from: "2027-01-01",
         to: "2027-01-31",
       })
 
       expect(data.length).toBeGreaterThanOrEqual(1)
-      const found = data.find((p) => p.id === state.dayPlanId)
+      const found = data.find((p) => p.id === state.dayPlanId!)
       expect(found).toBeDefined()
     })
 
     it("should list day plans for a specific employee", async () => {
       const { data } = await caller.employeeDayPlans.forEmployee({
-        employeeId: state.employeeId,
+        employeeId: state.employeeId!,
         from: "2027-01-01",
         to: "2027-01-31",
       })
@@ -792,16 +792,16 @@ describe("Phase 4: Mitarbeiter", () => {
 
     it("should get employee day plan by ID", async () => {
       const result = await caller.employeeDayPlans.getById({
-        id: state.dayPlanId,
+        id: state.dayPlanId!,
       })
 
-      expect(result.id).toBe(state.dayPlanId)
+      expect(result.id).toBe(state.dayPlanId!)
       expect(result.source).toBe("manual")
     })
 
     it("should update an employee day plan", async () => {
       const result = await caller.employeeDayPlans.update({
-        id: state.dayPlanId,
+        id: state.dayPlanId!,
         notes: "E2E updated day plan",
       })
 
@@ -812,17 +812,17 @@ describe("Phase 4: Mitarbeiter", () => {
       const result = await caller.employeeDayPlans.bulkCreate({
         entries: [
           {
-            employeeId: state.employeeId,
+            employeeId: state.employeeId!,
             planDate: "2027-01-05",
             source: "tariff",
           },
           {
-            employeeId: state.employeeId,
+            employeeId: state.employeeId!,
             planDate: "2027-01-06",
             source: "tariff",
           },
           {
-            employeeId: state.employeeId,
+            employeeId: state.employeeId!,
             planDate: "2027-01-07",
             source: "tariff",
           },
@@ -833,7 +833,7 @@ describe("Phase 4: Mitarbeiter", () => {
 
       // Track for cleanup
       const { data } = await caller.employeeDayPlans.forEmployee({
-        employeeId: state.employeeId,
+        employeeId: state.employeeId!,
         from: "2027-01-05",
         to: "2027-01-07",
       })
@@ -842,7 +842,7 @@ describe("Phase 4: Mitarbeiter", () => {
 
     it("should delete a date range of employee day plans", async () => {
       const result = await caller.employeeDayPlans.deleteRange({
-        employeeId: state.employeeId,
+        employeeId: state.employeeId!,
         from: "2027-01-05",
         to: "2027-01-07",
       })
@@ -851,7 +851,7 @@ describe("Phase 4: Mitarbeiter", () => {
 
       // Remove from cleanup since already deleted
       const { data } = await caller.employeeDayPlans.forEmployee({
-        employeeId: state.employeeId,
+        employeeId: state.employeeId!,
         from: "2027-01-05",
         to: "2027-01-07",
       })
@@ -860,12 +860,12 @@ describe("Phase 4: Mitarbeiter", () => {
 
     it("should delete a single employee day plan", async () => {
       const result = await caller.employeeDayPlans.delete({
-        id: state.dayPlanId,
+        id: state.dayPlanId!,
       })
 
       expect(result.success).toBe(true)
       created.employeeDayPlanIds = created.employeeDayPlanIds.filter(
-        (id) => id !== state.dayPlanId
+        (id) => id !== state.dayPlanId!
       )
     })
 

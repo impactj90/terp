@@ -232,8 +232,8 @@ describe("Phase 11: Reporting & Export", () => {
     })
 
     it("should retrieve a report by ID", async () => {
-      const result = await caller.reports.getById({ id: state.reportId })
-      expect(result.id).toBe(state.reportId)
+      const result = await caller.reports.getById({ id: state.reportId! })
+      expect(result.id).toBe(state.reportId!)
       expect(result.name).toBe("E2E Monthly Overview Jan 2026")
       expect(result.status).toBe("completed")
     })
@@ -244,7 +244,7 @@ describe("Phase 11: Reporting & Export", () => {
   // =========================================================
   describe("UC-064: Report herunterladen", () => {
     it("should download a CSV report", async () => {
-      const result = await caller.reports.download({ id: state.reportId })
+      const result = await caller.reports.download({ id: state.reportId! })
 
       expect(result.content).toBeDefined()
       expect(result.content.length).toBeGreaterThan(0)
@@ -254,7 +254,7 @@ describe("Phase 11: Reporting & Export", () => {
 
     it("should download a JSON report", async () => {
       const result = await caller.reports.download({
-        id: state.jsonReportId,
+        id: state.jsonReportId!,
       })
 
       expect(result.content).toBeDefined()
@@ -344,27 +344,27 @@ describe("Phase 11: Reporting & Export", () => {
 
     it("should retrieve an export interface by ID", async () => {
       const result = await caller.exportInterfaces.getById({
-        id: state.exportInterfaceId,
+        id: state.exportInterfaceId!,
       })
-      expect(result.id).toBe(state.exportInterfaceId)
+      expect(result.id).toBe(state.exportInterfaceId!)
       expect(result.name).toBe("E2E DATEV Export")
     })
 
     it("should set accounts on an export interface", async () => {
       const { data } = await caller.exportInterfaces.setAccounts({
-        id: state.exportInterfaceId,
+        id: state.exportInterfaceId!,
         accountIds: [SEED_ACCOUNT_ID_1, SEED_ACCOUNT_ID_2],
       })
 
       expect(data.length).toBe(2)
-      expect(data[0].sortOrder).toBe(0)
-      expect(data[1].sortOrder).toBe(1)
-      expect(data[0].account).toBeDefined()
+      expect(data[0]!.sortOrder).toBe(0)
+      expect(data[1]!.sortOrder).toBe(1)
+      expect(data[0]!.account).toBeDefined()
     })
 
     it("should list accounts for an export interface", async () => {
       const { data } = await caller.exportInterfaces.listAccounts({
-        id: state.exportInterfaceId,
+        id: state.exportInterfaceId!,
       })
 
       expect(data.length).toBe(2)
@@ -375,7 +375,7 @@ describe("Phase 11: Reporting & Export", () => {
 
     it("should update an export interface", async () => {
       const result = await caller.exportInterfaces.update({
-        id: state.exportInterfaceId,
+        id: state.exportInterfaceId!,
         name: "E2E DATEV Export Updated",
         mandantNumber: "E2E-99999",
       })
@@ -386,23 +386,23 @@ describe("Phase 11: Reporting & Export", () => {
 
     it("should replace accounts on an export interface", async () => {
       const { data } = await caller.exportInterfaces.setAccounts({
-        id: state.exportInterfaceId,
+        id: state.exportInterfaceId!,
         accountIds: [SEED_ACCOUNT_ID_2], // Only one account now
       })
 
       expect(data.length).toBe(1)
-      expect(data[0].accountId).toBe(SEED_ACCOUNT_ID_2)
+      expect(data[0]!.accountId).toBe(SEED_ACCOUNT_ID_2)
     })
 
     it("should delete an unused export interface", async () => {
       const result = await caller.exportInterfaces.delete({
-        id: state.exportInterface2Id,
+        id: state.exportInterface2Id!,
       })
       expect(result.success).toBe(true)
 
       // Remove from cleanup list
       created.exportInterfaceIds = created.exportInterfaceIds.filter(
-        (id) => id !== state.exportInterface2Id
+        (id) => id !== state.exportInterface2Id!
       )
     })
   })
@@ -436,11 +436,11 @@ describe("Phase 11: Reporting & Export", () => {
         month: 2,
         format: "csv",
         exportType: "standard",
-        exportInterfaceId: state.exportInterfaceId,
+        exportInterfaceId: state.exportInterfaceId!,
       })
 
       expect(result.id).toBeDefined()
-      expect(result.exportInterfaceId).toBe(state.exportInterfaceId)
+      expect(result.exportInterfaceId).toBe(state.exportInterfaceId!)
       expect(result.status).toBe("completed")
       state.payrollExport2Id = result.id
       created.payrollExportIds.push(result.id)
@@ -466,16 +466,16 @@ describe("Phase 11: Reporting & Export", () => {
 
     it("should retrieve a payroll export by ID", async () => {
       const result = await caller.payrollExports.getById({
-        id: state.payrollExportId,
+        id: state.payrollExportId!,
       })
-      expect(result.id).toBe(state.payrollExportId)
+      expect(result.id).toBe(state.payrollExportId!)
       expect(result.year).toBe(2025)
       expect(result.month).toBe(1)
     })
 
     it("should download a payroll export", async () => {
       const result = await caller.payrollExports.download({
-        id: state.payrollExportId,
+        id: state.payrollExportId!,
       })
 
       expect(result.content).toBeDefined()
@@ -486,7 +486,7 @@ describe("Phase 11: Reporting & Export", () => {
 
     it("should preview a payroll export", async () => {
       const result = await caller.payrollExports.preview({
-        id: state.payrollExportId,
+        id: state.payrollExportId!,
       })
 
       expect(result.lines).toBeDefined()
@@ -498,13 +498,13 @@ describe("Phase 11: Reporting & Export", () => {
 
     it("should delete a payroll export", async () => {
       const result = await caller.payrollExports.delete({
-        id: state.payrollExport2Id,
+        id: state.payrollExport2Id!,
       })
       expect(result.success).toBe(true)
 
       // Remove from cleanup list
       created.payrollExportIds = created.payrollExportIds.filter(
-        (id) => id !== state.payrollExport2Id
+        (id) => id !== state.payrollExport2Id!
       )
     })
 
@@ -517,13 +517,13 @@ describe("Phase 11: Reporting & Export", () => {
         month: 3,
         format: "csv",
         exportType: "standard",
-        exportInterfaceId: state.exportInterfaceId,
+        exportInterfaceId: state.exportInterfaceId!,
       })
       created.payrollExportIds.push(exportForInterfaceTest.id)
 
       // Now trying to delete the interface should fail
       await expect(
-        caller.exportInterfaces.delete({ id: state.exportInterfaceId })
+        caller.exportInterfaces.delete({ id: state.exportInterfaceId! })
       ).rejects.toThrow()
     })
   })
@@ -587,15 +587,15 @@ describe("Phase 11: Reporting & Export", () => {
 
     it("should retrieve a template by ID", async () => {
       const result = await caller.monthlyEvalTemplates.getById({
-        id: state.templateId,
+        id: state.templateId!,
       })
-      expect(result.id).toBe(state.templateId)
+      expect(result.id).toBe(state.templateId!)
       expect(result.name).toBe("E2E Standard Template")
     })
 
     it("should update a template", async () => {
       const result = await caller.monthlyEvalTemplates.update({
-        id: state.templateId,
+        id: state.templateId!,
         name: "E2E Standard Template Updated",
         flextimeCapPositive: 50,
       })
@@ -608,7 +608,7 @@ describe("Phase 11: Reporting & Export", () => {
 
     it("should set a template as default", async () => {
       const result = await caller.monthlyEvalTemplates.setDefault({
-        id: state.templateId,
+        id: state.templateId!,
       })
 
       expect(result.isDefault).toBe(true)
@@ -623,35 +623,35 @@ describe("Phase 11: Reporting & Export", () => {
 
     it("should switch default to another template", async () => {
       const result = await caller.monthlyEvalTemplates.setDefault({
-        id: state.template2Id,
+        id: state.template2Id!,
       })
 
       expect(result.isDefault).toBe(true)
-      expect(result.id).toBe(state.template2Id)
+      expect(result.id).toBe(state.template2Id!)
 
       // Previous default should no longer be default
       const previous = await caller.monthlyEvalTemplates.getById({
-        id: state.templateId,
+        id: state.templateId!,
       })
       expect(previous.isDefault).toBe(false)
     })
 
     it("should not delete the default template", async () => {
       await expect(
-        caller.monthlyEvalTemplates.delete({ id: state.template2Id })
+        caller.monthlyEvalTemplates.delete({ id: state.template2Id! })
       ).rejects.toThrow()
     })
 
     it("should delete a non-default template", async () => {
       const result = await caller.monthlyEvalTemplates.delete({
-        id: state.templateId,
+        id: state.templateId!,
       })
       expect(result.success).toBe(true)
 
       // Remove from cleanup list
       created.monthlyEvalTemplateIds =
         created.monthlyEvalTemplateIds.filter(
-          (id) => id !== state.templateId
+          (id) => id !== state.templateId!
         )
     })
   })

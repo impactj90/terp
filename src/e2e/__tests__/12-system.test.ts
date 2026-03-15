@@ -150,9 +150,9 @@ describe("Phase 12: System & Audit", () => {
 
     it("should restore original settings", async () => {
       await caller.systemSettings.update({
-        birthdayWindowDaysBefore: Number(state.origBirthdayBefore),
-        birthdayWindowDaysAfter: Number(state.origBirthdayAfter),
-        errorListEnabled: state.origErrorListEnabled === "true",
+        birthdayWindowDaysBefore: Number(state.origBirthdayBefore!),
+        birthdayWindowDaysAfter: Number(state.origBirthdayAfter!),
+        errorListEnabled: state.origErrorListEnabled! === "true",
         proxyEnabled: false,
         proxyHost: null,
         proxyPort: null,
@@ -184,7 +184,7 @@ describe("Phase 12: System & Audit", () => {
 
       // There should be entries from seed data operations and our test operations
       if (result.total > 0) {
-        const entry = result.items[0]
+        const entry = result.items[0]!
         expect(entry.id).toBeDefined()
         expect(entry.tenantId).toBe(SEED.TENANT_ID)
         expect(entry.action).toBeDefined()
@@ -232,7 +232,7 @@ describe("Phase 12: System & Audit", () => {
 
         // Entries on page 1 and page 2 should be different
         if (page2.items.length > 0) {
-          expect(page2.items[0].id).not.toBe(page1.items[0].id)
+          expect(page2.items[0]!.id).not.toBe(page1.items[0]!.id)
         }
       }
     })
@@ -241,7 +241,7 @@ describe("Phase 12: System & Audit", () => {
       const listResult = await caller.auditLogs.list({ pageSize: 1 })
 
       if (listResult.total > 0) {
-        const entryId = listResult.items[0].id
+        const entryId = listResult.items[0]!.id
         const result = await caller.auditLogs.getById({ id: entryId })
 
         expect(result.id).toBe(entryId)
@@ -260,8 +260,8 @@ describe("Phase 12: System & Audit", () => {
       if (result.total > 0) {
         const withUser = result.items.filter((e: any) => e.user != null)
         if (withUser.length > 0) {
-          expect(withUser[0].user!.id).toBe(SEED.ADMIN_USER_ID)
-          expect(withUser[0].user!.email).toBeDefined()
+          expect(withUser[0]!.user!.id).toBe(SEED.ADMIN_USER_ID)
+          expect(withUser[0]!.user!.email).toBeDefined()
         }
       }
     })

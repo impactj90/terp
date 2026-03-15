@@ -304,7 +304,7 @@ describe("Phase 7: Urlaubskonfiguration (Fortgeschritten)", () => {
 
     it("should update a special calculation", async () => {
       const result = await caller.vacationSpecialCalcs.update({
-        id: state.newSpecialCalcId,
+        id: state.newSpecialCalcId!,
         bonusDays: 4,
         description: "E2E Updated: 4 days for employees over 55",
       })
@@ -317,7 +317,7 @@ describe("Phase 7: Urlaubskonfiguration (Fortgeschritten)", () => {
 
     it("should deactivate a special calculation", async () => {
       const result = await caller.vacationSpecialCalcs.update({
-        id: state.newSpecialCalcId,
+        id: state.newSpecialCalcId!,
         isActive: false,
       })
 
@@ -424,7 +424,7 @@ describe("Phase 7: Urlaubskonfiguration (Fortgeschritten)", () => {
 
     it("should update a calculation group and replace special calcs", async () => {
       const result = await caller.vacationCalcGroups.update({
-        id: state.newCalcGroupId,
+        id: state.newCalcGroupId!,
         name: "E2E Updated Calc Group",
         specialCalculationIds: [
           SPECIAL_CALC_AGE_50,
@@ -439,7 +439,7 @@ describe("Phase 7: Urlaubskonfiguration (Fortgeschritten)", () => {
 
     it("should remove all special calcs from a group", async () => {
       const result = await caller.vacationCalcGroups.update({
-        id: state.newCalcGroupId,
+        id: state.newCalcGroupId!,
         specialCalculationIds: [],
       })
 
@@ -462,7 +462,7 @@ describe("Phase 7: Urlaubskonfiguration (Fortgeschritten)", () => {
     it("should filter groups by active status", async () => {
       // Deactivate our test group
       await caller.vacationCalcGroups.update({
-        id: state.newCalcGroupId,
+        id: state.newCalcGroupId!,
         isActive: false,
       })
 
@@ -477,13 +477,13 @@ describe("Phase 7: Urlaubskonfiguration (Fortgeschritten)", () => {
       inactive.forEach((g: any) => expect(g.isActive).toBe(false))
 
       // Our deactivated group should be in inactive list
-      expect(inactive.some((g: any) => g.id === state.newCalcGroupId)).toBe(
+      expect(inactive.some((g: any) => g.id === state.newCalcGroupId!)).toBe(
         true
       )
 
       // Reactivate for subsequent tests
       await caller.vacationCalcGroups.update({
-        id: state.newCalcGroupId,
+        id: state.newCalcGroupId!,
         isActive: true,
       })
     })
@@ -578,7 +578,7 @@ describe("Phase 7: Urlaubskonfiguration (Fortgeschritten)", () => {
 
     it("should update a capping rule", async () => {
       const result = await caller.vacationCappingRules.update({
-        id: state.newCappingRuleId,
+        id: state.newCappingRuleId!,
         capValue: 20,
         name: "E2E Updated Year-End Cap (20 days)",
       })
@@ -720,7 +720,7 @@ describe("Phase 7: Urlaubskonfiguration (Fortgeschritten)", () => {
 
     it("should update an exception", async () => {
       const result = await caller.employeeCappingExceptions.update({
-        id: state.newExceptionId,
+        id: state.newExceptionId!,
         retainDays: 10,
         notes: "E2E Updated: Maria retains up to 10 days for 2026",
       })
@@ -733,7 +733,7 @@ describe("Phase 7: Urlaubskonfiguration (Fortgeschritten)", () => {
 
     it("should deactivate an exception", async () => {
       const result = await caller.employeeCappingExceptions.update({
-        id: state.newExceptionId,
+        id: state.newExceptionId!,
         isActive: false,
       })
 

@@ -308,7 +308,7 @@ describe("Phase 5: Taeglicher Betrieb", () => {
       })
 
       const found = result.items.find(
-        (b) => b.id === state.clockInBookingId
+        (b) => b.id === state.clockInBookingId!
       )
       expect(found).toBeDefined()
       expect(found!.bookingType?.direction).toBe("in")
@@ -322,7 +322,7 @@ describe("Phase 5: Taeglicher Betrieb", () => {
 
       expect(result.bookings.length).toBeGreaterThanOrEqual(1)
       const found = result.bookings.find(
-        (b) => b.id === state.clockInBookingId
+        (b) => b.id === state.clockInBookingId!
       )
       expect(found).toBeDefined()
     })
@@ -405,10 +405,10 @@ describe("Phase 5: Taeglicher Betrieb", () => {
 
     it("should get a booking by ID", async () => {
       const result = await adminCaller.bookings.getById({
-        id: state.clockInBookingId,
+        id: state.clockInBookingId!,
       })
 
-      expect(result.id).toBe(state.clockInBookingId)
+      expect(result.id).toBe(state.clockInBookingId!)
       expect(result.employeeId).toBe(ADMIN_EMPLOYEE_ID)
       expect(result.bookingType).toBeDefined()
       expect(result.bookingType!.direction).toBe("in")
@@ -449,7 +449,7 @@ describe("Phase 5: Taeglicher Betrieb", () => {
     it("should create a manual booking for a past date", async () => {
       const result = await adminCaller.bookings.create({
         employeeId: ADMIN_EMPLOYEE_ID,
-        bookingTypeId: state.bookingTypeInId,
+        bookingTypeId: state.bookingTypeInId!,
         bookingDate: "2027-06-03",
         time: "09:30",
         notes: "E2E manual booking - forgotten clock-in",
@@ -465,7 +465,7 @@ describe("Phase 5: Taeglicher Betrieb", () => {
 
     it("should update a booking's time", async () => {
       const result = await adminCaller.bookings.update({
-        id: state.manualBookingId,
+        id: state.manualBookingId!,
         time: "09:15",
         notes: "E2E corrected time",
       })
@@ -478,7 +478,7 @@ describe("Phase 5: Taeglicher Betrieb", () => {
 
     it("should have audit logs for the booking", async () => {
       const result = await adminCaller.bookings.getLogs({
-        id: state.manualBookingId,
+        id: state.manualBookingId!,
       })
 
       // Audit logs might not be created for all operations;
@@ -522,14 +522,14 @@ describe("Phase 5: Taeglicher Betrieb", () => {
 
       // Track the first absence ID for later tests
       if (result.createdDays.length > 0) {
-        state.absenceDayId = result.createdDays[0].id
+        state.absenceDayId = result.createdDays[0]!.id
       }
     })
 
     it("should create a single-day absence (half day)", async () => {
       const result = await adminCaller.absences.createRange({
         employeeId: ADMIN_EMPLOYEE_ID,
-        absenceTypeId: state.absenceTypeVacationId,
+        absenceTypeId: state.absenceTypeVacationId!,
         fromDate: "2027-06-14", // Monday
         toDate: "2027-06-14",
         duration: 0.5,
@@ -538,17 +538,17 @@ describe("Phase 5: Taeglicher Betrieb", () => {
       })
 
       expect(result.createdDays.length).toBe(1)
-      expect(result.createdDays[0].duration).toBe(0.5)
-      expect(result.createdDays[0].halfDayPeriod).toBe("morning")
-      created.absenceDayIds.push(result.createdDays[0].id)
-      state.halfDayAbsenceId = result.createdDays[0].id
+      expect(result.createdDays[0]!.duration).toBe(0.5)
+      expect(result.createdDays[0]!.halfDayPeriod).toBe("morning")
+      created.absenceDayIds.push(result.createdDays[0]!.id)
+      state.halfDayAbsenceId = result.createdDays[0]!.id
     })
 
     it("should skip weekends in absence range creation", async () => {
       // Request for a range spanning a weekend
       const result = await adminCaller.absences.createRange({
         employeeId: ADMIN_EMPLOYEE_ID,
-        absenceTypeId: state.absenceTypeVacationId,
+        absenceTypeId: state.absenceTypeVacationId!,
         fromDate: "2027-06-18", // Friday
         toDate: "2027-06-21", // Monday
         duration: 1,
@@ -590,17 +590,17 @@ describe("Phase 5: Taeglicher Betrieb", () => {
 
     it("should get a single absence by ID", async () => {
       const result = await adminCaller.absences.getById({
-        id: state.absenceDayId,
+        id: state.absenceDayId!,
       })
 
-      expect(result.id).toBe(state.absenceDayId)
+      expect(result.id).toBe(state.absenceDayId!)
       expect(result.status).toBe("pending")
       expect(result.employeeId).toBe(ADMIN_EMPLOYEE_ID)
     })
 
     it("should approve a pending absence", async () => {
       const result = await adminCaller.absences.approve({
-        id: state.absenceDayId,
+        id: state.absenceDayId!,
       })
 
       expect(result.status).toBe("approved")
@@ -610,7 +610,7 @@ describe("Phase 5: Taeglicher Betrieb", () => {
 
     it("should reject a pending absence with reason", async () => {
       const result = await adminCaller.absences.reject({
-        id: state.halfDayAbsenceId,
+        id: state.halfDayAbsenceId!,
         reason: "E2E test rejection reason",
       })
 
@@ -622,14 +622,14 @@ describe("Phase 5: Taeglicher Betrieb", () => {
       // Create a new absence to cancel
       const createResult = await adminCaller.absences.createRange({
         employeeId: ADMIN_EMPLOYEE_ID,
-        absenceTypeId: state.absenceTypeVacationId,
+        absenceTypeId: state.absenceTypeVacationId!,
         fromDate: "2027-06-25", // Wednesday
         toDate: "2027-06-25",
         duration: 1,
         notes: "E2E cancel test",
       })
 
-      const dayId = createResult.createdDays[0].id
+      const dayId = createResult.createdDays[0]!.id
       created.absenceDayIds.push(dayId)
 
       // First approve it
@@ -656,8 +656,8 @@ describe("Phase 5: Taeglicher Betrieb", () => {
       })
 
       expect(result.createdDays.length).toBe(1)
-      expect(result.createdDays[0].status).toBe("pending")
-      created.absenceDayIds.push(result.createdDays[0].id)
+      expect(result.createdDays[0]!.status).toBe("pending")
+      created.absenceDayIds.push(result.createdDays[0]!.id)
     })
   })
 
@@ -672,7 +672,7 @@ describe("Phase 5: Taeglicher Betrieb", () => {
       })
 
       expect(result.items.length).toBeGreaterThanOrEqual(1)
-      const balance = result.items[0]
+      const balance = result.items[0]!
 
       expect(balance.employeeId).toBe(ADMIN_EMPLOYEE_ID)
       expect(balance.year).toBe(2026)
@@ -688,7 +688,7 @@ describe("Phase 5: Taeglicher Betrieb", () => {
       })
 
       expect(result.items.length).toBeGreaterThanOrEqual(1)
-      const balance = result.items[0]
+      const balance = result.items[0]!
 
       expect(balance.employeeId).toBe(USER_EMPLOYEE_ID)
       expect(balance.year).toBe(2026)
@@ -705,7 +705,7 @@ describe("Phase 5: Taeglicher Betrieb", () => {
         year: 2026,
       })
 
-      const balance = result.items[0]
+      const balance = result.items[0]!
       expect(balance.available).toBe(balance.total - balance.taken)
     })
   })
@@ -785,7 +785,7 @@ describe("Phase 5: Taeglicher Betrieb", () => {
 
       // Each month summary should have the expected shape
       if (result.length > 0) {
-        const month = result[0]
+        const month = result[0]!
         expect(month.employeeId).toBe(ADMIN_EMPLOYEE_ID)
         expect(month.year).toBe(2026)
         expect(typeof month.month).toBe("number")
@@ -1094,7 +1094,7 @@ describe("Phase 5: Taeglicher Betrieb", () => {
       // Create a disposable booking
       const booking = await adminCaller.bookings.create({
         employeeId: ADMIN_EMPLOYEE_ID,
-        bookingTypeId: state.bookingTypeInId,
+        bookingTypeId: state.bookingTypeInId!,
         bookingDate: "2027-06-04",
         time: "08:00",
         notes: "E2E disposable booking",

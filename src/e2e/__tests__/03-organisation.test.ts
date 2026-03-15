@@ -135,11 +135,11 @@ describe("Phase 3: Organisationsstruktur", () => {
       const result = await caller.departments.create({
         code: "E2E-BE",
         name: "E2E Backend",
-        parentId: state.itDeptId,
+        parentId: state.itDeptId!,
       })
 
       expect(result.id).toBeDefined()
-      expect(result.parentId).toBe(state.itDeptId)
+      expect(result.parentId).toBe(state.itDeptId!)
       state.backendDeptId = result.id
       created.departmentIds.push(result.id)
     })
@@ -148,11 +148,11 @@ describe("Phase 3: Organisationsstruktur", () => {
       const result = await caller.departments.create({
         code: "E2E-FE",
         name: "E2E Frontend",
-        parentId: state.itDeptId,
+        parentId: state.itDeptId!,
       })
 
       expect(result.id).toBeDefined()
-      expect(result.parentId).toBe(state.itDeptId)
+      expect(result.parentId).toBe(state.itDeptId!)
       state.frontendDeptId = result.id
       created.departmentIds.push(result.id)
     })
@@ -180,9 +180,9 @@ describe("Phase 3: Organisationsstruktur", () => {
     })
 
     it("should get a department by ID", async () => {
-      const result = await caller.departments.getById({ id: state.itDeptId })
+      const result = await caller.departments.getById({ id: state.itDeptId! })
 
-      expect(result.id).toBe(state.itDeptId)
+      expect(result.id).toBe(state.itDeptId!)
       expect(result.code).toBe("E2E-IT")
       expect(result.tenantId).toBe(SEED.TENANT_ID)
     })
@@ -215,18 +215,18 @@ describe("Phase 3: Organisationsstruktur", () => {
 
     it("should filter departments by parentId", async () => {
       const { data } = await caller.departments.list({
-        parentId: state.itDeptId,
+        parentId: state.itDeptId!,
       })
 
       expect(data.length).toBeGreaterThanOrEqual(2)
       data.forEach((d: any) => {
-        expect(d.parentId).toBe(state.itDeptId)
+        expect(d.parentId).toBe(state.itDeptId!)
       })
     })
 
     it("should update a department", async () => {
       const updated = await caller.departments.update({
-        id: state.itDeptId,
+        id: state.itDeptId!,
         name: "E2E IT-Abteilung (updated)",
         description: "Updated IT department",
       })
@@ -236,7 +236,7 @@ describe("Phase 3: Organisationsstruktur", () => {
 
       // Revert name for downstream tests
       await caller.departments.update({
-        id: state.itDeptId,
+        id: state.itDeptId!,
         name: "E2E IT-Abteilung",
       })
     })
@@ -244,8 +244,8 @@ describe("Phase 3: Organisationsstruktur", () => {
     it("should prevent circular references (self-reference)", async () => {
       await expect(
         caller.departments.update({
-          id: state.itDeptId,
-          parentId: state.itDeptId,
+          id: state.itDeptId!,
+          parentId: state.itDeptId!,
         })
       ).rejects.toThrow()
     })
@@ -254,8 +254,8 @@ describe("Phase 3: Organisationsstruktur", () => {
       // Attempt to make IT a child of Backend (which is already a child of IT)
       await expect(
         caller.departments.update({
-          id: state.itDeptId,
-          parentId: state.backendDeptId,
+          id: state.itDeptId!,
+          parentId: state.backendDeptId!,
         })
       ).rejects.toThrow()
     })
@@ -263,7 +263,7 @@ describe("Phase 3: Organisationsstruktur", () => {
     it("should prevent deletion of department with children", async () => {
       // IT has Backend and Frontend as children
       await expect(
-        caller.departments.delete({ id: state.itDeptId })
+        caller.departments.delete({ id: state.itDeptId! })
       ).rejects.toThrow()
     })
 
@@ -298,13 +298,13 @@ describe("Phase 3: Organisationsstruktur", () => {
       const result = await caller.teams.create({
         name: "E2E Backend-Team",
         description: "E2E Backend development team",
-        departmentId: state.backendDeptId,
+        departmentId: state.backendDeptId!,
       })
 
       expect(result.id).toBeDefined()
       expect(result.name).toBe("E2E Backend-Team")
       expect(result.description).toBe("E2E Backend development team")
-      expect(result.departmentId).toBe(state.backendDeptId)
+      expect(result.departmentId).toBe(state.backendDeptId!)
       expect(result.tenantId).toBe(SEED.TENANT_ID)
       expect(result.isActive).toBe(true)
       expect(result.memberCount).toBe(0)
@@ -327,11 +327,11 @@ describe("Phase 3: Organisationsstruktur", () => {
     it("should create a team under Frontend department", async () => {
       const result = await caller.teams.create({
         name: "E2E Frontend-Team",
-        departmentId: state.frontendDeptId,
+        departmentId: state.frontendDeptId!,
       })
 
       expect(result.id).toBeDefined()
-      expect(result.departmentId).toBe(state.frontendDeptId)
+      expect(result.departmentId).toBe(state.frontendDeptId!)
       state.frontendTeamId = result.id
       created.teamIds.push(result.id)
     })
@@ -359,19 +359,19 @@ describe("Phase 3: Organisationsstruktur", () => {
 
     it("should filter teams by departmentId", async () => {
       const result = await caller.teams.list({
-        departmentId: state.backendDeptId,
+        departmentId: state.backendDeptId!,
       })
 
       expect(result.items.length).toBeGreaterThanOrEqual(1)
       result.items.forEach((t: any) => {
-        expect(t.departmentId).toBe(state.backendDeptId)
+        expect(t.departmentId).toBe(state.backendDeptId!)
       })
     })
 
     it("should include department info in team list", async () => {
       const result = await caller.teams.list()
       const backendTeam = result.items.find(
-        (t: any) => t.id === state.backendTeamId
+        (t: any) => t.id === state.backendTeamId!
       )
       expect(backendTeam).toBeDefined()
       expect(backendTeam!.department).toBeDefined()
@@ -379,9 +379,9 @@ describe("Phase 3: Organisationsstruktur", () => {
     })
 
     it("should get a team by ID", async () => {
-      const result = await caller.teams.getById({ id: state.backendTeamId })
+      const result = await caller.teams.getById({ id: state.backendTeamId! })
 
-      expect(result.id).toBe(state.backendTeamId)
+      expect(result.id).toBe(state.backendTeamId!)
       expect(result.name).toBe("E2E Backend-Team")
       expect(result.department).toBeDefined()
       expect(result.department!.code).toBe("E2E-BE")
@@ -389,7 +389,7 @@ describe("Phase 3: Organisationsstruktur", () => {
 
     it("should update a team", async () => {
       const updated = await caller.teams.update({
-        id: state.backendTeamId,
+        id: state.backendTeamId!,
         name: "E2E Backend-Team (updated)",
         description: "Updated backend team description",
       })
@@ -399,22 +399,22 @@ describe("Phase 3: Organisationsstruktur", () => {
 
       // Revert name for downstream tests
       await caller.teams.update({
-        id: state.backendTeamId,
+        id: state.backendTeamId!,
         name: "E2E Backend-Team",
       })
     })
 
     it("should move a team to a different department", async () => {
       const updated = await caller.teams.update({
-        id: state.projectTeamId,
-        departmentId: state.itDeptId,
+        id: state.projectTeamId!,
+        departmentId: state.itDeptId!,
       })
 
-      expect(updated.departmentId).toBe(state.itDeptId)
+      expect(updated.departmentId).toBe(state.itDeptId!)
 
       // Move it back to no department
       await caller.teams.update({
-        id: state.projectTeamId,
+        id: state.projectTeamId!,
         departmentId: null,
       })
     })
@@ -430,7 +430,7 @@ describe("Phase 3: Organisationsstruktur", () => {
 
     it("should get team members (empty initially)", async () => {
       const result = await caller.teams.getMembers({
-        teamId: state.backendTeamId,
+        teamId: state.backendTeamId!,
       })
 
       expect(result.items).toBeInstanceOf(Array)

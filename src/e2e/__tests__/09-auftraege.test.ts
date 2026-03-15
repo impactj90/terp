@@ -143,15 +143,15 @@ describe("Phase 9: Auftraege & Projekte", () => {
     })
 
     it("should retrieve an order by ID", async () => {
-      const result = await caller.orders.getById({ id: state.orderId })
-      expect(result.id).toBe(state.orderId)
+      const result = await caller.orders.getById({ id: state.orderId! })
+      expect(result.id).toBe(state.orderId!)
       expect(result.code).toBe("E2E-ORD001")
       expect(result.customer).toBe("E2E Customer GmbH")
     })
 
     it("should update an order", async () => {
       const result = await caller.orders.update({
-        id: state.orderId,
+        id: state.orderId!,
         name: "E2E Project Alpha Updated",
         status: "planned",
       })
@@ -162,7 +162,7 @@ describe("Phase 9: Auftraege & Projekte", () => {
 
     it("should filter orders by active status", async () => {
       const { data } = await caller.orders.list({ isActive: true })
-      const found = data.find((o: any) => o.id === state.orderId)
+      const found = data.find((o: any) => o.id === state.orderId!)
       expect(found).toBeDefined()
     })
   })
@@ -173,13 +173,13 @@ describe("Phase 9: Auftraege & Projekte", () => {
   describe("UC-057: Mitarbeiter dem Auftrag zuweisen", () => {
     it("should assign an employee to the order", async () => {
       const result = await caller.orderAssignments.create({
-        orderId: state.orderId,
+        orderId: state.orderId!,
         employeeId: SEED_EMPLOYEE_ID_1,
         role: "leader",
       })
 
       expect(result.id).toBeDefined()
-      expect(result.orderId).toBe(state.orderId)
+      expect(result.orderId).toBe(state.orderId!)
       expect(result.employeeId).toBe(SEED_EMPLOYEE_ID_1)
       expect(result.role).toBe("leader")
       expect(result.isActive).toBe(true)
@@ -191,7 +191,7 @@ describe("Phase 9: Auftraege & Projekte", () => {
 
     it("should assign a second employee as worker", async () => {
       const result = await caller.orderAssignments.create({
-        orderId: state.orderId,
+        orderId: state.orderId!,
         employeeId: SEED_EMPLOYEE_ID_2,
       })
 
@@ -205,7 +205,7 @@ describe("Phase 9: Auftraege & Projekte", () => {
     it("should reject duplicate employee-order-role assignment", async () => {
       await expect(
         caller.orderAssignments.create({
-          orderId: state.orderId,
+          orderId: state.orderId!,
           employeeId: SEED_EMPLOYEE_ID_1,
           role: "leader",
         })
@@ -214,7 +214,7 @@ describe("Phase 9: Auftraege & Projekte", () => {
 
     it("should list assignments for an order", async () => {
       const { data } = await caller.orderAssignments.byOrder({
-        orderId: state.orderId,
+        orderId: state.orderId!,
       })
       expect(data.length).toBe(2)
       const roles = data.map((a: any) => a.role)
@@ -227,22 +227,22 @@ describe("Phase 9: Auftraege & Projekte", () => {
         employeeId: SEED_EMPLOYEE_ID_1,
       })
       expect(data.length).toBeGreaterThanOrEqual(1)
-      const found = data.find((a: any) => a.id === state.assignmentId)
+      const found = data.find((a: any) => a.id === state.assignmentId!)
       expect(found).toBeDefined()
     })
 
     it("should retrieve an assignment by ID", async () => {
       const result = await caller.orderAssignments.getById({
-        id: state.assignmentId,
+        id: state.assignmentId!,
       })
-      expect(result.id).toBe(state.assignmentId)
+      expect(result.id).toBe(state.assignmentId!)
       expect(result.order.code).toBe("E2E-ORD001")
       expect(result.employee.personnelNumber).toBe("EMP001")
     })
 
     it("should update an assignment", async () => {
       const result = await caller.orderAssignments.update({
-        id: state.assignmentId,
+        id: state.assignmentId!,
         validFrom: "2026-02-01",
         validTo: "2026-06-30",
       })
@@ -253,13 +253,13 @@ describe("Phase 9: Auftraege & Projekte", () => {
 
     it("should delete an assignment", async () => {
       const result = await caller.orderAssignments.delete({
-        id: state.assignment2Id,
+        id: state.assignment2Id!,
       })
       expect(result.success).toBe(true)
 
       // Remove from cleanup list since already deleted
       created.orderAssignmentIds = created.orderAssignmentIds.filter(
-        (id) => id !== state.assignment2Id
+        (id) => id !== state.assignment2Id!
       )
     })
   })
@@ -271,7 +271,7 @@ describe("Phase 9: Auftraege & Projekte", () => {
     it("should create an order booking", async () => {
       const result = await caller.orderBookings.create({
         employeeId: SEED_EMPLOYEE_ID_1,
-        orderId: state.orderId,
+        orderId: state.orderId!,
         bookingDate: "2026-03-10",
         timeMinutes: 480, // 8 hours
         description: "E2E Development work on project Alpha",
@@ -279,7 +279,7 @@ describe("Phase 9: Auftraege & Projekte", () => {
 
       expect(result.id).toBeDefined()
       expect(result.employeeId).toBe(SEED_EMPLOYEE_ID_1)
-      expect(result.orderId).toBe(state.orderId)
+      expect(result.orderId).toBe(state.orderId!)
       expect(result.timeMinutes).toBe(480)
       expect(result.source).toBe("manual")
       expect(result.description).toBe("E2E Development work on project Alpha")
@@ -291,7 +291,7 @@ describe("Phase 9: Auftraege & Projekte", () => {
     it("should create a second booking on a different date", async () => {
       const result = await caller.orderBookings.create({
         employeeId: SEED_EMPLOYEE_ID_1,
-        orderId: state.orderId,
+        orderId: state.orderId!,
         bookingDate: "2026-03-11",
         timeMinutes: 240, // 4 hours
         description: "E2E Afternoon session",
@@ -307,7 +307,7 @@ describe("Phase 9: Auftraege & Projekte", () => {
       await expect(
         caller.orderBookings.create({
           employeeId: SEED_EMPLOYEE_ID_1,
-          orderId: state.orderId,
+          orderId: state.orderId!,
           bookingDate: "2026-03-12",
           timeMinutes: 0,
         })
@@ -327,7 +327,7 @@ describe("Phase 9: Auftraege & Projekte", () => {
 
     it("should list order bookings with pagination", async () => {
       const result = await caller.orderBookings.list({
-        orderId: state.orderId,
+        orderId: state.orderId!,
       })
       expect(result.items.length).toBeGreaterThanOrEqual(2)
       expect(result.total).toBeGreaterThanOrEqual(2)
@@ -335,12 +335,12 @@ describe("Phase 9: Auftraege & Projekte", () => {
 
     it("should filter bookings by date range", async () => {
       const result = await caller.orderBookings.list({
-        orderId: state.orderId,
+        orderId: state.orderId!,
         fromDate: "2026-03-10",
         toDate: "2026-03-10",
       })
       expect(result.items.length).toBeGreaterThanOrEqual(1)
-      const found = result.items.find((b: any) => b.id === state.bookingId)
+      const found = result.items.find((b: any) => b.id === state.bookingId!)
       expect(found).toBeDefined()
     })
 
@@ -353,9 +353,9 @@ describe("Phase 9: Auftraege & Projekte", () => {
 
     it("should retrieve a booking by ID with relations", async () => {
       const result = await caller.orderBookings.getById({
-        id: state.bookingId,
+        id: state.bookingId!,
       })
-      expect(result.id).toBe(state.bookingId)
+      expect(result.id).toBe(state.bookingId!)
       expect(result.employee).toBeDefined()
       expect(result.order).toBeDefined()
       expect(result.order!.code).toBe("E2E-ORD001")
@@ -363,7 +363,7 @@ describe("Phase 9: Auftraege & Projekte", () => {
 
     it("should update a booking", async () => {
       const result = await caller.orderBookings.update({
-        id: state.bookingId,
+        id: state.bookingId!,
         timeMinutes: 510, // 8.5 hours
         description: "E2E Updated description",
       })
@@ -375,19 +375,19 @@ describe("Phase 9: Auftraege & Projekte", () => {
 
     it("should delete a booking", async () => {
       const result = await caller.orderBookings.delete({
-        id: state.booking2Id,
+        id: state.booking2Id!,
       })
       expect(result.success).toBe(true)
 
       // Remove from cleanup list since already deleted
       created.orderBookingIds = created.orderBookingIds.filter(
-        (id) => id !== state.booking2Id
+        (id) => id !== state.booking2Id!
       )
     })
 
     it("should not find deleted booking", async () => {
       await expect(
-        caller.orderBookings.getById({ id: state.booking2Id })
+        caller.orderBookings.getById({ id: state.booking2Id! })
       ).rejects.toThrow()
     })
   })

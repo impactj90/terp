@@ -189,14 +189,14 @@ describe("Phase 10: Zutrittskontrolle & Terminals", () => {
     })
 
     it("should retrieve an access zone by ID", async () => {
-      const result = await caller.accessZones.getById({ id: state.zoneId })
-      expect(result.id).toBe(state.zoneId)
+      const result = await caller.accessZones.getById({ id: state.zoneId! })
+      expect(result.id).toBe(state.zoneId!)
       expect(result.code).toBe("E2E-MAIN")
     })
 
     it("should update an access zone", async () => {
       const result = await caller.accessZones.update({
-        id: state.zoneId,
+        id: state.zoneId!,
         name: "E2E Hauptgebaeude Updated",
         description: "Updated main building zone",
       })
@@ -257,15 +257,15 @@ describe("Phase 10: Zutrittskontrolle & Terminals", () => {
 
     it("should retrieve a profile by ID", async () => {
       const result = await caller.accessProfiles.getById({
-        id: state.profileId,
+        id: state.profileId!,
       })
-      expect(result.id).toBe(state.profileId)
+      expect(result.id).toBe(state.profileId!)
       expect(result.code).toBe("E2E-STANDARD")
     })
 
     it("should update an access profile", async () => {
       const result = await caller.accessProfiles.update({
-        id: state.profileId,
+        id: state.profileId!,
         name: "E2E Standard-Mitarbeiter Updated",
         description: "Updated standard profile",
       })
@@ -281,14 +281,14 @@ describe("Phase 10: Zutrittskontrolle & Terminals", () => {
     it("should assign an access profile to an employee", async () => {
       const result = await caller.employeeAccessAssignments.create({
         employeeId: SEED_EMPLOYEE_ID,
-        accessProfileId: state.profileId,
+        accessProfileId: state.profileId!,
         validFrom: "2026-01-01",
         validTo: "2026-12-31",
       })
 
       expect(result.id).toBeDefined()
       expect(result.employeeId).toBe(SEED_EMPLOYEE_ID)
-      expect(result.accessProfileId).toBe(state.profileId)
+      expect(result.accessProfileId).toBe(state.profileId!)
       expect(result.isActive).toBe(true)
       expect(result.validFrom).toBeDefined()
       expect(result.validTo).toBeDefined()
@@ -301,7 +301,7 @@ describe("Phase 10: Zutrittskontrolle & Terminals", () => {
       expect(data.length).toBeGreaterThanOrEqual(1)
 
       const found = data.find(
-        (a: any) => a.id === state.accessAssignmentId
+        (a: any) => a.id === state.accessAssignmentId!
       )
       expect(found).toBeDefined()
       expect(found!.employee).toBeDefined()
@@ -310,9 +310,9 @@ describe("Phase 10: Zutrittskontrolle & Terminals", () => {
 
     it("should retrieve an assignment by ID", async () => {
       const result = await caller.employeeAccessAssignments.getById({
-        id: state.accessAssignmentId,
+        id: state.accessAssignmentId!,
       })
-      expect(result.id).toBe(state.accessAssignmentId)
+      expect(result.id).toBe(state.accessAssignmentId!)
       expect(result.employee).toBeDefined()
       expect(result.accessProfile).toBeDefined()
       expect(result.accessProfile!.code).toBe("E2E-STANDARD")
@@ -320,7 +320,7 @@ describe("Phase 10: Zutrittskontrolle & Terminals", () => {
 
     it("should update an assignment validity period", async () => {
       const result = await caller.employeeAccessAssignments.update({
-        id: state.accessAssignmentId,
+        id: state.accessAssignmentId!,
         validTo: "2027-06-30",
       })
 
@@ -329,7 +329,7 @@ describe("Phase 10: Zutrittskontrolle & Terminals", () => {
 
     it("should deactivate an assignment", async () => {
       const result = await caller.employeeAccessAssignments.update({
-        id: state.accessAssignmentId,
+        id: state.accessAssignmentId!,
         isActive: false,
       })
 
@@ -338,7 +338,7 @@ describe("Phase 10: Zutrittskontrolle & Terminals", () => {
 
     it("should reactivate an assignment", async () => {
       const result = await caller.employeeAccessAssignments.update({
-        id: state.accessAssignmentId,
+        id: state.accessAssignmentId!,
         isActive: true,
       })
 
@@ -399,7 +399,7 @@ describe("Phase 10: Zutrittskontrolle & Terminals", () => {
       })
 
       expect(result.wasDuplicate).toBe(true)
-      expect(result.batch.id).toBe(state.batchId)
+      expect(result.batch.id).toBe(state.batchId!)
     })
 
     it("should import a second batch", async () => {
@@ -466,17 +466,17 @@ describe("Phase 10: Zutrittskontrolle & Terminals", () => {
 
     it("should retrieve a single batch by ID", async () => {
       const result = await caller.terminalBookings.batch({
-        id: state.batchId,
+        id: state.batchId!,
       })
 
-      expect(result.id).toBe(state.batchId)
+      expect(result.id).toBe(state.batchId!)
       expect(result.batchReference).toBe("E2E-BATCH-001")
       expect(result.recordsTotal).toBe(3)
     })
 
     it("should list raw terminal bookings", async () => {
       const result = await caller.terminalBookings.list({
-        importBatchId: state.batchId,
+        importBatchId: state.batchId!,
         limit: 50,
         page: 1,
       })
@@ -487,7 +487,7 @@ describe("Phase 10: Zutrittskontrolle & Terminals", () => {
 
     it("should resolve known employee PINs", async () => {
       const result = await caller.terminalBookings.list({
-        importBatchId: state.batchId,
+        importBatchId: state.batchId!,
         limit: 50,
         page: 1,
       })

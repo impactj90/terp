@@ -167,7 +167,7 @@ describe("Phase 1: Grundeinrichtung", () => {
       const result = await caller.userGroups.list()
       // list may return { data: [...] } or array directly
       const list = Array.isArray(result) ? result : (result as any).data
-      const found = list.find((g: any) => g.id === state.userGroupId)
+      const found = list.find((g: any) => g.id === state.userGroupId!)
       expect(found).toBeDefined()
       expect(found!.name).toBe("E2E Test Gruppe")
     })
@@ -193,7 +193,7 @@ describe("Phase 1: Grundeinrichtung", () => {
       const result = await caller.users.create({
         email: "e2e-test-user@example.com",
         displayName: "E2E Test User",
-        userGroupId: state.userGroupId,
+        userGroupId: state.userGroupId!,
       })
 
       expect(result.id).toBeDefined()
@@ -205,12 +205,12 @@ describe("Phase 1: Grundeinrichtung", () => {
     })
 
     it("should have tenant_id set (not NULL)", async () => {
-      const user = await caller.users.getById({ id: state.userId })
+      const user = await caller.users.getById({ id: state.userId! })
       expect(user.tenantId).toBe(SEED.TENANT_ID)
     })
 
     it("should derive role='user' from non-admin group", async () => {
-      const user = await caller.users.getById({ id: state.userId })
+      const user = await caller.users.getById({ id: state.userId! })
       expect(user.role).toBe("user")
     })
 
@@ -218,7 +218,7 @@ describe("Phase 1: Grundeinrichtung", () => {
       const result = await caller.users.create({
         email: "e2e-admin-user@example.com",
         displayName: "E2E Admin User",
-        userGroupId: state.adminGroupId,
+        userGroupId: state.adminGroupId!,
       })
 
       expect(result.role).toBe("admin")
@@ -279,8 +279,8 @@ describe("Phase 1: Grundeinrichtung", () => {
 
       // Verify sorted by date
       for (let i = 1; i < data.length; i++) {
-        const prev = new Date(data[i - 1].holidayDate).getTime()
-        const curr = new Date(data[i].holidayDate).getTime()
+        const prev = new Date(data[i - 1]!.holidayDate).getTime()
+        const curr = new Date(data[i]!.holidayDate).getTime()
         expect(curr).toBeGreaterThanOrEqual(prev)
       }
     })
@@ -403,7 +403,7 @@ describe("Phase 1: Grundeinrichtung", () => {
 
     it("should create a contact kind linked to the type", async () => {
       const result = await caller.contactKinds.create({
-        contactTypeId: state.contactTypeId,
+        contactTypeId: state.contactTypeId!,
         code: "E2E-PRIV-EMAIL",
         label: "E2E Privat-Email",
       })
@@ -415,7 +415,7 @@ describe("Phase 1: Grundeinrichtung", () => {
     it("should list contact kinds for the type", async () => {
       // list returns { data: ContactKind[] }
       const { data } = await caller.contactKinds.list({
-        contactTypeId: state.contactTypeId,
+        contactTypeId: state.contactTypeId!,
       })
       expect(data.length).toBeGreaterThanOrEqual(1)
       expect(data.some((k: any) => k.code === "E2E-PRIV-EMAIL")).toBe(true)
