@@ -13,7 +13,8 @@ export async function findMany(
     employeeId?: string
     cappingRuleId?: string
     year?: number
-  }
+  },
+  scopeWhere?: Record<string, unknown> | null
 ) {
   const where: Record<string, unknown> = { tenantId }
 
@@ -28,6 +29,17 @@ export async function findMany(
   if (params?.year !== undefined) {
     // Match Go behavior: return entries for specific year OR null year
     where.OR = [{ year: params.year }, { year: null }]
+  }
+
+  if (scopeWhere) {
+    if (scopeWhere.employee && where.employee) {
+      where.employee = {
+        ...((where.employee as Record<string, unknown>) || {}),
+        ...((scopeWhere.employee as Record<string, unknown>) || {}),
+      }
+    } else {
+      Object.assign(where, scopeWhere)
+    }
   }
 
   return prisma.employeeCappingException.findMany({

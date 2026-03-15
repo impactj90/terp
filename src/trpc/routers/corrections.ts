@@ -20,7 +20,7 @@
  */
 import { z } from "zod"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
-import { requirePermission } from "@/lib/auth/middleware"
+import { requirePermission, applyDataScope, type DataScope } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
 import * as correctionService from "@/lib/services/correction-service"
@@ -177,6 +177,7 @@ export const correctionsRouter = createTRPCRouter({
    */
   list: tenantProcedure
     .use(requirePermission(CORRECTIONS_MANAGE))
+    .use(applyDataScope())
     .input(listInputSchema)
     .output(
       z.object({
@@ -186,10 +187,12 @@ export const correctionsRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
         const { items, total } = await correctionService.list(
           ctx.prisma,
           ctx.tenantId!,
-          input ?? undefined
+          input ?? undefined,
+          dataScope
         )
         return {
           items: items.map((item) =>
@@ -211,14 +214,17 @@ export const correctionsRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(CORRECTIONS_MANAGE))
+    .use(applyDataScope())
     .input(z.object({ id: z.string() }))
     .output(correctionOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
         const correction = await correctionService.getById(
           ctx.prisma,
           ctx.tenantId!,
-          input.id
+          input.id,
+          dataScope
         )
         return mapToOutput(correction as unknown as Record<string, unknown>)
       } catch (err) {
@@ -237,15 +243,18 @@ export const correctionsRouter = createTRPCRouter({
    */
   create: tenantProcedure
     .use(requirePermission(CORRECTIONS_MANAGE))
+    .use(applyDataScope())
     .input(createInputSchema)
     .output(correctionOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
         const correction = await correctionService.create(
           ctx.prisma,
           ctx.tenantId!,
           input,
-          ctx.user!.id
+          ctx.user!.id,
+          dataScope
         )
         return mapToOutput(correction as unknown as Record<string, unknown>)
       } catch (err) {
@@ -264,14 +273,17 @@ export const correctionsRouter = createTRPCRouter({
    */
   update: tenantProcedure
     .use(requirePermission(CORRECTIONS_MANAGE))
+    .use(applyDataScope())
     .input(updateInputSchema)
     .output(correctionOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
         const correction = await correctionService.update(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          dataScope
         )
         return mapToOutput(correction as unknown as Record<string, unknown>)
       } catch (err) {
@@ -289,11 +301,13 @@ export const correctionsRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(CORRECTIONS_MANAGE))
+    .use(applyDataScope())
     .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {
-        await correctionService.remove(ctx.prisma, ctx.tenantId!, input.id)
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        await correctionService.remove(ctx.prisma, ctx.tenantId!, input.id, dataScope)
         return { success: true }
       } catch (err) {
         handleServiceError(err)
@@ -310,15 +324,18 @@ export const correctionsRouter = createTRPCRouter({
    */
   approve: tenantProcedure
     .use(requirePermission(CORRECTIONS_MANAGE))
+    .use(applyDataScope())
     .input(z.object({ id: z.string() }))
     .output(correctionOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
         const correction = await correctionService.approve(
           ctx.prisma,
           ctx.tenantId!,
           input.id,
-          ctx.user!.id
+          ctx.user!.id,
+          dataScope
         )
         return mapToOutput(correction as unknown as Record<string, unknown>)
       } catch (err) {
@@ -336,15 +353,18 @@ export const correctionsRouter = createTRPCRouter({
    */
   reject: tenantProcedure
     .use(requirePermission(CORRECTIONS_MANAGE))
+    .use(applyDataScope())
     .input(z.object({ id: z.string() }))
     .output(correctionOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
         const correction = await correctionService.reject(
           ctx.prisma,
           ctx.tenantId!,
           input.id,
-          ctx.user!.id
+          ctx.user!.id,
+          dataScope
         )
         return mapToOutput(correction as unknown as Record<string, unknown>)
       } catch (err) {

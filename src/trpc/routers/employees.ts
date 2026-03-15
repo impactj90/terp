@@ -789,16 +789,19 @@ export const employeesRouter = createTRPCRouter({
    */
   search: tenantProcedure
     .use(requirePermission(EMPLOYEES_VIEW))
+    .use(applyDataScope())
     .input(z.object({ query: z.string().min(1) }))
     .output(z.object({ items: z.array(employeeSearchOutputSchema) }))
     .query(async ({ ctx, input }) => {
       try {
         const tenantId = ctx.tenantId!
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
 
         const employees = await employeesService.searchEmployees(
           ctx.prisma as unknown as PrismaClient,
           tenantId,
-          input.query
+          input.query,
+          dataScope
         )
 
         return { items: employees }

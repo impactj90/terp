@@ -40,9 +40,10 @@ export async function list(
     employeeId?: string
     cappingRuleId?: string
     year?: number
-  }
+  },
+  scopeWhere?: Record<string, unknown> | null
 ) {
-  return repo.findMany(prisma, tenantId, params)
+  return repo.findMany(prisma, tenantId, params, scopeWhere)
 }
 
 export async function getById(

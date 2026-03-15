@@ -5,6 +5,11 @@
  * Throws plain Error subclasses that are mapped by handleServiceError.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import type { DataScope } from "@/lib/auth/middleware"
+import {
+  buildRelatedEmployeeDataScopeWhere,
+  checkRelatedEmployeeDataScope,
+} from "@/lib/auth/data-scope"
 import { mapWithConcurrency } from "@/lib/async"
 import { MonthlyCalcService } from "./monthly-calc"
 import * as repo from "./monthly-values-repository"
@@ -79,7 +84,8 @@ export async function close(
   prisma: PrismaClient,
   tenantId: string,
   input: { id: string } | { employeeId: string; year: number; month: number },
-  userId: string
+  userId: string,
+  dataScope?: DataScope
 ) {
   // 1. Look up the monthly value
   let mv
@@ -97,6 +103,14 @@ export async function close(
 
   if (!mv) {
     throw new MonthlyValueNotFoundError()
+  }
+
+  // Check data scope
+  if (dataScope) {
+    checkRelatedEmployeeDataScope(dataScope, mv as unknown as {
+      employeeId: string
+      employee?: { departmentId: string | null } | null
+    }, "Monthly value")
   }
 
   // 2. Close via MonthlyCalcService
@@ -112,7 +126,8 @@ export async function reopen(
   prisma: PrismaClient,
   tenantId: string,
   input: { id: string } | { employeeId: string; year: number; month: number },
-  userId: string
+  userId: string,
+  dataScope?: DataScope
 ) {
   // 1. Look up the monthly value
   let mv
@@ -130,6 +145,14 @@ export async function reopen(
 
   if (!mv) {
     throw new MonthlyValueNotFoundError()
+  }
+
+  // Check data scope
+  if (dataScope) {
+    checkRelatedEmployeeDataScope(dataScope, mv as unknown as {
+      employeeId: string
+      employee?: { departmentId: string | null } | null
+    }, "Monthly value")
   }
 
   // 2. Reopen via MonthlyCalcService
@@ -156,7 +179,8 @@ export async function closeBatch(
     departmentId?: string
     recalculate?: boolean
   },
-  userId: string
+  userId: string,
+  dataScope?: DataScope
 ) {
   const { year, month, recalculate } = input
 
@@ -168,6 +192,27 @@ export async function closeBatch(
       tenantId,
       input.departmentId
     )
+  }
+
+  // Apply data scope filter to employee IDs
+  if (dataScope) {
+    const scopeWhere = buildRelatedEmployeeDataScopeWhere(dataScope)
+    if (scopeWhere) {
+      // Re-filter employee list through data scope
+      const scopedEmployees = await prisma.employee.findMany({
+        where: {
+          id: { in: employeeIds },
+          tenantId,
+          ...(dataScope.type === "department"
+            ? { departmentId: { in: dataScope.departmentIds } }
+            : dataScope.type === "employee"
+              ? { id: { in: dataScope.employeeIds } }
+              : {}),
+        },
+        select: { id: true },
+      })
+      employeeIds = scopedEmployees.map((e) => e.id)
+    }
   }
 
   // 2. Optionally recalculate before closing
@@ -229,16 +274,45 @@ export async function recalculate(
     year: number
     month: number
     employeeId?: string
-  }
+  },
+  dataScope?: DataScope
 ) {
   const { year, month, employeeId } = input
 
   // Determine which employees to recalculate
   let employeeIds: string[]
   if (employeeId) {
+    // Single employee — check data scope
+    if (dataScope) {
+      const emp = await prisma.employee.findFirst({
+        where: { id: employeeId, tenantId },
+        select: { id: true, departmentId: true },
+      })
+      if (emp) {
+        checkRelatedEmployeeDataScope(
+          dataScope,
+          { employeeId: emp.id, employee: { departmentId: emp.departmentId } },
+          "Employee"
+        )
+      }
+    }
     employeeIds = [employeeId]
   } else {
     employeeIds = await repo.findActiveEmployeeIds(prisma, tenantId)
+    // Apply data scope filter for bulk recalculate
+    if (dataScope && (dataScope.type === "department" || dataScope.type === "employee")) {
+      const scopedEmployees = await prisma.employee.findMany({
+        where: {
+          id: { in: employeeIds },
+          tenantId,
+          ...(dataScope.type === "department"
+            ? { departmentId: { in: dataScope.departmentIds } }
+            : { id: { in: dataScope.employeeIds } }),
+        },
+        select: { id: true },
+      })
+      employeeIds = scopedEmployees.map((e) => e.id)
+    }
   }
 
   const monthlyCalcService = new MonthlyCalcService(prisma)

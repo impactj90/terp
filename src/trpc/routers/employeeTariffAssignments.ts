@@ -18,7 +18,8 @@ import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import type { PrismaClient } from "@/generated/prisma/client"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
-import { requirePermission } from "@/lib/auth/middleware"
+import { requirePermission, applyDataScope, type DataScope } from "@/lib/auth/middleware"
+import { checkRelatedEmployeeDataScope } from "@/lib/auth/data-scope"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
 
@@ -137,6 +138,7 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
    */
   list: tenantProcedure
     .use(requirePermission(EMPLOYEES_VIEW))
+    .use(applyDataScope())
     .input(
       z.object({
         employeeId: z.string(),
@@ -149,11 +151,12 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       try {
         const tenantId = ctx.tenantId!
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
 
         // Verify employee exists and belongs to tenant
         const employee = await ctx.prisma.employee.findFirst({
           where: { id: input.employeeId, tenantId, deletedAt: null },
-          select: { id: true },
+          select: { id: true, departmentId: true },
         })
         if (!employee) {
           throw new TRPCError({
@@ -161,6 +164,10 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
             message: "Employee not found",
           })
         }
+        checkRelatedEmployeeDataScope(dataScope, {
+          employeeId: employee.id,
+          employee: { departmentId: employee.departmentId },
+        }, "EmployeeTariffAssignment")
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const where: Record<string, any> = { employeeId: input.employeeId }
@@ -191,6 +198,7 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(EMPLOYEES_VIEW))
+    .use(applyDataScope())
     .input(
       z.object({
         employeeId: z.string(),
@@ -201,6 +209,19 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       try {
         const tenantId = ctx.tenantId!
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+
+        // Check scope on target employee
+        const employee = await ctx.prisma.employee.findFirst({
+          where: { id: input.employeeId, tenantId, deletedAt: null },
+          select: { id: true, departmentId: true },
+        })
+        if (employee) {
+          checkRelatedEmployeeDataScope(dataScope, {
+            employeeId: employee.id,
+            employee: { departmentId: employee.departmentId },
+          }, "EmployeeTariffAssignment")
+        }
 
         const assignment =
           await ctx.prisma.employeeTariffAssignment.findFirst({
@@ -236,6 +257,7 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
    */
   create: tenantProcedure
     .use(requirePermission(EMPLOYEES_EDIT))
+    .use(applyDataScope())
     .input(
       z.object({
         employeeId: z.string(),
@@ -250,11 +272,12 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         const tenantId = ctx.tenantId!
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
 
         // Verify employee exists and belongs to tenant
         const employee = await ctx.prisma.employee.findFirst({
           where: { id: input.employeeId, tenantId, deletedAt: null },
-          select: { id: true },
+          select: { id: true, departmentId: true },
         })
         if (!employee) {
           throw new TRPCError({
@@ -262,6 +285,10 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
             message: "Employee not found",
           })
         }
+        checkRelatedEmployeeDataScope(dataScope, {
+          employeeId: employee.id,
+          employee: { departmentId: employee.departmentId },
+        }, "EmployeeTariffAssignment")
 
         // Validate date range
         const effectiveTo = input.effectiveTo ?? null
@@ -318,6 +345,7 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
    */
   update: tenantProcedure
     .use(requirePermission(EMPLOYEES_EDIT))
+    .use(applyDataScope())
     .input(
       z.object({
         employeeId: z.string(),
@@ -333,6 +361,19 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         const tenantId = ctx.tenantId!
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+
+        // Check scope on target employee
+        const employee = await ctx.prisma.employee.findFirst({
+          where: { id: input.employeeId, tenantId, deletedAt: null },
+          select: { id: true, departmentId: true },
+        })
+        if (employee) {
+          checkRelatedEmployeeDataScope(dataScope, {
+            employeeId: employee.id,
+            employee: { departmentId: employee.departmentId },
+          }, "EmployeeTariffAssignment")
+        }
 
         // Fetch existing assignment, verify tenant/employee match
         const existing =
@@ -430,6 +471,7 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(EMPLOYEES_EDIT))
+    .use(applyDataScope())
     .input(
       z.object({
         employeeId: z.string(),
@@ -440,6 +482,19 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         const tenantId = ctx.tenantId!
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+
+        // Check scope on target employee
+        const employee = await ctx.prisma.employee.findFirst({
+          where: { id: input.employeeId, tenantId, deletedAt: null },
+          select: { id: true, departmentId: true },
+        })
+        if (employee) {
+          checkRelatedEmployeeDataScope(dataScope, {
+            employeeId: employee.id,
+            employee: { departmentId: employee.departmentId },
+          }, "EmployeeTariffAssignment")
+        }
 
         // Fetch assignment, verify tenant/employee match
         const existing =
@@ -481,6 +536,7 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
    */
   effective: tenantProcedure
     .use(requirePermission(EMPLOYEES_VIEW))
+    .use(applyDataScope())
     .input(
       z.object({
         employeeId: z.string(),
@@ -491,6 +547,7 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       try {
         const tenantId = ctx.tenantId!
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
 
         // Parse date
         const date = new Date(input.date)
@@ -504,7 +561,7 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
         // Verify employee exists and belongs to tenant
         const employee = await ctx.prisma.employee.findFirst({
           where: { id: input.employeeId, tenantId, deletedAt: null },
-          select: { id: true, tariffId: true },
+          select: { id: true, tariffId: true, departmentId: true },
         })
         if (!employee) {
           throw new TRPCError({
@@ -512,6 +569,10 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
             message: "Employee not found",
           })
         }
+        checkRelatedEmployeeDataScope(dataScope, {
+          employeeId: employee.id,
+          employee: { departmentId: employee.departmentId },
+        }, "EmployeeTariffAssignment")
 
         // Find active assignment covering the date
         const assignment =

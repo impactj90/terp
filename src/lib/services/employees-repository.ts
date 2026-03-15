@@ -82,19 +82,27 @@ export async function findByIdWithRelations(
 export async function search(
   prisma: PrismaClient,
   tenantId: string,
-  query: string
+  query: string,
+  scopeWhere?: Record<string, unknown> | null
 ) {
+  const where: Record<string, unknown> = {
+    tenantId,
+    isActive: true,
+    deletedAt: null,
+    OR: [
+      { firstName: { contains: query, mode: "insensitive" } },
+      { lastName: { contains: query, mode: "insensitive" } },
+      { personnelNumber: { contains: query, mode: "insensitive" } },
+    ],
+  }
+
+  // Apply data scope filter
+  if (scopeWhere) {
+    Object.assign(where, scopeWhere)
+  }
+
   return prisma.employee.findMany({
-    where: {
-      tenantId,
-      isActive: true,
-      deletedAt: null,
-      OR: [
-        { firstName: { contains: query, mode: "insensitive" } },
-        { lastName: { contains: query, mode: "insensitive" } },
-        { personnelNumber: { contains: query, mode: "insensitive" } },
-      ],
-    },
+    where,
     select: {
       id: true,
       personnelNumber: true,

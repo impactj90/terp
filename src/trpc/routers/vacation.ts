@@ -19,7 +19,8 @@
  */
 import { z } from "zod"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
-import { requirePermission } from "@/lib/auth/middleware"
+import { requirePermission, applyDataScope, type DataScope } from "@/lib/auth/middleware"
+import { checkRelatedEmployeeDataScope } from "@/lib/auth/data-scope"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
 import { vacationBalanceOutputSchema } from "@/lib/services/vacation-balance-output"
@@ -86,6 +87,7 @@ export const vacationRouter = createTRPCRouter({
    */
   entitlementPreview: tenantProcedure
     .use(requirePermission(VACATION_CONFIG_MANAGE))
+    .use(applyDataScope())
     .input(
       z.object({
         employeeId: z.string(),
@@ -96,6 +98,17 @@ export const vacationRouter = createTRPCRouter({
     .output(entitlementPreviewOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const employee = await ctx.prisma.employee.findFirst({
+          where: { id: input.employeeId, tenantId: ctx.tenantId!, deletedAt: null },
+          select: { id: true, departmentId: true },
+        })
+        if (employee) {
+          checkRelatedEmployeeDataScope(dataScope, {
+            employeeId: employee.id,
+            employee: { departmentId: employee.departmentId },
+          }, "VacationEntitlement")
+        }
         return await vacationService.entitlementPreview(
           ctx.prisma,
           ctx.tenantId!,
@@ -116,6 +129,7 @@ export const vacationRouter = createTRPCRouter({
    */
   carryoverPreview: tenantProcedure
     .use(requirePermission(VACATION_CONFIG_MANAGE))
+    .use(applyDataScope())
     .input(
       z.object({
         employeeId: z.string(),
@@ -125,6 +139,17 @@ export const vacationRouter = createTRPCRouter({
     .output(carryoverPreviewOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const employee = await ctx.prisma.employee.findFirst({
+          where: { id: input.employeeId, tenantId: ctx.tenantId!, deletedAt: null },
+          select: { id: true, departmentId: true },
+        })
+        if (employee) {
+          checkRelatedEmployeeDataScope(dataScope, {
+            employeeId: employee.id,
+            employee: { departmentId: employee.departmentId },
+          }, "VacationCarryover")
+        }
         return await vacationService.carryoverPreview(
           ctx.prisma,
           ctx.tenantId!,
@@ -147,6 +172,7 @@ export const vacationRouter = createTRPCRouter({
    */
   getBalance: tenantProcedure
     .use(requirePermission(ABSENCES_MANAGE))
+    .use(applyDataScope())
     .input(
       z.object({
         employeeId: z.string(),
@@ -156,6 +182,17 @@ export const vacationRouter = createTRPCRouter({
     .output(vacationBalanceOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const employee = await ctx.prisma.employee.findFirst({
+          where: { id: input.employeeId, tenantId: ctx.tenantId!, deletedAt: null },
+          select: { id: true, departmentId: true },
+        })
+        if (employee) {
+          checkRelatedEmployeeDataScope(dataScope, {
+            employeeId: employee.id,
+            employee: { departmentId: employee.departmentId },
+          }, "VacationBalance")
+        }
         return await vacationService.getBalance(
           ctx.prisma,
           ctx.tenantId!,
@@ -178,6 +215,7 @@ export const vacationRouter = createTRPCRouter({
    */
   initializeYear: tenantProcedure
     .use(requirePermission(ABSENCES_MANAGE))
+    .use(applyDataScope())
     .input(
       z.object({
         employeeId: z.string(),
@@ -187,6 +225,17 @@ export const vacationRouter = createTRPCRouter({
     .output(vacationBalanceOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const employee = await ctx.prisma.employee.findFirst({
+          where: { id: input.employeeId, tenantId: ctx.tenantId!, deletedAt: null },
+          select: { id: true, departmentId: true },
+        })
+        if (employee) {
+          checkRelatedEmployeeDataScope(dataScope, {
+            employeeId: employee.id,
+            employee: { departmentId: employee.departmentId },
+          }, "VacationBalance")
+        }
         return await vacationService.initializeYear(
           ctx.prisma,
           ctx.tenantId!,
@@ -208,6 +257,7 @@ export const vacationRouter = createTRPCRouter({
    */
   adjustBalance: tenantProcedure
     .use(requirePermission(ABSENCES_MANAGE))
+    .use(applyDataScope())
     .input(
       z.object({
         employeeId: z.string(),
@@ -219,6 +269,17 @@ export const vacationRouter = createTRPCRouter({
     .output(vacationBalanceOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const employee = await ctx.prisma.employee.findFirst({
+          where: { id: input.employeeId, tenantId: ctx.tenantId!, deletedAt: null },
+          select: { id: true, departmentId: true },
+        })
+        if (employee) {
+          checkRelatedEmployeeDataScope(dataScope, {
+            employeeId: employee.id,
+            employee: { departmentId: employee.departmentId },
+          }, "VacationBalance")
+        }
         return await vacationService.adjustBalance(
           ctx.prisma,
           ctx.tenantId!,
@@ -241,6 +302,7 @@ export const vacationRouter = createTRPCRouter({
    */
   carryoverFromPreviousYear: tenantProcedure
     .use(requirePermission(ABSENCES_MANAGE))
+    .use(applyDataScope())
     .input(
       z.object({
         employeeId: z.string(),
@@ -250,6 +312,17 @@ export const vacationRouter = createTRPCRouter({
     .output(vacationBalanceOutputSchema.nullable())
     .mutation(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const employee = await ctx.prisma.employee.findFirst({
+          where: { id: input.employeeId, tenantId: ctx.tenantId!, deletedAt: null },
+          select: { id: true, departmentId: true },
+        })
+        if (employee) {
+          checkRelatedEmployeeDataScope(dataScope, {
+            employeeId: employee.id,
+            employee: { departmentId: employee.departmentId },
+          }, "VacationBalance")
+        }
         return await vacationService.carryoverFromPreviousYear(
           ctx.prisma,
           ctx.tenantId!,
@@ -271,6 +344,7 @@ export const vacationRouter = createTRPCRouter({
    */
   initializeBatch: tenantProcedure
     .use(requirePermission(ABSENCES_MANAGE))
+    .use(applyDataScope())
     .input(
       z.object({
         year: z.number().int().min(1900).max(2200),

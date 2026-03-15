@@ -15,7 +15,8 @@
 import { z } from "zod"
 import type { Prisma } from "@/generated/prisma/client"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
-import { requirePermission } from "@/lib/auth/middleware"
+import { requirePermission, applyDataScope, type DataScope } from "@/lib/auth/middleware"
+import { checkRelatedEmployeeDataScope, buildRelatedEmployeeDataScopeWhere } from "@/lib/auth/data-scope"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
 import * as employeeCappingExceptionService from "@/lib/services/employee-capping-exception-service"
@@ -112,6 +113,7 @@ export const employeeCappingExceptionsRouter = createTRPCRouter({
    */
   list: tenantProcedure
     .use(requirePermission(VACATION_CONFIG_MANAGE))
+    .use(applyDataScope())
     .input(
       z
         .object({
@@ -126,6 +128,8 @@ export const employeeCappingExceptionsRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const scopeWhere = buildRelatedEmployeeDataScopeWhere(dataScope)
         const items = await employeeCappingExceptionService.list(
           ctx.prisma,
           ctx.tenantId!,
@@ -135,7 +139,8 @@ export const employeeCappingExceptionsRouter = createTRPCRouter({
                 cappingRuleId: input.cappingRuleId,
                 year: input.year,
               }
-            : undefined
+            : undefined,
+          scopeWhere
         )
         return {
           data: items.map((item) =>
@@ -154,15 +159,27 @@ export const employeeCappingExceptionsRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(VACATION_CONFIG_MANAGE))
+    .use(applyDataScope())
     .input(z.object({ id: z.string() }))
     .output(employeeCappingExceptionOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
         const item = await employeeCappingExceptionService.getById(
           ctx.prisma,
           ctx.tenantId!,
           input.id
         )
+        const employee = await ctx.prisma.employee.findFirst({
+          where: { id: (item as unknown as Record<string, unknown>).employeeId as string, tenantId: ctx.tenantId!, deletedAt: null },
+          select: { id: true, departmentId: true },
+        })
+        if (employee) {
+          checkRelatedEmployeeDataScope(dataScope, {
+            employeeId: employee.id,
+            employee: { departmentId: employee.departmentId },
+          }, "EmployeeCappingException")
+        }
         return mapToOutput(item as unknown as Record<string, unknown>)
       } catch (err) {
         handleServiceError(err)
@@ -181,10 +198,22 @@ export const employeeCappingExceptionsRouter = createTRPCRouter({
    */
   create: tenantProcedure
     .use(requirePermission(VACATION_CONFIG_MANAGE))
+    .use(applyDataScope())
     .input(createEmployeeCappingExceptionInputSchema)
     .output(employeeCappingExceptionOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const employee = await ctx.prisma.employee.findFirst({
+          where: { id: input.employeeId, tenantId: ctx.tenantId!, deletedAt: null },
+          select: { id: true, departmentId: true },
+        })
+        if (employee) {
+          checkRelatedEmployeeDataScope(dataScope, {
+            employeeId: employee.id,
+            employee: { departmentId: employee.departmentId },
+          }, "EmployeeCappingException")
+        }
         const created = await employeeCappingExceptionService.create(
           ctx.prisma,
           ctx.tenantId!,
@@ -206,10 +235,27 @@ export const employeeCappingExceptionsRouter = createTRPCRouter({
    */
   update: tenantProcedure
     .use(requirePermission(VACATION_CONFIG_MANAGE))
+    .use(applyDataScope())
     .input(updateEmployeeCappingExceptionInputSchema)
     .output(employeeCappingExceptionOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const existing = await ctx.prisma.employeeCappingException.findFirst({
+          where: { id: input.id, tenantId: ctx.tenantId! },
+        })
+        if (existing) {
+          const employee = await ctx.prisma.employee.findFirst({
+            where: { id: existing.employeeId, tenantId: ctx.tenantId!, deletedAt: null },
+            select: { id: true, departmentId: true },
+          })
+          if (employee) {
+            checkRelatedEmployeeDataScope(dataScope, {
+              employeeId: employee.id,
+              employee: { departmentId: employee.departmentId },
+            }, "EmployeeCappingException")
+          }
+        }
         const updated = await employeeCappingExceptionService.update(
           ctx.prisma,
           ctx.tenantId!,
@@ -228,10 +274,27 @@ export const employeeCappingExceptionsRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(VACATION_CONFIG_MANAGE))
+    .use(applyDataScope())
     .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const existing = await ctx.prisma.employeeCappingException.findFirst({
+          where: { id: input.id, tenantId: ctx.tenantId! },
+        })
+        if (existing) {
+          const employee = await ctx.prisma.employee.findFirst({
+            where: { id: existing.employeeId, tenantId: ctx.tenantId!, deletedAt: null },
+            select: { id: true, departmentId: true },
+          })
+          if (employee) {
+            checkRelatedEmployeeDataScope(dataScope, {
+              employeeId: employee.id,
+              employee: { departmentId: employee.departmentId },
+            }, "EmployeeCappingException")
+          }
+        }
         await employeeCappingExceptionService.remove(
           ctx.prisma,
           ctx.tenantId!,

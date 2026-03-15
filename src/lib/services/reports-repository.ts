@@ -122,6 +122,10 @@ export async function findEmployeesInScope(
     costCenterIds?: string[]
     teamIds?: string[]
     employeeIds?: string[]
+  },
+  scopeFilter?: {
+    departmentIds?: string[]
+    employeeIds?: string[]
   }
 ): Promise<EmployeeScope[]> {
   const empWhere: Record<string, unknown> = {
@@ -130,6 +134,20 @@ export async function findEmployeesInScope(
   }
   if (params.departmentIds && params.departmentIds.length > 0) {
     empWhere.departmentId = { in: params.departmentIds }
+  }
+
+  // Apply data scope constraints
+  if (scopeFilter?.departmentIds) {
+    if (empWhere.departmentId) {
+      const paramIds = (empWhere.departmentId as { in: string[] }).in
+      const scopeIds = new Set(scopeFilter.departmentIds)
+      empWhere.departmentId = { in: paramIds.filter((id: string) => scopeIds.has(id)) }
+    } else {
+      empWhere.departmentId = { in: scopeFilter.departmentIds }
+    }
+  }
+  if (scopeFilter?.employeeIds) {
+    empWhere.id = { in: scopeFilter.employeeIds }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

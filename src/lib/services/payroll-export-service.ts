@@ -112,7 +112,11 @@ export async function generate(
       includeAccounts?: string[]
     }
   },
-  userId: string | null
+  userId: string | null,
+  scopeFilter?: {
+    departmentIds?: string[]
+    employeeIds?: string[]
+  }
 ) {
   // Validate not future month
   const now = new Date()
@@ -153,7 +157,8 @@ export async function generate(
       {
         departmentIds: input.parameters?.departmentIds,
         employeeIds: input.parameters?.employeeIds,
-      }
+      },
+      scopeFilter
     )
 
     // Determine which accounts to include
@@ -280,7 +285,11 @@ export async function generate(
 export async function preview(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  scopeFilter?: {
+    departmentIds?: string[]
+    employeeIds?: string[]
+  }
 ) {
   const pe = await repo.findById(prisma, tenantId, id)
 
@@ -306,7 +315,8 @@ export async function preview(
     tenantId,
     {
       employeeIds: params?.employeeIds,
-    }
+    },
+    scopeFilter
   )
 
   const lines: PreviewLine[] = []

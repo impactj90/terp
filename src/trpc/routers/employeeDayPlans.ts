@@ -19,7 +19,8 @@
  */
 import { z } from "zod"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
-import { requirePermission } from "@/lib/auth/middleware"
+import { requirePermission, applyDataScope, type DataScope } from "@/lib/auth/middleware"
+import { checkRelatedEmployeeDataScope, buildRelatedEmployeeDataScopeWhere } from "@/lib/auth/data-scope"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
 import * as edpService from "@/lib/services/employee-day-plans-service"
@@ -136,11 +137,26 @@ export const employeeDayPlansRouter = createTRPCRouter({
    */
   list: tenantProcedure
     .use(requirePermission(TIME_PLANS_MANAGE))
+    .use(applyDataScope())
     .input(listInputSchema)
     .output(z.object({ data: z.array(employeeDayPlanOutputSchema) }))
     .query(async ({ ctx, input }) => {
       try {
-        return await edpService.list(ctx.prisma, ctx.tenantId!, input)
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        if (input.employeeId) {
+          const employee = await ctx.prisma.employee.findFirst({
+            where: { id: input.employeeId, tenantId: ctx.tenantId!, deletedAt: null },
+            select: { id: true, departmentId: true },
+          })
+          if (employee) {
+            checkRelatedEmployeeDataScope(dataScope, {
+              employeeId: employee.id,
+              employee: { departmentId: employee.departmentId },
+            }, "EmployeeDayPlan")
+          }
+        }
+        const scopeWhere = buildRelatedEmployeeDataScopeWhere(dataScope)
+        return await edpService.list(ctx.prisma, ctx.tenantId!, input, scopeWhere)
       } catch (err) {
         handleServiceError(err)
       }
@@ -156,10 +172,22 @@ export const employeeDayPlansRouter = createTRPCRouter({
    */
   forEmployee: tenantProcedure
     .use(requirePermission(TIME_PLANS_MANAGE))
+    .use(applyDataScope())
     .input(forEmployeeInputSchema)
     .output(z.object({ data: z.array(employeeDayPlanOutputSchema) }))
     .query(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const employee = await ctx.prisma.employee.findFirst({
+          where: { id: input.employeeId, tenantId: ctx.tenantId!, deletedAt: null },
+          select: { id: true, departmentId: true },
+        })
+        if (employee) {
+          checkRelatedEmployeeDataScope(dataScope, {
+            employeeId: employee.id,
+            employee: { departmentId: employee.departmentId },
+          }, "EmployeeDayPlan")
+        }
         return await edpService.forEmployee(ctx.prisma, ctx.tenantId!, input)
       } catch (err) {
         handleServiceError(err)
@@ -175,11 +203,24 @@ export const employeeDayPlansRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(TIME_PLANS_MANAGE))
+    .use(applyDataScope())
     .input(z.object({ id: z.string() }))
     .output(employeeDayPlanOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
-        return await edpService.getById(ctx.prisma, ctx.tenantId!, input.id)
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const result = await edpService.getById(ctx.prisma, ctx.tenantId!, input.id)
+        const employee = await ctx.prisma.employee.findFirst({
+          where: { id: result.employeeId, tenantId: ctx.tenantId!, deletedAt: null },
+          select: { id: true, departmentId: true },
+        })
+        if (employee) {
+          checkRelatedEmployeeDataScope(dataScope, {
+            employeeId: employee.id,
+            employee: { departmentId: employee.departmentId },
+          }, "EmployeeDayPlan")
+        }
+        return result
       } catch (err) {
         handleServiceError(err)
       }
@@ -196,10 +237,22 @@ export const employeeDayPlansRouter = createTRPCRouter({
    */
   create: tenantProcedure
     .use(requirePermission(TIME_PLANS_MANAGE))
+    .use(applyDataScope())
     .input(createInputSchema)
     .output(employeeDayPlanOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const employee = await ctx.prisma.employee.findFirst({
+          where: { id: input.employeeId, tenantId: ctx.tenantId!, deletedAt: null },
+          select: { id: true, departmentId: true },
+        })
+        if (employee) {
+          checkRelatedEmployeeDataScope(dataScope, {
+            employeeId: employee.id,
+            employee: { departmentId: employee.departmentId },
+          }, "EmployeeDayPlan")
+        }
         return await edpService.create(ctx.prisma, ctx.tenantId!, input)
       } catch (err) {
         handleServiceError(err)
@@ -215,10 +268,22 @@ export const employeeDayPlansRouter = createTRPCRouter({
    */
   update: tenantProcedure
     .use(requirePermission(TIME_PLANS_MANAGE))
+    .use(applyDataScope())
     .input(updateInputSchema)
     .output(employeeDayPlanOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const existing = await ctx.prisma.employeeDayPlan.findFirst({
+          where: { id: input.id, tenantId: ctx.tenantId! },
+          include: { employee: { select: { id: true, departmentId: true } } },
+        })
+        if (existing?.employee) {
+          checkRelatedEmployeeDataScope(dataScope, {
+            employeeId: existing.employeeId,
+            employee: { departmentId: existing.employee.departmentId },
+          }, "EmployeeDayPlan")
+        }
         return await edpService.update(ctx.prisma, ctx.tenantId!, input)
       } catch (err) {
         handleServiceError(err)
@@ -234,10 +299,22 @@ export const employeeDayPlansRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(TIME_PLANS_MANAGE))
+    .use(applyDataScope())
     .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const existing = await ctx.prisma.employeeDayPlan.findFirst({
+          where: { id: input.id, tenantId: ctx.tenantId! },
+          include: { employee: { select: { id: true, departmentId: true } } },
+        })
+        if (existing?.employee) {
+          checkRelatedEmployeeDataScope(dataScope, {
+            employeeId: existing.employeeId,
+            employee: { departmentId: existing.employee.departmentId },
+          }, "EmployeeDayPlan")
+        }
         return await edpService.remove(ctx.prisma, ctx.tenantId!, input.id)
       } catch (err) {
         handleServiceError(err)
@@ -254,10 +331,24 @@ export const employeeDayPlansRouter = createTRPCRouter({
    */
   bulkCreate: tenantProcedure
     .use(requirePermission(TIME_PLANS_MANAGE))
+    .use(applyDataScope())
     .input(bulkCreateInputSchema)
     .output(z.object({ created: z.number() }))
     .mutation(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        // Check scope for all unique employeeIds in the batch
+        const uniqueEmployeeIds = [...new Set(input.entries.map((e) => e.employeeId))]
+        const employees = await ctx.prisma.employee.findMany({
+          where: { id: { in: uniqueEmployeeIds }, tenantId: ctx.tenantId!, deletedAt: null },
+          select: { id: true, departmentId: true },
+        })
+        for (const employee of employees) {
+          checkRelatedEmployeeDataScope(dataScope, {
+            employeeId: employee.id,
+            employee: { departmentId: employee.departmentId },
+          }, "EmployeeDayPlan")
+        }
         return await edpService.bulkCreate(ctx.prisma, ctx.tenantId!, input)
       } catch (err) {
         handleServiceError(err)
@@ -273,10 +364,22 @@ export const employeeDayPlansRouter = createTRPCRouter({
    */
   deleteRange: tenantProcedure
     .use(requirePermission(TIME_PLANS_MANAGE))
+    .use(applyDataScope())
     .input(deleteRangeInputSchema)
     .output(z.object({ deleted: z.number() }))
     .mutation(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const employee = await ctx.prisma.employee.findFirst({
+          where: { id: input.employeeId, tenantId: ctx.tenantId!, deletedAt: null },
+          select: { id: true, departmentId: true },
+        })
+        if (employee) {
+          checkRelatedEmployeeDataScope(dataScope, {
+            employeeId: employee.id,
+            employee: { departmentId: employee.departmentId },
+          }, "EmployeeDayPlan")
+        }
         return await edpService.deleteRange(ctx.prisma, ctx.tenantId!, input)
       } catch (err) {
         handleServiceError(err)
@@ -299,6 +402,7 @@ export const employeeDayPlansRouter = createTRPCRouter({
    */
   generateFromTariff: tenantProcedure
     .use(requirePermission(TIME_PLANS_MANAGE))
+    .use(applyDataScope())
     .input(generateFromTariffInputSchema)
     .output(
       z.object({
@@ -310,6 +414,20 @@ export const employeeDayPlansRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        // Check scope for specific employeeIds if provided
+        if (input.employeeIds && input.employeeIds.length > 0) {
+          const employees = await ctx.prisma.employee.findMany({
+            where: { id: { in: input.employeeIds }, tenantId: ctx.tenantId!, deletedAt: null },
+            select: { id: true, departmentId: true },
+          })
+          for (const employee of employees) {
+            checkRelatedEmployeeDataScope(dataScope, {
+              employeeId: employee.id,
+              employee: { departmentId: employee.departmentId },
+            }, "EmployeeDayPlan")
+          }
+        }
         return await edpService.generateFromTariff(
           ctx.prisma,
           ctx.tenantId!,

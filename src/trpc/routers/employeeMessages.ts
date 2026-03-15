@@ -14,7 +14,8 @@
  */
 import { z } from "zod"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
-import { requirePermission } from "@/lib/auth/middleware"
+import { requirePermission, applyDataScope, type DataScope } from "@/lib/auth/middleware"
+import { checkRelatedEmployeeDataScope } from "@/lib/auth/data-scope"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
 import * as service from "@/lib/services/employee-messages-service"
@@ -88,6 +89,7 @@ export const employeeMessagesRouter = createTRPCRouter({
    */
   list: tenantProcedure
     .use(requirePermission(NOTIFICATIONS_MANAGE))
+    .use(applyDataScope())
     .input(listMessagesInputSchema)
     .output(
       z.object({
@@ -114,6 +116,7 @@ export const employeeMessagesRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(NOTIFICATIONS_MANAGE))
+    .use(applyDataScope())
     .input(z.object({ id: z.string() }))
     .output(employeeMessageOutputSchema)
     .query(async ({ ctx, input }) => {
@@ -133,6 +136,7 @@ export const employeeMessagesRouter = createTRPCRouter({
    */
   listForEmployee: tenantProcedure
     .use(requirePermission(NOTIFICATIONS_MANAGE))
+    .use(applyDataScope())
     .input(
       z.object({
         employeeId: z.string(),
@@ -148,6 +152,17 @@ export const employeeMessagesRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const employee = await ctx.prisma.employee.findFirst({
+          where: { id: input.employeeId, tenantId: ctx.tenantId!, deletedAt: null },
+          select: { id: true, departmentId: true },
+        })
+        if (employee) {
+          checkRelatedEmployeeDataScope(dataScope, {
+            employeeId: employee.id,
+            employee: { departmentId: employee.departmentId },
+          }, "EmployeeMessage")
+        }
         return await service.listMessagesForEmployee(
           ctx.prisma,
           ctx.tenantId!,
@@ -169,10 +184,23 @@ export const employeeMessagesRouter = createTRPCRouter({
    */
   create: tenantProcedure
     .use(requirePermission(NOTIFICATIONS_MANAGE))
+    .use(applyDataScope())
     .input(createMessageInputSchema)
     .output(employeeMessageOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        // Check scope for all recipient employeeIds
+        const employees = await ctx.prisma.employee.findMany({
+          where: { id: { in: input.employeeIds }, tenantId: ctx.tenantId!, deletedAt: null },
+          select: { id: true, departmentId: true },
+        })
+        for (const employee of employees) {
+          checkRelatedEmployeeDataScope(dataScope, {
+            employeeId: employee.id,
+            employee: { departmentId: employee.departmentId },
+          }, "EmployeeMessage")
+        }
         return await service.createMessage(
           ctx.prisma,
           ctx.tenantId!,
@@ -198,6 +226,7 @@ export const employeeMessagesRouter = createTRPCRouter({
    */
   send: tenantProcedure
     .use(requirePermission(NOTIFICATIONS_MANAGE))
+    .use(applyDataScope())
     .input(z.object({ id: z.string() }))
     .output(sendResultOutputSchema)
     .mutation(async ({ ctx, input }) => {

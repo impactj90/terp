@@ -31,7 +31,8 @@ export async function findMany(
     toDate?: string
     correctionType?: string
     status?: string
-  }
+  },
+  dataScopeWhere?: Record<string, unknown> | null
 ) {
   const page = params?.page ?? 1
   const pageSize = params?.pageSize ?? 50
@@ -60,6 +61,18 @@ export async function findMany(
       correctionDate.lte = new Date(params.toDate)
     }
     where.correctionDate = correctionDate
+  }
+
+  // Apply data scope filter
+  if (dataScopeWhere) {
+    if (dataScopeWhere.employee && where.employee) {
+      where.employee = {
+        ...((where.employee as Record<string, unknown>) || {}),
+        ...((dataScopeWhere.employee as Record<string, unknown>) || {}),
+      }
+    } else {
+      Object.assign(where, dataScopeWhere)
+    }
   }
 
   const [items, total] = await Promise.all([
@@ -164,6 +177,17 @@ export async function employeeExists(
     where: { id: employeeId, tenantId },
   })
   return !!employee
+}
+
+export async function findEmployee(
+  prisma: PrismaClient,
+  tenantId: string,
+  employeeId: string
+) {
+  return prisma.employee.findFirst({
+    where: { id: employeeId, tenantId },
+    select: { id: true, departmentId: true },
+  })
 }
 
 export async function accountExists(

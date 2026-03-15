@@ -16,10 +16,24 @@
  */
 import { z } from "zod"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
-import { requirePermission } from "@/lib/auth/middleware"
+import { requirePermission, applyDataScope, type DataScope } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
 import * as payrollExportService from "@/lib/services/payroll-export-service"
+
+// --- Data Scope Helper ---
+
+function dataScopeToEmployeeFilter(dataScope: DataScope): {
+  departmentIds?: string[]
+  employeeIds?: string[]
+} | undefined {
+  if (dataScope.type === "department") {
+    return { departmentIds: dataScope.departmentIds }
+  } else if (dataScope.type === "employee") {
+    return { employeeIds: dataScope.employeeIds }
+  }
+  return undefined
+}
 
 // --- Permission Constants ---
 
@@ -149,6 +163,7 @@ export const payrollExportsRouter = createTRPCRouter({
    */
   generate: tenantProcedure
     .use(requirePermission(PAYROLL_MANAGE))
+    .use(applyDataScope())
     .input(
       z.object({
         year: z.number().int().min(1),
@@ -166,11 +181,14 @@ export const payrollExportsRouter = createTRPCRouter({
     .output(payrollExportOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const scopeFilter = dataScopeToEmployeeFilter(dataScope)
         return await payrollExportService.generate(
           ctx.prisma,
           ctx.tenantId!,
           input,
-          ctx.user?.id || null
+          ctx.user?.id || null,
+          scopeFilter
         )
       } catch (err) {
         handleServiceError(err)
@@ -186,6 +204,7 @@ export const payrollExportsRouter = createTRPCRouter({
    */
   preview: tenantProcedure
     .use(requirePermission(PAYROLL_VIEW))
+    .use(applyDataScope())
     .input(z.object({ id: z.string() }))
     .output(
       z.object({
@@ -199,10 +218,13 @@ export const payrollExportsRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const scopeFilter = dataScopeToEmployeeFilter(dataScope)
         return await payrollExportService.preview(
           ctx.prisma,
           ctx.tenantId!,
-          input.id
+          input.id,
+          scopeFilter
         )
       } catch (err) {
         handleServiceError(err)

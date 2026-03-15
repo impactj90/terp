@@ -7,6 +7,7 @@
 import type { PrismaClient } from "@/generated/prisma/client"
 import { Prisma } from "@/generated/prisma/client"
 import type { DataScope } from "@/lib/auth/middleware"
+import { checkRelatedEmployeeDataScope } from "@/lib/auth/data-scope"
 import * as repo from "./vacation-balances-repository"
 import { mapBalanceToOutput } from "./vacation-balance-output"
 
@@ -234,11 +235,20 @@ export async function listBalances(
 export async function getBalanceById(
   prisma: PrismaClient,
   tenantId: string,
-  balanceId: string
+  balanceId: string,
+  dataScope?: DataScope
 ) {
   const balance = await repo.findBalanceByIdAndTenant(prisma, tenantId, balanceId)
   if (!balance) {
     throw new VacationBalanceNotFoundError()
+  }
+
+  // Check data scope
+  if (dataScope) {
+    checkRelatedEmployeeDataScope(dataScope, balance as unknown as {
+      employeeId: string
+      employee?: { departmentId: string | null } | null
+    }, "Vacation balance")
   }
 
   return mapBalanceToOutput(balance)
@@ -258,8 +268,24 @@ export async function createBalance(
     carryover: number
     adjustments: number
     carryoverExpiresAt?: Date | null
-  }
+  },
+  dataScope?: DataScope
 ) {
+  // Check data scope on target employee
+  if (dataScope) {
+    const emp = await prisma.employee.findFirst({
+      where: { id: input.employeeId, tenantId },
+      select: { id: true, departmentId: true },
+    })
+    if (emp) {
+      checkRelatedEmployeeDataScope(
+        dataScope,
+        { employeeId: emp.id, employee: { departmentId: emp.departmentId } },
+        "Vacation balance"
+      )
+    }
+  }
+
   try {
     const balance = await repo.createBalance(prisma, {
       tenantId,
@@ -292,11 +318,20 @@ export async function updateBalance(
     carryover?: number
     adjustments?: number
     carryoverExpiresAt?: Date | null
-  }
+  },
+  dataScope?: DataScope
 ) {
-  const existing = await repo.findBalanceByIdSimple(prisma, tenantId, input.id)
+  const existing = await repo.findBalanceByIdAndTenant(prisma, tenantId, input.id)
   if (!existing) {
     throw new VacationBalanceNotFoundError()
+  }
+
+  // Check data scope
+  if (dataScope) {
+    checkRelatedEmployeeDataScope(dataScope, existing as unknown as {
+      employeeId: string
+      employee?: { departmentId: string | null } | null
+    }, "Vacation balance")
   }
 
   const data: Prisma.VacationBalanceUpdateInput = {}

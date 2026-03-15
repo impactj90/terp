@@ -579,6 +579,10 @@ export async function generate(
       teamIds?: string[]
     }
     createdBy: string | null
+  },
+  scopeFilter?: {
+    departmentIds?: string[]
+    employeeIds?: string[]
   }
 ) {
   // Check date range requirement
@@ -621,7 +625,7 @@ export async function generate(
     }))!
 
     // Get employees in scope
-    const employees = await repo.findEmployeesInScope(prisma, tenantId, params)
+    const employees = await repo.findEmployeesInScope(prisma, tenantId, params, scopeFilter)
 
     // Gather data based on report type
     let data: ReportRow

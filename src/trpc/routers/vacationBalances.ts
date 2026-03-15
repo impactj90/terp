@@ -85,11 +85,13 @@ export const vacationBalancesRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(ABSENCES_MANAGE))
+    .use(applyDataScope())
     .input(z.object({ id: z.string() }))
     .output(vacationBalanceOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
-        return await service.getBalanceById(ctx.prisma, ctx.tenantId!, input.id)
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        return await service.getBalanceById(ctx.prisma, ctx.tenantId!, input.id, dataScope)
       } catch (err) {
         handleServiceError(err)
       }
@@ -105,6 +107,7 @@ export const vacationBalancesRouter = createTRPCRouter({
    */
   create: tenantProcedure
     .use(requirePermission(ABSENCES_MANAGE))
+    .use(applyDataScope())
     .input(
       z.object({
         employeeId: z.string(),
@@ -118,7 +121,8 @@ export const vacationBalancesRouter = createTRPCRouter({
     .output(vacationBalanceOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
-        return await service.createBalance(ctx.prisma, ctx.tenantId!, input)
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        return await service.createBalance(ctx.prisma, ctx.tenantId!, input, dataScope)
       } catch (err) {
         handleServiceError(err)
       }
@@ -164,6 +168,7 @@ export const vacationBalancesRouter = createTRPCRouter({
    */
   update: tenantProcedure
     .use(requirePermission(ABSENCES_MANAGE))
+    .use(applyDataScope())
     .input(
       z.object({
         id: z.string(),
@@ -176,7 +181,8 @@ export const vacationBalancesRouter = createTRPCRouter({
     .output(vacationBalanceOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
-        return await service.updateBalance(ctx.prisma, ctx.tenantId!, input)
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        return await service.updateBalance(ctx.prisma, ctx.tenantId!, input, dataScope)
       } catch (err) {
         handleServiceError(err)
       }

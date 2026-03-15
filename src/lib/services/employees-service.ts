@@ -732,9 +732,10 @@ export async function deactivate(
 export async function searchEmployees(
   prisma: PrismaClient,
   tenantId: string,
-  query: string
+  query: string,
+  dataScope?: DataScope
 ) {
-  return repo.search(prisma, tenantId, query)
+  return repo.search(prisma, tenantId, query, dataScope ? buildDataScopeWhere(dataScope) : null)
 }
 
 export async function bulkAssignTariff(

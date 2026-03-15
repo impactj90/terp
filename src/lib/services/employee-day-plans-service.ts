@@ -102,7 +102,8 @@ function mapToOutput(record: Record<string, unknown>): EmployeeDayPlanOutput {
 export async function list(
   prisma: PrismaClient,
   tenantId: string,
-  input: { employeeId?: string; from: string; to: string }
+  input: { employeeId?: string; from: string; to: string },
+  scopeWhere?: Record<string, unknown> | null
 ) {
   if (input.from > input.to) {
     throw new EmployeeDayPlanValidationError(
@@ -110,7 +111,7 @@ export async function list(
     )
   }
 
-  const plans = await repo.findMany(prisma, tenantId, input)
+  const plans = await repo.findMany(prisma, tenantId, input, scopeWhere)
 
   return {
     data: plans.map((p) =>

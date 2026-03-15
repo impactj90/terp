@@ -60,9 +60,10 @@ function mapToOutput(item: {
 export async function list(
   prisma: PrismaClient,
   tenantId: string,
-  params?: DailyAccountValueListParams
+  params?: DailyAccountValueListParams,
+  scopeWhere?: Record<string, unknown> | null
 ) {
-  const items = await repo.findMany(prisma, tenantId, params)
+  const items = await repo.findMany(prisma, tenantId, params, scopeWhere)
 
   return {
     items: items.map(mapToOutput),

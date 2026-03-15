@@ -30,7 +30,8 @@ export const edpDetailInclude = {
 export async function findMany(
   prisma: PrismaClient,
   tenantId: string,
-  params: { employeeId?: string; from: string; to: string }
+  params: { employeeId?: string; from: string; to: string },
+  scopeWhere?: Record<string, unknown> | null
 ) {
   const where: Record<string, unknown> = {
     tenantId,
@@ -42,6 +43,17 @@ export async function findMany(
 
   if (params.employeeId) {
     where.employeeId = params.employeeId
+  }
+
+  if (scopeWhere) {
+    if (scopeWhere.employee && where.employee) {
+      where.employee = {
+        ...((where.employee as Record<string, unknown>) || {}),
+        ...((scopeWhere.employee as Record<string, unknown>) || {}),
+      }
+    } else {
+      Object.assign(where, scopeWhere)
+    }
   }
 
   return prisma.employeeDayPlan.findMany({

@@ -19,9 +19,24 @@ const assignmentInclude = {
   },
 } as const
 
-export async function findMany(prisma: PrismaClient, tenantId: string) {
+export async function findMany(
+  prisma: PrismaClient,
+  tenantId: string,
+  scopeWhere?: Record<string, unknown> | null
+) {
+  const where: Record<string, unknown> = { tenantId }
+  if (scopeWhere) {
+    if (scopeWhere.employee && where.employee) {
+      where.employee = {
+        ...((where.employee as Record<string, unknown>) || {}),
+        ...((scopeWhere.employee as Record<string, unknown>) || {}),
+      }
+    } else {
+      Object.assign(where, scopeWhere)
+    }
+  }
   return prisma.employeeAccessAssignment.findMany({
-    where: { tenantId },
+    where,
     orderBy: { createdAt: "desc" },
     include: assignmentInclude,
   })

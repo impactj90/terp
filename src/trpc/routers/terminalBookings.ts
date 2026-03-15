@@ -15,7 +15,8 @@
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
-import { requirePermission } from "@/lib/auth/middleware"
+import { requirePermission, applyDataScope, type DataScope } from "@/lib/auth/middleware"
+import { buildRelatedEmployeeDataScopeWhere, mergeDataScopeWhere } from "@/lib/auth/data-scope"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
 
@@ -90,6 +91,7 @@ export const terminalBookingsRouter = createTRPCRouter({
    */
   list: tenantProcedure
     .use(requirePermission(TERMINAL_BOOKINGS_MANAGE))
+    .use(applyDataScope())
     .input(
       z.object({
         from: z.string().date().optional(),
@@ -117,6 +119,7 @@ export const terminalBookingsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       try {
         const tenantId = ctx.tenantId!
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
 
         const where: Record<string, unknown> = { tenantId }
         if (input.terminalId) {
@@ -137,6 +140,7 @@ export const terminalBookingsRouter = createTRPCRouter({
             lte: new Date(input.to),
           }
         }
+        mergeDataScopeWhere(where, buildRelatedEmployeeDataScopeWhere(dataScope))
 
         const [data, total] = await Promise.all([
           ctx.prisma.rawTerminalBooking.findMany({

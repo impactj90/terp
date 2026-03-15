@@ -14,7 +14,8 @@
  */
 import { z } from "zod"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
-import { requirePermission } from "@/lib/auth/middleware"
+import { requirePermission, applyDataScope, type DataScope } from "@/lib/auth/middleware"
+import { buildRelatedEmployeeDataScopeWhere } from "@/lib/auth/data-scope"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
 import * as dailyAccountValuesService from "@/lib/services/daily-account-values-service"
@@ -78,14 +79,18 @@ export const dailyAccountValuesRouter = createTRPCRouter({
    */
   list: tenantProcedure
     .use(requirePermission(ACCOUNTS_MANAGE))
+    .use(applyDataScope())
     .input(listInputSchema)
     .output(z.object({ items: z.array(dailyAccountValueOutputSchema) }))
     .query(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const scopeWhere = buildRelatedEmployeeDataScopeWhere(dataScope)
         return await dailyAccountValuesService.list(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          scopeWhere
         )
       } catch (err) {
         handleServiceError(err)

@@ -25,8 +25,12 @@ export class EmployeeAccessAssignmentValidationError extends Error {
 
 // --- Service Functions ---
 
-export async function list(prisma: PrismaClient, tenantId: string) {
-  return repo.findMany(prisma, tenantId)
+export async function list(
+  prisma: PrismaClient,
+  tenantId: string,
+  scopeWhere?: Record<string, unknown> | null
+) {
+  return repo.findMany(prisma, tenantId, scopeWhere)
 }
 
 export async function getById(

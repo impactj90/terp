@@ -92,6 +92,10 @@ export async function findEmployeesWithRelations(
   params?: {
     departmentIds?: string[]
     employeeIds?: string[]
+  },
+  scopeFilter?: {
+    departmentIds?: string[]
+    employeeIds?: string[]
   }
 ) {
   const empWhere: Record<string, unknown> = {
@@ -100,6 +104,21 @@ export async function findEmployeesWithRelations(
   }
   if (params?.departmentIds && params.departmentIds.length > 0) {
     empWhere.departmentId = { in: params.departmentIds }
+  }
+
+  // Apply data scope constraints
+  if (scopeFilter?.departmentIds) {
+    if (empWhere.departmentId) {
+      // Intersect: keep only departmentIds that are in both the param filter and the scope
+      const paramIds = (empWhere.departmentId as { in: string[] }).in
+      const scopeIds = new Set(scopeFilter.departmentIds)
+      empWhere.departmentId = { in: paramIds.filter((id: string) => scopeIds.has(id)) }
+    } else {
+      empWhere.departmentId = { in: scopeFilter.departmentIds }
+    }
+  }
+  if (scopeFilter?.employeeIds) {
+    empWhere.id = { in: scopeFilter.employeeIds }
   }
 
   let employees = await prisma.employee.findMany({

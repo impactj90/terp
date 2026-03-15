@@ -469,16 +469,22 @@ export const monthlyValuesRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(REPORTS_VIEW))
+    .use(applyDataScope())
     .input(byIdInputSchema)
     .output(monthlyValueOutputSchema)
     .query(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!
+      const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
       try {
         const mv = await monthlyValuesService.getById(
           ctx.prisma,
           tenantId,
           input.id
         )
+        checkMonthlyValueDataScope(dataScope, mv as unknown as {
+          employeeId: string
+          employee?: { departmentId: string | null } | null
+        })
         return mapMonthlyValueToOutput(mv as unknown as Record<string, unknown>)
       } catch (err) {
         handleServiceError(err)
@@ -497,16 +503,19 @@ export const monthlyValuesRouter = createTRPCRouter({
    */
   close: tenantProcedure
     .use(requirePermission(REPORTS_MANAGE))
+    .use(applyDataScope())
     .input(closeReopenInputSchema)
     .output(monthlyValueOutputSchema)
     .mutation(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!
+      const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
       try {
         const updated = await monthlyValuesService.close(
           ctx.prisma,
           tenantId,
           input,
-          ctx.user!.id
+          ctx.user!.id,
+          dataScope
         )
         return mapMonthlyValueToOutput(
           updated as unknown as Record<string, unknown>
@@ -528,16 +537,19 @@ export const monthlyValuesRouter = createTRPCRouter({
    */
   reopen: tenantProcedure
     .use(requirePermission(REPORTS_MANAGE))
+    .use(applyDataScope())
     .input(closeReopenInputSchema)
     .output(monthlyValueOutputSchema)
     .mutation(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!
+      const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
       try {
         const updated = await monthlyValuesService.reopen(
           ctx.prisma,
           tenantId,
           input,
-          ctx.user!.id
+          ctx.user!.id,
+          dataScope
         )
         return mapMonthlyValueToOutput(
           updated as unknown as Record<string, unknown>
@@ -559,6 +571,7 @@ export const monthlyValuesRouter = createTRPCRouter({
    */
   closeBatch: tenantProcedure
     .use(requirePermission(REPORTS_MANAGE))
+    .use(applyDataScope())
     .input(closeBatchInputSchema)
     .output(
       z.object({
@@ -576,12 +589,14 @@ export const monthlyValuesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!
       const userId = ctx.user!.id
+      const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
       try {
         return await monthlyValuesService.closeBatch(
           ctx.prisma,
           tenantId,
           input,
-          userId
+          userId,
+          dataScope
         )
       } catch (err) {
         mapServiceError(err)
@@ -600,6 +615,7 @@ export const monthlyValuesRouter = createTRPCRouter({
    */
   recalculate: tenantProcedure
     .use(requirePermission(CALCULATE_MONTH))
+    .use(applyDataScope())
     .input(recalculateInputSchema)
     .output(
       z.object({
@@ -609,11 +625,13 @@ export const monthlyValuesRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!
+      const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
       try {
         return await monthlyValuesService.recalculate(
           ctx.prisma,
           tenantId,
-          input
+          input,
+          dataScope
         )
       } catch (err) {
         mapServiceError(err)
