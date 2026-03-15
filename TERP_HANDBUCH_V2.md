@@ -826,6 +826,10 @@ Die folgenden drei Tagespläne bilden ein typisches 3-Schicht-Modell in der Prod
 
 📍 Seitenleiste → **Verwaltung** → **Tarife**
 
+**Was ist es?** Ein Tarif ist das übergeordnete Arbeitszeitmodell, das einem Mitarbeiter zugewiesen wird. Er bündelt alle Bausteine: den **Arbeitsrhythmus** (welche Wochenpläne/Tagespläne wann gelten), die **Urlaubsregelung**, die **Sollstunden** und die **Flexzeitregeln**. Tagesplan und Wochenplan definieren, *wie* ein einzelner Tag bzw. eine Woche aussieht — der Tarif bestimmt, *welcher* Plan *wann* gilt und welche Rahmenbedingungen drumherum gelten.
+
+**Wozu dient es?** Ohne Tarif hat ein Mitarbeiter kein Arbeitszeitmodell. Erst durch die Tarifzuweisung weiß das System, welche Tagespläne generiert werden sollen, wie viel Urlaub zusteht und wie Überstunden behandelt werden.
+
 ✅ Tabelle mit Spalten: Code, Name, Wochenplan, Gültig ab, Gültig bis, Pausen (Anzahl), Status.
 
 **Filter:** Suchfeld, Status
@@ -833,37 +837,271 @@ Die folgenden drei Tagespläne bilden ein typisches 3-Schicht-Modell in der Prod
 ##### Neuen Tarif anlegen
 
 1. 📍 Seitenleiste → Verwaltung → Tarife → **„Neuer Tarif"** (oben rechts)
-2. Das Formular hat **5 Tabs**:
+2. Das Formular hat **5 Tabs** — jedes Feld wird nachfolgend im Detail erklärt:
 
-**Tab „Basis":** Code (Pflicht), Name (Pflicht), Beschreibung, Aktiv-Schalter
+---
+
+**Tab „Basis":**
+
+| Feld | Pflicht? | Beschreibung |
+|------|----------|--------------|
+| **Code** | Ja | Eindeutiger Kurzcode für den Tarif (max. 20 Zeichen). Wird nach dem Erstellen gesperrt und kann nicht mehr geändert werden. |
+| **Name** | Ja | Beschreibender Name, der in Dropdowns, Tabellen und Mitarbeiterstamm angezeigt wird. |
+| **Beschreibung** | Nein | Optionaler Freitext für interne Notizen zum Tarif. |
+| **Aktiv** | — | Nur beim Bearbeiten sichtbar. Inaktive Tarife können nicht mehr neuen Mitarbeitern zugewiesen werden, bestehende Zuweisungen bleiben erhalten. |
+
+**Beispiel — Basis-Tab für einen Verwaltungstarif:**
+- Code: `VERW-VZ`
+- Name: `Verwaltung Vollzeit`
+- Beschreibung: `Standardtarif für Vollzeitkräfte in der Verwaltung (Mo–Fr)`
+
+---
 
 **Tab „Zeitplan":**
-- **Rhythmustyp** (Dropdown):
-  - *Wöchentlich*: Ein Wochenplan-Dropdown erscheint
-  - *Rollierend wöchentlich*: Mehrere Wochenpläne in einer Reihenfolge konfigurieren
-  - *X-Tage-Rhythmus*: Zykluslänge festlegen + jedem Tag einen Tagesplan zuweisen
-- Bei rollierend und X-Tage: **Rhythmus-Startdatum** (Kalender)
-- **Gültigkeitszeitraum**: Gültig ab / Gültig bis (Kalender)
+
+Der Zeitplan bestimmt den **Arbeitsrhythmus** — also welche Wochenpläne oder Tagespläne in welcher Reihenfolge gelten.
+
+| Feld | Pflicht? | Beschreibung |
+|------|----------|--------------|
+| **Rhythmustyp** | Ja (Standard: Wöchentlich) | Bestimmt, wie der Arbeitsplan wiederholt wird. Beeinflusst, welche weiteren Felder sichtbar sind. |
+| **Wochenplan** | Bedingt | Nur bei Rhythmus „Wöchentlich" sichtbar. Wählt den einen Wochenplan, der jede Woche identisch wiederholt wird. |
+| **Wochenpläne (Reihenfolge)** | Bedingt | Nur bei „Rollierend wöchentlich". Mehrere Wochenpläne in einer festgelegten Reihenfolge konfigurieren. |
+| **Zykluslänge (Tage)** | Bedingt | Nur bei „X-Tage-Rhythmus". Anzahl der Tage im Zyklus (1–365). Für jeden Tag wird ein Tagesplan zugewiesen. |
+| **Rhythmus-Startdatum** | Bedingt | Nur bei „Rollierend wöchentlich" und „X-Tage-Rhythmus". Definiert den Tag, an dem der Zyklus beginnt — das System berechnet daraus, welcher Plan an welchem Datum gilt. |
+| **Gültig ab** | Nein | Optionaler Beginn der Tarifgültigkeit. |
+| **Gültig bis** | Nein | Optionales Ende der Tarifgültigkeit. |
+
+> **Rhythmustyp — Unterschiede:**
+>
+> | | Wöchentlich | Rollierend wöchentlich | X-Tage-Rhythmus |
+> |---|---|---|---|
+> | Wiederholung | Jede Woche identisch | Wochenpläne rotieren in fester Reihenfolge | Tage rotieren in fester Zykluslänge |
+> | Konfiguration | 1 Wochenplan auswählen | Mehrere Wochenpläne in Reihenfolge anordnen | Zykluslänge + je Tag einen Tagesplan zuweisen |
+> | Startdatum nötig? | Nein | Ja | Ja |
+> | Typischer Einsatz | Büro, Verwaltung (immer gleiche Woche) | Wechselschicht (z. B. Früh / Spät / Nacht im 3-Wochen-Turnus) | Unregelmäßige Zyklen (z. B. 14-Tage-Rhythmus, 4-Tage-Woche) |
+
+**Beispiel — Wöchentlich (Standard):**
+- Rhythmustyp: **Wöchentlich**
+- Wochenplan: `WP-BUERO` (Bürowoche, Mo–Fr)
+- → Jede Woche wird identisch nach dem Wochenplan „Bürowoche" geplant.
+
+**Beispiel — Rollierend wöchentlich (3-Wochen-Schichtrotation Früh/Spät/Nacht):**
+- Rhythmustyp: **Rollierend wöchentlich**
+- Wochenpläne: 1. `WP-FRUEH` (Frühschichtwoche), 2. `WP-SPAET` (Spätschichtwoche), 3. `WP-NACHT` (Nachtschichtwoche)
+- Rhythmus-Startdatum: `06.01.2026` (ein Montag)
+- → Woche vom 06.01.: Frühschicht. Woche vom 13.01.: Spätschicht. Woche vom 20.01.: Nachtschicht. Woche vom 27.01.: wieder Frühschicht. Usw.
+
+**Beispiel — X-Tage-Rhythmus (4-Tage-Woche):**
+- Rhythmustyp: **X-Tage-Rhythmus**
+- Zykluslänge: `7` Tage
+- Rhythmus-Startdatum: `06.01.2026` (ein Montag)
+- Tageszuweisungen:
+
+| Tag im Zyklus | Tagesplan |
+|---------------|-----------|
+| 1 (Montag) | BUERO |
+| 2 (Dienstag) | BUERO |
+| 3 (Mittwoch) | BUERO |
+| 4 (Donnerstag) | BUERO |
+| 5 (Freitag) | *(kein Plan — frei)* |
+| 6 (Samstag) | *(kein Plan — frei)* |
+| 7 (Sonntag) | *(kein Plan — frei)* |
+
+- → 4 Arbeitstage pro Woche statt 5. Vorteil gegenüber einem Wochenplan: Der Rhythmus kann auch über die Wochengrenze hinweg verschoben werden (z. B. 10 Tage Arbeit, 4 Tage frei).
+
+---
 
 **Tab „Urlaub":**
-- Jahresurlaubstage (Zahl)
-- Arbeitstage pro Woche (1–7)
-- Urlaubsberechnungsbasis (Kalenderjahr / Eintrittsdatum)
-- Urlaubskappungsregelgruppe (Dropdown)
+
+Die Urlaubseinstellungen steuern, wie viel Urlaub einem Mitarbeiter mit diesem Tarif zusteht und wie er berechnet wird.
+
+| Feld | Pflicht? | Beschreibung | Standard |
+|------|----------|--------------|---------|
+| **Jahresurlaubstage** | Nein | Anzahl der Urlaubstage pro Jahr (Dezimalwerte möglich, z. B. 25,5). | — |
+| **Arbeitstage pro Woche** | Nein | Wie viele Tage pro Woche der Mitarbeiter regulär arbeitet (1–7). Wird für die anteilige Urlaubsberechnung bei unterjährigem Eintritt/Austritt benötigt. | 5 |
+| **Urlaubsberechnungsbasis** | Nein | Bestimmt den Referenzzeitraum für die Urlaubsberechnung. | Kalenderjahr |
+| **Urlaubskappungsregelgruppe** | Nein | Optionale Verknüpfung zu einer Kappungsregelgruppe, die definiert, wann und wie viel Resturlaub verfällt. | — |
+
+> **Urlaubsberechnungsbasis — Unterschiede:**
+>
+> | Option | Beschreibung | Typischer Einsatz |
+> |--------|--------------|-------------------|
+> | **Kalenderjahr** | Der Urlaubsanspruch gilt vom 01.01. bis 31.12. Bei unterjährigem Eintritt wird der Anspruch anteilig berechnet. | Standard in den meisten Unternehmen |
+> | **Eintrittsdatum** | Der Urlaubsanspruch gilt ab dem Eintrittsdatum des Mitarbeiters für 12 Monate. Der Beginn des „Urlaubsjahres" ist individuell. | Unternehmen mit individuellen Urlaubsjahren |
+
+> **Urlaubskappungsregelgruppe:** Kappungsregelgruppen werden unter **Verwaltung → Urlaubskappungsregeln** verwaltet. Eine Gruppe enthält Regeln mit Stichtag (Monat + Tag) und Kappungswert. Beispiel: „Resturlaub verfällt am 31.03. des Folgejahres bis auf maximal 5 Tage" — das verhindert, dass Mitarbeiter unbegrenzt Urlaub ansammeln.
+
+**Beispiel — Urlaubseinstellungen für Vollzeitkraft:**
+- Jahresurlaubstage: `30`
+- Arbeitstage pro Woche: `5`
+- Urlaubsberechnungsbasis: **Kalenderjahr**
+- Urlaubskappungsregelgruppe: *(keine — kein Verfall)*
+
+**Beispiel — Urlaubseinstellungen für Teilzeitkraft (3-Tage-Woche):**
+- Jahresurlaubstage: `18` (= 30 × 3/5, anteilig berechnet)
+- Arbeitstage pro Woche: `3`
+- Urlaubsberechnungsbasis: **Kalenderjahr**
+
+---
 
 **Tab „Sollstunden":**
-- Tägliche, wöchentliche, monatliche und jährliche Sollstunden (jeweils in Stunden)
+
+Die Sollstunden dienen als **Referenzwerte für Auswertungen und Berichte** — nicht für die tägliche Berechnung. Die tägliche Sollzeit kommt aus dem Tagesplan. Die Felder hier werden verwendet, um z. B. monatliche oder jährliche Über-/Unterzeitauswertungen zu erstellen oder vertragliche Vereinbarungen abzubilden.
+
+| Feld | Beschreibung | Beispiel |
+|------|--------------|---------|
+| **Tägliche Sollstunden** | Rechnerische Sollstunden pro Tag (Dezimalwert in Stunden). | `8,0` |
+| **Wöchentliche Sollstunden** | Vertragliche Wochenstunden. Wird häufig für die Ermittlung des Beschäftigungsgrads verwendet. | `40,0` |
+| **Monatliche Sollstunden** | Rechnerische Sollstunden pro Monat. | `173,0` |
+| **Jährliche Sollstunden** | Rechnerische Sollstunden pro Jahr. | `2.080,0` |
+
+> **Hinweis:** Alle Felder sind optional. Sie ergänzen die Tagesplan-Sollzeit um eine „Vogelperspektive" — das System rechnet im Tagesgeschäft mit der Sollzeit aus dem Tagesplan, aber für monatliche Zusammenfassungen oder Jahresberichte kann es die hier hinterlegten Werte heranziehen.
+
+**Beispiel — Sollstunden Vollzeit (40h/Woche):**
+- Täglich: `8,0` | Wöchentlich: `40,0` | Monatlich: `173,0` | Jährlich: `2.080,0`
+
+**Beispiel — Sollstunden Teilzeit (20h/Woche):**
+- Täglich: `4,0` | Wöchentlich: `20,0` | Monatlich: `86,5` | Jährlich: `1.040,0`
+
+---
 
 **Tab „Flexzeit":**
-- Übertragungsart (Dropdown: Keine Bewertung / Vollständig / Nach Schwellenwert / Keine Übertragung)
-- Kontolimits: Max. Flexzeit/Monat, Schwellenwert, Obere Jahresgrenze, Untere Jahresgrenze
+
+Die Flexzeit-Einstellungen steuern, wie Über- und Unterstunden am Periodenende (Monat/Jahr) behandelt werden. Ohne Flexzeit-Konfiguration werden Über-/Unterstunden zwar angezeigt, aber nicht auf ein Flexzeitkonto übertragen.
+
+| Feld | Beschreibung | Standard |
+|------|--------------|---------|
+| **Übertragungsart** | Bestimmt, ob und wie der Flexzeitsaldo am Monatsende ins nächste Monat übertragen wird. | Keine Bewertung |
+| **Max. Flexzeit/Monat** | Obergrenze für die Flexzeit, die in einem einzelnen Monat angesammelt werden kann (Format HH:MM). Überstunden über diesem Wert werden gekappt. | — |
+| **Schwellenwert** | Nur bei Übertragungsart „Nach Schwellenwert" relevant. Stunden bis zu diesem Wert werden nicht übertragen (verfallen). Nur der Anteil **über** dem Schwellenwert wird ins nächste Monat mitgenommen. | — |
+| **Obere Jahresgrenze** | Maximaler positiver Flexzeitsaldo, der über das gesamte Jahr angesammelt werden darf (Format HH:MM). Wird dieser Wert erreicht, werden weitere Überstunden nicht mehr gutgeschrieben. | — |
+| **Untere Jahresgrenze** | Maximaler negativer Flexzeitsaldo (Format HH:MM, als negativer Wert gedacht). Wird dieser Wert erreicht, werden keine weiteren Unterstunden mehr verbucht. | — |
+
+> **Übertragungsart — Unterschiede:**
+>
+> | Option | Beschreibung | Typischer Einsatz |
+> |--------|--------------|-------------------|
+> | **Keine Bewertung** | Flexzeit wird angezeigt, aber nicht aktiv verwaltet. Kein Konto, kein Übertrag. | Vertrauensarbeitszeit, einfache Zeiterfassung ohne Flexzeitkonto |
+> | **Vollständige Übertragung** | Der gesamte Flexzeitsaldo wird am Monatsende 1:1 ins nächste Monat übertragen. | Standard — Mitarbeiter sammeln Über-/Unterstunden unbegrenzt an (innerhalb der Jahresgrenzen) |
+> | **Nach Schwellenwert** | Nur Stunden **über** dem Schwellenwert werden übertragen. Stunden darunter verfallen am Monatsende. | Unternehmen, die einen „Grundstock" an Überstunden nicht übertragen möchten |
+> | **Keine Übertragung** | Der Flexzeitsaldo wird am Monatsende auf 0 zurückgesetzt. Über-/Unterstunden verfallen komplett. | Strikte Monatsabrechnung, kein Übertrag erwünscht |
+
+**Beispiel — Flexzeit mit vollständiger Übertragung:**
+- Übertragungsart: **Vollständige Übertragung**
+- Max. Flexzeit/Monat: `20:00` (max. 20 Überstunden pro Monat)
+- Obere Jahresgrenze: `40:00` (max. 40 Stunden Plus-Saldo)
+- Untere Jahresgrenze: `-20:00` (max. 20 Stunden Minus-Saldo)
+- → Mitarbeiter können pro Monat bis zu 20 Überstunden ansammeln, insgesamt aber nie mehr als 40 Stunden Plus oder 20 Stunden Minus auf dem Konto haben.
+
+**Beispiel — Flexzeit nach Schwellenwert:**
+- Übertragungsart: **Nach Schwellenwert**
+- Schwellenwert: `10:00`
+- Obere Jahresgrenze: `60:00`
+- → Ein Mitarbeiter hat im Januar 15 Überstunden. Die ersten 10 Stunden verfallen, die restlichen 5 werden ins Februar übertragen. Hat er im Februar 8 Überstunden: Diese 8 verfallen komplett (unter dem Schwellenwert).
+
+**Beispiel — Keine Übertragung (strikte Monatsabrechnung):**
+- Übertragungsart: **Keine Übertragung**
+- → Am Monatsende wird der Saldo auf 0 gesetzt, egal ob Plus oder Minus.
+
+---
 
 3. 📍 „Tarif erstellen"
 
-> **Beispiel — Tarif „Verwaltung Vollzeit":**
-> - Rhythmus: Wöchentlich, Wochenplan „Normalwoche"
-> - 30 Urlaubstage/Jahr, 5-Tage-Woche
-> - Flexzeit: Vollständige Übertragung, max. ±40 Stunden/Jahr
+✅ Der Tarif erscheint in der Tabelle. Klick auf eine Zeile öffnet die Detailansicht.
+
+> **Hinweis:** Nach dem Erstellen oder Ändern eines Tarifs generiert das System automatisch die Tagespläne für alle zugewiesenen Mitarbeiter neu. Das kann bei vielen Mitarbeitern einige Sekunden dauern.
+
+##### Tarif-Pausen (Breaks)
+
+In der Detailansicht eines Tarifs (Klick auf eine Zeile in der Tabelle) gibt es den Abschnitt **„Pausen"**. Pausen, die auf Tarif-Ebene definiert werden, gelten für **alle Tagespläne innerhalb dieses Tarifs** und ergänzen die Pausen aus den einzelnen Tagesplänen.
+
+📍 Tarif anklicken → Detailansicht → Abschnitt „Pausen" → **„Pause hinzufügen"**
+
+| Feld | Pflicht? | Beschreibung |
+|------|----------|--------------|
+| **Pausentyp** | Ja | Art der Pause: **Fest** (wird immer abgezogen), **Variabel** (wird nach X Arbeitsminuten abgezogen) oder **Minimum** (wird nur abgezogen, wenn die Mindestarbeitszeit erreicht wird). |
+| **Dauer (Minuten)** | Ja | Pausendauer in Minuten (mind. 1 Minute). |
+| **Nach Arbeit (Minuten)** | Bedingt | Nur bei Pausentyp „Variabel" und „Minimum". Anzahl der Arbeitsminuten, nach denen die Pause automatisch abgezogen wird. |
+| **Bezahlt** | Nein | Wenn aktiviert, wird die Pause nicht von der Nettoarbeitszeit abgezogen. Standard: unbezahlt. |
+
+**Beispiel — Gesetzliche Pausenregelung (§ 4 ArbZG):**
+- Pause 1: Variabel, 30 Minuten, nach 360 Minuten (6 Std.) Arbeit
+- Pause 2: Variabel, 15 Minuten, nach 540 Minuten (9 Std.) Arbeit
+- → Nach 6 Stunden werden 30 Min. abgezogen. Nach 9 Stunden werden zusätzlich 15 Min. abgezogen (insgesamt 45 Min.).
+
+##### Was ein Tarif festlegt — Zusammenfassung
+
+> | Einstellung | Bedeutung | Beispiel |
+> |------------|-----------|---------|
+> | Rhythmustyp | Wie sich der Arbeitsplan wiederholt | Wöchentlich, Rollierend, X-Tage |
+> | Wochenplan(e) / Tagespläne | Welche Pläne wann gelten | WP-BUERO (Mo–Fr) |
+> | Gültigkeitszeitraum | Ab/bis wann der Tarif gilt | 01.01.2026 – unbefristet |
+> | Jahresurlaubstage | Urlaubsanspruch pro Jahr | 30 Tage |
+> | Arbeitstage pro Woche | Für anteilige Berechnung | 5 Tage |
+> | Sollstunden | Referenzwerte für Berichte | 40 Std./Woche |
+> | Übertragungsart | Wie Flexzeit übertragen wird | Vollständig |
+> | Kontolimits | Ober-/Untergrenzen Flexzeit | ±40 Std./Jahr |
+> | Pausen | Tarif-weite Pausenregeln | 30 Min. nach 6 Std. |
+
+##### Beispielkonfigurationen: Typische Tarife
+
+Die folgenden drei Tarife decken häufige Szenarien ab und können als Vorlage dienen.
+
+**Tarif 1 — „Verwaltung Vollzeit" (Standardbüro, 40h/Woche)**
+
+| Tab | Feld | Wert |
+|-----|------|------|
+| Basis | Code | `VERW-VZ` |
+| Basis | Name | `Verwaltung Vollzeit` |
+| Zeitplan | Rhythmustyp | Wöchentlich |
+| Zeitplan | Wochenplan | `WP-BUERO` (Mo–Fr je Tagesplan BUERO) |
+| Urlaub | Jahresurlaubstage | `30` |
+| Urlaub | Arbeitstage/Woche | `5` |
+| Urlaub | Berechnungsbasis | Kalenderjahr |
+| Sollstunden | Wöchentlich | `40,0` |
+| Flexzeit | Übertragungsart | Vollständige Übertragung |
+| Flexzeit | Obere Jahresgrenze | `40:00` |
+| Flexzeit | Untere Jahresgrenze | `-40:00` |
+
+**Tarif 2 — „Produktion Schicht" (3-Wochen-Rotation Früh/Spät/Nacht)**
+
+| Tab | Feld | Wert |
+|-----|------|------|
+| Basis | Code | `PROD-WS` |
+| Basis | Name | `Produktion Wechselschicht` |
+| Zeitplan | Rhythmustyp | Rollierend wöchentlich |
+| Zeitplan | Wochenpläne | 1. `WP-FRUEH`, 2. `WP-SPAET`, 3. `WP-NACHT` |
+| Zeitplan | Rhythmus-Startdatum | `06.01.2026` |
+| Urlaub | Jahresurlaubstage | `30` |
+| Urlaub | Arbeitstage/Woche | `5` |
+| Urlaub | Berechnungsbasis | Kalenderjahr |
+| Sollstunden | Wöchentlich | `40,0` |
+| Flexzeit | Übertragungsart | Keine Bewertung |
+
+> **Warum „Keine Bewertung" bei Schichtarbeit?** In der Produktion arbeiten Mitarbeiter in der Regel exakt nach Plan. Über-/Unterstunden werden typischerweise nicht auf ein Flexzeitkonto gebucht, sondern separat als Mehrarbeit/Kurzarbeit verwaltet.
+
+**Tarif 3 — „Teilzeit 20h" (3-Tage-Woche, Mo/Mi/Fr)**
+
+| Tab | Feld | Wert |
+|-----|------|------|
+| Basis | Code | `TZ-20` |
+| Basis | Name | `Teilzeit 20 Stunden` |
+| Zeitplan | Rhythmustyp | Wöchentlich |
+| Zeitplan | Wochenplan | `WP-TZ3` (Mo/Mi/Fr je Tagesplan TZ-7H, Di/Do/Sa/So frei) |
+| Urlaub | Jahresurlaubstage | `18` (= 30 × 3/5) |
+| Urlaub | Arbeitstage/Woche | `3` |
+| Urlaub | Berechnungsbasis | Kalenderjahr |
+| Sollstunden | Wöchentlich | `20,0` |
+| Sollstunden | Täglich | `6,67` |
+| Flexzeit | Übertragungsart | Vollständige Übertragung |
+| Flexzeit | Obere Jahresgrenze | `20:00` |
+| Flexzeit | Untere Jahresgrenze | `-20:00` |
+
+> **Tipp — Teilzeit-Urlaub:** Bei Teilzeitkräften muss der Urlaubsanspruch anteilig berechnet werden: `Vollzeiturlaub × Arbeitstage/Woche ÷ 5`. Eine 3-Tage-Kraft mit 30 Tagen Vollzeitanspruch erhält also 18 Tage. Das System berechnet das **nicht** automatisch — der Wert muss manuell im Tarif eingetragen werden.
+
+##### Tarif löschen
+
+Ein Tarif kann nur gelöscht werden, wenn er **keinem Mitarbeiter zugewiesen** ist — weder als Standard-Tarif im Mitarbeiterstamm noch über eine Tarifzuweisung. Solange Zuweisungen bestehen, zeigt das System eine Fehlermeldung.
 
 #### 4.6.4 Praxisbeispiel: Arbeitszeitmodell für Büro-Mitarbeiter einrichten
 
@@ -1031,7 +1269,13 @@ Ein vollständiges Praxisbeispiel zum Anlegen eines Mitarbeiters mit Tarifzuweis
 
 **Was ist es?** Beschäftigungsarten klassifizieren die Anstellungsverhältnisse Ihrer Mitarbeiter — z. B. Vollzeit, Teilzeit, Minijob, Werkstudent oder Auszubildender. Jede Art hat Standard-Wochenstunden und kann mit einer Urlaubsberechnungsgruppe verknüpft werden.
 
-**Wozu dient es?** Die Beschäftigungsart bestimmt automatisch die Wochenstunden im Mitarbeiterstamm und beeinflusst die Urlaubsberechnung (z. B. Teilzeitanpassung). Außerdem dient sie als Filter in Listen und Berichten: Sie können z. B. alle Minijobber auf einen Blick sehen.
+**Wozu dient es?** Die Beschäftigungsart erfüllt drei Aufgaben:
+
+1. **Defaults beim Onboarding:** Wenn Sie einen neuen Mitarbeiter anlegen und z. B. „Teilzeit" wählen, werden die Standard-Wochenstunden (z. B. 20) automatisch vorausgefüllt. Dieser Wert kann im Mitarbeiterstamm individuell angepasst werden.
+2. **Urlaubsberechnungsregeln:** Die Beschäftigungsart kann mit einer Urlaubsberechnungsgruppe verknüpft werden. Diese Gruppe legt die **Berechnungsmethode** fest (Kalenderjahr oder Eintrittsdatum) und definiert **Sondertage-Regeln** (z. B. Bonustage ab einem bestimmten Alter, Betriebszugehörigkeit oder bei Schwerbehinderung). Die Beschäftigungsart bestimmt dabei nicht die Anzahl der Urlaubstage selbst — der Basisanspruch und der Teilzeitfaktor kommen aus dem Mitarbeiterstamm und dem Tarif.
+3. **Filterung & Reporting:** Sie können in Listen und Berichten nach Beschäftigungsart filtern — z. B. „alle Minijobber" oder „alle Werkstudenten in Abteilung X".
+
+> **Abgrenzung zu Tarifen und Plänen:** Tarif, Tagesplan und Wochenplan legen fest, **wann und wie viel** ein Mitarbeiter arbeitet (konkrete Schichten, Pausenregeln, Zuschläge). Die Beschäftigungsart beschreibt dagegen, **was für ein Anstellungsverhältnis** vorliegt. Ein Teilzeit-Mitarbeiter und ein Minijobber können denselben Wochenplan haben (beide 20 Stunden), aber unterschiedliche Beschäftigungsarten — mit unterschiedlichen Berechnungsregeln für den Urlaub und unterschiedlicher Bedeutung im Reporting.
 
 ⚠️ Berechtigung: „Mitarbeiter ansehen"
 
@@ -1058,7 +1302,7 @@ Ein Unternehmen mit drei Anstellungsformen:
 | `TZ` | Teilzeit | 20 | Standard |
 | `MJ` | Minijob | 10 | *(keine)* |
 
-Wenn ein Teilzeit-Mitarbeiter angelegt wird und die Beschäftigungsart `TZ` gewählt wird, übernimmt das System automatisch 20 Wochenstunden. Die Urlaubsberechnung passt den Anspruch anteilig an (z. B. 30 Tage × 20/40 = 15 Tage).
+Wenn ein Teilzeit-Mitarbeiter angelegt wird und die Beschäftigungsart `TZ` gewählt wird, übernimmt das System automatisch 20 Wochenstunden als Vorgabewert. Ist „Standard" als Urlaubsberechnungsgruppe hinterlegt, gelten deren Regeln (Berechnungsbasis und ggf. Sondertage) für die Urlaubsermittlung dieses Mitarbeiters.
 
 💡 **Hinweis:** Beschäftigungsarten sind optional, aber empfehlenswert, sobald Sie unterschiedliche Anstellungsformen haben. Die Standard-Wochenstunden können im Mitarbeiterstamm individuell überschrieben werden.
 
