@@ -634,6 +634,11 @@ export {
   useDeleteAccount,
 } from './use-accounts'
 
+// Daily Account Values
+export {
+  useAccountValueSummary,
+} from './use-daily-account-values'
+
 // Contact Kinds
 export {
   useContactKinds,

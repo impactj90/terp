@@ -245,6 +245,8 @@ export async function createMany(
     status: string
     notes: string | null
     createdBy: string | null
+    approvedBy?: string | null
+    approvedAt?: Date | null
   }>
 ) {
   return prisma.absenceDay.createMany({ data })
@@ -259,6 +261,7 @@ export async function findCreatedAbsences(
     fromDate: Date
     toDate: Date
     createdBy: string | undefined
+    status?: string
   }
 ) {
   return prisma.absenceDay.findMany({
@@ -270,7 +273,7 @@ export async function findCreatedAbsences(
         gte: params.fromDate,
         lte: params.toDate,
       },
-      status: "pending",
+      status: params.status ?? "pending",
       createdBy: params.createdBy,
     },
     include: absenceDayListInclude,

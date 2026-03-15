@@ -349,6 +349,10 @@ export async function createRange(
     throw new AbsenceNotFoundError("Absence type not found or inactive")
   }
 
+  // Determine auto-approve: if the type does not require approval, approve immediately
+  const autoApprove = absenceType.requiresApproval === false
+  const status = autoApprove ? "approved" : "pending"
+
   // 3-7. Wrap check-and-create in a transaction to prevent duplicate inserts
   //       from concurrent requests for the same employee/date range.
   const { toCreate, skippedDates, createdAbsences } = await prisma.$transaction(
@@ -382,6 +386,8 @@ export async function createRange(
         status: string
         notes: string | null
         createdBy: string | null
+        approvedBy?: string | null
+        approvedAt?: Date | null
       }> = []
       const txSkippedDates: string[] = []
 
@@ -401,9 +407,11 @@ export async function createRange(
             absenceTypeId,
             duration,
             halfDayPeriod: halfDayPeriod ?? null,
-            status: "pending",
+            status,
             notes: notes ?? null,
             createdBy: userId,
+            approvedBy: autoApprove ? userId : null,
+            approvedAt: autoApprove ? new Date() : null,
           })
         }
 
@@ -425,6 +433,7 @@ export async function createRange(
               fromDate,
               toDate,
               createdBy: userId ?? undefined,
+              status,
             })
           : []
 
@@ -439,6 +448,31 @@ export async function createRange(
   // 8. Trigger recalc range (best effort, outside transaction)
   if (toCreate.length > 0) {
     await triggerRecalcRange(prisma, tenantId, employeeId, fromDate, toDate)
+
+    if (autoApprove) {
+      // Monthly recalc per affected month (approve-level)
+      const monthDates = new Map<string, Date>()
+      for (const r of toCreate) {
+        const d = r.absenceDate
+        const key = `${d.getUTCFullYear()}-${d.getUTCMonth()}`
+        if (!monthDates.has(key)) monthDates.set(key, d)
+      }
+      for (const date of monthDates.values()) {
+        await triggerRecalc(prisma, tenantId, employeeId, date)
+      }
+
+      // Recalculate vacation balance if type deducts vacation
+      if (absenceType.deductsVacation) {
+        const years = new Set(toCreate.map(r => r.absenceDate.getUTCFullYear()))
+        for (const year of years) {
+          try {
+            await recalculateVacationTaken(prisma, tenantId, employeeId, year)
+          } catch (error) {
+            console.error(`Vacation recalc failed for year ${year}:`, error)
+          }
+        }
+      }
+    }
   }
 
   return { createdAbsences, skippedDates }

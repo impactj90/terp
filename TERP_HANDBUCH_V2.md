@@ -1393,7 +1393,7 @@ Im Tab „Abwesenheitsarten" sehen Sie eine Tabelle mit Spalten: Farbe (farbiger
    - **Name** (Pflicht)
    - **Kategorie** (Dropdown: Urlaub / Krankheit / Persönlicher Urlaub / Unbezahlter Urlaub)
    - **Beeinflusst Urlaubssaldo** (Schalter — ob vom Urlaubskonto abgezogen wird)
-   - **Genehmigung erforderlich** (Schalter)
+   - **Genehmigung erforderlich** (Schalter — wenn deaktiviert, werden Abwesenheiten dieses Typs bei Erstellung automatisch genehmigt, ohne Genehmigungsworkflow)
 3. 📍 „Erstellen"
 
 | Kategorie | Code-Präfix | Beispiele |
@@ -1538,7 +1538,7 @@ Tabellenspalten: Typ-Symbol, Code, Name, Typ (Badge), Einheit (Minuten/Stunden/T
 
 1. 📍 Tab „Konten" → **„Neues Konto"** (oben rechts)
 2. Ausfüllen: Code (Pflicht, Großbuchstaben), Name (Pflicht), Beschreibung, Kontotyp (Bonus/Erfassung/Saldo — bei Bearbeitung gesperrt), Lohnrelevant (Schalter), Lohncode, Einheit (Minuten/Stunden/Tage), Jahresübertrag (Schalter), Sortierung
-3. 📍 „Speichern"
+3. 📍 „Erstellen"
 
 **Wichtige Systemkonten:** FLEX (Gleitzeitkonto), OT (Überstundenkonto), VAC (Urlaubskonto) — diese können nicht gelöscht werden.
 
@@ -1554,6 +1554,31 @@ Tabellenspalten: Typ-Symbol, Code, Name, Typ (Badge), Einheit (Minuten/Stunden/T
 | Jahresübersicht | 📍 Jahresübersicht | Karte „Flexzeitsaldo" und Diagramm mit monatlichem Verlauf aus dem FLEX-Konto |
 | Berichte generieren | 📍 Administration → Berichte → Bericht erstellen | Berichtstyp „Kontostände" unter „Zeitanalyse" |
 | Berechnungsregeln | 📍 Verwaltung → Berechnungsregeln | Jede Regel verweist auf ein Zielkonto, in das der berechnete Wert geschrieben wird |
+| Kontobuchungen | 📍 Verwaltung → Konten → ⋮-Menü → „Buchungen anzeigen" | Eigene Seite: welcher Mitarbeiter wie viele Stunden pro Monat gebucht hat, filterbar nach Abteilung/Standort |
+
+##### Kontobuchungen einsehen
+
+Öffnen Sie in der Kontentabelle das **⋮-Menü** (drei Punkte) einer Zeile und wählen Sie **„Buchungen anzeigen"**. Es öffnet sich eine eigene Seite mit den Buchungen des gewählten Kontos.
+
+**Monatsnavigation:** Mit den Pfeilknöpfen (◀ ▶) wechseln Sie den Monat.
+
+**Filter:** Über die Dropdown-Felder „Abteilung" und „Standort" können Sie die Liste auf bestimmte Mitarbeiter eingrenzen.
+
+**Sortierung:** Klicken Sie auf die Spaltenüberschrift „Mitarbeiter" oder „Stunden", um die Sortierreihenfolge zu ändern.
+
+| Spalte | Bedeutung |
+|--------|-----------|
+| **PersNr** | Personalnummer des Mitarbeiters |
+| **Mitarbeiter** | Nachname, Vorname (sortierbar) |
+| **Abteilung** | Abteilung des Mitarbeiters |
+| **Standort** | Standort des Mitarbeiters |
+| **Stunden** | Summe der gebuchten Minuten im Format H:MM (sortierbar) |
+
+Am Ende der Tabelle steht die **Gesamtsumme** aller (gefilterten) Mitarbeiter.
+
+**CSV-Export:** Über den Button „CSV exportieren" können Sie die aktuell angezeigte (gefilterte) Liste als CSV-Datei herunterladen. Der Zurück-Button führt zurück zur Kontenübersicht.
+
+> 💡 Die Buchungen stammen aus der automatischen Tagesberechnung (Netto-Zeit, gedeckelte Zeit, Zuschläge). Sie werden bei jeder Tagesberechnung automatisch aktualisiert.
 
 #### Praxisbeispiel
 
@@ -2310,6 +2335,8 @@ Beantragt  →  Genehmigt  →  (Storniert)
 | **Genehmigen** | Vorgesetzter | Status „Genehmigt", Tagesberechnung + Urlaubskonto werden aktualisiert (siehe unten), Benachrichtigung an Mitarbeiter |
 | **Ablehnen** | Vorgesetzter | Status „Abgelehnt" mit Begründung, Benachrichtigung an Mitarbeiter |
 | **Stornieren** | Vorgesetzter | Nur für genehmigte Abwesenheiten, Urlaubskonto wird zurückgerechnet |
+
+> **Automatische Genehmigung:** Wenn der Abwesenheitstyp den Schalter „Genehmigung erforderlich" deaktiviert hat, werden Abwesenheiten dieses Typs bei Erstellung automatisch genehmigt — ohne Genehmigungsworkflow. Die Stunden- und Urlaubskonto-Berechnung läuft sofort. Der Ersteller wird als Genehmiger eingetragen. Automatisch genehmigte Abwesenheiten können wie manuell genehmigte storniert, aber nicht mehr bearbeitet werden.
 
 #### Was passiert nach der Genehmigung im System?
 

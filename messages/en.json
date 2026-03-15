@@ -205,7 +205,8 @@
     "vacationConfig": "Vacation Config",
     "shiftPlanning": "Shift Planning",
     "orders": "Orders",
-    "employeeMessages": "Employee Messages"
+    "employeeMessages": "Employee Messages",
+    "postings": "Postings"
   },
   "time": {
     "today": "Today",
@@ -2246,11 +2247,26 @@
     "validationNameRequired": "Name is required",
     "viewAccountInfo": "View account information",
     "viewDetails": "View Details",
+    "viewPostings": "View Postings",
     "usageCount": "{count} plans",
     "usageNone": "Not used by any plans",
     "yes": "Yes",
     "tabAccounts": "Accounts",
-    "tabGroups": "Groups"
+    "tabGroups": "Groups",
+    "sectionPostings": "Postings",
+    "postingsPersonnelNumber": "Pers. No.",
+    "postingsEmployee": "Employee",
+    "postingsHours": "Hours",
+    "postingsTotal": "Total",
+    "postingsNone": "No postings in this month",
+    "postingsPageTitle": "Account Postings",
+    "postingsBackToAccounts": "Back to Accounts",
+    "postingsDepartment": "Department",
+    "postingsLocation": "Location",
+    "postingsAllDepartments": "All Departments",
+    "postingsAllLocations": "All Locations",
+    "postingsExportCsv": "Export CSV",
+    "postingsAccountNotFound": "Account not found"
   },
   "adminAccountGroups": {
     "title": "Account Groups",

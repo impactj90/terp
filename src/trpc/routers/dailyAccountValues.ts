@@ -64,6 +64,27 @@ const listInputSchema = z
   })
   .optional()
 
+const summaryInputSchema = z.object({
+  accountId: z.string(),
+  year: z.number().int().min(2000).max(2100),
+  month: z.number().int().min(1).max(12),
+})
+
+const summaryItemSchema = z.object({
+  employeeId: z.string(),
+  personnelNumber: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
+  departmentName: z.string(),
+  locationName: z.string(),
+  totalMinutes: z.number().int(),
+})
+
+const summaryOutputSchema = z.object({
+  items: z.array(summaryItemSchema),
+  totalMinutes: z.number().int(),
+})
+
 // --- Router ---
 
 export const dailyAccountValuesRouter = createTRPCRouter({
@@ -87,6 +108,34 @@ export const dailyAccountValuesRouter = createTRPCRouter({
         const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
         const scopeWhere = buildRelatedEmployeeDataScopeWhere(dataScope)
         return await dailyAccountValuesService.list(
+          ctx.prisma,
+          ctx.tenantId!,
+          input,
+          scopeWhere
+        )
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  /**
+   * dailyAccountValues.summary -- Returns per-employee aggregated minutes for an account in a given month.
+   *
+   * Groups daily account values by employee, returns sorted by last name.
+   * Includes employee name, personnel number, and total minutes.
+   *
+   * Requires: accounts.manage permission
+   */
+  summary: tenantProcedure
+    .use(requirePermission(ACCOUNTS_MANAGE))
+    .use(applyDataScope())
+    .input(summaryInputSchema)
+    .output(summaryOutputSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const scopeWhere = buildRelatedEmployeeDataScopeWhere(dataScope)
+        return await dailyAccountValuesService.summaryByEmployee(
           ctx.prisma,
           ctx.tenantId!,
           input,

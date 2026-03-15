@@ -205,7 +205,8 @@
     "vacationConfig": "Urlaubskonfiguration",
     "shiftPlanning": "Schichtplanung",
     "orders": "Aufträge",
-    "employeeMessages": "Mitarbeiternachrichten"
+    "employeeMessages": "Mitarbeiternachrichten",
+    "postings": "Buchungen"
   },
   "time": {
     "today": "Heute",
@@ -2246,11 +2247,26 @@
     "validationNameRequired": "Name ist erforderlich",
     "viewAccountInfo": "Kontoinformationen anzeigen",
     "viewDetails": "Details anzeigen",
+    "viewPostings": "Buchungen anzeigen",
     "usageCount": "{count} Pläne",
     "usageNone": "Wird von keinem Plan verwendet",
     "yes": "Ja",
     "tabAccounts": "Konten",
-    "tabGroups": "Gruppen"
+    "tabGroups": "Gruppen",
+    "sectionPostings": "Buchungen",
+    "postingsPersonnelNumber": "PersNr",
+    "postingsEmployee": "Mitarbeiter",
+    "postingsHours": "Stunden",
+    "postingsTotal": "Gesamt",
+    "postingsNone": "Keine Buchungen in diesem Monat",
+    "postingsPageTitle": "Kontobuchungen",
+    "postingsBackToAccounts": "Zurück zu Konten",
+    "postingsDepartment": "Abteilung",
+    "postingsLocation": "Standort",
+    "postingsAllDepartments": "Alle Abteilungen",
+    "postingsAllLocations": "Alle Standorte",
+    "postingsExportCsv": "CSV exportieren",
+    "postingsAccountNotFound": "Konto nicht gefunden"
   },
   "adminAccountGroups": {
     "title": "Kontogruppen",

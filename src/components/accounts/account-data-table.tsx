@@ -11,6 +11,7 @@ import {
   BarChart3,
   Scale,
   Lock,
+  BookOpen,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -63,6 +64,7 @@ interface AccountDataTableProps {
   accounts: Account[]
   isLoading: boolean
   onView: (account: Account) => void
+  onViewPostings: (account: Account) => void
   onEdit: (account: Account) => void
   onDelete: (account: Account) => void
   onToggleActive?: (account: Account, isActive: boolean) => void
@@ -74,8 +76,8 @@ const accountTypeConfig: Record<string, {
   variant: 'default' | 'secondary' | 'outline'
 }> = {
   bonus: { labelKey: 'typeBonus', icon: Award, variant: 'default' },
-  tracking: { labelKey: 'typeTracking', icon: BarChart3, variant: 'secondary' },
-  balance: { labelKey: 'typeBalance', icon: Scale, variant: 'outline' },
+  day: { labelKey: 'typeTracking', icon: BarChart3, variant: 'secondary' },
+  month: { labelKey: 'typeBalance', icon: Scale, variant: 'outline' },
 }
 
 const unitLabelKeys: Record<string, string> = {
@@ -88,6 +90,7 @@ export function AccountDataTable({
   accounts,
   isLoading,
   onView,
+  onViewPostings,
   onEdit,
   onDelete,
   onToggleActive,
@@ -120,7 +123,7 @@ export function AccountDataTable({
       </TableHeader>
       <TableBody>
         {accounts.map((account) => {
-          const typeKey = account.accountType || 'tracking'
+          const typeKey = account.accountType || 'day'
           const typeInfo = accountTypeConfig[typeKey] ?? { labelKey: typeKey, icon: BarChart3, variant: 'secondary' as const }
           const TypeIcon = typeInfo.icon
           const unit = account.unit
@@ -193,6 +196,11 @@ export function AccountDataTable({
                       <Eye className="mr-2 h-4 w-4" />
                       {t('viewDetails')}
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onViewPostings(account)}>
+                      <BookOpen className="mr-2 h-4 w-4" />
+                      {t('viewPostings')}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     {account.isSystem ? (
                       <TooltipProvider>
                         <Tooltip>

@@ -5,7 +5,7 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./daily-account-values-repository"
-import type { DailyAccountValueListParams } from "./daily-account-values-repository"
+import type { DailyAccountValueListParams, AccountValueSummaryParams } from "./daily-account-values-repository"
 
 // --- Mapper ---
 
@@ -68,4 +68,52 @@ export async function list(
   return {
     items: items.map(mapToOutput),
   }
+}
+
+export async function summaryByEmployee(
+  prisma: PrismaClient,
+  tenantId: string,
+  params: AccountValueSummaryParams,
+  scopeWhere?: Record<string, unknown> | null
+) {
+  const grouped = await repo.summarizeByEmployee(prisma, tenantId, params, scopeWhere)
+
+  const employeeIds = grouped.map((g) => g.employeeId)
+
+  if (employeeIds.length === 0) {
+    return { items: [], totalMinutes: 0 }
+  }
+
+  const employees = await prisma.employee.findMany({
+    where: { id: { in: employeeIds }, tenantId },
+    select: {
+      id: true,
+      personnelNumber: true,
+      firstName: true,
+      lastName: true,
+      department: { select: { id: true, name: true } },
+      location: { select: { id: true, name: true } },
+    },
+  })
+
+  const employeeMap = new Map(employees.map((e) => [e.id, e]))
+
+  const items = grouped
+    .map((g) => {
+      const emp = employeeMap.get(g.employeeId)
+      return {
+        employeeId: g.employeeId,
+        personnelNumber: emp?.personnelNumber ?? '',
+        firstName: emp?.firstName ?? '',
+        lastName: emp?.lastName ?? '',
+        departmentName: emp?.department?.name ?? '',
+        locationName: emp?.location?.name ?? '',
+        totalMinutes: g._sum.valueMinutes ?? 0,
+      }
+    })
+    .sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName))
+
+  const totalMinutes = items.reduce((sum, i) => sum + i.totalMinutes, 0)
+
+  return { items, totalMinutes }
 }

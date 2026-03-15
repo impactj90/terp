@@ -59,6 +59,7 @@ const segmentToKey: Record<string, string> = {
   'contact-types': 'contactTypes',
   'vacation-config': 'vacationConfig',
   'employee-messages': 'employeeMessages',
+  postings: 'postings',
 }
 
 interface BreadcrumbNavItem {
