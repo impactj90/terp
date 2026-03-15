@@ -2485,7 +2485,7 @@ Ein vollständiges Praxisbeispiel zur Urlaubskonfiguration (Kappungsregeln, Alte
 
 📍 Seitenleiste → **Verwaltung** → **Urlaubskonten**
 
-✅ Tabelle mit Spalten: Mitarbeiter (Avatar + Name), Personalnummer, Jahr, Basisanspruch, Zusatzanspruch, Übertrag, Manuelle Anpassung, Gesamtanspruch (fett), Genommen, Geplant, Verbleibend (farbiges Badge: grün > 5, gelb 1–5, rot < 1).
+✅ Tabelle mit Spalten: Mitarbeiter (Avatar + Name), Pers.-Nr., Jahr, Grundanspruch, Zusätzlich, Übertrag, Korrektur, Gesamt (fett), Genommen, Geplant, Restanspruch (farbiges Badge: grün > 5, gelb 1–5, rot < 1).
 
 **Filter:** Jahresauswahl, Suchfeld, Abteilung
 
@@ -2498,10 +2498,10 @@ Ein vollständiges Praxisbeispiel zur Urlaubskonfiguration (Kappungsregeln, Alte
 
 ##### Einzelnes Urlaubskonto bearbeiten
 
-1. 📍 Tabelle → ⋯-Menü → **„Saldo bearbeiten"**
-2. Felder: Basisanspruch, Zusatzanspruch, Übertrag, Manuelle Anpassung (jeweils in halben Tagen)
-3. ✅ Gesamtvorschau wird live berechnet (blau hervorgehoben)
-4. 📍 „Speichern"
+1. 📍 Tabelle → ⋯-Menü → **„Konto bearbeiten"**
+2. Felder: Grundanspruch, Zusätzlicher Anspruch, Übertrag aus Vorjahr, Manuelle Korrektur, Übertrag ins Folgejahr, Übertrag verfällt am (jeweils in halben Tagen)
+3. ✅ Gesamtvorschau wird live berechnet (hervorgehoben)
+4. 📍 „Änderungen speichern"
 
 #### Praxisbeispiel
 
@@ -2509,11 +2509,11 @@ Jahresinitialisierung für 2027:
 
 1. 📍 Verwaltung → Urlaubskonten → **„Jahr initialisieren"** → Jahr: `2027`, Übertrag: ✅ → 📍 „Initialisieren"
 2. ✅ Das System berechnet für jeden Mitarbeiter den Anspruch 2027 (inkl. Anteilsberechnung, Boni, Teilzeitfaktor) und den Übertrag aus 2026 (unter Berücksichtigung der Kappungsregeln).
-3. 📍 Mitarbeiter „Becker, Anna" → ⋯ → **„Saldo bearbeiten"** → Manuelle Anpassung: `+2` (Sonderurlaub Betriebsjubiläum) → 📍 „Speichern"
+3. 📍 Mitarbeiter „Becker, Anna" → ⋯ → **„Konto bearbeiten"** → Manuelle Korrektur: `+2` (Sonderurlaub Betriebsjubiläum) → 📍 „Änderungen speichern"
 
 Ein vollständiges Praxisbeispiel finden Sie in Abschnitt **7.8**.
 
-💡 **Hinweis:** Die Jahresinitialisierung muss nur einmal pro Jahr durchgeführt werden. Sie kann beliebig oft wiederholt werden — bestehende Konten werden aktualisiert, nicht dupliziert. Manuelle Anpassungen bleiben beim erneuten Initialisieren erhalten.
+💡 **Hinweis:** Die Jahresinitialisierung muss nur einmal pro Jahr durchgeführt werden. Sie kann beliebig oft wiederholt werden — bestehende Konten werden nicht überschrieben, nur der Übertrag wird bei erneutem Initialisieren aktualisiert. Manuelle Korrekturen bleiben erhalten.
 
 ### 7.7 Was am Jahresende passiert
 
