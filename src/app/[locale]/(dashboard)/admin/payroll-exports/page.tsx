@@ -218,6 +218,7 @@ export default function PayrollExportsPage() {
         onOpenChange={setGenerateOpen}
         defaultYear={year}
         defaultMonth={month > 1 ? month - 1 : 12}
+        onSuccess={(y, m) => { setYear(y); setMonth(m) }}
       />
 
       {/* Preview */}

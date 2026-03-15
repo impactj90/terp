@@ -33,6 +33,7 @@ interface GenerateExportDialogProps {
   onOpenChange: (open: boolean) => void
   defaultYear: number
   defaultMonth: number
+  onSuccess?: (year: number, month: number) => void
 }
 
 export function GenerateExportDialog({
@@ -40,6 +41,7 @@ export function GenerateExportDialog({
   onOpenChange,
   defaultYear,
   defaultMonth,
+  onSuccess,
 }: GenerateExportDialogProps) {
   const t = useTranslations('payrollExports')
   const tc = useTranslations('common')
@@ -125,6 +127,7 @@ export function GenerateExportDialog({
         ...(interfaceId ? { exportInterfaceId: interfaceId } : {}),
         ...(Object.keys(parameters).length > 0 ? { parameters } : {}),
       })
+      onSuccess?.(year, month)
       handleClose()
     } catch (err) {
       const apiError = parseApiError(err)
