@@ -71,10 +71,15 @@ export function AccountMappingDialog({
   const { data: assignedData } = useExportInterfaceAccounts(item?.id ?? '', open && !!item)
   const setAccountsMutation = useSetExportInterfaceAccounts()
 
-  // Extract data from wrapped responses
-  const allAccounts: Account[] = (accountsData as { data?: Account[] })?.data ?? []
-  const assignedAccountsData: ExportInterfaceAccount[] =
-    (assignedData as { data?: ExportInterfaceAccount[] })?.data ?? []
+  // Extract data from wrapped responses — stabilize references to prevent infinite re-renders
+  const allAccounts: Account[] = React.useMemo(
+    () => (accountsData as { data?: Account[] })?.data ?? [],
+    [accountsData]
+  )
+  const assignedAccountsData: ExportInterfaceAccount[] = React.useMemo(
+    () => (assignedData as { data?: ExportInterfaceAccount[] })?.data ?? [],
+    [assignedData]
+  )
 
   // Build a lookup map from account ID to account object
   const accountMap = React.useMemo(() => {
@@ -88,9 +93,9 @@ export function AccountMappingDialog({
     if (open && item) {
       // Sort assigned accounts by sort_order and extract their IDs
       const sorted = [...assignedAccountsData].sort(
-        (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
+        (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
       )
-      setAssignedIds(sorted.map((a) => a.account_id))
+      setAssignedIds(sorted.map((a) => a.accountId))
       setSelectedAvailable(new Set())
       setSelectedAssigned(new Set())
       setSearchAvailable('')
@@ -121,11 +126,11 @@ export function AccountMappingDialog({
       .map((id) => {
         const account = accountMap.get(id)
         // Fallback: try to find from assignedAccountsData
-        const assigned = assignedAccountsData.find((a) => a.account_id === id)
+        const assigned = assignedAccountsData.find((a) => a.accountId === id)
         return {
           id,
-          code: account?.code ?? assigned?.account_code ?? '',
-          name: account?.name ?? assigned?.account_name ?? '',
+          code: account?.code ?? assigned?.account?.code ?? '',
+          name: account?.name ?? assigned?.account?.name ?? '',
         }
       })
       .filter((a) => {

@@ -2921,7 +2921,7 @@
     "mandantPlaceholder": "z.B. 12345",
     "exportScriptPlaceholder": "z.B. export_datev.sh",
     "exportPathPlaceholder": "z.B. /exports/payroll/",
-    "outputFilenamePlaceholder": "z.B. payroll_{year}_{month}.csv",
+    "outputFilenamePlaceholder": "z.B. payroll_'{year}'_'{month}'.csv",
     "validationNumberRequired": "Schnittstellennummer ist erforderlich",
     "validationNumberMin": "Schnittstellennummer muss mindestens 1 sein",
     "validationNameRequired": "Name ist erforderlich",
