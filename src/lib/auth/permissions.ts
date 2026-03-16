@@ -6,6 +6,7 @@
  * - apps/api/internal/middleware/authorization.go (PermissionChecker)
  */
 import type { ContextUser } from "@/trpc/init"
+import { lookupPermission } from "./permission-catalog"
 
 /**
  * Resolves the effective permission IDs for a user.
@@ -78,7 +79,13 @@ export function hasPermission(user: ContextUser, permissionId: string): boolean 
     if (!userGroup.isActive) return false
     if (userGroup.isAdmin) return true
     const permissions = userGroup.permissions as string[] | null
-    return permissions?.includes(permissionId) ?? false
+    if (!permissions) return false
+    // Check by UUID directly
+    if (permissions.includes(permissionId)) return true
+    // Also check by key (permissions may be stored as key strings instead of UUIDs)
+    const perm = lookupPermission(permissionId)
+    if (perm && permissions.includes(perm.key)) return true
+    return false
   }
 
   // Fallback: role-based admin

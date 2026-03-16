@@ -133,7 +133,7 @@ VALUES (
   'Users',
   'user',
   'Standard user access',
-  '["time_tracking.view_own", "time_tracking.book_own", "absences.view_own", "absences.request_own"]'::jsonb,
+  '["time_tracking.view_own", "time_tracking.edit", "absences.request"]'::jsonb,
   false, false, true,
   NOW(), NOW()
 ) ON CONFLICT (id) DO NOTHING;

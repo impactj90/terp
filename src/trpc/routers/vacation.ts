@@ -19,7 +19,7 @@
  */
 import { z } from "zod"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
-import { requirePermission, applyDataScope, type DataScope } from "@/lib/auth/middleware"
+import { requirePermission, requireEmployeePermission, applyDataScope, type DataScope } from "@/lib/auth/middleware"
 import { checkRelatedEmployeeDataScope } from "@/lib/auth/data-scope"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
@@ -30,6 +30,7 @@ import * as vacationService from "@/lib/services/vacation-service"
 
 const VACATION_CONFIG_MANAGE = permissionIdByKey("vacation_config.manage")!
 const ABSENCES_MANAGE = permissionIdByKey("absences.manage")!
+const ABSENCES_REQUEST = permissionIdByKey("absences.request")!
 
 // --- Output Schemas ---
 
@@ -171,7 +172,11 @@ export const vacationRouter = createTRPCRouter({
    * Requires: absences.manage permission
    */
   getBalance: tenantProcedure
-    .use(requirePermission(ABSENCES_MANAGE))
+    .use(requireEmployeePermission(
+      (input) => (input as { employeeId: string }).employeeId,
+      ABSENCES_REQUEST,
+      ABSENCES_MANAGE
+    ))
     .use(applyDataScope())
     .input(
       z.object({

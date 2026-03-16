@@ -227,7 +227,7 @@ export const bookingsRouter = createTRPCRouter({
    * Requires: time_tracking.view_all permission
    */
   list: tenantProcedure
-    .use(requirePermission(VIEW_ALL))
+    .use(requirePermission(VIEW_OWN, VIEW_ALL))
     .use(applyDataScope())
     .input(listInputSchema)
     .output(
