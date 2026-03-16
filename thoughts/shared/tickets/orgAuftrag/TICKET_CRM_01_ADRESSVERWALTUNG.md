@@ -489,19 +489,19 @@ test.describe("UC-CRM-01: Address Management", () => {
 
 ## Acceptance Criteria
 
-- [ ] `NumberSequence` model created with migration; tenant-scoped unique constraint on `(tenantId, key)`
-- [ ] `CrmAddress` model created with all fields from ZMI feature analysis section 1.1
-- [ ] `CrmContact` model with cascade delete when parent address is deleted
-- [ ] `CrmBankAccount` model with cascade delete
-- [ ] Customer and supplier number sequences auto-initialize per tenant
-- [ ] Address number auto-generated on create; prefix configurable via settings
-- [ ] Search works across company, number, matchCode, city fields
-- [ ] Type filter (Customer / Supplier / Both) works
-- [ ] Active/inactive toggle works (soft-delete)
-- [ ] Contacts: full CRUD within address detail
-- [ ] Bank accounts: full CRUD within address detail
-- [ ] All procedures gated by `requireModule("crm")` — returns 403 if CRM disabled
-- [ ] All procedures gated by appropriate `crm_addresses.*` permissions
-- [ ] Cross-tenant isolation verified in tests
-- [ ] Address detail page has tab placeholders for Correspondence, Inquiries, Documents, Tasks (linked in future tickets)
-- [ ] Sidebar navigation shows CRM section when CRM module is enabled
+- [x] `NumberSequence` model created with migration; tenant-scoped unique constraint on `(tenantId, key)`
+- [x] `CrmAddress` model created with all fields from ZMI feature analysis section 1.1
+- [x] `CrmContact` model with cascade delete when parent address is deleted
+- [x] `CrmBankAccount` model with cascade delete
+- [x] Customer and supplier number sequences auto-initialize per tenant
+- [x] Address number auto-generated on create; prefix configurable via settings
+- [x] Search works across company, number, matchCode, city fields
+- [x] Type filter (Customer / Supplier / Both) works
+- [x] Active/inactive toggle works (soft-delete)
+- [x] Contacts: full CRUD within address detail
+- [x] Bank accounts: full CRUD within address detail
+- [x] All procedures gated by `requireModule("crm")` — returns 403 if CRM disabled
+- [x] All procedures gated by appropriate `crm_addresses.*` permissions
+- [x] Cross-tenant isolation verified in tests
+- [x] Address detail page has tab placeholders for Correspondence, Inquiries, Documents, Tasks (linked in future tickets)
+- [x] Sidebar navigation shows CRM section when CRM module is enabled

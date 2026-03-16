@@ -31,7 +31,13 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
 10. [Aufträge & Projektzeiterfassung](#10-aufträge--projektzeiterfassung)
     - [10.1.1 Praxisbeispiel: Auftrag anlegen und Zeiten erfassen](#1011-praxisbeispiel-auftrag-anlegen-und-zeiten-erfassen)
 11. [Zutrittskontrolle](#11-zutrittskontrolle)
-12. [Glossar](#12-glossar)
+12. [CRM — Kunden- und Lieferantenverwaltung](#12-crm--kunden--und-lieferantenverwaltung)
+    - [12.1 Adressen verwalten](#121-adressen-verwalten)
+    - [12.2 Kontaktpersonen](#122-kontaktpersonen)
+    - [12.3 Bankverbindungen](#123-bankverbindungen)
+    - [12.4 Nummernkreise](#124-nummernkreise)
+    - [12.5 Praxisbeispiel: Neuen Kunden mit Kontakten und Bankverbindung anlegen](#125-praxisbeispiel-neuen-kunden-mit-kontakten-und-bankverbindung-anlegen)
+13. [Glossar](#13-glossar)
 
 ---
 
@@ -46,6 +52,7 @@ Terp ist ein digitales Zeiterfassungs- und Personalverwaltungssystem für deutsc
 - **Schichten planen**: Schichtpläne können für einzelne Mitarbeiter oder ganze Teams erstellt werden, auch mit rollierenden Rhythmen.
 - **Lohnabrechnung vorbereiten**: Am Monatsende werden alle Daten aggregiert und als CSV-Export (z. B. für DATEV) bereitgestellt.
 - **Aufträge und Projekte erfassen**: Mitarbeiter können ihre Arbeitszeit auf Aufträge und Aktivitäten buchen.
+- **Kunden und Lieferanten verwalten**: Adressen, Kontaktpersonen und Bankverbindungen zentral pflegen — als Grundlage für Korrespondenz, Anfragen und Rechnungsstellung (CRM-Modul).
 - **Zutritt steuern**: RFID-Karten und PINs ermöglichen die Zutrittskontrolle zu bestimmten Bereichen.
 
 ### Für wen Terp gemacht ist
@@ -4091,7 +4098,323 @@ Am Ende des Tages liefert das Terminal-System eine Datei mit allen Stempelvorgä
 
 ---
 
-## 12. Glossar
+## 12. CRM — Kunden- und Lieferantenverwaltung
+
+### 12.1 Adressen verwalten
+
+**Was ist es?** Adressen sind die zentralen Stammdaten im CRM-Modul. Jede Adresse repräsentiert ein Unternehmen — einen Kunden, einen Lieferanten oder beides. Adressen enthalten Firmenname, Anschrift, Kommunikationsdaten, Steuerinformationen und Zahlungsbedingungen. Jede Adresse erhält automatisch eine eindeutige Nummer (z. B. K-1 für Kunden, L-1 für Lieferanten).
+
+**Wozu dient es?** Die Adressverwaltung bildet die Grundlage für alle CRM-Prozesse: Korrespondenz, Anfragen, Belege und Rechnungen beziehen sich auf Adressen. Durch die zentrale Pflege von Kontaktpersonen und Bankverbindungen innerhalb einer Adresse sind alle relevanten Informationen an einer Stelle verfügbar.
+
+⚠️ Modul: Das CRM-Modul muss für den Mandanten aktiviert sein (📍 Administration → Einstellungen → Module → **CRM**)
+
+⚠️ Berechtigung: „CRM-Adressen anzeigen" (Lesen), „CRM-Adressen erstellen/bearbeiten/löschen" (Schreiben)
+
+📍 Seitenleiste → **CRM** → **Adressen**
+
+✅ Seite mit Titel „Adressverwaltung", Tabelle aller aktiven Adressen, Suchfeld und Filter.
+
+#### Adressenliste
+
+Tabelle mit Spalten:
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Nummer** | Auto-generierte Adressnummer (z. B. K-1, L-3) — monospace |
+| **Firma** | Firmenname (fett) |
+| **Typ** | Badge: Kunde (blau), Lieferant (grau), Kunde & Lieferant (Outline) |
+| **Ort** | Stadt aus der Anschrift |
+| **Telefon** | Haupttelefonnummer |
+| **E-Mail** | Haupt-E-Mail-Adresse |
+| **Status** | Badge: Aktiv (blau) / Inaktiv (grau) |
+| **Aktionen** | ⋯-Menü: Details, Bearbeiten, Deaktivieren/Wiederherstellen |
+
+**Filter:**
+- **Suchfeld**: Durchsucht Firma, Nummer, Matchcode und Ort gleichzeitig
+- **Typ-Filter**: Alle Typen / Kunde / Lieferant / Kunde & Lieferant
+- **Status-Filter**: Aktiv (Standard) / Inaktiv / Alle
+- 📍 **„Filter zurücksetzen"** erscheint, wenn Filter aktiv sind
+
+##### Neue Adresse anlegen
+
+1. 📍 **„Neue Adresse"** (oben rechts)
+2. ✅ Seitliches Formular (Sheet) öffnet sich: „Neue Adresse anlegen"
+3. Abschnitt **Grunddaten** ausfüllen:
+   - **Typ** (Dropdown: Kunde / Lieferant / Kunde & Lieferant) — Standard: Kunde
+   - **Firma** (Pflicht)
+   - **Matchcode** (optional — wird automatisch aus dem Firmennamen generiert, wenn leer)
+4. Abschnitt **Anschrift** ausfüllen:
+   - **Straße**, **PLZ**, **Ort**, **Land** (Standard: DE)
+5. Abschnitt **Kommunikation** ausfüllen:
+   - **Telefon**, **Fax**, **E-Mail**, **Webseite**
+6. Abschnitt **Steuerinformationen** ausfüllen:
+   - **Steuernummer**, **USt-IdNr.**
+7. Abschnitt **Zahlungsbedingungen** ausfüllen:
+   - **Zahlungsziel (Tage)**, **Skonto (%)**, **Skontotage**, **Rabattgruppe**
+8. Abschnitt **Notizen** (optionales Freitext-Feld)
+9. 📍 „Anlegen"
+10. ✅ Adresse erscheint in der Tabelle mit automatisch vergebener Nummer
+
+💡 **Hinweis:** Die Adressnummer wird beim Anlegen automatisch vergeben und kann nicht manuell geändert werden. Kunden erhalten Nummern mit Präfix „K-" (K-1, K-2, …), Lieferanten mit „L-" (L-1, L-2, …). Die Präfixe und Startwerte können unter 📍 Administration → Einstellungen angepasst werden (→ Abschnitt 12.4 Nummernkreise).
+
+##### Adresse bearbeiten
+
+1. 📍 ⋯-Menü der Adresse → **„Bearbeiten"**
+2. ✅ Formular öffnet sich mit den aktuellen Werten vorausgefüllt
+3. Gewünschte Felder ändern
+4. 📍 „Speichern"
+
+##### Adresse deaktivieren (Soft-Delete)
+
+Adressen werden nicht gelöscht, sondern deaktiviert — sie bleiben im System erhalten und können wiederhergestellt werden.
+
+1. 📍 ⋯-Menü der Adresse → **„Deaktivieren"**
+2. ✅ Bestätigungsdialog: „Möchten Sie die Adresse ‚{Firma}' wirklich deaktivieren?"
+3. 📍 „Bestätigen"
+4. ✅ Adresse verschwindet aus der aktiven Liste
+
+##### Adresse wiederherstellen
+
+1. 📍 Status-Filter auf **„Inaktiv"** umstellen
+2. ✅ Deaktivierte Adressen werden angezeigt
+3. 📍 ⋯-Menü → **„Wiederherstellen"**
+4. ✅ Adresse ist wieder aktiv und erscheint in der Standardansicht
+
+#### Adressdetails
+
+📍 Zeile in der Tabelle anklicken → Detailseite
+
+✅ Kopfbereich zeigt: Firmenname (groß), Nummer (monospace), Typ-Badge, Status-Badge, Buttons „Bearbeiten" und „Deaktivieren"
+
+Die Detailseite hat **6 Tabs**:
+
+**Tab „Übersicht":** Alle Adressdaten in Kartenansicht (2-Spalten-Grid)
+
+| Karte | Felder |
+|-------|--------|
+| **Anschrift** | Straße, PLZ, Ort, Land |
+| **Kommunikation** | Telefon, Fax, E-Mail, Webseite |
+| **Steuerinformationen** | Steuernummer, USt-IdNr., Matchcode |
+| **Zahlungsbedingungen** | Zahlungsziel, Skonto, Skontotage, Rabattgruppe |
+| **Notizen** | Freitext (volle Breite, nur wenn vorhanden) |
+
+**Tab „Kontakte":** → Abschnitt 12.2
+
+**Tab „Bankverbindungen":** → Abschnitt 12.3
+
+**Tab „Korrespondenz":** Platzhalter — „In Vorbereitung — CRM_02"
+
+**Tab „Anfragen":** Platzhalter — „In Vorbereitung — CRM_03"
+
+**Tab „Belege":** Platzhalter — „In Vorbereitung — ORD_01"
+
+---
+
+### 12.2 Kontaktpersonen
+
+**Was ist es?** Kontaktpersonen sind die Ansprechpartner bei einer Adresse — z. B. der Einkaufsleiter eines Kunden oder die Buchhalterin eines Lieferanten. Jeder Kontakt gehört zu genau einer Adresse.
+
+**Wozu dient es?** Für Korrespondenz und Kommunikation müssen nicht nur Firmendaten, sondern auch die richtigen Personen bekannt sein: Wer ist der Hauptansprechpartner? Wer bearbeitet Rechnungen? Wer hat den technischen Kontakt?
+
+📍 Adressdetailseite → Tab **„Kontakte"**
+
+✅ Tabelle aller Kontaktpersonen dieser Adresse
+
+Tabelle mit Spalten:
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Name** | Vorname + Nachname |
+| **Position** | Funktion im Unternehmen (z. B. Geschäftsführer) |
+| **Abteilung** | Abteilung im Unternehmen (z. B. Einkauf) |
+| **Telefon** | Durchwahl |
+| **E-Mail** | E-Mail-Adresse |
+| **Hauptkontakt** | Badge, wenn als Hauptkontakt markiert |
+| **Aktionen** | ⋯-Menü: Bearbeiten, Löschen |
+
+##### Neuen Kontakt anlegen
+
+1. 📍 Tab „Kontakte" → **„Kontakt hinzufügen"** (oben rechts)
+2. ✅ Dialog öffnet sich: „Neuen Kontakt anlegen"
+3. Ausfüllen:
+   - **Vorname** (Pflicht), **Nachname** (Pflicht)
+   - **Position**, **Abteilung**, **Telefon**, **E-Mail**, **Notizen**
+   - **Hauptkontakt** (Checkbox)
+4. 📍 „Anlegen"
+5. ✅ Kontakt erscheint in der Tabelle
+
+##### Kontakt bearbeiten
+
+1. 📍 ⋯-Menü des Kontakts → **„Bearbeiten"**
+2. ✅ Dialog mit aktuellen Werten
+3. Felder ändern → 📍 „Speichern"
+
+##### Kontakt löschen
+
+1. 📍 ⋯-Menü des Kontakts → **„Löschen"**
+2. ✅ Bestätigungsdialog
+3. 📍 „Bestätigen"
+
+💡 **Hinweis:** Kontakte werden beim Löschen der übergeordneten Adresse automatisch mit gelöscht (Kaskade). Das Deaktivieren einer Adresse löscht die Kontakte jedoch **nicht** — sie bleiben erhalten und sind nach Wiederherstellung wieder sichtbar.
+
+---
+
+### 12.3 Bankverbindungen
+
+**Was ist es?** Bankverbindungen speichern die Zahlungsdaten einer Adresse — IBAN, BIC, Bankname und Kontoinhaber. Eine Adresse kann mehrere Bankverbindungen haben, wobei eine als Standard markiert werden kann.
+
+**Wozu dient es?** Für Rechnungsstellung und Zahlungsverkehr müssen die Bankdaten des Kunden oder Lieferanten hinterlegt sein. Bei mehreren Bankverbindungen (z. B. Inland/Ausland) wird die Standard-Verbindung bevorzugt verwendet.
+
+📍 Adressdetailseite → Tab **„Bankverbindungen"**
+
+✅ Tabelle aller Bankverbindungen dieser Adresse
+
+Tabelle mit Spalten:
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **IBAN** | Internationale Kontonummer (monospace) |
+| **BIC** | Bank-Identifikationscode |
+| **Bank** | Name der Bank |
+| **Kontoinhaber** | Name des Kontoinhabers |
+| **Standard** | Badge, wenn als Standard-Bankverbindung markiert |
+| **Aktionen** | ⋯-Menü: Bearbeiten, Löschen |
+
+##### Neue Bankverbindung anlegen
+
+1. 📍 Tab „Bankverbindungen" → **„Bankverbindung hinzufügen"** (oben rechts)
+2. ✅ Dialog öffnet sich: „Neue Bankverbindung anlegen"
+3. Ausfüllen:
+   - **IBAN** (Pflicht — wird automatisch formatiert: Leerzeichen entfernt, Großbuchstaben)
+   - **BIC**, **Bank**, **Kontoinhaber**
+   - **Standard** (Checkbox)
+4. 📍 „Anlegen"
+5. ✅ Bankverbindung erscheint in der Tabelle
+
+##### Bankverbindung bearbeiten / löschen
+
+Analog zu Kontaktpersonen: ⋯-Menü → „Bearbeiten" oder „Löschen" mit Bestätigungsdialog.
+
+💡 **Hinweis:** Bankverbindungen werden beim Löschen der übergeordneten Adresse automatisch mit gelöscht (Kaskade).
+
+---
+
+### 12.4 Nummernkreise
+
+**Was ist es?** Nummernkreise steuern die automatische Vergabe von Kunden- und Lieferantennummern. Jeder Nummernkreis hat einen Schlüssel (z. B. „customer" oder „supplier"), ein Präfix (z. B. „K-" oder „L-") und einen Zähler.
+
+**Wozu dient es?** Durch konfigurierbare Präfixe und Startwerte kann jedes Unternehmen sein eigenes Nummerierungsschema verwenden — z. B. „KD-" statt „K-" oder bei 1000 beginnen statt bei 1.
+
+⚠️ Berechtigung: „Einstellungen verwalten"
+
+📍 Seitenleiste → **Administration** → **Einstellungen** → Abschnitt Nummernkreise
+
+| Nummernkreis | Standard-Präfix | Beschreibung |
+|-------------|----------------|-------------|
+| `customer` | K- | Kundennummern (K-1, K-2, …) |
+| `supplier` | L- | Lieferantennummern (L-1, L-2, …) |
+
+**Ändern:**
+1. 📍 Präfix und/oder nächsten Wert anpassen
+2. 📍 „Speichern"
+
+⚠️ **Achtung:** Den Zähler nur nach oben setzen, niemals nach unten — sonst könnten Duplikate entstehen.
+
+💡 **Hinweis:** Nummernkreise werden beim ersten Anlegen einer Adresse automatisch initialisiert. Sie müssen nicht manuell erstellt werden.
+
+---
+
+### 12.5 Praxisbeispiel: Neuen Kunden mit Kontakten und Bankverbindung anlegen
+
+Szenario: Das Unternehmen „Müller Maschinenbau GmbH" aus München wird als neuer Kunde angelegt. Es gibt zwei Ansprechpartner: den Geschäftsführer Hans Müller und die Einkaufsleiterin Claudia Berger. Die Bankverbindung bei der Commerzbank wird hinterlegt.
+
+##### Schritt 1 — Adresse anlegen
+
+📍 Seitenleiste → **CRM** → **Adressen** → **„Neue Adresse"**
+
+- Typ: **Kunde**
+- Firma: `Müller Maschinenbau GmbH`
+- Matchcode: (leer lassen — wird automatisch zu „MUELLER MASCHINENBAU")
+- Straße: `Industriestr. 42`
+- PLZ: `80333`
+- Ort: `München`
+- Land: `DE`
+- Telefon: `+49 89 123456`
+- E-Mail: `info@mueller-maschinenbau.de`
+- Zahlungsziel: `30` Tage
+
+📍 „Anlegen"
+
+✅ Die Adresse erscheint in der Tabelle mit Nummer „K-1" (erste Kundennummer), Typ „Kunde" und Ort „München".
+
+##### Schritt 2 — Kontaktpersonen anlegen
+
+📍 Adresse „Müller Maschinenbau GmbH" anklicken → Tab **„Kontakte"** → **„Kontakt hinzufügen"**
+
+**Kontakt 1 — Geschäftsführer:**
+- Vorname: `Hans`
+- Nachname: `Müller`
+- Position: `Geschäftsführer`
+- Abteilung: `Geschäftsleitung`
+- Telefon: `+49 89 123456-10`
+- E-Mail: `h.mueller@mueller-maschinenbau.de`
+- Hauptkontakt: ✅ (aktiviert)
+
+📍 „Anlegen"
+
+**Kontakt 2 — Einkaufsleiterin:**
+- Vorname: `Claudia`
+- Nachname: `Berger`
+- Position: `Einkaufsleiterin`
+- Abteilung: `Einkauf`
+- Telefon: `+49 89 123456-20`
+- E-Mail: `c.berger@mueller-maschinenbau.de`
+- Hauptkontakt: (nicht aktiviert)
+
+📍 „Anlegen"
+
+✅ Beide Kontakte erscheinen in der Tabelle. Hans Müller wird mit dem Badge „Hauptkontakt" angezeigt.
+
+##### Schritt 3 — Bankverbindung anlegen
+
+📍 Tab **„Bankverbindungen"** → **„Bankverbindung hinzufügen"**
+
+- IBAN: `DE89 3704 0044 0532 0130 00` (Leerzeichen werden automatisch entfernt)
+- BIC: `COBADEFFXXX`
+- Bank: `Commerzbank`
+- Kontoinhaber: `Müller Maschinenbau GmbH`
+- Standard: ✅ (aktiviert)
+
+📍 „Anlegen"
+
+✅ Die Bankverbindung erscheint in der Tabelle mit formatierter IBAN und dem Badge „Standard".
+
+##### Schritt 4 — Ergebnis prüfen
+
+📍 Tab **„Übersicht"** — alle Stammdaten auf einen Blick:
+- Anschrift: Industriestr. 42, 80333 München, DE
+- Kommunikation: Telefon, E-Mail
+- Zahlungsbedingungen: 30 Tage
+
+📍 Tab **„Kontakte"** — 2 Einträge, davon 1 Hauptkontakt
+
+📍 Tab **„Bankverbindungen"** — 1 Eintrag (Standard)
+
+✅ Der Kunde ist vollständig angelegt und kann nun für Korrespondenz, Anfragen und Belege verwendet werden (sobald die entsprechenden CRM-Module freigeschaltet sind).
+
+💡 **Hinweis:** Die Tabs „Korrespondenz", „Anfragen" und „Belege" werden in zukünftigen Tickets (CRM_02, CRM_03, ORD_01) implementiert und sind aktuell als Platzhalter sichtbar.
+
+#### Wo Adressen außerdem erscheinen
+
+| Ort | Pfad | Was angezeigt wird |
+|-----|------|--------------------|
+| Korrespondenz (geplant) | 📍 CRM → Adressen → Detail → Tab „Korrespondenz" | Briefe, E-Mails zu dieser Adresse |
+| Anfragen (geplant) | 📍 CRM → Adressen → Detail → Tab „Anfragen" | Anfragen und Angebote |
+| Belege (geplant) | 📍 CRM → Adressen → Detail → Tab „Belege" | Rechnungen, Lieferscheine, Gutschriften |
+
+---
+
+## 13. Glossar
 
 | Begriff | Erklärung | Wo in Terp |
 |---------|-----------|-----------|
@@ -4102,10 +4425,12 @@ Am Ende des Tages liefert das Terminal-System eine Datei mit allen Stempelvorgä
 | **Aktivität** | Art der Arbeit innerhalb eines Auftrags (z. B. Montage, Dokumentation) | 📍 Verwaltung → Aufträge → Tab Aktivitäten |
 | **Auftrag** | Projekt oder Kundenauftrag für die Projektzeiterfassung | 📍 Verwaltung → Aufträge |
 | **Auftragsbuchung** | Zeitbuchung eines Mitarbeiters auf einen Auftrag | 📍 Auftragsdetail → Tab Buchungen |
+| **Bankverbindung (CRM)** | IBAN, BIC und Bankdaten einer CRM-Adresse | 📍 CRM → Adressen → Detail → Tab Bankverbindungen |
 | **Berechtigungsgruppe** | Sammlung von Berechtigungen, die einem Benutzer zugewiesen wird | 📍 Administration → Benutzergruppen |
 | **Bruttoarbeitszeit** | Gesamte Zeit zwischen Kommen und Gehen, inklusive Pausen | 📍 Zeitnachweis → Tageszusammenfassung |
 | **Buchung** | Einzelner Stempeleintrag (Kommen, Gehen, Pause) | 📍 Zeitnachweis → Tagesansicht |
 | **Buchungstyp** | Bedeutung einer Buchung: Richtung (Ein/Aus) und Kategorie | 📍 Verwaltung → Buchungstypen |
+| **CRM-Adresse** | Kunden-, Lieferanten- oder kombinierter Stammdatensatz im CRM-Modul | 📍 CRM → Adressen |
 | **Datensichtbereich** | Beschränkung, welche Mitarbeiter ein Benutzer sehen darf | 📍 Administration → Benutzer → Bearbeiten → Datensichtbereich |
 | **Fehlzeit** | Differenz Soll − Netto, wenn weniger gearbeitet wurde | 📍 Zeitnachweis / Monatsauswertung |
 | **Feiertagsgutschrift** | Stunden, die an einem Feiertag automatisch gutgeschrieben werden | 📍 Tagesplan → Tab Spezial → Feiertagsgutschriften |
@@ -4114,12 +4439,15 @@ Am Ende des Tages liefert das Terminal-System eine Datei mit allen Stempelvorgä
 | **Kernzeit** | Pflichtzeitraum bei Gleitzeit | 📍 Tagesplan → Tab Zeitfenster → Kernzeit |
 | **Konto** | Sammelstelle für Zeitwerte (Flex, Überstunden, Zuschläge) | 📍 Verwaltung → Konten |
 | **Korrektur** | Manuelle Anpassung an Zeitwerten eines Tages | 📍 Verwaltung → Korrekturassistent |
+| **Kontaktperson (CRM)** | Ansprechpartner bei einer CRM-Adresse (Name, Position, Telefon, E-Mail) | 📍 CRM → Adressen → Detail → Tab Kontakte |
 | **Kostenstelle** | Betriebswirtschaftliche Zuordnung für Mitarbeiter und Aufträge | 📍 Verwaltung → Kostenstellen |
 | **Makro** | Automatisierungsregel (z. B. Flexzeit zurücksetzen) | 📍 Administration → Makros |
 | **Mandant** | Oberste Organisationseinheit (Unternehmen/Niederlassung) | 📍 Administration → Mandanten |
 | **Monatsabschluss** | Einfrieren der Monatswerte — danach keine Änderungen mehr | 📍 Monatsauswertung → „Monat abschließen" |
 | **Monatswert** | Aggregierte Arbeitszeitwerte eines Mitarbeiters für einen Monat | 📍 Verwaltung → Monatswerte |
+| **Matchcode** | Kurzschlüssel für Adress-Suche (wird automatisch aus Firmenname generiert) | 📍 CRM → Adressen → Formular |
 | **Nettoarbeitszeit** | Anrechenbare Arbeitszeit: Brutto minus Pausen | 📍 Zeitnachweis → Tageszusammenfassung |
+| **Nummernkreis** | Auto-Zähler für Kunden-/Lieferantennummern mit konfigurierbarem Präfix | 📍 Administration → Einstellungen |
 | **Kontogruppe** | Logische Bündelung mehrerer Konten (z. B. alle Zuschlagskonten) | 📍 Verwaltung → Konten → Tab Gruppen |
 | **Personalnummer** | Eindeutige Kennung je Mitarbeiter im Mandanten | 📍 Verwaltung → Mitarbeiter |
 | **Profil** | Eigene Stamm-, Beschäftigungs- und Kontaktdaten des angemeldeten Benutzers | 📍 Benutzermenü → Profil |
@@ -4205,6 +4533,8 @@ Diese Tabelle listet alle Seiten der Anwendung mit ihrer URL und dem Menüpfad:
 | `/admin/macros/[id]` | Makroliste → Zeile anklicken | macros.manage |
 | `/admin/access-control` | Administration → Zutrittskontrolle | access_control.manage |
 | `/admin/terminal-bookings` | Administration → Terminal-Buchungen | terminal_bookings.manage |
+| `/crm/addresses` | CRM → Adressen | crm_addresses.view |
+| `/crm/addresses/[id]` | Adressenliste → Zeile anklicken | crm_addresses.view |
 
 ---
 
