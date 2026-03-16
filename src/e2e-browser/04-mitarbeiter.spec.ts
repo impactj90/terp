@@ -72,6 +72,12 @@ test.describe.serial("Mitarbeiter (Employee Management)", () => {
       .first()
       .click();
 
+    // Dismiss the calendar popover if still open
+    if (await popover.isVisible()) {
+      await page.keyboard.press("Escape");
+      await popover.waitFor({ state: "hidden" });
+    }
+
     // Submit and wait for sheet to close (indicates success)
     await submitAndWaitForClose(page);
 

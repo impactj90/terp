@@ -100,7 +100,13 @@
     "macros": "Macros",
     "accessControl": "Access Control",
     "terminalBookings": "Terminal Bookings",
-    "employeeMessages": "Employee Messages"
+    "employeeMessages": "Employee Messages",
+    "crm": "CRM",
+    "crmOverview": "CRM Overview",
+    "billingSection": "Billing",
+    "billingOverview": "Billing Overview",
+    "warehouseSection": "Warehouse",
+    "warehouseOverview": "Warehouse Overview"
   },
   "sidebar": {
     "collapse": "Collapse",
@@ -3629,6 +3635,19 @@
       "allLoaded": "All entries loaded"
     },
     "system": "System"
+  },
+  "modules": {
+    "title": "Modules",
+    "subtitle": "Enable or disable feature modules for this tenant",
+    "loadFailed": "Failed to load modules",
+    "name_core": "Core",
+    "desc_core": "Core functionality — always enabled",
+    "name_crm": "CRM",
+    "desc_crm": "Addresses, contacts, correspondence, inquiries",
+    "name_billing": "Billing",
+    "desc_billing": "Documents, invoices, payments",
+    "name_warehouse": "Warehouse",
+    "desc_warehouse": "Articles, stock, purchasing"
   },
   "adminSettings": {
     "title": "System Settings",

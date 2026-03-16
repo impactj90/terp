@@ -58,7 +58,11 @@ export async function toggleSwitch(page: Page, id: string): Promise<void> {
 /** Submit the form in the currently open sheet */
 export async function submitSheet(page: Page): Promise<void> {
   const footer = page.locator('[data-slot="sheet-footer"]');
-  await footer.getByRole("button").last().click();
+  const btn = footer.getByRole("button").last();
+  await btn.scrollIntoViewIfNeeded();
+  // Use evaluate to bypass viewport checks — sheet footers can be
+  // positioned outside the scrollable area on tall forms
+  await btn.evaluate((el) => (el as HTMLElement).click());
 }
 
 /** Wait for sheet to close (success indicator for most CRUD ops) */

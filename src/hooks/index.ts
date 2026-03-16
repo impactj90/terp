@@ -97,6 +97,7 @@ export {
 } from './use-user-groups'
 export { usePermissions } from './use-permissions'
 export { useCurrentPermissions } from './use-current-permissions'
+export { useModules, useEnableModule, useDisableModule } from './use-modules'
 
 // Notifications
 export {

@@ -60,6 +60,7 @@ model User {
   payrollExportsCreated      PayrollExport[]
   reportsCreated             Report[]
   scheduleExecutionsTriggers ScheduleExecution[]
+  enabledModules             TenantModule[] @relation("moduleEnabledBy")
 
   // Indexes
   @@unique([tenantId, email], map: "idx_users_tenant_email")
@@ -172,11 +173,35 @@ model Tenant {
   orderBookings               OrderBooking[]
   contactTypes                ContactType[]
   contactKinds                ContactKind[]
+  tenantModules               TenantModule[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
   @@index([isActive], map: "idx_tenants_is_active")
   @@map("tenants")
+}
+
+// -----------------------------------------------------------------------------
+// TenantModule
+// -----------------------------------------------------------------------------
+// Migration: 000090/000093
+//
+// Tracks which feature modules are enabled per tenant.
+// Available modules: "core", "crm", "orders", "warehouse"
+// "core" is always enabled and cannot be disabled.
+model TenantModule {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  module      String   @db.VarChar(50)
+  enabledAt   DateTime @default(now()) @map("enabled_at") @db.Timestamptz(6)
+  enabledById String?  @map("enabled_by_id") @db.Uuid
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  enabledBy   User?    @relation("moduleEnabledBy", fields: [enabledById], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, module], map: "uq_tenant_modules_tenant_module")
+  @@index([tenantId], map: "idx_tenant_modules_tenant_id")
+  @@map("tenant_modules")
 }
 
 // -----------------------------------------------------------------------------

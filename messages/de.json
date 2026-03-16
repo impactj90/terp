@@ -100,7 +100,13 @@
     "macros": "Makros",
     "accessControl": "Zutrittskontrolle",
     "terminalBookings": "Terminal-Buchungen",
-    "employeeMessages": "Mitarbeiternachrichten"
+    "employeeMessages": "Mitarbeiternachrichten",
+    "crm": "CRM",
+    "crmOverview": "CRM-Übersicht",
+    "billingSection": "Fakturierung",
+    "billingOverview": "Fakturierungsübersicht",
+    "warehouseSection": "Lager",
+    "warehouseOverview": "Lagerübersicht"
   },
   "sidebar": {
     "collapse": "Einklappen",
@@ -3629,6 +3635,19 @@
       "allLoaded": "Alle Eintraege geladen"
     },
     "system": "System"
+  },
+  "modules": {
+    "title": "Module",
+    "subtitle": "Aktivieren oder deaktivieren Sie Funktionsmodule fuer diesen Mandanten",
+    "loadFailed": "Module konnten nicht geladen werden",
+    "name_core": "Kern",
+    "desc_core": "Kernfunktionen — immer aktiviert",
+    "name_crm": "CRM",
+    "desc_crm": "Adressen, Kontakte, Korrespondenz, Anfragen",
+    "name_billing": "Fakturierung",
+    "desc_billing": "Dokumente, Rechnungen, Zahlungen",
+    "name_warehouse": "Lager",
+    "desc_warehouse": "Artikel, Bestand, Einkauf"
   },
   "adminSettings": {
     "title": "Systemeinstellungen",

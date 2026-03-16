@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { usePermissionChecker } from '@/hooks/use-has-permission'
+import { useModules } from '@/hooks/use-modules'
 import { useSidebar } from './sidebar-context'
 import { SidebarNavItem } from './sidebar-nav-item'
 import { navConfig, type NavSection, type NavItem } from './sidebar-nav-config'
@@ -15,26 +16,35 @@ interface SidebarNavProps {
 }
 
 /**
- * Filters a nav item based on user permissions.
+ * Filters a nav item based on user permissions and enabled modules.
  */
 function filterNavItem(
   item: NavItem,
-  check: (keys: string[]) => boolean
+  check: (keys: string[]) => boolean,
+  enabledModules: Set<string>
 ): boolean {
+  // Module check: if item requires a module, it must be enabled
+  if (item.module && !enabledModules.has(item.module)) return false
+  // Permission check
   if (!item.permissions) return true
   return check(item.permissions)
 }
 
 /**
- * Filters a nav section based on user permissions.
+ * Filters a nav section based on user permissions and enabled modules.
  * A section is visible if it has at least one visible item.
+ * If the section itself requires a module, it's hidden when the module is disabled.
  */
 function filterNavSection(
   section: NavSection,
-  check: (keys: string[]) => boolean
+  check: (keys: string[]) => boolean,
+  enabledModules: Set<string>
 ): NavSection | null {
+  // Section-level module check
+  if (section.module && !enabledModules.has(section.module)) return null
+
   const filteredItems = section.items.filter((item) =>
-    filterNavItem(item, check)
+    filterNavItem(item, check, enabledModules)
   )
 
   if (filteredItems.length === 0) {
@@ -49,20 +59,27 @@ function filterNavSection(
 
 /**
  * Sidebar navigation component.
- * Renders navigation sections with permission-based filtering.
+ * Renders navigation sections with permission-based and module-based filtering.
  */
 export function SidebarNav({ sections = navConfig }: SidebarNavProps) {
   const { isCollapsed } = useSidebar()
   const t = useTranslations('nav')
   const { check, isLoading } = usePermissionChecker()
+  const { data: modulesData, isLoading: modulesLoading } = useModules()
 
-  // Filter sections based on user permissions
+  // Build a set of enabled module names for O(1) lookup
+  const enabledModules = useMemo(() => {
+    if (!modulesData?.modules) return new Set<string>(['core'])
+    return new Set<string>(modulesData.modules.map((m) => m.module))
+  }, [modulesData])
+
+  // Filter sections based on user permissions and enabled modules
   const visibleSections = useMemo(() => {
-    if (isLoading) return []
+    if (isLoading || modulesLoading) return []
     return sections
-      .map((section) => filterNavSection(section, check))
+      .map((section) => filterNavSection(section, check, enabledModules))
       .filter((section): section is NavSection => section !== null)
-  }, [sections, check, isLoading])
+  }, [sections, check, isLoading, modulesLoading, enabledModules])
 
   return (
     <ScrollArea className="flex-1 min-h-0 px-3">

@@ -39,6 +39,8 @@ import {
   DoorOpen,
   Terminal,
   Mail,
+  BookOpen,
+  Warehouse,
 } from 'lucide-react'
 
 /**
@@ -53,6 +55,8 @@ export interface NavItem {
   icon: LucideIcon
   /** Required permissions to see this item (if undefined, all users can see) */
   permissions?: string[]
+  /** Required module to show this item (if undefined, shown regardless of modules) */
+  module?: string
   /** Optional badge count */
   badge?: number
 }
@@ -65,6 +69,8 @@ export interface NavSection {
   titleKey: string
   /** Navigation items in this section */
   items: NavItem[]
+  /** Required module for this entire section (if undefined, shown regardless of modules) */
+  module?: string
 }
 
 /**
@@ -263,6 +269,42 @@ export const navConfig: NavSection[] = [
         href: '/admin/employee-messages',
         icon: Mail,
         permissions: ['notifications.manage'],
+      },
+    ],
+  },
+  {
+    titleKey: 'crm',
+    module: 'crm',
+    items: [
+      {
+        titleKey: 'crmOverview',
+        href: '/crm',
+        icon: BookOpen,
+        module: 'crm',
+      },
+    ],
+  },
+  {
+    titleKey: 'billingSection',
+    module: 'billing',
+    items: [
+      {
+        titleKey: 'billingOverview',
+        href: '/billing',
+        icon: Package,
+        module: 'billing',
+      },
+    ],
+  },
+  {
+    titleKey: 'warehouseSection',
+    module: 'warehouse',
+    items: [
+      {
+        titleKey: 'warehouseOverview',
+        href: '/warehouse',
+        icon: Warehouse,
+        module: 'warehouse',
       },
     ],
   },

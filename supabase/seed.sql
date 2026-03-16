@@ -1895,3 +1895,14 @@ UPDATE vacation_balances SET taken = (
     AND at2.code LIKE 'U%'
     AND ad.status IN ('approved', 'pending')
 ) WHERE year = 2026;
+
+-- =============================================================
+-- C8. Tenant modules
+-- =============================================================
+-- Dev tenant gets "core" (always) + "orders" (for testing existing orders features)
+
+INSERT INTO tenant_modules (tenant_id, module, enabled_at)
+VALUES
+  ('10000000-0000-0000-0000-000000000001', 'core', NOW()),
+  ('10000000-0000-0000-0000-000000000001', 'billing', NOW())
+ON CONFLICT DO NOTHING;
