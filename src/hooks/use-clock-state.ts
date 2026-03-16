@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useCallback } from 'react'
+import { useMemo, useCallback, useRef } from 'react'
 import { useCreateBooking } from '@/hooks/use-bookings'
 import { useBookingTypes } from '@/hooks/use-booking-types'
 import { useEmployeeDayView } from '@/hooks/use-employee-day'
@@ -30,6 +30,10 @@ interface UseClockStateOptions {
 
 export function useClockState({ employeeId, enabled = true }: UseClockStateOptions) {
   const today = getToday()
+
+  // Track the actual click timestamp (with seconds) so the timer starts at 0:00:00
+  // instead of jumping ahead due to editedTime being minute-precision only.
+  const actionTimestampRef = useRef<Date | null>(null)
 
   // Fetch today's data
   const dayView = useEmployeeDayView(employeeId, today, { enabled: enabled && !!employeeId })
@@ -93,7 +97,25 @@ export function useClockState({ employeeId, enabled = true }: UseClockStateOptio
     if (status !== 'clocked_out' && lastBooking?.editedTime !== undefined) {
       const todayDate = new Date()
       todayDate.setHours(0, 0, 0, 0)
-      timerStartTime = new Date(todayDate.getTime() + lastBooking.editedTime * 60000)
+      const serverStartTime = new Date(todayDate.getTime() + lastBooking.editedTime * 60000)
+
+      // Use the exact click timestamp if it falls within the same minute as
+      // the server's editedTime (which only has minute precision). This makes
+      // the timer start at 0:00:00 instead of jumping ahead by the lost seconds.
+      if (
+        actionTimestampRef.current &&
+        Math.floor(actionTimestampRef.current.getTime() / 60000) ===
+          Math.floor(serverStartTime.getTime() / 60000)
+      ) {
+        timerStartTime = actionTimestampRef.current
+      } else {
+        // Different minute → a booking from before this session or edited manually;
+        // clear the ref so we don't keep stale data
+        actionTimestampRef.current = null
+        timerStartTime = serverStartTime
+      }
+    } else {
+      actionTimestampRef.current = null
     }
 
     return { status, timerStartTime, lastBooking }
@@ -121,12 +143,23 @@ export function useClockState({ employeeId, enabled = true }: UseClockStateOptio
         throw new Error(`Booking type ${code} not found`)
       }
 
+      // Capture exact click time (with seconds) before the async call
+      const clickTime = new Date()
+
       await createBooking.mutateAsync({
         employeeId,
         bookingDate: today,
         bookingTypeId: bookingType.id,
         time: getCurrentTimeString(),
       })
+
+      // Store exact click time so the timer starts cleanly at 0:00:00
+      // (editedTime from the server only has minute precision)
+      if (code !== CLOCK_OUT) {
+        actionTimestampRef.current = clickTime
+      } else {
+        actionTimestampRef.current = null
+      }
 
       // Refetch day view to get updated bookings and daily values
       await dayView.refetch()
