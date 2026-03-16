@@ -519,9 +519,11 @@ describe("DailyCalcService", () => {
 
       // Mock $queryRaw calls in order:
       // 1. loadAbsenceDay (from resolveTargetHours in handleNoBookings)
-      // 2. user_tenants lookup (from notifyDailyCalcError)
+      // 2. loadAbsenceDay (from step 7.5 postAbsenceRuleValue)
+      // 3. user_tenants lookup (from notifyDailyCalcError)
       mocks.$queryRaw
-        .mockResolvedValueOnce([]) // absence_days query
+        .mockResolvedValueOnce([]) // absence_days query (resolveTargetHours)
+        .mockResolvedValueOnce([]) // absence_days query (step 7.5)
         .mockResolvedValueOnce([{ user_id: "u-1" }]) // user_tenants query
 
       await service.calculateDay(TENANT_ID, EMPLOYEE_ID, DATE)
@@ -601,6 +603,107 @@ describe("DailyCalcService", () => {
         create: Record<string, unknown>
       }
       expect(upsertCall.create.warnings).toContain("WORKED_ON_HOLIDAY")
+    })
+
+    it("posts absence_rule account value when absence has calculation rule", async () => {
+      mocks.employeeDayPlan.findFirst.mockResolvedValue(
+        makeEmpDayPlan({ noBookingBehavior: "adopt_target" })
+      )
+
+      // Mock loadAbsenceDay ($queryRaw) to return absence with calculation rule
+      const absenceRow = {
+        id: "ad1",
+        status: "approved",
+        duration: "1.00",
+        at_portion: 1,
+        at_priority: 0,
+        at_code: "K01",
+        cr_account_id: "acc-sick",
+        cr_value: 0,
+        cr_factor: "1.00",
+      }
+      mocks.$queryRaw.mockResolvedValue([absenceRow])
+
+      await service.calculateDay(TENANT_ID, EMPLOYEE_ID, DATE)
+
+      const upsertCalls = mocks.dailyAccountValue.upsert.mock.calls
+      const absenceRuleCall = upsertCalls.find(
+        (c: unknown[]) => (c[0] as { create: { source: string } }).create.source === "absence_rule"
+      )
+      expect(absenceRuleCall).toBeDefined()
+      const create = (absenceRuleCall![0] as { create: Record<string, unknown> }).create
+      expect(create.accountId).toBe("acc-sick")
+      expect(create.valueMinutes).toBe(480) // targetTime * 1.0
+    })
+
+    it("does not post absence_rule when no calculation rule linked", async () => {
+      mocks.employeeDayPlan.findFirst.mockResolvedValue(
+        makeEmpDayPlan({ noBookingBehavior: "adopt_target" })
+      )
+
+      mocks.$queryRaw.mockResolvedValue([{
+        id: "ad1",
+        status: "approved",
+        duration: "1.00",
+        at_portion: 1,
+        at_priority: 0,
+        at_code: "U01",
+        cr_account_id: null,
+        cr_value: null,
+        cr_factor: null,
+      }])
+
+      await service.calculateDay(TENANT_ID, EMPLOYEE_ID, DATE)
+
+      const upsertCalls = mocks.dailyAccountValue.upsert.mock.calls
+      const absenceRuleCall = upsertCalls.find(
+        (c: unknown[]) => (c[0] as { create: { source: string } }).create.source === "absence_rule"
+      )
+      expect(absenceRuleCall).toBeUndefined()
+    })
+
+    it("cleans up absence_rule posting when no absence", async () => {
+      mocks.employeeDayPlan.findFirst.mockResolvedValue(
+        makeEmpDayPlan({ noBookingBehavior: "adopt_target" })
+      )
+
+      mocks.$queryRaw.mockResolvedValue([])
+
+      await service.calculateDay(TENANT_ID, EMPLOYEE_ID, DATE)
+
+      const deleteCalls = mocks.dailyAccountValue.deleteMany.mock.calls
+      const absenceRuleDelete = deleteCalls.find(
+        (c: unknown[]) => (c[0] as { where: { source?: string } }).where.source === "absence_rule"
+      )
+      expect(absenceRuleDelete).toBeDefined()
+    })
+
+    it("uses fixed ruleValue when > 0 (ignores targetTime)", async () => {
+      mocks.employeeDayPlan.findFirst.mockResolvedValue(
+        makeEmpDayPlan({ noBookingBehavior: "adopt_target" })
+      )
+
+      mocks.$queryRaw.mockResolvedValue([{
+        id: "ad1",
+        status: "approved",
+        duration: "1.00",
+        at_portion: 1,
+        at_priority: 0,
+        at_code: "K01",
+        cr_account_id: "acc-sick",
+        cr_value: 120,
+        cr_factor: "1.50",
+      }])
+
+      await service.calculateDay(TENANT_ID, EMPLOYEE_ID, DATE)
+
+      const upsertCalls = mocks.dailyAccountValue.upsert.mock.calls
+      const absenceRuleCall = upsertCalls.find(
+        (c: unknown[]) => (c[0] as { create: { source: string } }).create.source === "absence_rule"
+      )
+      expect(absenceRuleCall).toBeDefined()
+      const create = (absenceRuleCall![0] as { create: Record<string, unknown> }).create
+      expect(create.valueMinutes).toBe(180) // 120 * 1.5
     })
 
     it("cleans up account postings when no day plan", async () => {

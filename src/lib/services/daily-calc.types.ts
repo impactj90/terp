@@ -29,6 +29,10 @@ export interface AbsenceDayRow {
   at_portion: number | null
   at_priority: number | null
   at_code: string | null
+  // Joined fields from calculation_rules (via absence_types.calculation_rule_id)
+  cr_account_id: string | null
+  cr_value: number | null
+  cr_factor: string | null // Decimal as string from raw SQL
 }
 
 // --- Day Change Behavior constants ---
@@ -58,6 +62,7 @@ export const DV_STATUS_APPROVED = "approved"
 export const DAV_SOURCE_NET_TIME = "net_time"
 export const DAV_SOURCE_CAPPED_TIME = "capped_time"
 export const DAV_SOURCE_SURCHARGE = "surcharge"
+export const DAV_SOURCE_ABSENCE_RULE = "absence_rule"
 
 // --- Auto-complete constants ---
 

@@ -57,6 +57,7 @@ import {
   DAV_SOURCE_NET_TIME,
   DAV_SOURCE_CAPPED_TIME,
   DAV_SOURCE_SURCHARGE,
+  DAV_SOURCE_ABSENCE_RULE,
   AUTO_COMPLETE_NOTES,
 } from "./daily-calc.types"
 import {
@@ -77,6 +78,7 @@ import {
   getEffectiveRegularHours,
   convertBonusesToSurchargeConfigs,
   calculateAbsenceCredit,
+  calculateAbsenceRuleValue,
 } from "./daily-calc.helpers"
 
 /**
@@ -195,6 +197,19 @@ export class DailyCalcService {
       empDayPlan,
       dvInput
     )
+
+    // 7.5. Post absence rule account value (if applicable)
+    {
+      const absenceDay = await this.loadAbsenceDay(employeeId, calcDate)
+      await this.postAbsenceRuleValue(
+        tenantId,
+        employeeId,
+        calcDate,
+        absenceDay,
+        dvInput.targetTime,
+        empDayPlan?.dayPlan?.id ?? null
+      )
+    }
 
     // 8. Post surcharge values
     await this.postSurchargeValues(
@@ -346,9 +361,13 @@ export class DailyCalcService {
       SELECT ad.*,
              at.portion as at_portion,
              at.priority as at_priority,
-             at.code as at_code
+             at.code as at_code,
+             cr.account_id as cr_account_id,
+             cr.value as cr_value,
+             cr.factor::text as cr_factor
       FROM absence_days ad
       LEFT JOIN absence_types at ON at.id = ad.absence_type_id
+      LEFT JOIN calculation_rules cr ON cr.id = at.calculation_rule_id
       WHERE ad.employee_id = ${employeeId}::uuid
         AND ad.absence_date = ${date}::date
       LIMIT 1
@@ -1559,6 +1578,67 @@ export class DailyCalcService {
         ),
       )
     }
+  }
+
+  /**
+   * Post absence rule account value when an approved absence has a calculation rule.
+   * Called for every day — cleans up previous postings, then creates new one if applicable.
+   */
+  private async postAbsenceRuleValue(
+    tenantId: string,
+    employeeId: string,
+    date: Date,
+    absenceDay: AbsenceDayRow | null,
+    targetTime: number,
+    dayPlanId: string | null
+  ): Promise<void> {
+    // Clean up any previous absence_rule posting for this date
+    await this.prisma.dailyAccountValue.deleteMany({
+      where: { employeeId, valueDate: date, source: DAV_SOURCE_ABSENCE_RULE },
+    })
+
+    // Only post if we have an approved absence with a calculation rule that has an account
+    if (
+      !absenceDay ||
+      absenceDay.status !== "approved" ||
+      !absenceDay.cr_account_id ||
+      absenceDay.cr_factor === null
+    ) {
+      return
+    }
+
+    const ruleValue = absenceDay.cr_value ?? 0
+    const ruleFactor = Number(absenceDay.cr_factor)
+    const minutes = calculateAbsenceRuleValue(targetTime, ruleValue, ruleFactor)
+
+    if (minutes <= 0) {
+      return
+    }
+
+    await this.prisma.dailyAccountValue.upsert({
+      where: {
+        employeeId_valueDate_accountId_source: {
+          employeeId,
+          valueDate: date,
+          accountId: absenceDay.cr_account_id,
+          source: DAV_SOURCE_ABSENCE_RULE,
+        },
+      },
+      create: {
+        tenantId,
+        employeeId,
+        accountId: absenceDay.cr_account_id,
+        valueDate: date,
+        valueMinutes: minutes,
+        source: DAV_SOURCE_ABSENCE_RULE,
+        dayPlanId,
+      },
+      update: {
+        valueMinutes: minutes,
+        dayPlanId,
+        updatedAt: new Date(),
+      },
+    })
   }
 
   /**
