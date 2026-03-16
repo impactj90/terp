@@ -143,9 +143,6 @@ export function useClockState({ employeeId, enabled = true }: UseClockStateOptio
         throw new Error(`Booking type ${code} not found`)
       }
 
-      // Capture exact click time (with seconds) before the async call
-      const clickTime = new Date()
-
       await createBooking.mutateAsync({
         employeeId,
         bookingDate: today,
@@ -153,16 +150,12 @@ export function useClockState({ employeeId, enabled = true }: UseClockStateOptio
         time: getCurrentTimeString(),
       })
 
-      // Store exact click time so the timer starts cleanly at 0:00:00
-      // (editedTime from the server only has minute precision)
-      if (code !== CLOCK_OUT) {
-        actionTimestampRef.current = clickTime
-      } else {
-        actionTimestampRef.current = null
-      }
-
       // Refetch day view to get updated bookings and daily values
       await dayView.refetch()
+
+      // Capture timestamp AFTER refetch so the timer starts at ~0:00:00
+      // when the UI re-renders (editedTime only has minute precision)
+      actionTimestampRef.current = code !== CLOCK_OUT ? new Date() : null
     },
     [employeeId, today, bookingTypeMap, createBooking, dayView.refetch]
   )
