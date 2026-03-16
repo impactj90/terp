@@ -656,3 +656,21 @@ export {
   useUpdateContactType,
   useDeleteContactType,
 } from './use-contact-types'
+
+// CRM Addresses
+export {
+  useCrmAddresses,
+  useCrmAddress,
+  useCreateCrmAddress,
+  useUpdateCrmAddress,
+  useDeleteCrmAddress,
+  useRestoreCrmAddress,
+  useCrmContacts,
+  useCreateCrmContact,
+  useUpdateCrmContact,
+  useDeleteCrmContact,
+  useCrmBankAccounts,
+  useCreateCrmBankAccount,
+  useUpdateCrmBankAccount,
+  useDeleteCrmBankAccount,
+} from './use-crm-addresses'

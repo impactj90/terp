@@ -174,6 +174,10 @@ model Tenant {
   contactTypes                ContactType[]
   contactKinds                ContactKind[]
   tenantModules               TenantModule[]
+  numberSequences             NumberSequence[]
+  crmAddresses                CrmAddress[]
+  crmContacts                 CrmContact[]
+  crmBankAccounts             CrmBankAccount[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
@@ -202,6 +206,141 @@ model TenantModule {
   @@unique([tenantId, module], map: "uq_tenant_modules_tenant_module")
   @@index([tenantId], map: "idx_tenant_modules_tenant_id")
   @@map("tenant_modules")
+}
+
+// -----------------------------------------------------------------------------
+// CrmAddressType enum
+// -----------------------------------------------------------------------------
+enum CrmAddressType {
+  CUSTOMER
+  SUPPLIER
+  BOTH
+
+  @@map("crm_address_type")
+}
+
+// -----------------------------------------------------------------------------
+// NumberSequence
+// -----------------------------------------------------------------------------
+// Migration: 000095
+//
+// Shared utility model for auto-incrementing, tenant-scoped number sequences.
+// Used by CRM, Billing, and Warehouse modules.
+model NumberSequence {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  key       String   @db.VarChar(50)
+  prefix    String   @default("") @db.VarChar(20)
+  nextValue Int      @default(1) @map("next_value")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key], map: "uq_number_sequences_tenant_key")
+  @@index([tenantId], map: "idx_number_sequences_tenant_id")
+  @@map("number_sequences")
+}
+
+// -----------------------------------------------------------------------------
+// CrmAddress
+// -----------------------------------------------------------------------------
+// Migration: 000095
+//
+// Core CRM entity representing a customer, supplier, or both.
+model CrmAddress {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String         @map("tenant_id") @db.Uuid
+  number          String         @db.VarChar(50)
+  type            CrmAddressType @default(CUSTOMER)
+  company         String         @db.VarChar(255)
+  street          String?        @db.VarChar(255)
+  zip             String?        @db.VarChar(20)
+  city            String?        @db.VarChar(100)
+  country         String?        @default("DE") @db.VarChar(10)
+  phone           String?        @db.VarChar(50)
+  fax             String?        @db.VarChar(50)
+  email           String?        @db.VarChar(255)
+  website         String?        @db.VarChar(255)
+  taxNumber       String?        @map("tax_number") @db.VarChar(50)
+  vatId           String?        @map("vat_id") @db.VarChar(50)
+  matchCode       String?        @map("match_code") @db.VarChar(100)
+  notes           String?        @db.Text
+  paymentTermDays Int?           @map("payment_term_days")
+  discountPercent Float?         @map("discount_percent")
+  discountDays    Int?           @map("discount_days")
+  discountGroup   String?        @map("discount_group") @db.VarChar(50)
+  priceListId     String?        @map("price_list_id") @db.Uuid
+  isActive        Boolean        @default(true) @map("is_active")
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById     String?        @map("created_by_id") @db.Uuid
+
+  tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contacts     CrmContact[]
+  bankAccounts CrmBankAccount[]
+
+  @@unique([tenantId, number], map: "uq_crm_addresses_tenant_number")
+  @@index([tenantId], map: "idx_crm_addresses_tenant_id")
+  @@index([tenantId, type], map: "idx_crm_addresses_tenant_type")
+  @@index([tenantId, matchCode], map: "idx_crm_addresses_tenant_match_code")
+  @@index([tenantId, company], map: "idx_crm_addresses_tenant_company")
+  @@map("crm_addresses")
+}
+
+// -----------------------------------------------------------------------------
+// CrmContact
+// -----------------------------------------------------------------------------
+// Migration: 000095
+//
+// Contact person within a CRM address.
+model CrmContact {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  addressId  String   @map("address_id") @db.Uuid
+  firstName  String   @map("first_name") @db.VarChar(100)
+  lastName   String   @map("last_name") @db.VarChar(100)
+  position   String?  @db.VarChar(100)
+  department String?  @db.VarChar(100)
+  phone      String?  @db.VarChar(50)
+  email      String?  @db.VarChar(255)
+  notes      String?  @db.Text
+  isPrimary  Boolean  @default(false) @map("is_primary")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant  Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  address CrmAddress @relation(fields: [addressId], references: [id], onDelete: Cascade)
+
+  @@index([addressId], map: "idx_crm_contacts_address_id")
+  @@index([tenantId], map: "idx_crm_contacts_tenant_id")
+  @@map("crm_contacts")
+}
+
+// -----------------------------------------------------------------------------
+// CrmBankAccount
+// -----------------------------------------------------------------------------
+// Migration: 000095
+//
+// Bank account information for a CRM address.
+model CrmBankAccount {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  addressId     String   @map("address_id") @db.Uuid
+  iban          String   @db.VarChar(34)
+  bic           String?  @db.VarChar(11)
+  bankName      String?  @map("bank_name") @db.VarChar(255)
+  accountHolder String?  @map("account_holder") @db.VarChar(255)
+  isDefault     Boolean  @default(false) @map("is_default")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant  Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  address CrmAddress @relation(fields: [addressId], references: [id], onDelete: Cascade)
+
+  @@index([addressId], map: "idx_crm_bank_accounts_address_id")
+  @@index([tenantId], map: "idx_crm_bank_accounts_tenant_id")
+  @@map("crm_bank_accounts")
 }
 
 // -----------------------------------------------------------------------------

@@ -277,10 +277,11 @@ export const navConfig: NavSection[] = [
     module: 'crm',
     items: [
       {
-        titleKey: 'crmOverview',
-        href: '/crm',
+        titleKey: 'crmAddresses',
+        href: '/crm/addresses',
         icon: BookOpen,
         module: 'crm',
+        permissions: ['crm_addresses.view'],
       },
     ],
   },

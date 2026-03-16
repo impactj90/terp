@@ -220,6 +220,12 @@ export const ALL_PERMISSIONS: Permission[] = [
     "manage",
     "Manage vacation configuration including special calculations, calculation groups, capping rules, and exceptions"
   ),
+
+  // CRM Module
+  p("crm_addresses.view", "crm_addresses", "view", "View CRM addresses"),
+  p("crm_addresses.create", "crm_addresses", "create", "Create CRM addresses"),
+  p("crm_addresses.edit", "crm_addresses", "edit", "Edit CRM addresses"),
+  p("crm_addresses.delete", "crm_addresses", "delete", "Delete CRM addresses"),
 ]
 
 // Lookup maps

@@ -32,6 +32,12 @@ DELETE FROM shifts WHERE code LIKE 'E2E%';
 DELETE FROM employees WHERE personnel_number LIKE 'E2E%';
 DELETE FROM calculation_rules WHERE code LIKE 'E2E%';
 
+-- CRM records (spec 20)
+DELETE FROM crm_contacts WHERE address_id IN (SELECT id FROM crm_addresses WHERE company LIKE 'E2E%');
+DELETE FROM crm_bank_accounts WHERE address_id IN (SELECT id FROM crm_addresses WHERE company LIKE 'E2E%');
+DELETE FROM crm_addresses WHERE company LIKE 'E2E%';
+DELETE FROM number_sequences WHERE key IN ('customer', 'supplier');
+
 -- Parent records (specs 01-03)
 DELETE FROM locations WHERE code LIKE 'E2E%';
 DELETE FROM cost_centers WHERE code LIKE 'E2E%';

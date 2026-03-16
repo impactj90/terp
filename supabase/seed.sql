@@ -1904,5 +1904,66 @@ UPDATE vacation_balances SET taken = (
 INSERT INTO tenant_modules (tenant_id, module, enabled_at)
 VALUES
   ('10000000-0000-0000-0000-000000000001', 'core', NOW()),
+  ('10000000-0000-0000-0000-000000000001', 'crm', NOW()),
   ('10000000-0000-0000-0000-000000000001', 'billing', NOW())
 ON CONFLICT DO NOTHING;
+
+-- =============================================================
+-- C9. CRM seed data (addresses, contacts, bank accounts)
+-- =============================================================
+
+-- Number sequences with sensible prefixes
+INSERT INTO number_sequences (id, tenant_id, key, prefix, next_value)
+VALUES
+  ('c0000000-0000-4000-c000-000000000001', '10000000-0000-0000-0000-000000000001', 'customer', 'K-', 6),
+  ('c0000000-0000-4000-c000-000000000002', '10000000-0000-0000-0000-000000000001', 'supplier', 'L-', 4)
+ON CONFLICT DO NOTHING;
+
+-- Customers
+INSERT INTO crm_addresses (id, tenant_id, number, type, company, street, zip, city, country, phone, email, match_code, payment_term_days, is_active, created_by_id)
+VALUES
+  ('c1000000-0000-4000-c000-000000000001', '10000000-0000-0000-0000-000000000001', 'K-1', 'CUSTOMER', 'Müller Maschinenbau GmbH', 'Industriestr. 42', '80333', 'München', 'DE', '+49 89 123456', 'info@mueller-maschinenbau.de', 'MUELLER MASCHINENBAU', 30, true, '00000000-0000-0000-0000-000000000001'),
+  ('c1000000-0000-4000-c000-000000000002', '10000000-0000-0000-0000-000000000001', 'K-2', 'CUSTOMER', 'Schmidt & Partner KG', 'Hauptstr. 15', '10115', 'Berlin', 'DE', '+49 30 987654', 'kontakt@schmidt-partner.de', 'SCHMIDT PARTNER', 14, true, '00000000-0000-0000-0000-000000000001'),
+  ('c1000000-0000-4000-c000-000000000003', '10000000-0000-0000-0000-000000000001', 'K-3', 'CUSTOMER', 'Weber Elektrotechnik AG', 'Siemensallee 8', '70173', 'Stuttgart', 'DE', '+49 711 456789', 'vertrieb@weber-elektro.de', 'WEBER ELEKTROTECHNIK', 30, true, '00000000-0000-0000-0000-000000000001'),
+  ('c1000000-0000-4000-c000-000000000004', '10000000-0000-0000-0000-000000000001', 'K-4', 'CUSTOMER', 'Bauer Logistik e.K.', 'Am Hafen 3', '20457', 'Hamburg', 'DE', '+49 40 333222', 'info@bauer-logistik.de', 'BAUER LOGISTIK', 60, true, '00000000-0000-0000-0000-000000000001'),
+  ('c1000000-0000-4000-c000-000000000005', '10000000-0000-0000-0000-000000000001', 'K-5', 'CUSTOMER', 'Fischer IT Solutions GmbH', 'Technopark 12', '01069', 'Dresden', 'DE', '+49 351 111222', 'hello@fischer-it.de', 'FISCHER IT', 14, false, '00000000-0000-0000-0000-000000000001')
+ON CONFLICT (id) DO NOTHING;
+
+-- Suppliers
+INSERT INTO crm_addresses (id, tenant_id, number, type, company, street, zip, city, country, phone, email, match_code, payment_term_days, discount_percent, discount_days, is_active, created_by_id)
+VALUES
+  ('c1000000-0000-4000-c000-000000000011', '10000000-0000-0000-0000-000000000001', 'L-1', 'SUPPLIER', 'Stahl-Union Lieferwerk GmbH', 'Werksweg 1', '45127', 'Essen', 'DE', '+49 201 555666', 'einkauf@stahl-union.de', 'STAHL UNION', 45, 2.0, 10, true, '00000000-0000-0000-0000-000000000001'),
+  ('c1000000-0000-4000-c000-000000000012', '10000000-0000-0000-0000-000000000001', 'L-2', 'SUPPLIER', 'Kunststoff Meier OHG', 'Gewerbegebiet Süd 5', '90402', 'Nürnberg', 'DE', '+49 911 777888', 'bestellung@meier-kunststoff.de', 'KUNSTSTOFF MEIER', 30, 3.0, 14, true, '00000000-0000-0000-0000-000000000001'),
+  ('c1000000-0000-4000-c000-000000000013', '10000000-0000-0000-0000-000000000001', 'L-3', 'SUPPLIER', 'Elektro-Großhandel Braun KG', 'Lagerstr. 20', '50667', 'Köln', 'DE', '+49 221 444555', 'order@braun-elektro.de', 'ELEKTRO BRAUN', 30, NULL, NULL, true, '00000000-0000-0000-0000-000000000001')
+ON CONFLICT (id) DO NOTHING;
+
+-- Both (customer + supplier)
+INSERT INTO crm_addresses (id, tenant_id, number, type, company, street, zip, city, country, phone, email, match_code, tax_number, vat_id, payment_term_days, is_active, created_by_id)
+VALUES
+  ('c1000000-0000-4000-c000-000000000021', '10000000-0000-0000-0000-000000000001', 'K-6', 'BOTH', 'Hoffmann Werkzeuge GmbH & Co. KG', 'Werkzeugstr. 7', '42103', 'Wuppertal', 'DE', '+49 202 888999', 'info@hoffmann-werkzeuge.de', 'HOFFMANN WERKZEUGE', '113/456/78901', 'DE123456789', 30, true, '00000000-0000-0000-0000-000000000001')
+ON CONFLICT (id) DO NOTHING;
+
+-- Contacts
+INSERT INTO crm_contacts (id, tenant_id, address_id, first_name, last_name, position, department, phone, email, is_primary)
+VALUES
+  -- Müller Maschinenbau contacts
+  ('c2000000-0000-4000-c000-000000000001', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-c000-000000000001', 'Hans', 'Müller', 'Geschäftsführer', 'Geschäftsleitung', '+49 89 123456-10', 'h.mueller@mueller-maschinenbau.de', true),
+  ('c2000000-0000-4000-c000-000000000002', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-c000-000000000001', 'Claudia', 'Berger', 'Einkaufsleiterin', 'Einkauf', '+49 89 123456-20', 'c.berger@mueller-maschinenbau.de', false),
+  -- Schmidt & Partner contacts
+  ('c2000000-0000-4000-c000-000000000003', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-c000-000000000002', 'Peter', 'Schmidt', 'Inhaber', NULL, '+49 30 987654-0', 'p.schmidt@schmidt-partner.de', true),
+  -- Stahl-Union contact
+  ('c2000000-0000-4000-c000-000000000004', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-c000-000000000011', 'Karl', 'Wagner', 'Vertriebsleiter', 'Vertrieb', '+49 201 555666-30', 'k.wagner@stahl-union.de', true),
+  -- Hoffmann Werkzeuge contacts
+  ('c2000000-0000-4000-c000-000000000005', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-c000-000000000021', 'Ulrike', 'Hoffmann', 'Geschäftsführerin', 'Geschäftsleitung', '+49 202 888999-10', 'u.hoffmann@hoffmann-werkzeuge.de', true),
+  ('c2000000-0000-4000-c000-000000000006', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-c000-000000000021', 'Jens', 'Krause', 'Buchhaltung', 'Finanzen', '+49 202 888999-20', 'j.krause@hoffmann-werkzeuge.de', false)
+ON CONFLICT (id) DO NOTHING;
+
+-- Bank accounts
+INSERT INTO crm_bank_accounts (id, tenant_id, address_id, iban, bic, bank_name, account_holder, is_default)
+VALUES
+  ('c3000000-0000-4000-c000-000000000001', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-c000-000000000001', 'DE89370400440532013000', 'COBADEFFXXX', 'Commerzbank', 'Müller Maschinenbau GmbH', true),
+  ('c3000000-0000-4000-c000-000000000002', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-c000-000000000002', 'DE27100777770209299700', 'DEUTDEDBBER', 'Deutsche Bank', 'Schmidt & Partner KG', true),
+  ('c3000000-0000-4000-c000-000000000003', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-c000-000000000011', 'DE62370502990000684712', 'COKSDE33XXX', 'Sparkasse Essen', 'Stahl-Union Lieferwerk GmbH', true),
+  ('c3000000-0000-4000-c000-000000000004', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-c000-000000000021', 'DE44500105175407324931', 'INGDDEFFXXX', 'ING', 'Hoffmann Werkzeuge GmbH & Co. KG', true),
+  ('c3000000-0000-4000-c000-000000000005', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-c000-000000000021', 'DE75512108001245126199', 'SOGEDEFFXXX', 'Société Générale', 'Hoffmann Werkzeuge GmbH & Co. KG', false)
+ON CONFLICT (id) DO NOTHING;
