@@ -311,10 +311,11 @@ export const navConfig: NavSection[] = [
     module: 'billing',
     items: [
       {
-        titleKey: 'billingOverview',
-        href: '/billing',
-        icon: Package,
+        titleKey: 'billingDocuments',
+        href: '/orders/documents',
+        icon: FileText,
         module: 'billing',
+        permissions: ['billing_documents.view'],
       },
     ],
   },

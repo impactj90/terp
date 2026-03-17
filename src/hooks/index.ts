@@ -723,3 +723,21 @@ export {
   useCrmTaskCompletion,
   useCrmTasksByAssignee,
 } from './use-crm-reports'
+
+// Billing Documents
+export {
+  useBillingDocuments,
+  useBillingDocumentById,
+  useCreateBillingDocument,
+  useUpdateBillingDocument,
+  useDeleteBillingDocument,
+  useFinalizeBillingDocument,
+  useForwardBillingDocument,
+  useCancelBillingDocument,
+  useDuplicateBillingDocument,
+  useBillingPositions,
+  useAddBillingPosition,
+  useUpdateBillingPosition,
+  useDeleteBillingPosition,
+  useReorderBillingPositions,
+} from './use-billing-documents'

@@ -181,6 +181,7 @@ model Tenant {
   crmCorrespondences          CrmCorrespondence[]
   crmInquiries                CrmInquiry[]
   crmTasks                    CrmTask[]
+  billingDocuments            BillingDocument[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
@@ -296,6 +297,9 @@ model CrmAddress {
   correspondences CrmCorrespondence[]
   inquiries       CrmInquiry[]
   tasks           CrmTask[]
+  billingDocuments         BillingDocument[]
+  billingDocumentsDelivery BillingDocument[] @relation("DeliveryAddress")
+  billingDocumentsInvoice  BillingDocument[] @relation("InvoiceAddress")
 
   @@unique([tenantId, number], map: "uq_crm_addresses_tenant_number")
   @@index([tenantId], map: "idx_crm_addresses_tenant_id")
@@ -331,6 +335,7 @@ model CrmContact {
   correspondences CrmCorrespondence[]
   inquiries       CrmInquiry[]
   tasks           CrmTask[]
+  billingDocuments BillingDocument[]
 
   @@index([addressId], map: "idx_crm_contacts_address_id")
   @@index([tenantId], map: "idx_crm_contacts_tenant_id")
@@ -386,6 +391,48 @@ enum CrmTaskStatus {
   CANCELLED
 
   @@map("crm_task_status")
+}
+
+// --- Billing Document Enums ---
+
+enum BillingDocumentType {
+  OFFER
+  ORDER_CONFIRMATION
+  DELIVERY_NOTE
+  SERVICE_NOTE
+  RETURN_DELIVERY
+  INVOICE
+  CREDIT_NOTE
+
+  @@map("billing_document_type")
+}
+
+enum BillingDocumentStatus {
+  DRAFT
+  PRINTED
+  PARTIALLY_FORWARDED
+  FORWARDED
+  CANCELLED
+
+  @@map("billing_document_status")
+}
+
+enum BillingPositionType {
+  ARTICLE
+  FREE
+  TEXT
+  PAGE_BREAK
+  SUBTOTAL
+
+  @@map("billing_position_type")
+}
+
+enum BillingPriceType {
+  STANDARD
+  ESTIMATE
+  BY_EFFORT
+
+  @@map("billing_price_type")
 }
 
 // -----------------------------------------------------------------------------
@@ -457,6 +504,7 @@ model CrmInquiry {
   order           Order?              @relation(fields: [orderId], references: [id], onDelete: SetNull)
   correspondences CrmCorrespondence[]
   tasks           CrmTask[]
+  billingDocuments BillingDocument[]
 
   @@unique([tenantId, number], map: "uq_crm_inquiries_tenant_number")
   @@index([tenantId, status])
@@ -529,6 +577,122 @@ model CrmTaskAssignee {
   @@index([employeeId])
   @@index([teamId])
   @@map("crm_task_assignees")
+}
+
+// -----------------------------------------------------------------------------
+// BillingDocument
+// -----------------------------------------------------------------------------
+// Migration: 000099
+//
+// Commercial document in the billing chain (Belegkette).
+// Types: Offer, Order Confirmation, Delivery Note, Service Note,
+//        Return Delivery, Invoice, Credit Note.
+// Status workflow: DRAFT -> PRINTED -> FORWARDED (CANCELLED at any point).
+model BillingDocument {
+  id                  String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId            String                 @map("tenant_id") @db.Uuid
+  number              String                 @db.VarChar(50)
+  type                BillingDocumentType
+  status              BillingDocumentStatus  @default(DRAFT)
+
+  // Customer / Address
+  addressId           String                 @map("address_id") @db.Uuid
+  contactId           String?                @map("contact_id") @db.Uuid
+  deliveryAddressId   String?                @map("delivery_address_id") @db.Uuid
+  invoiceAddressId    String?                @map("invoice_address_id") @db.Uuid
+
+  // Links
+  inquiryId           String?                @map("inquiry_id") @db.Uuid
+  orderId             String?                @map("order_id") @db.Uuid
+  parentDocumentId    String?                @map("parent_document_id") @db.Uuid
+
+  // Dates
+  orderDate           DateTime?              @map("order_date") @db.Timestamptz(6)
+  documentDate        DateTime               @default(now()) @map("document_date") @db.Timestamptz(6)
+  deliveryDate        DateTime?              @map("delivery_date") @db.Timestamptz(6)
+
+  // Terms & Conditions
+  deliveryType        String?                @map("delivery_type")
+  deliveryTerms       String?                @map("delivery_terms")
+  paymentTermDays     Int?                   @map("payment_term_days")
+  discountPercent     Float?                 @map("discount_percent")
+  discountDays        Int?                   @map("discount_days")
+  discountPercent2    Float?                 @map("discount_percent_2")
+  discountDays2       Int?                   @map("discount_days_2")
+  shippingCostNet     Float?                 @map("shipping_cost_net")
+  shippingCostVatRate Float?                 @map("shipping_cost_vat_rate")
+
+  // Totals (computed, stored for performance)
+  subtotalNet         Float                  @default(0) @map("subtotal_net")
+  totalVat            Float                  @default(0) @map("total_vat")
+  totalGross          Float                  @default(0) @map("total_gross")
+
+  // Notes
+  notes               String?
+  internalNotes       String?                @map("internal_notes")
+
+  // Print state
+  printedAt           DateTime?              @map("printed_at") @db.Timestamptz(6)
+  printedById         String?                @map("printed_by_id") @db.Uuid
+
+  // Audit
+  createdAt           DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById         String?                @map("created_by_id") @db.Uuid
+
+  // Relations
+  tenant           Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  address          CrmAddress                @relation(fields: [addressId], references: [id])
+  contact          CrmContact?               @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  deliveryAddress  CrmAddress?               @relation("DeliveryAddress", fields: [deliveryAddressId], references: [id], onDelete: SetNull)
+  invoiceAddress   CrmAddress?               @relation("InvoiceAddress", fields: [invoiceAddressId], references: [id], onDelete: SetNull)
+  inquiry          CrmInquiry?               @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
+  order            Order?                    @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  parentDocument   BillingDocument?          @relation("DocumentChain", fields: [parentDocumentId], references: [id], onDelete: SetNull)
+  childDocuments   BillingDocument[]         @relation("DocumentChain")
+  positions        BillingDocumentPosition[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, type])
+  @@index([tenantId, status])
+  @@index([tenantId, addressId])
+  @@index([tenantId, inquiryId])
+  @@index([tenantId, parentDocumentId])
+  @@index([tenantId, documentDate])
+  @@map("billing_documents")
+}
+
+// -----------------------------------------------------------------------------
+// BillingDocumentPosition
+// -----------------------------------------------------------------------------
+// Migration: 000099
+//
+// Line item within a billing document. Types: Article, Free text, Text-only,
+// Page break, Subtotal. Cascade-deleted with parent document.
+model BillingDocumentPosition {
+  id              String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  documentId      String              @map("document_id") @db.Uuid
+  sortOrder       Int                 @map("sort_order")
+  type            BillingPositionType @default(FREE)
+  articleId       String?             @map("article_id") @db.Uuid
+  articleNumber   String?             @map("article_number") @db.VarChar(50)
+  description     String?
+  quantity        Float?
+  unit            String?             @db.VarChar(20)
+  unitPrice       Float?              @map("unit_price")
+  flatCosts       Float?              @map("flat_costs")
+  totalPrice      Float?              @map("total_price")
+  priceType       BillingPriceType?   @map("price_type")
+  vatRate         Float?              @map("vat_rate")
+  deliveryDate    DateTime?           @map("delivery_date") @db.Timestamptz(6)
+  confirmedDate   DateTime?           @map("confirmed_date") @db.Timestamptz(6)
+  createdAt       DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  document BillingDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId, sortOrder])
+  @@map("billing_document_positions")
 }
 
 // -----------------------------------------------------------------------------
@@ -1293,6 +1457,7 @@ model Order {
   defaultForEmployees Employee[]        @relation("EmployeeDefaultOrder")
   orderBookings       OrderBooking[]
   crmInquiries        CrmInquiry[]
+  billingDocuments    BillingDocument[]
 
   @@unique([tenantId, code], map: "orders_tenant_id_code_key")
   @@index([tenantId], map: "idx_orders_tenant")

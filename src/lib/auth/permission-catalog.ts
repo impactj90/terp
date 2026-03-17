@@ -38,7 +38,7 @@ function p(
 }
 
 /**
- * All 48 permissions, mirroring Go's allPermissions slice.
+ * All 53 permissions, mirroring Go's allPermissions slice.
  * Order matches the Go source file for easy comparison.
  */
 export const ALL_PERMISSIONS: Permission[] = [
@@ -244,6 +244,13 @@ export const ALL_PERMISSIONS: Permission[] = [
   p("crm_tasks.create", "crm_tasks", "create", "Create CRM tasks and messages"),
   p("crm_tasks.edit", "crm_tasks", "edit", "Edit CRM tasks and messages"),
   p("crm_tasks.delete", "crm_tasks", "delete", "Delete CRM tasks and messages"),
+
+  // Billing Documents
+  p("billing_documents.view", "billing_documents", "view", "View billing documents"),
+  p("billing_documents.create", "billing_documents", "create", "Create billing documents"),
+  p("billing_documents.edit", "billing_documents", "edit", "Edit billing documents"),
+  p("billing_documents.delete", "billing_documents", "delete", "Delete billing documents"),
+  p("billing_documents.finalize", "billing_documents", "finalize", "Finalize billing documents"),
 ]
 
 // Lookup maps

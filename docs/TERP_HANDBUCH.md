@@ -43,7 +43,17 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [12.9 Praxisbeispiel: Kundenanfrage anlegen und abschließen](#129-praxisbeispiel-kundenanfrage-anlegen-und-abschließen)
     - [12.10 Aufgaben & Nachrichten](#1210-aufgaben--nachrichten)
     - [12.11 Auswertungen](#1211-auswertungen)
-13. [Glossar](#13-glossar)
+13. [Belege & Fakturierung](#13-belege--fakturierung)
+    - [13.1 Belegtypen](#131-belegtypen)
+    - [13.2 Belegliste](#132-belegliste)
+    - [13.3 Beleg anlegen](#133-beleg-anlegen)
+    - [13.4 Positionen verwalten](#134-positionen-verwalten)
+    - [13.5 Beleg abschließen (Festschreiben)](#135-beleg-abschließen-festschreiben)
+    - [13.6 Beleg fortführen (Belegkette)](#136-beleg-fortführen-belegkette)
+    - [13.7 Beleg stornieren](#137-beleg-stornieren)
+    - [13.8 Beleg duplizieren](#138-beleg-duplizieren)
+    - [13.9 Praxisbeispiel: Angebot bis Rechnung](#139-praxisbeispiel-angebot-bis-rechnung)
+14. [Glossar](#14-glossar)
 
 ---
 
@@ -4983,7 +4993,298 @@ Optionaler Datumsfilter (Von / Bis) schränkt den Auswertungszeitraum ein.
 
 ---
 
-## 13. Glossar
+## 13. Belege & Fakturierung
+
+**Was ist es?** Das Belegmodul bildet die gesamte kaufmännische Belegkette ab -- vom Angebot über Auftragsbestätigung und Lieferschein bis zur Rechnung und Gutschrift. Jeder Beleg enthält Positionen (Artikel, Freitext, Zwischensummen) mit automatischer Berechnung.
+
+**Wozu dient es?** Angebote erstellen, Aufträge bestätigen, Lieferungen dokumentieren und Rechnungen generieren -- alles in einem durchgängigen Workflow mit lückenloser Nachverfolgbarkeit der Belegkette.
+
+> Modul: **Billing** muss aktiviert sein (Administration > Module > "Billing" aktivieren)
+
+> Berechtigung: `billing_documents.view`, `billing_documents.create`, `billing_documents.edit`, `billing_documents.delete`, `billing_documents.finalize`
+
+Aufträge > Belege
+
+Sie sehen die Belegliste mit allen Dokumenten des aktiven Mandanten.
+
+### 13.1 Belegtypen
+
+| Typ | Deutsch | Prefix | Beschreibung |
+|-----|---------|--------|-------------|
+| **OFFER** | Angebot | A- | Erstes Dokument in der Kette. Preisvorschlag an den Kunden. |
+| **ORDER_CONFIRMATION** | Auftragsbestätigung | AB- | Bestätigung des Auftrags nach Angebotsakzeptanz. |
+| **DELIVERY_NOTE** | Lieferschein | LS- | Begleitdokument für eine Warenlieferung. |
+| **SERVICE_NOTE** | Leistungsschein | LN- | Nachweis erbrachter Dienstleistungen. |
+| **RETURN_DELIVERY** | Rücklieferung | R- | Dokumentation einer Warenrücksendung. |
+| **INVOICE** | Rechnung | RE- | Zahlungsaufforderung an den Kunden. Ende der Kette. |
+| **CREDIT_NOTE** | Gutschrift | G- | Rückerstattung/Gutschrift an den Kunden. |
+
+#### Belegkette (Fortführungsregeln)
+
+| Quellbeleg | Kann fortgeführt werden zu |
+|-----------|--------------------------|
+| Angebot | Auftragsbestätigung |
+| Auftragsbestätigung | Lieferschein, Leistungsschein |
+| Lieferschein | Rechnung |
+| Leistungsschein | Rechnung |
+| Rücklieferung | Gutschrift |
+| Rechnung | (Ende der Kette) |
+| Gutschrift | (Ende der Kette) |
+
+### 13.2 Belegliste
+
+Aufträge > Belege
+
+Tabelle mit Spalten:
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Nummer** | Auto-generierte Belegnummer (z.B. A-1, RE-42) |
+| **Typ** | Belegtyp als farbiges Badge |
+| **Kunde** | Firmenname der verknüpften Adresse |
+| **Datum** | Belegdatum |
+| **Betrag** | Bruttosumme (totalGross) |
+| **Status** | Entwurf, Abgeschlossen, Fortgeführt, Storniert |
+
+**Filter:**
+- **Typ-Filter**: Alle, Angebot, AB, Lieferschein, etc.
+- **Status-Filter**: Dropdown mit Statuswerten
+- **Suchfeld**: Suche nach Belegnummer
+
+### 13.3 Beleg anlegen
+
+1. **"Neuer Beleg"** (Belegliste, oben rechts)
+2. Formular öffnet sich
+3. Belegtyp wählen (Angebot, AB, Lieferschein, etc.)
+4. Kundenadresse auswählen (Pflicht)
+5. Optionale Felder:
+   - **Kontaktperson**: Ansprechpartner aus der Adresse
+   - **Lieferadresse**: Abweichende Lieferanschrift
+   - **Rechnungsadresse**: Abweichende Rechnungsanschrift
+   - **Anfrage**: Verknüpfung zu einer CRM-Anfrage
+   - **Belegdatum**: Standard = heute
+   - **Auftragsdatum**: Datum der Beauftragung
+   - **Liefertermin**: Gewünschtes Lieferdatum
+   - **Lieferart / Lieferbedingungen**: Freitext
+   - **Zahlungsziel**: Tage (wird aus Kundenadresse vorbelegt)
+   - **Skonto %**: Skontosatz (wird aus Kundenadresse vorbelegt)
+   - **Skonto Tage**: Skontofrist (wird aus Kundenadresse vorbelegt)
+   - **Versandkosten netto**: Pauschalversandkosten
+   - **Bemerkungen / Interne Notizen**: Freitext
+6. **"Speichern"**
+7. Beleg wird als **Entwurf** angelegt. Belegnummer wird automatisch vergeben.
+8. ✅ Sie werden automatisch auf die **Detailseite** des neuen Belegs weitergeleitet.
+
+Zahlungsbedingungen werden automatisch aus den Stammdaten der Kundenadresse übernommen, können aber im Beleg überschrieben werden.
+
+> **Wichtig:** Das Erstellungsformular enthält nur die Kopfdaten (Typ, Kunde, Konditionen, Bemerkungen). Positionen werden im nächsten Schritt auf der Detailseite des Belegs hinzugefügt — siehe [13.4 Positionen verwalten](#134-positionen-verwalten).
+
+### 13.4 Positionen verwalten
+
+Positionen werden auf der **Detailseite** eines Belegs im Tab **"Positionen"** verwaltet (nur im Status **Entwurf**).
+
+**Positionstypen:**
+
+| Typ | Beschreibung |
+|-----|-------------|
+| **Artikel** | Position aus dem Artikelkatalog (mit Preis-Lookup) |
+| **Freitext** | Freie Position mit Beschreibung und Preis |
+| **Textzeile** | Nur Beschreibung, kein Preis (z.B. Hinweistext) |
+| **Seitenumbruch** | Seitentrenner für den PDF-Druck |
+| **Zwischensumme** | Zeigt die Summe aller vorangehenden Positionen |
+
+#### Position hinzufügen
+
+1. Detailseite des Belegs öffnen → Tab **"Positionen"** auswählen
+2. Unterhalb der Positionstabelle: **Positionstyp** im Dropdown wählen (Standard: "Freitext")
+3. Klick auf **"Position hinzufügen"**
+4. Eine neue Zeile erscheint in der Tabelle — Felder direkt in der Zeile ausfüllen:
+   - **Beschreibung**: Text der Position
+   - **Menge**: Anzahl
+   - **Einheit**: Stk, Std, kg, etc.
+   - **Einzelpreis**: Preis pro Einheit netto
+   - **Pauschalkosten**: Einmalige Zusatzkosten
+   - **MwSt-Satz**: z.B. 19%, 7%
+   - **Preistyp**: Standard / Richtpreis / Nach Aufwand
+4. **Positionssumme** = Menge x Einzelpreis + Pauschalkosten
+5. **Belegsumme** wird automatisch aktualisiert
+
+#### Positionen sortieren
+
+Positionen können per Drag-and-Drop oder mit Pfeiltasten umsortiert werden.
+
+#### Position löschen
+
+Löschsymbol am Zeilenende -- Position wird entfernt und Summen neu berechnet.
+
+### 13.5 Beleg abschließen (Festschreiben)
+
+1. **"Abschließen"** (Belegdetail, Aktionsleiste)
+2. Warnung: "Nach dem Abschließen ist der Beleg unveränderbar."
+3. Status wechselt von **Entwurf** zu **Abgeschlossen**
+4. Beleg und alle Positionen sind nun schreibgeschützt
+5. Erlaubte Aktionen nach dem Abschließen: **Fortführen**, **Stornieren**, **Duplizieren**
+
+> Berechtigung: `billing_documents.finalize` erforderlich
+
+##### Sonderfall: Auftragsbestätigung abschließen → Auftrag erstellen
+
+Beim Abschließen einer **Auftragsbestätigung** erscheint im Dialog ein zusätzlicher Bereich:
+
+1. **Auftragsbezeichnung** (optional): Name des Terp-Auftrags (z.B. "Beratungsprojekt Mustermann")
+2. **Beschreibung** (optional): Weitere Details (z.B. Sollstunden, Tätigkeiten)
+
+Wenn eine Auftragsbezeichnung eingetragen wird:
+- ✅ Ein neuer **Terp-Auftrag** wird automatisch erstellt
+- ✅ Die Belegnummer (z.B. AB-1) wird als Auftragscode übernommen
+- ✅ Der Kundenname wird aus der Adresse übernommen
+- ✅ Der Beleg wird mit dem Auftrag verknüpft (`orderId`)
+- ✅ Mitarbeiter können ab sofort **Zeit auf diesen Auftrag buchen**
+
+Wird keine Auftragsbezeichnung eingetragen, wird der Beleg ohne Auftragserstellung abgeschlossen.
+
+### 13.6 Beleg fortführen (Belegkette)
+
+Das Fortführen erstellt einen neuen Beleg aus einem abgeschlossenen Beleg -- mit kopierten Positionen und einer Verknüpfung zum Quellbeleg.
+
+1. **"Fortführen"** (nur bei Status Abgeschlossen)
+2. Dialog zeigt erlaubte Zielbelegtypen
+3. Zielbelegtyp auswählen
+4. **"Fortführen"**
+5. Neuer Beleg wird als **Entwurf** erstellt
+6. Alle Positionen werden kopiert
+7. Quellbeleg-Status wechselt zu **Fortgeführt**
+8. Verknüpfung über `parentDocumentId` nachvollziehbar
+
+Die Belegkette ist auf der Detailseite jedes Belegs im Tab "Kette" sichtbar (Eltern- und Kind-Belege).
+
+### 13.7 Beleg stornieren
+
+1. **"Stornieren"** (Belegdetail, Aktionsleiste)
+2. Optionaler Stornierungsgrund
+3. Status wechselt zu **Storniert**
+4. Nicht möglich bei Status **Fortgeführt** (alle Positionen wurden bereits übernommen)
+
+### 13.8 Beleg duplizieren
+
+1. **"Duplizieren"** (Belegdetail, Aktionsleiste)
+2. Erstellt eine **Entwurf**-Kopie mit neuer Belegnummer
+3. Alle Positionen werden kopiert
+4. Kein `parentDocumentId` -- eigenständiger Beleg
+
+### Status-Workflow
+
+| Status | Badge | Bedeutung | Erlaubte Aktionen |
+|--------|-------|-----------|-------------------|
+| **DRAFT** (Entwurf) | grau | In Bearbeitung | Bearbeiten, Positionen ändern, Abschließen, Löschen |
+| **PRINTED** (Abgeschlossen) | blau | Festgeschrieben | Fortführen, Stornieren, Duplizieren |
+| **PARTIALLY_FORWARDED** | gelb | Teilweise fortgeführt | Fortführen, Stornieren, Duplizieren |
+| **FORWARDED** (Fortgeführt) | grün | Vollständig fortgeführt | Duplizieren |
+| **CANCELLED** (Storniert) | rot | Storniert | Duplizieren |
+
+### 13.9 Praxisbeispiel: Angebot bis Rechnung
+
+**Szenario:** Sie erstellen ein Angebot für einen Kunden, der Kunde nimmt an, Sie liefern und stellen eine Rechnung.
+
+> Der Workflow besteht immer aus zwei Schritten: Zuerst wird der Beleg mit den Kopfdaten angelegt, danach werden auf der Detailseite die Positionen hinzugefügt.
+
+#### Schritt 1 — Angebot anlegen
+
+1. 📍 Aufträge > Belege
+2. Klick auf **"Neuer Beleg"** (oben rechts)
+3. Formular "Neuer Beleg" öffnet sich
+4. **Belegtyp**: "Angebot" auswählen (ist standardmäßig vorausgewählt)
+5. **Kundenadresse**: Dropdown öffnen → "Mustermann GmbH" auswählen (Pflichtfeld)
+6. Optional: Zahlungsziel, Skonto, Lieferart ausfüllen (werden aus Kundenstammdaten vorbelegt, sofern hinterlegt)
+7. Klick auf **"Speichern"**
+8. ✅ Sie werden automatisch auf die **Detailseite** des neuen Angebots (z.B. A-1) weitergeleitet. Der Status ist **Entwurf**.
+
+#### Schritt 2 — Positionen hinzufügen
+
+> Positionen können **nur auf der Detailseite** eines Belegs im Status **Entwurf** hinzugefügt werden — nicht im Erstellungsformular.
+
+1. Sie befinden sich auf der Detailseite des Angebots A-1
+2. Klick auf den Tab **"Positionen"**
+3. Unterhalb der (noch leeren) Positionstabelle: Dropdown **"Freitext"** ist vorausgewählt
+4. Klick auf **"Position hinzufügen"**
+5. Eine neue Zeile erscheint in der Tabelle — füllen Sie die Felder direkt in der Zeile aus:
+   - **Beschreibung**: "Beratungsleistung"
+   - **Menge**: 10
+   - **Einheit**: "Std"
+   - **Einzelpreis**: 120,00
+   - **MwSt %**: 19
+6. ✅ Die **Positionssumme** wird automatisch berechnet: 10 × 120,00 = **1.200,00 EUR**
+7. Erneut **"Position hinzufügen"** klicken
+8. Neue Zeile ausfüllen:
+   - **Beschreibung**: "Fahrtkosten"
+   - **Pauschalkosten**: 150,00
+   - **MwSt %**: 19
+9. ✅ Die **Belegsummen** am unteren Rand aktualisieren sich automatisch:
+   - Netto: 1.350,00 EUR
+   - MwSt 19%: 256,50 EUR
+   - Brutto: **1.606,50 EUR**
+
+#### Schritt 3 — Angebot abschließen (festschreiben)
+
+1. Auf der Detailseite von A-1: Klick auf **"Abschließen"** (Aktionsleiste oben)
+2. Bestätigungsdialog: "Nach dem Abschließen ist der Beleg unveränderbar." → Bestätigen
+3. ✅ Status wechselt von **Entwurf** → **Abgeschlossen**
+4. ✅ Die Felder und Positionen sind nun schreibgeschützt (grau hinterlegt)
+5. ✅ Hinweis-Banner: "Dieser Beleg ist festgeschrieben und kann nicht mehr bearbeitet werden."
+
+#### Schritt 4 — Angebot zur Auftragsbestätigung fortführen
+
+Der Kunde hat das Angebot angenommen.
+
+1. Auf der Detailseite von A-1 (Status: Abgeschlossen): Klick auf **"Fortführen"**
+2. Dialog "Beleg fortführen" öffnet sich — zeigt den erlaubten Zielbelegtyp: **Auftragsbestätigung**
+3. Klick auf **"Fortführen"**
+4. ✅ Neues Dokument **AB-1** wird als **Entwurf** erstellt
+5. ✅ Alle Positionen aus A-1 wurden automatisch nach AB-1 kopiert
+6. ✅ A-1 Status wechselt zu **Fortgeführt**
+7. Sie werden auf die Detailseite von AB-1 weitergeleitet
+8. Optional: Positionen in AB-1 anpassen (ist noch im Entwurf und daher bearbeitbar)
+
+#### Schritt 5 — Auftragsbestätigung abschließen und zum Lieferschein fortführen
+
+1. Detailseite AB-1: Klick auf **"Abschließen"**
+2. Dialog öffnet sich — bei einer Auftragsbestätigung erscheint der Bereich **"Auftrag für Zeiterfassung erstellen"**:
+   - **Auftragsbezeichnung**: "Beratungsprojekt Mustermann GmbH" eintragen
+   - **Beschreibung**: "Sollstunden: 10h Beratung, Fahrtkosten pauschal" (optional)
+3. Klick auf **"Abschließen"**
+4. ✅ AB-1 Status: **Abgeschlossen**
+5. ✅ Ein Terp-Auftrag mit Code "AB-1" wurde automatisch erstellt — Mitarbeiter können ab sofort Zeit darauf buchen
+3. Klick auf **"Fortführen"** → Zielbelegtyp: **Lieferschein** → **"Fortführen"**
+4. ✅ Neues Dokument **LS-1** wird erstellt (Entwurf, Positionen kopiert)
+5. ✅ AB-1 Status wechselt zu **Fortgeführt**
+
+#### Schritt 6 — Lieferschein abschließen und zur Rechnung fortführen
+
+1. Detailseite LS-1: Klick auf **"Abschließen"** → Bestätigen
+2. ✅ LS-1 Status: **Abgeschlossen**
+3. Klick auf **"Fortführen"** → Zielbelegtyp: **Rechnung** → **"Fortführen"**
+4. ✅ Neues Dokument **RE-1** wird erstellt (Entwurf, alle Positionen kopiert)
+5. ✅ LS-1 Status wechselt zu **Fortgeführt**
+
+#### Schritt 7 — Rechnung abschließen
+
+1. Detailseite RE-1: Prüfen Sie die kopierten Positionen und Summen
+2. Klick auf **"Abschließen"** → Bestätigen
+3. ✅ RE-1 Status: **Abgeschlossen** — Rechnung ist festgeschrieben
+
+#### Ergebnis
+
+Die Belegkette ist vollständig abgeschlossen:
+
+**A-1** (Angebot) → **AB-1** (Auftragsbestätigung) → **LS-1** (Lieferschein) → **RE-1** (Rechnung)
+
+Jeder Beleg verweist auf seinen Vorgänger. Die Kette ist auf der Detailseite jedes Belegs im Tab **"Kette"** nachvollziehbar (Eltern- und Kind-Belege werden angezeigt).
+
+💡 **Tipp:** Bei der Fortführung werden alle Positionen kopiert. Sie können im neuen Beleg (solange er im Entwurf ist) noch Positionen anpassen, hinzufügen oder entfernen, bevor Sie ihn abschließen.
+
+---
+
+## 14. Glossar
 
 | Begriff | Erklärung | Wo in Terp |
 |---------|-----------|-----------|
@@ -4992,6 +5293,9 @@ Optionaler Datumsfilter (Von / Bis) schränkt den Auswertungszeitraum ein.
 | **Benachrichtigung** | Interne Systemmeldung an einen Benutzer (Genehmigung, Fehler, Erinnerung, System) | 📍 Glocke (🔔) / Benachrichtigungen |
 | **Abwesenheitstyp** | Kategorie einer Abwesenheit mit Regeln (Urlaubsabzug, Genehmigung) | 📍 Verwaltung → Abwesenheitsarten |
 | **Aktivität** | Art der Arbeit innerhalb eines Auftrags (z. B. Montage, Dokumentation) | 📍 Verwaltung → Aufträge → Tab Aktivitäten |
+| **Beleg** | Kaufmännisches Dokument in der Belegkette (Angebot, AB, Lieferschein, Rechnung etc.) | 📍 Aufträge → Belege |
+| **Belegkette** | Lückenlose Abfolge von Belegen: Angebot → AB → Lieferschein → Rechnung | 📍 Aufträge → Belege → Detail → Tab Kette |
+| **Belegposition** | Einzelne Zeile in einem Beleg (Artikel, Freitext, Textzeile, Seitenumbruch, Zwischensumme) | 📍 Aufträge → Belege → Detail → Positionen |
 | **Aufgabe (CRM)** | Interne Arbeitsaufgabe im CRM mit Betreff, Beschreibung, Fälligkeitsdatum und Status-Workflow | 📍 CRM → Aufgaben |
 | **Auswertung (CRM)** | Berichts- und Analysedashboard mit Kennzahlen zu Adressen, Korrespondenz, Anfragen und Aufgaben | 📍 CRM → Auswertungen |
 | **Auftrag** | Projekt oder Kundenauftrag für die Projektzeiterfassung | 📍 Verwaltung → Aufträge |
@@ -5005,7 +5309,9 @@ Optionaler Datumsfilter (Von / Bis) schränkt den Auswertungszeitraum ein.
 | **Datensichtbereich** | Beschränkung, welche Mitarbeiter ein Benutzer sehen darf | 📍 Administration → Benutzer → Bearbeiten → Datensichtbereich |
 | **Fehlzeit** | Differenz Soll − Netto, wenn weniger gearbeitet wurde | 📍 Zeitnachweis / Monatsauswertung |
 | **Feiertagsgutschrift** | Stunden, die an einem Feiertag automatisch gutgeschrieben werden | 📍 Tagesplan → Tab Spezial → Feiertagsgutschriften |
+| **Festschreiben** | Abschließen eines Belegs, der dadurch unveränderbar wird (Status: Abgeschlossen) | 📍 Aufträge → Belege → Detail → "Abschließen" |
 | **Flexzeitsaldo** | Laufendes Konto für Plus-/Minusstunden | 📍 Dashboard (Karte) / Monatsauswertung |
+| **Fortführen** | Erstellen eines Folgebelegs aus einem abgeschlossenen Beleg mit Übernahme aller Positionen | 📍 Aufträge → Belege → Detail → "Fortführen" |
 | **Kappung** | Abschneiden von Arbeitszeit außerhalb des erlaubten Fensters | Konfiguriert im Tagesplan, Tab Zeitfenster |
 | **Kernzeit** | Pflichtzeitraum bei Gleitzeit | 📍 Tagesplan → Tab Zeitfenster → Kernzeit |
 | **Konto** | Sammelstelle für Zeitwerte (Flex, Überstunden, Zuschläge) | 📍 Verwaltung → Konten |
@@ -5113,6 +5419,9 @@ Diese Tabelle listet alle Seiten der Anwendung mit ihrer URL und dem Menüpfad:
 | `/crm/inquiries/[id]` | Anfragenliste → Zeile anklicken | crm_inquiries.view |
 | `/crm/tasks` | CRM → Aufgaben | crm_tasks.view |
 | `/crm/reports` | CRM → Auswertungen | crm_addresses.view |
+| `/orders/documents` | Aufträge → Belege | billing_documents.view |
+| `/orders/documents/new` | Aufträge → Belege → Neuer Beleg | billing_documents.create |
+| `/orders/documents/[id]` | Belegliste → Zeile anklicken | billing_documents.view |
 
 ---
 

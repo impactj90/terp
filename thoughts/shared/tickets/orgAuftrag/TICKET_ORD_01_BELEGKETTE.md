@@ -6,6 +6,8 @@
 | **Dependencies** | CRM_01 (Addresses, Contacts), CRM_03 (Inquiries) |
 | **Complexity** | L |
 | **New Models** | `BillingDocument`, `BillingDocumentPosition` |
+| **Status** | ✅ Complete |
+| **Completed** | 2026-03-17 |
 
 ---
 

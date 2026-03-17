@@ -30,6 +30,14 @@ const DEFAULT_PREFIXES: Record<string, string> = {
   customer: "K-",
   supplier: "L-",
   inquiry: "V-",
+  // Billing document types
+  offer: "A-",
+  order_confirmation: "AB-",
+  delivery_note: "LS-",
+  service_note: "LN-",
+  return_delivery: "R-",
+  invoice: "RE-",
+  credit_note: "G-",
 }
 
 export async function getNextNumber(

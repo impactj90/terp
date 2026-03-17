@@ -32,6 +32,16 @@ DELETE FROM shifts WHERE code LIKE 'E2E%';
 DELETE FROM employees WHERE personnel_number LIKE 'E2E%';
 DELETE FROM calculation_rules WHERE code LIKE 'E2E%';
 
+-- Billing document records (spec 30)
+DELETE FROM billing_document_positions WHERE document_id IN (
+  SELECT bd.id FROM billing_documents bd
+  JOIN crm_addresses ca ON bd.address_id = ca.id
+  WHERE ca.company LIKE 'E2E%'
+);
+DELETE FROM billing_documents WHERE address_id IN (
+  SELECT id FROM crm_addresses WHERE company LIKE 'E2E%'
+);
+
 -- CRM task records (spec 23)
 DELETE FROM crm_task_assignees WHERE task_id IN (SELECT id FROM crm_tasks WHERE subject LIKE 'E2E%');
 DELETE FROM crm_tasks WHERE subject LIKE 'E2E%';
@@ -55,7 +65,14 @@ INSERT INTO number_sequences (id, tenant_id, key, prefix, next_value, created_at
 VALUES
   (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'customer', 'K-', 100, NOW(), NOW()),
   (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'supplier', 'L-', 100, NOW(), NOW()),
-  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'inquiry', 'V-', 100, NOW(), NOW())
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'inquiry', 'V-', 100, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'offer', 'A-', 100, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'order_confirmation', 'AB-', 100, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'delivery_note', 'LS-', 100, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'service_note', 'LN-', 100, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'return_delivery', 'R-', 100, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'invoice', 'RE-', 100, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'credit_note', 'G-', 100, NOW(), NOW())
 ON CONFLICT (tenant_id, key) DO UPDATE SET next_value = GREATEST(number_sequences.next_value, 100);
 
 -- Parent records (specs 01-03)

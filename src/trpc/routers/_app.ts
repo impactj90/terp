@@ -79,6 +79,7 @@ import { contactTypesRouter } from "./contactTypes"
 import { contactKindsRouter } from "./contactKinds"
 import { tenantModulesRouter } from "./tenantModules"
 import { crmRouter } from "./crm"
+import { billingRouter } from "./billing"
 
 export const appRouter = createTRPCRouter({
   health: healthRouter,
@@ -155,6 +156,7 @@ export const appRouter = createTRPCRouter({
   contactKinds: contactKindsRouter,
   tenantModules: tenantModulesRouter,
   crm: crmRouter,
+  billing: billingRouter,
 })
 
 /** Type-only export for client-side inference. */
