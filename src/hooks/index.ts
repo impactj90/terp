@@ -674,3 +674,26 @@ export {
   useUpdateCrmBankAccount,
   useDeleteCrmBankAccount,
 } from './use-crm-addresses'
+
+// CRM Correspondence
+export {
+  useCrmCorrespondence,
+  useCrmCorrespondenceById,
+  useCreateCrmCorrespondence,
+  useUpdateCrmCorrespondence,
+  useDeleteCrmCorrespondence,
+} from './use-crm-correspondence'
+
+// CRM Inquiries
+export {
+  useCrmInquiries,
+  useCrmInquiryById,
+  useCreateCrmInquiry,
+  useUpdateCrmInquiry,
+  useCloseCrmInquiry,
+  useCancelCrmInquiry,
+  useReopenCrmInquiry,
+  useLinkCrmInquiryOrder,
+  useCreateCrmInquiryOrder,
+  useDeleteCrmInquiry,
+} from './use-crm-inquiries'

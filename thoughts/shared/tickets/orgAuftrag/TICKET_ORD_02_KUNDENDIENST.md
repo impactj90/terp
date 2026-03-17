@@ -33,10 +33,10 @@ model BillingServiceCase {
   id                String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenantId          String                    @map("tenant_id") @db.Uuid
   number            String                    // Auto-generated via NumberSequence (key: "service_case")
-  title             String                    // Vorgangsbezeichnung (Pflicht)
+  title             String                    // Bezeichnung (Pflicht)
   addressId         String                    @map("address_id") @db.Uuid
   contactId         String?                   @map("contact_id") @db.Uuid
-  inquiryId         String?                   @map("inquiry_id") @db.Uuid  // Linked Vorgang
+  inquiryId         String?                   @map("inquiry_id") @db.Uuid  // Linked Anfrage (CRM_03)
   status            BillingServiceCaseStatus   @default(OPEN)
   reportedAt        DateTime                  @default(now()) @map("reported_at") @db.Timestamptz(6) // Gemeldet-am
   customerNotifiedCost Boolean               @default(false) @map("customer_notified_cost") // Auf Kosten hingewiesen

@@ -1915,55 +1915,165 @@ ON CONFLICT DO NOTHING;
 -- Number sequences with sensible prefixes
 INSERT INTO number_sequences (id, tenant_id, key, prefix, next_value)
 VALUES
-  ('c0000000-0000-4000-c000-000000000001', '10000000-0000-0000-0000-000000000001', 'customer', 'K-', 6),
-  ('c0000000-0000-4000-c000-000000000002', '10000000-0000-0000-0000-000000000001', 'supplier', 'L-', 4)
+  ('c0000000-0000-4000-a000-000000000001', '10000000-0000-0000-0000-000000000001', 'customer', 'K-', 6),
+  ('c0000000-0000-4000-a000-000000000002', '10000000-0000-0000-0000-000000000001', 'supplier', 'L-', 4)
 ON CONFLICT DO NOTHING;
 
 -- Customers
 INSERT INTO crm_addresses (id, tenant_id, number, type, company, street, zip, city, country, phone, email, match_code, payment_term_days, is_active, created_by_id)
 VALUES
-  ('c1000000-0000-4000-c000-000000000001', '10000000-0000-0000-0000-000000000001', 'K-1', 'CUSTOMER', 'Müller Maschinenbau GmbH', 'Industriestr. 42', '80333', 'München', 'DE', '+49 89 123456', 'info@mueller-maschinenbau.de', 'MUELLER MASCHINENBAU', 30, true, '00000000-0000-0000-0000-000000000001'),
-  ('c1000000-0000-4000-c000-000000000002', '10000000-0000-0000-0000-000000000001', 'K-2', 'CUSTOMER', 'Schmidt & Partner KG', 'Hauptstr. 15', '10115', 'Berlin', 'DE', '+49 30 987654', 'kontakt@schmidt-partner.de', 'SCHMIDT PARTNER', 14, true, '00000000-0000-0000-0000-000000000001'),
-  ('c1000000-0000-4000-c000-000000000003', '10000000-0000-0000-0000-000000000001', 'K-3', 'CUSTOMER', 'Weber Elektrotechnik AG', 'Siemensallee 8', '70173', 'Stuttgart', 'DE', '+49 711 456789', 'vertrieb@weber-elektro.de', 'WEBER ELEKTROTECHNIK', 30, true, '00000000-0000-0000-0000-000000000001'),
-  ('c1000000-0000-4000-c000-000000000004', '10000000-0000-0000-0000-000000000001', 'K-4', 'CUSTOMER', 'Bauer Logistik e.K.', 'Am Hafen 3', '20457', 'Hamburg', 'DE', '+49 40 333222', 'info@bauer-logistik.de', 'BAUER LOGISTIK', 60, true, '00000000-0000-0000-0000-000000000001'),
-  ('c1000000-0000-4000-c000-000000000005', '10000000-0000-0000-0000-000000000001', 'K-5', 'CUSTOMER', 'Fischer IT Solutions GmbH', 'Technopark 12', '01069', 'Dresden', 'DE', '+49 351 111222', 'hello@fischer-it.de', 'FISCHER IT', 14, false, '00000000-0000-0000-0000-000000000001')
+  ('c1000000-0000-4000-a000-000000000001', '10000000-0000-0000-0000-000000000001', 'K-1', 'CUSTOMER', 'Müller Maschinenbau GmbH', 'Industriestr. 42', '80333', 'München', 'DE', '+49 89 123456', 'info@mueller-maschinenbau.de', 'MUELLER MASCHINENBAU', 30, true, '00000000-0000-0000-0000-000000000001'),
+  ('c1000000-0000-4000-a000-000000000002', '10000000-0000-0000-0000-000000000001', 'K-2', 'CUSTOMER', 'Schmidt & Partner KG', 'Hauptstr. 15', '10115', 'Berlin', 'DE', '+49 30 987654', 'kontakt@schmidt-partner.de', 'SCHMIDT PARTNER', 14, true, '00000000-0000-0000-0000-000000000001'),
+  ('c1000000-0000-4000-a000-000000000003', '10000000-0000-0000-0000-000000000001', 'K-3', 'CUSTOMER', 'Weber Elektrotechnik AG', 'Siemensallee 8', '70173', 'Stuttgart', 'DE', '+49 711 456789', 'vertrieb@weber-elektro.de', 'WEBER ELEKTROTECHNIK', 30, true, '00000000-0000-0000-0000-000000000001'),
+  ('c1000000-0000-4000-a000-000000000004', '10000000-0000-0000-0000-000000000001', 'K-4', 'CUSTOMER', 'Bauer Logistik e.K.', 'Am Hafen 3', '20457', 'Hamburg', 'DE', '+49 40 333222', 'info@bauer-logistik.de', 'BAUER LOGISTIK', 60, true, '00000000-0000-0000-0000-000000000001'),
+  ('c1000000-0000-4000-a000-000000000005', '10000000-0000-0000-0000-000000000001', 'K-5', 'CUSTOMER', 'Fischer IT Solutions GmbH', 'Technopark 12', '01069', 'Dresden', 'DE', '+49 351 111222', 'hello@fischer-it.de', 'FISCHER IT', 14, false, '00000000-0000-0000-0000-000000000001')
 ON CONFLICT (id) DO NOTHING;
 
 -- Suppliers
 INSERT INTO crm_addresses (id, tenant_id, number, type, company, street, zip, city, country, phone, email, match_code, payment_term_days, discount_percent, discount_days, is_active, created_by_id)
 VALUES
-  ('c1000000-0000-4000-c000-000000000011', '10000000-0000-0000-0000-000000000001', 'L-1', 'SUPPLIER', 'Stahl-Union Lieferwerk GmbH', 'Werksweg 1', '45127', 'Essen', 'DE', '+49 201 555666', 'einkauf@stahl-union.de', 'STAHL UNION', 45, 2.0, 10, true, '00000000-0000-0000-0000-000000000001'),
-  ('c1000000-0000-4000-c000-000000000012', '10000000-0000-0000-0000-000000000001', 'L-2', 'SUPPLIER', 'Kunststoff Meier OHG', 'Gewerbegebiet Süd 5', '90402', 'Nürnberg', 'DE', '+49 911 777888', 'bestellung@meier-kunststoff.de', 'KUNSTSTOFF MEIER', 30, 3.0, 14, true, '00000000-0000-0000-0000-000000000001'),
-  ('c1000000-0000-4000-c000-000000000013', '10000000-0000-0000-0000-000000000001', 'L-3', 'SUPPLIER', 'Elektro-Großhandel Braun KG', 'Lagerstr. 20', '50667', 'Köln', 'DE', '+49 221 444555', 'order@braun-elektro.de', 'ELEKTRO BRAUN', 30, NULL, NULL, true, '00000000-0000-0000-0000-000000000001')
+  ('c1000000-0000-4000-a000-000000000011', '10000000-0000-0000-0000-000000000001', 'L-1', 'SUPPLIER', 'Stahl-Union Lieferwerk GmbH', 'Werksweg 1', '45127', 'Essen', 'DE', '+49 201 555666', 'einkauf@stahl-union.de', 'STAHL UNION', 45, 2.0, 10, true, '00000000-0000-0000-0000-000000000001'),
+  ('c1000000-0000-4000-a000-000000000012', '10000000-0000-0000-0000-000000000001', 'L-2', 'SUPPLIER', 'Kunststoff Meier OHG', 'Gewerbegebiet Süd 5', '90402', 'Nürnberg', 'DE', '+49 911 777888', 'bestellung@meier-kunststoff.de', 'KUNSTSTOFF MEIER', 30, 3.0, 14, true, '00000000-0000-0000-0000-000000000001'),
+  ('c1000000-0000-4000-a000-000000000013', '10000000-0000-0000-0000-000000000001', 'L-3', 'SUPPLIER', 'Elektro-Großhandel Braun KG', 'Lagerstr. 20', '50667', 'Köln', 'DE', '+49 221 444555', 'order@braun-elektro.de', 'ELEKTRO BRAUN', 30, NULL, NULL, true, '00000000-0000-0000-0000-000000000001')
 ON CONFLICT (id) DO NOTHING;
 
 -- Both (customer + supplier)
 INSERT INTO crm_addresses (id, tenant_id, number, type, company, street, zip, city, country, phone, email, match_code, tax_number, vat_id, payment_term_days, is_active, created_by_id)
 VALUES
-  ('c1000000-0000-4000-c000-000000000021', '10000000-0000-0000-0000-000000000001', 'K-6', 'BOTH', 'Hoffmann Werkzeuge GmbH & Co. KG', 'Werkzeugstr. 7', '42103', 'Wuppertal', 'DE', '+49 202 888999', 'info@hoffmann-werkzeuge.de', 'HOFFMANN WERKZEUGE', '113/456/78901', 'DE123456789', 30, true, '00000000-0000-0000-0000-000000000001')
+  ('c1000000-0000-4000-a000-000000000021', '10000000-0000-0000-0000-000000000001', 'K-6', 'BOTH', 'Hoffmann Werkzeuge GmbH & Co. KG', 'Werkzeugstr. 7', '42103', 'Wuppertal', 'DE', '+49 202 888999', 'info@hoffmann-werkzeuge.de', 'HOFFMANN WERKZEUGE', '113/456/78901', 'DE123456789', 30, true, '00000000-0000-0000-0000-000000000001')
 ON CONFLICT (id) DO NOTHING;
 
 -- Contacts
 INSERT INTO crm_contacts (id, tenant_id, address_id, first_name, last_name, position, department, phone, email, is_primary)
 VALUES
   -- Müller Maschinenbau contacts
-  ('c2000000-0000-4000-c000-000000000001', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-c000-000000000001', 'Hans', 'Müller', 'Geschäftsführer', 'Geschäftsleitung', '+49 89 123456-10', 'h.mueller@mueller-maschinenbau.de', true),
-  ('c2000000-0000-4000-c000-000000000002', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-c000-000000000001', 'Claudia', 'Berger', 'Einkaufsleiterin', 'Einkauf', '+49 89 123456-20', 'c.berger@mueller-maschinenbau.de', false),
+  ('c2000000-0000-4000-a000-000000000001', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000001', 'Hans', 'Müller', 'Geschäftsführer', 'Geschäftsleitung', '+49 89 123456-10', 'h.mueller@mueller-maschinenbau.de', true),
+  ('c2000000-0000-4000-a000-000000000002', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000001', 'Claudia', 'Berger', 'Einkaufsleiterin', 'Einkauf', '+49 89 123456-20', 'c.berger@mueller-maschinenbau.de', false),
   -- Schmidt & Partner contacts
-  ('c2000000-0000-4000-c000-000000000003', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-c000-000000000002', 'Peter', 'Schmidt', 'Inhaber', NULL, '+49 30 987654-0', 'p.schmidt@schmidt-partner.de', true),
+  ('c2000000-0000-4000-a000-000000000003', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000002', 'Peter', 'Schmidt', 'Inhaber', NULL, '+49 30 987654-0', 'p.schmidt@schmidt-partner.de', true),
   -- Stahl-Union contact
-  ('c2000000-0000-4000-c000-000000000004', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-c000-000000000011', 'Karl', 'Wagner', 'Vertriebsleiter', 'Vertrieb', '+49 201 555666-30', 'k.wagner@stahl-union.de', true),
+  ('c2000000-0000-4000-a000-000000000004', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000011', 'Karl', 'Wagner', 'Vertriebsleiter', 'Vertrieb', '+49 201 555666-30', 'k.wagner@stahl-union.de', true),
   -- Hoffmann Werkzeuge contacts
-  ('c2000000-0000-4000-c000-000000000005', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-c000-000000000021', 'Ulrike', 'Hoffmann', 'Geschäftsführerin', 'Geschäftsleitung', '+49 202 888999-10', 'u.hoffmann@hoffmann-werkzeuge.de', true),
-  ('c2000000-0000-4000-c000-000000000006', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-c000-000000000021', 'Jens', 'Krause', 'Buchhaltung', 'Finanzen', '+49 202 888999-20', 'j.krause@hoffmann-werkzeuge.de', false)
+  ('c2000000-0000-4000-a000-000000000005', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000021', 'Ulrike', 'Hoffmann', 'Geschäftsführerin', 'Geschäftsleitung', '+49 202 888999-10', 'u.hoffmann@hoffmann-werkzeuge.de', true),
+  ('c2000000-0000-4000-a000-000000000006', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000021', 'Jens', 'Krause', 'Buchhaltung', 'Finanzen', '+49 202 888999-20', 'j.krause@hoffmann-werkzeuge.de', false)
 ON CONFLICT (id) DO NOTHING;
 
 -- Bank accounts
 INSERT INTO crm_bank_accounts (id, tenant_id, address_id, iban, bic, bank_name, account_holder, is_default)
 VALUES
-  ('c3000000-0000-4000-c000-000000000001', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-c000-000000000001', 'DE89370400440532013000', 'COBADEFFXXX', 'Commerzbank', 'Müller Maschinenbau GmbH', true),
-  ('c3000000-0000-4000-c000-000000000002', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-c000-000000000002', 'DE27100777770209299700', 'DEUTDEDBBER', 'Deutsche Bank', 'Schmidt & Partner KG', true),
-  ('c3000000-0000-4000-c000-000000000003', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-c000-000000000011', 'DE62370502990000684712', 'COKSDE33XXX', 'Sparkasse Essen', 'Stahl-Union Lieferwerk GmbH', true),
-  ('c3000000-0000-4000-c000-000000000004', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-c000-000000000021', 'DE44500105175407324931', 'INGDDEFFXXX', 'ING', 'Hoffmann Werkzeuge GmbH & Co. KG', true),
-  ('c3000000-0000-4000-c000-000000000005', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-c000-000000000021', 'DE75512108001245126199', 'SOGEDEFFXXX', 'Société Générale', 'Hoffmann Werkzeuge GmbH & Co. KG', false)
+  ('c3000000-0000-4000-a000-000000000001', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000001', 'DE89370400440532013000', 'COBADEFFXXX', 'Commerzbank', 'Müller Maschinenbau GmbH', true),
+  ('c3000000-0000-4000-a000-000000000002', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000002', 'DE27100777770209299700', 'DEUTDEDBBER', 'Deutsche Bank', 'Schmidt & Partner KG', true),
+  ('c3000000-0000-4000-a000-000000000003', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000011', 'DE62370502990000684712', 'COKSDE33XXX', 'Sparkasse Essen', 'Stahl-Union Lieferwerk GmbH', true),
+  ('c3000000-0000-4000-a000-000000000004', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000021', 'DE44500105175407324931', 'INGDDEFFXXX', 'ING', 'Hoffmann Werkzeuge GmbH & Co. KG', true),
+  ('c3000000-0000-4000-a000-000000000005', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000021', 'DE75512108001245126199', 'SOGEDEFFXXX', 'Société Générale', 'Hoffmann Werkzeuge GmbH & Co. KG', false)
 ON CONFLICT (id) DO NOTHING;
+
+-- Correspondence entries
+INSERT INTO crm_correspondences (id, tenant_id, address_id, direction, type, date, contact_id, from_user, to_user, subject, content, created_by_id)
+VALUES
+  -- Müller Maschinenbau GmbH (K-1) — 4 Einträge
+  ('c4000000-0000-4000-a000-000000000001', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000001', 'INCOMING', 'phone', '2026-01-10 09:15:00+01', 'c2000000-0000-4000-a000-000000000001', 'Hans Müller', 'Vertrieb intern', 'Anfrage Sonderkonditionen Großauftrag', 'Hr. Müller fragt nach Sonderkonditionen für einen Großauftrag über 50 Frästeile. Rückruf bis Freitag zugesagt.', '00000000-0000-0000-0000-000000000001'),
+  ('c4000000-0000-4000-a000-000000000002', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000001', 'OUTGOING', 'email', '2026-01-14 14:30:00+01', 'c2000000-0000-4000-a000-000000000001', 'Vertrieb', 'Hans Müller', 'Angebot Sonderkonditionen Frästeile', 'Angebot mit 8% Mengenrabatt per E-Mail an Hr. Müller gesendet. Lieferzeit 4 Wochen.', '00000000-0000-0000-0000-000000000001'),
+  ('c4000000-0000-4000-a000-000000000003', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000001', 'INCOMING', 'email', '2026-02-03 10:45:00+01', 'c2000000-0000-4000-a000-000000000002', 'Claudia Berger', 'Buchhaltung', 'Rückfrage Rechnung RE-2026-0042', 'Fr. Berger bittet um korrigierte Rechnung — falscher Bestellbezug auf Position 3.', '00000000-0000-0000-0000-000000000001'),
+  ('c4000000-0000-4000-a000-000000000004', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000001', 'OUTGOING', 'letter', '2026-02-20 08:00:00+01', NULL, 'Geschäftsführung', 'Müller Maschinenbau GmbH', 'Einladung Hausmesse März 2026', 'Einladung zur Hausmesse am 15.03.2026 per Post versendet, inkl. Anfahrtsbeschreibung und Parkausweis.', '00000000-0000-0000-0000-000000000001'),
+
+  -- Schmidt & Partner KG (K-2) — 3 Einträge
+  ('c4000000-0000-4000-a000-000000000011', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000002', 'OUTGOING', 'phone', '2026-01-20 11:00:00+01', 'c2000000-0000-4000-a000-000000000003', 'Vertrieb', 'Peter Schmidt', 'Nachfass Angebot AG-2026-0015', 'Hr. Schmidt telefonisch erreicht. Entscheidung fällt nächste Woche im Partnerkreis.', '00000000-0000-0000-0000-000000000001'),
+  ('c4000000-0000-4000-a000-000000000012', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000002', 'INCOMING', 'email', '2026-01-28 16:20:00+01', 'c2000000-0000-4000-a000-000000000003', 'Peter Schmidt', 'Vertrieb', 'Auftragserteilung Projekt Berlin-Mitte', 'Bestellung per E-Mail eingegangen. Verweis auf Angebot AG-2026-0015, Lieferadresse abweichend.', '00000000-0000-0000-0000-000000000001'),
+  ('c4000000-0000-4000-a000-000000000013', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000002', 'INTERNAL', 'email', '2026-02-05 09:00:00+01', NULL, 'Vertrieb', 'Lager/Versand', 'Interne Abstimmung Liefertermin Schmidt', 'Lager bestätigt Verfügbarkeit KW 8. Versand plant Spedition für 19.02.', '00000000-0000-0000-0000-000000000001'),
+
+  -- Weber Elektrotechnik AG (K-3) — 3 Einträge
+  ('c4000000-0000-4000-a000-000000000021', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000003', 'INCOMING', 'phone', '2026-02-10 08:30:00+01', NULL, 'Zentrale Weber', 'Empfang', 'Erstanfrage Schaltschrankkomponenten', 'Telefonische Erstanfrage über Zentrale. Ansprechpartner wird noch benannt. Katalog soll per E-Mail folgen.', '00000000-0000-0000-0000-000000000001'),
+  ('c4000000-0000-4000-a000-000000000022', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000003', 'OUTGOING', 'email', '2026-02-10 15:00:00+01', NULL, 'Vertrieb', 'vertrieb@weber-elektro.de', 'Produktkatalog und Preisliste 2026', 'Digitaler Katalog und aktuelle Preisliste als PDF per E-Mail gesendet.', '00000000-0000-0000-0000-000000000001'),
+  ('c4000000-0000-4000-a000-000000000023', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000003', 'OUTGOING', 'fax', '2026-02-18 10:00:00+01', NULL, 'Vertrieb', 'Weber Elektrotechnik AG', 'Angebot AG-2026-0031 Schaltschrankzubehör', 'Angebot per Fax gesendet auf Wunsch des Kunden. Original folgt per Post.', '00000000-0000-0000-0000-000000000001'),
+
+  -- Bauer Logistik e.K. (K-4) — 3 Einträge
+  ('c4000000-0000-4000-a000-000000000031', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000004', 'INCOMING', 'email', '2026-01-15 12:00:00+01', NULL, 'info@bauer-logistik.de', 'Vertrieb', 'Anfrage Regalsysteme für Neubau', 'Bauer Logistik plant Neubau Lagerhalle in Hamburg-Wilhelmsburg und benötigt Schwerlast-Regalsysteme.', '00000000-0000-0000-0000-000000000001'),
+  ('c4000000-0000-4000-a000-000000000032', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000004', 'OUTGOING', 'visit', '2026-02-01 10:00:00+01', NULL, 'Außendienst Nord', 'Bauer Logistik e.K.', 'Vor-Ort-Besichtigung Lagerhalle Neubau', 'Aufmaß vor Ort genommen. 3 Regalgassen à 12m, Tragkraft 2t/Fachboden. Fotos im Anhang.', '00000000-0000-0000-0000-000000000001'),
+  ('c4000000-0000-4000-a000-000000000033', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000004', 'OUTGOING', 'email', '2026-02-12 14:00:00+01', NULL, 'Vertrieb', 'info@bauer-logistik.de', 'Angebot AG-2026-0028 Regalsysteme', 'Detailliertes Angebot mit 3D-Zeichnung und Montagezeitplan gesendet. Zahlungsziel 60 Tage.', '00000000-0000-0000-0000-000000000001'),
+
+  -- Fischer IT Solutions GmbH (K-5, inaktiv) — 2 Einträge
+  ('c4000000-0000-4000-a000-000000000041', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000005', 'INCOMING', 'phone', '2025-11-05 14:00:00+01', NULL, 'Fischer IT', 'Vertrieb', 'Reklamation Lieferverzug Bestellung B-4711', 'Kunde beschwert sich über 2 Wochen Lieferverzug. Eskalation an Geschäftsführung angekündigt.', '00000000-0000-0000-0000-000000000001'),
+  ('c4000000-0000-4000-a000-000000000042', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000005', 'OUTGOING', 'email', '2025-11-07 09:30:00+01', NULL, 'Geschäftsführung', 'hello@fischer-it.de', 'Stellungnahme und Entschuldigung Lieferverzug', 'Entschuldigungsschreiben mit Erklärung (Lieferengpass Vorprodukt) und 5% Gutschrift auf nächste Bestellung.', '00000000-0000-0000-0000-000000000001'),
+
+  -- Stahl-Union Lieferwerk GmbH (L-1) — 3 Einträge
+  ('c4000000-0000-4000-a000-000000000051', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000011', 'OUTGOING', 'email', '2026-01-08 08:00:00+01', 'c2000000-0000-4000-a000-000000000004', 'Einkauf', 'Karl Wagner', 'Bestellung Flachstahl S235 — 12 Tonnen', 'Bestellung für Q1 aufgegeben. Lieferung in 3 Chargen à 4t, KW 4/6/8.', '00000000-0000-0000-0000-000000000001'),
+  ('c4000000-0000-4000-a000-000000000052', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000011', 'INCOMING', 'phone', '2026-01-22 11:15:00+01', 'c2000000-0000-4000-a000-000000000004', 'Karl Wagner', 'Einkauf', 'Lieferverzug 1. Charge — KW 5 statt KW 4', 'Hr. Wagner informiert über Verzögerung wegen Walzwerksstörung. Neue Lieferung voraussichtlich 30.01.', '00000000-0000-0000-0000-000000000001'),
+  ('c4000000-0000-4000-a000-000000000053', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000011', 'INCOMING', 'email', '2026-02-25 13:00:00+01', 'c2000000-0000-4000-a000-000000000004', 'Karl Wagner', 'Einkauf', 'Preiserhöhung Stahl ab April 2026', 'Ankündigung 6% Preiserhöhung ab 01.04.2026 wegen gestiegener Energiekosten. Bitte um Stellungnahme.', '00000000-0000-0000-0000-000000000001'),
+
+  -- Kunststoff Meier OHG (L-2) — 2 Einträge
+  ('c4000000-0000-4000-a000-000000000061', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000012', 'OUTGOING', 'phone', '2026-02-03 10:00:00+01', NULL, 'Einkauf', 'Kunststoff Meier', 'Nachbestellung PA6-Granulat 500kg', 'Telefonische Nachbestellung, Lieferung frei Haus bis KW 7.', '00000000-0000-0000-0000-000000000001'),
+  ('c4000000-0000-4000-a000-000000000062', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000012', 'INCOMING', 'letter', '2026-02-15 00:00:00+01', NULL, 'Kunststoff Meier OHG', 'Einkauf', 'Neue AGB und Preisliste 2026', 'Aktualisierte AGB und Preisliste per Post erhalten. Weiterleitung an Rechtsabteilung.', '00000000-0000-0000-0000-000000000001'),
+
+  -- Elektro-Großhandel Braun KG (L-3) — 2 Einträge
+  ('c4000000-0000-4000-a000-000000000071', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000013', 'OUTGOING', 'email', '2026-01-12 09:00:00+01', NULL, 'Einkauf', 'order@braun-elektro.de', 'Anfrage Verfügbarkeit Siemens S7-1500 CPU', 'Lieferbarkeit und Preis für 5x Siemens 6ES7 515-2AM02-0AB0 angefragt.', '00000000-0000-0000-0000-000000000001'),
+  ('c4000000-0000-4000-a000-000000000072', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000013', 'INCOMING', 'email', '2026-01-13 14:30:00+01', NULL, 'order@braun-elektro.de', 'Einkauf', 'RE: Verfügbarkeit Siemens S7-1500 CPU', '3 Stück ab Lager lieferbar, 2 weitere in KW 5. Angebot im Anhang.', '00000000-0000-0000-0000-000000000001'),
+
+  -- Hoffmann Werkzeuge GmbH & Co. KG (K-6, BOTH) — 4 Einträge
+  ('c4000000-0000-4000-a000-000000000081', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000021', 'INCOMING', 'visit', '2026-01-25 09:00:00+01', 'c2000000-0000-4000-a000-000000000005', 'Ulrike Hoffmann', 'Geschäftsführung', 'Besuch Fr. Hoffmann — Jahresgespräch', 'Jahresgespräch mit Fr. Hoffmann. Umsatz 2025 +12%. Rahmenvertrag 2026 vereinbart, Konditionen unverändert.', '00000000-0000-0000-0000-000000000001'),
+  ('c4000000-0000-4000-a000-000000000082', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000021', 'INCOMING', 'email', '2026-02-08 11:00:00+01', 'c2000000-0000-4000-a000-000000000006', 'Jens Krause', 'Buchhaltung', 'Zahlungsavise Februar 2026', 'Zahlungsavise für 3 offene Rechnungen erhalten. Zahlung per Überweisung am 10.02.', '00000000-0000-0000-0000-000000000001'),
+  ('c4000000-0000-4000-a000-000000000083', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000021', 'OUTGOING', 'phone', '2026-02-14 15:30:00+01', 'c2000000-0000-4000-a000-000000000005', 'Vertrieb', 'Ulrike Hoffmann', 'Lieferabruf Werkzeugstahl März', 'Abruf für März besprochen: 2t Werkzeugstahl 1.2343 ESU. Liefertermin 05.03.', '00000000-0000-0000-0000-000000000001'),
+  ('c4000000-0000-4000-a000-000000000084', '10000000-0000-0000-0000-000000000001', 'c1000000-0000-4000-a000-000000000021', 'INTERNAL', 'email', '2026-02-16 08:30:00+01', NULL, 'Vertrieb', 'QS/Reklamation', 'Qualitätsproblem letzte Hoffmann-Lieferung', 'Rückläufer 3 Fräser mit Ausbrüchen. QS soll Prüfbericht erstellen vor Reklamation an Hoffmann.', '00000000-0000-0000-0000-000000000001')
+ON CONFLICT (id) DO NOTHING;
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- CRM Inquiry / Vorgang entries (CRM_03)
+-- ═══════════════════════════════════════════════════════════════════════════════
+INSERT INTO crm_inquiries (id, tenant_id, number, title, address_id, contact_id, status, effort, credit_rating, notes, created_at, updated_at, created_by_id)
+VALUES
+  -- Müller Maschinenbau GmbH (K-1) — 2 Vorgänge
+  ('c5000000-0000-4000-a000-000000000001', '10000000-0000-0000-0000-000000000001', 'V-1', 'Großauftrag Frästeile 50 Stück', 'c1000000-0000-4000-a000-000000000001', 'c2000000-0000-4000-a000-000000000001', 'IN_PROGRESS', 'high', 'gut', 'Anfrage über Sonderkonditionen. Angebot mit 8% Mengenrabatt gesendet.', '2026-01-10 09:00:00+01', '2026-01-14 15:00:00+01', '00000000-0000-0000-0000-000000000001'),
+  ('c5000000-0000-4000-a000-000000000002', '10000000-0000-0000-0000-000000000001', 'V-2', 'Einladung Hausmesse März 2026', 'c1000000-0000-4000-a000-000000000001', NULL, 'CLOSED', 'low', NULL, 'Einladung versendet per Post.', '2026-02-20 08:00:00+01', '2026-03-16 10:00:00+01', '00000000-0000-0000-0000-000000000001'),
+
+  -- Schmidt & Partner KG (K-2) — 1 Vorgang
+  ('c5000000-0000-4000-a000-000000000011', '10000000-0000-0000-0000-000000000001', 'V-3', 'Projekt Berlin-Mitte Auftragserteilung', 'c1000000-0000-4000-a000-000000000002', 'c2000000-0000-4000-a000-000000000003', 'CLOSED', 'high', 'sehr gut', 'Bestellung eingegangen. Lieferadresse abweichend.', '2026-01-28 16:00:00+01', '2026-02-19 10:00:00+01', '00000000-0000-0000-0000-000000000001'),
+
+  -- Weber Elektrotechnik AG (K-3) — 1 Vorgang
+  ('c5000000-0000-4000-a000-000000000021', '10000000-0000-0000-0000-000000000001', 'V-4', 'Erstanfrage Schaltschrankkomponenten', 'c1000000-0000-4000-a000-000000000003', NULL, 'OPEN', 'medium', NULL, 'Telefonische Erstanfrage. Katalog und Preisliste gesendet. Ansprechpartner wird noch benannt.', '2026-02-10 08:30:00+01', '2026-02-10 15:00:00+01', '00000000-0000-0000-0000-000000000001'),
+
+  -- Bauer Logistik e.K. (K-4) — 1 Vorgang
+  ('c5000000-0000-4000-a000-000000000031', '10000000-0000-0000-0000-000000000001', 'V-5', 'Regalsysteme Neubau Hamburg-Wilhelmsburg', 'c1000000-0000-4000-a000-000000000004', NULL, 'IN_PROGRESS', 'high', 'gut', 'Vor-Ort-Besichtigung durchgeführt. Angebot mit 3D-Zeichnung gesendet.', '2026-01-15 12:00:00+01', '2026-02-12 14:00:00+01', '00000000-0000-0000-0000-000000000001'),
+
+  -- Fischer IT Solutions GmbH (K-5, inaktiv) — 1 Vorgang
+  ('c5000000-0000-4000-a000-000000000041', '10000000-0000-0000-0000-000000000001', 'V-6', 'Reklamation Lieferverzug B-4711', 'c1000000-0000-4000-a000-000000000005', NULL, 'CANCELLED', 'medium', 'kritisch', 'Eskalation wegen 2 Wochen Lieferverzug. Storniert da Kunde abgesprungen.', '2025-11-05 14:00:00+01', '2025-11-10 09:00:00+01', '00000000-0000-0000-0000-000000000001'),
+
+  -- Hoffmann Werkzeuge GmbH & Co. KG (K-6, BOTH) — 1 Vorgang
+  ('c5000000-0000-4000-a000-000000000051', '10000000-0000-0000-0000-000000000001', 'V-7', 'Rahmenvertrag 2026 und Qualitätsproblem', 'c1000000-0000-4000-a000-000000000021', 'c2000000-0000-4000-a000-000000000005', 'IN_PROGRESS', 'high', 'sehr gut', 'Jahresgespräch positiv. Aber Qualitätsproblem bei letzter Lieferung — QS prüft.', '2026-01-25 09:00:00+01', '2026-02-16 08:30:00+01', '00000000-0000-0000-0000-000000000001')
+ON CONFLICT (id) DO NOTHING;
+
+-- Set closed inquiry fields for V-2 and V-3
+UPDATE crm_inquiries SET
+  closed_at = '2026-03-16 10:00:00+01',
+  closed_by_id = '00000000-0000-0000-0000-000000000001',
+  closing_reason = 'Veranstaltung durchgeführt',
+  closing_remarks = 'Hausmesse erfolgreich, 12 Teilnehmer.'
+WHERE id = 'c5000000-0000-4000-a000-000000000002';
+
+UPDATE crm_inquiries SET
+  closed_at = '2026-02-19 10:00:00+01',
+  closed_by_id = '00000000-0000-0000-0000-000000000001',
+  closing_reason = 'Auftrag erteilt',
+  closing_remarks = 'Bestellung bestätigt. Lieferung KW 8 per Spedition.'
+WHERE id = 'c5000000-0000-4000-a000-000000000011';
+
+-- Link some correspondence entries to inquiries
+UPDATE crm_correspondences SET inquiry_id = 'c5000000-0000-4000-a000-000000000001'
+WHERE id IN ('c4000000-0000-4000-a000-000000000001', 'c4000000-0000-4000-a000-000000000002');
+
+UPDATE crm_correspondences SET inquiry_id = 'c5000000-0000-4000-a000-000000000011'
+WHERE id IN ('c4000000-0000-4000-a000-000000000012', 'c4000000-0000-4000-a000-000000000013');
+
+UPDATE crm_correspondences SET inquiry_id = 'c5000000-0000-4000-a000-000000000021'
+WHERE id IN ('c4000000-0000-4000-a000-000000000021', 'c4000000-0000-4000-a000-000000000022', 'c4000000-0000-4000-a000-000000000023');
+
+-- Link some inquiries to existing Terp orders (Auftragsverknüpfung)
+UPDATE crm_inquiries SET order_id = '00000000-0000-0000-0000-000000000b10'
+WHERE id = 'c5000000-0000-4000-a000-000000000001'; -- V-1 (Großauftrag Frästeile) → ORD-001 (Projekt Alpha)
+
+UPDATE crm_inquiries SET order_id = '00000000-0000-0000-0000-000000000b11'
+WHERE id = 'c5000000-0000-4000-a000-000000000031'; -- V-5 (Regalsysteme Neubau) → ORD-002 (Wartung Portal)
+
+-- Update number sequence for inquiry to account for seeded data (V-1 through V-7)
+INSERT INTO number_sequences (id, tenant_id, key, prefix, next_value, created_at, updated_at)
+VALUES (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'inquiry', 'V-', 8, NOW(), NOW())
+ON CONFLICT (tenant_id, key) DO UPDATE SET next_value = GREATEST(number_sequences.next_value, 8);

@@ -283,6 +283,13 @@ export const navConfig: NavSection[] = [
         module: 'crm',
         permissions: ['crm_addresses.view'],
       },
+      {
+        titleKey: 'crmInquiries',
+        href: '/crm/inquiries',
+        icon: FileText,
+        module: 'crm',
+        permissions: ['crm_inquiries.view'],
+      },
     ],
   },
   {

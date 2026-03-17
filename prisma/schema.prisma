@@ -178,6 +178,8 @@ model Tenant {
   crmAddresses                CrmAddress[]
   crmContacts                 CrmContact[]
   crmBankAccounts             CrmBankAccount[]
+  crmCorrespondences          CrmCorrespondence[]
+  crmInquiries                CrmInquiry[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
@@ -217,6 +219,17 @@ enum CrmAddressType {
   BOTH
 
   @@map("crm_address_type")
+}
+
+// -----------------------------------------------------------------------------
+// CrmCorrespondenceDirection enum
+// -----------------------------------------------------------------------------
+enum CrmCorrespondenceDirection {
+  INCOMING
+  OUTGOING
+  INTERNAL
+
+  @@map("crm_correspondence_direction")
 }
 
 // -----------------------------------------------------------------------------
@@ -276,9 +289,11 @@ model CrmAddress {
   updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
   createdById     String?        @map("created_by_id") @db.Uuid
 
-  tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  contacts     CrmContact[]
-  bankAccounts CrmBankAccount[]
+  tenant          Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contacts        CrmContact[]
+  bankAccounts    CrmBankAccount[]
+  correspondences CrmCorrespondence[]
+  inquiries       CrmInquiry[]
 
   @@unique([tenantId, number], map: "uq_crm_addresses_tenant_number")
   @@index([tenantId], map: "idx_crm_addresses_tenant_id")
@@ -309,8 +324,10 @@ model CrmContact {
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  tenant  Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  address CrmAddress @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  address         CrmAddress          @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  correspondences CrmCorrespondence[]
+  inquiries       CrmInquiry[]
 
   @@index([addressId], map: "idx_crm_contacts_address_id")
   @@index([tenantId], map: "idx_crm_contacts_tenant_id")
@@ -341,6 +358,91 @@ model CrmBankAccount {
   @@index([addressId], map: "idx_crm_bank_accounts_address_id")
   @@index([tenantId], map: "idx_crm_bank_accounts_tenant_id")
   @@map("crm_bank_accounts")
+}
+
+enum CrmInquiryStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+  CANCELLED
+
+  @@map("crm_inquiry_status")
+}
+
+// -----------------------------------------------------------------------------
+// CrmCorrespondence
+// -----------------------------------------------------------------------------
+// Migration: 000096
+//
+// Correspondence log entry linked to a CRM address.
+model CrmCorrespondence {
+  id          String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String                      @map("tenant_id") @db.Uuid
+  addressId   String                      @map("address_id") @db.Uuid
+  direction   CrmCorrespondenceDirection
+  type        String                      // "phone", "email", "letter", "fax", "visit"
+  date        DateTime                    @db.Timestamptz(6)
+  contactId   String?                     @map("contact_id") @db.Uuid
+  inquiryId   String?                     @map("inquiry_id") @db.Uuid
+  fromUser    String?                     @map("from_user")
+  toUser      String?                     @map("to_user")
+  subject     String
+  content     String?
+  attachments Json?                       @db.JsonB
+  createdAt   DateTime                    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime                    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById String?                     @map("created_by_id") @db.Uuid
+
+  tenant  Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  address CrmAddress  @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  contact CrmContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  inquiry CrmInquiry? @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, addressId])
+  @@index([tenantId, date])
+  @@index([tenantId, inquiryId])
+  @@map("crm_correspondences")
+}
+
+// -----------------------------------------------------------------------------
+// CrmInquiry
+// -----------------------------------------------------------------------------
+// Migration: 000097
+//
+// Inquiry / Vorgang — the overarching bracket for customer activities.
+// Status workflow: OPEN → IN_PROGRESS → CLOSED / CANCELLED
+// Closed inquiries are immutable.
+model CrmInquiry {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String           @map("tenant_id") @db.Uuid
+  number         String           @db.VarChar(50)
+  title          String           @db.VarChar(255)
+  addressId      String           @map("address_id") @db.Uuid
+  contactId      String?          @map("contact_id") @db.Uuid
+  status         CrmInquiryStatus @default(OPEN)
+  effort         String?          @db.VarChar(20)
+  creditRating   String?          @map("credit_rating") @db.VarChar(50)
+  notes          String?          @db.Text
+  orderId        String?          @map("order_id") @db.Uuid
+  closedAt       DateTime?        @map("closed_at") @db.Timestamptz(6)
+  closedById     String?          @map("closed_by_id") @db.Uuid
+  closingReason  String?          @map("closing_reason") @db.Text
+  closingRemarks String?          @map("closing_remarks") @db.Text
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById    String?          @map("created_by_id") @db.Uuid
+
+  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  address         CrmAddress          @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  contact         CrmContact?         @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  order           Order?              @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  correspondences CrmCorrespondence[]
+
+  @@unique([tenantId, number], map: "uq_crm_inquiries_tenant_number")
+  @@index([tenantId, status])
+  @@index([tenantId, addressId])
+  @@index([tenantId, orderId])
+  @@map("crm_inquiries")
 }
 
 // -----------------------------------------------------------------------------
@@ -1102,6 +1204,7 @@ model Order {
   assignments         OrderAssignment[]
   defaultForEmployees Employee[]        @relation("EmployeeDefaultOrder")
   orderBookings       OrderBooking[]
+  crmInquiries        CrmInquiry[]
 
   @@unique([tenantId, code], map: "orders_tenant_id_code_key")
   @@index([tenantId], map: "idx_orders_tenant")

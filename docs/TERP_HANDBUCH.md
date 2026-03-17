@@ -36,7 +36,11 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [12.2 Kontaktpersonen](#122-kontaktpersonen)
     - [12.3 Bankverbindungen](#123-bankverbindungen)
     - [12.4 Nummernkreise](#124-nummernkreise)
-    - [12.5 Praxisbeispiel: Neuen Kunden mit Kontakten und Bankverbindung anlegen](#125-praxisbeispiel-neuen-kunden-mit-kontakten-und-bankverbindung-anlegen)
+    - [12.5 Korrespondenz](#125-korrespondenz)
+    - [12.6 Praxisbeispiel: Korrespondenz protokollieren](#126-praxisbeispiel-korrespondenz-protokollieren)
+    - [12.7 Praxisbeispiel: Neuen Kunden mit Kontakten und Bankverbindung anlegen](#127-praxisbeispiel-neuen-kunden-mit-kontakten-und-bankverbindung-anlegen)
+    - [12.8 Anfragen](#128-anfragen)
+    - [12.9 Praxisbeispiel: Kundenanfrage anlegen und abschließen](#129-praxisbeispiel-kundenanfrage-anlegen-und-abschließen)
 13. [Glossar](#13-glossar)
 
 ---
@@ -4202,9 +4206,9 @@ Die Detailseite hat **6 Tabs**:
 
 **Tab „Bankverbindungen":** → Abschnitt 12.3
 
-**Tab „Korrespondenz":** Platzhalter — „In Vorbereitung — CRM_02"
+**Tab „Korrespondenz":** Kommunikationsprotokoll der Adresse — siehe Abschnitt 12.5
 
-**Tab „Anfragen":** Platzhalter — „In Vorbereitung — CRM_03"
+**Tab „Anfragen":** Kundenanfragen dieser Adresse — siehe Abschnitt 12.8
 
 **Tab „Belege":** Platzhalter — „In Vorbereitung — ORD_01"
 
@@ -4313,6 +4317,7 @@ Analog zu Kontaktpersonen: ⋯-Menü → „Bearbeiten" oder „Löschen" mit Be
 |-------------|----------------|-------------|
 | `customer` | K- | Kundennummern (K-1, K-2, …) |
 | `supplier` | L- | Lieferantennummern (L-1, L-2, …) |
+| `inquiry` | V- | Anfragenummern (V-1, V-2, …) |
 
 **Ändern:**
 1. 📍 Präfix und/oder nächsten Wert anpassen
@@ -4324,7 +4329,127 @@ Analog zu Kontaktpersonen: ⋯-Menü → „Bearbeiten" oder „Löschen" mit Be
 
 ---
 
-### 12.5 Praxisbeispiel: Neuen Kunden mit Kontakten und Bankverbindung anlegen
+### 12.5 Korrespondenz
+
+**Was ist es?** Korrespondenz ist das Kommunikationsprotokoll einer CRM-Adresse. Jeder Telefonanruf, jede E-Mail, jeder Brief, jedes Fax und jeder Besuch wird als Eintrag mit Datum, Richtung (eingehend/ausgehend/intern), Typ und Betreff erfasst. Optional kann ein Kontaktpartner aus der Adresse verknüpft werden.
+
+**Wozu dient es?** Die lückenlose Dokumentation aller Kommunikationsvorgänge mit Kunden und Lieferanten ist eine Grundvoraussetzung für professionelles CRM. Alle Mitarbeiter sehen auf einen Blick, wann zuletzt mit einem Kunden kommuniziert wurde, welche Themen besprochen wurden und wer der Ansprechpartner war.
+
+Berechtigung: „CRM-Korrespondenz anzeigen" (Lesen), „CRM-Korrespondenz erstellen/bearbeiten/löschen" (Schreiben)
+
+Adressdetailseite, Tab **„Korrespondenz"**
+
+Tabelle aller Korrespondenzeinträge dieser Adresse, sortiert nach Datum (neueste zuerst).
+
+Tabelle mit Spalten:
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Datum** | Datum des Kommunikationsvorgangs |
+| **Richtung** | Badge: Eingehend, Ausgehend, Intern |
+| **Typ** | Badge mit Icon: Telefon, E-Mail, Brief, Fax, Besuch |
+| **Betreff** | Betreffzeile des Eintrags |
+| **Kontakt** | Verknüpfte Kontaktperson (falls vorhanden) |
+| **Aktionen** | Menü: Anzeigen, Bearbeiten, Löschen |
+
+**Filter:**
+- **Suchfeld**: Durchsucht Betreff und Inhalt gleichzeitig (Volltextsuche, Groß-/Kleinschreibung egal)
+- **Richtung-Filter**: Alle / Eingehend / Ausgehend / Intern
+- **Typ-Filter**: Alle / Telefon / E-Mail / Brief / Fax / Besuch
+
+##### Neuen Korrespondenzeintrag anlegen
+
+1. Tab „Korrespondenz" — **„Neuer Eintrag"** (oben rechts)
+2. Seitliches Formular (Sheet) öffnet sich: „Neuen Korrespondenzeintrag anlegen"
+3. Abschnitt **Grunddaten** ausfüllen:
+   - **Richtung** (Eingehend / Ausgehend / Intern) — Pflicht
+   - **Typ** (Dropdown: Telefon / E-Mail / Brief / Fax / Besuch) — Pflicht
+   - **Datum** (Standard: heute) — Pflicht
+4. Abschnitt **Beteiligte** ausfüllen:
+   - **Kontakt** (Dropdown: Kontaktpersonen dieser Adresse, optional)
+   - **Von (intern)** (Freitext, optional — z. B. interner Absender)
+   - **An (intern)** (Freitext, optional — z. B. interner Empfänger)
+5. Abschnitt **Inhalt** ausfüllen:
+   - **Betreff** (Pflicht)
+   - **Inhalt** (Freitext, optional — Gesprächsnotizen, E-Mail-Text etc.)
+6. „Anlegen"
+7. Eintrag erscheint in der Tabelle, sortiert nach Datum
+
+##### Korrespondenzeintrag anzeigen
+
+1. Menü des Eintrags — **„Anzeigen"**
+2. Dialog zeigt alle Details: Betreff, Richtung, Typ, Datum, Kontakt, Von/An, Inhalt, Anhänge
+
+##### Korrespondenzeintrag bearbeiten
+
+1. Menü des Eintrags — **„Bearbeiten"**
+2. Formular öffnet sich mit den aktuellen Werten vorausgefüllt
+3. Gewünschte Felder ändern
+4. „Speichern"
+
+##### Korrespondenzeintrag löschen
+
+1. Menü des Eintrags — **„Löschen"**
+2. Bestätigungsdialog: „Möchten Sie den Korrespondenzeintrag ‚{Betreff}' wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+3. „Bestätigen"
+4. Eintrag wird unwiderruflich gelöscht
+
+**Hinweis:** Korrespondenzeinträge werden hart gelöscht (kein Soft-Delete), da es sich um ein Kommunikationsprotokoll handelt. Beim Löschen einer übergeordneten Adresse werden alle zugehörigen Korrespondenzeinträge automatisch mit gelöscht (Kaskade).
+
+**Hinweis:** Korrespondenzeinträge können über die Adresse mit Anfragen verknüpft werden. Die Korrespondenzliste einer Anfrage zeigt alle Einträge der zugehörigen Adresse (→ Abschnitt 12.8).
+
+---
+
+### 12.6 Praxisbeispiel: Korrespondenz protokollieren
+
+Szenario: Bei der Adresse „Müller Maschinenbau GmbH" (aus dem Praxisbeispiel 12.7) soll ein Telefonat mit der Einkaufsleiterin Claudia Berger protokolliert werden. Anschließend wird eine ausgehende E-Mail-Bestätigung erfasst.
+
+##### Schritt 1 — Telefonat protokollieren
+
+CRM — Adressen — „Müller Maschinenbau GmbH" — Tab **„Korrespondenz"** — **„Neuer Eintrag"**
+
+- Richtung: **Eingehend**
+- Typ: **Telefon**
+- Datum: (heute)
+- Kontakt: **Claudia Berger** (aus Dropdown)
+- Betreff: `Anfrage zu Lieferzeiten Bauteil X-500`
+- Inhalt: `Frau Berger erkundigt sich nach Lieferzeiten für 50 Stück Bauteil X-500. Liefertermin voraussichtlich KW 14. Angebot wird per E-Mail nachgereicht.`
+
+„Anlegen"
+
+Eintrag erscheint in der Tabelle: Datum = heute, Richtung = Eingehend, Typ = Telefon, Betreff = „Anfrage zu Lieferzeiten Bauteil X-500", Kontakt = Claudia Berger.
+
+##### Schritt 2 — Ausgehende E-Mail protokollieren
+
+Tab „Korrespondenz" — **„Neuer Eintrag"**
+
+- Richtung: **Ausgehend**
+- Typ: **E-Mail**
+- Datum: (heute)
+- Kontakt: **Claudia Berger**
+- Von (intern): `Max Mustermann`
+- Betreff: `Angebot Bauteil X-500 — 50 Stück`
+- Inhalt: `Angebot Nr. A-2026-042 per E-Mail an c.berger@mueller-maschinenbau.de versendet. Liefertermin KW 14, Preis gemäß Rahmenvertrag.`
+
+„Anlegen"
+
+Zwei Einträge in der Korrespondenzliste. Der neueste (E-Mail, ausgehend) steht oben.
+
+##### Schritt 3 — Suche und Filter testen
+
+Suchfeld: `Bauteil X-500`
+
+Beide Einträge werden gefunden (Betreff enthält den Suchbegriff).
+
+Richtung-Filter: **Ausgehend**
+
+Nur der E-Mail-Eintrag wird angezeigt.
+
+Filter zurücksetzen.
+
+---
+
+### 12.7 Praxisbeispiel: Neuen Kunden mit Kontakten und Bankverbindung anlegen
 
 Szenario: Das Unternehmen „Müller Maschinenbau GmbH" aus München wird als neuer Kunde angelegt. Es gibt zwei Ansprechpartner: den Geschäftsführer Hans Müller und die Einkaufsleiterin Claudia Berger. Die Bankverbindung bei der Commerzbank wird hinterlegt.
 
@@ -4402,15 +4527,226 @@ Szenario: Das Unternehmen „Müller Maschinenbau GmbH" aus München wird als ne
 
 ✅ Der Kunde ist vollständig angelegt und kann nun für Korrespondenz, Anfragen und Belege verwendet werden (sobald die entsprechenden CRM-Module freigeschaltet sind).
 
-💡 **Hinweis:** Die Tabs „Korrespondenz", „Anfragen" und „Belege" werden in zukünftigen Tickets (CRM_02, CRM_03, ORD_01) implementiert und sind aktuell als Platzhalter sichtbar.
+💡 **Hinweis:** Der Tab „Belege" wird in einem zukünftigen Ticket (ORD_01) implementiert und ist aktuell als Platzhalter sichtbar.
 
 #### Wo Adressen außerdem erscheinen
 
 | Ort | Pfad | Was angezeigt wird |
 |-----|------|--------------------|
-| Korrespondenz (geplant) | 📍 CRM → Adressen → Detail → Tab „Korrespondenz" | Briefe, E-Mails zu dieser Adresse |
-| Anfragen (geplant) | 📍 CRM → Adressen → Detail → Tab „Anfragen" | Anfragen und Angebote |
+| Korrespondenz | 📍 CRM → Adressen → Detail → Tab „Korrespondenz" | Telefonate, E-Mails, Briefe, Faxe, Besuche zu dieser Adresse (Abschnitt 12.5) |
+| Anfragen | 📍 CRM → Adressen → Detail → Tab „Anfragen" | Kundenanfragen dieser Adresse (Abschnitt 12.8) |
 | Belege (geplant) | 📍 CRM → Adressen → Detail → Tab „Belege" | Rechnungen, Lieferscheine, Gutschriften |
+
+---
+
+### 12.8 Anfragen
+
+**Was ist es?** Eine Anfrage ist die übergeordnete Klammer für alle Kundenaktivitäten. Jede Anfrage gehört zu einer Adresse, hat einen Status-Workflow (Offen → In Bearbeitung → Geschlossen → Storniert) und erhält automatisch eine eindeutige Anfragenummer (z. B. V-1, V-2). Optional kann eine Anfrage mit einem Terp-Auftrag verknüpft werden, um Zeiten darauf zu buchen.
+
+**Wozu dient es?** Anfragen bündeln alle Aktivitäten zu einer Kundenanfrage: Korrespondenz, Dokumente und Aufgaben werden der Anfrage zugeordnet. Durch den Status-Workflow ist auf einen Blick erkennbar, welche Anfragen offen sind, welche bearbeitet werden und welche abgeschlossen wurden. Die Verknüpfung mit einem Terp-Auftrag ermöglicht die Zeiterfassung direkt auf die Anfrage.
+
+⚠️ Modul: Das CRM-Modul muss für den Mandanten aktiviert sein (📍 Administration → Einstellungen → Module → **CRM**)
+
+⚠️ Berechtigung: „CRM-Anfragen anzeigen" (Lesen), „CRM-Anfragen erstellen/bearbeiten/löschen" (Schreiben)
+
+📍 Seitenleiste → **CRM** → **Anfragen**
+
+✅ Seite mit Titel „Anfragen", Tabelle aller Anfragen, Suchfeld und Statusfilter.
+
+#### Anfragenliste
+
+Tabelle mit Spalten:
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Nummer** | Auto-generierte Anfragenummer (z. B. V-1, V-3) — monospace |
+| **Titel** | Bezeichnung der Anfrage |
+| **Kunde / Lieferant** | Verknüpfte Adresse (nur in der globalen Liste sichtbar, nicht im Adress-Tab) |
+| **Status** | Badge: Offen (blau), In Bearbeitung (grau), Geschlossen (Outline), Storniert (rot) |
+| **Verknüpfter Auftrag** | Name des verknüpften Terp-Auftrags (falls vorhanden) |
+| **Erstellt am** | Datum der Erstellung |
+| **Aktionen** | ⋯-Menü: Anzeigen, Bearbeiten, Löschen |
+
+**Filter:**
+- **Suchfeld**: Durchsucht Titel und Nummer gleichzeitig
+- **Status-Filter**: Alle Status / Offen / In Bearbeitung / Geschlossen / Storniert
+
+##### Neue Anfrage anlegen
+
+1. 📍 **„Neue Anfrage"** (oben rechts)
+2. ✅ Seitliches Formular (Sheet) öffnet sich: „Neue Anfrage anlegen"
+3. Abschnitt **Grunddaten** ausfüllen:
+   - **Titel** (Pflicht)
+   - **Kunde / Lieferant** (Dropdown: alle aktiven Adressen — Pflicht)
+   - **Kontakt** (Dropdown: Kontaktpersonen der gewählten Adresse, optional)
+   - **Aufwand** (Dropdown: Gering / Mittel / Hoch, optional)
+4. **Notizen** (optionales Freitext-Feld)
+5. 📍 „Anlegen"
+6. ✅ Anfrage erscheint in der Tabelle mit automatisch vergebener Nummer
+
+💡 **Hinweis:** Die Anfragenummer wird beim Anlegen automatisch vergeben und kann nicht manuell geändert werden. Anfragen erhalten Nummern mit Präfix „V-" (V-1, V-2, …). Wird die Anfrage vom Tab „Anfragen" einer Adresse aus angelegt, ist die Adresse bereits vorbelegt.
+
+##### Anfrage bearbeiten
+
+1. 📍 ⋯-Menü der Anfrage → **„Bearbeiten"**
+2. ✅ Formular öffnet sich mit den aktuellen Werten vorausgefüllt
+3. Zusätzliches Feld im Bearbeitungsmodus:
+   - **Zahlungsfähigkeit** (Freitext)
+4. 📍 „Speichern"
+
+⚠️ **Geschlossene Anfragen können nicht bearbeitet werden.** Der Button „Bearbeiten" wird ausgeblendet und ein Hinweis angezeigt: „Diese Anfrage ist geschlossen und kann nicht mehr bearbeitet werden."
+
+##### Anfrage löschen
+
+1. 📍 ⋯-Menü der Anfrage → **„Löschen"**
+2. ✅ Bestätigungsdialog: „Möchten Sie die Anfrage ‚{Titel}' wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+3. 📍 „Bestätigen"
+
+⚠️ **Löschen nur möglich, wenn keine Korrespondenzeinträge verknüpft sind.** Andernfalls erscheint der Hinweis: „Diese Anfrage kann nicht gelöscht werden, da noch Korrespondenzeinträge verknüpft sind."
+
+#### Anfragedetails
+
+📍 Zeile in der Tabelle anklicken → Detailseite
+
+✅ Kopfbereich zeigt: Titel (groß), Nummer (monospace Badge), Status-Badge, Buttons für Aktionen (Bearbeiten, Schließen, Stornieren, Löschen)
+
+Die Detailseite hat **2 Tabs**:
+
+**Tab „Übersicht":** Alle Anfragedaten in Kartenansicht (2-Spalten-Grid)
+
+| Karte | Felder |
+|-------|--------|
+| **Grunddaten** | Nummer, Titel, Kunde / Lieferant (Link zur Adresse), Kontakt, Aufwand (Gering/Mittel/Hoch), Zahlungsfähigkeit, Erstellt am |
+| **Zusatzinformationen** | Status (Badge), Verknüpfter Auftrag (mit Link oder „Auftrag verknüpfen"-Button), Geschlossen am, Abschlussgrund, Abschlussbemerkung, Notizen |
+
+**Tab „Korrespondenz":** Zeigt alle Korrespondenzeinträge der verknüpften Adresse (→ Abschnitt 12.5)
+
+#### Status-Workflow
+
+Anfragen durchlaufen einen definierten Status-Workflow:
+
+| Status | Badge | Bedeutung |
+|--------|-------|-----------|
+| **Offen** | Blau (ausgefüllt) | Anfrage neu angelegt, noch nicht bearbeitet |
+| **In Bearbeitung** | Grau | Anfrage wird aktiv bearbeitet |
+| **Geschlossen** | Outline | Anfrage abgeschlossen (unveränderlich) |
+| **Storniert** | Rot | Anfrage abgebrochen |
+
+**Aktionen auf der Detailseite:**
+
+| Aktion | Button | Bedingung |
+|--------|--------|-----------|
+| **Schließen** | „Schließen" | Nur wenn Status ≠ Geschlossen und ≠ Storniert |
+| **Stornieren** | „Abbrechen" | Nur wenn Status ≠ Geschlossen und ≠ Storniert |
+| **Wieder öffnen** | „Wieder öffnen" | Nur wenn Status = Geschlossen oder Storniert |
+
+##### Anfrage schließen
+
+1. 📍 Detailseite → **„Schließen"**
+2. ✅ Dialog: „Möchten Sie die Anfrage ‚{Titel}' schließen?"
+3. Ausfüllen:
+   - **Abschlussgrund** (Dropdown: Auftrag erteilt / Kein Bedarf / Konkurrenz / Sonstiges, optional)
+   - **Abschlussbemerkung** (Freitext, optional)
+   - **„Verknüpften Auftrag ebenfalls schließen"** (Checkbox — nur sichtbar, wenn ein Auftrag verknüpft ist)
+4. 📍 „Bestätigen"
+5. ✅ Status wechselt auf „Geschlossen", Datum und Benutzer werden gespeichert
+
+##### Anfrage stornieren
+
+1. 📍 Detailseite → **„Abbrechen"**
+2. ✅ Bestätigungsdialog: „Möchten Sie die Anfrage ‚{Titel}' stornieren?"
+3. 📍 „Bestätigen"
+4. ✅ Status wechselt auf „Storniert"
+
+##### Anfrage wieder öffnen
+
+1. 📍 Detailseite → **„Wieder öffnen"**
+2. ✅ Bestätigungsdialog: „Möchten Sie die Anfrage ‚{Titel}' wieder öffnen?"
+3. 📍 „Bestätigen"
+4. ✅ Status wechselt auf „In Bearbeitung"
+
+#### Auftragsverknüpfung
+
+Anfragen können mit einem Terp-Auftrag verknüpft werden, um Projektzeiten darauf zu erfassen. Die Verknüpfung erfolgt über die Detailseite.
+
+📍 Detailseite → Karte „Zusatzinformationen" → **„Auftrag verknüpfen"**
+
+✅ Dialog mit zwei Tabs:
+
+**Tab „Bestehenden verknüpfen":**
+- Dropdown mit allen aktiven Terp-Aufträgen (Code — Name)
+- 📍 „Bestätigen"
+
+**Tab „Neu anlegen":**
+- **Auftragsbezeichnung** (vorausgefüllt mit dem Anfragetitel)
+- 📍 „Auftrag anlegen" → erstellt einen neuen Terp-Auftrag und verknüpft ihn automatisch
+
+✅ Nach der Verknüpfung zeigt die Karte den Auftragsnamen mit Code an.
+
+💡 **Hinweis:** Beim Schließen einer Anfrage kann der verknüpfte Auftrag optional mit geschlossen werden (Checkbox im Schließen-Dialog).
+
+#### Anfragen im Adress-Tab
+
+Anfragen einer bestimmten Adresse sind auch direkt über die Adressdetailseite erreichbar:
+
+📍 CRM → Adressen → Adresse anklicken → Tab **„Anfragen"**
+
+✅ Dieselbe Anfragenliste, gefiltert auf die aktuelle Adresse. Die Spalte „Kunde / Lieferant" wird ausgeblendet, da die Adresse bereits aus dem Kontext klar ist. Beim Anlegen einer neuen Anfrage ist die Adresse vorbelegt.
+
+---
+
+### 12.9 Praxisbeispiel: Kundenanfrage anlegen und abschließen
+
+Szenario: Beim Kunden „Müller Maschinenbau GmbH" (aus dem Praxisbeispiel 12.7) geht eine Anfrage zu Lieferzeiten ein. Die Anfrage wird angelegt, mit einem Auftrag verknüpft (für die Zeiterfassung) und nach erfolgreicher Bearbeitung geschlossen.
+
+##### Schritt 1 — Anfrage anlegen
+
+📍 Seitenleiste → **CRM** → **Anfragen** → **„Neue Anfrage"**
+
+- Titel: `Anfrage Lieferzeiten Bauteil X-500`
+- Kunde / Lieferant: **Müller Maschinenbau GmbH** (K-1)
+- Kontakt: **Claudia Berger** (Einkaufsleiterin)
+- Aufwand: **Mittel**
+- Notizen: `Kunde erfragt Lieferzeiten für 50 Stück Bauteil X-500. Liefertermin voraussichtlich KW 14.`
+
+📍 „Anlegen"
+
+✅ Anfrage erscheint in der Tabelle: Nummer = V-1, Status = „Offen", Kunde = Müller Maschinenbau GmbH.
+
+##### Schritt 2 — Auftrag verknüpfen
+
+📍 Anfrage „V-1" anklicken → Karte „Zusatzinformationen" → **„Auftrag verknüpfen"**
+
+Tab **„Neu anlegen"**:
+- Auftragsbezeichnung: `Anfrage Lieferzeiten Bauteil X-500` (vorausgefüllt)
+
+📍 „Auftrag anlegen"
+
+✅ Ein neuer Terp-Auftrag wird erstellt und auf der Detailseite angezeigt. Mitarbeiter können nun Zeiten auf diesen Auftrag buchen.
+
+##### Schritt 3 — Anfrage schließen
+
+📍 Detailseite → **„Schließen"**
+
+- Abschlussgrund: **Auftrag erteilt**
+- Abschlussbemerkung: `Auftrag über 50 Stück X-500 bestätigt, Lieferung KW 14.`
+- ☑️ „Verknüpften Auftrag ebenfalls schließen"
+
+📍 „Bestätigen"
+
+✅ Status wechselt auf „Geschlossen". Datum und Bearbeiter werden gespeichert. Die Anfrage kann nicht mehr bearbeitet werden — der Button „Bearbeiten" ist ausgeblendet, stattdessen wird der Hinweis angezeigt: „Diese Anfrage ist geschlossen und kann nicht mehr bearbeitet werden."
+
+##### Schritt 4 — Ergebnis prüfen
+
+📍 Tab **„Übersicht"**:
+- Status: Geschlossen
+- Geschlossen am: (heutiges Datum)
+- Abschlussgrund: Auftrag erteilt
+- Abschlussbemerkung: Auftrag über 50 Stück X-500 bestätigt …
+
+📍 CRM → Adressen → „Müller Maschinenbau GmbH" → Tab **„Anfragen"**:
+
+✅ Die Anfrage V-1 erscheint in der Liste mit Status „Geschlossen".
 
 ---
 
@@ -4440,6 +4776,8 @@ Szenario: Das Unternehmen „Müller Maschinenbau GmbH" aus München wird als ne
 | **Konto** | Sammelstelle für Zeitwerte (Flex, Überstunden, Zuschläge) | 📍 Verwaltung → Konten |
 | **Korrektur** | Manuelle Anpassung an Zeitwerten eines Tages | 📍 Verwaltung → Korrekturassistent |
 | **Kontaktperson (CRM)** | Ansprechpartner bei einer CRM-Adresse (Name, Position, Telefon, E-Mail) | 📍 CRM → Adressen → Detail → Tab Kontakte |
+| **Korrespondenz (CRM)** | Kommunikationsprotokoll einer CRM-Adresse (Telefonate, E-Mails, Briefe, Faxe, Besuche) | 📍 CRM → Adressen → Detail → Tab Korrespondenz |
+| **Anfrage (CRM)** | Übergeordnete Klammer für Kundenaktivitäten mit Status-Workflow und optionaler Auftragsverknüpfung | 📍 CRM → Anfragen |
 | **Kostenstelle** | Betriebswirtschaftliche Zuordnung für Mitarbeiter und Aufträge | 📍 Verwaltung → Kostenstellen |
 | **Makro** | Automatisierungsregel (z. B. Flexzeit zurücksetzen) | 📍 Administration → Makros |
 | **Mandant** | Oberste Organisationseinheit (Unternehmen/Niederlassung) | 📍 Administration → Mandanten |
@@ -4535,6 +4873,8 @@ Diese Tabelle listet alle Seiten der Anwendung mit ihrer URL und dem Menüpfad:
 | `/admin/terminal-bookings` | Administration → Terminal-Buchungen | terminal_bookings.manage |
 | `/crm/addresses` | CRM → Adressen | crm_addresses.view |
 | `/crm/addresses/[id]` | Adressenliste → Zeile anklicken | crm_addresses.view |
+| `/crm/inquiries` | CRM → Anfragen | crm_inquiries.view |
+| `/crm/inquiries/[id]` | Anfragenliste → Zeile anklicken | crm_inquiries.view |
 
 ---
 

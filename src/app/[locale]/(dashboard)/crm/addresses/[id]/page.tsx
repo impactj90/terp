@@ -24,6 +24,8 @@ import { ContactList } from '@/components/crm/contact-list'
 import { ContactFormDialog } from '@/components/crm/contact-form-dialog'
 import { BankAccountList } from '@/components/crm/bank-account-list'
 import { BankAccountFormDialog } from '@/components/crm/bank-account-form-dialog'
+import { CorrespondenceList } from '@/components/crm/correspondence-list'
+import { InquiryList } from '@/components/crm/inquiry-list'
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -284,21 +286,13 @@ export default function CrmAddressDetailPage() {
           />
         </TabsContent>
 
-        {/* Placeholder Tabs */}
+        {/* Correspondence Tab */}
         <TabsContent value="correspondence" className="mt-6">
-          <Card>
-            <CardContent className="flex items-center justify-center py-16">
-              <p className="text-muted-foreground">{t('comingSoon')} — CRM_02</p>
-            </CardContent>
-          </Card>
+          <CorrespondenceList addressId={address.id} tenantId={address.tenantId} />
         </TabsContent>
 
         <TabsContent value="inquiries" className="mt-6">
-          <Card>
-            <CardContent className="flex items-center justify-center py-16">
-              <p className="text-muted-foreground">{t('comingSoon')} — CRM_03</p>
-            </CardContent>
-          </Card>
+          <InquiryList addressId={address.id} />
         </TabsContent>
 
         <TabsContent value="documents" className="mt-6">

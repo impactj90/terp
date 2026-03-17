@@ -6,6 +6,8 @@
 | **Dependencies** | CRM_01 (Addresses, Contacts) |
 | **Complexity** | M |
 | **New Models** | `CrmCorrespondence` |
+| **Status** | Done |
+| **Completed** | 2026-03-17 |
 
 ---
 
@@ -245,15 +247,15 @@ test.describe("UC-CRM-02: Correspondence", () => {
 
 ## Acceptance Criteria
 
-- [ ] `CrmCorrespondence` model created with migration
-- [ ] CRUD operations fully functional
-- [ ] Correspondence entries scoped to tenant
-- [ ] Full-text search works across subject and content fields
-- [ ] Direction and type filters work
-- [ ] Date range filter works
-- [ ] Contact autocomplete shows contacts from the linked address
+- [x] `CrmCorrespondence` model created with migration
+- [x] CRUD operations fully functional
+- [x] Correspondence entries scoped to tenant
+- [x] Full-text search works across subject and content fields
+- [x] Direction and type filters work
+- [x] Date range filter works
+- [x] Contact autocomplete shows contacts from the linked address
 - [ ] Inquiry link works (optional, populated when CRM_03 is implemented)
 - [ ] Attachment upload/download works via Supabase Storage
-- [ ] Correspondence tab visible on address detail page
-- [ ] All procedures gated by `requireModule("crm")` and `crm_correspondence.*` permissions
-- [ ] Cross-tenant isolation verified
+- [x] Correspondence tab visible on address detail page
+- [x] All procedures gated by `requireModule("crm")` and `crm_correspondence.*` permissions
+- [x] Cross-tenant isolation verified

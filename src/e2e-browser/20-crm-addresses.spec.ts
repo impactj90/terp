@@ -252,11 +252,9 @@ test.describe.serial("UC-CRM-01: Address Management", () => {
     await page.waitForURL("**/crm/addresses/**");
     await page.locator("main#main-content").waitFor({ state: "visible" });
 
-    await clickTab(page, "Korrespondenz");
-    await expect(page.getByText("In Vorbereitung")).toBeVisible();
+    // Korrespondenz tab is now implemented (CRM_02), so skip it
 
-    await clickTab(page, "Anfragen");
-    await expect(page.getByText("In Vorbereitung")).toBeVisible();
+    // Anfragen tab is now implemented (CRM_03), skip placeholder test
 
     await clickTab(page, "Belege");
     await expect(page.getByText("In Vorbereitung")).toBeVisible();

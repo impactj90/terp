@@ -56,7 +56,7 @@ model BillingDocument {
   invoiceAddressId    String?               @map("invoice_address_id") @db.Uuid   // Rechnungsadresse (can differ)
 
   // Links
-  inquiryId           String?               @map("inquiry_id") @db.Uuid   // Linked Vorgang (CRM_03)
+  inquiryId           String?               @map("inquiry_id") @db.Uuid   // Linked Anfrage (CRM_03)
   orderId             String?               @map("order_id") @db.Uuid     // Linked Terp Order (time tracking)
   parentDocumentId    String?               @map("parent_document_id") @db.Uuid // Fortgeführt aus
 

@@ -29,6 +29,7 @@ export class NumberSequenceValidationError extends Error {
 const DEFAULT_PREFIXES: Record<string, string> = {
   customer: "K-",
   supplier: "L-",
+  inquiry: "V-",
 }
 
 export async function getNextNumber(

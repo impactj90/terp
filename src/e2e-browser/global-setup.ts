@@ -32,11 +32,27 @@ DELETE FROM shifts WHERE code LIKE 'E2E%';
 DELETE FROM employees WHERE personnel_number LIKE 'E2E%';
 DELETE FROM calculation_rules WHERE code LIKE 'E2E%';
 
+-- CRM inquiry records (spec 22)
+-- First unlink correspondences from inquiries
+UPDATE crm_correspondences SET inquiry_id = NULL WHERE inquiry_id IN (SELECT id FROM crm_inquiries WHERE title LIKE 'E2E%');
+-- Delete inquiries
+DELETE FROM crm_inquiries WHERE title LIKE 'E2E%';
+
+-- CRM correspondence records (spec 21)
+DELETE FROM crm_correspondences WHERE address_id IN (SELECT id FROM crm_addresses WHERE company LIKE 'E2E%');
+
 -- CRM records (spec 20)
 DELETE FROM crm_contacts WHERE address_id IN (SELECT id FROM crm_addresses WHERE company LIKE 'E2E%');
 DELETE FROM crm_bank_accounts WHERE address_id IN (SELECT id FROM crm_addresses WHERE company LIKE 'E2E%');
 DELETE FROM crm_addresses WHERE company LIKE 'E2E%';
-DELETE FROM number_sequences WHERE key IN ('customer', 'supplier');
+
+-- Reset number sequences to safe values (above seeded K-1..K-6, L-1..L-3)
+INSERT INTO number_sequences (id, tenant_id, key, prefix, next_value, created_at, updated_at)
+VALUES
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'customer', 'K-', 100, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'supplier', 'L-', 100, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'inquiry', 'V-', 100, NOW(), NOW())
+ON CONFLICT (tenant_id, key) DO UPDATE SET next_value = GREATEST(number_sequences.next_value, 100);
 
 -- Parent records (specs 01-03)
 DELETE FROM locations WHERE code LIKE 'E2E%';
