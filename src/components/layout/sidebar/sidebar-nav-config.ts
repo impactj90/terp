@@ -297,6 +297,13 @@ export const navConfig: NavSection[] = [
         module: 'crm',
         permissions: ['crm_tasks.view'],
       },
+      {
+        titleKey: 'crmReports',
+        href: '/crm/reports',
+        icon: BarChart3,
+        module: 'crm',
+        permissions: ['crm_addresses.view'],
+      },
     ],
   },
   {

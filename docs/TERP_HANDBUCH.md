@@ -42,6 +42,7 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [12.8 Anfragen](#128-anfragen)
     - [12.9 Praxisbeispiel: Kundenanfrage anlegen und abschließen](#129-praxisbeispiel-kundenanfrage-anlegen-und-abschließen)
     - [12.10 Aufgaben & Nachrichten](#1210-aufgaben--nachrichten)
+    - [12.11 Auswertungen](#1211-auswertungen)
 13. [Glossar](#13-glossar)
 
 ---
@@ -4906,6 +4907,82 @@ Beim Anlegen einer Aufgabe oder Nachricht erhalten alle zugewiesenen Mitarbeiter
 
 ---
 
+### 12.11 Auswertungen
+
+**Was ist es?** Auswertungen bieten eine zentrale Berichts- und Analysesicht auf alle CRM-Daten. Das Dashboard zeigt Kennzahlen (KPIs) wie Gesamtzahl der Adressen, offene Anfragen, ausstehende Aufgaben und überfällige Termine auf einen Blick. Detaillierte Berichte liefern Statistiken zu Adressen (Verteilung nach Typ, aktiv/inaktiv), Korrespondenz (Verlauf nach Zeitraum und Typ), Anfragen (Pipeline nach Status, durchschnittliche Bearbeitungsdauer, Top-Kunden) und Aufgaben (Erledigungsquote, Bearbeitungsdauer, Verteilung pro Mitarbeiter).
+
+**Wozu dient es?** Auswertungen ermöglichen einen schnellen Überblick über den aktuellen Stand des CRM: Wie viele Kunden sind aktiv? Wie viele Anfragen stehen offen? Werden Aufgaben rechtzeitig erledigt? Die Berichte helfen bei der Planung und Optimierung von Kundenbeziehungen und internen Arbeitsabläufen.
+
+⚠️ Modul: Das CRM-Modul muss für den Mandanten aktiviert sein (📍 Administration → Einstellungen → Module → **CRM**)
+
+⚠️ Berechtigung: „CRM-Adressen anzeigen" (Übersicht und Adress-Statistik), „CRM-Korrespondenz anzeigen" (Korrespondenz-Bericht), „CRM-Anfragen anzeigen" (Anfragen-Pipeline), „CRM-Aufgaben anzeigen" (Aufgaben-Auswertung)
+
+📍 Seitenleiste → **CRM** → **Auswertungen**
+
+✅ Seite mit Titel „CRM Auswertungen", KPI-Karten im oberen Bereich, darunter tabellarische und grafische Berichte in Reitern.
+
+#### Übersicht (KPI-Karten)
+
+Im oberen Bereich der Seite werden vier Kennzahlenkarten angezeigt:
+
+| Karte | Beschreibung |
+|-------|-------------|
+| **Adressen gesamt** | Gesamtzahl aller CRM-Adressen. Darunter: Anzahl neu angelegter Adressen im aktuellen Monat. |
+| **Offene Anfragen** | Anzahl der Anfragen mit Status „Offen" oder „In Bearbeitung". |
+| **Offene Aufgaben** | Anzahl der Aufgaben (Typ „Aufgabe") mit Status „Offen" oder „In Bearbeitung". Zusätzlich: Anzahl überfälliger Aufgaben (Fälligkeitsdatum in der Vergangenheit). |
+| **Korrespondenz diese Woche** | Anzahl der Korrespondenzeinträge seit Montag der aktuellen Woche. |
+
+#### Adress-Statistik
+
+📍 Reiter **„Adress-Statistik"**
+
+✅ Zwei Diagramme:
+
+1. **Kreisdiagramm — Adressen nach Typ:** Verteilung der Adressen nach Typ (Kunde, Lieferant, Beides).
+2. **Balkendiagramm — Aktiv / Inaktiv:** Anzahl aktiver und inaktiver Adressen.
+
+#### Korrespondenz-Bericht
+
+📍 Reiter **„Korrespondenz-Bericht"**
+
+✅ Zwei Diagramme mit Datumsfilter:
+
+**Filter:**
+- **Von / Bis:** Datumsbereich (Standard: letzte 3 Monate)
+- **Gruppierung:** Tag / Woche / Monat (Standard: Monat)
+
+1. **Balkendiagramm — Korrespondenz im Zeitverlauf:** Gestapeltes Balkendiagramm mit den Richtungen „Eingehend", „Ausgehend" und „Intern" pro Zeitraum.
+2. **Kreisdiagramm — Korrespondenz nach Typ:** Verteilung nach Kommunikationstyp (Telefon, E-Mail, Brief, Fax, Besuch).
+
+#### Anfragen-Pipeline
+
+📍 Reiter **„Anfragen-Pipeline"**
+
+✅ Folgende Auswertungen:
+
+1. **Balkendiagramm — Anfragen nach Status:** Anzahl der Anfragen pro Status (Offen, In Bearbeitung, Geschlossen, Storniert) mit farbigen Balken.
+2. **Kennzahl — Durchschnittliche Bearbeitungsdauer:** Durchschnittliche Anzahl Tage zwischen Anlage und Abschluss geschlossener Anfragen.
+3. **Tabelle — Top-Adressen nach Anfragen:** Die 10 Adressen mit den meisten Anfragen (Spalten: Firma, Anzahl).
+4. **Kreisdiagramm — Anfragen nach Aufwand:** Verteilung nach Aufwandsstufe (Gering, Mittel, Hoch).
+
+Optionaler Datumsfilter (Von / Bis) schränkt den Auswertungszeitraum ein.
+
+#### Aufgaben-Auswertung
+
+📍 Reiter **„Aufgaben-Auswertung"**
+
+✅ Folgende Auswertungen:
+
+1. **Kennzahlen-Karten:**
+   - **Erledigungsquote:** Prozentualer Anteil erledigter Aufgaben an der Gesamtzahl.
+   - **Durchschn. Erledigungsdauer:** Durchschnittliche Anzahl Tage zwischen Anlage und Erledigung.
+   - **Überfällig:** Anzahl offener Aufgaben mit überschrittenem Fälligkeitsdatum.
+2. **Tabelle — Aufgaben pro Mitarbeiter:** Aufschlüsselung nach Mitarbeiter (Spalten: Name, Gesamt, Erledigt, Offen).
+
+Optionaler Datumsfilter (Von / Bis) schränkt den Auswertungszeitraum ein.
+
+---
+
 ## 13. Glossar
 
 | Begriff | Erklärung | Wo in Terp |
@@ -4916,6 +4993,7 @@ Beim Anlegen einer Aufgabe oder Nachricht erhalten alle zugewiesenen Mitarbeiter
 | **Abwesenheitstyp** | Kategorie einer Abwesenheit mit Regeln (Urlaubsabzug, Genehmigung) | 📍 Verwaltung → Abwesenheitsarten |
 | **Aktivität** | Art der Arbeit innerhalb eines Auftrags (z. B. Montage, Dokumentation) | 📍 Verwaltung → Aufträge → Tab Aktivitäten |
 | **Aufgabe (CRM)** | Interne Arbeitsaufgabe im CRM mit Betreff, Beschreibung, Fälligkeitsdatum und Status-Workflow | 📍 CRM → Aufgaben |
+| **Auswertung (CRM)** | Berichts- und Analysedashboard mit Kennzahlen zu Adressen, Korrespondenz, Anfragen und Aufgaben | 📍 CRM → Auswertungen |
 | **Auftrag** | Projekt oder Kundenauftrag für die Projektzeiterfassung | 📍 Verwaltung → Aufträge |
 | **Auftragsbuchung** | Zeitbuchung eines Mitarbeiters auf einen Auftrag | 📍 Auftragsdetail → Tab Buchungen |
 | **Bankverbindung (CRM)** | IBAN, BIC und Bankdaten einer CRM-Adresse | 📍 CRM → Adressen → Detail → Tab Bankverbindungen |
@@ -5033,6 +5111,8 @@ Diese Tabelle listet alle Seiten der Anwendung mit ihrer URL und dem Menüpfad:
 | `/crm/addresses/[id]` | Adressenliste → Zeile anklicken | crm_addresses.view |
 | `/crm/inquiries` | CRM → Anfragen | crm_inquiries.view |
 | `/crm/inquiries/[id]` | Anfragenliste → Zeile anklicken | crm_inquiries.view |
+| `/crm/tasks` | CRM → Aufgaben | crm_tasks.view |
+| `/crm/reports` | CRM → Auswertungen | crm_addresses.view |
 
 ---
 

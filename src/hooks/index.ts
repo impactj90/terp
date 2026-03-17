@@ -711,3 +711,15 @@ export {
   useMarkCrmTaskRead,
   useDeleteCrmTask,
 } from './use-crm-tasks'
+
+// CRM Reports
+export {
+  useCrmOverview,
+  useCrmAddressStats,
+  useCrmCorrespondenceByPeriod,
+  useCrmCorrespondenceByType,
+  useCrmInquiryPipeline,
+  useCrmInquiryByEffort,
+  useCrmTaskCompletion,
+  useCrmTasksByAssignee,
+} from './use-crm-reports'

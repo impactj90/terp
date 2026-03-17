@@ -9,6 +9,7 @@ import { crmAddressesRouter } from "./addresses"
 import { crmCorrespondenceRouter } from "./correspondence"
 import { crmInquiriesRouter } from "./inquiries"
 import { crmTasksRouter } from "./tasks"
+import { crmReportsRouter } from "./reports"
 import { numberSequencesRouter } from "./numberSequences"
 
 export const crmRouter = createTRPCRouter({
@@ -16,5 +17,6 @@ export const crmRouter = createTRPCRouter({
   correspondence: crmCorrespondenceRouter,
   inquiries: crmInquiriesRouter,
   tasks: crmTasksRouter,
+  reports: crmReportsRouter,
   numberSequences: numberSequencesRouter,
 })

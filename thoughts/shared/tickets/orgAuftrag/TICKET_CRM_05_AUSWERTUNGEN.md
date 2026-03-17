@@ -222,14 +222,14 @@ test.describe("UC-CRM-05: CRM Reports", () => {
 
 ## Acceptance Criteria
 
-- [ ] No new database models — all reports are read-only aggregations
-- [ ] CRM overview dashboard shows key metrics (total addresses, open inquiries, pending tasks, overdue)
-- [ ] Address stats report shows distribution by type and active/inactive
-- [ ] Correspondence report groups by period (day/week/month) with direction breakdown
-- [ ] Correspondence report filters by date range
-- [ ] Inquiry pipeline shows status distribution and avg close time
-- [ ] Task completion report shows rate, overdue count, per-assignee breakdown
-- [ ] All charts render correctly using recharts
-- [ ] All reports scoped to tenant
-- [ ] All procedures gated by `requireModule("crm")` and appropriate view permissions
-- [ ] Reports page accessible from CRM sidebar navigation
+- [x] No new database models — all reports are read-only aggregations
+- [x] CRM overview dashboard shows key metrics (total addresses, open inquiries, pending tasks, overdue)
+- [x] Address stats report shows distribution by type and active/inactive
+- [x] Correspondence report groups by period (day/week/month) with direction breakdown
+- [x] Correspondence report filters by date range
+- [x] Inquiry pipeline shows status distribution and avg close time
+- [x] Task completion report shows rate, overdue count, per-assignee breakdown
+- [x] All charts render correctly using recharts
+- [x] All reports scoped to tenant
+- [x] All procedures gated by `requireModule("crm")` and appropriate view permissions
+- [x] Reports page accessible from CRM sidebar navigation
