@@ -26,6 +26,7 @@ import { BankAccountList } from '@/components/crm/bank-account-list'
 import { BankAccountFormDialog } from '@/components/crm/bank-account-form-dialog'
 import { CorrespondenceList } from '@/components/crm/correspondence-list'
 import { InquiryList } from '@/components/crm/inquiry-list'
+import { TaskList } from '@/components/crm/task-list'
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -188,6 +189,7 @@ export default function CrmAddressDetailPage() {
           <TabsTrigger value="bankAccounts">{t('tabBankAccounts')}</TabsTrigger>
           <TabsTrigger value="correspondence">{t('tabCorrespondence')}</TabsTrigger>
           <TabsTrigger value="inquiries">{t('tabInquiries')}</TabsTrigger>
+          <TabsTrigger value="tasks">{t('tabTasks')}</TabsTrigger>
           <TabsTrigger value="documents">{t('tabDocuments')}</TabsTrigger>
         </TabsList>
 
@@ -293,6 +295,10 @@ export default function CrmAddressDetailPage() {
 
         <TabsContent value="inquiries" className="mt-6">
           <InquiryList addressId={address.id} />
+        </TabsContent>
+
+        <TabsContent value="tasks" className="mt-6">
+          <TaskList addressId={address.id} />
         </TabsContent>
 
         <TabsContent value="documents" className="mt-6">

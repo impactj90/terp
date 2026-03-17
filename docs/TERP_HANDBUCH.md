@@ -41,6 +41,7 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [12.7 Praxisbeispiel: Neuen Kunden mit Kontakten und Bankverbindung anlegen](#127-praxisbeispiel-neuen-kunden-mit-kontakten-und-bankverbindung-anlegen)
     - [12.8 Anfragen](#128-anfragen)
     - [12.9 Praxisbeispiel: Kundenanfrage anlegen und abschließen](#129-praxisbeispiel-kundenanfrage-anlegen-und-abschließen)
+    - [12.10 Aufgaben & Nachrichten](#1210-aufgaben--nachrichten)
 13. [Glossar](#13-glossar)
 
 ---
@@ -4190,7 +4191,7 @@ Adressen werden nicht gelöscht, sondern deaktiviert — sie bleiben im System e
 
 ✅ Kopfbereich zeigt: Firmenname (groß), Nummer (monospace), Typ-Badge, Status-Badge, Buttons „Bearbeiten" und „Deaktivieren"
 
-Die Detailseite hat **6 Tabs**:
+Die Detailseite hat **7 Tabs**:
 
 **Tab „Übersicht":** Alle Adressdaten in Kartenansicht (2-Spalten-Grid)
 
@@ -4209,6 +4210,8 @@ Die Detailseite hat **6 Tabs**:
 **Tab „Korrespondenz":** Kommunikationsprotokoll der Adresse — siehe Abschnitt 12.5
 
 **Tab „Anfragen":** Kundenanfragen dieser Adresse — siehe Abschnitt 12.8
+
+**Tab „Aufgaben":** Aufgaben und Nachrichten dieser Adresse — siehe Abschnitt 12.10
 
 **Tab „Belege":** Platzhalter — „In Vorbereitung — ORD_01"
 
@@ -4535,6 +4538,7 @@ Szenario: Das Unternehmen „Müller Maschinenbau GmbH" aus München wird als ne
 |-----|------|--------------------|
 | Korrespondenz | 📍 CRM → Adressen → Detail → Tab „Korrespondenz" | Telefonate, E-Mails, Briefe, Faxe, Besuche zu dieser Adresse (Abschnitt 12.5) |
 | Anfragen | 📍 CRM → Adressen → Detail → Tab „Anfragen" | Kundenanfragen dieser Adresse (Abschnitt 12.8) |
+| Aufgaben | 📍 CRM → Adressen → Detail → Tab „Aufgaben" | Aufgaben und Nachrichten dieser Adresse (Abschnitt 12.10) |
 | Belege (geplant) | 📍 CRM → Adressen → Detail → Tab „Belege" | Rechnungen, Lieferscheine, Gutschriften |
 
 ---
@@ -4750,6 +4754,158 @@ Tab **„Neu anlegen"**:
 
 ---
 
+### 12.10 Aufgaben & Nachrichten
+
+**Was ist es?** Aufgaben und Nachrichten sind das interne Kommunikations- und Aufgabensystem im CRM-Modul. Eine Aufgabe hat einen Betreff, eine optionale Beschreibung, ein Fälligkeitsdatum und einen Status-Workflow (Offen → In Bearbeitung → Erledigt / Storniert). Eine Nachricht ist eine vereinfachte Aufgabe ohne Terminierung — sie dient als interne Mitteilung. Beide können einer oder mehreren Personen (Mitarbeitern oder ganzen Teams) zugewiesen werden.
+
+**Wozu dient es?** Aufgaben und Nachrichten ermöglichen die interne Koordination im CRM: Wer muss was bis wann erledigen? Wer wurde über etwas informiert? Durch die Verknüpfung mit Adressen und Anfragen ist der Kontext immer klar. Zugewiesene Mitarbeiter erhalten automatisch eine Terp-Benachrichtigung und können ihre Aufgaben über „Meine Aufgaben" einsehen.
+
+⚠️ Modul: Das CRM-Modul muss für den Mandanten aktiviert sein (📍 Administration → Einstellungen → Module → **CRM**)
+
+⚠️ Berechtigung: „CRM-Aufgaben anzeigen" (Lesen), „CRM-Aufgaben erstellen/bearbeiten/löschen" (Schreiben). „Meine Aufgaben" ist für jeden angemeldeten Benutzer ohne spezielle Berechtigung sichtbar.
+
+📍 Seitenleiste → **CRM** → **Aufgaben**
+
+✅ Seite mit Titel „Aufgaben & Nachrichten", Tabelle aller Aufgaben, Suchfeld, Status- und Typfilter, Umschalter „Meine Aufgaben".
+
+#### Aufgabenliste
+
+Tabelle mit Spalten:
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Typ** | Icon: Aufgabe (Häkchen) oder Nachricht (Sprechblase) |
+| **Betreff** | Bezeichnung der Aufgabe (fett) |
+| **Zugewiesen an** | Kommagetrennte Liste der Mitarbeiter und Teams |
+| **Fällig am** | Fälligkeitsdatum (nur bei Aufgaben, nicht bei Nachrichten) |
+| **Status** | Badge: Offen (blau), In Bearbeitung (grau), Erledigt (Outline), Storniert (rot) |
+| **Aktionen** | ⋯-Menü: Anzeigen, Bearbeiten, Erledigen, Löschen |
+
+**Filter:**
+- **Suchfeld**: Durchsucht den Betreff
+- **Status-Filter**: Alle Status / Offen / In Bearbeitung / Erledigt / Storniert
+- **Typ-Filter**: Alle Typen / Aufgabe / Nachricht
+- **„Meine Aufgaben"**: Umschalter — zeigt nur Aufgaben, die dem angemeldeten Benutzer (oder seinem Team) zugewiesen sind
+
+##### Neue Aufgabe anlegen
+
+1. 📍 **„Neue Aufgabe"** (oben rechts)
+2. ✅ Seitliches Formular (Sheet) öffnet sich: „Neue Aufgabe anlegen"
+3. Abschnitt **Grunddaten** ausfüllen:
+   - **Typ** (Umschalter: Aufgabe / Nachricht) — Standard: Aufgabe
+   - **Betreff** (Pflicht)
+   - **Beschreibung** (optional)
+4. Abschnitt **Verknüpfungen** ausfüllen:
+   - **Adresse** (Dropdown: alle aktiven CRM-Adressen, optional)
+   - **Kontakt** (Dropdown: Kontaktpersonen der gewählten Adresse, nur sichtbar wenn Adresse gewählt)
+   - **Anfrage** (Dropdown: Anfragen der gewählten Adresse, optional)
+5. Abschnitt **Zuweisungen** ausfüllen:
+   - **Zugewiesen an** (Pflicht, Mehrfachauswahl: Mitarbeiter und/oder Teams)
+6. Abschnitt **Terminierung** ausfüllen (nur bei Typ „Aufgabe"):
+   - **Fällig am** (Datumsauswahl, optional)
+   - **Uhrzeit** (HH:MM, optional)
+   - **Dauer (Min.)** (Zahl, optional)
+7. 📍 „Anlegen"
+8. ✅ Aufgabe erscheint in der Tabelle. Zugewiesene Mitarbeiter erhalten eine Benachrichtigung.
+
+💡 **Hinweis:** Bei Typ „Nachricht" sind die Terminierungsfelder (Fällig am, Uhrzeit, Dauer) ausgeblendet — Nachrichten haben keinen Termin. Wird die Aufgabe aus dem Tab „Aufgaben" einer Adresse oder Anfrage heraus angelegt, ist die Verknüpfung bereits vorbelegt.
+
+##### Aufgabe bearbeiten
+
+1. 📍 ⋯-Menü der Aufgabe → **„Bearbeiten"**
+2. ✅ Formular öffnet sich mit den aktuellen Werten vorausgefüllt
+3. Gewünschte Felder ändern
+4. 📍 „Speichern"
+
+⚠️ **Erledigte und stornierte Aufgaben können nicht bearbeitet werden.**
+
+##### Aufgabe löschen
+
+1. 📍 ⋯-Menü der Aufgabe → **„Löschen"**
+2. ✅ Bestätigungsdialog: „Möchten Sie die Aufgabe wirklich löschen?"
+3. 📍 „Bestätigen"
+
+#### Aufgabendetails
+
+📍 Zeile in der Tabelle anklicken → Detaildialog
+
+✅ Dialog zeigt: Betreff (groß), Typ-Badge, Status-Badge, Aktionsbuttons (Erledigen, Stornieren, Wieder öffnen, Bearbeiten, Löschen)
+
+Der Dialog hat folgende Bereiche:
+
+| Bereich | Felder |
+|---------|--------|
+| **Grunddaten** | Betreff, Beschreibung, Typ, Erstellt am |
+| **Verknüpfungen** | Adresse (Link), Kontakt, Anfrage (Link) |
+| **Terminierung** | Fällig am, Uhrzeit, Dauer (nur bei Aufgaben) |
+| **Zuweisungen** | Liste der Zugewiesenen mit Lesestatus (grüner Haken = gelesen, grauer Strich = ungelesen) |
+
+#### Status-Workflow
+
+Aufgaben durchlaufen einen definierten Status-Workflow:
+
+| Status | Badge | Bedeutung |
+|--------|-------|-----------|
+| **Offen** | Blau (ausgefüllt) | Aufgabe neu angelegt, noch nicht bearbeitet |
+| **In Bearbeitung** | Grau | Aufgabe wird aktiv bearbeitet (automatischer Übergang bei erster Bearbeitung) |
+| **Erledigt** | Outline | Aufgabe abgeschlossen |
+| **Storniert** | Rot | Aufgabe abgebrochen |
+
+**Aktionen im Detaildialog:**
+
+| Aktion | Button | Bedingung |
+|--------|--------|-----------|
+| **Erledigen** | „Erledigen" | Nur wenn Status = Offen oder In Bearbeitung |
+| **Stornieren** | „Stornieren" | Nur wenn Status = Offen oder In Bearbeitung |
+| **Wieder öffnen** | „Wieder öffnen" | Nur wenn Status = Erledigt oder Storniert |
+
+##### Aufgabe erledigen
+
+1. 📍 Detaildialog → **„Erledigen"**
+2. ✅ Bestätigungsdialog: „Möchten Sie die Aufgabe als erledigt markieren?"
+3. 📍 „Bestätigen"
+4. ✅ Status wechselt auf „Erledigt", Datum und Bearbeiter werden gespeichert
+
+##### Aufgabe stornieren
+
+1. 📍 Detaildialog → **„Stornieren"**
+2. ✅ Bestätigungsdialog: „Möchten Sie die Aufgabe stornieren?"
+3. 📍 „Bestätigen"
+4. ✅ Status wechselt auf „Storniert"
+
+##### Aufgabe wieder öffnen
+
+1. 📍 Detaildialog → **„Wieder öffnen"**
+2. ✅ Bestätigungsdialog: „Möchten Sie die Aufgabe wieder öffnen?"
+3. 📍 „Bestätigen"
+4. ✅ Status wechselt auf „In Bearbeitung"
+
+#### Meine Aufgaben
+
+Jeder angemeldete Benutzer kann seine eigenen Aufgaben einsehen — ohne spezielle Berechtigung.
+
+📍 **„Meine Aufgaben"** (Umschalter in der Aufgabenliste)
+
+✅ Die Tabelle zeigt nur Aufgaben, die dem Benutzer direkt oder über ein Team zugewiesen sind.
+
+#### Aufgaben in Adress- und Anfragedetails
+
+Aufgaben einer bestimmten Adresse oder Anfrage sind auch direkt über die jeweilige Detailseite erreichbar:
+
+📍 CRM → Adressen → Adresse anklicken → Tab **„Aufgaben"**
+
+📍 CRM → Anfragen → Anfrage anklicken → Tab **„Aufgaben"**
+
+✅ Dieselbe Aufgabenliste, gefiltert auf die aktuelle Adresse bzw. Anfrage. Beim Anlegen einer neuen Aufgabe ist die Verknüpfung vorbelegt.
+
+#### Benachrichtigungen
+
+Beim Anlegen einer Aufgabe oder Nachricht erhalten alle zugewiesenen Mitarbeiter automatisch eine Terp-Benachrichtigung (Typ „Erinnerung"). Die Benachrichtigung erscheint in der Benachrichtigungsglocke und enthält einen Link zur Aufgabenliste.
+
+📍 🔔 Benachrichtigungsglocke → Benachrichtigung anklicken → Aufgabenliste
+
+---
+
 ## 13. Glossar
 
 | Begriff | Erklärung | Wo in Terp |
@@ -4759,6 +4915,7 @@ Tab **„Neu anlegen"**:
 | **Benachrichtigung** | Interne Systemmeldung an einen Benutzer (Genehmigung, Fehler, Erinnerung, System) | 📍 Glocke (🔔) / Benachrichtigungen |
 | **Abwesenheitstyp** | Kategorie einer Abwesenheit mit Regeln (Urlaubsabzug, Genehmigung) | 📍 Verwaltung → Abwesenheitsarten |
 | **Aktivität** | Art der Arbeit innerhalb eines Auftrags (z. B. Montage, Dokumentation) | 📍 Verwaltung → Aufträge → Tab Aktivitäten |
+| **Aufgabe (CRM)** | Interne Arbeitsaufgabe im CRM mit Betreff, Beschreibung, Fälligkeitsdatum und Status-Workflow | 📍 CRM → Aufgaben |
 | **Auftrag** | Projekt oder Kundenauftrag für die Projektzeiterfassung | 📍 Verwaltung → Aufträge |
 | **Auftragsbuchung** | Zeitbuchung eines Mitarbeiters auf einen Auftrag | 📍 Auftragsdetail → Tab Buchungen |
 | **Bankverbindung (CRM)** | IBAN, BIC und Bankdaten einer CRM-Adresse | 📍 CRM → Adressen → Detail → Tab Bankverbindungen |
@@ -4785,6 +4942,7 @@ Tab **„Neu anlegen"**:
 | **Monatswert** | Aggregierte Arbeitszeitwerte eines Mitarbeiters für einen Monat | 📍 Verwaltung → Monatswerte |
 | **Matchcode** | Kurzschlüssel für Adress-Suche (wird automatisch aus Firmenname generiert) | 📍 CRM → Adressen → Formular |
 | **Nettoarbeitszeit** | Anrechenbare Arbeitszeit: Brutto minus Pausen | 📍 Zeitnachweis → Tageszusammenfassung |
+| **Nachricht (CRM)** | Vereinfachte CRM-Aufgabe ohne Terminierung — dient als interne Mitteilung | 📍 CRM → Aufgaben |
 | **Nummernkreis** | Auto-Zähler für Kunden-/Lieferantennummern mit konfigurierbarem Präfix | 📍 Administration → Einstellungen |
 | **Kontogruppe** | Logische Bündelung mehrerer Konten (z. B. alle Zuschlagskonten) | 📍 Verwaltung → Konten → Tab Gruppen |
 | **Personalnummer** | Eindeutige Kennung je Mitarbeiter im Mandanten | 📍 Verwaltung → Mitarbeiter |

@@ -32,6 +32,10 @@ DELETE FROM shifts WHERE code LIKE 'E2E%';
 DELETE FROM employees WHERE personnel_number LIKE 'E2E%';
 DELETE FROM calculation_rules WHERE code LIKE 'E2E%';
 
+-- CRM task records (spec 23)
+DELETE FROM crm_task_assignees WHERE task_id IN (SELECT id FROM crm_tasks WHERE subject LIKE 'E2E%');
+DELETE FROM crm_tasks WHERE subject LIKE 'E2E%';
+
 -- CRM inquiry records (spec 22)
 -- First unlink correspondences from inquiries
 UPDATE crm_correspondences SET inquiry_id = NULL WHERE inquiry_id IN (SELECT id FROM crm_inquiries WHERE title LIKE 'E2E%');

@@ -23,6 +23,7 @@ import { InquiryFormSheet } from './inquiry-form-sheet'
 import { InquiryCloseDialog } from './inquiry-close-dialog'
 import { InquiryLinkOrderDialog } from './inquiry-link-order-dialog'
 import { CorrespondenceList } from './correspondence-list'
+import { TaskList } from './task-list'
 
 interface InquiryDetailProps {
   id: string
@@ -188,6 +189,7 @@ export function InquiryDetail({ id }: InquiryDetailProps) {
         <TabsList>
           <TabsTrigger value="overview">{t('overview')}</TabsTrigger>
           <TabsTrigger value="correspondence">{t('correspondence')}</TabsTrigger>
+          <TabsTrigger value="tasks">Aufgaben</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -283,6 +285,11 @@ export function InquiryDetail({ id }: InquiryDetailProps) {
           {address && (
             <CorrespondenceList addressId={address.id} tenantId={address.tenantId} />
           )}
+        </TabsContent>
+
+        {/* Tasks Tab */}
+        <TabsContent value="tasks" className="mt-6">
+          <TaskList inquiryId={id} />
         </TabsContent>
       </Tabs>
 

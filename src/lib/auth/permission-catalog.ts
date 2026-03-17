@@ -238,6 +238,12 @@ export const ALL_PERMISSIONS: Permission[] = [
   p("crm_inquiries.create", "crm_inquiries", "create", "Create CRM inquiries"),
   p("crm_inquiries.edit", "crm_inquiries", "edit", "Edit CRM inquiries"),
   p("crm_inquiries.delete", "crm_inquiries", "delete", "Delete CRM inquiries"),
+
+  // CRM Tasks
+  p("crm_tasks.view", "crm_tasks", "view", "View CRM tasks and messages"),
+  p("crm_tasks.create", "crm_tasks", "create", "Create CRM tasks and messages"),
+  p("crm_tasks.edit", "crm_tasks", "edit", "Edit CRM tasks and messages"),
+  p("crm_tasks.delete", "crm_tasks", "delete", "Delete CRM tasks and messages"),
 ]
 
 // Lookup maps

@@ -697,3 +697,17 @@ export {
   useCreateCrmInquiryOrder,
   useDeleteCrmInquiry,
 } from './use-crm-inquiries'
+
+// CRM Tasks
+export {
+  useCrmTasks,
+  useMyTasks,
+  useCrmTaskById,
+  useCreateCrmTask,
+  useUpdateCrmTask,
+  useCompleteCrmTask,
+  useCancelCrmTask,
+  useReopenCrmTask,
+  useMarkCrmTaskRead,
+  useDeleteCrmTask,
+} from './use-crm-tasks'

@@ -2077,3 +2077,140 @@ WHERE id = 'c5000000-0000-4000-a000-000000000031'; -- V-5 (Regalsysteme Neubau) 
 INSERT INTO number_sequences (id, tenant_id, key, prefix, next_value, created_at, updated_at)
 VALUES (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'inquiry', 'V-', 8, NOW(), NOW())
 ON CONFLICT (tenant_id, key) DO UPDATE SET next_value = GREATEST(number_sequences.next_value, 8);
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- CRM Tasks & Messages (CRM_04)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+-- Tasks (type=TASK) — with due dates and status tracking
+INSERT INTO crm_tasks (id, tenant_id, type, subject, description, address_id, contact_id, inquiry_id, status, due_at, due_time, duration_min, completed_at, completed_by_id, created_at, updated_at, created_by_id)
+VALUES
+  -- Task 1: Open task for Müller Maschinenbau, linked to inquiry V-1
+  ('c6000000-0000-4000-a000-000000000001', '10000000-0000-0000-0000-000000000001', 'TASK',
+   'Angebot Sonderkonditionen nachfassen',
+   'Hr. Müller hat Rückfragen zum Angebot mit 8% Mengenrabatt. Bitte telefonisch klären und ggf. anpassen.',
+   'c1000000-0000-4000-a000-000000000001', 'c2000000-0000-4000-a000-000000000001', 'c5000000-0000-4000-a000-000000000001',
+   'OPEN', '2026-03-21 00:00:00+01', '10:00', 30,
+   NULL, NULL,
+   '2026-03-15 09:00:00+01', '2026-03-15 09:00:00+01', '00000000-0000-0000-0000-000000000001'),
+
+  -- Task 2: In progress — Bauer Logistik Regalsysteme
+  ('c6000000-0000-4000-a000-000000000002', '10000000-0000-0000-0000-000000000001', 'TASK',
+   'Technische Zeichnung Regalsystem prüfen',
+   'Die 3D-Zeichnung für Bauer Logistik muss vom technischen Leiter freigegeben werden bevor wir das Angebot finalisieren.',
+   'c1000000-0000-4000-a000-000000000004', NULL, 'c5000000-0000-4000-a000-000000000031',
+   'IN_PROGRESS', '2026-03-19 00:00:00+01', '14:00', 60,
+   NULL, NULL,
+   '2026-03-12 10:00:00+01', '2026-03-14 08:00:00+01', '00000000-0000-0000-0000-000000000001'),
+
+  -- Task 3: Completed task — Schmidt & Partner delivery
+  ('c6000000-0000-4000-a000-000000000003', '10000000-0000-0000-0000-000000000001', 'TASK',
+   'Liefertermin mit Spedition abstimmen',
+   'Lieferung KW 8 per Spedition an abweichende Adresse Berlin-Mitte koordinieren.',
+   'c1000000-0000-4000-a000-000000000002', 'c2000000-0000-4000-a000-000000000003', 'c5000000-0000-4000-a000-000000000011',
+   'COMPLETED', '2026-02-17 00:00:00+01', '09:00', 45,
+   '2026-02-16 14:30:00+01', '00000000-0000-0000-0000-000000000001',
+   '2026-02-10 11:00:00+01', '2026-02-16 14:30:00+01', '00000000-0000-0000-0000-000000000001'),
+
+  -- Task 4: Open task — Hoffmann quality issue
+  ('c6000000-0000-4000-a000-000000000004', '10000000-0000-0000-0000-000000000001', 'TASK',
+   'QS-Prüfbericht Hoffmann-Fräser erstellen',
+   'Rückläufer 3 Fräser mit Ausbrüchen prüfen und Prüfbericht erstellen für Reklamation an Hoffmann.',
+   'c1000000-0000-4000-a000-000000000021', 'c2000000-0000-4000-a000-000000000005', 'c5000000-0000-4000-a000-000000000051',
+   'OPEN', '2026-03-20 00:00:00+01', '08:00', 120,
+   NULL, NULL,
+   '2026-03-16 09:00:00+01', '2026-03-16 09:00:00+01', '00000000-0000-0000-0000-000000000001'),
+
+  -- Task 5: Cancelled task — Fischer IT (inactive customer)
+  ('c6000000-0000-4000-a000-000000000005', '10000000-0000-0000-0000-000000000001', 'TASK',
+   'Gutschrift für Fischer IT vorbereiten',
+   '5% Gutschrift auf nächste Bestellung als Entschuldigung für Lieferverzug. Storniert da Kunde abgesprungen.',
+   'c1000000-0000-4000-a000-000000000005', NULL, 'c5000000-0000-4000-a000-000000000041',
+   'CANCELLED', '2025-11-15 00:00:00+01', NULL, NULL,
+   NULL, NULL,
+   '2025-11-07 10:00:00+01', '2025-11-10 09:00:00+01', '00000000-0000-0000-0000-000000000001'),
+
+  -- Task 6: Open task — Weber Elektrotechnik follow-up
+  ('c6000000-0000-4000-a000-000000000006', '10000000-0000-0000-0000-000000000001', 'TASK',
+   'Ansprechpartner Weber Elektrotechnik klären',
+   'Nach der Erstanfrage muss der konkrete Ansprechpartner für Schaltschrankkomponenten identifiziert werden.',
+   'c1000000-0000-4000-a000-000000000003', NULL, 'c5000000-0000-4000-a000-000000000021',
+   'OPEN', '2026-03-24 00:00:00+01', NULL, NULL,
+   NULL, NULL,
+   '2026-03-10 09:00:00+01', '2026-03-10 09:00:00+01', '00000000-0000-0000-0000-000000000001'),
+
+  -- Task 7: Open task — Stahl-Union price increase
+  ('c6000000-0000-4000-a000-000000000007', '10000000-0000-0000-0000-000000000001', 'TASK',
+   'Stellungnahme Preiserhöhung Stahl-Union',
+   'Stahl-Union kündigt 6% Preiserhöhung ab April an. Einkauf soll Stellungnahme vorbereiten und Alternative prüfen.',
+   'c1000000-0000-4000-a000-000000000011', 'c2000000-0000-4000-a000-000000000004', NULL,
+   'OPEN', '2026-03-25 00:00:00+01', '11:00', 90,
+   NULL, NULL,
+   '2026-02-25 14:00:00+01', '2026-02-25 14:00:00+01', '00000000-0000-0000-0000-000000000001')
+ON CONFLICT (id) DO NOTHING;
+
+-- Messages (type=MESSAGE) — internal notifications without due dates
+INSERT INTO crm_tasks (id, tenant_id, type, subject, description, address_id, contact_id, inquiry_id, status, created_at, updated_at, created_by_id)
+VALUES
+  -- Message 1: Info about Hausmesse
+  ('c6000000-0000-4000-a000-000000000011', '10000000-0000-0000-0000-000000000001', 'MESSAGE',
+   'Hausmesse 15.03. — Teilnehmerliste aktualisiert',
+   'Die Teilnehmerliste für die Hausmesse wurde aktualisiert. Müller Maschinenbau hat 3 Personen angemeldet.',
+   'c1000000-0000-4000-a000-000000000001', NULL, 'c5000000-0000-4000-a000-000000000002',
+   'OPEN',
+   '2026-03-10 08:00:00+01', '2026-03-10 08:00:00+01', '00000000-0000-0000-0000-000000000001'),
+
+  -- Message 2: General info about supplier
+  ('c6000000-0000-4000-a000-000000000012', '10000000-0000-0000-0000-000000000001', 'MESSAGE',
+   'Kunststoff Meier — neue AGB beachten',
+   'Kunststoff Meier hat aktualisierte AGB gesendet. Bitte bei der nächsten Bestellung die neuen Zahlungsbedingungen beachten.',
+   'c1000000-0000-4000-a000-000000000012', NULL, NULL,
+   'OPEN',
+   '2026-02-16 08:00:00+01', '2026-02-16 08:00:00+01', '00000000-0000-0000-0000-000000000001'),
+
+  -- Message 3: Completed message (all read)
+  ('c6000000-0000-4000-a000-000000000013', '10000000-0000-0000-0000-000000000001', 'MESSAGE',
+   'Speditionspartner gewechselt ab März',
+   'Ab 01.03.2026 nutzen wir einen neuen Speditionspartner für Norddeutschland. Details im Intranet.',
+   NULL, NULL, NULL,
+   'COMPLETED',
+   '2026-02-20 09:00:00+01', '2026-02-28 10:00:00+01', '00000000-0000-0000-0000-000000000001')
+ON CONFLICT (id) DO NOTHING;
+
+-- Task Assignees
+INSERT INTO crm_task_assignees (id, task_id, employee_id, team_id, read_at, created_at)
+VALUES
+  -- Task 1 (Angebot Sonderkonditionen): assigned to Admin User + Thomas Mueller
+  ('c7000000-0000-4000-a000-000000000001', 'c6000000-0000-4000-a000-000000000001', '00000000-0000-0000-0000-000000000011', NULL, NULL, '2026-03-15 09:00:00+01'),
+  ('c7000000-0000-4000-a000-000000000002', 'c6000000-0000-4000-a000-000000000001', '00000000-0000-0000-0000-000000000014', NULL, NULL, '2026-03-15 09:00:00+01'),
+
+  -- Task 2 (Technische Zeichnung): assigned to Backend Team
+  ('c7000000-0000-4000-a000-000000000003', 'c6000000-0000-4000-a000-000000000002', NULL, '00000000-0000-0000-0000-000000000901', NULL, '2026-03-12 10:00:00+01'),
+
+  -- Task 3 (Liefertermin Spedition): assigned to Anna Weber (completed, read)
+  ('c7000000-0000-4000-a000-000000000004', 'c6000000-0000-4000-a000-000000000003', '00000000-0000-0000-0000-000000000015', NULL, '2026-02-11 08:00:00+01', '2026-02-10 11:00:00+01'),
+
+  -- Task 4 (QS-Prüfbericht): assigned to Markus Braun + Betrieb team
+  ('c7000000-0000-4000-a000-000000000005', 'c6000000-0000-4000-a000-000000000004', '00000000-0000-0000-0000-000000000017', NULL, NULL, '2026-03-16 09:00:00+01'),
+  ('c7000000-0000-4000-a000-000000000006', 'c6000000-0000-4000-a000-000000000004', NULL, '00000000-0000-0000-0000-000000000906', NULL, '2026-03-16 09:00:00+01'),
+
+  -- Task 5 (Gutschrift Fischer IT): assigned to Sabine Fischer
+  ('c7000000-0000-4000-a000-000000000007', 'c6000000-0000-4000-a000-000000000005', '00000000-0000-0000-0000-000000000016', NULL, '2025-11-08 10:00:00+01', '2025-11-07 10:00:00+01'),
+
+  -- Task 6 (Ansprechpartner Weber): assigned to Regular User
+  ('c7000000-0000-4000-a000-000000000008', 'c6000000-0000-4000-a000-000000000006', '00000000-0000-0000-0000-000000000012', NULL, NULL, '2026-03-10 09:00:00+01'),
+
+  -- Task 7 (Stellungnahme Preiserhöhung): assigned to Stefan Lang + Admin User
+  ('c7000000-0000-4000-a000-000000000009', 'c6000000-0000-4000-a000-000000000007', '00000000-0000-0000-0000-000000000019', NULL, NULL, '2026-02-25 14:00:00+01'),
+  ('c7000000-0000-4000-a000-000000000010', 'c6000000-0000-4000-a000-000000000007', '00000000-0000-0000-0000-000000000011', NULL, '2026-02-26 08:00:00+01', '2026-02-25 14:00:00+01'),
+
+  -- Message 1 (Hausmesse): assigned to Frontend Team
+  ('c7000000-0000-4000-a000-000000000011', 'c6000000-0000-4000-a000-000000000011', NULL, '00000000-0000-0000-0000-000000000902', NULL, '2026-03-10 08:00:00+01'),
+
+  -- Message 2 (Kunststoff Meier AGB): assigned to Julia Hoffmann + Stefan Lang
+  ('c7000000-0000-4000-a000-000000000012', 'c6000000-0000-4000-a000-000000000012', '00000000-0000-0000-0000-000000000018', NULL, '2026-02-17 09:00:00+01', '2026-02-16 08:00:00+01'),
+  ('c7000000-0000-4000-a000-000000000013', 'c6000000-0000-4000-a000-000000000012', '00000000-0000-0000-0000-000000000019', NULL, NULL, '2026-02-16 08:00:00+01'),
+
+  -- Message 3 (Speditionspartner): assigned to HR Core Team (all read → completed)
+  ('c7000000-0000-4000-a000-000000000014', 'c6000000-0000-4000-a000-000000000013', NULL, '00000000-0000-0000-0000-000000000904', '2026-02-28 10:00:00+01', '2026-02-20 09:00:00+01')
+ON CONFLICT (id) DO NOTHING;

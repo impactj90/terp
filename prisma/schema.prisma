@@ -180,6 +180,7 @@ model Tenant {
   crmBankAccounts             CrmBankAccount[]
   crmCorrespondences          CrmCorrespondence[]
   crmInquiries                CrmInquiry[]
+  crmTasks                    CrmTask[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
@@ -294,6 +295,7 @@ model CrmAddress {
   bankAccounts    CrmBankAccount[]
   correspondences CrmCorrespondence[]
   inquiries       CrmInquiry[]
+  tasks           CrmTask[]
 
   @@unique([tenantId, number], map: "uq_crm_addresses_tenant_number")
   @@index([tenantId], map: "idx_crm_addresses_tenant_id")
@@ -328,6 +330,7 @@ model CrmContact {
   address         CrmAddress          @relation(fields: [addressId], references: [id], onDelete: Cascade)
   correspondences CrmCorrespondence[]
   inquiries       CrmInquiry[]
+  tasks           CrmTask[]
 
   @@index([addressId], map: "idx_crm_contacts_address_id")
   @@index([tenantId], map: "idx_crm_contacts_tenant_id")
@@ -367,6 +370,22 @@ enum CrmInquiryStatus {
   CANCELLED
 
   @@map("crm_inquiry_status")
+}
+
+enum CrmTaskType {
+  TASK
+  MESSAGE
+
+  @@map("crm_task_type")
+}
+
+enum CrmTaskStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+
+  @@map("crm_task_status")
 }
 
 // -----------------------------------------------------------------------------
@@ -437,12 +456,79 @@ model CrmInquiry {
   contact         CrmContact?         @relation(fields: [contactId], references: [id], onDelete: SetNull)
   order           Order?              @relation(fields: [orderId], references: [id], onDelete: SetNull)
   correspondences CrmCorrespondence[]
+  tasks           CrmTask[]
 
   @@unique([tenantId, number], map: "uq_crm_inquiries_tenant_number")
   @@index([tenantId, status])
   @@index([tenantId, addressId])
   @@index([tenantId, orderId])
   @@map("crm_inquiries")
+}
+
+// -----------------------------------------------------------------------------
+// CrmTask
+// -----------------------------------------------------------------------------
+// Migration: 000098
+//
+// Internal task or message for CRM. Can be linked to an address, contact,
+// or inquiry. Assignees are stored in CrmTaskAssignee (employees or teams).
+model CrmTask {
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String        @map("tenant_id") @db.Uuid
+  type          CrmTaskType   @default(TASK)
+  subject       String        @db.VarChar(255)
+  description   String?       @db.Text
+  addressId     String?       @map("address_id") @db.Uuid
+  contactId     String?       @map("contact_id") @db.Uuid
+  inquiryId     String?       @map("inquiry_id") @db.Uuid
+  status        CrmTaskStatus @default(OPEN)
+  dueAt         DateTime?     @map("due_at") @db.Timestamptz(6)
+  dueTime       String?       @map("due_time") @db.VarChar(5)
+  durationMin   Int?          @map("duration_min")
+  attachments   Json?         @db.JsonB
+  completedAt   DateTime?     @map("completed_at") @db.Timestamptz(6)
+  completedById String?       @map("completed_by_id") @db.Uuid
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById   String?       @map("created_by_id") @db.Uuid
+
+  tenant    Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  address   CrmAddress?        @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  contact   CrmContact?        @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  inquiry   CrmInquiry?        @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
+  assignees CrmTaskAssignee[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, dueAt])
+  @@index([tenantId, addressId])
+  @@index([tenantId, inquiryId])
+  @@map("crm_tasks")
+}
+
+// -----------------------------------------------------------------------------
+// CrmTaskAssignee
+// -----------------------------------------------------------------------------
+// Migration: 000098
+//
+// Join table linking a CrmTask to individual employees or entire teams.
+// readAt tracks when the assignee read/acknowledged the task.
+model CrmTaskAssignee {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  taskId     String    @map("task_id") @db.Uuid
+  employeeId String?   @map("employee_id") @db.Uuid
+  teamId     String?   @map("team_id") @db.Uuid
+  readAt     DateTime? @map("read_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  task     CrmTask   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  employee Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  team     Team?     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, employeeId])
+  @@unique([taskId, teamId])
+  @@index([employeeId])
+  @@index([teamId])
+  @@map("crm_task_assignees")
 }
 
 // -----------------------------------------------------------------------------
@@ -757,8 +843,9 @@ model Team {
   // Relations
   tenant     Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   department Department?  @relation(fields: [departmentId], references: [id], onDelete: SetNull)
-  leader     Employee?    @relation("TeamLeader", fields: [leaderEmployeeId], references: [id], onDelete: SetNull)
-  members    TeamMember[]
+  leader           Employee?          @relation("TeamLeader", fields: [leaderEmployeeId], references: [id], onDelete: SetNull)
+  members          TeamMember[]
+  crmTaskAssignees CrmTaskAssignee[]
 
   // Indexes
   @@unique([tenantId, name], map: "teams_tenant_id_name_key")
@@ -903,6 +990,7 @@ model Employee {
   absenceDays         AbsenceDay[]
   corrections         Correction[]
   orderBookings       OrderBooking[]
+  crmTaskAssignees    CrmTaskAssignee[]
 
   // Indexes
   @@unique([tenantId, personnelNumber], map: "employees_tenant_id_personnel_number_key")

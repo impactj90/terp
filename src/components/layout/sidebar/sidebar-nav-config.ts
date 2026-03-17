@@ -290,6 +290,13 @@ export const navConfig: NavSection[] = [
         module: 'crm',
         permissions: ['crm_inquiries.view'],
       },
+      {
+        titleKey: 'crmTasks',
+        href: '/crm/tasks',
+        icon: ClipboardCheck,
+        module: 'crm',
+        permissions: ['crm_tasks.view'],
+      },
     ],
   },
   {
