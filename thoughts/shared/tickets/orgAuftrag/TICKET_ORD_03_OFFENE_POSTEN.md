@@ -6,6 +6,8 @@
 | **Dependencies** | ORD_01 (Documents — specifically INVOICE and CREDIT_NOTE types) |
 | **Complexity** | M |
 | **New Models** | `BillingPayment` |
+| **Status** | DONE |
+| **Completed** | 2026-03-17 |
 
 ---
 
