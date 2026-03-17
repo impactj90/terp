@@ -42,10 +42,10 @@ test.describe.serial("Module Settings", () => {
     await billingSwitch.click();
     await page.waitForTimeout(1500);
 
-    // Sidebar should no longer show billing links
+    // Sidebar should no longer show billing links (billing uses /orders/* paths)
     const sidebar = page.locator("nav[aria-label='Main navigation']");
     await expect(
-      sidebar.locator(`a[href*="/billing"]`),
+      sidebar.locator(`a[href*="/orders/documents"]`),
     ).toHaveCount(0);
   });
 
@@ -66,10 +66,10 @@ test.describe.serial("Module Settings", () => {
       await page.waitForTimeout(1500);
     }
 
-    // Sidebar should show billing
+    // Sidebar should show billing (Belege link at /orders/documents)
     const sidebar = page.locator("nav[aria-label='Main navigation']");
     await expect(
-      sidebar.locator(`a[href*="/billing"]`),
+      sidebar.locator(`a[href*="/orders/documents"]`),
     ).toBeVisible();
   });
 });

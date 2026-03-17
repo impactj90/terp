@@ -109,6 +109,7 @@
     "billingSection": "Billing",
     "billingOverview": "Billing Overview",
     "billingDocuments": "Documents",
+    "billingServiceCases": "Service Cases",
     "warehouseSection": "Warehouse",
     "warehouseOverview": "Warehouse Overview",
     "crmReports": "Reports"
@@ -5128,6 +5129,7 @@
     "tabInquiries": "Inquiries",
     "tabTasks": "Tasks",
     "tabDocuments": "Documents",
+    "tabServiceCases": "Service Cases",
     "comingSoon": "Coming Soon",
     "contactsTitle": "Contact Persons",
     "addContact": "Add Contact",

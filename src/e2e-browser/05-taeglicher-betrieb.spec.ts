@@ -84,7 +84,9 @@ test.describe.serial("UC-028 & UC-029: Time Clock", () => {
     if (!alreadyClockedIn) {
       // Not clocked in — clock in first to reveal secondary buttons
       await clockInBtn.click();
-      await page.waitForTimeout(2000);
+      // Wait for the page to settle after clock-in (may trigger re-render)
+      await page.waitForLoadState("networkidle");
+      await expect(clockOutBtn).toBeEnabled({ timeout: 10_000 });
     }
 
     // Now verify auxiliary buttons are visible

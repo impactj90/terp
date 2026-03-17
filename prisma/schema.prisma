@@ -182,6 +182,7 @@ model Tenant {
   crmInquiries                CrmInquiry[]
   crmTasks                    CrmTask[]
   billingDocuments            BillingDocument[]
+  billingServiceCases         BillingServiceCase[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
@@ -300,6 +301,7 @@ model CrmAddress {
   billingDocuments         BillingDocument[]
   billingDocumentsDelivery BillingDocument[] @relation("DeliveryAddress")
   billingDocumentsInvoice  BillingDocument[] @relation("InvoiceAddress")
+  billingServiceCases      BillingServiceCase[]
 
   @@unique([tenantId, number], map: "uq_crm_addresses_tenant_number")
   @@index([tenantId], map: "idx_crm_addresses_tenant_id")
@@ -335,7 +337,8 @@ model CrmContact {
   correspondences CrmCorrespondence[]
   inquiries       CrmInquiry[]
   tasks           CrmTask[]
-  billingDocuments BillingDocument[]
+  billingDocuments  BillingDocument[]
+  billingServiceCases BillingServiceCase[]
 
   @@index([addressId], map: "idx_crm_contacts_address_id")
   @@index([tenantId], map: "idx_crm_contacts_tenant_id")
@@ -435,6 +438,15 @@ enum BillingPriceType {
   @@map("billing_price_type")
 }
 
+enum BillingServiceCaseStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+  INVOICED
+
+  @@map("billing_service_case_status")
+}
+
 // -----------------------------------------------------------------------------
 // CrmCorrespondence
 // -----------------------------------------------------------------------------
@@ -504,7 +516,8 @@ model CrmInquiry {
   order           Order?              @relation(fields: [orderId], references: [id], onDelete: SetNull)
   correspondences CrmCorrespondence[]
   tasks           CrmTask[]
-  billingDocuments BillingDocument[]
+  billingDocuments    BillingDocument[]
+  billingServiceCases BillingServiceCase[]
 
   @@unique([tenantId, number], map: "uq_crm_inquiries_tenant_number")
   @@index([tenantId, status])
@@ -649,8 +662,9 @@ model BillingDocument {
   inquiry          CrmInquiry?               @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
   order            Order?                    @relation(fields: [orderId], references: [id], onDelete: SetNull)
   parentDocument   BillingDocument?          @relation("DocumentChain", fields: [parentDocumentId], references: [id], onDelete: SetNull)
-  childDocuments   BillingDocument[]         @relation("DocumentChain")
-  positions        BillingDocumentPosition[]
+  childDocuments      BillingDocument[]         @relation("DocumentChain")
+  positions           BillingDocumentPosition[]
+  billingServiceCases BillingServiceCase[]
 
   @@unique([tenantId, number])
   @@index([tenantId, type])
@@ -693,6 +707,50 @@ model BillingDocumentPosition {
 
   @@index([documentId, sortOrder])
   @@map("billing_document_positions")
+}
+
+// -----------------------------------------------------------------------------
+// BillingServiceCase
+// -----------------------------------------------------------------------------
+// Migration: 000100
+//
+// Service case (Kundendienst) for maintenance, repair, or on-site jobs.
+// Workflow: OPEN -> IN_PROGRESS -> CLOSED -> INVOICED
+model BillingServiceCase {
+  id                  String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId            String                     @map("tenant_id") @db.Uuid
+  number              String                     @db.VarChar(50)
+  title               String                     @db.VarChar(255)
+  addressId           String                     @map("address_id") @db.Uuid
+  contactId           String?                    @map("contact_id") @db.Uuid
+  inquiryId           String?                    @map("inquiry_id") @db.Uuid
+  status              BillingServiceCaseStatus   @default(OPEN)
+  reportedAt          DateTime                   @default(now()) @map("reported_at") @db.Timestamptz(6)
+  customerNotifiedCost Boolean                   @default(false) @map("customer_notified_cost")
+  assignedToId        String?                    @map("assigned_to_id") @db.Uuid
+  description         String?
+  closingReason       String?                    @map("closing_reason")
+  closedAt            DateTime?                  @map("closed_at") @db.Timestamptz(6)
+  closedById          String?                    @map("closed_by_id") @db.Uuid
+  orderId             String?                    @map("order_id") @db.Uuid
+  invoiceDocumentId   String?                    @map("invoice_document_id") @db.Uuid
+  createdAt           DateTime                   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById         String?                    @map("created_by_id") @db.Uuid
+
+  tenant           Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  address          CrmAddress       @relation(fields: [addressId], references: [id])
+  contact          CrmContact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  inquiry          CrmInquiry?      @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
+  assignedTo       Employee?        @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  order            Order?           @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  invoiceDocument  BillingDocument? @relation(fields: [invoiceDocumentId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+  @@index([tenantId, addressId])
+  @@index([tenantId, assignedToId])
+  @@map("billing_service_cases")
 }
 
 // -----------------------------------------------------------------------------
@@ -1154,7 +1212,8 @@ model Employee {
   absenceDays         AbsenceDay[]
   corrections         Correction[]
   orderBookings       OrderBooking[]
-  crmTaskAssignees    CrmTaskAssignee[]
+  crmTaskAssignees        CrmTaskAssignee[]
+  assignedServiceCases    BillingServiceCase[]
 
   // Indexes
   @@unique([tenantId, personnelNumber], map: "employees_tenant_id_personnel_number_key")
@@ -1458,6 +1517,7 @@ model Order {
   orderBookings       OrderBooking[]
   crmInquiries        CrmInquiry[]
   billingDocuments    BillingDocument[]
+  billingServiceCases BillingServiceCase[]
 
   @@unique([tenantId, code], map: "orders_tenant_id_code_key")
   @@index([tenantId], map: "idx_orders_tenant")

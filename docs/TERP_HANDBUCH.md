@@ -53,6 +53,7 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [13.7 Beleg stornieren](#137-beleg-stornieren)
     - [13.8 Beleg duplizieren](#138-beleg-duplizieren)
     - [13.9 Praxisbeispiel: Angebot bis Rechnung](#139-praxisbeispiel-angebot-bis-rechnung)
+    - [13.10 Kundendienst (Serviceaufträge)](#1310-kundendienst-serviceaufträge)
 14. [Glossar](#14-glossar)
 
 ---
@@ -5284,6 +5285,190 @@ Jeder Beleg verweist auf seinen Vorgänger. Die Kette ist auf der Detailseite je
 
 ---
 
+### 13.10 Kundendienst (Serviceaufträge)
+
+**Was ist es?** Der Kundendienst verwaltet Serviceaufträge -- Wartungs-, Reparatur- und Vor-Ort-Einsätze für Kunden. Jeder Serviceauftrag durchläuft einen Workflow von der Erstellung bis zur Rechnungsstellung.
+
+**Wozu dient es?** Serviceaufträge erfassen, einem Mitarbeiter zuweisen, nach Abschluss eine Rechnung generieren und optional einen Terp-Auftrag für die Zeiterfassung erstellen.
+
+> Modul: **Billing** muss aktiviert sein
+
+> Berechtigung: `billing_service_cases.view`, `billing_service_cases.create`, `billing_service_cases.edit`, `billing_service_cases.delete`
+
+📍 Aufträge > Kundendienst
+
+Sie sehen die Liste aller Serviceaufträge des aktiven Mandanten.
+
+#### Serviceauftragsliste
+
+Tabelle mit Spalten:
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Nummer** | Auto-generierte Nummer (z.B. KD-1, KD-42) |
+| **Titel** | Bezeichnung des Serviceauftrags |
+| **Kunde** | Firmenname der verknüpften Adresse |
+| **Zuständig** | Zugewiesener Mitarbeiter |
+| **Status** | Offen, In Bearbeitung, Abgeschlossen, Abgerechnet |
+| **Gemeldet am** | Datum der Meldung |
+
+**Filter:**
+- **Status-Filter**: Dropdown mit Statuswerten
+- **Suchfeld**: Suche nach Nummer, Titel, Beschreibung
+
+#### Serviceauftrag anlegen
+
+1. **"Neuer Serviceauftrag"** (Kundendienstliste, oben rechts)
+2. Seitenformular öffnet sich
+3. **Titel** eintragen (Pflicht)
+4. **Kundenadresse** auswählen (Pflicht)
+5. Optionale Felder:
+   - **Kontaktperson**: Ansprechpartner aus der Adresse
+   - **Beschreibung**: Detailbeschreibung des Auftrags
+   - **Zuständiger Mitarbeiter**: Mitarbeiter zuweisen
+   - **Auf Kosten hingewiesen**: Wurde der Kunde darüber informiert, dass der Einsatz kostenpflichtig ist? (z.B. bei außervertraglichen Reparaturen oder abgelaufener Garantie). Dient als interne Dokumentation für die spätere Rechnungsstellung.
+6. **"Speichern"**
+7. ✅ Serviceauftrag wird mit Status **Offen** angelegt. Nummer wird automatisch vergeben (z.B. KD-1).
+
+#### Serviceauftrag bearbeiten
+
+Bearbeitung ist nur im Status **Offen** oder **In Bearbeitung** möglich.
+
+1. Serviceauftrag in der Liste anklicken
+2. Detailseite öffnet sich
+3. **"Bearbeiten"** klicken
+4. Felder anpassen (Titel, Beschreibung, Kontaktperson, Zuständigkeit, etc.)
+5. **"Speichern"**
+6. ✅ Status wechselt automatisch von **Offen** zu **In Bearbeitung** bei der ersten Bearbeitung
+
+#### Serviceauftrag abschließen
+
+1. Detailseite des Serviceauftrags: **"Abschließen"** klicken
+2. Dialog öffnet sich: **Abschlussgrund** eingeben (Pflicht)
+3. **"Abschließen"** bestätigen
+4. ✅ Status wechselt zu **Abgeschlossen**
+5. ✅ Nach dem Abschließen ist der Serviceauftrag nicht mehr bearbeitbar
+
+#### Rechnung erstellen
+
+Nach dem Abschließen kann aus dem Serviceauftrag eine Rechnung generiert werden:
+
+1. Detailseite (Status: Abgeschlossen): **"Rechnung erstellen"** klicken
+2. Dialog öffnet sich mit Positionsliste
+3. Positionen hinzufügen:
+   - **Beschreibung**: Text der Position
+   - **Menge**: Anzahl
+   - **Einheit**: Stk, Std, etc.
+   - **Einzelpreis**: Preis netto
+   - **MwSt %**: z.B. 19%
+4. **"Rechnung erstellen"** klicken
+5. ✅ Ein Beleg vom Typ **Rechnung** (RE-) wird automatisch erstellt
+6. ✅ Die Rechnung ist mit dem Serviceauftrag verknüpft
+7. ✅ Status wechselt zu **Abgerechnet**
+
+💡 **Tipp:** Die erstellte Rechnung wird als Beleg im Belegmodul (Aufträge > Belege) angezeigt und kann dort abgeschlossen und weiterverarbeitet werden.
+
+#### Auftrag für Zeiterfassung erstellen
+
+Optional kann aus einem offenen Serviceauftrag ein Terp-Auftrag erstellt werden:
+
+1. Detailseite (Status: Offen oder In Bearbeitung): **"Auftrag erstellen"** klicken
+2. Dialog: Bestätigen
+3. ✅ Ein Terp-Auftrag wird erstellt -- Mitarbeiter können Zeit darauf buchen
+4. ✅ Der Auftrag ist auf der Detailseite als "Verknüpfter Auftrag" sichtbar
+
+#### Status-Workflow
+
+| Status | Badge | Bedeutung | Erlaubte Aktionen |
+|--------|-------|-----------|-------------------|
+| **OPEN** (Offen) | grau | Neu angelegt | Bearbeiten, Auftrag erstellen, Abschließen, Löschen |
+| **IN_PROGRESS** (In Bearbeitung) | blau | In Arbeit | Bearbeiten, Auftrag erstellen, Abschließen, Löschen |
+| **CLOSED** (Abgeschlossen) | grün | Erledigt | Rechnung erstellen |
+| **INVOICED** (Abgerechnet) | lila | Rechnung erstellt | (keine) |
+
+#### CRM-Integration
+
+- **Adressdetailseite**: Tab **"Kundendienst"** zeigt alle Serviceaufträge dieser Adresse
+- **Anfragen**: Serviceaufträge können mit CRM-Anfragen verknüpft werden
+
+#### 13.10.1 Praxisbeispiel: Heizungsreparatur bis Rechnung
+
+**Szenario:** Ein Kunde meldet eine defekte Heizung. Sie erstellen einen Serviceauftrag, weisen einen Techniker zu, schließen nach der Reparatur ab und erstellen eine Rechnung.
+
+##### Schritt 1 -- Serviceauftrag anlegen
+
+1. 📍 Aufträge > Kundendienst
+2. Klick auf **"Neuer Serviceauftrag"** (oben rechts)
+3. Seitenformular öffnet sich
+4. **Titel**: "Heizungsreparatur" eintragen
+5. **Kundenadresse**: Dropdown öffnen → "Mustermann GmbH" auswählen
+6. **Beschreibung**: "Heizung im EG fällt regelmäßig aus. Vor-Ort-Termin erforderlich."
+7. **Auf Kosten hingewiesen**: Checkbox aktivieren (der Kunde wurde informiert, dass die Reparatur kostenpflichtig ist)
+8. Klick auf **"Speichern"**
+9. ✅ Serviceauftrag **KD-1** wird als **Offen** angelegt und erscheint in der Liste
+
+##### Schritt 2 -- Mitarbeiter zuweisen und Auftrag erstellen
+
+1. In der Kundendienstliste: Klick auf **KD-1**
+2. Detailseite öffnet sich
+3. Klick auf **"Bearbeiten"**
+4. **Zuständiger Mitarbeiter**: "Max Müller" auswählen
+5. **"Speichern"**
+6. ✅ Status wechselt automatisch zu **In Bearbeitung**
+7. Klick auf **"Auftrag erstellen"**
+8. Bestätigen
+9. ✅ Ein Terp-Auftrag wird erstellt -- Max Müller kann ab sofort Zeit darauf buchen
+10. ✅ "Verknüpfter Auftrag" wird auf der Detailseite angezeigt
+
+##### Schritt 3 -- Serviceauftrag abschließen
+
+Die Reparatur wurde durchgeführt.
+
+1. Detailseite KD-1: Klick auf **"Abschließen"**
+2. Dialog: **Abschlussgrund**: "Thermostat getauscht, Heizung funktioniert wieder."
+3. Klick auf **"Abschließen"**
+4. ✅ Status wechselt zu **Abgeschlossen**
+5. ✅ Hinweis-Banner: "Dieser Serviceauftrag ist abgeschlossen."
+6. ✅ Die Schaltfläche **"Rechnung erstellen"** erscheint
+
+##### Schritt 4 -- Rechnung erstellen
+
+1. Klick auf **"Rechnung erstellen"**
+2. Dialog "Rechnung erstellen" öffnet sich
+3. Klick auf **"Position hinzufügen"** und ausfüllen:
+
+| Beschreibung | Menge | Einheit | Einzelpreis | MwSt % |
+|-------------|-------|---------|-------------|--------|
+| Arbeitszeit Techniker | 2 | Std | 85,00 | 19 |
+| Thermostat (Ersatzteil) | 1 | Stk | 45,00 | 19 |
+| Anfahrtspauschale | -- | -- | -- | 19 |
+
+   Für die Anfahrtspauschale: **Pauschalkosten**: 35,00
+
+4. Klick auf **"Rechnung erstellen"**
+5. ✅ Beleg **RE-1** wird als Entwurf erstellt
+6. ✅ KD-1 Status wechselt zu **Abgerechnet**
+7. ✅ Verknüpfte Rechnung RE-1 wird auf der Detailseite angezeigt
+
+##### Schritt 5 -- Rechnung abschließen
+
+1. 📍 Aufträge > Belege → RE-1 anklicken
+2. Positionen prüfen (alle drei wurden übernommen)
+3. Klick auf **"Abschließen"** → Bestätigen
+4. ✅ RE-1 ist festgeschrieben -- Rechnung kann an den Kunden versendet werden
+
+##### Ergebnis
+
+Der vollständige Workflow ist abgeschlossen:
+
+**KD-1** (Serviceauftrag) → **Auftrag** (Zeiterfassung) → **RE-1** (Rechnung)
+
+Alle Verknüpfungen sind auf der Detailseite von KD-1 nachvollziehbar: Kundenadresse, zuständiger Mitarbeiter, verknüpfter Auftrag, und die erstellte Rechnung.
+
+💡 **Tipp:** Die Rechnung RE-1 kann auch in die reguläre Belegkette eingebunden werden -- z.B. wenn Sie vorab ein Angebot erstellt haben, können Sie das Angebot und die Serviceauftrag-Rechnung unabhängig verwalten.
+
+---
+
 ## 14. Glossar
 
 | Begriff | Erklärung | Wo in Terp |
@@ -5314,6 +5499,7 @@ Jeder Beleg verweist auf seinen Vorgänger. Die Kette ist auf der Detailseite je
 | **Fortführen** | Erstellen eines Folgebelegs aus einem abgeschlossenen Beleg mit Übernahme aller Positionen | 📍 Aufträge → Belege → Detail → "Fortführen" |
 | **Kappung** | Abschneiden von Arbeitszeit außerhalb des erlaubten Fensters | Konfiguriert im Tagesplan, Tab Zeitfenster |
 | **Kernzeit** | Pflichtzeitraum bei Gleitzeit | 📍 Tagesplan → Tab Zeitfenster → Kernzeit |
+| **Kundendienst** | Serviceauftrag für Wartung, Reparatur oder Vor-Ort-Einsatz mit Status-Workflow und Rechnungserstellung | 📍 Aufträge → Kundendienst |
 | **Konto** | Sammelstelle für Zeitwerte (Flex, Überstunden, Zuschläge) | 📍 Verwaltung → Konten |
 | **Korrektur** | Manuelle Anpassung an Zeitwerten eines Tages | 📍 Verwaltung → Korrekturassistent |
 | **Kontaktperson (CRM)** | Ansprechpartner bei einer CRM-Adresse (Name, Position, Telefon, E-Mail) | 📍 CRM → Adressen → Detail → Tab Kontakte |
@@ -5335,6 +5521,7 @@ Jeder Beleg verweist auf seinen Vorgänger. Die Kette ist auf der Detailseite je
 | **RFID-Karte** | Zutrittskarte mit Funkchip | 📍 Mitarbeiterdetail → Zutrittskarten |
 | **Rundung** | Automatisches Auf-/Abrunden von Stempelzeiten | 📍 Tagesplan → Tab Rundung |
 | **Schicht** | Benanntes Arbeitszeitpaket mit Farbe und Tagesplan | 📍 Verwaltung → Schichtplanung → Tab Schichten |
+| **Serviceauftrag** | Einzelner Kundendienst-Eintrag mit Nummer (KD-), Status und optionaler Auftrags-/Rechnungsverknüpfung | 📍 Aufträge → Kundendienst → Detail |
 | **Schichterkennung** | Automatische Schichtzuordnung anhand der Stempelzeiten | Konfiguriert im Tagesplan, Tab Spezial |
 | **Sollarbeitszeit** | Geplante Arbeitszeit laut Tagesplan | 📍 Zeitnachweis → Tagessollzeit |
 | **Standort** | Physischer Arbeitsort mit Adresse | 📍 Verwaltung → Standorte |
@@ -5422,6 +5609,8 @@ Diese Tabelle listet alle Seiten der Anwendung mit ihrer URL und dem Menüpfad:
 | `/orders/documents` | Aufträge → Belege | billing_documents.view |
 | `/orders/documents/new` | Aufträge → Belege → Neuer Beleg | billing_documents.create |
 | `/orders/documents/[id]` | Belegliste → Zeile anklicken | billing_documents.view |
+| `/orders/service-cases` | Aufträge → Kundendienst | billing_service_cases.view |
+| `/orders/service-cases/[id]` | Kundendienstliste → Zeile anklicken | billing_service_cases.view |
 
 ---
 

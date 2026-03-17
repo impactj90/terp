@@ -41,6 +41,7 @@ import {
   Mail,
   BookOpen,
   Warehouse,
+  Wrench,
 } from 'lucide-react'
 
 /**
@@ -316,6 +317,13 @@ export const navConfig: NavSection[] = [
         icon: FileText,
         module: 'billing',
         permissions: ['billing_documents.view'],
+      },
+      {
+        titleKey: 'billingServiceCases',
+        href: '/orders/service-cases',
+        icon: Wrench,
+        module: 'billing',
+        permissions: ['billing_service_cases.view'],
       },
     ],
   },

@@ -109,6 +109,7 @@
     "billingSection": "Fakturierung",
     "billingOverview": "Fakturierungsübersicht",
     "billingDocuments": "Belege",
+    "billingServiceCases": "Kundendienst",
     "warehouseSection": "Lager",
     "warehouseOverview": "Lagerübersicht",
     "crmReports": "Auswertungen"
@@ -5128,6 +5129,7 @@
     "tabInquiries": "Anfragen",
     "tabTasks": "Aufgaben",
     "tabDocuments": "Belege",
+    "tabServiceCases": "Kundendienst",
     "comingSoon": "In Vorbereitung",
     "contactsTitle": "Kontaktpersonen",
     "addContact": "Kontakt hinzufügen",

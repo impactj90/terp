@@ -27,6 +27,8 @@ import { BankAccountFormDialog } from '@/components/crm/bank-account-form-dialog
 import { CorrespondenceList } from '@/components/crm/correspondence-list'
 import { InquiryList } from '@/components/crm/inquiry-list'
 import { TaskList } from '@/components/crm/task-list'
+import { BillingDocumentList } from '@/components/billing/document-list'
+import { ServiceCaseList } from '@/components/billing/service-case-list'
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -191,6 +193,7 @@ export default function CrmAddressDetailPage() {
           <TabsTrigger value="inquiries">{t('tabInquiries')}</TabsTrigger>
           <TabsTrigger value="tasks">{t('tabTasks')}</TabsTrigger>
           <TabsTrigger value="documents">{t('tabDocuments')}</TabsTrigger>
+          <TabsTrigger value="serviceCases">{t('tabServiceCases')}</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -302,11 +305,11 @@ export default function CrmAddressDetailPage() {
         </TabsContent>
 
         <TabsContent value="documents" className="mt-6">
-          <Card>
-            <CardContent className="flex items-center justify-center py-16">
-              <p className="text-muted-foreground">{t('comingSoon')} — ORD_01</p>
-            </CardContent>
-          </Card>
+          <BillingDocumentList addressId={address.id} />
+        </TabsContent>
+
+        <TabsContent value="serviceCases" className="mt-6">
+          <ServiceCaseList addressId={address.id} />
         </TabsContent>
       </Tabs>
 
