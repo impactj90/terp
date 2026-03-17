@@ -6,6 +6,7 @@
 | **Dependencies** | CRM_01 (Addresses), CRM_03 (Inquiries), ORD_01 (Documents) |
 | **Complexity** | M |
 | **New Models** | `BillingServiceCase` |
+| **Status** | ✅ Complete |
 
 ---
 
