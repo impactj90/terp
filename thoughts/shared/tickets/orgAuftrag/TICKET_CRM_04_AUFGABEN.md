@@ -288,16 +288,16 @@ test.describe("UC-CRM-04: Tasks & Messages", () => {
 
 ## Acceptance Criteria
 
-- [ ] `CrmTask` and `CrmTaskAssignee` models created with migration
-- [ ] Tasks and messages (two types) supported
-- [ ] Assignees can be individual employees or teams
-- [ ] Notifications sent to assignees on task creation (via existing notification system)
-- [ ] "My Tasks" query works for current user (direct + team assignments)
-- [ ] Task status workflow: OPEN → IN_PROGRESS → COMPLETED / CANCELLED
-- [ ] Mark as read tracking per assignee
-- [ ] Tasks visible on address, inquiry, and document detail tabs
-- [ ] Global task list at `/crm/tasks` with search and filters
-- [ ] Attachment upload supported
-- [ ] All procedures gated by `requireModule("crm")` and `crm_tasks.*` permissions
-- [ ] `myTasks` accessible to any authenticated tenant user (no special permission needed)
-- [ ] Cross-tenant isolation verified
+- [x] `CrmTask` and `CrmTaskAssignee` models created with migration
+- [x] Tasks and messages (two types) supported
+- [x] Assignees can be individual employees or teams
+- [x] Notifications sent to assignees on task creation (via existing notification system)
+- [x] "My Tasks" query works for current user (direct + team assignments)
+- [x] Task status workflow: OPEN → IN_PROGRESS → COMPLETED / CANCELLED
+- [x] Mark as read tracking per assignee
+- [x] Tasks visible on address, inquiry, and document detail tabs
+- [x] Global task list at `/crm/tasks` with search and filters
+- [ ] Attachment upload supported (deferred — requires file upload infrastructure from ORD_01)
+- [x] All procedures gated by `requireModule("crm")` and `crm_tasks.*` permissions
+- [x] `myTasks` accessible to any authenticated tenant user (no special permission needed)
+- [x] Cross-tenant isolation verified
