@@ -41,6 +41,8 @@ export function BillingDocumentForm() {
   const [paymentTermDays, setPaymentTermDays] = React.useState('')
   const [discountPercent, setDiscountPercent] = React.useState('')
   const [discountDays, setDiscountDays] = React.useState('')
+  const [discountPercent2, setDiscountPercent2] = React.useState('')
+  const [discountDays2, setDiscountDays2] = React.useState('')
   const [deliveryType, setDeliveryType] = React.useState('')
   const [deliveryTerms, setDeliveryTerms] = React.useState('')
 
@@ -64,6 +66,8 @@ export function BillingDocumentForm() {
         paymentTermDays: paymentTermDays ? parseInt(paymentTermDays) : undefined,
         discountPercent: discountPercent ? parseFloat(discountPercent) : undefined,
         discountDays: discountDays ? parseInt(discountDays) : undefined,
+        discountPercent2: discountPercent2 ? parseFloat(discountPercent2) : undefined,
+        discountDays2: discountDays2 ? parseInt(discountDays2) : undefined,
         deliveryType: deliveryType || undefined,
         deliveryTerms: deliveryTerms || undefined,
       })
@@ -148,24 +152,48 @@ export function BillingDocumentForm() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="discountPercent">Skonto %</Label>
+                <Label htmlFor="discountPercent">Skonto 1 %</Label>
                 <Input
                   id="discountPercent"
                   type="number"
                   step="0.01"
                   value={discountPercent}
                   onChange={(e) => setDiscountPercent(e.target.value)}
-                  placeholder="z.B. 2"
+                  placeholder="z.B. 3"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="discountDays">Skonto Tage</Label>
+                <Label htmlFor="discountDays">Skonto 1 Tage</Label>
                 <Input
                   id="discountDays"
                   type="number"
                   value={discountDays}
                   onChange={(e) => setDiscountDays(e.target.value)}
                   placeholder="z.B. 10"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div />
+              <div className="space-y-2">
+                <Label htmlFor="discountPercent2">Skonto 2 %</Label>
+                <Input
+                  id="discountPercent2"
+                  type="number"
+                  step="0.01"
+                  value={discountPercent2}
+                  onChange={(e) => setDiscountPercent2(e.target.value)}
+                  placeholder="z.B. 2"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="discountDays2">Skonto 2 Tage</Label>
+                <Input
+                  id="discountDays2"
+                  type="number"
+                  value={discountDays2}
+                  onChange={(e) => setDiscountDays2(e.target.value)}
+                  placeholder="z.B. 20"
                 />
               </div>
             </div>

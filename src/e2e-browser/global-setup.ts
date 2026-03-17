@@ -32,6 +32,13 @@ DELETE FROM shifts WHERE code LIKE 'E2E%';
 DELETE FROM employees WHERE personnel_number LIKE 'E2E%';
 DELETE FROM calculation_rules WHERE code LIKE 'E2E%';
 
+-- Payment records (spec 32) — must come before billing docs cleanup
+DELETE FROM billing_payments WHERE document_id IN (
+  SELECT bd.id FROM billing_documents bd
+  JOIN crm_addresses ca ON bd.address_id = ca.id
+  WHERE ca.company LIKE 'E2E%'
+);
+
 -- Service case records (spec 31) — must come before billing docs and CRM addresses
 DELETE FROM billing_service_cases WHERE address_id IN (
   SELECT id FROM crm_addresses WHERE company LIKE 'E2E%'

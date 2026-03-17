@@ -325,6 +325,13 @@ export const navConfig: NavSection[] = [
         module: 'billing',
         permissions: ['billing_service_cases.view'],
       },
+      {
+        titleKey: 'billingOpenItems',
+        href: '/orders/open-items',
+        icon: Wallet,
+        module: 'billing',
+        permissions: ['billing_payments.view'],
+      },
     ],
   },
   {

@@ -54,6 +54,7 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [13.8 Beleg duplizieren](#138-beleg-duplizieren)
     - [13.9 Praxisbeispiel: Angebot bis Rechnung](#139-praxisbeispiel-angebot-bis-rechnung)
     - [13.10 Kundendienst (Serviceaufträge)](#1310-kundendienst-serviceaufträge)
+    - [13.11 Offene Posten / Zahlungen](#1311-offene-posten--zahlungen)
 14. [Glossar](#14-glossar)
 
 ---
@@ -5469,6 +5470,197 @@ Alle Verknüpfungen sind auf der Detailseite von KD-1 nachvollziehbar: Kundenadr
 
 ---
 
+### 13.11 Offene Posten / Zahlungen
+
+**Was ist es?** Die Offene-Posten-Verwaltung zeigt alle unbezahlten oder teilbezahlten Rechnungen an. Sobald eine Rechnung abgeschlossen (festgeschrieben) wird, erscheint sie automatisch als offener Posten. Zahlungen werden gegen Rechnungen erfasst -- bar oder per Überweisung. Skonto-Abzüge (zwei Stufen) und Teilzahlungen werden unterstützt.
+
+**Wozu dient es?** Offene Forderungen im Blick behalten, Zahlungseingänge dokumentieren, überfällige Rechnungen erkennen und Skonto-Fristen nutzen.
+
+> Modul: **Billing** muss aktiviert sein
+
+> Berechtigung: `billing_payments.view` (Anzeige), `billing_payments.create` (Zahlung erfassen), `billing_payments.cancel` (Zahlung stornieren)
+
+📍 Aufträge > Offene Posten
+
+Sie sehen die Liste aller offenen Posten des aktiven Mandanten mit Zusammenfassung (Gesamtbetrag offen, überfällig, Anzahl pro Status).
+
+#### Offene-Posten-Liste
+
+Tabelle mit Spalten:
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Rechnungsnr.** | Belegnummer der Rechnung (z.B. RE-1) |
+| **Kunde** | Firmenname der verknüpften Adresse |
+| **Rechnungsdatum** | Datum des Belegs |
+| **Fällig am** | Rechnungsdatum + Zahlungsziel (Tage) |
+| **Brutto** | Gesamtbetrag der Rechnung (brutto) |
+| **Bezahlt** | Summe aller aktiven Zahlungen |
+| **Offen** | Restbetrag (Brutto - Bezahlt) |
+| **Status** | Offen, Teilzahlung, Bezahlt, Überfällig |
+
+**Filter:**
+- **Status-Filter**: Dropdown (Alle, Offen, Teilzahlung, Bezahlt, Überfällig)
+- **Suchfeld**: Suche nach Rechnungsnummer oder Kundenname
+- **Datumsbereich**: Von / Bis (Rechnungsdatum)
+
+**Zusammenfassung:** Im oberen Bereich werden KPI-Karten angezeigt:
+- **Gesamt offen**: Summe aller offenen Beträge
+- **Überfällig**: Summe der offenen Beträge mit überschrittenem Fälligkeitsdatum
+- **Anzahl**: Offen / Teilzahlung / Bezahlt
+
+#### Offene-Posten-Detail
+
+📍 Zeile in der Offene-Posten-Liste anklicken
+
+Die Detailseite zeigt die Rechnungszusammenfassung und die Zahlungshistorie.
+
+**Rechnungszusammenfassung:**
+
+| Feld | Beschreibung |
+|------|-------------|
+| **Rechnungsnr.** | Belegnummer |
+| **Kunde** | Firma und Adresse |
+| **Rechnungsdatum** | Datum des Belegs |
+| **Fällig am** | Berechnetes Fälligkeitsdatum |
+| **Brutto** | Gesamtbetrag |
+| **Bezahlt** | Summe aktiver Zahlungen |
+| **Offen** | Restbetrag |
+| **Status** | Zahlungsstatus-Badge |
+| **Skonto 1** | X% innerhalb von Y Tagen (falls konfiguriert) |
+| **Skonto 2** | X% innerhalb von Y Tagen (falls konfiguriert) |
+
+**Zahlungshistorie (Tabelle):**
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Datum** | Zahlungsdatum |
+| **Betrag** | Zahlungsbetrag |
+| **Art** | Bar / Überweisung |
+| **Skonto** | Ja / -- |
+| **Status** | Aktiv / Storniert |
+| **Notizen** | Optionale Anmerkungen |
+| **Aktionen** | Stornieren-Button (nur bei aktiven Zahlungen) |
+
+#### Zahlung erfassen
+
+1. 📍 Offene-Posten-Detail → **"Zahlung erfassen"** (oben rechts)
+2. Dialog öffnet sich: "Zahlung erfassen"
+3. **Datum** auswählen (Standard: heute)
+4. **Betrag** eingeben (vorausgefüllt mit dem offenen Restbetrag)
+5. **Zahlungsart** wählen: Bar oder Überweisung
+6. Optional: **Skonto** aktivieren (Checkbox, nur sichtbar wenn Skonto-Fristen konfiguriert sind und die Frist noch nicht abgelaufen ist)
+   - Bei aktiviertem Skonto wird der Abzug automatisch berechnet und als separate Zahlung verbucht
+7. Optional: **Notizen** eintragen
+8. 📍 **"Zahlung erfassen"**
+9. Zahlung erscheint in der Zahlungshistorie
+10. Status der Rechnung aktualisiert sich (Offen → Teilzahlung → Bezahlt)
+
+**Teilzahlungen:** Der Betrag kann geringer als der offene Restbetrag sein. Die Rechnung wechselt dann in den Status "Teilzahlung".
+
+#### Skonto (Rabatt bei schneller Zahlung)
+
+Rechnungen können zwei Skonto-Stufen haben (konfiguriert über die Zahlungsbedingungen des Belegs):
+
+| Stufe | Regel | Beispiel |
+|-------|-------|---------|
+| **Skonto 1** | X% Abzug bei Zahlung innerhalb von Y Tagen | 3% bei Zahlung innerhalb von 10 Tagen |
+| **Skonto 2** | X% Abzug bei Zahlung innerhalb von Y Tagen | 2% bei Zahlung innerhalb von 20 Tagen |
+| **Netto** | Voller Betrag nach Ablauf beider Fristen | Zahlung nach 20 Tagen = voller Betrag |
+
+Beim Erfassen einer Zahlung mit aktiviertem Skonto:
+1. Das System prüft, welche Skonto-Stufe zum Zahlungsdatum gilt
+2. Der Skonto-Betrag wird automatisch berechnet
+3. Zwei Einträge werden in der Zahlungshistorie erstellt: die eigentliche Zahlung und der Skonto-Abzug (markiert als "Skonto")
+
+#### Zahlung stornieren
+
+1. 📍 Offene-Posten-Detail → Zahlungshistorie → **"Stornieren"** (bei der gewünschten Zahlung)
+2. Bestätigungsdialog: "Möchten Sie diese Zahlung wirklich stornieren?"
+3. Optional: **Grund** eintragen
+4. 📍 **"Bestätigen"**
+5. Zahlung wird als "Storniert" markiert
+6. Der stornierte Betrag wird dem offenen Posten wieder zugerechnet
+7. Status der Rechnung aktualisiert sich entsprechend
+
+#### Zahlungsstatus
+
+| Status | Badge | Bedeutung |
+|--------|-------|-----------|
+| **Offen** | Grau | Keine Zahlung erfasst |
+| **Teilzahlung** | Gelb | Teilbetrag bezahlt, Rest offen |
+| **Bezahlt** | Grün | Vollständig bezahlt |
+| **Überzahlt** | Blau | Mehr als der Rechnungsbetrag bezahlt |
+| **Überfällig** | Rot | Fälligkeitsdatum überschritten und nicht vollständig bezahlt |
+
+#### Gutschriften
+
+Wird eine Gutschrift (Typ: Gutschrift) mit Bezug auf eine Rechnung erstellt (über "Fortführen" → Gutschrift), reduziert sich der effektive Rechnungsbetrag automatisch. Der offene Posten zeigt den reduzierten Betrag an.
+
+#### 13.11.1 Praxisbeispiel: Rechnung mit Teilzahlung und Skonto
+
+**Szenario:** Sie haben eine Rechnung über 1.190,00 EUR (brutto) erstellt. Der Kunde zahlt zunächst einen Teilbetrag per Überweisung, dann den Rest bar mit Skonto-Abzug.
+
+##### Voraussetzung
+
+Eine abgeschlossene (festgeschriebene) Rechnung RE-1 über 1.190,00 EUR mit folgenden Zahlungsbedingungen:
+- Zahlungsziel: 30 Tage
+- Skonto 1: 3% bei Zahlung innerhalb von 10 Tagen
+- Skonto 2: 2% bei Zahlung innerhalb von 20 Tagen
+
+##### Schritt 1 -- Offene Posten aufrufen
+
+1. 📍 Aufträge > Offene Posten
+2. RE-1 erscheint in der Liste mit Status **Offen**
+3. Spalte "Offen" zeigt **1.190,00 EUR**
+4. Spalte "Fällig am" zeigt das berechnete Fälligkeitsdatum (Rechnungsdatum + 30 Tage)
+
+##### Schritt 2 -- Teilzahlung per Überweisung
+
+1. Klick auf die Zeile **RE-1**
+2. Detailseite öffnet sich
+3. Klick auf **"Zahlung erfassen"**
+4. **Datum**: heutiges Datum
+5. **Betrag**: "500" eintragen (statt des vorausgefüllten Gesamtbetrags)
+6. **Zahlungsart**: "Überweisung" auswählen
+7. **Notizen**: "Anzahlung"
+8. Klick auf **"Zahlung erfassen"**
+9. Zahlung erscheint in der Zahlungshistorie
+10. Status wechselt zu **Teilzahlung**
+11. Bezahlt: 500,00 EUR | Offen: 690,00 EUR
+
+##### Schritt 3 -- Restzahlung bar mit Skonto
+
+1. Klick auf **"Zahlung erfassen"**
+2. Betrag ist vorausgefüllt mit **690,00 EUR** (Restbetrag)
+3. **Zahlungsart**: "Bar" auswählen
+4. **Skonto** aktivieren (Checkbox)
+5. System zeigt: "Skonto 1 (3%): Abzug 20,70 EUR" (oder Stufe 2, je nach Datum)
+6. Zahlungsbetrag wird automatisch angepasst: 669,30 EUR
+7. Klick auf **"Zahlung erfassen"**
+8. Zwei Einträge in der Zahlungshistorie: Zahlung (669,30 EUR) und Skonto (20,70 EUR)
+9. Status wechselt zu **Bezahlt**
+
+##### Schritt 4 -- Zahlung stornieren
+
+1. In der Zahlungshistorie: Klick auf **"Stornieren"** bei der letzten Barzahlung
+2. Bestätigungsdialog → **"Bestätigen"**
+3. Zahlung wird als "Storniert" markiert
+4. Auch der zugehörige Skonto-Eintrag wird storniert
+5. Status wechselt zurück zu **Teilzahlung**
+6. Offen: 690,00 EUR
+
+##### Ergebnis
+
+Die Zahlungshistorie dokumentiert alle Vorgänge lückenlos:
+- Teilzahlung per Überweisung (500,00 EUR -- aktiv)
+- Barzahlung mit Skonto (669,30 EUR -- storniert)
+- Skonto-Abzug (20,70 EUR -- storniert)
+
+📍 Aufträge > Offene Posten zeigt RE-1 weiterhin als "Teilzahlung" an, bis der Restbetrag beglichen ist.
+
+---
+
 ## 14. Glossar
 
 | Begriff | Erklärung | Wo in Terp |
@@ -5514,6 +5706,7 @@ Alle Verknüpfungen sind auf der Detailseite von KD-1 nachvollziehbar: Kundenadr
 | **Nettoarbeitszeit** | Anrechenbare Arbeitszeit: Brutto minus Pausen | 📍 Zeitnachweis → Tageszusammenfassung |
 | **Nachricht (CRM)** | Vereinfachte CRM-Aufgabe ohne Terminierung — dient als interne Mitteilung | 📍 CRM → Aufgaben |
 | **Nummernkreis** | Auto-Zähler für Kunden-/Lieferantennummern mit konfigurierbarem Präfix | 📍 Administration → Einstellungen |
+| **Offener Posten** | Unbezahlte oder teilbezahlte Rechnung mit Fälligkeitsdatum und Zahlungsstatus | 📍 Aufträge → Offene Posten |
 | **Kontogruppe** | Logische Bündelung mehrerer Konten (z. B. alle Zuschlagskonten) | 📍 Verwaltung → Konten → Tab Gruppen |
 | **Personalnummer** | Eindeutige Kennung je Mitarbeiter im Mandanten | 📍 Verwaltung → Mitarbeiter |
 | **Profil** | Eigene Stamm-, Beschäftigungs- und Kontaktdaten des angemeldeten Benutzers | 📍 Benutzermenü → Profil |
@@ -5522,6 +5715,7 @@ Alle Verknüpfungen sind auf der Detailseite von KD-1 nachvollziehbar: Kundenadr
 | **Rundung** | Automatisches Auf-/Abrunden von Stempelzeiten | 📍 Tagesplan → Tab Rundung |
 | **Schicht** | Benanntes Arbeitszeitpaket mit Farbe und Tagesplan | 📍 Verwaltung → Schichtplanung → Tab Schichten |
 | **Serviceauftrag** | Einzelner Kundendienst-Eintrag mit Nummer (KD-), Status und optionaler Auftrags-/Rechnungsverknüpfung | 📍 Aufträge → Kundendienst → Detail |
+| **Skonto** | Rabatt bei Zahlung innerhalb einer vereinbarten Frist (bis zu zwei Stufen) | 📍 Aufträge → Offene Posten → Detail → Zahlung erfassen |
 | **Schichterkennung** | Automatische Schichtzuordnung anhand der Stempelzeiten | Konfiguriert im Tagesplan, Tab Spezial |
 | **Sollarbeitszeit** | Geplante Arbeitszeit laut Tagesplan | 📍 Zeitnachweis → Tagessollzeit |
 | **Standort** | Physischer Arbeitsort mit Adresse | 📍 Verwaltung → Standorte |
@@ -5537,6 +5731,7 @@ Alle Verknüpfungen sind auf der Detailseite von KD-1 nachvollziehbar: Kundenadr
 | **Urlaubskonto** | Jahresguthaben: Anspruch + Übertrag + Anpassungen − Genommen | 📍 Urlaub / Verwaltung → Urlaubskonten |
 | **Urlaubskappung** | Begrenzung des Resturlaubsübertrags ins nächste Jahr | 📍 Verwaltung → Urlaubskonfiguration → Tab Kappungsregeln |
 | **Wochenplan** | Zuordnung von 7 Tagesplänen zu einer Woche | 📍 Verwaltung → Wochenpläne |
+| **Zahlung** | Erfasster Zahlungseingang (bar oder Überweisung) gegen eine Rechnung | 📍 Aufträge → Offene Posten → Detail → Zahlungshistorie |
 | **Zugangsprofil** | Berechtigungsgruppe für physischen Zutritt (bündelt Zonen) | 📍 Administration → Zutrittskontrolle → Tab Profile |
 | **Zugangszone** | Physischer Bereich mit gesteuertem Zutritt | 📍 Administration → Zutrittskontrolle → Tab Zonen |
 | **Zuschlag** | Bonus für Arbeit in bestimmten Zeitfenstern (z. B. Nachtarbeit) | Konfiguriert im Tagesplan, Detailansicht → Zuschläge |
@@ -5611,6 +5806,8 @@ Diese Tabelle listet alle Seiten der Anwendung mit ihrer URL und dem Menüpfad:
 | `/orders/documents/[id]` | Belegliste → Zeile anklicken | billing_documents.view |
 | `/orders/service-cases` | Aufträge → Kundendienst | billing_service_cases.view |
 | `/orders/service-cases/[id]` | Kundendienstliste → Zeile anklicken | billing_service_cases.view |
+| `/orders/open-items` | Aufträge → Offene Posten | billing_payments.view |
+| `/orders/open-items/[documentId]` | Offene Posten → Rechnung anklicken | billing_payments.view |
 
 ---
 

@@ -23,6 +23,10 @@
 --  20. Absence days
 --  21. Vacation config (special calcs, calc groups, capping rules)
 --  22. Employee day plans (January 2026)
+--  23. Billing documents (offers, confirmations, delivery notes, invoices, credit notes)
+--  24. Billing document positions
+--  25. Billing service cases
+--  26. Billing payments (cash, bank, partial, discount)
 --
 -- Run via: pnpm db:reset (applies seed.sql after migrations)
 --
@@ -2214,3 +2218,550 @@ VALUES
   -- Message 3 (Speditionspartner): assigned to HR Core Team (all read → completed)
   ('c7000000-0000-4000-a000-000000000014', 'c6000000-0000-4000-a000-000000000013', NULL, '00000000-0000-0000-0000-000000000904', '2026-02-28 10:00:00+01', '2026-02-20 09:00:00+01')
 ON CONFLICT (id) DO NOTHING;
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- B1. Billing Documents (ORD_01 — Belegkette)
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- Realistic document chains across customers:
+--
+-- Chain A: Müller Maschinenbau (K-1) — Full chain OFFER→AB→LF→RE (paid)
+-- Chain B: Schmidt & Partner (K-2) — OFFER→AB→LF→RE (partial payment, overdue)
+-- Chain C: Weber Elektrotechnik (K-3) — OFFER→AB→LF→RE (unpaid, not yet overdue)
+-- Chain D: Bauer Logistik (K-4) — OFFER→AB→LF→RE (with credit note + discount payment)
+-- Chain E: Hoffmann Werkzeuge (K-6) — Direct RE (service invoice, paid with Skonto)
+-- Chain F: Müller Maschinenbau (K-1) — Second RE (recent, unpaid)
+-- Chain G: Schmidt & Partner (K-2) — RE from Kundendienst (open)
+--
+-- Document IDs use prefix b1 for billing documents:
+--   b1000000-0000-4000-a000-0000000000XX
+
+-- --- Chain A: Müller Maschinenbau — Großauftrag Frästeile (vollständig bezahlt) ---
+
+-- A1: Angebot AG-1 (PRINTED)
+INSERT INTO billing_documents (id, tenant_id, number, type, status, address_id, contact_id, inquiry_id, order_date, document_date, delivery_date, delivery_type, delivery_terms, payment_term_days, discount_percent, discount_days, discount_percent_2, discount_days_2, subtotal_net, total_vat, total_gross, notes, printed_at, printed_by_id, created_at, updated_at, created_by_id)
+VALUES (
+  'b1000000-0000-4000-a000-000000000001', '10000000-0000-0000-0000-000000000001',
+  'AG-1', 'OFFER', 'FORWARDED',
+  'c1000000-0000-4000-a000-000000000001', 'c2000000-0000-4000-a000-000000000002',
+  'c5000000-0000-4000-a000-000000000001',
+  '2026-01-10', '2026-01-14', '2026-02-14',
+  'Spedition', 'frei Haus', 30, 3.0, 10, 2.0, 20,
+  12500.00, 2375.00, 14875.00,
+  'Sonderkonditionen lt. Telefonat mit Hr. Müller',
+  '2026-01-14 15:00:00+01', '00000000-0000-0000-0000-000000000001',
+  '2026-01-14 14:00:00+01', '2026-01-14 15:00:00+01', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- A2: Auftragsbestätigung AB-1 (FORWARDED, from AG-1)
+INSERT INTO billing_documents (id, tenant_id, number, type, status, address_id, contact_id, inquiry_id, order_id, parent_document_id, order_date, document_date, delivery_date, delivery_type, delivery_terms, payment_term_days, discount_percent, discount_days, discount_percent_2, discount_days_2, subtotal_net, total_vat, total_gross, printed_at, printed_by_id, created_at, updated_at, created_by_id)
+VALUES (
+  'b1000000-0000-4000-a000-000000000002', '10000000-0000-0000-0000-000000000001',
+  'AB-1', 'ORDER_CONFIRMATION', 'FORWARDED',
+  'c1000000-0000-4000-a000-000000000001', 'c2000000-0000-4000-a000-000000000002',
+  'c5000000-0000-4000-a000-000000000001', '00000000-0000-0000-0000-000000000b10',
+  'b1000000-0000-4000-a000-000000000001',
+  '2026-01-18', '2026-01-20', '2026-02-14',
+  'Spedition', 'frei Haus', 30, 3.0, 10, 2.0, 20,
+  12500.00, 2375.00, 14875.00,
+  '2026-01-20 10:00:00+01', '00000000-0000-0000-0000-000000000001',
+  '2026-01-20 09:00:00+01', '2026-01-20 10:00:00+01', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- A3: Lieferschein LS-1 (FORWARDED, from AB-1)
+INSERT INTO billing_documents (id, tenant_id, number, type, status, address_id, contact_id, parent_document_id, order_date, document_date, delivery_date, delivery_type, delivery_terms, payment_term_days, discount_percent, discount_days, discount_percent_2, discount_days_2, subtotal_net, total_vat, total_gross, printed_at, printed_by_id, created_at, updated_at, created_by_id)
+VALUES (
+  'b1000000-0000-4000-a000-000000000003', '10000000-0000-0000-0000-000000000001',
+  'LS-1', 'DELIVERY_NOTE', 'FORWARDED',
+  'c1000000-0000-4000-a000-000000000001', 'c2000000-0000-4000-a000-000000000002',
+  'b1000000-0000-4000-a000-000000000002',
+  '2026-01-18', '2026-02-10', '2026-02-10',
+  'Spedition', 'frei Haus', 30, 3.0, 10, 2.0, 20,
+  12500.00, 2375.00, 14875.00,
+  '2026-02-10 08:00:00+01', '00000000-0000-0000-0000-000000000001',
+  '2026-02-10 07:30:00+01', '2026-02-10 08:00:00+01', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- A4: Rechnung RE-1 (PRINTED, from LS-1) — fully paid
+INSERT INTO billing_documents (id, tenant_id, number, type, status, address_id, contact_id, parent_document_id, order_date, document_date, delivery_date, delivery_type, delivery_terms, payment_term_days, discount_percent, discount_days, discount_percent_2, discount_days_2, subtotal_net, total_vat, total_gross, printed_at, printed_by_id, created_at, updated_at, created_by_id)
+VALUES (
+  'b1000000-0000-4000-a000-000000000004', '10000000-0000-0000-0000-000000000001',
+  'RE-1', 'INVOICE', 'PRINTED',
+  'c1000000-0000-4000-a000-000000000001', 'c2000000-0000-4000-a000-000000000002',
+  'b1000000-0000-4000-a000-000000000003',
+  '2026-01-18', '2026-02-12', '2026-02-10',
+  'Spedition', 'frei Haus', 30, 3.0, 10, 2.0, 20,
+  12500.00, 2375.00, 14875.00,
+  '2026-02-12 09:00:00+01', '00000000-0000-0000-0000-000000000001',
+  '2026-02-12 08:30:00+01', '2026-02-12 09:00:00+01', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- --- Chain B: Schmidt & Partner — Projekt Berlin-Mitte (Teilzahlung, überfällig) ---
+
+-- B1: Angebot AG-2
+INSERT INTO billing_documents (id, tenant_id, number, type, status, address_id, contact_id, inquiry_id, order_date, document_date, delivery_date, delivery_type, payment_term_days, subtotal_net, total_vat, total_gross, printed_at, printed_by_id, created_at, updated_at, created_by_id)
+VALUES (
+  'b1000000-0000-4000-a000-000000000011', '10000000-0000-0000-0000-000000000001',
+  'AG-2', 'OFFER', 'FORWARDED',
+  'c1000000-0000-4000-a000-000000000002', 'c2000000-0000-4000-a000-000000000003',
+  'c5000000-0000-4000-a000-000000000011',
+  '2026-01-25', '2026-01-26', '2026-02-20',
+  'Spedition', 14,
+  8400.00, 1596.00, 9996.00,
+  '2026-01-26 14:00:00+01', '00000000-0000-0000-0000-000000000001',
+  '2026-01-26 13:00:00+01', '2026-01-26 14:00:00+01', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- B2: AB-2 (from AG-2)
+INSERT INTO billing_documents (id, tenant_id, number, type, status, address_id, contact_id, inquiry_id, order_id, parent_document_id, order_date, document_date, delivery_date, delivery_type, payment_term_days, subtotal_net, total_vat, total_gross, printed_at, printed_by_id, created_at, updated_at, created_by_id)
+VALUES (
+  'b1000000-0000-4000-a000-000000000012', '10000000-0000-0000-0000-000000000001',
+  'AB-2', 'ORDER_CONFIRMATION', 'FORWARDED',
+  'c1000000-0000-4000-a000-000000000002', 'c2000000-0000-4000-a000-000000000003',
+  'c5000000-0000-4000-a000-000000000011', '00000000-0000-0000-0000-000000000b11',
+  'b1000000-0000-4000-a000-000000000011',
+  '2026-01-28', '2026-01-30', '2026-02-20',
+  'Spedition', 14,
+  8400.00, 1596.00, 9996.00,
+  '2026-01-30 09:00:00+01', '00000000-0000-0000-0000-000000000001',
+  '2026-01-30 08:30:00+01', '2026-01-30 09:00:00+01', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- B3: LS-2 (from AB-2)
+INSERT INTO billing_documents (id, tenant_id, number, type, status, address_id, contact_id, parent_document_id, order_date, document_date, delivery_date, delivery_type, payment_term_days, subtotal_net, total_vat, total_gross, printed_at, printed_by_id, created_at, updated_at, created_by_id)
+VALUES (
+  'b1000000-0000-4000-a000-000000000013', '10000000-0000-0000-0000-000000000001',
+  'LS-2', 'DELIVERY_NOTE', 'FORWARDED',
+  'c1000000-0000-4000-a000-000000000002', 'c2000000-0000-4000-a000-000000000003',
+  'b1000000-0000-4000-a000-000000000012',
+  '2026-01-28', '2026-02-18', '2026-02-18',
+  'Spedition', 14,
+  8400.00, 1596.00, 9996.00,
+  '2026-02-18 08:00:00+01', '00000000-0000-0000-0000-000000000001',
+  '2026-02-18 07:30:00+01', '2026-02-18 08:00:00+01', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- B4: RE-2 (from LS-2) — partially paid, overdue (14 days term, doc date Feb 20)
+INSERT INTO billing_documents (id, tenant_id, number, type, status, address_id, contact_id, parent_document_id, order_date, document_date, delivery_date, delivery_type, payment_term_days, subtotal_net, total_vat, total_gross, printed_at, printed_by_id, created_at, updated_at, created_by_id)
+VALUES (
+  'b1000000-0000-4000-a000-000000000014', '10000000-0000-0000-0000-000000000001',
+  'RE-2', 'INVOICE', 'PRINTED',
+  'c1000000-0000-4000-a000-000000000002', 'c2000000-0000-4000-a000-000000000003',
+  'b1000000-0000-4000-a000-000000000013',
+  '2026-01-28', '2026-02-20', '2026-02-18',
+  'Spedition', 14,
+  8400.00, 1596.00, 9996.00,
+  '2026-02-20 10:00:00+01', '00000000-0000-0000-0000-000000000001',
+  '2026-02-20 09:30:00+01', '2026-02-20 10:00:00+01', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- --- Chain C: Weber Elektrotechnik — Schaltschrankzubehör (unbezahlt, noch nicht fällig) ---
+
+-- C1: AG-3
+INSERT INTO billing_documents (id, tenant_id, number, type, status, address_id, inquiry_id, order_date, document_date, delivery_date, delivery_type, payment_term_days, subtotal_net, total_vat, total_gross, printed_at, printed_by_id, created_at, updated_at, created_by_id)
+VALUES (
+  'b1000000-0000-4000-a000-000000000021', '10000000-0000-0000-0000-000000000001',
+  'AG-3', 'OFFER', 'FORWARDED',
+  'c1000000-0000-4000-a000-000000000003',
+  'c5000000-0000-4000-a000-000000000021',
+  '2026-02-18', '2026-02-20', '2026-03-15',
+  'Paketdienst', 30,
+  3200.00, 608.00, 3808.00,
+  '2026-02-20 11:00:00+01', '00000000-0000-0000-0000-000000000001',
+  '2026-02-20 10:30:00+01', '2026-02-20 11:00:00+01', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- C2: AB-3
+INSERT INTO billing_documents (id, tenant_id, number, type, status, address_id, parent_document_id, order_date, document_date, delivery_date, delivery_type, payment_term_days, subtotal_net, total_vat, total_gross, printed_at, printed_by_id, created_at, updated_at, created_by_id)
+VALUES (
+  'b1000000-0000-4000-a000-000000000022', '10000000-0000-0000-0000-000000000001',
+  'AB-3', 'ORDER_CONFIRMATION', 'FORWARDED',
+  'c1000000-0000-4000-a000-000000000003',
+  'b1000000-0000-4000-a000-000000000021',
+  '2026-02-25', '2026-02-26', '2026-03-15',
+  'Paketdienst', 30,
+  3200.00, 608.00, 3808.00,
+  '2026-02-26 09:00:00+01', '00000000-0000-0000-0000-000000000001',
+  '2026-02-26 08:30:00+01', '2026-02-26 09:00:00+01', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- C3: LS-3
+INSERT INTO billing_documents (id, tenant_id, number, type, status, address_id, parent_document_id, order_date, document_date, delivery_date, delivery_type, payment_term_days, subtotal_net, total_vat, total_gross, printed_at, printed_by_id, created_at, updated_at, created_by_id)
+VALUES (
+  'b1000000-0000-4000-a000-000000000023', '10000000-0000-0000-0000-000000000001',
+  'LS-3', 'DELIVERY_NOTE', 'FORWARDED',
+  'c1000000-0000-4000-a000-000000000003',
+  'b1000000-0000-4000-a000-000000000022',
+  '2026-02-25', '2026-03-10', '2026-03-10',
+  'Paketdienst', 30,
+  3200.00, 608.00, 3808.00,
+  '2026-03-10 08:00:00+01', '00000000-0000-0000-0000-000000000001',
+  '2026-03-10 07:30:00+01', '2026-03-10 08:00:00+01', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- C4: RE-3 (unpaid, due 2026-04-09 — not yet overdue)
+INSERT INTO billing_documents (id, tenant_id, number, type, status, address_id, parent_document_id, order_date, document_date, delivery_date, delivery_type, payment_term_days, subtotal_net, total_vat, total_gross, printed_at, printed_by_id, created_at, updated_at, created_by_id)
+VALUES (
+  'b1000000-0000-4000-a000-000000000024', '10000000-0000-0000-0000-000000000001',
+  'RE-3', 'INVOICE', 'PRINTED',
+  'c1000000-0000-4000-a000-000000000003',
+  'b1000000-0000-4000-a000-000000000023',
+  '2026-02-25', '2026-03-10', '2026-03-10',
+  'Paketdienst', 30,
+  3200.00, 608.00, 3808.00,
+  '2026-03-10 09:00:00+01', '00000000-0000-0000-0000-000000000001',
+  '2026-03-10 08:30:00+01', '2026-03-10 09:00:00+01', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- --- Chain D: Bauer Logistik — Regalsysteme (with credit note + discount) ---
+
+-- D1: AG-4
+INSERT INTO billing_documents (id, tenant_id, number, type, status, address_id, inquiry_id, order_date, document_date, delivery_date, delivery_type, delivery_terms, payment_term_days, discount_percent, discount_days, discount_percent_2, discount_days_2, subtotal_net, total_vat, total_gross, printed_at, printed_by_id, created_at, updated_at, created_by_id)
+VALUES (
+  'b1000000-0000-4000-a000-000000000031', '10000000-0000-0000-0000-000000000001',
+  'AG-4', 'OFFER', 'FORWARDED',
+  'c1000000-0000-4000-a000-000000000004',
+  'c5000000-0000-4000-a000-000000000031',
+  '2026-02-01', '2026-02-12', '2026-03-10',
+  'Spedition', 'frei Haus', 60, 3.0, 14, 2.0, 30,
+  45000.00, 8550.00, 53550.00,
+  '2026-02-12 14:30:00+01', '00000000-0000-0000-0000-000000000001',
+  '2026-02-12 14:00:00+01', '2026-02-12 14:30:00+01', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- D2: AB-4
+INSERT INTO billing_documents (id, tenant_id, number, type, status, address_id, parent_document_id, order_date, document_date, delivery_date, delivery_type, delivery_terms, payment_term_days, discount_percent, discount_days, discount_percent_2, discount_days_2, subtotal_net, total_vat, total_gross, printed_at, printed_by_id, created_at, updated_at, created_by_id)
+VALUES (
+  'b1000000-0000-4000-a000-000000000032', '10000000-0000-0000-0000-000000000001',
+  'AB-4', 'ORDER_CONFIRMATION', 'FORWARDED',
+  'c1000000-0000-4000-a000-000000000004',
+  'b1000000-0000-4000-a000-000000000031',
+  '2026-02-15', '2026-02-17', '2026-03-10',
+  'Spedition', 'frei Haus', 60, 3.0, 14, 2.0, 30,
+  45000.00, 8550.00, 53550.00,
+  '2026-02-17 10:00:00+01', '00000000-0000-0000-0000-000000000001',
+  '2026-02-17 09:30:00+01', '2026-02-17 10:00:00+01', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- D3: LS-4
+INSERT INTO billing_documents (id, tenant_id, number, type, status, address_id, parent_document_id, order_date, document_date, delivery_date, delivery_type, delivery_terms, payment_term_days, discount_percent, discount_days, discount_percent_2, discount_days_2, subtotal_net, total_vat, total_gross, printed_at, printed_by_id, created_at, updated_at, created_by_id)
+VALUES (
+  'b1000000-0000-4000-a000-000000000033', '10000000-0000-0000-0000-000000000001',
+  'LS-4', 'DELIVERY_NOTE', 'FORWARDED',
+  'c1000000-0000-4000-a000-000000000004',
+  'b1000000-0000-4000-a000-000000000032',
+  '2026-02-15', '2026-03-05', '2026-03-05',
+  'Spedition', 'frei Haus', 60, 3.0, 14, 2.0, 30,
+  45000.00, 8550.00, 53550.00,
+  '2026-03-05 08:00:00+01', '00000000-0000-0000-0000-000000000001',
+  '2026-03-05 07:30:00+01', '2026-03-05 08:00:00+01', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- D4: RE-4 (from LS-4) — will have credit note + discount payment
+INSERT INTO billing_documents (id, tenant_id, number, type, status, address_id, parent_document_id, order_date, document_date, delivery_date, delivery_type, delivery_terms, payment_term_days, discount_percent, discount_days, discount_percent_2, discount_days_2, subtotal_net, total_vat, total_gross, printed_at, printed_by_id, created_at, updated_at, created_by_id)
+VALUES (
+  'b1000000-0000-4000-a000-000000000034', '10000000-0000-0000-0000-000000000001',
+  'RE-4', 'INVOICE', 'PRINTED',
+  'c1000000-0000-4000-a000-000000000004',
+  'b1000000-0000-4000-a000-000000000033',
+  '2026-02-15', '2026-03-06', '2026-03-05',
+  'Spedition', 'frei Haus', 60, 3.0, 14, 2.0, 30,
+  45000.00, 8550.00, 53550.00,
+  '2026-03-06 09:00:00+01', '00000000-0000-0000-0000-000000000001',
+  '2026-03-06 08:30:00+01', '2026-03-06 09:00:00+01', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- D5: GS-1 Credit Note for RE-4 (damaged goods returned — 1 Regalgasse)
+INSERT INTO billing_documents (id, tenant_id, number, type, status, address_id, parent_document_id, document_date, payment_term_days, subtotal_net, total_vat, total_gross, notes, printed_at, printed_by_id, created_at, updated_at, created_by_id)
+VALUES (
+  'b1000000-0000-4000-a000-000000000035', '10000000-0000-0000-0000-000000000001',
+  'GS-1', 'CREDIT_NOTE', 'PRINTED',
+  'c1000000-0000-4000-a000-000000000004',
+  'b1000000-0000-4000-a000-000000000034',
+  '2026-03-12', 60,
+  5000.00, 950.00, 5950.00,
+  'Gutschrift für beschädigte Regalgasse bei Lieferung',
+  '2026-03-12 10:00:00+01', '00000000-0000-0000-0000-000000000001',
+  '2026-03-12 09:30:00+01', '2026-03-12 10:00:00+01', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- --- Chain E: Hoffmann Werkzeuge — Direktrechnung Service (mit Skonto bezahlt) ---
+
+-- E1: RE-5 (direct invoice for service work, paid with discount)
+INSERT INTO billing_documents (id, tenant_id, number, type, status, address_id, contact_id, document_date, delivery_date, payment_term_days, discount_percent, discount_days, subtotal_net, total_vat, total_gross, notes, printed_at, printed_by_id, created_at, updated_at, created_by_id)
+VALUES (
+  'b1000000-0000-4000-a000-000000000041', '10000000-0000-0000-0000-000000000001',
+  'RE-5', 'INVOICE', 'PRINTED',
+  'c1000000-0000-4000-a000-000000000021', 'c2000000-0000-4000-a000-000000000006',
+  '2026-02-05', '2026-02-04',
+  30, 2.0, 10,
+  1800.00, 342.00, 2142.00,
+  'Werkzeugwartung und Nachschliff lt. Rahmenvertrag 2026',
+  '2026-02-05 11:00:00+01', '00000000-0000-0000-0000-000000000001',
+  '2026-02-05 10:30:00+01', '2026-02-05 11:00:00+01', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- --- Chain F: Müller Maschinenbau — zweite Rechnung (kürzlich, offen) ---
+
+-- F1: RE-6 (recent invoice, unpaid but not yet overdue)
+INSERT INTO billing_documents (id, tenant_id, number, type, status, address_id, contact_id, document_date, delivery_date, payment_term_days, discount_percent, discount_days, subtotal_net, total_vat, total_gross, notes, printed_at, printed_by_id, created_at, updated_at, created_by_id)
+VALUES (
+  'b1000000-0000-4000-a000-000000000051', '10000000-0000-0000-0000-000000000001',
+  'RE-6', 'INVOICE', 'PRINTED',
+  'c1000000-0000-4000-a000-000000000001', 'c2000000-0000-4000-a000-000000000001',
+  '2026-03-14', '2026-03-12',
+  30, 2.0, 10,
+  6800.00, 1292.00, 8092.00,
+  'Nachlieferung Ersatzteile Fräsmaschine',
+  '2026-03-14 14:00:00+01', '00000000-0000-0000-0000-000000000001',
+  '2026-03-14 13:30:00+01', '2026-03-14 14:00:00+01', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- --- Chain G: Schmidt & Partner — Kundendienst-Rechnung (offen) ---
+
+-- G1: RE-7 (service case invoice, open)
+INSERT INTO billing_documents (id, tenant_id, number, type, status, address_id, contact_id, document_date, delivery_date, payment_term_days, subtotal_net, total_vat, total_gross, notes, printed_at, printed_by_id, created_at, updated_at, created_by_id)
+VALUES (
+  'b1000000-0000-4000-a000-000000000061', '10000000-0000-0000-0000-000000000001',
+  'RE-7', 'INVOICE', 'PRINTED',
+  'c1000000-0000-4000-a000-000000000002', 'c2000000-0000-4000-a000-000000000003',
+  '2026-03-05', '2026-03-04',
+  14,
+  950.00, 180.50, 1130.50,
+  'Reparatur Steuerungsmodul vor Ort (Kundendienst)',
+  '2026-03-05 11:00:00+01', '00000000-0000-0000-0000-000000000001',
+  '2026-03-05 10:30:00+01', '2026-03-05 11:00:00+01', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- --- Draft: OFFER still in progress ---
+
+-- H1: AG-5 (DRAFT — Stahl-Union Lieferwerk, not yet printed)
+INSERT INTO billing_documents (id, tenant_id, number, type, status, address_id, document_date, payment_term_days, subtotal_net, total_vat, total_gross, notes, created_at, updated_at, created_by_id)
+VALUES (
+  'b1000000-0000-4000-a000-000000000071', '10000000-0000-0000-0000-000000000001',
+  'AG-5', 'OFFER', 'DRAFT',
+  'c1000000-0000-4000-a000-000000000011',
+  '2026-03-17', 45,
+  22000.00, 4180.00, 26180.00,
+  'Rahmenvertrag Flachstahl 2026/2027 — Entwurf',
+  '2026-03-17 09:00:00+01', '2026-03-17 09:00:00+01', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- B2. Billing Document Positions
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- Positions for all documents. Subsequent chain documents inherit parent positions.
+-- We add positions for the leaf documents (invoices, credit note) and key offers.
+
+-- RE-1 (Müller Frästeile) Positions
+INSERT INTO billing_document_positions (id, document_id, sort_order, type, article_number, description, quantity, unit, unit_price, total_price, vat_rate, created_at, updated_at)
+VALUES
+  ('b2000000-0000-4000-a000-000000000001', 'b1000000-0000-4000-a000-000000000004', 1, 'ARTICLE', 'FT-100', 'Frästeile CNC Typ A — Aluminium 7075', 25, 'Stk', 320.00, 8000.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000002', 'b1000000-0000-4000-a000-000000000004', 2, 'ARTICLE', 'FT-200', 'Frästeile CNC Typ B — Stahl S235', 25, 'Stk', 180.00, 4500.00, 19.0, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- Also add same positions to AG-1 (offer)
+INSERT INTO billing_document_positions (id, document_id, sort_order, type, article_number, description, quantity, unit, unit_price, total_price, vat_rate, created_at, updated_at)
+VALUES
+  ('b2000000-0000-4000-a000-000000000003', 'b1000000-0000-4000-a000-000000000001', 1, 'ARTICLE', 'FT-100', 'Frästeile CNC Typ A — Aluminium 7075', 25, 'Stk', 320.00, 8000.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000004', 'b1000000-0000-4000-a000-000000000001', 2, 'ARTICLE', 'FT-200', 'Frästeile CNC Typ B — Stahl S235', 25, 'Stk', 180.00, 4500.00, 19.0, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- RE-2 (Schmidt Berlin-Mitte) Positions
+INSERT INTO billing_document_positions (id, document_id, sort_order, type, article_number, description, quantity, unit, unit_price, total_price, vat_rate, created_at, updated_at)
+VALUES
+  ('b2000000-0000-4000-a000-000000000011', 'b1000000-0000-4000-a000-000000000014', 1, 'ARTICLE', 'SM-300', 'Spezialmontageset Berlin-Mitte', 12, 'Stk', 450.00, 5400.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000012', 'b1000000-0000-4000-a000-000000000014', 2, 'ARTICLE', 'SM-310', 'Montagezubehör Kleinteile', 1, 'Psch', 3000.00, 3000.00, 19.0, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- RE-3 (Weber Schaltschrankzubehör) Positions
+INSERT INTO billing_document_positions (id, document_id, sort_order, type, article_number, description, quantity, unit, unit_price, total_price, vat_rate, created_at, updated_at)
+VALUES
+  ('b2000000-0000-4000-a000-000000000021', 'b1000000-0000-4000-a000-000000000024', 1, 'ARTICLE', 'SS-500', 'Schaltschrankgehäuse 800x600x300', 4, 'Stk', 480.00, 1920.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000022', 'b1000000-0000-4000-a000-000000000024', 2, 'ARTICLE', 'SS-510', 'Klemmleisten-Set DIN-Schiene', 8, 'Stk', 85.00, 680.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000023', 'b1000000-0000-4000-a000-000000000024', 3, 'FREE', NULL, 'Verdrahtungsmaterial und Kleinteile', 1, 'Psch', 600.00, 600.00, 19.0, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- RE-4 (Bauer Regalsysteme) Positions
+INSERT INTO billing_document_positions (id, document_id, sort_order, type, article_number, description, quantity, unit, unit_price, total_price, vat_rate, created_at, updated_at)
+VALUES
+  ('b2000000-0000-4000-a000-000000000031', 'b1000000-0000-4000-a000-000000000034', 1, 'ARTICLE', 'RS-700', 'Schwerlast-Regalanlage 12m x 4m', 3, 'Stk', 12000.00, 36000.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000032', 'b1000000-0000-4000-a000-000000000034', 2, 'ARTICLE', 'RS-710', 'Fachböden Tragkraft 2t', 36, 'Stk', 250.00, 9000.00, 19.0, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- GS-1 (Gutschrift Bauer — beschädigte Regalgasse) Positions
+INSERT INTO billing_document_positions (id, document_id, sort_order, type, article_number, description, quantity, unit, unit_price, total_price, vat_rate, created_at, updated_at)
+VALUES
+  ('b2000000-0000-4000-a000-000000000035', 'b1000000-0000-4000-a000-000000000035', 1, 'FREE', NULL, 'Gutschrift beschädigte Regalgasse Nr. 2 (Transportschaden)', 1, 'Psch', 5000.00, 5000.00, 19.0, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- RE-5 (Hoffmann Service) Positions
+INSERT INTO billing_document_positions (id, document_id, sort_order, type, article_number, description, quantity, unit, unit_price, total_price, vat_rate, created_at, updated_at)
+VALUES
+  ('b2000000-0000-4000-a000-000000000041', 'b1000000-0000-4000-a000-000000000041', 1, 'ARTICLE', 'SV-100', 'Werkzeugwartung Fräser-Set', 3, 'Stk', 250.00, 750.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000042', 'b1000000-0000-4000-a000-000000000041', 2, 'ARTICLE', 'SV-110', 'Nachschliff Spiralbohrer HSS', 15, 'Stk', 35.00, 525.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000043', 'b1000000-0000-4000-a000-000000000041', 3, 'FREE', NULL, 'Anfahrt und Arbeitszeit', 3.5, 'Std', 150.00, 525.00, 19.0, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- RE-6 (Müller Ersatzteile) Positions
+INSERT INTO billing_document_positions (id, document_id, sort_order, type, article_number, description, quantity, unit, unit_price, total_price, vat_rate, created_at, updated_at)
+VALUES
+  ('b2000000-0000-4000-a000-000000000051', 'b1000000-0000-4000-a000-000000000051', 1, 'ARTICLE', 'ET-400', 'Ersatzspindel für CNC-Fräse Typ 3', 1, 'Stk', 4200.00, 4200.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000052', 'b1000000-0000-4000-a000-000000000051', 2, 'ARTICLE', 'ET-410', 'Kugelgewindetriebe 20x5', 2, 'Stk', 850.00, 1700.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000053', 'b1000000-0000-4000-a000-000000000051', 3, 'FREE', NULL, 'Einbau und Kalibrierung vor Ort', 6, 'Std', 150.00, 900.00, 19.0, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- RE-7 (Schmidt Kundendienst) Positions
+INSERT INTO billing_document_positions (id, document_id, sort_order, type, article_number, description, quantity, unit, unit_price, total_price, vat_rate, created_at, updated_at)
+VALUES
+  ('b2000000-0000-4000-a000-000000000061', 'b1000000-0000-4000-a000-000000000061', 1, 'FREE', NULL, 'Fehlerdiagnose Steuerungsmodul', 2, 'Std', 150.00, 300.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000062', 'b1000000-0000-4000-a000-000000000061', 2, 'ARTICLE', 'KD-200', 'Ersatz-Relais Siemens 3RT2', 2, 'Stk', 125.00, 250.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000063', 'b1000000-0000-4000-a000-000000000061', 3, 'FREE', NULL, 'Anfahrt Berlin-Mitte', 1, 'Psch', 400.00, 400.00, 19.0, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- AG-5 (Draft Stahl-Union) Positions
+INSERT INTO billing_document_positions (id, document_id, sort_order, type, article_number, description, quantity, unit, unit_price, total_price, vat_rate, created_at, updated_at)
+VALUES
+  ('b2000000-0000-4000-a000-000000000071', 'b1000000-0000-4000-a000-000000000071', 1, 'ARTICLE', 'FS-800', 'Flachstahl S235JR 200x10mm', 15000, 'kg', 1.20, 18000.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000072', 'b1000000-0000-4000-a000-000000000071', 2, 'FREE', NULL, 'Anlieferung frei Werk (4 Chargen)', 1, 'Psch', 4000.00, 4000.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000073', 'b1000000-0000-4000-a000-000000000071', 3, 'TEXT', NULL, 'Preisbindung bis 30.09.2026. Lieferung in 4 Quartalschargen.', NULL, NULL, NULL, NULL, NULL, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- B3. Billing Service Cases (ORD_02 — Kundendienst)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+INSERT INTO billing_service_cases (id, tenant_id, number, title, address_id, contact_id, inquiry_id, status, reported_at, customer_notified_cost, assigned_to_id, description, closing_reason, closed_at, closed_by_id, order_id, invoice_document_id, created_at, updated_at, created_by_id)
+VALUES
+  -- KD-1: Müller Maschinenbau — CNC-Steuerung Störung (CLOSED, invoiced via RE-1)
+  ('b3000000-0000-4000-a000-000000000001', '10000000-0000-0000-0000-000000000001',
+   'KD-1', 'CNC-Steuerung Störung — Notfall-Reparatur',
+   'c1000000-0000-4000-a000-000000000001', 'c2000000-0000-4000-a000-000000000002', NULL,
+   'INVOICED', '2026-01-08 07:30:00+01', true,
+   '00000000-0000-0000-0000-000000000014',
+   'Kunde meldet Totalausfall CNC-Fräse Typ 3. Spindel defekt, Kugelgewindetriebe verschlissen. Notfall-Einsatz vor Ort erforderlich.',
+   'Reparatur abgeschlossen. Spindel und Kugelgewindetriebe getauscht. Maschine kalibriert und abgenommen.',
+   '2026-01-12 16:00:00+01', '00000000-0000-0000-0000-000000000001',
+   NULL, NULL,
+   '2026-01-08 08:00:00+01', '2026-01-12 16:00:00+01', '00000000-0000-0000-0000-000000000001'),
+
+  -- KD-2: Schmidt & Partner — Steuerungsmodul Reparatur (INVOICED, linked to RE-7)
+  ('b3000000-0000-4000-a000-000000000002', '10000000-0000-0000-0000-000000000001',
+   'KD-2', 'Steuerungsmodul defekt — Reparatur vor Ort',
+   'c1000000-0000-4000-a000-000000000002', 'c2000000-0000-4000-a000-000000000003', NULL,
+   'INVOICED', '2026-03-01 10:00:00+01', true,
+   '00000000-0000-0000-0000-000000000017',
+   'Relais im Steuerungsmodul der Montageanlage Berlin-Mitte defekt. Sporadische Ausfälle seit 2 Tagen.',
+   'Fehlerhafte Relais identifiziert und getauscht (2x Siemens 3RT2). Funktionstest bestanden.',
+   '2026-03-04 15:00:00+01', '00000000-0000-0000-0000-000000000001',
+   NULL, 'b1000000-0000-4000-a000-000000000061',
+   '2026-03-01 10:30:00+01', '2026-03-05 11:00:00+01', '00000000-0000-0000-0000-000000000001'),
+
+  -- KD-3: Weber Elektrotechnik — Schaltschrank-Prüfung (IN_PROGRESS)
+  ('b3000000-0000-4000-a000-000000000003', '10000000-0000-0000-0000-000000000001',
+   'KD-3', 'Schaltschrank-Inbetriebnahme und Prüfung',
+   'c1000000-0000-4000-a000-000000000003', NULL,
+   'c5000000-0000-4000-a000-000000000021',
+   'IN_PROGRESS', '2026-03-12 09:00:00+01', false,
+   '00000000-0000-0000-0000-000000000019',
+   'Inbetriebnahme der gelieferten Schaltschrankkomponenten beim Kunden. Prüfprotokoll nach VDE erstellen.',
+   NULL, NULL, NULL, NULL, NULL,
+   '2026-03-12 09:30:00+01', '2026-03-15 14:00:00+01', '00000000-0000-0000-0000-000000000001'),
+
+  -- KD-4: Bauer Logistik — Regal-Nachjustierung (OPEN)
+  ('b3000000-0000-4000-a000-000000000004', '10000000-0000-0000-0000-000000000001',
+   'KD-4', 'Regalsystem Nachjustierung nach Transportschaden',
+   'c1000000-0000-4000-a000-000000000004', NULL,
+   'c5000000-0000-4000-a000-000000000031',
+   'OPEN', '2026-03-15 11:00:00+01', false,
+   NULL,
+   'Regalgasse Nr. 2 war beim Transport beschädigt. Gutschrift erstellt. Nachjustierung/Austausch vor Ort nötig.',
+   NULL, NULL, NULL, NULL, NULL,
+   '2026-03-15 11:30:00+01', '2026-03-15 11:30:00+01', '00000000-0000-0000-0000-000000000001'),
+
+  -- KD-5: Hoffmann Werkzeuge — Fräser-Qualitätsprüfung (CLOSED, not yet invoiced)
+  ('b3000000-0000-4000-a000-000000000005', '10000000-0000-0000-0000-000000000001',
+   'KD-5', 'Qualitätsprüfung Fräser-Rückläufer',
+   'c1000000-0000-4000-a000-000000000021', 'c2000000-0000-4000-a000-000000000005',
+   'c5000000-0000-4000-a000-000000000051',
+   'CLOSED', '2026-02-16 09:00:00+01', true,
+   '00000000-0000-0000-0000-000000000017',
+   '3 Fräser mit Ausbrüchen zurückerhalten. QS-Prüfung erforderlich. Prüfbericht für Reklamation an Hoffmann.',
+   'Prüfbericht erstellt. Materialfehler bestätigt. Reklamation an Hoffmann gesendet. Kulanzgutschrift erwartet.',
+   '2026-03-10 14:00:00+01', '00000000-0000-0000-0000-000000000001',
+   NULL, NULL,
+   '2026-02-16 09:30:00+01', '2026-03-10 14:00:00+01', '00000000-0000-0000-0000-000000000001')
+ON CONFLICT (id) DO NOTHING;
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- B4. Billing Payments (ORD_03 — Offene Posten / Zahlungen)
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- Payment scenarios:
+--   RE-1 (14.875,00€): PAID — single bank transfer within Skonto period
+--   RE-2 ( 9.996,00€): PARTIAL — one payment of 5.000€, rest overdue
+--   RE-3 ( 3.808,00€): UNPAID — no payments yet (not overdue)
+--   RE-4 (53.550,00€): PARTIAL — credit note GS-1 reduces by 5.950€, bank payment pending
+--   RE-5 ( 2.142,00€): PAID — paid with 2% Skonto within 10 days
+--   RE-6 ( 8.092,00€): UNPAID — brand new invoice, no payments
+--   RE-7 ( 1.130,50€): UNPAID — service invoice, overdue (14 day term, doc date Mar 5)
+
+INSERT INTO billing_payments (id, tenant_id, document_id, date, amount, type, status, is_discount, notes, created_at, updated_at, created_by_id)
+VALUES
+  -- RE-1: Full payment via bank (14.875,00€) — paid on Feb 18 (within 10-day Skonto: 3%)
+  -- Customer paid within Skonto-1 period: 14.875 * (1 - 0.03) = 14.428,75
+  ('b4000000-0000-4000-a000-000000000001', '10000000-0000-0000-0000-000000000001',
+   'b1000000-0000-4000-a000-000000000004', '2026-02-18 00:00:00+01',
+   14428.75, 'BANK', 'ACTIVE', false,
+   'Banküberweisung Müller Maschinenbau, Verwendungszweck: RE-1 Frästeile',
+   '2026-02-19 08:00:00+01', '2026-02-19 08:00:00+01', '00000000-0000-0000-0000-000000000001'),
+
+  -- RE-1: Skonto discount entry (3% = 446,25€)
+  ('b4000000-0000-4000-a000-000000000002', '10000000-0000-0000-0000-000000000001',
+   'b1000000-0000-4000-a000-000000000004', '2026-02-18 00:00:00+01',
+   446.25, 'BANK', 'ACTIVE', true,
+   'Skonto 3% (Zahlung innerhalb 10 Tagen)',
+   '2026-02-19 08:00:00+01', '2026-02-19 08:00:00+01', '00000000-0000-0000-0000-000000000001'),
+
+  -- RE-2: Partial payment (5.000€ of 9.996€ via bank)
+  ('b4000000-0000-4000-a000-000000000003', '10000000-0000-0000-0000-000000000001',
+   'b1000000-0000-4000-a000-000000000014', '2026-03-01 00:00:00+01',
+   5000.00, 'BANK', 'ACTIVE', false,
+   'Teilzahlung Schmidt & Partner, Restzahlung zugesagt für KW 12',
+   '2026-03-02 09:00:00+01', '2026-03-02 09:00:00+01', '00000000-0000-0000-0000-000000000001'),
+
+  -- RE-4: Partial payment (20.000€ of 53.550€ via bank)
+  ('b4000000-0000-4000-a000-000000000004', '10000000-0000-0000-0000-000000000001',
+   'b1000000-0000-4000-a000-000000000034', '2026-03-14 00:00:00+01',
+   20000.00, 'BANK', 'ACTIVE', false,
+   'Anzahlung Bauer Logistik — weitere Zahlung nach Mängelbeseitigung',
+   '2026-03-14 10:00:00+01', '2026-03-14 10:00:00+01', '00000000-0000-0000-0000-000000000001'),
+
+  -- RE-5: Full payment with Skonto (2% within 10 days)
+  -- Hoffmann paid on Feb 12 (7 days after doc date Feb 5) → 2% Skonto applies
+  -- 2.142 * (1 - 0.02) = 2.099,16
+  ('b4000000-0000-4000-a000-000000000005', '10000000-0000-0000-0000-000000000001',
+   'b1000000-0000-4000-a000-000000000041', '2026-02-12 00:00:00+01',
+   2099.16, 'BANK', 'ACTIVE', false,
+   'Zahlung Hoffmann Werkzeuge lt. Zahlungsavise',
+   '2026-02-13 08:00:00+01', '2026-02-13 08:00:00+01', '00000000-0000-0000-0000-000000000001'),
+
+  -- RE-5: Skonto discount entry (2% = 42,84€)
+  ('b4000000-0000-4000-a000-000000000006', '10000000-0000-0000-0000-000000000001',
+   'b1000000-0000-4000-a000-000000000041', '2026-02-12 00:00:00+01',
+   42.84, 'BANK', 'ACTIVE', true,
+   'Skonto 2% (Zahlung innerhalb 10 Tagen)',
+   '2026-02-13 08:00:00+01', '2026-02-13 08:00:00+01', '00000000-0000-0000-0000-000000000001')
+ON CONFLICT (id) DO NOTHING;
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- B5. Number sequences for billing documents
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+INSERT INTO number_sequences (id, tenant_id, key, prefix, next_value, created_at, updated_at)
+VALUES
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'offer', 'AG-', 6, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'order_confirmation', 'AB-', 5, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'delivery_note', 'LS-', 5, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'invoice', 'RE-', 8, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'credit_note', 'GS-', 2, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'service_case', 'KD-', 6, NOW(), NOW())
+ON CONFLICT (tenant_id, key) DO UPDATE SET next_value = GREATEST(number_sequences.next_value, EXCLUDED.next_value);

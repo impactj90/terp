@@ -183,6 +183,7 @@ model Tenant {
   crmTasks                    CrmTask[]
   billingDocuments            BillingDocument[]
   billingServiceCases         BillingServiceCase[]
+  billingPayments             BillingPayment[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
@@ -665,6 +666,7 @@ model BillingDocument {
   childDocuments      BillingDocument[]         @relation("DocumentChain")
   positions           BillingDocumentPosition[]
   billingServiceCases BillingServiceCase[]
+  payments            BillingPayment[]
 
   @@unique([tenantId, number])
   @@index([tenantId, type])
@@ -751,6 +753,53 @@ model BillingServiceCase {
   @@index([tenantId, addressId])
   @@index([tenantId, assignedToId])
   @@map("billing_service_cases")
+}
+
+// -----------------------------------------------------------------------------
+// BillingPayment
+// -----------------------------------------------------------------------------
+// Migration: 000101
+//
+// Payment record against a billing document (INVOICE).
+// Types: CASH (bar), BANK (Überweisung).
+// Supports partial payments, discount (Skonto), and cancellation.
+
+enum BillingPaymentType {
+  CASH
+  BANK
+
+  @@map("billing_payment_type")
+}
+
+enum BillingPaymentStatus {
+  ACTIVE
+  CANCELLED
+
+  @@map("billing_payment_status")
+}
+
+model BillingPayment {
+  id            String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String                @map("tenant_id") @db.Uuid
+  documentId    String                @map("document_id") @db.Uuid
+  date          DateTime              @db.Timestamptz(6)
+  amount        Float
+  type          BillingPaymentType
+  status        BillingPaymentStatus  @default(ACTIVE)
+  isDiscount    Boolean               @default(false) @map("is_discount")
+  notes         String?
+  cancelledAt   DateTime?             @map("cancelled_at") @db.Timestamptz(6)
+  cancelledById String?               @map("cancelled_by_id") @db.Uuid
+  createdAt     DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById   String?               @map("created_by_id") @db.Uuid
+
+  tenant   Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  document BillingDocument @relation(fields: [documentId], references: [id])
+
+  @@index([tenantId, documentId])
+  @@index([tenantId, date])
+  @@map("billing_payments")
 }
 
 // -----------------------------------------------------------------------------
