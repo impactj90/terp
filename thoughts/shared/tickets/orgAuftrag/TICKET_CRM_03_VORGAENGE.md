@@ -263,17 +263,17 @@ test.describe("UC-CRM-03: Inquiries", () => {
 
 ## Acceptance Criteria
 
-- [ ] `CrmInquiry` model created with migration
-- [ ] Inquiry number auto-generated via NumberSequence (key: "inquiry")
-- [ ] CRUD operations fully functional
-- [ ] Status workflow: OPEN → IN_PROGRESS → CLOSED (with closingReason, closingRemarks)
-- [ ] Closed inquiries are immutable (update rejected)
-- [ ] Cancel and reopen supported
-- [ ] Link to existing Terp Order works
-- [ ] Create new Terp Order from inquiry works
-- [ ] Global inquiry list at `/crm/inquiries` with search and status filter
-- [ ] Inquiry tab on address detail page (CRM_01)
-- [ ] Correspondence entries can be linked to inquiry via `inquiryId` (CRM_02)
-- [ ] Delete only works if no linked records exist
-- [ ] All procedures gated by `requireModule("crm")` and `crm_inquiries.*` permissions
-- [ ] Cross-tenant isolation verified
+- [x] `CrmInquiry` model created with migration
+- [x] Inquiry number auto-generated via NumberSequence (key: "inquiry")
+- [x] CRUD operations fully functional
+- [x] Status workflow: OPEN → IN_PROGRESS → CLOSED (with closingReason, closingRemarks)
+- [x] Closed inquiries are immutable (update rejected)
+- [x] Cancel and reopen supported
+- [x] Link to existing Terp Order works
+- [x] Create new Terp Order from inquiry works
+- [x] Global inquiry list at `/crm/inquiries` with search and status filter
+- [x] Inquiry tab on address detail page (CRM_01)
+- [x] Correspondence entries can be linked to inquiry via `inquiryId` (CRM_02)
+- [x] Delete only works if no linked records exist
+- [x] All procedures gated by `requireModule("crm")` and `crm_inquiries.*` permissions
+- [x] Cross-tenant isolation verified
