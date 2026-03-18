@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback, memo } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Search, ChevronLeft, ChevronRight, ArrowUp } from 'lucide-react'
@@ -242,84 +242,7 @@ export function HilfePage({ content }: HilfePageProps) {
 
         {/* Markdown content */}
         <main className="hilfe-content mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              h1: createHeading(1),
-              h2: createHeading(2),
-              h3: createHeading(3),
-              h4: createHeading(4),
-              table: ({ children }) => (
-                <div className="my-4 overflow-x-auto rounded-lg border">
-                  <table className="min-w-full divide-y divide-border text-sm">
-                    {children}
-                  </table>
-                </div>
-              ),
-              thead: ({ children }) => (
-                <thead className="bg-muted/50">{children}</thead>
-              ),
-              th: ({ children }) => (
-                <th className="px-4 py-2 text-left font-semibold text-foreground">
-                  {children}
-                </th>
-              ),
-              td: ({ children }) => (
-                <td className="px-4 py-2 border-t border-border">{children}</td>
-              ),
-              code: ({ children, className }) => {
-                const isBlock = className?.startsWith('language-')
-                if (isBlock) {
-                  return (
-                    <code className={cn('text-sm', className)}>
-                      {children}
-                    </code>
-                  )
-                }
-                return (
-                  <code className="rounded bg-muted px-1.5 py-0.5 text-sm font-mono text-foreground">
-                    {children}
-                  </code>
-                )
-              },
-              pre: ({ children }) => (
-                <pre className="my-4 overflow-x-auto rounded-lg border bg-muted/50 p-4 text-sm">
-                  {children}
-                </pre>
-              ),
-              a: ({ href, children }) => (
-                <a
-                  href={href}
-                  className="text-primary underline underline-offset-4 hover:text-primary-hover"
-                >
-                  {children}
-                </a>
-              ),
-              blockquote: ({ children }) => (
-                <blockquote className="my-4 border-l-4 border-primary/30 pl-4 italic text-muted-foreground">
-                  {children}
-                </blockquote>
-              ),
-              hr: () => <hr className="my-8 border-border" />,
-              ul: ({ children }) => (
-                <ul className="my-2 ml-6 list-disc space-y-1">{children}</ul>
-              ),
-              ol: ({ children }) => (
-                <ol className="my-2 ml-6 list-decimal space-y-1">{children}</ol>
-              ),
-              li: ({ children }) => (
-                <li className="text-foreground">{children}</li>
-              ),
-              p: ({ children }) => (
-                <p className="my-3 leading-7">{children}</p>
-              ),
-              strong: ({ children }) => (
-                <strong className="font-semibold text-foreground">{children}</strong>
-              ),
-            }}
-          >
-            {content}
-          </ReactMarkdown>
+          <MemoizedMarkdown content={content} />
         </main>
       </div>
 
@@ -338,6 +261,91 @@ export function HilfePage({ content }: HilfePageProps) {
     </div>
   )
 }
+
+/** Memoized markdown renderer — prevents re-parsing 6000+ lines on every keystroke */
+const markdownComponents = {
+  h1: createHeading(1),
+  h2: createHeading(2),
+  h3: createHeading(3),
+  h4: createHeading(4),
+  table: ({ children }: { children?: React.ReactNode }) => (
+    <div className="my-4 overflow-x-auto rounded-lg border">
+      <table className="min-w-full divide-y divide-border text-sm">
+        {children}
+      </table>
+    </div>
+  ),
+  thead: ({ children }: { children?: React.ReactNode }) => (
+    <thead className="bg-muted/50">{children}</thead>
+  ),
+  th: ({ children }: { children?: React.ReactNode }) => (
+    <th className="px-4 py-2 text-left font-semibold text-foreground">
+      {children}
+    </th>
+  ),
+  td: ({ children }: { children?: React.ReactNode }) => (
+    <td className="px-4 py-2 border-t border-border">{children}</td>
+  ),
+  code: ({ children, className }: { children?: React.ReactNode; className?: string }) => {
+    const isBlock = className?.startsWith('language-')
+    if (isBlock) {
+      return (
+        <code className={cn('text-sm', className)}>
+          {children}
+        </code>
+      )
+    }
+    return (
+      <code className="rounded bg-muted px-1.5 py-0.5 text-sm font-mono text-foreground">
+        {children}
+      </code>
+    )
+  },
+  pre: ({ children }: { children?: React.ReactNode }) => (
+    <pre className="my-4 overflow-x-auto rounded-lg border bg-muted/50 p-4 text-sm">
+      {children}
+    </pre>
+  ),
+  a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
+    <a
+      href={href}
+      className="text-primary underline underline-offset-4 hover:text-primary-hover"
+    >
+      {children}
+    </a>
+  ),
+  blockquote: ({ children }: { children?: React.ReactNode }) => (
+    <blockquote className="my-4 border-l-4 border-primary/30 pl-4 italic text-muted-foreground">
+      {children}
+    </blockquote>
+  ),
+  hr: () => <hr className="my-8 border-border" />,
+  ul: ({ children }: { children?: React.ReactNode }) => (
+    <ul className="my-2 ml-6 list-disc space-y-1">{children}</ul>
+  ),
+  ol: ({ children }: { children?: React.ReactNode }) => (
+    <ol className="my-2 ml-6 list-decimal space-y-1">{children}</ol>
+  ),
+  li: ({ children }: { children?: React.ReactNode }) => (
+    <li className="text-foreground">{children}</li>
+  ),
+  p: ({ children }: { children?: React.ReactNode }) => (
+    <p className="my-3 leading-7">{children}</p>
+  ),
+  strong: ({ children }: { children?: React.ReactNode }) => (
+    <strong className="font-semibold text-foreground">{children}</strong>
+  ),
+}
+
+const remarkPlugins = [remarkGfm]
+
+const MemoizedMarkdown = memo(function MemoizedMarkdown({ content }: { content: string }) {
+  return (
+    <ReactMarkdown remarkPlugins={remarkPlugins} components={markdownComponents}>
+      {content}
+    </ReactMarkdown>
+  )
+})
 
 /** Mobile-only expandable table of contents */
 function MobileToc({
