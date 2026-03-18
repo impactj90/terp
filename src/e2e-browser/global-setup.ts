@@ -32,6 +32,15 @@ DELETE FROM shifts WHERE code LIKE 'E2E%';
 DELETE FROM employees WHERE personnel_number LIKE 'E2E%';
 DELETE FROM calculation_rules WHERE code LIKE 'E2E%';
 
+-- Price list records (spec 33) — must come before CRM addresses cleanup
+UPDATE crm_addresses SET price_list_id = NULL WHERE company LIKE 'E2E%';
+DELETE FROM billing_price_list_entries WHERE price_list_id IN (
+  SELECT id FROM billing_price_lists WHERE name LIKE 'Standardpreisliste%'
+  AND tenant_id = '10000000-0000-0000-0000-000000000001'
+);
+DELETE FROM billing_price_lists WHERE name LIKE 'Standardpreisliste%'
+  AND tenant_id = '10000000-0000-0000-0000-000000000001';
+
 -- Payment records (spec 32) — must come before billing docs cleanup
 DELETE FROM billing_payments WHERE document_id IN (
   SELECT bd.id FROM billing_documents bd

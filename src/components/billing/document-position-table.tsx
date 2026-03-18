@@ -12,6 +12,11 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+} from '@/components/ui/popover'
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -23,7 +28,10 @@ import {
   useAddBillingPosition,
   useUpdateBillingPosition,
   useDeleteBillingPosition,
+  usePriceListEntriesForAddress,
 } from '@/hooks'
+import { useTRPC } from '@/trpc'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
 interface Position {
@@ -42,10 +50,20 @@ interface Position {
   vatRate?: number | null
 }
 
+interface PriceEntry {
+  id: string
+  itemKey: string | null
+  description: string | null
+  unitPrice: number
+  unit: string | null
+  minQuantity: number | null
+}
+
 interface DocumentPositionTableProps {
   documentId: string
   positions: Position[]
   readonly?: boolean
+  addressId?: string
 }
 
 function formatCurrency(value: number | null | undefined): string {
@@ -64,15 +82,115 @@ const POSITION_TYPE_LABELS: Record<string, string> = {
   SUBTOTAL: 'Zwischensumme',
 }
 
+// --- Description Combobox ---
+
+interface DescriptionComboboxProps {
+  defaultValue: string
+  entries: PriceEntry[]
+  onCommit: (description: string) => void
+  onSelectEntry: (entry: PriceEntry) => void
+}
+
+function DescriptionCombobox({ defaultValue, entries, onCommit, onSelectEntry }: DescriptionComboboxProps) {
+  const [value, setValue] = React.useState(defaultValue)
+  const [open, setOpen] = React.useState(false)
+
+  const filtered = React.useMemo(() => {
+    if (!value.trim()) return entries
+    const term = value.toLowerCase()
+    return entries.filter(
+      (e) =>
+        e.itemKey?.toLowerCase().includes(term) ||
+        e.description?.toLowerCase().includes(term)
+    )
+  }, [value, entries])
+
+  const handleBlur = () => {
+    // Small delay to allow mousedown on popover item to fire first
+    setTimeout(() => {
+      setOpen(false)
+      if (value !== defaultValue) {
+        onCommit(value)
+      }
+    }, 150)
+  }
+
+  const handleSelect = (entry: PriceEntry) => {
+    const desc = entry.description || entry.itemKey || ''
+    setValue(desc)
+    setOpen(false)
+    onSelectEntry(entry)
+  }
+
+  return (
+    <Popover open={open && filtered.length > 0} onOpenChange={setOpen}>
+      <PopoverAnchor asChild>
+        <Input
+          value={value}
+          onChange={(e) => {
+            setValue(e.target.value)
+            if (!open) setOpen(true)
+          }}
+          onFocus={() => {
+            if (entries.length > 0) setOpen(true)
+          }}
+          onBlur={handleBlur}
+          className="h-8"
+          placeholder="Beschreibung"
+        />
+      </PopoverAnchor>
+      <PopoverContent
+        className="w-[350px] p-0"
+        align="start"
+        side="bottom"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <div className="max-h-48 overflow-y-auto p-1">
+          {filtered.map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              className="flex w-full items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer"
+              onMouseDown={(e) => {
+                e.preventDefault()
+                handleSelect(entry)
+              }}
+            >
+              <span className="flex items-center gap-2 min-w-0">
+                <span className="font-mono text-xs text-muted-foreground shrink-0">
+                  {entry.itemKey}
+                </span>
+                <span className="truncate">{entry.description}</span>
+              </span>
+              <span className="shrink-0 text-xs font-medium">
+                {formatCurrency(entry.unitPrice)}
+              </span>
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+// --- Main Component ---
+
 export function DocumentPositionTable({
   documentId,
   positions,
   readonly = false,
+  addressId,
 }: DocumentPositionTableProps) {
   const addMutation = useAddBillingPosition()
   const updateMutation = useUpdateBillingPosition()
   const deleteMutation = useDeleteBillingPosition()
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
   const [addType, setAddType] = React.useState('FREE')
+
+  // Fetch price list entries for autocomplete
+  const { data: priceListData } = usePriceListEntriesForAddress(addressId, !readonly && !!addressId)
+  const priceEntries = priceListData?.entries ?? []
 
   const handleAdd = async () => {
     try {
@@ -98,6 +216,41 @@ export function DocumentPositionTable({
 
     try {
       await updateMutation.mutateAsync({ id, [field]: parsed })
+
+      // Price lookup: when description changes on a priced position, try to look up price by itemKey
+      if (field === 'description' && addressId && typeof value === 'string' && value.trim()) {
+        const pos = positions.find((p) => p.id === id)
+        if (pos && (pos.type === 'FREE' || pos.type === 'ARTICLE')) {
+          try {
+            const result = await queryClient.fetchQuery(
+              trpc.billing.priceLists.lookupPrice.queryOptions({
+                addressId,
+                itemKey: value.trim(),
+              })
+            )
+            if (result?.unitPrice != null) {
+              await updateMutation.mutateAsync({ id, unitPrice: result.unitPrice })
+            }
+          } catch {
+            // No price found — that's fine, user can enter manually
+          }
+        }
+      }
+    } catch {
+      toast.error('Fehler beim Aktualisieren')
+    }
+  }
+
+  const handleSelectEntry = async (posId: string, entry: PriceEntry) => {
+    try {
+      // Update description, unitPrice, and unit in one go
+      const desc = entry.description || entry.itemKey || ''
+      await updateMutation.mutateAsync({
+        id: posId,
+        description: desc,
+        unitPrice: entry.unitPrice,
+        ...(entry.unit ? { unit: entry.unit } : {}),
+      })
     } catch {
       toast.error('Fehler beim Aktualisieren')
     }
@@ -111,6 +264,9 @@ export function DocumentPositionTable({
       toast.error('Fehler beim Löschen')
     }
   }
+
+  const showCombobox = (posType: string) =>
+    !readonly && priceEntries.length > 0 && (posType === 'FREE' || posType === 'ARTICLE')
 
   return (
     <div className="space-y-4">
@@ -151,6 +307,14 @@ export function DocumentPositionTable({
               <TableCell>
                 {readonly ? (
                   pos.description ?? ''
+                ) : showCombobox(pos.type) ? (
+                  <DescriptionCombobox
+                    key={`desc-${pos.id}-${pos.description}`}
+                    defaultValue={pos.description ?? ''}
+                    entries={priceEntries}
+                    onCommit={(desc) => handleUpdate(pos.id, 'description', desc)}
+                    onSelectEntry={(entry) => handleSelectEntry(pos.id, entry)}
+                  />
                 ) : (
                   <Input
                     defaultValue={pos.description ?? ''}
@@ -176,6 +340,7 @@ export function DocumentPositionTable({
                 {pos.type === 'TEXT' || pos.type === 'PAGE_BREAK' || pos.type === 'SUBTOTAL' ? '' : (
                   readonly ? (pos.unit ?? '') : (
                     <Input
+                      key={`unit-${pos.id}-${pos.unit}`}
                       defaultValue={pos.unit ?? ''}
                       onBlur={(e) => handleUpdate(pos.id, 'unit', e.target.value)}
                       className="h-8 w-16"
@@ -188,6 +353,7 @@ export function DocumentPositionTable({
                 {pos.type === 'TEXT' || pos.type === 'PAGE_BREAK' || pos.type === 'SUBTOTAL' ? '' : (
                   readonly ? formatCurrency(pos.unitPrice) : (
                     <Input
+                      key={`unitPrice-${pos.id}-${pos.unitPrice}`}
                       type="number"
                       step="0.01"
                       defaultValue={pos.unitPrice ?? ''}

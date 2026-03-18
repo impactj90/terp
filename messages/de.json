@@ -111,6 +111,7 @@
     "billingDocuments": "Belege",
     "billingServiceCases": "Kundendienst",
     "billingOpenItems": "Offene Posten",
+    "billingPriceLists": "Preislisten",
     "warehouseSection": "Lager",
     "warehouseOverview": "Lagerübersicht",
     "crmReports": "Auswertungen"
@@ -5118,6 +5119,10 @@
     "labelDiscountPercent": "Skonto (%)",
     "labelDiscountDays": "Skontotage",
     "labelDiscountGroup": "Rabattgruppe",
+    "sectionPriceList": "Preisliste",
+    "labelPriceList": "Preisliste",
+    "labelPriceListPlaceholder": "Preisliste auswählen...",
+    "labelNoPriceList": "Keine Preisliste",
     "labelNotes": "Notizen",
     "cancel": "Abbrechen",
     "save": "Speichern",

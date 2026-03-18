@@ -242,6 +242,10 @@ export default function CrmAddressDetailPage() {
                   <DetailRow label={t('labelDiscountPercent')} value={address.discountPercent?.toString()} />
                   <DetailRow label={t('labelDiscountDays')} value={address.discountDays?.toString()} />
                   <DetailRow label={t('labelDiscountGroup')} value={address.discountGroup} />
+                  <DetailRow
+                    label={t('labelPriceList')}
+                    value={(address as unknown as { priceList?: { name: string } | null }).priceList?.name}
+                  />
                 </div>
               </CardContent>
             </Card>

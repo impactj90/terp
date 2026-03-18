@@ -55,6 +55,7 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [13.9 Praxisbeispiel: Angebot bis Rechnung](#139-praxisbeispiel-angebot-bis-rechnung)
     - [13.10 Kundendienst (Serviceaufträge)](#1310-kundendienst-serviceaufträge)
     - [13.11 Offene Posten / Zahlungen](#1311-offene-posten--zahlungen)
+    - [13.12 Preislisten](#1312-preislisten)
 14. [Glossar](#14-glossar)
 
 ---
@@ -5661,6 +5662,217 @@ Die Zahlungshistorie dokumentiert alle Vorgänge lückenlos:
 
 ---
 
+### 13.12 Preislisten
+
+**Was ist es?** Preislisten definieren Preise für Artikel und Freitextpositionen, die Kunden zugewiesen werden können. Das System unterstützt eine Standardpreisliste, kundenspezifische Preislisten und Mengenstaffeln. Beim Anlegen von Belegpositionen wird der Preis automatisch aus der zugewiesenen Preisliste des Kunden vorgeschlagen.
+
+**Wozu dient es?** Einheitliche Preispflege, kundenindividuelle Konditionen und automatische Preisübernahme in Belege -- ohne manuelle Preissuche.
+
+> Modul: **Billing** muss aktiviert sein
+
+> Berechtigung: `billing_price_lists.view` (Anzeige), `billing_price_lists.manage` (Anlegen, Bearbeiten, Löschen)
+
+📍 Aufträge > Preislisten
+
+Sie sehen die Liste aller Preislisten des aktiven Mandanten.
+
+#### Preislistenliste
+
+Tabelle mit Spalten:
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Name** | Name der Preisliste (z.B. "Standardpreisliste", "Großkunde") |
+| **Beschreibung** | Optionale Beschreibung |
+| **Standard** | Stern-Symbol: ausgefüllt = Standardpreisliste des Mandanten |
+| **Gültig von** | Beginn des Gültigkeitszeitraums |
+| **Gültig bis** | Ende des Gültigkeitszeitraums |
+| **Aktiv** | Aktiv/Inaktiv-Badge |
+| **Einträge** | Anzahl der Preiseinträge |
+
+**Suchfeld:** Suche nach Name oder Beschreibung
+
+#### Preisliste anlegen
+
+1. **"Neue Preisliste"** (Preislistenliste, oben rechts)
+2. Seitenformular öffnet sich
+3. **Name** eintragen (Pflicht)
+4. Optionale Felder:
+   - **Beschreibung**: Freitext
+   - **Standardpreisliste**: Checkbox -- wenn aktiviert, wird diese Preisliste als Fallback für alle Kunden ohne eigene Preisliste verwendet. Pro Mandant kann nur eine Standardpreisliste existieren.
+   - **Gültig von / Gültig bis**: Gültigkeitszeitraum der Preisliste
+5. **"Speichern"**
+6. Preisliste wird erstellt und erscheint in der Liste
+
+#### Standardpreisliste festlegen
+
+Es kann pro Mandant nur **eine** Standardpreisliste geben. Wenn eine neue Preisliste als Standard gesetzt wird, verliert die bisherige Standardpreisliste diesen Status automatisch.
+
+1. Preisliste in der Liste anklicken → Detailseite
+2. **"Als Standard setzen"** klicken
+3. Diese Preisliste wird zur Standardpreisliste (Stern-Symbol wird ausgefüllt)
+4. Die vorherige Standardpreisliste verliert den Standard-Status
+
+**Funktionsweise der Standardpreisliste:**
+- Wenn ein Kunde **keine eigene Preisliste** zugewiesen hat, werden Preise aus der Standardpreisliste verwendet
+- Wenn ein Kunde eine eigene Preisliste hat, aber dort kein Eintrag für einen bestimmten Artikel existiert, wird ebenfalls die Standardpreisliste als Fallback herangezogen
+
+#### Preiseinträge verwalten
+
+Auf der **Detailseite** einer Preisliste werden die Preiseinträge in einer Tabelle angezeigt:
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Artikel / Schlüssel** | Verknüpfter Artikel oder Freitext-Schlüssel (z.B. "beratung_std") |
+| **Beschreibung** | Beschreibungstext (überschreibt Artikelbeschreibung) |
+| **Einzelpreis** | Nettopreis pro Einheit in EUR |
+| **Ab Menge** | Mengenstaffel: Preis gilt ab dieser Menge (leer = Standardpreis) |
+| **Einheit** | Mengeneinheit (Stk, Std, kg, etc.) |
+| **Gültig von / bis** | Gültigkeitszeitraum des Eintrags |
+
+##### Eintrag hinzufügen
+
+1. Detailseite der Preisliste: **"Neuer Eintrag"** klicken
+2. Dialog öffnet sich
+3. Wahlweise:
+   - **Artikel** auswählen (Artikelsuche) -- verknüpft den Preis mit einem konkreten Artikel
+   - **Schlüssel** eingeben -- für freie Positionen ohne Artikelstamm (z.B. "stundensatz_senior")
+4. **Einzelpreis** eintragen (Pflicht, netto in EUR)
+5. Optionale Felder:
+   - **Beschreibung**: Überschreibt die Artikelbeschreibung
+   - **Ab Menge**: Preis gilt erst ab dieser Menge (für Mengenstaffeln)
+   - **Einheit**: z.B. Stk, Std, kg
+   - **Gültig von / bis**: Zeitraum, in dem dieser Preis gilt
+6. **"Speichern"**
+7. Eintrag erscheint in der Tabelle
+
+##### Mengenstaffel
+
+Durch mehrere Einträge für denselben Artikel mit unterschiedlichen **Ab Menge**-Werten können Mengenstaffeln abgebildet werden:
+
+| Artikel | Einzelpreis | Ab Menge |
+|---------|------------|----------|
+| Schraube M8 | 0,50 EUR | -- (Standardpreis) |
+| Schraube M8 | 0,40 EUR | 100 |
+| Schraube M8 | 0,30 EUR | 500 |
+
+Bei einer Bestellung von 200 Stück wird automatisch 0,40 EUR/Stück vorgeschlagen.
+
+##### Eintrag löschen
+
+Löschsymbol am Zeilenende -- Eintrag wird entfernt.
+
+#### Massenimport
+
+Für die schnelle Erfassung vieler Preiseinträge steht ein Massenimport zur Verfügung:
+
+1. Detailseite der Preisliste: **"Massenimport"** klicken
+2. Dialog öffnet sich mit einem Textfeld
+3. Einträge im Format einfügen (tabulatorgetrennt oder semikolongetrennt):
+   ```
+   Schlüssel;Beschreibung;Einzelpreis;Ab Menge;Einheit
+   beratung_std;Beratung Standard;120;;Std
+   beratung_senior;Beratung Senior;150;;Std
+   montage;Montagearbeiten;85;;Std
+   ```
+4. Klick auf **"Importieren"**
+5. Vorhandene Einträge (gleicher Artikel/Schlüssel) werden aktualisiert, neue werden erstellt
+6. Erfolgsmeldung: "X Einträge importiert, Y aktualisiert"
+
+#### Preisliste einem Kunden zuweisen
+
+Die Zuweisung erfolgt in den **Stammdaten der CRM-Adresse**:
+
+1. 📍 CRM > Adressen → Kunde anklicken
+2. **"Bearbeiten"** klicken
+3. Feld **"Preisliste"**: Dropdown mit allen aktiven Preislisten des Mandanten
+4. Preisliste auswählen
+5. **"Speichern"**
+6. Ab sofort werden bei Belegpositionen für diesen Kunden die Preise aus der zugewiesenen Preisliste vorgeschlagen
+
+#### Preisermittlung (Automatische Preisübernahme)
+
+Beim Hinzufügen einer Position zu einem Beleg ermittelt das System den Preis in folgender Reihenfolge:
+
+1. **Kundenspezifische Preisliste** → Kunde hat eine zugewiesene Preisliste? → Eintrag für den Artikel/Schlüssel vorhanden? → Mengenstaffel berücksichtigen → **Preis übernehmen**
+2. **Standardpreisliste** → Kein Treffer beim Kunden? → In der Standardpreisliste nachschlagen → **Preis übernehmen**
+3. **Kein Treffer** → Der Benutzer gibt den Preis manuell ein
+
+Der vorgeschlagene Preis kann im Beleg jederzeit manuell überschrieben werden.
+
+#### Preisliste löschen
+
+1. Detailseite der Preisliste: **"Löschen"** klicken
+2. **Schutz:** Wenn die Preisliste einem oder mehreren Kunden zugewiesen ist, wird das Löschen verweigert mit der Meldung: "Preisliste ist X Kunden zugewiesen und kann nicht gelöscht werden."
+3. Preisliste erst von allen Kunden entfernen, dann erneut löschen.
+
+#### 13.12.1 Praxisbeispiel: Preisliste erstellen und Kunden zuweisen
+
+**Szenario:** Sie erstellen eine Standardpreisliste mit Beratungspreisen, weisen sie einem Kunden zu und überprüfen, dass der Preis beim Beleg-Erstellen automatisch vorgeschlagen wird.
+
+##### Schritt 1 -- Preisliste anlegen
+
+1. 📍 Aufträge > Preislisten
+2. Klick auf **"Neue Preisliste"** (oben rechts)
+3. Seitenformular öffnet sich
+4. **Name**: "Standardpreisliste" eintragen
+5. **Beschreibung**: "Preisliste für Standardkunden"
+6. **Standardpreisliste**: Checkbox aktivieren
+7. Klick auf **"Speichern"**
+8. Preisliste "Standardpreisliste" erscheint in der Liste mit ausgefülltem Stern-Symbol (= Standard)
+
+##### Schritt 2 -- Preiseinträge hinzufügen
+
+1. In der Preislistenliste: Klick auf **"Standardpreisliste"**
+2. Detailseite öffnet sich
+3. Klick auf **"Neuer Eintrag"**
+4. Dialog öffnet sich:
+   - **Schlüssel**: "beratung_std"
+   - **Beschreibung**: "Beratung pro Stunde"
+   - **Einzelpreis**: 120,00
+   - **Einheit**: "Std"
+5. Klick auf **"Speichern"**
+6. Eintrag erscheint in der Tabelle: "Beratung pro Stunde | 120,00 EUR | Std"
+7. Erneut **"Neuer Eintrag"** klicken:
+   - **Schlüssel**: "fahrtkosten"
+   - **Beschreibung**: "Anfahrtspauschale"
+   - **Einzelpreis**: 35,00
+8. Klick auf **"Speichern"**
+9. Zweiter Eintrag erscheint in der Tabelle
+
+##### Schritt 3 -- Preisliste dem Kunden zuweisen
+
+1. 📍 CRM > Adressen
+2. Klick auf **"Mustermann GmbH"** (oder den gewünschten Kunden)
+3. Detailseite öffnet sich
+4. Klick auf **"Bearbeiten"**
+5. Feld **"Preisliste"**: Dropdown öffnen → **"Standardpreisliste"** auswählen
+6. Klick auf **"Speichern"**
+7. "Preisliste: Standardpreisliste" wird auf der Detailseite angezeigt
+
+##### Schritt 4 -- Preis wird im Beleg vorausgefüllt
+
+1. 📍 Aufträge > Belege
+2. Klick auf **"Neuer Beleg"**
+3. **Belegtyp**: "Angebot"
+4. **Kundenadresse**: "Mustermann GmbH" auswählen
+5. Klick auf **"Speichern"** → Detailseite des neuen Angebots
+6. Tab **"Positionen"** → Positionstyp "Freitext" → **"Position hinzufügen"**
+7. Bei der Erfassung eines Artikels oder Schlüssels, der in der Preisliste vorhanden ist, wird der **Einzelpreis automatisch mit 120,00 EUR vorausgefüllt**
+8. Der Preis kann manuell überschrieben werden
+
+##### Ergebnis
+
+Die Preisliste ist vollständig eingerichtet:
+
+- **Standardpreisliste** mit zwei Einträgen (Beratung 120 EUR/Std, Anfahrt 35 EUR)
+- **Mustermann GmbH** hat die Standardpreisliste zugewiesen
+- Bei neuen Belegen für diesen Kunden werden Preise automatisch vorgeschlagen
+
+**Tipp:** Für Großkunden können Sie eine separate Preisliste mit reduzierten Preisen anlegen und diese dem Kunden zuweisen. Die kundenspezifische Preisliste hat immer Vorrang vor der Standardpreisliste.
+
+---
+
 ## 14. Glossar
 
 | Begriff | Erklärung | Wo in Terp |
@@ -5706,9 +5918,12 @@ Die Zahlungshistorie dokumentiert alle Vorgänge lückenlos:
 | **Nettoarbeitszeit** | Anrechenbare Arbeitszeit: Brutto minus Pausen | 📍 Zeitnachweis → Tageszusammenfassung |
 | **Nachricht (CRM)** | Vereinfachte CRM-Aufgabe ohne Terminierung — dient als interne Mitteilung | 📍 CRM → Aufgaben |
 | **Nummernkreis** | Auto-Zähler für Kunden-/Lieferantennummern mit konfigurierbarem Präfix | 📍 Administration → Einstellungen |
+| **Mengenstaffel** | Mehrere Preiseinträge für denselben Artikel mit unterschiedlichen Ab-Mengen für mengenabhängige Rabatte | 📍 Aufträge → Preislisten → Detail |
 | **Offener Posten** | Unbezahlte oder teilbezahlte Rechnung mit Fälligkeitsdatum und Zahlungsstatus | 📍 Aufträge → Offene Posten |
 | **Kontogruppe** | Logische Bündelung mehrerer Konten (z. B. alle Zuschlagskonten) | 📍 Verwaltung → Konten → Tab Gruppen |
 | **Personalnummer** | Eindeutige Kennung je Mitarbeiter im Mandanten | 📍 Verwaltung → Mitarbeiter |
+| **Preiseintrag** | Einzelne Preiszeile in einer Preisliste mit Artikel/Schlüssel, Einzelpreis und optionaler Mengenstaffel | 📍 Aufträge → Preislisten → Detail |
+| **Preisliste** | Liste mit Preisen für Artikel und Freitextpositionen, zuweisbar an Kunden. Standardpreisliste als Fallback. | 📍 Aufträge → Preislisten |
 | **Profil** | Eigene Stamm-, Beschäftigungs- und Kontaktdaten des angemeldeten Benutzers | 📍 Benutzermenü → Profil |
 | **PIN** | Persönliche Identifikationsnummer für das Terminal | Wird bei Mitarbeiteranlage automatisch vergeben |
 | **RFID-Karte** | Zutrittskarte mit Funkchip | 📍 Mitarbeiterdetail → Zutrittskarten |
@@ -5808,6 +6023,8 @@ Diese Tabelle listet alle Seiten der Anwendung mit ihrer URL und dem Menüpfad:
 | `/orders/service-cases/[id]` | Kundendienstliste → Zeile anklicken | billing_service_cases.view |
 | `/orders/open-items` | Aufträge → Offene Posten | billing_payments.view |
 | `/orders/open-items/[documentId]` | Offene Posten → Rechnung anklicken | billing_payments.view |
+| `/orders/price-lists` | Aufträge → Preislisten | billing_price_lists.view |
+| `/orders/price-lists/[id]` | Preislistenliste → Zeile anklicken | billing_price_lists.view |
 
 ---
 

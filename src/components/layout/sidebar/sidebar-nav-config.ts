@@ -42,6 +42,7 @@ import {
   BookOpen,
   Warehouse,
   Wrench,
+  Tag,
 } from 'lucide-react'
 
 /**
@@ -331,6 +332,13 @@ export const navConfig: NavSection[] = [
         icon: Wallet,
         module: 'billing',
         permissions: ['billing_payments.view'],
+      },
+      {
+        titleKey: 'billingPriceLists',
+        href: '/orders/price-lists',
+        icon: Tag,
+        module: 'billing',
+        permissions: ['billing_price_lists.view'],
       },
     ],
   },

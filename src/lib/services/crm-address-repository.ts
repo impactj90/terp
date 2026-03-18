@@ -64,6 +64,7 @@ export async function findById(
     include: {
       contacts: { orderBy: [{ isPrimary: "desc" }, { lastName: "asc" }] },
       bankAccounts: { orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] },
+      priceList: { select: { id: true, name: true } },
     },
   })
 }
@@ -91,6 +92,7 @@ export async function create(
     discountPercent?: number | null
     discountDays?: number | null
     discountGroup?: string | null
+    priceListId?: string | null
     createdById?: string | null
   }
 ) {

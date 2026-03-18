@@ -89,6 +89,7 @@ export async function create(
     discountPercent?: number
     discountDays?: number
     discountGroup?: string
+    priceListId?: string | null
   },
   createdById: string
 ) {
@@ -127,6 +128,7 @@ export async function create(
     discountPercent: input.discountPercent ?? null,
     discountDays: input.discountDays ?? null,
     discountGroup: input.discountGroup || null,
+    priceListId: input.priceListId ?? null,
     createdById,
   })
 }
@@ -154,6 +156,7 @@ export async function update(
     discountPercent?: number | null
     discountDays?: number | null
     discountGroup?: string | null
+    priceListId?: string | null
   }
 ) {
   const existing = await repo.findById(prisma, tenantId, input.id)
@@ -176,6 +179,7 @@ export async function update(
     "type", "street", "zip", "city", "country", "phone", "fax",
     "email", "website", "taxNumber", "vatId", "matchCode", "notes",
     "paymentTermDays", "discountPercent", "discountDays", "discountGroup",
+    "priceListId",
   ] as const
 
   for (const field of directFields) {

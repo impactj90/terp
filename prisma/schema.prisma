@@ -184,6 +184,7 @@ model Tenant {
   billingDocuments            BillingDocument[]
   billingServiceCases         BillingServiceCase[]
   billingPayments             BillingPayment[]
+  billingPriceLists           BillingPriceList[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
@@ -303,6 +304,7 @@ model CrmAddress {
   billingDocumentsDelivery BillingDocument[] @relation("DeliveryAddress")
   billingDocumentsInvoice  BillingDocument[] @relation("InvoiceAddress")
   billingServiceCases      BillingServiceCase[]
+  priceList                BillingPriceList?    @relation(fields: [priceListId], references: [id])
 
   @@unique([tenantId, number], map: "uq_crm_addresses_tenant_number")
   @@index([tenantId], map: "idx_crm_addresses_tenant_id")
@@ -800,6 +802,57 @@ model BillingPayment {
   @@index([tenantId, documentId])
   @@index([tenantId, date])
   @@map("billing_payments")
+}
+
+// -----------------------------------------------------------------------------
+// BillingPriceList
+// -----------------------------------------------------------------------------
+// Migration: 000102
+model BillingPriceList {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  name        String
+  description String?
+  isDefault   Boolean  @default(false) @map("is_default")
+  validFrom   DateTime? @map("valid_from") @db.Timestamptz(6)
+  validTo     DateTime? @map("valid_to") @db.Timestamptz(6)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById String?  @map("created_by_id") @db.Uuid
+
+  tenant     Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  entries    BillingPriceListEntry[]
+  addresses  CrmAddress[]
+
+  @@index([tenantId, isDefault])
+  @@index([tenantId, isActive])
+  @@map("billing_price_lists")
+}
+
+// -----------------------------------------------------------------------------
+// BillingPriceListEntry
+// -----------------------------------------------------------------------------
+// Migration: 000102
+model BillingPriceListEntry {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  priceListId String    @map("price_list_id") @db.Uuid
+  articleId   String?   @map("article_id") @db.Uuid
+  itemKey     String?   @map("item_key")
+  description String?
+  unitPrice   Float     @map("unit_price")
+  minQuantity Float?    @map("min_quantity")
+  unit        String?
+  validFrom   DateTime? @map("valid_from") @db.Timestamptz(6)
+  validTo     DateTime? @map("valid_to") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  priceList BillingPriceList @relation(fields: [priceListId], references: [id], onDelete: Cascade)
+
+  @@index([priceListId, articleId])
+  @@index([priceListId, itemKey])
+  @@map("billing_price_list_entries")
 }
 
 // -----------------------------------------------------------------------------

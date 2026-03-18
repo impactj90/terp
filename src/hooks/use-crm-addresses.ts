@@ -61,6 +61,9 @@ export function useUpdateCrmAddress() {
       queryClient.invalidateQueries({
         queryKey: trpc.crm.addresses.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.crm.addresses.getById.queryKey(),
+      })
     },
   })
 }

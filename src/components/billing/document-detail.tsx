@@ -237,6 +237,7 @@ export function BillingDocumentDetail({ id }: BillingDocumentDetailProps) {
               priceType?: string | null; vatRate?: number | null;
             }> }).positions ?? []}
             readonly={isImmutable}
+            addressId={doc.addressId ?? undefined}
           />
           <DocumentTotalsSummary
             subtotalNet={doc.subtotalNet}

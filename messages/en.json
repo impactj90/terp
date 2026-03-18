@@ -111,6 +111,7 @@
     "billingDocuments": "Documents",
     "billingServiceCases": "Service Cases",
     "billingOpenItems": "Open Items",
+    "billingPriceLists": "Price Lists",
     "warehouseSection": "Warehouse",
     "warehouseOverview": "Warehouse Overview",
     "crmReports": "Reports"
@@ -5118,6 +5119,10 @@
     "labelDiscountPercent": "Discount (%)",
     "labelDiscountDays": "Discount Days",
     "labelDiscountGroup": "Discount Group",
+    "sectionPriceList": "Price List",
+    "labelPriceList": "Price List",
+    "labelPriceListPlaceholder": "Select price list...",
+    "labelNoPriceList": "No price list",
     "labelNotes": "Notes",
     "cancel": "Cancel",
     "save": "Save",

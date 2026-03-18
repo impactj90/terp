@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Loader2 } from 'lucide-react'
-import { useCreateCrmAddress, useUpdateCrmAddress } from '@/hooks'
+import { useCreateCrmAddress, useUpdateCrmAddress, useBillingPriceLists } from '@/hooks'
 
 interface FormState {
   type: 'CUSTOMER' | 'SUPPLIER' | 'BOTH'
@@ -43,6 +43,7 @@ interface FormState {
   discountPercent: string
   discountDays: string
   discountGroup: string
+  priceListId: string
   notes: string
 }
 
@@ -64,6 +65,7 @@ const INITIAL_STATE: FormState = {
   discountPercent: '',
   discountDays: '',
   discountGroup: '',
+  priceListId: '',
   notes: '',
 }
 
@@ -89,6 +91,7 @@ interface AddressFormSheetProps {
     discountPercent: number | null
     discountDays: number | null
     discountGroup: string | null
+    priceListId: string | null
     notes: string | null
   } | null
   onSuccess?: () => void
@@ -100,6 +103,7 @@ export function AddressFormSheet({ open, onOpenChange, address, onSuccess }: Add
 
   const [form, setForm] = React.useState<FormState>(INITIAL_STATE)
   const [error, setError] = React.useState<string | null>(null)
+  const { data: priceListsData } = useBillingPriceLists({ enabled: open })
 
   const createMutation = useCreateCrmAddress()
   const updateMutation = useUpdateCrmAddress()
@@ -127,6 +131,7 @@ export function AddressFormSheet({ open, onOpenChange, address, onSuccess }: Add
           discountPercent: address.discountPercent?.toString() || '',
           discountDays: address.discountDays?.toString() || '',
           discountGroup: address.discountGroup || '',
+          priceListId: address.priceListId || '',
           notes: address.notes || '',
         })
       } else {
@@ -172,7 +177,11 @@ export function AddressFormSheet({ open, onOpenChange, address, onSuccess }: Add
       }
 
       if (isEdit) {
-        await updateMutation.mutateAsync({ id: address!.id, ...payload })
+        await updateMutation.mutateAsync({
+          id: address!.id,
+          ...payload,
+          priceListId: form.priceListId || null,
+        })
       } else {
         await createMutation.mutateAsync(payload)
       }
@@ -402,6 +411,33 @@ export function AddressFormSheet({ open, onOpenChange, address, onSuccess }: Add
                 </div>
               </div>
             </div>
+
+            {/* Price List */}
+            {priceListsData?.items && priceListsData.items.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-muted-foreground">{t('sectionPriceList')}</h3>
+                <div className="space-y-2">
+                  <Label htmlFor="priceListId">{t('labelPriceList')}</Label>
+                  <Select
+                    value={form.priceListId || '_none'}
+                    onValueChange={(v) => updateField('priceListId', v === '_none' ? '' : v)}
+                    disabled={isSubmitting}
+                  >
+                    <SelectTrigger id="priceListId">
+                      <SelectValue placeholder={t('labelPriceListPlaceholder')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">{t('labelNoPriceList')}</SelectItem>
+                      {priceListsData.items.map((pl) => (
+                        <SelectItem key={pl.id} value={pl.id}>
+                          {pl.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
 
             {/* Notes */}
             <div className="space-y-4">
