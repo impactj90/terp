@@ -66,11 +66,15 @@ export function useClockState({ employeeId, enabled = true }: UseClockStateOptio
       return { status: 'clocked_out' as ClockStatus, timerStartTime: null, lastBooking: null }
     }
 
-    // Sort by time (ascending)
+    // Sort by time (ascending), then by createdAt as tiebreaker
     const sorted = [...bookings].sort((a, b) => {
       const timeA = a.editedTime ?? 0
       const timeB = b.editedTime ?? 0
-      return timeA - timeB
+      if (timeA !== timeB) return timeA - timeB
+      // Same editedTime: use createdAt to preserve insertion order
+      const createdA = new Date(a.createdAt).getTime()
+      const createdB = new Date(b.createdAt).getTime()
+      return createdA - createdB
     })
 
     const lastBooking = sorted[sorted.length - 1]
