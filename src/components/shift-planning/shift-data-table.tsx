@@ -21,9 +21,20 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { components } from '@/types/legacy-api-types'
 
-type Shift = components['schemas']['Shift']
+interface Shift {
+  id: string
+  code: string
+  name: string
+  color: string | null
+  qualification: string | null
+  isActive: boolean
+  dayPlanId: string | null
+  dayPlan?: { id: string; code: string; name: string } | null
+  // Allow snake_case fallback from legacy types
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any
+}
 
 interface ShiftDataTableProps {
   items: Shift[]
@@ -89,14 +100,14 @@ export function ShiftDataTable({
               </div>
             </TableCell>
             <TableCell className="text-sm text-muted-foreground">
-              {item.day_plan_id ? 'Linked' : '-'}
+              {item.dayPlan ? `${item.dayPlan.code} — ${item.dayPlan.name}` : '-'}
             </TableCell>
             <TableCell className="text-sm text-muted-foreground">
               {item.qualification || '-'}
             </TableCell>
             <TableCell>
-              <Badge variant={item.is_active ? 'default' : 'secondary'}>
-                {item.is_active ? t('statusActive') : t('statusInactive')}
+              <Badge variant={item.isActive ? 'default' : 'secondary'}>
+                {item.isActive ? t('statusActive') : t('statusInactive')}
               </Badge>
             </TableCell>
             <TableCell onClick={(e) => e.stopPropagation()}>

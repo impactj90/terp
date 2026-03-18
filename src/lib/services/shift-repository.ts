@@ -9,6 +9,7 @@ export async function findMany(prisma: PrismaClient, tenantId: string) {
   return prisma.shift.findMany({
     where: { tenantId },
     orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
+    include: { dayPlan: { select: { id: true, code: true, name: true } } },
   })
 }
 
