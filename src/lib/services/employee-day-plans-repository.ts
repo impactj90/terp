@@ -9,7 +9,7 @@ import type { PrismaClient } from "@/generated/prisma/client"
 
 export const edpListInclude = {
   dayPlan: { select: { id: true, code: true, name: true, planType: true } },
-  shift: { select: { id: true, code: true, name: true } },
+  shift: { select: { id: true, code: true, name: true, color: true } },
 } as const
 
 export const edpDetailInclude = {
