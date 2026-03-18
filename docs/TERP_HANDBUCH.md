@@ -4629,7 +4629,7 @@ Tabelle mit Spalten:
 
 ✅ Kopfbereich zeigt: Titel (groß), Nummer (monospace Badge), Status-Badge, Buttons für Aktionen (Bearbeiten, Schließen, Stornieren, Löschen)
 
-Die Detailseite hat **2 Tabs**:
+Die Detailseite hat **4 Tabs**:
 
 **Tab „Übersicht":** Alle Anfragedaten in Kartenansicht (2-Spalten-Grid)
 
@@ -4639,6 +4639,10 @@ Die Detailseite hat **2 Tabs**:
 | **Zusatzinformationen** | Status (Badge), Verknüpfter Auftrag (mit Link oder „Auftrag verknüpfen"-Button), Geschlossen am, Abschlussgrund, Abschlussbemerkung, Notizen |
 
 **Tab „Korrespondenz":** Zeigt alle Korrespondenzeinträge der verknüpften Adresse (→ Abschnitt 12.5)
+
+**Tab „Aufgaben":** Zeigt alle Aufgaben, die mit dieser Anfrage verknüpft sind (→ Abschnitt 12.9)
+
+**Tab „Belege":** Zeigt alle Belege (Angebote, AB, Rechnungen etc.), die bei der Erstellung mit dieser Anfrage verknüpft wurden. Klick auf eine Zeile öffnet die Beleg-Detailseite. Ein Beleg wird mit einer Anfrage verknüpft, indem beim Erstellen des Belegs (→ Abschnitt 13.3) im Feld „Anfrage" die entsprechende Anfrage ausgewählt wird.
 
 #### Status-Workflow
 
@@ -5065,7 +5069,7 @@ Tabelle mit Spalten:
    - **Kontaktperson**: Ansprechpartner aus der Adresse
    - **Lieferadresse**: Abweichende Lieferanschrift
    - **Rechnungsadresse**: Abweichende Rechnungsanschrift
-   - **Anfrage**: Verknüpfung zu einer CRM-Anfrage
+   - **Anfrage**: Verknüpfung zu einer CRM-Anfrage (Dropdown zeigt offene Anfragen des gewählten Kunden). Wird auf der Detailseite als **„Verknüpfte Anfrage"** in den Kopfdaten angezeigt. Bei Fortführung und Duplizierung wird die Anfrage automatisch in den neuen Beleg übernommen.
    - **Belegdatum**: Standard = heute
    - **Auftragsdatum**: Datum der Beauftragung
    - **Liefertermin**: Gewünschtes Lieferdatum

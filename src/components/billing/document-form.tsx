@@ -16,6 +16,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useCreateBillingDocument } from '@/hooks'
 import { useCrmAddresses } from '@/hooks'
+import { useCrmInquiries } from '@/hooks'
 import { toast } from 'sonner'
 import { ArrowLeft } from 'lucide-react'
 
@@ -45,9 +46,16 @@ export function BillingDocumentForm() {
   const [discountDays2, setDiscountDays2] = React.useState('')
   const [deliveryType, setDeliveryType] = React.useState('')
   const [deliveryTerms, setDeliveryTerms] = React.useState('')
+  const [inquiryId, setInquiryId] = React.useState('')
 
   // Load addresses for selection
   const { data: addressData } = useCrmAddresses({ pageSize: 100 })
+
+  // Load inquiries filtered by selected address
+  const { data: inquiryData } = useCrmInquiries({
+    addressId: addressId || undefined,
+    pageSize: 100,
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -70,6 +78,7 @@ export function BillingDocumentForm() {
         discountDays2: discountDays2 ? parseInt(discountDays2) : undefined,
         deliveryType: deliveryType || undefined,
         deliveryTerms: deliveryTerms || undefined,
+        inquiryId: inquiryId && inquiryId !== 'none' ? inquiryId : undefined,
       })
       toast.success('Beleg erfolgreich erstellt')
       if (result?.id) {
@@ -117,7 +126,7 @@ export function BillingDocumentForm() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="addressId">Kundenadresse *</Label>
-                <Select value={addressId} onValueChange={setAddressId}>
+                <Select value={addressId} onValueChange={(v) => { setAddressId(v); setInquiryId(''); }}>
                   <SelectTrigger id="addressId">
                     <SelectValue placeholder="Adresse wählen..." />
                   </SelectTrigger>
@@ -131,6 +140,24 @@ export function BillingDocumentForm() {
                 </Select>
               </div>
             </div>
+            {addressId && inquiryData?.items && inquiryData.items.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="inquiryId">Anfrage</Label>
+                <Select value={inquiryId} onValueChange={setInquiryId}>
+                  <SelectTrigger id="inquiryId">
+                    <SelectValue placeholder="Anfrage wählen (optional)..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Keine Anfrage</SelectItem>
+                    {inquiryData.items.map((inq) => (
+                      <SelectItem key={inq.id} value={inq.id}>
+                        {inq.number} — {inq.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </CardContent>
         </Card>
 

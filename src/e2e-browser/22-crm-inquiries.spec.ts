@@ -347,4 +347,27 @@ test.describe.serial("UC-CRM-03: Inquiries", () => {
     // Entry should be removed
     await expect(page.getByText(INQUIRY_TITLE_2)).not.toBeVisible();
   });
+
+  // ── Belege-Tab auf Anfrage-Detailseite ─────────────────────────────
+  test("inquiry detail shows Belege tab", async ({ page }) => {
+    await navigateTo(page, "/crm/inquiries");
+    await waitForTableLoad(page);
+
+    // Open the first inquiry
+    const row = page.locator("table tbody tr").filter({ hasText: INQUIRY_TITLE });
+    await row.click();
+    await page.waitForURL("**/crm/inquiries/**");
+    await page.locator("main#main-content").waitFor({ state: "visible" });
+
+    // Verify Belege tab exists
+    await expect(page.getByRole("tab", { name: "Belege" })).toBeVisible();
+
+    // Click Belege tab
+    await clickTab(page, "Belege");
+
+    // Should show empty state or linked documents
+    await expect(
+      page.getByText(/Keine Belege|Nummer/).first()
+    ).toBeVisible({ timeout: 5_000 });
+  });
 });

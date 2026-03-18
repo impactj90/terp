@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Plus, Search } from 'lucide-react'
-import { useBillingDocuments } from '@/hooks'
+import { useBillingDocuments, useCrmAddresses } from '@/hooks'
 import { DocumentTypeBadge } from './document-type-badge'
 import { DocumentStatusBadge } from './document-status-badge'
 
@@ -45,13 +45,17 @@ export function BillingDocumentList({ addressId, inquiryId }: BillingDocumentLis
   const [search, setSearch] = React.useState('')
   const [typeFilter, setTypeFilter] = React.useState<string>('all')
   const [statusFilter, setStatusFilter] = React.useState<string>('all')
+  const [customerFilter, setCustomerFilter] = React.useState<string>('all')
   const [page, setPage] = React.useState(1)
+
+  // Load addresses for customer filter (only when not embedded in address detail)
+  const { data: addressData } = useCrmAddresses({ pageSize: 200 })
 
   const { data, isLoading } = useBillingDocuments({
     search: search || undefined,
     type: typeFilter !== 'all' ? typeFilter as "OFFER" : undefined,
     status: statusFilter !== 'all' ? statusFilter as "DRAFT" : undefined,
-    addressId,
+    addressId: addressId ?? (customerFilter !== 'all' ? customerFilter : undefined),
     inquiryId,
     page,
     pageSize: 25,
@@ -106,6 +110,21 @@ export function BillingDocumentList({ addressId, inquiryId }: BillingDocumentLis
             <SelectItem value="CANCELLED">Storniert</SelectItem>
           </SelectContent>
         </Select>
+        {!addressId && (
+          <Select value={customerFilter} onValueChange={(v) => { setCustomerFilter(v); setPage(1) }}>
+            <SelectTrigger className="w-52">
+              <SelectValue placeholder="Alle Kunden" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle Kunden</SelectItem>
+              {addressData?.items?.map((addr) => (
+                <SelectItem key={addr.id} value={addr.id}>
+                  {addr.company}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {/* Table */}

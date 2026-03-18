@@ -87,6 +87,19 @@ test.describe.serial("UC-ORD-01: Document Chain (Belegkette)", () => {
     await expect(page.getByText("Maria Schmidt")).toBeVisible();
   });
 
+  // ── 1c. Create inquiry for linking ───────────────────────────────
+  test("create inquiry for billing chain", async ({ page }) => {
+    await navigateTo(page, "/crm/inquiries");
+    await page.getByRole("button", { name: "Neue Anfrage" }).click();
+    await waitForSheet(page);
+    await page.locator("#inqTitle").fill("Wartung Q2");
+    await page.locator("#inqAddress").click();
+    await page.getByRole("option", { name: new RegExp(COMPANY) }).click();
+    await submitAndWaitForClose(page);
+    // Verify inquiry created with V-number
+    await expect(page.getByText("Wartung Q2")).toBeVisible({ timeout: 10_000 });
+  });
+
   // ── 1. Navigate to billing documents ──────────────────────────────
   test("navigate to billing documents page", async ({ page }) => {
     await navigateTo(page, "/orders/documents");
@@ -95,7 +108,7 @@ test.describe.serial("UC-ORD-01: Document Chain (Belegkette)", () => {
     ).toBeVisible({ timeout: 10000 });
   });
 
-  // ── 2. Create an Offer (Angebot) ─────────────────────────────────
+  // ── 2. Create an Offer (Angebot) linked to inquiry ────────────────
   test("create an offer", async ({ page }) => {
     await navigateTo(page, "/orders/documents/new");
     await expect(page.getByText("Neuer Beleg")).toBeVisible({
@@ -106,11 +119,26 @@ test.describe.serial("UC-ORD-01: Document Chain (Belegkette)", () => {
     await page.getByRole("combobox", { name: /Kundenadresse/ }).click();
     await page.getByRole("option", { name: new RegExp(COMPANY) }).click();
 
+    // Link to the inquiry we just created (selector appears after address is picked)
+    const inquirySelect = page.locator("#inquiryId");
+    if (await inquirySelect.isVisible({ timeout: 3_000 }).catch(() => false)) {
+      await inquirySelect.click();
+      await page.getByRole("option", { name: /Wartung Q2/ }).click();
+    }
+
     await page.getByRole("button", { name: "Speichern" }).click();
     await page.waitForURL(/\/orders\/documents\/[0-9a-f-]+/, {
       timeout: 10000,
     });
     await expect(page.getByText("Entwurf")).toBeVisible();
+  });
+
+  // ── 2b. Verify linked inquiry on detail page ──────────────────────
+  test("offer shows linked inquiry", async ({ page }) => {
+    await openDocument(page, /A-/);
+    await page.getByRole("tab", { name: /Übersicht/ }).click();
+    await expect(page.getByText("Verknüpfte Anfrage")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(/Wartung Q2/)).toBeVisible();
   });
 
   // ── 3. Add positions to the offer ─────────────────────────────────

@@ -174,6 +174,12 @@ export function BillingDocumentDetail({ id }: BillingDocumentDetailProps) {
                 <DetailRow label="Liefertermin" value={formatDate(doc.deliveryDate)} />
                 <DetailRow label="Lieferart" value={doc.deliveryType ?? '-'} />
                 <DetailRow label="Lieferbedingungen" value={doc.deliveryTerms ?? '-'} />
+                {(doc as unknown as { inquiry?: { id: string; number: string; title: string } }).inquiry && (
+                  <DetailRow
+                    label="Verknüpfte Anfrage"
+                    value={`${(doc as unknown as { inquiry: { number: string; title: string } }).inquiry.number} — ${(doc as unknown as { inquiry: { number: string; title: string } }).inquiry.title}`}
+                  />
+                )}
                 {(doc as unknown as { order?: { code: string; name: string } }).order && (
                   <DetailRow
                     label="Verknüpfter Auftrag"

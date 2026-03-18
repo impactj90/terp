@@ -17,6 +17,7 @@ import {
   useCancelCrmInquiry,
   useReopenCrmInquiry,
   useDeleteCrmInquiry,
+  useBillingDocuments,
 } from '@/hooks'
 import { InquiryStatusBadge } from './inquiry-status-badge'
 import { InquiryFormSheet } from './inquiry-form-sheet'
@@ -190,6 +191,7 @@ export function InquiryDetail({ id }: InquiryDetailProps) {
           <TabsTrigger value="overview">{t('overview')}</TabsTrigger>
           <TabsTrigger value="correspondence">{t('correspondence')}</TabsTrigger>
           <TabsTrigger value="tasks">Aufgaben</TabsTrigger>
+          <TabsTrigger value="documents">Belege</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -291,6 +293,11 @@ export function InquiryDetail({ id }: InquiryDetailProps) {
         <TabsContent value="tasks" className="mt-6">
           <TaskList inquiryId={id} />
         </TabsContent>
+
+        {/* Documents Tab */}
+        <TabsContent value="documents" className="mt-6">
+          <InquiryDocumentsList inquiryId={id} />
+        </TabsContent>
       </Tabs>
 
       {/* Dialogs */}
@@ -347,5 +354,83 @@ export function InquiryDetail({ id }: InquiryDetailProps) {
         variant="destructive"
       />
     </div>
+  )
+}
+
+// --- Inline sub-component for the Belege tab ---
+
+function InquiryDocumentsList({ inquiryId }: { inquiryId: string }) {
+  const router = useRouter()
+  const { data, isLoading } = useBillingDocuments({ inquiryId })
+
+  if (isLoading) {
+    return <Skeleton className="h-24 w-full" />
+  }
+
+  const items = data?.items ?? []
+
+  if (items.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center text-muted-foreground">
+          Keine Belege mit dieser Anfrage verknüpft.
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const typeLabels: Record<string, string> = {
+    OFFER: 'Angebot',
+    ORDER_CONFIRMATION: 'Auftragsbestätigung',
+    DELIVERY_NOTE: 'Lieferschein',
+    SERVICE_NOTE: 'Leistungsschein',
+    RETURN_DELIVERY: 'Rücklieferung',
+    INVOICE: 'Rechnung',
+    CREDIT_NOTE: 'Gutschrift',
+  }
+
+  const statusLabels: Record<string, string> = {
+    DRAFT: 'Entwurf',
+    PRINTED: 'Abgeschlossen',
+    PARTIALLY_FORWARDED: 'Teilw. fortgeführt',
+    FORWARDED: 'Fortgeführt',
+    CANCELLED: 'Storniert',
+  }
+
+  return (
+    <Card>
+      <CardContent className="p-0">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b text-left text-muted-foreground">
+              <th className="px-4 py-2 font-medium">Nummer</th>
+              <th className="px-4 py-2 font-medium">Typ</th>
+              <th className="px-4 py-2 font-medium">Datum</th>
+              <th className="px-4 py-2 font-medium">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((doc) => (
+              <tr
+                key={doc.id}
+                className="border-b cursor-pointer hover:bg-muted/50"
+                onClick={() => router.push(`/orders/documents/${doc.id}`)}
+              >
+                <td className="px-4 py-2 font-mono">{doc.number}</td>
+                <td className="px-4 py-2">{typeLabels[doc.type] ?? doc.type}</td>
+                <td className="px-4 py-2">
+                  {new Intl.DateTimeFormat('de-DE').format(new Date(doc.documentDate))}
+                </td>
+                <td className="px-4 py-2">
+                  <Badge variant={doc.status === 'DRAFT' ? 'outline' : 'secondary'}>
+                    {statusLabels[doc.status] ?? doc.status}
+                  </Badge>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </CardContent>
+    </Card>
   )
 }
