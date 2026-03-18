@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Plus, Search } from 'lucide-react'
-import { useBillingDocuments, useCrmAddresses } from '@/hooks'
+import { useBillingDocuments } from '@/hooks'
 import { DocumentTypeBadge } from './document-type-badge'
 import { DocumentStatusBadge } from './document-status-badge'
 
@@ -48,8 +48,23 @@ export function BillingDocumentList({ addressId, inquiryId }: BillingDocumentLis
   const [customerFilter, setCustomerFilter] = React.useState<string>('all')
   const [page, setPage] = React.useState(1)
 
-  // Load addresses for customer filter (only when not embedded in address detail)
-  const { data: addressData } = useCrmAddresses({ pageSize: 200 })
+  // Load all documents (unfiltered) to extract unique customers for the filter dropdown
+  const { data: allDocsData } = useBillingDocuments({ pageSize: 200 })
+
+  // Extract unique customers from loaded documents
+  const uniqueCustomers = React.useMemo(() => {
+    const items = allDocsData?.items ?? []
+    const seen = new Map<string, string>()
+    for (const doc of items) {
+      const addr = (doc as unknown as { address?: { id: string; company: string } }).address
+      if (addr && !seen.has(addr.id)) {
+        seen.set(addr.id, addr.company)
+      }
+    }
+    return Array.from(seen.entries())
+      .map(([id, company]) => ({ id, company }))
+      .sort((a, b) => a.company.localeCompare(b.company))
+  }, [allDocsData])
 
   const { data, isLoading } = useBillingDocuments({
     search: search || undefined,
@@ -117,7 +132,7 @@ export function BillingDocumentList({ addressId, inquiryId }: BillingDocumentLis
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Alle Kunden</SelectItem>
-              {addressData?.items?.map((addr) => (
+              {uniqueCustomers.map((addr) => (
                 <SelectItem key={addr.id} value={addr.id}>
                   {addr.company}
                 </SelectItem>
