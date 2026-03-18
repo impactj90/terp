@@ -49,7 +49,15 @@ export function HoursThisWeekCard({
       return { totalNet: 0, totalTarget: 0, remaining: 0, daysWorked: 0 }
     }
 
-    const dailyValues = data.data
+    // The API returns the entire month — filter to only this week's dates
+    const weekStartDate = getWeekStart()
+    const weekEndDate = getWeekEnd()
+
+    const dailyValues = data.data.filter((dv) => {
+      const dvDate = new Date(dv.date)
+      return dvDate >= weekStartDate && dvDate <= weekEndDate
+    })
+
     let totalNet = 0
     let totalTarget = 0
     let daysWorked = 0
