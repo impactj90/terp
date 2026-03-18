@@ -31,9 +31,11 @@ interface Shift {
   isActive: boolean
   dayPlanId: string | null
   dayPlan?: { id: string; code: string; name: string } | null
-  // Allow snake_case fallback from legacy types
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any
+  tenantId: string
+  createdAt: string
+  updatedAt: string
+  description: string | null
+  sortOrder: number
 }
 
 interface ShiftDataTableProps {

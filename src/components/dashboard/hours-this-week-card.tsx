@@ -54,6 +54,7 @@ export function HoursThisWeekCard({
     const weekEndDate = getWeekEnd()
 
     const dailyValues = data.data.filter((dv) => {
+      if (!dv.date) return false
       const dvDate = new Date(dv.date)
       return dvDate >= weekStartDate && dvDate <= weekEndDate
     })
