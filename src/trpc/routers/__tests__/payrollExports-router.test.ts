@@ -90,6 +90,7 @@ function makeMonthlyValue(employeeId: string, overrides: Record<string, unknown>
     vacationTaken: new Decimal("2.00"),
     sickDays: 1,
     otherAbsenceDays: 0,
+    isClosed: true,
     ...overrides,
   }
 }
@@ -505,24 +506,36 @@ describe("payrollExports.generate", () => {
     expect(emp2Line!.endsWith("0.00")).toBe(true)
   })
 
-  it("skips employees without monthly values", async () => {
+  it("rejects when employees have unclosed monthly values", async () => {
+    const emp = makeEmployee(EMPLOYEE_ID, "001", "John", "Doe")
+    const mv = makeMonthlyValue(EMPLOYEE_ID, { isClosed: false })
+
+    const { prisma } = makeGeneratePrisma({
+      employees: [emp],
+      monthlyValues: [mv],
+    })
+
+    const caller = createCaller(createViewContext(prisma))
+    await expect(
+      caller.generate({ year: 2025, month: 1 })
+    ).rejects.toThrow("Monthly values not closed for all employees")
+  })
+
+  it("rejects when employees have no monthly values", async () => {
     const emp1 = makeEmployee(EMPLOYEE_ID, "001", "John", "Doe")
     const emp2 = makeEmployee(EMPLOYEE_ID_2, "002", "Jane", "Smith")
     // Only emp1 has monthly values
     const mv1 = makeMonthlyValue(EMPLOYEE_ID)
 
-    const { prisma, getCapturedFileContent } = makeGeneratePrisma({
+    const { prisma } = makeGeneratePrisma({
       employees: [emp1, emp2],
       monthlyValues: [mv1],
     })
 
     const caller = createCaller(createViewContext(prisma))
-    await caller.generate({ year: 2025, month: 1 })
-
-    const csv = getCapturedFileContent()!
-    const dataLines = csv.trim().split("\n").slice(1)
-    expect(dataLines).toHaveLength(1)
-    expect(dataLines[0]).toContain("001")
+    await expect(
+      caller.generate({ year: 2025, month: 1 })
+    ).rejects.toThrow("Monthly values not closed for all employees")
   })
 })
 

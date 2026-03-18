@@ -411,6 +411,44 @@ describe("Phase 11: Reporting & Export", () => {
   // UC-066: Lohnexport generieren und herunterladen
   // =========================================================
   describe("UC-066: Lohnexport generieren und herunterladen", () => {
+    // Payroll exports require all employees to have closed monthly values.
+    // Ensure monthly values exist and are closed for the test months.
+    beforeAll(async () => {
+      const employees = await prisma.employee.findMany({
+        where: { tenantId: SEED.TENANT_ID, isActive: true },
+        select: { id: true },
+      })
+      for (const month of [1, 2, 3]) {
+        for (const emp of employees) {
+          await prisma.monthlyValue.upsert({
+            where: { employeeId_year_month: { employeeId: emp.id, year: 2025, month } },
+            update: { isClosed: true },
+            create: {
+              tenantId: SEED.TENANT_ID,
+              employeeId: emp.id,
+              year: 2025,
+              month,
+              totalGrossTime: 0,
+              totalNetTime: 0,
+              totalTargetTime: 0,
+              totalOvertime: 0,
+              totalUndertime: 0,
+              totalBreakTime: 0,
+              flextimeStart: 0,
+              flextimeChange: 0,
+              flextimeEnd: 0,
+              vacationTaken: 0,
+              sickDays: 0,
+              otherAbsenceDays: 0,
+              workDays: 0,
+              daysWithErrors: 0,
+              isClosed: true,
+            },
+          })
+        }
+      }
+    })
+
     it("should generate a payroll export for a past month", async () => {
       const result = await caller.payrollExports.generate({
         year: 2025,

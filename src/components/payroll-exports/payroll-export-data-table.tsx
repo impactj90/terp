@@ -26,14 +26,14 @@ export interface PayrollExportRow {
   id: string
   year: number
   month: number
-  export_type?: string
+  exportType?: string
   format?: string
   status: string
-  employee_count?: number
-  total_hours?: number
-  requested_at?: string | null
-  completed_at?: string | null
-  error_message?: string | null
+  employeeCount?: number
+  totalHours?: number
+  requestedAt?: string | null
+  completedAt?: string | null
+  errorMessage?: string | null
 }
 
 interface PayrollExportDataTableProps {
@@ -150,7 +150,7 @@ export function PayrollExportDataTable({
               </TableCell>
               <TableCell>
                 <Badge variant="outline">
-                  {t(`exportType.${item.export_type ?? 'standard'}` as Parameters<typeof t>[0])}
+                  {t(`exportType.${item.exportType ?? 'standard'}` as Parameters<typeof t>[0])}
                 </Badge>
               </TableCell>
               <TableCell className="font-mono text-sm uppercase">
@@ -160,13 +160,13 @@ export function PayrollExportDataTable({
                 {getStatusBadge(item.status, t as unknown as (key: string) => string)}
               </TableCell>
               <TableCell className="text-right">
-                {item.employee_count ?? '-'}
+                {item.employeeCount ?? '-'}
               </TableCell>
               <TableCell className="text-right">
-                {formatHours(item.total_hours)}
+                {formatHours(item.totalHours)}
               </TableCell>
               <TableCell className="text-sm text-muted-foreground">
-                {formatDate(item.completed_at ?? item.requested_at)}
+                {formatDate(item.completedAt ?? item.requestedAt)}
               </TableCell>
               <TableCell onClick={(e) => e.stopPropagation()}>
                 <DropdownMenu>

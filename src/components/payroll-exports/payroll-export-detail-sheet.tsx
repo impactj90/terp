@@ -26,16 +26,16 @@ interface PayrollExportDetailSheetProps {
   onDelete: (item: PayrollExportRow) => void
   /** Additional metadata loaded from usePayrollExport(id) */
   fullExport?: {
-    export_interface_id?: string | null
-    file_size?: number | null
-    row_count?: number | null
-    total_overtime?: number
-    started_at?: string | null
-    requested_at?: string
+    exportInterfaceId?: string | null
+    fileSize?: number | null
+    rowCount?: number | null
+    totalOvertime?: number
+    startedAt?: string | null
+    requestedAt?: string
     parameters?: {
-      employee_ids?: string[]
-      department_ids?: string[]
-      include_accounts?: string[]
+      employeeIds?: string[]
+      departmentIds?: string[]
+      includeAccounts?: string[]
     } | null
   } | null
 }
@@ -109,9 +109,9 @@ export function PayrollExportDetailSheet({
           <ScrollArea className="flex-1 -mx-4 px-4">
             <div className="space-y-6 py-4">
               {/* Error message for failed exports */}
-              {isFailed && item.error_message && (
+              {isFailed && item.errorMessage && (
                 <Alert variant="destructive">
-                  <AlertDescription>{item.error_message}</AlertDescription>
+                  <AlertDescription>{item.errorMessage}</AlertDescription>
                 </Alert>
               )}
 
@@ -124,7 +124,7 @@ export function PayrollExportDetailSheet({
                   <div className="flex justify-between py-1">
                     <span className="text-sm text-muted-foreground">{t('detail.type')}</span>
                     <span className="text-sm font-medium">
-                      {t(`exportType.${item.export_type ?? 'standard'}` as Parameters<typeof t>[0])}
+                      {t(`exportType.${item.exportType ?? 'standard'}` as Parameters<typeof t>[0])}
                     </span>
                   </div>
                   <div className="flex justify-between py-1">
@@ -153,19 +153,19 @@ export function PayrollExportDetailSheet({
                   <div className="flex justify-between py-1">
                     <span className="text-sm text-muted-foreground">{t('detail.requestedAt')}</span>
                     <span className="text-sm font-medium">
-                      {formatDate(item.requested_at ?? fullExport?.requested_at)}
+                      {formatDate(item.requestedAt ?? fullExport?.requestedAt)}
                     </span>
                   </div>
-                  {fullExport?.started_at && (
+                  {fullExport?.startedAt && (
                     <div className="flex justify-between py-1">
                       <span className="text-sm text-muted-foreground">{t('detail.startedAt')}</span>
-                      <span className="text-sm font-medium">{formatDate(fullExport.started_at)}</span>
+                      <span className="text-sm font-medium">{formatDate(fullExport.startedAt)}</span>
                     </div>
                   )}
-                  {item.completed_at && (
+                  {item.completedAt && (
                     <div className="flex justify-between py-1">
                       <span className="text-sm text-muted-foreground">{t('detail.completedAt')}</span>
-                      <span className="text-sm font-medium">{formatDate(item.completed_at)}</span>
+                      <span className="text-sm font-medium">{formatDate(item.completedAt)}</span>
                     </div>
                   )}
                 </div>
@@ -179,30 +179,30 @@ export function PayrollExportDetailSheet({
                 <div className="rounded-lg border p-4 space-y-2">
                   <div className="flex justify-between py-1">
                     <span className="text-sm text-muted-foreground">{t('detail.employeeCount')}</span>
-                    <span className="text-sm font-medium">{item.employee_count ?? '-'}</span>
+                    <span className="text-sm font-medium">{item.employeeCount ?? '-'}</span>
                   </div>
                   <div className="flex justify-between py-1">
                     <span className="text-sm text-muted-foreground">{t('detail.totalHours')}</span>
                     <span className="text-sm font-medium">
-                      {item.total_hours != null ? item.total_hours.toFixed(2) : '-'}
+                      {item.totalHours != null ? Number(item.totalHours).toFixed(2) : '-'}
                     </span>
                   </div>
                   <div className="flex justify-between py-1">
                     <span className="text-sm text-muted-foreground">{t('detail.totalOvertime')}</span>
                     <span className="text-sm font-medium">
-                      {fullExport?.total_overtime != null ? fullExport.total_overtime.toFixed(2) : '-'}
+                      {fullExport?.totalOvertime != null ? Number(fullExport.totalOvertime).toFixed(2) : '-'}
                     </span>
                   </div>
-                  {fullExport?.row_count != null && (
+                  {fullExport?.rowCount != null && (
                     <div className="flex justify-between py-1">
                       <span className="text-sm text-muted-foreground">{t('detail.rowCount')}</span>
-                      <span className="text-sm font-medium">{fullExport.row_count}</span>
+                      <span className="text-sm font-medium">{fullExport.rowCount}</span>
                     </div>
                   )}
-                  {fullExport?.file_size != null && (
+                  {fullExport?.fileSize != null && (
                     <div className="flex justify-between py-1">
                       <span className="text-sm text-muted-foreground">{t('detail.fileSize')}</span>
-                      <span className="text-sm font-medium">{formatFileSize(fullExport.file_size)}</span>
+                      <span className="text-sm font-medium">{formatFileSize(fullExport.fileSize)}</span>
                     </div>
                   )}
                 </div>

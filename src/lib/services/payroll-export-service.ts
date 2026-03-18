@@ -25,6 +25,13 @@ export class PayrollExportValidationError extends Error {
   }
 }
 
+export class PayrollExportConflictError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "PayrollExportConflictError"
+  }
+}
+
 // --- Helpers ---
 
 function decimalToNumber(val: Decimal | null | undefined): number {
@@ -325,6 +332,33 @@ export async function generate(
     )
   }
 
+  // Get active employees in scope (before creating record so validation can reject early)
+  const employees = await repo.findEmployeesWithRelations(
+    prisma,
+    tenantId,
+    {
+      departmentIds: input.parameters?.departmentIds,
+      employeeIds: input.parameters?.employeeIds,
+    },
+    scopeFilter
+  )
+
+  // Validate all employees have closed monthly values
+  const empIds = employees.map((e) => e.id)
+  const allMvs = await repo.findMonthlyValuesBatch(prisma, tenantId, empIds, input.year, input.month)
+  const mvMap = new Map(allMvs.map((mv) => [mv.employeeId, mv]))
+
+  const unclosedEmployees = employees.filter((emp) => {
+    const mv = mvMap.get(emp.id)
+    return !mv || !mv.isClosed
+  })
+
+  if (unclosedEmployees.length > 0) {
+    throw new PayrollExportConflictError(
+      "Monthly values not closed for all employees"
+    )
+  }
+
   // Create export record in pending status
   let pe = await repo.create(prisma, {
     tenantId,
@@ -345,17 +379,6 @@ export async function generate(
       status: "generating",
       startedAt: new Date(),
     }))!
-
-    // Get active employees in scope
-    const employees = await repo.findEmployeesWithRelations(
-      prisma,
-      tenantId,
-      {
-        departmentIds: input.parameters?.departmentIds,
-        employeeIds: input.parameters?.employeeIds,
-      },
-      scopeFilter
-    )
 
     // Determine which accounts to include
     let accountIds = input.parameters?.includeAccounts ?? []
@@ -378,7 +401,6 @@ export async function generate(
     const accountCodeList = Object.values(accountInfoMap).map((a) => a.code)
 
     // Aggregate daily account values
-    const empIds = employees.map((e) => e.id)
     const accountValueMap = await buildAccountValueMap(
       prisma, tenantId, empIds, accountIds, input.year, input.month,
     )
@@ -387,10 +409,6 @@ export async function generate(
     const lines: ExportLine[] = []
     let totalWorked = 0
     let totalOT = 0
-
-    // Batch-fetch all monthly values
-    const allMvs = await repo.findMonthlyValuesBatch(prisma, tenantId, empIds, input.year, input.month)
-    const mvMap = new Map(allMvs.map((mv) => [mv.employeeId, mv]))
 
     for (const emp of employees) {
       const mv = mvMap.get(emp.id)
