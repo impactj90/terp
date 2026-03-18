@@ -493,8 +493,9 @@ export function ShiftPlanningBoard({ enabled }: ShiftPlanningBoardProps) {
                           const dateStr = formatDate(date)
                           const key = `${employee.id}-${dateStr}`
                           const plan = planMap.get(key) ?? null
+                          // Prefer shiftMap (full data from useShifts) over plan.shift (partial select)
                           const shift = plan?.shiftId
-                            ? ((plan.shift ?? shiftMap.get(plan.shiftId) ?? null) as Shift | null)
+                            ? ((shiftMap.get(plan.shiftId) ?? plan.shift ?? null) as Shift | null)
                             : null
                           const weekend = isWeekend(date)
 
