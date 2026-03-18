@@ -241,7 +241,7 @@ test.describe.serial("UC-CRM-01: Address Management", () => {
 
   // ─── Placeholder tabs ──────────────────────────────────────────
 
-  test("placeholder tabs show coming soon message", async ({ page }) => {
+  test("Belege tab shows billing documents view", async ({ page }) => {
     await navigateTo(page, "/crm/addresses");
     await waitForTableLoad(page);
 
@@ -252,12 +252,8 @@ test.describe.serial("UC-CRM-01: Address Management", () => {
     await page.waitForURL("**/crm/addresses/**");
     await page.locator("main#main-content").waitFor({ state: "visible" });
 
-    // Korrespondenz tab is now implemented (CRM_02), so skip it
-
-    // Anfragen tab is now implemented (CRM_03), skip placeholder test
-
     await clickTab(page, "Belege");
-    await expect(page.getByText("In Vorbereitung")).toBeVisible();
+    await expect(page.getByText("Keine Belege gefunden")).toBeVisible();
   });
 
   // ─── Soft-delete and restore ───────────────────────────────────

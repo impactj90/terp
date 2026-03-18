@@ -42,6 +42,83 @@ test.describe.serial("UC-051: Shift Planning", () => {
     await expectTableContains(page, "E2E-SHIFT");
   });
 
+  // ── Demo: 3-Schicht-Betrieb — FS, SS, NS ───────────────────────────
+  test("create Frühschicht (E2E-FS)", async ({ page }) => {
+    await navigateTo(page, "/admin/shift-planning");
+    await clickTab(page, "Schichten");
+    await waitForTableLoad(page);
+
+    await page.getByRole("button", { name: /Neue Schicht/i }).first().click();
+    await page
+      .locator('[data-slot="sheet-content"][data-state="open"]')
+      .waitFor({ state: "visible" });
+
+    await fillInput(page, "code", "E2E-FS");
+    await fillInput(page, "name", "E2E Frühschicht");
+
+    await submitAndWaitForClose(page);
+    await waitForTableLoad(page);
+    await expectTableContains(page, "E2E-FS");
+  });
+
+  test("create Spätschicht (E2E-SS)", async ({ page }) => {
+    await navigateTo(page, "/admin/shift-planning");
+    await clickTab(page, "Schichten");
+    await waitForTableLoad(page);
+
+    await page.getByRole("button", { name: /Neue Schicht/i }).first().click();
+    await page
+      .locator('[data-slot="sheet-content"][data-state="open"]')
+      .waitFor({ state: "visible" });
+
+    await fillInput(page, "code", "E2E-SS");
+    await fillInput(page, "name", "E2E Spätschicht");
+
+    await submitAndWaitForClose(page);
+    await waitForTableLoad(page);
+    await expectTableContains(page, "E2E-SS");
+  });
+
+  test("create Nachtschicht (E2E-NS)", async ({ page }) => {
+    await navigateTo(page, "/admin/shift-planning");
+    await clickTab(page, "Schichten");
+    await waitForTableLoad(page);
+
+    await page.getByRole("button", { name: /Neue Schicht/i }).first().click();
+    await page
+      .locator('[data-slot="sheet-content"][data-state="open"]')
+      .waitFor({ state: "visible" });
+
+    await fillInput(page, "code", "E2E-NS");
+    await fillInput(page, "name", "E2E Nachtschicht");
+
+    await submitAndWaitForClose(page);
+    await waitForTableLoad(page);
+    await expectTableContains(page, "E2E-NS");
+  });
+
+  test("Plantafel — Schichtpalette prüfen", async ({ page }) => {
+    await navigateTo(page, "/admin/shift-planning");
+    await clickTab(page, "Plantafel");
+
+    // Verify planning board loads (active tab panel)
+    const panel = page.locator(
+      'main#main-content [role="tabpanel"][data-state="active"]',
+    );
+    await expect(panel).toBeVisible();
+
+    // Verify all 3 demo shifts appear in the palette / legend
+    await expect(panel.getByText("E2E Frühschicht").or(panel.getByText("E2E-FS"))).toBeVisible({
+      timeout: 5_000,
+    });
+    await expect(panel.getByText("E2E Spätschicht").or(panel.getByText("E2E-SS"))).toBeVisible({
+      timeout: 5_000,
+    });
+    await expect(panel.getByText("E2E Nachtschicht").or(panel.getByText("E2E-NS"))).toBeVisible({
+      timeout: 5_000,
+    });
+  });
+
   test("switch to Plantafel tab", async ({ page }) => {
     await navigateTo(page, "/admin/shift-planning");
     await clickTab(page, "Plantafel");

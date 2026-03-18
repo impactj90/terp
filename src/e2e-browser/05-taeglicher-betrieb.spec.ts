@@ -351,3 +351,130 @@ test.describe("UC-038: Profile", () => {
     await expect(cards.first()).toBeVisible({ timeout: 10_000 });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Demo: Tägliche Zeiterfassung — Full Workflow
+// ---------------------------------------------------------------------------
+test.describe.serial("Demo: Tägliche Zeiterfassung", () => {
+  test("Dashboard — Statistik-Karten prüfen", async ({ page }) => {
+    await navigateTo(page, "/dashboard");
+
+    const main = page.locator("main#main-content");
+    // Verify stat cards render (schedule, hours, vacation, flextime)
+    const cards = main.locator(".rounded-lg.border");
+    await expect(cards.first()).toBeVisible({ timeout: 10_000 });
+    const cardCount = await cards.count();
+    expect(cardCount).toBeGreaterThanOrEqual(4);
+  });
+
+  test("Einstempeln", async ({ page }) => {
+    await navigateTo(page, "/time-clock");
+    await expectPageTitle(page, "Stempeluhr");
+
+    const main = page.locator("main#main-content");
+    const clockOutBtn = main.getByRole("button", { name: /ausstempeln/i });
+    const clockInBtn = main.getByRole("button", { name: /einstempeln/i });
+
+    // Wait for page to fully load
+    await expect(clockOutBtn.or(clockInBtn)).toBeEnabled({ timeout: 10_000 });
+
+    // If already clocked in, clock out first to start clean
+    const alreadyClockedIn = await clockOutBtn.isEnabled().catch(() => false);
+    if (alreadyClockedIn) {
+      await clockOutBtn.click();
+      await page.waitForLoadState("networkidle");
+      await expect(clockInBtn).toBeEnabled({ timeout: 10_000 });
+    }
+
+    // Clock in
+    await clockInBtn.click();
+    await page.waitForLoadState("networkidle");
+
+    // Verify clocked-in state
+    await expect(clockOutBtn).toBeEnabled({ timeout: 10_000 });
+
+    // Verify booking in today's history
+    await expect(main.getByText("Kommen")).toBeVisible({ timeout: 5_000 });
+  });
+
+  test("Pause starten", async ({ page }) => {
+    await navigateTo(page, "/time-clock");
+
+    const main = page.locator("main#main-content");
+    const pauseBtn = main.getByRole("button", { name: /pause beginnen/i });
+    await expect(pauseBtn).toBeVisible({ timeout: 10_000 });
+
+    await pauseBtn.click();
+    await page.waitForLoadState("networkidle");
+
+    // Verify pause state — "Pause beenden" button should appear
+    await expect(
+      main.getByRole("button", { name: /pause beenden/i }),
+    ).toBeVisible({ timeout: 10_000 });
+  });
+
+  test("Pause beenden", async ({ page }) => {
+    await navigateTo(page, "/time-clock");
+
+    const main = page.locator("main#main-content");
+    const pauseEndBtn = main.getByRole("button", { name: /pause beenden/i });
+    await expect(pauseEndBtn).toBeVisible({ timeout: 10_000 });
+
+    await pauseEndBtn.click();
+    await page.waitForLoadState("networkidle");
+
+    // Back to clocked-in state — Ausstempeln should be enabled
+    await expect(
+      main.getByRole("button", { name: /ausstempeln/i }),
+    ).toBeEnabled({ timeout: 10_000 });
+  });
+
+  test("Ausstempeln", async ({ page }) => {
+    await navigateTo(page, "/time-clock");
+
+    const main = page.locator("main#main-content");
+    const clockOutBtn = main.getByRole("button", { name: /ausstempeln/i });
+    await expect(clockOutBtn).toBeEnabled({ timeout: 10_000 });
+
+    await clockOutBtn.click();
+    await page.waitForLoadState("networkidle");
+
+    // Verify clocked-out state
+    await expect(
+      main.getByRole("button", { name: /einstempeln/i }),
+    ).toBeEnabled({ timeout: 10_000 });
+
+    // Verify Tagesübersicht section visible with stats
+    await expect(main.getByText("Tagesübersicht")).toBeVisible();
+  });
+
+  test("Zeitnachweis — Tagesansicht prüfen", async ({ page }) => {
+    await navigateTo(page, "/timesheet");
+    await expectPageTitle(page, "Zeitnachweis");
+
+    // Day view (default or click tab)
+    await page.getByRole("tab", { name: /tag/i }).click();
+    await page.waitForTimeout(1000);
+
+    // Should show today's bookings (Kommen + Gehen from the demo workflow)
+    const main = page.locator("main#main-content");
+    await expect(main.getByText("Kommen")).toBeVisible({ timeout: 10_000 });
+    await expect(main.getByText("Gehen")).toBeVisible({ timeout: 5_000 });
+  });
+
+  test("Zeitnachweis — Wochenansicht prüfen", async ({ page }) => {
+    await navigateTo(page, "/timesheet");
+
+    // Switch to week view
+    await page.getByRole("tab", { name: /woche/i }).click();
+    await page.waitForTimeout(1000);
+
+    // Week view should render with today showing some net hours
+    const main = page.locator("main#main-content");
+    await expect(main).toBeVisible();
+
+    // The week table or grid should have at least one cell with time data
+    const content = main.locator("table, [class*='grid']");
+    await expect(content.first()).toBeVisible({ timeout: 10_000 });
+  });
+});

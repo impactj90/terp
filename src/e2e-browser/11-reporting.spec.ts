@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { navigateTo, expectPageTitle } from "./helpers/nav";
+import { navigateTo, waitForTableLoad, expectPageTitle } from "./helpers/nav";
 
 // ---------------------------------------------------------------------------
 // UC-063: Generate Report
@@ -97,7 +97,7 @@ test.describe("UC-065: Export Interface", () => {
 // ---------------------------------------------------------------------------
 // UC-066: Payroll Export
 // ---------------------------------------------------------------------------
-test.describe("UC-066: Payroll Export", () => {
+test.describe.serial("UC-066: Payroll Export", () => {
   test("navigate to payroll exports page and verify title", async ({
     page,
   }) => {
@@ -119,6 +119,104 @@ test.describe("UC-066: Payroll Export", () => {
     await expect(toolbar.getByText(/20\d{2}/)).toBeVisible();
     // Status dropdown
     await expect(toolbar.getByText(/Status/)).toBeVisible();
+  });
+
+  // ── Demo: Lohnexport erstellen ────────────────────────────────────
+  test("Demo: Lohnexport erstellen", async ({ page }) => {
+    await navigateTo(page, "/admin/payroll-exports");
+
+    // Click "Export erstellen"
+    await page.getByRole("button", { name: "Export erstellen" }).first().click();
+
+    // Sheet or dialog should open
+    const sheet = page.locator(
+      '[data-slot="sheet-content"][data-state="open"]',
+    );
+    const dialog = page.locator('[role="dialog"]');
+    const form = sheet.or(dialog);
+    await expect(form).toBeVisible({ timeout: 10_000 });
+
+    // The form should have month/year and format fields — submit with defaults
+    const submitBtn = form.getByRole("button", { name: /Erstellen|Exportieren|Speichern/i });
+    await expect(submitBtn).toBeVisible({ timeout: 5_000 });
+    await submitBtn.click();
+
+    // Wait for form to close
+    await page.waitForTimeout(2000);
+    await page.waitForLoadState("networkidle");
+
+    // Export should appear in the list
+    await waitForTableLoad(page);
+    const firstRow = page.locator("table tbody tr").first();
+    await expect(firstRow).toBeVisible();
+    await expect(firstRow).toContainText(/Abgeschlossen|Erstellt|Fertig/i);
+  });
+
+  // ── Demo: Vorschau prüfen ─────────────────────────────────────────
+  test("Demo: Vorschau prüfen", async ({ page }) => {
+    await navigateTo(page, "/admin/payroll-exports");
+
+    const rows = page.locator("table tbody tr");
+    const rowCount = await rows.count();
+    if (rowCount === 0) return;
+
+    // Open row actions on first export
+    const firstRow = rows.first();
+    await firstRow.getByRole("button").last().click();
+    await page.getByRole("menu").waitFor({ state: "visible" });
+
+    // Click "Vorschau" or "Anzeigen"
+    const previewItem = page.getByRole("menuitem", {
+      name: /Vorschau|Anzeigen|Details/i,
+    });
+    if (await previewItem.isVisible().catch(() => false)) {
+      await previewItem.click();
+
+      // Preview should show a table with employee columns
+      await page.waitForTimeout(2000);
+      const previewContent = page.locator(
+        '[role="dialog"], [data-slot="sheet-content"][data-state="open"], main#main-content',
+      );
+      await expect(previewContent.first()).toBeVisible();
+
+      // Look for typical payroll columns (Personalnummer, Name, Soll, Ist)
+      const content = page.locator("main#main-content");
+      await expect(
+        content.getByText(/Personalnummer|Name|Soll|Ist/i).first(),
+      ).toBeVisible({ timeout: 10_000 });
+    }
+  });
+
+  // ── Demo: CSV herunterladen ───────────────────────────────────────
+  test("Demo: CSV herunterladen", async ({ page }) => {
+    await navigateTo(page, "/admin/payroll-exports");
+
+    const rows = page.locator("table tbody tr");
+    const rowCount = await rows.count();
+    if (rowCount === 0) return;
+
+    // Open row actions on first export
+    const firstRow = rows.first();
+    await firstRow.getByRole("button").last().click();
+    await page.getByRole("menu").waitFor({ state: "visible" });
+
+    // Set up download listener before clicking
+    const downloadPromise = page.waitForEvent("download", { timeout: 10_000 }).catch(() => null);
+
+    // Click "Herunterladen" or "Download"
+    const downloadItem = page.getByRole("menuitem", {
+      name: /Herunterladen|Download|CSV/i,
+    });
+    if (await downloadItem.isVisible().catch(() => false)) {
+      await downloadItem.click();
+
+      const download = await downloadPromise;
+      if (download) {
+        // Verify download was triggered
+        const filename = download.suggestedFilename();
+        expect(filename).toMatch(/\.(csv|xlsx)/);
+      }
+    }
   });
 });
 

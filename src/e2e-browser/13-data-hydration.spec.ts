@@ -364,7 +364,7 @@ test.describe.serial("Booking → daily values hydration", () => {
     ).toHaveCount(0, { timeout: 10_000 });
 
     // Verify the booking appears on the same page (cache was invalidated)
-    await expect(page.getByText("08:00")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("08:00").first()).toBeVisible({ timeout: 5_000 });
   });
 });
 

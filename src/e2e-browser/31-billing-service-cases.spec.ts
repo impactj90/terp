@@ -34,7 +34,7 @@ const CLOSING_REASON =
 async function openServiceCaseDetail(page: Page, match: RegExp) {
   await navigateTo(page, "/orders/service-cases");
   await waitForTableLoad(page);
-  const row = page.locator("table tbody tr").filter({ hasText: match });
+  const row = page.locator("table tbody tr").filter({ hasText: match }).filter({ hasText: SC_TITLE });
   await row.click();
   await page.waitForURL(/\/orders\/service-cases\/[0-9a-f-]+/, {
     timeout: 10_000,
@@ -94,9 +94,9 @@ test.describe.serial(
       // 9. ✅ Serviceauftrag mit KD-Nummer als "Offen" in der Liste
       const row = page
         .locator("table tbody tr")
-        .filter({ hasText: /KD-/ });
+        .filter({ hasText: /KD-/ })
+        .filter({ hasText: SC_TITLE });
       await expect(row).toBeVisible({ timeout: 10_000 });
-      await expect(row.getByText(SC_TITLE)).toBeVisible();
       await expect(row.getByText("Offen")).toBeVisible();
     });
 

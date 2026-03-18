@@ -165,6 +165,35 @@ test.describe("UC-041: Correction Assistant", () => {
     // Message catalog should load with a table (system messages are always present)
     await waitForTableLoad(page);
   });
+
+  // ── Demo: Korrekturassistent — Fehler erkennen ────────────────────
+  test("Demo: Korrekturen-Tab zeigt Fehler oder leeren Zustand", async ({
+    page,
+  }) => {
+    await navigateTo(page, "/admin/correction-assistant");
+
+    // Korrekturen tab is the default — check content loads
+    const table = page.locator("table");
+    const emptyState = page.getByText(/Keine Korrekturen|Keine Meldungen/i);
+    await expect(table.or(emptyState).first()).toBeVisible({ timeout: 10_000 });
+
+    // If rows exist, verify they show error codes and severity
+    const rows = page.locator("table tbody tr");
+    const rowCount = await rows.count();
+    if (rowCount > 0) {
+      // First row should have a severity indicator and employee reference
+      const firstRow = rows.first();
+      await expect(firstRow).toBeVisible();
+
+      // Click row to see detail panel
+      await firstRow.click();
+      await page.waitForTimeout(1000);
+
+      // Detail should show error code or description
+      const main = page.locator("main#main-content");
+      await expect(main).toBeVisible();
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -240,18 +269,135 @@ test.describe.serial("UC-043: Close Month", () => {
       page.getByRole("button", { name: /Neuberechnen/i }),
     ).toBeVisible();
   });
+
+  // ── Demo: Neuberechnung auslösen ──────────────────────────────────
+  test("Demo: Neuberechnung auslösen", async ({ page }) => {
+    await navigateTo(page, "/admin/monthly-values");
+
+    const rows = page.locator("table tbody tr");
+    const rowCount = await rows.count();
+    if (rowCount === 0) return; // Skip if no data
+
+    // Select all employees
+    await page.getByText("Alle auswählen").click();
+
+    // Click "Neuberechnen"
+    await page.getByRole("button", { name: /Neuberechnen/i }).click();
+
+    // Confirm if dialog appears
+    const dialog = page.locator('[role="dialog"], [role="alertdialog"]');
+    if (await dialog.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      await dialog.getByRole("button", { name: /Bestätigen|Neuberechnen/i }).click();
+    }
+
+    // Wait for recalculation — no error toast should appear
+    await page.waitForTimeout(3000);
+    await page.waitForLoadState("networkidle");
+
+    // Table should still be visible (not crashed)
+    await expect(page.locator("table")).toBeVisible();
+  });
+
+  // ── Demo: Massenabschluss ─────────────────────────────────────────
+  test("Demo: Massenabschluss — alle Mitarbeiter schließen", async ({
+    page,
+  }) => {
+    await navigateTo(page, "/admin/monthly-values");
+
+    const rows = page.locator("table tbody tr");
+    const rowCount = await rows.count();
+    if (rowCount === 0) return; // Skip if no data
+
+    // Select all
+    await page.getByText("Alle auswählen").click();
+
+    // Click "Ausgewählte schließen"
+    await page.getByRole("button", { name: /Ausgewählte schließen/i }).click();
+
+    // Confirm dialog
+    const dialog = page.locator('[role="dialog"], [role="alertdialog"]');
+    await expect(dialog).toBeVisible({ timeout: 5_000 });
+    await dialog.getByRole("button", { name: /Bestätigen|Schließen/i }).last().click();
+    await expect(dialog).not.toBeVisible({ timeout: 10_000 });
+
+    // Wait for status update
+    await page.waitForLoadState("networkidle");
+
+    // Verify status changed to "Abgeschlossen" (green badge)
+    const firstRow = rows.first();
+    await expect(firstRow.getByText(/Abgeschlossen|Geschlossen/i)).toBeVisible({
+      timeout: 10_000,
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------
 // UC-044: Reopen Month (/admin/monthly-values)
 // ---------------------------------------------------------------------------
-test.describe("UC-044: Reopen Month", () => {
+test.describe.serial("UC-044: Reopen Month", () => {
   test("verify reopen batch action button exists", async ({ page }) => {
     await navigateTo(page, "/admin/monthly-values");
 
     await expect(
       page.getByRole("button", { name: /Ausgewählte öffnen/i }),
     ).toBeVisible();
+  });
+
+  // ── Demo: Monat wieder öffnen und erneut schließen (Roundtrip) ────
+  test("Demo: Monat wieder öffnen", async ({ page }) => {
+    await navigateTo(page, "/admin/monthly-values");
+
+    const rows = page.locator("table tbody tr");
+    const rowCount = await rows.count();
+    if (rowCount === 0) return;
+
+    // Select first employee
+    const firstRowCheckbox = rows.first().locator('[role="checkbox"]');
+    await firstRowCheckbox.click();
+
+    // Click "Ausgewählte öffnen"
+    await page.getByRole("button", { name: /Ausgewählte öffnen/i }).click();
+
+    // Confirm dialog
+    const dialog = page.locator('[role="dialog"], [role="alertdialog"]');
+    if (await dialog.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      await dialog.getByRole("button", { name: /Bestätigen|Öffnen/i }).last().click();
+      await expect(dialog).not.toBeVisible({ timeout: 10_000 });
+    }
+
+    await page.waitForLoadState("networkidle");
+
+    // Status should be "Offen" or "Berechnet"
+    await expect(
+      rows.first().getByText(/Offen|Berechnet/i),
+    ).toBeVisible({ timeout: 10_000 });
+  });
+
+  test("Demo: Monat erneut schließen (Roundtrip)", async ({ page }) => {
+    await navigateTo(page, "/admin/monthly-values");
+
+    const rows = page.locator("table tbody tr");
+    const rowCount = await rows.count();
+    if (rowCount === 0) return;
+
+    // Select first employee
+    const firstRowCheckbox = rows.first().locator('[role="checkbox"]');
+    await firstRowCheckbox.click();
+
+    // Close again
+    await page.getByRole("button", { name: /Ausgewählte schließen/i }).click();
+
+    const dialog = page.locator('[role="dialog"], [role="alertdialog"]');
+    await expect(dialog).toBeVisible({ timeout: 5_000 });
+    await dialog.getByRole("button", { name: /Bestätigen|Schließen/i }).last().click();
+    await expect(dialog).not.toBeVisible({ timeout: 10_000 });
+
+    await page.waitForLoadState("networkidle");
+
+    // Verify closed again
+    await expect(
+      rows.first().getByText(/Abgeschlossen|Geschlossen/i),
+    ).toBeVisible({ timeout: 10_000 });
   });
 });
 

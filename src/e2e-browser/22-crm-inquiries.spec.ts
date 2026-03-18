@@ -88,7 +88,7 @@ test.describe.serial("UC-CRM-03: Inquiries", () => {
     // Verify entry appears with auto-generated number
     await expect(page.getByText(INQUIRY_TITLE)).toBeVisible({ timeout: 10_000 });
     // Verify status badge shows "Offen"
-    await expect(page.getByText("Offen")).toBeVisible();
+    await expect(page.getByText("Offen", { exact: true })).toBeVisible();
   });
 
   // --- Create a second inquiry from global page ---
