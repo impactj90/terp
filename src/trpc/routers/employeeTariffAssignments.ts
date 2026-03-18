@@ -35,6 +35,7 @@ const employeeTariffAssignmentOutputSchema = z.object({
   tenantId: z.string(),
   employeeId: z.string(),
   tariffId: z.string(),
+  tariff: z.object({ id: z.string(), code: z.string(), name: z.string() }).nullable().optional(),
   effectiveFrom: z.date(),
   effectiveTo: z.date().nullable(),
   overwriteBehavior: z.string(),
