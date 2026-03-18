@@ -6,6 +6,9 @@
 | **Dependencies** | CRM_01 (Addresses — price list assignment to customers) |
 | **Complexity** | M |
 | **New Models** | `BillingPriceList`, `BillingPriceListEntry` |
+| **Status** | ✅ Complete |
+| **Completed** | 2026-03-18 |
+| **Commit** | c88fed79 |
 
 ---
 
@@ -276,16 +279,18 @@ test.describe("UC-ORD-04: Price Lists", () => {
 
 ## Acceptance Criteria
 
-- [ ] `BillingPriceList` and `BillingPriceListEntry` models created with migration
-- [ ] Price list CRUD fully functional
-- [ ] One default price list per tenant
-- [ ] Entries support article-linked and custom items
-- [ ] Volume pricing via `minQuantity` threshold
-- [ ] Validity dates on both lists and entries
-- [ ] Price lookup algorithm: customer list → default list → article base price
-- [ ] Price list assignable to CRM addresses via `priceListId`
-- [ ] Document positions auto-fill price from customer's list (ORD_01 integration)
-- [ ] Bulk import of price entries
-- [ ] Delete rejected if price list assigned to customers
-- [ ] All procedures gated by `requireModule("billing")` and `billing_price_lists.*` permissions
-- [ ] Cross-tenant isolation verified
+- [x] `BillingPriceList` and `BillingPriceListEntry` models created with migration
+- [x] Price list CRUD fully functional
+- [x] One default price list per tenant
+- [x] Entries support article-linked and custom items
+- [x] Volume pricing via `minQuantity` threshold
+- [x] Validity dates on both lists and entries
+- [x] Price lookup algorithm: customer list → default list → article base price
+- [x] Price list assignable to CRM addresses via `priceListId`
+- [x] Document positions auto-fill price from customer's list (ORD_01 integration)
+- [x] Bulk import of price entries
+- [x] Delete rejected if price list assigned to customers
+- [x] All procedures gated by `requireModule("billing")` and `billing_price_lists.*` permissions
+- [x] Cross-tenant isolation verified
+- [x] Autocomplete combobox in position description for price list entry selection
+- [x] E2E tests cover Praxisbeispiel 13.12.1 (all 4 steps + manual price override)
