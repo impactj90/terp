@@ -53,6 +53,11 @@ DELETE FROM billing_service_cases WHERE address_id IN (
   SELECT id FROM crm_addresses WHERE company LIKE 'E2E%'
 );
 
+-- Recurring invoice records (spec 34) — must come before billing docs and CRM addresses
+DELETE FROM billing_recurring_invoices WHERE address_id IN (
+  SELECT id FROM crm_addresses WHERE company LIKE 'E2E%'
+);
+
 -- Billing document records (spec 30, 31)
 DELETE FROM billing_document_positions WHERE document_id IN (
   SELECT bd.id FROM billing_documents bd

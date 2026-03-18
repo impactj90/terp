@@ -340,6 +340,13 @@ export const navConfig: NavSection[] = [
         module: 'billing',
         permissions: ['billing_price_lists.view'],
       },
+      {
+        titleKey: 'billingRecurringInvoices',
+        href: '/orders/recurring',
+        icon: Repeat,
+        module: 'billing',
+        permissions: ['billing_recurring.view'],
+      },
     ],
   },
   {

@@ -112,6 +112,7 @@
     "billingServiceCases": "Service Cases",
     "billingOpenItems": "Open Items",
     "billingPriceLists": "Price Lists",
+    "billingRecurringInvoices": "Recurring Invoices",
     "warehouseSection": "Warehouse",
     "warehouseOverview": "Warehouse Overview",
     "crmReports": "Reports"

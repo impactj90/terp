@@ -2753,7 +2753,101 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- B5. Number sequences for billing documents
+-- B5. Billing Recurring Invoices (ORD_05 — Wiederkehrende Rechnungen)
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- Three recurring templates across different customers and intervals:
+--   WR-1: Müller Maschinenbau  — Monthly maintenance contract (active, auto-generate, already generated once)
+--   WR-2: Weber Elektrotechnik — Quarterly inspection contract (active, manual)
+--   WR-3: Bauer Logistik       — Annual service agreement (inactive, ended)
+
+-- WR-1: Müller Maschinenbau — Monatliche Wartungspauschale CNC-Maschinen
+-- Active, auto-generate, already generated Jan+Feb → next due 2026-04-01
+INSERT INTO billing_recurring_invoices (
+  id, tenant_id, name, address_id, contact_id, interval,
+  start_date, end_date, next_due_date, last_generated_at,
+  auto_generate, is_active,
+  delivery_type, delivery_terms, payment_term_days, discount_percent, discount_days,
+  notes, internal_notes,
+  position_template,
+  created_at, updated_at, created_by_id
+) VALUES (
+  'b5000000-0000-4000-a000-000000000001', '10000000-0000-0000-0000-000000000001',
+  'Wartungsvertrag CNC-Maschinen (monatlich)',
+  'c1000000-0000-4000-a000-000000000001', 'c2000000-0000-4000-a000-000000000002',
+  'MONTHLY',
+  '2026-01-01 00:00:00+01', NULL,
+  '2026-04-01 00:00:00+02', '2026-03-01 04:00:00+01',
+  true, true,
+  'Spedition', 'frei Haus', 30, 3.0, 10,
+  'Monatliche Wartung gemäß Servicevertrag SV-2026-001',
+  'Vertragslaufzeit: unbefristet, 3 Monate Kündigungsfrist',
+  '[
+    {"type":"FREE","description":"Monatliche Wartungspauschale CNC-Fräse Typ 3","quantity":1,"unit":"Stk","unitPrice":1250.00,"vatRate":19},
+    {"type":"FREE","description":"Verschleißteile-Pauschale (Spindellager, Filter)","quantity":1,"unit":"Stk","unitPrice":380.00,"vatRate":19},
+    {"type":"FREE","description":"24/7 Notfall-Hotline","quantity":1,"unit":"Monat","unitPrice":120.00,"vatRate":19}
+  ]'::jsonb,
+  '2025-12-15 10:00:00+01', '2026-03-01 04:00:00+01', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- WR-2: Weber Elektrotechnik — Quartalsweise Schaltschrank-Inspektion
+-- Active, manual generation, next due Q2 2026
+INSERT INTO billing_recurring_invoices (
+  id, tenant_id, name, address_id, interval,
+  start_date, end_date, next_due_date, last_generated_at,
+  auto_generate, is_active,
+  payment_term_days,
+  notes,
+  position_template,
+  created_at, updated_at, created_by_id
+) VALUES (
+  'b5000000-0000-4000-a000-000000000002', '10000000-0000-0000-0000-000000000001',
+  'Schaltschrank-Inspektion (quartalsweise)',
+  'c1000000-0000-4000-a000-000000000003',
+  'QUARTERLY',
+  '2026-01-01 00:00:00+01', '2027-12-31 00:00:00+01',
+  '2026-04-01 00:00:00+02', '2026-01-15 09:00:00+01',
+  false, true,
+  30,
+  'Inspektion nach VDE-Richtlinien, inkl. Prüfprotokoll',
+  '[
+    {"type":"FREE","description":"Schaltschrank-Inspektion (VDE 0100-600)","quantity":4,"unit":"Stk","unitPrice":285.00,"vatRate":19},
+    {"type":"FREE","description":"Prüfprotokoll-Erstellung und Dokumentation","quantity":1,"unit":"Pausch.","unitPrice":150.00,"vatRate":19},
+    {"type":"TEXT","description":"Prüfung umfasst: Sichtprüfung, Isolationsmessung, RCD-Test, Thermografie"}
+  ]'::jsonb,
+  '2025-12-20 14:00:00+01', '2026-01-15 09:00:00+01', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- WR-3: Bauer Logistik — Jährliche Regalprüfung (abgelaufen)
+-- Inactive — end date reached, last generated was the final invoice
+INSERT INTO billing_recurring_invoices (
+  id, tenant_id, name, address_id, interval,
+  start_date, end_date, next_due_date, last_generated_at,
+  auto_generate, is_active,
+  payment_term_days, discount_percent, discount_days,
+  notes, internal_notes,
+  position_template,
+  created_at, updated_at, created_by_id
+) VALUES (
+  'b5000000-0000-4000-a000-000000000003', '10000000-0000-0000-0000-000000000001',
+  'Jährliche Regalprüfung nach DIN EN 15635',
+  'c1000000-0000-4000-a000-000000000004',
+  'ANNUALLY',
+  '2024-06-01 00:00:00+02', '2026-06-01 00:00:00+02',
+  '2026-06-01 00:00:00+02', '2025-06-02 04:00:00+02',
+  true, false,
+  60, 2.0, 14,
+  'Regalinspektion gemäß DIN EN 15635 durch zertifizierten Prüfer',
+  'Vertrag ausgelaufen. Kunde hat Verlängerung abgelehnt (Haushaltssperre).',
+  '[
+    {"type":"FREE","description":"Regalinspektion DIN EN 15635 (Experte vor Ort)","quantity":1,"unit":"Tag","unitPrice":890.00,"vatRate":19},
+    {"type":"FREE","description":"Prüfbericht mit Fotodokumentation","quantity":1,"unit":"Stk","unitPrice":250.00,"vatRate":19},
+    {"type":"FREE","description":"Anfahrtspauschale Hamburg","quantity":1,"unit":"Pausch.","unitPrice":185.00,"vatRate":19}
+  ]'::jsonb,
+  '2024-05-10 11:00:00+02', '2025-06-02 04:00:00+02', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- B6. Number sequences for billing documents
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 INSERT INTO number_sequences (id, tenant_id, key, prefix, next_value, created_at, updated_at)

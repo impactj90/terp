@@ -185,6 +185,7 @@ model Tenant {
   billingServiceCases         BillingServiceCase[]
   billingPayments             BillingPayment[]
   billingPriceLists           BillingPriceList[]
+  billingRecurringInvoices    BillingRecurringInvoice[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
@@ -304,6 +305,7 @@ model CrmAddress {
   billingDocumentsDelivery BillingDocument[] @relation("DeliveryAddress")
   billingDocumentsInvoice  BillingDocument[] @relation("InvoiceAddress")
   billingServiceCases      BillingServiceCase[]
+  billingRecurringInvoices BillingRecurringInvoice[]
   priceList                BillingPriceList?    @relation(fields: [priceListId], references: [id])
 
   @@unique([tenantId, number], map: "uq_crm_addresses_tenant_number")
@@ -342,6 +344,7 @@ model CrmContact {
   tasks           CrmTask[]
   billingDocuments  BillingDocument[]
   billingServiceCases BillingServiceCase[]
+  billingRecurringInvoices BillingRecurringInvoice[]
 
   @@index([addressId], map: "idx_crm_contacts_address_id")
   @@index([tenantId], map: "idx_crm_contacts_tenant_id")
@@ -439,6 +442,15 @@ enum BillingPriceType {
   BY_EFFORT
 
   @@map("billing_price_type")
+}
+
+enum BillingRecurringInterval {
+  MONTHLY
+  QUARTERLY
+  SEMI_ANNUALLY
+  ANNUALLY
+
+  @@map("billing_recurring_interval")
 }
 
 enum BillingServiceCaseStatus {
@@ -853,6 +865,54 @@ model BillingPriceListEntry {
   @@index([priceListId, articleId])
   @@index([priceListId, itemKey])
   @@map("billing_price_list_entries")
+}
+
+// -----------------------------------------------------------------------------
+// BillingRecurringInvoice
+// -----------------------------------------------------------------------------
+// Migration: 000103
+//
+// Template for recurring invoice generation. Stores invoice header + positions
+// as JSONB. On each generation cycle, creates a BillingDocument of type INVOICE.
+model BillingRecurringInvoice {
+  id              String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String                   @map("tenant_id") @db.Uuid
+  name            String
+  addressId       String                   @map("address_id") @db.Uuid
+  contactId       String?                  @map("contact_id") @db.Uuid
+  interval        BillingRecurringInterval
+  startDate       DateTime                 @map("start_date") @db.Timestamptz(6)
+  endDate         DateTime?                @map("end_date") @db.Timestamptz(6)
+  nextDueDate     DateTime                 @map("next_due_date") @db.Timestamptz(6)
+  lastGeneratedAt DateTime?                @map("last_generated_at") @db.Timestamptz(6)
+  autoGenerate    Boolean                  @default(false) @map("auto_generate")
+  isActive        Boolean                  @default(true) @map("is_active")
+
+  // Invoice template fields
+  deliveryType    String?                  @map("delivery_type")
+  deliveryTerms   String?                  @map("delivery_terms")
+  paymentTermDays Int?                     @map("payment_term_days")
+  discountPercent Float?                   @map("discount_percent")
+  discountDays    Int?                     @map("discount_days")
+  notes           String?
+  internalNotes   String?                  @map("internal_notes")
+
+  // Position template as JSONB array
+  positionTemplate Json                    @map("position_template") @db.JsonB
+
+  // Audit
+  createdAt       DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById     String?                  @map("created_by_id") @db.Uuid
+
+  // Relations
+  tenant  Tenant      @relation(fields: [tenantId], references: [id])
+  address CrmAddress  @relation(fields: [addressId], references: [id])
+  contact CrmContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, isActive])
+  @@index([tenantId, nextDueDate])
+  @@map("billing_recurring_invoices")
 }
 
 // -----------------------------------------------------------------------------

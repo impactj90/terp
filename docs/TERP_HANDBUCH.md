@@ -56,6 +56,7 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [13.10 Kundendienst (Serviceaufträge)](#1310-kundendienst-serviceaufträge)
     - [13.11 Offene Posten / Zahlungen](#1311-offene-posten--zahlungen)
     - [13.12 Preislisten](#1312-preislisten)
+    - [13.13 Wiederkehrende Rechnungen](#1313-wiederkehrende-rechnungen)
 14. [Glossar](#14-glossar)
 
 ---
@@ -5873,6 +5874,260 @@ Die Preisliste ist vollständig eingerichtet:
 
 ---
 
+### 13.13 Wiederkehrende Rechnungen
+
+**Was ist es?** Vorlagen fuer Rechnungen, die in regelmaessigen Abstaenden automatisch oder manuell erzeugt werden -- z. B. fuer Wartungsvertraege, Mietvertraege oder monatliche Dienstleistungspauschalen.
+
+**Wozu dient es?** Statt jeden Monat (oder jedes Quartal, Halbjahr, Jahr) dieselbe Rechnung manuell anzulegen, definieren Sie einmal eine Vorlage mit Positionen und Intervall. Terp erzeugt daraus zur richtigen Zeit eine echte Rechnung (Beleg vom Typ *Rechnung*).
+
+> Modul: **Billing** muss aktiviert sein
+
+> Berechtigung: `billing_recurring.view` (Anzeigen), `billing_recurring.manage` (Verwalten), `billing_recurring.generate` (Rechnungen generieren)
+
+📍 Auftraege > Wiederkehrende Rechnungen
+
+Sie sehen die Liste aller wiederkehrenden Rechnungsvorlagen des aktiven Mandanten.
+
+#### Vorlagenliste
+
+Tabelle mit Spalten:
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Name** | Bezeichnung der Vorlage (z. B. Vertragsreferenz) |
+| **Kunde** | Firmenname der zugeordneten Kundenadresse |
+| **Intervall** | Monatlich, Quartal, Halbjaehrlich oder Jaehrlich |
+| **Naechste Faelligkeit** | Datum, an dem die naechste Rechnung generiert wird |
+| **Letzte Generierung** | Datum der letzten erzeugten Rechnung (oder "-" wenn noch nie generiert) |
+| **Aktiv** | Aktiv/Inaktiv-Badge |
+
+**Filter:**
+- **Suchfeld**: Suche nach Name oder Notizen
+- **Status-Filter**: Dropdown -- Alle / Aktiv / Inaktiv
+
+**Aktionsschaltflaechen (oben rechts):**
+- **"Alle faelligen generieren"**: Erzeugt sofort Rechnungen fuer alle aktiven Vorlagen, deren Faelligkeitsdatum erreicht oder ueberschritten ist. Ergebnis wird als Toast angezeigt (z. B. "3 Rechnung(en) generiert, 0 fehlgeschlagen").
+- **"Neue Vorlage"**: Leitet zur Formularseite weiter
+
+#### Vorlage erstellen
+
+1. **"Neue Vorlage"** (Vorlagenliste, oben rechts)
+2. Formularseite oeffnet sich mit Bereich **Kopfdaten**, **Konditionen**, **Positionen** und **Notizen**
+
+**Kopfdaten (Pflichtfelder):**
+
+| Feld | Beschreibung |
+|------|-------------|
+| **Name** | Aussagekraeftiger Vorlagenname (Pflicht). Z. B. "Wartungsvertrag CNC-Maschinen (monatlich)". |
+| **Kundenadresse** | Adresse aus dem CRM auswaehlen (Pflicht). Dropdown zeigt Firmenname und Kundennummer. |
+| **Intervall** | Generierungsrhythmus (Pflicht). Voreinstellung: **Monatlich**. Optionen: Monatlich / Quartal (3 Monate) / Halbjaehrlich (6 Monate) / Jaehrlich (12 Monate). |
+| **Startdatum** | Datum der ersten Rechnung (Pflicht). Wird gleichzeitig als **Naechste Faelligkeit** gesetzt. |
+
+**Kopfdaten (Optionale Felder):**
+
+| Feld | Beschreibung | Wenn leer |
+|------|-------------|-----------|
+| **Kontaktperson** | Ansprechpartner aus der Adresse | Kein Kontakt auf der Rechnung |
+| **Enddatum** | Vertragsenddatum | Vorlage laeuft unbefristet weiter |
+| **Automatisch generieren** | Checkbox. Voreinstellung: **deaktiviert** | Rechnungen muessen manuell generiert werden. Der taegliche Cron-Job ignoriert diese Vorlage. |
+
+**Konditionen (alle optional):**
+
+Die Konditionen werden 1:1 in jede generierte Rechnung uebernommen. Felder, die leer gelassen werden, bleiben auch in der erzeugten Rechnung leer -- es werden **keine Standardwerte** aus den Kundenstammdaten uebernommen (anders als beim manuellen Beleg-Erstellen).
+
+| Feld | Beschreibung | Wenn leer |
+|------|-------------|-----------|
+| **Zahlungsziel (Tage)** | Anzahl Tage bis zur Faelligkeit der Rechnung | Kein Zahlungsziel auf der Rechnung |
+| **Skonto %** | Skontosatz bei fruehzeitiger Zahlung | Kein Skonto auf der Rechnung |
+| **Skonto Tage** | Frist fuer den Skontoabzug | Kein Skonto auf der Rechnung |
+| **Lieferart** | Art der Lieferung (z. B. "Spedition") | Leer auf der Rechnung |
+| **Lieferbedingungen** | Bedingungen (z. B. "frei Haus") | Leer auf der Rechnung |
+
+> **Wichtig:** Da wiederkehrende Rechnungen keine Kundenstammdaten-Übernahme haben, muessen Sie Zahlungsziel und Skonto hier explizit eintragen, wenn diese auf der Rechnung erscheinen sollen.
+
+**Positionen (mindestens eine Position erforderlich):**
+
+Neue Vorlagen beginnen mit einer leeren Standardposition. Weitere Positionen koennen ueber **"Position hinzufuegen"** ergaenzt werden.
+
+| Feld | Beschreibung | Voreinstellung |
+|------|-------------|----------------|
+| **Typ** | Positionstyp: **Freitext** (frei beschreibbare Position), **Artikel** (aus Artikelkatalog), **Text** (nur Beschreibung, kein Preis) | Freitext |
+| **Beschreibung** | Text der Position | Leer |
+| **Menge** | Anzahl | 1 |
+| **Einheit** | Mengeneinheit (Stk, Std, Monat, Pausch., kg, etc.) | Stk |
+| **Einzelpreis** | Nettopreis pro Einheit in EUR | 0,00 |
+| **Festkosten** | Einmalige Zusatzkosten (werden zum Positionstotal addiert) | Leer (0) |
+| **MwSt %** | Umsatzsteuersatz | 19 |
+| **Gesamt** | Automatisch berechnet: Menge x Einzelpreis + Festkosten (nur Anzeige) | - |
+
+Positionen werden als Vorlage gespeichert und bei jeder Rechnungsgenerierung exakt in den neuen Beleg uebernommen. Bei Positionen vom Typ **Text** werden Menge, Einheit, Einzelpreis und MwSt ignoriert -- es erscheint nur der Beschreibungstext.
+
+Positionen koennen ueber das Loeschsymbol (Papierkorb) am Zeilenende entfernt werden.
+
+**Notizen (optional):**
+
+| Feld | Beschreibung | Wenn leer |
+|------|-------------|-----------|
+| **Notizen** | Erscheinen auf jeder generierten Rechnung (z. B. Vertragsnummer, Hinweise) | Kein Notiztext auf der Rechnung |
+| **Interne Notizen** | Nur intern sichtbar, erscheinen nicht auf der Rechnung | Keine internen Notizen |
+
+3. **"Speichern"**
+4. ✅ Vorlage wird erstellt und Sie werden auf die **Detailseite** weitergeleitet
+5. ✅ **Naechste Faelligkeit** wird automatisch auf das **Startdatum** gesetzt
+
+#### Detailseite
+
+Die Detailseite zeigt alle Informationen zur Vorlage und bietet Aktionen:
+
+**Kopfbereich:**
+- Vorlagenname als Ueberschrift
+- **Aktiv/Inaktiv**-Badge
+- Intervall-Anzeige
+
+**Aktionsschaltflaechen:**
+- **"Rechnung generieren"** -- nur sichtbar wenn Vorlage aktiv ist
+- **"Bearbeiten"** -- oeffnet das Formular zur Bearbeitung
+- **"Deaktivieren"** / **"Aktivieren"** -- wechselt den Status
+- **"Loeschen"** -- entfernt die Vorlage (mit Bestaetigungsdialog)
+
+**Detailbereich:**
+
+| Feld | Beschreibung |
+|------|-------------|
+| **Kunde** | Firmenname der Adresse |
+| **Kontakt** | Kontaktperson (oder "-") |
+| **Intervall** | Monatlich / Quartal / Halbjaehrlich / Jaehrlich |
+| **Startdatum** | Datum der ersten Rechnung |
+| **Enddatum** | Vertragsenddatum (oder "-" wenn unbefristet) |
+| **Naechste Faelligkeit** | Wann die naechste Rechnung faellig ist |
+| **Letzte Generierung** | Wann zuletzt generiert wurde (oder "-") |
+| **Auto-Generierung** | Ja / Nein |
+| **Zahlungsziel** | z. B. "30 Tage" (oder "-") |
+| **Skonto** | z. B. "3% / 10 Tage" (oder "-") |
+
+**Tabs:**
+- **Positionen**: Tabelle mit allen Positionen der Vorlage (Nr., Typ, Beschreibung, Menge, Einheit, Einzelpreis, MwSt %, Gesamt)
+- **Vorschau**: Zeigt eine Vorschau der naechsten Rechnung mit berechnetem Rechnungsdatum, Nettosumme, MwSt-Betrag und Bruttosumme
+
+#### Vorlage bearbeiten
+
+1. Detailseite: **"Bearbeiten"** klicken
+2. Formular oeffnet sich mit den aktuellen Werten vorausgefuellt
+3. Felder anpassen
+4. **"Speichern"**
+5. ✅ Aenderungen gelten nur fuer zukuenftige Rechnungen -- bereits erzeugte Belege bleiben unveraendert
+
+#### Rechnung manuell generieren
+
+1. Vorlage in der Liste anklicken -- Detailseite oeffnet sich
+2. Klick auf **"Rechnung generieren"** (nur sichtbar bei aktiven Vorlagen)
+3. Bestaetigungsdialog (Sheet) oeffnet sich mit Vorschau:
+   - Rechnungsdatum (= naechste Faelligkeit)
+   - Nettosumme, MwSt-Betrag, Bruttosumme
+4. Klick auf **"Generieren"**
+5. Ergebnis:
+   - Neue Rechnung (RE-Nummer) wird als Beleg vom Typ *Rechnung* angelegt
+   - Positionen werden exakt aus der Vorlage uebernommen
+   - Konditionen (Zahlungsziel, Skonto, Lieferart, Lieferbedingungen) werden uebernommen
+   - Notizen werden uebernommen
+   - **Naechste Faelligkeit** rueckt um ein Intervall vor (z. B. 01.04. → 01.05. bei monatlich)
+   - **Letzte Generierung** wird auf das aktuelle Datum gesetzt
+6. ✅ Erfolgsmeldung: "Rechnung RE-X wurde erstellt"
+7. ✅ Sie werden automatisch auf die Detailseite der erzeugten Rechnung weitergeleitet
+
+Die erzeugte Rechnung ist ein normaler Beleg im Status **Entwurf** und kann unter 📍 Auftraege > Belege weiterverarbeitet werden (Positionen anpassen, abschliessen, fortfuehren etc.).
+
+#### Automatische Generierung (Cron)
+
+Wenn **"Automatisch generieren"** aktiviert ist, prueft ein taeglicher Hintergrundprozess (04:00 UTC), ob das Faelligkeitsdatum erreicht oder ueberschritten ist, und erzeugt die Rechnung automatisch. Die Generierung funktioniert identisch zur manuellen Generierung.
+
+Voraussetzungen fuer die automatische Generierung:
+- Vorlage muss **aktiv** sein
+- **"Automatisch generieren"** muss aktiviert sein
+- **Naechste Faelligkeit** muss das heutige Datum erreicht oder ueberschritten haben
+
+Wenn die Checkbox **"Automatisch generieren"** nicht aktiviert ist, wird die Vorlage vom Cron-Job ignoriert -- Rechnungen koennen dann nur manuell ueber die Detailseite generiert werden.
+
+#### Vorlage deaktivieren
+
+1. Detailseite: Klick auf **"Deaktivieren"**
+2. Badge wechselt zu **Inaktiv**
+3. Vorlage wird nicht mehr fuer die automatische Generierung beruecksichtigt
+4. **"Rechnung generieren"** wird ausgeblendet -- manuelle Generierung ist ebenfalls gesperrt
+5. Ueber **"Aktivieren"** kann die Vorlage jederzeit wieder eingeschaltet werden
+
+#### Vorlage loeschen
+
+1. Detailseite: Klick auf **"Loeschen"**
+2. Bestaetigungsdialog: "Moechten Sie die Vorlage wirklich loeschen?"
+3. Klick auf **"Loeschen"** bestaetigen
+4. ✅ Vorlage wird unwiderruflich entfernt
+5. Bereits erzeugte Rechnungen bleiben bestehen und werden nicht geloescht
+
+#### Vertragsende
+
+Wenn ein **Enddatum** gesetzt ist und die naechste Faelligkeit dieses Datum ueberschreitet, wird die Vorlage automatisch deaktiviert. Dies geschieht:
+- beim naechsten Generierungslauf (manuell oder automatisch)
+- die letzte Rechnung wird noch erzeugt, danach wird die Vorlage inaktiv gesetzt
+- eine erneute Aktivierung ist moeglich, fuehrt aber zu einem Fehler bei der Generierung wenn das Enddatum weiterhin ueberschritten ist
+
+#### 13.13.1 Praxisbeispiel: Wiederkehrende Rechnung erstellen und Rechnung generieren
+
+**Szenario:** Sie richten einen monatlichen Wartungsvertrag fuer einen Kunden ein, generieren die erste Rechnung manuell und pruefen das Ergebnis.
+
+##### Schritt 1 -- Vorlage anlegen
+
+1. 📍 Auftraege > Wiederkehrende Rechnungen
+2. Klick auf **"Neue Vorlage"**
+3. Formularseite oeffnet sich
+4. **Name**: "Wartungsvertrag Monatlich"
+5. **Kundenadresse**: "Mustermann GmbH" auswaehlen
+6. **Intervall**: "Monatlich"
+7. **Startdatum**: 01.04.2026
+8. **Automatisch generieren**: Checkbox aktivieren
+9. **Zahlungsziel**: 30 Tage
+10. Position hinzufuegen:
+    - **Typ**: Freitext
+    - **Beschreibung**: "Monatliche Wartungspauschale"
+    - **Menge**: 1
+    - **Einheit**: "Stk"
+    - **Einzelpreis**: 500,00
+    - **MwSt**: 19%
+11. Klick auf **"Speichern"**
+12. ✅ Vorlage "Wartungsvertrag Monatlich" erscheint in der Liste mit naechster Faelligkeit 01.04.2026
+
+##### Schritt 2 -- Rechnung manuell generieren
+
+1. In der Liste: Klick auf **"Wartungsvertrag Monatlich"**
+2. Detailseite oeffnet sich
+3. Klick auf **"Rechnung generieren"**
+4. Bestaetigungsdialog: Vorschau zeigt Mustermann GmbH, 1x Monatliche Wartungspauschale, Netto 500,00 EUR, MwSt 95,00 EUR, Brutto 595,00 EUR
+5. Klick auf **"Generieren"**
+6. ✅ Erfolgsmeldung: "Rechnung RE-1 wurde erstellt"
+7. ✅ **Naechste Faelligkeit** ist jetzt 01.05.2026
+8. ✅ **Letzte Generierung** zeigt das heutige Datum
+
+##### Schritt 3 -- Erzeugte Rechnung pruefen
+
+1. 📍 Auftraege > Belege
+2. Rechnung **RE-1** (oder die aktuelle Nummer) ist sichtbar
+3. Belegtyp: Rechnung, Kunde: Mustermann GmbH
+4. Positionen-Tab zeigt: "Monatliche Wartungspauschale | 1 Stk | 500,00 EUR | 19% MwSt"
+5. ✅ Summen: Netto 500,00 EUR, MwSt 95,00 EUR, Brutto 595,00 EUR
+
+##### Ergebnis
+
+Die wiederkehrende Rechnung ist vollstaendig eingerichtet:
+
+- **Vorlage** "Wartungsvertrag Monatlich" ist aktiv mit automatischer Generierung
+- **Erste Rechnung** RE-1 wurde manuell generiert und geprueft
+- Ab Mai wird die naechste Rechnung automatisch durch den taeglichen Cron-Job erzeugt
+- Bei Vertragsende setzen Sie ein Enddatum -- die Vorlage deaktiviert sich danach automatisch
+
+**Tipp:** Sie koennen die Vorlage jederzeit bearbeiten, z. B. um den Preis anzupassen. Aenderungen gelten nur fuer zukuenftige Rechnungen -- bereits erzeugte Belege bleiben unveraendert.
+
+---
+
 ## 14. Glossar
 
 | Begriff | Erklärung | Wo in Terp |
@@ -5945,6 +6200,7 @@ Die Preisliste ist vollständig eingerichtet:
 | **Urlaubsabzug** | Faktor, mit dem ein Abwesenheitstag vom Urlaubskonto abzieht | 📍 Tagesplan → Tab Spezial → Urlaubsabzug |
 | **Urlaubskonto** | Jahresguthaben: Anspruch + Übertrag + Anpassungen − Genommen | 📍 Urlaub / Verwaltung → Urlaubskonten |
 | **Urlaubskappung** | Begrenzung des Resturlaubsübertrags ins nächste Jahr | 📍 Verwaltung → Urlaubskonfiguration → Tab Kappungsregeln |
+| **Wiederkehrende Rechnung** | Vorlage fuer automatisch oder manuell erzeugte Rechnungen in regelmaessigen Intervallen (z. B. monatlich) | 📍 Auftraege → Wiederkehrende Rechnungen |
 | **Wochenplan** | Zuordnung von 7 Tagesplänen zu einer Woche | 📍 Verwaltung → Wochenpläne |
 | **Zahlung** | Erfasster Zahlungseingang (bar oder Überweisung) gegen eine Rechnung | 📍 Aufträge → Offene Posten → Detail → Zahlungshistorie |
 | **Zugangsprofil** | Berechtigungsgruppe für physischen Zutritt (bündelt Zonen) | 📍 Administration → Zutrittskontrolle → Tab Profile |
@@ -6025,6 +6281,9 @@ Diese Tabelle listet alle Seiten der Anwendung mit ihrer URL und dem Menüpfad:
 | `/orders/open-items/[documentId]` | Offene Posten → Rechnung anklicken | billing_payments.view |
 | `/orders/price-lists` | Aufträge → Preislisten | billing_price_lists.view |
 | `/orders/price-lists/[id]` | Preislistenliste → Zeile anklicken | billing_price_lists.view |
+| `/orders/recurring` | Auftraege → Wiederkehrende Rechnungen | billing_recurring.view |
+| `/orders/recurring/new` | Auftraege → Wiederkehrende Rechnungen → Neue Vorlage | billing_recurring.manage |
+| `/orders/recurring/[id]` | Wiederkehrende Rechnungen → Zeile anklicken | billing_recurring.view |
 
 ---
 

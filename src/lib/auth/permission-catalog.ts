@@ -38,7 +38,7 @@ function p(
 }
 
 /**
- * All 83 permissions, mirroring Go's allPermissions slice.
+ * All 86 permissions, mirroring Go's allPermissions slice.
  * Order matches the Go source file for easy comparison.
  */
 export const ALL_PERMISSIONS: Permission[] = [
@@ -266,6 +266,11 @@ export const ALL_PERMISSIONS: Permission[] = [
   // Billing Price Lists
   p("billing_price_lists.view", "billing_price_lists", "view", "View price lists"),
   p("billing_price_lists.manage", "billing_price_lists", "manage", "Manage price lists and entries"),
+
+  // Billing Recurring Invoices
+  p("billing_recurring.view", "billing_recurring", "view", "View recurring invoices"),
+  p("billing_recurring.manage", "billing_recurring", "manage", "Manage recurring invoice templates"),
+  p("billing_recurring.generate", "billing_recurring", "generate", "Generate invoices from recurring templates"),
 ]
 
 // Lookup maps
