@@ -50,6 +50,7 @@ type EmployeeTariffAssignmentOutput = z.infer<
 
 const effectiveTariffOutputSchema = z.object({
   tariffId: z.string().nullable(),
+  tariffLabel: z.string().nullable().optional(),
   source: z.enum(["assignment", "default", "none"]),
   assignmentId: z.string().nullable(),
 })
@@ -179,10 +180,14 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
           await ctx.prisma.employeeTariffAssignment.findMany({
             where,
             orderBy: { effectiveFrom: "desc" },
+            include: { tariff: { select: { id: true, code: true, name: true } } },
           })
 
         return {
-          data: assignments.map(mapAssignmentToOutput),
+          data: assignments.map((a) => ({
+            ...mapAssignmentToOutput(a),
+            tariff: a.tariff ? { id: a.tariff.id, code: a.tariff.code, name: a.tariff.name } : null,
+          })),
         }
       } catch (err) {
         handleServiceError(err)
@@ -587,11 +592,13 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
               ],
             },
             orderBy: { effectiveFrom: "desc" },
+            include: { tariff: { select: { id: true, code: true, name: true } } },
           })
 
         if (assignment) {
           return {
             tariffId: assignment.tariffId,
+            tariffLabel: assignment.tariff ? `${assignment.tariff.code} — ${assignment.tariff.name}` : null,
             source: "assignment" as const,
             assignmentId: assignment.id,
           }

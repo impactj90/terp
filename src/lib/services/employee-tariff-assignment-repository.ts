@@ -32,6 +32,7 @@ export async function findMany(
   return prisma.employeeTariffAssignment.findMany({
     where,
     orderBy: { effectiveFrom: "desc" },
+    include: { tariff: { select: { id: true, code: true, name: true } } },
   })
 }
 
