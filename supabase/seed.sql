@@ -1267,13 +1267,7 @@ VALUES
   (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000b11', '00000000-0000-0000-0000-000000000014', 'worker', true, NOW(), NOW())
 ON CONFLICT (order_id, employee_id, role) DO NOTHING;
 
--- A6. Shifts
-INSERT INTO shifts (id, tenant_id, code, name, description, day_plan_id, color, sort_order, is_active, created_at, updated_at)
-VALUES
-  ('00000000-0000-0000-0000-000000000a10', '10000000-0000-0000-0000-000000000001', 'FRUEH', 'Fruehschicht', '06:00-14:00', '00000000-0000-0000-0000-000000000502', '#4CAF50', 1, true, NOW(), NOW()),
-  ('00000000-0000-0000-0000-000000000a11', '10000000-0000-0000-0000-000000000001', 'SPAET', 'Spaetschicht', '14:00-22:00', '00000000-0000-0000-0000-000000000502', '#FF9800', 2, true, NOW(), NOW()),
-  ('00000000-0000-0000-0000-000000000a12', '10000000-0000-0000-0000-000000000001', 'NORMAL', 'Normalschicht', '08:00-17:00', '00000000-0000-0000-0000-000000000502', '#2196F3', 3, true, NOW(), NOW())
-ON CONFLICT (tenant_id, code) DO NOTHING;
+-- A6. Shifts (old FRUEH/SPAET/NORMAL removed — replaced by FS/SS/NS in Scenario 3 section)
 
 -- A7. Access Control
 INSERT INTO access_zones (id, tenant_id, code, name, description, sort_order, is_active, created_at, updated_at)
@@ -2859,3 +2853,443 @@ VALUES
   (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'credit_note', 'GS-', 2, NOW(), NOW()),
   (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'service_case', 'KD-', 6, NOW(), NOW())
 ON CONFLICT (tenant_id, key) DO UPDATE SET next_value = GREATEST(number_sequences.next_value, EXCLUDED.next_value);
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- SCENARIO 3: 3-Schicht-Betrieb (Pro-Di Demo)
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- Adds: 3 day plans (FS/SS/NS), 3 week plans, 1 rolling tariff, 3 shifts,
+--       4 employees (Instandhaltung), tariff assignments, employee day plans,
+--       bookings + daily values for last 2 weeks + today
+
+-- S3-1. Department: Instandhaltung (under Operations)
+INSERT INTO departments (id, tenant_id, code, name, description, parent_id, manager_employee_id, is_active, created_at, updated_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000808', '10000000-0000-0000-0000-000000000001', 'MAINT', 'Instandhaltung', 'Instandhaltung und Wartung', '00000000-0000-0000-0000-000000000805', NULL, true, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- S3-2. Day Plans: FS (Frühschicht), SS (Spätschicht), NS (Nachtschicht)
+-- Day plan IDs:
+--   FS: 00000000-0000-0000-0000-000000000506
+--   SS: 00000000-0000-0000-0000-000000000507
+--   NS: 00000000-0000-0000-0000-000000000508
+--
+-- Times in minutes from midnight:
+--   06:00 = 360, 14:00 = 840, 22:00 = 1320, 08:00 = 480
+
+INSERT INTO day_plans (
+  id, tenant_id, code, name, description, plan_type,
+  come_from, come_to, go_from, go_to,
+  regular_hours,
+  tolerance_come_plus, tolerance_come_minus, tolerance_go_plus, tolerance_go_minus,
+  holiday_credit_cat1, vacation_deduction, no_booking_behavior, day_change_behavior,
+  is_active, created_at, updated_at
+) VALUES
+  ('00000000-0000-0000-0000-000000000506', '10000000-0000-0000-0000-000000000001',
+   'FS', 'Fruehschicht', 'Fruehschicht 06:00-14:00', 'fixed',
+   360, NULL, NULL, 840,
+   480,
+   5, 5, 5, 5,
+   480, 1.00, 'error', 'none',
+   true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000507', '10000000-0000-0000-0000-000000000001',
+   'SS', 'Spaetschicht', 'Spaetschicht 14:00-22:00', 'fixed',
+   840, NULL, NULL, 1320,
+   480,
+   5, 5, 5, 5,
+   480, 1.00, 'error', 'none',
+   true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000508', '10000000-0000-0000-0000-000000000001',
+   'NS', 'Nachtschicht', 'Nachtschicht 22:00-06:00 (Tageswechsel bei Ankunft)', 'fixed',
+   1320, NULL, NULL, 360,
+   480,
+   5, 5, 5, 5,
+   480, 1.00, 'error', 'at_arrival',
+   true, NOW(), NOW())
+ON CONFLICT (tenant_id, code) DO UPDATE SET
+  name = EXCLUDED.name, description = EXCLUDED.description, plan_type = EXCLUDED.plan_type,
+  come_from = EXCLUDED.come_from, come_to = EXCLUDED.come_to, go_from = EXCLUDED.go_from, go_to = EXCLUDED.go_to,
+  regular_hours = EXCLUDED.regular_hours,
+  tolerance_come_plus = EXCLUDED.tolerance_come_plus, tolerance_come_minus = EXCLUDED.tolerance_come_minus,
+  tolerance_go_plus = EXCLUDED.tolerance_go_plus, tolerance_go_minus = EXCLUDED.tolerance_go_minus,
+  holiday_credit_cat1 = EXCLUDED.holiday_credit_cat1, vacation_deduction = EXCLUDED.vacation_deduction,
+  no_booking_behavior = EXCLUDED.no_booking_behavior, day_change_behavior = EXCLUDED.day_change_behavior,
+  updated_at = NOW();
+
+-- S3-2b. Breaks: 30 min auto-deduct after 360 min (6h) for all 3 shift plans
+INSERT INTO day_plan_breaks (id, day_plan_id, break_type, start_time, end_time, duration, after_work_minutes, auto_deduct, is_paid, sort_order, created_at, updated_at)
+VALUES
+  (gen_random_uuid(), '00000000-0000-0000-0000-000000000506', 'auto', NULL, NULL, 30, 360, true, false, 1, NOW(), NOW()),
+  (gen_random_uuid(), '00000000-0000-0000-0000-000000000507', 'auto', NULL, NULL, 30, 360, true, false, 1, NOW(), NOW()),
+  (gen_random_uuid(), '00000000-0000-0000-0000-000000000508', 'auto', NULL, NULL, 30, 360, true, false, 1, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- S3-3. Week Plans: WP-FS, WP-SS, WP-NS (Mon-Fri = shift day plan, Sat/Sun = NULL)
+-- Week plan IDs:
+--   WP-FS: 00000000-0000-0000-0000-000000000605
+--   WP-SS: 00000000-0000-0000-0000-000000000606
+--   WP-NS: 00000000-0000-0000-0000-000000000607
+
+INSERT INTO week_plans (id, tenant_id, code, name, description,
+  monday_day_plan_id, tuesday_day_plan_id, wednesday_day_plan_id, thursday_day_plan_id, friday_day_plan_id,
+  saturday_day_plan_id, sunday_day_plan_id, is_active, created_at, updated_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000605', '10000000-0000-0000-0000-000000000001',
+   'WP-FS', 'Fruehschicht-Woche', 'Mo-Fr Fruehschicht, Sa/So frei',
+   '00000000-0000-0000-0000-000000000506', '00000000-0000-0000-0000-000000000506',
+   '00000000-0000-0000-0000-000000000506', '00000000-0000-0000-0000-000000000506',
+   '00000000-0000-0000-0000-000000000506', NULL, NULL, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000606', '10000000-0000-0000-0000-000000000001',
+   'WP-SS', 'Spaetschicht-Woche', 'Mo-Fr Spaetschicht, Sa/So frei',
+   '00000000-0000-0000-0000-000000000507', '00000000-0000-0000-0000-000000000507',
+   '00000000-0000-0000-0000-000000000507', '00000000-0000-0000-0000-000000000507',
+   '00000000-0000-0000-0000-000000000507', NULL, NULL, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000607', '10000000-0000-0000-0000-000000000001',
+   'WP-NS', 'Nachtschicht-Woche', 'Mo-Fr Nachtschicht, Sa/So frei',
+   '00000000-0000-0000-0000-000000000508', '00000000-0000-0000-0000-000000000508',
+   '00000000-0000-0000-0000-000000000508', '00000000-0000-0000-0000-000000000508',
+   '00000000-0000-0000-0000-000000000508', NULL, NULL, true, NOW(), NOW())
+ON CONFLICT (tenant_id, code) DO UPDATE SET
+  name = EXCLUDED.name, description = EXCLUDED.description,
+  monday_day_plan_id = EXCLUDED.monday_day_plan_id, tuesday_day_plan_id = EXCLUDED.tuesday_day_plan_id,
+  wednesday_day_plan_id = EXCLUDED.wednesday_day_plan_id, thursday_day_plan_id = EXCLUDED.thursday_day_plan_id,
+  friday_day_plan_id = EXCLUDED.friday_day_plan_id,
+  saturday_day_plan_id = EXCLUDED.saturday_day_plan_id, sunday_day_plan_id = EXCLUDED.sunday_day_plan_id,
+  updated_at = NOW();
+
+-- S3-4. Tariff: SCHICHT-3R (3-Schicht-Rotation, rolling_weekly)
+-- Tariff ID: 00000000-0000-0000-0000-000000000707
+
+INSERT INTO tariffs (id, tenant_id, code, name, description, week_plan_id, is_active,
+  annual_vacation_days, work_days_per_week, vacation_basis,
+  daily_target_hours, weekly_target_hours, monthly_target_hours,
+  credit_type, rhythm_type, rhythm_start_date,
+  created_at, updated_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000707', '10000000-0000-0000-0000-000000000001',
+   'SCHICHT-3R', '3-Schicht-Rotation', 'Rollierender 3-Schicht-Rhythmus (FS->SS->NS) fuer Instandhaltung',
+   '00000000-0000-0000-0000-000000000605', true,
+   30.00, 5, 'calendar_year', 8.00, 40.00, 173.33,
+   'complete', 'rolling_weekly', '2026-01-05',
+   NOW(), NOW())
+ON CONFLICT (tenant_id, code) DO UPDATE SET
+  name = EXCLUDED.name, description = EXCLUDED.description,
+  week_plan_id = EXCLUDED.week_plan_id,
+  annual_vacation_days = EXCLUDED.annual_vacation_days, work_days_per_week = EXCLUDED.work_days_per_week,
+  daily_target_hours = EXCLUDED.daily_target_hours, weekly_target_hours = EXCLUDED.weekly_target_hours,
+  monthly_target_hours = EXCLUDED.monthly_target_hours,
+  credit_type = EXCLUDED.credit_type, rhythm_type = EXCLUDED.rhythm_type,
+  rhythm_start_date = EXCLUDED.rhythm_start_date,
+  updated_at = NOW();
+
+-- S3-4b. Tariff Week Plans: 3-week rotation (FS -> SS -> NS)
+-- Delete existing entries for this tariff first (idempotent)
+DELETE FROM tariff_week_plans WHERE tariff_id = '00000000-0000-0000-0000-000000000707';
+
+INSERT INTO tariff_week_plans (id, tariff_id, week_plan_id, sequence_order, created_at)
+VALUES
+  (gen_random_uuid(), '00000000-0000-0000-0000-000000000707', '00000000-0000-0000-0000-000000000605', 1, NOW()),
+  (gen_random_uuid(), '00000000-0000-0000-0000-000000000707', '00000000-0000-0000-0000-000000000606', 2, NOW()),
+  (gen_random_uuid(), '00000000-0000-0000-0000-000000000707', '00000000-0000-0000-0000-000000000607', 3, NOW());
+
+-- S3-5. Shifts: FS, SS, NS (linked to day plans)
+-- Shift IDs:
+--   FS: 00000000-0000-0000-0000-000000000a13
+--   SS: 00000000-0000-0000-0000-000000000a14
+--   NS: 00000000-0000-0000-0000-000000000a15
+
+INSERT INTO shifts (id, tenant_id, code, name, description, day_plan_id, color, sort_order, is_active, created_at, updated_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000a13', '10000000-0000-0000-0000-000000000001', 'FS', 'Fruehschicht', '06:00-14:00', '00000000-0000-0000-0000-000000000506', '#22C55E', 4, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000a14', '10000000-0000-0000-0000-000000000001', 'SS', 'Spaetschicht', '14:00-22:00', '00000000-0000-0000-0000-000000000507', '#F97316', 5, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000a15', '10000000-0000-0000-0000-000000000001', 'NS', 'Nachtschicht', '22:00-06:00', '00000000-0000-0000-0000-000000000508', '#3B82F6', 6, true, NOW(), NOW())
+ON CONFLICT (tenant_id, code) DO UPDATE SET
+  name = EXCLUDED.name, description = EXCLUDED.description, day_plan_id = EXCLUDED.day_plan_id,
+  color = EXCLUDED.color, sort_order = EXCLUDED.sort_order, updated_at = NOW();
+
+-- S3-6. Employees: 4 shift workers for Instandhaltung
+-- Employee IDs:
+--   Klaus Weber:    00000000-0000-0000-0000-00000000001b
+--   Andrea Mueller: 00000000-0000-0000-0000-00000000001c
+--   Mehmet Yilmaz:  00000000-0000-0000-0000-00000000001d
+--   Sandra Koch:    00000000-0000-0000-0000-00000000001e
+
+INSERT INTO employees (id, tenant_id, personnel_number, pin, first_name, last_name, email, entry_date, weekly_hours, vacation_days_per_year, is_active,
+  department_id, tariff_id, created_at, updated_at)
+VALUES
+  ('00000000-0000-0000-0000-00000000001b', '10000000-0000-0000-0000-000000000001', 'EMP011', '1011', 'Klaus', 'Weber', 'klaus.weber@dev.local', '2023-04-01', 40.00, 30.00, true,
+   '00000000-0000-0000-0000-000000000808', '00000000-0000-0000-0000-000000000707', NOW(), NOW()),
+  ('00000000-0000-0000-0000-00000000001c', '10000000-0000-0000-0000-000000000001', 'EMP012', '1012', 'Andrea', 'Mueller', 'andrea.mueller@dev.local', '2022-09-01', 40.00, 30.00, true,
+   '00000000-0000-0000-0000-000000000808', '00000000-0000-0000-0000-000000000707', NOW(), NOW()),
+  ('00000000-0000-0000-0000-00000000001d', '10000000-0000-0000-0000-000000000001', 'EMP013', '1013', 'Mehmet', 'Yilmaz', 'mehmet.yilmaz@dev.local', '2024-02-15', 40.00, 30.00, true,
+   '00000000-0000-0000-0000-000000000808', '00000000-0000-0000-0000-000000000707', NOW(), NOW()),
+  ('00000000-0000-0000-0000-00000000001e', '10000000-0000-0000-0000-000000000001', 'EMP014', '1014', 'Sandra', 'Koch', 'sandra.koch@dev.local', '2021-11-01', 40.00, 30.00, true,
+   '00000000-0000-0000-0000-000000000808', '00000000-0000-0000-0000-000000000707', NOW(), NOW())
+ON CONFLICT (id) DO UPDATE SET
+  first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name,
+  department_id = EXCLUDED.department_id, tariff_id = EXCLUDED.tariff_id,
+  updated_at = NOW();
+
+-- S3-6b. Employee enrichment (extended data)
+DO $$
+DECLARE
+  t_id uuid := '10000000-0000-0000-0000-000000000001';
+  et_vz uuid;
+BEGIN
+  SELECT id INTO et_vz FROM employment_types WHERE code = 'VZ' LIMIT 1;
+
+  UPDATE employees SET cost_center_id = '00000000-0000-0000-0000-000000000c04', employment_type_id = et_vz,
+    location_id = '00000000-0000-0000-0000-000000000d01',
+    birth_date = '1978-05-12', gender = 'male', address_street = 'Dachauer Str. 45', address_zip = '80335', address_city = 'Muenchen'
+    WHERE id = '00000000-0000-0000-0000-00000000001b' AND tenant_id = t_id;
+  UPDATE employees SET cost_center_id = '00000000-0000-0000-0000-000000000c04', employment_type_id = et_vz,
+    location_id = '00000000-0000-0000-0000-000000000d01',
+    birth_date = '1985-09-23', gender = 'female', address_street = 'Landwehrstr. 18', address_zip = '80336', address_city = 'Muenchen'
+    WHERE id = '00000000-0000-0000-0000-00000000001c' AND tenant_id = t_id;
+  UPDATE employees SET cost_center_id = '00000000-0000-0000-0000-000000000c04', employment_type_id = et_vz,
+    location_id = '00000000-0000-0000-0000-000000000d01',
+    birth_date = '1990-03-07', gender = 'male', address_street = 'Schwanthalerstr. 22', address_zip = '80336', address_city = 'Muenchen'
+    WHERE id = '00000000-0000-0000-0000-00000000001d' AND tenant_id = t_id;
+  UPDATE employees SET cost_center_id = '00000000-0000-0000-0000-000000000c04', employment_type_id = et_vz,
+    location_id = '00000000-0000-0000-0000-000000000d01',
+    birth_date = '1982-11-30', gender = 'female', address_street = 'Nymphenburger Str. 8', address_zip = '80335', address_city = 'Muenchen'
+    WHERE id = '00000000-0000-0000-0000-00000000001e' AND tenant_id = t_id;
+END $$;
+
+-- S3-7. Employee tariff assignments
+INSERT INTO employee_tariff_assignments (id, tenant_id, employee_id, tariff_id, effective_from, effective_to, overwrite_behavior, is_active, created_at, updated_at)
+VALUES
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001b', '00000000-0000-0000-0000-000000000707', '2026-01-01', NULL, 'preserve_manual', true, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001c', '00000000-0000-0000-0000-000000000707', '2026-01-01', NULL, 'preserve_manual', true, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001d', '00000000-0000-0000-0000-000000000707', '2026-01-01', NULL, 'preserve_manual', true, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001e', '00000000-0000-0000-0000-000000000707', '2026-01-01', NULL, 'preserve_manual', true, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- S3-8. Employee day plans + shifts (rolling 3-week schedule from Jan 5 -> CURRENT_DATE + 90)
+-- Rhythm: Week 1=FS, Week 2=SS, Week 3=NS, repeating
+-- Rhythm start: 2026-01-05 (Monday KW2)
+-- All 4 employees are in phase (same shift same week)
+DO $$
+DECLARE
+  t_id uuid := '10000000-0000-0000-0000-000000000001';
+  d date;
+  dow int;
+  week_num int;
+  cycle_pos int; -- 0=FS, 1=SS, 2=NS
+  dp_id uuid;
+  sh_id uuid;
+  emp_id uuid;
+  rhythm_start date := '2026-01-05';
+  is_holiday boolean;
+BEGIN
+  FOR emp_id IN
+    SELECT unnest(ARRAY[
+      '00000000-0000-0000-0000-00000000001b'::uuid,
+      '00000000-0000-0000-0000-00000000001c'::uuid,
+      '00000000-0000-0000-0000-00000000001d'::uuid,
+      '00000000-0000-0000-0000-00000000001e'::uuid
+    ])
+  LOOP
+    d := rhythm_start;
+    WHILE d <= CURRENT_DATE + 90 LOOP
+      dow := EXTRACT(ISODOW FROM d)::int;
+      is_holiday := EXISTS (SELECT 1 FROM holidays WHERE holiday_date = d AND tenant_id = t_id);
+
+      IF dow IN (6, 7) OR is_holiday THEN
+        -- Weekend or holiday: no plan
+        INSERT INTO employee_day_plans (id, tenant_id, employee_id, plan_date, day_plan_id, shift_id, source, created_at, updated_at)
+        VALUES (gen_random_uuid(), t_id, emp_id, d, NULL, NULL,
+          CASE WHEN is_holiday THEN 'holiday' ELSE 'tariff' END, NOW(), NOW())
+        ON CONFLICT (employee_id, plan_date) DO UPDATE SET
+          day_plan_id = EXCLUDED.day_plan_id, shift_id = EXCLUDED.shift_id,
+          source = EXCLUDED.source, updated_at = NOW();
+      ELSE
+        -- Calculate which shift this week
+        week_num := ((d - rhythm_start) / 7)::int;
+        cycle_pos := week_num % 3;
+
+        CASE cycle_pos
+          WHEN 0 THEN dp_id := '00000000-0000-0000-0000-000000000506'; sh_id := '00000000-0000-0000-0000-000000000a13'; -- FS
+          WHEN 1 THEN dp_id := '00000000-0000-0000-0000-000000000507'; sh_id := '00000000-0000-0000-0000-000000000a14'; -- SS
+          WHEN 2 THEN dp_id := '00000000-0000-0000-0000-000000000508'; sh_id := '00000000-0000-0000-0000-000000000a15'; -- NS
+        END CASE;
+
+        INSERT INTO employee_day_plans (id, tenant_id, employee_id, plan_date, day_plan_id, shift_id, source, created_at, updated_at)
+        VALUES (gen_random_uuid(), t_id, emp_id, d, dp_id, sh_id, 'tariff', NOW(), NOW())
+        ON CONFLICT (employee_id, plan_date) DO UPDATE SET
+          day_plan_id = EXCLUDED.day_plan_id, shift_id = EXCLUDED.shift_id,
+          source = EXCLUDED.source, updated_at = NOW();
+      END IF;
+
+      d := d + 1;
+    END LOOP;
+  END LOOP;
+END $$;
+
+-- S3-9. Bookings + Daily Values for shift workers (Jan 5 -> yesterday)
+-- Generates realistic bookings based on the rolling shift schedule.
+-- Special cases:
+--   - Klaus Weber: MISSING_GO error on last Thursday
+--   - Mehmet Yilmaz: +30 min overtime on current week's Monday
+DO $$
+DECLARE
+  bt_a1 uuid; bt_a2 uuid;
+  t_id uuid := '10000000-0000-0000-0000-000000000001';
+  d date;
+  dow int;
+  week_num int;
+  cycle_pos int;
+  emp record;
+  come_time int;
+  go_time int;
+  target int := 480;
+  break_dur int := 30;
+  gross int;
+  net int;
+  pair_id uuid;
+  h int;
+  rhythm_start date := '2026-01-05';
+  last_thu date;
+  this_mon date;
+  is_holiday boolean;
+BEGIN
+  SELECT id INTO bt_a1 FROM booking_types WHERE code = 'A1' LIMIT 1;
+  SELECT id INTO bt_a2 FROM booking_types WHERE code = 'A2' LIMIT 1;
+
+  -- Find last Thursday and this Monday for special cases
+  last_thu := CURRENT_DATE - ((EXTRACT(ISODOW FROM CURRENT_DATE)::int + 3) % 7);
+  this_mon := CURRENT_DATE - (EXTRACT(ISODOW FROM CURRENT_DATE)::int - 1);
+
+  FOR emp IN
+    SELECT * FROM (VALUES
+      ('00000000-0000-0000-0000-00000000001b'::uuid, 'Klaus', 'terminal'),
+      ('00000000-0000-0000-0000-00000000001c'::uuid, 'Andrea', 'terminal'),
+      ('00000000-0000-0000-0000-00000000001d'::uuid, 'Mehmet', 'terminal'),
+      ('00000000-0000-0000-0000-00000000001e'::uuid, 'Sandra', 'terminal')
+    ) AS t(emp_id, emp_name, src)
+  LOOP
+    d := rhythm_start;
+    WHILE d < CURRENT_DATE LOOP
+      dow := EXTRACT(ISODOW FROM d)::int;
+      IF dow IN (6, 7) THEN d := d + 1; CONTINUE; END IF;
+
+      is_holiday := EXISTS (SELECT 1 FROM holidays WHERE holiday_date = d AND tenant_id = t_id);
+      IF is_holiday THEN d := d + 1; CONTINUE; END IF;
+
+      -- Skip if bookings already exist
+      IF EXISTS (SELECT 1 FROM bookings WHERE employee_id = emp.emp_id AND booking_date = d) THEN d := d + 1; CONTINUE; END IF;
+
+      week_num := ((d - rhythm_start) / 7)::int;
+      cycle_pos := week_num % 3;
+
+      -- Determine shift times
+      CASE cycle_pos
+        WHEN 0 THEN come_time := 360; -- FS: 06:00-14:00
+        WHEN 1 THEN come_time := 840; -- SS: 14:00-22:00
+        WHEN 2 THEN come_time := 1320; -- NS: 22:00-06:00
+      END CASE;
+
+      -- Add slight randomness (-5 to +5 min)
+      h := (hashtext(emp.emp_id::text || d::text) % 11) - 5;
+      come_time := come_time + h;
+
+      pair_id := gen_random_uuid();
+
+      -- KOMMEN booking
+      INSERT INTO bookings (id, tenant_id, employee_id, booking_date, booking_type_id, original_time, edited_time, pair_id, source, created_at, updated_at)
+      VALUES (gen_random_uuid(), t_id, emp.emp_id, d, bt_a1, come_time, come_time, pair_id, emp.src, NOW(), NOW());
+
+      -- Special: Klaus has MISSING_GO on last Thursday
+      IF emp.emp_name = 'Klaus' AND d = last_thu THEN
+        INSERT INTO daily_values (id, tenant_id, employee_id, value_date, gross_time, net_time, target_time, overtime, undertime, break_time,
+          has_error, error_codes, first_come, last_go, booking_count, status, created_at, updated_at)
+        VALUES (gen_random_uuid(), t_id, emp.emp_id, d, 0, 0, target, 0, 0, 0, true, ARRAY['MISSING_GO'],
+          come_time, NULL, 1, 'calculated', NOW(), NOW())
+        ON CONFLICT (employee_id, value_date) DO NOTHING;
+        d := d + 1; CONTINUE;
+      END IF;
+
+      -- Special: Mehmet has +30 min overtime on this Monday
+      IF emp.emp_name = 'Mehmet' AND d = this_mon THEN
+        go_time := come_time + target + break_dur + 30; -- 30 min extra
+      ELSE
+        go_time := come_time + target + break_dur + (abs(h) % 5); -- tiny variance
+      END IF;
+
+      -- GEHEN booking
+      -- For night shift (cycle_pos=2), go_time wraps past midnight but we still store as minutes
+      INSERT INTO bookings (id, tenant_id, employee_id, booking_date, booking_type_id, original_time, edited_time, pair_id, source, created_at, updated_at)
+      VALUES (gen_random_uuid(), t_id, emp.emp_id, d, bt_a2, go_time, go_time, pair_id, emp.src, NOW(), NOW());
+
+      -- Daily value
+      gross := go_time - come_time;
+      net := gross - break_dur;
+
+      INSERT INTO daily_values (id, tenant_id, employee_id, value_date, gross_time, net_time, target_time, overtime, undertime, break_time,
+        has_error, first_come, last_go, booking_count, status, created_at, updated_at)
+      VALUES (gen_random_uuid(), t_id, emp.emp_id, d, gross, net, target,
+        GREATEST(0, net - target), GREATEST(0, target - net),
+        break_dur, false, come_time, go_time, 2, 'calculated', NOW(), NOW())
+      ON CONFLICT (employee_id, value_date) DO NOTHING;
+
+      d := d + 1;
+    END LOOP;
+  END LOOP;
+END $$;
+
+-- S3-10. Today's partial bookings for shift workers (only Kommen, no Gehen yet)
+DO $$
+DECLARE
+  bt_a1 uuid;
+  t_id uuid := '10000000-0000-0000-0000-000000000001';
+  today date := CURRENT_DATE;
+  dow int;
+  week_num int;
+  cycle_pos int;
+  come_time int;
+  pair_id uuid;
+  emp_id uuid;
+  rhythm_start date := '2026-01-05';
+BEGIN
+  dow := EXTRACT(ISODOW FROM today)::int;
+  IF dow IN (6, 7) THEN RETURN; END IF;
+  IF EXISTS (SELECT 1 FROM holidays WHERE holiday_date = today AND tenant_id = t_id) THEN RETURN; END IF;
+
+  SELECT id INTO bt_a1 FROM booking_types WHERE code = 'A1' LIMIT 1;
+
+  week_num := ((today - rhythm_start) / 7)::int;
+  cycle_pos := week_num % 3;
+
+  CASE cycle_pos
+    WHEN 0 THEN come_time := 360;  -- FS
+    WHEN 1 THEN come_time := 840;  -- SS
+    WHEN 2 THEN come_time := 1320; -- NS
+  END CASE;
+
+  FOR emp_id IN
+    SELECT unnest(ARRAY[
+      '00000000-0000-0000-0000-00000000001b'::uuid,
+      '00000000-0000-0000-0000-00000000001c'::uuid,
+      '00000000-0000-0000-0000-00000000001d'::uuid,
+      '00000000-0000-0000-0000-00000000001e'::uuid
+    ])
+  LOOP
+    IF NOT EXISTS (SELECT 1 FROM bookings WHERE employee_id = emp_id AND booking_date = today) THEN
+      pair_id := gen_random_uuid();
+      INSERT INTO bookings (id, tenant_id, employee_id, booking_date, booking_type_id, original_time, edited_time, pair_id, source, created_at, updated_at)
+      VALUES (gen_random_uuid(), t_id, emp_id, today, bt_a1, come_time, come_time, pair_id, 'terminal', NOW(), NOW())
+      ON CONFLICT (id) DO NOTHING;
+    END IF;
+  END LOOP;
+END $$;
+
+-- S3-11. Vacation balances for shift workers (2026)
+INSERT INTO vacation_balances (id, tenant_id, employee_id, year, entitlement, taken, adjustments, carryover, created_at, updated_at)
+VALUES
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001b', 2026, 30.00, 0, 0, 0, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001c', 2026, 30.00, 0, 0, 0, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001d', 2026, 30.00, 0, 0, 0, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001e', 2026, 30.00, 0, 0, 0, NOW(), NOW())
+ON CONFLICT (employee_id, year) DO NOTHING;
+
+-- S3-12. Set department manager
+UPDATE departments SET manager_employee_id = '00000000-0000-0000-0000-00000000001b' WHERE id = '00000000-0000-0000-0000-000000000808';
