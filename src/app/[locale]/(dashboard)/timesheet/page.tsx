@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { useSearchParams } from 'next/navigation'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Lock } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/providers/auth-provider'
 import { useHasPermission } from '@/hooks'
@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useDailyValues, useDeleteBooking, useEmployees } from '@/hooks'
+import { useDailyValues, useDeleteBooking, useEmployees, useMonthlyValues } from '@/hooks'
 import {
   formatDate,
   getWeekRange,
@@ -136,6 +136,15 @@ export default function TimesheetPage() {
     to: formatDate(periodDates.end),
     enabled: !!effectiveEmployeeId && viewMode !== 'day',
   })
+
+  // Check if the current month is closed (blocks booking mutations)
+  const { data: monthlyValueData } = useMonthlyValues({
+    employeeId: effectiveEmployeeId,
+    year: currentDate.getFullYear(),
+    month: currentDate.getMonth() + 1,
+    enabled: !!effectiveEmployeeId,
+  })
+  const isMonthClosed = monthlyValueData?.data?.[0]?.is_closed ?? false
 
   // Prepare export data
   const exportData = useMemo(() => {
@@ -327,14 +336,20 @@ export default function TimesheetPage() {
       {/* Content based on view mode */}
       <Card>
         <CardContent className="pt-6">
+          {isMonthClosed && (
+            <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-200 mb-4">
+              <Lock className="h-4 w-4 shrink-0" />
+              {t('monthClosed')}
+            </div>
+          )}
           {viewMode === 'day' && (
             <DayView
               date={currentDate}
               employeeId={effectiveEmployeeId}
-              isEditable={true}
-              onAddBooking={effectiveEmployeeId ? handleAddBooking : undefined}
-              onEditBooking={handleEditBooking}
-              onDeleteBooking={handleDeleteBooking}
+              isEditable={!isMonthClosed}
+              onAddBooking={effectiveEmployeeId && !isMonthClosed ? handleAddBooking : undefined}
+              onEditBooking={!isMonthClosed ? handleEditBooking : undefined}
+              onDeleteBooking={!isMonthClosed ? handleDeleteBooking : undefined}
             />
           )}
           {viewMode === 'week' && (

@@ -413,7 +413,8 @@
     "absence": "Absence",
     "notes": "Notes",
     "deleteBookingFailed": "Failed to delete booking",
-    "loadFailed": "Failed to load timesheet data"
+    "loadFailed": "Failed to load timesheet data",
+    "monthClosed": "This month is closed. Bookings cannot be created, edited, or deleted."
   },
   "absences": {
     "title": "Absences",

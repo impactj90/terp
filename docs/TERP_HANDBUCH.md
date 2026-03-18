@@ -3131,7 +3131,7 @@ Der vollständige Ablauf „Fehler finden → korrigieren → Monat abschließen
    - Hinweistext erklärt, was der Abschluss bewirkt
 3. 📍 „Monat abschließen"
 
-✅ Status wechselt zu „Abgeschlossen" (grün). Ab sofort können keine Änderungen mehr an den Buchungen dieses Monats vorgenommen werden.
+✅ Status wechselt zu „Abgeschlossen" (grün). Ab sofort können keine Änderungen mehr an den Buchungen dieses Monats vorgenommen werden. Im Zeitnachweis wird ein Hinweis-Banner angezeigt und die Buttons zum Erstellen, Bearbeiten und Löschen von Buchungen sind deaktiviert.
 
 #### Monat wieder öffnen
 

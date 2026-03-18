@@ -731,6 +731,7 @@ Wenn ein Mitarbeiter eine Buchung vergessen hat oder die Zeit falsch ist, kann d
 - Eine bestehende Buchung kann in der Uhrzeit geändert werden ("bearbeitete Zeit").
 - Die ursprüngliche Zeit bleibt als Referenz gespeichert.
 - Nach der Änderung wird der Tag automatisch neu berechnet.
+- **Hinweis:** Ist der Monat abgeschlossen, können Buchungen weder erstellt, bearbeitet noch gelöscht werden. Im Zeitnachweis wird ein entsprechender Hinweis angezeigt und die Bearbeitungs-Buttons sind deaktiviert.
 
 **2. Korrektur anlegen**
 - Eine Korrektur ist ein eigenständiger Eintrag, der einen Zeitwert addiert oder subtrahiert.

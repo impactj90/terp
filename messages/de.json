@@ -413,7 +413,8 @@
     "absence": "Abwesenheit",
     "notes": "Notizen",
     "deleteBookingFailed": "Buchung konnte nicht gelöscht werden",
-    "loadFailed": "Zeitnachweisdaten konnten nicht geladen werden"
+    "loadFailed": "Zeitnachweisdaten konnten nicht geladen werden",
+    "monthClosed": "Dieser Monat ist abgeschlossen. Buchungen können nicht erstellt, bearbeitet oder gelöscht werden."
   },
   "absences": {
     "title": "Abwesenheiten",

@@ -10,6 +10,7 @@
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./bookings-repository"
 import type { DataScopeFilter } from "./bookings-repository"
+import * as monthlyValuesRepo from "./monthly-values-repository"
 import { RecalcService } from "./recalc"
 
 // --- Constants ---
@@ -36,6 +37,13 @@ export class BookingForbiddenError extends Error {
   constructor(message = "Booking not within data scope") {
     super(message)
     this.name = "BookingForbiddenError"
+  }
+}
+
+export class BookingConflictError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "BookingConflictError"
   }
 }
 
@@ -96,6 +104,32 @@ function checkBookingDataScope(
     if (!dataScope.employeeIds.includes(booking.employeeId)) {
       throw new BookingForbiddenError()
     }
+  }
+}
+
+/**
+ * Asserts that the month for the given booking date is not closed.
+ * Throws BookingConflictError if the month has been closed in MonthlyValues.
+ */
+async function assertMonthNotClosed(
+  prisma: PrismaClient,
+  tenantId: string,
+  employeeId: string,
+  bookingDate: Date
+): Promise<void> {
+  const year = bookingDate.getUTCFullYear()
+  const month = bookingDate.getUTCMonth() + 1
+  const mv = await monthlyValuesRepo.findByEmployeeYearMonth(
+    prisma,
+    tenantId,
+    employeeId,
+    year,
+    month
+  )
+  if (mv?.isClosed) {
+    throw new BookingConflictError(
+      `Der Monat ${month.toString().padStart(2, "0")}/${year} ist abgeschlossen. Buchungen können nicht mehr verändert werden.`
+    )
   }
 }
 
@@ -348,6 +382,9 @@ export async function createBooking(
     throw new BookingValidationError("Invalid date: " + input.bookingDate)
   }
 
+  // Block mutations in closed months
+  await assertMonthNotClosed(prisma, tenantId, input.employeeId, bookingDate)
+
   // Create booking
   const booking = await repo.create(prisma, {
     tenantId,
@@ -405,6 +442,9 @@ export async function updateBooking(
   // Check data scope
   checkBookingDataScope(dataScope, existing)
 
+  // Block mutations in closed months
+  await assertMonthNotClosed(prisma, tenantId, existing.employeeId, existing.bookingDate)
+
   // Build partial update data
   const data: Record<string, unknown> = { updatedBy: userId }
 
@@ -442,6 +482,9 @@ export async function deleteBooking(
 
   // Check data scope
   checkBookingDataScope(dataScope, existing)
+
+  // Block mutations in closed months
+  await assertMonthNotClosed(prisma, tenantId, existing.employeeId, existing.bookingDate)
 
   // Delete derived bookings first, then delete the booking in a transaction
   await repo.deleteWithDerived(prisma, tenantId, id)
