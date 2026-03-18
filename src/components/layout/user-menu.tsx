@@ -83,7 +83,7 @@ export function UserMenu() {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/settings" className="flex items-center">
+          <Link href="/admin/settings" className="flex items-center">
             <Settings className="mr-2 h-4 w-4" aria-hidden="true" />
             <span>{t('settings')}</span>
           </Link>
