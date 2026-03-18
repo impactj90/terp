@@ -108,13 +108,13 @@ test.describe.serial("UC-051: Shift Planning", () => {
     await expect(panel).toBeVisible();
 
     // Verify all 3 demo shifts appear in the palette / legend
-    await expect(panel.getByText("E2E Frühschicht").or(panel.getByText("E2E-FS"))).toBeVisible({
+    await expect(panel.getByRole("button", { name: /E2E-FS/ })).toBeVisible({
       timeout: 5_000,
     });
-    await expect(panel.getByText("E2E Spätschicht").or(panel.getByText("E2E-SS"))).toBeVisible({
+    await expect(panel.getByRole("button", { name: /E2E-SS/ })).toBeVisible({
       timeout: 5_000,
     });
-    await expect(panel.getByText("E2E Nachtschicht").or(panel.getByText("E2E-NS"))).toBeVisible({
+    await expect(panel.getByRole("button", { name: /E2E-NS/ })).toBeVisible({
       timeout: 5_000,
     });
   });

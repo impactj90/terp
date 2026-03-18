@@ -135,7 +135,7 @@ test.describe.serial("UC-ORD-01: Document Chain (Belegkette)", () => {
 
   // ── 2b. Verify linked inquiry on detail page ──────────────────────
   test("offer shows linked inquiry", async ({ page }) => {
-    await openDocument(page, /A-/);
+    await openDocument(page, /AG-/);
     await page.getByRole("tab", { name: /Übersicht/ }).click();
     await expect(page.getByText("Verknüpfte Anfrage")).toBeVisible({ timeout: 5_000 });
     await expect(page.getByText(/Wartung Q2/)).toBeVisible();
@@ -143,7 +143,7 @@ test.describe.serial("UC-ORD-01: Document Chain (Belegkette)", () => {
 
   // ── 3. Add positions to the offer ─────────────────────────────────
   test("add positions to the offer", async ({ page }) => {
-    await openDocument(page, /A-/);
+    await openDocument(page, /AG-/);
 
     // Switch to Positionen tab
     await page.getByRole("tab", { name: /Positionen/ }).click();
@@ -193,13 +193,13 @@ test.describe.serial("UC-ORD-01: Document Chain (Belegkette)", () => {
 
   // ── 4. Finalize the offer ─────────────────────────────────────────
   test("finalize the offer", async ({ page }) => {
-    await openDocument(page, /A-/);
+    await openDocument(page, /AG-/);
     await finalizeDocument(page);
   });
 
   // ── 5. Verify immutability — no edit controls on finalized doc ────
   test("finalized document is immutable", async ({ page }) => {
-    await openDocument(page, /A-/);
+    await openDocument(page, /AG-/);
 
     // Abschließen button should NOT be visible
     await expect(
@@ -225,7 +225,7 @@ test.describe.serial("UC-ORD-01: Document Chain (Belegkette)", () => {
 
   // ── 6. Forward offer → order confirmation (AB) ────────────────────
   test("forward offer to order confirmation", async ({ page }) => {
-    await openDocument(page, /A-/);
+    await openDocument(page, /AG-/);
 
     await page.getByRole("button", { name: "Fortführen" }).click();
     const dialog = page.getByRole("dialog");
@@ -243,7 +243,7 @@ test.describe.serial("UC-ORD-01: Document Chain (Belegkette)", () => {
 
   // ── 7. Verify source offer is now "Fortgeführt" ───────────────────
   test("source offer status is Fortgeführt", async ({ page }) => {
-    await openDocument(page, /A-/);
+    await openDocument(page, /AG-/);
     await expect(page.getByText("Fortgeführt")).toBeVisible();
     // Cannot forward again
     await expect(
@@ -341,9 +341,9 @@ test.describe.serial("UC-ORD-01: Document Chain (Belegkette)", () => {
     // Switch to Kette tab
     await page.getByRole("tab", { name: "Kette" }).click();
 
-    // AB should show parent (the offer A-) and child (LS-)
+    // AB should show parent (the offer AG-) and child (LS-)
     const panel = page.locator('[role="tabpanel"]');
-    await expect(panel.getByText(/A-\d+/)).toBeVisible({ timeout: 5000 });
+    await expect(panel.getByText(/AG-\d+/)).toBeVisible({ timeout: 5000 });
     await expect(panel.getByText(/LS-\d+/)).toBeVisible({ timeout: 5000 });
   });
 

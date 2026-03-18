@@ -382,13 +382,11 @@ test.describe.serial("Demo: Tägliche Zeiterfassung", () => {
     const alreadyClockedIn = await clockOutBtn.isEnabled().catch(() => false);
     if (alreadyClockedIn) {
       await clockOutBtn.click();
-      await page.waitForLoadState("networkidle");
       await expect(clockInBtn).toBeEnabled({ timeout: 10_000 });
     }
 
     // Clock in
     await clockInBtn.click();
-    await page.waitForLoadState("networkidle");
 
     // Verify clocked-in state
     await expect(clockOutBtn).toBeEnabled({ timeout: 10_000 });

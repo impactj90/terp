@@ -292,10 +292,9 @@ test.describe.serial("UC-043: Close Month", () => {
 
     // Wait for recalculation — no error toast should appear
     await page.waitForTimeout(3000);
-    await page.waitForLoadState("networkidle");
 
     // Table should still be visible (not crashed)
-    await expect(page.locator("table")).toBeVisible();
+    await expect(page.locator("table")).toBeVisible({ timeout: 10_000 });
   });
 
   // ── Demo: Massenabschluss ─────────────────────────────────────────

@@ -142,8 +142,7 @@ test.describe.serial("UC-066: Payroll Export", () => {
     await submitBtn.click();
 
     // Wait for form to close
-    await page.waitForTimeout(2000);
-    await page.waitForLoadState("networkidle");
+    await expect(form).not.toBeVisible({ timeout: 15_000 });
 
     // Export should appear in the list
     await waitForTableLoad(page);

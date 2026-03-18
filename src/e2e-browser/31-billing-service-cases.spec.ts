@@ -110,7 +110,7 @@ test.describe.serial(
 
       // 2. Detailseite — verify title + status
       await expect(page.getByText(SC_TITLE)).toBeVisible();
-      await expect(page.getByText("Offen")).toBeVisible();
+      await expect(page.getByText("Offen", { exact: true })).toBeVisible();
 
       // 3. Klick auf "Bearbeiten"
       await page
