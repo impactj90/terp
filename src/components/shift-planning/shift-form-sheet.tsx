@@ -89,11 +89,11 @@ export function ShiftFormSheet({
         code: shift.code || '',
         name: shift.name || '',
         description: shift.description || '',
-        dayPlanId: shift.day_plan_id || '',
+        dayPlanId: shift.dayPlanId ?? (shift as any).day_plan_id ?? '',
         color: shift.color || '#3B82F6',
         qualification: shift.qualification || '',
-        sortOrder: shift.sort_order ?? 0,
-        isActive: shift.is_active ?? true,
+        sortOrder: shift.sortOrder ?? (shift as any).sort_order ?? 0,
+        isActive: shift.isActive ?? (shift as any).is_active ?? true,
       })
     } else {
       setForm(INITIAL_STATE)
