@@ -546,6 +546,75 @@ describe("Phase 11: Reporting & Export", () => {
       )
     })
 
+    it("should reject generate when monthly values are not closed", async () => {
+      // Use month 6 which has no pre-existing monthly values for any employee.
+      // First, find an active employee and create an unclosed monthly value.
+      const employees = await prisma.employee.findMany({
+        where: { tenantId: SEED.TENANT_ID, isActive: true },
+        select: { id: true },
+        take: 1,
+      })
+      expect(employees.length).toBeGreaterThan(0)
+
+      const emp = employees[0]!
+      await prisma.monthlyValue.upsert({
+        where: { employeeId_year_month: { employeeId: emp.id, year: 2025, month: 6 } },
+        update: { isClosed: false },
+        create: {
+          tenantId: SEED.TENANT_ID,
+          employeeId: emp.id,
+          year: 2025,
+          month: 6,
+          totalGrossTime: 0,
+          totalNetTime: 0,
+          totalTargetTime: 0,
+          totalOvertime: 0,
+          totalUndertime: 0,
+          totalBreakTime: 0,
+          flextimeStart: 0,
+          flextimeChange: 0,
+          flextimeEnd: 0,
+          vacationTaken: 0,
+          sickDays: 0,
+          otherAbsenceDays: 0,
+          workDays: 0,
+          daysWithErrors: 0,
+          isClosed: false,
+        },
+      })
+
+      await expect(
+        caller.payrollExports.generate({
+          year: 2025,
+          month: 6,
+          format: "csv",
+          exportType: "standard",
+        })
+      ).rejects.toThrow("Monthly values not closed for all employees")
+
+      // Clean up
+      await prisma.monthlyValue.delete({
+        where: { employeeId_year_month: { employeeId: emp.id, year: 2025, month: 6 } },
+      }).catch(() => {})
+    })
+
+    it("should reject generate when monthly values are missing", async () => {
+      // Month 7 — no monthly values exist at all, but active employees do
+      const empCount = await prisma.employee.count({
+        where: { tenantId: SEED.TENANT_ID, isActive: true },
+      })
+      expect(empCount).toBeGreaterThan(0)
+
+      await expect(
+        caller.payrollExports.generate({
+          year: 2025,
+          month: 7,
+          format: "csv",
+          exportType: "standard",
+        })
+      ).rejects.toThrow("Monthly values not closed for all employees")
+    })
+
     it("should reject deleting export interface that has been used", async () => {
       // First generate a payroll export using the interface
       // The interface already has a generated export (payrollExport2 was deleted,

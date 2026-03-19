@@ -151,6 +151,41 @@ test.describe.serial("UC-066: Payroll Export", () => {
     await expect(firstRow).toContainText(/Abgeschlossen|Erstellt|Fertig/i);
   });
 
+  // ── Negative: Export with unclosed month shows error ─────────────
+  test("shows error when generating export for month without closed values", async ({ page }) => {
+    await navigateTo(page, "/admin/payroll-exports");
+
+    // Open generate dialog
+    await page.getByRole("button", { name: "Export erstellen" }).first().click();
+
+    const sheet = page.locator(
+      '[data-slot="sheet-content"][data-state="open"]',
+    );
+    const dialog = page.locator('[role="dialog"]');
+    const form = sheet.or(dialog);
+    await expect(form).toBeVisible({ timeout: 10_000 });
+
+    // Change year to 2020 where no monthly values exist
+    const yearInput = form.locator('input[type="number"]');
+    await yearInput.fill("2020");
+
+    // Submit the form
+    const submitBtn = form.getByRole("button", { name: /Erstellen|Exportieren|Speichern/i });
+    await submitBtn.click();
+
+    // The form should stay open and show a destructive alert
+    const alert = form.locator('[data-slot="alert"]');
+    await expect(alert).toBeVisible({ timeout: 15_000 });
+    await expect(alert).toContainText(/geschlossene Monate|closed months/i);
+
+    // Verify the link to monthly values is shown
+    const monthValuesLink = alert.locator('a[href*="monthly-values"]');
+    await expect(monthValuesLink).toBeVisible();
+
+    // Close dialog
+    await page.keyboard.press("Escape");
+  });
+
   // ── Demo: Vorschau prüfen ─────────────────────────────────────────
   test("Demo: Vorschau prüfen", async ({ page }) => {
     await navigateTo(page, "/admin/payroll-exports");
