@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/select'
 import { Plus, Search } from 'lucide-react'
 import { useBillingDocuments } from '@/hooks'
+import { useCrmInquiries } from '@/hooks'
 import { DocumentTypeBadge } from './document-type-badge'
 import { DocumentStatusBadge } from './document-status-badge'
 
@@ -46,10 +47,25 @@ export function BillingDocumentList({ addressId, inquiryId }: BillingDocumentLis
   const [typeFilter, setTypeFilter] = React.useState<string>('all')
   const [statusFilter, setStatusFilter] = React.useState<string>('all')
   const [customerFilter, setCustomerFilter] = React.useState<string>('all')
+  const [inquiryFilter, setInquiryFilter] = React.useState<string>('all')
   const [page, setPage] = React.useState(1)
 
   // Load all documents (unfiltered) to extract unique customers for the filter dropdown
   const { data: allDocsData } = useBillingDocuments({ pageSize: 200 })
+
+  // Load inquiries for filter dropdown
+  const { data: inquiriesData } = useCrmInquiries({ pageSize: 100 })
+
+  // Extract inquiries that have at least one document
+  const inquiriesWithDocs = React.useMemo(() => {
+    const items = allDocsData?.items ?? []
+    const inquiryIds = new Set<string>()
+    for (const doc of items) {
+      const inqId = (doc as Record<string, unknown>).inquiryId as string | null
+      if (inqId) inquiryIds.add(inqId)
+    }
+    return (inquiriesData?.items ?? []).filter((inq) => inquiryIds.has(inq.id))
+  }, [allDocsData, inquiriesData])
 
   // Extract unique customers from loaded documents
   const uniqueCustomers = React.useMemo(() => {
@@ -71,7 +87,7 @@ export function BillingDocumentList({ addressId, inquiryId }: BillingDocumentLis
     type: typeFilter !== 'all' ? typeFilter as "OFFER" : undefined,
     status: statusFilter !== 'all' ? statusFilter as "DRAFT" : undefined,
     addressId: addressId ?? (customerFilter !== 'all' ? customerFilter : undefined),
-    inquiryId,
+    inquiryId: inquiryId ?? (inquiryFilter !== 'all' ? inquiryFilter : undefined),
     page,
     pageSize: 25,
   })
@@ -135,6 +151,21 @@ export function BillingDocumentList({ addressId, inquiryId }: BillingDocumentLis
               {uniqueCustomers.map((addr) => (
                 <SelectItem key={addr.id} value={addr.id}>
                   {addr.company}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        {!inquiryId && inquiriesWithDocs.length > 0 && (
+          <Select value={inquiryFilter} onValueChange={(v) => { setInquiryFilter(v); setPage(1) }}>
+            <SelectTrigger className="w-52">
+              <SelectValue placeholder="Alle Vorgänge" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle Vorgänge</SelectItem>
+              {inquiriesWithDocs.map((inq) => (
+                <SelectItem key={inq.id} value={inq.id}>
+                  {inq.number} — {inq.title}
                 </SelectItem>
               ))}
             </SelectContent>

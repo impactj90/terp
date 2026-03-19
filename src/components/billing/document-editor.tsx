@@ -21,6 +21,7 @@ import {
   useBillingTenantConfig,
   useBillingDocumentTemplatesByType,
 } from '@/hooks'
+import { useCrmInquiries } from '@/hooks'
 import { RichTextEditor } from '@/components/ui/rich-text-editor'
 import {
   Select,
@@ -145,6 +146,19 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
   const cancelMutation = useCancelBillingDocument()
   const duplicateMutation = useDuplicateBillingDocument()
   const downloadPdfMutation = useDownloadBillingDocumentPdf()
+
+  // Load inquiries for Vorgang select (only for DRAFT documents)
+  const { data: inquiryData } = useCrmInquiries({
+    addressId: doc?.addressId ?? undefined,
+    pageSize: 100,
+    enabled: doc?.status === 'DRAFT' && !!doc?.addressId,
+  })
+  const activeInquiries = React.useMemo(
+    () => (inquiryData?.items ?? []).filter(
+      (inq) => inq.status === 'OPEN' || inq.status === 'IN_PROGRESS'
+    ),
+    [inquiryData]
+  )
 
   const [showFinalizeDialog, setShowFinalizeDialog] = React.useState(false)
   const [showForwardDialog, setShowForwardDialog] = React.useState(false)
@@ -541,12 +555,32 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                       <span className="text-muted-foreground text-xs">Gedruckt</span>
                       <span className="text-xs">{formatDate((doc as Record<string, unknown>).printedAt as string | null)}</span>
                     </div>
-                    {inquiry && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground text-xs">Anfrage</span>
-                        <span className="text-xs">{inquiry.number}</span>
+                    {isDraft && activeInquiries.length > 0 ? (
+                      <div className="space-y-0.5">
+                        <Label className="text-xs text-muted-foreground">Vorgang</Label>
+                        <Select
+                          value={inquiry?.id ?? 'none'}
+                          onValueChange={(v) => handleSidebarField('inquiryId', v === 'none' ? null : v)}
+                        >
+                          <SelectTrigger className="h-7 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Kein Vorgang</SelectItem>
+                            {activeInquiries.map((inq) => (
+                              <SelectItem key={inq.id} value={inq.id}>
+                                {inq.number} — {inq.title}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
-                    )}
+                    ) : inquiry ? (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground text-xs">Vorgang</span>
+                        <span className="text-xs">{inquiry.number} — {inquiry.title}</span>
+                      </div>
+                    ) : null}
                     {order && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground text-xs">Auftrag</span>

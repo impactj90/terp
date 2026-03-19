@@ -276,6 +276,7 @@ export async function update(
     contactId?: string | null
     deliveryAddressId?: string | null
     invoiceAddressId?: string | null
+    inquiryId?: string | null
     orderDate?: Date | null
     documentDate?: Date
     deliveryDate?: Date | null
@@ -302,6 +303,7 @@ export async function update(
   const data: Record<string, unknown> = {}
   const fields = [
     "contactId", "deliveryAddressId", "invoiceAddressId",
+    "inquiryId",
     "orderDate", "documentDate", "deliveryDate",
     "deliveryType", "deliveryTerms",
     "paymentTermDays", "discountPercent", "discountDays",

@@ -57,6 +57,14 @@ export function BillingDocumentForm() {
     pageSize: 100,
   })
 
+  // Only show OPEN and IN_PROGRESS inquiries
+  const activeInquiries = React.useMemo(
+    () => (inquiryData?.items ?? []).filter(
+      (inq) => inq.status === 'OPEN' || inq.status === 'IN_PROGRESS'
+    ),
+    [inquiryData]
+  )
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -140,16 +148,16 @@ export function BillingDocumentForm() {
                 </Select>
               </div>
             </div>
-            {addressId && inquiryData?.items && inquiryData.items.length > 0 && (
+            {addressId && activeInquiries.length > 0 && (
               <div className="space-y-2">
-                <Label htmlFor="inquiryId">Anfrage</Label>
+                <Label htmlFor="inquiryId">Vorgang</Label>
                 <Select value={inquiryId} onValueChange={setInquiryId}>
                   <SelectTrigger id="inquiryId">
-                    <SelectValue placeholder="Anfrage wählen (optional)..." />
+                    <SelectValue placeholder="Vorgang wählen (optional)..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Keine Anfrage</SelectItem>
-                    {inquiryData.items.map((inq) => (
+                    <SelectItem value="none">Kein Vorgang</SelectItem>
+                    {activeInquiries.map((inq) => (
                       <SelectItem key={inq.id} value={inq.id}>
                         {inq.number} — {inq.title}
                       </SelectItem>

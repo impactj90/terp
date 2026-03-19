@@ -74,6 +74,7 @@ const updateInput = z.object({
   contactId: z.string().uuid().nullable().optional(),
   deliveryAddressId: z.string().uuid().nullable().optional(),
   invoiceAddressId: z.string().uuid().nullable().optional(),
+  inquiryId: z.string().uuid().nullable().optional(),
   orderDate: z.coerce.date().nullable().optional(),
   documentDate: z.coerce.date().optional(),
   deliveryDate: z.coerce.date().nullable().optional(),

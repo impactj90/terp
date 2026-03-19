@@ -19,6 +19,8 @@ import {
   useDeleteCrmInquiry,
   useBillingDocuments,
 } from '@/hooks'
+import { DocumentTypeBadge } from '@/components/billing/document-type-badge'
+import { DocumentStatusBadge } from '@/components/billing/document-status-badge'
 import { InquiryStatusBadge } from './inquiry-status-badge'
 import { InquiryFormSheet } from './inquiry-form-sheet'
 import { InquiryCloseDialog } from './inquiry-close-dialog'
@@ -361,7 +363,7 @@ export function InquiryDetail({ id }: InquiryDetailProps) {
 
 function InquiryDocumentsList({ inquiryId }: { inquiryId: string }) {
   const router = useRouter()
-  const { data, isLoading } = useBillingDocuments({ inquiryId })
+  const { data, isLoading } = useBillingDocuments({ inquiryId, pageSize: 100 })
 
   if (isLoading) {
     return <Skeleton className="h-24 w-full" />
@@ -373,29 +375,23 @@ function InquiryDocumentsList({ inquiryId }: { inquiryId: string }) {
     return (
       <Card>
         <CardContent className="py-8 text-center text-muted-foreground">
-          Keine Belege mit dieser Anfrage verknüpft.
+          Keine Belege mit diesem Vorgang verknüpft.
         </CardContent>
       </Card>
     )
   }
 
-  const typeLabels: Record<string, string> = {
-    OFFER: 'Angebot',
-    ORDER_CONFIRMATION: 'Auftragsbestätigung',
-    DELIVERY_NOTE: 'Lieferschein',
-    SERVICE_NOTE: 'Leistungsschein',
-    RETURN_DELIVERY: 'Rücklieferung',
-    INVOICE: 'Rechnung',
-    CREDIT_NOTE: 'Gutschrift',
-  }
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value)
 
-  const statusLabels: Record<string, string> = {
-    DRAFT: 'Entwurf',
-    PRINTED: 'Abgeschlossen',
-    PARTIALLY_FORWARDED: 'Teilw. fortgeführt',
-    FORWARDED: 'Fortgeführt',
-    CANCELLED: 'Storniert',
-  }
+  const formatDocDate = (date: string | Date) =>
+    new Intl.DateTimeFormat('de-DE').format(new Date(date))
+
+  // Sum only PRINTED/FORWARDED/PARTIALLY_FORWARDED (no DRAFTs, no CANCELLED)
+  const countableStatuses = new Set(['PRINTED', 'PARTIALLY_FORWARDED', 'FORWARDED'])
+  const totalGross = items
+    .filter((doc) => countableStatuses.has(doc.status))
+    .reduce((sum, doc) => sum + doc.totalGross, 0)
 
   return (
     <Card>
@@ -406,6 +402,7 @@ function InquiryDocumentsList({ inquiryId }: { inquiryId: string }) {
               <th className="px-4 py-2 font-medium">Nummer</th>
               <th className="px-4 py-2 font-medium">Typ</th>
               <th className="px-4 py-2 font-medium">Datum</th>
+              <th className="px-4 py-2 font-medium text-right">Betrag</th>
               <th className="px-4 py-2 font-medium">Status</th>
             </tr>
           </thead>
@@ -417,18 +414,26 @@ function InquiryDocumentsList({ inquiryId }: { inquiryId: string }) {
                 onClick={() => router.push(`/orders/documents/${doc.id}`)}
               >
                 <td className="px-4 py-2 font-mono">{doc.number}</td>
-                <td className="px-4 py-2">{typeLabels[doc.type] ?? doc.type}</td>
                 <td className="px-4 py-2">
-                  {new Intl.DateTimeFormat('de-DE').format(new Date(doc.documentDate))}
+                  <DocumentTypeBadge type={doc.type} />
                 </td>
+                <td className="px-4 py-2">{formatDocDate(doc.documentDate)}</td>
+                <td className="px-4 py-2 text-right">{formatCurrency(doc.totalGross)}</td>
                 <td className="px-4 py-2">
-                  <Badge variant={doc.status === 'DRAFT' ? 'outline' : 'secondary'}>
-                    {statusLabels[doc.status] ?? doc.status}
-                  </Badge>
+                  <DocumentStatusBadge status={doc.status} />
                 </td>
               </tr>
             ))}
           </tbody>
+          {totalGross > 0 && (
+            <tfoot>
+              <tr className="border-t font-semibold">
+                <td className="px-4 py-2" colSpan={3}>Gesamt (abgeschlossen)</td>
+                <td className="px-4 py-2 text-right">{formatCurrency(totalGross)}</td>
+                <td />
+              </tr>
+            </tfoot>
+          )}
         </table>
       </CardContent>
     </Card>
