@@ -65,7 +65,88 @@ export async function list(
     dataScopeWhere?: Record<string, unknown> | null
   }
 ) {
-  return repo.findMany(prisma, tenantId, params)
+  // If filtering by "closed" status only, no need to find missing employees
+  if (params.status === "closed") {
+    return repo.findMany(prisma, tenantId, params)
+  }
+
+  // Get existing monthly values (unpaginated to merge with missing employees)
+  const { items: existingItems } = await repo.findMany(prisma, tenantId, {
+    ...params,
+    page: 1,
+    pageSize: 10000,
+  })
+
+  // Find active employees that are missing monthly values for this month
+  const empWhere: Record<string, unknown> = { tenantId, isActive: true }
+  if (params.departmentId) empWhere.departmentId = params.departmentId
+  if (params.employeeId) empWhere.id = params.employeeId
+  // Apply data scope
+  if (params.dataScopeWhere) {
+    const dsEmployee = params.dataScopeWhere.employee as Record<string, unknown> | undefined
+    if (dsEmployee) {
+      empWhere.departmentId = empWhere.departmentId ?? dsEmployee.departmentId
+      if (dsEmployee.id) empWhere.id = empWhere.id ?? dsEmployee.id
+    }
+  }
+
+  const activeEmployees = await prisma.employee.findMany({
+    where: empWhere,
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      personnelNumber: true,
+      isActive: true,
+      departmentId: true,
+    },
+  })
+
+  const existingEmployeeIds = new Set(existingItems.map((mv) => mv.employeeId))
+  const missingEmployees = activeEmployees.filter((e) => !existingEmployeeIds.has(e.id))
+
+  // Create synthetic "open" entries for missing employees
+  const now = new Date()
+  const syntheticItems = missingEmployees.map((emp) => ({
+    id: `missing-${emp.id}-${params.year}-${params.month}`,
+    tenantId,
+    employeeId: emp.id,
+    year: params.year,
+    month: params.month,
+    isClosed: false,
+    totalGrossTime: 0,
+    totalNetTime: 0,
+    totalTargetTime: 0,
+    totalOvertime: 0,
+    totalUndertime: 0,
+    totalBreakTime: 0,
+    flextimeStart: 0,
+    flextimeChange: 0,
+    flextimeEnd: 0,
+    flextimeCarryover: 0,
+    vacationTaken: 0,
+    sickDays: 0,
+    otherAbsenceDays: 0,
+    workDays: 0,
+    daysWithErrors: 0,
+    closedAt: null,
+    closedBy: null,
+    reopenedAt: null,
+    reopenedBy: null,
+    createdAt: now,
+    updatedAt: now,
+    employee: emp,
+  }))
+
+  const allItems = [...existingItems, ...syntheticItems]
+
+  // Apply pagination
+  const page = params.page ?? 1
+  const pageSize = params.pageSize ?? 50
+  const start = (page - 1) * pageSize
+  const paginatedItems = allItems.slice(start, start + pageSize)
+
+  return { items: paginatedItems, total: allItems.length }
 }
 
 export async function getById(
@@ -215,7 +296,7 @@ export async function closeBatch(
     }
   }
 
-  // 2. Optionally recalculate before closing
+  // 2. Calculate monthly values for employees that need it
   const monthlyCalcService = new MonthlyCalcService(prisma)
   if (recalculate) {
     await monthlyCalcService.calculateMonthBatch(employeeIds, year, month)
@@ -231,14 +312,28 @@ export async function closeBatch(
   })
   const mvByEmployee = new Map(allMvs.map((mv) => [mv.employeeId, mv]))
 
+  // 3b. Calculate any employees still missing monthly values (even if recalculate was false)
+  const missingIds = employeeIds.filter((id) => !mvByEmployee.has(id))
+  if (missingIds.length > 0) {
+    await monthlyCalcService.calculateMonthBatch(missingIds, year, month)
+    // Re-fetch the newly created records
+    const newMvs = await prisma.monthlyValue.findMany({
+      where: { employeeId: { in: missingIds }, year, month },
+    })
+    for (const mv of newMvs) {
+      mvByEmployee.set(mv.employeeId, mv)
+    }
+  }
+
   // Partition into closeable vs skipped
   const toClose: string[] = []
   let skippedCount = 0
   for (const empId of employeeIds) {
     const mv = mvByEmployee.get(empId)
-    if (!mv || mv.isClosed) {
+    if (mv?.isClosed) {
       skippedCount++
     } else {
+      // mv exists (just created if missing) and is not closed -> close it
       toClose.push(empId)
     }
   }

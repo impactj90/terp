@@ -5089,7 +5089,7 @@ Zahlungsbedingungen werden automatisch aus den Stammdaten der Kundenadresse übe
 
 ### 13.4 Positionen verwalten
 
-Positionen werden auf der **Detailseite** eines Belegs im Tab **"Positionen"** verwaltet (nur im Status **Entwurf**).
+Positionen werden direkt auf der **Detailseite** eines Belegs im eingebetteten A4-Editor verwaltet (nur im Status **Entwurf**). Die Positionstabelle ist zwischen Einleitungstext und Summenblock eingebettet.
 
 **Positionstypen:**
 
@@ -5103,7 +5103,7 @@ Positionen werden auf der **Detailseite** eines Belegs im Tab **"Positionen"** v
 
 #### Position hinzufügen
 
-1. Detailseite des Belegs öffnen → Tab **"Positionen"** auswählen
+1. Detailseite des Belegs öffnen — die Positionstabelle ist direkt im A4-Editor sichtbar
 2. Unterhalb der Positionstabelle: **Positionstyp** im Dropdown wählen (Standard: "Freitext")
 3. Klick auf **"Position hinzufügen"**
 4. Eine neue Zeile erscheint in der Tabelle — Felder direkt in der Zeile ausfüllen:
@@ -5164,7 +5164,7 @@ Das Fortführen erstellt einen neuen Beleg aus einem abgeschlossenen Beleg -- mi
 7. Quellbeleg-Status wechselt zu **Fortgeführt**
 8. Verknüpfung über `parentDocumentId` nachvollziehbar
 
-Die Belegkette ist auf der Detailseite jedes Belegs im Tab "Kette" sichtbar (Eltern- und Kind-Belege).
+Die Belegkette ist auf der Detailseite jedes Belegs in der Seitenleiste unter **"Belegkette"** sichtbar (Eltern- und Kind-Belege).
 
 ### 13.7 Beleg stornieren
 
@@ -5211,8 +5211,8 @@ Die Belegkette ist auf der Detailseite jedes Belegs im Tab "Kette" sichtbar (Elt
 
 > Positionen können **nur auf der Detailseite** eines Belegs im Status **Entwurf** hinzugefügt werden — nicht im Erstellungsformular.
 
-1. Sie befinden sich auf der Detailseite des Angebots A-1
-2. Klick auf den Tab **"Positionen"**
+1. Sie befinden sich auf der Detailseite des Angebots A-1 — der A4-Editor zeigt das Dokument als Druckvorschau
+2. Die Positionstabelle ist direkt im Dokument eingebettet (kein Tab-Wechsel nötig)
 3. Unterhalb der (noch leeren) Positionstabelle: Dropdown **"Freitext"** ist vorausgewählt
 4. Klick auf **"Position hinzufügen"**
 5. Eine neue Zeile erscheint in der Tabelle — füllen Sie die Felder direkt in der Zeile aus:
@@ -5286,7 +5286,7 @@ Die Belegkette ist vollständig abgeschlossen:
 
 **A-1** (Angebot) → **AB-1** (Auftragsbestätigung) → **LS-1** (Lieferschein) → **RE-1** (Rechnung)
 
-Jeder Beleg verweist auf seinen Vorgänger. Die Kette ist auf der Detailseite jedes Belegs im Tab **"Kette"** nachvollziehbar (Eltern- und Kind-Belege werden angezeigt).
+Jeder Beleg verweist auf seinen Vorgänger. Die Kette ist auf der Detailseite jedes Belegs in der Seitenleiste unter **"Belegkette"** nachvollziehbar (Eltern- und Kind-Belege werden angezeigt).
 
 💡 **Tipp:** Bei der Fortführung werden alle Positionen kopiert. Sie können im neuen Beleg (solange er im Entwurf ist) noch Positionen anpassen, hinzufügen oder entfernen, bevor Sie ihn abschließen.
 
@@ -5862,7 +5862,7 @@ Der vorgeschlagene Preis kann im Beleg jederzeit manuell überschrieben werden.
 3. **Belegtyp**: "Angebot"
 4. **Kundenadresse**: "Mustermann GmbH" auswählen
 5. Klick auf **"Speichern"** → Detailseite des neuen Angebots
-6. Tab **"Positionen"** → Positionstyp "Freitext" → **"Position hinzufügen"**
+6. Im A4-Editor: Positionstyp "Freitext" → **"Position hinzufügen"**
 7. Bei der Erfassung eines Artikels oder Schlüssels, der in der Preisliste vorhanden ist, wird der **Einzelpreis automatisch mit 120,00 EUR vorausgefüllt**
 8. Der Preis kann manuell überschrieben werden
 
@@ -6116,7 +6116,7 @@ Wenn ein **Enddatum** gesetzt ist und die naechste Faelligkeit dieses Datum uebe
 1. 📍 Auftraege > Belege
 2. Rechnung **RE-1** (oder die aktuelle Nummer) ist sichtbar
 3. Belegtyp: Rechnung, Kunde: Mustermann GmbH
-4. Positionen-Tab zeigt: "Monatliche Wartungspauschale | 1 Stk | 500,00 EUR | 19% MwSt"
+4. Positionstabelle im A4-Editor zeigt: "Monatliche Wartungspauschale | 1 Stk | 500,00 EUR | 19% MwSt"
 5. ✅ Summen: Netto 500,00 EUR, MwSt 95,00 EUR, Brutto 595,00 EUR
 
 ##### Ergebnis
@@ -6142,8 +6142,8 @@ Die wiederkehrende Rechnung ist vollstaendig eingerichtet:
 | **Abwesenheitstyp** | Kategorie einer Abwesenheit mit Regeln (Urlaubsabzug, Genehmigung) | 📍 Verwaltung → Abwesenheitsarten |
 | **Aktivität** | Art der Arbeit innerhalb eines Auftrags (z. B. Montage, Dokumentation) | 📍 Verwaltung → Aufträge → Tab Aktivitäten |
 | **Beleg** | Kaufmännisches Dokument in der Belegkette (Angebot, AB, Lieferschein, Rechnung etc.) | 📍 Aufträge → Belege |
-| **Belegkette** | Lückenlose Abfolge von Belegen: Angebot → AB → Lieferschein → Rechnung | 📍 Aufträge → Belege → Detail → Tab Kette |
-| **Belegposition** | Einzelne Zeile in einem Beleg (Artikel, Freitext, Textzeile, Seitenumbruch, Zwischensumme) | 📍 Aufträge → Belege → Detail → Positionen |
+| **Belegkette** | Lückenlose Abfolge von Belegen: Angebot → AB → Lieferschein → Rechnung | 📍 Aufträge → Belege → Detail → Seitenleiste „Belegkette" |
+| **Belegposition** | Einzelne Zeile in einem Beleg (Artikel, Freitext, Textzeile, Seitenumbruch, Zwischensumme) | 📍 Aufträge → Belege → Detail → Positionstabelle im A4-Editor |
 | **Aufgabe (CRM)** | Interne Arbeitsaufgabe im CRM mit Betreff, Beschreibung, Fälligkeitsdatum und Status-Workflow | 📍 CRM → Aufgaben |
 | **Auswertung (CRM)** | Berichts- und Analysedashboard mit Kennzahlen zu Adressen, Korrespondenz, Anfragen und Aufgaben | 📍 CRM → Auswertungen |
 | **Auftrag** | Projekt oder Kundenauftrag für die Projektzeiterfassung | 📍 Verwaltung → Aufträge |

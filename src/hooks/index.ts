@@ -735,12 +735,30 @@ export {
   useForwardBillingDocument,
   useCancelBillingDocument,
   useDuplicateBillingDocument,
+  useDownloadBillingDocumentPdf,
   useBillingPositions,
   useAddBillingPosition,
   useUpdateBillingPosition,
   useDeleteBillingPosition,
   useReorderBillingPositions,
 } from './use-billing-documents'
+
+// Billing Document Templates
+export {
+  useBillingDocumentTemplates,
+  useBillingDocumentTemplatesByType,
+  useDefaultBillingDocumentTemplate,
+  useCreateBillingDocumentTemplate,
+  useUpdateBillingDocumentTemplate,
+  useDeleteBillingDocumentTemplate,
+  useSetDefaultBillingDocumentTemplate,
+} from './use-billing-document-templates'
+
+// Billing Tenant Config
+export {
+  useBillingTenantConfig,
+  useUpsertBillingTenantConfig,
+} from './use-billing-tenant-config'
 
 // Billing Service Cases
 export {

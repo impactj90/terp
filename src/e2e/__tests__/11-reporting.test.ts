@@ -547,8 +547,7 @@ describe("Phase 11: Reporting & Export", () => {
     })
 
     it("should reject generate when monthly values are not closed", async () => {
-      // Use month 6 which has no pre-existing monthly values for any employee.
-      // First, find an active employee and create an unclosed monthly value.
+      // Temporarily open an existing closed monthly value for month 6.
       const employees = await prisma.employee.findMany({
         where: { tenantId: SEED.TENANT_ID, isActive: true },
         select: { id: true },
@@ -590,11 +589,12 @@ describe("Phase 11: Reporting & Export", () => {
           format: "csv",
           exportType: "standard",
         })
-      ).rejects.toThrow("Monthly values not closed for all employees")
+      ).rejects.toThrow("Monthly values not closed for:")
 
-      // Clean up
-      await prisma.monthlyValue.delete({
+      // Restore to closed state (seed data has all 2025 months closed)
+      await prisma.monthlyValue.update({
         where: { employeeId_year_month: { employeeId: emp.id, year: 2025, month: 6 } },
+        data: { isClosed: true },
       }).catch(() => {})
     })
 
@@ -612,7 +612,7 @@ describe("Phase 11: Reporting & Export", () => {
           format: "csv",
           exportType: "standard",
         })
-      ).rejects.toThrow("Monthly values not closed for all employees")
+      ).rejects.toThrow("Monthly values not closed for:")
     })
 
     it("should reject deleting export interface that has been used", async () => {

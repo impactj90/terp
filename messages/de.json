@@ -113,6 +113,8 @@
     "billingOpenItems": "Offene Posten",
     "billingPriceLists": "Preislisten",
     "billingRecurringInvoices": "Wiederkehrende Rechnungen",
+    "billingTemplates": "Vorlagen",
+    "billingConfig": "Briefpapier",
     "warehouseSection": "Lager",
     "warehouseOverview": "Lagerübersicht",
     "crmReports": "Auswertungen"

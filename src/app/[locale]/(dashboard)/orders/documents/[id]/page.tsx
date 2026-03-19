@@ -1,13 +1,13 @@
 'use client'
 
 import { useParams } from 'next/navigation'
-import { BillingDocumentDetail } from "@/components/billing/document-detail"
+import { DocumentEditor } from "@/components/billing/document-editor"
 
 export default function BillingDocumentDetailPage() {
   const params = useParams<{ id: string }>()
   return (
     <div className="container mx-auto py-6">
-      <BillingDocumentDetail id={params.id} />
+      <DocumentEditor id={params.id} />
     </div>
   )
 }

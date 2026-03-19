@@ -231,8 +231,7 @@ test.describe.serial(
       });
       await expect(page.getByText("Entwurf")).toBeVisible();
 
-      // 6. Switch to Positionen tab and add a FREE position
-      await page.getByRole("tab", { name: /Positionen/ }).click();
+      // 6. Positions are embedded in A4 editor — no tab switch needed
       await page
         .getByRole("button", { name: "Position hinzufügen" })
         .click();
@@ -240,7 +239,7 @@ test.describe.serial(
 
       // 7. Type in description to trigger the autocomplete dropdown, then select the entry
       const lastRow = page
-        .locator('[role="tabpanel"] table tbody tr')
+        .locator('[data-testid="position-table-area"] table tbody tr')
         .last();
       const descriptionInput = lastRow.locator('input[placeholder="Beschreibung"]');
       await descriptionInput.fill("beratung");

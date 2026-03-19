@@ -263,7 +263,9 @@ test.describe.serial(
 
       // 5. ✅ RE-Nummer als Beleg erstellt
       // 6. ✅ Status wechselt zu "Abgerechnet"
-      await expect(page.getByText("Abgerechnet")).toBeVisible({
+      // Use exact match to avoid matching the alert description text
+      // which also contains "abgerechnet" (lowercase)
+      await expect(page.getByText("Abgerechnet", { exact: true })).toBeVisible({
         timeout: 10_000,
       });
 
@@ -295,14 +297,12 @@ test.describe.serial(
         timeout: 10_000,
       });
 
-      // 2. Positionen prüfen — all 3 should be visible
-      await expect(page.getByText("Arbeitszeit Techniker")).toBeVisible({
-        timeout: 10_000,
-      });
-      await expect(
-        page.getByText("Thermostat (Ersatzteil)")
-      ).toBeVisible();
-      await expect(page.getByText("Anfahrtspauschale")).toBeVisible();
+      // 2. Positionen prüfen — all 3 should be visible (in input fields in WYSIWYG editor)
+      const posArea = page.locator('[data-testid="position-table-area"]');
+      await expect(posArea).toBeVisible({ timeout: 10_000 });
+      await expect(posArea.locator('input[value="Arbeitszeit Techniker"]')).toBeVisible({ timeout: 5_000 });
+      await expect(posArea.locator('input[value="Thermostat (Ersatzteil)"]')).toBeVisible();
+      await expect(posArea.locator('input[value="Anfahrtspauschale"]')).toBeVisible();
 
       // 3. Klick auf "Abschließen" → Bestätigen
       await page

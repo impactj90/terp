@@ -123,7 +123,45 @@ test.describe.serial("UC-066: Payroll Export", () => {
 
   // ── Demo: Lohnexport erstellen ────────────────────────────────────
   test("Demo: Lohnexport erstellen", async ({ page }) => {
+    // First, close all monthly values for January 2026 so the export passes validation.
+    // The validation requires ALL active employees to have closed monthly values.
+    await navigateTo(page, "/admin/monthly-values");
+
+    // Navigate to January 2026
+    const monthLabel = page.locator("main#main-content");
+    // Click previous month arrow until we reach January 2026
+    const prevBtn = monthLabel.locator("button").filter({ has: page.locator("img") }).first();
+    for (let i = 0; i < 6; i++) {
+      const text = await monthLabel.getByText(/\w+ \d{4}/).first().textContent();
+      if (text?.includes("Januar 2026") || text?.includes("January 2026")) break;
+      await prevBtn.click();
+      await page.waitForLoadState("networkidle");
+    }
+
+    // Select all employees and close
+    const selectAll = page.locator('[role="checkbox"]').first();
+    await selectAll.click();
+    await page.getByRole("button", { name: /Ausgewählte schließen/i }).click();
+
+    const closeDialog = page.locator('[role="dialog"], [role="alertdialog"]');
+    if (await closeDialog.isVisible({ timeout: 3_000 }).catch(() => false)) {
+      await closeDialog.getByRole("button", { name: /Bestätigen|Schließen|Fertig/i }).last().click();
+      await expect(closeDialog).not.toBeVisible({ timeout: 10_000 });
+    }
+    await page.waitForLoadState("networkidle");
+
+    // Now create the payroll export
     await navigateTo(page, "/admin/payroll-exports");
+
+    // Navigate to January 2026
+    const exportMonthLabel = page.locator("main#main-content");
+    const exportPrevBtn = exportMonthLabel.locator("button").filter({ has: page.locator("img") }).first();
+    for (let i = 0; i < 6; i++) {
+      const text = await exportMonthLabel.getByText(/\w+ \d{4}/).first().textContent();
+      if (text?.includes("Januar 2026") || text?.includes("January 2026")) break;
+      await exportPrevBtn.click();
+      await page.waitForLoadState("networkidle");
+    }
 
     // Click "Export erstellen"
     await page.getByRole("button", { name: "Export erstellen" }).first().click();
@@ -136,7 +174,14 @@ test.describe.serial("UC-066: Payroll Export", () => {
     const form = sheet.or(dialog);
     await expect(form).toBeVisible({ timeout: 10_000 });
 
-    // The form should have month/year and format fields — submit with defaults
+    // Set month to January and year to 2026
+    const yearInput = form.locator('[role="spinbutton"], input[type="number"]').first();
+    await yearInput.fill("2026");
+    const monthSelect = form.locator("button[role='combobox']").first();
+    await monthSelect.click();
+    await page.getByRole("option", { name: /January|Januar/i }).click();
+
+    // Submit
     const submitBtn = form.getByRole("button", { name: /Erstellen|Exportieren|Speichern/i });
     await expect(submitBtn).toBeVisible({ timeout: 5_000 });
     await submitBtn.click();

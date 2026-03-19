@@ -46,7 +46,18 @@ api_url = "http://127.0.0.1"
 enabled = false
 
 [storage]
-enabled = false
+enabled = true
+file_size_limit = "10MiB"
+
+[storage.buckets.documents]
+public = false
+file_size_limit = "10MiB"
+allowed_mime_types = ["application/pdf"]
+
+[storage.buckets.tenant-logos]
+public = true
+file_size_limit = "2MiB"
+allowed_mime_types = ["image/png", "image/jpeg", "image/svg+xml", "image/webp"]
 
 [auth]
 enabled = true

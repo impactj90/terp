@@ -345,6 +345,62 @@ describe("billing.documents.forward", () => {
     expect(result?.type).toBe("ORDER_CONFIRMATION")
   })
 
+  it("copies headerText and footerText to new document", async () => {
+    const printedOffer = {
+      ...mockDocument,
+      status: "PRINTED",
+      positions: [mockPosition],
+      headerText: "<p>Sehr geehrte Damen und Herren,</p>",
+      footerText: "<p>Mit freundlichen Grüßen</p>",
+    }
+    const prisma = {
+      billingDocument: {
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(printedOffer)
+          .mockResolvedValueOnce({ ...printedOffer, status: "FORWARDED" })
+          .mockResolvedValueOnce({
+            ...mockDocument,
+            type: "ORDER_CONFIRMATION",
+            parentDocumentId: DOC_ID,
+            headerText: printedOffer.headerText,
+            footerText: printedOffer.footerText,
+          }),
+        create: vi.fn().mockResolvedValue({
+          ...mockDocument,
+          id: "new-doc-id",
+          type: "ORDER_CONFIRMATION",
+          headerText: printedOffer.headerText,
+          footerText: printedOffer.footerText,
+        }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+      billingDocumentPosition: {
+        findMany: vi.fn().mockResolvedValue([mockPosition]),
+        create: vi.fn().mockResolvedValue({}),
+      },
+      numberSequence: {
+        upsert: vi
+          .fn()
+          .mockResolvedValue({ prefix: "AB-", nextValue: 2 }),
+      },
+    }
+    const caller = createCaller(createTestContext(prisma))
+    await caller.forward({
+      id: DOC_ID,
+      targetType: "ORDER_CONFIRMATION",
+    })
+    // Verify create was called with headerText/footerText
+    expect(prisma.billingDocument.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          headerText: "<p>Sehr geehrte Damen und Herren,</p>",
+          footerText: "<p>Mit freundlichen Grüßen</p>",
+        }),
+      })
+    )
+  })
+
   it("rejects invalid type transition", async () => {
     const printedInvoice = {
       ...mockDocument,
@@ -361,6 +417,109 @@ describe("billing.documents.forward", () => {
     await expect(
       caller.forward({ id: DOC_ID, targetType: "ORDER_CONFIRMATION" })
     ).rejects.toThrow()
+  })
+})
+
+describe("billing.documents.duplicate", () => {
+  it("copies headerText and footerText to duplicated document", async () => {
+    const docWithText = {
+      ...mockDocument,
+      headerText: "<p>Header text</p>",
+      footerText: "<p>Footer text</p>",
+      positions: [mockPosition],
+    }
+    const prisma = {
+      billingDocument: {
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(docWithText)
+          .mockResolvedValueOnce({
+            ...docWithText,
+            id: "new-dup-id",
+            number: "A-2",
+          }),
+        create: vi.fn().mockResolvedValue({
+          ...docWithText,
+          id: "new-dup-id",
+          number: "A-2",
+        }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+      billingDocumentPosition: {
+        findMany: vi.fn().mockResolvedValue([mockPosition]),
+        create: vi.fn().mockResolvedValue({}),
+      },
+      numberSequence: {
+        upsert: vi
+          .fn()
+          .mockResolvedValue({ prefix: "A-", nextValue: 3 }),
+      },
+    }
+    const caller = createCaller(createTestContext(prisma))
+    await caller.duplicate({ id: DOC_ID })
+    expect(prisma.billingDocument.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          headerText: "<p>Header text</p>",
+          footerText: "<p>Footer text</p>",
+        }),
+      })
+    )
+  })
+})
+
+describe("billing.documents.create with headerText/footerText", () => {
+  it("accepts headerText and footerText", async () => {
+    const docWithText = {
+      ...mockDocument,
+      headerText: "<p>Hello</p>",
+      footerText: "<p>Bye</p>",
+    }
+    const prisma = {
+      crmAddress: { findFirst: vi.fn().mockResolvedValue(mockAddress) },
+      billingDocument: {
+        create: vi.fn().mockResolvedValue(docWithText),
+      },
+      numberSequence: {
+        upsert: vi.fn().mockResolvedValue({ prefix: "A-", nextValue: 2 }),
+      },
+    }
+    const caller = createCaller(createTestContext(prisma))
+    const result = await caller.create({
+      type: "OFFER",
+      addressId: ADDRESS_ID,
+      headerText: "<p>Hello</p>",
+      footerText: "<p>Bye</p>",
+    })
+    expect(result.headerText).toBe("<p>Hello</p>")
+    expect(result.footerText).toBe("<p>Bye</p>")
+  })
+})
+
+describe("billing.documents.update with headerText/footerText", () => {
+  it("updates headerText and footerText", async () => {
+    const updatedDoc = {
+      ...mockDocument,
+      headerText: "<p>New header</p>",
+      footerText: "<p>New footer</p>",
+    }
+    const prisma = {
+      billingDocument: {
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(mockDocument)
+          .mockResolvedValueOnce(updatedDoc),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+    }
+    const caller = createCaller(createTestContext(prisma))
+    const result = await caller.update({
+      id: DOC_ID,
+      headerText: "<p>New header</p>",
+      footerText: "<p>New footer</p>",
+    })
+    expect(result?.headerText).toBe("<p>New header</p>")
+    expect(result?.footerText).toBe("<p>New footer</p>")
   })
 })
 

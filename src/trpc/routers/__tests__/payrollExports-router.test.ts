@@ -518,7 +518,7 @@ describe("payrollExports.generate", () => {
     const caller = createCaller(createViewContext(prisma))
     await expect(
       caller.generate({ year: 2025, month: 1 })
-    ).rejects.toThrow("Monthly values not closed for all employees")
+    ).rejects.toThrow("Monthly values not closed for: 001 John Doe")
   })
 
   it("rejects when employees have no monthly values", async () => {
@@ -535,7 +535,7 @@ describe("payrollExports.generate", () => {
     const caller = createCaller(createViewContext(prisma))
     await expect(
       caller.generate({ year: 2025, month: 1 })
-    ).rejects.toThrow("Monthly values not closed for all employees")
+    ).rejects.toThrow("Monthly values not closed for: 002 Jane Smith")
   })
 })
 

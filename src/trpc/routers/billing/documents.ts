@@ -65,6 +65,8 @@ const createInput = z.object({
   shippingCostVatRate: z.number().optional(),
   notes: z.string().optional(),
   internalNotes: z.string().optional(),
+  headerText: z.string().optional(),
+  footerText: z.string().optional(),
 })
 
 const updateInput = z.object({
@@ -86,6 +88,8 @@ const updateInput = z.object({
   shippingCostVatRate: z.number().nullable().optional(),
   notes: z.string().nullable().optional(),
   internalNotes: z.string().nullable().optional(),
+  headerText: z.string().nullable().optional(),
+  footerText: z.string().nullable().optional(),
 })
 
 const idInput = z.object({ id: z.string().uuid() })
@@ -301,6 +305,22 @@ export const billingDocumentsRouter = createTRPCRouter({
           input.id
         )
       } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  downloadPdf: billingProcedure
+    .use(requirePermission(BILLING_VIEW))
+    .input(idInput)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await billingPdfService.generateAndGetDownloadUrl(
+          ctx.prisma as unknown as PrismaClient,
+          ctx.tenantId!,
+          input.id
+        )
+      } catch (err) {
+        console.error("downloadPdf error:", err)
         handleServiceError(err)
       }
     }),

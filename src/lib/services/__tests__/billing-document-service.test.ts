@@ -137,6 +137,7 @@ function createMockPrisma(overrides: Record<string, unknown> = {}) {
       deleteMany: vi.fn(),
     },
     numberSequence: { upsert: vi.fn() },
+    billingDocumentTemplate: { findFirst: vi.fn().mockResolvedValue(null) },
     ...overrides,
   } as unknown as PrismaClient
 }

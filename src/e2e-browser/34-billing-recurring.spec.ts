@@ -233,22 +233,19 @@ test.describe.serial(
         timeout: 10_000,
       });
 
-      // Step 4: Positionen-Tab pruefen
-      await page.getByRole("tab", { name: /Positionen/ }).click();
-      await expect(
-        page.getByText("Monatliche Wartungspauschale"),
-      ).toBeVisible({ timeout: 5_000 });
+      // Step 4: Positions are embedded in A4 editor
+      const posArea = page.locator('[data-testid="position-table-area"]');
+      await expect(posArea).toBeVisible({ timeout: 5_000 });
+      await expect(posArea.locator('input[value="Monatliche Wartungspauschale"]')).toBeVisible({ timeout: 5_000 });
 
-      // Verify position details: 1 Stk, 500,00 EUR, 19% MwSt
-      const posPanel = page.locator('[role="tabpanel"]');
-      await expect(posPanel).toContainText("500,00");
-      await expect(posPanel).toContainText("19");
+      // Verify position details: 500,00 EUR
+      await expect(posArea).toContainText("500,00");
 
       // Step 5: ✅ Summen: Netto 500,00, MwSt 95,00, Brutto 595,00
-      // Switch to overview tab to check totals
-      await page.getByRole("tab", { name: /Übersicht|Uebersicht/ }).click();
-      await expect(page.getByText(/500,00/)).toBeVisible({ timeout: 5_000 });
-      await expect(page.getByText(/595,00/)).toBeVisible({ timeout: 5_000 });
+      // Totals are shown directly in the A4 editor
+      const totalsArea = page.locator('[data-testid="totals-area"]');
+      await expect(totalsArea.getByText(/500,00/)).toBeVisible({ timeout: 5_000 });
+      await expect(totalsArea.getByText(/595,00/)).toBeVisible({ timeout: 5_000 });
     });
 
     // ── Vorlage deaktivieren (13.13 section "Vorlage deaktivieren", Steps 1-4) ──
@@ -287,7 +284,7 @@ test.describe.serial(
       // Verify reactivation
       await page.getByRole("button", { name: "Aktivieren" }).click();
       await expect(
-        page.getByText("Aktiv", { exact: false }),
+        page.getByText("Aktiv", { exact: true }),
       ).toBeVisible({ timeout: 5_000 });
       await expect(
         page.getByRole("button", { name: "Rechnung generieren" }),

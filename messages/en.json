@@ -113,6 +113,8 @@
     "billingOpenItems": "Open Items",
     "billingPriceLists": "Price Lists",
     "billingRecurringInvoices": "Recurring Invoices",
+    "billingTemplates": "Templates",
+    "billingConfig": "Letterhead",
     "warehouseSection": "Warehouse",
     "warehouseOverview": "Warehouse Overview",
     "crmReports": "Reports"

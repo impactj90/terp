@@ -3293,3 +3293,93 @@ ON CONFLICT (employee_id, year) DO NOTHING;
 
 -- S3-12. Set department manager
 UPDATE departments SET manager_employee_id = '00000000-0000-0000-0000-00000000001b' WHERE id = '00000000-0000-0000-0000-000000000808';
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- B9. Billing Tenant Config (Briefpapier)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+INSERT INTO billing_tenant_configs (id, tenant_id, company_name, company_address, phone, email, website, bank_name, iban, bic, tax_id, commercial_register, managing_director, footer_html, created_at, updated_at)
+VALUES (
+  'b9000000-0000-4000-a000-000000000001', '10000000-0000-0000-0000-000000000001',
+  'Müller & Söhne Metallverarbeitung GmbH',
+  'Industriestraße 42' || E'\n' || '70565 Stuttgart',
+  '+49 711 12345-0',
+  'info@mueller-metall.de',
+  'https://mueller-metall.de',
+  'Sparkasse Stuttgart',
+  'DE89 6005 0101 0012 3456 78',
+  'SOLADEST600',
+  'DE123456789',
+  'HRB 750123 AG Stuttgart',
+  'Hans Müller, Thomas Müller',
+  NULL,
+  NOW(), NOW()
+) ON CONFLICT (tenant_id) DO NOTHING;
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- B10. Test-Angebot mit vielen Positionen (Seitenumbruch-Test)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+INSERT INTO billing_documents (id, tenant_id, number, type, status, address_id, contact_id, document_date, delivery_date, delivery_type, delivery_terms, payment_term_days, discount_percent, discount_days, subtotal_net, total_vat, total_gross, header_text, footer_text, notes, created_at, updated_at, created_by_id)
+VALUES (
+  'b1000000-0000-4000-a000-000000000099', '10000000-0000-0000-0000-000000000001',
+  'AG-99', 'OFFER', 'DRAFT',
+  'c1000000-0000-4000-a000-000000000001', 'c2000000-0000-4000-a000-000000000002',
+  '2026-03-19', '2026-04-30',
+  'Spedition', 'frei Haus', 30, 2.0, 10,
+  89540.00, 17019.60, 106559.60,
+  '<p>Sehr geehrte Damen und Herren,</p><p>vielen Dank für Ihre Anfrage. Gerne unterbreiten wir Ihnen folgendes Angebot für die <strong>Komplettausstattung Ihrer neuen Fertigungshalle</strong>:</p>',
+  '<p>Dieses Angebot ist gültig bis zum <strong>30.04.2026</strong>. Bei Rückfragen steht Ihnen Herr Müller unter Tel. 0711/12345-100 gerne zur Verfügung.</p><p>Mit freundlichen Grüßen</p>',
+  'Großprojekt Fertigungshalle — viele Positionen für Seitenumbruch-Test',
+  '2026-03-19 10:00:00+01', '2026-03-19 10:00:00+01', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO billing_document_positions (id, document_id, sort_order, type, article_number, description, quantity, unit, unit_price, total_price, vat_rate, created_at, updated_at)
+VALUES
+  -- Abschnitt 1: CNC-Maschinen
+  ('b2000000-0000-4000-a000-000000000101', 'b1000000-0000-4000-a000-000000000099',  1, 'TEXT',    NULL,     'Abschnitt 1: CNC-Maschinen und Zubehör', NULL, NULL, NULL, NULL, NULL, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000102', 'b1000000-0000-4000-a000-000000000099',  2, 'ARTICLE', 'CNC-01', 'CNC-Fräsmaschine 5-Achs Typ FX-5000 inkl. Steuerung', 2, 'Stk', 18500.00, 37000.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000103', 'b1000000-0000-4000-a000-000000000099',  3, 'ARTICLE', 'CNC-02', 'CNC-Drehmaschine Typ DL-3200 mit Gegenspindel', 1, 'Stk', 12800.00, 12800.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000104', 'b1000000-0000-4000-a000-000000000099',  4, 'ARTICLE', 'CNC-03', 'Werkzeugwechsler 24-fach für FX-5000', 2, 'Stk', 2400.00, 4800.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000105', 'b1000000-0000-4000-a000-000000000099',  5, 'ARTICLE', 'CNC-04', 'Kühlmittelsystem geschlossener Kreislauf', 3, 'Stk', 890.00, 2670.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000106', 'b1000000-0000-4000-a000-000000000099',  6, 'ARTICLE', 'CNC-05', 'Spannfutter-Set 3-Backen 160/200/250mm', 3, 'Set', 560.00, 1680.00, 19.0, NOW(), NOW()),
+
+  -- Abschnitt 2: Werkzeuge
+  ('b2000000-0000-4000-a000-000000000107', 'b1000000-0000-4000-a000-000000000099',  7, 'TEXT',    NULL,     'Abschnitt 2: Schneidwerkzeuge und Aufnahmen', NULL, NULL, NULL, NULL, NULL, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000108', 'b1000000-0000-4000-a000-000000000099',  8, 'ARTICLE', 'WZ-10',  'VHM-Schaftfräser Set 6/8/10/12/16mm (je 5 Stk)', 1, 'Set', 1250.00, 1250.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000109', 'b1000000-0000-4000-a000-000000000099',  9, 'ARTICLE', 'WZ-11',  'HSS-Spiralbohrer Satz 1-13mm (0,5mm Stufen)', 5, 'Set', 185.00, 925.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000110', 'b1000000-0000-4000-a000-000000000099', 10, 'ARTICLE', 'WZ-12',  'Wendeschneidplatten CNMG 120408 (100er Pack)', 3, 'Pck', 320.00, 960.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000111', 'b1000000-0000-4000-a000-000000000099', 11, 'ARTICLE', 'WZ-13',  'Werkzeugaufnahme SK40 ER32 Spannzangenfutter', 10, 'Stk', 145.00, 1450.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000112', 'b1000000-0000-4000-a000-000000000099', 12, 'ARTICLE', 'WZ-14',  'Gewindebohrer-Set M3-M12 (HSS-E, Maschinengewindebohrer)', 2, 'Set', 420.00, 840.00, 19.0, NOW(), NOW()),
+
+  -- Abschnitt 3: Messtechnik
+  ('b2000000-0000-4000-a000-000000000113', 'b1000000-0000-4000-a000-000000000099', 13, 'TEXT',    NULL,     'Abschnitt 3: Messtechnik und Qualitätssicherung', NULL, NULL, NULL, NULL, NULL, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000114', 'b1000000-0000-4000-a000-000000000099', 14, 'ARTICLE', 'MT-20',  '3D-Koordinatenmessmaschine Zeiss CONTURA 700x1000x600', 1, 'Stk', 8500.00, 8500.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000115', 'b1000000-0000-4000-a000-000000000099', 15, 'ARTICLE', 'MT-21',  'Digitaler Messschieber 0-300mm (Mitutoyo)', 10, 'Stk', 89.00, 890.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000116', 'b1000000-0000-4000-a000-000000000099', 16, 'ARTICLE', 'MT-22',  'Bügelmessschrauben-Set 0-150mm (6-teilig)', 5, 'Set', 340.00, 1700.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000117', 'b1000000-0000-4000-a000-000000000099', 17, 'ARTICLE', 'MT-23',  'Oberflächenrauheitsmessgerät SJ-210', 2, 'Stk', 1650.00, 3300.00, 19.0, NOW(), NOW()),
+
+  -- Abschnitt 4: Betriebsausstattung
+  ('b2000000-0000-4000-a000-000000000118', 'b1000000-0000-4000-a000-000000000099', 18, 'TEXT',    NULL,     'Abschnitt 4: Betriebsausstattung und Infrastruktur', NULL, NULL, NULL, NULL, NULL, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000119', 'b1000000-0000-4000-a000-000000000099', 19, 'ARTICLE', 'BA-30',  'Schwerlast-Werkbank 2000x800mm mit Schraubstock', 6, 'Stk', 890.00, 5340.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000120', 'b1000000-0000-4000-a000-000000000099', 20, 'ARTICLE', 'BA-31',  'Werkzeugschrank mit Schubladeneinsätzen (7 Schubladen)', 6, 'Stk', 650.00, 3900.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000121', 'b1000000-0000-4000-a000-000000000099', 21, 'ARTICLE', 'BA-32',  'Hallenkran Einträger 5t Spannweite 12m', 1, 'Stk', 0.00, 0.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000122', 'b1000000-0000-4000-a000-000000000099', 22, 'FREE',   NULL,     'Montage Hallenkran inkl. Schienensystem und Abnahme', 1, 'Psch', 4500.00, 4500.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000123', 'b1000000-0000-4000-a000-000000000099', 23, 'ARTICLE', 'BA-33',  'Druckluftanlage Kompressor 7,5kW mit 500l Kessel', 1, 'Stk', 3200.00, 3200.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000124', 'b1000000-0000-4000-a000-000000000099', 24, 'ARTICLE', 'BA-34',  'Druckluft-Verteilernetz DN25 (ca. 80 lfm inkl. Anschlüsse)', 80, 'm', 45.00, 3600.00, 19.0, NOW(), NOW()),
+
+  -- Abschnitt 5: Dienstleistungen
+  ('b2000000-0000-4000-a000-000000000125', 'b1000000-0000-4000-a000-000000000099', 25, 'TEXT',    NULL,     'Abschnitt 5: Dienstleistungen', NULL, NULL, NULL, NULL, NULL, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000126', 'b1000000-0000-4000-a000-000000000099', 26, 'FREE',   NULL,     'Transport und Anlieferung sämtlicher Maschinen frei Werk', 1, 'Psch', 3800.00, 3800.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000127', 'b1000000-0000-4000-a000-000000000099', 27, 'FREE',   NULL,     'Aufstellung, Nivellierung und Inbetriebnahme CNC-Maschinen', 5, 'Tag', 1200.00, 6000.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000128', 'b1000000-0000-4000-a000-000000000099', 28, 'FREE',   NULL,     'Schulung Bedienpersonal (2 Gruppen à 3 Tage)', 6, 'Tag', 950.00, 5700.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000129', 'b1000000-0000-4000-a000-000000000099', 29, 'FREE',   NULL,     'Erstinspektion und Kalibrierung Messtechnik', 2, 'Tag', 850.00, 1700.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000130', 'b1000000-0000-4000-a000-000000000099', 30, 'TEXT',   NULL,     'Alle Preise verstehen sich netto zzgl. gesetzlicher MwSt. Lieferzeit ca. 8-10 Wochen ab Auftragseingang.', NULL, NULL, NULL, NULL, NULL, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- S4. Storage buckets for billing documents and tenant logos
+INSERT INTO storage.buckets (id, name, public)
+VALUES
+  ('documents', 'documents', false),
+  ('tenant-logos', 'tenant-logos', true)
+ON CONFLICT (id) DO NOTHING;

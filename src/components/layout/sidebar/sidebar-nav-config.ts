@@ -43,6 +43,8 @@ import {
   Warehouse,
   Wrench,
   Tag,
+  FileStack,
+  Stamp,
 } from 'lucide-react'
 
 /**
@@ -347,6 +349,13 @@ export const navConfig: NavSection[] = [
         module: 'billing',
         permissions: ['billing_recurring.view'],
       },
+      {
+        titleKey: 'billingTemplates',
+        href: '/orders/templates',
+        icon: FileStack,
+        module: 'billing',
+        permissions: ['billing_documents.view'],
+      },
     ],
   },
   {
@@ -441,6 +450,13 @@ export const navConfig: NavSection[] = [
         href: '/admin/terminal-bookings',
         icon: Terminal,
         permissions: ['terminal_bookings.manage'],
+      },
+      {
+        titleKey: 'billingConfig',
+        href: '/admin/billing-config',
+        icon: Stamp,
+        module: 'billing',
+        permissions: ['billing_documents.edit'],
       },
     ],
   },

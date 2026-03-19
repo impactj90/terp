@@ -107,6 +107,7 @@ function createMockPrisma(overrides: Record<string, unknown> = {}) {
       findMany: vi.fn(),
     },
     numberSequence: { upsert: vi.fn() },
+    billingDocumentTemplate: { findFirst: vi.fn().mockResolvedValue(null) },
     order: {
       findFirst: vi.fn(),
       create: vi.fn(),

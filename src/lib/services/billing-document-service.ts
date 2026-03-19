@@ -2,6 +2,8 @@ import type { PrismaClient, BillingDocumentType, BillingDocumentStatus } from "@
 import * as repo from "./billing-document-repository"
 import * as numberSeqService from "./number-sequence-service"
 import * as orderService from "./order-service"
+import * as templateRepo from "./billing-document-template-repository"
+import * as pdfService from "./billing-document-pdf-service"
 
 // --- Error Classes ---
 
@@ -173,6 +175,8 @@ export async function create(
     shippingCostVatRate?: number
     notes?: string
     internalNotes?: string
+    headerText?: string
+    footerText?: string
   },
   createdById: string
 ) {
@@ -223,6 +227,17 @@ export async function create(
   const discountPercent = input.discountPercent ?? address.discountPercent ?? null
   const discountDays = input.discountDays ?? address.discountDays ?? null
 
+  // Auto-apply default template if no text provided
+  let headerText = input.headerText || null
+  let footerText = input.footerText || null
+  if (!headerText && !footerText) {
+    const defaultTemplate = await templateRepo.findDefault(prisma, tenantId, input.type)
+    if (defaultTemplate) {
+      headerText = defaultTemplate.headerText
+      footerText = defaultTemplate.footerText
+    }
+  }
+
   return repo.create(prisma, {
     tenantId,
     number,
@@ -247,6 +262,8 @@ export async function create(
     shippingCostVatRate: input.shippingCostVatRate ?? null,
     notes: input.notes || null,
     internalNotes: input.internalNotes || null,
+    headerText,
+    footerText,
     createdById,
   })
 }
@@ -273,6 +290,8 @@ export async function update(
     shippingCostVatRate?: number | null
     notes?: string | null
     internalNotes?: string | null
+    headerText?: string | null
+    footerText?: string | null
   }
 ) {
   const existing = await repo.findById(prisma, tenantId, input.id)
@@ -289,6 +308,7 @@ export async function update(
     "discountPercent2", "discountDays2",
     "shippingCostNet", "shippingCostVatRate",
     "notes", "internalNotes",
+    "headerText", "footerText",
   ] as const
 
   for (const field of fields) {
@@ -373,7 +393,17 @@ export async function finalize(
     updateData.orderId = orderId
   }
 
-  return repo.update(prisma, tenantId, id, updateData)
+  const result = await repo.update(prisma, tenantId, id, updateData)
+
+  // Generate PDF on finalization
+  try {
+    await pdfService.generateAndStorePdf(prisma, tenantId, id)
+  } catch {
+    // PDF generation failure should not block finalization
+    console.error(`PDF generation failed for document ${id}`)
+  }
+
+  return result
 }
 
 export async function forward(
@@ -431,6 +461,8 @@ export async function forward(
     shippingCostVatRate: existing.shippingCostVatRate,
     notes: existing.notes,
     internalNotes: existing.internalNotes,
+    headerText: existing.headerText,
+    footerText: existing.footerText,
     createdById,
   })
 
@@ -533,6 +565,8 @@ export async function duplicate(
     shippingCostVatRate: existing.shippingCostVatRate,
     notes: existing.notes,
     internalNotes: existing.internalNotes,
+    headerText: existing.headerText,
+    footerText: existing.footerText,
     createdById,
   })
 

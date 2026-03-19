@@ -274,7 +274,7 @@ function mapMonthlyValueToOutput(
     employeeId: record.employeeId,
     year: record.year,
     month: record.month,
-    status: isClosed ? "closed" : "calculated",
+    status: isClosed ? "closed" : (record.id as string).startsWith("missing-") ? "open" : "calculated",
     totalGrossTime: record.totalGrossTime,
     totalNetTime: record.totalNetTime,
     totalTargetTime: record.totalTargetTime,

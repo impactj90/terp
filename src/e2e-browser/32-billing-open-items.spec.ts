@@ -74,14 +74,11 @@ test.describe.serial(
         timeout: 10_000,
       });
 
-      // 6. Add position: switch to Positionen tab
-      await page.getByRole("tab", { name: /Positionen/i }).click();
-
-      // Click "Position hinzufügen" (adds a default Freitext row)
+      // 6. Positions are embedded directly in A4 editor — no tab switch needed
       await page.getByRole("button", { name: /Position hinzufügen/i }).click();
 
       // Wait for the row to appear, then edit inline
-      const posRow = page.locator("table tbody tr").first();
+      const posRow = page.locator('[data-testid="position-table-area"] table tbody tr').first();
       await posRow.waitFor({ state: "visible", timeout: 10_000 });
 
       // Fill description

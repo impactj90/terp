@@ -150,6 +150,11 @@ export function useDuplicateBillingDocument() {
   })
 }
 
+export function useDownloadBillingDocumentPdf() {
+  const trpc = useTRPC()
+  return useMutation(trpc.billing.documents.downloadPdf.mutationOptions())
+}
+
 // ==================== Position Hooks ====================
 
 export function useBillingPositions(documentId: string, enabled = true) {

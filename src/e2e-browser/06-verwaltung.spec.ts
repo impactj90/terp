@@ -388,7 +388,7 @@ test.describe.serial("UC-044: Reopen Month", () => {
 
     const dialog = page.locator('[role="dialog"], [role="alertdialog"]');
     await expect(dialog).toBeVisible({ timeout: 5_000 });
-    await dialog.getByRole("button", { name: /Bestätigen|Schließen/i }).last().click();
+    await dialog.getByRole("button", { name: /Bestätigen|Schließen|Fertig/i }).last().click();
     await expect(dialog).not.toBeVisible({ timeout: 10_000 });
 
     await page.waitForLoadState("networkidle");

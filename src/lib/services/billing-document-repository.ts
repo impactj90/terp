@@ -107,6 +107,8 @@ export async function create(
     shippingCostVatRate?: number | null
     notes?: string | null
     internalNotes?: string | null
+    headerText?: string | null
+    footerText?: string | null
     createdById?: string | null
   }
 ) {

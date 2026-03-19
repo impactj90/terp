@@ -354,8 +354,14 @@ export async function generate(
   })
 
   if (unclosedEmployees.length > 0) {
+    const names = unclosedEmployees
+      .slice(0, 10)
+      .map((e) => `${e.personnelNumber} ${e.firstName} ${e.lastName}`)
+    const suffix = unclosedEmployees.length > 10
+      ? ` (and ${unclosedEmployees.length - 10} more)`
+      : ""
     throw new PayrollExportConflictError(
-      "Monthly values not closed for all employees"
+      `Monthly values not closed for: ${names.join(", ")}${suffix}`
     )
   }
 
