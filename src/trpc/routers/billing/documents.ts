@@ -6,6 +6,7 @@ import { requireModule } from "@/lib/modules"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import * as billingDocService from "@/lib/services/billing-document-service"
 import * as billingPdfService from "@/lib/services/billing-document-pdf-service"
+import * as eInvoiceService from "@/lib/services/billing-document-einvoice-service"
 import type { PrismaClient } from "@/generated/prisma/client"
 
 // --- Permission Constants ---
@@ -322,6 +323,21 @@ export const billingDocumentsRouter = createTRPCRouter({
         )
       } catch (err) {
         console.error("downloadPdf error:", err)
+        handleServiceError(err)
+      }
+    }),
+
+  downloadXml: billingProcedure
+    .use(requirePermission(BILLING_VIEW))
+    .input(idInput)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await eInvoiceService.getSignedXmlDownloadUrl(
+          ctx.prisma as unknown as PrismaClient,
+          ctx.tenantId!,
+          input.id
+        )
+      } catch (err) {
         handleServiceError(err)
       }
     }),

@@ -72,3 +72,8 @@ tsconfig.tsbuildinfo
 
 *storybook.log
 storybook-static
+
+# KoSIT Validator (local E-Invoice validation)
+tools/kosit/*.jar
+tools/kosit/*.zip
+tools/kosit/xrechnung/

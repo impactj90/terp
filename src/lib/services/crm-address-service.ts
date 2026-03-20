@@ -83,6 +83,7 @@ export async function create(
     website?: string
     taxNumber?: string
     vatId?: string
+    leitwegId?: string
     matchCode?: string
     notes?: string
     paymentTermDays?: number
@@ -122,6 +123,7 @@ export async function create(
     website: input.website || null,
     taxNumber: input.taxNumber || null,
     vatId: input.vatId || null,
+    leitwegId: input.leitwegId || null,
     matchCode,
     notes: input.notes || null,
     paymentTermDays: input.paymentTermDays ?? null,
@@ -150,6 +152,7 @@ export async function update(
     website?: string | null
     taxNumber?: string | null
     vatId?: string | null
+    leitwegId?: string | null
     matchCode?: string | null
     notes?: string | null
     paymentTermDays?: number | null
@@ -177,7 +180,7 @@ export async function update(
   // Pass through all optional fields
   const directFields = [
     "type", "street", "zip", "city", "country", "phone", "fax",
-    "email", "website", "taxNumber", "vatId", "matchCode", "notes",
+    "email", "website", "taxNumber", "vatId", "leitwegId", "matchCode", "notes",
     "paymentTermDays", "discountPercent", "discountDays", "discountGroup",
     "priceListId",
   ] as const

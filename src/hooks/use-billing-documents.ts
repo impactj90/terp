@@ -155,6 +155,11 @@ export function useDownloadBillingDocumentPdf() {
   return useMutation(trpc.billing.documents.downloadPdf.mutationOptions())
 }
 
+export function useDownloadBillingDocumentXml() {
+  const trpc = useTRPC()
+  return useMutation(trpc.billing.documents.downloadXml.mutationOptions())
+}
+
 // ==================== Position Hooks ====================
 
 export function useBillingPositions(documentId: string, enabled = true) {

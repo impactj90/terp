@@ -4,6 +4,8 @@ import * as numberSeqService from "./number-sequence-service"
 import * as orderService from "./order-service"
 import * as templateRepo from "./billing-document-template-repository"
 import * as pdfService from "./billing-document-pdf-service"
+import * as eInvoiceService from "./billing-document-einvoice-service"
+import * as billingTenantConfigRepo from "./billing-tenant-config-repository"
 
 // --- Error Classes ---
 
@@ -403,6 +405,18 @@ export async function finalize(
   } catch {
     // PDF generation failure should not block finalization
     console.error(`PDF generation failed for document ${id}`)
+  }
+
+  // Generate E-Invoice XML on finalization (after PDF)
+  if (existing.type === "INVOICE" || existing.type === "CREDIT_NOTE") {
+    const config = await billingTenantConfigRepo.findByTenantId(prisma, tenantId)
+    if (config?.eInvoiceEnabled) {
+      try {
+        await eInvoiceService.generateAndStoreEInvoice(prisma, tenantId, id)
+      } catch (err) {
+        console.error(`E-Invoice generation failed for document ${id}`, err)
+      }
+    }
   }
 
   return result

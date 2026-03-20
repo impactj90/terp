@@ -736,6 +736,7 @@ export {
   useCancelBillingDocument,
   useDuplicateBillingDocument,
   useDownloadBillingDocumentPdf,
+  useDownloadBillingDocumentXml,
   useBillingPositions,
   useAddBillingPosition,
   useUpdateBillingPosition,

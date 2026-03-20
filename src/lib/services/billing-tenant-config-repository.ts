@@ -26,6 +26,13 @@ export async function upsert(
     phone?: string | null
     email?: string | null
     website?: string | null
+    taxNumber?: string | null
+    leitwegId?: string | null
+    eInvoiceEnabled?: boolean
+    companyStreet?: string | null
+    companyZip?: string | null
+    companyCity?: string | null
+    companyCountry?: string | null
   }
 ) {
   return prisma.billingTenantConfig.upsert({

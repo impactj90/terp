@@ -86,6 +86,7 @@ export async function create(
     website?: string | null
     taxNumber?: string | null
     vatId?: string | null
+    leitwegId?: string | null
     matchCode?: string | null
     notes?: string | null
     paymentTermDays?: number | null

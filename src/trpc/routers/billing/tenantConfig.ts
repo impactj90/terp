@@ -29,6 +29,13 @@ const upsertInput = z.object({
   phone: z.string().max(50).nullable().optional(),
   email: z.string().max(255).nullable().optional(),
   website: z.string().max(255).nullable().optional(),
+  taxNumber: z.string().max(50).nullable().optional(),
+  leitwegId: z.string().max(50).nullable().optional(),
+  eInvoiceEnabled: z.boolean().optional(),
+  companyStreet: z.string().max(255).nullable().optional(),
+  companyZip: z.string().max(20).nullable().optional(),
+  companyCity: z.string().max(100).nullable().optional(),
+  companyCountry: z.string().max(10).nullable().optional(),
 })
 
 // --- Router ---

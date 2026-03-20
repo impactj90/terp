@@ -39,6 +39,7 @@ interface FormState {
   website: string
   taxNumber: string
   vatId: string
+  leitwegId: string
   paymentTermDays: string
   discountPercent: string
   discountDays: string
@@ -61,6 +62,7 @@ const INITIAL_STATE: FormState = {
   website: '',
   taxNumber: '',
   vatId: '',
+  leitwegId: '',
   paymentTermDays: '',
   discountPercent: '',
   discountDays: '',
@@ -87,6 +89,7 @@ interface AddressFormSheetProps {
     website: string | null
     taxNumber: string | null
     vatId: string | null
+    leitwegId: string | null
     paymentTermDays: number | null
     discountPercent: number | null
     discountDays: number | null
@@ -127,6 +130,7 @@ export function AddressFormSheet({ open, onOpenChange, address, onSuccess }: Add
           website: address.website || '',
           taxNumber: address.taxNumber || '',
           vatId: address.vatId || '',
+          leitwegId: address.leitwegId || '',
           paymentTermDays: address.paymentTermDays?.toString() || '',
           discountPercent: address.discountPercent?.toString() || '',
           discountDays: address.discountDays?.toString() || '',
@@ -169,6 +173,7 @@ export function AddressFormSheet({ open, onOpenChange, address, onSuccess }: Add
         website: form.website.trim() || undefined,
         taxNumber: form.taxNumber.trim() || undefined,
         vatId: form.vatId.trim() || undefined,
+        leitwegId: form.leitwegId.trim() || undefined,
         paymentTermDays: form.paymentTermDays ? parseInt(form.paymentTermDays, 10) : undefined,
         discountPercent: form.discountPercent ? parseFloat(form.discountPercent) : undefined,
         discountDays: form.discountDays ? parseInt(form.discountDays, 10) : undefined,
@@ -362,6 +367,17 @@ export function AddressFormSheet({ open, onOpenChange, address, onSuccess }: Add
                     disabled={isSubmitting}
                   />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="leitwegId">Leitweg-ID</Label>
+                <Input
+                  id="leitwegId"
+                  value={form.leitwegId}
+                  onChange={(e) => updateField('leitwegId', e.target.value)}
+                  disabled={isSubmitting}
+                  placeholder="991-12345-67"
+                />
+                <p className="text-xs text-muted-foreground">Für XRechnung an öffentliche Auftraggeber</p>
               </div>
             </div>
 

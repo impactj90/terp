@@ -23,6 +23,8 @@ interface DocumentFinalizeDialogProps {
   documentId: string
   documentNumber: string
   documentType: string
+  eInvoiceEnabled?: boolean
+  eInvoiceMissingFields?: string[]
 }
 
 export function DocumentFinalizeDialog({
@@ -31,6 +33,8 @@ export function DocumentFinalizeDialog({
   documentId,
   documentNumber,
   documentType,
+  eInvoiceEnabled,
+  eInvoiceMissingFields,
 }: DocumentFinalizeDialogProps) {
   const finalizeMutation = useFinalizeBillingDocument()
   const isOrderConfirmation = documentType === 'ORDER_CONFIRMATION'
@@ -80,6 +84,21 @@ export function DocumentFinalizeDialog({
             Nach dem Abschließen ist der Beleg unveränderbar. Positionen und Kopfdaten können nicht mehr bearbeitet werden.
           </AlertDescription>
         </Alert>
+
+        {eInvoiceEnabled && (documentType === 'INVOICE' || documentType === 'CREDIT_NOTE') && eInvoiceMissingFields && eInvoiceMissingFields.length > 0 && (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              <p className="font-medium">E-Rechnung: Pflichtfelder fehlen</p>
+              <p className="text-sm mt-1">
+                {eInvoiceMissingFields.join(', ')}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Die E-Rechnung (XML) wird nicht erstellt. Der Beleg wird trotzdem abgeschlossen und das PDF generiert.
+              </p>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {isOrderConfirmation && (
           <div className="space-y-4 border rounded-lg p-4 bg-muted/50">

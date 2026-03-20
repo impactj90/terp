@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2 } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
 import { RichTextEditor } from '@/components/ui/rich-text-editor'
 import { useBillingTenantConfig, useUpsertBillingTenantConfig } from '@/hooks'
 import { toast } from 'sonner'
@@ -27,6 +28,13 @@ export function TenantConfigForm() {
   const [commercialRegister, setCommercialRegister] = React.useState('')
   const [managingDirector, setManagingDirector] = React.useState('')
   const [footerHtml, setFooterHtml] = React.useState('')
+  const [taxNumber, setTaxNumber] = React.useState('')
+  const [leitwegId, setLeitwegId] = React.useState('')
+  const [eInvoiceEnabled, setEInvoiceEnabled] = React.useState(false)
+  const [companyStreet, setCompanyStreet] = React.useState('')
+  const [companyZip, setCompanyZip] = React.useState('')
+  const [companyCity, setCompanyCity] = React.useState('')
+  const [companyCountry, setCompanyCountry] = React.useState('DE')
 
   // Load existing config
   React.useEffect(() => {
@@ -43,6 +51,13 @@ export function TenantConfigForm() {
       setCommercialRegister(config.commercialRegister ?? '')
       setManagingDirector(config.managingDirector ?? '')
       setFooterHtml(config.footerHtml ?? '')
+      setTaxNumber(config.taxNumber ?? '')
+      setLeitwegId(config.leitwegId ?? '')
+      setEInvoiceEnabled(config.eInvoiceEnabled ?? false)
+      setCompanyStreet(config.companyStreet ?? '')
+      setCompanyZip(config.companyZip ?? '')
+      setCompanyCity(config.companyCity ?? '')
+      setCompanyCountry(config.companyCountry ?? 'DE')
     }
   }, [config])
 
@@ -62,6 +77,13 @@ export function TenantConfigForm() {
         commercialRegister: commercialRegister || null,
         managingDirector: managingDirector || null,
         footerHtml: footerHtml || null,
+        taxNumber: taxNumber || null,
+        leitwegId: leitwegId || null,
+        eInvoiceEnabled,
+        companyStreet: companyStreet || null,
+        companyZip: companyZip || null,
+        companyCity: companyCity || null,
+        companyCountry: companyCountry || null,
       })
       toast.success('Briefpapier gespeichert')
     } catch {
@@ -150,6 +172,61 @@ export function TenantConfigForm() {
               <div className="space-y-2">
                 <Label htmlFor="managing-director">Geschäftsführer</Label>
                 <Input id="managing-director" value={managingDirector} onChange={(e) => setManagingDirector(e.target.value)} placeholder="Max Mustermann" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* E-Rechnung */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">E-Rechnung</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-3">
+              <Switch
+                id="e-invoice-enabled"
+                checked={eInvoiceEnabled}
+                onCheckedChange={setEInvoiceEnabled}
+              />
+              <Label htmlFor="e-invoice-enabled">E-Rechnung aktivieren (ZUGFeRD / XRechnung)</Label>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Wenn aktiviert, wird bei Rechnungen und Gutschriften automatisch eine EN 16931 konforme E-Rechnung (CII-XML) erstellt und in das PDF eingebettet.
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="tax-number">Steuernummer</Label>
+                <Input id="tax-number" value={taxNumber} onChange={(e) => setTaxNumber(e.target.value)} placeholder="123/456/78901" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="leitweg-id">Leitweg-ID</Label>
+                <Input id="leitweg-id" value={leitwegId} onChange={(e) => setLeitwegId(e.target.value)} placeholder="991-12345-67" />
+                <p className="text-xs text-muted-foreground">Für XRechnung an öffentliche Auftraggeber</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Strukturierte Firmenadresse (für E-Rechnung)</Label>
+              <p className="text-xs text-muted-foreground">
+                Diese Felder werden für das maschinenlesbare XML verwendet. Die Freitext-Adresse oben bleibt für den PDF-Briefkopf.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="company-street">Straße</Label>
+              <Input id="company-street" value={companyStreet} onChange={(e) => setCompanyStreet(e.target.value)} placeholder="Musterstraße 1" />
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="company-zip">PLZ</Label>
+                <Input id="company-zip" value={companyZip} onChange={(e) => setCompanyZip(e.target.value)} placeholder="12345" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="company-city">Ort</Label>
+                <Input id="company-city" value={companyCity} onChange={(e) => setCompanyCity(e.target.value)} placeholder="Musterstadt" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="company-country">Land</Label>
+                <Input id="company-country" value={companyCountry} onChange={(e) => setCompanyCountry(e.target.value)} placeholder="DE" />
               </div>
             </div>
           </CardContent>

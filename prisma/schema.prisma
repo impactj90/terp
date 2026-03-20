@@ -285,6 +285,7 @@ model CrmAddress {
   website         String?        @db.VarChar(255)
   taxNumber       String?        @map("tax_number") @db.VarChar(50)
   vatId           String?        @map("vat_id") @db.VarChar(50)
+  leitwegId       String?        @map("leitweg_id") @db.VarChar(50)
   matchCode       String?        @map("match_code") @db.VarChar(100)
   notes           String?        @db.Text
   paymentTermDays Int?           @map("payment_term_days")
@@ -665,6 +666,7 @@ model BillingDocument {
   headerText          String?                @map("header_text")
   footerText          String?                @map("footer_text")
   pdfUrl              String?                @map("pdf_url")
+  eInvoiceXmlUrl      String?                @map("e_invoice_xml_url")
 
   // Print state
   printedAt           DateTime?              @map("printed_at") @db.Timestamptz(6)
@@ -781,6 +783,13 @@ model BillingTenantConfig {
   phone              String?  @db.VarChar(50)
   email              String?  @db.VarChar(255)
   website            String?  @db.VarChar(255)
+  taxNumber          String?  @map("tax_number") @db.VarChar(50)
+  leitwegId          String?  @map("leitweg_id") @db.VarChar(50)
+  eInvoiceEnabled    Boolean  @default(false) @map("e_invoice_enabled")
+  companyStreet      String?  @map("company_street") @db.VarChar(255)
+  companyZip         String?  @map("company_zip") @db.VarChar(20)
+  companyCity        String?  @map("company_city") @db.VarChar(100)
+  companyCountry     String?  @default("DE") @map("company_country") @db.VarChar(10)
   createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 

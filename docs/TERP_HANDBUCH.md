@@ -57,6 +57,7 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [13.11 Offene Posten / Zahlungen](#1311-offene-posten--zahlungen)
     - [13.12 Preislisten](#1312-preislisten)
     - [13.13 Wiederkehrende Rechnungen](#1313-wiederkehrende-rechnungen)
+    - [13.14 E-Rechnung (ZUGFeRD / XRechnung)](#1314-e-rechnung-zugferd--xrechnung)
 14. [Glossar](#14-glossar)
 
 ---
@@ -4168,7 +4169,7 @@ Tabelle mit Spalten:
 5. Abschnitt **Kommunikation** ausfüllen:
    - **Telefon**, **Fax**, **E-Mail**, **Webseite**
 6. Abschnitt **Steuerinformationen** ausfüllen:
-   - **Steuernummer**, **USt-IdNr.**
+   - **Steuernummer**, **USt-IdNr.**, **Leitweg-ID** (optional, fuer E-Rechnung an oeffentliche Auftraggeber)
 7. Abschnitt **Zahlungsbedingungen** ausfüllen:
    - **Zahlungsziel (Tage)**, **Skonto (%)**, **Skontotage**, **Rabattgruppe**
 8. Abschnitt **Notizen** (optionales Freitext-Feld)
@@ -4214,7 +4215,7 @@ Die Detailseite hat **7 Tabs**:
 |-------|--------|
 | **Anschrift** | Straße, PLZ, Ort, Land |
 | **Kommunikation** | Telefon, Fax, E-Mail, Webseite |
-| **Steuerinformationen** | Steuernummer, USt-IdNr., Matchcode |
+| **Steuerinformationen** | Steuernummer, USt-IdNr., Leitweg-ID (fuer E-Rechnung an Behoerden), Matchcode |
 | **Zahlungsbedingungen** | Zahlungsziel, Skonto, Skontotage, Rabattgruppe |
 | **Notizen** | Freitext (volle Breite, nur wenn vorhanden) |
 
@@ -5131,9 +5132,15 @@ Löschsymbol am Zeilenende -- Position wird entfernt und Summen neu berechnet.
 2. Warnung: "Nach dem Abschließen ist der Beleg unveränderbar."
 3. Status wechselt von **Entwurf** zu **Abgeschlossen**
 4. Beleg und alle Positionen sind nun schreibgeschützt
-5. Erlaubte Aktionen nach dem Abschließen: **Fortführen**, **Stornieren**, **Duplizieren**
+5. PDF wird automatisch generiert
+6. Bei **Rechnungen** und **Gutschriften**: Wenn E-Rechnung aktiviert ist, wird automatisch ein EN 16931 konformes CII-XML generiert und in die PDF eingebettet (ZUGFeRD PDF/A-3). Siehe [13.14 E-Rechnung](#1314-e-rechnung-zugferd--xrechnung).
+7. Erlaubte Aktionen nach dem Abschließen: **Fortführen**, **Stornieren**, **Duplizieren**, **PDF herunterladen**, **E-Rechnung XML herunterladen** (nur Rechnungen/Gutschriften)
 
 > Berechtigung: `billing_documents.finalize` erforderlich
+
+##### E-Rechnung Warnung im Abschließen-Dialog
+
+Wenn E-Rechnung aktiviert ist und Pflichtfelder fehlen (z. B. strukturierte Firmenadresse, USt-IdNr.), erscheint eine gelbe Warnung im Dialog. Der Beleg wird trotzdem abgeschlossen und die PDF generiert -- nur das XML wird nicht erstellt. Die fehlenden Felder werden in der Warnung aufgelistet.
 
 ##### Sonderfall: Auftragsbestätigung abschließen → Auftrag erstellen
 
@@ -6129,6 +6136,89 @@ Die wiederkehrende Rechnung ist vollstaendig eingerichtet:
 - Bei Vertragsende setzen Sie ein Enddatum -- die Vorlage deaktiviert sich danach automatisch
 
 **Tipp:** Sie koennen die Vorlage jederzeit bearbeiten, z. B. um den Preis anzupassen. Aenderungen gelten nur fuer zukuenftige Rechnungen -- bereits erzeugte Belege bleiben unveraendert.
+
+### 13.14 E-Rechnung (ZUGFeRD / XRechnung)
+
+**Was ist es?** Ab 01.01.2027 ist die E-Rechnung fuer alle B2B-Rechnungen in Deutschland Pflicht (Wachstumschancengesetz). Terp unterstuetzt das Format **ZUGFeRD 2.x** (Profil EN 16931 / COMFORT): Bei Rechnungen und Gutschriften wird automatisch ein maschinenlesbares CII-XML generiert und in die PDF eingebettet. Das Ergebnis ist eine PDF/A-3 Datei, die sowohl fuer Menschen lesbar (PDF) als auch fuer Buchhaltungssoftware maschinenlesbar (XML) ist.
+
+**Wozu dient es?** Empfaenger koennen die Rechnung wie gewohnt als PDF oeffnen und lesen. Gleichzeitig kann deren Buchhaltungssoftware die strukturierten Rechnungsdaten automatisch aus der PDF extrahieren -- ohne manuelles Abtippen.
+
+#### E-Rechnung aktivieren
+
+📍 Auftraege > Belege > **Briefpapier / Billing-Konfiguration** (ueber das Zahnrad-Symbol oder Einstellungen)
+
+1. Zum Abschnitt **"E-Rechnung"** scrollen
+2. **"E-Rechnung aktivieren (ZUGFeRD / XRechnung)"** einschalten
+3. **Steuernummer** eintragen (optional, falls keine USt-IdNr. vorhanden)
+4. **Leitweg-ID** eintragen (nur fuer XRechnung an oeffentliche Auftraggeber)
+5. **Strukturierte Firmenadresse** ausfuellen:
+   - **Strasse** (z. B. "Industriestrasse 42")
+   - **PLZ** (z. B. "70565")
+   - **Ort** (z. B. "Stuttgart")
+   - **Land** (Standard: "DE")
+6. **Speichern**
+
+> Diese strukturierte Adresse wird fuer das maschinenlesbare XML verwendet. Die Freitext-Adresse im Abschnitt "Unternehmen" bleibt fuer den PDF-Briefkopf erhalten.
+
+##### Pflichtfelder fuer die E-Rechnung
+
+| Feld | Wo gepflegt | Hinweis |
+|------|-------------|---------|
+| Firmenname | Billing-Konfiguration > Unternehmen | |
+| USt-IdNr. **oder** Steuernummer | Billing-Konfiguration > Rechtliches / E-Rechnung | Mindestens eins von beiden |
+| Strasse, PLZ, Ort | Billing-Konfiguration > E-Rechnung | Strukturierte Adresse |
+| Kundenname | CRM > Adressen > Firma | |
+| Kundenadresse (Strasse, PLZ, Ort, Land) | CRM > Adressen > Adresse | |
+| Mindestens eine Artikelposition | Belegdetail > Positionen | |
+
+Fehlen Pflichtfelder, erscheint beim Abschliessen eine Warnung. Der Beleg wird trotzdem abgeschlossen -- nur das XML wird nicht erstellt.
+
+#### Leitweg-ID (fuer oeffentliche Auftraggeber)
+
+Wenn ein Kunde eine **Leitweg-ID** hat (fuer B2G / XRechnung an Behoerden), kann diese auf der CRM-Adresse hinterlegt werden:
+
+📍 CRM > Adressen > Adresse bearbeiten > Abschnitt "Steuerinformationen" > **Leitweg-ID**
+
+Die Leitweg-ID wird als BT-10 (Buyer Reference) ins XML geschrieben.
+
+#### E-Rechnung XML herunterladen
+
+Nach dem Abschliessen einer Rechnung oder Gutschrift mit aktivierter E-Rechnung:
+
+📍 Belegdetail (Status: Abgeschlossen) > **"E-Rechnung XML"** (Button neben PDF)
+
+Der Button ist nur sichtbar wenn:
+- Belegtyp ist **Rechnung** oder **Gutschrift**
+- Status ist **Abgeschlossen** oder spaeter
+- XML wurde erfolgreich generiert
+
+> Im Normalfall reicht es, die **PDF** zu versenden. Das XML ist darin eingebettet (ZUGFeRD PDF/A-3). Der separate XML-Download ist fuer Sonderfaelle: XRechnung an Behoerden (die nur das nackte XML akzeptieren) oder fuer die manuelle Pruefung.
+
+#### Praxisbeispiel: E-Rechnung einrichten und erste Rechnung erstellen
+
+**Schritt 1 -- E-Rechnung aktivieren**
+
+1. 📍 Auftraege > Belege > Briefpapier / Billing-Konfiguration
+2. Zum Abschnitt "E-Rechnung" scrollen
+3. Toggle **"E-Rechnung aktivieren"** einschalten
+4. Steuernummer eintragen: `123/456/78901`
+5. Strukturierte Firmenadresse ausfuellen: Strasse, PLZ, Ort
+6. **Speichern**
+
+**Schritt 2 -- Rechnung erstellen und abschliessen**
+
+1. 📍 Auftraege > Belege > **"Neuer Beleg"**
+2. Typ: **Rechnung**, Kunde auswaehlen
+3. Position hinzufuegen (z. B. 10 Std. Beratung, 100 EUR/Std.)
+4. **"Abschliessen"** klicken
+5. Kein Warnhinweis (alle Pflichtfelder vorhanden)
+6. PDF und ZUGFeRD-XML werden automatisch generiert
+
+**Schritt 3 -- PDF versenden**
+
+1. **"PDF"** klicken -- PDF herunterladen
+2. PDF per E-Mail an den Kunden versenden
+3. Die PDF enthaelt das eingebettete XML -- der Kunde braucht keine separate Datei
 
 ---
 

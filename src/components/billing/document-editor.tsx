@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   ArrowLeft, CheckCircle, Forward, XCircle, Copy, Lock,
-  ChevronRight, ChevronLeft, FileDown,
+  ChevronRight, ChevronLeft, FileDown, FileCode,
 } from 'lucide-react'
 import {
   useBillingDocumentById,
@@ -18,6 +18,7 @@ import {
   useCancelBillingDocument,
   useDuplicateBillingDocument,
   useDownloadBillingDocumentPdf,
+  useDownloadBillingDocumentXml,
   useBillingTenantConfig,
   useBillingDocumentTemplatesByType,
 } from '@/hooks'
@@ -146,6 +147,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
   const cancelMutation = useCancelBillingDocument()
   const duplicateMutation = useDuplicateBillingDocument()
   const downloadPdfMutation = useDownloadBillingDocumentPdf()
+  const downloadXmlMutation = useDownloadBillingDocumentXml()
 
   // Load inquiries for Vorgang select (only for DRAFT documents)
   const { data: inquiryData } = useCrmInquiries({
@@ -164,6 +166,25 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
   const [showForwardDialog, setShowForwardDialog] = React.useState(false)
   const [showCancelDialog, setShowCancelDialog] = React.useState(false)
   const [sidebarOpen, setSidebarOpen] = React.useState(true)
+
+  // E-Invoice validation (client-side check for finalize dialog warning)
+  const eInvoiceMissingFields = React.useMemo(() => {
+    if (!tenantConfig?.eInvoiceEnabled || !doc) return []
+    if (doc.type !== 'INVOICE' && doc.type !== 'CREDIT_NOTE') return []
+    const missing: string[] = []
+    if (!tenantConfig.companyName) missing.push('Firmenname (Einstellungen)')
+    if (!tenantConfig.companyStreet) missing.push('Firmen-Straße (Einstellungen)')
+    if (!tenantConfig.companyZip) missing.push('Firmen-PLZ (Einstellungen)')
+    if (!tenantConfig.companyCity) missing.push('Firmen-Ort (Einstellungen)')
+    if (!tenantConfig.taxId && !tenantConfig.taxNumber) missing.push('USt-IdNr. oder Steuernummer (Einstellungen)')
+    const addr = doc.address as Record<string, unknown> | undefined
+    if (!addr?.company) missing.push('Kundenname (Adresse)')
+    if (!addr?.street) missing.push('Straße (Adresse)')
+    if (!addr?.zip) missing.push('PLZ (Adresse)')
+    if (!addr?.city) missing.push('Ort (Adresse)')
+    if (!addr?.country) missing.push('Land (Adresse)')
+    return missing
+  }, [tenantConfig, doc])
 
   if (isLoading) {
     return <div className="flex items-center justify-center p-8 text-muted-foreground">Laden...</div>
@@ -305,6 +326,25 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
             >
               <FileDown className="h-4 w-4 mr-1" />
               {downloadPdfMutation.isPending ? 'Lade PDF...' : 'PDF'}
+            </Button>
+          )}
+          {isImmutable && !!(doc as Record<string, unknown>).eInvoiceXmlUrl && (doc.type === 'INVOICE' || doc.type === 'CREDIT_NOTE') && (
+            <Button
+              variant="outline"
+              disabled={downloadXmlMutation.isPending}
+              onClick={async () => {
+                try {
+                  const result = await downloadXmlMutation.mutateAsync({ id: doc.id })
+                  if (result?.signedUrl) {
+                    window.open(result.signedUrl, '_blank')
+                  }
+                } catch {
+                  toast.error('XML-Download fehlgeschlagen')
+                }
+              }}
+            >
+              <FileCode className="h-4 w-4 mr-1" />
+              {downloadXmlMutation.isPending ? 'Lade XML...' : 'E-Rechnung XML'}
             </Button>
           )}
         </div>
@@ -666,6 +706,8 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
         documentId={doc.id}
         documentNumber={doc.number}
         documentType={doc.type}
+        eInvoiceEnabled={tenantConfig?.eInvoiceEnabled}
+        eInvoiceMissingFields={eInvoiceMissingFields}
       />
       <DocumentForwardDialog
         open={showForwardDialog}

@@ -17,3 +17,11 @@ export function getStoragePath(doc: {
 }): string {
   return `${DOCUMENT_TYPE_PATHS[doc.type]}/${doc.tenantId}_${doc.id}.pdf`
 }
+
+export function getXmlStoragePath(doc: {
+  type: BillingDocumentType
+  tenantId: string
+  id: string
+}): string {
+  return `${DOCUMENT_TYPE_PATHS[doc.type]}/${doc.tenantId}_${doc.id}.xml`
+}

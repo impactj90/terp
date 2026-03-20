@@ -52,7 +52,7 @@ file_size_limit = "10MiB"
 [storage.buckets.documents]
 public = false
 file_size_limit = "10MiB"
-allowed_mime_types = ["application/pdf"]
+allowed_mime_types = ["application/pdf", "text/xml"]
 
 [storage.buckets.tenant-logos]
 public = true
