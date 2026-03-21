@@ -250,9 +250,9 @@ export function OpenItemDetail({ documentId }: OpenItemDetailProps) {
                     <TableCell>
                       {payment.status === 'ACTIVE' && (
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
-                          className="text-red-600 hover:text-red-700"
+                          className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
                           onClick={() => setCancelPaymentId(payment.id)}
                         >
                           <XCircle className="h-4 w-4 mr-1" />
