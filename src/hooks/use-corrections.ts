@@ -60,6 +60,7 @@ export function useCorrection(id: string, enabled = true) {
 export function useCreateCorrection() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
   return useMutation({
     ...trpc.corrections.create.mutationOptions(),
     onSuccess: () => {
@@ -72,9 +73,7 @@ export function useCreateCorrection() {
       queryClient.invalidateQueries({
         queryKey: trpc.correctionAssistant.listItems.queryKey(),
       })
-      queryClient.invalidateQueries({
-        queryKey: trpc.employees.dayView.queryKey(),
-      })
+      invalidateTimeData()
     },
   })
 }
@@ -85,6 +84,7 @@ export function useCreateCorrection() {
 export function useUpdateCorrection() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
   return useMutation({
     ...trpc.corrections.update.mutationOptions(),
     onSuccess: () => {
@@ -97,9 +97,7 @@ export function useUpdateCorrection() {
       queryClient.invalidateQueries({
         queryKey: trpc.correctionAssistant.listItems.queryKey(),
       })
-      queryClient.invalidateQueries({
-        queryKey: trpc.employees.dayView.queryKey(),
-      })
+      invalidateTimeData()
     },
   })
 }
@@ -110,6 +108,7 @@ export function useUpdateCorrection() {
 export function useDeleteCorrection() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
   return useMutation({
     ...trpc.corrections.delete.mutationOptions(),
     onSuccess: () => {
@@ -122,9 +121,7 @@ export function useDeleteCorrection() {
       queryClient.invalidateQueries({
         queryKey: trpc.correctionAssistant.listItems.queryKey(),
       })
-      queryClient.invalidateQueries({
-        queryKey: trpc.employees.dayView.queryKey(),
-      })
+      invalidateTimeData()
     },
   })
 }

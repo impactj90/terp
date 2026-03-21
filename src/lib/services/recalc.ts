@@ -14,6 +14,8 @@
 import type { PrismaClient } from "@/generated/prisma/client"
 import { mapWithConcurrency } from "@/lib/async"
 import { DailyCalcService } from "./daily-calc"
+import type { TenantCalcCache } from "./daily-calc.context"
+import { loadTenantCalcCache } from "./daily-calc.context"
 import { MonthlyCalcService } from "./monthly-calc"
 import type { RecalcResult } from "./recalc.types"
 
@@ -25,10 +27,11 @@ export class RecalcService {
     private prisma: PrismaClient,
     dailyCalcService?: DailyCalcService,
     monthlyCalcService?: MonthlyCalcService,
+    tenantId?: string,
   ) {
     this.dailyCalcService = dailyCalcService ?? new DailyCalcService(prisma)
     this.monthlyCalcService =
-      monthlyCalcService ?? new MonthlyCalcService(prisma)
+      monthlyCalcService ?? new MonthlyCalcService(prisma, tenantId)
   }
 
   /**
@@ -80,6 +83,7 @@ export class RecalcService {
     employeeId: string,
     from: Date,
     to: Date,
+    tenantCache?: TenantCalcCache,
   ): Promise<RecalcResult> {
     try {
       const { count } = await this.dailyCalcService.calculateDateRange(
@@ -87,6 +91,7 @@ export class RecalcService {
         employeeId,
         from,
         to,
+        tenantCache,
       )
       return { processedDays: count, failedDays: 0, errors: [] }
     } catch (err) {
@@ -120,10 +125,13 @@ export class RecalcService {
     from: Date,
     to: Date,
   ): Promise<RecalcResult> {
+    // Pre-load tenant-level data once (holidays + settings)
+    const tenantCache = await loadTenantCalcCache(this.prisma, tenantId, from, to)
+
     const empResults = await mapWithConcurrency(
       employeeIds,
       5,
-      (empId) => this.triggerRecalcRange(tenantId, empId, from, to),
+      (empId) => this.triggerRecalcRange(tenantId, empId, from, to, tenantCache),
     )
 
     const result: RecalcResult = {

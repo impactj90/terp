@@ -40,6 +40,8 @@ function createMockPrisma() {
     },
     employee: {
       findUnique: vi.fn().mockResolvedValue(null),
+      // findFirst delegates to findUnique so existing test setups work
+      get findFirst() { return this.findUnique },
     },
     tariff: {
       findUnique: vi.fn().mockResolvedValue(null),

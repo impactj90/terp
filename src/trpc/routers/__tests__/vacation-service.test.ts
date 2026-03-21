@@ -86,6 +86,9 @@ describe("vacation.getBalance", () => {
   it("returns balance for existing employee/year", async () => {
     const balance = makeBalance()
     const mockPrisma = {
+      employee: {
+        findFirst: vi.fn().mockResolvedValue(makeEmployee()),
+      },
       vacationBalance: {
         findFirst: vi.fn().mockResolvedValue(balance),
       },
@@ -105,6 +108,9 @@ describe("vacation.getBalance", () => {
 
   it("throws NOT_FOUND for missing balance", async () => {
     const mockPrisma = {
+      employee: {
+        findFirst: vi.fn().mockResolvedValue(makeEmployee()),
+      },
       vacationBalance: {
         findFirst: vi.fn().mockResolvedValue(null),
       },
@@ -123,6 +129,9 @@ describe("vacation.getBalance", () => {
       taken: 12,
     })
     const mockPrisma = {
+      employee: {
+        findFirst: vi.fn().mockResolvedValue(makeEmployee()),
+      },
       vacationBalance: {
         findFirst: vi.fn().mockResolvedValue(balance),
       },
@@ -281,6 +290,9 @@ describe("vacation.adjustBalance", () => {
     const existing = makeBalance({ adjustments: 2 })
     const updated = makeBalance({ adjustments: 7 }) // 2 + 5
     const mockPrisma = {
+      employee: {
+        findFirst: vi.fn().mockResolvedValue(makeEmployee()),
+      },
       vacationBalance: {
         findFirst: vi.fn().mockResolvedValue(existing),
         update: vi.fn().mockResolvedValue(updated),
@@ -304,6 +316,9 @@ describe("vacation.adjustBalance", () => {
     const existing = makeBalance({ adjustments: 5 })
     const updated = makeBalance({ adjustments: 2 }) // 5 - 3
     const mockPrisma = {
+      employee: {
+        findFirst: vi.fn().mockResolvedValue(makeEmployee()),
+      },
       vacationBalance: {
         findFirst: vi.fn().mockResolvedValue(existing),
         update: vi.fn().mockResolvedValue(updated),
@@ -320,6 +335,9 @@ describe("vacation.adjustBalance", () => {
 
   it("throws NOT_FOUND for missing balance", async () => {
     const mockPrisma = {
+      employee: {
+        findFirst: vi.fn().mockResolvedValue(makeEmployee()),
+      },
       vacationBalance: {
         update: vi.fn().mockRejectedValue(
           new Prisma.PrismaClientKnownRequestError("Record not found", {

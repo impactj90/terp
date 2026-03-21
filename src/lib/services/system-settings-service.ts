@@ -370,7 +370,7 @@ export async function cleanupReReadBookings(
   }
 
   // Execute mode: recalculate bookings
-  const recalcService = new RecalcService(prisma)
+  const recalcService = new RecalcService(prisma, undefined, undefined, tenantId)
 
   const fromDate = new Date(input.dateFrom)
   const toDate = new Date(input.dateTo)

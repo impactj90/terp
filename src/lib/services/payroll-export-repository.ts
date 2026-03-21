@@ -176,10 +176,11 @@ export async function findExportInterfaceAccounts(
 
 export async function findAccountsByIds(
   prisma: PrismaClient,
+  tenantId: string,
   ids: string[]
 ) {
   return prisma.account.findMany({
-    where: { id: { in: ids } },
+    where: { id: { in: ids }, tenantId },
     select: { id: true, code: true, name: true, payrollCode: true },
   })
 }

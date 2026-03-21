@@ -401,7 +401,7 @@ export async function generate(
     // Build account info map (code + payrollCode for DATEV)
     const accountInfoMap: Record<string, { code: string; payrollCode: string | null }> = {}
     if (accountIds.length > 0) {
-      const accounts = await repo.findAccountsByIds(prisma, accountIds)
+      const accounts = await repo.findAccountsByIds(prisma, tenantId, accountIds)
       for (const acct of accounts) {
         accountInfoMap[acct.id] = { code: acct.code, payrollCode: acct.payrollCode }
       }
@@ -546,7 +546,7 @@ export async function preview(
   // Build account info map
   const accountInfoMap: Record<string, { code: string; payrollCode: string | null }> = {}
   if (accountIds.length > 0) {
-    const accounts = await repo.findAccountsByIds(prisma, accountIds)
+    const accounts = await repo.findAccountsByIds(prisma, tenantId, accountIds)
     for (const acct of accounts) {
       accountInfoMap[acct.id] = { code: acct.code, payrollCode: acct.payrollCode }
     }

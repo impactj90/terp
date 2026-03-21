@@ -18,6 +18,7 @@
  * @see apps/api/internal/handler/booking.go (DayView + Calculate)
  */
 import { z } from "zod"
+import { TRPCError } from "@trpc/server"
 import type { Prisma } from "@/generated/prisma/client"
 import type { PrismaClient } from "@/generated/prisma/client"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
@@ -700,11 +701,20 @@ export const employeesRouter = createTRPCRouter({
    */
   create: tenantProcedure
     .use(requirePermission(EMPLOYEES_CREATE))
+    .use(applyDataScope())
     .input(createEmployeeInputSchema)
     .output(employeeOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
         const tenantId = ctx.tenantId!
+
+        // H-006: Validate departmentId against data scope
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        if (dataScope.type === "department" && input.departmentId) {
+          if (!dataScope.departmentIds.includes(input.departmentId)) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "Department outside data scope" })
+          }
+        }
 
         const employee = await employeesService.create(
           ctx.prisma as unknown as PrismaClient,

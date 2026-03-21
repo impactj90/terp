@@ -424,13 +424,14 @@ describe("employees.create", () => {
   })
 
   it("rejects duplicate personnelNumber", async () => {
-    const existing = makeEmployee()
+    const p2002 = new Prisma.PrismaClientKnownRequestError(
+      "Unique constraint failed",
+      { code: "P2002", clientVersion: "5.0.0", meta: { target: ["personnel_number"] } }
+    )
     const mockPrisma = {
       employee: {
-        findFirst: vi
-          .fn()
-          .mockResolvedValueOnce(existing), // personnelNumber check
-        create: vi.fn(),
+        findFirst: vi.fn().mockResolvedValue(null),
+        create: vi.fn().mockRejectedValue(p2002),
       },
       $queryRaw: vi.fn().mockResolvedValue([{ max_pin: "1" }]),
     }
@@ -446,14 +447,14 @@ describe("employees.create", () => {
   })
 
   it("rejects duplicate PIN", async () => {
-    const existingByPIN = makeEmployee()
+    const p2002 = new Prisma.PrismaClientKnownRequestError(
+      "Unique constraint failed",
+      { code: "P2002", clientVersion: "5.0.0", meta: { target: ["pin"] } }
+    )
     const mockPrisma = {
       employee: {
-        findFirst: vi
-          .fn()
-          .mockResolvedValueOnce(null) // personnelNumber check passes
-          .mockResolvedValueOnce(existingByPIN), // PIN check fails
-        create: vi.fn(),
+        findFirst: vi.fn().mockResolvedValue(null),
+        create: vi.fn().mockRejectedValue(p2002),
       },
       $queryRaw: vi.fn().mockResolvedValue([{ max_pin: "1" }]),
     }

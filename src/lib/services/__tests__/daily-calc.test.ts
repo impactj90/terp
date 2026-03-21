@@ -22,9 +22,11 @@ function createPrismaMocks() {
   return {
     holiday: {
       findFirst: vi.fn().mockResolvedValue(null),
+      findMany: vi.fn().mockResolvedValue([]),
     },
     employeeDayPlan: {
       findFirst: vi.fn().mockResolvedValue(null),
+      findMany: vi.fn().mockResolvedValue([]),
     },
     booking: {
       findMany: vi.fn().mockResolvedValue([]),
@@ -36,6 +38,7 @@ function createPrismaMocks() {
     },
     dailyValue: {
       findUnique: vi.fn().mockResolvedValue(null),
+      findMany: vi.fn().mockResolvedValue([]),
       upsert: vi.fn().mockImplementation(async (args: { create: Record<string, unknown> }) => ({
         id: "dv-1",
         ...args.create,
@@ -753,6 +756,48 @@ describe("DailyCalcService", () => {
 
       expect(count).toBe(1)
       expect(values.length).toBe(1)
+    })
+
+    it("batch-loads data and does not call per-day query methods", async () => {
+      const from = new Date("2026-03-01T00:00:00Z")
+      const to = new Date("2026-03-03T00:00:00Z")
+
+      await service.calculateDateRange(TENANT_ID, EMPLOYEE_ID, from, to)
+
+      // Batch-loading methods should be called once
+      expect(mocks.holiday.findMany).toHaveBeenCalledTimes(1)
+      expect(mocks.employeeDayPlan.findMany).toHaveBeenCalledTimes(1)
+      expect(mocks.dailyValue.findMany).toHaveBeenCalledTimes(1)
+      // booking.findMany called once (batch load for extended range)
+      expect(mocks.booking.findMany).toHaveBeenCalledTimes(1)
+
+      // Per-day query methods should NOT be called (context provides cached data)
+      expect(mocks.holiday.findFirst).not.toHaveBeenCalled()
+      expect(mocks.employeeDayPlan.findFirst).not.toHaveBeenCalled()
+      expect(mocks.dailyValue.findUnique).not.toHaveBeenCalled()
+      // systemSetting.findFirst is called exactly once by loadTenantCalcCache (not 3x per day)
+      expect(mocks.systemSetting.findFirst).toHaveBeenCalledTimes(1)
+    })
+
+    it("uses pre-loaded holiday data from context", async () => {
+      const from = new Date("2026-03-01T00:00:00Z")
+      const to = new Date("2026-03-01T00:00:00Z")
+
+      // Set up batch holiday data
+      mocks.holiday.findMany.mockResolvedValue([
+        { holidayDate: from, holidayCategory: 1, tenantId: TENANT_ID },
+      ])
+
+      const { values } = await service.calculateDateRange(
+        TENANT_ID,
+        EMPLOYEE_ID,
+        from,
+        to
+      )
+
+      expect(values.length).toBe(1)
+      // Off day (no day plan) but holiday data was loaded from batch
+      expect(mocks.holiday.findFirst).not.toHaveBeenCalled()
     })
   })
 })

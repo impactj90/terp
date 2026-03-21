@@ -44,6 +44,7 @@ interface TenantResult {
   failedMonths: number
   durationMs: number
   error?: string
+  skipped?: boolean
 }
 
 /**
@@ -81,7 +82,26 @@ export async function executeCalculateMonths(
 
   console.log(`[calculate-months] Found ${tenants.length} active tenants`)
 
-  const monthlyCalcService = new MonthlyCalcService(prisma)
+  // --- Checkpoint: load already-completed tenants for this run ---
+  const runKey = `${targetYear}:${targetMonth}`
+  const completedCheckpoints = await prisma.cronCheckpoint.findMany({
+    where: { cronName: TASK_TYPE, runKey },
+    select: { tenantId: true },
+  })
+  const completedTenantIds = new Set(completedCheckpoints.map((c) => c.tenantId))
+
+  if (completedTenantIds.size > 0) {
+    console.log(
+      `[calculate-months] Checkpoint: ${completedTenantIds.size} tenants already completed, will skip`,
+    )
+  }
+
+  // Cleanup old checkpoints (> 30 days)
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+  await prisma.cronCheckpoint.deleteMany({
+    where: { cronName: TASK_TYPE, createdAt: { lt: thirtyDaysAgo } },
+  })
+
   const logger = new CronExecutionLogger(prisma)
   const results: TenantResult[] = []
   let tenantsProcessed = 0
@@ -89,10 +109,36 @@ export async function executeCalculateMonths(
   let totalProcessedMonths = 0
   let totalSkippedMonths = 0
   let totalFailedMonths = 0
+  const jobStart = Date.now()
 
   // Process tenants sequentially to avoid connection pool exhaustion
-  for (const tenant of tenants) {
+  for (let i = 0; i < tenants.length; i++) {
+    const tenant = tenants[i]!
     const tenantStart = Date.now()
+
+    // Timeout warning: alert when approaching 5-min Vercel limit
+    const elapsedMs = Date.now() - jobStart
+    if (elapsedMs > 240_000) {
+      console.warn(
+        `[calculate-months] WARNING: ${Math.round(elapsedMs / 1000)}s elapsed — approaching 5-min timeout. ` +
+          `${tenants.length - i} tenants remaining. Processed tenants are checkpointed for resume.`,
+      )
+    }
+
+    // Skip already-completed tenants (checkpoint hit)
+    if (completedTenantIds.has(tenant.id)) {
+      console.log(`[calculate-months] Tenant ${tenant.id}: checkpoint hit, skipping`)
+      results.push({
+        tenantId: tenant.id,
+        processedMonths: 0,
+        skippedMonths: 0,
+        failedMonths: 0,
+        durationMs: 0,
+        skipped: true,
+      })
+      tenantsProcessed++
+      continue
+    }
     let scheduleId: string | undefined
     let executionId: string | undefined
     let taskExecutionId: string | undefined
@@ -127,6 +173,7 @@ export async function executeCalculateMonths(
       const employeeIds = employees.map((e) => e.id)
 
       // 4. Calculate monthly values for all employees
+      const monthlyCalcService = new MonthlyCalcService(prisma, tenant.id)
       const result = await monthlyCalcService.calculateMonthBatch(
         employeeIds,
         targetYear,
@@ -165,6 +212,32 @@ export async function executeCalculateMonths(
             ? `All ${result.failedMonths} months failed`
             : undefined,
       })
+
+      // Save checkpoint so re-runs skip this tenant
+      try {
+        await prisma.cronCheckpoint.upsert({
+          where: {
+            cronName_runKey_tenantId: {
+              cronName: TASK_TYPE,
+              runKey,
+              tenantId: tenant.id,
+            },
+          },
+          create: {
+            cronName: TASK_TYPE,
+            runKey,
+            tenantId: tenant.id,
+            status: "completed",
+            durationMs,
+          },
+          update: { status: "completed", durationMs },
+        })
+      } catch (cpErr) {
+        console.error(
+          `[calculate-months] Failed to save checkpoint for tenant ${tenant.id}:`,
+          cpErr,
+        )
+      }
 
       tenantsProcessed++
       totalProcessedMonths += result.processedMonths

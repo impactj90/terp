@@ -306,7 +306,7 @@ export const billingDocumentsRouter = createTRPCRouter({
   generatePdf: billingProcedure
     .use(requirePermission(BILLING_VIEW))
     .input(idInput)
-    .query(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
       try {
         return await billingPdfService.generatePdf(
           ctx.prisma as unknown as PrismaClient,

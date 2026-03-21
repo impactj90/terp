@@ -241,13 +241,22 @@ export const bookingsRouter = createTRPCRouter({
         const tenantId = ctx.tenantId!
         const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
 
+        // H-005: VIEW_OWN users must only see their own bookings
+        let employeeId = input?.employeeId
+        if (!hasPermission(ctx.user!, VIEW_ALL)) {
+          if (!ctx.user!.employeeId) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "No employee linked to user" })
+          }
+          employeeId = ctx.user!.employeeId
+        }
+
         const { items, total } = await bookingsService.list(
           ctx.prisma,
           tenantId,
           {
             page: input?.page ?? 1,
             pageSize: input?.pageSize ?? 50,
-            employeeId: input?.employeeId,
+            employeeId,
             fromDate: input?.fromDate,
             toDate: input?.toDate,
             bookingTypeId: input?.bookingTypeId,

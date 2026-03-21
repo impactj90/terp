@@ -234,53 +234,59 @@ export async function create(
     }
   }
 
-  // Generate number for document type
-  const seqKey = NUMBER_SEQUENCE_KEYS[input.type]
-  const number = await numberSeqService.getNextNumber(prisma, tenantId, seqKey)
-
   // Pre-fill payment terms from address defaults
   const paymentTermDays = input.paymentTermDays ?? address.paymentTermDays ?? null
   const discountPercent = input.discountPercent ?? address.discountPercent ?? null
   const discountDays = input.discountDays ?? address.discountDays ?? null
 
-  // Auto-apply default template if no text provided
-  let headerText = input.headerText || null
-  let footerText = input.footerText || null
-  if (!headerText && !footerText) {
-    const defaultTemplate = await templateRepo.findDefault(prisma, tenantId, input.type)
-    if (defaultTemplate) {
-      headerText = defaultTemplate.headerText
-      footerText = defaultTemplate.footerText
-    }
-  }
+  // Wrap number generation + document creation in a transaction
+  // so a failed create doesn't consume a sequence number
+  const created = await prisma.$transaction(async (tx) => {
+    const txPrisma = tx as unknown as PrismaClient
 
-  const created = await repo.create(prisma, {
-    tenantId,
-    number,
-    type: input.type,
-    addressId: input.addressId,
-    contactId: input.contactId || null,
-    deliveryAddressId: input.deliveryAddressId || null,
-    invoiceAddressId: input.invoiceAddressId || null,
-    inquiryId: input.inquiryId || null,
-    orderId: input.orderId || null,
-    orderDate: input.orderDate || null,
-    documentDate: input.documentDate || new Date(),
-    deliveryDate: input.deliveryDate || null,
-    deliveryType: input.deliveryType || null,
-    deliveryTerms: input.deliveryTerms || null,
-    paymentTermDays,
-    discountPercent,
-    discountDays,
-    discountPercent2: input.discountPercent2 ?? null,
-    discountDays2: input.discountDays2 ?? null,
-    shippingCostNet: input.shippingCostNet ?? null,
-    shippingCostVatRate: input.shippingCostVatRate ?? null,
-    notes: input.notes || null,
-    internalNotes: input.internalNotes || null,
-    headerText,
-    footerText,
-    createdById,
+    // Generate number for document type
+    const seqKey = NUMBER_SEQUENCE_KEYS[input.type]
+    const number = await numberSeqService.getNextNumber(txPrisma, tenantId, seqKey)
+
+    // Auto-apply default template if no text provided
+    let headerText = input.headerText || null
+    let footerText = input.footerText || null
+    if (!headerText && !footerText) {
+      const defaultTemplate = await templateRepo.findDefault(txPrisma, tenantId, input.type)
+      if (defaultTemplate) {
+        headerText = defaultTemplate.headerText
+        footerText = defaultTemplate.footerText
+      }
+    }
+
+    return repo.create(txPrisma, {
+      tenantId,
+      number,
+      type: input.type,
+      addressId: input.addressId,
+      contactId: input.contactId || null,
+      deliveryAddressId: input.deliveryAddressId || null,
+      invoiceAddressId: input.invoiceAddressId || null,
+      inquiryId: input.inquiryId || null,
+      orderId: input.orderId || null,
+      orderDate: input.orderDate || null,
+      documentDate: input.documentDate || new Date(),
+      deliveryDate: input.deliveryDate || null,
+      deliveryType: input.deliveryType || null,
+      deliveryTerms: input.deliveryTerms || null,
+      paymentTermDays,
+      discountPercent,
+      discountDays,
+      discountPercent2: input.discountPercent2 ?? null,
+      discountDays2: input.discountDays2 ?? null,
+      shippingCostNet: input.shippingCostNet ?? null,
+      shippingCostVatRate: input.shippingCostVatRate ?? null,
+      notes: input.notes || null,
+      internalNotes: input.internalNotes || null,
+      headerText,
+      footerText,
+      createdById,
+    })
   })
 
   // Never throws — audit failures must not block the actual operation
@@ -290,7 +296,7 @@ export async function create(
     action: "create",
     entityType: "billing_document",
     entityId: created.id,
-    entityName: number || "DRAFT",
+    entityName: created.number || "DRAFT",
     changes: null,
     ipAddress: audit.ipAddress,
     userAgent: audit.userAgent,
@@ -512,63 +518,65 @@ export async function forward(
   createdById: string,
   audit: AuditContext
 ) {
-  const existing = await repo.findById(prisma, tenantId, id)
-  if (!existing) throw new BillingDocumentNotFoundError()
+  const { newDoc, number } = await prisma.$transaction(async (tx) => {
+    const txPrisma = tx as unknown as PrismaClient
 
-  // Must be finalized to forward
-  if (existing.status !== "PRINTED" && existing.status !== "PARTIALLY_FORWARDED") {
-    throw new BillingDocumentValidationError(
-      "Only finalized or partially forwarded documents can be forwarded"
-    )
-  }
+    const existing = await repo.findById(txPrisma, tenantId, id)
+    if (!existing) throw new BillingDocumentNotFoundError()
 
-  // Validate forwarding rule
-  const allowedTargets = FORWARDING_RULES[existing.type]
-  if (!allowedTargets.includes(targetType)) {
-    throw new BillingDocumentValidationError(
-      `Cannot forward ${existing.type} to ${targetType}. Allowed: ${allowedTargets.join(", ") || "none"}`
-    )
-  }
+    // Must be finalized to forward
+    if (existing.status !== "PRINTED" && existing.status !== "PARTIALLY_FORWARDED") {
+      throw new BillingDocumentValidationError(
+        "Only finalized or partially forwarded documents can be forwarded"
+      )
+    }
 
-  // Generate number for target type
-  const seqKey = NUMBER_SEQUENCE_KEYS[targetType]
-  const number = await numberSeqService.getNextNumber(prisma, tenantId, seqKey)
+    // Validate forwarding rule
+    const allowedTargets = FORWARDING_RULES[existing.type]
+    if (!allowedTargets.includes(targetType)) {
+      throw new BillingDocumentValidationError(
+        `Cannot forward ${existing.type} to ${targetType}. Allowed: ${allowedTargets.join(", ") || "none"}`
+      )
+    }
 
-  // Create child document inheriting header fields
-  const newDoc = await repo.create(prisma, {
-    tenantId,
-    number,
-    type: targetType,
-    addressId: existing.addressId,
-    contactId: existing.contactId,
-    deliveryAddressId: existing.deliveryAddressId,
-    invoiceAddressId: existing.invoiceAddressId,
-    inquiryId: existing.inquiryId,
-    orderId: existing.orderId,
-    parentDocumentId: existing.id,
-    orderDate: existing.orderDate,
-    documentDate: new Date(),
-    deliveryDate: existing.deliveryDate,
-    deliveryType: existing.deliveryType,
-    deliveryTerms: existing.deliveryTerms,
-    paymentTermDays: existing.paymentTermDays,
-    discountPercent: existing.discountPercent,
-    discountDays: existing.discountDays,
-    discountPercent2: existing.discountPercent2,
-    discountDays2: existing.discountDays2,
-    shippingCostNet: existing.shippingCostNet,
-    shippingCostVatRate: existing.shippingCostVatRate,
-    notes: existing.notes,
-    internalNotes: existing.internalNotes,
-    headerText: existing.headerText,
-    footerText: existing.footerText,
-    createdById,
-  })
+    // Generate number for target type
+    const seqKey = NUMBER_SEQUENCE_KEYS[targetType]
+    const number = await numberSeqService.getNextNumber(txPrisma, tenantId, seqKey)
 
-  // Copy positions
-  if (existing.positions && existing.positions.length > 0) {
-    for (const pos of existing.positions) {
-      await repo.createPosition(prisma, {
+    // Create child document inheriting header fields
+    const newDoc = await repo.create(txPrisma, {
+      tenantId,
+      number,
+      type: targetType,
+      addressId: existing.addressId,
+      contactId: existing.contactId,
+      deliveryAddressId: existing.deliveryAddressId,
+      invoiceAddressId: existing.invoiceAddressId,
+      inquiryId: existing.inquiryId,
+      orderId: existing.orderId,
+      parentDocumentId: existing.id,
+      orderDate: existing.orderDate,
+      documentDate: new Date(),
+      deliveryDate: existing.deliveryDate,
+      deliveryType: existing.deliveryType,
+      deliveryTerms: existing.deliveryTerms,
+      paymentTermDays: existing.paymentTermDays,
+      discountPercent: existing.discountPercent,
+      discountDays: existing.discountDays,
+      discountPercent2: existing.discountPercent2,
+      discountDays2: existing.discountDays2,
+      shippingCostNet: existing.shippingCostNet,
+      shippingCostVatRate: existing.shippingCostVatRate,
+      notes: existing.notes,
+      internalNotes: existing.internalNotes,
+      headerText: existing.headerText,
+      footerText: existing.footerText,
+      createdById,
+    })
+
+    // Copy positions (batch insert)
+    if (existing.positions && existing.positions.length > 0) {
+      await repo.createManyPositions(txPrisma, existing.positions.map(pos => ({
         documentId: newDoc.id,
         sortOrder: pos.sortOrder,
         type: pos.type,
@@ -584,16 +592,18 @@ export async function forward(
         vatRate: pos.vatRate,
         deliveryDate: pos.deliveryDate,
         confirmedDate: pos.confirmedDate,
-      })
+      })))
     }
-  }
 
-  // Recalculate totals on new document
-  await recalculateTotals(prisma, tenantId, newDoc.id)
+    // Recalculate totals on new document
+    await recalculateTotals(txPrisma, tenantId, newDoc.id)
 
-  // Update source document status
-  await repo.update(prisma, tenantId, existing.id, {
-    status: "FORWARDED",
+    // Update source document status
+    await repo.update(txPrisma, tenantId, existing.id, {
+      status: "FORWARDED",
+    })
+
+    return { newDoc, number }
   })
 
   // Never throws — audit failures must not block the actual operation
@@ -605,7 +615,7 @@ export async function forward(
     entityId: newDoc.id,
     entityName: number || "DRAFT",
     changes: null,
-    metadata: { forwardedFrom: existing.id, targetType },
+    metadata: { forwardedFrom: id, targetType },
     ipAddress: audit.ipAddress,
     userAgent: audit.userAgent,
   }).catch(err => console.error('[AuditLog] Failed:', err))
@@ -665,48 +675,50 @@ export async function duplicate(
   createdById: string,
   audit: AuditContext
 ) {
-  const existing = await repo.findById(prisma, tenantId, id)
-  if (!existing) throw new BillingDocumentNotFoundError()
+  const { newDoc, number } = await prisma.$transaction(async (tx) => {
+    const txPrisma = tx as unknown as PrismaClient
 
-  // Generate new number for same type
-  const seqKey = NUMBER_SEQUENCE_KEYS[existing.type]
-  const number = await numberSeqService.getNextNumber(prisma, tenantId, seqKey)
+    const existing = await repo.findById(txPrisma, tenantId, id)
+    if (!existing) throw new BillingDocumentNotFoundError()
 
-  // Create copy as DRAFT
-  const newDoc = await repo.create(prisma, {
-    tenantId,
-    number,
-    type: existing.type,
-    addressId: existing.addressId,
-    contactId: existing.contactId,
-    deliveryAddressId: existing.deliveryAddressId,
-    invoiceAddressId: existing.invoiceAddressId,
-    inquiryId: existing.inquiryId,
-    orderId: existing.orderId,
-    parentDocumentId: null,
-    orderDate: existing.orderDate,
-    documentDate: new Date(),
-    deliveryDate: existing.deliveryDate,
-    deliveryType: existing.deliveryType,
-    deliveryTerms: existing.deliveryTerms,
-    paymentTermDays: existing.paymentTermDays,
-    discountPercent: existing.discountPercent,
-    discountDays: existing.discountDays,
-    discountPercent2: existing.discountPercent2,
-    discountDays2: existing.discountDays2,
-    shippingCostNet: existing.shippingCostNet,
-    shippingCostVatRate: existing.shippingCostVatRate,
-    notes: existing.notes,
-    internalNotes: existing.internalNotes,
-    headerText: existing.headerText,
-    footerText: existing.footerText,
-    createdById,
-  })
+    // Generate new number for same type
+    const seqKey = NUMBER_SEQUENCE_KEYS[existing.type]
+    const number = await numberSeqService.getNextNumber(txPrisma, tenantId, seqKey)
 
-  // Copy positions
-  if (existing.positions && existing.positions.length > 0) {
-    for (const pos of existing.positions) {
-      await repo.createPosition(prisma, {
+    // Create copy as DRAFT
+    const newDoc = await repo.create(txPrisma, {
+      tenantId,
+      number,
+      type: existing.type,
+      addressId: existing.addressId,
+      contactId: existing.contactId,
+      deliveryAddressId: existing.deliveryAddressId,
+      invoiceAddressId: existing.invoiceAddressId,
+      inquiryId: existing.inquiryId,
+      orderId: existing.orderId,
+      parentDocumentId: null,
+      orderDate: existing.orderDate,
+      documentDate: new Date(),
+      deliveryDate: existing.deliveryDate,
+      deliveryType: existing.deliveryType,
+      deliveryTerms: existing.deliveryTerms,
+      paymentTermDays: existing.paymentTermDays,
+      discountPercent: existing.discountPercent,
+      discountDays: existing.discountDays,
+      discountPercent2: existing.discountPercent2,
+      discountDays2: existing.discountDays2,
+      shippingCostNet: existing.shippingCostNet,
+      shippingCostVatRate: existing.shippingCostVatRate,
+      notes: existing.notes,
+      internalNotes: existing.internalNotes,
+      headerText: existing.headerText,
+      footerText: existing.footerText,
+      createdById,
+    })
+
+    // Copy positions (batch insert)
+    if (existing.positions && existing.positions.length > 0) {
+      await repo.createManyPositions(txPrisma, existing.positions.map(pos => ({
         documentId: newDoc.id,
         sortOrder: pos.sortOrder,
         type: pos.type,
@@ -722,12 +734,14 @@ export async function duplicate(
         vatRate: pos.vatRate,
         deliveryDate: pos.deliveryDate,
         confirmedDate: pos.confirmedDate,
-      })
+      })))
     }
-  }
 
-  // Recalculate totals
-  await recalculateTotals(prisma, tenantId, newDoc.id)
+    // Recalculate totals
+    await recalculateTotals(txPrisma, tenantId, newDoc.id)
+
+    return { newDoc, number }
+  })
 
   // Never throws — audit failures must not block the actual operation
   await auditLog.log(prisma, {
@@ -933,10 +947,30 @@ export async function reorderPositions(
   if (!doc) throw new BillingDocumentNotFoundError()
   assertDraft(doc.status)
 
-  // Update sort order for each position
-  for (let i = 0; i < positionIds.length; i++) {
-    await repo.updatePosition(prisma, positionIds[i]!, { sortOrder: i + 1 })
+  // Validate all position IDs belong to this document + tenant
+  const validPositions = await prisma.billingDocumentPosition.findMany({
+    where: {
+      id: { in: positionIds },
+      document: { id: documentId, tenantId },
+    },
+    select: { id: true },
+  })
+
+  if (validPositions.length !== positionIds.length) {
+    throw new BillingDocumentValidationError(
+      "One or more position IDs do not belong to this document"
+    )
   }
+
+  // Batch update sort order in a single transaction
+  await prisma.$transaction(
+    positionIds.map((id, index) =>
+      prisma.billingDocumentPosition.update({
+        where: { id },
+        data: { sortOrder: index + 1 },
+      })
+    )
+  )
 
   return repo.findPositions(prisma, documentId)
 }

@@ -92,6 +92,7 @@ vi.mock("@/lib/db/prisma", () => ({
     schedule: { upsert: vi.fn() },
     scheduleExecution: { create: vi.fn(), update: vi.fn() },
     scheduleTaskExecution: { update: vi.fn() },
+    cronCheckpoint: { findMany: vi.fn().mockResolvedValue([]), deleteMany: vi.fn(), upsert: vi.fn() },
     $transaction: vi.fn(),
   },
 }))

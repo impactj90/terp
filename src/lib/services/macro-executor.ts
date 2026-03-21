@@ -60,12 +60,19 @@ export class MacroExecutor {
       include: { assignments: true },
     })
 
+    const todayStr = date.toISOString().slice(0, 10)
+
     for (const macro of weeklyMacros) {
       for (const assignment of macro.assignments) {
         if (!assignment.isActive) continue
+        if (assignment.lastExecutedDate?.toISOString().slice(0, 10) === todayStr) continue
         if (assignment.executionDay === weekday) {
           try {
             await this.executeSingleMacro(macro, "scheduled", assignment.id)
+            await this.prisma.macroAssignment.update({
+              where: { id: assignment.id },
+              data: { lastExecutedAt: new Date(), lastExecutedDate: date },
+            })
             executed++
           } catch (err) {
             failed++
@@ -88,6 +95,7 @@ export class MacroExecutor {
     for (const macro of monthlyMacros) {
       for (const assignment of macro.assignments) {
         if (!assignment.isActive) continue
+        if (assignment.lastExecutedDate?.toISOString().slice(0, 10) === todayStr) continue
         // Monthly day fallback: if configured day exceeds month length, use last day
         let effectiveDay = assignment.executionDay
         if (effectiveDay > lastDayOfMonth) {
@@ -96,6 +104,10 @@ export class MacroExecutor {
         if (effectiveDay === dayOfMonth) {
           try {
             await this.executeSingleMacro(macro, "scheduled", assignment.id)
+            await this.prisma.macroAssignment.update({
+              where: { id: assignment.id },
+              data: { lastExecutedAt: new Date(), lastExecutedDate: date },
+            })
             executed++
           } catch (err) {
             failed++

@@ -371,10 +371,9 @@ export async function generate(
       vatRate?: number
     }>
 
-    for (let i = 0; i < positions.length; i++) {
-      const pos = positions[i]!
+    await billingDocRepo.createManyPositions(tx, positions.map((pos, i) => {
       const totalPrice = calculatePositionTotal(pos.quantity, pos.unitPrice, pos.flatCosts)
-      await billingDocRepo.createPosition(tx, {
+      return {
         documentId: invoiceDoc.id,
         sortOrder: i + 1,
         type: (pos.type as "ARTICLE" | "FREE" | "TEXT") ?? "FREE",
@@ -387,8 +386,8 @@ export async function generate(
         flatCosts: pos.flatCosts ?? null,
         totalPrice,
         vatRate: pos.vatRate ?? null,
-      })
-    }
+      }
+    }))
 
     // 4. Recalculate totals
     await billingDocService.recalculateTotals(tx, tenantId, invoiceDoc.id)

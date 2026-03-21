@@ -75,6 +75,7 @@ interface TenantResult {
   failedDays: number
   durationMs: number
   error?: string
+  skipped?: boolean
 }
 
 /**
@@ -111,17 +112,61 @@ export async function executeCalculateDays(
 
   console.log(`[calculate-days] Found ${tenants.length} active tenants`)
 
-  const recalcService = new RecalcService(prisma)
+  // --- Checkpoint: load already-completed tenants for this run ---
+  const runKey = `${fromStr}:${toStr}`
+  const completedCheckpoints = await prisma.cronCheckpoint.findMany({
+    where: { cronName: TASK_TYPE, runKey },
+    select: { tenantId: true },
+  })
+  const completedTenantIds = new Set(completedCheckpoints.map((c) => c.tenantId))
+
+  if (completedTenantIds.size > 0) {
+    console.log(
+      `[calculate-days] Checkpoint: ${completedTenantIds.size} tenants already completed, will skip`,
+    )
+  }
+
+  // Cleanup old checkpoints (> 30 days)
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+  await prisma.cronCheckpoint.deleteMany({
+    where: { cronName: TASK_TYPE, createdAt: { lt: thirtyDaysAgo } },
+  })
+
   const logger = new CronExecutionLogger(prisma)
   const results: TenantResult[] = []
   let tenantsProcessed = 0
   let tenantsFailed = 0
   let totalProcessedDays = 0
   let totalFailedDays = 0
+  const jobStart = Date.now()
 
   // Process tenants sequentially to avoid connection pool exhaustion
-  for (const tenant of tenants) {
+  for (let i = 0; i < tenants.length; i++) {
+    const tenant = tenants[i]!
     const tenantStart = Date.now()
+
+    // Timeout warning: alert when approaching 5-min Vercel limit
+    const elapsedMs = Date.now() - jobStart
+    if (elapsedMs > 240_000) {
+      console.warn(
+        `[calculate-days] WARNING: ${Math.round(elapsedMs / 1000)}s elapsed — approaching 5-min timeout. ` +
+          `${tenants.length - i} tenants remaining. Processed tenants are checkpointed for resume.`,
+      )
+    }
+
+    // Skip already-completed tenants (checkpoint hit)
+    if (completedTenantIds.has(tenant.id)) {
+      console.log(`[calculate-days] Tenant ${tenant.id}: checkpoint hit, skipping`)
+      results.push({
+        tenantId: tenant.id,
+        processedDays: 0,
+        failedDays: 0,
+        durationMs: 0,
+        skipped: true,
+      })
+      tenantsProcessed++
+      continue
+    }
     let scheduleId: string | undefined
     let executionId: string | undefined
     let taskExecutionId: string | undefined
@@ -145,6 +190,7 @@ export async function executeCalculateDays(
       taskExecutionId = execution.taskExecutionId
 
       // 3. Run recalculation for all active employees
+      const recalcService = new RecalcService(prisma, undefined, undefined, tenant.id)
       const result = await recalcService.triggerRecalcAll(tenant.id, from, to)
 
       const durationMs = Date.now() - tenantStart
@@ -178,6 +224,32 @@ export async function executeCalculateDays(
             ? `All ${result.failedDays} days failed`
             : undefined,
       })
+
+      // Save checkpoint so re-runs skip this tenant
+      try {
+        await prisma.cronCheckpoint.upsert({
+          where: {
+            cronName_runKey_tenantId: {
+              cronName: TASK_TYPE,
+              runKey,
+              tenantId: tenant.id,
+            },
+          },
+          create: {
+            cronName: TASK_TYPE,
+            runKey,
+            tenantId: tenant.id,
+            status: "completed",
+            durationMs,
+          },
+          update: { status: "completed", durationMs },
+        })
+      } catch (cpErr) {
+        console.error(
+          `[calculate-days] Failed to save checkpoint for tenant ${tenant.id}:`,
+          cpErr,
+        )
+      }
 
       tenantsProcessed++
       totalProcessedDays += result.processedDays

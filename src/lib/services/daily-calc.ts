@@ -14,6 +14,14 @@
  */
 
 import type { PrismaClient, DailyValue } from "@/generated/prisma/client"
+import type {
+  TenantCalcCache,
+  DailyCalcContext,
+} from "./daily-calc.context"
+import {
+  loadTenantCalcCache,
+  loadEmployeeCalcContext,
+} from "./daily-calc.context"
 import {
   calculate,
   splitOvernightSurcharge,
@@ -106,25 +114,28 @@ export class DailyCalcService {
   async calculateDay(
     tenantId: string,
     employeeId: string,
-    date: Date
+    date: Date,
+    context?: DailyCalcContext
   ): Promise<DailyValue | null> {
     const calcDate = dateOnly(date)
 
     // 1. Check for holiday
     const { isHoliday, holidayCategory } = await this.checkHoliday(
       tenantId,
-      calcDate
+      calcDate,
+      context
     )
 
     // 2. Get day plan (null = no plan assigned = off day)
-    const empDayPlan = await this.loadEmployeeDayPlan(employeeId, calcDate)
+    const empDayPlan = await this.loadEmployeeDayPlan(employeeId, calcDate, context)
 
     // 3. Load bookings (includes adjacent days for day change behavior)
     const bookings = await this.loadBookingsForCalculation(
       tenantId,
       employeeId,
       calcDate,
-      empDayPlan
+      empDayPlan,
+      context
     )
 
     // 4. Branch: determine daily value
@@ -136,7 +147,7 @@ export class DailyCalcService {
       dvInput = this.handleOffDay(employeeId, calcDate, bookings)
     } else if (isHoliday && bookings.length === 0) {
       // Holiday without bookings -- check absence priority override
-      const absence = await this.loadAbsenceDay(employeeId, calcDate)
+      const absence = await this.loadAbsenceDay(employeeId, calcDate, context)
       if (
         absence &&
         absence.status === "approved" &&
@@ -147,14 +158,16 @@ export class DailyCalcService {
           employeeId,
           calcDate,
           empDayPlan,
-          absence
+          absence,
+          context
         )
       } else {
         dvInput = await this.handleHolidayCredit(
           employeeId,
           calcDate,
           empDayPlan,
-          holidayCategory
+          holidayCategory,
+          context
         )
       }
     } else if (bookings.length === 0) {
@@ -163,7 +176,8 @@ export class DailyCalcService {
         tenantId,
         employeeId,
         calcDate,
-        empDayPlan
+        empDayPlan,
+        context
       )
       if (dvInput === null) {
         return null // Skip behavior
@@ -176,14 +190,15 @@ export class DailyCalcService {
         calcDate,
         empDayPlan,
         bookings,
-        isHoliday
+        isHoliday,
+        context
       )
       dvInput = result.dailyValue
       calcPairs = result.calcPairs
     }
 
     // 5. Get previous value (for error notification comparison)
-    const previousValue = await this.getPreviousDailyValue(employeeId, calcDate)
+    const previousValue = await this.getPreviousDailyValue(employeeId, calcDate, context)
 
     // 6. Set tenant and upsert
     dvInput.tenantId = tenantId
@@ -200,7 +215,7 @@ export class DailyCalcService {
 
     // 7.5. Post absence rule account value (if applicable)
     {
-      const absenceDay = await this.loadAbsenceDay(employeeId, calcDate)
+      const absenceDay = await this.loadAbsenceDay(employeeId, calcDate, context)
       await this.postAbsenceRuleValue(
         tenantId,
         employeeId,
@@ -244,19 +259,34 @@ export class DailyCalcService {
     tenantId: string,
     employeeId: string,
     fromDate: Date,
-    toDate: Date
+    toDate: Date,
+    tenantCache?: TenantCalcCache
   ): Promise<{ count: number; values: DailyValue[] }> {
     const values: DailyValue[] = []
     let count = 0
     const from = dateOnly(fromDate)
     const to = dateOnly(toDate)
-    const current = new Date(from)
 
+    // Batch-load all data for the range
+    const tc =
+      tenantCache ??
+      (await loadTenantCalcCache(this.prisma, tenantId, from, to))
+    const context = await loadEmployeeCalcContext(
+      this.prisma,
+      tc,
+      tenantId,
+      employeeId,
+      from,
+      to
+    )
+
+    const current = new Date(from)
     while (current <= to) {
       const dv = await this.calculateDay(
         tenantId,
         employeeId,
-        new Date(current)
+        new Date(current),
+        context
       )
       count++
       if (dv) {
@@ -278,8 +308,13 @@ export class DailyCalcService {
    */
   private async loadEmployeeDayPlan(
     employeeId: string,
-    date: Date
+    date: Date,
+    context?: DailyCalcContext
   ): Promise<EmployeeDayPlanWithDetails | null> {
+    if (context) {
+      const key = date.toISOString().split("T")[0]!
+      return context.dayPlans.get(key) ?? null
+    }
     return this.prisma.employeeDayPlan.findFirst({
       where: {
         employeeId,
@@ -305,8 +340,13 @@ export class DailyCalcService {
    */
   private async checkHoliday(
     tenantId: string,
-    date: Date
+    date: Date,
+    context?: DailyCalcContext
   ): Promise<{ isHoliday: boolean; holidayCategory: number }> {
+    if (context) {
+      const key = date.toISOString().split("T")[0]!
+      return context.tenant.holidays.get(key) ?? { isHoliday: false, holidayCategory: 0 }
+    }
     const holiday = await this.prisma.holiday.findFirst({
       where: { tenantId, holidayDate: date },
     })
@@ -323,24 +363,32 @@ export class DailyCalcService {
   private async resolveTargetHours(
     employeeId: string,
     date: Date,
-    dayPlan: DayPlanWithDetails
+    dayPlan: DayPlanWithDetails,
+    context?: DailyCalcContext
   ): Promise<number> {
     let employeeTargetMinutes: number | null = null
 
     // 1. If fromEmployeeMaster, look up employee's dailyTargetHours
     if (dayPlan.fromEmployeeMaster) {
-      const emp = await this.prisma.employee.findFirst({
-        where: { id: employeeId },
-        select: { dailyTargetHours: true },
-      })
-      if (emp?.dailyTargetHours !== null && emp?.dailyTargetHours !== undefined) {
-        employeeTargetMinutes = Math.round(Number(emp.dailyTargetHours) * 60)
+      if (context) {
+        const dth = context.employeeMaster?.dailyTargetHours
+        if (dth !== null && dth !== undefined) {
+          employeeTargetMinutes = Math.round(Number(dth) * 60)
+        }
+      } else {
+        const emp = await this.prisma.employee.findFirst({
+          where: { id: employeeId },
+          select: { dailyTargetHours: true },
+        })
+        if (emp?.dailyTargetHours !== null && emp?.dailyTargetHours !== undefined) {
+          employeeTargetMinutes = Math.round(Number(emp.dailyTargetHours) * 60)
+        }
       }
     }
 
     // 2. Check if absence day
     let isAbsenceDay = false
-    const absence = await this.loadAbsenceDay(employeeId, date)
+    const absence = await this.loadAbsenceDay(employeeId, date, context)
     if (absence && absence.status === "approved") {
       isAbsenceDay = true
     }
@@ -355,8 +403,14 @@ export class DailyCalcService {
    */
   private async loadAbsenceDay(
     employeeId: string,
-    date: Date
+    date: Date,
+    context?: DailyCalcContext
   ): Promise<AbsenceDayRow | null> {
+    if (context) {
+      const key = date.toISOString().split("T")[0]!
+      // Return cached value; undefined means "not in range" → treat as null
+      return context.absences.get(key) ?? null
+    }
     const rows = await this.prisma.$queryRaw<AbsenceDayRow[]>`
       SELECT ad.*,
              at.portion as at_portion,
@@ -379,7 +433,13 @@ export class DailyCalcService {
    * Check if rounding is relative to plan from system settings.
    * Ported from Go: settingsLookup.IsRoundingRelativeToPlan()
    */
-  private async isRoundingRelativeToPlan(tenantId: string): Promise<boolean> {
+  private async isRoundingRelativeToPlan(
+    tenantId: string,
+    context?: DailyCalcContext
+  ): Promise<boolean> {
+    if (context) {
+      return context.tenant.systemSettings.roundingRelativeToPlan
+    }
     const settings = await this.prisma.systemSetting.findFirst({
       where: { tenantId },
       select: { roundingRelativeToPlan: true },
@@ -392,8 +452,14 @@ export class DailyCalcService {
    */
   private async getPreviousDailyValue(
     employeeId: string,
-    date: Date
+    date: Date,
+    context?: DailyCalcContext
   ): Promise<{ hasError: boolean } | null> {
+    if (context) {
+      const key = date.toISOString().split("T")[0]!
+      // undefined means "not in range" → treat as null (no previous value)
+      return context.previousValues.get(key) ?? null
+    }
     return this.prisma.dailyValue.findUnique({
       where: {
         employeeId_valueDate: { employeeId, valueDate: date },
@@ -414,16 +480,17 @@ export class DailyCalcService {
     tenantId: string,
     employeeId: string,
     date: Date,
-    empDayPlan: EmployeeDayPlanWithDetails | null
+    empDayPlan: EmployeeDayPlanWithDetails | null,
+    context?: DailyCalcContext
   ): Promise<BookingWithType[]> {
     // Simple load if no day plan or no day change behavior
     if (!empDayPlan || !empDayPlan.dayPlan) {
-      return this.loadBookingsForDate(tenantId, employeeId, date)
+      return this.loadBookingsForDate(tenantId, employeeId, date, context)
     }
 
     const behavior = empDayPlan.dayPlan.dayChangeBehavior
     if (!behavior || behavior === "" || behavior === DAY_CHANGE_NONE) {
-      return this.loadBookingsForDate(tenantId, employeeId, date)
+      return this.loadBookingsForDate(tenantId, employeeId, date, context)
     }
 
     // Load 3-day range for day change behaviors
@@ -431,7 +498,8 @@ export class DailyCalcService {
       tenantId,
       employeeId,
       addDays(date, -1),
-      addDays(date, 1)
+      addDays(date, 1),
+      context
     )
 
     switch (behavior) {
@@ -458,8 +526,13 @@ export class DailyCalcService {
   private async loadBookingsForDate(
     tenantId: string,
     employeeId: string,
-    date: Date
+    date: Date,
+    context?: DailyCalcContext
   ): Promise<BookingWithType[]> {
+    if (context) {
+      const key = date.toISOString().split("T")[0]!
+      return context.bookingsByDate.get(key) ?? []
+    }
     return this.prisma.booking.findMany({
       where: { tenantId, employeeId, bookingDate: date },
       include: { bookingType: true },
@@ -474,8 +547,18 @@ export class DailyCalcService {
     tenantId: string,
     employeeId: string,
     startDate: Date,
-    endDate: Date
+    endDate: Date,
+    context?: DailyCalcContext
   ): Promise<BookingWithType[]> {
+    if (context) {
+      // Filter from the pre-loaded extended booking range
+      const start = dateOnly(startDate).getTime()
+      const end = dateOnly(endDate).getTime()
+      return context.allBookingsExtended.filter((b) => {
+        const t = dateOnly(b.bookingDate).getTime()
+        return t >= start && t <= end
+      })
+    }
     return this.prisma.booking.findMany({
       where: {
         tenantId,
@@ -659,14 +742,16 @@ export class DailyCalcService {
     employeeId: string,
     date: Date,
     empDayPlan: EmployeeDayPlanWithDetails,
-    holidayCategory: number
+    holidayCategory: number,
+    context?: DailyCalcContext
   ): Promise<DailyValueInput> {
     let targetTime = 0
     if (empDayPlan.dayPlan) {
       targetTime = await this.resolveTargetHours(
         employeeId,
         date,
-        empDayPlan.dayPlan
+        empDayPlan.dayPlan,
+        context
       )
     }
 
@@ -706,14 +791,16 @@ export class DailyCalcService {
     employeeId: string,
     date: Date,
     empDayPlan: EmployeeDayPlanWithDetails,
-    absenceDay: AbsenceDayRow
+    absenceDay: AbsenceDayRow,
+    context?: DailyCalcContext
   ): Promise<DailyValueInput> {
     let targetTime = 0
     if (empDayPlan.dayPlan) {
       targetTime = await this.resolveTargetHours(
         employeeId,
         date,
-        empDayPlan.dayPlan
+        empDayPlan.dayPlan,
+        context
       )
     }
 
@@ -756,7 +843,8 @@ export class DailyCalcService {
     tenantId: string,
     employeeId: string,
     date: Date,
-    empDayPlan: EmployeeDayPlanWithDetails
+    empDayPlan: EmployeeDayPlanWithDetails,
+    context?: DailyCalcContext
   ): Promise<DailyValueInput | null> {
     let targetTime = 0
     let behavior = NO_BOOKING_ERROR
@@ -764,7 +852,8 @@ export class DailyCalcService {
       targetTime = await this.resolveTargetHours(
         employeeId,
         date,
-        empDayPlan.dayPlan
+        empDayPlan.dayPlan,
+        context
       )
       behavior = empDayPlan.dayPlan.noBookingBehavior || NO_BOOKING_ERROR
     }
@@ -826,7 +915,7 @@ export class DailyCalcService {
         const today = dateOnly(new Date())
         if (date < today) {
           // Check if absence already exists (idempotency)
-          const existing = await this.loadAbsenceDay(employeeId, date)
+          const existing = await this.loadAbsenceDay(employeeId, date, context)
           if (!existing) {
             try {
               await this.createAutoAbsenceByCode(
@@ -869,15 +958,22 @@ export class DailyCalcService {
         const warnings: string[] = ["NO_BOOKINGS_CREDITED"]
 
         if (targetTime > 0) {
-          const emp = await this.prisma.employee.findFirst({
-            where: { id: employeeId },
-            select: {
-              id: true,
-              tenantId: true,
-              defaultOrderId: true,
-              defaultActivityId: true,
-            },
-          })
+          const emp = context?.employeeMaster
+            ? {
+                id: employeeId,
+                tenantId: context.employeeMaster.tenantId,
+                defaultOrderId: context.employeeMaster.defaultOrderId,
+                defaultActivityId: context.employeeMaster.defaultActivityId,
+              }
+            : await this.prisma.employee.findFirst({
+                where: { id: employeeId },
+                select: {
+                  id: true,
+                  tenantId: true,
+                  defaultOrderId: true,
+                  defaultActivityId: true,
+                },
+              })
 
           if (emp?.defaultOrderId) {
             try {
@@ -997,7 +1093,8 @@ export class DailyCalcService {
     date: Date,
     empDayPlan: EmployeeDayPlanWithDetails,
     bookings: BookingWithType[],
-    isHoliday: boolean
+    isHoliday: boolean,
+    context?: DailyCalcContext
   ): Promise<{ dailyValue: DailyValueInput; calcPairs: BookingPair[] }> {
     let currentEmpDayPlan = empDayPlan
     let shiftResult: { hasError: boolean; errorCode: string } | null = null
@@ -1044,7 +1141,8 @@ export class DailyCalcService {
       employeeId,
       date,
       currentEmpDayPlan,
-      bookings
+      bookings,
+      context
     )
 
     // 3. Run calculation
@@ -1088,7 +1186,8 @@ export class DailyCalcService {
     employeeId: string,
     date: Date,
     empDayPlan: EmployeeDayPlanWithDetails,
-    bookings: BookingWithType[]
+    bookings: BookingWithType[],
+    context?: DailyCalcContext
   ): Promise<CalculationInput> {
     const input: CalculationInput = {
       employeeId,
@@ -1147,11 +1246,12 @@ export class DailyCalcService {
       const regularHours = await this.resolveTargetHours(
         employeeId,
         date,
-        dp
+        dp,
+        context
       )
 
       // Check system setting for relative rounding
-      const roundRelativeToPlan = await this.isRoundingRelativeToPlan(tenantId)
+      const roundRelativeToPlan = await this.isRoundingRelativeToPlan(tenantId, context)
 
       input.dayPlan = {
         planType: dp.planType as "fixed" | "flextime",

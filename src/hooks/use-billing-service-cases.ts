@@ -98,6 +98,9 @@ export function useCreateInvoiceFromServiceCase() {
       queryClient.invalidateQueries({
         queryKey: trpc.billing.serviceCases.getById.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.billing.documents.list.queryKey(),
+      })
     },
   })
 }

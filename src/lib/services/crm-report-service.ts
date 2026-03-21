@@ -220,7 +220,7 @@ export async function inquiryPipeline(
   const addresses =
     addressIds.length > 0
       ? await prisma.crmAddress.findMany({
-          where: { id: { in: addressIds } },
+          where: { id: { in: addressIds }, tenantId },
           select: { id: true, company: true },
         })
       : []

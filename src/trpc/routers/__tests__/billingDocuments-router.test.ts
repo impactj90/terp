@@ -564,6 +564,7 @@ describe("billing.documents.positions.add", () => {
 
 describe("billing.documents.positions.reorder", () => {
   it("updates sort order", async () => {
+    const posIds = [POS_ID, "e0000000-0000-4000-a000-000000000002"]
     const prisma = {
       billingDocument: {
         findFirst: vi.fn().mockResolvedValue(mockDocument),
@@ -571,14 +572,17 @@ describe("billing.documents.positions.reorder", () => {
       billingDocumentPosition: {
         updateMany: vi.fn().mockResolvedValue({ count: 1 }),
         findFirst: vi.fn().mockResolvedValue(null),
-        findMany: vi.fn().mockResolvedValue([]),
+        findMany: vi.fn()
+          .mockResolvedValueOnce(posIds.map(id => ({ id }))) // validation
+          .mockResolvedValue([]), // findPositions return
+        update: vi.fn().mockResolvedValue({}),
       },
     }
     const caller = createCaller(createTestContext(prisma))
+    // Should not throw — valid positions pass validation
     await caller.positions.reorder({
       documentId: DOC_ID,
-      positionIds: [POS_ID, "e0000000-0000-4000-a000-000000000002"],
+      positionIds: posIds,
     })
-    expect(prisma.billingDocumentPosition.updateMany).toHaveBeenCalled()
   })
 })

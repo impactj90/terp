@@ -50,7 +50,7 @@ import {
 } from "./monthly-calc.types"
 
 export class MonthlyCalcService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(private prisma: PrismaClient, private tenantId?: string) {}
 
   // =========================================================================
   // Public Methods -- Orchestration (from monthlycalc.go)
@@ -270,9 +270,9 @@ export class MonthlyCalcService {
   ): Promise<void> {
     this.validateYearMonth(year, month)
 
-    // Get employee for tenant ID
-    const employee = await this.prisma.employee.findUnique({
-      where: { id: employeeId },
+    // Get employee for tenant ID (scoped if tenantId available)
+    const employee = await this.prisma.employee.findFirst({
+      where: { id: employeeId, ...(this.tenantId ? { tenantId: this.tenantId } : {}) },
     })
     if (employee === null) {
       throw new Error(ERR_EMPLOYEE_NOT_FOUND)
@@ -530,8 +530,8 @@ export class MonthlyCalcService {
     const { from, to } = this.monthDateRange(year, month)
 
     // Load employee first (needed for tariffId), then parallelize the rest
-    const employee = await this.prisma.employee.findUnique({
-      where: { id: employeeId },
+    const employee = await this.prisma.employee.findFirst({
+      where: { id: employeeId, ...(this.tenantId ? { tenantId: this.tenantId } : {}) },
     })
     if (employee === null) {
       throw new Error(ERR_EMPLOYEE_NOT_FOUND)

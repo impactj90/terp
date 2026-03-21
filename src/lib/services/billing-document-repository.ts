@@ -210,6 +210,35 @@ export async function createPosition(
   })
 }
 
+export async function createManyPositions(
+  prisma: PrismaClient,
+  positions: Array<{
+    documentId: string
+    sortOrder: number
+    type: BillingPositionType | string
+    articleId?: string | null
+    articleNumber?: string | null
+    description?: string | null
+    quantity?: number | null
+    unit?: string | null
+    unitPrice?: number | null
+    flatCosts?: number | null
+    totalPrice?: number | null
+    priceType?: BillingPriceType | string | null
+    vatRate?: number | null
+    deliveryDate?: Date | null
+    confirmedDate?: Date | null
+  }>
+) {
+  return prisma.billingDocumentPosition.createMany({
+    data: positions.map(pos => ({
+      ...pos,
+      type: pos.type as BillingPositionType,
+      priceType: pos.priceType as BillingPriceType | null ?? undefined,
+    })),
+  })
+}
+
 export async function updatePosition(
   prisma: PrismaClient,
   id: string,

@@ -244,7 +244,7 @@ export async function update(
     (previousIsAdmin ?? false) !== input.isAdmin
   ) {
     const newRole = input.isAdmin ? "admin" : "user"
-    await repo.updateUsersRole(prisma, input.id, newRole)
+    await repo.updateUsersRole(prisma, tenantId, input.id, newRole)
   }
 
   // Never throws — audit failures must not block the actual operation

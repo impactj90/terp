@@ -125,7 +125,7 @@ const mockPosition = {
 }
 
 function createMockPrisma(overrides: Record<string, unknown> = {}) {
-  return {
+  const prisma = {
     crmAddress: { findFirst: vi.fn() },
     crmContact: { findFirst: vi.fn() },
     billingDocument: {
@@ -140,13 +140,23 @@ function createMockPrisma(overrides: Record<string, unknown> = {}) {
       findMany: vi.fn(),
       findFirst: vi.fn(),
       create: vi.fn(),
+      createMany: vi.fn().mockResolvedValue({ count: 0 }),
+      update: vi.fn(),
       updateMany: vi.fn(),
       deleteMany: vi.fn(),
     },
     numberSequence: { upsert: vi.fn() },
+    $transaction: vi.fn(),
     billingDocumentTemplate: { findFirst: vi.fn().mockResolvedValue(null) },
     ...overrides,
   } as unknown as PrismaClient
+  ;(prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(
+    (fnOrArr: unknown) => {
+      if (typeof fnOrArr === "function") return (fnOrArr as (tx: unknown) => unknown)(prisma)
+      return Promise.all(fnOrArr as unknown[])
+    }
+  )
+  return prisma
 }
 
 describe("billing-document-service", () => {
@@ -407,7 +417,7 @@ describe("billing-document-service", () => {
 
       await service.forward(prisma, TENANT_ID, DOC_ID, "ORDER_CONFIRMATION", USER_ID, AUDIT)
 
-      expect(prisma.billingDocumentPosition.create).toHaveBeenCalledTimes(2)
+      expect(prisma.billingDocumentPosition.createMany).toHaveBeenCalledTimes(1)
     })
 
     it("sets parent document status to FORWARDED", async () => {
@@ -629,15 +639,17 @@ describe("billing-document-service", () => {
     it("updates sortOrder for all positions", async () => {
       const prisma = createMockPrisma()
       ;(prisma.billingDocument.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(mockDocument)
-      ;(prisma.billingDocumentPosition.updateMany as ReturnType<typeof vi.fn>).mockResolvedValue({ count: 1 })
-      ;(prisma.billingDocumentPosition.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(null)
-      ;(prisma.billingDocumentPosition.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([])
+      ;(prisma.billingDocumentPosition.findMany as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce([{ id: "id-a" }, { id: "id-b" }, { id: "id-c" }]) // validation
+        .mockResolvedValue([]) // findPositions return
+      ;(prisma.billingDocumentPosition.update as ReturnType<typeof vi.fn>).mockResolvedValue({})
+      ;(prisma.$transaction as ReturnType<typeof vi.fn>).mockResolvedValue([{}, {}, {}])
 
       const ids = ["id-a", "id-b", "id-c"]
       await service.reorderPositions(prisma, TENANT_ID, DOC_ID, ids)
 
-      // updateMany called 3 times (one per position)
-      expect(prisma.billingDocumentPosition.updateMany).toHaveBeenCalledTimes(3)
+      // $transaction called once with batch of updates
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1)
     })
   })
 

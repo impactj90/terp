@@ -169,6 +169,7 @@ model Tenant {
   absenceDays                 AbsenceDay[]
   schedules                   Schedule[]
   scheduleExecutions          ScheduleExecution[]
+  cronCheckpoints             CronCheckpoint[]
   corrections                 Correction[]
   orderBookings               OrderBooking[]
   contactTypes                ContactType[]
@@ -2918,10 +2919,12 @@ model MacroAssignment {
   macroId      String   @map("macro_id") @db.Uuid
   tariffId     String?  @map("tariff_id") @db.Uuid
   employeeId   String?  @map("employee_id") @db.Uuid
-  executionDay Int      @map("execution_day")
-  isActive     Boolean  @default(true) @map("is_active")
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  executionDay      Int       @map("execution_day")
+  isActive          Boolean   @default(true) @map("is_active")
+  lastExecutedAt    DateTime? @map("last_executed_at") @db.Timestamptz(6)
+  lastExecutedDate  DateTime? @map("last_executed_date") @db.Date
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -2936,6 +2939,7 @@ model MacroAssignment {
   @@index([tariffId], map: "idx_macro_assignments_tariff")
   @@index([employeeId], map: "idx_macro_assignments_employee")
   @@index([tenantId, isActive], map: "idx_macro_assignments_active")
+  @@index([lastExecutedDate], map: "idx_macro_assignments_last_executed_date")
   @@map("macro_assignments")
 }
 
@@ -4001,6 +4005,32 @@ model ScheduleTaskExecution {
   @@index([executionId], map: "idx_ste_execution")
   @@index([executionId, sortOrder], map: "idx_ste_order")
   @@map("schedule_task_executions")
+}
+
+// -----------------------------------------------------------------------------
+// CronCheckpoint
+// -----------------------------------------------------------------------------
+// Migration: 000106
+//
+// Lightweight checkpoint table for cron job resume. When a cron run times out,
+// re-triggering the same run skips already-completed tenants.
+//
+model CronCheckpoint {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cronName   String   @map("cron_name") @db.VarChar(100)
+  runKey     String   @map("run_key") @db.VarChar(255)
+  tenantId   String   @map("tenant_id") @db.Uuid
+  status     String   @default("completed") @db.VarChar(20)
+  durationMs Int?     @map("duration_ms")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Indexes
+  @@unique([cronName, runKey, tenantId])
+  @@index([cronName, runKey], map: "idx_cron_checkpoints_lookup")
+  @@map("cron_checkpoints")
 }
 
 // -----------------------------------------------------------------------------

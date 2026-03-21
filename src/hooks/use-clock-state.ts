@@ -128,6 +128,8 @@ export function useClockState({ employeeId, enabled = true }: UseClockStateOptio
   // Action handler
   const handleAction = useCallback(
     async (action: string) => {
+      if (createBooking.isPending) return
+
       const codeMap: Record<string, string> = {
         clock_in: CLOCK_IN,
         clock_out: CLOCK_OUT,

@@ -128,6 +128,7 @@ async function ensureDefaults(prisma: PrismaClient, tenantId: string): Promise<v
 
   await prisma.correctionMessage.createMany({
     data: defaultCorrectionMessages(tenantId),
+    skipDuplicates: true,
   })
 }
 

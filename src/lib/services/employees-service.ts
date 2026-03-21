@@ -252,23 +252,8 @@ export async function create(
     pin = await repo.getNextPin(prisma, tenantId);
   }
 
-  // Check personnel number uniqueness per tenant
-  const existingByPN = await repo.findByPersonnelNumber(
-    prisma,
-    tenantId,
-    personnelNumber,
-  );
-  if (existingByPN) {
-    throw new EmployeeConflictError("Personnel number already exists");
-  }
-
-  // Check PIN uniqueness per tenant
-  const existingByPIN = await repo.findByPin(prisma, tenantId, pin);
-  if (existingByPIN) {
-    throw new EmployeeConflictError("PIN already exists");
-  }
-
-  // Build create data -- wrap in try/catch for P2002 unique constraint as safety net
+  // Rely on DB unique constraints for personnel number / PIN uniqueness.
+  // P2002 catch below maps constraint violations to domain errors.
   try {
     const created = await repo.create(prisma, {
       tenantId,
@@ -834,7 +819,7 @@ export async function bulkAssignTariff(
   let updated = 0;
   if (validIds.length > 0) {
     const result = await prisma.employee.updateMany({
-      where: { id: { in: validIds } },
+      where: { id: { in: validIds }, tenantId },
       data: { tariffId: tariffValue },
     });
     updated = result.count;
@@ -910,7 +895,7 @@ export async function calculateDay(
   // Also trigger monthly recalc (best-effort) so monthly values stay in sync
   // @see ZMI-TICKET-243
   try {
-    const monthlyService = new MonthlyCalcService(prisma);
+    const monthlyService = new MonthlyCalcService(prisma, tenantId);
     await monthlyService.calculateMonth(
       employeeId,
       date.getUTCFullYear(),

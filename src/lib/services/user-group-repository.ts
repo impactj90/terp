@@ -117,11 +117,12 @@ export async function deleteById(prisma: PrismaClient, tenantId: string, id: str
 
 export async function updateUsersRole(
   prisma: PrismaClient,
+  tenantId: string,
   userGroupId: string,
   role: string
 ) {
   return prisma.user.updateMany({
-    where: { userGroupId },
+    where: { userGroupId, tenantId },
     data: { role },
   })
 }

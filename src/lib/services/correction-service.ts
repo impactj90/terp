@@ -58,7 +58,7 @@ async function triggerRecalc(
   correctionDate: Date
 ): Promise<void> {
   try {
-    const service = new RecalcService(prisma)
+    const service = new RecalcService(prisma, undefined, undefined, tenantId)
     await service.triggerRecalc(tenantId, employeeId, correctionDate)
   } catch (error) {
     console.error(

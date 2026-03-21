@@ -90,7 +90,7 @@ const mockInvoicedCase = {
 }
 
 function createMockPrisma(overrides: Record<string, unknown> = {}) {
-  return {
+  const prisma = {
     crmAddress: { findFirst: vi.fn() },
     crmContact: { findFirst: vi.fn() },
     crmInquiry: { findFirst: vi.fn() },
@@ -110,16 +110,25 @@ function createMockPrisma(overrides: Record<string, unknown> = {}) {
     billingDocumentPosition: {
       findFirst: vi.fn(),
       create: vi.fn(),
+      createMany: vi.fn().mockResolvedValue({ count: 0 }),
       findMany: vi.fn(),
     },
     numberSequence: { upsert: vi.fn() },
     billingDocumentTemplate: { findFirst: vi.fn().mockResolvedValue(null) },
+    $transaction: vi.fn(),
     order: {
       findFirst: vi.fn(),
       create: vi.fn(),
     },
     ...overrides,
   } as unknown as PrismaClient
+  ;(prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(
+    (fnOrArr: unknown) => {
+      if (typeof fnOrArr === "function") return (fnOrArr as (tx: unknown) => unknown)(prisma)
+      return Promise.all(fnOrArr as unknown[])
+    }
+  )
+  return prisma
 }
 
 describe("billing-service-case-service", () => {

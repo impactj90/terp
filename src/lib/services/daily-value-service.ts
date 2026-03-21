@@ -103,7 +103,7 @@ export async function recalculate(
   }
 
   const { RecalcService } = await import("./recalc")
-  const recalcService = new RecalcService(prisma as PrismaClient)
+  const recalcService = new RecalcService(prisma as PrismaClient, undefined, undefined, tenantId)
 
   let result
   if (input.employeeId) {

@@ -66,6 +66,7 @@ function createMockPrisma(overrides: Record<string, Record<string, unknown>> = {
     },
     billingDocumentPosition: {
       create: vi.fn().mockResolvedValue({}),
+      createMany: vi.fn().mockResolvedValue({ count: 0 }),
       findMany: vi.fn().mockResolvedValue([]),
       ...overrides.billingDocumentPosition,
     },

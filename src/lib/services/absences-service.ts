@@ -109,7 +109,7 @@ async function triggerRecalc(
   date: Date
 ): Promise<void> {
   try {
-    const service = new RecalcService(prisma)
+    const service = new RecalcService(prisma, undefined, undefined, tenantId)
     await service.triggerRecalc(tenantId, employeeId, date)
   } catch (error) {
     console.error(
@@ -127,7 +127,7 @@ async function triggerRecalcRange(
   toDate: Date
 ): Promise<void> {
   try {
-    const service = new RecalcService(prisma)
+    const service = new RecalcService(prisma, undefined, undefined, tenantId)
     await service.triggerRecalcRange(tenantId, employeeId, fromDate, toDate)
   } catch (error) {
     console.error(
