@@ -211,8 +211,10 @@ describe("costCenters.update", () => {
     })
     const mockPrisma = {
       costCenter: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -272,14 +274,16 @@ describe("costCenters.update", () => {
     const updated = makeCostCenter({ code: "CC001" })
     const mockPrisma = {
       costCenter: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({ id: CC_ID, code: "CC001" })
     expect(result.code).toBe("CC001")
-    expect(mockPrisma.costCenter.findFirst).toHaveBeenCalledTimes(1)
+    expect(mockPrisma.costCenter.findFirst).toHaveBeenCalledTimes(2)
   })
 
   it("throws NOT_FOUND for missing cost center", async () => {

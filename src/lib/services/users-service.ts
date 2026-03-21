@@ -82,7 +82,7 @@ export async function create(
 
   // If userGroupId provided, look up the group
   if (input.userGroupId) {
-    const group = await repo.findUserGroupById(prisma, input.userGroupId)
+    const group = await repo.findUserGroupById(prisma, tenantId, input.userGroupId)
     if (!group) {
       throw new UserValidationError("User group not found")
     }
@@ -202,7 +202,7 @@ export async function update(
       data.role = "user"
     } else {
       // Look up new group
-      const group = await repo.findUserGroupById(prisma, input.userGroupId)
+      const group = await repo.findUserGroupById(prisma, tenantId, input.userGroupId)
       if (!group) {
         throw new UserValidationError("User group not found")
       }

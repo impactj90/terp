@@ -235,8 +235,10 @@ describe("accessZones.update", () => {
     const updated = makeZone({ name: "Zone A Updated", sortOrder: 3 })
     const mockPrisma = {
       accessZone: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -248,8 +250,8 @@ describe("accessZones.update", () => {
 
     expect(result.name).toBe("Zone A Updated")
     expect(result.sortOrder).toBe(3)
-    expect(mockPrisma.accessZone.update).toHaveBeenCalledWith({
-      where: { id: ZONE_ID },
+    expect(mockPrisma.accessZone.updateMany).toHaveBeenCalledWith({
+      where: { id: ZONE_ID, tenantId: TENANT_ID },
       data: { name: "Zone A Updated", sortOrder: 3 },
     })
   })

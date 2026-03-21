@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for the User model.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { TenantScopedNotFoundError } from "@/lib/services/prisma-helpers"
 
 export interface UserListParams {
   search?: string
@@ -68,10 +69,14 @@ export async function findByIdWithRelations(
 
 export async function findUserGroupById(
   prisma: PrismaClient,
+  tenantId: string,
   id: string
 ) {
-  return prisma.userGroup.findUnique({
-    where: { id },
+  return prisma.userGroup.findFirst({
+    where: {
+      id,
+      OR: [{ tenantId }, { tenantId: null }],
+    },
   })
 }
 
@@ -117,7 +122,16 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.user.update({ where: { id }, data })
+  const { count } = await prisma.user.updateMany({
+    where: { id, userTenants: { some: { tenantId } } },
+    data,
+  })
+  if (count === 0) {
+    throw new TenantScopedNotFoundError("User")
+  }
+  return prisma.user.findFirst({
+    where: { id, userTenants: { some: { tenantId } } },
+  })
 }
 
 export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {

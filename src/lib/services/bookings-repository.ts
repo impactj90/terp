@@ -6,6 +6,7 @@
  * CRUD operations, derived booking management, and transactional deletes.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 // --- Prisma Include Objects ---
 
@@ -155,10 +156,9 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.booking.update({
-    where: { id },
-    data,
+  return tenantScopedUpdate(prisma.booking, { id, tenantId }, data, {
     include: bookingDetailInclude,
+    entity: "Booking",
   })
 }
 

@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for RawTerminalBooking and ImportBatch models.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 const rawBookingInclude = {
   employee: {
@@ -98,7 +99,7 @@ export async function updateImportBatch(
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.importBatch.update({ where: { id }, data })
+  return tenantScopedUpdate(prisma.importBatch, { id, tenantId }, data, { entity: "ImportBatch" })
 }
 
 export async function findEmployeeByPin(

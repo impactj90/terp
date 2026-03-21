@@ -219,8 +219,10 @@ describe("crm.addresses.delete", () => {
   it("soft-deletes address (sets isActive=false)", async () => {
     const prisma = {
       crmAddress: {
-        findFirst: vi.fn().mockResolvedValue(mockAddress),
-        update: vi.fn().mockResolvedValue({ ...mockAddress, isActive: false }),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(mockAddress)
+          .mockResolvedValueOnce({ ...mockAddress, isActive: false }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
 
@@ -228,8 +230,8 @@ describe("crm.addresses.delete", () => {
     const result = await caller.delete({ id: ADDRESS_ID })
 
     expect(result.success).toBe(true)
-    expect(prisma.crmAddress.update).toHaveBeenCalledWith({
-      where: { id: ADDRESS_ID },
+    expect(prisma.crmAddress.updateMany).toHaveBeenCalledWith({
+      where: { id: ADDRESS_ID, tenantId: TENANT_ID },
       data: { isActive: false },
     })
   })
@@ -242,8 +244,10 @@ describe("crm.addresses.restore", () => {
     const inactiveAddress = { ...mockAddress, isActive: false }
     const prisma = {
       crmAddress: {
-        findFirst: vi.fn().mockResolvedValue(inactiveAddress),
-        update: vi.fn().mockResolvedValue({ ...mockAddress, isActive: true }),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(inactiveAddress)
+          .mockResolvedValueOnce({ ...mockAddress, isActive: true }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
 

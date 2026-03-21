@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for the Correction model.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 const correctionInclude = {
   employee: {
@@ -136,10 +137,9 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.correction.update({
-    where: { id },
-    data,
+  return tenantScopedUpdate(prisma.correction, { id, tenantId }, data, {
     include: correctionInclude,
+    entity: "Correction",
   })
 }
 
@@ -154,9 +154,13 @@ export async function updateIfStatus(
   expectedStatus: string,
   data: Record<string, unknown>
 ) {
-  return prisma.correction.update({
-    where: { id },
+  const { count } = await prisma.correction.updateMany({
+    where: { id, tenantId, status: expectedStatus },
     data,
+  })
+  if (count === 0) return null
+  return prisma.correction.findFirst({
+    where: { id, tenantId },
     include: correctionInclude,
   })
 }

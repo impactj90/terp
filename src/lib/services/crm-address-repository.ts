@@ -1,4 +1,5 @@
 import type { PrismaClient, CrmAddressType } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 // --- Address Repository ---
 
@@ -106,7 +107,7 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.crmAddress.update({ where: { id }, data })
+  return tenantScopedUpdate(prisma.crmAddress, { id, tenantId }, data, { entity: "CrmAddress" })
 }
 
 export async function softDelete(
@@ -114,10 +115,7 @@ export async function softDelete(
   tenantId: string,
   id: string
 ) {
-  return prisma.crmAddress.update({
-    where: { id },
-    data: { isActive: false },
-  })
+  return tenantScopedUpdate(prisma.crmAddress, { id, tenantId }, { isActive: false } as Record<string, unknown>, { entity: "CrmAddress" })
 }
 
 export async function restore(
@@ -125,10 +123,7 @@ export async function restore(
   tenantId: string,
   id: string
 ) {
-  return prisma.crmAddress.update({
-    where: { id },
-    data: { isActive: true },
-  })
+  return tenantScopedUpdate(prisma.crmAddress, { id, tenantId }, { isActive: true } as Record<string, unknown>, { entity: "CrmAddress" })
 }
 
 export async function hardDelete(
@@ -189,7 +184,7 @@ export async function updateContact(
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.crmContact.update({ where: { id }, data })
+  return tenantScopedUpdate(prisma.crmContact, { id, tenantId }, data, { entity: "CrmContact" })
 }
 
 export async function deleteContact(
@@ -247,7 +242,7 @@ export async function updateBankAccount(
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.crmBankAccount.update({ where: { id }, data })
+  return tenantScopedUpdate(prisma.crmBankAccount, { id, tenantId }, data, { entity: "CrmBankAccount" })
 }
 
 export async function deleteBankAccount(
@@ -265,14 +260,16 @@ export async function deleteBankAccount(
 
 export async function countContacts(
   prisma: PrismaClient,
+  tenantId: string,
   addressId: string
 ) {
-  return prisma.crmContact.count({ where: { addressId } })
+  return prisma.crmContact.count({ where: { tenantId, addressId } })
 }
 
 export async function countBankAccounts(
   prisma: PrismaClient,
+  tenantId: string,
   addressId: string
 ) {
-  return prisma.crmBankAccount.count({ where: { addressId } })
+  return prisma.crmBankAccount.count({ where: { tenantId, addressId } })
 }

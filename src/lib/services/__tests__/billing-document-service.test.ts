@@ -618,7 +618,7 @@ describe("billing-document-service", () => {
       await service.deletePosition(prisma, TENANT_ID, POS_ID, AUDIT)
 
       expect(prisma.billingDocumentPosition.deleteMany).toHaveBeenCalledWith({
-        where: { id: POS_ID },
+        where: { id: POS_ID, document: { tenantId: TENANT_ID } },
       })
     })
 

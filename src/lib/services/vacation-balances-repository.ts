@@ -5,6 +5,7 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import { employeeSelect } from "./vacation-balance-output"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 /**
  * Lists vacation balances with pagination and filtering.
@@ -111,12 +112,12 @@ export async function findBalancesByTenantAndYear(
  */
 export async function updateBalance(
   prisma: PrismaClient,
+  tenantId: string,
   balanceId: string,
   data: Record<string, unknown>
 ) {
-  return prisma.vacationBalance.update({
-    where: { id: balanceId },
-    data,
+  return tenantScopedUpdate(prisma.vacationBalance, { id: balanceId, tenantId }, data, {
     include: { employee: { select: employeeSelect } },
+    entity: "VacationBalance",
   })
 }

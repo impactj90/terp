@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for the AbsenceDay model.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 // --- Include Objects ---
 
@@ -287,10 +288,9 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.absenceDay.update({
-    where: { id },
-    data,
+  return tenantScopedUpdate(prisma.absenceDay, { id, tenantId }, data, {
     include: absenceDayListInclude,
+    entity: "AbsenceDay",
   })
 }
 
@@ -305,13 +305,13 @@ export async function updateIfStatus(
   expectedStatus: string,
   data: Record<string, unknown>
 ) {
-  const existing = await prisma.absenceDay.findFirst({ where: { id, tenantId, status: expectedStatus } })
-  if (!existing) {
-    return null
-  }
-  return prisma.absenceDay.update({
-    where: { id },
+  const { count } = await prisma.absenceDay.updateMany({
+    where: { id, tenantId, status: expectedStatus },
     data,
+  })
+  if (count === 0) return null
+  return prisma.absenceDay.findFirst({
+    where: { id, tenantId },
     include: absenceDayListInclude,
   })
 }

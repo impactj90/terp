@@ -160,7 +160,8 @@ describe("systemSettings.update", () => {
     const mockPrisma = {
       systemSetting: {
         findUnique: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        findFirst: vi.fn().mockResolvedValue(updated),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -171,8 +172,8 @@ describe("systemSettings.update", () => {
 
     expect(result.roundingRelativeToPlan).toBe(true)
     expect(result.birthdayWindowDaysBefore).toBe(14)
-    expect(mockPrisma.systemSetting.update).toHaveBeenCalledWith({
-      where: { id: SETTINGS_ID },
+    expect(mockPrisma.systemSetting.updateMany).toHaveBeenCalledWith({
+      where: { id: SETTINGS_ID, tenantId: TENANT_ID },
       data: {
         roundingRelativeToPlan: true,
         birthdayWindowDaysBefore: 14,

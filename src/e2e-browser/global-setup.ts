@@ -7,6 +7,23 @@ import { writeFileSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 
 const CLEANUP_SQL = `
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Cross-tenant isolation test: cleanup Tenant B (security-tenant-isolation.spec.ts)
+-- Uses deterministic UUID prefix e2e150ff for easy identification
+-- ═══════════════════════════════════════════════════════════════════════════
+DELETE FROM billing_document_positions WHERE document_id IN (
+  SELECT id FROM billing_documents WHERE tenant_id = 'e2e150ff-0000-4000-a000-000000000001'
+);
+DELETE FROM billing_documents WHERE tenant_id = 'e2e150ff-0000-4000-a000-000000000001';
+DELETE FROM absence_days WHERE tenant_id = 'e2e150ff-0000-4000-a000-000000000001';
+DELETE FROM bookings WHERE tenant_id = 'e2e150ff-0000-4000-a000-000000000001';
+DELETE FROM booking_types WHERE tenant_id = 'e2e150ff-0000-4000-a000-000000000001';
+DELETE FROM absence_types WHERE tenant_id = 'e2e150ff-0000-4000-a000-000000000001';
+DELETE FROM employees WHERE tenant_id = 'e2e150ff-0000-4000-a000-000000000001';
+DELETE FROM crm_addresses WHERE tenant_id = 'e2e150ff-0000-4000-a000-000000000001';
+DELETE FROM tenant_modules WHERE tenant_id = 'e2e150ff-0000-4000-a000-000000000001';
+DELETE FROM tenants WHERE id = 'e2e150ff-0000-4000-a000-000000000001';
+
 -- Child records first (FK dependencies)
 DELETE FROM macro_assignments WHERE macro_id IN (SELECT id FROM macros WHERE name LIKE 'E2E%');
 DELETE FROM macro_executions WHERE macro_id IN (SELECT id FROM macros WHERE name LIKE 'E2E%');
@@ -137,6 +154,56 @@ DELETE FROM user_tenants WHERE user_id IN (SELECT id FROM users WHERE email = 'e
 DELETE FROM users WHERE email = 'e2e-test@dev.local';
 DELETE FROM user_groups WHERE code = 'E2E-GRP';
 DELETE FROM holidays WHERE tenant_id = '10000000-0000-0000-0000-000000000001' AND holiday_date >= '2027-01-01' AND holiday_date < '2028-01-01';
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Cross-tenant isolation test: seed Tenant B (security-tenant-isolation.spec.ts)
+-- Re-insert after cleanup so tests have deterministic data every run
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- Tenant B
+INSERT INTO tenants (id, name, slug, created_at, updated_at)
+VALUES ('e2e150ff-0000-4000-a000-000000000001', 'E2E Isolation Tenant B', 'e2e-iso-b', NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- Enable billing module for Tenant B (needed for billing document FK)
+INSERT INTO tenant_modules (tenant_id, module, enabled_at)
+VALUES ('e2e150ff-0000-4000-a000-000000000001', 'billing', NOW())
+ON CONFLICT DO NOTHING;
+
+-- Tenant B employee
+INSERT INTO employees (id, tenant_id, personnel_number, pin, first_name, last_name, entry_date, is_active, weekly_hours, vacation_days_per_year, created_at, updated_at)
+VALUES ('e2e150ff-0000-4000-a000-000000000011', 'e2e150ff-0000-4000-a000-000000000001', 'ISO-B-001', '9999', 'Isolation', 'Employee', '2026-01-01', true, 40, 30, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- Tenant B booking type
+INSERT INTO booking_types (id, tenant_id, code, name, direction, is_active, created_at, updated_at)
+VALUES ('e2e150ff-0000-4000-a000-000000000051', 'e2e150ff-0000-4000-a000-000000000001', 'ISO-K', 'Kommen', 'in', true, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- Tenant B booking
+INSERT INTO bookings (id, tenant_id, employee_id, booking_type_id, booking_date, original_time, edited_time, source, created_at, updated_at)
+VALUES ('e2e150ff-0000-4000-a000-000000000021', 'e2e150ff-0000-4000-a000-000000000001', 'e2e150ff-0000-4000-a000-000000000011', 'e2e150ff-0000-4000-a000-000000000051', '2026-01-15', 480, 480, 'web', NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- Tenant B absence type
+INSERT INTO absence_types (id, tenant_id, code, name, category, color, deducts_vacation, is_active, created_at, updated_at)
+VALUES ('e2e150ff-0000-4000-a000-000000000052', 'e2e150ff-0000-4000-a000-000000000001', 'U-ISO', 'Urlaub ISO', 'vacation', '#4CAF50', true, true, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- Tenant B absence day
+INSERT INTO absence_days (id, tenant_id, employee_id, absence_type_id, absence_date, duration, status, created_at, updated_at)
+VALUES ('e2e150ff-0000-4000-a000-000000000031', 'e2e150ff-0000-4000-a000-000000000001', 'e2e150ff-0000-4000-a000-000000000011', 'e2e150ff-0000-4000-a000-000000000052', '2026-03-15', 1, 'pending', NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- Tenant B CRM address (needed for billing document FK)
+INSERT INTO crm_addresses (id, tenant_id, number, company, type, created_at, updated_at)
+VALUES ('e2e150ff-0000-4000-a000-000000000061', 'e2e150ff-0000-4000-a000-000000000001', 'ISO-K-1', 'ISO GmbH', 'CUSTOMER', NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- Tenant B billing document
+INSERT INTO billing_documents (id, tenant_id, number, type, status, address_id, document_date, created_at, updated_at)
+VALUES ('e2e150ff-0000-4000-a000-000000000041', 'e2e150ff-0000-4000-a000-000000000001', 'ISO-RE-001', 'INVOICE', 'DRAFT', 'e2e150ff-0000-4000-a000-000000000061', '2026-03-01', NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
 `;
 
 export default function globalSetup() {

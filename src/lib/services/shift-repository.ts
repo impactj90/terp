@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for the Shift model.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 export async function findMany(prisma: PrismaClient, tenantId: string) {
   return prisma.shift.findMany({
@@ -66,7 +67,7 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.shift.update({ where: { id }, data })
+  return tenantScopedUpdate(prisma.shift, { id, tenantId }, data, { entity: "Shift" })
 }
 
 export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {

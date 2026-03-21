@@ -71,7 +71,7 @@ export async function recalculateTotals(
   tenantId: string,
   documentId: string
 ) {
-  const positions = await repo.findPositions(prisma, documentId)
+  const positions = await repo.findPositions(prisma, tenantId, documentId)
 
   let subtotalNet = 0
   const vatMap = new Map<number, number>()
@@ -788,7 +788,7 @@ export async function addPosition(
   assertDraft(doc.status)
 
   // Get next sort order
-  const maxSort = await repo.getMaxSortOrder(prisma, input.documentId)
+  const maxSort = await repo.getMaxSortOrder(prisma, tenantId, input.documentId)
 
   // Calculate total price
   const totalPrice = calculatePositionTotal(input.quantity, input.unitPrice, input.flatCosts)
@@ -876,7 +876,7 @@ export async function updatePosition(
 
   if (Object.keys(data).length === 0) return pos
 
-  const updated = await repo.updatePosition(prisma, input.id, data)
+  const updated = await repo.updatePosition(prisma, tenantId, input.id, data)
 
   // Recalculate document totals
   await recalculateTotals(prisma, tenantId, pos.document.id)
@@ -917,7 +917,7 @@ export async function deletePosition(
   assertDraft(pos.document.status)
 
   const documentId = pos.document.id
-  const deleted = await repo.deletePosition(prisma, id)
+  const deleted = await repo.deletePosition(prisma, tenantId, id)
   if (!deleted) throw new BillingDocumentValidationError("Position not found")
 
   // Recalculate document totals
@@ -972,7 +972,7 @@ export async function reorderPositions(
     )
   )
 
-  return repo.findPositions(prisma, documentId)
+  return repo.findPositions(prisma, tenantId, documentId)
 }
 
 export async function listPositions(
@@ -987,5 +987,5 @@ export async function listPositions(
   })
   if (!doc) throw new BillingDocumentNotFoundError()
 
-  return repo.findPositions(prisma, documentId)
+  return repo.findPositions(prisma, tenantId, documentId)
 }

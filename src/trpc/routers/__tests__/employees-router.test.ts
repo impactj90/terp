@@ -588,8 +588,10 @@ describe("employees.update", () => {
     const updated = makeEmployee({ firstName: "Jane" })
     const mockPrisma = {
       employee: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -602,14 +604,16 @@ describe("employees.update", () => {
     const updated = makeEmployee({ locationId: LOC_ID })
     const mockPrisma = {
       employee: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({ id: EMP_ID, locationId: LOC_ID })
     expect(result.locationId).toBe(LOC_ID)
-    const updateCall = mockPrisma.employee.update.mock.calls[0]![0]
+    const updateCall = mockPrisma.employee.updateMany.mock.calls[0]![0]
     expect(updateCall.data.locationId).toBe(LOC_ID)
   })
 
@@ -618,13 +622,15 @@ describe("employees.update", () => {
     const updated = makeEmployee({ locationId: null })
     const mockPrisma = {
       employee: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     await caller.update({ id: EMP_ID, clearLocationId: true })
-    const updateCall = mockPrisma.employee.update.mock.calls[0]![0]
+    const updateCall = mockPrisma.employee.updateMany.mock.calls[0]![0]
     expect(updateCall.data.locationId).toBeNull()
   })
 
@@ -633,13 +639,15 @@ describe("employees.update", () => {
     const updated = makeEmployee({ departmentId: null })
     const mockPrisma = {
       employee: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     await caller.update({ id: EMP_ID, clearDepartmentId: true })
-    const updateCall = mockPrisma.employee.update.mock.calls[0]![0]
+    const updateCall = mockPrisma.employee.updateMany.mock.calls[0]![0]
     expect(updateCall.data.departmentId).toBeNull()
   })
 
@@ -714,14 +722,16 @@ describe("employees.delete", () => {
     const existing = makeEmployee()
     const mockPrisma = {
       employee: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue({ ...existing, isActive: false }),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce({ ...existing, isActive: false }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: EMP_ID })
     expect(result.success).toBe(true)
-    const updateCall = mockPrisma.employee.update.mock.calls[0]![0]
+    const updateCall = mockPrisma.employee.updateMany.mock.calls[0]![0]
     expect(updateCall.data.isActive).toBe(false)
     expect(updateCall.data.exitDate).toBeDefined()
   })
@@ -731,15 +741,15 @@ describe("employees.delete", () => {
     const existing = makeEmployee({ exitDate: existingDate })
     const mockPrisma = {
       employee: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi
-          .fn()
-          .mockResolvedValue({ ...existing, isActive: false }),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce({ ...existing, isActive: false }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     await caller.delete({ id: EMP_ID })
-    const updateCall = mockPrisma.employee.update.mock.calls[0]![0]
+    const updateCall = mockPrisma.employee.updateMany.mock.calls[0]![0]
     expect(updateCall.data.exitDate).toEqual(existingDate)
   })
 

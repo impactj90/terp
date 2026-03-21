@@ -110,16 +110,23 @@ function makeGeneratePrisma(opts: {
   const generatingExport = makePayrollExport({ status: "generating", fileContent: null })
 
   let capturedFileContent: string | null = null
-  const updateMock = vi.fn().mockImplementation((arg: { where: unknown; data: Record<string, unknown> }) => {
-    if (updateMock.mock.calls.length === 1) {
-      return Promise.resolve(generatingExport)
-    }
-    // Second+ call — capture fileContent from data
+  const updateManyMock = vi.fn().mockImplementation((arg: { where: unknown; data: Record<string, unknown> }) => {
+    // Capture fileContent from data if present
     if (arg.data?.fileContent) {
       capturedFileContent = arg.data.fileContent as string
     }
+    return Promise.resolve({ count: 1 })
+  })
+
+  // findFirst returns the state after each updateMany call
+  const findFirstMock = vi.fn().mockImplementation(() => {
+    // After first updateMany (generating), return generating state
+    if (updateManyMock.mock.calls.length === 1) {
+      return Promise.resolve(generatingExport)
+    }
+    // After second+ updateMany (completed), return completed state
     return Promise.resolve(makePayrollExport({
-      status: (arg.data?.status as string) ?? "completed",
+      status: (updateManyMock.mock.calls[updateManyMock.mock.calls.length - 1]?.[0]?.data?.status as string) ?? "completed",
       fileContent: capturedFileContent,
     }))
   })
@@ -128,7 +135,8 @@ function makeGeneratePrisma(opts: {
     prisma: {
       payrollExport: {
         create: vi.fn().mockResolvedValue(pendingExport),
-        update: updateMock,
+        updateMany: updateManyMock,
+        findFirst: findFirstMock,
       },
       employee: {
         findMany: vi.fn().mockResolvedValue(opts.employees ?? []),
@@ -147,7 +155,7 @@ function makeGeneratePrisma(opts: {
       },
     },
     getCapturedFileContent: () => capturedFileContent,
-    updateMock,
+    updateMock: updateManyMock,
   }
 }
 

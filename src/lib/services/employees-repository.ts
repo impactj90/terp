@@ -5,6 +5,7 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import { Prisma } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 // --- List / Search ---
 
@@ -177,7 +178,7 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.employee.update({ where: { id }, data })
+  return tenantScopedUpdate(prisma.employee, { id, tenantId }, data, { entity: "Employee" })
 }
 
 // --- Day View Queries ---

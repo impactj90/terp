@@ -255,7 +255,7 @@ describe("bookings — closed-month guard", () => {
       const mockPrisma = {
         booking: {
           findFirst: vi.fn().mockResolvedValue(existing),
-          update: vi.fn().mockResolvedValue(existing),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
         },
         monthlyValue: {
           findFirst: vi.fn().mockResolvedValue(makeClosedMonthlyValue()),
@@ -267,7 +267,7 @@ describe("bookings — closed-month guard", () => {
         caller.update({ id: BOOKING_ID, time: "09:00" })
       ).rejects.toMatchObject({ code: "CONFLICT" })
 
-      expect(mockPrisma.booking.update).not.toHaveBeenCalled()
+      expect(mockPrisma.booking.updateMany).not.toHaveBeenCalled()
     })
 
     it("allows update when month is open", async () => {
@@ -275,8 +275,10 @@ describe("bookings — closed-month guard", () => {
       const updated = makeBookingRecord({ editedTime: 540 })
       const mockPrisma = {
         booking: {
-          findFirst: vi.fn().mockResolvedValue(existing),
-          update: vi.fn().mockResolvedValue(updated),
+          findFirst: vi.fn()
+            .mockResolvedValueOnce(existing)
+            .mockResolvedValueOnce(updated),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
         },
         monthlyValue: {
           findFirst: vi.fn().mockResolvedValue(makeOpenMonthlyValue()),
@@ -287,7 +289,7 @@ describe("bookings — closed-month guard", () => {
       const result = await caller.update({ id: BOOKING_ID, time: "09:00" })
 
       expect(result.editedTime).toBe(540)
-      expect(mockPrisma.booking.update).toHaveBeenCalled()
+      expect(mockPrisma.booking.updateMany).toHaveBeenCalled()
     })
   })
 

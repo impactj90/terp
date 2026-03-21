@@ -5,6 +5,7 @@
  */
 import type { Prisma } from "@/generated/prisma/client"
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 const orderInclude = {
   costCenter: {
@@ -93,7 +94,7 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.order.update({ where: { id }, data })
+  return tenantScopedUpdate(prisma.order, { id, tenantId }, data, { entity: "Order" })
 }
 
 export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {

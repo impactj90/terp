@@ -5,6 +5,7 @@
  * and related data gathering queries.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 // --- Types ---
 
@@ -102,7 +103,7 @@ export async function updateStatus(
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.report.update({ where: { id }, data })
+  return tenantScopedUpdate(prisma.report, { id, tenantId }, data, { entity: "Report" })
 }
 
 export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {

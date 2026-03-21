@@ -163,10 +163,11 @@ export async function remove(
 
 export async function findPositions(
   prisma: PrismaClient,
+  tenantId: string,
   documentId: string
 ) {
   return prisma.billingDocumentPosition.findMany({
-    where: { documentId },
+    where: { documentId, document: { tenantId } },
     orderBy: { sortOrder: "asc" },
   })
 }
@@ -241,32 +242,38 @@ export async function createManyPositions(
 
 export async function updatePosition(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  await prisma.billingDocumentPosition.updateMany({
-    where: { id },
+  const { count } = await prisma.billingDocumentPosition.updateMany({
+    where: { id, document: { tenantId } },
     data,
   })
-  return prisma.billingDocumentPosition.findFirst({ where: { id } })
+  if (count === 0) return null
+  return prisma.billingDocumentPosition.findFirst({
+    where: { id, document: { tenantId } },
+  })
 }
 
 export async function deletePosition(
   prisma: PrismaClient,
+  tenantId: string,
   id: string
 ): Promise<boolean> {
   const { count } = await prisma.billingDocumentPosition.deleteMany({
-    where: { id },
+    where: { id, document: { tenantId } },
   })
   return count > 0
 }
 
 export async function getMaxSortOrder(
   prisma: PrismaClient,
+  tenantId: string,
   documentId: string
 ): Promise<number> {
   const result = await prisma.billingDocumentPosition.findFirst({
-    where: { documentId },
+    where: { documentId, document: { tenantId } },
     orderBy: { sortOrder: "desc" },
     select: { sortOrder: true },
   })

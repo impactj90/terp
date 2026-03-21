@@ -385,8 +385,10 @@ describe("absenceTypes.update", () => {
     const updated = makeAbsenceType({ name: "Updated", description: "New desc" })
     const mockPrisma = {
       absenceType: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -428,13 +430,15 @@ describe("absenceTypes.update", () => {
     const updated = makeAbsenceType({ name: "Updated" })
     const mockPrisma = {
       absenceType: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     await caller.update({ id: TYPE_ID, name: "Updated" })
-    const updateCall = mockPrisma.absenceType.update.mock.calls[0]![0]
+    const updateCall = mockPrisma.absenceType.updateMany.mock.calls[0]![0]
     expect(updateCall.data.name).toBe("Updated")
     // Other fields should not be in the data
     expect(updateCall.data.category).toBeUndefined()
@@ -446,14 +450,16 @@ describe("absenceTypes.update", () => {
     const updated = makeAbsenceType({ isActive: false })
     const mockPrisma = {
       absenceType: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({ id: TYPE_ID, isActive: false })
     expect(result.isActive).toBe(false)
-    const updateCall = mockPrisma.absenceType.update.mock.calls[0]![0]
+    const updateCall = mockPrisma.absenceType.updateMany.mock.calls[0]![0]
     expect(updateCall.data.isActive).toBe(false)
   })
 
@@ -462,8 +468,10 @@ describe("absenceTypes.update", () => {
     const updated = makeAbsenceType({ description: null })
     const mockPrisma = {
       absenceType: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -472,7 +480,7 @@ describe("absenceTypes.update", () => {
       description: null,
     })
     expect(result.description).toBeNull()
-    const updateCall = mockPrisma.absenceType.update.mock.calls[0]![0]
+    const updateCall = mockPrisma.absenceType.updateMany.mock.calls[0]![0]
     expect(updateCall.data.description).toBeNull()
   })
 

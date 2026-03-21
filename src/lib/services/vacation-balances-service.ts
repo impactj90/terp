@@ -373,7 +373,7 @@ export async function updateBalance(
     data.carryoverExpiresAt = input.carryoverExpiresAt
   }
 
-  const balance = await repo.updateBalance(prisma, input.id, data)
+  const balance = await repo.updateBalance(prisma, tenantId, input.id, data)
 
   // Never throws — audit failures must not block the actual operation
   if (audit) {

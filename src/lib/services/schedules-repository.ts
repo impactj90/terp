@@ -5,6 +5,7 @@
  * ScheduleExecution, and ScheduleTaskExecution models.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 // --- Prisma Include Objects ---
 
@@ -81,7 +82,7 @@ export async function updateSchedule(
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.schedule.update({ where: { id }, data })
+  return tenantScopedUpdate(prisma.schedule, { id, tenantId }, data, { entity: "Schedule" })
 }
 
 export async function deleteSchedule(prisma: PrismaClient, tenantId: string, id: string) {
@@ -172,7 +173,7 @@ export async function updateExecution(
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.scheduleExecution.update({ where: { id }, data })
+  return tenantScopedUpdate(prisma.scheduleExecution, { id, tenantId }, data, { entity: "ScheduleExecution" })
 }
 
 export async function findExecutionById(

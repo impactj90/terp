@@ -5,6 +5,7 @@
  * Includes system types (tenantId = null) in tenant-scoped queries.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 export async function findMany(
   prisma: PrismaClient,
@@ -88,7 +89,7 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.absenceType.update({ where: { id }, data })
+  return tenantScopedUpdate(prisma.absenceType, { id, tenantId }, data, { entity: "AbsenceType" })
 }
 
 export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {

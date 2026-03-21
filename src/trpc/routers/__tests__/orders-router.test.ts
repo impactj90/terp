@@ -341,9 +341,10 @@ describe("orders.update", () => {
       order: {
         findFirst: vi
           .fn()
-          .mockResolvedValueOnce(existing)
-          .mockResolvedValueOnce(updated),
-        update: vi.fn().mockResolvedValue(updated),
+          .mockResolvedValueOnce(existing)   // repo.findById
+          .mockResolvedValueOnce(updated)     // tenantScopedUpdate refetch
+          .mockResolvedValueOnce(updated),    // repo.findByIdWithInclude
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -401,15 +402,16 @@ describe("orders.update", () => {
       order: {
         findFirst: vi
           .fn()
-          .mockResolvedValueOnce(existing)
-          .mockResolvedValueOnce(updated),
-        update: vi.fn().mockResolvedValue(updated),
+          .mockResolvedValueOnce(existing)   // repo.findById
+          .mockResolvedValueOnce(updated)     // tenantScopedUpdate refetch
+          .mockResolvedValueOnce(updated),    // repo.findByIdWithInclude
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({ id: ORDER_ID, code: "ORD001" })
     expect(result.code).toBe("ORD001")
-    expect(mockPrisma.order.findFirst).toHaveBeenCalledTimes(2)
+    expect(mockPrisma.order.findFirst).toHaveBeenCalledTimes(3)
   })
 
   it("throws NOT_FOUND for missing order", async () => {
@@ -431,9 +433,10 @@ describe("orders.update", () => {
       order: {
         findFirst: vi
           .fn()
-          .mockResolvedValueOnce(existing)
-          .mockResolvedValueOnce(updated),
-        update: vi.fn().mockResolvedValue(updated),
+          .mockResolvedValueOnce(existing)   // repo.findById
+          .mockResolvedValueOnce(updated)     // tenantScopedUpdate refetch
+          .mockResolvedValueOnce(updated),    // repo.findByIdWithInclude
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -448,15 +451,16 @@ describe("orders.update", () => {
       order: {
         findFirst: vi
           .fn()
-          .mockResolvedValueOnce(existing)
-          .mockResolvedValueOnce(updated),
-        update: vi.fn().mockResolvedValue(updated),
+          .mockResolvedValueOnce(existing)   // repo.findById
+          .mockResolvedValueOnce(updated)     // tenantScopedUpdate refetch
+          .mockResolvedValueOnce(updated),    // repo.findByIdWithInclude
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({ id: ORDER_ID, costCenterId: null })
     expect(result.costCenterId).toBeNull()
-    const updateCall = mockPrisma.order.update.mock.calls[0]![0]
+    const updateCall = mockPrisma.order.updateMany.mock.calls[0]![0]
     expect(updateCall.data.costCenterId).toBeNull()
   })
 
@@ -469,9 +473,10 @@ describe("orders.update", () => {
       order: {
         findFirst: vi
           .fn()
-          .mockResolvedValueOnce(existing)
-          .mockResolvedValueOnce(updated),
-        update: vi.fn().mockResolvedValue(updated),
+          .mockResolvedValueOnce(existing)   // repo.findById
+          .mockResolvedValueOnce(updated)     // tenantScopedUpdate refetch
+          .mockResolvedValueOnce(updated),    // repo.findByIdWithInclude
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -480,7 +485,7 @@ describe("orders.update", () => {
       billingRatePerHour: null,
     })
     expect(result.billingRatePerHour).toBeNull()
-    const updateCall = mockPrisma.order.update.mock.calls[0]![0]
+    const updateCall = mockPrisma.order.updateMany.mock.calls[0]![0]
     expect(updateCall.data.billingRatePerHour).toBeNull()
   })
 })

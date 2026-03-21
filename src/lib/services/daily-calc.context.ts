@@ -150,6 +150,7 @@ export async function loadEmployeeCalcContext(
         LEFT JOIN absence_types at ON at.id = ad.absence_type_id
         LEFT JOIN calculation_rules cr ON cr.id = at.calculation_rule_id
         WHERE ad.employee_id = ${employeeId}::uuid
+          AND ad.tenant_id = ${tenantId}::uuid
           AND ad.absence_date >= ${fromDate}::date
           AND ad.absence_date <= ${toDate}::date
       `,
