@@ -6,6 +6,17 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./employee-tariff-assignment-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit ---
+
+const TRACKED_FIELDS = [
+  "employeeId",
+  "tariffId",
+  "validFrom",
+  "validTo",
+]
 
 // --- Error Classes ---
 
@@ -82,7 +93,8 @@ export async function create(
     effectiveTo?: Date
     overwriteBehavior?: string
     notes?: string
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify employee exists and belongs to tenant
   const employee = await repo.findEmployeeById(
@@ -115,7 +127,7 @@ export async function create(
     )
   }
 
-  return repo.create(prisma, {
+  const created = await repo.create(prisma, {
     tenantId,
     employeeId: input.employeeId,
     tariffId: input.tariffId,
@@ -126,6 +138,22 @@ export async function create(
     notes: input.notes?.trim() || null,
     isActive: true,
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "employee_tariff_assignment",
+      entityId: created.id,
+      entityName: null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return created
 }
 
 export async function update(
@@ -139,7 +167,8 @@ export async function update(
     overwriteBehavior?: string
     notes?: string | null
     isActive?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   // Fetch existing assignment, verify tenant/employee match
   const existing = await repo.findById(
@@ -205,14 +234,36 @@ export async function update(
     }
   }
 
-  return (await repo.update(prisma, tenantId, input.id, data))!
+  const updated = (await repo.update(prisma, tenantId, input.id, data))!
+
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "employee_tariff_assignment",
+      entityId: input.id,
+      entityName: null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
   employeeId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   // Fetch assignment, verify tenant/employee match
   const existing = await repo.findById(prisma, tenantId, employeeId, id)

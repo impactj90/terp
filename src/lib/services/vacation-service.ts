@@ -25,6 +25,12 @@ import {
 } from "./vacation-helpers"
 import { decimalToNumber, mapBalanceToOutput } from "./vacation-balance-output"
 import * as repo from "./vacation-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit Constants ---
+
+const ENTITY_TYPE = "vacation_balance"
 
 // --- Error Classes ---
 
@@ -365,7 +371,8 @@ export async function initializeYear(
   input: {
     employeeId: string
     year: number
-  }
+  },
+  audit?: AuditContext
 ) {
   // 1. Get employee with employment type
   const employee = await repo.findEmployeeWithEmploymentType(
@@ -413,6 +420,22 @@ export async function initializeYear(
     result.totalEntitlement
   )
 
+  // Never throws — audit failures must not block the actual operation
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: ENTITY_TYPE,
+      entityId: (balance as unknown as Record<string, unknown>).id as string,
+      entityName: `${input.year}`,
+      changes: null,
+      metadata: { initialized: true },
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err));
+  }
+
   return mapBalanceToOutput(balance)
 }
 
@@ -432,7 +455,8 @@ export async function adjustBalance(
     year: number
     adjustment: number
     notes?: string
-  }
+  },
+  audit?: AuditContext
 ) {
   // Atomically increment adjustment; catch P2025 (record not found) to avoid
   // the check-then-update race where the balance could be deleted between the
@@ -444,6 +468,22 @@ export async function adjustBalance(
       input.year,
       input.adjustment
     )
+
+    // Never throws — audit failures must not block the actual operation
+    if (audit) {
+      await auditLog.log(prisma, {
+        tenantId,
+        userId: audit.userId,
+        action: "update",
+        entityType: ENTITY_TYPE,
+        entityId: (balance as unknown as Record<string, unknown>).id as string,
+        entityName: `${input.year}`,
+        changes: null,
+        metadata: { adjustment: input.adjustment, notes: input.notes },
+        ipAddress: audit.ipAddress,
+        userAgent: audit.userAgent,
+      }).catch(err => console.error('[AuditLog] Failed:', err));
+    }
 
     return mapBalanceToOutput(balance)
   } catch (err) {
@@ -471,7 +511,8 @@ export async function carryoverFromPreviousYear(
   input: {
     employeeId: string
     year: number
-  }
+  },
+  audit?: AuditContext
 ) {
   const prevYear = input.year - 1
 
@@ -519,6 +560,22 @@ export async function carryoverFromPreviousYear(
     carryover
   )
 
+  // Never throws — audit failures must not block the actual operation
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: ENTITY_TYPE,
+      entityId: (balance as unknown as Record<string, unknown>).id as string,
+      entityName: `${input.year}`,
+      changes: null,
+      metadata: { carryover: true },
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err));
+  }
+
   return mapBalanceToOutput(balance)
 }
 
@@ -535,7 +592,8 @@ export async function initializeBatch(
   input: {
     year: number
     carryover: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   // 1. Get all active employees for tenant
   const employees = await repo.findActiveEmployees(prisma, tenantId)
@@ -693,13 +751,29 @@ export async function initializeBatch(
       )
       const result = calculateVacation(calcInput)
 
-      await repo.upsertBalanceEntitlementSimple(
+      const batchBalance = await repo.upsertBalanceEntitlementSimple(
         prisma,
         tenantId,
         employee.id,
         input.year,
         result.totalEntitlement
       )
+
+      // Never throws — audit failures must not block the actual operation
+      if (audit) {
+        await auditLog.log(prisma, {
+          tenantId,
+          userId: audit.userId,
+          action: "create",
+          entityType: ENTITY_TYPE,
+          entityId: (batchBalance as unknown as Record<string, unknown>).id as string,
+          entityName: `${input.year}`,
+          changes: null,
+          metadata: { batch: true },
+          ipAddress: audit.ipAddress,
+          userAgent: audit.userAgent,
+        }).catch(err => console.error('[AuditLog] Failed:', err));
+      }
 
       createdCount++
     } catch {

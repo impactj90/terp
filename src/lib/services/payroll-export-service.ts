@@ -8,6 +8,8 @@ import type { PrismaClient } from "@/generated/prisma/client"
 import { type Prisma } from "@/generated/prisma/client"
 import { Decimal } from "@prisma/client/runtime/client"
 import * as repo from "./payroll-export-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
 
 // --- Error Classes ---
 
@@ -315,7 +317,7 @@ export async function generate(
       includeAccounts?: string[]
     }
   },
-  userId: string | null,
+  audit: AuditContext,
   scopeFilter?: {
     departmentIds?: string[]
     employeeIds?: string[]
@@ -376,7 +378,7 @@ export async function generate(
     format: input.format,
     parameters: (input.parameters ?? {}) as Prisma.InputJsonValue,
     requestedAt: new Date(),
-    createdBy: userId,
+    createdBy: audit.userId,
   })
 
   try {
@@ -476,7 +478,21 @@ export async function generate(
     }))!
   }
 
-  return stripFileContent(pe)
+  const result = stripFileContent(pe)
+
+  // Never throws — audit failures must not block the actual operation
+  await auditLog.log(prisma, {
+    tenantId,
+    userId: audit.userId,
+    action: "export",
+    entityType: "payroll_export",
+    entityId: pe.id,
+    entityName: `${input.format} ${input.year}-${input.month}`,
+    ipAddress: audit.ipAddress,
+    userAgent: audit.userAgent,
+  }).catch(err => console.error('[AuditLog] Failed:', err))
+
+  return result
 }
 
 export async function preview(
@@ -659,7 +675,8 @@ export async function download(
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) {
@@ -667,4 +684,16 @@ export async function remove(
   }
 
   await repo.deleteById(prisma, tenantId, id)
+
+  // Never throws — audit failures must not block the actual operation
+  await auditLog.log(prisma, {
+    tenantId,
+    userId: audit.userId,
+    action: "delete",
+    entityType: "payroll_export",
+    entityId: id,
+    entityName: `${existing.format} ${existing.year}-${existing.month}`,
+    ipAddress: audit.ipAddress,
+    userAgent: audit.userAgent,
+  }).catch(err => console.error('[AuditLog] Failed:', err))
 }

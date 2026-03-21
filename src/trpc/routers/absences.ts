@@ -371,7 +371,7 @@ export const absencesRouter = createTRPCRouter({
             ctx.prisma,
             ctx.tenantId!,
             input,
-            ctx.user?.id ?? null
+            ctx.user ? { userId: ctx.user.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent } : null
           )
         return {
           createdDays: createdAbsences.map((a) =>
@@ -407,7 +407,8 @@ export const absencesRouter = createTRPCRouter({
           ctx.prisma,
           ctx.tenantId!,
           input,
-          dataScope
+          dataScope,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapAbsenceDayToOutput(
           updated as unknown as Record<string, unknown>
@@ -441,7 +442,8 @@ export const absencesRouter = createTRPCRouter({
           ctx.prisma,
           ctx.tenantId!,
           input.id,
-          dataScope
+          dataScope,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {
@@ -475,8 +477,8 @@ export const absencesRouter = createTRPCRouter({
           ctx.prisma,
           ctx.tenantId!,
           input.id,
-          ctx.user!.id,
-          dataScope
+          dataScope,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapAbsenceDayToOutput(
           updated as unknown as Record<string, unknown>
@@ -513,7 +515,8 @@ export const absencesRouter = createTRPCRouter({
           ctx.tenantId!,
           input.id,
           input.reason,
-          dataScope
+          dataScope,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapAbsenceDayToOutput(
           updated as unknown as Record<string, unknown>
@@ -548,7 +551,8 @@ export const absencesRouter = createTRPCRouter({
           ctx.prisma,
           ctx.tenantId!,
           input.id,
-          dataScope
+          dataScope,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapAbsenceDayToOutput(
           updated as unknown as Record<string, unknown>

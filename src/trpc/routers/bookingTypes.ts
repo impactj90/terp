@@ -181,7 +181,7 @@ export const bookingTypesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         const tenantId = ctx.tenantId!
-        const bt = await bookingTypeService.create(ctx.prisma, tenantId, input)
+        const bt = await bookingTypeService.create(ctx.prisma, tenantId, input, { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent })
         return mapToOutput(bt)
       } catch (err) {
         handleServiceError(err)
@@ -205,7 +205,7 @@ export const bookingTypesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         const tenantId = ctx.tenantId!
-        const bt = await bookingTypeService.update(ctx.prisma, tenantId, input)
+        const bt = await bookingTypeService.update(ctx.prisma, tenantId, input, { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent })
         return mapToOutput(bt)
       } catch (err) {
         handleServiceError(err)
@@ -227,7 +227,7 @@ export const bookingTypesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         const tenantId = ctx.tenantId!
-        await bookingTypeService.remove(ctx.prisma, tenantId, input.id)
+        await bookingTypeService.remove(ctx.prisma, tenantId, input.id, { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent })
         return { success: true }
       } catch (err) {
         handleServiceError(err)

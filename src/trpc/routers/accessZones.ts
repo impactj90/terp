@@ -145,7 +145,8 @@ export const accessZonesRouter = createTRPCRouter({
         const zone = await accessZoneService.create(
           ctx.prisma as unknown as PrismaClient,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return {
           id: zone.id,
@@ -180,7 +181,8 @@ export const accessZonesRouter = createTRPCRouter({
         const zone = await accessZoneService.update(
           ctx.prisma as unknown as PrismaClient,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return {
           id: zone.id,
@@ -215,7 +217,8 @@ export const accessZonesRouter = createTRPCRouter({
         await accessZoneService.remove(
           ctx.prisma as unknown as PrismaClient,
           tenantId,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {

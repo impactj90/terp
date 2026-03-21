@@ -6,6 +6,8 @@ import * as templateRepo from "./billing-document-template-repository"
 import * as pdfService from "./billing-document-pdf-service"
 import * as eInvoiceService from "./billing-document-einvoice-service"
 import * as billingTenantConfigRepo from "./billing-tenant-config-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
 
 // --- Error Classes ---
 
@@ -122,6 +124,17 @@ function calculatePositionTotal(
   return Math.round((qty * price + flat) * 100) / 100
 }
 
+// --- Audit tracked fields ---
+
+const DOCUMENT_TRACKED_FIELDS = [
+  "contactId", "documentDate", "deliveryDate",
+  "headerText", "footerText", "subject", "status",
+]
+
+const POSITION_TRACKED_FIELDS = [
+  "description", "quantity", "unitPrice", "discount", "sortOrder",
+]
+
 // --- Service Functions ---
 
 export async function list(
@@ -180,7 +193,8 @@ export async function create(
     headerText?: string
     footerText?: string
   },
-  createdById: string
+  createdById: string,
+  audit: AuditContext
 ) {
   // Validate address belongs to tenant
   const address = await prisma.crmAddress.findFirst({
@@ -240,7 +254,7 @@ export async function create(
     }
   }
 
-  return repo.create(prisma, {
+  const created = await repo.create(prisma, {
     tenantId,
     number,
     type: input.type,
@@ -268,6 +282,21 @@ export async function create(
     footerText,
     createdById,
   })
+
+  // Never throws — audit failures must not block the actual operation
+  await auditLog.log(prisma, {
+    tenantId,
+    userId: audit.userId,
+    action: "create",
+    entityType: "billing_document",
+    entityId: created.id,
+    entityName: number || "DRAFT",
+    changes: null,
+    ipAddress: audit.ipAddress,
+    userAgent: audit.userAgent,
+  }).catch(err => console.error('[AuditLog] Failed:', err))
+
+  return created
 }
 
 export async function update(
@@ -295,7 +324,8 @@ export async function update(
     internalNotes?: string | null
     headerText?: string | null
     footerText?: string | null
-  }
+  },
+  audit: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, input.id)
   if (!existing) throw new BillingDocumentNotFoundError()
@@ -323,13 +353,36 @@ export async function update(
 
   if (Object.keys(data).length === 0) return existing
 
-  return repo.update(prisma, tenantId, input.id, data)
+  const updated = await repo.update(prisma, tenantId, input.id, data)
+
+  // Never throws — audit failures must not block the actual operation
+  if (updated) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      DOCUMENT_TRACKED_FIELDS,
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "billing_document",
+      entityId: updated.id,
+      entityName: (updated as unknown as { number?: string }).number || "DRAFT",
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) throw new BillingDocumentNotFoundError()
@@ -346,6 +399,19 @@ export async function remove(
 
   const deleted = await repo.remove(prisma, tenantId, id)
   if (!deleted) throw new BillingDocumentNotFoundError()
+
+  // Never throws — audit failures must not block the actual operation
+  await auditLog.log(prisma, {
+    tenantId,
+    userId: audit.userId,
+    action: "delete",
+    entityType: "billing_document",
+    entityId: id,
+    entityName: (existing as unknown as { number?: string }).number || "DRAFT",
+    changes: null,
+    ipAddress: audit.ipAddress,
+    userAgent: audit.userAgent,
+  }).catch(err => console.error('[AuditLog] Failed:', err))
 }
 
 export async function finalize(
@@ -356,7 +422,8 @@ export async function finalize(
   orderParams?: {
     orderName: string
     orderDescription?: string
-  }
+  },
+  audit?: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) throw new BillingDocumentNotFoundError()
@@ -419,6 +486,21 @@ export async function finalize(
     }
   }
 
+  // Never throws — audit failures must not block the actual operation
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "finalize",
+      entityType: "billing_document",
+      entityId: id,
+      entityName: (existing as unknown as { number?: string }).number || "DRAFT",
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return result
 }
 
@@ -427,7 +509,8 @@ export async function forward(
   tenantId: string,
   id: string,
   targetType: BillingDocumentType,
-  createdById: string
+  createdById: string,
+  audit: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) throw new BillingDocumentNotFoundError()
@@ -513,6 +596,20 @@ export async function forward(
     status: "FORWARDED",
   })
 
+  // Never throws — audit failures must not block the actual operation
+  await auditLog.log(prisma, {
+    tenantId,
+    userId: audit.userId,
+    action: "forward",
+    entityType: "billing_document",
+    entityId: newDoc.id,
+    entityName: number || "DRAFT",
+    changes: null,
+    metadata: { forwardedFrom: existing.id, targetType },
+    ipAddress: audit.ipAddress,
+    userAgent: audit.userAgent,
+  }).catch(err => console.error('[AuditLog] Failed:', err))
+
   // Return the new document with positions
   return repo.findById(prisma, tenantId, newDoc.id)
 }
@@ -521,7 +618,8 @@ export async function cancel(
   prisma: PrismaClient,
   tenantId: string,
   id: string,
-  reason?: string
+  reason?: string,
+  audit?: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) throw new BillingDocumentNotFoundError()
@@ -539,14 +637,33 @@ export async function cancel(
   const data: Record<string, unknown> = { status: "CANCELLED" }
   if (reason) data.internalNotes = reason
 
-  return repo.update(prisma, tenantId, id, data)
+  const updated = await repo.update(prisma, tenantId, id, data)
+
+  // Never throws — audit failures must not block the actual operation
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "cancel",
+      entityType: "billing_document",
+      entityId: id,
+      entityName: (existing as unknown as { number?: string }).number || "DRAFT",
+      changes: null,
+      metadata: reason ? { reason } : undefined,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function duplicate(
   prisma: PrismaClient,
   tenantId: string,
   id: string,
-  createdById: string
+  createdById: string,
+  audit: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) throw new BillingDocumentNotFoundError()
@@ -612,6 +729,20 @@ export async function duplicate(
   // Recalculate totals
   await recalculateTotals(prisma, tenantId, newDoc.id)
 
+  // Never throws — audit failures must not block the actual operation
+  await auditLog.log(prisma, {
+    tenantId,
+    userId: audit.userId,
+    action: "create",
+    entityType: "billing_document",
+    entityId: newDoc.id,
+    entityName: number || "DRAFT",
+    changes: null,
+    metadata: { duplicatedFrom: id },
+    ipAddress: audit.ipAddress,
+    userAgent: audit.userAgent,
+  }).catch(err => console.error('[AuditLog] Failed:', err))
+
   return repo.findById(prisma, tenantId, newDoc.id)
 }
 
@@ -634,7 +765,8 @@ export async function addPosition(
     vatRate?: number
     deliveryDate?: Date
     confirmedDate?: Date
-  }
+  },
+  audit: AuditContext
 ) {
   // Verify document exists and is DRAFT
   const doc = await repo.findById(prisma, tenantId, input.documentId)
@@ -668,6 +800,19 @@ export async function addPosition(
   // Recalculate document totals
   await recalculateTotals(prisma, tenantId, input.documentId)
 
+  // Never throws — audit failures must not block the actual operation
+  await auditLog.log(prisma, {
+    tenantId,
+    userId: audit.userId,
+    action: "create",
+    entityType: "billing_document_position",
+    entityId: position.id,
+    entityName: (doc as unknown as { number?: string }).number || "DRAFT",
+    changes: null,
+    ipAddress: audit.ipAddress,
+    userAgent: audit.userAgent,
+  }).catch(err => console.error('[AuditLog] Failed:', err))
+
   return position
 }
 
@@ -685,7 +830,8 @@ export async function updatePosition(
     vatRate?: number
     deliveryDate?: Date | null
     confirmedDate?: Date | null
-  }
+  },
+  audit: AuditContext
 ) {
   // Find position and verify parent doc is DRAFT
   const pos = await repo.findPositionById(prisma, input.id)
@@ -721,13 +867,34 @@ export async function updatePosition(
   // Recalculate document totals
   await recalculateTotals(prisma, tenantId, pos.document.id)
 
+  // Never throws — audit failures must not block the actual operation
+  if (updated) {
+    const changes = auditLog.computeChanges(
+      pos as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      POSITION_TRACKED_FIELDS,
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "billing_document_position",
+      entityId: updated.id,
+      entityName: (pos.document as unknown as { number?: string }).number || "DRAFT",
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return updated
 }
 
 export async function deletePosition(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit: AuditContext
 ) {
   const pos = await repo.findPositionById(prisma, id)
   if (!pos) throw new BillingDocumentValidationError("Position not found")
@@ -741,6 +908,19 @@ export async function deletePosition(
 
   // Recalculate document totals
   await recalculateTotals(prisma, tenantId, documentId)
+
+  // Never throws — audit failures must not block the actual operation
+  await auditLog.log(prisma, {
+    tenantId,
+    userId: audit.userId,
+    action: "delete",
+    entityType: "billing_document_position",
+    entityId: id,
+    entityName: (pos.document as unknown as { number?: string }).number || "DRAFT",
+    changes: null,
+    ipAddress: audit.ipAddress,
+    userAgent: audit.userAgent,
+  }).catch(err => console.error('[AuditLog] Failed:', err))
 }
 
 export async function reorderPositions(

@@ -16,7 +16,7 @@ import {
   AuditLogDetailSheet,
 } from '@/components/audit-logs'
 import type { DateRange } from '@/components/ui/date-range-picker'
-import type { components } from '@/types/legacy-api-types'
+import type { AuditLogEntry } from '@/components/audit-logs/types'
 
 export default function AuditLogsPage() {
   const router = useRouter()
@@ -49,12 +49,12 @@ export default function AuditLogsPage() {
   const [action, setAction] = React.useState<string | null>(initialAction)
 
   // Pagination state
-  const [allItems, setAllItems] = React.useState<components['schemas']['AuditLog'][]>([])
+  const [allItems, setAllItems] = React.useState<AuditLogEntry[]>([])
   const [cursor, setCursor] = React.useState<string | undefined>(undefined)
   const [limit] = React.useState(50)
 
   // Detail sheet state
-  const [selectedEntry, setSelectedEntry] = React.useState<components['schemas']['AuditLog'] | null>(null)
+  const [selectedEntry, setSelectedEntry] = React.useState<AuditLogEntry | null>(null)
 
   // Auth guard
   React.useEffect(() => {
@@ -91,7 +91,7 @@ export default function AuditLogsPage() {
     userId: userId ?? undefined,
     entityType: entityType ?? undefined,
     entityId: entityId || undefined,
-    action: action as components['schemas']['AuditLog']['action'] | undefined,
+    action: action ?? undefined,
     fromDate: fromStr,
     toDate: toStr,
     pageSize: limit,
@@ -106,9 +106,9 @@ export default function AuditLogsPage() {
   React.useEffect(() => {
     if (data?.items) {
       if (cursor) {
-        setAllItems(prev => [...prev, ...(data.items as unknown as components['schemas']['AuditLog'][])])
+        setAllItems(prev => [...prev, ...(data.items as unknown as AuditLogEntry[])])
       } else {
-        setAllItems(data.items as unknown as components['schemas']['AuditLog'][])
+        setAllItems(data.items as unknown as AuditLogEntry[])
       }
     }
   }, [data, cursor])

@@ -61,7 +61,8 @@ export const billingTenantConfigRouter = createTRPCRouter({
         return await configService.upsert(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)

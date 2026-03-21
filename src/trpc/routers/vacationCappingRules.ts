@@ -182,7 +182,8 @@ export const vacationCappingRulesRouter = createTRPCRouter({
         const created = await vacationCappingRuleService.create(
           ctx.prisma,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapToOutput(created as unknown as Record<string, unknown>)
       } catch (err) {
@@ -207,7 +208,8 @@ export const vacationCappingRulesRouter = createTRPCRouter({
         const updated = await vacationCappingRuleService.update(
           ctx.prisma,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapToOutput(updated as unknown as Record<string, unknown>)
       } catch (err) {
@@ -232,7 +234,8 @@ export const vacationCappingRulesRouter = createTRPCRouter({
         await vacationCappingRuleService.remove(
           ctx.prisma,
           tenantId,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {

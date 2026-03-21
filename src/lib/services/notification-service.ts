@@ -6,6 +6,8 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./notification-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
 
 // --- Error Classes ---
 
@@ -99,7 +101,24 @@ export async function updatePreferences(
     errorsEnabled?: boolean
     remindersEnabled?: boolean
     systemEnabled?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
-  return repo.upsertPreferences(prisma, tenantId, userId, input)
+  const updated = await repo.upsertPreferences(prisma, tenantId, userId, input)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "notification_preference",
+      entityId: updated.id,
+      entityName: null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }

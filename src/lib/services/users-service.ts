@@ -7,6 +7,8 @@
 import type { PrismaClient } from "@/generated/prisma/client"
 import { createAdminClient } from "@/lib/supabase/admin"
 import * as repo from "./users-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
 
 // --- Error Classes ---
 
@@ -70,7 +72,8 @@ export async function create(
     dataScopeTenantIds?: string[]
     dataScopeDepartmentIds?: string[]
     dataScopeEmployeeIds?: string[]
-  }
+  },
+  audit: AuditContext
 ) {
   // Set defaults
   let role = "user"
@@ -113,6 +116,19 @@ export async function create(
   // Auto-add user to tenant
   await repo.upsertUserTenant(prisma, user.id, tenantId)
 
+  // Never throws — audit failures must not block the actual operation
+  await auditLog.log(prisma, {
+    tenantId,
+    userId: audit.userId,
+    action: "create",
+    entityType: "user",
+    entityId: user.id,
+    entityName: user.displayName || user.email,
+    changes: null,
+    ipAddress: audit.ipAddress,
+    userAgent: audit.userAgent,
+  }).catch(err => console.error('[AuditLog] Failed:', err))
+
   return user
 }
 
@@ -134,7 +150,8 @@ export async function update(
     dataScopeDepartmentIds?: string[]
     dataScopeEmployeeIds?: string[]
   },
-  opts: { canManageAdminFields: boolean }
+  opts: { canManageAdminFields: boolean },
+  audit: AuditContext
 ) {
   // Fetch target user (scoped to current tenant)
   const existing = await repo.findById(prisma, tenantId, input.id)
@@ -231,17 +248,41 @@ export async function update(
     data.dataScopeEmployeeIds = input.dataScopeEmployeeIds
   }
 
-  return (await repo.update(prisma, tenantId, input.id, data))!
+  const updated = (await repo.update(prisma, tenantId, input.id, data))!
+
+  // Never throws — audit failures must not block the actual operation
+  const TRACKED_FIELDS = [
+    "displayName", "email", "username", "userGroupId",
+    "employeeId", "isActive", "isLocked", "dataScopeType",
+  ]
+  const changes = auditLog.computeChanges(
+    existing as unknown as Record<string, unknown>,
+    updated as unknown as Record<string, unknown>,
+    TRACKED_FIELDS,
+  )
+  await auditLog.log(prisma, {
+    tenantId,
+    userId: audit.userId,
+    action: "update",
+    entityType: "user",
+    entityId: updated.id,
+    entityName: updated.displayName || updated.email,
+    changes,
+    ipAddress: audit.ipAddress,
+    userAgent: audit.userAgent,
+  }).catch(err => console.error('[AuditLog] Failed:', err))
+
+  return updated
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
   id: string,
-  currentUserId: string
+  audit: AuditContext
 ) {
   // Cannot delete self
-  if (currentUserId === id) {
+  if (audit.userId === id) {
     throw new UserForbiddenError("Cannot delete yourself")
   }
 
@@ -253,13 +294,27 @@ export async function remove(
 
   // Hard delete to match Go behavior
   await repo.deleteById(prisma, tenantId, id)
+
+  // Never throws — audit failures must not block the actual operation
+  await auditLog.log(prisma, {
+    tenantId,
+    userId: audit.userId,
+    action: "delete",
+    entityType: "user",
+    entityId: id,
+    entityName: existing.displayName || existing.email,
+    changes: null,
+    ipAddress: audit.ipAddress,
+    userAgent: audit.userAgent,
+  }).catch(err => console.error('[AuditLog] Failed:', err))
 }
 
 export async function changePassword(
   prisma: PrismaClient,
   tenantId: string,
   userId: string,
-  newPassword: string
+  newPassword: string,
+  audit: AuditContext
 ) {
   // Verify target user exists (scoped to current tenant)
   const existing = await repo.findById(prisma, tenantId, userId)
@@ -276,4 +331,18 @@ export async function changePassword(
   if (error) {
     throw new Error("Failed to update password")
   }
+
+  // Never throws — audit failures must not block the actual operation
+  await auditLog.log(prisma, {
+    tenantId,
+    userId: audit.userId,
+    action: "update",
+    entityType: "user",
+    entityId: userId,
+    entityName: existing.displayName || existing.email,
+    changes: null,
+    metadata: { passwordChanged: true },
+    ipAddress: audit.ipAddress,
+    userAgent: audit.userAgent,
+  }).catch(err => console.error('[AuditLog] Failed:', err))
 }

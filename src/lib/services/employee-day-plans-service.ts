@@ -7,6 +7,17 @@
 import type { PrismaClient } from "@/generated/prisma/client"
 import { EmployeeDayPlanGenerator } from "@/lib/services/employee-day-plan-generator"
 import * as repo from "./employee-day-plans-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit ---
+
+const TRACKED_FIELDS = [
+  "employeeId",
+  "dayPlanId",
+  "validFrom",
+  "validTo",
+]
 
 // --- Error Classes ---
 
@@ -185,7 +196,8 @@ export async function create(
     shiftId?: string
     source: string
     notes?: string
-  }
+  },
+  audit?: AuditContext
 ) {
   // Validate employee exists in tenant
   const employee = await repo.findEmployeeForTenant(
@@ -231,6 +243,20 @@ export async function create(
       notes: input.notes?.trim() || null,
     })
 
+    if (audit) {
+      await auditLog.log(prisma, {
+        tenantId,
+        userId: audit.userId,
+        action: "create",
+        entityType: "employee_day_plan",
+        entityId: plan.id,
+        entityName: null,
+        changes: null,
+        ipAddress: audit.ipAddress,
+        userAgent: audit.userAgent,
+      }).catch(err => console.error('[AuditLog] Failed:', err))
+    }
+
     return mapToOutput(plan as unknown as Record<string, unknown>)
   } catch (err: unknown) {
     // Handle unique constraint violation on [employeeId, planDate]
@@ -261,7 +287,8 @@ export async function update(
     shiftId?: string | null
     source?: string
     notes?: string | null
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify EDP exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, input.id)
@@ -323,6 +350,25 @@ export async function update(
 
   const plan = (await repo.update(prisma, tenantId, input.id, data))!
 
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      plan as unknown as Record<string, unknown>,
+      TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "employee_day_plan",
+      entityId: input.id,
+      entityName: null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return mapToOutput(plan as unknown as Record<string, unknown>)
 }
 
@@ -332,7 +378,8 @@ export async function update(
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   // Verify EDP exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, id)
@@ -341,6 +388,21 @@ export async function remove(
   }
 
   await repo.deleteById(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "employee_day_plan",
+      entityId: id,
+      entityName: null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return { success: true }
 }
 

@@ -171,7 +171,8 @@ export const systemSettingsRouter = createTRPCRouter({
         const updated = await settingsService.update(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapToOutput(updated as unknown as Record<string, unknown>)
       } catch (err) {
@@ -196,7 +197,8 @@ export const systemSettingsRouter = createTRPCRouter({
         return await settingsService.cleanupDeleteBookings(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -221,7 +223,8 @@ export const systemSettingsRouter = createTRPCRouter({
         return await settingsService.cleanupDeleteBookingData(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -245,7 +248,8 @@ export const systemSettingsRouter = createTRPCRouter({
         return await settingsService.cleanupReReadBookings(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -270,7 +274,8 @@ export const systemSettingsRouter = createTRPCRouter({
         return await settingsService.cleanupMarkDeleteOrders(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)

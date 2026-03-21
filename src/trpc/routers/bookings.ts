@@ -331,7 +331,8 @@ export const bookingsRouter = createTRPCRouter({
           tenantId,
           input,
           dataScope,
-          ctx.user!.id
+          ctx.user!.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
 
         return mapToOutput(booking as unknown as Record<string, unknown>)
@@ -364,7 +365,8 @@ export const bookingsRouter = createTRPCRouter({
           tenantId,
           input,
           dataScope,
-          ctx.user!.id
+          ctx.user!.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
 
         return mapToOutput(updated as unknown as Record<string, unknown>)
@@ -396,7 +398,8 @@ export const bookingsRouter = createTRPCRouter({
           ctx.prisma,
           tenantId,
           input.id,
-          dataScope
+          dataScope,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
 
         return { success: true }

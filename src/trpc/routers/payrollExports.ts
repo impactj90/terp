@@ -187,7 +187,7 @@ export const payrollExportsRouter = createTRPCRouter({
           ctx.prisma,
           ctx.tenantId!,
           input,
-          ctx.user?.id || null,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent },
           scopeFilter
         )
       } catch (err) {
@@ -272,7 +272,8 @@ export const payrollExportsRouter = createTRPCRouter({
         await payrollExportService.remove(
           ctx.prisma,
           ctx.tenantId!,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {

@@ -2,6 +2,15 @@ import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./crm-inquiry-repository"
 import * as numberSeqService from "./number-sequence-service"
 import * as orderService from "./order-service"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Tracked Fields for Audit Diffs ---
+
+const INQUIRY_TRACKED_FIELDS = [
+  "title", "status", "contactId", "effort", "creditRating", "notes",
+  "closingReason", "closingRemarks", "orderId",
+]
 
 // --- Error Classes ---
 
@@ -64,7 +73,8 @@ export async function create(
     effort?: string
     notes?: string
   },
-  createdById: string
+  createdById: string,
+  audit?: AuditContext
 ) {
   // Validate address belongs to tenant
   const address = await prisma.crmAddress.findFirst({
@@ -87,7 +97,7 @@ export async function create(
   // Generate inquiry number via NumberSequence
   const number = await numberSeqService.getNextNumber(prisma, tenantId, "inquiry")
 
-  return repo.create(prisma, {
+  const created = await repo.create(prisma, {
     tenantId,
     number,
     title: input.title,
@@ -97,6 +107,16 @@ export async function create(
     notes: input.notes || null,
     createdById,
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "create", entityType: "crm_inquiry",
+      entityId: created.id, entityName: created.title ?? null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return created
 }
 
 export async function update(
@@ -109,7 +129,8 @@ export async function update(
     effort?: string | null
     creditRating?: string | null
     notes?: string | null
-  }
+  },
+  audit?: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, input.id)
   if (!existing) {
@@ -148,7 +169,18 @@ export async function update(
     data.status = "IN_PROGRESS"
   }
 
-  return repo.update(prisma, tenantId, input.id, data)
+  const updated = await repo.update(prisma, tenantId, input.id, data)
+
+  if (audit) {
+    const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, INQUIRY_TRACKED_FIELDS)
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "update", entityType: "crm_inquiry",
+      entityId: input.id, entityName: updated?.title ?? null, changes,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function close(
@@ -160,7 +192,8 @@ export async function close(
     closingRemarks?: string
     closeLinkedOrder?: boolean
   },
-  closedById: string
+  closedById: string,
+  audit?: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, input.id)
   if (!existing) {
@@ -193,6 +226,15 @@ export async function close(
     }
   }
 
+  if (audit) {
+    const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, result as unknown as Record<string, unknown>, INQUIRY_TRACKED_FIELDS)
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "close", entityType: "crm_inquiry",
+      entityId: input.id, entityName: result?.title ?? null, changes,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return result
 }
 
@@ -200,7 +242,8 @@ export async function cancel(
   prisma: PrismaClient,
   tenantId: string,
   id: string,
-  reason?: string
+  reason?: string,
+  audit?: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) {
@@ -213,16 +256,28 @@ export async function cancel(
     )
   }
 
-  return repo.update(prisma, tenantId, id, {
+  const result = await repo.update(prisma, tenantId, id, {
     status: "CANCELLED",
     closingReason: reason || null,
   })
+
+  if (audit) {
+    const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, result as unknown as Record<string, unknown>, INQUIRY_TRACKED_FIELDS)
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "cancel", entityType: "crm_inquiry",
+      entityId: id, entityName: existing.title ?? null, changes,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return result
 }
 
 export async function reopen(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) {
@@ -235,20 +290,32 @@ export async function reopen(
     )
   }
 
-  return repo.update(prisma, tenantId, id, {
+  const result = await repo.update(prisma, tenantId, id, {
     status: "IN_PROGRESS",
     closedAt: null,
     closedById: null,
     closingReason: null,
     closingRemarks: null,
   })
+
+  if (audit) {
+    const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, result as unknown as Record<string, unknown>, INQUIRY_TRACKED_FIELDS)
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "reopen", entityType: "crm_inquiry",
+      entityId: id, entityName: existing.title ?? null, changes,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return result
 }
 
 export async function linkOrder(
   prisma: PrismaClient,
   tenantId: string,
   id: string,
-  orderId: string
+  orderId: string,
+  audit?: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) {
@@ -263,7 +330,18 @@ export async function linkOrder(
     throw new CrmInquiryValidationError("Order not found in this tenant")
   }
 
-  return repo.update(prisma, tenantId, id, { orderId })
+  const result = await repo.update(prisma, tenantId, id, { orderId })
+
+  if (audit) {
+    const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, result as unknown as Record<string, unknown>, INQUIRY_TRACKED_FIELDS)
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "link_order", entityType: "crm_inquiry",
+      entityId: id, entityName: existing.title ?? null, changes,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return result
 }
 
 export async function createOrder(
@@ -271,7 +349,8 @@ export async function createOrder(
   tenantId: string,
   id: string,
   input?: { orderName?: string },
-  userId?: string
+  userId?: string,
+  audit?: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) {
@@ -297,13 +376,25 @@ export async function createOrder(
     updateData.status = "IN_PROGRESS"
   }
 
-  return repo.update(prisma, tenantId, id, updateData)
+  const result = await repo.update(prisma, tenantId, id, updateData)
+
+  if (audit) {
+    const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, result as unknown as Record<string, unknown>, INQUIRY_TRACKED_FIELDS)
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "create_order", entityType: "crm_inquiry",
+      entityId: id, entityName: existing.title ?? null, changes,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return result
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   // Check for linked records
   const linked = await repo.countLinkedRecords(prisma, tenantId, id)
@@ -313,8 +404,19 @@ export async function remove(
     )
   }
 
+  // Fetch name before deleting
+  const existing = audit ? await repo.findById(prisma, tenantId, id) : null
+
   const deleted = await repo.remove(prisma, tenantId, id)
   if (!deleted) {
     throw new CrmInquiryNotFoundError()
+  }
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "delete", entityType: "crm_inquiry",
+      entityId: id, entityName: existing?.title ?? null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
   }
 }

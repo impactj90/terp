@@ -10,6 +10,16 @@ import {
   parseState,
 } from "./holiday-calendar"
 import * as repo from "./holiday-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit ---
+
+const TRACKED_FIELDS = [
+  "name",
+  "date",
+  "isHalfDay",
+]
 
 // --- Error Classes ---
 
@@ -105,7 +115,8 @@ export async function create(
     holidayCategory: number
     appliesToAll?: boolean
     departmentId?: string | null
-  }
+  },
+  audit?: AuditContext
 ) {
   // Parse and validate date
   const holidayDate = new Date(input.holidayDate)
@@ -130,7 +141,7 @@ export async function create(
     throw new HolidayConflictError("Holiday already exists on this date")
   }
 
-  return repo.create(prisma, {
+  const created = await repo.create(prisma, {
     tenantId,
     holidayDate: normalizedDate,
     name,
@@ -138,6 +149,22 @@ export async function create(
     appliesToAll: input.appliesToAll ?? true,
     departmentId: input.departmentId ?? null,
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "holiday",
+      entityId: created.id,
+      entityName: created.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return created
 }
 
 export async function update(
@@ -150,7 +177,8 @@ export async function update(
     holidayCategory?: number
     appliesToAll?: boolean
     departmentId?: string | null
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify holiday exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, input.id)
@@ -193,13 +221,35 @@ export async function update(
     data.departmentId = input.departmentId
   }
 
-  return (await repo.update(prisma, tenantId, input.id, data))!
+  const updated = (await repo.update(prisma, tenantId, input.id, data))!
+
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "holiday",
+      entityId: input.id,
+      entityName: updated.name ?? null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   // Verify holiday exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, id)
@@ -208,6 +258,20 @@ export async function remove(
   }
 
   await repo.deleteById(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "holiday",
+      entityId: id,
+      entityName: existing.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }
 
 export async function generate(

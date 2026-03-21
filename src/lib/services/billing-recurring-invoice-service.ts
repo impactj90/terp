@@ -3,6 +3,8 @@ import * as repo from "./billing-recurring-invoice-repository"
 import * as billingDocRepo from "./billing-document-repository"
 import * as billingDocService from "./billing-document-service"
 import * as numberSeqService from "./number-sequence-service"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
 
 // --- Error Classes ---
 
@@ -55,6 +57,13 @@ function calculatePositionTotal(
   if (qty === 0 && price === 0 && flat === 0) return null
   return Math.round((qty * price + flat) * 100) / 100
 }
+
+const RECURRING_INVOICE_TRACKED_FIELDS = [
+  "name", "contactId", "interval", "startDate", "endDate",
+  "autoGenerate", "isActive", "deliveryType", "deliveryTerms",
+  "paymentTermDays", "discountPercent", "discountDays",
+  "notes", "internalNotes",
+]
 
 // --- Service Functions ---
 
@@ -112,7 +121,8 @@ export async function create(
       vatRate?: number
     }>
   },
-  createdById: string
+  createdById: string,
+  audit?: AuditContext
 ) {
   // Validate address belongs to tenant
   const address = await prisma.crmAddress.findFirst({
@@ -142,7 +152,7 @@ export async function create(
     throw new BillingRecurringInvoiceValidationError("End date must be after start date")
   }
 
-  return repo.create(prisma, {
+  const created = await repo.create(prisma, {
     tenantId,
     name: input.name,
     addressId: input.addressId,
@@ -162,6 +172,17 @@ export async function create(
     positionTemplate: input.positionTemplate as unknown as Record<string, unknown>,
     createdById,
   })
+
+  if (audit) {
+    // Never throws — audit failures must not block the actual operation
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "create", entityType: "billing_recurring_invoice",
+      entityId: created.id, entityName: null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return created
 }
 
 export async function update(
@@ -183,7 +204,8 @@ export async function update(
     notes?: string | null
     internalNotes?: string | null
     positionTemplate?: Array<Record<string, unknown>>
-  }
+  },
+  audit?: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, input.id)
   if (!existing) throw new BillingRecurringInvoiceNotFoundError()
@@ -204,39 +226,87 @@ export async function update(
 
   if (Object.keys(data).length === 0) return existing
 
-  return repo.update(prisma, tenantId, input.id, data)
+  const updated = await repo.update(prisma, tenantId, input.id, data)
+
+  if (audit) {
+    const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, RECURRING_INVOICE_TRACKED_FIELDS)
+    // Never throws — audit failures must not block the actual operation
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "update", entityType: "billing_recurring_invoice",
+      entityId: input.id, entityName: null, changes,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) throw new BillingRecurringInvoiceNotFoundError()
 
   const deleted = await repo.remove(prisma, tenantId, id)
   if (!deleted) throw new BillingRecurringInvoiceNotFoundError()
+
+  if (audit) {
+    // Never throws — audit failures must not block the actual operation
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "delete", entityType: "billing_recurring_invoice",
+      entityId: id, entityName: null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }
 
 export async function activate(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) throw new BillingRecurringInvoiceNotFoundError()
-  return repo.update(prisma, tenantId, id, { isActive: true })
+  const updated = await repo.update(prisma, tenantId, id, { isActive: true })
+
+  if (audit) {
+    const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, RECURRING_INVOICE_TRACKED_FIELDS)
+    // Never throws — audit failures must not block the actual operation
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "update", entityType: "billing_recurring_invoice",
+      entityId: id, entityName: null, changes,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function deactivate(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) throw new BillingRecurringInvoiceNotFoundError()
-  return repo.update(prisma, tenantId, id, { isActive: false })
+  const updated = await repo.update(prisma, tenantId, id, { isActive: false })
+
+  if (audit) {
+    const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, RECURRING_INVOICE_TRACKED_FIELDS)
+    // Never throws — audit failures must not block the actual operation
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "update", entityType: "billing_recurring_invoice",
+      entityId: id, entityName: null, changes,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 // --- Invoice Generation ---
@@ -245,10 +315,11 @@ export async function generate(
   prisma: PrismaClient,
   tenantId: string,
   recurringId: string,
-  generatedById: string
+  generatedById: string,
+  audit?: AuditContext
 ) {
   // Transaction: load template, create invoice, create positions, update template
-  return prisma.$transaction(async (rawTx) => {
+  const result = await prisma.$transaction(async (rawTx) => {
     const tx = rawTx as unknown as PrismaClient
     const template = await repo.findById(tx, tenantId, recurringId)
     if (!template) throw new BillingRecurringInvoiceNotFoundError()
@@ -341,6 +412,17 @@ export async function generate(
     // 7. Return the created invoice
     return billingDocRepo.findById(tx, tenantId, invoiceDoc.id)
   })
+
+  if (audit) {
+    // Never throws — audit failures must not block the actual operation
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "create", entityType: "billing_recurring_invoice",
+      entityId: recurringId, entityName: null, changes: { action: "generate_invoice" },
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return result
 }
 
 // --- Batch Generation (for cron) ---

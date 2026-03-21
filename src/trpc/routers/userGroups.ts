@@ -215,7 +215,8 @@ export const userGroupsRouter = createTRPCRouter({
         const group = await userGroupService.create(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
 
         return mapUserGroupToOutput(group)
@@ -242,7 +243,8 @@ export const userGroupsRouter = createTRPCRouter({
         const group = await userGroupService.update(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
 
         return mapUserGroupToOutput(group)
@@ -268,7 +270,8 @@ export const userGroupsRouter = createTRPCRouter({
         await userGroupService.remove(
           ctx.prisma,
           ctx.tenantId!,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
 
         return { success: true }

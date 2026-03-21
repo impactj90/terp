@@ -6,6 +6,12 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./location-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit Logging ---
+
+const TRACKED_FIELDS = ["name", "code", "isActive"]
 
 // --- Error Classes ---
 
@@ -63,7 +69,8 @@ export async function create(
     city?: string
     country?: string
     timezone?: string
-  }
+  },
+  audit?: AuditContext
 ) {
   // Trim and validate code
   const code = input.code.trim()
@@ -83,7 +90,7 @@ export async function create(
     throw new LocationConflictError("Location code already exists")
   }
 
-  return repo.create(prisma, {
+  const created = await repo.create(prisma, {
     tenantId,
     code,
     name,
@@ -94,6 +101,16 @@ export async function create(
     timezone: input.timezone?.trim() ?? "",
     isActive: true,
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "create", entityType: "location",
+      entityId: created.id, entityName: created.name ?? null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return created
 }
 
 export async function update(
@@ -109,7 +126,8 @@ export async function update(
     country?: string
     timezone?: string
     isActive?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify location exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, input.id)
@@ -172,13 +190,25 @@ export async function update(
     data.isActive = input.isActive
   }
 
-  return (await repo.update(prisma, tenantId, input.id, data))!
+  const updated = (await repo.update(prisma, tenantId, input.id, data))!
+
+  if (audit) {
+    const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, TRACKED_FIELDS)
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "update", entityType: "location",
+      entityId: input.id, entityName: updated.name ?? null, changes,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   // Verify location exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, id)
@@ -187,4 +217,12 @@ export async function remove(
   }
 
   await repo.deleteById(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "delete", entityType: "location",
+      entityId: id, entityName: existing.name ?? null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }

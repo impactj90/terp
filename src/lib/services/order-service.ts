@@ -7,6 +7,16 @@
 import { Prisma } from "@/generated/prisma/client"
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./order-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit ---
+
+const TRACKED_FIELDS = [
+  "name",
+  "code",
+  "isActive",
+]
 
 // --- Error Classes ---
 
@@ -72,7 +82,8 @@ export async function create(
     billingRatePerHour?: number
     validFrom?: string
     validTo?: string
-  }
+  },
+  audit?: AuditContext
 ) {
   // Trim and validate code
   const code = input.code.trim()
@@ -114,6 +125,20 @@ export async function create(
     validTo: input.validTo ? parseDate(input.validTo) : undefined,
   })
 
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "order",
+      entityId: created.id,
+      entityName: created.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   // Re-fetch with CostCenter preload
   const result = await repo.findByIdWithInclude(prisma, tenantId, created.id)
   if (!result) {
@@ -137,7 +162,8 @@ export async function update(
     validFrom?: string | null
     validTo?: string | null
     isActive?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify order exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, input.id)
@@ -227,6 +253,25 @@ export async function update(
 
   await repo.update(prisma, tenantId, input.id, data)
 
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      data as Record<string, unknown>,
+      TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "order",
+      entityId: input.id,
+      entityName: (data.name as string) ?? existing.name ?? null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   // Re-fetch with CostCenter preload
   const result = await repo.findByIdWithInclude(prisma, tenantId, input.id)
   if (!result) {
@@ -238,7 +283,8 @@ export async function update(
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   // Verify order exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, id)
@@ -248,4 +294,18 @@ export async function remove(
 
   // Hard delete (OrderAssignments cascade via FK)
   await repo.deleteById(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "order",
+      entityId: id,
+      entityName: existing.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }

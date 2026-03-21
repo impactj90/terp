@@ -3,7 +3,7 @@
  *
  * Pure Prisma data-access functions for the AuditLog model.
  */
-import type { PrismaClient } from "@/generated/prisma/client"
+import type { PrismaClient, Prisma } from "@/generated/prisma/client"
 
 export interface AuditLogListParams {
   page?: number
@@ -76,6 +76,39 @@ export async function count(
 ) {
   const where = buildWhere(tenantId, params)
   return prisma.auditLog.count({ where })
+}
+
+export interface AuditLogCreateInput {
+  tenantId: string
+  userId: string | null
+  action: string
+  entityType: string
+  entityId: string
+  entityName?: string | null
+  changes?: Record<string, unknown> | null
+  metadata?: Record<string, unknown> | null
+  ipAddress?: string | null
+  userAgent?: string | null
+}
+
+export async function create(
+  prisma: PrismaClient,
+  data: AuditLogCreateInput
+) {
+  return prisma.auditLog.create({
+    data: {
+      tenantId: data.tenantId,
+      userId: data.userId,
+      action: data.action,
+      entityType: data.entityType,
+      entityId: data.entityId,
+      entityName: data.entityName ?? null,
+      changes: (data.changes as Prisma.InputJsonValue) ?? undefined,
+      metadata: (data.metadata as Prisma.InputJsonValue) ?? undefined,
+      ipAddress: data.ipAddress ?? null,
+      userAgent: data.userAgent ?? null,
+    },
+  })
 }
 
 export async function findById(

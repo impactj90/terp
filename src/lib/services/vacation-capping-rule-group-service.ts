@@ -6,6 +6,12 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./vacation-capping-rule-group-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit Logging ---
+
+const TRACKED_FIELDS = ["name"]
 
 // --- Error Classes ---
 
@@ -61,7 +67,8 @@ export async function create(
     description?: string
     isActive: boolean
     cappingRuleIds?: string[]
-  }
+  },
+  audit?: AuditContext
 ) {
   // Trim and validate code
   const code = input.code.trim()
@@ -110,6 +117,15 @@ export async function create(
 
   // Re-fetch with includes
   const result = await repo.findById(prisma, tenantId, group.id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "create", entityType: "vacation_capping_rule_group",
+      entityId: group.id, entityName: group.name ?? null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return result!
 }
 
@@ -122,7 +138,8 @@ export async function update(
     description?: string | null
     isActive?: boolean
     cappingRuleIds?: string[]
-  }
+  },
+  audit?: AuditContext
 ) {
   const existing = await repo.findByIdSimple(prisma, tenantId, input.id)
   if (!existing) {
@@ -164,13 +181,24 @@ export async function update(
 
   // Re-fetch with includes
   const result = await repo.findById(prisma, tenantId, input.id)
+
+  if (audit) {
+    const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, result as unknown as Record<string, unknown>, TRACKED_FIELDS)
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "update", entityType: "vacation_capping_rule_group",
+      entityId: input.id, entityName: result?.name ?? null, changes,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return result!
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   const existing = await repo.findByIdSimple(prisma, tenantId, id)
   if (!existing) {
@@ -186,4 +214,12 @@ export async function remove(
   }
 
   await repo.deleteById(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "delete", entityType: "vacation_capping_rule_group",
+      entityId: id, entityName: existing.name ?? null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }

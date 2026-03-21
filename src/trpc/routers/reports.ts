@@ -176,7 +176,8 @@ export const reportsRouter = createTRPCRouter({
           name: input.name,
           parameters: input.parameters,
           createdBy: ctx.user?.id || null,
-        }, scopeFilter)
+        }, scopeFilter,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent })
       } catch (err) {
         handleServiceError(err)
       }
@@ -220,7 +221,8 @@ export const reportsRouter = createTRPCRouter({
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {
-        await reportsService.remove(ctx.prisma, ctx.tenantId!, input.id)
+        await reportsService.remove(ctx.prisma, ctx.tenantId!, input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent })
         return { success: true }
       } catch (err) {
         handleServiceError(err)

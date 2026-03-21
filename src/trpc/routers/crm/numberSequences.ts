@@ -35,7 +35,8 @@ export const numberSequencesRouter = createTRPCRouter({
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
           input.key,
-          { prefix: input.prefix, nextValue: input.nextValue }
+          { prefix: input.prefix, nextValue: input.nextValue },
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)

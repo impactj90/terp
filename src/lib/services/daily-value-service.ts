@@ -7,6 +7,8 @@
 import type { PrismaClient } from "@/generated/prisma/client"
 import type { DataScope } from "@/lib/auth/middleware"
 import * as repo from "./daily-value-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
 
 // --- Error Classes ---
 
@@ -211,7 +213,8 @@ export async function approve(
   prisma: PrismaClient,
   tenantId: string,
   dataScope: DataScope,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   // 1. Fetch the daily value with employee relation (for data scope check)
   const dv = await repo.findByIdWithEmployee(prisma, tenantId, id)
@@ -248,6 +251,20 @@ export async function approve(
   const updated = await repo.findById(prisma, tenantId, id)
   if (!updated) {
     throw new DailyValueNotFoundError()
+  }
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "daily_value",
+      entityId: id,
+      entityName: dv.valueDate.toISOString().split("T")[0],
+      changes: { status: { old: dv.status, new: "approved" } },
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
   }
 
   // 5. Send notification (best effort)

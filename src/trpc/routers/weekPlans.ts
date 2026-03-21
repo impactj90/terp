@@ -21,6 +21,7 @@ import type { TRPCContext } from "@/trpc/init"
 import { requirePermission } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
+import * as auditLog from "@/lib/services/audit-logs-service"
 
 // --- Permission Constants ---
 
@@ -347,6 +348,18 @@ export const weekPlansRouter = createTRPCRouter({
           })
         }
 
+        await auditLog.log(ctx.prisma, {
+          tenantId,
+          userId: ctx.user!.id,
+          action: "create",
+          entityType: "week_plan",
+          entityId: created.id,
+          entityName: created.name ?? null,
+          changes: null,
+          ipAddress: ctx.ipAddress,
+          userAgent: ctx.userAgent,
+        }).catch(err => console.error('[AuditLog] Failed:', err))
+
         return mapWeekPlanToOutput(
           plan as unknown as Record<string, unknown>
         )
@@ -501,6 +514,23 @@ export const weekPlansRouter = createTRPCRouter({
           return plan
         })
 
+        const changes = auditLog.computeChanges(
+          existing as unknown as Record<string, unknown>,
+          updated as unknown as Record<string, unknown>,
+          ["name", "code", "description", "mondayDayPlanId", "tuesdayDayPlanId", "wednesdayDayPlanId", "thursdayDayPlanId", "fridayDayPlanId", "saturdayDayPlanId", "sundayDayPlanId", "isActive"]
+        )
+        await auditLog.log(ctx.prisma, {
+          tenantId,
+          userId: ctx.user!.id,
+          action: "update",
+          entityType: "week_plan",
+          entityId: input.id,
+          entityName: updated.name as string ?? null,
+          changes,
+          ipAddress: ctx.ipAddress,
+          userAgent: ctx.userAgent,
+        }).catch(err => console.error('[AuditLog] Failed:', err))
+
         return mapWeekPlanToOutput(
           updated as unknown as Record<string, unknown>
         )
@@ -537,6 +567,18 @@ export const weekPlansRouter = createTRPCRouter({
         await ctx.prisma.weekPlan.delete({
           where: { id: input.id },
         })
+
+        await auditLog.log(ctx.prisma, {
+          tenantId,
+          userId: ctx.user!.id,
+          action: "delete",
+          entityType: "week_plan",
+          entityId: input.id,
+          entityName: existing.name ?? null,
+          changes: null,
+          ipAddress: ctx.ipAddress,
+          userAgent: ctx.userAgent,
+        }).catch(err => console.error('[AuditLog] Failed:', err))
 
         return { success: true }
       } catch (err) {

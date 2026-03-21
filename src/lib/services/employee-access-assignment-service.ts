@@ -6,6 +6,18 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./employee-access-assignment-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit ---
+
+const TRACKED_FIELDS = [
+  "employeeId",
+  "accessProfileId",
+  "validFrom",
+  "validTo",
+  "isActive",
+]
 
 // --- Error Classes ---
 
@@ -53,7 +65,8 @@ export async function create(
     accessProfileId: string
     validFrom?: string
     validTo?: string
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify employee exists in same tenant
   const employee = await repo.findEmployeeForTenant(
@@ -77,7 +90,7 @@ export async function create(
     )
   }
 
-  return repo.create(prisma, {
+  const created = await repo.create(prisma, {
     tenantId,
     employeeId: input.employeeId,
     accessProfileId: input.accessProfileId,
@@ -85,6 +98,22 @@ export async function create(
     validTo: input.validTo ? new Date(input.validTo) : null,
     isActive: true,
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "employee_access_assignment",
+      entityId: created.id,
+      entityName: null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return created
 }
 
 export async function update(
@@ -95,7 +124,8 @@ export async function update(
     validFrom?: string | null
     validTo?: string | null
     isActive?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify assignment exists (tenant-scoped) - use simple findById without include
   // since we only need to check existence
@@ -120,13 +150,35 @@ export async function update(
     data.isActive = input.isActive
   }
 
-  return (await repo.update(prisma, tenantId, input.id, data))!
+  const updated = (await repo.update(prisma, tenantId, input.id, data))!
+
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "employee_access_assignment",
+      entityId: input.id,
+      entityName: null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   // Verify assignment exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, id)
@@ -135,4 +187,18 @@ export async function remove(
   }
 
   await repo.deleteById(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "employee_access_assignment",
+      entityId: id,
+      entityName: null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }

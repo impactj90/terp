@@ -365,7 +365,8 @@ export const dailyValuesRouter = createTRPCRouter({
           ctx.prisma,
           ctx.tenantId!,
           dataScope,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
 
         return mapDailyValueToOutput(

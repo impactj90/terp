@@ -8,6 +8,15 @@
 import type { PrismaClient } from "@/generated/prisma/client"
 import { Prisma } from "@/generated/prisma/client"
 import * as repo from "./day-plans-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit ---
+
+const TRACKED_FIELDS = [
+  "name",
+  "code",
+]
 
 // --- Error Classes ---
 
@@ -196,7 +205,8 @@ export async function create(
     shiftAltPlan6?: string
     netAccountId?: string
     capAccountId?: string
-  }
+  },
+  audit?: AuditContext
 ) {
   // Trim and validate code
   const code = input.code.trim()
@@ -290,6 +300,20 @@ export async function create(
 
   const created = await repo.create(prisma, data)
 
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "day_plan",
+      entityId: created.id,
+      entityName: created.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   // Re-fetch with detail include
   return repo.findByIdWithDetail(prisma, created.id)
 }
@@ -345,7 +369,8 @@ export async function update(
     netAccountId?: string | null
     capAccountId?: string | null
     isActive?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify day plan exists (tenant-scoped)
   const existing = await repo.findByIdBasic(prisma, tenantId, input.id)
@@ -507,7 +532,26 @@ export async function update(
     (data.planType as string) || existing.planType
   normalizeFlextimeFields(data, effectivePlanType)
 
-  await repo.update(prisma, tenantId, input.id, data)
+  const updated = await repo.update(prisma, tenantId, input.id, data)
+
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "day_plan",
+      entityId: input.id,
+      entityName: (updated as unknown as Record<string, unknown>)?.name as string ?? null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 
   // Re-fetch with detail include
   return repo.findByIdWithDetail(prisma, input.id)
@@ -516,7 +560,8 @@ export async function update(
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   // Verify day plan exists (tenant-scoped)
   const existing = await repo.findByIdBasic(prisma, tenantId, id)
@@ -534,6 +579,20 @@ export async function remove(
 
   // Hard delete (breaks and bonuses cascade via FK)
   await repo.deleteById(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "day_plan",
+      entityId: id,
+      entityName: existing.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }
 
 export async function copy(

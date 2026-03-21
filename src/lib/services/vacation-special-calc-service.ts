@@ -7,6 +7,12 @@
 import type { PrismaClient } from "@/generated/prisma/client"
 import { Prisma } from "@/generated/prisma/client"
 import * as repo from "./vacation-special-calc-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit Logging ---
+
+const TRACKED_FIELDS = ["name"]
 
 // --- Error Classes ---
 
@@ -62,7 +68,8 @@ export async function create(
     bonusDays: number
     description?: string
     isActive: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   // Validate threshold vs type
   if (input.type === "disability" && input.threshold !== 0) {
@@ -95,7 +102,7 @@ export async function create(
 
   const description = input.description?.trim() || null
 
-  return repo.create(prisma, {
+  const created = await repo.create(prisma, {
     tenantId,
     type: input.type,
     threshold: input.threshold,
@@ -103,6 +110,16 @@ export async function create(
     description,
     isActive: input.isActive,
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "create", entityType: "vacation_special_calc",
+      entityId: created.id, entityName: null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return created
 }
 
 export async function update(
@@ -114,7 +131,8 @@ export async function update(
     bonusDays?: number
     description?: string | null
     isActive?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, input.id)
   if (!existing) {
@@ -150,13 +168,25 @@ export async function update(
   }
   if (input.isActive !== undefined) data.isActive = input.isActive
 
-  return (await repo.update(prisma, tenantId, input.id, data))!
+  const updated = (await repo.update(prisma, tenantId, input.id, data))!
+
+  if (audit) {
+    const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, TRACKED_FIELDS)
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "update", entityType: "vacation_special_calc",
+      entityId: input.id, entityName: null, changes,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) {
@@ -172,4 +202,12 @@ export async function remove(
   }
 
   await repo.deleteById(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "delete", entityType: "vacation_special_calc",
+      entityId: id, entityName: null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }

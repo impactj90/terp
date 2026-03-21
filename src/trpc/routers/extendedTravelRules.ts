@@ -18,6 +18,7 @@ import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
+import * as auditLog from "@/lib/services/audit-logs-service"
 
 // --- Permission Constants ---
 
@@ -228,6 +229,18 @@ export const extendedTravelRulesRouter = createTRPCRouter({
           },
         })
 
+        await auditLog.log(ctx.prisma, {
+          tenantId,
+          userId: ctx.user!.id,
+          action: "create",
+          entityType: "extended_travel_rule",
+          entityId: rule.id,
+          entityName: null,
+          changes: null,
+          ipAddress: ctx.ipAddress,
+          userAgent: ctx.userAgent,
+        }).catch(err => console.error('[AuditLog] Failed:', err))
+
         return {
           id: rule.id,
           tenantId: rule.tenantId,
@@ -329,6 +342,23 @@ export const extendedTravelRulesRouter = createTRPCRouter({
           data,
         })
 
+        const changes = auditLog.computeChanges(
+          existing as unknown as Record<string, unknown>,
+          rule as unknown as Record<string, unknown>,
+          ["arrivalDayTaxFree", "arrivalDayTaxable", "departureDayTaxFree", "departureDayTaxable", "intermediateDayTaxFree", "intermediateDayTaxable", "threeMonthEnabled", "threeMonthTaxFree", "threeMonthTaxable", "isActive", "sortOrder"]
+        )
+        await auditLog.log(ctx.prisma, {
+          tenantId,
+          userId: ctx.user!.id,
+          action: "update",
+          entityType: "extended_travel_rule",
+          entityId: input.id,
+          entityName: null,
+          changes,
+          ipAddress: ctx.ipAddress,
+          userAgent: ctx.userAgent,
+        }).catch(err => console.error('[AuditLog] Failed:', err))
+
         return {
           id: rule.id,
           tenantId: rule.tenantId,
@@ -379,6 +409,18 @@ export const extendedTravelRulesRouter = createTRPCRouter({
         await ctx.prisma.extendedTravelRule.delete({
           where: { id: input.id },
         })
+
+        await auditLog.log(ctx.prisma, {
+          tenantId,
+          userId: ctx.user!.id,
+          action: "delete",
+          entityType: "extended_travel_rule",
+          entityId: input.id,
+          entityName: null,
+          changes: null,
+          ipAddress: ctx.ipAddress,
+          userAgent: ctx.userAgent,
+        }).catch(err => console.error('[AuditLog] Failed:', err))
 
         return { success: true }
       } catch (err) {

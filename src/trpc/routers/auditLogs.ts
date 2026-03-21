@@ -44,7 +44,7 @@ const auditLogOutputSchema = z.object({
   metadata: z.unknown().nullable(),
   ipAddress: z.string().nullable(),
   userAgent: z.string().nullable(),
-  performedAt: z.date(),
+  performedAt: z.coerce.date(),
   user: auditLogUserSchema.optional(),
 })
 
@@ -58,8 +58,8 @@ const listInputSchema = z
     entityType: z.string().optional(),
     entityId: z.string().optional(),
     action: z.string().optional(),
-    fromDate: z.string().datetime().optional(),
-    toDate: z.string().datetime().optional(),
+    fromDate: z.string().optional(),
+    toDate: z.string().optional(),
   })
   .optional()
 

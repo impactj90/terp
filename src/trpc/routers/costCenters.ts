@@ -162,7 +162,8 @@ export const costCentersRouter = createTRPCRouter({
         const costCenter = await costCenterService.create(
           ctx.prisma as unknown as PrismaClient,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapCostCenterToOutput(costCenter)
       } catch (err) {
@@ -187,7 +188,8 @@ export const costCentersRouter = createTRPCRouter({
         const costCenter = await costCenterService.update(
           ctx.prisma as unknown as PrismaClient,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapCostCenterToOutput(costCenter)
       } catch (err) {
@@ -212,7 +214,8 @@ export const costCentersRouter = createTRPCRouter({
         await costCenterService.remove(
           ctx.prisma as unknown as PrismaClient,
           tenantId,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {

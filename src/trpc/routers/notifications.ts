@@ -368,7 +368,8 @@ export const notificationsRouter = createTRPCRouter({
           ctx.prisma,
           ctx.tenantId!,
           ctx.user.id,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapPreferences(result)
       } catch (err) {

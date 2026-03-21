@@ -85,7 +85,8 @@ export const crmAddressesRouter = createTRPCRouter({
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
           input,
-          ctx.user!.id
+          ctx.user!.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -122,7 +123,8 @@ export const crmAddressesRouter = createTRPCRouter({
         return await crmAddressService.update(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -137,7 +139,8 @@ export const crmAddressesRouter = createTRPCRouter({
         await crmAddressService.remove(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {
@@ -153,7 +156,8 @@ export const crmAddressesRouter = createTRPCRouter({
         return await crmAddressService.restoreAddress(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -195,7 +199,8 @@ export const crmAddressesRouter = createTRPCRouter({
         return await crmAddressService.createContact(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -220,7 +225,8 @@ export const crmAddressesRouter = createTRPCRouter({
         return await crmAddressService.updateContact(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -235,7 +241,8 @@ export const crmAddressesRouter = createTRPCRouter({
         await crmAddressService.deleteContact(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {
@@ -275,7 +282,8 @@ export const crmAddressesRouter = createTRPCRouter({
         return await crmAddressService.createBankAccount(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -297,7 +305,8 @@ export const crmAddressesRouter = createTRPCRouter({
         return await crmAddressService.updateBankAccount(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -312,7 +321,8 @@ export const crmAddressesRouter = createTRPCRouter({
         await crmAddressService.deleteBankAccount(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {

@@ -6,7 +6,20 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./audit-logs-repository"
-import type { AuditLogListParams } from "./audit-logs-repository"
+import type { AuditLogListParams, AuditLogCreateInput } from "./audit-logs-repository"
+
+// Re-export for convenience
+export type { AuditLogCreateInput }
+
+/**
+ * Audit context passed from tRPC routers to services.
+ * Contains the acting user's ID and request metadata.
+ */
+export interface AuditContext {
+  userId: string
+  ipAddress?: string | null
+  userAgent?: string | null
+}
 
 // --- Error Classes ---
 
@@ -74,4 +87,96 @@ export async function getById(
   }
 
   return mapToOutput(log as unknown as Record<string, unknown>)
+}
+
+// --- Write Path ---
+
+/**
+ * Compute a changes diff between two records.
+ *
+ * Returns an object of `{ fieldName: { old: value, new: value } }` for each
+ * field that differs. Fields present in `fieldsToTrack` are compared; all
+ * others are ignored. If `fieldsToTrack` is omitted, all keys present in
+ * either record are compared.
+ *
+ * Designed for use with Prisma model objects — handles Date, Decimal, null.
+ */
+export function computeChanges(
+  before: Record<string, unknown>,
+  after: Record<string, unknown>,
+  fieldsToTrack?: string[]
+): Record<string, { old: unknown; new: unknown }> | null {
+  const keys = fieldsToTrack ?? [
+    ...new Set([...Object.keys(before), ...Object.keys(after)]),
+  ]
+
+  const changes: Record<string, { old: unknown; new: unknown }> = {}
+
+  for (const key of keys) {
+    const oldVal = normalize(before[key])
+    const newVal = normalize(after[key])
+
+    if (!deepEqual(oldVal, newVal)) {
+      changes[key] = { old: oldVal, new: newVal }
+    }
+  }
+
+  return Object.keys(changes).length > 0 ? changes : null
+}
+
+/**
+ * Normalize a value for comparison:
+ * - Date → ISO string
+ * - Decimal → number
+ * - undefined → null
+ */
+function normalize(val: unknown): unknown {
+  if (val === undefined) return null
+  if (val instanceof Date) return val.toISOString()
+  if (val !== null && typeof val === "object" && "toNumber" in val) {
+    return (val as { toNumber(): number }).toNumber()
+  }
+  return val
+}
+
+/**
+ * Simple deep equality check for JSON-compatible values.
+ */
+function deepEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true
+  if (a === null || b === null) return false
+  if (typeof a !== typeof b) return false
+  if (typeof a !== "object") return false
+  const aObj = a as Record<string, unknown>
+  const bObj = b as Record<string, unknown>
+  const keys = new Set([...Object.keys(aObj), ...Object.keys(bObj)])
+  for (const key of keys) {
+    if (!deepEqual(aObj[key], bObj[key])) return false
+  }
+  return true
+}
+
+/**
+ * Write an audit log entry. Fire-and-forget — never throws.
+ *
+ * This function catches all errors internally. Audit log failures
+ * must NEVER block the actual business operation.
+ *
+ * Callers SHOULD still use `.catch()` as defense-in-depth:
+ *   await auditLog.log({ ... }).catch(err => console.error('[AuditLog] Failed:', err))
+ */
+export async function log(
+  prisma: PrismaClient,
+  data: AuditLogCreateInput
+): Promise<void> {
+  try {
+    await repo.create(prisma, data)
+  } catch (err) {
+    // Never throw — audit failures must not block the actual operation
+    console.error("[AuditLog] Failed to write audit log:", err, {
+      action: data.action,
+      entityType: data.entityType,
+      entityId: data.entityId,
+    })
+  }
 }

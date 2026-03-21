@@ -285,7 +285,8 @@ export const macrosRouter = createTRPCRouter({
         const macro = await macrosService.create(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapMacroToOutput(macro)
       } catch (err) {
@@ -309,7 +310,8 @@ export const macrosRouter = createTRPCRouter({
         const macro = await macrosService.update(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapMacroToOutput(macro)
       } catch (err) {
@@ -330,7 +332,7 @@ export const macrosRouter = createTRPCRouter({
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {
-        await macrosService.remove(ctx.prisma, ctx.tenantId!, input.id)
+        await macrosService.remove(ctx.prisma, ctx.tenantId!, input.id, { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent })
         return { success: true }
       } catch (err) {
         handleServiceError(err)
@@ -378,7 +380,8 @@ export const macrosRouter = createTRPCRouter({
         const assignment = await macrosService.createAssignment(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapAssignmentToOutput(assignment)
       } catch (err) {
@@ -403,7 +406,8 @@ export const macrosRouter = createTRPCRouter({
         const assignment = await macrosService.updateAssignment(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapAssignmentToOutput(assignment)
       } catch (err) {
@@ -433,7 +437,8 @@ export const macrosRouter = createTRPCRouter({
           ctx.prisma,
           ctx.tenantId!,
           input.macroId,
-          input.assignmentId
+          input.assignmentId,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {

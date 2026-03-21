@@ -1,5 +1,7 @@
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./billing-price-list-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
 
 // --- Error Classes ---
 
@@ -23,6 +25,14 @@ export class BillingPriceListConflictError extends Error {
     this.name = "BillingPriceListConflictError"
   }
 }
+
+const PRICE_LIST_TRACKED_FIELDS = [
+  "name", "description", "isDefault", "isActive", "validFrom", "validTo",
+]
+
+const PRICE_LIST_ENTRY_TRACKED_FIELDS = [
+  "description", "unitPrice", "minQuantity", "unit", "validFrom", "validTo",
+]
 
 // --- Service Functions ---
 
@@ -59,14 +69,15 @@ export async function create(
     validFrom?: Date
     validTo?: Date
   },
-  createdById: string
+  createdById: string,
+  audit?: AuditContext
 ) {
   // If setting as default, unset other defaults first
   if (input.isDefault) {
     await repo.unsetDefault(prisma, tenantId)
   }
 
-  return repo.create(prisma, {
+  const created = await repo.create(prisma, {
     tenantId,
     name: input.name,
     description: input.description || null,
@@ -75,6 +86,17 @@ export async function create(
     validTo: input.validTo || null,
     createdById,
   })
+
+  if (audit) {
+    // Never throws — audit failures must not block the actual operation
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "create", entityType: "billing_price_list",
+      entityId: created.id, entityName: null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return created
 }
 
 export async function update(
@@ -88,7 +110,8 @@ export async function update(
     validFrom?: Date | null
     validTo?: Date | null
     isActive?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, input.id)
   if (!existing) throw new BillingPriceListNotFoundError()
@@ -111,13 +134,26 @@ export async function update(
     await repo.unsetDefault(prisma, tenantId)
   }
 
-  return repo.update(prisma, tenantId, input.id, data)
+  const updated = await repo.update(prisma, tenantId, input.id, data)
+
+  if (audit) {
+    const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, PRICE_LIST_TRACKED_FIELDS)
+    // Never throws — audit failures must not block the actual operation
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "update", entityType: "billing_price_list",
+      entityId: input.id, entityName: null, changes,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) throw new BillingPriceListNotFoundError()
@@ -132,18 +168,40 @@ export async function remove(
 
   const deleted = await repo.remove(prisma, tenantId, id)
   if (!deleted) throw new BillingPriceListNotFoundError()
+
+  if (audit) {
+    // Never throws — audit failures must not block the actual operation
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "delete", entityType: "billing_price_list",
+      entityId: id, entityName: null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }
 
 export async function setDefault(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) throw new BillingPriceListNotFoundError()
 
   await repo.unsetDefault(prisma, tenantId)
-  return repo.update(prisma, tenantId, id, { isDefault: true })
+  const updated = await repo.update(prisma, tenantId, id, { isDefault: true })
+
+  if (audit) {
+    const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, PRICE_LIST_TRACKED_FIELDS)
+    // Never throws — audit failures must not block the actual operation
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "update", entityType: "billing_price_list",
+      entityId: id, entityName: null, changes,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function listEntries(
@@ -172,13 +230,14 @@ export async function createEntry(
     unit?: string
     validFrom?: Date
     validTo?: Date
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify price list exists and belongs to tenant
   const pl = await repo.findById(prisma, tenantId, input.priceListId)
   if (!pl) throw new BillingPriceListNotFoundError()
 
-  return repo.createEntry(prisma, {
+  const created = await repo.createEntry(prisma, {
     priceListId: input.priceListId,
     articleId: input.articleId || null,
     itemKey: input.itemKey || null,
@@ -189,6 +248,17 @@ export async function createEntry(
     validFrom: input.validFrom || null,
     validTo: input.validTo || null,
   })
+
+  if (audit) {
+    // Never throws — audit failures must not block the actual operation
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "create", entityType: "billing_price_list_entry",
+      entityId: created.id, entityName: null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return created
 }
 
 export async function updateEntry(
@@ -203,7 +273,8 @@ export async function updateEntry(
     unit?: string | null
     validFrom?: Date | null
     validTo?: Date | null
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify price list exists and belongs to tenant
   const pl = await repo.findById(prisma, tenantId, input.priceListId)
@@ -224,14 +295,32 @@ export async function updateEntry(
     return repo.updateEntry(prisma, input.priceListId, input.id, {})
   }
 
-  return repo.updateEntry(prisma, input.priceListId, input.id, data)
+  // Fetch existing entry for change tracking
+  const existing = await prisma.billingPriceListEntry.findFirst({
+    where: { id: input.id, priceListId: input.priceListId },
+  })
+
+  const updated = await repo.updateEntry(prisma, input.priceListId, input.id, data)
+
+  if (audit && existing) {
+    const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, PRICE_LIST_ENTRY_TRACKED_FIELDS)
+    // Never throws — audit failures must not block the actual operation
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "update", entityType: "billing_price_list_entry",
+      entityId: input.id, entityName: null, changes,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function removeEntry(
   prisma: PrismaClient,
   tenantId: string,
   priceListId: string,
-  entryId: string
+  entryId: string,
+  audit?: AuditContext
 ) {
   // Verify price list exists and belongs to tenant
   const pl = await repo.findById(prisma, tenantId, priceListId)
@@ -239,6 +328,15 @@ export async function removeEntry(
 
   const deleted = await repo.removeEntry(prisma, priceListId, entryId)
   if (!deleted) throw new BillingPriceListNotFoundError("Price list entry not found")
+
+  if (audit) {
+    // Never throws — audit failures must not block the actual operation
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "delete", entityType: "billing_price_list_entry",
+      entityId: entryId, entityName: null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }
 
 export async function bulkImport(
@@ -252,13 +350,25 @@ export async function bulkImport(
     unitPrice: number
     minQuantity?: number
     unit?: string
-  }>
+  }>,
+  audit?: AuditContext
 ) {
   // Verify price list exists and belongs to tenant
   const pl = await repo.findById(prisma, tenantId, priceListId)
   if (!pl) throw new BillingPriceListNotFoundError()
 
-  return repo.upsertEntries(prisma, priceListId, entries)
+  const result = await repo.upsertEntries(prisma, priceListId, entries)
+
+  if (audit) {
+    // Never throws — audit failures must not block the actual operation
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "update", entityType: "billing_price_list",
+      entityId: priceListId, entityName: null, changes: { action: "bulk_import", entryCount: entries.length },
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return result
 }
 
 // --- Entries for Address (autocomplete) ---

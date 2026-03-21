@@ -480,11 +480,9 @@ describe("departments.update", () => {
         findFirst: vi
           .fn()
           .mockResolvedValueOnce(deptA) // exists check for A
-          .mockResolvedValueOnce(deptC), // parent existence check for C
-        findUnique: vi
-          .fn()
-          .mockResolvedValueOnce({ parentId: DEPT_B_ID }) // C.parentId = B
-          .mockResolvedValueOnce({ parentId: DEPT_A_ID }), // B.parentId = A -> circular!
+          .mockResolvedValueOnce(deptC) // parent existence check for C
+          .mockResolvedValueOnce({ parentId: DEPT_B_ID }) // findParentId: C.parentId = B
+          .mockResolvedValueOnce({ parentId: DEPT_A_ID }), // findParentId: B.parentId = A -> circular!
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -535,7 +533,7 @@ describe("departments.delete", () => {
       department: {
         findFirst: vi.fn().mockResolvedValue(existing),
         count: vi.fn().mockResolvedValue(0), // no children
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       employee: {
         count: vi.fn().mockResolvedValue(0), // no employees
@@ -544,8 +542,8 @@ describe("departments.delete", () => {
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: DEPT_ID })
     expect(result.success).toBe(true)
-    expect(mockPrisma.department.delete).toHaveBeenCalledWith({
-      where: { id: DEPT_ID },
+    expect(mockPrisma.department.deleteMany).toHaveBeenCalledWith({
+      where: { id: DEPT_ID, tenantId: expect.any(String) },
     })
   })
 

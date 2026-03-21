@@ -474,7 +474,8 @@ export const dayPlansRouter = createTRPCRouter({
         const plan = await dayPlansService.create(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
 
         return mapDayPlanToOutput(plan as unknown as Record<string, unknown>)
@@ -500,7 +501,8 @@ export const dayPlansRouter = createTRPCRouter({
         const plan = await dayPlansService.update(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
 
         return mapDayPlanToOutput(plan as unknown as Record<string, unknown>)
@@ -523,7 +525,9 @@ export const dayPlansRouter = createTRPCRouter({
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {
-        await dayPlansService.remove(ctx.prisma, ctx.tenantId!, input.id)
+        await dayPlansService.remove(ctx.prisma, ctx.tenantId!, input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
+        )
         return { success: true }
       } catch (err) {
         handleServiceError(err)

@@ -26,6 +26,7 @@ import {
 } from "@/lib/auth/data-scope"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
+import * as auditLog from "@/lib/services/audit-logs-service"
 
 // --- Permission Constants ---
 // Matching Go route registration at apps/api/internal/handler/routes.go:1119-1139
@@ -404,6 +405,18 @@ export const orderBookingsRouter = createTRPCRouter({
           },
         })
 
+        await auditLog.log(ctx.prisma, {
+          tenantId,
+          userId: ctx.user!.id,
+          action: "create",
+          entityType: "order_booking",
+          entityId: created.id,
+          entityName: null,
+          changes: null,
+          ipAddress: ctx.ipAddress,
+          userAgent: ctx.userAgent,
+        }).catch(err => console.error('[AuditLog] Failed:', err))
+
         // Re-fetch with includes (matching Go pattern)
         const booking = await ctx.prisma.orderBooking.findUnique({
           where: { id: created.id },
@@ -511,6 +524,24 @@ export const orderBookingsRouter = createTRPCRouter({
           data,
         })
 
+        const TRACKED_FIELDS = ["orderId", "employeeId", "bookingDate"]
+        const changes = auditLog.computeChanges(
+          existing as unknown as Record<string, unknown>,
+          data as Record<string, unknown>,
+          TRACKED_FIELDS
+        )
+        await auditLog.log(ctx.prisma, {
+          tenantId,
+          userId: ctx.user!.id,
+          action: "update",
+          entityType: "order_booking",
+          entityId: input.id,
+          entityName: null,
+          changes,
+          ipAddress: ctx.ipAddress,
+          userAgent: ctx.userAgent,
+        }).catch(err => console.error('[AuditLog] Failed:', err))
+
         // Re-fetch with includes
         const booking = await ctx.prisma.orderBooking.findUnique({
           where: { id: input.id },
@@ -568,6 +599,18 @@ export const orderBookingsRouter = createTRPCRouter({
         await ctx.prisma.orderBooking.delete({
           where: { id: input.id },
         })
+
+        await auditLog.log(ctx.prisma, {
+          tenantId,
+          userId: ctx.user!.id,
+          action: "delete",
+          entityType: "order_booking",
+          entityId: input.id,
+          entityName: null,
+          changes: null,
+          ipAddress: ctx.ipAddress,
+          userAgent: ctx.userAgent,
+        }).catch(err => console.error('[AuditLog] Failed:', err))
 
         return { success: true }
       } catch (err) {

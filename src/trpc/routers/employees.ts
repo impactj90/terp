@@ -709,7 +709,8 @@ export const employeesRouter = createTRPCRouter({
         const employee = await employeesService.create(
           ctx.prisma as unknown as PrismaClient,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
 
         return mapEmployeeToOutput(employee)
@@ -740,7 +741,8 @@ export const employeesRouter = createTRPCRouter({
           ctx.prisma as unknown as PrismaClient,
           tenantId,
           dataScope,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
 
         return mapEmployeeToOutput(employee)
@@ -770,7 +772,8 @@ export const employeesRouter = createTRPCRouter({
           ctx.prisma as unknown as PrismaClient,
           tenantId,
           dataScope,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
 
         return { success: true }
@@ -837,7 +840,8 @@ export const employeesRouter = createTRPCRouter({
           ctx.prisma as unknown as PrismaClient,
           tenantId,
           dataScope,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)

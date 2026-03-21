@@ -10,6 +10,10 @@ import type { DataScope } from "@/lib/auth/middleware"
 import { Decimal } from "@prisma/client/runtime/client"
 import { RecalcService } from "@/lib/services/recalc"
 import * as repo from "./absences-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+const TRACKED_FIELDS = ["duration", "halfDayPeriod", "notes", "status", "approvedById", "rejectedReason"]
 
 // --- Error Classes ---
 
@@ -323,7 +327,7 @@ export async function createRange(
     halfDayPeriod?: string
     notes?: string
   },
-  userId: string | null
+  audit: AuditContext | null
 ) {
   const {
     employeeId,
@@ -409,8 +413,8 @@ export async function createRange(
             halfDayPeriod: halfDayPeriod ?? null,
             status,
             notes: notes ?? null,
-            createdBy: userId,
-            approvedBy: autoApprove ? userId : null,
+            createdBy: audit?.userId ?? null,
+            approvedBy: autoApprove ? (audit?.userId ?? null) : null,
             approvedAt: autoApprove ? new Date() : null,
           })
         }
@@ -432,7 +436,7 @@ export async function createRange(
               absenceTypeId,
               fromDate,
               toDate,
-              createdBy: userId ?? undefined,
+              createdBy: (audit?.userId) ?? undefined,
               status,
             })
           : []
@@ -475,6 +479,23 @@ export async function createRange(
     }
   }
 
+  // Never throws — audit failures must not block the actual operation
+  if (audit && createdAbsences.length > 0) {
+    for (const created of createdAbsences) {
+      await auditLog.log(prisma, {
+        tenantId,
+        userId: audit.userId,
+        action: "create",
+        entityType: "absence_day",
+        entityId: (created as unknown as Record<string, unknown>).id as string,
+        entityName: null,
+        changes: null,
+        ipAddress: audit.ipAddress,
+        userAgent: audit.userAgent,
+      }).catch(err => console.error('[AuditLog] Failed:', err));
+    }
+  }
+
   return { createdAbsences, skippedDates }
 }
 
@@ -487,7 +508,8 @@ export async function update(
     halfDayPeriod?: string | null
     notes?: string | null
   },
-  dataScope: DataScope
+  dataScope: DataScope,
+  audit: AuditContext
 ) {
   // 1. Fetch the absence
   const absence = await repo.findByIdWithEmployee(prisma, tenantId, input.id)
@@ -522,6 +544,24 @@ export async function update(
   // 6. Trigger recalc (best effort)
   await triggerRecalc(prisma, tenantId, absence.employeeId, absence.absenceDate)
 
+  // Never throws — audit failures must not block the actual operation
+  const changes = auditLog.computeChanges(
+    absence as unknown as Record<string, unknown>,
+    updated as unknown as Record<string, unknown>,
+    TRACKED_FIELDS,
+  );
+  await auditLog.log(prisma, {
+    tenantId,
+    userId: audit.userId,
+    action: "update",
+    entityType: "absence_day",
+    entityId: input.id,
+    entityName: null,
+    changes,
+    ipAddress: audit.ipAddress,
+    userAgent: audit.userAgent,
+  }).catch(err => console.error('[AuditLog] Failed:', err));
+
   return updated
 }
 
@@ -529,7 +569,8 @@ export async function remove(
   prisma: PrismaClient,
   tenantId: string,
   id: string,
-  dataScope: DataScope
+  dataScope: DataScope,
+  audit: AuditContext
 ) {
   // 1. Fetch the absence with type info
   const absence = await repo.findByIdWithEmployeeAndType(prisma, tenantId, id)
@@ -568,14 +609,27 @@ export async function remove(
       )
     }
   }
+
+  // Never throws — audit failures must not block the actual operation
+  await auditLog.log(prisma, {
+    tenantId,
+    userId: audit.userId,
+    action: "delete",
+    entityType: "absence_day",
+    entityId: id,
+    entityName: null,
+    changes: null,
+    ipAddress: audit.ipAddress,
+    userAgent: audit.userAgent,
+  }).catch(err => console.error('[AuditLog] Failed:', err));
 }
 
 export async function approve(
   prisma: PrismaClient,
   tenantId: string,
   id: string,
-  userId: string,
-  dataScope: DataScope
+  dataScope: DataScope,
+  audit: AuditContext
 ) {
   // 1. Fetch absence with relations
   const absence = await repo.findByIdForApproval(prisma, tenantId, id)
@@ -590,7 +644,7 @@ export async function approve(
   // 3. Atomically update only if status is still pending (prevents double-approve)
   const updated = await repo.updateIfStatus(prisma, tenantId, id, "pending", {
     status: "approved",
-    approvedBy: userId,
+    approvedBy: audit.userId,
     approvedAt: new Date(),
   })
 
@@ -618,6 +672,24 @@ export async function approve(
       )
     }
   }
+
+  // Never throws — audit failures must not block the actual operation
+  const changes = auditLog.computeChanges(
+    absence as unknown as Record<string, unknown>,
+    updated as unknown as Record<string, unknown>,
+    TRACKED_FIELDS,
+  );
+  await auditLog.log(prisma, {
+    tenantId,
+    userId: audit.userId,
+    action: "approve",
+    entityType: "absence_day",
+    entityId: id,
+    entityName: null,
+    changes,
+    ipAddress: audit.ipAddress,
+    userAgent: audit.userAgent,
+  }).catch(err => console.error('[AuditLog] Failed:', err));
 
   // 7. Send notification to employee (best effort)
   try {
@@ -656,7 +728,8 @@ export async function reject(
   tenantId: string,
   id: string,
   reason: string | undefined,
-  dataScope: DataScope
+  dataScope: DataScope,
+  audit: AuditContext
 ) {
   // 1. Fetch absence with relations
   const absence = await repo.findByIdForRejection(prisma, tenantId, id)
@@ -680,6 +753,24 @@ export async function reject(
 
   // 4. Trigger recalc (best effort)
   await triggerRecalc(prisma, tenantId, absence.employeeId, absence.absenceDate)
+
+  // Never throws — audit failures must not block the actual operation
+  const changes = auditLog.computeChanges(
+    absence as unknown as Record<string, unknown>,
+    updated as unknown as Record<string, unknown>,
+    TRACKED_FIELDS,
+  );
+  await auditLog.log(prisma, {
+    tenantId,
+    userId: audit.userId,
+    action: "reject",
+    entityType: "absence_day",
+    entityId: id,
+    entityName: null,
+    changes,
+    ipAddress: audit.ipAddress,
+    userAgent: audit.userAgent,
+  }).catch(err => console.error('[AuditLog] Failed:', err));
 
   // 6. Send rejection notification to employee (best effort)
   try {
@@ -718,7 +809,8 @@ export async function cancel(
   prisma: PrismaClient,
   tenantId: string,
   id: string,
-  dataScope: DataScope
+  dataScope: DataScope,
+  audit: AuditContext
 ) {
   // 1. Fetch absence with relations
   const absence = await repo.findByIdForCancel(prisma, tenantId, id)
@@ -759,6 +851,24 @@ export async function cancel(
       )
     }
   }
+
+  // Never throws — audit failures must not block the actual operation
+  const changes = auditLog.computeChanges(
+    absence as unknown as Record<string, unknown>,
+    updated as unknown as Record<string, unknown>,
+    TRACKED_FIELDS,
+  );
+  await auditLog.log(prisma, {
+    tenantId,
+    userId: audit.userId,
+    action: "cancel",
+    entityType: "absence_day",
+    entityId: id,
+    entityName: null,
+    changes,
+    ipAddress: audit.ipAddress,
+    userAgent: audit.userAgent,
+  }).catch(err => console.error('[AuditLog] Failed:', err));
 
   return updated
 }

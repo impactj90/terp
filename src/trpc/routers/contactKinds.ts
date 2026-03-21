@@ -165,7 +165,8 @@ export const contactKindsRouter = createTRPCRouter({
         const ck = await contactKindService.create(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapContactKindToOutput(ck)
       } catch (err) {
@@ -189,7 +190,8 @@ export const contactKindsRouter = createTRPCRouter({
         const ck = await contactKindService.update(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapContactKindToOutput(ck)
       } catch (err) {
@@ -213,7 +215,8 @@ export const contactKindsRouter = createTRPCRouter({
         await contactKindService.remove(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {

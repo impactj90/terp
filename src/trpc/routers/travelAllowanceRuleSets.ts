@@ -167,7 +167,8 @@ export const travelAllowanceRuleSetsRouter = createTRPCRouter({
         const rs = await travelAllowanceRuleSetService.create(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapRuleSet(rs)
       } catch (err) {
@@ -191,7 +192,8 @@ export const travelAllowanceRuleSetsRouter = createTRPCRouter({
         const rs = await travelAllowanceRuleSetService.update(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapRuleSet(rs)
       } catch (err) {
@@ -215,7 +217,8 @@ export const travelAllowanceRuleSetsRouter = createTRPCRouter({
         await travelAllowanceRuleSetService.remove(
           ctx.prisma,
           ctx.tenantId!,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {

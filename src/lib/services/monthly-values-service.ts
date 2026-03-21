@@ -13,6 +13,8 @@ import {
 import { mapWithConcurrency } from "@/lib/async"
 import { MonthlyCalcService } from "./monthly-calc"
 import * as repo from "./monthly-values-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
 
 // --- Error Classes ---
 
@@ -166,7 +168,8 @@ export async function close(
   tenantId: string,
   input: { id: string } | { employeeId: string; year: number; month: number },
   userId: string,
-  dataScope?: DataScope
+  dataScope?: DataScope,
+  audit?: AuditContext
 ) {
   // 1. Look up the monthly value
   let mv
@@ -200,6 +203,21 @@ export async function close(
 
   // 3. Re-fetch and return updated record
   const updated = await repo.findById(prisma, tenantId, mv.id)
+
+  // Never throws — audit failures must not block the actual operation
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "close",
+      entityType: "monthly_values",
+      entityId: mv.id,
+      entityName: `${mv.year}-${mv.month}`,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return updated!
 }
 
@@ -261,7 +279,8 @@ export async function closeBatch(
     recalculate?: boolean
   },
   userId: string,
-  dataScope?: DataScope
+  dataScope?: DataScope,
+  audit?: AuditContext
 ) {
   const { year, month, recalculate } = input
 
@@ -346,6 +365,21 @@ export async function closeBatch(
     try {
       await monthlyCalcService.closeMonth(empId, year, month, userId)
       closedCount++
+
+      // Never throws — audit failures must not block the actual operation
+      if (audit) {
+        const mv = mvByEmployee.get(empId)
+        await auditLog.log(prisma, {
+          tenantId,
+          userId: audit.userId,
+          action: "close",
+          entityType: "monthly_values",
+          entityId: mv?.id ?? empId,
+          entityName: `${year}-${month}`,
+          ipAddress: audit.ipAddress,
+          userAgent: audit.userAgent,
+        }).catch(err => console.error('[AuditLog] Failed:', err))
+      }
     } catch (err) {
       errors.push({
         employeeId: empId,

@@ -12,6 +12,8 @@ import * as repo from "./bookings-repository"
 import type { DataScopeFilter } from "./bookings-repository"
 import * as monthlyValuesRepo from "./monthly-values-repository"
 import { RecalcService } from "./recalc"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
 
 // --- Constants ---
 
@@ -334,7 +336,8 @@ export async function createBooking(
     bookingReasonId?: string
   },
   dataScope: DataScopeFilter,
-  userId: string
+  userId: string,
+  audit: AuditContext
 ) {
   // Parse and validate time
   const minutes = parseTimeString(input.time)
@@ -419,6 +422,18 @@ export async function createBooking(
     bookingDate
   )
 
+  // Never throws — audit failures must not block the actual operation
+  await auditLog.log(prisma, {
+    tenantId,
+    userId: audit.userId,
+    action: "create",
+    entityType: "booking",
+    entityId: booking.id,
+    entityName: null,
+    ipAddress: audit.ipAddress,
+    userAgent: audit.userAgent,
+  }).catch(err => console.error('[AuditLog] Failed:', err))
+
   return booking
 }
 
@@ -431,7 +446,8 @@ export async function updateBooking(
     notes?: string | null
   },
   dataScope: DataScopeFilter,
-  userId: string
+  userId: string,
+  audit: AuditContext
 ) {
   // Fetch existing booking (tenant-scoped) with employee
   const existing = await repo.findByIdWithEmployee(prisma, tenantId, input.id)
@@ -465,6 +481,24 @@ export async function updateBooking(
   // Trigger recalculation for the affected day (best effort)
   await triggerRecalc(prisma, tenantId, existing.employeeId, existing.bookingDate)
 
+  // Never throws — audit failures must not block the actual operation
+  const changes = auditLog.computeChanges(
+    existing as unknown as Record<string, unknown>,
+    updated as unknown as Record<string, unknown>,
+    ["editedTime", "notes", "bookingReasonId"]
+  )
+  await auditLog.log(prisma, {
+    tenantId,
+    userId: audit.userId,
+    action: "update",
+    entityType: "booking",
+    entityId: input.id,
+    entityName: null,
+    changes,
+    ipAddress: audit.ipAddress,
+    userAgent: audit.userAgent,
+  }).catch(err => console.error('[AuditLog] Failed:', err))
+
   return updated
 }
 
@@ -472,7 +506,8 @@ export async function deleteBooking(
   prisma: PrismaClient,
   tenantId: string,
   id: string,
-  dataScope: DataScopeFilter
+  dataScope: DataScopeFilter,
+  audit: AuditContext
 ) {
   // Fetch existing booking (tenant-scoped) with employee
   const existing = await repo.findByIdWithEmployee(prisma, tenantId, id)
@@ -492,4 +527,16 @@ export async function deleteBooking(
   // Trigger recalculation for the affected day (best effort)
   // Note: must capture employee/date before deletion (already done via `existing`)
   await triggerRecalc(prisma, tenantId, existing.employeeId, existing.bookingDate)
+
+  // Never throws — audit failures must not block the actual operation
+  await auditLog.log(prisma, {
+    tenantId,
+    userId: audit.userId,
+    action: "delete",
+    entityType: "booking",
+    entityId: id,
+    entityName: null,
+    ipAddress: audit.ipAddress,
+    userAgent: audit.userAgent,
+  }).catch(err => console.error('[AuditLog] Failed:', err))
 }

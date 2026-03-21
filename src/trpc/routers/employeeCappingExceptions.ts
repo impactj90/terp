@@ -217,7 +217,8 @@ export const employeeCappingExceptionsRouter = createTRPCRouter({
         const created = await employeeCappingExceptionService.create(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapToOutput(created as unknown as Record<string, unknown>)
       } catch (err) {
@@ -259,7 +260,8 @@ export const employeeCappingExceptionsRouter = createTRPCRouter({
         const updated = await employeeCappingExceptionService.update(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapToOutput(updated as unknown as Record<string, unknown>)
       } catch (err) {
@@ -298,7 +300,8 @@ export const employeeCappingExceptionsRouter = createTRPCRouter({
         await employeeCappingExceptionService.remove(
           ctx.prisma,
           ctx.tenantId!,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {

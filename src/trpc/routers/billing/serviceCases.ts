@@ -121,7 +121,8 @@ export const billingServiceCasesRouter = createTRPCRouter({
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
           input,
-          ctx.user!.id
+          ctx.user!.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -136,7 +137,8 @@ export const billingServiceCasesRouter = createTRPCRouter({
         return await serviceCaseService.update(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -153,7 +155,8 @@ export const billingServiceCasesRouter = createTRPCRouter({
           ctx.tenantId!,
           input.id,
           input.closingReason,
-          ctx.user!.id
+          ctx.user!.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -170,7 +173,8 @@ export const billingServiceCasesRouter = createTRPCRouter({
           ctx.tenantId!,
           input.id,
           input.positions,
-          ctx.user!.id
+          ctx.user!.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -187,7 +191,8 @@ export const billingServiceCasesRouter = createTRPCRouter({
           ctx.tenantId!,
           input.id,
           { orderName: input.orderName, orderDescription: input.orderDescription },
-          ctx.user!.id
+          ctx.user!.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -202,7 +207,8 @@ export const billingServiceCasesRouter = createTRPCRouter({
         await serviceCaseService.remove(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {

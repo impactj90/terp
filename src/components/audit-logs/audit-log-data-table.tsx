@@ -4,7 +4,7 @@ import { useTranslations, useLocale } from 'next-intl'
 import { Eye } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
@@ -14,9 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import type { components } from '@/types/legacy-api-types'
-
-type AuditLogEntry = components['schemas']['AuditLog']
+import type { AuditLogEntry } from './types'
 
 interface AuditLogDataTableProps {
   items: AuditLogEntry[]
@@ -25,31 +23,32 @@ interface AuditLogDataTableProps {
 }
 
 const actionBadgeConfig: Record<string, { variant: 'default' | 'destructive' | 'outline'; className: string }> = {
-  create:  { variant: 'default',     className: 'bg-green-600 hover:bg-green-700' },
-  update:  { variant: 'outline',     className: 'border-blue-500 text-blue-700' },
-  delete:  { variant: 'destructive', className: '' },
-  approve: { variant: 'default',     className: 'bg-green-600 hover:bg-green-700' },
-  reject:  { variant: 'destructive', className: '' },
-  close:   { variant: 'outline',     className: 'border-purple-500 text-purple-700' },
-  reopen:  { variant: 'outline',     className: 'border-orange-500 text-orange-700' },
-  export:  { variant: 'outline',     className: 'border-cyan-500 text-cyan-700' },
-  import:  { variant: 'outline',     className: 'border-teal-500 text-teal-700' },
-  login:   { variant: 'outline',     className: '' },
-  logout:  { variant: 'outline',     className: '' },
+  create:   { variant: 'default',     className: 'bg-green-600 hover:bg-green-700' },
+  update:   { variant: 'outline',     className: 'border-blue-500 text-blue-700' },
+  delete:   { variant: 'destructive', className: '' },
+  approve:  { variant: 'default',     className: 'bg-green-600 hover:bg-green-700' },
+  reject:   { variant: 'destructive', className: '' },
+  cancel:   { variant: 'destructive', className: '' },
+  close:    { variant: 'outline',     className: 'border-purple-500 text-purple-700' },
+  reopen:   { variant: 'outline',     className: 'border-orange-500 text-orange-700' },
+  finalize: { variant: 'outline',     className: 'border-indigo-500 text-indigo-700' },
+  forward:  { variant: 'outline',     className: 'border-cyan-500 text-cyan-700' },
+  export:   { variant: 'outline',     className: 'border-cyan-500 text-cyan-700' },
+  import:   { variant: 'outline',     className: 'border-teal-500 text-teal-700' },
 }
 
 export function AuditLogDataTable({ items, isLoading, onRowClick }: AuditLogDataTableProps) {
   const t = useTranslations('auditLogs')
   const locale = useLocale()
 
-  const formatDateTime = (dateStr: string) => {
+  const formatDateTime = (dateStr: string | Date) => {
     try {
       return new Intl.DateTimeFormat(locale, {
         dateStyle: 'medium',
         timeStyle: 'short',
       }).format(new Date(dateStr))
     } catch {
-      return dateStr
+      return String(dateStr)
     }
   }
 
@@ -86,19 +85,18 @@ export function AuditLogDataTable({ items, isLoading, onRowClick }: AuditLogData
               onClick={() => onRowClick(item)}
             >
               <TableCell className="text-sm text-muted-foreground">
-                {formatDateTime(item.performed_at)}
+                {formatDateTime(item.performedAt)}
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
                   {item.user && (
                     <Avatar className="h-6 w-6">
-                      <AvatarImage src={item.user.avatar_url} />
                       <AvatarFallback className="text-xs">
-                        {item.user.display_name?.charAt(0)?.toUpperCase() ?? '?'}
+                        {item.user.displayName?.charAt(0)?.toUpperCase() ?? '?'}
                       </AvatarFallback>
                     </Avatar>
                   )}
-                  <span>{item.user?.display_name ?? '-'}</span>
+                  <span>{item.user?.displayName ?? '-'}</span>
                 </div>
               </TableCell>
               <TableCell>
@@ -107,13 +105,13 @@ export function AuditLogDataTable({ items, isLoading, onRowClick }: AuditLogData
                 </Badge>
               </TableCell>
               <TableCell>
-                {t(`entityTypes.${item.entity_type}` as Parameters<typeof t>[0])}
+                {t(`entityTypes.${item.entityType}` as Parameters<typeof t>[0])}
               </TableCell>
               <TableCell className="max-w-[150px] truncate">
-                {item.entity_name ?? '-'}
+                {item.entityName ?? '-'}
               </TableCell>
               <TableCell className="font-mono text-sm">
-                {item.ip_address ?? t('system')}
+                {item.ipAddress ?? t('system')}
               </TableCell>
               <TableCell>
                 <Button

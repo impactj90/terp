@@ -140,7 +140,8 @@ export const accessProfilesRouter = createTRPCRouter({
         const profile = await accessProfileService.create(
           ctx.prisma as unknown as PrismaClient,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return {
           id: profile.id,
@@ -174,7 +175,8 @@ export const accessProfilesRouter = createTRPCRouter({
         const profile = await accessProfileService.update(
           ctx.prisma as unknown as PrismaClient,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return {
           id: profile.id,
@@ -208,7 +210,8 @@ export const accessProfilesRouter = createTRPCRouter({
         await accessProfileService.remove(
           ctx.prisma as unknown as PrismaClient,
           tenantId,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {

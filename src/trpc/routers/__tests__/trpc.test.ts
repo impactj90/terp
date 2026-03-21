@@ -9,6 +9,8 @@ function createMockContext(overrides: Partial<TRPCContext> = {}): TRPCContext {
     user: null,
     session: null,
     tenantId: null,
+    ipAddress: null,
+    userAgent: null,
     ...overrides,
   }
 }

@@ -121,7 +121,8 @@ export const billingRecurringInvoicesRouter = createTRPCRouter({
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
           input,
-          ctx.user!.id
+          ctx.user!.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -136,7 +137,8 @@ export const billingRecurringInvoicesRouter = createTRPCRouter({
         return await recurringService.update(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -151,7 +153,8 @@ export const billingRecurringInvoicesRouter = createTRPCRouter({
         await recurringService.remove(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {
@@ -167,7 +170,8 @@ export const billingRecurringInvoicesRouter = createTRPCRouter({
         return await recurringService.activate(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -182,7 +186,8 @@ export const billingRecurringInvoicesRouter = createTRPCRouter({
         return await recurringService.deactivate(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -198,7 +203,8 @@ export const billingRecurringInvoicesRouter = createTRPCRouter({
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
           input.id,
-          ctx.user!.id
+          ctx.user!.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)

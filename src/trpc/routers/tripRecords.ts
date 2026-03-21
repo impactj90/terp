@@ -18,6 +18,7 @@ import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
+import * as auditLog from "@/lib/services/audit-logs-service"
 
 // --- Permission Constants ---
 
@@ -305,6 +306,18 @@ export const tripRecordsRouter = createTRPCRouter({
           },
         })
 
+        await auditLog.log(ctx.prisma, {
+          tenantId,
+          userId: ctx.user!.id,
+          action: "create",
+          entityType: "trip_record",
+          entityId: record.id,
+          entityName: null,
+          changes: null,
+          ipAddress: ctx.ipAddress,
+          userAgent: ctx.userAgent,
+        }).catch(err => console.error('[AuditLog] Failed:', err))
+
         return {
           id: record.id,
           tenantId: record.tenantId,
@@ -411,6 +424,23 @@ export const tripRecordsRouter = createTRPCRouter({
           },
         })
 
+        const changes = auditLog.computeChanges(
+          existing as unknown as Record<string, unknown>,
+          record as unknown as Record<string, unknown>,
+          ["vehicleId", "routeId", "tripDate", "startMileage", "endMileage", "distanceKm", "notes"]
+        )
+        await auditLog.log(ctx.prisma, {
+          tenantId,
+          userId: ctx.user!.id,
+          action: "update",
+          entityType: "trip_record",
+          entityId: input.id,
+          entityName: null,
+          changes,
+          ipAddress: ctx.ipAddress,
+          userAgent: ctx.userAgent,
+        }).catch(err => console.error('[AuditLog] Failed:', err))
+
         return {
           id: record.id,
           tenantId: record.tenantId,
@@ -458,6 +488,18 @@ export const tripRecordsRouter = createTRPCRouter({
         await ctx.prisma.tripRecord.delete({
           where: { id: input.id },
         })
+
+        await auditLog.log(ctx.prisma, {
+          tenantId,
+          userId: ctx.user!.id,
+          action: "delete",
+          entityType: "trip_record",
+          entityId: input.id,
+          entityName: null,
+          changes: null,
+          ipAddress: ctx.ipAddress,
+          userAgent: ctx.userAgent,
+        }).catch(err => console.error('[AuditLog] Failed:', err))
 
         return { success: true }
       } catch (err) {

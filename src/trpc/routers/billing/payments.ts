@@ -114,7 +114,8 @@ export const billingPaymentsRouter = createTRPCRouter({
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
           input,
-          ctx.user!.id
+          ctx.user!.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -131,7 +132,8 @@ export const billingPaymentsRouter = createTRPCRouter({
           ctx.tenantId!,
           input.id,
           ctx.user!.id,
-          input.reason
+          input.reason,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)

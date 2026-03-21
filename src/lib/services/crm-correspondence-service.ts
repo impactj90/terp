@@ -1,5 +1,14 @@
 import type { PrismaClient, CrmCorrespondenceDirection, Prisma } from "@/generated/prisma/client"
 import * as repo from "./crm-correspondence-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Tracked Fields for Audit Diffs ---
+
+const CORRESPONDENCE_TRACKED_FIELDS = [
+  "direction", "type", "date", "contactId", "inquiryId",
+  "fromUser", "toUser", "subject", "content",
+]
 
 // --- Error Classes ---
 
@@ -65,7 +74,8 @@ export async function create(
     content?: string
     attachments?: Prisma.InputJsonValue | null
   },
-  createdById: string
+  createdById: string,
+  audit?: AuditContext
 ) {
   // Validate address belongs to tenant
   const address = await prisma.crmAddress.findFirst({
@@ -85,7 +95,7 @@ export async function create(
     }
   }
 
-  return repo.create(prisma, {
+  const created = await repo.create(prisma, {
     tenantId,
     addressId: input.addressId,
     direction: input.direction,
@@ -100,6 +110,16 @@ export async function create(
     attachments: input.attachments ?? null,
     createdById,
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "create", entityType: "crm_correspondence",
+      entityId: created.id, entityName: created.subject ?? null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return created
 }
 
 export async function update(
@@ -117,7 +137,8 @@ export async function update(
     subject?: string
     content?: string | null
     attachments?: Prisma.InputJsonValue | null
-  }
+  },
+  audit?: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, input.id)
   if (!existing) {
@@ -151,16 +172,39 @@ export async function update(
     return existing
   }
 
-  return repo.update(prisma, tenantId, input.id, data)
+  const updated = await repo.update(prisma, tenantId, input.id, data)
+
+  if (audit) {
+    const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, CORRESPONDENCE_TRACKED_FIELDS)
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "update", entityType: "crm_correspondence",
+      entityId: input.id, entityName: updated?.subject ?? null, changes,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
+  // Fetch name before deleting
+  const existing = audit ? await repo.findById(prisma, tenantId, id) : null
+
   const deleted = await repo.remove(prisma, tenantId, id)
   if (!deleted) {
     throw new CrmCorrespondenceNotFoundError()
+  }
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "delete", entityType: "crm_correspondence",
+      entityId: id, entityName: existing?.subject ?? null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
   }
 }

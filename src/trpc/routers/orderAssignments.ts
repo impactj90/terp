@@ -227,7 +227,8 @@ export const orderAssignmentsRouter = createTRPCRouter({
         const assignment = await orderAssignmentService.create(
           ctx.prisma,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapAssignmentToOutput(assignment)
       } catch (err) {
@@ -253,7 +254,8 @@ export const orderAssignmentsRouter = createTRPCRouter({
         const assignment = await orderAssignmentService.update(
           ctx.prisma,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapAssignmentToOutput(assignment)
       } catch (err) {
@@ -273,7 +275,7 @@ export const orderAssignmentsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         const tenantId = ctx.tenantId!
-        await orderAssignmentService.remove(ctx.prisma, tenantId, input.id)
+        await orderAssignmentService.remove(ctx.prisma, tenantId, input.id, { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent })
         return { success: true }
       } catch (err) {
         handleServiceError(err)

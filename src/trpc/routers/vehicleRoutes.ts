@@ -155,7 +155,8 @@ export const vehicleRoutesRouter = createTRPCRouter({
         const route = await vehicleRouteService.create(
           ctx.prisma,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapToOutput(route)
       } catch (err) {
@@ -180,7 +181,8 @@ export const vehicleRoutesRouter = createTRPCRouter({
         const route = await vehicleRouteService.update(
           ctx.prisma,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapToOutput(route)
       } catch (err) {
@@ -202,7 +204,8 @@ export const vehicleRoutesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         const tenantId = ctx.tenantId!
-        await vehicleRouteService.remove(ctx.prisma, tenantId, input.id)
+        await vehicleRouteService.remove(ctx.prisma, tenantId, input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent })
         return { success: true }
       } catch (err) {
         handleServiceError(err)

@@ -309,7 +309,8 @@ export const teamsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!
       try {
-        const team = await teamService.create(ctx.prisma, tenantId, input)
+        const team = await teamService.create(ctx.prisma, tenantId, input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent })
         return mapTeamToOutput(team, 0)
       } catch (err) {
         handleServiceError(err)
@@ -332,7 +333,8 @@ export const teamsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!
       try {
-        const team = await teamService.update(ctx.prisma, tenantId, input)
+        const team = await teamService.update(ctx.prisma, tenantId, input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent })
         if (!team) throw new TRPCError({ code: 'NOT_FOUND', message: 'Team not found' })
         return mapTeamToOutput(team)
       } catch (err) {
@@ -356,7 +358,8 @@ export const teamsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId!
       try {
-        await teamService.remove(ctx.prisma, tenantId, input.id)
+        await teamService.remove(ctx.prisma, tenantId, input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent })
         return { success: true }
       } catch (err) {
         handleServiceError(err)

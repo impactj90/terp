@@ -6,6 +6,12 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./booking-type-group-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit Logging ---
+
+const TRACKED_FIELDS = ["name", "code"]
 
 // --- Error Classes ---
 
@@ -60,7 +66,8 @@ export async function create(
     name: string
     description?: string
     bookingTypeIds?: string[]
-  }
+  },
+  audit?: AuditContext
 ) {
   // Trim and validate code
   const code = input.code.trim()
@@ -103,6 +110,14 @@ export async function create(
     await repo.createMembers(prisma, created.id, input.bookingTypeIds)
   }
 
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "create", entityType: "booking_type_group",
+      entityId: created.id, entityName: created.name ?? null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   // Re-fetch with includes for response
   return repo.findByIdWithMembers(prisma, created.id)
 }
@@ -116,7 +131,8 @@ export async function update(
     description?: string | null
     isActive?: boolean
     bookingTypeIds?: string[]
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify group exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, input.id)
@@ -160,13 +176,25 @@ export async function update(
   }
 
   // Re-fetch with includes for response
-  return repo.findByIdWithMembers(prisma, input.id)
+  const result = await repo.findByIdWithMembers(prisma, input.id)
+
+  if (audit) {
+    const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, result as unknown as Record<string, unknown>, TRACKED_FIELDS)
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "update", entityType: "booking_type_group",
+      entityId: input.id, entityName: result?.name ?? null, changes,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return result
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   // Verify group exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, id)
@@ -176,4 +204,12 @@ export async function remove(
 
   // Hard delete (members cascade via FK)
   await repo.deleteById(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "delete", entityType: "booking_type_group",
+      entityId: id, entityName: existing.name ?? null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }

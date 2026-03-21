@@ -1,5 +1,7 @@
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./billing-tenant-config-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
 
 // --- Error Classes ---
 
@@ -43,7 +45,24 @@ export async function upsert(
     companyZip?: string | null
     companyCity?: string | null
     companyCountry?: string | null
-  }
+  },
+  audit?: AuditContext
 ) {
-  return repo.upsert(prisma, tenantId, input)
+  const result = await repo.upsert(prisma, tenantId, input)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "billing_tenant_config",
+      entityId: result.id,
+      entityName: (result as unknown as Record<string, unknown>).companyName as string ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return result
 }

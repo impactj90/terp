@@ -85,6 +85,8 @@ export async function createAuthenticatedCaller(
     user,
     session: { access_token: token, user: { id: userId } } as Session,
     tenantId,
+    ipAddress: "127.0.0.1",
+    userAgent: "e2e-test",
   }
   return createCaller(context)
 }

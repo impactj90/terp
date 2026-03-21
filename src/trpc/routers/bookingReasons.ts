@@ -183,7 +183,8 @@ export const bookingReasonsRouter = createTRPCRouter({
         const reason = await bookingReasonService.create(
           ctx.prisma,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapToOutput(reason)
       } catch (err) {
@@ -212,7 +213,8 @@ export const bookingReasonsRouter = createTRPCRouter({
         const reason = await bookingReasonService.update(
           ctx.prisma,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapToOutput(reason)
       } catch (err) {
@@ -232,7 +234,7 @@ export const bookingReasonsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         const tenantId = ctx.tenantId!
-        await bookingReasonService.remove(ctx.prisma, tenantId, input.id)
+        await bookingReasonService.remove(ctx.prisma, tenantId, input.id, { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent })
         return { success: true }
       } catch (err) {
         handleServiceError(err)

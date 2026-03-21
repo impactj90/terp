@@ -280,7 +280,8 @@ export const usersRouter = createTRPCRouter({
         const user = await userService.create(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapUserToOutput(user)
       } catch (err) {
@@ -317,7 +318,8 @@ export const usersRouter = createTRPCRouter({
           ctx.prisma,
           ctx.tenantId!,
           input,
-          { canManageAdminFields: canManage }
+          { canManageAdminFields: canManage },
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapUserToOutput(user)
       } catch (err) {
@@ -344,7 +346,7 @@ export const usersRouter = createTRPCRouter({
           ctx.prisma,
           ctx.tenantId!,
           input.id,
-          ctx.user!.id
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {
@@ -375,7 +377,8 @@ export const usersRouter = createTRPCRouter({
           ctx.prisma,
           ctx.tenantId!,
           input.userId,
-          input.newPassword
+          input.newPassword,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {

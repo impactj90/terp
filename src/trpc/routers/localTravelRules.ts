@@ -183,7 +183,8 @@ export const localTravelRulesRouter = createTRPCRouter({
         const rule = await localTravelRuleService.create(
           ctx.prisma,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapToOutput(rule)
       } catch (err) {
@@ -208,7 +209,8 @@ export const localTravelRulesRouter = createTRPCRouter({
         const rule = await localTravelRuleService.update(
           ctx.prisma,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapToOutput(rule)
       } catch (err) {
@@ -228,7 +230,9 @@ export const localTravelRulesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         const tenantId = ctx.tenantId!
-        await localTravelRuleService.remove(ctx.prisma, tenantId, input.id)
+        await localTravelRuleService.remove(ctx.prisma, tenantId, input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
+        )
         return { success: true }
       } catch (err) {
         handleServiceError(err)

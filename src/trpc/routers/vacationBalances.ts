@@ -122,7 +122,13 @@ export const vacationBalancesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
-        return await service.createBalance(ctx.prisma, ctx.tenantId!, input, dataScope)
+        return await service.createBalance(
+          ctx.prisma,
+          ctx.tenantId!,
+          input,
+          dataScope,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
+        )
       } catch (err) {
         handleServiceError(err)
       }
@@ -182,7 +188,13 @@ export const vacationBalancesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
-        return await service.updateBalance(ctx.prisma, ctx.tenantId!, input, dataScope)
+        return await service.updateBalance(
+          ctx.prisma,
+          ctx.tenantId!,
+          input,
+          dataScope,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
+        )
       } catch (err) {
         handleServiceError(err)
       }

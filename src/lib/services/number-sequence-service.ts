@@ -1,4 +1,10 @@
 import type { PrismaClient } from "@/generated/prisma/client"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit ---
+
+const TRACKED_FIELDS = ["prefix", "nextValue"]
 
 // --- Error Classes ---
 
@@ -74,7 +80,8 @@ export async function update(
   prisma: PrismaClient,
   tenantId: string,
   key: string,
-  input: { prefix?: string; nextValue?: number }
+  input: { prefix?: string; nextValue?: number },
+  audit?: AuditContext
 ) {
   const existing = await prisma.numberSequence.findUnique({
     where: { tenantId_key: { tenantId, key } },
@@ -91,8 +98,29 @@ export async function update(
   if (input.prefix !== undefined) data.prefix = input.prefix
   if (input.nextValue !== undefined) data.nextValue = input.nextValue
 
-  return prisma.numberSequence.update({
+  const updated = await prisma.numberSequence.update({
     where: { tenantId_key: { tenantId, key } },
     data,
   })
+
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "number_sequence",
+      entityId: updated.id,
+      entityName: key,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }

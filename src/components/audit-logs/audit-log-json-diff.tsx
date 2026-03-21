@@ -3,42 +3,15 @@
 import { useTranslations } from 'next-intl'
 
 interface AuditLogJsonDiffProps {
-  before: Record<string, unknown> | null | undefined
-  after: Record<string, unknown> | null | undefined
+  changes: Record<string, unknown>
 }
 
-function flattenObject(obj: Record<string, unknown>, prefix = ''): Record<string, unknown> {
-  const result: Record<string, unknown> = {}
-  for (const key of Object.keys(obj)) {
-    const fullKey = prefix ? `${prefix}.${key}` : key
-    const value = obj[key]
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-      Object.assign(result, flattenObject(value as Record<string, unknown>, fullKey))
-    } else {
-      result[fullKey] = value
-    }
-  }
-  return result
-}
-
-export function AuditLogJsonDiff({ before, after }: AuditLogJsonDiffProps) {
+export function AuditLogJsonDiff({ changes }: AuditLogJsonDiffProps) {
   const t = useTranslations('auditLogs')
 
-  if ((!before || Object.keys(before).length === 0) && (!after || Object.keys(after).length === 0)) {
-    return <p className="text-sm text-muted-foreground">{t('diff.noChanges')}</p>
-  }
+  const entries = Object.entries(changes)
 
-  const flatBefore = before ? flattenObject(before) : {}
-  const flatAfter = after ? flattenObject(after) : {}
-  const allKeys = [...new Set([...Object.keys(flatBefore), ...Object.keys(flatAfter)])]
-
-  const changedKeys = allKeys.filter((key) => {
-    const oldVal = JSON.stringify(flatBefore[key] ?? null)
-    const newVal = JSON.stringify(flatAfter[key] ?? null)
-    return oldVal !== newVal
-  })
-
-  if (changedKeys.length === 0) {
+  if (entries.length === 0) {
     return <p className="text-sm text-muted-foreground">{t('diff.noChanges')}</p>
   }
 
@@ -49,11 +22,19 @@ export function AuditLogJsonDiff({ before, after }: AuditLogJsonDiffProps) {
         <span>{t('diff.before')}</span>
         <span>{t('diff.after')}</span>
       </div>
-      {changedKeys.map((key) => {
-        const oldVal = flatBefore[key]
-        const newVal = flatAfter[key]
-        const oldStr = oldVal !== undefined ? JSON.stringify(oldVal) : '-'
-        const newStr = newVal !== undefined ? JSON.stringify(newVal) : '-'
+      {entries.map(([key, value]) => {
+        const diff = value as { old?: unknown; new?: unknown } | unknown
+        let oldStr: string
+        let newStr: string
+
+        if (diff && typeof diff === 'object' && 'old' in diff && 'new' in diff) {
+          oldStr = formatValue((diff as { old: unknown }).old)
+          newStr = formatValue((diff as { new: unknown }).new)
+        } else {
+          oldStr = '-'
+          newStr = formatValue(diff)
+        }
+
         return (
           <div key={key} className="grid grid-cols-3 gap-2 text-sm font-mono">
             <span className="text-muted-foreground truncate">{key}</span>
@@ -68,4 +49,12 @@ export function AuditLogJsonDiff({ before, after }: AuditLogJsonDiffProps) {
       })}
     </div>
   )
+}
+
+function formatValue(val: unknown): string {
+  if (val === null || val === undefined) return '-'
+  if (typeof val === 'string') return val || '-'
+  if (typeof val === 'boolean') return val ? 'true' : 'false'
+  if (typeof val === 'number') return String(val)
+  return JSON.stringify(val)
 }

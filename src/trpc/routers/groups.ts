@@ -182,7 +182,8 @@ export const groupsRouter = createTRPCRouter({
           ctx.prisma as unknown as PrismaClient,
           tenantId,
           type,
-          rest
+          rest,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapGroupToOutput(group)
       } catch (err) {
@@ -209,7 +210,8 @@ export const groupsRouter = createTRPCRouter({
           ctx.prisma as unknown as PrismaClient,
           tenantId,
           type,
-          rest
+          rest,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapGroupToOutput(group)
       } catch (err) {
@@ -240,7 +242,8 @@ export const groupsRouter = createTRPCRouter({
           ctx.prisma as unknown as PrismaClient,
           tenantId,
           input.type,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {

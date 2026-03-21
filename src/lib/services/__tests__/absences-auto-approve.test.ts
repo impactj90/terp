@@ -20,6 +20,11 @@ vi.mock("../absences-repository", () => ({
   upsertVacationBalance: vi.fn(),
 }))
 
+vi.mock("../audit-logs-service", () => ({
+  log: vi.fn().mockResolvedValue(undefined),
+  computeChanges: vi.fn().mockReturnValue(null),
+}))
+
 vi.mock("@/lib/services/recalc", () => ({
   RecalcService: class {
     async triggerRecalc() {}
@@ -38,6 +43,7 @@ const TENANT_ID = "t-00000000-0000-0000-0000-000000000001"
 const EMPLOYEE_ID = "e-00000000-0000-0000-0000-000000000001"
 const TYPE_ID = "at-0000000-0000-0000-0000-000000000001"
 const USER_ID = "u-00000000-0000-0000-0000-000000000001"
+const AUDIT = { userId: USER_ID, ipAddress: "127.0.0.1", userAgent: "test" }
 
 // --- Fake Prisma ---
 
@@ -119,7 +125,7 @@ describe("createRange auto-approve", () => {
         toDate: "2026-03-16",
         duration: 1,
       },
-      USER_ID
+      AUDIT
     )
 
     expect(mockedRepo.createMany).toHaveBeenCalledTimes(1)
@@ -148,7 +154,7 @@ describe("createRange auto-approve", () => {
         toDate: "2026-03-16",
         duration: 1,
       },
-      USER_ID
+      AUDIT
     )
 
     expect(mockedRepo.createMany).toHaveBeenCalledTimes(1)
@@ -176,7 +182,7 @@ describe("createRange auto-approve", () => {
         toDate: "2026-03-16",
         duration: 1,
       },
-      USER_ID
+      AUDIT
     )
 
     expect(mockedRepo.findCreatedAbsences).toHaveBeenCalledWith(
@@ -205,7 +211,7 @@ describe("createRange auto-approve", () => {
         toDate: "2026-03-16",
         duration: 1,
       },
-      USER_ID
+      AUDIT
     )
 
     expect(mockedRepo.upsertVacationBalance).toHaveBeenCalledTimes(1)
@@ -234,7 +240,7 @@ describe("createRange auto-approve", () => {
         toDate: "2026-03-16",
         duration: 1,
       },
-      USER_ID
+      AUDIT
     )
 
     expect(mockedRepo.upsertVacationBalance).not.toHaveBeenCalled()
@@ -256,7 +262,7 @@ describe("createRange auto-approve", () => {
         toDate: "2026-03-16",
         duration: 1,
       },
-      USER_ID
+      AUDIT
     )
 
     expect(mockedRepo.upsertVacationBalance).not.toHaveBeenCalled()

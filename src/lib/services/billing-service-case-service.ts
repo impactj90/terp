@@ -3,6 +3,8 @@ import * as repo from "./billing-service-case-repository"
 import * as numberSeqService from "./number-sequence-service"
 import * as orderService from "./order-service"
 import * as billingDocService from "./billing-document-service"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
 
 // --- Error Classes ---
 
@@ -77,7 +79,8 @@ export async function create(
     customerNotifiedCost?: boolean
     reportedAt?: Date
   },
-  createdById: string
+  createdById: string,
+  audit?: AuditContext
 ) {
   // Validate address belongs to tenant
   const address = await prisma.crmAddress.findFirst({
@@ -113,7 +116,7 @@ export async function create(
   // Determine initial status
   const status: BillingServiceCaseStatus = input.assignedToId ? "IN_PROGRESS" : "OPEN"
 
-  return repo.create(prisma, {
+  const created = await repo.create(prisma, {
     tenantId,
     number,
     title: input.title,
@@ -127,7 +130,22 @@ export async function create(
     description: input.description || null,
     createdById,
   })
+
+  if (audit) {
+    // Never throws — audit failures must not block the actual operation
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "create", entityType: "billing_service_case",
+      entityId: created.id, entityName: null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return created
 }
+
+const SERVICE_CASE_TRACKED_FIELDS = [
+  "title", "contactId", "description", "assignedToId", "customerNotifiedCost", "status",
+]
 
 export async function update(
   prisma: PrismaClient,
@@ -139,7 +157,8 @@ export async function update(
     description?: string | null
     assignedToId?: string | null
     customerNotifiedCost?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, input.id)
   if (!existing) throw new BillingServiceCaseNotFoundError()
@@ -164,7 +183,19 @@ export async function update(
     data.status = "IN_PROGRESS"
   }
 
-  return repo.update(prisma, tenantId, input.id, data)
+  const updated = await repo.update(prisma, tenantId, input.id, data)
+
+  if (audit) {
+    const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, SERVICE_CASE_TRACKED_FIELDS)
+    // Never throws — audit failures must not block the actual operation
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "update", entityType: "billing_service_case",
+      entityId: input.id, entityName: null, changes,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function close(
@@ -172,7 +203,8 @@ export async function close(
   tenantId: string,
   id: string,
   closingReason: string,
-  closedById: string
+  closedById: string,
+  audit?: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) throw new BillingServiceCaseNotFoundError()
@@ -183,12 +215,24 @@ export async function close(
     )
   }
 
-  return repo.update(prisma, tenantId, id, {
+  const updated = await repo.update(prisma, tenantId, id, {
     status: "CLOSED",
     closingReason,
     closedAt: new Date(),
     closedById,
   })
+
+  if (audit) {
+    const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, SERVICE_CASE_TRACKED_FIELDS)
+    // Never throws — audit failures must not block the actual operation
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "update", entityType: "billing_service_case",
+      entityId: id, entityName: null, changes,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function createInvoice(
@@ -203,7 +247,8 @@ export async function createInvoice(
     flatCosts?: number
     vatRate?: number
   }>,
-  createdById: string
+  createdById: string,
+  audit: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) throw new BillingServiceCaseNotFoundError()
@@ -229,7 +274,8 @@ export async function createInvoice(
       addressId: existing.addressId,
       contactId: existing.contactId || undefined,
     },
-    createdById
+    createdById,
+    audit
   )
 
   // Add positions to the invoice
@@ -243,7 +289,7 @@ export async function createInvoice(
       unitPrice: pos.unitPrice,
       flatCosts: pos.flatCosts,
       vatRate: pos.vatRate,
-    })
+    }, audit)
   }
 
   // Update service case
@@ -261,7 +307,8 @@ export async function createOrder(
     orderName?: string
     orderDescription?: string
   },
-  createdById: string
+  createdById: string,
+  audit?: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) throw new BillingServiceCaseNotFoundError()
@@ -287,13 +334,26 @@ export async function createOrder(
     status: "active",
   })
 
-  return repo.update(prisma, tenantId, id, { orderId: newOrder.id })
+  const updated = await repo.update(prisma, tenantId, id, { orderId: newOrder.id })
+
+  if (audit) {
+    const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, SERVICE_CASE_TRACKED_FIELDS)
+    // Never throws — audit failures must not block the actual operation
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "update", entityType: "billing_service_case",
+      entityId: id, entityName: null, changes,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) throw new BillingServiceCaseNotFoundError()
@@ -308,4 +368,13 @@ export async function remove(
 
   const deleted = await repo.remove(prisma, tenantId, id)
   if (!deleted) throw new BillingServiceCaseNotFoundError()
+
+  if (audit) {
+    // Never throws — audit failures must not block the actual operation
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "delete", entityType: "billing_service_case",
+      entityId: id, entityName: null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }

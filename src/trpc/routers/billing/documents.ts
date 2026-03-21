@@ -184,7 +184,8 @@ export const billingDocumentsRouter = createTRPCRouter({
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
           input,
-          ctx.user!.id
+          ctx.user!.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -199,7 +200,8 @@ export const billingDocumentsRouter = createTRPCRouter({
         return await billingDocService.update(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -214,7 +216,8 @@ export const billingDocumentsRouter = createTRPCRouter({
         await billingDocService.remove(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {
@@ -240,7 +243,8 @@ export const billingDocumentsRouter = createTRPCRouter({
           ctx.tenantId!,
           input.id,
           ctx.user!.id,
-          orderParams
+          orderParams,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -257,7 +261,8 @@ export const billingDocumentsRouter = createTRPCRouter({
           ctx.tenantId!,
           input.id,
           input.targetType as Parameters<typeof billingDocService.forward>[3],
-          ctx.user!.id
+          ctx.user!.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -273,7 +278,8 @@ export const billingDocumentsRouter = createTRPCRouter({
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
           input.id,
-          input.reason
+          input.reason,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -289,7 +295,8 @@ export const billingDocumentsRouter = createTRPCRouter({
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
           input.id,
-          ctx.user!.id
+          ctx.user!.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -367,7 +374,8 @@ export const billingDocumentsRouter = createTRPCRouter({
           return await billingDocService.addPosition(
             ctx.prisma as unknown as PrismaClient,
             ctx.tenantId!,
-            input
+            input,
+            { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
           )
         } catch (err) {
           handleServiceError(err)
@@ -382,7 +390,8 @@ export const billingDocumentsRouter = createTRPCRouter({
           return await billingDocService.updatePosition(
             ctx.prisma as unknown as PrismaClient,
             ctx.tenantId!,
-            input
+            input,
+            { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
           )
         } catch (err) {
           handleServiceError(err)
@@ -397,7 +406,8 @@ export const billingDocumentsRouter = createTRPCRouter({
           await billingDocService.deletePosition(
             ctx.prisma as unknown as PrismaClient,
             ctx.tenantId!,
-            input.id
+            input.id,
+            { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
           )
           return { success: true }
         } catch (err) {

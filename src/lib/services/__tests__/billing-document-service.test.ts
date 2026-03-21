@@ -2,6 +2,11 @@ import { describe, it, expect, vi } from "vitest"
 import * as service from "../billing-document-service"
 import type { PrismaClient } from "@/generated/prisma/client"
 
+vi.mock("../audit-logs-service", () => ({
+  log: vi.fn().mockResolvedValue(undefined),
+  computeChanges: vi.fn().mockReturnValue(null),
+}))
+
 // --- Constants ---
 const TENANT_ID = "a0000000-0000-4000-a000-000000000100"
 const USER_ID = "a0000000-0000-4000-a000-000000000001"
@@ -10,6 +15,8 @@ const CONTACT_ID = "c0000000-0000-4000-a000-000000000001"
 const DOC_ID = "d0000000-0000-4000-a000-000000000001"
 const DOC_ID_2 = "d0000000-0000-4000-a000-000000000002"
 const POS_ID = "e0000000-0000-4000-a000-000000000001"
+
+const AUDIT = { userId: USER_ID, ipAddress: "127.0.0.1", userAgent: "test" }
 
 const mockAddress = {
   id: ADDRESS_ID,
@@ -160,7 +167,8 @@ describe("billing-document-service", () => {
         prisma,
         TENANT_ID,
         { type: "OFFER", addressId: ADDRESS_ID },
-        USER_ID
+        USER_ID,
+        AUDIT
       )
       expect(result.number).toBe("A-1")
       expect(prisma.numberSequence.upsert).toHaveBeenCalledWith(
@@ -190,7 +198,8 @@ describe("billing-document-service", () => {
         prisma,
         TENANT_ID,
         { type: "OFFER", addressId: ADDRESS_ID },
-        USER_ID
+        USER_ID,
+        AUDIT
       )
 
       expect(result.paymentTermDays).toBe(30)
@@ -203,7 +212,7 @@ describe("billing-document-service", () => {
       ;(prisma.crmAddress.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(null)
 
       await expect(
-        service.create(prisma, TENANT_ID, { type: "OFFER", addressId: ADDRESS_ID }, USER_ID)
+        service.create(prisma, TENANT_ID, { type: "OFFER", addressId: ADDRESS_ID }, USER_ID, AUDIT)
       ).rejects.toThrow("Address not found in this tenant")
     })
 
@@ -217,7 +226,8 @@ describe("billing-document-service", () => {
           prisma,
           TENANT_ID,
           { type: "OFFER", addressId: ADDRESS_ID, contactId: CONTACT_ID },
-          USER_ID
+          USER_ID,
+          AUDIT
         )
       ).rejects.toThrow("Contact not found for this address")
     })
@@ -234,7 +244,7 @@ describe("billing-document-service", () => {
       const result = await service.update(prisma, TENANT_ID, {
         id: DOC_ID,
         notes: "Updated",
-      })
+      }, AUDIT)
       expect(result?.notes).toBe("Updated")
     })
 
@@ -246,7 +256,7 @@ describe("billing-document-service", () => {
       })
 
       await expect(
-        service.update(prisma, TENANT_ID, { id: DOC_ID, notes: "test" })
+        service.update(prisma, TENANT_ID, { id: DOC_ID, notes: "test" }, AUDIT)
       ).rejects.toThrow("Document can only be modified in DRAFT status")
     })
   })
@@ -333,7 +343,8 @@ describe("billing-document-service", () => {
         TENANT_ID,
         DOC_ID,
         "ORDER_CONFIRMATION",
-        USER_ID
+        USER_ID,
+        AUDIT
       )
 
       expect(prisma.billingDocument.create).toHaveBeenCalledWith(
@@ -354,7 +365,7 @@ describe("billing-document-service", () => {
       })
 
       await expect(
-        service.forward(prisma, TENANT_ID, DOC_ID, "ORDER_CONFIRMATION", USER_ID)
+        service.forward(prisma, TENANT_ID, DOC_ID, "ORDER_CONFIRMATION", USER_ID, AUDIT)
       ).rejects.toThrow("Cannot forward INVOICE to ORDER_CONFIRMATION")
     })
 
@@ -363,7 +374,7 @@ describe("billing-document-service", () => {
       ;(prisma.billingDocument.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(mockDocument)
 
       await expect(
-        service.forward(prisma, TENANT_ID, DOC_ID, "ORDER_CONFIRMATION", USER_ID)
+        service.forward(prisma, TENANT_ID, DOC_ID, "ORDER_CONFIRMATION", USER_ID, AUDIT)
       ).rejects.toThrow("Only finalized or partially forwarded documents can be forwarded")
     })
 
@@ -394,7 +405,7 @@ describe("billing-document-service", () => {
       )
       ;(prisma.billingDocument.updateMany as ReturnType<typeof vi.fn>).mockResolvedValue({ count: 1 })
 
-      await service.forward(prisma, TENANT_ID, DOC_ID, "ORDER_CONFIRMATION", USER_ID)
+      await service.forward(prisma, TENANT_ID, DOC_ID, "ORDER_CONFIRMATION", USER_ID, AUDIT)
 
       expect(prisma.billingDocumentPosition.create).toHaveBeenCalledTimes(2)
     })
@@ -419,7 +430,7 @@ describe("billing-document-service", () => {
       )
       ;(prisma.billingDocument.updateMany as ReturnType<typeof vi.fn>).mockResolvedValue({ count: 1 })
 
-      await service.forward(prisma, TENANT_ID, DOC_ID, "ORDER_CONFIRMATION", USER_ID)
+      await service.forward(prisma, TENANT_ID, DOC_ID, "ORDER_CONFIRMATION", USER_ID, AUDIT)
 
       // updateMany should be called: once for recalculateTotals, once for FORWARDED status, once for update return
       const updateCalls = (prisma.billingDocument.updateMany as ReturnType<typeof vi.fn>).mock.calls
@@ -494,7 +505,7 @@ describe("billing-document-service", () => {
       )
       ;(prisma.billingDocument.updateMany as ReturnType<typeof vi.fn>).mockResolvedValue({ count: 1 })
 
-      await service.duplicate(prisma, TENANT_ID, DOC_ID, USER_ID)
+      await service.duplicate(prisma, TENANT_ID, DOC_ID, USER_ID, AUDIT)
       expect(prisma.billingDocument.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
@@ -528,7 +539,7 @@ describe("billing-document-service", () => {
         quantity: 10,
         unitPrice: 5,
         vatRate: 19,
-      })
+      }, AUDIT)
 
       expect(prisma.billingDocumentPosition.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -550,7 +561,7 @@ describe("billing-document-service", () => {
         service.addPosition(prisma, TENANT_ID, {
           documentId: DOC_ID,
           type: "FREE",
-        })
+        }, AUDIT)
       ).rejects.toThrow("Document can only be modified in DRAFT status")
     })
   })
@@ -570,7 +581,7 @@ describe("billing-document-service", () => {
       await service.updatePosition(prisma, TENANT_ID, {
         id: POS_ID,
         quantity: 20,
-      })
+      }, AUDIT)
 
       expect(prisma.billingDocumentPosition.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -594,7 +605,7 @@ describe("billing-document-service", () => {
       ;(prisma.billingDocumentPosition.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([])
       ;(prisma.billingDocument.updateMany as ReturnType<typeof vi.fn>).mockResolvedValue({ count: 1 })
 
-      await service.deletePosition(prisma, TENANT_ID, POS_ID)
+      await service.deletePosition(prisma, TENANT_ID, POS_ID, AUDIT)
 
       expect(prisma.billingDocumentPosition.deleteMany).toHaveBeenCalledWith({
         where: { id: POS_ID },
@@ -609,7 +620,7 @@ describe("billing-document-service", () => {
       })
 
       await expect(
-        service.deletePosition(prisma, TENANT_ID, POS_ID)
+        service.deletePosition(prisma, TENANT_ID, POS_ID, AUDIT)
       ).rejects.toThrow("Document can only be modified in DRAFT status")
     })
   })

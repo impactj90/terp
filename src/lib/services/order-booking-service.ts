@@ -6,6 +6,16 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./order-booking-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit ---
+
+const TRACKED_FIELDS = [
+  "orderId",
+  "employeeId",
+  "bookingDate",
+]
 
 // --- Error Classes ---
 
@@ -63,7 +73,8 @@ export async function create(
     bookingDate: string
     timeMinutes: number
     description?: string
-  }
+  },
+  audit?: AuditContext
 ) {
   // Validate employee exists in tenant
   const employee = await repo.findEmployee(prisma, tenantId, input.employeeId)
@@ -103,6 +114,20 @@ export async function create(
     updatedBy: userId,
   })
 
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "order_booking",
+      entityId: created.id,
+      entityName: null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   // Re-fetch with includes
   const result = await repo.findByIdWithInclude(prisma, tenantId, created.id)
   if (!result) {
@@ -122,7 +147,8 @@ export async function update(
     bookingDate?: string
     timeMinutes?: number
     description?: string | null
-  }
+  },
+  audit?: AuditContext
 ) {
   // Fetch existing (tenant-scoped)
   const existing = await repo.findByIdSimple(prisma, tenantId, input.id)
@@ -173,6 +199,25 @@ export async function update(
   // Update
   await repo.update(prisma, tenantId, input.id, data)
 
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      data as Record<string, unknown>,
+      TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "order_booking",
+      entityId: input.id,
+      entityName: null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   // Re-fetch with includes
   const result = await repo.findByIdWithInclude(prisma, tenantId, input.id)
   if (!result) {
@@ -184,7 +229,8 @@ export async function update(
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   // Fetch existing (tenant-scoped)
   const existing = await repo.findByIdSimple(prisma, tenantId, id)
@@ -193,4 +239,18 @@ export async function remove(
   }
 
   await repo.deleteById(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "order_booking",
+      entityId: id,
+      entityName: null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }

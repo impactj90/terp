@@ -7,6 +7,8 @@
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./reports-repository"
 import type { EmployeeScope } from "./reports-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
 
 // --- Error Classes ---
 
@@ -583,7 +585,8 @@ export async function generate(
   scopeFilter?: {
     departmentIds?: string[]
     employeeIds?: string[]
-  }
+  },
+  audit?: AuditContext
 ) {
   // Check date range requirement
   if (requiresDateRange(input.reportType)) {
@@ -692,6 +695,20 @@ export async function generate(
     }))!
   }
 
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "report",
+      entityId: report.id,
+      entityName: report.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return stripFileContent(report)
 }
 
@@ -744,7 +761,8 @@ export async function download(
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) {
@@ -752,4 +770,18 @@ export async function remove(
   }
 
   await repo.deleteById(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "report",
+      entityId: id,
+      entityName: existing.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }

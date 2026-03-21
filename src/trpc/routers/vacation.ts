@@ -244,7 +244,8 @@ export const vacationRouter = createTRPCRouter({
         return await vacationService.initializeYear(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -288,7 +289,8 @@ export const vacationRouter = createTRPCRouter({
         return await vacationService.adjustBalance(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -331,7 +333,8 @@ export const vacationRouter = createTRPCRouter({
         return await vacationService.carryoverFromPreviousYear(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -367,7 +370,8 @@ export const vacationRouter = createTRPCRouter({
         return await vacationService.initializeBatch(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)

@@ -253,7 +253,9 @@ export const employeeDayPlansRouter = createTRPCRouter({
             employee: { departmentId: employee.departmentId },
           }, "EmployeeDayPlan")
         }
-        return await edpService.create(ctx.prisma, ctx.tenantId!, input)
+        return await edpService.create(ctx.prisma, ctx.tenantId!, input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
+        )
       } catch (err) {
         handleServiceError(err)
       }
@@ -284,7 +286,9 @@ export const employeeDayPlansRouter = createTRPCRouter({
             employee: { departmentId: existing.employee.departmentId },
           }, "EmployeeDayPlan")
         }
-        return await edpService.update(ctx.prisma, ctx.tenantId!, input)
+        return await edpService.update(ctx.prisma, ctx.tenantId!, input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
+        )
       } catch (err) {
         handleServiceError(err)
       }
@@ -315,7 +319,9 @@ export const employeeDayPlansRouter = createTRPCRouter({
             employee: { departmentId: existing.employee.departmentId },
           }, "EmployeeDayPlan")
         }
-        return await edpService.remove(ctx.prisma, ctx.tenantId!, input.id)
+        return await edpService.remove(ctx.prisma, ctx.tenantId!, input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
+        )
       } catch (err) {
         handleServiceError(err)
       }

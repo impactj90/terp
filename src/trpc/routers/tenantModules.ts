@@ -59,7 +59,8 @@ export const tenantModulesRouter = createTRPCRouter({
           ctx.prisma,
           ctx.tenantId!,
           input.module,
-          ctx.user!.id
+          ctx.user!.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -79,7 +80,8 @@ export const tenantModulesRouter = createTRPCRouter({
         await tenantModuleService.disable(
           ctx.prisma,
           ctx.tenantId!,
-          input.module
+          input.module,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {

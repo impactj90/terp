@@ -10,6 +10,8 @@ import type { DataScope } from "@/lib/auth/middleware";
 import { DailyCalcService } from "@/lib/services/daily-calc";
 import { MonthlyCalcService } from "@/lib/services/monthly-calc";
 import * as repo from "./employees-repository";
+import * as auditLog from "./audit-logs-service";
+import type { AuditContext } from "./audit-logs-service";
 
 // --- Error Classes ---
 
@@ -212,6 +214,7 @@ export async function create(
     workDaysPerWeek?: number;
     calculationStartDate?: Date;
   },
+  audit: AuditContext,
 ) {
   // Trim and validate required fields
   const personnelNumber = input.personnelNumber.trim();
@@ -267,7 +270,7 @@ export async function create(
 
   // Build create data -- wrap in try/catch for P2002 unique constraint as safety net
   try {
-    return await repo.create(prisma, {
+    const created = await repo.create(prisma, {
       tenantId,
       personnelNumber,
       pin,
@@ -338,6 +341,21 @@ export async function create(
           : null,
       calculationStartDate: input.calculationStartDate ?? null,
     });
+
+    // Never throws — audit failures must not block the actual operation
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "employee",
+      entityId: created.id,
+      entityName: `${created.firstName} ${created.lastName} (${created.personnelNumber})`,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err));
+
+    return created;
   } catch (err) {
     if (
       err instanceof Prisma.PrismaClientKnownRequestError &&
@@ -420,6 +438,7 @@ export async function update(
     clearDefaultOrderId?: boolean;
     clearDefaultActivityId?: boolean;
   },
+  audit: AuditContext,
 ) {
   // Verify employee exists (tenant-scoped, not deleted)
   const existing = await repo.findById(prisma, tenantId, input.id);
@@ -695,7 +714,33 @@ export async function update(
     data.calculationStartDate = input.calculationStartDate;
   }
 
-  return (await repo.update(prisma, tenantId, input.id, data))!;
+  const updated = (await repo.update(prisma, tenantId, input.id, data))!;
+
+  // Never throws — audit failures must not block the actual operation
+  const TRACKED_FIELDS = [
+    "firstName", "lastName", "personnelNumber", "email", "phone",
+    "entryDate", "exitDate", "departmentId", "costCenterId",
+    "employmentTypeId", "locationId", "tariffId", "weeklyHours",
+    "vacationDaysPerYear", "isActive", "pin",
+  ];
+  const changes = auditLog.computeChanges(
+    existing as unknown as Record<string, unknown>,
+    updated as unknown as Record<string, unknown>,
+    TRACKED_FIELDS,
+  );
+  await auditLog.log(prisma, {
+    tenantId,
+    userId: audit.userId,
+    action: "update",
+    entityType: "employee",
+    entityId: updated.id,
+    entityName: `${updated.firstName} ${updated.lastName} (${updated.personnelNumber})`,
+    changes,
+    ipAddress: audit.ipAddress,
+    userAgent: audit.userAgent,
+  }).catch(err => console.error('[AuditLog] Failed:', err));
+
+  return updated;
 }
 
 export async function deactivate(
@@ -703,6 +748,7 @@ export async function deactivate(
   tenantId: string,
   dataScope: DataScope,
   id: string,
+  audit: AuditContext,
 ) {
   // Verify employee exists (tenant-scoped, not deleted)
   const existing = await repo.findById(prisma, tenantId, id);
@@ -718,6 +764,20 @@ export async function deactivate(
     isActive: false,
     exitDate: existing.exitDate ?? new Date(),
   });
+
+  // Never throws — audit failures must not block the actual operation
+  await auditLog.log(prisma, {
+    tenantId,
+    userId: audit.userId,
+    action: "update",
+    entityType: "employee",
+    entityId: id,
+    entityName: `${existing.firstName} ${existing.lastName} (${existing.personnelNumber})`,
+    changes: null,
+    metadata: { deactivated: true },
+    ipAddress: audit.ipAddress,
+    userAgent: audit.userAgent,
+  }).catch(err => console.error('[AuditLog] Failed:', err));
 }
 
 export async function searchEmployees(
@@ -743,6 +803,7 @@ export async function bulkAssignTariff(
     tariffId: string | null;
     clearTariff?: boolean;
   },
+  audit: AuditContext,
 ) {
   // Batch-fetch all employees to avoid N+1
   const employees = await prisma.employee.findMany({
@@ -777,6 +838,23 @@ export async function bulkAssignTariff(
       data: { tariffId: tariffValue },
     });
     updated = result.count;
+
+    // Never throws — audit failures must not block the actual operation
+    for (const employeeId of validIds) {
+      const emp = empMap.get(employeeId)!;
+      await auditLog.log(prisma, {
+        tenantId,
+        userId: audit.userId,
+        action: "update",
+        entityType: "employee",
+        entityId: employeeId,
+        entityName: `${emp.firstName} ${emp.lastName} (${emp.personnelNumber})`,
+        changes: null,
+        metadata: { bulk: true, tariffId: tariffValue },
+        ipAddress: audit.ipAddress,
+        userAgent: audit.userAgent,
+      }).catch(err => console.error('[AuditLog] Failed:', err));
+    }
   }
 
   return { updated, skipped };

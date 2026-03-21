@@ -515,7 +515,8 @@ export const monthlyValuesRouter = createTRPCRouter({
           tenantId,
           input,
           ctx.user!.id,
-          dataScope
+          dataScope,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapMonthlyValueToOutput(
           updated as unknown as Record<string, unknown>
@@ -596,7 +597,8 @@ export const monthlyValuesRouter = createTRPCRouter({
           tenantId,
           input,
           userId,
-          dataScope
+          dataScope,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         mapServiceError(err)

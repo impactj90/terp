@@ -7,6 +7,15 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./schedules-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit ---
+
+const TRACKED_FIELDS = [
+  "name",
+  "code",
+]
 
 // --- Error Classes ---
 
@@ -302,7 +311,8 @@ export async function create(
       parameters?: unknown
       isEnabled?: boolean
     }[]
-  }
+  },
+  audit?: AuditContext
 ) {
   // Trim and validate name
   const name = input.name.trim()
@@ -347,6 +357,20 @@ export async function create(
     }
   }
 
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "schedule",
+      entityId: schedule.id,
+      entityName: schedule.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   // Re-fetch with tasks
   const result = await repo.findScheduleById(prisma, tenantId, schedule.id)
   return result!
@@ -362,7 +386,8 @@ export async function update(
     timingType?: string
     timingConfig?: unknown
     isEnabled?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify schedule exists (tenant-scoped)
   const existing = await repo.findScheduleByIdPlain(prisma, tenantId, input.id)
@@ -427,6 +452,25 @@ export async function update(
 
   await repo.updateSchedule(prisma, tenantId, input.id, data)
 
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      data as Record<string, unknown>,
+      TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "schedule",
+      entityId: input.id,
+      entityName: (data.name as string) ?? existing.name ?? null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   // Re-fetch with tasks
   const result = await repo.findScheduleById(prisma, tenantId, input.id)
   return result!
@@ -435,7 +479,8 @@ export async function update(
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   // Verify schedule exists (tenant-scoped)
   const existing = await repo.findScheduleByIdPlain(prisma, tenantId, id)
@@ -445,6 +490,20 @@ export async function remove(
 
   // Hard delete (cascades to tasks and executions via FK)
   await repo.deleteSchedule(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "schedule",
+      entityId: id,
+      entityName: existing.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }
 
 // --- Task Management ---
@@ -472,7 +531,8 @@ export async function createTask(
     sortOrder: number
     parameters?: unknown
     isEnabled?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify schedule exists in tenant
   const schedule = await repo.findScheduleByIdPlain(
@@ -484,13 +544,29 @@ export async function createTask(
     throw new ScheduleNotFoundError()
   }
 
-  return repo.createTask(prisma, {
+  const created = await repo.createTask(prisma, {
     scheduleId: input.scheduleId,
     taskType: input.taskType,
     sortOrder: input.sortOrder,
     parameters: (input.parameters as object) ?? {},
     isEnabled: input.isEnabled ?? true,
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "schedule_task",
+      entityId: created.id,
+      entityName: created.taskType ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return created
 }
 
 export async function updateTask(
@@ -503,7 +579,8 @@ export async function updateTask(
     sortOrder?: number
     parameters?: unknown
     isEnabled?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify schedule exists in tenant
   const schedule = await repo.findScheduleByIdPlain(
@@ -544,14 +621,36 @@ export async function updateTask(
     data.isEnabled = input.isEnabled
   }
 
-  return (await repo.updateTask(prisma, tenantId, input.taskId, data))!
+  const updated = (await repo.updateTask(prisma, tenantId, input.taskId, data))!
+
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "schedule_task",
+      entityId: input.taskId,
+      entityName: updated.taskType ?? null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function removeTask(
   prisma: PrismaClient,
   tenantId: string,
   scheduleId: string,
-  taskId: string
+  taskId: string,
+  audit?: AuditContext
 ) {
   // Verify schedule exists in tenant
   const schedule = await repo.findScheduleByIdPlain(
@@ -570,6 +669,20 @@ export async function removeTask(
   }
 
   await repo.deleteTask(prisma, tenantId, taskId)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "schedule_task",
+      entityId: taskId,
+      entityName: existing.taskType ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }
 
 // --- Execution ---

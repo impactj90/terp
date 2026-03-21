@@ -7,6 +7,28 @@
 import type { PrismaClient } from "@/generated/prisma/client"
 import { RecalcService } from "@/lib/services/recalc"
 import * as repo from "./system-settings-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit ---
+
+const TRACKED_FIELDS = [
+  "roundingRelativeToPlan",
+  "errorListEnabled",
+  "trackedErrorCodes",
+  "autoFillOrderEndBookings",
+  "birthdayWindowDaysBefore",
+  "birthdayWindowDaysAfter",
+  "followUpEntriesEnabled",
+  "proxyHost",
+  "proxyPort",
+  "proxyUsername",
+  "proxyEnabled",
+  "serverAliveEnabled",
+  "serverAliveExpectedCompletionTime",
+  "serverAliveThresholdMinutes",
+  "serverAliveNotifyAdmins",
+]
 
 // --- Error Classes ---
 
@@ -86,7 +108,8 @@ export async function update(
     serverAliveExpectedCompletionTime?: number | null
     serverAliveThresholdMinutes?: number | null
     serverAliveNotifyAdmins?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   // Ensure settings exist
   const existing = await getOrCreateSettings(prisma, tenantId)
@@ -144,7 +167,28 @@ export async function update(
     data.serverAliveNotifyAdmins = input.serverAliveNotifyAdmins
   }
 
-  return (await repo.update(prisma, tenantId, existing.id, data))!
+  const updated = (await repo.update(prisma, tenantId, existing.id, data))!
+
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "system_settings",
+      entityId: updated.id as string,
+      entityName: null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function cleanupDeleteBookings(
@@ -155,7 +199,8 @@ export async function cleanupDeleteBookings(
     dateTo: string
     employeeIds?: string[]
     confirm: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   validateDateRange(input.dateFrom, input.dateTo)
 
@@ -182,6 +227,20 @@ export async function cleanupDeleteBookings(
     input.employeeIds
   )
 
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "system_settings",
+      entityId: tenantId,
+      entityName: `cleanup_delete_bookings ${input.dateFrom}..${input.dateTo}`,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return {
     operation: "delete_bookings" as const,
     affectedCount: deleted,
@@ -197,7 +256,8 @@ export async function cleanupDeleteBookingData(
     dateTo: string
     employeeIds?: string[]
     confirm: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   validateDateRange(input.dateFrom, input.dateTo)
 
@@ -255,6 +315,20 @@ export async function cleanupDeleteBookingData(
       ),
     ])
 
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "system_settings",
+      entityId: tenantId,
+      entityName: `cleanup_delete_booking_data ${input.dateFrom}..${input.dateTo}`,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return {
     operation: "delete_booking_data" as const,
     affectedCount: deletedBookings + deletedDailyValues + deletedEdps,
@@ -275,7 +349,8 @@ export async function cleanupReReadBookings(
     dateTo: string
     employeeIds?: string[]
     confirm: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   validateDateRange(input.dateFrom, input.dateTo)
 
@@ -312,6 +387,20 @@ export async function cleanupReReadBookings(
     result = await recalcService.triggerRecalcAll(tenantId, fromDate, toDate)
   }
 
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "system_settings",
+      entityId: tenantId,
+      entityName: `cleanup_re_read_bookings ${input.dateFrom}..${input.dateTo}`,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return {
     operation: "re_read_bookings" as const,
     affectedCount: result.processedDays,
@@ -325,7 +414,8 @@ export async function cleanupMarkDeleteOrders(
   input: {
     orderIds: string[]
     confirm: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   if (!input.confirm) {
     const count = await repo.countOrders(prisma, tenantId, input.orderIds)
@@ -337,6 +427,21 @@ export async function cleanupMarkDeleteOrders(
   }
 
   const deleted = await repo.deleteOrders(prisma, tenantId, input.orderIds)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "system_settings",
+      entityId: tenantId,
+      entityName: `cleanup_mark_delete_orders (${input.orderIds.length} orders)`,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return {
     operation: "mark_delete_orders" as const,
     affectedCount: deleted,

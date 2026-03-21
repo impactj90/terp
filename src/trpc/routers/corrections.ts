@@ -253,8 +253,8 @@ export const correctionsRouter = createTRPCRouter({
           ctx.prisma,
           ctx.tenantId!,
           input,
-          ctx.user!.id,
-          dataScope
+          dataScope,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapToOutput(correction as unknown as Record<string, unknown>)
       } catch (err) {
@@ -283,7 +283,8 @@ export const correctionsRouter = createTRPCRouter({
           ctx.prisma,
           ctx.tenantId!,
           input,
-          dataScope
+          dataScope,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapToOutput(correction as unknown as Record<string, unknown>)
       } catch (err) {
@@ -307,7 +308,13 @@ export const correctionsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
-        await correctionService.remove(ctx.prisma, ctx.tenantId!, input.id, dataScope)
+        await correctionService.remove(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id,
+          dataScope,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
+        )
         return { success: true }
       } catch (err) {
         handleServiceError(err)
@@ -334,8 +341,8 @@ export const correctionsRouter = createTRPCRouter({
           ctx.prisma,
           ctx.tenantId!,
           input.id,
-          ctx.user!.id,
-          dataScope
+          dataScope,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapToOutput(correction as unknown as Record<string, unknown>)
       } catch (err) {
@@ -363,8 +370,8 @@ export const correctionsRouter = createTRPCRouter({
           ctx.prisma,
           ctx.tenantId!,
           input.id,
-          ctx.user!.id,
-          dataScope
+          dataScope,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapToOutput(correction as unknown as Record<string, unknown>)
       } catch (err) {

@@ -46,6 +46,10 @@ export type TRPCContext = {
   session: Session | null
   /** Tenant ID from X-Tenant-ID header. Null if not provided. */
   tenantId: string | null
+  /** Client IP address from X-Forwarded-For or X-Real-IP header. */
+  ipAddress: string | null
+  /** Client User-Agent header. */
+  userAgent: string | null
 }
 
 /**
@@ -121,12 +125,21 @@ export async function createTRPCContext(
     }
   }
 
+  // Extract client info for audit logging
+  const ipAddress =
+    opts.req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    opts.req.headers.get("x-real-ip") ??
+    null
+  const userAgent = opts.req.headers.get("user-agent") ?? null
+
   return {
     prisma,
     authToken,
     user,
     session,
     tenantId,
+    ipAddress,
+    userAgent,
   }
 }
 

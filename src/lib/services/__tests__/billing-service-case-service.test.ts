@@ -2,6 +2,11 @@ import { describe, it, expect, vi } from "vitest"
 import * as service from "../billing-service-case-service"
 import type { PrismaClient } from "@/generated/prisma/client"
 
+vi.mock("../audit-logs-service", () => ({
+  log: vi.fn().mockResolvedValue(undefined),
+  computeChanges: vi.fn().mockReturnValue(null),
+}))
+
 // --- Constants ---
 const TENANT_ID = "a0000000-0000-4000-a000-000000000100"
 const USER_ID = "a0000000-0000-4000-a000-000000000001"
@@ -10,6 +15,7 @@ const CONTACT_ID = "c0000000-0000-4000-a000-000000000001"
 const CASE_ID = "d0000000-0000-4000-a000-000000000010"
 const ORDER_ID = "f0000000-0000-4000-a000-000000000001"
 const INVOICE_ID = "d0000000-0000-4000-a000-000000000020"
+const AUDIT = { userId: USER_ID, ipAddress: "127.0.0.1", userAgent: "test" }
 const EMPLOYEE_ID = "e0000000-0000-4000-a000-000000000001"
 const INQUIRY_ID = "c0000000-0000-4000-a000-000000000010"
 
@@ -354,7 +360,8 @@ describe("billing-service-case-service", () => {
         TENANT_ID,
         CASE_ID,
         [{ description: "Arbeitszeit", quantity: 2, unitPrice: 85, vatRate: 19 }],
-        USER_ID
+        USER_ID,
+        AUDIT
       )
 
       expect(prisma.billingDocument.create).toHaveBeenCalledWith(
@@ -398,7 +405,8 @@ describe("billing-service-case-service", () => {
         TENANT_ID,
         CASE_ID,
         [{ description: "Arbeitszeit" }],
-        USER_ID
+        USER_ID,
+        AUDIT
       )
 
       // Verify updateMany was called with invoiceDocumentId and INVOICED status
@@ -417,7 +425,7 @@ describe("billing-service-case-service", () => {
       ;(prisma.billingServiceCase.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(mockServiceCase)
 
       await expect(
-        service.createInvoice(prisma, TENANT_ID, CASE_ID, [{ description: "Test" }], USER_ID)
+        service.createInvoice(prisma, TENANT_ID, CASE_ID, [{ description: "Test" }], USER_ID, AUDIT)
       ).rejects.toThrow("Invoice can only be created from a CLOSED service case")
     })
 
@@ -429,7 +437,7 @@ describe("billing-service-case-service", () => {
       })
 
       await expect(
-        service.createInvoice(prisma, TENANT_ID, CASE_ID, [{ description: "Test" }], USER_ID)
+        service.createInvoice(prisma, TENANT_ID, CASE_ID, [{ description: "Test" }], USER_ID, AUDIT)
       ).rejects.toThrow("Service case already has a linked invoice")
     })
   })

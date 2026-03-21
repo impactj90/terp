@@ -1,6 +1,26 @@
 import type { PrismaClient, CrmAddressType } from "@/generated/prisma/client"
 import * as repo from "./crm-address-repository"
 import * as numberSeqService from "./number-sequence-service"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Tracked Fields for Audit Diffs ---
+
+const ADDRESS_TRACKED_FIELDS = [
+  "type", "company", "street", "zip", "city", "country", "phone", "fax",
+  "email", "website", "taxNumber", "vatId", "leitwegId", "matchCode", "notes",
+  "paymentTermDays", "discountPercent", "discountDays", "discountGroup",
+  "priceListId", "isActive",
+]
+
+const CONTACT_TRACKED_FIELDS = [
+  "firstName", "lastName", "position", "department", "phone", "email",
+  "notes", "isPrimary",
+]
+
+const BANK_ACCOUNT_TRACKED_FIELDS = [
+  "iban", "bic", "bankName", "accountHolder", "isDefault",
+]
 
 // --- Error Classes ---
 
@@ -92,7 +112,8 @@ export async function create(
     discountGroup?: string
     priceListId?: string | null
   },
-  createdById: string
+  createdById: string,
+  audit?: AuditContext
 ) {
   const company = input.company.trim()
   if (company.length === 0) {
@@ -108,7 +129,7 @@ export async function create(
   // Auto-generate matchCode from company if not provided
   const matchCode = input.matchCode?.trim() || company.toUpperCase().slice(0, 20)
 
-  return repo.create(prisma, {
+  const created = await repo.create(prisma, {
     tenantId,
     number,
     type,
@@ -133,6 +154,16 @@ export async function create(
     priceListId: input.priceListId ?? null,
     createdById,
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "create", entityType: "crm_address",
+      entityId: created.id, entityName: created.company ?? null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return created
 }
 
 export async function update(
@@ -160,7 +191,8 @@ export async function update(
     discountDays?: number | null
     discountGroup?: string | null
     priceListId?: string | null
-  }
+  },
+  audit?: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, input.id)
   if (!existing) {
@@ -195,13 +227,25 @@ export async function update(
     return existing
   }
 
-  return repo.update(prisma, tenantId, input.id, data)
+  const updated = await repo.update(prisma, tenantId, input.id, data)
+
+  if (audit) {
+    const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, ADDRESS_TRACKED_FIELDS)
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "update", entityType: "crm_address",
+      entityId: input.id, entityName: updated.company ?? null, changes,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) {
@@ -209,19 +253,40 @@ export async function remove(
   }
 
   // Soft-delete: set isActive=false
-  return repo.softDelete(prisma, tenantId, id)
+  const result = await repo.softDelete(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "delete", entityType: "crm_address",
+      entityId: id, entityName: existing.company ?? null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return result
 }
 
 export async function restoreAddress(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) {
     throw new CrmAddressNotFoundError()
   }
-  return repo.restore(prisma, tenantId, id)
+  const restored = await repo.restore(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "restore", entityType: "crm_address",
+      entityId: id, entityName: existing.company ?? null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return restored
 }
 
 // --- Contact Service Functions ---
@@ -251,7 +316,8 @@ export async function createContact(
     email?: string
     notes?: string
     isPrimary?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   const address = await repo.findById(prisma, tenantId, input.addressId)
   if (!address) {
@@ -267,7 +333,7 @@ export async function createContact(
     throw new CrmAddressValidationError("Last name is required")
   }
 
-  return repo.createContact(prisma, {
+  const created = await repo.createContact(prisma, {
     tenantId,
     addressId: input.addressId,
     firstName,
@@ -279,6 +345,16 @@ export async function createContact(
     notes: input.notes || null,
     isPrimary: input.isPrimary ?? false,
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "create", entityType: "crm_contact",
+      entityId: created.id, entityName: `${created.firstName} ${created.lastName}`, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return created
 }
 
 export async function updateContact(
@@ -294,7 +370,8 @@ export async function updateContact(
     email?: string | null
     notes?: string | null
     isPrimary?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   const existing = await repo.findContactById(prisma, tenantId, input.id)
   if (!existing) {
@@ -325,19 +402,39 @@ export async function updateContact(
     }
   }
 
-  return repo.updateContact(prisma, tenantId, input.id, data)
+  const updated = await repo.updateContact(prisma, tenantId, input.id, data)
+
+  if (audit) {
+    const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, CONTACT_TRACKED_FIELDS)
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "update", entityType: "crm_contact",
+      entityId: input.id, entityName: `${updated.firstName} ${updated.lastName}`, changes,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function deleteContact(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   const existing = await repo.findContactById(prisma, tenantId, id)
   if (!existing) {
     throw new CrmContactNotFoundError()
   }
   await repo.deleteContact(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "delete", entityType: "crm_contact",
+      entityId: id, entityName: `${existing.firstName} ${existing.lastName}`, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }
 
 // --- Bank Account Service Functions ---
@@ -364,7 +461,8 @@ export async function createBankAccount(
     bankName?: string
     accountHolder?: string
     isDefault?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   const address = await repo.findById(prisma, tenantId, input.addressId)
   if (!address) {
@@ -376,7 +474,7 @@ export async function createBankAccount(
     throw new CrmAddressValidationError("IBAN is required")
   }
 
-  return repo.createBankAccount(prisma, {
+  const created = await repo.createBankAccount(prisma, {
     tenantId,
     addressId: input.addressId,
     iban,
@@ -385,6 +483,16 @@ export async function createBankAccount(
     accountHolder: input.accountHolder || null,
     isDefault: input.isDefault ?? false,
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "create", entityType: "bank_account",
+      entityId: created.id, entityName: created.iban ?? null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return created
 }
 
 export async function updateBankAccount(
@@ -397,7 +505,8 @@ export async function updateBankAccount(
     bankName?: string | null
     accountHolder?: string | null
     isDefault?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   const existing = await repo.findBankAccountById(prisma, tenantId, input.id)
   if (!existing) {
@@ -421,17 +530,37 @@ export async function updateBankAccount(
     }
   }
 
-  return repo.updateBankAccount(prisma, tenantId, input.id, data)
+  const updated = await repo.updateBankAccount(prisma, tenantId, input.id, data)
+
+  if (audit) {
+    const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, BANK_ACCOUNT_TRACKED_FIELDS)
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "update", entityType: "bank_account",
+      entityId: input.id, entityName: updated.iban ?? null, changes,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function deleteBankAccount(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   const existing = await repo.findBankAccountById(prisma, tenantId, id)
   if (!existing) {
     throw new CrmBankAccountNotFoundError()
   }
   await repo.deleteBankAccount(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "delete", entityType: "bank_account",
+      entityId: id, entityName: existing.iban ?? null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }

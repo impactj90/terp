@@ -227,7 +227,8 @@ export const absenceTypesRouter = createTRPCRouter({
         const type = await absenceTypeService.create(
           ctx.prisma,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapToOutput(type)
       } catch (err) {
@@ -253,7 +254,8 @@ export const absenceTypesRouter = createTRPCRouter({
         const type = await absenceTypeService.update(
           ctx.prisma,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapToOutput(type)
       } catch (err) {
@@ -276,7 +278,7 @@ export const absenceTypesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         const tenantId = ctx.tenantId!
-        await absenceTypeService.remove(ctx.prisma, tenantId, input.id)
+        await absenceTypeService.remove(ctx.prisma, tenantId, input.id, { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent })
         return { success: true }
       } catch (err) {
         handleServiceError(err)

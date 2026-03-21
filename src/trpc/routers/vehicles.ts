@@ -19,6 +19,7 @@ import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
+import * as auditLog from "@/lib/services/audit-logs-service"
 
 // --- Permission Constants ---
 
@@ -184,6 +185,18 @@ export const vehiclesRouter = createTRPCRouter({
           throw err
         }
 
+        await auditLog.log(ctx.prisma, {
+          tenantId,
+          userId: ctx.user!.id,
+          action: "create",
+          entityType: "vehicle",
+          entityId: vehicle.id,
+          entityName: vehicle.name ?? null,
+          changes: null,
+          ipAddress: ctx.ipAddress,
+          userAgent: ctx.userAgent,
+        }).catch(err => console.error('[AuditLog] Failed:', err))
+
         return vehicle
       } catch (err) {
         handleServiceError(err)
@@ -253,6 +266,23 @@ export const vehiclesRouter = createTRPCRouter({
           data,
         })
 
+        const changes = auditLog.computeChanges(
+          existing as unknown as Record<string, unknown>,
+          vehicle as unknown as Record<string, unknown>,
+          ["name", "code", "description", "licensePlate", "isActive", "sortOrder"]
+        )
+        await auditLog.log(ctx.prisma, {
+          tenantId,
+          userId: ctx.user!.id,
+          action: "update",
+          entityType: "vehicle",
+          entityId: input.id,
+          entityName: vehicle.name ?? null,
+          changes,
+          ipAddress: ctx.ipAddress,
+          userAgent: ctx.userAgent,
+        }).catch(err => console.error('[AuditLog] Failed:', err))
+
         return vehicle
       } catch (err) {
         handleServiceError(err)
@@ -299,6 +329,18 @@ export const vehiclesRouter = createTRPCRouter({
         await ctx.prisma.vehicle.delete({
           where: { id: input.id },
         })
+
+        await auditLog.log(ctx.prisma, {
+          tenantId,
+          userId: ctx.user!.id,
+          action: "delete",
+          entityType: "vehicle",
+          entityId: input.id,
+          entityName: existing.name ?? null,
+          changes: null,
+          ipAddress: ctx.ipAddress,
+          userAgent: ctx.userAgent,
+        }).catch(err => console.error('[AuditLog] Failed:', err))
 
         return { success: true }
       } catch (err) {

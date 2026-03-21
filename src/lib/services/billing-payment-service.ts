@@ -1,5 +1,7 @@
 import type { PrismaClient, BillingPaymentType } from "@/generated/prisma/client"
 import * as repo from "./billing-payment-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
 
 // --- Error Classes ---
 
@@ -285,7 +287,8 @@ export async function createPayment(
     isDiscount?: boolean
     notes?: string
   },
-  createdById: string
+  createdById: string,
+  audit?: AuditContext
 ) {
   // 1. Validate document exists and belongs to tenant
   const document = await prisma.billingDocument.findFirst({
@@ -360,6 +363,15 @@ export async function createPayment(
       createdById,
     })
 
+    if (audit) {
+      // Never throws — audit failures must not block the actual operation
+      await auditLog.log(prisma, {
+        tenantId, userId: audit.userId, action: "create", entityType: "billing_payment",
+        entityId: payment.id, entityName: null, changes: null,
+        ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+      }).catch(err => console.error('[AuditLog] Failed:', err))
+    }
+
     return payment
   }
 
@@ -371,7 +383,7 @@ export async function createPayment(
   }
 
   // 7. Create payment record
-  return repo.createPayment(prisma, {
+  const created = await repo.createPayment(prisma, {
     tenantId,
     documentId: input.documentId,
     date: input.date,
@@ -381,6 +393,17 @@ export async function createPayment(
     notes: input.notes ?? null,
     createdById,
   })
+
+  if (audit) {
+    // Never throws — audit failures must not block the actual operation
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "create", entityType: "billing_payment",
+      entityId: created.id, entityName: null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return created
 }
 
 export async function cancelPayment(
@@ -388,7 +411,8 @@ export async function cancelPayment(
   tenantId: string,
   id: string,
   cancelledById: string,
-  reason?: string
+  reason?: string,
+  audit?: AuditContext
 ) {
   // 1. Find payment
   const payment = await repo.findPaymentById(prisma, tenantId, id)
@@ -426,6 +450,15 @@ export async function cancelPayment(
     for (const skonto of relatedSkonto) {
       await repo.cancelPayment(prisma, tenantId, skonto.id, cancelledById, `Storniert mit Zahlung`)
     }
+  }
+
+  if (audit) {
+    // Never throws — audit failures must not block the actual operation
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "delete", entityType: "billing_payment",
+      entityId: id, entityName: null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
   }
 
   return result

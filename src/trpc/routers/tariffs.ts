@@ -441,7 +441,8 @@ export const tariffsRouter = createTRPCRouter({
         const result = await tariffsService.create(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
 
         return mapToOutput(result as unknown as Record<string, unknown>, {
@@ -469,7 +470,8 @@ export const tariffsRouter = createTRPCRouter({
         const result = await tariffsService.update(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
 
         return mapToOutput(result as unknown as Record<string, unknown>, {
@@ -494,7 +496,7 @@ export const tariffsRouter = createTRPCRouter({
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {
-        await tariffsService.remove(ctx.prisma, ctx.tenantId!, input.id)
+        await tariffsService.remove(ctx.prisma, ctx.tenantId!, input.id, { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent })
         return { success: true }
       } catch (err) {
         handleServiceError(err)
@@ -517,7 +519,8 @@ export const tariffsRouter = createTRPCRouter({
         return await tariffsService.createBreak(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -541,7 +544,8 @@ export const tariffsRouter = createTRPCRouter({
           ctx.prisma,
           ctx.tenantId!,
           input.tariffId,
-          input.breakId
+          input.breakId,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {

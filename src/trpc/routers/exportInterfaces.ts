@@ -22,6 +22,7 @@ import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
+import * as auditLog from "@/lib/services/audit-logs-service"
 
 // --- Permission Constants ---
 
@@ -232,6 +233,18 @@ export const exportInterfacesRouter = createTRPCRouter({
           throw err
         }
 
+        await auditLog.log(ctx.prisma, {
+          tenantId,
+          userId: ctx.user!.id,
+          action: "create",
+          entityType: "export_interface",
+          entityId: ei.id,
+          entityName: ei.name ?? null,
+          changes: null,
+          ipAddress: ctx.ipAddress,
+          userAgent: ctx.userAgent,
+        }).catch(err => console.error('[AuditLog] Failed:', err))
+
         return { ...ei, accounts: [] }
       } catch (err) {
         handleServiceError(err)
@@ -331,6 +344,23 @@ export const exportInterfacesRouter = createTRPCRouter({
           },
         })
 
+        const changes = auditLog.computeChanges(
+          existing as unknown as Record<string, unknown>,
+          updated as unknown as Record<string, unknown>,
+          ["name", "interfaceNumber", "mandantNumber", "exportScript", "exportPath", "outputFilename", "isActive"]
+        )
+        await auditLog.log(ctx.prisma, {
+          tenantId,
+          userId: ctx.user!.id,
+          action: "update",
+          entityType: "export_interface",
+          entityId: input.id,
+          entityName: updated.name ?? null,
+          changes,
+          ipAddress: ctx.ipAddress,
+          userAgent: ctx.userAgent,
+        }).catch(err => console.error('[AuditLog] Failed:', err))
+
         return updated
       } catch (err) {
         handleServiceError(err)
@@ -377,6 +407,18 @@ export const exportInterfacesRouter = createTRPCRouter({
         await ctx.prisma.exportInterface.delete({
           where: { id: input.id },
         })
+
+        await auditLog.log(ctx.prisma, {
+          tenantId,
+          userId: ctx.user!.id,
+          action: "delete",
+          entityType: "export_interface",
+          entityId: input.id,
+          entityName: existing.name ?? null,
+          changes: null,
+          ipAddress: ctx.ipAddress,
+          userAgent: ctx.userAgent,
+        }).catch(err => console.error('[AuditLog] Failed:', err))
 
         return { success: true }
       } catch (err) {

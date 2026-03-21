@@ -187,7 +187,8 @@ export const holidaysRouter = createTRPCRouter({
         const holiday = await holidayService.create(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapHolidayToOutput(holiday)
       } catch (err) {
@@ -211,7 +212,8 @@ export const holidaysRouter = createTRPCRouter({
         const holiday = await holidayService.update(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapHolidayToOutput(holiday)
       } catch (err) {
@@ -230,7 +232,9 @@ export const holidaysRouter = createTRPCRouter({
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {
-        await holidayService.remove(ctx.prisma, ctx.tenantId!, input.id)
+        await holidayService.remove(ctx.prisma, ctx.tenantId!, input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
+        )
         return { success: true }
       } catch (err) {
         handleServiceError(err)

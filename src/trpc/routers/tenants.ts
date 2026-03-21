@@ -18,6 +18,7 @@ import { createTRPCRouter, protectedProcedure } from "@/trpc/init"
 import { requirePermission } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
+import * as auditLog from "@/lib/services/audit-logs-service"
 
 // --- Permission Constants ---
 
@@ -340,6 +341,18 @@ export const tenantsRouter = createTRPCRouter({
           return created
         })
 
+        await auditLog.log(ctx.prisma, {
+          tenantId: tenant.id,
+          userId: ctx.user!.id,
+          action: "create",
+          entityType: "tenant",
+          entityId: tenant.id,
+          entityName: tenant.name,
+          changes: null,
+          ipAddress: ctx.ipAddress,
+          userAgent: ctx.userAgent,
+        }).catch(err => console.error('[AuditLog] Failed:', err))
+
         return {
           id: tenant.id,
           name: tenant.name,
@@ -479,6 +492,23 @@ export const tenantsRouter = createTRPCRouter({
           data,
         })
 
+        const changes = auditLog.computeChanges(
+          existing as unknown as Record<string, unknown>,
+          tenant as unknown as Record<string, unknown>,
+          ["name", "addressStreet", "addressZip", "addressCity", "addressCountry", "phone", "email", "payrollExportBasePath", "notes", "vacationBasis", "isActive"]
+        )
+        await auditLog.log(ctx.prisma, {
+          tenantId: tenant.id,
+          userId: ctx.user!.id,
+          action: "update",
+          entityType: "tenant",
+          entityId: tenant.id,
+          entityName: tenant.name,
+          changes,
+          ipAddress: ctx.ipAddress,
+          userAgent: ctx.userAgent,
+        }).catch(err => console.error('[AuditLog] Failed:', err))
+
         return {
           id: tenant.id,
           name: tenant.name,
@@ -532,6 +562,18 @@ export const tenantsRouter = createTRPCRouter({
           where: { id: input.id },
           data: { isActive: false },
         })
+
+        await auditLog.log(ctx.prisma, {
+          tenantId: input.id,
+          userId: ctx.user!.id,
+          action: "update",
+          entityType: "tenant",
+          entityId: input.id,
+          entityName: existing.name,
+          changes: { isActive: { old: true, new: false } },
+          ipAddress: ctx.ipAddress,
+          userAgent: ctx.userAgent,
+        }).catch(err => console.error('[AuditLog] Failed:', err))
 
         return { success: true }
       } catch (err) {

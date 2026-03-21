@@ -10,6 +10,13 @@ import type { DataScope } from "@/lib/auth/middleware"
 import { checkRelatedEmployeeDataScope } from "@/lib/auth/data-scope"
 import * as repo from "./vacation-balances-repository"
 import { mapBalanceToOutput } from "./vacation-balance-output"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit Constants ---
+
+const ENTITY_TYPE = "vacation_balance"
+const TRACKED_FIELDS = ["entitlement", "carryover", "adjustments", "carryoverExpiresAt"]
 
 // --- Error Classes ---
 
@@ -269,7 +276,8 @@ export async function createBalance(
     adjustments: number
     carryoverExpiresAt?: Date | null
   },
-  dataScope?: DataScope
+  dataScope?: DataScope,
+  audit?: AuditContext
 ) {
   // Check data scope on target employee
   if (dataScope) {
@@ -297,6 +305,22 @@ export async function createBalance(
       taken: 0,
       carryoverExpiresAt: input.carryoverExpiresAt ?? null,
     })
+
+    // Never throws — audit failures must not block the actual operation
+    if (audit) {
+      await auditLog.log(prisma, {
+        tenantId,
+        userId: audit.userId,
+        action: "create",
+        entityType: ENTITY_TYPE,
+        entityId: (balance as unknown as Record<string, unknown>).id as string,
+        entityName: `${input.year}`,
+        changes: null,
+        ipAddress: audit.ipAddress,
+        userAgent: audit.userAgent,
+      }).catch(err => console.error('[AuditLog] Failed:', err));
+    }
+
     return mapBalanceToOutput(balance)
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
@@ -319,7 +343,8 @@ export async function updateBalance(
     adjustments?: number
     carryoverExpiresAt?: Date | null
   },
-  dataScope?: DataScope
+  dataScope?: DataScope,
+  audit?: AuditContext
 ) {
   const existing = await repo.findBalanceByIdAndTenant(prisma, tenantId, input.id)
   if (!existing) {
@@ -349,6 +374,26 @@ export async function updateBalance(
   }
 
   const balance = await repo.updateBalance(prisma, input.id, data)
+
+  // Never throws — audit failures must not block the actual operation
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      balance as unknown as Record<string, unknown>,
+      TRACKED_FIELDS,
+    );
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: ENTITY_TYPE,
+      entityId: input.id,
+      entityName: `${(existing as unknown as Record<string, unknown>).year}`,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err));
+  }
 
   return mapBalanceToOutput(balance)
 }

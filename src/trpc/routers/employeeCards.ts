@@ -115,7 +115,8 @@ export const employeeCardsRouter = createTRPCRouter({
             employee: { departmentId: employee.departmentId },
           }, "EmployeeCard")
         }
-        return await service.createCard(ctx.prisma, ctx.tenantId!, input)
+        return await service.createCard(ctx.prisma, ctx.tenantId!, input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent })
       } catch (err) {
         handleServiceError(err)
       }
@@ -152,7 +153,8 @@ export const employeeCardsRouter = createTRPCRouter({
             employee: card.employee ? { departmentId: card.employee.departmentId } : null,
           }, "EmployeeCard")
         }
-        return await service.deactivateCard(ctx.prisma, ctx.tenantId!, input)
+        return await service.deactivateCard(ctx.prisma, ctx.tenantId!, input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent })
       } catch (err) {
         handleServiceError(err)
       }

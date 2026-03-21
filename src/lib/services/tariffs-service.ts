@@ -8,6 +8,16 @@
 import type { PrismaClient } from "@/generated/prisma/client"
 import { Prisma } from "@/generated/prisma/client"
 import * as repo from "./tariffs-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit ---
+
+const TRACKED_FIELDS = [
+  "name",
+  "code",
+  "isActive",
+]
 
 // --- Error Classes ---
 
@@ -90,7 +100,8 @@ export async function create(
     rhythmStartDate?: string
     weekPlanIds?: string[]
     dayPlans?: Array<{ dayPosition: number; dayPlanId: string | null }>
-  }
+  },
+  audit?: AuditContext
 ) {
   // Trim and validate code
   const code = input.code.trim()
@@ -180,6 +191,21 @@ export async function create(
 
   // Re-fetch with full details
   const result = await repo.findByIdWithDetails(prisma, tenantId, created.id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "tariff",
+      entityId: created.id,
+      entityName: name,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return result!
 }
 
@@ -212,7 +238,8 @@ export async function update(
     rhythmStartDate?: string | null
     weekPlanIds?: string[]
     dayPlans?: Array<{ dayPosition: number; dayPlanId: string | null }>
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify tariff exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, input.id)
@@ -363,13 +390,34 @@ export async function update(
 
   // Re-fetch with full details
   const result = await repo.findByIdWithDetails(prisma, tenantId, input.id)
+
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      result as unknown as Record<string, unknown>,
+      TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "tariff",
+      entityId: input.id,
+      entityName: (result as unknown as Record<string, unknown>).name as string ?? null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return result!
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   // Verify tariff exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, id)
@@ -395,6 +443,20 @@ export async function remove(
 
   // Hard delete (cascades to breaks, tariffWeekPlans, tariffDayPlans)
   await repo.deleteById(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "tariff",
+      entityId: id,
+      entityName: existing.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }
 
 export async function createBreak(
@@ -406,7 +468,8 @@ export async function createBreak(
     afterWorkMinutes?: number
     duration: number
     isPaid?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify parent tariff exists (tenant-scoped)
   const tariff = await repo.findById(prisma, tenantId, input.tariffId)
@@ -426,6 +489,20 @@ export async function createBreak(
     sortOrder: breakCount,
   })
 
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId: tariff.tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "tariff_break",
+      entityId: created.id,
+      entityName: null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return {
     id: created.id,
     tariffId: created.tariffId,
@@ -443,7 +520,8 @@ export async function deleteBreak(
   prisma: PrismaClient,
   tenantId: string,
   tariffId: string,
-  breakId: string
+  breakId: string,
+  audit?: AuditContext
 ) {
   // Verify parent tariff exists (tenant-scoped)
   const tariff = await repo.findById(prisma, tenantId, tariffId)
@@ -459,6 +537,20 @@ export async function deleteBreak(
 
   // Delete break
   await repo.deleteBreak(prisma, breakId)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "tariff_break",
+      entityId: breakId,
+      entityName: null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }
 
 // --- Private Helpers ---

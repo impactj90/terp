@@ -6,6 +6,20 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./employee-cards-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit ---
+
+const TRACKED_FIELDS = [
+  "cardNumber",
+  "cardType",
+  "validFrom",
+  "validTo",
+  "isActive",
+  "deactivatedAt",
+  "deactivationReason",
+]
 
 // --- Error Classes ---
 
@@ -105,7 +119,8 @@ export async function createCard(
     cardType?: string
     validFrom?: Date
     validTo?: Date
-  }
+  },
+  audit?: AuditContext
 ) {
   const employee = await repo.findEmployeeForTenant(prisma, tenantId, input.employeeId)
   if (!employee) {
@@ -132,6 +147,20 @@ export async function createCard(
     isActive: true,
   })
 
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "employee_card",
+      entityId: card.id,
+      entityName: null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return mapCardToOutput(card)
 }
 
@@ -146,7 +175,8 @@ export async function deactivateCard(
   input: {
     id: string
     reason?: string
-  }
+  },
+  audit?: AuditContext
 ) {
   const existing = await repo.findCardByIdAndTenant(prisma, tenantId, input.id)
   if (!existing) {
@@ -158,6 +188,25 @@ export async function deactivateCard(
     deactivatedAt: new Date(),
     deactivationReason: input.reason?.trim() ?? null,
   })
+
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      card as unknown as Record<string, unknown>,
+      TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "employee_card",
+      entityId: input.id,
+      entityName: null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 
   return mapCardToOutput(card)
 }

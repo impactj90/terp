@@ -111,7 +111,8 @@ export const employeeContactsRouter = createTRPCRouter({
             employee: { departmentId: employee.departmentId },
           }, "EmployeeContact")
         }
-        return await service.createContact(ctx.prisma, ctx.tenantId!, input)
+        return await service.createContact(ctx.prisma, ctx.tenantId!, input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent })
       } catch (err) {
         handleServiceError(err)
       }
@@ -143,7 +144,8 @@ export const employeeContactsRouter = createTRPCRouter({
             employee: contact.employee ? { departmentId: contact.employee.departmentId } : null,
           }, "EmployeeContact")
         }
-        return await service.deleteContact(ctx.prisma, ctx.tenantId!, input.id)
+        return await service.deleteContact(ctx.prisma, ctx.tenantId!, input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent })
       } catch (err) {
         handleServiceError(err)
       }

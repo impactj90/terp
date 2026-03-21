@@ -177,7 +177,8 @@ export const monthlyEvalTemplatesRouter = createTRPCRouter({
         const template = await monthlyEvalTemplateService.create(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapTemplate(template)
       } catch (err) {
@@ -201,7 +202,8 @@ export const monthlyEvalTemplatesRouter = createTRPCRouter({
         const template = await monthlyEvalTemplateService.update(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapTemplate(template)
       } catch (err) {
@@ -225,7 +227,8 @@ export const monthlyEvalTemplatesRouter = createTRPCRouter({
         await monthlyEvalTemplateService.remove(
           ctx.prisma,
           ctx.tenantId!,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {

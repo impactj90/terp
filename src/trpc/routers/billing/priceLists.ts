@@ -143,7 +143,8 @@ export const billingPriceListsRouter = createTRPCRouter({
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
           input,
-          ctx.user!.id
+          ctx.user!.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -158,7 +159,8 @@ export const billingPriceListsRouter = createTRPCRouter({
         return await priceListService.update(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -173,7 +175,8 @@ export const billingPriceListsRouter = createTRPCRouter({
         await priceListService.remove(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {
@@ -189,7 +192,8 @@ export const billingPriceListsRouter = createTRPCRouter({
         return await priceListService.setDefault(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -222,7 +226,8 @@ export const billingPriceListsRouter = createTRPCRouter({
           return await priceListService.createEntry(
             ctx.prisma as unknown as PrismaClient,
             ctx.tenantId!,
-            input
+            input,
+            { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
           )
         } catch (err) {
           handleServiceError(err)
@@ -237,7 +242,8 @@ export const billingPriceListsRouter = createTRPCRouter({
           return await priceListService.updateEntry(
             ctx.prisma as unknown as PrismaClient,
             ctx.tenantId!,
-            input
+            input,
+            { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
           )
         } catch (err) {
           handleServiceError(err)
@@ -253,7 +259,8 @@ export const billingPriceListsRouter = createTRPCRouter({
             ctx.prisma as unknown as PrismaClient,
             ctx.tenantId!,
             input.priceListId,
-            input.id
+            input.id,
+            { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
           )
           return { success: true }
         } catch (err) {
@@ -270,7 +277,8 @@ export const billingPriceListsRouter = createTRPCRouter({
             ctx.prisma as unknown as PrismaClient,
             ctx.tenantId!,
             input.priceListId,
-            input.entries
+            input.entries,
+            { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
           )
         } catch (err) {
           handleServiceError(err)

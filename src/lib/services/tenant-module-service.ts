@@ -7,6 +7,8 @@
 import type { PrismaClient } from "@/generated/prisma/client"
 import { AVAILABLE_MODULES, type ModuleId } from "@/lib/modules"
 import * as repo from "./tenant-module-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
 
 // --- Custom Errors ---
 
@@ -61,7 +63,8 @@ export async function enable(
   prisma: PrismaClient,
   tenantId: string,
   module: string,
-  enabledById?: string
+  enabledById?: string,
+  audit?: AuditContext
 ) {
   if (!AVAILABLE_MODULES.includes(module as ModuleId)) {
     throw new ModuleValidationError(
@@ -70,6 +73,21 @@ export async function enable(
   }
 
   const row = await repo.create(prisma, tenantId, module, enabledById)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "tenant_module",
+      entityId: row.id ?? module,
+      entityName: module,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return { module: row.module, enabledAt: row.enabledAt }
 }
 
@@ -79,7 +97,8 @@ export async function enable(
 export async function disable(
   prisma: PrismaClient,
   tenantId: string,
-  module: string
+  module: string,
+  audit?: AuditContext
 ) {
   if (module === "core") {
     throw new ModuleValidationError('The "core" module cannot be disabled')
@@ -92,4 +111,18 @@ export async function disable(
   }
 
   await repo.remove(prisma, tenantId, module)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "tenant_module",
+      entityId: module,
+      entityName: module,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }

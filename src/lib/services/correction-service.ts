@@ -12,6 +12,12 @@ import {
 } from "@/lib/auth/data-scope"
 import { RecalcService } from "./recalc"
 import * as repo from "./correction-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit Log Config ---
+
+const TRACKED_FIELDS = ["valueMinutes", "reason", "status", "correctionType"]
 
 // --- Error Classes ---
 
@@ -112,8 +118,8 @@ export async function create(
     valueMinutes: number
     reason: string
   },
-  userId: string,
-  dataScope?: DataScope
+  dataScope?: DataScope,
+  audit?: AuditContext
 ) {
   // Validate employee exists in tenant and is within data scope
   const employee = await repo.findEmployee(prisma, tenantId, input.employeeId)
@@ -146,7 +152,7 @@ export async function create(
     throw new CorrectionValidationError("Invalid date: " + input.correctionDate)
   }
 
-  return repo.create(prisma, {
+  const correction = await repo.create(prisma, {
     tenantId,
     employeeId: input.employeeId,
     correctionDate,
@@ -155,8 +161,25 @@ export async function create(
     valueMinutes: input.valueMinutes,
     reason: input.reason,
     status: "pending",
-    createdBy: userId,
+    createdBy: audit!.userId,
   })
+
+  // Never throws — audit failures must not block the actual operation
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "correction",
+      entityId: (correction as unknown as Record<string, unknown>).id as string,
+      entityName: null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return correction
 }
 
 export async function update(
@@ -167,7 +190,8 @@ export async function update(
     valueMinutes?: number
     reason?: string
   },
-  dataScope?: DataScope
+  dataScope?: DataScope,
+  audit?: AuditContext
 ) {
   // Fetch existing (tenant-scoped) with employee for scope check
   const existing = await repo.findById(prisma, tenantId, input.id)
@@ -199,14 +223,37 @@ export async function update(
     data.reason = input.reason
   }
 
-  return (await repo.update(prisma, tenantId, input.id, data))!
+  const updated = (await repo.update(prisma, tenantId, input.id, data))!
+
+  // Never throws — audit failures must not block the actual operation
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      TRACKED_FIELDS,
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "correction",
+      entityId: input.id,
+      entityName: null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
   id: string,
-  dataScope?: DataScope
+  dataScope?: DataScope,
+  audit?: AuditContext
 ) {
   // Fetch existing (tenant-scoped) with employee for scope check
   const existing = await repo.findById(prisma, tenantId, id)
@@ -226,14 +273,29 @@ export async function remove(
   }
 
   await repo.deleteById(prisma, tenantId, id)
+
+  // Never throws — audit failures must not block the actual operation
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "correction",
+      entityId: id,
+      entityName: null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }
 
 export async function approve(
   prisma: PrismaClient,
   tenantId: string,
   id: string,
-  userId: string,
-  dataScope?: DataScope
+  dataScope?: DataScope,
+  audit?: AuditContext
 ) {
   // Fetch existing (tenant-scoped) with employee for scope check
   const existing = await repo.findById(prisma, tenantId, id)
@@ -250,7 +312,7 @@ export async function approve(
   // Atomically update only if status is still pending (prevents double-approve)
   const correction = await repo.updateIfStatus(prisma, tenantId, id, "pending", {
     status: "approved",
-    approvedBy: userId,
+    approvedBy: audit?.userId ?? null,
     approvedAt: new Date(),
     updatedAt: new Date(),
   })
@@ -269,6 +331,26 @@ export async function approve(
     existing.correctionDate
   )
 
+  // Never throws — audit failures must not block the actual operation
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      correction as unknown as Record<string, unknown>,
+      TRACKED_FIELDS,
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "approve",
+      entityType: "correction",
+      entityId: id,
+      entityName: null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return correction
 }
 
@@ -276,8 +358,8 @@ export async function reject(
   prisma: PrismaClient,
   tenantId: string,
   id: string,
-  userId: string,
-  dataScope?: DataScope
+  dataScope?: DataScope,
+  audit?: AuditContext
 ) {
   // Fetch existing (tenant-scoped) with employee for scope check
   const existing = await repo.findById(prisma, tenantId, id)
@@ -294,7 +376,7 @@ export async function reject(
   // Atomically update only if status is still pending (prevents double-reject)
   const correction = await repo.updateIfStatus(prisma, tenantId, id, "pending", {
     status: "rejected",
-    approvedBy: userId,
+    approvedBy: audit?.userId ?? null,
     approvedAt: new Date(),
     updatedAt: new Date(),
   })
@@ -303,6 +385,26 @@ export async function reject(
     throw new CorrectionValidationError(
       "Correction is not in pending status"
     )
+  }
+
+  // Never throws — audit failures must not block the actual operation
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      correction as unknown as Record<string, unknown>,
+      TRACKED_FIELDS,
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "reject",
+      entityType: "correction",
+      entityId: id,
+      entityName: null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
   }
 
   return correction
