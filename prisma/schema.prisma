@@ -3303,6 +3303,7 @@ model MonthlyValue {
   @@unique([employeeId, year, month])
   @@index([tenantId], map: "idx_mv_tenant")
   @@index([employeeId], map: "idx_mv_employee")
+  @@index([tenantId, year, month], map: "idx_mv_tenant_year_month")
   @@map("monthly_values")
 }
 
@@ -3693,6 +3694,7 @@ model Booking {
   @@index([tenantId], map: "idx_bookings_tenant")
   @@index([employeeId, bookingDate], map: "idx_bookings_employee_date")
   @@index([bookingDate], map: "idx_bookings_date")
+  @@index([tenantId, employeeId, bookingDate], map: "idx_bookings_tenant_employee_date")
   @@map("bookings")
 }
 
