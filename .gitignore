@@ -18,6 +18,7 @@ src/generated/
 .env.staging
 .env.production
 !.env.example
+!.env.*.vault
 
 # IDE and editors
 .idea/
