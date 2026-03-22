@@ -49,6 +49,11 @@ DELETE FROM shifts WHERE code LIKE 'E2E%';
 DELETE FROM employees WHERE personnel_number LIKE 'E2E%';
 DELETE FROM calculation_rules WHERE code LIKE 'E2E%';
 
+-- Template records (cache-invalidation.spec.ts)
+DELETE FROM billing_document_templates
+WHERE name LIKE 'E2E%'
+  AND tenant_id = '10000000-0000-0000-0000-000000000001';
+
 -- Price list records (spec 33) — must come before CRM addresses cleanup
 UPDATE crm_addresses SET price_list_id = NULL WHERE company LIKE 'E2E%';
 DELETE FROM billing_price_list_entries WHERE price_list_id IN (

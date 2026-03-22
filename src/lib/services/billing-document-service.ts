@@ -431,48 +431,53 @@ export async function finalize(
   },
   audit?: AuditContext
 ) {
-  const existing = await repo.findById(prisma, tenantId, id)
-  if (!existing) throw new BillingDocumentNotFoundError()
+  // Wrap status check + Order creation + status update in a transaction
+  const result = await prisma.$transaction(async (tx) => {
+    const txPrisma = tx as unknown as PrismaClient
 
-  if (existing.status !== "DRAFT") {
-    throw new BillingDocumentValidationError(
-      "Only DRAFT documents can be finalized"
-    )
-  }
+    const existing = await repo.findById(txPrisma, tenantId, id)
+    if (!existing) throw new BillingDocumentNotFoundError()
 
-  // Must have at least one position
-  if (!existing.positions || existing.positions.length === 0) {
-    throw new BillingDocumentValidationError(
-      "Document must have at least one position before finalizing"
-    )
-  }
+    if (existing.status !== "DRAFT") {
+      throw new BillingDocumentValidationError(
+        "Only DRAFT documents can be finalized"
+      )
+    }
 
-  // For ORDER_CONFIRMATION: create a linked Terp Order for time tracking
-  let orderId: string | undefined
-  if (existing.type === "ORDER_CONFIRMATION" && orderParams?.orderName) {
-    const customerName = (existing as unknown as { address?: { company?: string } }).address?.company
-    const newOrder = await orderService.create(prisma, tenantId, {
-      code: existing.number,
-      name: orderParams.orderName,
-      description: orderParams.orderDescription,
-      customer: customerName || undefined,
-      status: "active",
-    })
-    orderId = newOrder.id
-  }
+    // Must have at least one position
+    if (!existing.positions || existing.positions.length === 0) {
+      throw new BillingDocumentValidationError(
+        "Document must have at least one position before finalizing"
+      )
+    }
 
-  const updateData: Record<string, unknown> = {
-    status: "PRINTED",
-    printedAt: new Date(),
-    printedById: finalizedById,
-  }
-  if (orderId) {
-    updateData.orderId = orderId
-  }
+    // For ORDER_CONFIRMATION: create a linked Terp Order for time tracking
+    let orderId: string | undefined
+    if (existing.type === "ORDER_CONFIRMATION" && orderParams?.orderName) {
+      const customerName = (existing as unknown as { address?: { company?: string } }).address?.company
+      const newOrder = await orderService.create(txPrisma, tenantId, {
+        code: existing.number,
+        name: orderParams.orderName,
+        description: orderParams.orderDescription,
+        customer: customerName || undefined,
+        status: "active",
+      })
+      orderId = newOrder.id
+    }
 
-  const result = await repo.update(prisma, tenantId, id, updateData)
+    const updateData: Record<string, unknown> = {
+      status: "PRINTED",
+      printedAt: new Date(),
+      printedById: finalizedById,
+    }
+    if (orderId) {
+      updateData.orderId = orderId
+    }
 
-  // Generate PDF on finalization
+    return repo.update(txPrisma, tenantId, id, updateData)
+  })
+
+  // Generate PDF on finalization (best-effort, OUTSIDE transaction)
   try {
     await pdfService.generateAndStorePdf(prisma, tenantId, id)
   } catch {
@@ -481,13 +486,17 @@ export async function finalize(
   }
 
   // Generate E-Invoice XML on finalization (after PDF)
-  if (existing.type === "INVOICE" || existing.type === "CREDIT_NOTE") {
-    const config = await billingTenantConfigRepo.findByTenantId(prisma, tenantId)
-    if (config?.eInvoiceEnabled) {
-      try {
-        await eInvoiceService.generateAndStoreEInvoice(prisma, tenantId, id)
-      } catch (err) {
-        console.error(`E-Invoice generation failed for document ${id}`, err)
+  // Use result.type since `existing` was scoped to the transaction closure
+  if (result) {
+    const docType = (result as unknown as { type?: string }).type
+    if (docType === "INVOICE" || docType === "CREDIT_NOTE") {
+      const config = await billingTenantConfigRepo.findByTenantId(prisma, tenantId)
+      if (config?.eInvoiceEnabled) {
+        try {
+          await eInvoiceService.generateAndStoreEInvoice(prisma, tenantId, id)
+        } catch (err) {
+          console.error(`E-Invoice generation failed for document ${id}`, err)
+        }
       }
     }
   }
@@ -500,7 +509,7 @@ export async function finalize(
       action: "finalize",
       entityType: "billing_document",
       entityId: id,
-      entityName: (existing as unknown as { number?: string }).number || "DRAFT",
+      entityName: (result as unknown as { number?: string })?.number || "DRAFT",
       changes: null,
       ipAddress: audit.ipAddress,
       userAgent: audit.userAgent,
@@ -631,23 +640,42 @@ export async function cancel(
   reason?: string,
   audit?: AuditContext
 ) {
-  const existing = await repo.findById(prisma, tenantId, id)
-  if (!existing) throw new BillingDocumentNotFoundError()
-
-  if (existing.status === "CANCELLED") {
-    throw new BillingDocumentConflictError("Document is already cancelled")
-  }
-
-  if (existing.status === "FORWARDED") {
-    throw new BillingDocumentValidationError(
-      "Cannot cancel a fully forwarded document"
-    )
-  }
-
+  // Atomic status guard: only cancel if not already CANCELLED or FORWARDED
   const data: Record<string, unknown> = { status: "CANCELLED" }
   if (reason) data.internalNotes = reason
 
-  const updated = await repo.update(prisma, tenantId, id, data)
+  const { count } = await prisma.billingDocument.updateMany({
+    where: {
+      id,
+      tenantId,
+      status: { notIn: ["CANCELLED", "FORWARDED"] },
+    },
+    data,
+  })
+
+  if (count === 0) {
+    // Distinguish not-found from wrong-status
+    const existing = await prisma.billingDocument.findFirst({
+      where: { id, tenantId },
+      select: { status: true },
+    })
+    if (!existing) throw new BillingDocumentNotFoundError()
+    if (existing.status === "CANCELLED") {
+      throw new BillingDocumentConflictError("Document is already cancelled")
+    }
+    if (existing.status === "FORWARDED") {
+      throw new BillingDocumentValidationError(
+        "Cannot cancel a fully forwarded document"
+      )
+    }
+    // Defensive: unexpected status that also blocks cancel
+    throw new BillingDocumentConflictError(
+      `Document status changed concurrently (current: ${existing.status})`
+    )
+  }
+
+  // Fetch updated document for return value and audit
+  const updated = await repo.findById(prisma, tenantId, id)
 
   // Never throws — audit failures must not block the actual operation
   if (audit) {
@@ -657,7 +685,7 @@ export async function cancel(
       action: "cancel",
       entityType: "billing_document",
       entityId: id,
-      entityName: (existing as unknown as { number?: string }).number || "DRAFT",
+      entityName: (updated as unknown as { number?: string })?.number || "DRAFT",
       changes: null,
       metadata: reason ? { reason } : undefined,
       ipAddress: audit.ipAddress,
@@ -782,37 +810,47 @@ export async function addPosition(
   },
   audit: AuditContext
 ) {
-  // Verify document exists and is DRAFT
-  const doc = await repo.findById(prisma, tenantId, input.documentId)
-  if (!doc) throw new BillingDocumentNotFoundError()
-  assertDraft(doc.status)
-
-  // Get next sort order
-  const maxSort = await repo.getMaxSortOrder(prisma, tenantId, input.documentId)
-
-  // Calculate total price
+  // Calculate total price (pure computation, can stay outside transaction)
   const totalPrice = calculatePositionTotal(input.quantity, input.unitPrice, input.flatCosts)
 
-  const position = await repo.createPosition(prisma, {
-    documentId: input.documentId,
-    sortOrder: maxSort + 1,
-    type: input.type,
-    articleId: input.articleId || null,
-    articleNumber: input.articleNumber || null,
-    description: input.description || null,
-    quantity: input.quantity ?? null,
-    unit: input.unit || null,
-    unitPrice: input.unitPrice ?? null,
-    flatCosts: input.flatCosts ?? null,
-    totalPrice,
-    priceType: input.priceType || null,
-    vatRate: input.vatRate ?? null,
-    deliveryDate: input.deliveryDate || null,
-    confirmedDate: input.confirmedDate || null,
-  })
+  // Wrap read-sortOrder-create-recalculate in a transaction
+  const { position, docNumber } = await prisma.$transaction(async (tx) => {
+    const txPrisma = tx as unknown as PrismaClient
 
-  // Recalculate document totals
-  await recalculateTotals(prisma, tenantId, input.documentId)
+    // Verify document exists and is DRAFT
+    const doc = await repo.findById(txPrisma, tenantId, input.documentId)
+    if (!doc) throw new BillingDocumentNotFoundError()
+    assertDraft(doc.status)
+
+    // Get next sort order (atomic within this transaction)
+    const maxSort = await repo.getMaxSortOrder(txPrisma, tenantId, input.documentId)
+
+    const position = await repo.createPosition(txPrisma, {
+      documentId: input.documentId,
+      sortOrder: maxSort + 1,
+      type: input.type,
+      articleId: input.articleId || null,
+      articleNumber: input.articleNumber || null,
+      description: input.description || null,
+      quantity: input.quantity ?? null,
+      unit: input.unit || null,
+      unitPrice: input.unitPrice ?? null,
+      flatCosts: input.flatCosts ?? null,
+      totalPrice,
+      priceType: input.priceType || null,
+      vatRate: input.vatRate ?? null,
+      deliveryDate: input.deliveryDate || null,
+      confirmedDate: input.confirmedDate || null,
+    })
+
+    // Recalculate document totals
+    await recalculateTotals(txPrisma, tenantId, input.documentId)
+
+    return {
+      position,
+      docNumber: (doc as unknown as { number?: string }).number || "DRAFT",
+    }
+  })
 
   // Never throws — audit failures must not block the actual operation
   await auditLog.log(prisma, {
@@ -821,7 +859,7 @@ export async function addPosition(
     action: "create",
     entityType: "billing_document_position",
     entityId: position.id,
-    entityName: (doc as unknown as { number?: string }).number || "DRAFT",
+    entityName: docNumber,
     changes: null,
     ipAddress: audit.ipAddress,
     userAgent: audit.userAgent,

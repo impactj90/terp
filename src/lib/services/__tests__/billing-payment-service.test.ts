@@ -15,7 +15,17 @@ import {
 
 // --- Helper: mock Prisma ---
 function mockPrisma(overrides: Record<string, unknown> = {}) {
-  return overrides as unknown as Parameters<typeof createPayment>[0]
+  const prisma = {
+    $transaction: vi.fn(),
+    ...overrides,
+  } as unknown as Parameters<typeof createPayment>[0]
+  ;(prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(
+    (fnOrArr: unknown) => {
+      if (typeof fnOrArr === "function") return (fnOrArr as (tx: unknown) => unknown)(prisma)
+      return Promise.all(fnOrArr as unknown[])
+    }
+  )
+  return prisma
 }
 
 // --- computePaymentStatus ---

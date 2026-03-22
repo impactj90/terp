@@ -428,19 +428,39 @@ export async function generate(
 
 export async function generateDue(
   prisma: PrismaClient,
-  today: Date = new Date()
+  today: Date = new Date(),
+  checkpoint?: {
+    cronName: string
+    runKey: string
+    completedKeys: Set<string>
+  }
 ): Promise<{
   generated: number
   failed: number
-  results: Array<{ tenantId: string; recurringId: string; invoiceId?: string; error?: string }>
+  skipped: number
+  results: Array<{ tenantId: string; recurringId: string; invoiceId?: string; error?: string; skipped?: boolean }>
 }> {
   const dueTemplates = await repo.findDue(prisma, today)
 
-  const results: Array<{ tenantId: string; recurringId: string; invoiceId?: string; error?: string }> = []
+  const results: Array<{ tenantId: string; recurringId: string; invoiceId?: string; error?: string; skipped?: boolean }> = []
   let generated = 0
   let failed = 0
+  let skipped = 0
 
   for (const template of dueTemplates) {
+    // Checkpoint: skip already-completed templates
+    const checkpointKey = `${template.tenantId}:${template.id}`
+    if (checkpoint?.completedKeys.has(checkpointKey)) {
+      console.log(`[recurring-invoices] Template ${template.id}: checkpoint hit, skipping`)
+      results.push({
+        tenantId: template.tenantId,
+        recurringId: template.id,
+        skipped: true,
+      })
+      skipped++
+      continue
+    }
+
     try {
       const invoice = await generate(
         prisma,
@@ -454,6 +474,33 @@ export async function generateDue(
         recurringId: template.id,
         invoiceId: invoice?.id,
       })
+
+      // Save checkpoint after successful generation
+      if (checkpoint) {
+        try {
+          await prisma.cronCheckpoint.upsert({
+            where: {
+              cronName_runKey_tenantId: {
+                cronName: checkpoint.cronName,
+                runKey: checkpoint.runKey,
+                tenantId: checkpointKey,
+              },
+            },
+            create: {
+              cronName: checkpoint.cronName,
+              runKey: checkpoint.runKey,
+              tenantId: checkpointKey,
+              status: "completed",
+            },
+            update: { status: "completed" },
+          })
+        } catch (cpErr) {
+          console.error(
+            `[recurring-invoices] Failed to save checkpoint for template ${template.id}:`,
+            cpErr,
+          )
+        }
+      }
     } catch (err) {
       failed++
       results.push({
@@ -464,7 +511,7 @@ export async function generateDue(
     }
   }
 
-  return { generated, failed, results }
+  return { generated, failed, skipped, results }
 }
 
 // --- Preview ---

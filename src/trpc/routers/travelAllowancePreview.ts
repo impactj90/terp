@@ -46,7 +46,7 @@ const previewOutputSchema = z.object({
 const previewInputSchema = z.object({
   ruleSetId: z.string(),
   tripType: z.enum(["local", "extended"]),
-  distanceKm: z.number().optional().default(0),
+  distanceKm: z.number().min(0).max(100000).optional().default(0),
   durationMinutes: z.number().int().optional().default(0),
   startDate: z.string().optional(),
   endDate: z.string().optional(),

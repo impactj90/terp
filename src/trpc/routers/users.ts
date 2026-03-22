@@ -187,8 +187,8 @@ export const usersRouter = createTRPCRouter({
     .input(
       z
         .object({
-          search: z.string().optional(),
-          limit: z.number().optional(),
+          search: z.string().max(255).optional(),
+          limit: z.number().int().min(1).max(500).optional(),
         })
         .optional()
     )

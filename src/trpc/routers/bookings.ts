@@ -439,8 +439,8 @@ export const bookingsRouter = createTRPCRouter({
             entityType: z.string(),
             entityId: z.string(),
             entityName: z.string().nullable(),
-            changes: z.any().nullable(),
-            metadata: z.any().nullable(),
+            changes: z.unknown().nullable(),
+            metadata: z.unknown().nullable(),
             performedAt: z.date(),
           })
         ),

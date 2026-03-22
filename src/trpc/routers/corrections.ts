@@ -97,8 +97,8 @@ const createInputSchema = z.object({
 
 const updateInputSchema = z.object({
   id: z.string(),
-  valueMinutes: z.number().int().optional(),
-  reason: z.string().optional(),
+  valueMinutes: z.number().int().min(-10080).max(10080).optional(),
+  reason: z.string().max(500).optional(),
 })
 
 // --- Helper Functions ---

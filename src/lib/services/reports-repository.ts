@@ -5,6 +5,7 @@
  * and related data gathering queries.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { Prisma } from "@/generated/prisma/client"
 import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 // --- Types ---
@@ -302,32 +303,24 @@ export async function findAbsenceDays(
     employeeIds?: string[]
   }
 ): Promise<AbsenceDayRow[]> {
+  const fromDate = params.from.toISOString().slice(0, 10)
+  const toDate = params.to.toISOString().slice(0, 10)
+
   const employeeFilter = params.employeeIds && params.employeeIds.length > 0
-    ? `AND ad.employee_id = ANY($4::uuid[])`
-    : ""
+    ? Prisma.sql`AND ad.employee_id = ANY(${params.employeeIds}::uuid[])`
+    : Prisma.sql``
 
-  const queryParams: unknown[] = [
-    tenantId,
-    params.from.toISOString().slice(0, 10),
-    params.to.toISOString().slice(0, 10),
-  ]
-  if (params.employeeIds && params.employeeIds.length > 0) {
-    queryParams.push(params.employeeIds)
-  }
-
-  return prisma.$queryRawUnsafe(
-    `SELECT ad.absence_date, ad.employee_id, e.personnel_number,
+  return prisma.$queryRaw<AbsenceDayRow[]>`
+    SELECT ad.absence_date, ad.employee_id, e.personnel_number,
             COALESCE(at.name, '') as absence_type_name,
             ad.status, ad.duration
      FROM absence_days ad
      JOIN employees e ON e.id = ad.employee_id
      LEFT JOIN absence_types at ON at.id = ad.absence_type_id
-     WHERE ad.tenant_id = $1
-       AND ad.absence_date >= $2
-       AND ad.absence_date <= $3
+     WHERE ad.tenant_id = ${tenantId}::uuid
+       AND ad.absence_date >= ${fromDate}::date
+       AND ad.absence_date <= ${toDate}::date
        ${employeeFilter}
      ORDER BY ad.absence_date, e.personnel_number
-     LIMIT 10000`,
-    ...queryParams
-  )
+     LIMIT 10000`
 }

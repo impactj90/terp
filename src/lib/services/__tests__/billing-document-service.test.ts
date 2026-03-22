@@ -471,8 +471,8 @@ describe("billing-document-service", () => {
 
     it("rejects if already cancelled", async () => {
       const prisma = createMockPrisma()
+      ;(prisma.billingDocument.updateMany as ReturnType<typeof vi.fn>).mockResolvedValue({ count: 0 })
       ;(prisma.billingDocument.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
-        ...mockDocument,
         status: "CANCELLED",
       })
 
@@ -483,8 +483,8 @@ describe("billing-document-service", () => {
 
     it("rejects if fully forwarded", async () => {
       const prisma = createMockPrisma()
+      ;(prisma.billingDocument.updateMany as ReturnType<typeof vi.fn>).mockResolvedValue({ count: 0 })
       ;(prisma.billingDocument.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
-        ...mockDocument,
         status: "FORWARDED",
       })
 

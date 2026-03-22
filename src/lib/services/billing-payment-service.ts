@@ -336,31 +336,63 @@ export async function createPayment(
       throw new BillingPaymentValidationError("Discount period expired")
     }
 
-    const discountAmount = Math.round(openAmount * (discount.percent / 100) * 100) / 100
-    const paymentAmount = Math.round((openAmount - discountAmount) * 100) / 100
+    // Wrap both payment + Skonto creation in a transaction,
+    // re-reading document inside to prevent concurrent overpayment
+    const payment = await prisma.$transaction(async (tx) => {
+      const txPrisma = tx as unknown as PrismaClient
 
-    // Create the actual payment
-    const payment = await repo.createPayment(prisma, {
-      tenantId,
-      documentId: input.documentId,
-      date: input.date,
-      amount: paymentAmount,
-      type: input.type,
-      isDiscount: false,
-      notes: input.notes ?? null,
-      createdById,
-    })
+      // Re-read document inside transaction for consistent openAmount
+      const txDoc = await txPrisma.billingDocument.findFirst({
+        where: { id: input.documentId, tenantId },
+        include: {
+          payments: { where: { status: "ACTIVE" } },
+          childDocuments: {
+            where: { type: "CREDIT_NOTE", status: { not: "CANCELLED" } },
+            select: { totalGross: true },
+          },
+        },
+      })
+      if (!txDoc) throw new BillingPaymentValidationError("Document not found")
 
-    // Create the discount entry
-    await repo.createPayment(prisma, {
-      tenantId,
-      documentId: input.documentId,
-      date: input.date,
-      amount: discountAmount,
-      type: input.type,
-      isDiscount: true,
-      notes: `Skonto ${discount.tier} (${discount.percent}%)`,
-      createdById,
+      const txCreditReduction = (txDoc.childDocuments ?? []).reduce(
+        (sum, cn) => sum + cn.totalGross, 0
+      )
+      const txEffective = txDoc.totalGross - txCreditReduction
+      const txPaid = txDoc.payments.reduce((sum, p) => sum + p.amount, 0)
+      const txOpen = txEffective - txPaid
+
+      if (txOpen <= 0.01) {
+        throw new BillingPaymentValidationError("Document is already fully paid")
+      }
+
+      const discountAmount = Math.round(txOpen * (discount.percent / 100) * 100) / 100
+      const paymentAmount = Math.round((txOpen - discountAmount) * 100) / 100
+
+      // Create the actual payment
+      const payment = await repo.createPayment(txPrisma, {
+        tenantId,
+        documentId: input.documentId,
+        date: input.date,
+        amount: paymentAmount,
+        type: input.type,
+        isDiscount: false,
+        notes: input.notes ?? null,
+        createdById,
+      })
+
+      // Create the discount entry
+      await repo.createPayment(txPrisma, {
+        tenantId,
+        documentId: input.documentId,
+        date: input.date,
+        amount: discountAmount,
+        type: input.type,
+        isDiscount: true,
+        notes: `Skonto ${discount.tier} (${discount.percent}%)`,
+        createdById,
+      })
+
+      return payment
     })
 
     if (audit) {
@@ -414,43 +446,50 @@ export async function cancelPayment(
   reason?: string,
   audit?: AuditContext
 ) {
-  // 1. Find payment
-  const payment = await repo.findPaymentById(prisma, tenantId, id)
-  if (!payment) {
-    throw new BillingPaymentNotFoundError()
-  }
+  // Wrap all cancellations (main payment + Skonto) in a transaction
+  const result = await prisma.$transaction(async (tx) => {
+    const txPrisma = tx as unknown as PrismaClient
 
-  // 2. Validate not already cancelled
-  if (payment.status === "CANCELLED") {
-    throw new BillingPaymentValidationError("Payment is already cancelled")
-  }
-
-  // 3. Build notes
-  const notes = reason
-    ? payment.notes
-      ? `${payment.notes} | Storniert: ${reason}`
-      : `Storniert: ${reason}`
-    : payment.notes
-
-  // 4. Cancel the payment
-  const result = await repo.cancelPayment(prisma, tenantId, id, cancelledById, notes)
-
-  // 5. If this is a non-discount payment, also cancel associated Skonto entries
-  //    (Skonto entries share the same document and date)
-  if (!payment.isDiscount) {
-    const relatedSkonto = await prisma.billingPayment.findMany({
-      where: {
-        tenantId,
-        documentId: payment.document.id,
-        isDiscount: true,
-        status: "ACTIVE",
-        date: payment.date,
-      },
-    })
-    for (const skonto of relatedSkonto) {
-      await repo.cancelPayment(prisma, tenantId, skonto.id, cancelledById, `Storniert mit Zahlung`)
+    // 1. Find payment
+    const payment = await repo.findPaymentById(txPrisma, tenantId, id)
+    if (!payment) {
+      throw new BillingPaymentNotFoundError()
     }
-  }
+
+    // 2. Validate not already cancelled
+    if (payment.status === "CANCELLED") {
+      throw new BillingPaymentValidationError("Payment is already cancelled")
+    }
+
+    // 3. Build notes
+    const notes = reason
+      ? payment.notes
+        ? `${payment.notes} | Storniert: ${reason}`
+        : `Storniert: ${reason}`
+      : payment.notes
+
+    // 4. Cancel the payment
+    const result = await repo.cancelPayment(txPrisma, tenantId, id, cancelledById, notes)
+
+    // 5. If this is a non-discount payment, also cancel associated Skonto entries
+    //    (Skonto entries share the same document and date)
+    if (!payment.isDiscount) {
+      const relatedSkonto = await txPrisma.billingPayment.findMany({
+        where: {
+          tenantId,
+          documentId: payment.document.id,
+          isDiscount: true,
+          status: "ACTIVE",
+          date: payment.date,
+        },
+      })
+      for (const skonto of relatedSkonto) {
+        await repo.cancelPayment(txPrisma, tenantId, skonto.id, cancelledById, `Storniert mit Zahlung`)
+      }
+    }
+
+    return result
+  })
 
   if (audit) {
     // Never throws — audit failures must not block the actual operation

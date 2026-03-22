@@ -411,6 +411,15 @@ export const correctionAssistantRouter = createTRPCRouter({
           dvWhere.employee = { departmentId: input.departmentId }
         }
 
+        const needsPostFilter = !!(input?.severity || input?.errorCode)
+        const limit = input?.limit ?? 50
+        const offset = input?.offset ?? 0
+
+        // When no post-fetch filtering is needed, paginate at the DB level.
+        // When post-fetch filtering is needed, cap at 10000 to prevent unbounded loads.
+        const dbSkip = needsPostFilter ? undefined : offset
+        const dbTake = needsPostFilter ? 10000 : limit
+
         const rows = await ctx.prisma.dailyValue.findMany({
           where: dvWhere,
           include: {
@@ -426,6 +435,8 @@ export const correctionAssistantRouter = createTRPCRouter({
             },
           },
           orderBy: { valueDate: "asc" },
+          skip: dbSkip,
+          take: dbTake,
         })
 
         // Build correction assistant items
@@ -518,13 +529,21 @@ export const correctionAssistantRouter = createTRPCRouter({
           })
         }
 
-        const total = items.length
-        const limit = input?.limit ?? 50
-        const offset = input?.offset ?? 0
+        let total: number
+        let paginatedItems: CorrectionAssistantItem[]
+        let hasMore: boolean
 
-        // Apply pagination
-        const paginatedItems = items.slice(offset, offset + limit)
-        const hasMore = offset + limit < total
+        if (needsPostFilter) {
+          // Post-fetch filtering was applied — paginate in memory
+          total = items.length
+          paginatedItems = items.slice(offset, offset + limit)
+          hasMore = offset + limit < total
+        } else {
+          // DB-level pagination was used — items ARE the page
+          total = await ctx.prisma.dailyValue.count({ where: dvWhere })
+          paginatedItems = items
+          hasMore = offset + limit < total
+        }
 
         return {
           data: paginatedItems,

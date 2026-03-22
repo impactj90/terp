@@ -102,8 +102,8 @@ export const payrollExportsRouter = createTRPCRouter({
     .use(requirePermission(PAYROLL_VIEW))
     .input(
       z.object({
-        year: z.number().optional(),
-        month: z.number().optional(),
+        year: z.number().int().min(1).max(9999).optional(),
+        month: z.number().int().min(1).max(12).optional(),
         status: payrollExportStatusEnum.optional(),
         limit: z.number().int().min(1).max(100).default(20),
         cursor: z.string().optional(),
