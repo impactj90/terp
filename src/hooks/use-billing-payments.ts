@@ -80,6 +80,12 @@ export function useCreateBillingPayment() {
       queryClient.invalidateQueries({
         queryKey: trpc.billing.payments.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.billing.documents.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.billing.documents.getById.queryKey(),
+      })
     },
   })
 }
@@ -101,6 +107,12 @@ export function useCancelBillingPayment() {
       })
       queryClient.invalidateQueries({
         queryKey: trpc.billing.payments.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.billing.documents.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.billing.documents.getById.queryKey(),
       })
     },
   })

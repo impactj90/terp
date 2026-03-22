@@ -1,5 +1,6 @@
 import { useTRPC } from "@/trpc"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useTimeDataInvalidation } from "./use-time-data-invalidation"
 
 // ==================== Schedule CRUD Hooks ====================
 
@@ -168,6 +169,7 @@ export function useDeleteScheduleTask() {
 export function useExecuteSchedule() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
   return useMutation({
     ...trpc.schedules.execute.mutationOptions(),
     onSuccess: () => {
@@ -175,11 +177,9 @@ export function useExecuteSchedule() {
         queryKey: trpc.schedules.list.queryKey(),
       })
       queryClient.invalidateQueries({
-        queryKey: trpc.employees.dayView.queryKey(),
-      })
-      queryClient.invalidateQueries({
         queryKey: trpc.employeeDayPlans.list.queryKey(),
       })
+      invalidateTimeData()
     },
   })
 }

@@ -38,6 +38,12 @@ export function useCreateBillingDocumentTemplate() {
       queryClient.invalidateQueries({
         queryKey: trpc.billing.documentTemplates.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.billing.documentTemplates.listByType.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.billing.documentTemplates.getDefault.queryKey(),
+      })
     },
   })
 }
@@ -50,6 +56,15 @@ export function useUpdateBillingDocumentTemplate() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.billing.documentTemplates.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.billing.documentTemplates.listByType.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.billing.documentTemplates.getDefault.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.billing.documentTemplates.getById.queryKey(),
       })
     },
   })
@@ -64,6 +79,15 @@ export function useDeleteBillingDocumentTemplate() {
       queryClient.invalidateQueries({
         queryKey: trpc.billing.documentTemplates.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.billing.documentTemplates.listByType.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.billing.documentTemplates.getDefault.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.billing.documentTemplates.getById.queryKey(),
+      })
     },
   })
 }
@@ -76,6 +100,12 @@ export function useSetDefaultBillingDocumentTemplate() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.billing.documentTemplates.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.billing.documentTemplates.listByType.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.billing.documentTemplates.getDefault.queryKey(),
       })
     },
   })
