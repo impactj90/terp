@@ -250,53 +250,61 @@ export async function createInvoice(
   createdById: string,
   audit: AuditContext
 ) {
-  const existing = await repo.findById(prisma, tenantId, id)
-  if (!existing) throw new BillingServiceCaseNotFoundError()
+  // Wrap read-create-link in transaction to prevent concurrent invoice creation
+  // and ensure partial failures roll back (no orphaned documents)
+  const updated = await prisma.$transaction(async (tx) => {
+    const txPrisma = tx as unknown as PrismaClient
 
-  if (existing.status !== "CLOSED") {
-    throw new BillingServiceCaseValidationError(
-      "Invoice can only be created from a CLOSED service case"
+    const existing = await repo.findById(txPrisma, tenantId, id)
+    if (!existing) throw new BillingServiceCaseNotFoundError()
+
+    if (existing.status !== "CLOSED") {
+      throw new BillingServiceCaseValidationError(
+        "Invoice can only be created from a CLOSED service case"
+      )
+    }
+
+    if (existing.invoiceDocumentId) {
+      throw new BillingServiceCaseConflictError(
+        "Service case already has a linked invoice"
+      )
+    }
+
+    // Create BillingDocument of type INVOICE
+    const invoice = await billingDocService.create(
+      txPrisma,
+      tenantId,
+      {
+        type: "INVOICE",
+        addressId: existing.addressId,
+        contactId: existing.contactId || undefined,
+      },
+      createdById,
+      audit
     )
-  }
 
-  if (existing.invoiceDocumentId) {
-    throw new BillingServiceCaseConflictError(
-      "Service case already has a linked invoice"
-    )
-  }
+    // Add positions to the invoice
+    for (const pos of positions) {
+      await billingDocService.addPosition(txPrisma, tenantId, {
+        documentId: invoice.id,
+        type: "FREE",
+        description: pos.description,
+        quantity: pos.quantity,
+        unit: pos.unit,
+        unitPrice: pos.unitPrice,
+        flatCosts: pos.flatCosts,
+        vatRate: pos.vatRate,
+      }, audit)
+    }
 
-  // Create BillingDocument of type INVOICE
-  const invoice = await billingDocService.create(
-    prisma,
-    tenantId,
-    {
-      type: "INVOICE",
-      addressId: existing.addressId,
-      contactId: existing.contactId || undefined,
-    },
-    createdById,
-    audit
-  )
-
-  // Add positions to the invoice
-  for (const pos of positions) {
-    await billingDocService.addPosition(prisma, tenantId, {
-      documentId: invoice.id,
-      type: "FREE",
-      description: pos.description,
-      quantity: pos.quantity,
-      unit: pos.unit,
-      unitPrice: pos.unitPrice,
-      flatCosts: pos.flatCosts,
-      vatRate: pos.vatRate,
-    }, audit)
-  }
-
-  // Update service case
-  return repo.update(prisma, tenantId, id, {
-    invoiceDocumentId: invoice.id,
-    status: "INVOICED",
+    // Update service case
+    return repo.update(txPrisma, tenantId, id, {
+      invoiceDocumentId: invoice.id,
+      status: "INVOICED",
+    })
   })
+
+  return updated
 }
 
 export async function createOrder(

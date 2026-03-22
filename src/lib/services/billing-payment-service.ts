@@ -407,23 +407,48 @@ export async function createPayment(
     return payment
   }
 
-  // 6. Validate amount does not exceed open amount (with tolerance)
-  if (input.amount > openAmount + 0.01) {
-    throw new BillingPaymentValidationError(
-      `Payment amount (${input.amount}) exceeds open amount (${Math.round(openAmount * 100) / 100})`
-    )
-  }
+  // 6. Wrap validation + creation in transaction to prevent concurrent overpayment
+  const created = await prisma.$transaction(async (tx) => {
+    const txPrisma = tx as unknown as PrismaClient
 
-  // 7. Create payment record
-  const created = await repo.createPayment(prisma, {
-    tenantId,
-    documentId: input.documentId,
-    date: input.date,
-    amount: input.amount,
-    type: input.type,
-    isDiscount: false,
-    notes: input.notes ?? null,
-    createdById,
+    // Re-read document inside transaction for consistent openAmount
+    const txDoc = await txPrisma.billingDocument.findFirst({
+      where: { id: input.documentId, tenantId },
+      include: {
+        payments: { where: { status: "ACTIVE" } },
+        childDocuments: {
+          where: { type: "CREDIT_NOTE", status: { not: "CANCELLED" } },
+          select: { totalGross: true },
+        },
+      },
+    })
+    if (!txDoc) throw new BillingPaymentValidationError("Document not found")
+
+    const txCreditReduction = (txDoc.childDocuments ?? []).reduce(
+      (sum, cn) => sum + cn.totalGross, 0
+    )
+    const txEffective = txDoc.totalGross - txCreditReduction
+    const txPaid = txDoc.payments.reduce((sum, p) => sum + p.amount, 0)
+    const txOpen = txEffective - txPaid
+
+    // Validate amount does not exceed open amount (with tolerance)
+    if (input.amount > txOpen + 0.01) {
+      throw new BillingPaymentValidationError(
+        `Payment amount (${input.amount}) exceeds open amount (${Math.round(txOpen * 100) / 100})`
+      )
+    }
+
+    // Create payment record
+    return repo.createPayment(txPrisma, {
+      tenantId,
+      documentId: input.documentId,
+      date: input.date,
+      amount: input.amount,
+      type: input.type,
+      isDiscount: false,
+      notes: input.notes ?? null,
+      createdById,
+    })
   })
 
   if (audit) {
