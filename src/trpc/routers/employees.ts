@@ -166,7 +166,7 @@ const listEmployeesInputSchema = z
   .object({
     page: z.number().int().positive().optional().default(1),
     pageSize: z.number().int().min(1).max(500).optional().default(20),
-    search: z.string().optional(),
+    search: z.string().max(255).optional(),
     departmentId: z.string().optional(),
     costCenterId: z.string().optional(),
     employmentTypeId: z.string().optional(),
@@ -177,12 +177,12 @@ const listEmployeesInputSchema = z
   .optional()
 
 const createEmployeeInputSchema = z.object({
-  personnelNumber: z.string().min(1, "Personnel number is required"),
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  pin: z.string().optional(),
+  personnelNumber: z.string().min(1, "Personnel number is required").max(50),
+  firstName: z.string().min(1, "First name is required").max(255),
+  lastName: z.string().min(1, "Last name is required").max(255),
+  pin: z.string().max(20).optional(),
   email: z.string().email().optional(),
-  phone: z.string().optional(),
+  phone: z.string().max(50).optional(),
   entryDate: z.coerce.date(),
   exitDate: z.coerce.date().optional(),
   departmentId: z.string().optional(),
@@ -190,8 +190,8 @@ const createEmployeeInputSchema = z.object({
   employmentTypeId: z.string().optional(),
   locationId: z.string().optional(),
   tariffId: z.string().optional(),
-  weeklyHours: z.number().min(0).optional(),
-  vacationDaysPerYear: z.number().min(0).optional(),
+  weeklyHours: z.number().min(0).max(168).optional(),
+  vacationDaysPerYear: z.number().min(0).max(365).optional(),
   isActive: z.boolean().optional(),
   disabilityFlag: z.boolean().optional(),
   // Extended fields
@@ -219,23 +219,23 @@ const createEmployeeInputSchema = z.object({
   defaultActivityId: z.string().optional(),
   // Tariff overrides
   partTimePercent: z.number().min(0).max(100).optional(),
-  dailyTargetHours: z.number().optional(),
-  weeklyTargetHours: z.number().optional(),
-  monthlyTargetHours: z.number().optional(),
-  annualTargetHours: z.number().optional(),
-  workDaysPerWeek: z.number().optional(),
+  dailyTargetHours: z.number().min(0).max(24).optional(),
+  weeklyTargetHours: z.number().min(0).max(168).optional(),
+  monthlyTargetHours: z.number().min(0).max(744).optional(),
+  annualTargetHours: z.number().min(0).max(8784).optional(),
+  workDaysPerWeek: z.number().min(0).max(7).optional(),
   // System
   calculationStartDate: z.coerce.date().optional(),
 })
 
 const updateEmployeeInputSchema = z.object({
   id: z.string(),
-  personnelNumber: z.string().min(1).optional(),
-  firstName: z.string().min(1).optional(),
-  lastName: z.string().min(1).optional(),
-  pin: z.string().optional(),
+  personnelNumber: z.string().min(1).max(50).optional(),
+  firstName: z.string().min(1).max(255).optional(),
+  lastName: z.string().min(1).max(255).optional(),
+  pin: z.string().max(20).optional(),
   email: z.string().email().nullable().optional(),
-  phone: z.string().nullable().optional(),
+  phone: z.string().max(50).nullable().optional(),
   entryDate: z.coerce.date().optional(),
   exitDate: z.coerce.date().nullable().optional(),
   departmentId: z.string().optional(),
@@ -243,8 +243,8 @@ const updateEmployeeInputSchema = z.object({
   employmentTypeId: z.string().optional(),
   locationId: z.string().optional(),
   tariffId: z.string().optional(),
-  weeklyHours: z.number().min(0).optional(),
-  vacationDaysPerYear: z.number().min(0).optional(),
+  weeklyHours: z.number().min(0).max(168).optional(),
+  vacationDaysPerYear: z.number().min(0).max(365).optional(),
   isActive: z.boolean().optional(),
   disabilityFlag: z.boolean().optional(),
   // Extended fields
@@ -272,11 +272,11 @@ const updateEmployeeInputSchema = z.object({
   defaultActivityId: z.string().optional(),
   // Tariff overrides
   partTimePercent: z.number().min(0).max(100).nullable().optional(),
-  dailyTargetHours: z.number().nullable().optional(),
-  weeklyTargetHours: z.number().nullable().optional(),
-  monthlyTargetHours: z.number().nullable().optional(),
-  annualTargetHours: z.number().nullable().optional(),
-  workDaysPerWeek: z.number().nullable().optional(),
+  dailyTargetHours: z.number().min(0).max(24).nullable().optional(),
+  weeklyTargetHours: z.number().min(0).max(168).nullable().optional(),
+  monthlyTargetHours: z.number().min(0).max(744).nullable().optional(),
+  annualTargetHours: z.number().min(0).max(8784).nullable().optional(),
+  workDaysPerWeek: z.number().min(0).max(7).nullable().optional(),
   // System
   calculationStartDate: z.coerce.date().nullable().optional(),
   // Clear flags for nullable FKs
@@ -803,7 +803,7 @@ export const employeesRouter = createTRPCRouter({
   search: tenantProcedure
     .use(requirePermission(EMPLOYEES_VIEW))
     .use(applyDataScope())
-    .input(z.object({ query: z.string().min(1) }))
+    .input(z.object({ query: z.string().min(1).max(255) }))
     .output(z.object({ items: z.array(employeeSearchOutputSchema) }))
     .query(async ({ ctx, input }) => {
       try {

@@ -5,6 +5,7 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import type { Prisma } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 export async function findMany(
   prisma: PrismaClient,
@@ -115,7 +116,7 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.employeeCappingException.update({ where: { id }, data })
+  return tenantScopedUpdate(prisma.employeeCappingException, { id, tenantId }, data, { entity: "EmployeeCappingException" })
 }
 
 export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {

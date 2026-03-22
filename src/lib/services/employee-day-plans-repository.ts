@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for the EmployeeDayPlan model.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 // --- Include Objects ---
 
@@ -117,10 +118,9 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.employeeDayPlan.update({
-    where: { id },
-    data,
+  return tenantScopedUpdate(prisma.employeeDayPlan, { id, tenantId }, data, {
     include: edpListInclude,
+    entity: "EmployeeDayPlan",
   })
 }
 

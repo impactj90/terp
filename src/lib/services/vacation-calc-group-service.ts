@@ -224,7 +224,7 @@ export async function remove(
   }
 
   // Check usage in employment types
-  const usageCount = await repo.countEmploymentTypeUsage(prisma, id)
+  const usageCount = await repo.countEmploymentTypeUsage(prisma, tenantId, id)
   if (usageCount > 0) {
     throw new VacationCalcGroupValidationError(
       "Cannot delete calculation group that is assigned to employment types"

@@ -98,7 +98,7 @@ export const vacationRouter = createTRPCRouter({
       })
     )
     .output(entitlementPreviewOutputSchema)
-    .mutation(async ({ ctx, input }) => {
+    .query(async ({ ctx, input }) => {
       try {
         const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
         const employee = await ctx.prisma.employee.findFirst({
@@ -140,7 +140,7 @@ export const vacationRouter = createTRPCRouter({
       })
     )
     .output(carryoverPreviewOutputSchema)
-    .mutation(async ({ ctx, input }) => {
+    .query(async ({ ctx, input }) => {
       try {
         const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
         const employee = await ctx.prisma.employee.findFirst({

@@ -282,8 +282,10 @@ describe("travelAllowanceRuleSets.update", () => {
     const updated = makeRuleSet({ name: "Updated Name", sortOrder: 3 })
     const mockPrisma = {
       travelAllowanceRuleSet: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)   // existence check
+          .mockResolvedValueOnce(updated),   // refetch after updateMany
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -295,8 +297,8 @@ describe("travelAllowanceRuleSets.update", () => {
 
     expect(result.name).toBe("Updated Name")
     expect(result.sortOrder).toBe(3)
-    expect(mockPrisma.travelAllowanceRuleSet.update).toHaveBeenCalledWith({
-      where: { id: RULE_SET_ID },
+    expect(mockPrisma.travelAllowanceRuleSet.updateMany).toHaveBeenCalledWith({
+      where: { id: RULE_SET_ID, tenantId: TENANT_ID },
       data: { name: "Updated Name", sortOrder: 3 },
     })
   })
@@ -334,8 +336,10 @@ describe("travelAllowanceRuleSets.update", () => {
     const updated = makeRuleSet({ validFrom: null, validTo: null })
     const mockPrisma = {
       travelAllowanceRuleSet: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)   // existence check
+          .mockResolvedValueOnce(updated),   // refetch after updateMany
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -345,8 +349,8 @@ describe("travelAllowanceRuleSets.update", () => {
       validTo: null,
     })
 
-    expect(mockPrisma.travelAllowanceRuleSet.update).toHaveBeenCalledWith({
-      where: { id: RULE_SET_ID },
+    expect(mockPrisma.travelAllowanceRuleSet.updateMany).toHaveBeenCalledWith({
+      where: { id: RULE_SET_ID, tenantId: TENANT_ID },
       data: { validFrom: null, validTo: null },
     })
   })

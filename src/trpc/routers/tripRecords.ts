@@ -61,20 +61,20 @@ const createTripRecordInputSchema = z.object({
   vehicleId: z.string(),
   routeId: z.string().optional(),
   tripDate: z.string().date(),
-  startMileage: z.number().optional(),
-  endMileage: z.number().optional(),
-  distanceKm: z.number().optional(),
-  notes: z.string().optional(),
+  startMileage: z.number().min(0).max(9999999).optional(),
+  endMileage: z.number().min(0).max(9999999).optional(),
+  distanceKm: z.number().min(0).max(100000).optional(),
+  notes: z.string().max(2000).optional(),
 })
 
 const updateTripRecordInputSchema = z.object({
   id: z.string(),
   routeId: z.string().nullable().optional(),
   tripDate: z.string().date().optional(),
-  startMileage: z.number().nullable().optional(),
-  endMileage: z.number().nullable().optional(),
-  distanceKm: z.number().nullable().optional(),
-  notes: z.string().nullable().optional(),
+  startMileage: z.number().min(0).max(9999999).nullable().optional(),
+  endMileage: z.number().min(0).max(9999999).nullable().optional(),
+  distanceKm: z.number().min(0).max(100000).nullable().optional(),
+  notes: z.string().max(2000).nullable().optional(),
 })
 
 // --- Helpers ---

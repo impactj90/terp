@@ -30,7 +30,7 @@ const listInput = z.object({
   status: serviceCaseStatusEnum.optional(),
   addressId: optionalUuid,
   assignedToId: optionalUuid,
-  search: z.string().optional(),
+  search: z.string().max(255).optional(),
   page: z.number().int().min(1).default(1),
   pageSize: z.number().int().min(1).max(100).default(25),
 })
@@ -40,7 +40,7 @@ const createInput = z.object({
   addressId: uuid,
   contactId: optionalUuid,
   inquiryId: optionalUuid,
-  description: z.string().optional(),
+  description: z.string().max(2000).optional(),
   assignedToId: optionalUuid,
   customerNotifiedCost: z.boolean().optional(),
   reportedAt: z.coerce.date().optional(),
@@ -50,7 +50,7 @@ const updateInput = z.object({
   id: uuid,
   title: z.string().min(1).max(255).optional(),
   contactId: nullableUuid,
-  description: z.string().nullable().optional(),
+  description: z.string().max(2000).nullable().optional(),
   assignedToId: nullableUuid,
   customerNotifiedCost: z.boolean().optional(),
 })
@@ -59,25 +59,25 @@ const idInput = z.object({ id: uuid })
 
 const closeInput = z.object({
   id: uuid,
-  closingReason: z.string().min(1),
+  closingReason: z.string().min(1).max(2000),
 })
 
 const createInvoiceInput = z.object({
   id: uuid,
   positions: z.array(z.object({
-    description: z.string(),
-    quantity: z.number().optional(),
-    unit: z.string().optional(),
-    unitPrice: z.number().optional(),
-    flatCosts: z.number().optional(),
-    vatRate: z.number().optional(),
+    description: z.string().max(2000),
+    quantity: z.number().min(0).max(999999).optional(),
+    unit: z.string().max(255).optional(),
+    unitPrice: z.number().min(-999999999.99).max(999999999.99).optional(),
+    flatCosts: z.number().min(-999999999.99).max(999999999.99).optional(),
+    vatRate: z.number().min(0).max(100).optional(),
   })).min(1),
 })
 
 const createOrderInput = z.object({
   id: uuid,
-  orderName: z.string().optional(),
-  orderDescription: z.string().optional(),
+  orderName: z.string().max(255).optional(),
+  orderDescription: z.string().max(2000).optional(),
 })
 
 // --- Router ---

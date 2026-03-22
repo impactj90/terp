@@ -53,6 +53,9 @@ export function useCreateBookingType() {
       queryClient.invalidateQueries({
         queryKey: trpc.bookingTypes.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookingTypes.getById.queryKey(),
+      })
     },
   })
 }
@@ -69,6 +72,9 @@ export function useUpdateBookingType() {
       queryClient.invalidateQueries({
         queryKey: trpc.bookingTypes.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookingTypes.getById.queryKey(),
+      })
     },
   })
 }
@@ -84,6 +90,9 @@ export function useDeleteBookingType() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.bookingTypes.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookingTypes.getById.queryKey(),
       })
     },
   })

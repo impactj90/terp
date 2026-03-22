@@ -243,7 +243,7 @@ export async function remove(
   }
 
   // Check if interface has generated exports
-  const usageCount = await repo.countPayrollExports(prisma, id)
+  const usageCount = await repo.countPayrollExports(prisma, tenantId, id)
   if (usageCount > 0) {
     throw new ExportInterfaceValidationError(
       "Cannot delete export interface that has generated exports"

@@ -481,19 +481,16 @@ export async function createRange(
 
   // Never throws — audit failures must not block the actual operation
   if (audit && createdAbsences.length > 0) {
-    for (const created of createdAbsences) {
-      await auditLog.log(prisma, {
-        tenantId,
-        userId: audit.userId,
-        action: "create",
-        entityType: "absence_day",
-        entityId: (created as unknown as Record<string, unknown>).id as string,
-        entityName: null,
-        changes: null,
-        ipAddress: audit.ipAddress,
-        userAgent: audit.userAgent,
-      }).catch(err => console.error('[AuditLog] Failed:', err));
-    }
+    await auditLog.logBulk(prisma, createdAbsences.map(created => ({
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "absence_day",
+      entityId: (created as unknown as Record<string, unknown>).id as string,
+      entityName: null,
+      ipAddress: audit.ipAddress ?? null,
+      userAgent: audit.userAgent ?? null,
+    })));
   }
 
   return { createdAbsences, skippedDates }

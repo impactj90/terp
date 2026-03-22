@@ -5,6 +5,7 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import type { Prisma } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 export async function findMany(
   prisma: PrismaClient,
@@ -65,7 +66,7 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.calculationRule.update({ where: { id }, data })
+  return tenantScopedUpdate(prisma.calculationRule, { id, tenantId }, data, { entity: "CalculationRule" })
 }
 
 export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
@@ -77,11 +78,11 @@ export async function deleteById(prisma: PrismaClient, tenantId: string, id: str
 
 export async function countAbsenceTypeUsages(
   prisma: PrismaClient,
+  tenantId: string,
   calculationRuleId: string
 ) {
-  const result = await prisma.$queryRawUnsafe<[{ count: number }]>(
-    `SELECT COUNT(*)::int as count FROM absence_types WHERE calculation_rule_id = $1`,
-    calculationRuleId
-  )
+  const result = await prisma.$queryRaw<[{ count: number }]>`
+    SELECT COUNT(*)::int as count FROM absence_types WHERE calculation_rule_id = ${calculationRuleId} AND tenant_id = ${tenantId}
+  `
   return result[0]?.count ?? 0
 }

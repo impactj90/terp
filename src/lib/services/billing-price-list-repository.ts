@@ -234,8 +234,8 @@ export async function upsertEntries(
       })
 
       if (existing) {
-        await tx.billingPriceListEntry.update({
-          where: { id: existing.id },
+        await tx.billingPriceListEntry.updateMany({
+          where: { id: existing.id, priceListId },
           data: {
             unitPrice: entry.unitPrice,
             ...(entry.description !== undefined ? { description: entry.description } : {}),

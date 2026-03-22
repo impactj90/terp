@@ -318,8 +318,9 @@ describe("teams.update", () => {
         findFirst: vi
           .fn()
           .mockResolvedValueOnce(existing) // exists check
-          .mockResolvedValueOnce(null), // name uniqueness check
-        update: vi.fn().mockResolvedValue(updated),
+          .mockResolvedValueOnce(null) // name uniqueness check
+          .mockResolvedValueOnce(updated), // refetch after tenantScopedUpdate
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -367,8 +368,11 @@ describe("teams.update", () => {
     const updated = makeTeam({ name: "Frontend Team", _count: { members: 0 } })
     const mockPrisma = {
       team: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -378,7 +382,8 @@ describe("teams.update", () => {
     })
     expect(result.name).toBe("Frontend Team")
     // Should NOT do uniqueness check when name hasn't changed
-    expect(mockPrisma.team.findFirst).toHaveBeenCalledTimes(1)
+    // findFirst called twice: existence check + refetch after tenantScopedUpdate
+    expect(mockPrisma.team.findFirst).toHaveBeenCalledTimes(2)
   })
 
   it("clears department when departmentId is null", async () => {
@@ -386,8 +391,11 @@ describe("teams.update", () => {
     const updated = makeTeam({ departmentId: null, _count: { members: 0 } })
     const mockPrisma = {
       team: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -396,7 +404,7 @@ describe("teams.update", () => {
       departmentId: null,
     })
     expect(result.departmentId).toBeNull()
-    const updateCall = mockPrisma.team.update.mock.calls[0]![0]
+    const updateCall = mockPrisma.team.updateMany.mock.calls[0]![0]
     expect(updateCall.data.departmentId).toBeNull()
   })
 
@@ -408,8 +416,11 @@ describe("teams.update", () => {
     })
     const mockPrisma = {
       team: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))

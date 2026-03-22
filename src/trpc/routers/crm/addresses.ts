@@ -22,7 +22,7 @@ export const crmAddressesRouter = createTRPCRouter({
   list: crmProcedure
     .use(requirePermission(CRM_VIEW))
     .input(z.object({
-      search: z.string().optional(),
+      search: z.string().max(255).optional(),
       type: z.enum(["CUSTOMER", "SUPPLIER", "BOTH"]).optional(),
       isActive: z.boolean().optional().default(true),
       page: z.number().int().min(1).default(1),
@@ -59,24 +59,24 @@ export const crmAddressesRouter = createTRPCRouter({
     .use(requirePermission(CRM_CREATE))
     .input(z.object({
       type: z.enum(["CUSTOMER", "SUPPLIER", "BOTH"]).optional().default("CUSTOMER"),
-      company: z.string().min(1, "Company is required"),
-      street: z.string().optional(),
-      zip: z.string().optional(),
-      city: z.string().optional(),
-      country: z.string().optional().default("DE"),
-      phone: z.string().optional(),
-      fax: z.string().optional(),
+      company: z.string().min(1, "Company is required").max(500),
+      street: z.string().max(500).optional(),
+      zip: z.string().max(500).optional(),
+      city: z.string().max(500).optional(),
+      country: z.string().max(500).optional().default("DE"),
+      phone: z.string().max(255).optional(),
+      fax: z.string().max(255).optional(),
       email: z.string().email().optional().or(z.literal("")),
-      website: z.string().optional(),
-      taxNumber: z.string().optional(),
-      vatId: z.string().optional(),
+      website: z.string().max(255).optional(),
+      taxNumber: z.string().max(255).optional(),
+      vatId: z.string().max(255).optional(),
       leitwegId: z.string().max(50).optional(),
-      matchCode: z.string().optional(),
-      notes: z.string().optional(),
-      paymentTermDays: z.number().int().optional(),
-      discountPercent: z.number().optional(),
-      discountDays: z.number().int().optional(),
-      discountGroup: z.string().optional(),
+      matchCode: z.string().max(255).optional(),
+      notes: z.string().max(2000).optional(),
+      paymentTermDays: z.number().int().min(0).max(365).optional(),
+      discountPercent: z.number().min(0).max(100).optional(),
+      discountDays: z.number().int().min(0).max(365).optional(),
+      discountGroup: z.string().max(100).optional(),
       priceListId: z.string().uuid().nullable().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -98,24 +98,24 @@ export const crmAddressesRouter = createTRPCRouter({
     .input(z.object({
       id: z.string().uuid(),
       type: z.enum(["CUSTOMER", "SUPPLIER", "BOTH"]).optional(),
-      company: z.string().min(1).optional(),
-      street: z.string().nullable().optional(),
-      zip: z.string().nullable().optional(),
-      city: z.string().nullable().optional(),
-      country: z.string().nullable().optional(),
-      phone: z.string().nullable().optional(),
-      fax: z.string().nullable().optional(),
+      company: z.string().min(1).max(500).optional(),
+      street: z.string().max(500).nullable().optional(),
+      zip: z.string().max(500).nullable().optional(),
+      city: z.string().max(500).nullable().optional(),
+      country: z.string().max(500).nullable().optional(),
+      phone: z.string().max(255).nullable().optional(),
+      fax: z.string().max(255).nullable().optional(),
       email: z.string().email().nullable().optional().or(z.literal("")),
-      website: z.string().nullable().optional(),
-      taxNumber: z.string().nullable().optional(),
-      vatId: z.string().nullable().optional(),
+      website: z.string().max(255).nullable().optional(),
+      taxNumber: z.string().max(255).nullable().optional(),
+      vatId: z.string().max(255).nullable().optional(),
       leitwegId: z.string().max(50).nullable().optional(),
-      matchCode: z.string().nullable().optional(),
-      notes: z.string().nullable().optional(),
-      paymentTermDays: z.number().int().nullable().optional(),
-      discountPercent: z.number().nullable().optional(),
-      discountDays: z.number().int().nullable().optional(),
-      discountGroup: z.string().nullable().optional(),
+      matchCode: z.string().max(255).nullable().optional(),
+      notes: z.string().max(2000).nullable().optional(),
+      paymentTermDays: z.number().int().min(0).max(365).nullable().optional(),
+      discountPercent: z.number().min(0).max(100).nullable().optional(),
+      discountDays: z.number().int().min(0).max(365).nullable().optional(),
+      discountGroup: z.string().max(100).nullable().optional(),
       priceListId: z.string().uuid().nullable().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -185,13 +185,13 @@ export const crmAddressesRouter = createTRPCRouter({
     .use(requirePermission(CRM_EDIT))
     .input(z.object({
       addressId: z.string().uuid(),
-      firstName: z.string().min(1, "First name is required"),
-      lastName: z.string().min(1, "Last name is required"),
-      position: z.string().optional(),
-      department: z.string().optional(),
-      phone: z.string().optional(),
+      firstName: z.string().min(1, "First name is required").max(255),
+      lastName: z.string().min(1, "Last name is required").max(255),
+      position: z.string().max(255).optional(),
+      department: z.string().max(255).optional(),
+      phone: z.string().max(255).optional(),
       email: z.string().email().optional().or(z.literal("")),
-      notes: z.string().optional(),
+      notes: z.string().max(2000).optional(),
       isPrimary: z.boolean().optional().default(false),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -211,13 +211,13 @@ export const crmAddressesRouter = createTRPCRouter({
     .use(requirePermission(CRM_EDIT))
     .input(z.object({
       id: z.string().uuid(),
-      firstName: z.string().min(1).optional(),
-      lastName: z.string().min(1).optional(),
-      position: z.string().nullable().optional(),
-      department: z.string().nullable().optional(),
-      phone: z.string().nullable().optional(),
+      firstName: z.string().min(1).max(255).optional(),
+      lastName: z.string().min(1).max(255).optional(),
+      position: z.string().max(255).nullable().optional(),
+      department: z.string().max(255).nullable().optional(),
+      phone: z.string().max(255).nullable().optional(),
       email: z.string().email().nullable().optional().or(z.literal("")),
-      notes: z.string().nullable().optional(),
+      notes: z.string().max(2000).nullable().optional(),
       isPrimary: z.boolean().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -271,10 +271,10 @@ export const crmAddressesRouter = createTRPCRouter({
     .use(requirePermission(CRM_EDIT))
     .input(z.object({
       addressId: z.string().uuid(),
-      iban: z.string().min(1, "IBAN is required"),
-      bic: z.string().optional(),
-      bankName: z.string().optional(),
-      accountHolder: z.string().optional(),
+      iban: z.string().min(1, "IBAN is required").max(34),
+      bic: z.string().max(11).optional(),
+      bankName: z.string().max(255).optional(),
+      accountHolder: z.string().max(255).optional(),
       isDefault: z.boolean().optional().default(false),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -294,10 +294,10 @@ export const crmAddressesRouter = createTRPCRouter({
     .use(requirePermission(CRM_EDIT))
     .input(z.object({
       id: z.string().uuid(),
-      iban: z.string().min(1).optional(),
-      bic: z.string().nullable().optional(),
-      bankName: z.string().nullable().optional(),
-      accountHolder: z.string().nullable().optional(),
+      iban: z.string().min(1).max(34).optional(),
+      bic: z.string().max(11).nullable().optional(),
+      bankName: z.string().max(255).nullable().optional(),
+      accountHolder: z.string().max(255).nullable().optional(),
       isDefault: z.boolean().optional(),
     }))
     .mutation(async ({ ctx, input }) => {

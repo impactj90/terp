@@ -174,10 +174,11 @@ export async function findPositions(
 
 export async function findPositionById(
   prisma: PrismaClient,
+  tenantId: string,
   id: string
 ) {
   return prisma.billingDocumentPosition.findFirst({
-    where: { id },
+    where: { id, document: { tenantId } },
     include: { document: { select: { id: true, tenantId: true, status: true } } },
   })
 }

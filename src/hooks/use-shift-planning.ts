@@ -61,6 +61,9 @@ export function useUpdateShift() {
       queryClient.invalidateQueries({
         queryKey: trpc.shifts.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.shifts.getById.queryKey(),
+      })
     },
   })
 }
@@ -76,6 +79,9 @@ export function useDeleteShift() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.shifts.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.shifts.getById.queryKey(),
       })
     },
   })

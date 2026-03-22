@@ -282,7 +282,7 @@ export async function remove(
   }
 
   // Check usage in bookings table
-  const bookingCount = await repo.countBookingsByType(prisma, id)
+  const bookingCount = await repo.countBookingsByType(prisma, tenantId, id)
   if (bookingCount > 0) {
     throw new BookingTypeValidationError(
       "Cannot delete booking type that is in use"

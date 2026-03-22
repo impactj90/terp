@@ -228,7 +228,7 @@ export async function remove(
   }
 
   // Check for accounts referencing this group
-  const accountCount = await repo.countAccounts(prisma, id)
+  const accountCount = await repo.countAccounts(prisma, tenantId, id)
   if (accountCount > 0) {
     throw new AccountGroupValidationError(
       "Cannot delete account group with assigned accounts"

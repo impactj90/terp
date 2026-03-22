@@ -217,8 +217,11 @@ describe("absenceTypeGroups.update", () => {
     const updated = makeGroup({ name: "Updated", description: "New desc" })
     const mockPrisma = {
       absenceTypeGroup: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -238,8 +241,9 @@ describe("absenceTypeGroups.update", () => {
         findFirst: vi
           .fn()
           .mockResolvedValueOnce(existing)
-          .mockResolvedValueOnce(null),
-        update: vi.fn().mockResolvedValue(updated),
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -269,15 +273,18 @@ describe("absenceTypeGroups.update", () => {
     const updated = makeGroup({ code: "ATG001" })
     const mockPrisma = {
       absenceTypeGroup: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({ id: GROUP_ID, code: "ATG001" })
     expect(result.code).toBe("ATG001")
-    // Only called once for existence check, not a second time for uniqueness
-    expect(mockPrisma.absenceTypeGroup.findFirst).toHaveBeenCalledTimes(1)
+    // Called once for existence check + once for refetch after updateMany (no uniqueness check)
+    expect(mockPrisma.absenceTypeGroup.findFirst).toHaveBeenCalledTimes(2)
   })
 
   it("throws NOT_FOUND for missing group", async () => {
@@ -297,14 +304,18 @@ describe("absenceTypeGroups.update", () => {
     const updated = makeGroup({ isActive: false })
     const mockPrisma = {
       absenceTypeGroup: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({ id: GROUP_ID, isActive: false })
     expect(result.isActive).toBe(false)
-    const updateCall = mockPrisma.absenceTypeGroup.update.mock.calls[0]![0]
+    const updateCall =
+      mockPrisma.absenceTypeGroup.updateMany.mock.calls[0]![0]
     expect(updateCall.data.isActive).toBe(false)
   })
 })

@@ -205,13 +205,6 @@ export async function update(
     }, "Correction")
   }
 
-  // Check status is pending
-  if (existing.status !== "pending") {
-    throw new CorrectionValidationError(
-      "Can only update pending corrections"
-    )
-  }
-
   // Build partial update data
   const data: Record<string, unknown> = { updatedAt: new Date() }
 
@@ -223,7 +216,13 @@ export async function update(
     data.reason = input.reason
   }
 
-  const updated = (await repo.update(prisma, tenantId, input.id, data))!
+  // Atomically update only if status is still pending (prevents concurrent approve + update)
+  const updated = await repo.updateIfStatus(prisma, tenantId, input.id, "pending", data)
+  if (!updated) {
+    throw new CorrectionValidationError(
+      "Can only update pending corrections"
+    )
+  }
 
   // Never throws — audit failures must not block the actual operation
   if (audit) {
@@ -267,12 +266,18 @@ export async function remove(
     }, "Correction")
   }
 
-  // Cannot delete approved corrections
-  if ((existing as unknown as { status: string }).status === "approved") {
+  // Atomic status guard: only delete if NOT approved (prevents delete during concurrent approve)
+  const { count } = await prisma.correction.deleteMany({
+    where: { id, tenantId, status: { not: "approved" } },
+  })
+  if (count === 0) {
+    // Re-check: either it was deleted concurrently, or it was approved
+    const current = await repo.findById(prisma, tenantId, id)
+    if (!current) {
+      throw new CorrectionNotFoundError()
+    }
     throw new CorrectionForbiddenError("Cannot delete approved corrections")
   }
-
-  await repo.deleteById(prisma, tenantId, id)
 
   // Never throws — audit failures must not block the actual operation
   if (audit) {

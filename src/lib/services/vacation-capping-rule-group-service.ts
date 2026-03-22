@@ -206,7 +206,7 @@ export async function remove(
   }
 
   // Check usage in tariffs
-  const usageCount = await repo.countTariffUsage(prisma, id)
+  const usageCount = await repo.countTariffUsage(prisma, tenantId, id)
   if (usageCount > 0) {
     throw new VacationCappingRuleGroupValidationError(
       "Cannot delete capping rule group that is assigned to tariffs"

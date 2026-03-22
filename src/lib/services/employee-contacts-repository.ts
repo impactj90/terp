@@ -55,10 +55,11 @@ export async function createContact(
  */
 export async function findContactWithEmployee(
   prisma: PrismaClient,
+  tenantId: string,
   contactId: string
 ) {
-  return prisma.employeeContact.findUnique({
-    where: { id: contactId },
+  return prisma.employeeContact.findFirst({
+    where: { id: contactId, employee: { tenantId } },
     include: {
       employee: {
         select: { tenantId: true },

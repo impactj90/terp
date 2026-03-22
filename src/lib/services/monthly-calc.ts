@@ -17,6 +17,7 @@
 
 import type {
   PrismaClient,
+  Employee,
   MonthlyValue,
   DailyValue,
   Tariff,
@@ -122,9 +123,19 @@ export class MonthlyCalcService {
       return result
     }
 
+    // Pre-fetch all employees to avoid N individual findFirst calls
+    const employees = await this.prisma.employee.findMany({
+      where: {
+        id: { in: employeeIds },
+        ...(this.tenantId ? { tenantId: this.tenantId } : {}),
+      },
+    })
+    const employeeMap = new Map(employees.map((e) => [e.id, e]))
+
     await mapWithConcurrency(employeeIds, 5, async (empId) => {
       try {
-        await this.recalculateMonth(empId, year, month)
+        const employee = employeeMap.get(empId) ?? null
+        await this.recalculateMonth(empId, year, month, employee)
         result.processedMonths++
       } catch (err) {
         if (err instanceof Error && err.message === ERR_MONTH_CLOSED) {
@@ -267,13 +278,16 @@ export class MonthlyCalcService {
     employeeId: string,
     year: number,
     month: number,
+    prefetchedEmployee?: Employee | null,
   ): Promise<void> {
     this.validateYearMonth(year, month)
 
-    // Get employee for tenant ID (scoped if tenantId available)
-    const employee = await this.prisma.employee.findFirst({
-      where: { id: employeeId, ...(this.tenantId ? { tenantId: this.tenantId } : {}) },
-    })
+    // Use pre-fetched employee if provided (batch path), otherwise fetch individually
+    const employee = prefetchedEmployee !== undefined
+      ? prefetchedEmployee
+      : await this.prisma.employee.findFirst({
+          where: { id: employeeId, ...(this.tenantId ? { tenantId: this.tenantId } : {}) },
+        })
     if (employee === null) {
       throw new Error(ERR_EMPLOYEE_NOT_FOUND)
     }

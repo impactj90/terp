@@ -205,7 +205,7 @@ export async function remove(
   }
 
   // Check for employees assigned to this group
-  const employeeCount = await repo.countEmployees(prisma, type, id)
+  const employeeCount = await repo.countEmployees(prisma, tenantId, type, id)
   if (employeeCount > 0) {
     throw new GroupValidationError(
       "Cannot delete group with assigned employees"

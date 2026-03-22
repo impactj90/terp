@@ -43,16 +43,16 @@ const vehicleRouteOutputSchema = z.object({
 const createVehicleRouteInputSchema = z.object({
   code: z.string().min(1, "Code is required").max(50),
   name: z.string().min(1, "Name is required").max(255),
-  description: z.string().optional(),
-  distanceKm: z.number().optional(),
+  description: z.string().max(2000).optional(),
+  distanceKm: z.number().min(0).max(100000).optional(),
   sortOrder: z.number().int().optional(),
 })
 
 const updateVehicleRouteInputSchema = z.object({
   id: z.string(),
   name: z.string().min(1).max(255).optional(),
-  description: z.string().nullable().optional(),
-  distanceKm: z.number().nullable().optional(),
+  description: z.string().max(2000).nullable().optional(),
+  distanceKm: z.number().min(0).max(100000).nullable().optional(),
   isActive: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
 })

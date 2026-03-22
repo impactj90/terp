@@ -60,6 +60,9 @@ export function useUpdateAbsenceTypeGroup() {
       queryClient.invalidateQueries({
         queryKey: trpc.absenceTypeGroups.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.absenceTypeGroups.getById.queryKey(),
+      })
     },
   })
 }
@@ -75,6 +78,9 @@ export function useDeleteAbsenceTypeGroup() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.absenceTypeGroups.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.absenceTypeGroups.getById.queryKey(),
       })
     },
   })

@@ -197,7 +197,12 @@ export async function close(
     }, "Monthly value")
   }
 
-  // 2. Close via MonthlyCalcService
+  // Atomic isClosed guard: reject if already closed (prevents double-close race)
+  if (mv.isClosed) {
+    throw new MonthlyValueValidationError("Month is already closed")
+  }
+
+  // 2. Close via MonthlyCalcService (has its own atomic guard internally)
   const monthlyCalcService = new MonthlyCalcService(prisma)
   await monthlyCalcService.closeMonth(mv.employeeId, mv.year, mv.month, userId)
 
@@ -254,7 +259,12 @@ export async function reopen(
     }, "Monthly value")
   }
 
-  // 2. Reopen via MonthlyCalcService
+  // Atomic isClosed guard: reject if not closed (prevents double-reopen race)
+  if (!mv.isClosed) {
+    throw new MonthlyValueValidationError("Month is not closed")
+  }
+
+  // 2. Reopen via MonthlyCalcService (has its own atomic guard internally)
   const monthlyCalcService = new MonthlyCalcService(prisma)
   await monthlyCalcService.reopenMonth(
     mv.employeeId,

@@ -227,19 +227,21 @@ export async function deleteById(prisma: PrismaClient, tenantId: string, id: str
 
 export async function countEmployeeTariffAssignments(
   prisma: PrismaClient,
+  tenantId: string,
   tariffId: string
 ) {
   return prisma.employeeTariffAssignment.count({
-    where: { tariffId },
+    where: { tenantId, tariffId },
   })
 }
 
 export async function countEmployeesByTariff(
   prisma: PrismaClient,
+  tenantId: string,
   tariffId: string
 ) {
   return prisma.employee.count({
-    where: { tariffId },
+    where: { tenantId, tariffId },
   })
 }
 
@@ -269,10 +271,11 @@ export async function findDayPlan(
 
 export async function countBreaks(
   prisma: PrismaClient,
+  tenantId: string,
   tariffId: string
 ) {
   return prisma.tariffBreak.count({
-    where: { tariffId },
+    where: { tariffId, tariff: { tenantId } },
   })
 }
 

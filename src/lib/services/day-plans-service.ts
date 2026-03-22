@@ -315,7 +315,7 @@ export async function create(
   }
 
   // Re-fetch with detail include
-  return repo.findByIdWithDetail(prisma, created.id)
+  return repo.findByIdWithDetail(prisma, tenantId, created.id)
 }
 
 export async function update(
@@ -554,7 +554,7 @@ export async function update(
   }
 
   // Re-fetch with detail include
-  return repo.findByIdWithDetail(prisma, input.id)
+  return repo.findByIdWithDetail(prisma, tenantId, input.id)
 }
 
 export async function remove(
@@ -570,7 +570,7 @@ export async function remove(
   }
 
   // Check if any week plans reference this day plan
-  const count = await repo.countWeekPlanUsages(prisma, id)
+  const count = await repo.countWeekPlanUsages(prisma, tenantId, id)
   if (count > 0) {
     throw new DayPlanValidationError(
       "Cannot delete day plan that is referenced by week plans"
@@ -714,7 +714,7 @@ export async function copy(
   }
 
   // Re-fetch with detail include
-  return repo.findByIdWithDetail(prisma, copiedPlan.id)
+  return repo.findByIdWithDetail(prisma, tenantId, copiedPlan.id)
 }
 
 export async function createBreak(

@@ -180,3 +180,24 @@ export async function log(
     })
   }
 }
+
+/**
+ * Write multiple audit log entries in a single batch. Fire-and-forget — never throws.
+ *
+ * Uses prisma.auditLog.createMany() for a single INSERT statement
+ * instead of N sequential creates.
+ */
+export async function logBulk(
+  prisma: PrismaClient,
+  data: AuditLogCreateInput[]
+): Promise<void> {
+  if (data.length === 0) return
+  try {
+    await repo.createBulk(prisma, data)
+  } catch (err) {
+    console.error("[AuditLog] Failed to write bulk audit logs:", err, {
+      count: data.length,
+      entityType: data[0]?.entityType,
+    })
+  }
+}

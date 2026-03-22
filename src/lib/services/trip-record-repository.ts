@@ -5,6 +5,7 @@
  * Includes vehicle and vehicleRoute relation preloads.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 /** Prisma include for vehicle and vehicleRoute relation preloads */
 const tripRecordInclude = {
@@ -123,10 +124,9 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.tripRecord.update({
-    where: { id },
-    data,
+  return tenantScopedUpdate(prisma.tripRecord, { id, tenantId }, data, {
     include: tripRecordInclude,
+    entity: "TripRecord",
   })
 }
 

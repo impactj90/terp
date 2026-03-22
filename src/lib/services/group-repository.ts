@@ -145,11 +145,12 @@ export async function deleteById(
 
 export async function countEmployees(
   prisma: PrismaClient,
+  tenantId: string,
   type: GroupType,
   groupId: string
 ) {
   const fkColumn = getEmployeeFkColumn(type)
   return prisma.employee.count({
-    where: { [fkColumn]: groupId },
+    where: { tenantId, [fkColumn]: groupId },
   })
 }

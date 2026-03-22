@@ -183,7 +183,7 @@ export async function deactivateCard(
     throw new CardNotFoundError()
   }
 
-  const card = await repo.updateCard(prisma, input.id, {
+  const card = await repo.updateCard(prisma, tenantId, input.id, {
     isActive: false,
     deactivatedAt: new Date(),
     deactivationReason: input.reason?.trim() ?? null,

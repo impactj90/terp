@@ -194,7 +194,7 @@ export async function remove(
   }
 
   // Check usage in calc groups
-  const usageCount = await repo.countCalcGroupUsages(prisma, id)
+  const usageCount = await repo.countCalcGroupUsages(prisma, tenantId, id)
   if (usageCount > 0) {
     throw new VacationSpecialCalcValidationError(
       "Cannot delete special calculation that is assigned to calculation groups"

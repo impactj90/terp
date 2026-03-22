@@ -76,6 +76,26 @@ export async function executeGenerateDayPlans(
 
   console.log(`[generate-day-plans] Found ${tenants.length} active tenants`)
 
+  // --- Checkpoint: load already-completed tenants for this run ---
+  const runKey = `${fromStr}:${toStr}`
+  const completedCheckpoints = await prisma.cronCheckpoint.findMany({
+    where: { cronName: TASK_TYPE, runKey },
+    select: { tenantId: true },
+  })
+  const completedTenantIds = new Set(completedCheckpoints.map((c) => c.tenantId))
+
+  if (completedTenantIds.size > 0) {
+    console.log(
+      `[generate-day-plans] Checkpoint: ${completedTenantIds.size} tenants already completed, will skip`,
+    )
+  }
+
+  // Cleanup old checkpoints (> 30 days)
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+  await prisma.cronCheckpoint.deleteMany({
+    where: { cronName: TASK_TYPE, createdAt: { lt: thirtyDaysAgo } },
+  })
+
   const generator = new EmployeeDayPlanGenerator(prisma)
   const logger = new CronExecutionLogger(prisma)
   const results: TenantResult[] = []
@@ -85,10 +105,35 @@ export async function executeGenerateDayPlans(
   let totalPlansCreated = 0
   let totalPlansUpdated = 0
   let totalEmployeesSkipped = 0
+  const jobStartTime = Date.now()
 
   // Process tenants sequentially to avoid connection pool exhaustion
-  for (const tenant of tenants) {
+  for (let i = 0; i < tenants.length; i++) {
+    const tenant = tenants[i]!
     const tenantStart = Date.now()
+
+    // Timeout warning: alert when approaching 5-min Vercel limit
+    if (Date.now() - jobStartTime > 240_000) {
+      console.warn(
+        `[generate-day-plans] WARNING: approaching 5-min timeout. ` +
+          `${tenants.length - i} tenants remaining. Processed tenants are checkpointed for resume.`,
+      )
+    }
+
+    // Skip already-completed tenants (checkpoint hit)
+    if (completedTenantIds.has(tenant.id)) {
+      console.log(`[generate-day-plans] Tenant ${tenant.id}: checkpoint hit, skipping`)
+      results.push({
+        tenantId: tenant.id,
+        employeesProcessed: 0,
+        plansCreated: 0,
+        plansUpdated: 0,
+        employeesSkipped: 0,
+        durationMs: 0,
+      })
+      tenantsProcessed++
+      continue
+    }
     let scheduleId: string | undefined
     let executionId: string | undefined
     let taskExecutionId: string | undefined
@@ -154,6 +199,32 @@ export async function executeGenerateDayPlans(
         employeesSkipped: result.employeesSkipped,
         durationMs,
       })
+
+      // Save checkpoint so re-runs skip this tenant
+      try {
+        await prisma.cronCheckpoint.upsert({
+          where: {
+            cronName_runKey_tenantId: {
+              cronName: TASK_TYPE,
+              runKey,
+              tenantId: tenant.id,
+            },
+          },
+          create: {
+            cronName: TASK_TYPE,
+            runKey,
+            tenantId: tenant.id,
+            status: "completed",
+            durationMs,
+          },
+          update: { status: "completed", durationMs },
+        })
+      } catch (cpErr) {
+        console.error(
+          `[generate-day-plans] Failed to save checkpoint for tenant ${tenant.id}:`,
+          cpErr,
+        )
+      }
 
       console.log(
         `[generate-day-plans] Tenant ${tenant.id}: ${result.employeesProcessed} processed, ${result.plansCreated} created, ${result.plansUpdated} updated, ${result.employeesSkipped} skipped (${durationMs}ms)`,

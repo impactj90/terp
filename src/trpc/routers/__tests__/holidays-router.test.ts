@@ -226,8 +226,11 @@ describe("holidays.update", () => {
     const updated = makeHoliday({ name: "Updated" })
     const mockPrisma = {
       holiday: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))

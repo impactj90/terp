@@ -223,8 +223,10 @@ describe("vacationSpecialCalcs.update", () => {
     const updated = makeSpecialCalc({ bonusDays: 5 })
     const mockPrisma = {
       vacationSpecialCalculation: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)   // existence check
+          .mockResolvedValueOnce(updated),   // refetch after updateMany
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))

@@ -80,12 +80,12 @@ const userWithRelationsOutputSchema = userOutputSchema.extend({
 
 const createUserInputSchema = z.object({
   email: z.string().email(),
-  displayName: z.string().min(1),
-  username: z.string().optional(),
+  displayName: z.string().min(1).max(255),
+  username: z.string().max(50).optional(),
   userGroupId: z.string().optional(),
   employeeId: z.string().optional(),
-  password: z.string().min(8).optional(),
-  ssoId: z.string().optional(),
+  password: z.string().min(8).max(128).optional(),
+  ssoId: z.string().max(255).optional(),
   isActive: z.boolean().optional().default(true),
   isLocked: z.boolean().optional().default(false),
   dataScopeType: dataScopeTypeEnum.optional().default("all"),
@@ -105,12 +105,12 @@ const createUserInputSchema = z.object({
 
 const updateUserInputSchema = z.object({
   id: z.string(),
-  displayName: z.string().min(1).optional(),
+  displayName: z.string().min(1).max(255).optional(),
   avatarUrl: z.string().nullable().optional(),
   userGroupId: z.string().nullable().optional(),
-  username: z.string().nullable().optional(),
+  username: z.string().max(50).nullable().optional(),
   employeeId: z.string().nullable().optional(),
-  ssoId: z.string().nullable().optional(),
+  ssoId: z.string().max(255).nullable().optional(),
   isActive: z.boolean().optional(),
   isLocked: z.boolean().optional(),
   dataScopeType: dataScopeTypeEnum.optional(),
@@ -121,7 +121,7 @@ const updateUserInputSchema = z.object({
 
 const changePasswordInputSchema = z.object({
   userId: z.string(),
-  newPassword: z.string().min(8, "Password must be at least 8 characters"),
+  newPassword: z.string().min(8, "Password must be at least 8 characters").max(128),
 })
 
 // --- Helpers ---

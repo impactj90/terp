@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for the ContactKind model.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 export async function findMany(
   prisma: PrismaClient,
@@ -69,7 +70,7 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.contactKind.update({ where: { id }, data })
+  return tenantScopedUpdate(prisma.contactKind, { id, tenantId }, data, { entity: "ContactKind" })
 }
 
 export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
@@ -81,9 +82,10 @@ export async function deleteById(prisma: PrismaClient, tenantId: string, id: str
 
 export async function countEmployeeContacts(
   prisma: PrismaClient,
+  tenantId: string,
   contactKindId: string
 ) {
   return prisma.employeeContact.count({
-    where: { contactKindId },
+    where: { contactKindId, employee: { tenantId } },
   })
 }

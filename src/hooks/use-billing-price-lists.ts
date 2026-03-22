@@ -71,6 +71,7 @@ export function useUpdateBillingPriceList() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: trpc.billing.priceLists.list.queryKey() })
       queryClient.invalidateQueries({ queryKey: trpc.billing.priceLists.getById.queryKey() })
+      queryClient.invalidateQueries({ queryKey: trpc.billing.priceLists.entriesForAddress.queryKey() })
     },
   })
 }
@@ -82,6 +83,8 @@ export function useDeleteBillingPriceList() {
     ...trpc.billing.priceLists.delete.mutationOptions(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: trpc.billing.priceLists.list.queryKey() })
+      queryClient.invalidateQueries({ queryKey: trpc.billing.priceLists.getById.queryKey() })
+      queryClient.invalidateQueries({ queryKey: trpc.billing.priceLists.entriesForAddress.queryKey() })
     },
   })
 }
@@ -94,6 +97,7 @@ export function useSetDefaultBillingPriceList() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: trpc.billing.priceLists.list.queryKey() })
       queryClient.invalidateQueries({ queryKey: trpc.billing.priceLists.getById.queryKey() })
+      queryClient.invalidateQueries({ queryKey: trpc.billing.priceLists.entriesForAddress.queryKey() })
     },
   })
 }

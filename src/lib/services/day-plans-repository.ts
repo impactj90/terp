@@ -5,6 +5,7 @@
  * and DayPlanBonus models.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 const dayPlanDetailInclude = {
   breaks: { orderBy: { sortOrder: "asc" as const } },
@@ -90,12 +91,12 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.dayPlan.update({ where: { id }, data })
+  return tenantScopedUpdate(prisma.dayPlan, { id, tenantId }, data, { entity: "DayPlan" })
 }
 
-export async function findByIdWithDetail(prisma: PrismaClient, id: string) {
-  return prisma.dayPlan.findUnique({
-    where: { id },
+export async function findByIdWithDetail(prisma: PrismaClient, tenantId: string, id: string) {
+  return prisma.dayPlan.findFirst({
+    where: { id, tenantId },
     include: dayPlanDetailInclude,
   })
 }
@@ -109,12 +110,12 @@ export async function deleteById(prisma: PrismaClient, tenantId: string, id: str
 
 export async function countWeekPlanUsages(
   prisma: PrismaClient,
+  tenantId: string,
   dayPlanId: string
 ) {
-  const result = await prisma.$queryRawUnsafe<[{ count: number }]>(
-    `SELECT COUNT(*)::int as count FROM week_plans WHERE monday_day_plan_id = $1 OR tuesday_day_plan_id = $1 OR wednesday_day_plan_id = $1 OR thursday_day_plan_id = $1 OR friday_day_plan_id = $1 OR saturday_day_plan_id = $1 OR sunday_day_plan_id = $1`,
-    dayPlanId
-  )
+  const result = await prisma.$queryRaw<[{ count: number }]>`
+    SELECT COUNT(*)::int as count FROM week_plans WHERE (monday_day_plan_id = ${dayPlanId} OR tuesday_day_plan_id = ${dayPlanId} OR wednesday_day_plan_id = ${dayPlanId} OR thursday_day_plan_id = ${dayPlanId} OR friday_day_plan_id = ${dayPlanId} OR saturday_day_plan_id = ${dayPlanId} OR sunday_day_plan_id = ${dayPlanId}) AND tenant_id = ${tenantId}
+  `
   return result[0]?.count ?? 0
 }
 

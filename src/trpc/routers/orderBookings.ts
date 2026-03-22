@@ -102,8 +102,8 @@ const createInputSchema = z.object({
   orderId: z.string(),
   activityId: z.string().optional(),
   bookingDate: z.string().date(), // YYYY-MM-DD
-  timeMinutes: z.number().int().positive("Time in minutes must be positive"),
-  description: z.string().optional(),
+  timeMinutes: z.number().int().min(1).max(1440),
+  description: z.string().max(2000).optional(),
 })
 
 const updateInputSchema = z.object({
@@ -111,8 +111,8 @@ const updateInputSchema = z.object({
   orderId: z.string().optional(),
   activityId: z.string().nullable().optional(),
   bookingDate: z.string().date().optional(),
-  timeMinutes: z.number().int().positive().optional(),
-  description: z.string().nullable().optional(),
+  timeMinutes: z.number().int().min(1).max(1440).optional(),
+  description: z.string().max(2000).nullable().optional(),
 })
 
 // --- Prisma Include Objects ---

@@ -1619,8 +1619,8 @@ model EmployeeTariffAssignment {
   @@index([tenantId], map: "idx_eta_tenant")
   @@index([employeeId], map: "idx_eta_employee")
   @@index([tariffId], map: "idx_eta_tariff")
-  @@index([employeeId, effectiveFrom, effectiveTo], map: "idx_eta_employee_dates")
-  @@index([employeeId, effectiveFrom, effectiveTo, isActive], map: "idx_eta_effective_lookup")
+  @@index([tenantId, employeeId, effectiveFrom, effectiveTo], map: "idx_eta_tenant_employee_dates")
+  @@index([tenantId, employeeId, effectiveFrom, effectiveTo, isActive], map: "idx_eta_tenant_effective_lookup")
   @@map("employee_tariff_assignments")
 }
 
@@ -2632,6 +2632,7 @@ model VacationBalance {
   @@unique([employeeId, year], map: "vacation_balances_employee_id_year_key")
   @@index([tenantId], map: "idx_vacation_balances_tenant")
   @@index([employeeId], map: "idx_vacation_balances_employee")
+  @@index([tenantId, employeeId, year], map: "idx_vacation_balances_tenant_employee_year")
   @@map("vacation_balances")
 }
 
@@ -2703,6 +2704,7 @@ model AuditLog {
   @@index([entityType, entityId], map: "idx_audit_logs_entity")
   @@index([action], map: "idx_audit_logs_action")
   @@index([performedAt], map: "idx_audit_logs_performed_at")
+  @@index([tenantId, performedAt], map: "idx_audit_logs_tenant_performed_at")
   @@map("audit_logs")
 }
 
@@ -2827,6 +2829,7 @@ model ShiftAssignment {
   @@index([employeeId], map: "idx_shift_assignments_employee")
   @@index([shiftId], map: "idx_shift_assignments_shift")
   @@index([validFrom, validTo], map: "idx_shift_assignments_dates")
+  @@index([tenantId, employeeId], map: "idx_shift_assignments_tenant_employee")
   @@map("shift_assignments")
 }
 
@@ -2862,7 +2865,7 @@ model EmployeeDayPlan {
   // Constraints & indexes
   @@unique([employeeId, planDate])
   @@index([tenantId], map: "idx_employee_day_plans_tenant")
-  @@index([employeeId, planDate], map: "idx_employee_day_plans_employee_date")
+  @@index([tenantId, employeeId, planDate], map: "idx_employee_day_plans_tenant_employee_date")
   @@index([planDate], map: "idx_employee_day_plans_date")
   @@index([shiftId], map: "idx_employee_day_plans_shift")
   @@map("employee_day_plans")
@@ -2939,7 +2942,7 @@ model MacroAssignment {
   @@index([tariffId], map: "idx_macro_assignments_tariff")
   @@index([employeeId], map: "idx_macro_assignments_employee")
   @@index([tenantId, isActive], map: "idx_macro_assignments_active")
-  @@index([lastExecutedDate], map: "idx_macro_assignments_last_executed_date")
+  @@index([tenantId, lastExecutedDate], map: "idx_macro_assignments_tenant_last_executed")
   @@map("macro_assignments")
 }
 
@@ -2977,7 +2980,8 @@ model MacroExecution {
   @@index([tenantId], map: "idx_macro_executions_tenant")
   @@index([macroId], map: "idx_macro_executions_macro")
   @@index([status], map: "idx_macro_executions_status")
-  @@index([createdAt(sort: Desc)], map: "idx_macro_executions_created")
+  @@index([tenantId, createdAt(sort: Desc)], map: "idx_macro_executions_tenant_created")
+  @@index([tenantId, status], map: "idx_macro_executions_tenant_status")
   @@map("macro_executions")
 }
 
@@ -3218,6 +3222,7 @@ model PayrollExport {
   @@index([exportInterfaceId], map: "idx_pe_interface")
   @@index([tenantId, year, month], map: "idx_pe_period")
   @@index([status], map: "idx_pe_status")
+  @@index([tenantId, status], map: "idx_pe_tenant_status")
   @@map("payroll_exports")
 }
 
@@ -3256,6 +3261,7 @@ model Report {
   @@index([tenantId], map: "idx_reports_tenant")
   @@index([tenantId, reportType], map: "idx_reports_type")
   @@index([status], map: "idx_reports_status")
+  @@index([tenantId, status], map: "idx_reports_tenant_status")
   @@map("reports")
 }
 
@@ -3338,6 +3344,7 @@ model ImportBatch {
   @@unique([tenantId, batchReference], map: "idx_import_batches_unique_ref")
   @@index([tenantId], map: "idx_import_batches_tenant")
   @@index([status], map: "idx_import_batches_status")
+  @@index([tenantId, status], map: "idx_import_batches_tenant_status")
   @@map("import_batches")
 }
 
@@ -3377,6 +3384,7 @@ model RawTerminalBooking {
   @@index([importBatchId], map: "idx_raw_terminal_bookings_batch")
   @@index([employeeId], map: "idx_raw_terminal_bookings_employee")
   @@index([tenantId, bookingDate], map: "idx_raw_terminal_bookings_date")
+  @@index([tenantId, status], map: "idx_raw_terminal_bookings_tenant_status")
   @@map("raw_terminal_bookings")
 }
 
@@ -3468,6 +3476,8 @@ model TripRecord {
   @@index([vehicleId], map: "idx_trip_records_vehicle")
   @@index([routeId], map: "idx_trip_records_route")
   @@index([tripDate], map: "idx_trip_records_date")
+  @@index([tenantId, vehicleId], map: "idx_trip_records_tenant_vehicle")
+  @@index([tenantId, tripDate], map: "idx_trip_records_tenant_date")
   @@map("trip_records")
 }
 
@@ -3692,7 +3702,6 @@ model Booking {
 
   // Indexes
   @@index([tenantId], map: "idx_bookings_tenant")
-  @@index([employeeId, bookingDate], map: "idx_bookings_employee_date")
   @@index([bookingDate], map: "idx_bookings_date")
   @@index([tenantId, employeeId, bookingDate], map: "idx_bookings_tenant_employee_date")
   @@map("bookings")
@@ -3759,6 +3768,7 @@ model DailyValue {
   @@index([valueDate], map: "idx_daily_values_date")
   @@index([employeeId, valueDate], map: "idx_daily_values_lookup")
   @@index([status], map: "idx_daily_values_status")
+  @@index([tenantId, valueDate], map: "idx_daily_values_tenant_value_date")
   @@map("daily_values")
 }
 
@@ -3801,6 +3811,8 @@ model DailyAccountValue {
   @@index([accountId], map: "idx_daily_account_values_account")
   @@index([valueDate], map: "idx_daily_account_values_date")
   @@index([employeeId, valueDate], map: "idx_daily_account_values_lookup")
+  @@index([tenantId, valueDate], map: "idx_daily_account_values_tenant_value_date")
+  @@index([tenantId, accountId, valueDate], map: "idx_daily_account_values_tenant_account_value_date")
   @@map("daily_account_values")
 }
 
@@ -3863,8 +3875,9 @@ model AbsenceDay {
   @@index([absenceDate], map: "idx_absence_days_date")
   @@index([absenceTypeId], map: "idx_absence_days_type")
   @@index([status], map: "idx_absence_days_status")
-  @@index([employeeId, absenceDate], map: "idx_absence_days_lookup")
-  @@index([employeeId, absenceDate, status], map: "idx_absence_days_range")
+  @@index([tenantId, employeeId, absenceDate], map: "idx_absence_days_tenant_employee_date")
+  @@index([tenantId, employeeId, absenceDate, status], map: "idx_absence_days_tenant_employee_date_status")
+  @@index([tenantId, status], map: "idx_absence_days_tenant_status")
   @@map("absence_days")
 }
 
@@ -3973,7 +3986,7 @@ model ScheduleExecution {
   @@index([tenantId], map: "idx_schedule_executions_tenant")
   @@index([scheduleId], map: "idx_schedule_executions_schedule")
   @@index([status], map: "idx_schedule_executions_status")
-  @@index([createdAt(sort: Desc)], map: "idx_schedule_executions_created")
+  @@index([tenantId, createdAt(sort: Desc)], map: "idx_schedule_executions_tenant_created")
   @@map("schedule_executions")
 }
 
@@ -4077,6 +4090,8 @@ model Correction {
   @@index([employeeId], map: "idx_corrections_employee_id")
   @@index([correctionDate], map: "idx_corrections_date")
   @@index([status], map: "idx_corrections_status")
+  @@index([tenantId, status], map: "idx_corrections_tenant_status")
+  @@index([tenantId, createdAt], map: "idx_corrections_tenant_created_at")
   @@map("corrections")
 }
 
@@ -4119,7 +4134,7 @@ model OrderBooking {
   @@index([employeeId], map: "idx_order_bookings_employee")
   @@index([orderId], map: "idx_order_bookings_order")
   @@index([activityId], map: "idx_order_bookings_activity")
-  @@index([employeeId, bookingDate], map: "idx_order_bookings_employee_date")
-  @@index([orderId, bookingDate], map: "idx_order_bookings_order_date")
+  @@index([tenantId, employeeId, bookingDate], map: "idx_order_bookings_tenant_employee_date")
+  @@index([tenantId, orderId, bookingDate], map: "idx_order_bookings_tenant_order_date")
   @@map("order_bookings")
 }

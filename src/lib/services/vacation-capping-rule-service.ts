@@ -187,7 +187,7 @@ export async function remove(
   }
 
   // Check usage in capping rule groups
-  const usageCount = await repo.countGroupRuleUsages(prisma, id)
+  const usageCount = await repo.countGroupRuleUsages(prisma, tenantId, id)
   if (usageCount > 0) {
     throw new VacationCappingRuleValidationError(
       "Cannot delete capping rule that is assigned to capping rule groups"

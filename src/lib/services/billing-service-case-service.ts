@@ -163,8 +163,6 @@ export async function update(
   const existing = await repo.findById(prisma, tenantId, input.id)
   if (!existing) throw new BillingServiceCaseNotFoundError()
 
-  assertEditable(existing.status)
-
   const data: Record<string, unknown> = {}
   const fields = [
     "title", "contactId", "description", "assignedToId", "customerNotifiedCost",
@@ -176,14 +174,34 @@ export async function update(
     }
   }
 
-  if (Object.keys(data).length === 0) return existing
+  if (Object.keys(data).length === 0) {
+    assertEditable(existing.status)
+    return existing
+  }
 
   // Auto-transition: OPEN -> IN_PROGRESS on first meaningful update
   if (existing.status === "OPEN") {
     data.status = "IN_PROGRESS"
   }
 
-  const updated = await repo.update(prisma, tenantId, input.id, data)
+  // Atomic status guard: only update if status is still editable (not CLOSED/INVOICED)
+  const { count } = await prisma.billingServiceCase.updateMany({
+    where: {
+      id: input.id,
+      tenantId,
+      status: { notIn: ["CLOSED", "INVOICED"] },
+    },
+    data,
+  })
+  if (count === 0) {
+    // Re-check to distinguish not-found from wrong status
+    assertEditable(existing.status)
+    throw new BillingServiceCaseConflictError(
+      "Service case status changed concurrently"
+    )
+  }
+
+  const updated = await repo.findById(prisma, tenantId, input.id)
 
   if (audit) {
     const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, SERVICE_CASE_TRACKED_FIELDS)
@@ -209,18 +227,27 @@ export async function close(
   const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) throw new BillingServiceCaseNotFoundError()
 
-  if (existing.status === "CLOSED" || existing.status === "INVOICED") {
+  // Atomic status guard: only close if not already CLOSED or INVOICED
+  const { count } = await prisma.billingServiceCase.updateMany({
+    where: {
+      id,
+      tenantId,
+      status: { notIn: ["CLOSED", "INVOICED"] },
+    },
+    data: {
+      status: "CLOSED",
+      closingReason,
+      closedAt: new Date(),
+      closedById,
+    },
+  })
+  if (count === 0) {
     throw new BillingServiceCaseValidationError(
       "Service case is already closed or invoiced"
     )
   }
 
-  const updated = await repo.update(prisma, tenantId, id, {
-    status: "CLOSED",
-    closingReason,
-    closedAt: new Date(),
-    closedById,
-  })
+  const updated = await repo.findById(prisma, tenantId, id)
 
   if (audit) {
     const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, SERVICE_CASE_TRACKED_FIELDS)
@@ -318,31 +345,38 @@ export async function createOrder(
   createdById: string,
   audit?: AuditContext
 ) {
-  const existing = await repo.findById(prisma, tenantId, id)
-  if (!existing) throw new BillingServiceCaseNotFoundError()
+  // Wrap null-check + create order + link in transaction to prevent orphan orders
+  const { updated, existing } = await prisma.$transaction(async (tx) => {
+    const txPrisma = tx as unknown as PrismaClient
 
-  assertEditable(existing.status)
+    const existing = await repo.findById(txPrisma, tenantId, id)
+    if (!existing) throw new BillingServiceCaseNotFoundError()
 
-  if (existing.orderId) {
-    throw new BillingServiceCaseConflictError(
-      "Service case already has a linked order"
-    )
-  }
+    assertEditable(existing.status)
 
-  // Get address for customer name
-  const address = await prisma.crmAddress.findFirst({
-    where: { id: existing.addressId, tenantId },
+    if (existing.orderId) {
+      throw new BillingServiceCaseConflictError(
+        "Service case already has a linked order"
+      )
+    }
+
+    // Get address for customer name
+    const address = await tx.crmAddress.findFirst({
+      where: { id: existing.addressId, tenantId },
+    })
+
+    const newOrder = await orderService.create(txPrisma, tenantId, {
+      code: existing.number,
+      name: params.orderName || existing.title,
+      description: params.orderDescription,
+      customer: address?.company || undefined,
+      status: "active",
+    })
+
+    const updated = await repo.update(txPrisma, tenantId, id, { orderId: newOrder.id })
+
+    return { updated, existing }
   })
-
-  const newOrder = await orderService.create(prisma, tenantId, {
-    code: existing.number,
-    name: params.orderName || existing.title,
-    description: params.orderDescription,
-    customer: address?.company || undefined,
-    status: "active",
-  })
-
-  const updated = await repo.update(prisma, tenantId, id, { orderId: newOrder.id })
 
   if (audit) {
     const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, SERVICE_CASE_TRACKED_FIELDS)

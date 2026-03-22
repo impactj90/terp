@@ -40,6 +40,7 @@ function createMockPrisma() {
     },
     employee: {
       findUnique: vi.fn().mockResolvedValue(null),
+      findMany: vi.fn().mockResolvedValue([]),
       // findFirst delegates to findUnique so existing test setups work
       get findFirst() { return this.findUnique },
     },
@@ -220,6 +221,11 @@ describe("CalculateMonthBatch", () => {
     const month = 1
 
     mocks.employee.findUnique.mockResolvedValue(makeEmployee())
+    mocks.employee.findMany.mockResolvedValue([
+      makeEmployee({ id: emp1 }),
+      makeEmployee({ id: emp2 }),
+      makeEmployee({ id: emp3 }),
+    ])
     mocks.monthlyValue.findUnique.mockResolvedValue(null) // not closed, no previous
 
     const result = await svc.calculateMonthBatch(
@@ -250,6 +256,11 @@ describe("CalculateMonthBatch", () => {
         return makeEmployee({ id: args.where.id })
       },
     )
+    // Pre-fetch returns only emp1 and emp3 (emp2 not found in DB)
+    mocks.employee.findMany.mockResolvedValue([
+      makeEmployee({ id: emp1 }),
+      makeEmployee({ id: emp3 }),
+    ])
     mocks.monthlyValue.findUnique.mockResolvedValue(null)
 
     const result = await svc.calculateMonthBatch(
@@ -275,6 +286,10 @@ describe("CalculateMonthBatch", () => {
     const month = 1
 
     mocks.employee.findUnique.mockResolvedValue(makeEmployee())
+    mocks.employee.findMany.mockResolvedValue([
+      makeEmployee({ id: emp1 }),
+      makeEmployee({ id: emp2 }),
+    ])
     // emp1 not closed, emp2 closed
     mocks.monthlyValue.findUnique.mockImplementation(
       async (args: { where: { employeeId_year_month?: { employeeId: string } } }) => {

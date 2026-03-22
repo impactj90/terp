@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for the Tenant model.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { TenantScopedNotFoundError } from "@/lib/services/prisma-helpers"
 
 export async function findTenantsForUser(
   prisma: PrismaClient,
@@ -55,6 +56,9 @@ export async function update(
   data: Record<string, unknown>
 ) {
   // For tenant updates, tenantId === id (the tenant being updated)
+  if (id !== tenantId) {
+    throw new TenantScopedNotFoundError("Tenant")
+  }
   return prisma.tenant.update({ where: { id }, data })
 }
 

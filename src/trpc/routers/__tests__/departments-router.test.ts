@@ -356,8 +356,11 @@ describe("departments.update", () => {
     })
     const mockPrisma = {
       department: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -378,8 +381,9 @@ describe("departments.update", () => {
         findFirst: vi
           .fn()
           .mockResolvedValueOnce(existing) // exists check
-          .mockResolvedValueOnce(null), // uniqueness check
-        update: vi.fn().mockResolvedValue(updated),
+          .mockResolvedValueOnce(null) // uniqueness check
+          .mockResolvedValueOnce(updated), // tenantScopedUpdate refetch
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -435,15 +439,18 @@ describe("departments.update", () => {
     const updated = makeDept({ code: "ENG" })
     const mockPrisma = {
       department: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({ id: DEPT_ID, code: "ENG" })
     expect(result.code).toBe("ENG")
-    // Should NOT do uniqueness check when code hasn't changed
-    expect(mockPrisma.department.findFirst).toHaveBeenCalledTimes(1)
+    // findFirst: once for existence check + once for tenantScopedUpdate refetch (no uniqueness check since code unchanged)
+    expect(mockPrisma.department.findFirst).toHaveBeenCalledTimes(2)
   })
 
   it("rejects NOT_FOUND for missing department", async () => {
@@ -512,14 +519,17 @@ describe("departments.update", () => {
     const updated = makeDept({ parentId: null })
     const mockPrisma = {
       department: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({ id: DEPT_ID, parentId: null })
     expect(result.parentId).toBeNull()
-    const updateCall = mockPrisma.department.update.mock.calls[0]![0]
+    const updateCall = mockPrisma.department.updateMany.mock.calls[0]![0]
     expect(updateCall.data.parentId).toBeNull()
   })
 })

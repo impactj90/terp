@@ -50,6 +50,9 @@ export function useCreateBillingServiceCase() {
       queryClient.invalidateQueries({
         queryKey: trpc.billing.serviceCases.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.billing.serviceCases.getById.queryKey(),
+      })
     },
   })
 }
@@ -117,6 +120,9 @@ export function useCreateOrderFromServiceCase() {
       queryClient.invalidateQueries({
         queryKey: trpc.billing.serviceCases.getById.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.orders.list.queryKey(),
+      })
     },
   })
 }
@@ -129,6 +135,9 @@ export function useDeleteBillingServiceCase() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.billing.serviceCases.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.billing.serviceCases.getById.queryKey(),
       })
     },
   })

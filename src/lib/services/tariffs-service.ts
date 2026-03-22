@@ -426,7 +426,7 @@ export async function remove(
   }
 
   // Check usage in EmployeeTariffAssignment
-  const assignmentCount = await repo.countEmployeeTariffAssignments(prisma, id)
+  const assignmentCount = await repo.countEmployeeTariffAssignments(prisma, tenantId, id)
   if (assignmentCount > 0) {
     throw new TariffValidationError(
       "Cannot delete tariff that is assigned to employees"
@@ -434,7 +434,7 @@ export async function remove(
   }
 
   // Check direct employee tariffId references
-  const employeeCount = await repo.countEmployeesByTariff(prisma, id)
+  const employeeCount = await repo.countEmployeesByTariff(prisma, tenantId, id)
   if (employeeCount > 0) {
     throw new TariffValidationError(
       "Cannot delete tariff that is assigned to employees"
@@ -478,7 +478,7 @@ export async function createBreak(
   }
 
   // Auto-calculate sortOrder
-  const breakCount = await repo.countBreaks(prisma, input.tariffId)
+  const breakCount = await repo.countBreaks(prisma, tenantId, input.tariffId)
 
   const created = await repo.createBreak(prisma, {
     tariffId: input.tariffId,

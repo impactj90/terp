@@ -199,7 +199,7 @@ describe("employeeContacts.delete", () => {
     }
     const mockPrisma = {
       employeeContact: {
-        findUnique: vi.fn().mockResolvedValue(contact),
+        findFirst: vi.fn().mockResolvedValue(contact),
         delete: vi.fn().mockResolvedValue(contact),
       },
     }
@@ -211,7 +211,7 @@ describe("employeeContacts.delete", () => {
   it("throws NOT_FOUND for missing contact", async () => {
     const mockPrisma = {
       employeeContact: {
-        findUnique: vi.fn().mockResolvedValue(null),
+        findFirst: vi.fn().mockResolvedValue(null),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -227,7 +227,7 @@ describe("employeeContacts.delete", () => {
     }
     const mockPrisma = {
       employeeContact: {
-        findUnique: vi.fn().mockResolvedValue(contact),
+        findFirst: vi.fn().mockResolvedValue(contact),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))

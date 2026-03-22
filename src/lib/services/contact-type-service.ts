@@ -237,7 +237,7 @@ export async function remove(
   }
 
   // Check for contact kinds referencing this type
-  const kindCount = await repo.countContactKinds(prisma, id)
+  const kindCount = await repo.countContactKinds(prisma, tenantId, id)
   if (kindCount > 0) {
     throw new ContactTypeValidationError(
       "Cannot delete contact type with associated contact kinds"

@@ -44,6 +44,9 @@ export function useCreateBookingTypeGroup() {
       queryClient.invalidateQueries({
         queryKey: trpc.bookingTypeGroups.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookingTypeGroups.getById.queryKey(),
+      })
     },
   })
 }
@@ -60,6 +63,9 @@ export function useUpdateBookingTypeGroup() {
       queryClient.invalidateQueries({
         queryKey: trpc.bookingTypeGroups.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookingTypeGroups.getById.queryKey(),
+      })
     },
   })
 }
@@ -75,6 +81,9 @@ export function useDeleteBookingTypeGroup() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.bookingTypeGroups.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookingTypeGroups.getById.queryKey(),
       })
     },
   })

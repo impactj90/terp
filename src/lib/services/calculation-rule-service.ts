@@ -229,7 +229,7 @@ export async function remove(
   }
 
   // Check usage in absence_types table
-  const count = await repo.countAbsenceTypeUsages(prisma, id)
+  const count = await repo.countAbsenceTypeUsages(prisma, tenantId, id)
   if (count > 0) {
     throw new CalculationRuleValidationError(
       "Cannot delete calculation rule that is in use by absence types"

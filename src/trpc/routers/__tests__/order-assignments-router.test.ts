@@ -353,8 +353,9 @@ describe("orderAssignments.update", () => {
         findFirst: vi
           .fn()
           .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated)
           .mockResolvedValueOnce(updated),
-        update: vi.fn().mockResolvedValue(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -370,8 +371,9 @@ describe("orderAssignments.update", () => {
         findFirst: vi
           .fn()
           .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated)
           .mockResolvedValueOnce(updated),
-        update: vi.fn().mockResolvedValue(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))

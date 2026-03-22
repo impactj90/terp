@@ -102,7 +102,7 @@ export const payrollExportsRouter = createTRPCRouter({
     .use(requirePermission(PAYROLL_VIEW))
     .input(
       z.object({
-        year: z.number().int().min(1).max(9999).optional(),
+        year: z.number().int().min(2000).max(2100).optional(),
         month: z.number().int().min(1).max(12).optional(),
         status: payrollExportStatusEnum.optional(),
         limit: z.number().int().min(1).max(100).default(20),
@@ -166,7 +166,7 @@ export const payrollExportsRouter = createTRPCRouter({
     .use(applyDataScope())
     .input(
       z.object({
-        year: z.number().int().min(1),
+        year: z.number().int().min(2000).max(2100),
         month: z.number().int().min(1).max(12),
         format: payrollExportFormatEnum.default("csv"),
         exportType: payrollExportTypeEnum.default("standard"),

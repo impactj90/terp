@@ -44,21 +44,21 @@ type CalculationRuleOutput = z.infer<typeof calculationRuleOutputSchema>
 // --- Input Schemas ---
 
 const createCalculationRuleInputSchema = z.object({
-  code: z.string().min(1, "Code is required"),
-  name: z.string().min(1, "Name is required"),
-  description: z.string().optional(),
+  code: z.string().min(1, "Code is required").max(50),
+  name: z.string().min(1, "Name is required").max(255),
+  description: z.string().max(2000).optional(),
   accountId: z.string().optional(),
-  value: z.number().optional(),
-  factor: z.number().optional(),
+  value: z.number().min(-999999).max(999999).optional(),
+  factor: z.number().min(-999999).max(999999).optional(),
 })
 
 const updateCalculationRuleInputSchema = z.object({
   id: z.string(),
-  name: z.string().min(1).optional(),
-  description: z.string().nullable().optional(),
+  name: z.string().min(1).max(255).optional(),
+  description: z.string().max(2000).nullable().optional(),
   accountId: z.string().nullable().optional(),
-  value: z.number().optional(),
-  factor: z.number().optional(),
+  value: z.number().min(-999999).max(999999).optional(),
+  factor: z.number().min(-999999).max(999999).optional(),
   isActive: z.boolean().optional(),
 })
 

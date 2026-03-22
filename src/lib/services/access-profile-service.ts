@@ -188,7 +188,7 @@ export async function remove(
   }
 
   // Check if profile is in use by employee assignments
-  const assignmentCount = await repo.countAssignments(prisma, id)
+  const assignmentCount = await repo.countAssignments(prisma, tenantId, id)
   if (assignmentCount > 0) {
     throw new AccessProfileConflictError(
       "Access profile is in use by employee assignments and cannot be deleted"

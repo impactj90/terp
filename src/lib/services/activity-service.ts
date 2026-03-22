@@ -218,7 +218,7 @@ export async function remove(
   }
 
   // Check for employees with defaultActivityId
-  const employeeCount = await repo.countEmployees(prisma, id)
+  const employeeCount = await repo.countEmployees(prisma, tenantId, id)
   if (employeeCount > 0) {
     throw new ActivityValidationError(
       "Cannot delete activity with assigned employees"

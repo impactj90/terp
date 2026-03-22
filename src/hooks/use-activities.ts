@@ -57,6 +57,9 @@ export function useUpdateActivity() {
       queryClient.invalidateQueries({
         queryKey: trpc.activities.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.activities.getById.queryKey(),
+      })
     },
   })
 }
@@ -69,6 +72,9 @@ export function useDeleteActivity() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.activities.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.activities.getById.queryKey(),
       })
     },
   })

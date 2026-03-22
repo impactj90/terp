@@ -111,6 +111,26 @@ export async function create(
   })
 }
 
+export async function createBulk(
+  prisma: PrismaClient,
+  data: AuditLogCreateInput[]
+) {
+  return prisma.auditLog.createMany({
+    data: data.map((d) => ({
+      tenantId: d.tenantId,
+      userId: d.userId,
+      action: d.action,
+      entityType: d.entityType,
+      entityId: d.entityId,
+      entityName: d.entityName ?? null,
+      changes: (d.changes as Prisma.InputJsonValue) ?? undefined,
+      metadata: (d.metadata as Prisma.InputJsonValue) ?? undefined,
+      ipAddress: d.ipAddress ?? null,
+      userAgent: d.userAgent ?? null,
+    })),
+  })
+}
+
 export async function findById(
   prisma: PrismaClient,
   tenantId: string,

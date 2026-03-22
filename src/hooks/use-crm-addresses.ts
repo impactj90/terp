@@ -77,6 +77,9 @@ export function useDeleteCrmAddress() {
       queryClient.invalidateQueries({
         queryKey: trpc.crm.addresses.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.crm.addresses.getById.queryKey(),
+      })
     },
   })
 }
@@ -89,6 +92,9 @@ export function useRestoreCrmAddress() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.crm.addresses.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.crm.addresses.getById.queryKey(),
       })
     },
   })

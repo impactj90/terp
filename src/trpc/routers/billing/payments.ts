@@ -25,7 +25,7 @@ const optionalUuid = uuid.optional()
 const openItemsListInput = z.object({
   addressId: optionalUuid,
   status: z.enum(["open", "partial", "paid", "overdue"]).optional(),
-  search: z.string().optional(),
+  search: z.string().max(255).optional(),
   dateFrom: z.coerce.date().optional(),
   dateTo: z.coerce.date().optional(),
   page: z.number().int().min(1).default(1),
@@ -35,10 +35,10 @@ const openItemsListInput = z.object({
 const createPaymentInput = z.object({
   documentId: uuid,
   date: z.coerce.date(),
-  amount: z.number().positive(),
+  amount: z.number().positive().max(999999999.99),
   type: z.enum(["CASH", "BANK"]),
   isDiscount: z.boolean().optional().default(false),
-  notes: z.string().optional(),
+  notes: z.string().max(2000).optional(),
 })
 
 // --- Router ---
@@ -124,7 +124,7 @@ export const billingPaymentsRouter = createTRPCRouter({
 
   cancel: billingProcedure
     .use(requirePermission(PAY_CANCEL))
-    .input(z.object({ id: uuid, reason: z.string().optional() }))
+    .input(z.object({ id: uuid, reason: z.string().max(2000).optional() }))
     .mutation(async ({ ctx, input }) => {
       try {
         return await paymentService.cancelPayment(

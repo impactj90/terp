@@ -213,8 +213,11 @@ describe("calculationRules.update", () => {
     })
     const mockPrisma = {
       calculationRule: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -234,14 +237,17 @@ describe("calculationRules.update", () => {
     const updated = makeRule({ accountId: null })
     const mockPrisma = {
       calculationRule: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({ id: RULE_ID, accountId: null })
     expect(result.accountId).toBeNull()
-    const updateCall = mockPrisma.calculationRule.update.mock.calls[0]![0]
+    const updateCall = mockPrisma.calculationRule.updateMany.mock.calls[0]![0]
     expect(updateCall.data.accountId).toBeNull()
   })
 
@@ -268,7 +274,7 @@ describe("calculationRules.delete", () => {
         findFirst: vi.fn().mockResolvedValue(existing),
         deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
-      $queryRawUnsafe: vi.fn().mockResolvedValue([{ count: 0 }]),
+      $queryRaw: vi.fn().mockResolvedValue([{ count: 0 }]),
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: RULE_ID })
@@ -284,7 +290,7 @@ describe("calculationRules.delete", () => {
       calculationRule: {
         findFirst: vi.fn().mockResolvedValue(existing),
       },
-      $queryRawUnsafe: vi.fn().mockResolvedValue([{ count: 3 }]),
+      $queryRaw: vi.fn().mockResolvedValue([{ count: 3 }]),
     }
     const caller = createCaller(createTestContext(mockPrisma))
     await expect(caller.delete({ id: RULE_ID })).rejects.toThrow(

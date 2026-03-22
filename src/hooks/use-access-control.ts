@@ -43,6 +43,9 @@ export function useCreateAccessZone() {
       queryClient.invalidateQueries({
         queryKey: trpc.accessZones.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.accessZones.getById.queryKey(),
+      })
     },
   })
 }
@@ -59,6 +62,9 @@ export function useUpdateAccessZone() {
       queryClient.invalidateQueries({
         queryKey: trpc.accessZones.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.accessZones.getById.queryKey(),
+      })
     },
   })
 }
@@ -74,6 +80,9 @@ export function useDeleteAccessZone() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.accessZones.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.accessZones.getById.queryKey(),
       })
     },
   })
@@ -121,6 +130,9 @@ export function useCreateAccessProfile() {
       queryClient.invalidateQueries({
         queryKey: trpc.accessProfiles.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.accessProfiles.getById.queryKey(),
+      })
     },
   })
 }
@@ -137,6 +149,9 @@ export function useUpdateAccessProfile() {
       queryClient.invalidateQueries({
         queryKey: trpc.accessProfiles.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.accessProfiles.getById.queryKey(),
+      })
     },
   })
 }
@@ -152,6 +167,9 @@ export function useDeleteAccessProfile() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.accessProfiles.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.accessProfiles.getById.queryKey(),
       })
     },
   })

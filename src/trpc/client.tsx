@@ -3,7 +3,9 @@
 import { useState } from "react"
 import { MutationCache, QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
+import { TRPCClientError } from "@trpc/client"
 import { createTRPCClient, httpBatchLink, httpSubscriptionLink, splitLink } from "@trpc/client"
+import { toast } from "sonner"
 import type { AppRouter } from "@/trpc/routers/_app"
 import { TRPCProvider } from "./context"
 import { createClient } from "@/lib/supabase/client"
@@ -16,8 +18,14 @@ function makeQueryClient() {
   return new QueryClient({
     mutationCache: new MutationCache({
       onError: (error) => {
-        // Global fallback for mutations without their own onError handler.
-        // Individual mutation hooks can still provide specific onError callbacks.
+        // Global fallback: show a toast for every failed mutation.
+        // Individual mutation hooks can still provide specific onError callbacks;
+        // this fires in addition to any per-mutation handler.
+        const message =
+          error instanceof TRPCClientError
+            ? error.message
+            : 'An unexpected error occurred'
+        toast.error(message)
         console.error('[Mutation Error]', error.message)
       },
     }),

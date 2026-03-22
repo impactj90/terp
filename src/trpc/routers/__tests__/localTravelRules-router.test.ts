@@ -268,8 +268,11 @@ describe("localTravelRules.update", () => {
     const updated = makeRule({ taxFreeAmount: new Decimal(20) })
     const mockPrisma = {
       localTravelRule: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -279,8 +282,8 @@ describe("localTravelRules.update", () => {
     })
 
     expect(result.taxFreeAmount).toBe(20)
-    expect(mockPrisma.localTravelRule.update).toHaveBeenCalledWith({
-      where: { id: RULE_ID },
+    expect(mockPrisma.localTravelRule.updateMany).toHaveBeenCalledWith({
+      where: { id: RULE_ID, tenantId: TENANT_ID },
       data: { taxFreeAmount: 20 },
     })
   })
@@ -305,8 +308,11 @@ describe("localTravelRules.update", () => {
     })
     const mockPrisma = {
       localTravelRule: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -316,8 +322,8 @@ describe("localTravelRules.update", () => {
       maxDurationMinutes: null,
     })
 
-    expect(mockPrisma.localTravelRule.update).toHaveBeenCalledWith({
-      where: { id: RULE_ID },
+    expect(mockPrisma.localTravelRule.updateMany).toHaveBeenCalledWith({
+      where: { id: RULE_ID, tenantId: TENANT_ID },
       data: { maxDistanceKm: null, maxDurationMinutes: null },
     })
   })

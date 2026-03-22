@@ -336,6 +336,14 @@ export class EmployeeDayPlanGenerator {
       existingPlansByEmployee.set(plan.employeeId, list)
     }
 
+    // Collect all upserts across all employees, then batch-execute
+    const allPlansToUpsert: Array<{
+      employeeId: string
+      planDate: Date
+      dayPlanId: string | null
+      isUpdate: boolean
+    }> = []
+
     // Process each employee (no more per-employee DB queries)
     for (const employee of employees) {
       // Skip if no tariffId
@@ -373,8 +381,10 @@ export class EmployeeDayPlanGenerator {
 
       // Build skip map: dates to skip based on source
       const skipDates = new Set<string>()
+      const existingDateKeys = new Set<string>()
       for (const plan of existingPlans) {
         const dateKey = plan.planDate.toISOString().split("T")[0]!
+        existingDateKeys.add(dateKey)
         if (plan.source !== "tariff") {
           // Always skip manual/holiday plans
           skipDates.add(dateKey)
@@ -385,12 +395,6 @@ export class EmployeeDayPlanGenerator {
       }
 
       // Generate plans for each day in window
-      const plansToUpsert: Array<{
-        employeeId: string
-        planDate: Date
-        dayPlanId: string | null
-      }> = []
-
       const current = new Date(window.start.getTime())
       while (current.getTime() <= window.end.getTime()) {
         const dateKey = current.toISOString().split("T")[0]!
@@ -402,10 +406,11 @@ export class EmployeeDayPlanGenerator {
           )
 
           if (dayPlanId !== null) {
-            plansToUpsert.push({
+            allPlansToUpsert.push({
               employeeId: employee.id,
               planDate: new Date(current.getTime()),
               dayPlanId,
+              isUpdate: existingDateKeys.has(dateKey),
             })
           }
         }
@@ -413,50 +418,46 @@ export class EmployeeDayPlanGenerator {
         current.setUTCDate(current.getUTCDate() + 1)
       }
 
-      // Bulk upsert plans using array-form $transaction (single DB round-trip)
-      if (plansToUpsert.length > 0) {
-        // Track which are new vs updates
-        const existingDateKeys = new Set(
-          existingPlans.map(
-            (p) => p.planDate.toISOString().split("T")[0]!,
-          ),
-        )
+      employeesProcessed++
+    }
 
-        await this.prisma.$transaction(
-          plansToUpsert.map((plan) =>
-            this.prisma.employeeDayPlan.upsert({
-              where: {
-                employeeId_planDate: {
-                  employeeId: plan.employeeId,
-                  planDate: plan.planDate,
-                },
-              },
-              create: {
-                tenantId,
+    // Bulk upsert all plans in chunked transactions (max 500 per transaction
+    // to avoid Prisma timeout on very large batches)
+    const CHUNK_SIZE = 500
+    for (let i = 0; i < allPlansToUpsert.length; i += CHUNK_SIZE) {
+      const chunk = allPlansToUpsert.slice(i, i + CHUNK_SIZE)
+      await this.prisma.$transaction(
+        chunk.map((plan) =>
+          this.prisma.employeeDayPlan.upsert({
+            where: {
+              employeeId_planDate: {
                 employeeId: plan.employeeId,
                 planDate: plan.planDate,
-                dayPlanId: plan.dayPlanId,
-                source: "tariff",
               },
-              update: {
-                dayPlanId: plan.dayPlanId,
-                source: "tariff",
-              },
-            }),
-          ),
-        )
+            },
+            create: {
+              tenantId,
+              employeeId: plan.employeeId,
+              planDate: plan.planDate,
+              dayPlanId: plan.dayPlanId,
+              source: "tariff",
+            },
+            update: {
+              dayPlanId: plan.dayPlanId,
+              source: "tariff",
+            },
+          }),
+        ),
+      )
+    }
 
-        for (const plan of plansToUpsert) {
-          const dateKey = plan.planDate.toISOString().split("T")[0]!
-          if (existingDateKeys.has(dateKey)) {
-            plansUpdated++
-          } else {
-            plansCreated++
-          }
-        }
+    // Count created vs updated
+    for (const plan of allPlansToUpsert) {
+      if (plan.isUpdate) {
+        plansUpdated++
+      } else {
+        plansCreated++
       }
-
-      employeesProcessed++
     }
 
     return {

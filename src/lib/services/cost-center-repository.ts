@@ -75,8 +75,8 @@ export async function deleteById(prisma: PrismaClient, tenantId: string, id: str
   return count > 0
 }
 
-export async function countEmployees(prisma: PrismaClient, costCenterId: string) {
+export async function countEmployees(prisma: PrismaClient, tenantId: string, costCenterId: string) {
   return prisma.employee.count({
-    where: { costCenterId },
+    where: { tenantId, costCenterId },
   })
 }

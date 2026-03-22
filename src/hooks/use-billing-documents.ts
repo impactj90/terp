@@ -56,6 +56,9 @@ export function useCreateBillingDocument() {
       queryClient.invalidateQueries({
         queryKey: trpc.billing.documents.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.billing.documents.getById.queryKey(),
+      })
     },
   })
 }
@@ -145,6 +148,9 @@ export function useDuplicateBillingDocument() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.billing.documents.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.billing.documents.getById.queryKey(),
       })
     },
   })

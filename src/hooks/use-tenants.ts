@@ -67,6 +67,9 @@ export function useUpdateTenant() {
       queryClient.invalidateQueries({
         queryKey: trpc.tenants.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.tenants.getById.queryKey(),
+      })
     },
   })
 }
@@ -79,6 +82,9 @@ export function useDeactivateTenant() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.tenants.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.tenants.getById.queryKey(),
       })
     },
   })

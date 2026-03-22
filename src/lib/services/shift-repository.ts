@@ -79,18 +79,20 @@ export async function deleteById(prisma: PrismaClient, tenantId: string, id: str
 
 export async function countEmployeeDayPlanUsages(
   prisma: PrismaClient,
+  tenantId: string,
   shiftId: string
 ) {
   return prisma.employeeDayPlan.count({
-    where: { shiftId },
+    where: { tenantId, shiftId },
   })
 }
 
 export async function countShiftAssignmentUsages(
   prisma: PrismaClient,
+  tenantId: string,
   shiftId: string
 ) {
   return prisma.shiftAssignment.count({
-    where: { shiftId },
+    where: { tenantId, shiftId },
   })
 }

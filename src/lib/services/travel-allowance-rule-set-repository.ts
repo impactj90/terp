@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for the TravelAllowanceRuleSet model.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 export async function findMany(prisma: PrismaClient, tenantId: string) {
   return prisma.travelAllowanceRuleSet.findMany({
@@ -56,7 +57,9 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.travelAllowanceRuleSet.update({ where: { id }, data })
+  return tenantScopedUpdate(prisma.travelAllowanceRuleSet, { id, tenantId }, data, {
+    entity: "TravelAllowanceRuleSet",
+  })
 }
 
 export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {

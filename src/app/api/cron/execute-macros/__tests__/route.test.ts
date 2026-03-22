@@ -32,6 +32,11 @@ const {
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     tenant: { findMany: mockTenantFindMany },
+    cronCheckpoint: {
+      findMany: vi.fn().mockResolvedValue([]),
+      deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
+      upsert: vi.fn().mockResolvedValue({}),
+    },
     schedule: { upsert: vi.fn() },
     scheduleExecution: { create: vi.fn(), update: vi.fn() },
     scheduleTaskExecution: { update: vi.fn() },

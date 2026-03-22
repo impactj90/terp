@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for the EmployeeAccessAssignment model.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 const assignmentInclude = {
   employee: {
@@ -98,10 +99,9 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.employeeAccessAssignment.update({
-    where: { id },
-    data,
+  return tenantScopedUpdate(prisma.employeeAccessAssignment, { id, tenantId }, data, {
     include: assignmentInclude,
+    entity: "EmployeeAccessAssignment",
   })
 }
 

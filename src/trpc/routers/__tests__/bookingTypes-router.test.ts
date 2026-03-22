@@ -283,8 +283,11 @@ describe("bookingTypes.update", () => {
     const updated = makeBookingType({ name: "Updated", category: "break" })
     const mockPrisma = {
       bookingType: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))

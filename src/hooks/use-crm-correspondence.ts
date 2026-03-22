@@ -69,6 +69,9 @@ export function useUpdateCrmCorrespondence() {
       queryClient.invalidateQueries({
         queryKey: trpc.crm.correspondence.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.crm.correspondence.getById.queryKey(),
+      })
     },
   })
 }

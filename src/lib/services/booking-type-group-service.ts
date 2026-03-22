@@ -119,7 +119,7 @@ export async function create(
   }
 
   // Re-fetch with includes for response
-  return repo.findByIdWithMembers(prisma, created.id)
+  return repo.findByIdWithMembers(prisma, tenantId, created.id)
 }
 
 export async function update(
@@ -176,7 +176,7 @@ export async function update(
   }
 
   // Re-fetch with includes for response
-  const result = await repo.findByIdWithMembers(prisma, input.id)
+  const result = await repo.findByIdWithMembers(prisma, tenantId, input.id)
 
   if (audit) {
     const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, result as unknown as Record<string, unknown>, TRACKED_FIELDS)

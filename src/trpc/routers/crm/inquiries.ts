@@ -19,39 +19,39 @@ const crmProcedure = tenantProcedure.use(requireModule("crm"))
 // --- Input Schemas ---
 const listInput = z.object({
   addressId: z.string().uuid().optional(),
-  search: z.string().optional(),
+  search: z.string().max(255).optional(),
   status: z.enum(["OPEN", "IN_PROGRESS", "CLOSED", "CANCELLED"]).optional(),
   page: z.number().int().min(1).default(1),
   pageSize: z.number().int().min(1).max(100).default(25),
 })
 
 const createInput = z.object({
-  title: z.string().min(1),
+  title: z.string().min(1).max(255),
   addressId: z.string().uuid(),
   contactId: z.string().uuid().optional(),
-  effort: z.string().optional(),
-  notes: z.string().optional(),
+  effort: z.string().max(100).optional(),
+  notes: z.string().max(2000).optional(),
 })
 
 const updateInput = z.object({
   id: z.string().uuid(),
-  title: z.string().min(1).optional(),
+  title: z.string().min(1).max(255).optional(),
   contactId: z.string().uuid().nullable().optional(),
-  effort: z.string().nullable().optional(),
-  creditRating: z.string().nullable().optional(),
-  notes: z.string().nullable().optional(),
+  effort: z.string().max(100).nullable().optional(),
+  creditRating: z.string().max(255).nullable().optional(),
+  notes: z.string().max(2000).nullable().optional(),
 })
 
 const closeInput = z.object({
   id: z.string().uuid(),
-  closingReason: z.string().optional(),
-  closingRemarks: z.string().optional(),
+  closingReason: z.string().max(2000).optional(),
+  closingRemarks: z.string().max(2000).optional(),
   closeLinkedOrder: z.boolean().optional().default(false),
 })
 
 const cancelInput = z.object({
   id: z.string().uuid(),
-  reason: z.string().optional(),
+  reason: z.string().max(2000).optional(),
 })
 
 const idInput = z.object({ id: z.string().uuid() })
@@ -63,7 +63,7 @@ const linkOrderInput = z.object({
 
 const createOrderInput = z.object({
   id: z.string().uuid(),
-  orderName: z.string().optional(),
+  orderName: z.string().max(255).optional(),
 })
 
 // --- Router ---

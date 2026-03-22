@@ -141,10 +141,11 @@ export async function deleteById(prisma: PrismaClient, tenantId: string, id: str
 
 export async function countTariffUsage(
   prisma: PrismaClient,
+  tenantId: string,
   groupId: string
 ) {
   return prisma.tariff.count({
-    where: { vacationCappingRuleGroupId: groupId },
+    where: { tenantId, vacationCappingRuleGroupId: groupId },
   })
 }
 

@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for the Team and TeamMember models.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 // --- Shared includes ---
 
@@ -127,10 +128,9 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.team.update({
-    where: { id },
-    data,
+  return tenantScopedUpdate(prisma.team, { id, tenantId }, data, {
     include: teamRelationsInclude,
+    entity: "Team",
   })
 }
 

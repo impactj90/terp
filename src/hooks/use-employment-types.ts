@@ -85,6 +85,9 @@ export function useUpdateEmploymentType() {
       queryClient.invalidateQueries({
         queryKey: trpc.employmentTypes.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employmentTypes.getById.queryKey(),
+      })
     },
   })
 }
@@ -106,6 +109,9 @@ export function useDeleteEmploymentType() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.employmentTypes.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employmentTypes.getById.queryKey(),
       })
     },
   })

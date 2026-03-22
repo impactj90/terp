@@ -422,7 +422,7 @@ describe("groups.delete", () => {
       const caller = createCaller(createTestContext(mockPrisma))
       await caller.delete({ type, id: GROUP_ID })
       expect(mockPrisma.employee.count).toHaveBeenCalledWith({
-        where: { [fkColumn]: GROUP_ID },
+        where: { tenantId: TENANT_ID, [fkColumn]: GROUP_ID },
       })
     }
   })

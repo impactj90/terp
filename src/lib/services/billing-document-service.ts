@@ -336,8 +336,6 @@ export async function update(
   const existing = await repo.findById(prisma, tenantId, input.id)
   if (!existing) throw new BillingDocumentNotFoundError()
 
-  assertDraft(existing.status)
-
   const data: Record<string, unknown> = {}
   const fields = [
     "contactId", "deliveryAddressId", "invoiceAddressId",
@@ -357,9 +355,30 @@ export async function update(
     }
   }
 
-  if (Object.keys(data).length === 0) return existing
+  if (Object.keys(data).length === 0) {
+    // Still enforce DRAFT check even for no-op
+    assertDraft(existing.status)
+    return existing
+  }
 
-  const updated = await repo.update(prisma, tenantId, input.id, data)
+  // Atomic DRAFT guard: only update if still in DRAFT status
+  const { count } = await prisma.billingDocument.updateMany({
+    where: { id: input.id, tenantId, status: "DRAFT" },
+    data,
+  })
+  if (count === 0) {
+    // Distinguish not-found from wrong-status
+    if (existing.status !== "DRAFT") {
+      throw new BillingDocumentValidationError(
+        "Document can only be modified in DRAFT status"
+      )
+    }
+    throw new BillingDocumentConflictError(
+      "Document status changed concurrently"
+    )
+  }
+
+  const updated = await repo.findById(prisma, tenantId, input.id)
 
   // Never throws — audit failures must not block the actual operation
   if (updated) {
@@ -393,18 +412,38 @@ export async function remove(
   const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) throw new BillingDocumentNotFoundError()
 
-  assertDraft(existing.status)
+  // Wrap child-count check + delete in transaction with atomic DRAFT guard
+  await prisma.$transaction(async (tx) => {
+    // Atomic DRAFT guard
+    const { count: draftCount } = await tx.billingDocument.updateMany({
+      where: { id, tenantId, status: "DRAFT" },
+      data: { updatedAt: new Date() }, // no-op write to lock the row
+    })
+    if (draftCount === 0) {
+      throw new BillingDocumentValidationError(
+        "Document can only be modified in DRAFT status"
+      )
+    }
 
-  // Check for child documents
-  const childCount = await repo.countChildDocuments(prisma, tenantId, id)
-  if (childCount > 0) {
-    throw new BillingDocumentValidationError(
-      "Cannot delete document with forwarded child documents"
-    )
-  }
+    // Check for child documents (inside transaction so it's atomic)
+    const childCount = await tx.billingDocument.count({
+      where: { tenantId, parentDocumentId: id },
+    })
+    if (childCount > 0) {
+      throw new BillingDocumentValidationError(
+        "Cannot delete document with forwarded child documents"
+      )
+    }
 
-  const deleted = await repo.remove(prisma, tenantId, id)
-  if (!deleted) throw new BillingDocumentNotFoundError()
+    // Delete positions first, then document
+    await tx.billingDocumentPosition.deleteMany({
+      where: { documentId: id },
+    })
+    const { count } = await tx.billingDocument.deleteMany({
+      where: { id, tenantId },
+    })
+    if (count === 0) throw new BillingDocumentNotFoundError()
+  })
 
   // Never throws — audit failures must not block the actual operation
   await auditLog.log(prisma, {
@@ -885,12 +924,11 @@ export async function updatePosition(
   },
   audit: AuditContext
 ) {
-  // Find position and verify parent doc is DRAFT
-  const pos = await repo.findPositionById(prisma, input.id)
+  // Pre-fetch position for early validation and audit comparison
+  const pos = await repo.findPositionById(prisma, tenantId, input.id)
   if (!pos) throw new BillingDocumentValidationError("Position not found")
   if (!pos.document) throw new BillingDocumentNotFoundError()
   if (pos.document.tenantId !== tenantId) throw new BillingDocumentNotFoundError()
-  assertDraft(pos.document.status)
 
   const data: Record<string, unknown> = {}
   const fields = [
@@ -912,12 +950,33 @@ export async function updatePosition(
     data.totalPrice = calculatePositionTotal(qty, price, flat)
   }
 
-  if (Object.keys(data).length === 0) return pos
+  if (Object.keys(data).length === 0) {
+    assertDraft(pos.document.status)
+    return pos
+  }
 
-  const updated = await repo.updatePosition(prisma, tenantId, input.id, data)
+  // Wrap DRAFT check + position update + recalculate in transaction
+  const updated = await prisma.$transaction(async (tx) => {
+    const txPrisma = tx as unknown as PrismaClient
 
-  // Recalculate document totals
-  await recalculateTotals(prisma, tenantId, pos.document.id)
+    // Atomic DRAFT guard on parent document
+    const { count } = await tx.billingDocument.updateMany({
+      where: { id: pos.document!.id, tenantId, status: "DRAFT" },
+      data: { updatedAt: new Date() },
+    })
+    if (count === 0) {
+      throw new BillingDocumentValidationError(
+        "Document can only be modified in DRAFT status"
+      )
+    }
+
+    const updatedPos = await repo.updatePosition(txPrisma, tenantId, input.id, data)
+
+    // Recalculate document totals
+    await recalculateTotals(txPrisma, tenantId, pos.document!.id)
+
+    return updatedPos
+  })
 
   // Never throws — audit failures must not block the actual operation
   if (updated) {
@@ -948,18 +1007,35 @@ export async function deletePosition(
   id: string,
   audit: AuditContext
 ) {
-  const pos = await repo.findPositionById(prisma, id)
+  // Pre-fetch position for early validation and audit info
+  const pos = await repo.findPositionById(prisma, tenantId, id)
   if (!pos) throw new BillingDocumentValidationError("Position not found")
   if (!pos.document) throw new BillingDocumentNotFoundError()
   if (pos.document.tenantId !== tenantId) throw new BillingDocumentNotFoundError()
-  assertDraft(pos.document.status)
 
   const documentId = pos.document.id
-  const deleted = await repo.deletePosition(prisma, tenantId, id)
-  if (!deleted) throw new BillingDocumentValidationError("Position not found")
 
-  // Recalculate document totals
-  await recalculateTotals(prisma, tenantId, documentId)
+  // Wrap DRAFT check + delete + recalculate in transaction
+  await prisma.$transaction(async (tx) => {
+    const txPrisma = tx as unknown as PrismaClient
+
+    // Atomic DRAFT guard on parent document
+    const { count: draftCount } = await tx.billingDocument.updateMany({
+      where: { id: documentId, tenantId, status: "DRAFT" },
+      data: { updatedAt: new Date() },
+    })
+    if (draftCount === 0) {
+      throw new BillingDocumentValidationError(
+        "Document can only be modified in DRAFT status"
+      )
+    }
+
+    const deleted = await repo.deletePosition(txPrisma, tenantId, id)
+    if (!deleted) throw new BillingDocumentValidationError("Position not found")
+
+    // Recalculate document totals
+    await recalculateTotals(txPrisma, tenantId, documentId)
+  })
 
   // Never throws — audit failures must not block the actual operation
   await auditLog.log(prisma, {
@@ -983,32 +1059,43 @@ export async function reorderPositions(
 ) {
   const doc = await repo.findById(prisma, tenantId, documentId)
   if (!doc) throw new BillingDocumentNotFoundError()
-  assertDraft(doc.status)
 
-  // Validate all position IDs belong to this document + tenant
-  const validPositions = await prisma.billingDocumentPosition.findMany({
-    where: {
-      id: { in: positionIds },
-      document: { id: documentId, tenantId },
-    },
-    select: { id: true },
-  })
+  // Wrap DRAFT guard + validation + reorder in a single transaction
+  await prisma.$transaction(async (tx) => {
+    // Atomic DRAFT guard
+    const { count } = await tx.billingDocument.updateMany({
+      where: { id: documentId, tenantId, status: "DRAFT" },
+      data: { updatedAt: new Date() },
+    })
+    if (count === 0) {
+      throw new BillingDocumentValidationError(
+        "Document can only be modified in DRAFT status"
+      )
+    }
 
-  if (validPositions.length !== positionIds.length) {
-    throw new BillingDocumentValidationError(
-      "One or more position IDs do not belong to this document"
-    )
-  }
+    // Validate all position IDs belong to this document + tenant
+    const validPositions = await tx.billingDocumentPosition.findMany({
+      where: {
+        id: { in: positionIds },
+        document: { id: documentId, tenantId },
+      },
+      select: { id: true },
+    })
 
-  // Batch update sort order in a single transaction
-  await prisma.$transaction(
-    positionIds.map((id, index) =>
-      prisma.billingDocumentPosition.update({
-        where: { id },
-        data: { sortOrder: index + 1 },
+    if (validPositions.length !== positionIds.length) {
+      throw new BillingDocumentValidationError(
+        "One or more position IDs do not belong to this document"
+      )
+    }
+
+    // Batch update sort order
+    for (let i = 0; i < positionIds.length; i++) {
+      await tx.billingDocumentPosition.update({
+        where: { id: positionIds[i]! },
+        data: { sortOrder: i + 1 },
       })
-    )
-  )
+    }
+  })
 
   return repo.findPositions(prisma, tenantId, documentId)
 }

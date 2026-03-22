@@ -4,6 +4,7 @@
  * Pure Prisma query functions for employee card data access.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 /**
  * Verifies an employee exists and belongs to the given tenant (not soft-deleted).
@@ -82,6 +83,7 @@ export async function findCardByIdAndTenant(
  */
 export async function updateCard(
   prisma: PrismaClient,
+  tenantId: string,
   cardId: string,
   data: {
     isActive: boolean
@@ -89,8 +91,10 @@ export async function updateCard(
     deactivationReason: string | null
   }
 ) {
-  return prisma.employeeCard.update({
-    where: { id: cardId },
-    data,
-  })
+  return tenantScopedUpdate(
+    prisma.employeeCard,
+    { id: cardId, tenantId },
+    data as unknown as Record<string, unknown>,
+    { entity: "EmployeeCard" },
+  )
 }

@@ -260,8 +260,15 @@ describe("employeeCappingExceptions.update", () => {
     const updated = makeException({ exemptionType: "partial", retainDays: 10 })
     const mockPrisma = {
       employeeCappingException: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)   // router data-scope check
+          .mockResolvedValueOnce(existing)   // service findById
+          .mockResolvedValueOnce(updated),   // tenantScopedUpdate refetch
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+      employee: {
+        findFirst: vi.fn().mockResolvedValue({ id: EMPLOYEE_ID, departmentId: null }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))

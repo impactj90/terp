@@ -148,7 +148,7 @@ export async function deleteContact(
   contactId: string,
   audit?: AuditContext
 ) {
-  const contact = await repo.findContactWithEmployee(prisma, contactId)
+  const contact = await repo.findContactWithEmployee(prisma, tenantId, contactId)
   if (!contact) {
     throw new ContactNotFoundError()
   }

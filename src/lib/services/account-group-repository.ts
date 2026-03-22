@@ -78,9 +78,10 @@ export async function deleteById(prisma: PrismaClient, tenantId: string, id: str
 
 export async function countAccounts(
   prisma: PrismaClient,
+  tenantId: string,
   accountGroupId: string
 ) {
   return prisma.account.count({
-    where: { accountGroupId },
+    where: { tenantId, accountGroupId },
   })
 }

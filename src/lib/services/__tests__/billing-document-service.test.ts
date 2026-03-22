@@ -260,10 +260,13 @@ describe("billing-document-service", () => {
 
     it("rejects when status is not DRAFT", async () => {
       const prisma = createMockPrisma()
+      // findFirst returns the PRINTED doc (used by pre-fetch and re-check after count === 0)
       ;(prisma.billingDocument.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
         ...mockDocument,
         status: "PRINTED",
       })
+      // Atomic updateMany with status: "DRAFT" in where clause finds no match
+      ;(prisma.billingDocument.updateMany as ReturnType<typeof vi.fn>).mockResolvedValue({ count: 0 })
 
       await expect(
         service.update(prisma, TENANT_ID, { id: DOC_ID, notes: "test" }, AUDIT)
@@ -624,10 +627,13 @@ describe("billing-document-service", () => {
 
     it("rejects if document is not DRAFT", async () => {
       const prisma = createMockPrisma()
+      // Pre-fetch position succeeds (needed for early validation)
       ;(prisma.billingDocumentPosition.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
         ...mockPosition,
         document: { id: DOC_ID, tenantId: TENANT_ID, status: "PRINTED" },
       })
+      // Atomic DRAFT guard inside transaction: updateMany with status: "DRAFT" finds no match
+      ;(prisma.billingDocument.updateMany as ReturnType<typeof vi.fn>).mockResolvedValue({ count: 0 })
 
       await expect(
         service.deletePosition(prisma, TENANT_ID, POS_ID, AUDIT)

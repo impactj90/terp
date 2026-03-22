@@ -146,7 +146,7 @@ const taskCatalogEntrySchema = z.object({
 
 const createScheduleInputSchema = z.object({
   name: z.string().min(1, "Name is required").max(255),
-  description: z.string().optional(),
+  description: z.string().max(2000).optional(),
   timingType: z.enum(TIMING_TYPES),
   timingConfig: z.unknown().optional(),
   isEnabled: z.boolean().optional(),
@@ -165,7 +165,7 @@ const createScheduleInputSchema = z.object({
 const updateScheduleInputSchema = z.object({
   id: z.string(),
   name: z.string().min(1).max(255).optional(),
-  description: z.string().nullable().optional(),
+  description: z.string().max(2000).nullable().optional(),
   timingType: z.enum(TIMING_TYPES).optional(),
   timingConfig: z.unknown().optional(),
   isEnabled: z.boolean().optional(),

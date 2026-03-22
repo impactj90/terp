@@ -122,6 +122,7 @@ export function useGenerateDueRecurringInvoices() {
     ...trpc.billing.recurringInvoices.generateDue.mutationOptions(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: trpc.billing.recurringInvoices.list.queryKey() })
+      queryClient.invalidateQueries({ queryKey: trpc.billing.recurringInvoices.getById.queryKey() })
       queryClient.invalidateQueries({ queryKey: trpc.billing.documents.list.queryKey() })
     },
   })

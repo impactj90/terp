@@ -228,8 +228,11 @@ describe("activities.update", () => {
     const updated = makeActivity({ name: "Updated", description: "New desc" })
     const mockPrisma = {
       activity: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -289,15 +292,18 @@ describe("activities.update", () => {
     const updated = makeActivity({ code: "ACT001" })
     const mockPrisma = {
       activity: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({ id: ACTIVITY_ID, code: "ACT001" })
     expect(result.code).toBe("ACT001")
-    // Only called once for existence check, not a second time for uniqueness
-    expect(mockPrisma.activity.findFirst).toHaveBeenCalledTimes(1)
+    // Called once for existence check + once for refetch after updateMany (no uniqueness check)
+    expect(mockPrisma.activity.findFirst).toHaveBeenCalledTimes(2)
   })
 
   it("throws NOT_FOUND for missing activity", async () => {
@@ -317,14 +323,17 @@ describe("activities.update", () => {
     const updated = makeActivity({ isActive: false })
     const mockPrisma = {
       activity: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({ id: ACTIVITY_ID, isActive: false })
     expect(result.isActive).toBe(false)
-    const updateCall = mockPrisma.activity.update.mock.calls[0]![0]
+    const updateCall = mockPrisma.activity.updateMany.mock.calls[0]![0]
     expect(updateCall.data.isActive).toBe(false)
   })
 })
@@ -378,7 +387,7 @@ describe("activities.delete", () => {
       "Cannot delete activity with assigned employees"
     )
     expect(mockPrisma.employee.count).toHaveBeenCalledWith({
-      where: { defaultActivityId: ACTIVITY_ID },
+      where: { tenantId: TENANT_ID, defaultActivityId: ACTIVITY_ID },
     })
   })
 })

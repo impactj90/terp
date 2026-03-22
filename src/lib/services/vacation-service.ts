@@ -26,7 +26,7 @@ import {
 import { decimalToNumber, mapBalanceToOutput } from "./vacation-balance-output"
 import * as repo from "./vacation-repository"
 import * as auditLog from "./audit-logs-service"
-import type { AuditContext } from "./audit-logs-service"
+import type { AuditContext, AuditLogCreateInput } from "./audit-logs-service"
 
 // --- Audit Constants ---
 
@@ -67,18 +67,27 @@ async function calculateCappedCarryover(
   employee: { id: string; tariffId: string | null },
   prevYear: number,
   available: number,
-  defaultMaxCarryover: number = 0
+  defaultMaxCarryover: number = 0,
+  prefetched?: {
+    tariff?: { vacationCappingRuleGroupId: string | null; [key: string]: unknown } | null
+    cappingGroup?: Awaited<ReturnType<typeof repo.findCappingGroupWithRules>> | null
+    exceptions?: Awaited<ReturnType<typeof repo.findCappingExceptions>>
+  }
 ): Promise<number> {
-  // Resolve tariff for previous year
-  const tariff = await resolveTariff(prisma, employee, prevYear, tenantId)
+  // Resolve tariff for previous year (use pre-fetched if available)
+  const tariff = prefetched?.tariff !== undefined
+    ? prefetched.tariff
+    : await resolveTariff(prisma, employee, prevYear, tenantId)
 
   // If tariff has capping rule group, use advanced capping
   if (tariff?.vacationCappingRuleGroupId) {
-    const cappingGroup = await repo.findCappingGroupWithRules(
-      prisma,
-      tenantId,
-      tariff.vacationCappingRuleGroupId
-    )
+    const cappingGroup = prefetched?.cappingGroup !== undefined
+      ? prefetched.cappingGroup
+      : await repo.findCappingGroupWithRules(
+          prisma,
+          tenantId,
+          tariff.vacationCappingRuleGroupId
+        )
 
     if (cappingGroup) {
       // Build capping rules
@@ -92,13 +101,15 @@ async function calculateCappedCarryover(
           capValue: decimalToNumber(link.cappingRule.capValue),
         }))
 
-      // Load employee exceptions
-      const exceptions = await repo.findCappingExceptions(
-        prisma,
-        tenantId,
-        employee.id,
-        prevYear
-      )
+      // Load employee exceptions (use pre-fetched if available)
+      const exceptions = prefetched?.exceptions !== undefined
+        ? prefetched.exceptions
+        : await repo.findCappingExceptions(
+            prisma,
+            tenantId,
+            employee.id,
+            prevYear
+          )
 
       const exceptionsInput: CappingExceptionInput[] = exceptions.map(
         (exc) => ({
@@ -684,7 +695,80 @@ export async function initializeBatch(
       : []
   const fallbackTariffMap = new Map(fallbackTariffs.map((t) => [t.id, t]))
 
+  // Pre-fetch tariff assignments for PREVIOUS year (for carryover calculation)
+  // The current year tariff pre-fetch above uses tariffRefDate = end of input.year.
+  // Carryover needs tariffs as of end of (input.year - 1), which may differ.
+  const prevYearTariffMap = new Map<string, typeof fallbackTariffs[number]>()
+  const cappingGroupMap = new Map<string, NonNullable<Awaited<ReturnType<typeof repo.findCappingGroupWithRules>>>>()
+  const exceptionsByEmployee = new Map<string, Awaited<ReturnType<typeof repo.findCappingExceptions>>>()
+
+  if (input.carryover && input.year >= 1901) {
+    let prevRefDate = new Date(Date.UTC(input.year - 1, 11, 31))
+    if (prevRefDate > now) prevRefDate = now
+
+    const prevAssignments = await prisma.employeeTariffAssignment.findMany({
+      where: {
+        employeeId: { in: empIds },
+        isActive: true,
+        effectiveFrom: { lte: prevRefDate },
+        OR: [{ effectiveTo: null }, { effectiveTo: { gte: prevRefDate } }],
+      },
+      include: { tariff: true },
+      orderBy: { effectiveFrom: "desc" },
+    })
+    for (const ta of prevAssignments) {
+      if (!prevYearTariffMap.has(ta.employeeId) && ta.tariff) {
+        prevYearTariffMap.set(ta.employeeId, ta.tariff)
+      }
+    }
+    // Add fallback tariffs for employees without prevYear assignments
+    for (const emp of employees) {
+      if (!prevYearTariffMap.has(emp.id) && emp.tariffId) {
+        const fb = fallbackTariffMap.get(emp.tariffId)
+        if (fb) prevYearTariffMap.set(emp.id, fb)
+      }
+    }
+
+    // Pre-fetch capping groups (usually 1-3 per tenant)
+    const uniqueCappingGroupIds = [
+      ...new Set(
+        [...prevYearTariffMap.values()]
+          .map((t) => t.vacationCappingRuleGroupId)
+          .filter((id): id is string => !!id)
+      ),
+    ]
+    if (uniqueCappingGroupIds.length > 0) {
+      const cappingGroups = await prisma.vacationCappingRuleGroup.findMany({
+        where: { id: { in: uniqueCappingGroupIds }, tenantId },
+        include: {
+          cappingRuleLinks: {
+            include: { cappingRule: true },
+          },
+        },
+      })
+      for (const g of cappingGroups) {
+        cappingGroupMap.set(g.id, g)
+      }
+    }
+
+    // Pre-fetch all capping exceptions for all employees in prevYear
+    const allExceptions = await prisma.employeeCappingException.findMany({
+      where: {
+        employeeId: { in: empIds },
+        employee: { tenantId },
+        isActive: true,
+        OR: [{ year: input.year - 1 }, { year: null }],
+      },
+    })
+    for (const exc of allExceptions) {
+      const list = exceptionsByEmployee.get(exc.employeeId) ?? []
+      list.push(exc)
+      exceptionsByEmployee.set(exc.employeeId, list)
+    }
+  }
+
   let createdCount = 0
+  const auditEntries: AuditLogCreateInput[] = []
 
   // 2. For each employee
   for (const employee of employees) {
@@ -695,12 +779,24 @@ export async function initializeBatch(
           const prevBalance = prevBalanceMap.get(employee.id)
           if (prevBalance) {
             const available = calculateAvailable(prevBalance)
+            const prevTariff = prevYearTariffMap.get(employee.id) ?? null
+            const prevCappingGroup = prevTariff?.vacationCappingRuleGroupId
+              ? cappingGroupMap.get(prevTariff.vacationCappingRuleGroupId) ?? null
+              : null
+            const prevExceptions = exceptionsByEmployee.get(employee.id) ?? []
+
             const carryoverAmount = await calculateCappedCarryover(
               prisma,
               tenantId,
               employee,
               input.year - 1,
-              available
+              available,
+              0,
+              {
+                tariff: prevTariff,
+                cappingGroup: prevCappingGroup,
+                exceptions: prevExceptions,
+              }
             )
             if (carryoverAmount > 0) {
               await repo.upsertBalanceCarryoverSimple(
@@ -759,26 +855,29 @@ export async function initializeBatch(
         result.totalEntitlement
       )
 
-      // Never throws — audit failures must not block the actual operation
       if (audit) {
-        await auditLog.log(prisma, {
+        auditEntries.push({
           tenantId,
           userId: audit.userId,
           action: "create",
           entityType: ENTITY_TYPE,
           entityId: (batchBalance as unknown as Record<string, unknown>).id as string,
           entityName: `${input.year}`,
-          changes: null,
           metadata: { batch: true },
-          ipAddress: audit.ipAddress,
-          userAgent: audit.userAgent,
-        }).catch(err => console.error('[AuditLog] Failed:', err));
+          ipAddress: audit.ipAddress ?? null,
+          userAgent: audit.userAgent ?? null,
+        })
       }
 
       createdCount++
     } catch {
       // Skip employees with errors, continue with next
     }
+  }
+
+  // Batch write all collected audit entries
+  if (audit && auditEntries.length > 0) {
+    await auditLog.logBulk(prisma, auditEntries)
   }
 
   return {

@@ -282,7 +282,7 @@ describe("accessProfiles.delete", () => {
 
     expect(result.success).toBe(true)
     expect(mockPrisma.employeeAccessAssignment.count).toHaveBeenCalledWith({
-      where: { accessProfileId: PROFILE_ID },
+      where: { tenantId: TENANT_ID, accessProfileId: PROFILE_ID },
     })
     expect(mockPrisma.accessProfile.deleteMany).toHaveBeenCalledWith({
       where: { id: PROFILE_ID, tenantId: TENANT_ID },

@@ -192,15 +192,19 @@ describe("employeeCards.deactivate", () => {
     })
     const mockPrisma = {
       employeeCard: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(deactivated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce({ ...existing, employee: { id: EMP_ID, departmentId: null } }) // router data-scope check
+          .mockResolvedValueOnce(existing)       // service findCardByIdAndTenant
+          .mockResolvedValueOnce(deactivated),   // tenantScopedUpdate refetch
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.deactivate({ id: CARD_ID, reason: "Lost" })
     expect(result.isActive).toBe(false)
     expect(result.deactivationReason).toBe("Lost")
-    const updateCall = mockPrisma.employeeCard.update.mock.calls[0]![0]
+    const updateCall = mockPrisma.employeeCard.updateMany.mock.calls[0]![0]
     expect(updateCall.data.isActive).toBe(false)
     expect(updateCall.data.deactivatedAt).toBeDefined()
     expect(updateCall.data.deactivationReason).toBe("Lost")

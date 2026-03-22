@@ -62,6 +62,9 @@ export function useCreateExportInterface() {
       queryClient.invalidateQueries({
         queryKey: trpc.exportInterfaces.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.exportInterfaces.getById.queryKey(),
+      })
     },
   })
 }
@@ -78,6 +81,9 @@ export function useUpdateExportInterface() {
       queryClient.invalidateQueries({
         queryKey: trpc.exportInterfaces.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.exportInterfaces.getById.queryKey(),
+      })
     },
   })
 }
@@ -93,6 +99,12 @@ export function useDeleteExportInterface() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.exportInterfaces.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.exportInterfaces.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.exportInterfaces.listAccounts.queryKey(),
       })
     },
   })

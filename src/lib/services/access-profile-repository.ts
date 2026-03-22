@@ -64,9 +64,10 @@ export async function deleteById(prisma: PrismaClient, tenantId: string, id: str
 
 export async function countAssignments(
   prisma: PrismaClient,
+  tenantId: string,
   accessProfileId: string
 ) {
   return prisma.employeeAccessAssignment.count({
-    where: { accessProfileId },
+    where: { tenantId, accessProfileId },
   })
 }

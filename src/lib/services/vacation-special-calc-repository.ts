@@ -5,6 +5,7 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import type { Prisma } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 export async function findMany(
   prisma: PrismaClient,
@@ -68,7 +69,7 @@ export async function update(
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.vacationSpecialCalculation.update({ where: { id }, data })
+  return tenantScopedUpdate(prisma.vacationSpecialCalculation, { id, tenantId }, data, { entity: "VacationSpecialCalculation" })
 }
 
 export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
@@ -80,9 +81,10 @@ export async function deleteById(prisma: PrismaClient, tenantId: string, id: str
 
 export async function countCalcGroupUsages(
   prisma: PrismaClient,
+  tenantId: string,
   specialCalculationId: string
 ) {
   return prisma.vacationCalcGroupSpecialCalc.count({
-    where: { specialCalculationId },
+    where: { specialCalculationId, group: { tenantId } },
   })
 }

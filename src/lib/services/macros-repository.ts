@@ -5,6 +5,7 @@
  * and MacroExecution models.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 // --- Include constants ---
 
@@ -74,7 +75,7 @@ export async function updateMacro(
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.macro.update({ where: { id }, data })
+  return tenantScopedUpdate(prisma.macro, { id, tenantId }, data, { entity: "Macro" })
 }
 
 export async function deleteMacro(prisma: PrismaClient, tenantId: string, id: string) {
@@ -126,7 +127,7 @@ export async function updateAssignment(
   assignmentId: string,
   data: Record<string, unknown>
 ) {
-  return prisma.macroAssignment.update({ where: { id: assignmentId }, data })
+  return tenantScopedUpdate(prisma.macroAssignment, { id: assignmentId, tenantId }, data, { entity: "MacroAssignment" })
 }
 
 export async function deleteAssignment(
@@ -189,5 +190,5 @@ export async function updateExecution(
     errorMessage: string | null
   }
 ) {
-  return prisma.macroExecution.update({ where: { id }, data })
+  return tenantScopedUpdate(prisma.macroExecution, { id, tenantId }, data as Record<string, unknown>, { entity: "MacroExecution" })
 }

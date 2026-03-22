@@ -202,7 +202,7 @@ export async function remove(
   }
 
   // Check if route has trip records
-  const tripCount = await repo.countTripRecordsByRoute(prisma, id)
+  const tripCount = await repo.countTripRecordsByRoute(prisma, tenantId, id)
   if (tripCount > 0) {
     throw new VehicleRouteValidationError(
       "Cannot delete vehicle route that has trip records"

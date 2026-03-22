@@ -239,7 +239,7 @@ export async function remove(
   }
 
   // Check for employee contacts referencing this kind
-  const contactCount = await repo.countEmployeeContacts(prisma, id)
+  const contactCount = await repo.countEmployeeContacts(prisma, tenantId, id)
   if (contactCount > 0) {
     throw new ContactKindValidationError(
       "Cannot delete contact kind with associated employee contacts"

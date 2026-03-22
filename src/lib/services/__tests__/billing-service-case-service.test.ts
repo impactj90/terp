@@ -276,7 +276,10 @@ describe("billing-service-case-service", () => {
 
     it("rejects when status is CLOSED", async () => {
       const prisma = createMockPrisma()
+      // findFirst returns CLOSED case (used by pre-fetch and re-check after count === 0)
       ;(prisma.billingServiceCase.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(mockClosedCase)
+      // Atomic updateMany with status notIn ["CLOSED","INVOICED"] finds no match
+      ;(prisma.billingServiceCase.updateMany as ReturnType<typeof vi.fn>).mockResolvedValue({ count: 0 })
 
       await expect(
         service.update(prisma, TENANT_ID, { id: CASE_ID, title: "test" })
@@ -285,7 +288,10 @@ describe("billing-service-case-service", () => {
 
     it("rejects when status is INVOICED", async () => {
       const prisma = createMockPrisma()
+      // findFirst returns INVOICED case (used by pre-fetch and re-check after count === 0)
       ;(prisma.billingServiceCase.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(mockInvoicedCase)
+      // Atomic updateMany with status notIn ["CLOSED","INVOICED"] finds no match
+      ;(prisma.billingServiceCase.updateMany as ReturnType<typeof vi.fn>).mockResolvedValue({ count: 0 })
 
       await expect(
         service.update(prisma, TENANT_ID, { id: CASE_ID, title: "test" })
@@ -315,7 +321,10 @@ describe("billing-service-case-service", () => {
 
     it("rejects if already CLOSED", async () => {
       const prisma = createMockPrisma()
+      // findFirst returns CLOSED case (needed for pre-fetch)
       ;(prisma.billingServiceCase.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(mockClosedCase)
+      // Atomic updateMany with status notIn ["CLOSED","INVOICED"] finds no match
+      ;(prisma.billingServiceCase.updateMany as ReturnType<typeof vi.fn>).mockResolvedValue({ count: 0 })
 
       await expect(
         service.close(prisma, TENANT_ID, CASE_ID, "reason", USER_ID)
@@ -324,7 +333,10 @@ describe("billing-service-case-service", () => {
 
     it("rejects if already INVOICED", async () => {
       const prisma = createMockPrisma()
+      // findFirst returns INVOICED case (needed for pre-fetch)
       ;(prisma.billingServiceCase.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(mockInvoicedCase)
+      // Atomic updateMany with status notIn ["CLOSED","INVOICED"] finds no match
+      ;(prisma.billingServiceCase.updateMany as ReturnType<typeof vi.fn>).mockResolvedValue({ count: 0 })
 
       await expect(
         service.close(prisma, TENANT_ID, CASE_ID, "reason", USER_ID)

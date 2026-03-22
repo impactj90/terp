@@ -111,10 +111,11 @@ export async function deleteById(prisma: PrismaClient, tenantId: string, id: str
 
 export async function countPayrollExports(
   prisma: PrismaClient,
+  tenantId: string,
   exportInterfaceId: string
 ) {
   return prisma.payrollExport.count({
-    where: { exportInterfaceId },
+    where: { tenantId, exportInterfaceId },
   })
 }
 

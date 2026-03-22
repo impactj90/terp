@@ -17,15 +17,15 @@ const billingProcedure = tenantProcedure.use(requireModule("billing"))
 // --- Input Schemas ---
 const upsertInput = z.object({
   companyName: z.string().max(255).nullable().optional(),
-  companyAddress: z.string().nullable().optional(),
-  logoUrl: z.string().nullable().optional(),
+  companyAddress: z.string().max(500).nullable().optional(),
+  logoUrl: z.string().max(2000).nullable().optional(),
   bankName: z.string().max(255).nullable().optional(),
   iban: z.string().max(34).nullable().optional(),
   bic: z.string().max(11).nullable().optional(),
   taxId: z.string().max(50).nullable().optional(),
   commercialRegister: z.string().max(255).nullable().optional(),
   managingDirector: z.string().max(255).nullable().optional(),
-  footerHtml: z.string().nullable().optional(),
+  footerHtml: z.string().max(10000).nullable().optional(),
   phone: z.string().max(50).nullable().optional(),
   email: z.string().max(255).nullable().optional(),
   website: z.string().max(255).nullable().optional(),

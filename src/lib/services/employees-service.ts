@@ -825,9 +825,9 @@ export async function bulkAssignTariff(
     updated = result.count;
 
     // Never throws — audit failures must not block the actual operation
-    for (const employeeId of validIds) {
+    await auditLog.logBulk(prisma, validIds.map(employeeId => {
       const emp = empMap.get(employeeId)!;
-      await auditLog.log(prisma, {
+      return {
         tenantId,
         userId: audit.userId,
         action: "update",
@@ -836,10 +836,10 @@ export async function bulkAssignTariff(
         entityName: `${emp.firstName} ${emp.lastName} (${emp.personnelNumber})`,
         changes: null,
         metadata: { bulk: true, tariffId: tariffValue },
-        ipAddress: audit.ipAddress,
-        userAgent: audit.userAgent,
-      }).catch(err => console.error('[AuditLog] Failed:', err));
-    }
+        ipAddress: audit.ipAddress ?? null,
+        userAgent: audit.userAgent ?? null,
+      };
+    }));
   }
 
   return { updated, skipped };

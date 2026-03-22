@@ -62,6 +62,7 @@ export class MacroExecutor {
 
     const todayStr = date.toISOString().slice(0, 10)
 
+    const successfulWeeklyIds: string[] = []
     for (const macro of weeklyMacros) {
       for (const assignment of macro.assignments) {
         if (!assignment.isActive) continue
@@ -69,10 +70,7 @@ export class MacroExecutor {
         if (assignment.executionDay === weekday) {
           try {
             await this.executeSingleMacro(macro, "scheduled", assignment.id)
-            await this.prisma.macroAssignment.update({
-              where: { id: assignment.id },
-              data: { lastExecutedAt: new Date(), lastExecutedDate: date },
-            })
+            successfulWeeklyIds.push(assignment.id)
             executed++
           } catch (err) {
             failed++
@@ -85,6 +83,12 @@ export class MacroExecutor {
         }
       }
     }
+    if (successfulWeeklyIds.length > 0) {
+      await this.prisma.macroAssignment.updateMany({
+        where: { id: { in: successfulWeeklyIds } },
+        data: { lastExecutedAt: new Date(), lastExecutedDate: date },
+      })
+    }
 
     // 2. Execute monthly macros
     const monthlyMacros = await this.prisma.macro.findMany({
@@ -92,6 +96,7 @@ export class MacroExecutor {
       include: { assignments: true },
     })
 
+    const successfulMonthlyIds: string[] = []
     for (const macro of monthlyMacros) {
       for (const assignment of macro.assignments) {
         if (!assignment.isActive) continue
@@ -104,10 +109,7 @@ export class MacroExecutor {
         if (effectiveDay === dayOfMonth) {
           try {
             await this.executeSingleMacro(macro, "scheduled", assignment.id)
-            await this.prisma.macroAssignment.update({
-              where: { id: assignment.id },
-              data: { lastExecutedAt: new Date(), lastExecutedDate: date },
-            })
+            successfulMonthlyIds.push(assignment.id)
             executed++
           } catch (err) {
             failed++
@@ -119,6 +121,12 @@ export class MacroExecutor {
           }
         }
       }
+    }
+    if (successfulMonthlyIds.length > 0) {
+      await this.prisma.macroAssignment.updateMany({
+        where: { id: { in: successfulMonthlyIds } },
+        data: { lastExecutedAt: new Date(), lastExecutedDate: date },
+      })
     }
 
     return { executed, failed, errors }

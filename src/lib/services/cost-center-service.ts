@@ -218,7 +218,7 @@ export async function remove(
   }
 
   // Check for employees
-  const employeeCount = await repo.countEmployees(prisma, id)
+  const employeeCount = await repo.countEmployees(prisma, tenantId, id)
   if (employeeCount > 0) {
     throw new CostCenterValidationError(
       "Cannot delete cost center with assigned employees"

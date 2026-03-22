@@ -128,6 +128,12 @@ export function useLinkCrmInquiryOrder() {
       queryClient.invalidateQueries({
         queryKey: trpc.crm.inquiries.getById.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.orders.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.orders.getById.queryKey(),
+      })
     },
   })
 }
@@ -143,6 +149,12 @@ export function useCreateCrmInquiryOrder() {
       })
       queryClient.invalidateQueries({
         queryKey: trpc.crm.inquiries.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.orders.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.orders.getById.queryKey(),
       })
     },
   })

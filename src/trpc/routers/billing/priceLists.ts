@@ -24,14 +24,14 @@ const optionalUuid = uuid.optional()
 
 const listInput = z.object({
   isActive: z.boolean().optional(),
-  search: z.string().optional(),
+  search: z.string().max(255).optional(),
   page: z.number().int().min(1).default(1),
   pageSize: z.number().int().min(1).max(100).default(25),
 })
 
 const createInput = z.object({
   name: z.string().min(1).max(255),
-  description: z.string().optional(),
+  description: z.string().max(2000).optional(),
   isDefault: z.boolean().optional(),
   validFrom: z.coerce.date().optional(),
   validTo: z.coerce.date().optional(),
@@ -40,7 +40,7 @@ const createInput = z.object({
 const updateInput = z.object({
   id: uuid,
   name: z.string().min(1).max(255).optional(),
-  description: z.string().nullable().optional(),
+  description: z.string().max(2000).nullable().optional(),
   isDefault: z.boolean().optional(),
   validFrom: z.coerce.date().nullable().optional(),
   validTo: z.coerce.date().nullable().optional(),
@@ -51,17 +51,17 @@ const idInput = z.object({ id: uuid })
 
 const entryListInput = z.object({
   priceListId: uuid,
-  search: z.string().optional(),
+  search: z.string().max(255).optional(),
 })
 
 const createEntryInput = z.object({
   priceListId: uuid,
   articleId: optionalUuid,
-  itemKey: z.string().optional(),
-  description: z.string().optional(),
-  unitPrice: z.number(),
-  minQuantity: z.number().optional(),
-  unit: z.string().optional(),
+  itemKey: z.string().max(255).optional(),
+  description: z.string().max(2000).optional(),
+  unitPrice: z.number().min(-999999999.99).max(999999999.99),
+  minQuantity: z.number().min(0).max(999999).optional(),
+  unit: z.string().max(255).optional(),
   validFrom: z.coerce.date().optional(),
   validTo: z.coerce.date().optional(),
 })
@@ -69,10 +69,10 @@ const createEntryInput = z.object({
 const updateEntryInput = z.object({
   id: uuid,
   priceListId: uuid,
-  description: z.string().nullable().optional(),
-  unitPrice: z.number().optional(),
-  minQuantity: z.number().nullable().optional(),
-  unit: z.string().nullable().optional(),
+  description: z.string().max(2000).nullable().optional(),
+  unitPrice: z.number().min(-999999999.99).max(999999999.99).optional(),
+  minQuantity: z.number().min(0).max(999999).nullable().optional(),
+  unit: z.string().max(255).nullable().optional(),
   validFrom: z.coerce.date().nullable().optional(),
   validTo: z.coerce.date().nullable().optional(),
 })
@@ -86,19 +86,19 @@ const bulkImportInput = z.object({
   priceListId: uuid,
   entries: z.array(z.object({
     articleId: optionalUuid,
-    itemKey: z.string().optional(),
-    description: z.string().optional(),
-    unitPrice: z.number(),
-    minQuantity: z.number().optional(),
-    unit: z.string().optional(),
+    itemKey: z.string().max(255).optional(),
+    description: z.string().max(2000).optional(),
+    unitPrice: z.number().min(-999999999.99).max(999999999.99),
+    minQuantity: z.number().min(0).max(999999).optional(),
+    unit: z.string().max(255).optional(),
   })).min(1),
 })
 
 const lookupPriceInput = z.object({
   addressId: uuid,
   articleId: optionalUuid,
-  itemKey: z.string().optional(),
-  quantity: z.number().optional(),
+  itemKey: z.string().max(255).optional(),
+  quantity: z.number().min(0).max(999999).optional(),
 })
 
 // --- Router ---

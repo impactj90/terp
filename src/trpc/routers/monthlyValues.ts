@@ -153,8 +153,8 @@ const closeReopenInputSchema = z.union([
   z.object({ id: z.string() }),
   z.object({
     employeeId: z.string(),
-    year: z.number().int(),
-    month: z.number().int(),
+    year: z.number().int().min(2000).max(2100),
+    month: z.number().int().min(1).max(12),
   }),
 ])
 

@@ -230,10 +230,10 @@ export async function remove(
   }
 
   // Check if shift is in use via employee_day_plans
-  const dayPlanCount = await repo.countEmployeeDayPlanUsages(prisma, id)
+  const dayPlanCount = await repo.countEmployeeDayPlanUsages(prisma, tenantId, id)
 
   // Check shift_assignments
-  const assignmentCount = await repo.countShiftAssignmentUsages(prisma, id)
+  const assignmentCount = await repo.countShiftAssignmentUsages(prisma, tenantId, id)
 
   if (dayPlanCount > 0 || assignmentCount > 0) {
     throw new ShiftValidationError("Cannot delete shift that is in use")
