@@ -375,6 +375,13 @@ export const navConfig: NavSection[] = [
         module: 'warehouse',
         permissions: ['wh_articles.view'],
       },
+      {
+        titleKey: 'warehousePriceLists',
+        href: '/warehouse/prices',
+        icon: Tag,
+        module: 'warehouse',
+        permissions: ['billing_price_lists.view'],
+      },
     ],
   },
   {

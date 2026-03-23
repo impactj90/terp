@@ -19,6 +19,7 @@ import { PriceListEntryFormDialog } from './price-list-entry-form-dialog'
 import { PriceListBulkImportDialog } from './price-list-bulk-import-dialog'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { toast } from 'sonner'
+import { useTranslations } from 'next-intl'
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value)
@@ -35,6 +36,7 @@ interface PriceListEntriesTableProps {
 }
 
 export function PriceListEntriesTable({ priceListId, readonly }: PriceListEntriesTableProps) {
+  const t = useTranslations('billingPriceListEntries')
   const { data: entries, isLoading } = useBillingPriceListEntries(priceListId)
   const deleteMutation = useDeleteBillingPriceListEntry()
 
@@ -50,10 +52,10 @@ export function PriceListEntriesTable({ priceListId, readonly }: PriceListEntrie
         id: deletingEntry.id,
         priceListId,
       })
-      toast.success('Eintrag gelöscht')
+      toast.success(t('entryDeleted'))
       setDeletingEntry(null)
     } catch (err) {
-      toast.error((err as Error).message || 'Fehler beim Löschen')
+      toast.error((err as Error).message || t('deleteError'))
     }
   }
 
@@ -64,11 +66,11 @@ export function PriceListEntriesTable({ priceListId, readonly }: PriceListEntrie
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => { setEditingEntry(null); setShowEntryDialog(true) }}>
             <Plus className="h-4 w-4 mr-1" />
-            Neuer Eintrag
+            {t('newEntry')}
           </Button>
           <Button variant="outline" size="sm" onClick={() => setShowBulkImport(true)}>
             <Upload className="h-4 w-4 mr-1" />
-            Massenimport
+            {t('bulkImport')}
           </Button>
         </div>
       )}
@@ -77,34 +79,38 @@ export function PriceListEntriesTable({ priceListId, readonly }: PriceListEntrie
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Artikel / Schlüssel</TableHead>
-            <TableHead>Beschreibung</TableHead>
-            <TableHead className="text-right">Einzelpreis</TableHead>
-            <TableHead className="text-right">Ab Menge</TableHead>
-            <TableHead>Einheit</TableHead>
-            <TableHead>Gültig von</TableHead>
-            <TableHead>Gültig bis</TableHead>
-            {!readonly && <TableHead className="w-[80px]">Aktionen</TableHead>}
+            <TableHead>{t('articleOrKey')}</TableHead>
+            <TableHead>{t('description')}</TableHead>
+            <TableHead className="text-right">{t('unitPrice')}</TableHead>
+            <TableHead className="text-right">{t('minQuantity')}</TableHead>
+            <TableHead>{t('unit')}</TableHead>
+            <TableHead>{t('validFrom')}</TableHead>
+            <TableHead>{t('validTo')}</TableHead>
+            {!readonly && <TableHead className="w-[80px]">{t('actions')}</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
           {isLoading ? (
             <TableRow>
               <TableCell colSpan={readonly ? 7 : 8} className="text-center text-muted-foreground">
-                Laden...
+                {t('loading')}
               </TableCell>
             </TableRow>
           ) : !entries?.length ? (
             <TableRow>
               <TableCell colSpan={readonly ? 7 : 8} className="text-center text-muted-foreground">
-                Keine Einträge vorhanden
+                {t('noEntries')}
               </TableCell>
             </TableRow>
           ) : (
-            entries.map((entry) => (
+            entries.map((entry) => {
+              const article = (entry as unknown as { article?: { number: string; name: string } | null }).article
+              return (
               <TableRow key={entry.id}>
-                <TableCell className="font-mono text-sm">
-                  {entry.articleId ? `Art: ${entry.articleId.slice(0, 8)}...` : entry.itemKey || '-'}
+                <TableCell className="text-sm">
+                  {article
+                    ? <span><span className="font-mono text-xs mr-1">{article.number}</span> {article.name}</span>
+                    : entry.itemKey || '-'}
                 </TableCell>
                 <TableCell>{entry.description || '-'}</TableCell>
                 <TableCell className="text-right font-medium">
@@ -136,7 +142,7 @@ export function PriceListEntriesTable({ priceListId, readonly }: PriceListEntrie
                         className="h-7 w-7 text-destructive"
                         onClick={() => setDeletingEntry({
                           id: entry.id,
-                          description: entry.description || entry.itemKey || 'Eintrag',
+                          description: entry.description || entry.itemKey || t('entry'),
                         })}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -145,7 +151,7 @@ export function PriceListEntriesTable({ priceListId, readonly }: PriceListEntrie
                   </TableCell>
                 )}
               </TableRow>
-            ))
+            )})
           )}
         </TableBody>
       </Table>
@@ -169,10 +175,10 @@ export function PriceListEntriesTable({ priceListId, readonly }: PriceListEntrie
       <ConfirmDialog
         open={!!deletingEntry}
         onOpenChange={(open) => { if (!open) setDeletingEntry(null) }}
-        title="Eintrag löschen"
-        description={`Möchten Sie den Eintrag "${deletingEntry?.description}" wirklich löschen?`}
+        title={t('deleteTitle')}
+        description={t('deleteDescription', { name: deletingEntry?.description ?? '' })}
         onConfirm={handleDelete}
-        confirmLabel="Löschen"
+        confirmLabel={t('deleteConfirm')}
         variant="destructive"
       />
     </div>

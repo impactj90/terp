@@ -17,6 +17,7 @@ import {
   useUpdateBillingPriceListEntry,
 } from '@/hooks'
 import { toast } from 'sonner'
+import { useTranslations } from 'next-intl'
 
 interface EntryFormState {
   articleId: string
@@ -53,6 +54,7 @@ export function PriceListEntryFormDialog({
   priceListId,
   editItem,
 }: PriceListEntryFormDialogProps) {
+  const t = useTranslations('billingPriceListEntries')
   const isEdit = !!editItem
   const [form, setForm] = React.useState<EntryFormState>(INITIAL_STATE)
   const [tab, setTab] = React.useState<string>('free')
@@ -89,7 +91,7 @@ export function PriceListEntryFormDialog({
   const handleSubmit = async () => {
     const unitPrice = parseFloat(form.unitPrice)
     if (isNaN(unitPrice)) {
-      toast.error('Einzelpreis ist ein Pflichtfeld')
+      toast.error(t('unitPriceRequired'))
       return
     }
 
@@ -105,7 +107,7 @@ export function PriceListEntryFormDialog({
           validFrom: form.validFrom ? new Date(form.validFrom) : null,
           validTo: form.validTo ? new Date(form.validTo) : null,
         })
-        toast.success('Eintrag aktualisiert')
+        toast.success(t('entryUpdated'))
       } else {
         await createMutation.mutateAsync({
           priceListId,
@@ -118,11 +120,11 @@ export function PriceListEntryFormDialog({
           ...(form.validFrom ? { validFrom: new Date(form.validFrom) } : {}),
           ...(form.validTo ? { validTo: new Date(form.validTo) } : {}),
         })
-        toast.success('Eintrag erstellt')
+        toast.success(t('entryCreated'))
       }
       onOpenChange(false)
     } catch (err) {
-      toast.error((err as Error).message || 'Fehler beim Speichern')
+      toast.error((err as Error).message || t('saveError'))
     }
   }
 
@@ -130,57 +132,55 @@ export function PriceListEntryFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Eintrag bearbeiten' : 'Neuer Eintrag'}</DialogTitle>
+          <DialogTitle>{isEdit ? t('editEntry') : t('newEntry')}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           {!isEdit && (
             <Tabs value={tab} onValueChange={setTab}>
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="free">Freier Eintrag</TabsTrigger>
-                <TabsTrigger value="article">Artikel</TabsTrigger>
+                <TabsTrigger value="free">{t('freeEntry')}</TabsTrigger>
+                <TabsTrigger value="article">{t('article')}</TabsTrigger>
               </TabsList>
               <TabsContent value="free">
                 <div className="space-y-2">
-                  <Label htmlFor="entry-item-key">Schlüssel</Label>
+                  <Label htmlFor="entry-item-key">{t('keyLabel')}</Label>
                   <Input
                     id="entry-item-key"
                     value={form.itemKey}
                     onChange={(e) => setForm({ ...form, itemKey: e.target.value })}
                     disabled={isSubmitting}
-                    placeholder="z.B. beratung_std"
+                    placeholder={t('keyPlaceholder')}
                   />
                 </div>
               </TabsContent>
               <TabsContent value="article">
                 <div className="space-y-2">
-                  <Label htmlFor="entry-article">Artikel-ID</Label>
+                  <Label htmlFor="entry-article">{t('articleIdLabel')}</Label>
                   <Input
                     id="entry-article"
                     value={form.articleId}
                     onChange={(e) => setForm({ ...form, articleId: e.target.value })}
                     disabled={isSubmitting}
-                    placeholder="Artikel-UUID"
+                    placeholder={t('articleIdPlaceholder')}
                   />
                 </div>
               </TabsContent>
             </Tabs>
           )}
 
-          {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="entry-description">Beschreibung</Label>
+            <Label htmlFor="entry-description">{t('description')}</Label>
             <Input
               id="entry-description"
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               disabled={isSubmitting}
-              placeholder="Beschreibung des Eintrags"
+              placeholder={t('descriptionPlaceholder')}
             />
           </div>
 
-          {/* Unit Price */}
           <div className="space-y-2">
-            <Label htmlFor="entry-unit-price">Einzelpreis (EUR) *</Label>
+            <Label htmlFor="entry-unit-price">{t('unitPriceLabel')} *</Label>
             <Input
               id="entry-unit-price"
               type="number"
@@ -188,13 +188,12 @@ export function PriceListEntryFormDialog({
               value={form.unitPrice}
               onChange={(e) => setForm({ ...form, unitPrice: e.target.value })}
               disabled={isSubmitting}
-              placeholder="0.00"
+              placeholder={t('unitPricePlaceholder')}
             />
           </div>
 
-          {/* Min Quantity */}
           <div className="space-y-2">
-            <Label htmlFor="entry-min-quantity">Ab Menge</Label>
+            <Label htmlFor="entry-min-quantity">{t('minQuantity')}</Label>
             <Input
               id="entry-min-quantity"
               type="number"
@@ -202,25 +201,23 @@ export function PriceListEntryFormDialog({
               value={form.minQuantity}
               onChange={(e) => setForm({ ...form, minQuantity: e.target.value })}
               disabled={isSubmitting}
-              placeholder="Leer = Standardpreis"
+              placeholder={t('minQuantityPlaceholder')}
             />
           </div>
 
-          {/* Unit */}
           <div className="space-y-2">
-            <Label htmlFor="entry-unit">Einheit</Label>
+            <Label htmlFor="entry-unit">{t('unit')}</Label>
             <Input
               id="entry-unit"
               value={form.unit}
               onChange={(e) => setForm({ ...form, unit: e.target.value })}
               disabled={isSubmitting}
-              placeholder="z.B. Std, Stk, kg"
+              placeholder={t('unitPlaceholder')}
             />
           </div>
 
-          {/* Valid From */}
           <div className="space-y-2">
-            <Label htmlFor="entry-valid-from">Gültig von</Label>
+            <Label htmlFor="entry-valid-from">{t('validFrom')}</Label>
             <Input
               id="entry-valid-from"
               type="date"
@@ -230,9 +227,8 @@ export function PriceListEntryFormDialog({
             />
           </div>
 
-          {/* Valid To */}
           <div className="space-y-2">
-            <Label htmlFor="entry-valid-to">Gültig bis</Label>
+            <Label htmlFor="entry-valid-to">{t('validTo')}</Label>
             <Input
               id="entry-valid-to"
               type="date"
@@ -245,10 +241,10 @@ export function PriceListEntryFormDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-            Abbrechen
+            {t('cancel')}
           </Button>
           <Button onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? 'Wird gespeichert...' : 'Speichern'}
+            {isSubmitting ? t('saving') : t('save')}
           </Button>
         </DialogFooter>
       </DialogContent>

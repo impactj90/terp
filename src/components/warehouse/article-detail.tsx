@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { ArrowLeft, Edit, Trash2, RotateCcw, Package } from 'lucide-react'
 import { toast } from 'sonner'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -19,6 +20,7 @@ import { ArticleFormSheet } from './article-form-sheet'
 import { ArticleSupplierList } from './article-supplier-list'
 import { ArticleBomList } from './article-bom-list'
 import { ArticleStockAdjustDialog } from './article-stock-adjust-dialog'
+import { ArticlePriceTab } from './article-price-tab'
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -47,6 +49,8 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
   const deleteArticle = useDeleteWhArticle()
   const restoreArticle = useRestoreWhArticle()
 
+  const t = useTranslations('warehouseArticles')
+
   const [editOpen, setEditOpen] = React.useState(false)
   const [deleteOpen, setDeleteOpen] = React.useState(false)
   const [stockAdjustOpen, setStockAdjustOpen] = React.useState(false)
@@ -63,7 +67,7 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
   if (!article) {
     return (
       <div className="p-6 text-center text-muted-foreground">
-        Artikel nicht gefunden
+        {t('articleNotFound')}
       </div>
     )
   }
@@ -73,7 +77,7 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
       { id: articleId },
       {
         onSuccess: () => {
-          toast.success('Artikel deaktiviert')
+          toast.success(t('toastDeactivated'))
           setDeleteOpen(false)
         },
         onError: (err) => toast.error(err.message),
@@ -85,7 +89,7 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
     restoreArticle.mutate(
       { id: articleId },
       {
-        onSuccess: () => toast.success('Artikel wiederhergestellt'),
+        onSuccess: () => toast.success(t('toastRestored')),
         onError: (err) => toast.error(err.message),
       }
     )
@@ -106,12 +110,12 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
             </h1>
             <div className="flex gap-2 mt-1">
               {article.isActive ? (
-                <Badge variant="default">Aktiv</Badge>
+                <Badge variant="default">{t('statusActive')}</Badge>
               ) : (
-                <Badge variant="secondary">Inaktiv</Badge>
+                <Badge variant="secondary">{t('statusInactive')}</Badge>
               )}
               {article.stockTracking && (
-                <Badge variant="outline">Bestandsfuehrung</Badge>
+                <Badge variant="outline">{t('badgeStockTracking')}</Badge>
               )}
               {article.group && (
                 <Badge variant="outline">{article.group.name}</Badge>
@@ -127,12 +131,12 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
               onClick={() => setStockAdjustOpen(true)}
             >
               <Package className="h-4 w-4 mr-2" />
-              Bestand korrigieren
+              {t('actionAdjustStock')}
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
             <Edit className="h-4 w-4 mr-2" />
-            Bearbeiten
+            {t('actionEdit')}
           </Button>
           {article.isActive ? (
             <Button
@@ -141,12 +145,12 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
               onClick={() => setDeleteOpen(true)}
             >
               <Trash2 className="h-4 w-4 mr-2" />
-              Deaktivieren
+              {t('actionDeactivate')}
             </Button>
           ) : (
             <Button variant="outline" size="sm" onClick={handleRestore}>
               <RotateCcw className="h-4 w-4 mr-2" />
-              Wiederherstellen
+              {t('actionRestore')}
             </Button>
           )}
         </div>
@@ -155,11 +159,11 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
       {/* Tabs */}
       <Tabs defaultValue="overview">
         <TabsList>
-          <TabsTrigger value="overview">Uebersicht</TabsTrigger>
-          <TabsTrigger value="suppliers">Lieferanten</TabsTrigger>
-          <TabsTrigger value="bom">Stueckliste</TabsTrigger>
-          <TabsTrigger value="stock">Bestand</TabsTrigger>
-          <TabsTrigger value="prices">Preise</TabsTrigger>
+          <TabsTrigger value="overview">{t('tabOverview')}</TabsTrigger>
+          <TabsTrigger value="suppliers">{t('tabSuppliers')}</TabsTrigger>
+          <TabsTrigger value="bom">{t('tabBom')}</TabsTrigger>
+          <TabsTrigger value="stock">{t('tabStock')}</TabsTrigger>
+          <TabsTrigger value="prices">{t('tabPrices')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4 mt-4">
@@ -167,25 +171,25 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
             {/* Basic Info */}
             <Card>
               <CardContent className="pt-6">
-                <h3 className="text-sm font-semibold mb-3">Stammdaten</h3>
-                <DetailRow label="Artikelnr." value={article.number} />
-                <DetailRow label="Bezeichnung" value={article.name} />
-                <DetailRow label="Beschreibung" value={article.description} />
-                <DetailRow label="Matchcode" value={article.matchCode} />
-                <DetailRow label="Einheit" value={article.unit} />
-                <DetailRow label="Artikelgruppe" value={article.group?.name} />
-                <DetailRow label="Rabattgruppe" value={article.discountGroup} />
-                <DetailRow label="Bestellart" value={article.orderType} />
+                <h3 className="text-sm font-semibold mb-3">{t('sectionMasterData')}</h3>
+                <DetailRow label={t('labelArticleNumber')} value={article.number} />
+                <DetailRow label={t('labelName')} value={article.name} />
+                <DetailRow label={t('labelDescription')} value={article.description} />
+                <DetailRow label={t('labelMatchcode')} value={article.matchCode} />
+                <DetailRow label={t('labelUnit')} value={article.unit} />
+                <DetailRow label={t('labelGroup')} value={article.group?.name} />
+                <DetailRow label={t('labelDiscountGroup')} value={article.discountGroup} />
+                <DetailRow label={t('labelOrderType')} value={article.orderType} />
               </CardContent>
             </Card>
 
             {/* Prices */}
             <Card>
               <CardContent className="pt-6">
-                <h3 className="text-sm font-semibold mb-3">Preise</h3>
-                <DetailRow label="VK-Preis (netto)" value={formatPrice(article.sellPrice)} />
-                <DetailRow label="EK-Preis" value={formatPrice(article.buyPrice)} />
-                <DetailRow label="MwSt-Satz" value={`${article.vatRate}%`} />
+                <h3 className="text-sm font-semibold mb-3">{t('sectionPrices')}</h3>
+                <DetailRow label={t('labelSellPrice')} value={formatPrice(article.sellPrice)} />
+                <DetailRow label={t('labelBuyPrice')} value={formatPrice(article.buyPrice)} />
+                <DetailRow label={t('labelVatRate')} value={`${article.vatRate}%`} />
               </CardContent>
             </Card>
 
@@ -193,13 +197,13 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
             {article.stockTracking && (
               <Card>
                 <CardContent className="pt-6">
-                  <h3 className="text-sm font-semibold mb-3">Bestand</h3>
-                  <DetailRow label="Aktueller Bestand" value={article.currentStock} />
-                  <DetailRow label="Mindestbestand" value={article.minStock ?? '\u2014'} />
-                  <DetailRow label="Lagerort" value={article.warehouseLocation} />
+                  <h3 className="text-sm font-semibold mb-3">{t('sectionStock')}</h3>
+                  <DetailRow label={t('labelCurrentStock')} value={article.currentStock} />
+                  <DetailRow label={t('labelMinStock')} value={article.minStock ?? '\u2014'} />
+                  <DetailRow label={t('labelWarehouseLocation')} value={article.warehouseLocation} />
                   {article.minStock != null && article.currentStock < article.minStock && (
                     <div className="mt-2 p-2 bg-destructive/10 text-destructive text-sm rounded-md">
-                      Bestand unter Mindestbestand!
+                      {t('alertBelowMinStock')}
                     </div>
                   )}
                 </CardContent>
@@ -219,17 +223,13 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
         <TabsContent value="stock" className="mt-4">
           <Card>
             <CardContent className="pt-6 text-center text-muted-foreground">
-              Bestandsbewegungen werden mit WH_04 implementiert.
+              {t('stockMovementsPlaceholder')}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="prices" className="mt-4">
-          <Card>
-            <CardContent className="pt-6 text-center text-muted-foreground">
-              Preislisten werden mit WH_02 implementiert.
-            </CardContent>
-          </Card>
+          <ArticlePriceTab articleId={articleId} />
         </TabsContent>
       </Tabs>
 
@@ -243,9 +243,9 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        title="Artikel deaktivieren?"
-        description={`Moechten Sie den Artikel "${article.name}" wirklich deaktivieren?`}
-        confirmLabel="Deaktivieren"
+        title={t('confirmDeactivateTitle')}
+        description={t('confirmDeactivateDescription', { name: article.name })}
+        confirmLabel={t('actionDeactivate')}
         onConfirm={handleDelete}
         variant="destructive"
       />

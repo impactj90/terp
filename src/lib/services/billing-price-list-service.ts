@@ -214,7 +214,26 @@ export async function listEntries(
   const pl = await repo.findById(prisma, tenantId, priceListId)
   if (!pl) throw new BillingPriceListNotFoundError()
 
-  return repo.findEntries(prisma, priceListId, params)
+  const entries = await repo.findEntries(prisma, priceListId, params)
+
+  // Enrich entries that reference a warehouse article with name/number
+  const articleIds = [...new Set(
+    entries.map((e) => e.articleId).filter((id): id is string => !!id)
+  )]
+
+  const articleMap = new Map<string, { id: string; number: string; name: string }>()
+  if (articleIds.length > 0) {
+    const articles = await prisma.whArticle.findMany({
+      where: { id: { in: articleIds } },
+      select: { id: true, number: true, name: true },
+    })
+    for (const a of articles) articleMap.set(a.id, a)
+  }
+
+  return entries.map((e) => ({
+    ...e,
+    article: e.articleId ? articleMap.get(e.articleId) ?? null : null,
+  }))
 }
 
 export async function createEntry(

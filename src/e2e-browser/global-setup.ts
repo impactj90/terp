@@ -108,6 +108,11 @@ DELETE FROM crm_contacts WHERE address_id IN (SELECT id FROM crm_addresses WHERE
 DELETE FROM crm_bank_accounts WHERE address_id IN (SELECT id FROM crm_addresses WHERE company LIKE 'E2E%');
 DELETE FROM crm_addresses WHERE company LIKE 'E2E%';
 
+-- Warehouse price list entries for E2E articles (spec 41)
+DELETE FROM billing_price_list_entries WHERE article_id IN (
+  SELECT id FROM wh_articles WHERE name LIKE 'E2E%'
+);
+
 -- Warehouse article records (spec 40)
 DELETE FROM wh_bill_of_materials WHERE parent_article_id IN (
   SELECT id FROM wh_articles WHERE name LIKE 'E2E%'

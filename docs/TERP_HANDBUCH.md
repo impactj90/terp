@@ -58,7 +58,19 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [13.12 Preislisten](#1312-preislisten)
     - [13.13 Wiederkehrende Rechnungen](#1313-wiederkehrende-rechnungen)
     - [13.14 E-Rechnung (ZUGFeRD / XRechnung)](#1314-e-rechnung-zugferd--xrechnung)
-14. [Glossar](#14-glossar)
+14. [Lagerverwaltung — Artikelstamm](#14-lagerverwaltung--artikelstamm)
+    - [14.1 Artikelliste](#141-artikelliste)
+    - [14.2 Artikeldetailseite](#142-artikeldetailseite)
+    - [14.3 Bestandskorrektur](#143-bestandskorrektur)
+    - [14.4 Praxisbeispiel: Artikelstamm für eine Schreinerei einrichten](#144-praxisbeispiel-artikelstamm-für-eine-schreinerei-einrichten)
+15. [Lagerverwaltung — Preislisten](#15-lagerverwaltung--preislisten)
+    - [15.1 Preislisten verwalten](#151-preislisten-verwalten)
+    - [15.2 Neue Preisliste erstellen](#152-neue-preisliste-erstellen)
+    - [15.3 Artikel hinzufügen und Preise bearbeiten](#153-artikel-hinzufügen-und-preise-bearbeiten)
+    - [15.4 Preise prozentual anpassen](#154-preise-prozentual-anpassen)
+    - [15.5 Preisliste kopieren](#155-preisliste-kopieren)
+    - [15.6 Praxisbeispiel: Preislisten für Standardkunden und Großkunden einrichten](#156-praxisbeispiel-preislisten-für-standardkunden-und-großkunden-einrichten)
+16. [Glossar](#16-glossar)
 
 ---
 
@@ -6222,7 +6234,450 @@ Der Button ist nur sichtbar wenn:
 
 ---
 
-## 14. Glossar
+## 14. Lagerverwaltung — Artikelstamm
+
+### 14.1 Artikelliste
+
+**Was ist es?** Der Artikelstamm ist das zentrale Register aller Materialien, Waren und Dienstleistungen, die ein Unternehmen beschafft, lagert oder verkauft. Jeder Artikel hat eine automatisch vergebene Nummer, eine Bezeichnung, eine Einheit und optional Preise und Bestandsführung.
+
+**Wozu dient es?** Artikel bilden die Grundlage für Preislisten, Stücklisten, Einkauf, Wareneingang und Lagerentnahmen. Durch die zentrale Pflege sind alle Artikelinformationen — Preise, Lieferanten, Komponenten, Bestand — an einer Stelle verfügbar.
+
+⚠️ Modul: Das Warehouse-Modul muss für den Mandanten aktiviert sein
+
+⚠️ Berechtigung: „Lagerartikel anzeigen" (`wh_articles.view`) zum Lesen, „Lagerartikel erstellen" (`wh_articles.create`) zum Anlegen, „Lagerartikel bearbeiten" (`wh_articles.edit`) zum Bearbeiten
+
+📍 Seitenleiste → **Lager** → **Artikel**
+
+✅ Seite mit Artikeltabelle, Gruppenbaum links, Suchfeld und Filtern
+
+#### Artikeltabelle
+
+Tabelle mit Spalten:
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Nummer** | Auto-generierte Artikelnummer — monospace |
+| **Bezeichnung** | Artikelname (fett) |
+| **Gruppe** | Name der Artikelgruppe oder „—" |
+| **Einheit** | Stk, kg, m, Std, l, Paar, Pkt, Set |
+| **VK-Preis** | Netto-Verkaufspreis in EUR oder „—" |
+| **Bestand** | Aktuelle Lagermenge (nur bei Bestandsführung) oder „—" |
+| **Status** | Badge: Aktiv (blau) / Inaktiv (grau) |
+| **Aktionen** | ⋯-Menü: Anzeigen, Bearbeiten, Deaktivieren/Wiederherstellen |
+
+**Filter:**
+- **Suchfeld**: Durchsucht Nummer, Name und Matchcode gleichzeitig
+- **„Nur aktive"**: Schalter, blendet inaktive Artikel aus (Standard: ein)
+- **„Unter Mindestbestand"**: Schalter, zeigt nur Artikel mit Bestand unter Mindestbestand
+- **Gruppenfilter**: Klick auf eine Artikelgruppe im Baum links filtert die Tabelle
+
+#### Artikelgruppen (Baum links)
+
+📍 Links neben der Artikeltabelle
+
+Artikel können in **Artikelgruppen** organisiert werden. Gruppen bilden eine Baumstruktur — jede Gruppe kann beliebig viele Untergruppen enthalten.
+
+- 📍 **„Alle Artikel"** (oben) → zeigt alle Artikel ohne Gruppenfilter
+- 📍 Klick auf eine Gruppe → filtert die Tabelle auf Artikel dieser Gruppe
+- ⚠️ Berechtigung: „Artikelgruppen verwalten" (`wh_article_groups.manage`) für Kontextmenü
+
+Über das ⋯-Menü einer Gruppe:
+- **„Untergruppe"** → Dialog: Name eingeben → erstellt eine neue Untergruppe
+- **„Bearbeiten"** → Dialog: Name ändern → speichert
+- **„Entfernen"** → Gruppe wird sofort gelöscht
+
+> 💡 **Beispiel:** Eine Schreinerei könnte die Gruppen „Holz → Massivholz → Eiche", „Beschläge → Scharniere" und „Verbrauchsmaterial" anlegen.
+
+#### Neuen Artikel anlegen
+
+1. 📍 **„Neuer Artikel"** (oben rechts)
+2. ✅ Seitliches Formular (Sheet) öffnet sich: „Neuer Artikel"
+3. Felder ausfüllen:
+   - **Bezeichnung** (Pflicht) — Name des Artikels
+   - **Beschreibung** (optional) — ausführliche Beschreibung
+   - **Artikelgruppe** (optional) — Zuordnung zu einer Gruppe
+   - **Einheit** (Dropdown: Stk, kg, m, Std, l, Paar, Pkt, Set) — Standard: Stk
+   - **Matchcode** (optional) — Kurzname für Schnellsuche, wird automatisch aus dem Namen generiert
+   - **VK-Preis netto** (optional) — Verkaufspreis
+   - **EK-Preis** (optional) — Einkaufspreis
+   - **MwSt-Satz %** — Standard: 19
+   - **Rabattgruppe** (optional) — für Einkaufsabwicklung
+   - **Bestellart** (optional)
+   - **Bestandsführung** (Schalter) — aktiviert Lagerfunktionen
+   - Bei aktiver Bestandsführung zusätzlich: **Mindestbestand** und **Lagerort**
+4. 📍 „Erstellen"
+5. ✅ Artikel erscheint in der Tabelle mit automatisch vergebener Nummer
+
+> 💡 **Hinweis:** Die Artikelnummer wird beim Anlegen automatisch vergeben und kann nicht manuell geändert werden.
+
+#### Artikel bearbeiten
+
+1. 📍 ⋯-Menü des Artikels → **„Bearbeiten"**
+2. ✅ Formular öffnet sich mit den aktuellen Werten vorausgefüllt
+3. Gewünschte Felder ändern
+4. 📍 „Speichern"
+
+#### Artikel deaktivieren und wiederherstellen
+
+Artikel werden nicht gelöscht, sondern deaktiviert — sie bleiben im System erhalten.
+
+1. 📍 ⋯-Menü → **„Deaktivieren"**
+2. ✅ Artikel verschwindet aus der aktiven Liste
+
+Zum Wiederherstellen:
+1. 📍 Schalter „Nur aktive" ausschalten → deaktivierte Artikel werden sichtbar
+2. 📍 ⋯-Menü → **„Wiederherstellen"**
+
+---
+
+### 14.2 Artikeldetailseite
+
+📍 Zeile in der Artikeltabelle anklicken → Detailseite
+
+✅ Kopfbereich zeigt: Artikelnummer (monospace), Name, Status-Badge (Aktiv/Inaktiv), optional Badges „Bestandsführung" und Gruppenname. Buttons „Bestand korrigieren" (bei Bestandsführung), „Bearbeiten" und „Deaktivieren/Wiederherstellen".
+
+Die Detailseite hat **5 Tabs**:
+
+#### Tab „Übersicht"
+
+Zeigt alle Artikeldaten in Kartenansicht (2-Spalten-Grid):
+
+| Karte | Felder |
+|-------|--------|
+| **Stammdaten** | Artikelnr., Bezeichnung, Beschreibung, Matchcode, Einheit, Artikelgruppe, Rabattgruppe, Bestellart |
+| **Preise** | VK-Preis (netto), EK-Preis, MwSt-Satz |
+| **Bestand** (nur bei Bestandsführung) | Aktueller Bestand, Mindestbestand, Lagerort |
+
+> ⚠️ Fällt der Bestand unter den Mindestbestand, erscheint ein roter Warnhinweis: „Bestand unter Mindestbestand!"
+
+#### Tab „Lieferanten"
+
+📍 Tab **„Lieferanten"**
+
+Hier werden einem Artikel Lieferanten zugeordnet. Lieferanten stammen aus dem CRM-Adressbuch (Typ: Lieferant).
+
+Tabelle mit Spalten:
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Lieferant** | Firmenname aus CRM |
+| **Artikelnr. Lieferant** | Die Bestellnummer beim Lieferanten |
+| **EK-Preis** | Lieferantenspezifischer Einkaufspreis in EUR |
+| **Lieferzeit** | In Tagen |
+| **Hauptlieferant** | Badge „Haupt" beim bevorzugten Lieferanten |
+| **Aktionen** | Bearbeiten (Stift) / Löschen (Papierkorb) |
+
+##### Lieferant zuordnen
+
+1. 📍 **„Lieferant hinzufügen"**
+2. ✅ Dialog öffnet sich
+3. **Lieferant** auswählen (Dropdown aller CRM-Lieferanten)
+4. Optional ausfüllen: Artikelnr. beim Lieferant, EK-Preis, Lieferzeit (Tage), Bestelleinheit, Std.-Bestellmenge
+5. Optional: **Hauptlieferant** einschalten
+6. 📍 „Hinzufügen"
+
+> 💡 **Beispiel:** Der Artikel „Eichenholz 2m" hat zwei Lieferanten: „Holz Müller" (Hauptlieferant, 5 Tage, 45,00 €/m) und „Sägewerk Schmidt" (7 Tage, 42,50 €/m).
+
+#### Tab „Stückliste"
+
+📍 Tab **„Stückliste"**
+
+Definiert die Komponenten (Bill of Materials), aus denen ein Artikel zusammengesetzt ist.
+
+Tabelle mit Spalten:
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Artikelnr.** | Nummer der Komponente (monospace) |
+| **Bezeichnung** | Name der Komponente |
+| **Menge** | Anzahl mit Einheit (z. B. „4 Stk") |
+| **Bemerkung** | Optionaler Freitext |
+| **Aktionen** | Bearbeiten (Stift) / Löschen (Papierkorb) |
+
+##### Komponente hinzufügen
+
+1. 📍 **„Komponente hinzufügen"**
+2. ✅ Dialog öffnet sich
+3. **Artikel** — Suchfeld: Artikelname oder -nummer eingeben, Ergebnis auswählen (Pflicht)
+4. **Menge** eingeben (Standard: 1)
+5. Optional: **Bemerkung**
+6. 📍 „Hinzufügen"
+
+> 💡 **Beispiel:** Der Artikel „Tischplatte Eiche 120×80" besteht aus: 1× Eichenholz-Platte, 4× Gewindeeinsatz M8, 1× Kantenumleimer 4m.
+
+#### Tab „Bestand"
+
+📍 Tab **„Bestand"**
+
+Platzhalter — „Bestandsbewegungen werden mit WH_04 implementiert."
+
+#### Tab „Preise"
+
+📍 Tab **„Preise"**
+
+Zeigt alle Preislisteneinträge dieses Artikels in einer Tabelle:
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Preisliste** | Name der Preisliste (mit „Standard"-Badge, falls zutreffend) |
+| **Einzelpreis** | Der Preis in dieser Liste in EUR |
+| **Mindestmenge** | Ab welcher Menge dieser Preis gilt (oder „—") |
+| **Einheit** | Die Einheit in dieser Liste (oder „—") |
+| **Gültig ab** | Gültigkeitsbeginn der Preisliste |
+| **Gültig bis** | Gültigkeitsende der Preisliste |
+
+✅ Wenn keine Einträge vorhanden: „Keine Preislisteneinträge für diesen Artikel"
+
+---
+
+### 14.3 Bestandskorrektur
+
+📍 Artikeldetailseite → Button **„Bestand korrigieren"** (nur bei aktiver Bestandsführung sichtbar)
+
+✅ Dialog öffnet sich
+
+1. **Änderung (+/−)** eingeben — z. B. +10 oder −5 (Deltawert, nicht der neue Absolutwert)
+2. ✅ Vorschau zeigt: „Neuer Bestand: {aktuell + Änderung}"
+3. Optional: **Grund** eingeben (z. B. „Inventur", „Schwund", „Nachlieferung")
+4. 📍 „Korrigieren"
+5. ✅ Toast: „Bestand korrigiert"
+
+> ⚠️ Der Button ist deaktiviert, wenn die Änderung 0 beträgt.
+
+---
+
+### 14.4 Praxisbeispiel: Artikelstamm für eine Schreinerei einrichten
+
+**Schritt 1 — Artikelgruppen anlegen**
+
+1. 📍 Seitenleiste → **Lager** → **Artikel**
+2. ✅ Seite mit leerem Artikelstamm und Gruppenbaum links
+3. 📍 Im Gruppenbaum: **[+]** bei „Alle Artikel" (erscheint beim Hovern) oder **„Neue Gruppe"** unten
+4. Name: „Holz" → Erstellen
+5. ✅ Gruppe „Holz" erscheint im Baum
+6. 📍 **[+]** bei „Holz" (erscheint beim Hovern) → Name: „Massivholz" → Erstellen
+7. 📍 **[+]** bei „Holz" → Name: „Plattenware" → Erstellen
+8. 📍 **[+]** bei „Alle Artikel" oder „Neue Gruppe" → „Beschläge" anlegen
+9. 📍 **[+]** bei „Beschläge" → „Scharniere" anlegen
+10. ✅ Baumstruktur: Holz (Massivholz, Plattenware), Beschläge (Scharniere)
+
+**Schritt 2 — Ersten Artikel anlegen**
+
+1. 📍 **„Neuer Artikel"**
+2. **Bezeichnung**: „Eichenholz-Platte 2000×600×20mm"
+3. **Artikelgruppe**: „Massivholz"
+4. **Einheit**: „Stk"
+5. **VK-Preis**: 85,00
+6. **EK-Preis**: 52,00
+7. **MwSt-Satz**: 19
+8. **Bestandsführung**: einschalten
+9. **Mindestbestand**: 10
+10. **Lagerort**: „Regal A3, Fach 2"
+11. 📍 „Erstellen"
+12. ✅ Artikel erscheint in der Tabelle mit Nummer und Status „Aktiv"
+
+**Schritt 3 — Lieferant zuordnen**
+
+1. 📍 Artikelzeile anklicken → Detailseite
+2. 📍 Tab **„Lieferanten"** → **„Lieferant hinzufügen"**
+3. Lieferant: „Holz Müller" (aus CRM)
+4. Artikelnr. beim Lieferant: „HM-EI-2060"
+5. EK-Preis: 52,00
+6. Lieferzeit: 5 Tage
+7. Hauptlieferant: einschalten
+8. 📍 „Hinzufügen"
+9. ✅ Lieferant erscheint in der Tabelle mit Badge „Haupt"
+
+**Schritt 4 — Stückliste anlegen**
+
+1. 📍 Tab **„Stückliste"** → **„Komponente hinzufügen"**
+2. Artikel suchen: „Kantenumleimer" → auswählen
+3. Menge: 1
+4. 📍 „Hinzufügen"
+5. ✅ Komponente erscheint in der Stückliste
+
+**Schritt 5 — Bestand korrigieren**
+
+1. 📍 Button **„Bestand korrigieren"** (im Kopfbereich)
+2. Änderung: +25
+3. Grund: „Erstbestand / Inventur"
+4. ✅ Vorschau: „Neuer Bestand: 25"
+5. 📍 „Korrigieren"
+6. ✅ Tab „Übersicht" → Karte „Bestand" zeigt: Aktueller Bestand: 25
+
+---
+
+## 15. Lagerverwaltung — Preislisten
+
+### 15.1 Preislisten verwalten
+
+**Was ist es?** Eine Preisliste ordnet Artikeln individuelle Preise zu. Es können beliebig viele Preislisten parallel existieren — für verschiedene Kundengruppen, Regionen oder Zeiträume. Eine Preisliste kann als **Standard** markiert werden und wird dann automatisch verwendet, wenn einem Kunden keine eigene Liste zugeordnet ist.
+
+**Wozu dient es?** Preislisten ermöglichen kundenspezifische Preisgestaltung: Großkunden bekommen Rabatte, bestimmte Regionen andere Preise, Messeaktionen werden zeitlich begrenzt. Bei der Belegerfassung wird der Preis automatisch aus der zugeordneten Preisliste des Kunden gezogen.
+
+⚠️ Modul: Das Warehouse-Modul muss für den Mandanten aktiviert sein
+
+⚠️ Berechtigung: „Preislisten anzeigen" (`billing_price_lists.view`) zum Lesen, „Preislisten verwalten" (`billing_price_lists.manage`) zum Anlegen und Bearbeiten
+
+📍 Seitenleiste → **Lager** → **Preislisten**
+
+✅ Drei-Panel-Ansicht: Links Preislisten, Mitte Artikeltabelle, Rechts Preisdetails
+
+#### Drei-Panel-Aufbau
+
+| Panel | Position | Inhalt |
+|-------|----------|--------|
+| **Preislisten** | Links (schmal) | Liste aller aktiven Preislisten. Standard-Liste mit „Standard"-Badge. Button „Neue Liste". |
+| **Artikel** | Mitte (breit) | Alle Artikel der ausgewählten Preisliste mit Suchfeld. Button „Artikel hinzufügen". |
+| **Preisdetails** | Rechts (schmal) | Bearbeitungsformular für den ausgewählten Artikel mit Speichern/Löschen. |
+
+#### Werkzeugleiste
+
+Oberhalb der drei Panels erscheinen (nur bei ausgewählter Preisliste und mit Berechtigung):
+- 📍 **„Preise anpassen"** → öffnet den Dialog zur prozentualen Anpassung (→ 15.4)
+- 📍 **„Preisliste kopieren"** → öffnet den Kopierdialog (→ 15.5)
+
+---
+
+### 15.2 Neue Preisliste erstellen
+
+1. 📍 Im linken Panel: **„Neue Liste"**
+2. ✅ Eingabefeld erscheint unter dem Button
+3. Name eingeben (z. B. „Großkunden Q2 2026")
+4. 📍 Enter drücken oder **„Speichern"** klicken
+5. ✅ Toast: „Preisliste erstellt"
+6. ✅ Neue Preisliste ist sofort ausgewählt und bereit für Artikel
+
+> 💡 **Hinweis:** Wenn noch keine Preisliste existiert, zeigt das linke Panel „Keine Einträge" und einen großen „Neue Liste"-Button.
+
+---
+
+### 15.3 Artikel hinzufügen und Preise bearbeiten
+
+#### Artikel zur Preisliste hinzufügen
+
+1. 📍 Im linken Panel eine Preisliste auswählen
+2. ✅ Mittleres Panel zeigt die Artikeltabelle (oder „Keine Einträge")
+3. 📍 **„Artikel hinzufügen"** (oben im mittleren Panel)
+4. ✅ Suchfeld erscheint — Artikelname oder -nummer eingeben
+5. 📍 Gewünschten Artikel aus der Ergebnisliste auswählen
+6. ✅ Artikel wird mit Preis 0,00 € hinzugefügt und im rechten Panel geöffnet
+7. Im rechten Panel den **Einzelpreis** eingeben
+8. Optional: **Mindestmenge** und **Einheit** anpassen
+9. 📍 **„Speichern"**
+10. ✅ Toast: „Preis gespeichert"
+
+Artikeltabelle im mittleren Panel:
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Artikel-Nr.** | Artikelnummer (monospace) |
+| **Bezeichnung** | Artikelname |
+| **Einzelpreis** | Preis in EUR |
+| **Einheit** | Einheit in dieser Liste (oder Artikeleinheit als Fallback) |
+| **Mindestmenge** | Ab welcher Menge dieser Preis gilt (oder „—") |
+
+#### Preis bearbeiten
+
+1. 📍 Im mittleren Panel auf einen Artikel klicken
+2. ✅ Rechtes Panel zeigt die Preisdetails:
+   - **Basispreis (Artikel)**: Referenz — der VK-Preis aus dem Artikelstamm
+   - **Einzelpreis**: editierbares Feld
+   - **Mindestmenge**: editierbares Feld (leer = keine Mindestmenge)
+   - **Einheit**: editierbares Feld (vorausgefüllt mit Artikeleinheit)
+3. Werte anpassen
+4. 📍 **„Speichern"**
+5. ✅ Toast: „Preis gespeichert"
+
+#### Artikel aus Preisliste entfernen
+
+1. 📍 Artikel im mittleren Panel auswählen
+2. 📍 Im rechten Panel: roter **Löschen-Button** (Papierkorb-Symbol)
+3. ✅ Toast: „Preis entfernt"
+
+---
+
+### 15.4 Preise prozentual anpassen
+
+📍 Werkzeugleiste → **„Preise anpassen"**
+
+✅ Dialog öffnet sich
+
+1. **Anpassung (%)** eingeben — z. B. 5,0 für +5 % oder −3,0 für −3 %
+2. Optional: **Artikelgruppe** auswählen, um nur Artikel dieser Gruppe anzupassen (Standard: „Alle Gruppen")
+3. 📍 **„Bestätigen"**
+4. ✅ Toast: „Preise erfolgreich angepasst: {Anzahl} Betroffene Einträge"
+
+> 💡 **Beispiel:** Preisliste „Standard 2026" hat 120 Artikel. Preise anpassen mit +3,0 % ergibt: alle 120 Preise werden um 3 % erhöht. Ein Artikel mit 10,00 € kostet danach 10,30 €.
+
+> 💡 **Hinweis:** Preise werden auf zwei Dezimalstellen gerundet.
+
+---
+
+### 15.5 Preisliste kopieren
+
+📍 Werkzeugleiste → **„Preisliste kopieren"**
+
+✅ Dialog öffnet sich
+
+1. **Kopieren von**: Zeigt den Namen der aktuell ausgewählten Preisliste (nicht änderbar)
+2. **Kopieren nach**: Ziel-Preisliste auswählen (Dropdown aller aktiven Listen außer der Quelle)
+3. Optional: **„Vorhandene Einträge überschreiben"** einschalten
+   - **Aus** (Standard): Bereits vorhandene Artikel in der Zielliste werden übersprungen
+   - **Ein**: Alle Artikelpreise in der Zielliste werden durch die Quellpreise ersetzt
+4. 📍 **„Bestätigen"**
+5. ✅ Toast: „Preisliste erfolgreich kopiert: {Anzahl} kopiert, {Anzahl} übersprungen"
+
+---
+
+### 15.6 Praxisbeispiel: Preislisten für Standardkunden und Großkunden einrichten
+
+**Schritt 1 — Standardpreisliste erstellen**
+
+1. 📍 Seitenleiste → **Lager** → **Preislisten**
+2. ✅ Drei-Panel-Ansicht, linkes Panel zeigt „Keine Einträge"
+3. 📍 **„Neue Liste"** → Name: „Standardpreise 2026" → Enter
+4. ✅ Preisliste erstellt und ausgewählt
+
+**Schritt 2 — Artikel mit Preisen befüllen**
+
+1. 📍 **„Artikel hinzufügen"** im mittleren Panel
+2. Suche: „Eichenholz" → Artikel auswählen
+3. ✅ Artikel erscheint mit 0,00 €, rechtes Panel öffnet sich
+4. Einzelpreis: 85,00 → 📍 **„Speichern"**
+5. ✅ Preis wird in der Tabelle aktualisiert
+6. Weitere Artikel hinzufügen und bepreisen
+
+**Schritt 3 — Großkundenpreisliste durch Kopie erstellen**
+
+1. 📍 **„Neue Liste"** → Name: „Großkunden −10 %" → Enter
+2. ✅ Neue leere Preisliste erstellt
+3. 📍 Im linken Panel zurück auf „Standardpreise 2026" klicken
+4. 📍 Werkzeugleiste → **„Preisliste kopieren"**
+5. Kopieren nach: „Großkunden −10 %"
+6. 📍 **„Bestätigen"**
+7. ✅ Toast: „Preisliste kopiert: {Anzahl} kopiert"
+
+**Schritt 4 — Großkundenpreise um 10 % senken**
+
+1. 📍 Im linken Panel „Großkunden −10 %" auswählen
+2. ✅ Alle kopierten Artikel sind sichtbar
+3. 📍 Werkzeugleiste → **„Preise anpassen"**
+4. Anpassung: −10,0
+5. 📍 **„Bestätigen"**
+6. ✅ Toast: „Preise angepasst" — Eichenholz-Platte jetzt 76,50 € statt 85,00 €
+
+**Schritt 5 — Preise im Artikeldetail prüfen**
+
+1. 📍 Seitenleiste → **Lager** → **Artikel** → Artikel „Eichenholz-Platte" anklicken
+2. 📍 Tab **„Preise"**
+3. ✅ Tabelle zeigt zwei Einträge:
+   - „Standardpreise 2026" — 85,00 €
+   - „Großkunden −10 %" — 76,50 €
+
+---
+
+## 16. Glossar
 
 | Begriff | Erklärung | Wo in Terp |
 |---------|-----------|-----------|
@@ -6300,6 +6755,16 @@ Der Button ist nur sichtbar wenn:
 | **Zugangsprofil** | Berechtigungsgruppe für physischen Zutritt (bündelt Zonen) | 📍 Administration → Zutrittskontrolle → Tab Profile |
 | **Zugangszone** | Physischer Bereich mit gesteuertem Zutritt | 📍 Administration → Zutrittskontrolle → Tab Zonen |
 | **Zuschlag** | Bonus für Arbeit in bestimmten Zeitfenstern (z. B. Nachtarbeit) | Konfiguriert im Tagesplan, Detailansicht → Zuschläge |
+| **Artikel** | Material, Ware oder Dienstleistung im Artikelstamm mit Nummer, Bezeichnung, Einheit und optional Preisen und Bestandsführung | 📍 Lager → Artikel |
+| **Artikelgruppe** | Hierarchische Kategorie zur Organisation von Artikeln (z. B. „Holz → Massivholz → Eiche") | 📍 Lager → Artikel → Gruppenbaum links |
+| **Bestandsführung** | Schalter pro Artikel, der Lagerfunktionen aktiviert: aktueller Bestand, Mindestbestand, Lagerort und Bestandskorrektur | 📍 Lager → Artikel → Formular → Bestandsführung |
+| **Bestandskorrektur** | Manuelle Anpassung des Lagerbestands um einen Deltawert (z. B. +10 oder −5) mit optionaler Begründung | 📍 Lager → Artikel → Detail → „Bestand korrigieren" |
+| **EK-Preis** | Einkaufspreis eines Artikels — kann im Artikelstamm und pro Lieferant hinterlegt werden | 📍 Lager → Artikel → Detail |
+| **Matchcode (Artikel)** | Kurzname für die Schnellsuche, wird automatisch aus dem Artikelnamen generiert | 📍 Lager → Artikel → Formular |
+| **Mindestbestand** | Lagermenge, bei deren Unterschreitung ein Warnhinweis erscheint (nur bei Bestandsführung) | 📍 Lager → Artikel → Detail → Übersicht → Karte Bestand |
+| **Preisliste (Lager)** | Benannte Sammlung von Artikelpreisen für kunden- oder zeitraumspezifische Preisgestaltung | 📍 Lager → Preislisten |
+| **Stückliste (BOM)** | Komponentenliste eines Artikels (Bill of Materials) mit Artikel, Menge und optionaler Bemerkung | 📍 Lager → Artikel → Detail → Tab Stückliste |
+| **VK-Preis** | Netto-Verkaufspreis eines Artikels im Artikelstamm, dient als Basispreis für Preislisten | 📍 Lager → Artikel → Detail → Karte Preise |
 
 ---
 
@@ -6378,6 +6843,9 @@ Diese Tabelle listet alle Seiten der Anwendung mit ihrer URL und dem Menüpfad:
 | `/orders/recurring` | Auftraege → Wiederkehrende Rechnungen | billing_recurring.view |
 | `/orders/recurring/new` | Auftraege → Wiederkehrende Rechnungen → Neue Vorlage | billing_recurring.manage |
 | `/orders/recurring/[id]` | Wiederkehrende Rechnungen → Zeile anklicken | billing_recurring.view |
+| `/warehouse/articles` | Lager → Artikel | wh_articles.view |
+| `/warehouse/articles/[id]` | Artikelliste → Zeile anklicken | wh_articles.view |
+| `/warehouse/prices` | Lager → Preislisten | billing_price_lists.view, wh_articles.view |
 
 ---
 
