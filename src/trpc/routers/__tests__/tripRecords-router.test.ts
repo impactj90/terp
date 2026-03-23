@@ -8,6 +8,28 @@ import {
   createUserWithPermissions,
 } from "./helpers"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
+import * as tripRecordService from "@/lib/services/trip-record-service"
+
+vi.mock("@/lib/services/trip-record-service", () => ({
+  update: vi.fn(),
+  remove: vi.fn(),
+  TripRecordNotFoundError: class TripRecordNotFoundError extends Error {
+    constructor(message = "Trip record not found") {
+      super(message)
+      this.name = "TripRecordNotFoundError"
+    }
+  },
+  TripRecordValidationError: class TripRecordValidationError extends Error {
+    constructor(message: string) {
+      super(message)
+      this.name = "TripRecordValidationError"
+    }
+  },
+}))
+vi.mock("@/lib/services/audit-logs-service", () => ({
+  log: vi.fn().mockResolvedValue(undefined),
+  computeChanges: vi.fn().mockReturnValue(null),
+}))
 
 // --- Constants ---
 
@@ -368,14 +390,23 @@ describe("tripRecords.create", () => {
 
 describe("tripRecords.update", () => {
   it("updates trip record (partial)", async () => {
-    const existing = makeTripRecord()
     const updated = makeTripRecord({ notes: "Updated notes" })
-    const mockPrisma = {
-      tripRecord: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
-      },
-    }
+    vi.mocked(tripRecordService.update).mockResolvedValue({
+      id: updated.id,
+      tenantId: updated.tenantId,
+      vehicleId: updated.vehicleId,
+      routeId: updated.routeId,
+      tripDate: updated.tripDate,
+      startMileage: 10000,
+      endMileage: 10050,
+      distanceKm: 50,
+      notes: "Updated notes",
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt,
+      vehicle: updated.vehicle,
+      vehicleRoute: updated.vehicleRoute,
+    })
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({
       id: TRIP_RECORD_ID,
@@ -383,39 +414,48 @@ describe("tripRecords.update", () => {
     })
 
     expect(result.notes).toBe("Updated notes")
+    expect(tripRecordService.update).toHaveBeenCalledWith(
+      expect.anything(),
+      TENANT_ID,
+      expect.objectContaining({ id: TRIP_RECORD_ID, notes: "Updated notes" }),
+      expect.objectContaining({ userId: USER_ID })
+    )
   })
 
   it("sets routeId to null", async () => {
-    const existing = makeTripRecord()
     const updated = makeTripRecord({ routeId: null, vehicleRoute: null })
-    const mockPrisma = {
-      tripRecord: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
-      },
-    }
+    vi.mocked(tripRecordService.update).mockResolvedValue({
+      id: updated.id,
+      tenantId: updated.tenantId,
+      vehicleId: updated.vehicleId,
+      routeId: null,
+      tripDate: updated.tripDate,
+      startMileage: 10000,
+      endMileage: 10050,
+      distanceKm: 50,
+      notes: updated.notes,
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt,
+      vehicle: updated.vehicle,
+      vehicleRoute: undefined,
+    })
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     await caller.update({ id: TRIP_RECORD_ID, routeId: null })
 
-    expect(mockPrisma.tripRecord.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          routeId: null,
-        }),
-      })
+    expect(tripRecordService.update).toHaveBeenCalledWith(
+      expect.anything(),
+      TENANT_ID,
+      expect.objectContaining({ id: TRIP_RECORD_ID, routeId: null }),
+      expect.objectContaining({ userId: USER_ID })
     )
   })
 
   it("validates routeId FK when setting a new route", async () => {
-    const existing = makeTripRecord()
-    const mockPrisma = {
-      tripRecord: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-      },
-      vehicleRoute: {
-        findFirst: vi.fn().mockResolvedValue(null), // route not found
-      },
-    }
+    vi.mocked(tripRecordService.update).mockRejectedValue(
+      new tripRecordService.TripRecordValidationError("Vehicle route not found")
+    )
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     await expect(
       caller.update({ id: TRIP_RECORD_ID, routeId: ROUTE_ID })
@@ -423,11 +463,10 @@ describe("tripRecords.update", () => {
   })
 
   it("throws NOT_FOUND for missing record", async () => {
-    const mockPrisma = {
-      tripRecord: {
-        findFirst: vi.fn().mockResolvedValue(null),
-      },
-    }
+    vi.mocked(tripRecordService.update).mockRejectedValue(
+      new tripRecordService.TripRecordNotFoundError()
+    )
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     await expect(
       caller.update({ id: TRIP_RECORD_ID, notes: "test" })
@@ -435,18 +474,27 @@ describe("tripRecords.update", () => {
   })
 
   it("updates nullable Decimal fields", async () => {
-    const existing = makeTripRecord()
     const updated = makeTripRecord({
       startMileage: null,
       endMileage: null,
       distanceKm: null,
     })
-    const mockPrisma = {
-      tripRecord: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
-      },
-    }
+    vi.mocked(tripRecordService.update).mockResolvedValue({
+      id: updated.id,
+      tenantId: updated.tenantId,
+      vehicleId: updated.vehicleId,
+      routeId: updated.routeId,
+      tripDate: updated.tripDate,
+      startMileage: null,
+      endMileage: null,
+      distanceKm: null,
+      notes: updated.notes,
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt,
+      vehicle: updated.vehicle,
+      vehicleRoute: updated.vehicleRoute,
+    })
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     await caller.update({
       id: TRIP_RECORD_ID,
@@ -455,14 +503,16 @@ describe("tripRecords.update", () => {
       distanceKm: null,
     })
 
-    expect(mockPrisma.tripRecord.update).toHaveBeenCalledWith(
+    expect(tripRecordService.update).toHaveBeenCalledWith(
+      expect.anything(),
+      TENANT_ID,
       expect.objectContaining({
-        data: expect.objectContaining({
-          startMileage: null,
-          endMileage: null,
-          distanceKm: null,
-        }),
-      })
+        id: TRIP_RECORD_ID,
+        startMileage: null,
+        endMileage: null,
+        distanceKm: null,
+      }),
+      expect.objectContaining({ userId: USER_ID })
     )
   })
 })
@@ -471,28 +521,25 @@ describe("tripRecords.update", () => {
 
 describe("tripRecords.delete", () => {
   it("deletes a trip record", async () => {
-    const existing = makeTripRecord()
-    const mockPrisma = {
-      tripRecord: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
-      },
-    }
+    vi.mocked(tripRecordService.remove).mockResolvedValue(undefined)
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: TRIP_RECORD_ID })
 
     expect(result.success).toBe(true)
-    expect(mockPrisma.tripRecord.delete).toHaveBeenCalledWith({
-      where: { id: TRIP_RECORD_ID },
-    })
+    expect(tripRecordService.remove).toHaveBeenCalledWith(
+      expect.anything(),
+      TENANT_ID,
+      TRIP_RECORD_ID,
+      expect.objectContaining({ userId: USER_ID })
+    )
   })
 
   it("throws NOT_FOUND for missing record", async () => {
-    const mockPrisma = {
-      tripRecord: {
-        findFirst: vi.fn().mockResolvedValue(null),
-      },
-    }
+    vi.mocked(tripRecordService.remove).mockRejectedValue(
+      new tripRecordService.TripRecordNotFoundError()
+    )
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     await expect(
       caller.delete({ id: TRIP_RECORD_ID })

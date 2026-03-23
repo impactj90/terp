@@ -36,20 +36,22 @@ export class MonthlyValueValidationError extends Error {
 
 export async function forEmployee(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string,
   year: number,
   month: number
 ) {
-  const monthlyCalcService = new MonthlyCalcService(prisma)
+  const monthlyCalcService = new MonthlyCalcService(prisma, tenantId)
   return monthlyCalcService.getMonthSummary(employeeId, year, month)
 }
 
 export async function yearOverview(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string,
   year: number
 ) {
-  const monthlyCalcService = new MonthlyCalcService(prisma)
+  const monthlyCalcService = new MonthlyCalcService(prisma, tenantId)
   return monthlyCalcService.getYearOverview(employeeId, year)
 }
 
@@ -203,7 +205,7 @@ export async function close(
   }
 
   // 2. Close via MonthlyCalcService (has its own atomic guard internally)
-  const monthlyCalcService = new MonthlyCalcService(prisma)
+  const monthlyCalcService = new MonthlyCalcService(prisma, tenantId)
   await monthlyCalcService.closeMonth(mv.employeeId, mv.year, mv.month, userId)
 
   // 3. Re-fetch and return updated record
@@ -265,7 +267,7 @@ export async function reopen(
   }
 
   // 2. Reopen via MonthlyCalcService (has its own atomic guard internally)
-  const monthlyCalcService = new MonthlyCalcService(prisma)
+  const monthlyCalcService = new MonthlyCalcService(prisma, tenantId)
   await monthlyCalcService.reopenMonth(
     mv.employeeId,
     mv.year,
@@ -326,7 +328,7 @@ export async function closeBatch(
   }
 
   // 2. Calculate monthly values for employees that need it
-  const monthlyCalcService = new MonthlyCalcService(prisma)
+  const monthlyCalcService = new MonthlyCalcService(prisma, tenantId)
   if (recalculate) {
     await monthlyCalcService.calculateMonthBatch(employeeIds, year, month)
   }
@@ -454,7 +456,7 @@ export async function recalculate(
     }
   }
 
-  const monthlyCalcService = new MonthlyCalcService(prisma)
+  const monthlyCalcService = new MonthlyCalcService(prisma, tenantId)
   const result = await monthlyCalcService.calculateMonthBatch(
     employeeIds,
     year,

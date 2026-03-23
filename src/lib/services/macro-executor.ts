@@ -14,6 +14,7 @@
 
 import type { PrismaClient } from "@/generated/prisma/client"
 import { executeAction } from "@/lib/services/macros-service"
+import * as macrosRepo from "@/lib/services/macros-repository"
 
 // --- Exported Types ---
 
@@ -85,7 +86,7 @@ export class MacroExecutor {
     }
     if (successfulWeeklyIds.length > 0) {
       await this.prisma.macroAssignment.updateMany({
-        where: { id: { in: successfulWeeklyIds } },
+        where: { id: { in: successfulWeeklyIds }, tenantId },
         data: { lastExecutedAt: new Date(), lastExecutedDate: date },
       })
     }
@@ -124,7 +125,7 @@ export class MacroExecutor {
     }
     if (successfulMonthlyIds.length > 0) {
       await this.prisma.macroAssignment.updateMany({
-        where: { id: { in: successfulMonthlyIds } },
+        where: { id: { in: successfulMonthlyIds }, tenantId },
         data: { lastExecutedAt: new Date(), lastExecutedDate: date },
       })
     }
@@ -174,26 +175,21 @@ export class MacroExecutor {
       })
     } catch (err) {
       // Unexpected throw — mark execution as failed so it doesn't stay "running"
-      await this.prisma.macroExecution.update({
-        where: { id: execution.id },
-        data: {
-          completedAt: new Date(),
-          status: "failed",
-          errorMessage: String(err),
-        },
+      await macrosRepo.updateExecution(this.prisma, macro.tenantId, execution.id, {
+        completedAt: new Date(),
+        status: "failed",
+        result: {},
+        errorMessage: String(err),
       })
       throw err
     }
 
     // 3. Update execution record
-    await this.prisma.macroExecution.update({
-      where: { id: execution.id },
-      data: {
-        completedAt: new Date(),
-        status: actionResult.error ? "failed" : "completed",
-        result: (actionResult.result as object) ?? {},
-        errorMessage: actionResult.error,
-      },
+    await macrosRepo.updateExecution(this.prisma, macro.tenantId, execution.id, {
+      completedAt: new Date(),
+      status: actionResult.error ? "failed" : "completed",
+      result: (actionResult.result as object) ?? {},
+      errorMessage: actionResult.error ?? null,
     })
 
     // 4. If action returned an error, throw so caller counts it as failed

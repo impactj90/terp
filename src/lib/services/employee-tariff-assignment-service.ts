@@ -8,6 +8,8 @@ import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./employee-tariff-assignment-repository"
 import * as auditLog from "./audit-logs-service"
 import type { AuditContext } from "./audit-logs-service"
+import { checkRelatedEmployeeDataScope } from "@/lib/auth/data-scope"
+import type { DataScope } from "@/lib/auth/middleware"
 
 // --- Audit ---
 
@@ -168,7 +170,8 @@ export async function update(
     notes?: string | null
     isActive?: boolean
   },
-  audit?: AuditContext
+  audit?: AuditContext,
+  dataScope?: DataScope
 ) {
   // Fetch existing assignment, verify tenant/employee match
   const existing = await repo.findById(
@@ -179,6 +182,17 @@ export async function update(
   )
   if (!existing) {
     throw new EmployeeTariffAssignmentNotFoundError()
+  }
+
+  // Check data scope if provided
+  if (dataScope) {
+    const employee = await repo.findEmployeeById(prisma, tenantId, input.employeeId, { id: true, departmentId: true })
+    if (employee) {
+      checkRelatedEmployeeDataScope(dataScope, {
+        employeeId: input.employeeId,
+        employee: { departmentId: (employee as unknown as { departmentId: string | null }).departmentId },
+      }, "EmployeeTariffAssignment")
+    }
   }
 
   // Build partial update data
@@ -215,26 +229,29 @@ export async function update(
     )
   }
 
-  // Re-check overlap if dates changed (exclude self)
-  if (
-    input.effectiveFrom !== undefined ||
-    input.effectiveTo !== undefined
-  ) {
-    const overlap = await repo.hasOverlap(
-      prisma,
-      input.employeeId,
-      effectiveFrom,
-      effectiveTo,
-      input.id
-    )
-    if (overlap) {
-      throw new EmployeeTariffAssignmentConflictError(
-        "Overlapping tariff assignment exists"
+  // Wrap overlap check + update in transaction for atomicity (Tier 3)
+  const updated = await prisma.$transaction(async (tx) => {
+    // Re-check overlap if dates changed (exclude self)
+    if (
+      input.effectiveFrom !== undefined ||
+      input.effectiveTo !== undefined
+    ) {
+      const overlap = await repo.hasOverlap(
+        tx as unknown as PrismaClient,
+        input.employeeId,
+        effectiveFrom,
+        effectiveTo,
+        input.id
       )
+      if (overlap) {
+        throw new EmployeeTariffAssignmentConflictError(
+          "Overlapping tariff assignment exists"
+        )
+      }
     }
-  }
 
-  const updated = (await repo.update(prisma, tenantId, input.id, data))!
+    return (await repo.update(tx as unknown as PrismaClient, tenantId, input.id, data))!
+  })
 
   if (audit) {
     const changes = auditLog.computeChanges(
@@ -263,7 +280,8 @@ export async function remove(
   tenantId: string,
   employeeId: string,
   id: string,
-  audit?: AuditContext
+  audit?: AuditContext,
+  dataScope?: DataScope
 ) {
   // Fetch assignment, verify tenant/employee match
   const existing = await repo.findById(prisma, tenantId, employeeId, id)
@@ -271,7 +289,32 @@ export async function remove(
     throw new EmployeeTariffAssignmentNotFoundError()
   }
 
+  // Check data scope if provided
+  if (dataScope) {
+    const employee = await repo.findEmployeeById(prisma, tenantId, employeeId, { id: true, departmentId: true })
+    if (employee) {
+      checkRelatedEmployeeDataScope(dataScope, {
+        employeeId,
+        employee: { departmentId: (employee as unknown as { departmentId: string | null }).departmentId },
+      }, "EmployeeTariffAssignment")
+    }
+  }
+
   await repo.deleteById(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "employee_tariff_assignment",
+      entityId: id,
+      entityName: null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }
 
 export async function getEffective(

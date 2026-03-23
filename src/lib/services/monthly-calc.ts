@@ -51,7 +51,7 @@ import {
 } from "./monthly-calc.types"
 
 export class MonthlyCalcService {
-  constructor(private prisma: PrismaClient, private tenantId?: string) {}
+  constructor(private prisma: PrismaClient, private tenantId: string) {}
 
   // =========================================================================
   // Public Methods -- Orchestration (from monthlycalc.go)
@@ -127,7 +127,7 @@ export class MonthlyCalcService {
     const employees = await this.prisma.employee.findMany({
       where: {
         id: { in: employeeIds },
-        ...(this.tenantId ? { tenantId: this.tenantId } : {}),
+        tenantId: this.tenantId,
       },
     })
     const employeeMap = new Map(employees.map((e) => [e.id, e]))
@@ -286,7 +286,7 @@ export class MonthlyCalcService {
     const employee = prefetchedEmployee !== undefined
       ? prefetchedEmployee
       : await this.prisma.employee.findFirst({
-          where: { id: employeeId, ...(this.tenantId ? { tenantId: this.tenantId } : {}) },
+          where: { id: employeeId, tenantId: this.tenantId },
         })
     if (employee === null) {
       throw new Error(ERR_EMPLOYEE_NOT_FOUND)
@@ -301,19 +301,21 @@ export class MonthlyCalcService {
 
     // Fetch daily values, absences, and tariff in parallel
     const tariffPromise = employee.tariffId !== null
-      ? this.prisma.tariff.findUnique({ where: { id: employee.tariffId } }).catch(() => null)
+      ? this.prisma.tariff.findFirst({ where: { id: employee.tariffId, tenantId: this.tenantId } }).catch(() => null)
       : Promise.resolve(null)
 
     const [dailyValues, absences, tariff] = await Promise.all([
       this.prisma.dailyValue.findMany({
         where: {
           employeeId,
+          tenantId: this.tenantId,
           valueDate: { gte: from, lte: to },
         },
       }),
       this.prisma.absenceDay.findMany({
         where: {
           employeeId,
+          tenantId: this.tenantId,
           absenceDate: { gte: from, lte: to },
         },
         include: { absenceType: true },
@@ -342,6 +344,7 @@ export class MonthlyCalcService {
         year,
         month,
         isClosed: false,
+        tenantId: this.tenantId,
       },
       data: {
         ...monthlyData,
@@ -381,7 +384,7 @@ export class MonthlyCalcService {
     this.validateYearMonth(year, month)
 
     const result = await this.prisma.monthlyValue.updateMany({
-      where: { employeeId, year, month, isClosed: false },
+      where: { employeeId, year, month, isClosed: false, tenantId: this.tenantId },
       data: {
         isClosed: true,
         closedAt: new Date(),
@@ -414,7 +417,7 @@ export class MonthlyCalcService {
     this.validateYearMonth(year, month)
 
     const result = await this.prisma.monthlyValue.updateMany({
-      where: { employeeId, year, month, isClosed: true },
+      where: { employeeId, year, month, isClosed: true, tenantId: this.tenantId },
       data: {
         isClosed: false,
         reopenedAt: new Date(),
@@ -446,7 +449,7 @@ export class MonthlyCalcService {
     }
 
     const values = await this.prisma.monthlyValue.findMany({
-      where: { employeeId, year },
+      where: { employeeId, year, tenantId: this.tenantId },
       orderBy: { month: "asc" },
     })
 
@@ -467,6 +470,7 @@ export class MonthlyCalcService {
     return this.prisma.dailyValue.findMany({
       where: {
         employeeId,
+        tenantId: this.tenantId,
         valueDate: { gte: from, lte: to },
       },
     })
@@ -545,7 +549,7 @@ export class MonthlyCalcService {
 
     // Load employee first (needed for tariffId), then parallelize the rest
     const employee = await this.prisma.employee.findFirst({
-      where: { id: employeeId, ...(this.tenantId ? { tenantId: this.tenantId } : {}) },
+      where: { id: employeeId, tenantId: this.tenantId },
     })
     if (employee === null) {
       throw new Error(ERR_EMPLOYEE_NOT_FOUND)
@@ -557,18 +561,20 @@ export class MonthlyCalcService {
       this.prisma.dailyValue.findMany({
         where: {
           employeeId,
+          tenantId: this.tenantId,
           valueDate: { gte: from, lte: to },
         },
       }),
       this.prisma.absenceDay.findMany({
         where: {
           employeeId,
+          tenantId: this.tenantId,
           absenceDate: { gte: from, lte: to },
         },
         include: { absenceType: true },
       }),
       employee.tariffId !== null
-        ? this.prisma.tariff.findUnique({ where: { id: employee.tariffId } }).catch(() => null)
+        ? this.prisma.tariff.findFirst({ where: { id: employee.tariffId, tenantId: this.tenantId } }).catch(() => null)
         : Promise.resolve(null),
     ])
     const previousCarryover = prevMonth !== null ? prevMonth.flextimeEnd : 0

@@ -270,28 +270,33 @@ export async function update(
     data.isActive = input.isActive
   }
 
-  await repo.update(prisma, tenantId, input.id, data)
+  // Wrap update + completeness check in transaction for atomicity (Tier 3)
+  const updated = await prisma.$transaction(async (tx) => {
+    await repo.update(tx as unknown as PrismaClient, tenantId, input.id, data)
 
-  // Re-fetch with include to check completeness and return
-  const updated = await repo.findByIdWithInclude(prisma, tenantId, input.id)
-  if (!updated) {
-    throw new WeekPlanNotFoundError()
-  }
+    // Re-fetch with include to check completeness and return
+    const plan = await repo.findByIdWithInclude(tx as unknown as PrismaClient, tenantId, input.id)
+    if (!plan) {
+      throw new WeekPlanNotFoundError()
+    }
 
-  // Verify completeness: all 7 days must have plans
-  if (
-    !updated.mondayDayPlanId ||
-    !updated.tuesdayDayPlanId ||
-    !updated.wednesdayDayPlanId ||
-    !updated.thursdayDayPlanId ||
-    !updated.fridayDayPlanId ||
-    !updated.saturdayDayPlanId ||
-    !updated.sundayDayPlanId
-  ) {
-    throw new WeekPlanValidationError(
-      "Week plan must have a day plan assigned for all 7 days"
-    )
-  }
+    // Verify completeness: all 7 days must have plans
+    if (
+      !plan.mondayDayPlanId ||
+      !plan.tuesdayDayPlanId ||
+      !plan.wednesdayDayPlanId ||
+      !plan.thursdayDayPlanId ||
+      !plan.fridayDayPlanId ||
+      !plan.saturdayDayPlanId ||
+      !plan.sundayDayPlanId
+    ) {
+      throw new WeekPlanValidationError(
+        "Week plan must have a day plan assigned for all 7 days"
+      )
+    }
+
+    return plan
+  })
 
   if (audit) {
     const changes = auditLog.computeChanges(

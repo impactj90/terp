@@ -19,6 +19,7 @@ import { requirePermission } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
 import * as auditLog from "@/lib/services/audit-logs-service"
+import * as tripRecordService from "@/lib/services/trip-record-service"
 
 // --- Permission Constants ---
 
@@ -352,110 +353,20 @@ export const tripRecordsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         const tenantId = ctx.tenantId!
+        const { id, ...updateData } = input
 
-        // Verify record exists (tenant-scoped)
-        const existing = await ctx.prisma.tripRecord.findFirst({
-          where: { id: input.id, tenantId },
-        })
-        if (!existing) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Trip record not found",
-          })
-        }
-
-        // Build partial update data
-        const data: Record<string, unknown> = {}
-
-        if (input.routeId !== undefined) {
-          if (input.routeId === null) {
-            data.routeId = null
-          } else {
-            const route = await ctx.prisma.vehicleRoute.findFirst({
-              where: { id: input.routeId, tenantId },
-            })
-            if (!route) {
-              throw new TRPCError({
-                code: "BAD_REQUEST",
-                message: "Vehicle route not found",
-              })
-            }
-            data.routeId = input.routeId
-          }
-        }
-
-        if (input.tripDate !== undefined) {
-          const tripDate = new Date(input.tripDate)
-          if (isNaN(tripDate.getTime())) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Invalid trip date",
-            })
-          }
-          data.tripDate = tripDate
-        }
-
-        if (input.startMileage !== undefined) {
-          data.startMileage = input.startMileage
-        }
-
-        if (input.endMileage !== undefined) {
-          data.endMileage = input.endMileage
-        }
-
-        if (input.distanceKm !== undefined) {
-          data.distanceKm = input.distanceKm
-        }
-
-        if (input.notes !== undefined) {
-          data.notes = input.notes === null ? null : input.notes.trim()
-        }
-
-        const record = await ctx.prisma.tripRecord.update({
-          where: { id: input.id },
-          data,
-          include: {
-            vehicle: {
-              select: { id: true, code: true, name: true },
-            },
-            vehicleRoute: {
-              select: { id: true, code: true, name: true },
-            },
-          },
-        })
-
-        const changes = auditLog.computeChanges(
-          existing as unknown as Record<string, unknown>,
-          record as unknown as Record<string, unknown>,
-          ["vehicleId", "routeId", "tripDate", "startMileage", "endMileage", "distanceKm", "notes"]
-        )
-        await auditLog.log(ctx.prisma, {
+        const record = await tripRecordService.update(
+          ctx.prisma,
           tenantId,
-          userId: ctx.user!.id,
-          action: "update",
-          entityType: "trip_record",
-          entityId: input.id,
-          entityName: null,
-          changes,
-          ipAddress: ctx.ipAddress,
-          userAgent: ctx.userAgent,
-        }).catch(err => console.error('[AuditLog] Failed:', err))
+          { id, ...updateData },
+          {
+            userId: ctx.user!.id,
+            ipAddress: ctx.ipAddress,
+            userAgent: ctx.userAgent,
+          }
+        )
 
-        return {
-          id: record.id,
-          tenantId: record.tenantId,
-          vehicleId: record.vehicleId,
-          routeId: record.routeId,
-          tripDate: record.tripDate,
-          startMileage: decToNum(record.startMileage),
-          endMileage: decToNum(record.endMileage),
-          distanceKm: decToNum(record.distanceKm),
-          notes: record.notes,
-          createdAt: record.createdAt,
-          updatedAt: record.updatedAt,
-          vehicle: record.vehicle,
-          vehicleRoute: record.vehicleRoute,
-        }
+        return record
       } catch (err) {
         handleServiceError(err)
       }
@@ -474,32 +385,16 @@ export const tripRecordsRouter = createTRPCRouter({
       try {
         const tenantId = ctx.tenantId!
 
-        // Verify record exists (tenant-scoped)
-        const existing = await ctx.prisma.tripRecord.findFirst({
-          where: { id: input.id, tenantId },
-        })
-        if (!existing) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Trip record not found",
-          })
-        }
-
-        await ctx.prisma.tripRecord.delete({
-          where: { id: input.id },
-        })
-
-        await auditLog.log(ctx.prisma, {
+        await tripRecordService.remove(
+          ctx.prisma,
           tenantId,
-          userId: ctx.user!.id,
-          action: "delete",
-          entityType: "trip_record",
-          entityId: input.id,
-          entityName: null,
-          changes: null,
-          ipAddress: ctx.ipAddress,
-          userAgent: ctx.userAgent,
-        }).catch(err => console.error('[AuditLog] Failed:', err))
+          input.id,
+          {
+            userId: ctx.user!.id,
+            ipAddress: ctx.ipAddress,
+            userAgent: ctx.userAgent,
+          }
+        )
 
         return { success: true }
       } catch (err) {

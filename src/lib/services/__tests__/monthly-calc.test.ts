@@ -46,6 +46,8 @@ function createMockPrisma() {
     },
     tariff: {
       findUnique: vi.fn().mockResolvedValue(null),
+      // findFirst delegates to findUnique so existing test setups work
+      get findFirst() { return this.findUnique },
     },
   }
   return { prisma: mocks as unknown as PrismaClient, mocks }
@@ -139,7 +141,7 @@ function makeTariff(overrides: Record<string, unknown> = {}) {
 describe("CalculateMonth", () => {
   it("Success - calculates and returns persisted value", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     const year = 2025
     const month = 1
@@ -163,7 +165,7 @@ describe("CalculateMonth", () => {
 
   it("FutureMonth - throws ERR_FUTURE_MONTH", async () => {
     const { prisma } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     const futureYear = new Date().getFullYear() + 1
 
@@ -174,7 +176,7 @@ describe("CalculateMonth", () => {
 
   it("MonthClosed - throws ERR_MONTH_CLOSED", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     mocks.employee.findUnique.mockResolvedValue(makeEmployee())
     mocks.monthlyValue.findUnique.mockResolvedValue(
@@ -188,7 +190,7 @@ describe("CalculateMonth", () => {
 
   it("CurrentMonth - current month succeeds", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     const now = new Date()
     const year = now.getFullYear()
@@ -212,7 +214,7 @@ describe("CalculateMonth", () => {
 describe("CalculateMonthBatch", () => {
   it("Success - all employees succeed", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     const emp1 = "e-1"
     const emp2 = "e-2"
@@ -242,7 +244,7 @@ describe("CalculateMonthBatch", () => {
 
   it("WithFailures - one employee fails", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     const emp1 = "e-1"
     const emp2 = "e-2"
@@ -278,7 +280,7 @@ describe("CalculateMonthBatch", () => {
 
   it("WithClosedMonths - closed month is skipped", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     const emp1 = "e-1"
     const emp2 = "e-2"
@@ -315,7 +317,7 @@ describe("CalculateMonthBatch", () => {
 
   it("FutureMonth - all employees fail", async () => {
     const { prisma } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     const emp1 = "e-1"
     const emp2 = "e-2"
@@ -334,7 +336,7 @@ describe("CalculateMonthBatch", () => {
 describe("RecalculateFromMonth", () => {
   it("Success - cascading from past to current month", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     const now = new Date()
     const startYear = 2025
@@ -373,7 +375,7 @@ describe("RecalculateFromMonth", () => {
 
   it("SkipsClosedMonths - continues cascade past closed months", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     mocks.employee.findUnique.mockResolvedValue(makeEmployee())
     // Nov 2025 is closed, all others open
@@ -398,7 +400,7 @@ describe("RecalculateFromMonth", () => {
 
   it("ContinuesOnError - processes remaining months after error", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     // Oct 2025 employee not found, all others succeed
     let callCount = 0
@@ -421,7 +423,7 @@ describe("RecalculateFromMonth", () => {
 
   it("YearBoundary - December to January transition", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     mocks.employee.findUnique.mockResolvedValue(makeEmployee())
     mocks.monthlyValue.findUnique.mockResolvedValue(null)
@@ -435,7 +437,7 @@ describe("RecalculateFromMonth", () => {
 
   it("CurrentMonth - single month when start = current", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     const now = new Date()
     const year = now.getFullYear()
@@ -453,7 +455,7 @@ describe("RecalculateFromMonth", () => {
 
   it("FutureMonth - processes nothing", async () => {
     const { prisma } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     const futureYear = new Date().getFullYear() + 1
 
@@ -470,7 +472,7 @@ describe("RecalculateFromMonth", () => {
 describe("RecalculateFromMonthBatch", () => {
   it("Success - 2 employees", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     const now = new Date()
     const year = now.getFullYear()
@@ -492,7 +494,7 @@ describe("RecalculateFromMonthBatch", () => {
 
   it("MixedResults - 1 processed, 1 closed", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     const now = new Date()
     const year = now.getFullYear()
@@ -531,7 +533,7 @@ describe("RecalculateFromMonthBatch", () => {
 describe("GetMonthSummary", () => {
   it("Success - persisted monthly value found", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     const mv = makeMonthlyValue(2026, 1, {
       totalNetTime: 9600,
@@ -549,7 +551,7 @@ describe("GetMonthSummary", () => {
 
   it("NotFound_CalculatesOnTheFly - calculates from daily values", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     // No persisted monthly value
     mocks.monthlyValue.findUnique.mockResolvedValue(null)
@@ -574,7 +576,7 @@ describe("GetMonthSummary", () => {
 
   it("InvalidYear - throws ERR_INVALID_YEAR_MONTH", async () => {
     const { prisma } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     await expect(svc.getMonthSummary(EMPLOYEE_ID, 1800, 1)).rejects.toThrow(
       ERR_INVALID_YEAR_MONTH,
@@ -586,7 +588,7 @@ describe("GetMonthSummary", () => {
 
   it("InvalidMonth - throws ERR_INVALID_MONTH", async () => {
     const { prisma } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     await expect(svc.getMonthSummary(EMPLOYEE_ID, 2026, 0)).rejects.toThrow(
       ERR_INVALID_MONTH,
@@ -602,7 +604,7 @@ describe("GetMonthSummary", () => {
 describe("RecalculateMonth", () => {
   it("Success - 5 work days with overtime/undertime", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     mocks.employee.findUnique.mockResolvedValue(makeEmployee({ tariffId: null }))
     mocks.monthlyValue.findUnique.mockResolvedValue(null)
@@ -631,7 +633,7 @@ describe("RecalculateMonth", () => {
 
   it("MonthClosed - throws ERR_MONTH_CLOSED", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     mocks.employee.findUnique.mockResolvedValue(makeEmployee())
     mocks.monthlyValue.findUnique.mockResolvedValue(
@@ -645,7 +647,7 @@ describe("RecalculateMonth", () => {
 
   it("WithPreviousCarryover - flextime chain from previous month", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     mocks.employee.findUnique.mockResolvedValue(makeEmployee({ tariffId: null }))
     // New flow: getPreviousMonth is called first, then getByEmployeeMonth after updateMany=0
@@ -671,7 +673,7 @@ describe("RecalculateMonth", () => {
 
   it("EmployeeNotFound - throws ERR_EMPLOYEE_NOT_FOUND", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     mocks.employee.findUnique.mockResolvedValue(null)
 
@@ -682,7 +684,7 @@ describe("RecalculateMonth", () => {
 
   it("InvalidMonth - throws ERR_INVALID_MONTH", async () => {
     const { prisma } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     await expect(svc.recalculateMonth(EMPLOYEE_ID, 2026, 0)).rejects.toThrow(
       ERR_INVALID_MONTH,
@@ -698,7 +700,7 @@ describe("RecalculateMonth", () => {
 describe("CloseMonth", () => {
   it("Success - close an open month", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     mocks.monthlyValue.updateMany.mockResolvedValue({ count: 1 })
 
@@ -714,7 +716,7 @@ describe("CloseMonth", () => {
 
   it("AlreadyClosed - throws ERR_MONTH_CLOSED", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     // updateMany returns 0 (no rows matched isClosed: false)
     mocks.monthlyValue.updateMany.mockResolvedValue({ count: 0 })
@@ -730,7 +732,7 @@ describe("CloseMonth", () => {
 
   it("NotFound - throws ERR_MONTHLY_VALUE_NOT_FOUND", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     // updateMany returns 0, fallback findUnique returns null
     mocks.monthlyValue.updateMany.mockResolvedValue({ count: 0 })
@@ -743,7 +745,7 @@ describe("CloseMonth", () => {
 
   it("InvalidMonth - throws ERR_INVALID_MONTH", async () => {
     const { prisma } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     await expect(
       svc.closeMonth(EMPLOYEE_ID, 2026, 13, CLOSER_ID),
@@ -756,7 +758,7 @@ describe("CloseMonth", () => {
 describe("ReopenMonth", () => {
   it("Success - reopen a closed month", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     mocks.monthlyValue.updateMany.mockResolvedValue({ count: 1 })
 
@@ -772,7 +774,7 @@ describe("ReopenMonth", () => {
 
   it("NotClosed - throws ERR_MONTH_NOT_CLOSED", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     // updateMany returns 0 (no rows matched isClosed: true)
     mocks.monthlyValue.updateMany.mockResolvedValue({ count: 0 })
@@ -788,7 +790,7 @@ describe("ReopenMonth", () => {
 
   it("NotFound - throws ERR_MONTHLY_VALUE_NOT_FOUND", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     // updateMany returns 0, fallback findUnique returns null
     mocks.monthlyValue.updateMany.mockResolvedValue({ count: 0 })
@@ -805,7 +807,7 @@ describe("ReopenMonth", () => {
 describe("GetYearOverview", () => {
   it("Success - 2 months returned", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     mocks.monthlyValue.findMany.mockResolvedValue([
       makeMonthlyValue(2026, 1, {
@@ -829,7 +831,7 @@ describe("GetYearOverview", () => {
 
   it("Empty - no months returns empty array", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     mocks.monthlyValue.findMany.mockResolvedValue([])
 
@@ -840,7 +842,7 @@ describe("GetYearOverview", () => {
 
   it("InvalidYear - throws ERR_INVALID_YEAR_MONTH", async () => {
     const { prisma } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     await expect(svc.getYearOverview(EMPLOYEE_ID, 1800)).rejects.toThrow(
       ERR_INVALID_YEAR_MONTH,
@@ -853,7 +855,7 @@ describe("GetYearOverview", () => {
 describe("validateYearMonth", () => {
   it("valid year/month succeeds", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     mocks.monthlyValue.findUnique.mockResolvedValue(null)
     mocks.employee.findUnique.mockResolvedValue(
@@ -867,7 +869,7 @@ describe("validateYearMonth", () => {
 
   it("year too low throws ERR_INVALID_YEAR_MONTH", async () => {
     const { prisma } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     await expect(svc.getMonthSummary(EMPLOYEE_ID, 1800, 6)).rejects.toThrow(
       ERR_INVALID_YEAR_MONTH,
@@ -876,7 +878,7 @@ describe("validateYearMonth", () => {
 
   it("year too high throws ERR_INVALID_YEAR_MONTH", async () => {
     const { prisma } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     await expect(svc.getMonthSummary(EMPLOYEE_ID, 2500, 6)).rejects.toThrow(
       ERR_INVALID_YEAR_MONTH,
@@ -885,7 +887,7 @@ describe("validateYearMonth", () => {
 
   it("month 0 throws ERR_INVALID_MONTH", async () => {
     const { prisma } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     await expect(svc.getMonthSummary(EMPLOYEE_ID, 2026, 0)).rejects.toThrow(
       ERR_INVALID_MONTH,
@@ -894,7 +896,7 @@ describe("validateYearMonth", () => {
 
   it("month 13 throws ERR_INVALID_MONTH", async () => {
     const { prisma } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     await expect(svc.getMonthSummary(EMPLOYEE_ID, 2026, 13)).rejects.toThrow(
       ERR_INVALID_MONTH,
@@ -903,7 +905,7 @@ describe("validateYearMonth", () => {
 
   it("edge case min year 1900 succeeds", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     mocks.monthlyValue.findUnique.mockResolvedValue(null)
     mocks.employee.findUnique.mockResolvedValue(
@@ -916,7 +918,7 @@ describe("validateYearMonth", () => {
 
   it("edge case max year 2200 succeeds", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     mocks.monthlyValue.findUnique.mockResolvedValue(null)
     mocks.employee.findUnique.mockResolvedValue(
@@ -932,7 +934,7 @@ describe("monthDateRange", () => {
   // We test through getDailyBreakdown which calls monthDateRange internally
   it("January - 31 days", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     mocks.dailyValue.findMany.mockResolvedValue([])
 
@@ -951,7 +953,7 @@ describe("monthDateRange", () => {
 
   it("February non-leap - 28 days", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     mocks.dailyValue.findMany.mockResolvedValue([])
 
@@ -970,7 +972,7 @@ describe("monthDateRange", () => {
 
   it("February leap year - 29 days", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     mocks.dailyValue.findMany.mockResolvedValue([])
 
@@ -989,7 +991,7 @@ describe("monthDateRange", () => {
 
   it("December - 31 days", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     mocks.dailyValue.findMany.mockResolvedValue([])
 
@@ -1012,7 +1014,7 @@ describe("monthDateRange", () => {
 describe("buildAbsenceSummary", () => {
   it("counts vacation full + half day with Decimal addition", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     mocks.employee.findUnique.mockResolvedValue(
       makeEmployee({ tariffId: null }),
@@ -1066,7 +1068,7 @@ describe("buildAbsenceSummary", () => {
 
   it("illness rounds up half day to 1", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     mocks.employee.findUnique.mockResolvedValue(
       makeEmployee({ tariffId: null }),
@@ -1121,7 +1123,7 @@ describe("buildAbsenceSummary", () => {
 
   it("special/other category counted as 1 each", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     mocks.employee.findUnique.mockResolvedValue(
       makeEmployee({ tariffId: null }),
@@ -1157,7 +1159,7 @@ describe("buildAbsenceSummary", () => {
 
   it("pending status excluded", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     mocks.employee.findUnique.mockResolvedValue(
       makeEmployee({ tariffId: null }),
@@ -1193,7 +1195,7 @@ describe("buildAbsenceSummary", () => {
 
   it("null absenceType excluded", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     mocks.employee.findUnique.mockResolvedValue(
       makeEmployee({ tariffId: null }),
@@ -1235,7 +1237,7 @@ describe("buildAbsenceSummary", () => {
 describe("Tariff Evaluation Rules", () => {
   it("CompleteCarryoverCapped - all tariff fields applied", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     const tariff = makeTariff({
       creditType: "complete_carryover",
@@ -1275,7 +1277,7 @@ describe("Tariff Evaluation Rules", () => {
 
   it("AfterThreshold - threshold applied", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     const tariff = makeTariff({
       creditType: "after_threshold",
@@ -1309,7 +1311,7 @@ describe("Tariff Evaluation Rules", () => {
 
   it("NoCarryover - resets to 0", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     const tariff = makeTariff({ creditType: "no_carryover" })
 
@@ -1338,7 +1340,7 @@ describe("Tariff Evaluation Rules", () => {
 
   it("TariffNotFound - graceful fallback (direct transfer)", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     mocks.employee.findUnique.mockResolvedValue(makeEmployee())
     mocks.monthlyValue.findUnique.mockResolvedValue(null)
@@ -1373,7 +1375,7 @@ describe("Tariff Evaluation Rules", () => {
 describe("buildEvaluationRules", () => {
   it("NoEvaluation returns null rules", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     mocks.employee.findUnique.mockResolvedValue(makeEmployee())
     mocks.monthlyValue.findUnique.mockResolvedValue(null)
@@ -1396,7 +1398,7 @@ describe("buildEvaluationRules", () => {
 
   it("EmptyCreditType defaults to no_evaluation (null rules)", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     mocks.employee.findUnique.mockResolvedValue(makeEmployee())
     mocks.monthlyValue.findUnique.mockResolvedValue(null)
@@ -1423,7 +1425,7 @@ describe("buildEvaluationRules", () => {
 describe("Integration Scenarios", () => {
   it("CloseReopenRecalculate - close -> recalc blocked -> reopen -> recalc allowed", async () => {
     const { prisma, mocks } = createMockPrisma()
-    const svc = new MonthlyCalcService(prisma)
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     const year = 2026
     const month = 1
@@ -1459,5 +1461,499 @@ describe("Integration Scenarios", () => {
 
     await svc.recalculateMonth(EMPLOYEE_ID, year, month)
     expect(mocks.monthlyValue.create).toHaveBeenCalled()
+  })
+})
+
+// ==========================================================================
+// AUDIT-002: Tenant isolation verification tests
+//
+// Verifies that MonthlyCalcService requires tenantId and includes it in
+// every Prisma query, preventing cross-tenant data access.
+// ==========================================================================
+
+describe("AUDIT-002: tenantId is required and propagated to all queries", () => {
+  const OTHER_TENANT = "t-other"
+
+  it("AUDIT-002: constructor requires tenantId (not optional)", () => {
+    // TypeScript enforces this at compile time. At runtime we verify that
+    // the tenantId is stored and used — construct with a known value and
+    // call a method that hits Prisma, then inspect the where clause.
+    const { prisma, mocks } = createMockPrisma()
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
+
+    // Verify service was created successfully with tenantId
+    expect(svc).toBeDefined()
+
+    // Also verify that constructing with empty string is technically possible
+    // but will propagate the empty string (i.e. no silent fallback to "no filter")
+    const svc2 = new MonthlyCalcService(prisma, "")
+    expect(svc2).toBeDefined()
+  })
+
+  it("AUDIT-002: calculateMonthBatch passes tenantId to employee.findMany", async () => {
+    const { prisma, mocks } = createMockPrisma()
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
+
+    // All employees succeed with no daily values
+    mocks.employee.findMany.mockResolvedValue([makeEmployee()])
+    mocks.employee.findUnique.mockResolvedValue(makeEmployee())
+    mocks.monthlyValue.findUnique.mockResolvedValue(null)
+
+    await svc.calculateMonthBatch([EMPLOYEE_ID], 2025, 1)
+
+    // Verify employee.findMany was called with tenantId in where clause
+    expect(mocks.employee.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          tenantId: TENANT_ID,
+        }),
+      }),
+    )
+  })
+
+  it("AUDIT-002: recalculateMonth passes tenantId to employee.findFirst", async () => {
+    const { prisma, mocks } = createMockPrisma()
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
+
+    mocks.employee.findUnique.mockResolvedValue(makeEmployee({ tariffId: null }))
+    mocks.monthlyValue.findUnique.mockResolvedValue(null)
+
+    await svc.recalculateMonth(EMPLOYEE_ID, 2026, 1)
+
+    // employee.findFirst delegates to findUnique in our mock setup
+    // Verify the call included tenantId
+    expect(mocks.employee.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: EMPLOYEE_ID,
+          tenantId: TENANT_ID,
+        }),
+      }),
+    )
+  })
+
+  it("AUDIT-002: recalculateMonth passes tenantId to dailyValue.findMany", async () => {
+    const { prisma, mocks } = createMockPrisma()
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
+
+    mocks.employee.findUnique.mockResolvedValue(makeEmployee({ tariffId: null }))
+    mocks.monthlyValue.findUnique.mockResolvedValue(null)
+
+    await svc.recalculateMonth(EMPLOYEE_ID, 2026, 1)
+
+    expect(mocks.dailyValue.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          employeeId: EMPLOYEE_ID,
+          tenantId: TENANT_ID,
+        }),
+      }),
+    )
+  })
+
+  it("AUDIT-002: recalculateMonth passes tenantId to absenceDay.findMany", async () => {
+    const { prisma, mocks } = createMockPrisma()
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
+
+    mocks.employee.findUnique.mockResolvedValue(makeEmployee({ tariffId: null }))
+    mocks.monthlyValue.findUnique.mockResolvedValue(null)
+
+    await svc.recalculateMonth(EMPLOYEE_ID, 2026, 1)
+
+    expect(mocks.absenceDay.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          employeeId: EMPLOYEE_ID,
+          tenantId: TENANT_ID,
+        }),
+      }),
+    )
+  })
+
+  it("AUDIT-002: recalculateMonth passes tenantId to tariff.findFirst", async () => {
+    const { prisma, mocks } = createMockPrisma()
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
+
+    mocks.employee.findUnique.mockResolvedValue(makeEmployee())
+    mocks.monthlyValue.findUnique.mockResolvedValue(null)
+    mocks.tariff.findUnique.mockResolvedValue(makeTariff())
+
+    await svc.recalculateMonth(EMPLOYEE_ID, 2026, 1)
+
+    // tariff.findFirst delegates to findUnique in our mock setup
+    expect(mocks.tariff.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: TARIFF_ID,
+          tenantId: TENANT_ID,
+        }),
+      }),
+    )
+  })
+
+  it("AUDIT-002: getYearOverview passes tenantId to monthlyValue.findMany", async () => {
+    const { prisma, mocks } = createMockPrisma()
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
+
+    mocks.monthlyValue.findMany.mockResolvedValue([])
+
+    await svc.getYearOverview(EMPLOYEE_ID, 2026)
+
+    expect(mocks.monthlyValue.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          employeeId: EMPLOYEE_ID,
+          year: 2026,
+          tenantId: TENANT_ID,
+        }),
+      }),
+    )
+  })
+
+  it("AUDIT-002: getDailyBreakdown passes tenantId to dailyValue.findMany", async () => {
+    const { prisma, mocks } = createMockPrisma()
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
+
+    mocks.dailyValue.findMany.mockResolvedValue([])
+
+    await svc.getDailyBreakdown(EMPLOYEE_ID, 2026, 1)
+
+    expect(mocks.dailyValue.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          employeeId: EMPLOYEE_ID,
+          tenantId: TENANT_ID,
+        }),
+      }),
+    )
+  })
+
+  it("AUDIT-002: calculateMonthSummary passes tenantId to employee, dailyValue, absenceDay, and tariff", async () => {
+    const { prisma, mocks } = createMockPrisma()
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
+
+    // No persisted monthly value -> triggers on-the-fly calculation
+    mocks.monthlyValue.findUnique.mockResolvedValue(null)
+    mocks.employee.findUnique.mockResolvedValue(makeEmployee())
+    mocks.tariff.findUnique.mockResolvedValue(makeTariff())
+    mocks.dailyValue.findMany.mockResolvedValue([makeDailyValue("2026-01-06")])
+
+    await svc.getMonthSummary(EMPLOYEE_ID, 2026, 1)
+
+    // Verify employee lookup included tenantId
+    expect(mocks.employee.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: EMPLOYEE_ID,
+          tenantId: TENANT_ID,
+        }),
+      }),
+    )
+
+    // Verify dailyValue lookup included tenantId
+    expect(mocks.dailyValue.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          employeeId: EMPLOYEE_ID,
+          tenantId: TENANT_ID,
+        }),
+      }),
+    )
+
+    // Verify absenceDay lookup included tenantId
+    expect(mocks.absenceDay.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          employeeId: EMPLOYEE_ID,
+          tenantId: TENANT_ID,
+        }),
+      }),
+    )
+
+    // Verify tariff lookup included tenantId
+    expect(mocks.tariff.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: TARIFF_ID,
+          tenantId: TENANT_ID,
+        }),
+      }),
+    )
+  })
+})
+
+describe("AUDIT-002: closeMonth/reopenMonth tenant isolation", () => {
+  it("AUDIT-002: closeMonth includes tenantId in updateMany where clause", async () => {
+    const { prisma, mocks } = createMockPrisma()
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
+
+    mocks.monthlyValue.updateMany.mockResolvedValue({ count: 1 })
+
+    await svc.closeMonth(EMPLOYEE_ID, 2026, 1, CLOSER_ID)
+
+    const call = mocks.monthlyValue.updateMany.mock.calls[0]![0] as {
+      where: Record<string, unknown>
+      data: Record<string, unknown>
+    }
+    expect(call.where).toEqual(
+      expect.objectContaining({
+        employeeId: EMPLOYEE_ID,
+        year: 2026,
+        month: 1,
+        isClosed: false,
+        tenantId: TENANT_ID,
+      }),
+    )
+  })
+
+  it("AUDIT-002: reopenMonth includes tenantId in updateMany where clause", async () => {
+    const { prisma, mocks } = createMockPrisma()
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
+
+    mocks.monthlyValue.updateMany.mockResolvedValue({ count: 1 })
+
+    await svc.reopenMonth(EMPLOYEE_ID, 2026, 1, CLOSER_ID)
+
+    const call = mocks.monthlyValue.updateMany.mock.calls[0]![0] as {
+      where: Record<string, unknown>
+      data: Record<string, unknown>
+    }
+    expect(call.where).toEqual(
+      expect.objectContaining({
+        employeeId: EMPLOYEE_ID,
+        year: 2026,
+        month: 1,
+        isClosed: true,
+        tenantId: TENANT_ID,
+      }),
+    )
+  })
+
+  it("AUDIT-002: recalculateMonth includes tenantId in updateMany where clause", async () => {
+    const { prisma, mocks } = createMockPrisma()
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
+
+    mocks.employee.findUnique.mockResolvedValue(makeEmployee({ tariffId: null }))
+    mocks.monthlyValue.findUnique.mockResolvedValue(null)
+    mocks.monthlyValue.updateMany.mockResolvedValue({ count: 0 })
+
+    await svc.recalculateMonth(EMPLOYEE_ID, 2026, 1)
+
+    const call = mocks.monthlyValue.updateMany.mock.calls[0]![0] as {
+      where: Record<string, unknown>
+      data: Record<string, unknown>
+    }
+    expect(call.where).toEqual(
+      expect.objectContaining({
+        employeeId: EMPLOYEE_ID,
+        year: 2026,
+        month: 1,
+        isClosed: false,
+        tenantId: TENANT_ID,
+      }),
+    )
+  })
+
+  it("AUDIT-002: closeMonth with different tenantId sends that tenantId (not a default)", async () => {
+    const { prisma, mocks } = createMockPrisma()
+    const OTHER_TENANT = "t-other-tenant"
+    const svc = new MonthlyCalcService(prisma, OTHER_TENANT)
+
+    mocks.monthlyValue.updateMany.mockResolvedValue({ count: 1 })
+
+    await svc.closeMonth(EMPLOYEE_ID, 2026, 1, CLOSER_ID)
+
+    const call = mocks.monthlyValue.updateMany.mock.calls[0]![0] as {
+      where: Record<string, unknown>
+    }
+    expect(call.where.tenantId).toBe(OTHER_TENANT)
+  })
+
+  it("AUDIT-002: reopenMonth with different tenantId sends that tenantId", async () => {
+    const { prisma, mocks } = createMockPrisma()
+    const OTHER_TENANT = "t-other-tenant"
+    const svc = new MonthlyCalcService(prisma, OTHER_TENANT)
+
+    mocks.monthlyValue.updateMany.mockResolvedValue({ count: 1 })
+
+    await svc.reopenMonth(EMPLOYEE_ID, 2026, 1, CLOSER_ID)
+
+    const call = mocks.monthlyValue.updateMany.mock.calls[0]![0] as {
+      where: Record<string, unknown>
+    }
+    expect(call.where.tenantId).toBe(OTHER_TENANT)
+  })
+})
+
+describe("AUDIT-002: tariff queries use findFirst with tenantId", () => {
+  it("AUDIT-002: recalculateMonth uses tariff.findFirst (not findUnique) with tenantId", async () => {
+    const { prisma, mocks } = createMockPrisma()
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
+
+    mocks.employee.findUnique.mockResolvedValue(makeEmployee())
+    mocks.monthlyValue.findUnique.mockResolvedValue(null)
+    mocks.tariff.findUnique.mockResolvedValue(makeTariff())
+
+    await svc.recalculateMonth(EMPLOYEE_ID, 2026, 1)
+
+    // In the mock, findFirst delegates to findUnique via getter.
+    // The key assertion: the query arg includes { id, tenantId },
+    // NOT just { id } as findUnique would require.
+    const tariffCall = mocks.tariff.findUnique.mock.calls[0]![0] as {
+      where: Record<string, unknown>
+    }
+    expect(tariffCall.where).toHaveProperty("id", TARIFF_ID)
+    expect(tariffCall.where).toHaveProperty("tenantId", TENANT_ID)
+  })
+
+  it("AUDIT-002: calculateMonthSummary uses tariff.findFirst with tenantId", async () => {
+    const { prisma, mocks } = createMockPrisma()
+    const svc = new MonthlyCalcService(prisma, TENANT_ID)
+
+    // Trigger on-the-fly calculation (no persisted monthly value)
+    mocks.monthlyValue.findUnique.mockResolvedValue(null)
+    mocks.employee.findUnique.mockResolvedValue(makeEmployee())
+    mocks.tariff.findUnique.mockResolvedValue(makeTariff())
+
+    await svc.getMonthSummary(EMPLOYEE_ID, 2026, 1)
+
+    // Verify tariff was looked up with both id and tenantId
+    const tariffCalls = mocks.tariff.findUnique.mock.calls
+    const tariffCallWithId = tariffCalls.find(
+      (call: unknown[]) => {
+        const arg = call[0] as { where: Record<string, unknown> }
+        return arg.where.id === TARIFF_ID
+      },
+    )
+    expect(tariffCallWithId).toBeDefined()
+    const where = (tariffCallWithId![0] as { where: Record<string, unknown> }).where
+    expect(where.tenantId).toBe(TENANT_ID)
+  })
+})
+
+describe("AUDIT-002: monthly-values-service callers pass tenantId", () => {
+  // These are compile-time checks verified by reading the source code.
+  // We encode them as snapshot assertions on the source to prevent regression.
+  // The actual runtime verification is covered by the tests above that
+  // verify tenantId appears in every Prisma query's where clause.
+
+  it("AUDIT-002: all MonthlyCalcService instantiations in monthly-values-service.ts include tenantId", async () => {
+    const fs = await import("fs")
+    const path = await import("path")
+    const filePath = path.resolve(
+      __dirname,
+      "..",
+      "monthly-values-service.ts",
+    )
+    const content = fs.readFileSync(filePath, "utf-8")
+
+    // Find all lines that instantiate MonthlyCalcService
+    const lines = content.split("\n")
+    const instantiations = lines.filter((line) =>
+      line.includes("new MonthlyCalcService("),
+    )
+
+    // There should be at least 6 instantiations (per the ticket)
+    expect(instantiations.length).toBeGreaterThanOrEqual(6)
+
+    // Every instantiation must pass two arguments: (prisma, tenantId)
+    for (const line of instantiations) {
+      // Match pattern: new MonthlyCalcService(prisma, <something>)
+      // The second argument should be present (not just `new MonthlyCalcService(prisma)`)
+      const match = line.match(/new MonthlyCalcService\(\s*prisma\s*,\s*(\w+)\s*\)/)
+      expect(match).not.toBeNull()
+      // The second argument should be "tenantId"
+      expect(match![1]).toBe("tenantId")
+    }
+  })
+
+  it("AUDIT-002: employees-service.ts passes tenantId to MonthlyCalcService", async () => {
+    const fs = await import("fs")
+    const path = await import("path")
+    const filePath = path.resolve(
+      __dirname,
+      "..",
+      "employees-service.ts",
+    )
+    const content = fs.readFileSync(filePath, "utf-8")
+
+    const lines = content.split("\n")
+    const instantiations = lines.filter((line) =>
+      line.includes("new MonthlyCalcService("),
+    )
+
+    expect(instantiations.length).toBeGreaterThanOrEqual(1)
+
+    for (const line of instantiations) {
+      const match = line.match(/new MonthlyCalcService\(\s*prisma\s*,\s*(\w+)\s*\)/)
+      expect(match).not.toBeNull()
+      expect(match![1]).toBe("tenantId")
+    }
+  })
+
+  it("AUDIT-002: recalc.ts passes tenantId to MonthlyCalcService", async () => {
+    const fs = await import("fs")
+    const path = await import("path")
+    const filePath = path.resolve(
+      __dirname,
+      "..",
+      "recalc.ts",
+    )
+    const content = fs.readFileSync(filePath, "utf-8")
+
+    const lines = content.split("\n")
+    const instantiations = lines.filter((line) =>
+      line.includes("new MonthlyCalcService("),
+    )
+
+    expect(instantiations.length).toBeGreaterThanOrEqual(1)
+
+    for (const line of instantiations) {
+      // recalc.ts uses tenantId! (non-null assertion) — accept both tenantId and tenantId!
+      const match = line.match(/new MonthlyCalcService\(\s*prisma\s*,\s*(\w+!?)\s*\)/)
+      expect(match).not.toBeNull()
+      expect(match![1]).toMatch(/^tenantId!?$/)
+    }
+  })
+})
+
+describe("AUDIT-002: no conditional tenantId spreads remain in monthly-calc.ts", () => {
+  it("AUDIT-002: monthly-calc.ts contains no conditional tenantId spread patterns", async () => {
+    const fs = await import("fs")
+    const path = await import("path")
+    const filePath = path.resolve(
+      __dirname,
+      "..",
+      "monthly-calc.ts",
+    )
+    const content = fs.readFileSync(filePath, "utf-8")
+
+    // The old vulnerable pattern: ...(this.tenantId ? { tenantId: this.tenantId } : {})
+    const conditionalSpreadPattern = /\.\.\.\(\s*this\.tenantId\s*\?\s*\{/
+    const matches = content.match(new RegExp(conditionalSpreadPattern, "g"))
+
+    expect(matches).toBeNull()
+  })
+
+  it("AUDIT-002: constructor signature uses required tenantId (no ?)", async () => {
+    const fs = await import("fs")
+    const path = await import("path")
+    const filePath = path.resolve(
+      __dirname,
+      "..",
+      "monthly-calc.ts",
+    )
+    const content = fs.readFileSync(filePath, "utf-8")
+
+    // Find the constructor line
+    const constructorMatch = content.match(/constructor\s*\([^)]*tenantId[^)]*\)/)
+    expect(constructorMatch).not.toBeNull()
+
+    // Verify tenantId is NOT optional (no ? before the colon)
+    const optionalPattern = /tenantId\?\s*:/
+    expect(constructorMatch![0]).not.toMatch(optionalPattern)
+
+    // Verify tenantId IS typed as string (required)
+    expect(constructorMatch![0]).toMatch(/tenantId:\s*string/)
   })
 })

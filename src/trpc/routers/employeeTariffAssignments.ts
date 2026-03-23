@@ -22,6 +22,7 @@ import { requirePermission, applyDataScope, type DataScope } from "@/lib/auth/mi
 import { checkRelatedEmployeeDataScope } from "@/lib/auth/data-scope"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
+import * as employeeTariffAssignmentService from "@/lib/services/employee-tariff-assignment-service"
 
 // --- Permission Constants ---
 
@@ -369,96 +370,17 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
         const tenantId = ctx.tenantId!
         const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
 
-        // Check scope on target employee
-        const employee = await ctx.prisma.employee.findFirst({
-          where: { id: input.employeeId, tenantId, deletedAt: null },
-          select: { id: true, departmentId: true },
-        })
-        if (employee) {
-          checkRelatedEmployeeDataScope(dataScope, {
-            employeeId: employee.id,
-            employee: { departmentId: employee.departmentId },
-          }, "EmployeeTariffAssignment")
-        }
-
-        // Fetch existing assignment, verify tenant/employee match
-        const existing =
-          await ctx.prisma.employeeTariffAssignment.findFirst({
-            where: {
-              id: input.id,
-              employeeId: input.employeeId,
-              tenantId,
-            },
-          })
-
-        if (!existing) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Tariff assignment not found",
-          })
-        }
-
-        // Build partial update data
-        const data: Record<string, unknown> = {}
-
-        if (input.effectiveFrom !== undefined) {
-          data.effectiveFrom = input.effectiveFrom
-        }
-        if (input.effectiveTo !== undefined) {
-          data.effectiveTo = input.effectiveTo
-        }
-        if (input.overwriteBehavior !== undefined) {
-          data.overwriteBehavior = input.overwriteBehavior.trim()
-        }
-        if (input.notes !== undefined) {
-          data.notes =
-            input.notes === null ? null : input.notes.trim() || null
-        }
-        if (input.isActive !== undefined) {
-          data.isActive = input.isActive
-        }
-
-        // If dates changed, validate and re-check overlap
-        const effectiveFrom =
-          (data.effectiveFrom as Date | undefined) ?? existing.effectiveFrom
-        const effectiveTo =
-          data.effectiveTo !== undefined
-            ? (data.effectiveTo as Date | null)
-            : existing.effectiveTo
-
-        if (effectiveTo && effectiveTo < effectiveFrom) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Effective to date cannot be before effective from date",
-          })
-        }
-
-        // Use transaction for atomic overlap check + update
-        const assignment = await ctx.prisma.$transaction(async (tx) => {
-          if (
-            input.effectiveFrom !== undefined ||
-            input.effectiveTo !== undefined
-          ) {
-            const overlap = await hasOverlap(
-              tx as unknown as PrismaClient,
-              input.employeeId,
-              effectiveFrom,
-              effectiveTo,
-              input.id
-            )
-            if (overlap) {
-              throw new TRPCError({
-                code: "CONFLICT",
-                message: "Overlapping tariff assignment exists",
-              })
-            }
-          }
-
-          return tx.employeeTariffAssignment.update({
-            where: { id: input.id },
-            data,
-          })
-        })
+        const assignment = await employeeTariffAssignmentService.update(
+          ctx.prisma,
+          tenantId,
+          input,
+          {
+            userId: ctx.user!.id,
+            ipAddress: ctx.ipAddress,
+            userAgent: ctx.userAgent,
+          },
+          dataScope
+        )
 
         return mapAssignmentToOutput(assignment)
       } catch (err) {
@@ -490,39 +412,18 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
         const tenantId = ctx.tenantId!
         const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
 
-        // Check scope on target employee
-        const employee = await ctx.prisma.employee.findFirst({
-          where: { id: input.employeeId, tenantId, deletedAt: null },
-          select: { id: true, departmentId: true },
-        })
-        if (employee) {
-          checkRelatedEmployeeDataScope(dataScope, {
-            employeeId: employee.id,
-            employee: { departmentId: employee.departmentId },
-          }, "EmployeeTariffAssignment")
-        }
-
-        // Fetch assignment, verify tenant/employee match
-        const existing =
-          await ctx.prisma.employeeTariffAssignment.findFirst({
-            where: {
-              id: input.id,
-              employeeId: input.employeeId,
-              tenantId,
-            },
-          })
-
-        if (!existing) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Tariff assignment not found",
-          })
-        }
-
-        // Hard delete
-        await ctx.prisma.employeeTariffAssignment.delete({
-          where: { id: input.id },
-        })
+        await employeeTariffAssignmentService.remove(
+          ctx.prisma,
+          tenantId,
+          input.employeeId,
+          input.id,
+          {
+            userId: ctx.user!.id,
+            ipAddress: ctx.ipAddress,
+            userAgent: ctx.userAgent,
+          },
+          dataScope
+        )
 
         return { success: true }
       } catch (err) {

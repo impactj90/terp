@@ -9,6 +9,22 @@ import {
   createMockUserTenant,
 } from "./helpers"
 import { Decimal } from "@prisma/client/runtime/client"
+import * as extendedTravelRuleService from "@/lib/services/extended-travel-rule-service"
+
+vi.mock("@/lib/services/extended-travel-rule-service", () => ({
+  update: vi.fn(),
+  remove: vi.fn(),
+  ExtendedTravelRuleNotFoundError: class ExtendedTravelRuleNotFoundError extends Error {
+    constructor(message = "Extended travel rule not found") {
+      super(message)
+      this.name = "ExtendedTravelRuleNotFoundError"
+    }
+  },
+}))
+vi.mock("@/lib/services/audit-logs-service", () => ({
+  log: vi.fn().mockResolvedValue(undefined),
+  computeChanges: vi.fn().mockReturnValue(null),
+}))
 
 // --- Constants ---
 
@@ -239,17 +255,12 @@ describe("extendedTravelRules.create", () => {
 
 describe("extendedTravelRules.update", () => {
   it("partial update succeeds", async () => {
-    const existing = makeRule()
     const updated = makeRule({
       arrivalDayTaxFree: new Decimal(20),
       threeMonthEnabled: true,
     })
-    const mockPrisma = {
-      extendedTravelRule: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
-      },
-    }
+    vi.mocked(extendedTravelRuleService.update).mockResolvedValue(updated)
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({
       id: RULE_ID,
@@ -259,18 +270,19 @@ describe("extendedTravelRules.update", () => {
 
     expect(result.arrivalDayTaxFree).toBe(20)
     expect(result.threeMonthEnabled).toBe(true)
-    expect(mockPrisma.extendedTravelRule.update).toHaveBeenCalledWith({
-      where: { id: RULE_ID },
-      data: { arrivalDayTaxFree: 20, threeMonthEnabled: true },
-    })
+    expect(extendedTravelRuleService.update).toHaveBeenCalledWith(
+      expect.anything(),
+      TENANT_ID,
+      expect.objectContaining({ id: RULE_ID, arrivalDayTaxFree: 20, threeMonthEnabled: true }),
+      expect.objectContaining({ userId: expect.any(String) })
+    )
   })
 
   it("throws NOT_FOUND for missing rule", async () => {
-    const mockPrisma = {
-      extendedTravelRule: {
-        findFirst: vi.fn().mockResolvedValue(null),
-      },
-    }
+    vi.mocked(extendedTravelRuleService.update).mockRejectedValue(
+      new extendedTravelRuleService.ExtendedTravelRuleNotFoundError()
+    )
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     await expect(
       caller.update({ id: RULE_ID, arrivalDayTaxFree: 20 })
@@ -282,28 +294,25 @@ describe("extendedTravelRules.update", () => {
 
 describe("extendedTravelRules.delete", () => {
   it("deletes existing rule", async () => {
-    const existing = makeRule()
-    const mockPrisma = {
-      extendedTravelRule: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
-      },
-    }
+    vi.mocked(extendedTravelRuleService.remove).mockResolvedValue(undefined)
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: RULE_ID })
 
     expect(result.success).toBe(true)
-    expect(mockPrisma.extendedTravelRule.delete).toHaveBeenCalledWith({
-      where: { id: RULE_ID },
-    })
+    expect(extendedTravelRuleService.remove).toHaveBeenCalledWith(
+      expect.anything(),
+      TENANT_ID,
+      RULE_ID,
+      expect.objectContaining({ userId: expect.any(String) })
+    )
   })
 
   it("throws NOT_FOUND for missing rule", async () => {
-    const mockPrisma = {
-      extendedTravelRule: {
-        findFirst: vi.fn().mockResolvedValue(null),
-      },
-    }
+    vi.mocked(extendedTravelRuleService.remove).mockRejectedValue(
+      new extendedTravelRuleService.ExtendedTravelRuleNotFoundError()
+    )
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     await expect(caller.delete({ id: RULE_ID })).rejects.toThrow(
       "Extended travel rule not found"

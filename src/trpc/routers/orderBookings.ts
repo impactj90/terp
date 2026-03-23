@@ -27,6 +27,7 @@ import {
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
 import * as auditLog from "@/lib/services/audit-logs-service"
+import * as orderBookingService from "@/lib/services/order-booking-service"
 
 // --- Permission Constants ---
 // Matching Go route registration at apps/api/internal/handler/routes.go:1119-1139
@@ -454,108 +455,20 @@ export const orderBookingsRouter = createTRPCRouter({
         const tenantId = ctx.tenantId!
         const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
 
-        // Fetch existing (tenant-scoped) with employee for scope check
-        const existing = await ctx.prisma.orderBooking.findFirst({
-          where: { id: input.id, tenantId },
-          include: { employee: { select: { id: true, departmentId: true } } },
-        })
-        if (!existing) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Order booking not found",
-          })
-        }
-
-        // Check data scope
-        checkRelatedEmployeeDataScope(dataScope, existing as unknown as {
-          employeeId: string
-          employee?: { departmentId: string | null } | null
-        }, "Order booking")
-
-        // Build partial update data
-        const data: Record<string, unknown> = { updatedBy: ctx.user!.id }
-
-        if (input.orderId !== undefined) {
-          // Validate order exists in tenant
-          const order = await ctx.prisma.order.findFirst({
-            where: { id: input.orderId, tenantId },
-          })
-          if (!order) {
-            throw new TRPCError({
-              code: "NOT_FOUND",
-              message: "Order not found",
-            })
-          }
-          data.orderId = input.orderId
-        }
-
-        if (input.activityId !== undefined) {
-          if (input.activityId !== null) {
-            // Validate activity exists in tenant
-            const activity = await ctx.prisma.activity.findFirst({
-              where: { id: input.activityId, tenantId },
-            })
-            if (!activity) {
-              throw new TRPCError({
-                code: "NOT_FOUND",
-                message: "Activity not found",
-              })
-            }
-          }
-          data.activityId = input.activityId
-        }
-
-        if (input.bookingDate !== undefined) {
-          data.bookingDate = new Date(input.bookingDate)
-        }
-
-        if (input.timeMinutes !== undefined) {
-          data.timeMinutes = input.timeMinutes
-        }
-
-        if (input.description !== undefined) {
-          data.description =
-            input.description === null ? null : input.description.trim()
-        }
-
-        // Update
-        await ctx.prisma.orderBooking.update({
-          where: { id: input.id },
-          data,
-        })
-
-        const TRACKED_FIELDS = ["orderId", "employeeId", "bookingDate"]
-        const changes = auditLog.computeChanges(
-          existing as unknown as Record<string, unknown>,
-          data as Record<string, unknown>,
-          TRACKED_FIELDS
-        )
-        await auditLog.log(ctx.prisma, {
+        const result = await orderBookingService.update(
+          ctx.prisma,
           tenantId,
-          userId: ctx.user!.id,
-          action: "update",
-          entityType: "order_booking",
-          entityId: input.id,
-          entityName: null,
-          changes,
-          ipAddress: ctx.ipAddress,
-          userAgent: ctx.userAgent,
-        }).catch(err => console.error('[AuditLog] Failed:', err))
+          ctx.user!.id,
+          input,
+          {
+            userId: ctx.user!.id,
+            ipAddress: ctx.ipAddress,
+            userAgent: ctx.userAgent,
+          },
+          dataScope
+        )
 
-        // Re-fetch with includes
-        const booking = await ctx.prisma.orderBooking.findUnique({
-          where: { id: input.id },
-          include: orderBookingInclude,
-        })
-
-        if (!booking) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Order booking not found after update",
-          })
-        }
-
-        return mapToOutput(booking as unknown as Record<string, unknown>)
+        return mapToOutput(result as unknown as Record<string, unknown>)
       } catch (err) {
         handleServiceError(err)
       }
@@ -578,39 +491,17 @@ export const orderBookingsRouter = createTRPCRouter({
         const tenantId = ctx.tenantId!
         const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
 
-        // Fetch existing (tenant-scoped) with employee for scope check
-        const existing = await ctx.prisma.orderBooking.findFirst({
-          where: { id: input.id, tenantId },
-          include: { employee: { select: { id: true, departmentId: true } } },
-        })
-        if (!existing) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Order booking not found",
-          })
-        }
-
-        // Check data scope
-        checkRelatedEmployeeDataScope(dataScope, existing as unknown as {
-          employeeId: string
-          employee?: { departmentId: string | null } | null
-        }, "Order booking")
-
-        await ctx.prisma.orderBooking.delete({
-          where: { id: input.id },
-        })
-
-        await auditLog.log(ctx.prisma, {
+        await orderBookingService.remove(
+          ctx.prisma,
           tenantId,
-          userId: ctx.user!.id,
-          action: "delete",
-          entityType: "order_booking",
-          entityId: input.id,
-          entityName: null,
-          changes: null,
-          ipAddress: ctx.ipAddress,
-          userAgent: ctx.userAgent,
-        }).catch(err => console.error('[AuditLog] Failed:', err))
+          input.id,
+          {
+            userId: ctx.user!.id,
+            ipAddress: ctx.ipAddress,
+            userAgent: ctx.userAgent,
+          },
+          dataScope
+        )
 
         return { success: true }
       } catch (err) {

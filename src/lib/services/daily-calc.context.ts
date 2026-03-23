@@ -121,6 +121,7 @@ export async function loadEmployeeCalcContext(
       // Day plans with full includes
       prisma.employeeDayPlan.findMany({
         where: {
+          tenantId,
           employeeId,
           planDate: { gte: fromDate, lte: toDate },
         },
@@ -169,6 +170,7 @@ export async function loadEmployeeCalcContext(
       // Previous daily values for error notification comparison
       prisma.dailyValue.findMany({
         where: {
+          tenantId,
           employeeId,
           valueDate: { gte: fromDate, lte: toDate },
         },
@@ -177,7 +179,7 @@ export async function loadEmployeeCalcContext(
 
       // Employee master data (target hours, default order/activity)
       prisma.employee.findFirst({
-        where: { id: employeeId },
+        where: { id: employeeId, tenantId },
         select: {
           dailyTargetHours: true,
           defaultOrderId: true,

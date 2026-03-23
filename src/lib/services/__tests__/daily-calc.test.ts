@@ -32,6 +32,7 @@ function createPrismaMocks() {
       findMany: vi.fn().mockResolvedValue([]),
       create: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     },
     employee: {
       findFirst: vi.fn().mockResolvedValue(null),

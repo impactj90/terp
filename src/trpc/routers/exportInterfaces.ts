@@ -23,6 +23,7 @@ import { requirePermission } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
 import * as auditLog from "@/lib/services/audit-logs-service"
+import * as exportInterfaceService from "@/lib/services/export-interface-service"
 
 // --- Permission Constants ---
 
@@ -266,100 +267,16 @@ export const exportInterfacesRouter = createTRPCRouter({
       try {
         const tenantId = ctx.tenantId!
 
-        // Verify exists with tenant scope
-        const existing = await ctx.prisma.exportInterface.findFirst({
-          where: { id: input.id, tenantId },
-        })
-        if (!existing) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Export interface not found",
-          })
-        }
-
-        // Build partial update data
-        const data: Record<string, unknown> = {}
-
-        if (input.name !== undefined) {
-          const name = input.name.trim()
-          if (name.length === 0) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Export interface name is required",
-            })
-          }
-          data.name = name
-        }
-
-        if (input.interfaceNumber !== undefined) {
-          if (input.interfaceNumber <= 0) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Export interface number must be greater than 0",
-            })
-          }
-          // Check uniqueness if changed
-          if (input.interfaceNumber !== existing.interfaceNumber) {
-            const conflict = await ctx.prisma.exportInterface.findFirst({
-              where: { tenantId, interfaceNumber: input.interfaceNumber },
-            })
-            if (conflict) {
-              throw new TRPCError({
-                code: "CONFLICT",
-                message: "Export interface number already exists",
-              })
-            }
-            data.interfaceNumber = input.interfaceNumber
-          }
-        }
-
-        if (input.mandantNumber !== undefined) {
-          data.mandantNumber = input.mandantNumber
-        }
-        if (input.exportScript !== undefined) {
-          data.exportScript = input.exportScript
-        }
-        if (input.exportPath !== undefined) {
-          data.exportPath = input.exportPath
-        }
-        if (input.outputFilename !== undefined) {
-          data.outputFilename = input.outputFilename
-        }
-        if (input.isActive !== undefined) {
-          data.isActive = input.isActive
-        }
-
-        const updated = await ctx.prisma.exportInterface.update({
-          where: { id: input.id },
-          data,
-          include: {
-            accounts: {
-              include: {
-                account: {
-                  select: { id: true, code: true, name: true, payrollCode: true },
-                },
-              },
-              orderBy: { sortOrder: "asc" },
-            },
-          },
-        })
-
-        const changes = auditLog.computeChanges(
-          existing as unknown as Record<string, unknown>,
-          updated as unknown as Record<string, unknown>,
-          ["name", "interfaceNumber", "mandantNumber", "exportScript", "exportPath", "outputFilename", "isActive"]
-        )
-        await auditLog.log(ctx.prisma, {
+        const updated = await exportInterfaceService.update(
+          ctx.prisma,
           tenantId,
-          userId: ctx.user!.id,
-          action: "update",
-          entityType: "export_interface",
-          entityId: input.id,
-          entityName: updated.name ?? null,
-          changes,
-          ipAddress: ctx.ipAddress,
-          userAgent: ctx.userAgent,
-        }).catch(err => console.error('[AuditLog] Failed:', err))
+          input,
+          {
+            userId: ctx.user!.id,
+            ipAddress: ctx.ipAddress,
+            userAgent: ctx.userAgent,
+          }
+        )
 
         return updated
       } catch (err) {
@@ -382,43 +299,16 @@ export const exportInterfacesRouter = createTRPCRouter({
       try {
         const tenantId = ctx.tenantId!
 
-        // Verify exists with tenant scope
-        const existing = await ctx.prisma.exportInterface.findFirst({
-          where: { id: input.id, tenantId },
-        })
-        if (!existing) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Export interface not found",
-          })
-        }
-
-        // Check if interface has generated exports
-        const usageCount = await ctx.prisma.payrollExport.count({
-          where: { exportInterfaceId: input.id },
-        })
-        if (usageCount > 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Cannot delete export interface that has generated exports",
-          })
-        }
-
-        await ctx.prisma.exportInterface.delete({
-          where: { id: input.id },
-        })
-
-        await auditLog.log(ctx.prisma, {
+        await exportInterfaceService.remove(
+          ctx.prisma,
           tenantId,
-          userId: ctx.user!.id,
-          action: "delete",
-          entityType: "export_interface",
-          entityId: input.id,
-          entityName: existing.name ?? null,
-          changes: null,
-          ipAddress: ctx.ipAddress,
-          userAgent: ctx.userAgent,
-        }).catch(err => console.error('[AuditLog] Failed:', err))
+          input.id,
+          {
+            userId: ctx.user!.id,
+            ipAddress: ctx.ipAddress,
+            userAgent: ctx.userAgent,
+          }
+        )
 
         return { success: true }
       } catch (err) {

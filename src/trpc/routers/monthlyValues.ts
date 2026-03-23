@@ -364,6 +364,7 @@ export const monthlyValuesRouter = createTRPCRouter({
       try {
         const summary = await monthlyValuesService.forEmployee(
           ctx.prisma,
+          ctx.tenantId!,
           employeeId,
           year,
           month
@@ -397,6 +398,7 @@ export const monthlyValuesRouter = createTRPCRouter({
       try {
         const summaries = await monthlyValuesService.yearOverview(
           ctx.prisma,
+          ctx.tenantId!,
           employeeId,
           year
         )

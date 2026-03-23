@@ -22,6 +22,7 @@ import { requirePermission } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
 import * as auditLog from "@/lib/services/audit-logs-service"
+import * as weekPlanService from "@/lib/services/week-plan-service"
 
 // --- Permission Constants ---
 
@@ -385,151 +386,16 @@ export const weekPlansRouter = createTRPCRouter({
       try {
         const tenantId = ctx.tenantId!
 
-        // Verify week plan exists (tenant-scoped)
-        const existing = await ctx.prisma.weekPlan.findFirst({
-          where: { id: input.id, tenantId },
-        })
-        if (!existing) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Week plan not found",
-          })
-        }
-
-        // Build partial update data
-        const data: Record<string, unknown> = {}
-
-        // Handle code update
-        if (input.code !== undefined) {
-          const code = input.code.trim()
-          if (code.length === 0) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Week plan code is required",
-            })
-          }
-          // Check uniqueness if changed
-          if (code !== existing.code) {
-            const existingByCode = await ctx.prisma.weekPlan.findFirst({
-              where: {
-                tenantId,
-                code,
-                NOT: { id: input.id },
-              },
-            })
-            if (existingByCode) {
-              throw new TRPCError({
-                code: "CONFLICT",
-                message: "Week plan code already exists",
-              })
-            }
-          }
-          data.code = code
-        }
-
-        // Handle name update
-        if (input.name !== undefined) {
-          const name = input.name.trim()
-          if (name.length === 0) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Week plan name is required",
-            })
-          }
-          data.name = name
-        }
-
-        // Handle description update
-        if (input.description !== undefined) {
-          data.description =
-            input.description === null ? null : input.description.trim()
-        }
-
-        // Handle day plan ID updates and validate
-        const dayPlanFields = [
-          "mondayDayPlanId",
-          "tuesdayDayPlanId",
-          "wednesdayDayPlanId",
-          "thursdayDayPlanId",
-          "fridayDayPlanId",
-          "saturdayDayPlanId",
-          "sundayDayPlanId",
-        ] as const
-
-        const dayPlanIdsToValidate: (string | null | undefined)[] = []
-        for (const field of dayPlanFields) {
-          if (input[field] !== undefined) {
-            data[field] = input[field]
-            dayPlanIdsToValidate.push(input[field])
-          }
-        }
-
-        // Validate any provided day plan IDs
-        if (dayPlanIdsToValidate.length > 0) {
-          await validateDayPlanIds(ctx.prisma, tenantId, dayPlanIdsToValidate)
-        }
-
-        // Handle isActive update
-        if (input.isActive !== undefined) {
-          data.isActive = input.isActive
-        }
-
-        // Use transaction so validation failure rolls back the update
-        const updated = await ctx.prisma.$transaction(async (tx) => {
-          await tx.weekPlan.update({
-            where: { id: input.id },
-            data,
-          })
-
-          // Re-fetch with include to check completeness and return
-          const plan = await tx.weekPlan.findUnique({
-            where: { id: input.id },
-            include: weekPlanInclude,
-          })
-
-          if (!plan) {
-            throw new TRPCError({
-              code: "NOT_FOUND",
-              message: "Week plan not found after update",
-            })
-          }
-
-          // Verify completeness: all 7 days must have plans
-          if (
-            !plan.mondayDayPlanId ||
-            !plan.tuesdayDayPlanId ||
-            !plan.wednesdayDayPlanId ||
-            !plan.thursdayDayPlanId ||
-            !plan.fridayDayPlanId ||
-            !plan.saturdayDayPlanId ||
-            !plan.sundayDayPlanId
-          ) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message:
-                "Week plan must have a day plan assigned for all 7 days",
-            })
-          }
-
-          return plan
-        })
-
-        const changes = auditLog.computeChanges(
-          existing as unknown as Record<string, unknown>,
-          updated as unknown as Record<string, unknown>,
-          ["name", "code", "description", "mondayDayPlanId", "tuesdayDayPlanId", "wednesdayDayPlanId", "thursdayDayPlanId", "fridayDayPlanId", "saturdayDayPlanId", "sundayDayPlanId", "isActive"]
-        )
-        await auditLog.log(ctx.prisma, {
+        const updated = await weekPlanService.update(
+          ctx.prisma,
           tenantId,
-          userId: ctx.user!.id,
-          action: "update",
-          entityType: "week_plan",
-          entityId: input.id,
-          entityName: updated.name as string ?? null,
-          changes,
-          ipAddress: ctx.ipAddress,
-          userAgent: ctx.userAgent,
-        }).catch(err => console.error('[AuditLog] Failed:', err))
+          input,
+          {
+            userId: ctx.user!.id,
+            ipAddress: ctx.ipAddress,
+            userAgent: ctx.userAgent,
+          }
+        )
 
         return mapWeekPlanToOutput(
           updated as unknown as Record<string, unknown>
@@ -552,33 +418,16 @@ export const weekPlansRouter = createTRPCRouter({
       try {
         const tenantId = ctx.tenantId!
 
-        // Verify week plan exists (tenant-scoped)
-        const existing = await ctx.prisma.weekPlan.findFirst({
-          where: { id: input.id, tenantId },
-        })
-        if (!existing) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Week plan not found",
-          })
-        }
-
-        // Hard delete
-        await ctx.prisma.weekPlan.delete({
-          where: { id: input.id },
-        })
-
-        await auditLog.log(ctx.prisma, {
+        await weekPlanService.remove(
+          ctx.prisma,
           tenantId,
-          userId: ctx.user!.id,
-          action: "delete",
-          entityType: "week_plan",
-          entityId: input.id,
-          entityName: existing.name ?? null,
-          changes: null,
-          ipAddress: ctx.ipAddress,
-          userAgent: ctx.userAgent,
-        }).catch(err => console.error('[AuditLog] Failed:', err))
+          input.id,
+          {
+            userId: ctx.user!.id,
+            ipAddress: ctx.ipAddress,
+            userAgent: ctx.userAgent,
+          }
+        )
 
         return { success: true }
       } catch (err) {

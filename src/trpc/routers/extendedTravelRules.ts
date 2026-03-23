@@ -19,6 +19,7 @@ import { requirePermission } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
 import * as auditLog from "@/lib/services/audit-logs-service"
+import * as extendedTravelRuleService from "@/lib/services/extended-travel-rule-service"
 
 // --- Permission Constants ---
 
@@ -279,85 +280,16 @@ export const extendedTravelRulesRouter = createTRPCRouter({
       try {
         const tenantId = ctx.tenantId!
 
-        // Verify rule exists (tenant-scoped)
-        const existing = await ctx.prisma.extendedTravelRule.findFirst({
-          where: { id: input.id, tenantId },
-        })
-        if (!existing) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Extended travel rule not found",
-          })
-        }
-
-        // Build partial update data
-        const data: Record<string, unknown> = {}
-
-        if (input.arrivalDayTaxFree !== undefined) {
-          data.arrivalDayTaxFree = input.arrivalDayTaxFree
-        }
-
-        if (input.arrivalDayTaxable !== undefined) {
-          data.arrivalDayTaxable = input.arrivalDayTaxable
-        }
-
-        if (input.departureDayTaxFree !== undefined) {
-          data.departureDayTaxFree = input.departureDayTaxFree
-        }
-
-        if (input.departureDayTaxable !== undefined) {
-          data.departureDayTaxable = input.departureDayTaxable
-        }
-
-        if (input.intermediateDayTaxFree !== undefined) {
-          data.intermediateDayTaxFree = input.intermediateDayTaxFree
-        }
-
-        if (input.intermediateDayTaxable !== undefined) {
-          data.intermediateDayTaxable = input.intermediateDayTaxable
-        }
-
-        if (input.threeMonthEnabled !== undefined) {
-          data.threeMonthEnabled = input.threeMonthEnabled
-        }
-
-        if (input.threeMonthTaxFree !== undefined) {
-          data.threeMonthTaxFree = input.threeMonthTaxFree
-        }
-
-        if (input.threeMonthTaxable !== undefined) {
-          data.threeMonthTaxable = input.threeMonthTaxable
-        }
-
-        if (input.isActive !== undefined) {
-          data.isActive = input.isActive
-        }
-
-        if (input.sortOrder !== undefined) {
-          data.sortOrder = input.sortOrder
-        }
-
-        const rule = await ctx.prisma.extendedTravelRule.update({
-          where: { id: input.id },
-          data,
-        })
-
-        const changes = auditLog.computeChanges(
-          existing as unknown as Record<string, unknown>,
-          rule as unknown as Record<string, unknown>,
-          ["arrivalDayTaxFree", "arrivalDayTaxable", "departureDayTaxFree", "departureDayTaxable", "intermediateDayTaxFree", "intermediateDayTaxable", "threeMonthEnabled", "threeMonthTaxFree", "threeMonthTaxable", "isActive", "sortOrder"]
-        )
-        await auditLog.log(ctx.prisma, {
+        const rule = await extendedTravelRuleService.update(
+          ctx.prisma,
           tenantId,
-          userId: ctx.user!.id,
-          action: "update",
-          entityType: "extended_travel_rule",
-          entityId: input.id,
-          entityName: null,
-          changes,
-          ipAddress: ctx.ipAddress,
-          userAgent: ctx.userAgent,
-        }).catch(err => console.error('[AuditLog] Failed:', err))
+          input,
+          {
+            userId: ctx.user!.id,
+            ipAddress: ctx.ipAddress,
+            userAgent: ctx.userAgent,
+          }
+        )
 
         return {
           id: rule.id,
@@ -395,32 +327,16 @@ export const extendedTravelRulesRouter = createTRPCRouter({
       try {
         const tenantId = ctx.tenantId!
 
-        // Verify rule exists (tenant-scoped)
-        const existing = await ctx.prisma.extendedTravelRule.findFirst({
-          where: { id: input.id, tenantId },
-        })
-        if (!existing) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Extended travel rule not found",
-          })
-        }
-
-        await ctx.prisma.extendedTravelRule.delete({
-          where: { id: input.id },
-        })
-
-        await auditLog.log(ctx.prisma, {
+        await extendedTravelRuleService.remove(
+          ctx.prisma,
           tenantId,
-          userId: ctx.user!.id,
-          action: "delete",
-          entityType: "extended_travel_rule",
-          entityId: input.id,
-          entityName: null,
-          changes: null,
-          ipAddress: ctx.ipAddress,
-          userAgent: ctx.userAgent,
-        }).catch(err => console.error('[AuditLog] Failed:', err))
+          input.id,
+          {
+            userId: ctx.user!.id,
+            ipAddress: ctx.ipAddress,
+            userAgent: ctx.userAgent,
+          }
+        )
 
         return { success: true }
       } catch (err) {

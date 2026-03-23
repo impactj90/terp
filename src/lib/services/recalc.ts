@@ -31,7 +31,7 @@ export class RecalcService {
   ) {
     this.dailyCalcService = dailyCalcService ?? new DailyCalcService(prisma)
     this.monthlyCalcService =
-      monthlyCalcService ?? new MonthlyCalcService(prisma, tenantId)
+      monthlyCalcService ?? new MonthlyCalcService(prisma, tenantId!)
   }
 
   /**

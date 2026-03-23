@@ -8,6 +8,34 @@ import {
   createUserWithPermissions,
 } from "./helpers"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
+import * as exportInterfaceService from "@/lib/services/export-interface-service"
+
+vi.mock("@/lib/services/export-interface-service", () => ({
+  update: vi.fn(),
+  remove: vi.fn(),
+  ExportInterfaceNotFoundError: class ExportInterfaceNotFoundError extends Error {
+    constructor(message = "Export interface not found") {
+      super(message)
+      this.name = "ExportInterfaceNotFoundError"
+    }
+  },
+  ExportInterfaceConflictError: class ExportInterfaceConflictError extends Error {
+    constructor(message: string) {
+      super(message)
+      this.name = "ExportInterfaceConflictError"
+    }
+  },
+  ExportInterfaceValidationError: class ExportInterfaceValidationError extends Error {
+    constructor(message: string) {
+      super(message)
+      this.name = "ExportInterfaceValidationError"
+    }
+  },
+}))
+vi.mock("@/lib/services/audit-logs-service", () => ({
+  log: vi.fn().mockResolvedValue(undefined),
+  computeChanges: vi.fn().mockReturnValue(null),
+}))
 
 // --- Constants ---
 
@@ -192,26 +220,26 @@ describe("exportInterfaces.create", () => {
 
 describe("exportInterfaces.update", () => {
   it("updates with partial data", async () => {
-    const existing = makeExportInterface()
     const updated = makeExportInterface({ name: "Updated Name", accounts: [] })
-    const mockPrisma = {
-      exportInterface: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
-      },
-    }
+    vi.mocked(exportInterfaceService.update).mockResolvedValue(updated as ReturnType<typeof makeExportInterface>)
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({ id: INTERFACE_ID, name: "Updated Name" })
 
     expect(result.name).toBe("Updated Name")
+    expect(exportInterfaceService.update).toHaveBeenCalledWith(
+      expect.anything(),
+      TENANT_ID,
+      expect.objectContaining({ id: INTERFACE_ID, name: "Updated Name" }),
+      expect.objectContaining({ userId: USER_ID })
+    )
   })
 
   it("throws NOT_FOUND for missing interface", async () => {
-    const mockPrisma = {
-      exportInterface: {
-        findFirst: vi.fn().mockResolvedValue(null),
-      },
-    }
+    vi.mocked(exportInterfaceService.update).mockRejectedValue(
+      new exportInterfaceService.ExportInterfaceNotFoundError()
+    )
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     await expect(
       caller.update({ id: INTERFACE_ID, name: "Updated" })
@@ -219,15 +247,10 @@ describe("exportInterfaces.update", () => {
   })
 
   it("checks uniqueness when interfaceNumber changes", async () => {
-    const existing = makeExportInterface({ interfaceNumber: 1 })
-    const conflict = makeExportInterface({ id: INTERFACE_ID_2, interfaceNumber: 2 })
-    const mockPrisma = {
-      exportInterface: {
-        findFirst: vi.fn()
-          .mockResolvedValueOnce(existing) // exists check
-          .mockResolvedValueOnce(conflict), // uniqueness check
-      },
-    }
+    vi.mocked(exportInterfaceService.update).mockRejectedValue(
+      new exportInterfaceService.ExportInterfaceConflictError("Export interface number already exists")
+    )
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     await expect(
       caller.update({ id: INTERFACE_ID, interfaceNumber: 2 })
@@ -239,35 +262,27 @@ describe("exportInterfaces.update", () => {
 
 describe("exportInterfaces.delete", () => {
   it("deletes when not in use", async () => {
-    const existing = makeExportInterface()
-    const mockPrisma = {
-      exportInterface: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
-      },
-      payrollExport: {
-        count: vi.fn().mockResolvedValue(0),
-      },
-    }
+    vi.mocked(exportInterfaceService.remove).mockResolvedValue(undefined)
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: INTERFACE_ID })
 
     expect(result.success).toBe(true)
-    expect(mockPrisma.exportInterface.delete).toHaveBeenCalledWith({
-      where: { id: INTERFACE_ID },
-    })
+    expect(exportInterfaceService.remove).toHaveBeenCalledWith(
+      expect.anything(),
+      TENANT_ID,
+      INTERFACE_ID,
+      expect.objectContaining({ userId: USER_ID })
+    )
   })
 
   it("throws BAD_REQUEST when interface has exports", async () => {
-    const existing = makeExportInterface()
-    const mockPrisma = {
-      exportInterface: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-      },
-      payrollExport: {
-        count: vi.fn().mockResolvedValue(3),
-      },
-    }
+    vi.mocked(exportInterfaceService.remove).mockRejectedValue(
+      new exportInterfaceService.ExportInterfaceValidationError(
+        "Cannot delete export interface that has generated exports"
+      )
+    )
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     await expect(
       caller.delete({ id: INTERFACE_ID })
@@ -275,11 +290,10 @@ describe("exportInterfaces.delete", () => {
   })
 
   it("throws NOT_FOUND for missing interface", async () => {
-    const mockPrisma = {
-      exportInterface: {
-        findFirst: vi.fn().mockResolvedValue(null),
-      },
-    }
+    vi.mocked(exportInterfaceService.remove).mockRejectedValue(
+      new exportInterfaceService.ExportInterfaceNotFoundError()
+    )
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     await expect(
       caller.delete({ id: INTERFACE_ID })

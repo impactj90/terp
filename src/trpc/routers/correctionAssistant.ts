@@ -19,6 +19,7 @@ import { requirePermission } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
 import type { PrismaClient } from "@/generated/prisma/client"
+import * as correctionAssistantService from "@/lib/services/correction-assistant-service"
 
 // --- Permission Constants ---
 
@@ -288,41 +289,11 @@ export const correctionAssistantRouter = createTRPCRouter({
       try {
         const tenantId = ctx.tenantId!
 
-        // Verify exists with tenant scope
-        const existing = await ctx.prisma.correctionMessage.findFirst({
-          where: { id: input.id, tenantId },
-        })
-        if (!existing) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Correction message not found",
-          })
-        }
-
-        // Build partial update data
-        const data: Record<string, unknown> = {}
-
-        if (input.customText !== undefined) {
-          if (input.customText === null || input.customText === "") {
-            data.customText = null
-          } else {
-            const trimmed = input.customText.trim()
-            data.customText = trimmed === "" ? null : trimmed
-          }
-        }
-
-        if (input.severity !== undefined) {
-          data.severity = input.severity
-        }
-
-        if (input.isActive !== undefined) {
-          data.isActive = input.isActive
-        }
-
-        const updated = await ctx.prisma.correctionMessage.update({
-          where: { id: input.id },
-          data,
-        })
+        const updated = await correctionAssistantService.updateMessage(
+          ctx.prisma,
+          tenantId,
+          input
+        )
 
         return mapMessage(updated)
       } catch (err) {

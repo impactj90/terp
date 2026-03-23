@@ -236,11 +236,12 @@ export async function updateDerived(
 
 export async function findEmployeeDayPlan(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string,
   planDate: Date
 ) {
   return prisma.employeeDayPlan.findFirst({
-    where: { employeeId, planDate },
+    where: { employeeId, planDate, tenantId },
     include: { dayPlan: true },
   })
 }

@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { clientEnv, serverEnv } from "@/lib/config"
 import { getXmlStoragePath, getStoragePath } from "@/lib/pdf/pdf-storage"
 import * as billingDocService from "./billing-document-service"
+import * as billingDocRepo from "./billing-document-repository"
 import * as billingTenantConfigRepo from "./billing-tenant-config-repository"
 
 // --- Error Classes ---
@@ -425,9 +426,8 @@ export async function generateAndStoreEInvoice(
   }
 
   // 9. Update eInvoiceXmlUrl on document
-  await prisma.billingDocument.update({
-    where: { id: documentId },
-    data: { eInvoiceXmlUrl: xmlStoragePath },
+  await billingDocRepo.update(prisma, tenantId, documentId, {
+    eInvoiceXmlUrl: xmlStoragePath,
   })
 
   return { xmlStoragePath }

@@ -20,6 +20,7 @@ import { requirePermission } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
 import * as auditLog from "@/lib/services/audit-logs-service"
+import * as vehicleService from "@/lib/services/vehicle-service"
 
 // --- Permission Constants ---
 
@@ -218,70 +219,16 @@ export const vehiclesRouter = createTRPCRouter({
       try {
         const tenantId = ctx.tenantId!
 
-        // Verify vehicle exists (tenant-scoped)
-        const existing = await ctx.prisma.vehicle.findFirst({
-          where: { id: input.id, tenantId },
-        })
-        if (!existing) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Vehicle not found",
-          })
-        }
-
-        // Build partial update data
-        const data: Record<string, unknown> = {}
-
-        if (input.name !== undefined) {
-          const name = input.name.trim()
-          if (name.length === 0) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Vehicle name is required",
-            })
-          }
-          data.name = name
-        }
-
-        if (input.description !== undefined) {
-          data.description =
-            input.description === null ? null : input.description.trim()
-        }
-
-        if (input.licensePlate !== undefined) {
-          data.licensePlate =
-            input.licensePlate === null ? null : input.licensePlate.trim()
-        }
-
-        if (input.isActive !== undefined) {
-          data.isActive = input.isActive
-        }
-
-        if (input.sortOrder !== undefined) {
-          data.sortOrder = input.sortOrder
-        }
-
-        const vehicle = await ctx.prisma.vehicle.update({
-          where: { id: input.id },
-          data,
-        })
-
-        const changes = auditLog.computeChanges(
-          existing as unknown as Record<string, unknown>,
-          vehicle as unknown as Record<string, unknown>,
-          ["name", "code", "description", "licensePlate", "isActive", "sortOrder"]
-        )
-        await auditLog.log(ctx.prisma, {
+        const vehicle = await vehicleService.update(
+          ctx.prisma,
           tenantId,
-          userId: ctx.user!.id,
-          action: "update",
-          entityType: "vehicle",
-          entityId: input.id,
-          entityName: vehicle.name ?? null,
-          changes,
-          ipAddress: ctx.ipAddress,
-          userAgent: ctx.userAgent,
-        }).catch(err => console.error('[AuditLog] Failed:', err))
+          input,
+          {
+            userId: ctx.user!.id,
+            ipAddress: ctx.ipAddress,
+            userAgent: ctx.userAgent,
+          }
+        )
 
         return vehicle
       } catch (err) {
@@ -304,43 +251,16 @@ export const vehiclesRouter = createTRPCRouter({
       try {
         const tenantId = ctx.tenantId!
 
-        // Verify vehicle exists (tenant-scoped)
-        const existing = await ctx.prisma.vehicle.findFirst({
-          where: { id: input.id, tenantId },
-        })
-        if (!existing) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Vehicle not found",
-          })
-        }
-
-        // Check if vehicle has trip records
-        const tripCount = await ctx.prisma.tripRecord.count({
-          where: { vehicleId: input.id },
-        })
-        if (tripCount > 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Cannot delete vehicle that has trip records",
-          })
-        }
-
-        await ctx.prisma.vehicle.delete({
-          where: { id: input.id },
-        })
-
-        await auditLog.log(ctx.prisma, {
+        await vehicleService.remove(
+          ctx.prisma,
           tenantId,
-          userId: ctx.user!.id,
-          action: "delete",
-          entityType: "vehicle",
-          entityId: input.id,
-          entityName: existing.name ?? null,
-          changes: null,
-          ipAddress: ctx.ipAddress,
-          userAgent: ctx.userAgent,
-        }).catch(err => console.error('[AuditLog] Failed:', err))
+          input.id,
+          {
+            userId: ctx.user!.id,
+            ipAddress: ctx.ipAddress,
+            userAgent: ctx.userAgent,
+          }
+        )
 
         return { success: true }
       } catch (err) {

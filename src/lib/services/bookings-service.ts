@@ -143,6 +143,7 @@ async function assertMonthNotClosed(
  */
 async function resolveReferenceTime(
   prisma: PrismaClient,
+  tenantId: string,
   reason: {
     referenceTime: string | null
     offsetMinutes: number | null
@@ -162,6 +163,7 @@ async function resolveReferenceTime(
     case "plan_start": {
       const edp = await repo.findEmployeeDayPlan(
         prisma,
+        tenantId,
         original.employeeId,
         original.bookingDate
       )
@@ -172,6 +174,7 @@ async function resolveReferenceTime(
     case "plan_end": {
       const edp = await repo.findEmployeeDayPlan(
         prisma,
+        tenantId,
         original.employeeId,
         original.bookingDate
       )
@@ -215,7 +218,7 @@ async function createDerivedBookingIfNeeded(
   if (!reason.referenceTime || reason.offsetMinutes === null) return // No adjustment configured
 
   // Resolve reference time
-  const refMinutes = await resolveReferenceTime(prisma, reason, original)
+  const refMinutes = await resolveReferenceTime(prisma, original.tenantId, reason, original)
   if (refMinutes === null) return
 
   // Calculate derived time = reference + offset, clamped to 0-1439

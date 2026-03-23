@@ -127,7 +127,7 @@ export class DailyCalcService {
     )
 
     // 2. Get day plan (null = no plan assigned = off day)
-    const empDayPlan = await this.loadEmployeeDayPlan(employeeId, calcDate, context)
+    const empDayPlan = await this.loadEmployeeDayPlan(tenantId, employeeId, calcDate, context)
 
     // 3. Load bookings (includes adjacent days for day change behavior)
     const bookings = await this.loadBookingsForCalculation(
@@ -155,6 +155,7 @@ export class DailyCalcService {
         absence.at_priority > 0
       ) {
         dvInput = await this.handleAbsenceCredit(
+          tenantId,
           employeeId,
           calcDate,
           empDayPlan,
@@ -163,6 +164,7 @@ export class DailyCalcService {
         )
       } else {
         dvInput = await this.handleHolidayCredit(
+          tenantId,
           employeeId,
           calcDate,
           empDayPlan,
@@ -307,6 +309,7 @@ export class DailyCalcService {
    * Ported from Go: empDayPlanRepo.GetForEmployeeDate()
    */
   private async loadEmployeeDayPlan(
+    tenantId: string,
     employeeId: string,
     date: Date,
     context?: DailyCalcContext
@@ -317,6 +320,7 @@ export class DailyCalcService {
     }
     return this.prisma.employeeDayPlan.findFirst({
       where: {
+        tenantId,
         employeeId,
         planDate: date,
       },
@@ -361,6 +365,7 @@ export class DailyCalcService {
    * Ported from Go: resolveTargetHours() (lines 151-172)
    */
   private async resolveTargetHours(
+    tenantId: string,
     employeeId: string,
     date: Date,
     dayPlan: DayPlanWithDetails,
@@ -377,7 +382,7 @@ export class DailyCalcService {
         }
       } else {
         const emp = await this.prisma.employee.findFirst({
-          where: { id: employeeId },
+          where: { id: employeeId, tenantId },
           select: { dailyTargetHours: true },
         })
         if (emp?.dailyTargetHours !== null && emp?.dailyTargetHours !== undefined) {
@@ -739,6 +744,7 @@ export class DailyCalcService {
    * Ported from Go: handleHolidayCredit() (lines 448-484)
    */
   private async handleHolidayCredit(
+    tenantId: string,
     employeeId: string,
     date: Date,
     empDayPlan: EmployeeDayPlanWithDetails,
@@ -748,6 +754,7 @@ export class DailyCalcService {
     let targetTime = 0
     if (empDayPlan.dayPlan) {
       targetTime = await this.resolveTargetHours(
+        tenantId,
         employeeId,
         date,
         empDayPlan.dayPlan,
@@ -788,6 +795,7 @@ export class DailyCalcService {
    * Ported from Go: handleAbsenceCredit() (lines 488-519)
    */
   private async handleAbsenceCredit(
+    tenantId: string,
     employeeId: string,
     date: Date,
     empDayPlan: EmployeeDayPlanWithDetails,
@@ -797,6 +805,7 @@ export class DailyCalcService {
     let targetTime = 0
     if (empDayPlan.dayPlan) {
       targetTime = await this.resolveTargetHours(
+        tenantId,
         employeeId,
         date,
         empDayPlan.dayPlan,
@@ -850,6 +859,7 @@ export class DailyCalcService {
     let behavior = NO_BOOKING_ERROR
     if (empDayPlan.dayPlan) {
       targetTime = await this.resolveTargetHours(
+        tenantId,
         employeeId,
         date,
         empDayPlan.dayPlan,
@@ -966,7 +976,7 @@ export class DailyCalcService {
                 defaultActivityId: context.employeeMaster.defaultActivityId,
               }
             : await this.prisma.employee.findFirst({
-                where: { id: employeeId },
+                where: { id: employeeId, tenantId },
                 select: {
                   id: true,
                   tenantId: true,
@@ -1104,7 +1114,7 @@ export class DailyCalcService {
       const { firstCome, lastGo } = findFirstLastWorkBookings(bookings)
 
       // Build shift detection loader with pre-loaded alternative plans
-      const loader = await this.preloadShiftDetectionPlans(currentEmpDayPlan.dayPlan)
+      const loader = await this.preloadShiftDetectionPlans(tenantId, currentEmpDayPlan.dayPlan)
       const detector = new ShiftDetector(loader)
 
       const assignedInput = this.buildShiftDetectionInput(currentEmpDayPlan.dayPlan)
@@ -1114,7 +1124,7 @@ export class DailyCalcService {
       // If shifted to different plan, reload it
       if (!result.isOriginalPlan && result.matchedPlanId) {
         const matchedPlan = await this.prisma.dayPlan.findFirst({
-          where: { id: result.matchedPlanId },
+          where: { id: result.matchedPlanId, tenantId },
           include: {
             breaks: { orderBy: { sortOrder: "asc" } },
             bonuses: {
@@ -1166,8 +1176,8 @@ export class DailyCalcService {
     if (result.calculatedTimes.size > 0) {
       const updates = Array.from(result.calculatedTimes.entries()).map(
         ([id, time]) =>
-          this.prisma.booking.update({
-            where: { id },
+          this.prisma.booking.updateMany({
+            where: { id, tenantId },
             data: { calculatedTime: time },
           })
       )
@@ -1244,6 +1254,7 @@ export class DailyCalcService {
 
       // Resolve target hours using ZMI priority chain
       const regularHours = await this.resolveTargetHours(
+        tenantId,
         employeeId,
         date,
         dp,
@@ -1410,6 +1421,7 @@ export class DailyCalcService {
    * Must be called before detectShift() when shift detection is active.
    */
   private async preloadShiftDetectionPlans(
+    tenantId: string,
     dayPlan: DayPlanWithDetails
   ): Promise<DayPlanLoader> {
     const cache = new Map<string, ShiftDetectionInput | null>()
@@ -1419,7 +1431,7 @@ export class DailyCalcService {
     const plans = await Promise.all(
       altIds.map((id) =>
         this.prisma.dayPlan.findFirst({
-          where: { id },
+          where: { id, tenantId },
           select: {
             id: true,
             code: true,
@@ -1761,7 +1773,7 @@ export class DailyCalcService {
     // Find user linked to this employee (best-effort)
     try {
       const emp = await this.prisma.employee.findFirst({
-        where: { id: employeeId },
+        where: { id: employeeId, tenantId },
         select: { id: true },
       })
       if (!emp) return

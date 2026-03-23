@@ -8,6 +8,8 @@ import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./order-booking-repository"
 import * as auditLog from "./audit-logs-service"
 import type { AuditContext } from "./audit-logs-service"
+import { checkRelatedEmployeeDataScope } from "@/lib/auth/data-scope"
+import type { DataScope } from "@/lib/auth/middleware"
 
 // --- Audit ---
 
@@ -148,12 +150,24 @@ export async function update(
     timeMinutes?: number
     description?: string | null
   },
-  audit?: AuditContext
+  audit?: AuditContext,
+  dataScope?: DataScope
 ) {
-  // Fetch existing (tenant-scoped)
+  // Fetch existing (tenant-scoped) with employee for scope check
   const existing = await repo.findByIdSimple(prisma, tenantId, input.id)
   if (!existing) {
     throw new OrderBookingNotFoundError()
+  }
+
+  // Check data scope if provided
+  if (dataScope) {
+    const withEmployee = await repo.findById(prisma, tenantId, input.id)
+    if (withEmployee) {
+      checkRelatedEmployeeDataScope(dataScope, withEmployee as unknown as {
+        employeeId: string
+        employee?: { departmentId: string | null } | null
+      }, "Order booking")
+    }
   }
 
   // Build partial update data
@@ -230,12 +244,24 @@ export async function remove(
   prisma: PrismaClient,
   tenantId: string,
   id: string,
-  audit?: AuditContext
+  audit?: AuditContext,
+  dataScope?: DataScope
 ) {
   // Fetch existing (tenant-scoped)
   const existing = await repo.findByIdSimple(prisma, tenantId, id)
   if (!existing) {
     throw new OrderBookingNotFoundError()
+  }
+
+  // Check data scope if provided
+  if (dataScope) {
+    const withEmployee = await repo.findById(prisma, tenantId, id)
+    if (withEmployee) {
+      checkRelatedEmployeeDataScope(dataScope, withEmployee as unknown as {
+        employeeId: string
+        employee?: { departmentId: string | null } | null
+      }, "Order booking")
+    }
   }
 
   await repo.deleteById(prisma, tenantId, id)
