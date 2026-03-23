@@ -17,6 +17,7 @@ import { ServiceCaseCloseDialog } from './service-case-close-dialog'
 import { ServiceCaseInvoiceDialog } from './service-case-invoice-dialog'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { toast } from 'sonner'
+import { useTranslations } from 'next-intl'
 
 function formatDate(date: string | Date | null): string {
   if (!date) return '-'
@@ -43,6 +44,7 @@ interface ServiceCaseDetailProps {
 
 export function ServiceCaseDetail({ id }: ServiceCaseDetailProps) {
   const router = useRouter()
+  const t = useTranslations('billingServiceCases')
   const { data: sc, isLoading } = useBillingServiceCase(id)
   const createOrderMutation = useCreateOrderFromServiceCase()
   const deleteMutation = useDeleteBillingServiceCase()
@@ -54,11 +56,11 @@ export function ServiceCaseDetail({ id }: ServiceCaseDetailProps) {
   const [showOrderDialog, setShowOrderDialog] = React.useState(false)
 
   if (isLoading) {
-    return <div className="flex items-center justify-center p-8 text-muted-foreground">Laden...</div>
+    return <div className="flex items-center justify-center p-8 text-muted-foreground">{t('loading')}</div>
   }
 
   if (!sc) {
-    return <div className="flex items-center justify-center p-8 text-muted-foreground">Serviceauftrag nicht gefunden</div>
+    return <div className="flex items-center justify-center p-8 text-muted-foreground">{t('notFound')}</div>
   }
 
   const isEditable = sc.status === 'OPEN' || sc.status === 'IN_PROGRESS'
@@ -80,10 +82,10 @@ export function ServiceCaseDetail({ id }: ServiceCaseDetailProps) {
         id: sc.id,
         orderName: sc.title,
       })
-      toast.success('Auftrag erstellt')
+      toast.success(t('orderCreated'))
       setShowOrderDialog(false)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Fehler'
+      const message = err instanceof Error ? err.message : t('error')
       toast.error(message)
     }
   }
@@ -91,10 +93,10 @@ export function ServiceCaseDetail({ id }: ServiceCaseDetailProps) {
   const handleDelete = async () => {
     try {
       await deleteMutation.mutateAsync({ id: sc.id })
-      toast.success('Serviceauftrag gelöscht')
+      toast.success(t('serviceCaseDeleted'))
       router.push('/orders/service-cases')
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Fehler beim Löschen'
+      const message = err instanceof Error ? err.message : t('deleteError')
       toast.error(message)
     }
   }
@@ -105,7 +107,7 @@ export function ServiceCaseDetail({ id }: ServiceCaseDetailProps) {
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" onClick={() => router.push('/orders/service-cases')}>
           <ArrowLeft className="h-4 w-4 mr-1" />
-          Zurück
+          {t('back')}
         </Button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
@@ -122,8 +124,8 @@ export function ServiceCaseDetail({ id }: ServiceCaseDetailProps) {
           <Lock className="h-4 w-4" />
           <AlertDescription>
             {sc.status === 'INVOICED'
-              ? 'Dieser Serviceauftrag ist abgerechnet und kann nicht mehr bearbeitet werden.'
-              : 'Dieser Serviceauftrag ist abgeschlossen und kann nicht mehr bearbeitet werden.'}
+              ? t('invoicedImmutable')
+              : t('closedImmutable')}
           </AlertDescription>
         </Alert>
       )}
@@ -134,28 +136,28 @@ export function ServiceCaseDetail({ id }: ServiceCaseDetailProps) {
           <>
             <Button variant="outline" size="sm" onClick={() => setShowEditSheet(true)}>
               <Pencil className="h-4 w-4 mr-1" />
-              Bearbeiten
+              {t('edit')}
             </Button>
             {!sc.orderId && (
               <Button variant="outline" size="sm" onClick={() => setShowOrderDialog(true)}>
                 <Briefcase className="h-4 w-4 mr-1" />
-                Auftrag erstellen
+                {t('createOrder')}
               </Button>
             )}
             <Button variant="outline" size="sm" onClick={() => setShowCloseDialog(true)}>
               <CheckCircle className="h-4 w-4 mr-1" />
-              Abschließen
+              {t('close')}
             </Button>
             <Button variant="outline" size="sm" onClick={() => setShowDeleteDialog(true)} className="text-destructive">
               <Trash2 className="h-4 w-4 mr-1" />
-              Löschen
+              {t('delete')}
             </Button>
           </>
         )}
         {isClosed && !sc.invoiceDocumentId && (
           <Button variant="outline" size="sm" onClick={() => setShowInvoiceDialog(true)}>
             <FileText className="h-4 w-4 mr-1" />
-            Rechnung erstellen
+            {t('createInvoice')}
           </Button>
         )}
       </div>
@@ -165,7 +167,7 @@ export function ServiceCaseDetail({ id }: ServiceCaseDetailProps) {
         {/* Address Card */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Kundenadresse</CardTitle>
+            <CardTitle className="text-base">{t('customerAddress')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-sm space-y-1">
@@ -177,7 +179,7 @@ export function ServiceCaseDetail({ id }: ServiceCaseDetailProps) {
             </div>
             {typedSc.contact && (
               <div className="mt-3 pt-3 border-t">
-                <span className="text-muted-foreground text-xs">Kontaktperson</span>
+                <span className="text-muted-foreground text-xs">{t('contactPerson')}</span>
                 <div className="text-sm font-medium">
                   {typedSc.contact.firstName} {typedSc.contact.lastName}
                 </div>
@@ -189,25 +191,25 @@ export function ServiceCaseDetail({ id }: ServiceCaseDetailProps) {
         {/* Details Card */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Details</CardTitle>
+            <CardTitle className="text-base">{t('details')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
-            <DetailRow label="Gemeldet am" value={formatDate(sc.reportedAt)} />
+            <DetailRow label={t('reportedAt')} value={formatDate(sc.reportedAt)} />
             <DetailRow
-              label="Auf Kosten hingewiesen"
-              value={sc.customerNotifiedCost ? 'Ja' : 'Nein'}
+              label={t('costNotified')}
+              value={sc.customerNotifiedCost ? t('yes') : t('no')}
             />
             {typedSc.assignedTo && (
               <DetailRow
-                label="Zuständig"
+                label={t('assignedTo')}
                 value={`${typedSc.assignedTo.firstName} ${typedSc.assignedTo.lastName}`}
               />
             )}
             {sc.closingReason && (
-              <DetailRow label="Abschlussgrund" value={sc.closingReason} />
+              <DetailRow label={t('closingReason')} value={sc.closingReason} />
             )}
             {sc.closedAt && (
-              <DetailRow label="Abgeschlossen am" value={formatDate(sc.closedAt)} />
+              <DetailRow label={t('closedAt')} value={formatDate(sc.closedAt)} />
             )}
           </CardContent>
         </Card>
@@ -216,7 +218,7 @@ export function ServiceCaseDetail({ id }: ServiceCaseDetailProps) {
         {sc.description && (
           <Card className="md:col-span-2">
             <CardHeader>
-              <CardTitle className="text-base">Beschreibung</CardTitle>
+              <CardTitle className="text-base">{t('description')}</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm whitespace-pre-wrap">{sc.description}</p>
@@ -227,24 +229,24 @@ export function ServiceCaseDetail({ id }: ServiceCaseDetailProps) {
         {/* Links */}
         <Card className="md:col-span-2">
           <CardHeader>
-            <CardTitle className="text-base">Verknüpfungen</CardTitle>
+            <CardTitle className="text-base">{t('links')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {typedSc.order ? (
               <div className="flex items-center gap-2">
                 <Briefcase className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">Verknüpfter Auftrag:</span>
+                <span className="text-sm">{t('linkedOrder')}</span>
                 <span className="text-sm font-medium">
                   {typedSc.order.code} — {typedSc.order.name}
                 </span>
               </div>
             ) : (
-              <div className="text-sm text-muted-foreground">Kein verknüpfter Auftrag</div>
+              <div className="text-sm text-muted-foreground">{t('noLinkedOrder')}</div>
             )}
             {typedSc.invoiceDocument ? (
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">Verknüpfte Rechnung:</span>
+                <span className="text-sm">{t('linkedInvoice')}</span>
                 <Button
                   variant="link"
                   size="sm"
@@ -258,7 +260,7 @@ export function ServiceCaseDetail({ id }: ServiceCaseDetailProps) {
             {typedSc.inquiry ? (
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">Verknüpfte Anfrage:</span>
+                <span className="text-sm">{t('linkedInquiry')}</span>
                 <Button
                   variant="link"
                   size="sm"
@@ -296,20 +298,20 @@ export function ServiceCaseDetail({ id }: ServiceCaseDetailProps) {
       <ConfirmDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
-        title="Serviceauftrag löschen"
-        description={`Möchten Sie den Serviceauftrag "${sc.title}" wirklich löschen?`}
+        title={t('deleteTitle')}
+        description={t('deleteDescription', { title: sc.title })}
         onConfirm={handleDelete}
-        confirmLabel="Löschen"
+        confirmLabel={t('deleteConfirm')}
         variant="destructive"
       />
 
       <ConfirmDialog
         open={showOrderDialog}
         onOpenChange={setShowOrderDialog}
-        title="Auftrag erstellen"
-        description={`Einen Terp-Auftrag für "${sc.title}" erstellen? Mitarbeiter können dann Zeit darauf buchen.`}
+        title={t('createOrderTitle')}
+        description={t('createOrderDescription', { title: sc.title })}
         onConfirm={handleCreateOrder}
-        confirmLabel="Auftrag erstellen"
+        confirmLabel={t('createOrderConfirm')}
       />
     </div>
   )

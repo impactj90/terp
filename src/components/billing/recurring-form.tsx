@@ -24,12 +24,13 @@ import {
 import { RecurringPositionEditor, type PositionTemplate } from './recurring-position-editor'
 import { toast } from 'sonner'
 import { ArrowLeft } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 const INTERVALS = [
-  { value: 'MONTHLY', label: 'Monatlich' },
-  { value: 'QUARTERLY', label: 'Quartal' },
-  { value: 'SEMI_ANNUALLY', label: 'Halbjaehrlich' },
-  { value: 'ANNUALLY', label: 'Jaehrlich' },
+  { value: 'MONTHLY', key: 'intervalMonthly' },
+  { value: 'QUARTERLY', key: 'intervalQuarterly' },
+  { value: 'SEMI_ANNUALLY', key: 'intervalSemiAnnually' },
+  { value: 'ANNUALLY', key: 'intervalAnnually' },
 ]
 
 interface RecurringFormProps {
@@ -37,6 +38,8 @@ interface RecurringFormProps {
 }
 
 export function RecurringForm({ editId }: RecurringFormProps) {
+  const t = useTranslations('billingRecurring')
+  const tDoc = useTranslations('billingDocuments')
   const router = useRouter()
   const createMutation = useCreateBillingRecurringInvoice()
   const updateMutation = useUpdateBillingRecurringInvoice()
@@ -93,19 +96,19 @@ export function RecurringForm({ editId }: RecurringFormProps) {
     e.preventDefault()
 
     if (!name.trim()) {
-      toast.error('Bitte geben Sie einen Namen ein')
+      toast.error(t('nameRequired'))
       return
     }
     if (!addressId) {
-      toast.error('Bitte waehlen Sie eine Kundenadresse')
+      toast.error(t('addressRequired'))
       return
     }
     if (!startDate) {
-      toast.error('Bitte geben Sie ein Startdatum ein')
+      toast.error(t('startDateRequired'))
       return
     }
     if (positions.length === 0) {
-      toast.error('Bitte fuegen Sie mindestens eine Position hinzu')
+      toast.error(t('positionsRequired'))
       return
     }
 
@@ -130,11 +133,11 @@ export function RecurringForm({ editId }: RecurringFormProps) {
     try {
       if (editId) {
         await updateMutation.mutateAsync({ id: editId, ...payload })
-        toast.success('Vorlage aktualisiert')
+        toast.success(t('templateUpdated'))
         router.push(`/orders/recurring/${editId}`)
       } else {
         const result = await createMutation.mutateAsync(payload)
-        toast.success('Vorlage erstellt')
+        toast.success(t('templateCreated'))
         if (result?.id) {
           router.push(`/orders/recurring/${result.id}`)
         } else {
@@ -142,7 +145,7 @@ export function RecurringForm({ editId }: RecurringFormProps) {
         }
       }
     } catch {
-      toast.error('Fehler beim Speichern der Vorlage')
+      toast.error(t('saveError'))
     }
   }
 
@@ -154,7 +157,7 @@ export function RecurringForm({ editId }: RecurringFormProps) {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h2 className="text-2xl font-bold">
-          {editId ? 'Vorlage bearbeiten' : 'Neue wiederkehrende Rechnung'}
+          {editId ? t('editTemplate') : t('newRecurringInvoice')}
         </h2>
       </div>
 
@@ -162,24 +165,24 @@ export function RecurringForm({ editId }: RecurringFormProps) {
         {/* Header Data */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Kopfdaten</CardTitle>
+            <CardTitle className="text-lg">{tDoc('headerData')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="rec-name">Name *</Label>
+                <Label htmlFor="rec-name">{t('nameLabel')}</Label>
                 <Input
                   id="rec-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="z.B. Wartungsvertrag Monatlich"
+                  placeholder={t('namePlaceholder')}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="rec-address">Kundenadresse *</Label>
+                <Label htmlFor="rec-address">{t('customerAddressLabel')}</Label>
                 <Select value={addressId} onValueChange={setAddressId}>
                   <SelectTrigger id="rec-address">
-                    <SelectValue placeholder="Adresse waehlen..." />
+                    <SelectValue placeholder={t('selectAddress')} />
                   </SelectTrigger>
                   <SelectContent>
                     {addressData?.items?.map((addr) => (
@@ -193,7 +196,7 @@ export function RecurringForm({ editId }: RecurringFormProps) {
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="rec-interval">Intervall *</Label>
+                <Label htmlFor="rec-interval">{t('intervalLabel')}</Label>
                 <Select value={interval} onValueChange={setInterval}>
                   <SelectTrigger id="rec-interval">
                     <SelectValue />
@@ -201,14 +204,14 @@ export function RecurringForm({ editId }: RecurringFormProps) {
                   <SelectContent>
                     {INTERVALS.map((i) => (
                       <SelectItem key={i.value} value={i.value}>
-                        {i.label}
+                        {t(i.key as any)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="rec-start">Startdatum *</Label>
+                <Label htmlFor="rec-start">{t('startDateLabel')}</Label>
                 <Input
                   id="rec-start"
                   type="date"
@@ -217,7 +220,7 @@ export function RecurringForm({ editId }: RecurringFormProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="rec-end">Enddatum</Label>
+                <Label htmlFor="rec-end">{t('endDateLabel')}</Label>
                 <Input
                   id="rec-end"
                   type="date"
@@ -232,7 +235,7 @@ export function RecurringForm({ editId }: RecurringFormProps) {
                 checked={autoGenerate}
                 onCheckedChange={(v) => setAutoGenerate(v === true)}
               />
-              <Label htmlFor="rec-auto">Automatisch generieren (Cron-Job)</Label>
+              <Label htmlFor="rec-auto">{t('autoGenerateLabel')}</Label>
             </div>
           </CardContent>
         </Card>
@@ -240,45 +243,45 @@ export function RecurringForm({ editId }: RecurringFormProps) {
         {/* Terms */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Konditionen</CardTitle>
+            <CardTitle className="text-lg">{tDoc('terms')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="rec-payment">Zahlungsziel (Tage)</Label>
+                <Label htmlFor="rec-payment">{t('paymentTermDays')}</Label>
                 <Input
                   id="rec-payment"
                   type="number"
                   value={paymentTermDays}
                   onChange={(e) => setPaymentTermDays(e.target.value)}
-                  placeholder="z.B. 30"
+                  placeholder={tDoc('paymentTermPlaceholder')}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="rec-discount-pct">Skonto %</Label>
+                <Label htmlFor="rec-discount-pct">{t('discountPercent')}</Label>
                 <Input
                   id="rec-discount-pct"
                   type="number"
                   step="0.01"
                   value={discountPercent}
                   onChange={(e) => setDiscountPercent(e.target.value)}
-                  placeholder="z.B. 3"
+                  placeholder={t('discountPercentPlaceholder')}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="rec-discount-days">Skonto Tage</Label>
+                <Label htmlFor="rec-discount-days">{t('discountDaysLabel')}</Label>
                 <Input
                   id="rec-discount-days"
                   type="number"
                   value={discountDays}
                   onChange={(e) => setDiscountDays(e.target.value)}
-                  placeholder="z.B. 10"
+                  placeholder={t('discountDaysPlaceholder')}
                 />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="rec-delivery-type">Lieferart</Label>
+                <Label htmlFor="rec-delivery-type">{tDoc('deliveryType')}</Label>
                 <Input
                   id="rec-delivery-type"
                   value={deliveryType}
@@ -286,7 +289,7 @@ export function RecurringForm({ editId }: RecurringFormProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="rec-delivery-terms">Lieferbedingungen</Label>
+                <Label htmlFor="rec-delivery-terms">{tDoc('deliveryTerms')}</Label>
                 <Input
                   id="rec-delivery-terms"
                   value={deliveryTerms}
@@ -300,7 +303,7 @@ export function RecurringForm({ editId }: RecurringFormProps) {
         {/* Positions */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Positionen</CardTitle>
+            <CardTitle className="text-lg">{t('positions')}</CardTitle>
           </CardHeader>
           <CardContent>
             <RecurringPositionEditor positions={positions} onChange={setPositions} />
@@ -310,11 +313,11 @@ export function RecurringForm({ editId }: RecurringFormProps) {
         {/* Notes */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Notizen</CardTitle>
+            <CardTitle className="text-lg">{t('notesSection')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="rec-notes">Notizen (erscheinen auf der Rechnung)</Label>
+              <Label htmlFor="rec-notes">{t('notesLabel')}</Label>
               <Textarea
                 id="rec-notes"
                 value={notes}
@@ -323,7 +326,7 @@ export function RecurringForm({ editId }: RecurringFormProps) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="rec-internal">Interne Notizen</Label>
+              <Label htmlFor="rec-internal">{t('internalNotesLabel')}</Label>
               <Textarea
                 id="rec-internal"
                 value={internalNotes}
@@ -337,13 +340,13 @@ export function RecurringForm({ editId }: RecurringFormProps) {
         {/* Submit */}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => router.back()}>
-            Abbrechen
+            {t('cancel')}
           </Button>
           <Button
             type="submit"
             disabled={createMutation.isPending || updateMutation.isPending}
           >
-            Speichern
+            {t('save')}
           </Button>
         </div>
       </form>

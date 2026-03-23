@@ -15,6 +15,7 @@ import { PriceListFormSheet } from './price-list-form-sheet'
 import { PriceListEntriesTable } from './price-list-entries-table'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { toast } from 'sonner'
+import { useTranslations } from 'next-intl'
 
 function formatDate(date: string | Date | null): string {
   if (!date) return '-'
@@ -41,6 +42,7 @@ interface PriceListDetailProps {
 
 export function PriceListDetail({ id }: PriceListDetailProps) {
   const router = useRouter()
+  const t = useTranslations('billingPriceLists')
   const { data: pl, isLoading } = useBillingPriceList(id)
   const deleteMutation = useDeleteBillingPriceList()
   const setDefaultMutation = useSetDefaultBillingPriceList()
@@ -49,20 +51,20 @@ export function PriceListDetail({ id }: PriceListDetailProps) {
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false)
 
   if (isLoading) {
-    return <div className="flex items-center justify-center p-8 text-muted-foreground">Laden...</div>
+    return <div className="flex items-center justify-center p-8 text-muted-foreground">{t('loading')}</div>
   }
 
   if (!pl) {
-    return <div className="flex items-center justify-center p-8 text-muted-foreground">Preisliste nicht gefunden</div>
+    return <div className="flex items-center justify-center p-8 text-muted-foreground">{t('notFound')}</div>
   }
 
   const handleDelete = async () => {
     try {
       await deleteMutation.mutateAsync({ id: pl.id })
-      toast.success('Preisliste gelöscht')
+      toast.success(t('priceListDeleted'))
       router.push('/orders/price-lists')
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Fehler beim Löschen'
+      const message = err instanceof Error ? err.message : t('deleteError')
       toast.error(message)
     }
   }
@@ -70,9 +72,9 @@ export function PriceListDetail({ id }: PriceListDetailProps) {
   const handleSetDefault = async () => {
     try {
       await setDefaultMutation.mutateAsync({ id: pl.id })
-      toast.success('Als Standardpreisliste gesetzt')
+      toast.success(t('setAsDefaultSuccess'))
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Fehler'
+      const message = err instanceof Error ? err.message : t('error')
       toast.error(message)
     }
   }
@@ -87,7 +89,7 @@ export function PriceListDetail({ id }: PriceListDetailProps) {
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" onClick={() => router.push('/orders/price-lists')}>
           <ArrowLeft className="h-4 w-4 mr-1" />
-          Zurück
+          {t('back')}
         </Button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
@@ -95,11 +97,11 @@ export function PriceListDetail({ id }: PriceListDetailProps) {
             {pl.isDefault && (
               <Badge variant="default" className="gap-1">
                 <Star className="h-3 w-3 fill-current" />
-                Standard
+                {t('default')}
               </Badge>
             )}
             <Badge variant={pl.isActive ? 'default' : 'secondary'}>
-              {pl.isActive ? 'Aktiv' : 'Inaktiv'}
+              {pl.isActive ? t('active') : t('inactive')}
             </Badge>
           </div>
         </div>
@@ -109,7 +111,7 @@ export function PriceListDetail({ id }: PriceListDetailProps) {
       <div className="flex items-center gap-2">
         <Button variant="outline" size="sm" onClick={() => setShowEditSheet(true)}>
           <Pencil className="h-4 w-4 mr-1" />
-          Bearbeiten
+          {t('edit')}
         </Button>
         {!pl.isDefault && (
           <Button
@@ -119,7 +121,7 @@ export function PriceListDetail({ id }: PriceListDetailProps) {
             disabled={setDefaultMutation.isPending}
           >
             <Star className="h-4 w-4 mr-1" />
-            Als Standard setzen
+            {t('setAsDefault')}
           </Button>
         )}
         <Button
@@ -129,7 +131,7 @@ export function PriceListDetail({ id }: PriceListDetailProps) {
           className="text-destructive"
         >
           <Trash2 className="h-4 w-4 mr-1" />
-          Löschen
+          {t('delete')}
         </Button>
       </div>
 
@@ -138,21 +140,21 @@ export function PriceListDetail({ id }: PriceListDetailProps) {
         {/* Info Card */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Details</CardTitle>
+            <CardTitle className="text-base">{t('details')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
             {pl.description && (
-              <DetailRow label="Beschreibung" value={pl.description} />
+              <DetailRow label={t('description')} value={pl.description} />
             )}
-            <DetailRow label="Gültig von" value={formatDate(pl.validFrom)} />
-            <DetailRow label="Gültig bis" value={formatDate(pl.validTo)} />
+            <DetailRow label={t('validFrom')} value={formatDate(pl.validFrom)} />
+            <DetailRow label={t('validTo')} value={formatDate(pl.validTo)} />
             <DetailRow
-              label="Standard"
-              value={pl.isDefault ? 'Ja' : 'Nein'}
+              label={t('default')}
+              value={pl.isDefault ? t('yes') : t('no')}
             />
             <DetailRow
-              label="Status"
-              value={pl.isActive ? 'Aktiv' : 'Inaktiv'}
+              label={t('status')}
+              value={pl.isActive ? t('active') : t('inactive')}
             />
           </CardContent>
         </Card>
@@ -160,7 +162,7 @@ export function PriceListDetail({ id }: PriceListDetailProps) {
         {/* Assigned Customers Card */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Zugewiesene Kunden</CardTitle>
+            <CardTitle className="text-base">{t('assignedCustomers')}</CardTitle>
           </CardHeader>
           <CardContent>
             {typedPl.addresses && typedPl.addresses.length > 0 ? (
@@ -174,7 +176,7 @@ export function PriceListDetail({ id }: PriceListDetailProps) {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-muted-foreground">Keine Kunden zugewiesen</p>
+              <p className="text-sm text-muted-foreground">{t('noCustomersAssigned')}</p>
             )}
           </CardContent>
         </Card>
@@ -183,7 +185,7 @@ export function PriceListDetail({ id }: PriceListDetailProps) {
       {/* Entries Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Preiseinträge</CardTitle>
+          <CardTitle className="text-base">{t('priceEntries')}</CardTitle>
         </CardHeader>
         <CardContent>
           <PriceListEntriesTable priceListId={id} />
@@ -200,10 +202,10 @@ export function PriceListDetail({ id }: PriceListDetailProps) {
       <ConfirmDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
-        title="Preisliste löschen"
-        description={`Möchten Sie die Preisliste "${pl.name}" wirklich löschen?`}
+        title={t('deletePriceList')}
+        description={t('deletePriceListDescription', { name: pl.name })}
         onConfirm={handleDelete}
-        confirmLabel="Löschen"
+        confirmLabel={t('delete')}
         variant="destructive"
       />
     </div>

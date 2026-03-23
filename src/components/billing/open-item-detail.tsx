@@ -13,6 +13,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { ArrowLeft, Plus, XCircle } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { useBillingOpenItem } from '@/hooks'
 import { PaymentStatusBadge } from './payment-status-badge'
 import { PaymentFormDialog } from './payment-form-dialog'
@@ -48,6 +49,7 @@ interface OpenItemDetailProps {
 
 export function OpenItemDetail({ documentId }: OpenItemDetailProps) {
   const router = useRouter()
+  const t = useTranslations('billingOpenItems')
   const { data: doc, isLoading } = useBillingOpenItem(documentId)
   const [showPaymentForm, setShowPaymentForm] = React.useState(false)
   const [cancelPaymentId, setCancelPaymentId] = React.useState<string | null>(null)
@@ -66,9 +68,9 @@ export function OpenItemDetail({ documentId }: OpenItemDetailProps) {
       <div className="space-y-4">
         <Button variant="ghost" onClick={() => router.push('/orders/open-items')}>
           <ArrowLeft className="h-4 w-4 mr-1" />
-          Zurück
+          {t('back')}
         </Button>
-        <p className="text-muted-foreground">Rechnung nicht gefunden</p>
+        <p className="text-muted-foreground">{t('invoiceNotFound')}</p>
       </div>
     )
   }
@@ -143,15 +145,15 @@ export function OpenItemDetail({ documentId }: OpenItemDetailProps) {
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={() => router.push('/orders/open-items')}>
             <ArrowLeft className="h-4 w-4 mr-1" />
-            Zurück
+            {t('back')}
           </Button>
-          <h2 className="text-2xl font-bold">Rechnung {typedDoc.number}</h2>
+          <h2 className="text-2xl font-bold">{t('invoiceTitle', { number: typedDoc.number })}</h2>
           <PaymentStatusBadge status={typedDoc.paymentStatus} isOverdue={typedDoc.isOverdue} />
         </div>
         {!isPaid && (
           <Button onClick={() => setShowPaymentForm(true)}>
             <Plus className="h-4 w-4 mr-1" />
-            Zahlung erfassen
+            {t('recordPayment')}
           </Button>
         )}
       </div>
@@ -159,28 +161,28 @@ export function OpenItemDetail({ documentId }: OpenItemDetailProps) {
       {/* Invoice Summary */}
       <Card>
         <CardHeader>
-          <CardTitle>Rechnungszusammenfassung</CardTitle>
+          <CardTitle>{t('invoiceSummary')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-1">
-          <DetailRow label="Kunde" value={typedDoc.address?.company ?? '-'} />
-          <DetailRow label="Rechnungsdatum" value={formatDate(typedDoc.documentDate)} />
-          <DetailRow label="Fällig am" value={formatDate(typedDoc.dueDate)} />
-          <DetailRow label="Brutto" value={formatCurrency(typedDoc.totalGross)} />
+          <DetailRow label={t('customer')} value={typedDoc.address?.company ?? '-'} />
+          <DetailRow label={t('invoiceDate')} value={formatDate(typedDoc.documentDate)} />
+          <DetailRow label={t('dueDate')} value={formatDate(typedDoc.dueDate)} />
+          <DetailRow label={t('gross')} value={formatCurrency(typedDoc.totalGross)} />
           {typedDoc.creditNoteReduction > 0 && (
             <DetailRow
-              label="Gutschriften"
+              label={t('creditNotes')}
               value={`-${formatCurrency(typedDoc.creditNoteReduction)}`}
             />
           )}
           {typedDoc.creditNoteReduction > 0 && (
             <DetailRow
-              label="Effektiver Betrag"
+              label={t('effectiveAmount')}
               value={formatCurrency(typedDoc.effectiveTotalGross)}
             />
           )}
-          <DetailRow label="Bezahlt" value={formatCurrency(typedDoc.paidAmount)} />
+          <DetailRow label={t('paid')} value={formatCurrency(typedDoc.paidAmount)} />
           <DetailRow
-            label="Offen"
+            label={t('open')}
             value={
               <span className={typedDoc.openAmount > 0 ? 'text-red-600' : 'text-green-600'}>
                 {formatCurrency(typedDoc.openAmount)}
@@ -189,14 +191,14 @@ export function OpenItemDetail({ documentId }: OpenItemDetailProps) {
           />
           {typedDoc.discountDays != null && typedDoc.discountPercent != null && (
             <DetailRow
-              label="Skonto 1"
-              value={`${typedDoc.discountPercent}% innerhalb von ${typedDoc.discountDays} Tagen`}
+              label={t('discount1')}
+              value={t('discountWithinDays', { percent: typedDoc.discountPercent, days: typedDoc.discountDays })}
             />
           )}
           {typedDoc.discountDays2 != null && typedDoc.discountPercent2 != null && (
             <DetailRow
-              label="Skonto 2"
-              value={`${typedDoc.discountPercent2}% innerhalb von ${typedDoc.discountDays2} Tagen`}
+              label={t('discount2')}
+              value={t('discountWithinDays', { percent: typedDoc.discountPercent2, days: typedDoc.discountDays2 })}
             />
           )}
         </CardContent>
@@ -205,26 +207,26 @@ export function OpenItemDetail({ documentId }: OpenItemDetailProps) {
       {/* Payment History */}
       <Card>
         <CardHeader>
-          <CardTitle>Zahlungshistorie</CardTitle>
+          <CardTitle>{t('paymentHistory')}</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Datum</TableHead>
-                <TableHead className="text-right">Betrag</TableHead>
-                <TableHead>Art</TableHead>
-                <TableHead>Skonto</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Notizen</TableHead>
-                <TableHead>Aktionen</TableHead>
+                <TableHead>{t('columnDate')}</TableHead>
+                <TableHead className="text-right">{t('columnAmount')}</TableHead>
+                <TableHead>{t('columnPaymentType')}</TableHead>
+                <TableHead>{t('columnDiscount')}</TableHead>
+                <TableHead>{t('columnPaymentStatus')}</TableHead>
+                <TableHead>{t('columnNotes')}</TableHead>
+                <TableHead>{t('columnActions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {!typedDoc.payments?.length ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-muted-foreground">
-                    Keine Zahlungen vorhanden
+                    {t('noPayments')}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -235,13 +237,13 @@ export function OpenItemDetail({ documentId }: OpenItemDetailProps) {
                   >
                     <TableCell>{formatDate(payment.date)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(payment.amount)}</TableCell>
-                    <TableCell>{payment.type === 'CASH' ? 'Bar' : 'Überweisung'}</TableCell>
-                    <TableCell>{payment.isDiscount ? 'Ja' : '\u2014'}</TableCell>
+                    <TableCell>{payment.type === 'CASH' ? t('typeCash') : t('typeTransfer')}</TableCell>
+                    <TableCell>{payment.isDiscount ? t('yes') : '\u2014'}</TableCell>
                     <TableCell>
                       {payment.status === 'ACTIVE' ? (
-                        <span className="text-green-700">Aktiv</span>
+                        <span className="text-green-700">{t('statusActive')}</span>
                       ) : (
-                        <span className="text-red-700">Storniert</span>
+                        <span className="text-red-700">{t('statusCancelled')}</span>
                       )}
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate">
@@ -256,7 +258,7 @@ export function OpenItemDetail({ documentId }: OpenItemDetailProps) {
                           onClick={() => setCancelPaymentId(payment.id)}
                         >
                           <XCircle className="h-4 w-4 mr-1" />
-                          Stornieren
+                          {t('cancelPayment')}
                         </Button>
                       )}
                     </TableCell>

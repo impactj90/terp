@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Search, Star } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { useBillingPriceLists } from '@/hooks'
 import { PriceListFormSheet } from './price-list-form-sheet'
 
@@ -24,6 +25,7 @@ function formatDate(date: string | Date | null): string {
 
 export function PriceListList() {
   const router = useRouter()
+  const t = useTranslations('billingPriceLists')
   const [search, setSearch] = React.useState('')
   const [page, setPage] = React.useState(1)
   const [sheetOpen, setSheetOpen] = React.useState(false)
@@ -38,10 +40,10 @@ export function PriceListList() {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Preislisten</h2>
+        <h2 className="text-2xl font-bold">{t('title')}</h2>
         <Button onClick={() => setSheetOpen(true)}>
           <Plus className="h-4 w-4 mr-1" />
-          Neue Preisliste
+          {t('newPriceList')}
         </Button>
       </div>
 
@@ -50,7 +52,7 @@ export function PriceListList() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Name, Beschreibung suchen..."
+            placeholder={t('searchPlaceholder')}
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1) }}
             className="pl-8"
@@ -62,26 +64,26 @@ export function PriceListList() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Beschreibung</TableHead>
-            <TableHead>Standard</TableHead>
-            <TableHead>Gültig von</TableHead>
-            <TableHead>Gültig bis</TableHead>
-            <TableHead>Aktiv</TableHead>
-            <TableHead>Einträge</TableHead>
+            <TableHead>{t('columnName')}</TableHead>
+            <TableHead>{t('columnDescription')}</TableHead>
+            <TableHead>{t('columnDefault')}</TableHead>
+            <TableHead>{t('columnValidFrom')}</TableHead>
+            <TableHead>{t('columnValidTo')}</TableHead>
+            <TableHead>{t('columnActive')}</TableHead>
+            <TableHead>{t('columnEntries')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {isLoading ? (
             <TableRow>
               <TableCell colSpan={7} className="text-center text-muted-foreground">
-                Laden...
+                {t('loading')}
               </TableCell>
             </TableRow>
           ) : !data?.items?.length ? (
             <TableRow>
               <TableCell colSpan={7} className="text-center text-muted-foreground">
-                Keine Preislisten gefunden
+                {t('noPriceListsFound')}
               </TableCell>
             </TableRow>
           ) : (
@@ -106,7 +108,7 @@ export function PriceListList() {
                   <TableCell>{formatDate(pl.validTo)}</TableCell>
                   <TableCell>
                     <Badge variant={pl.isActive ? 'default' : 'secondary'}>
-                      {pl.isActive ? 'Aktiv' : 'Inaktiv'}
+                      {pl.isActive ? t('active') : t('inactive')}
                     </Badge>
                   </TableCell>
                   <TableCell>{typed._count?.entries ?? 0}</TableCell>
@@ -121,7 +123,7 @@ export function PriceListList() {
       {data && data.total > 25 && (
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">
-            {data.total} Preislisten gesamt
+            {t('totalPriceLists', { count: data.total })}
           </span>
           <div className="flex gap-2">
             <Button
@@ -130,7 +132,7 @@ export function PriceListList() {
               disabled={page <= 1}
               onClick={() => setPage(page - 1)}
             >
-              Zurück
+              {t('previous')}
             </Button>
             <Button
               variant="outline"
@@ -138,7 +140,7 @@ export function PriceListList() {
               disabled={page * 25 >= data.total}
               onClick={() => setPage(page + 1)}
             >
-              Weiter
+              {t('next')}
             </Button>
           </div>
         </div>

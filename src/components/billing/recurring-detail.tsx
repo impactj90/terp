@@ -25,12 +25,13 @@ import {
 import { RecurringGenerateDialog } from './recurring-generate-dialog'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { toast } from 'sonner'
+import { useTranslations } from 'next-intl'
 
-const INTERVAL_LABELS: Record<string, string> = {
-  MONTHLY: 'Monatlich',
-  QUARTERLY: 'Quartal',
-  SEMI_ANNUALLY: 'Halbjaehrlich',
-  ANNUALLY: 'Jaehrlich',
+const INTERVAL_KEYS: Record<string, string> = {
+  MONTHLY: 'intervalMonthly',
+  QUARTERLY: 'intervalQuarterly',
+  SEMI_ANNUALLY: 'intervalSemiAnnually',
+  ANNUALLY: 'intervalAnnually',
 }
 
 function formatDate(date: string | Date | null | undefined): string {
@@ -65,6 +66,8 @@ interface RecurringDetailProps {
 }
 
 export function RecurringDetail({ id }: RecurringDetailProps) {
+  const t = useTranslations('billingRecurring')
+  const tDoc = useTranslations('billingDocuments')
   const router = useRouter()
   const { data: rec, isLoading, refetch } = useBillingRecurringInvoice(id)
   const { data: previewData } = useBillingRecurringInvoicePreview(id, !!rec)
@@ -76,46 +79,47 @@ export function RecurringDetail({ id }: RecurringDetailProps) {
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false)
 
   if (isLoading) {
-    return <div className="flex items-center justify-center p-8 text-muted-foreground">Laden...</div>
+    return <div className="flex items-center justify-center p-8 text-muted-foreground">{t('loading')}</div>
   }
 
   if (!rec) {
-    return <div className="flex items-center justify-center p-8 text-muted-foreground">Vorlage nicht gefunden</div>
+    return <div className="flex items-center justify-center p-8 text-muted-foreground">{t('templateNotFound')}</div>
   }
 
   const handleActivate = async () => {
     try {
       await activateMutation.mutateAsync({ id })
-      toast.success('Vorlage aktiviert')
+      toast.success(t('templateActivated'))
       refetch()
     } catch {
-      toast.error('Fehler beim Aktivieren')
+      toast.error(t('activateError'))
     }
   }
 
   const handleDeactivate = async () => {
     try {
       await deactivateMutation.mutateAsync({ id })
-      toast.success('Vorlage deaktiviert')
+      toast.success(t('templateDeactivated'))
       refetch()
     } catch {
-      toast.error('Fehler beim Deaktivieren')
+      toast.error(t('deactivateError'))
     }
   }
 
   const handleDelete = async () => {
     try {
       await deleteMutation.mutateAsync({ id })
-      toast.success('Vorlage geloescht')
+      toast.success(t('templateDeleted'))
       setShowDeleteDialog(false)
       router.push('/orders/recurring')
     } catch {
-      toast.error('Fehler beim Loeschen')
+      toast.error(t('deleteError'))
     }
   }
 
-  const positions = Array.isArray(rec.positionTemplate)
-    ? (rec.positionTemplate as Array<{
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const positions = Array.isArray((rec as any).positionTemplate)
+    ? ((rec as any).positionTemplate as Array<{
         type?: string
         description?: string
         quantity?: number
@@ -138,10 +142,10 @@ export function RecurringDetail({ id }: RecurringDetailProps) {
             <h2 className="text-2xl font-bold">{rec.name}</h2>
             <div className="flex items-center gap-2 mt-1">
               <Badge variant={rec.isActive ? 'default' : 'secondary'}>
-                {rec.isActive ? 'Aktiv' : 'Inaktiv'}
+                {rec.isActive ? t('active') : t('inactive')}
               </Badge>
               <span className="text-sm text-muted-foreground">
-                {INTERVAL_LABELS[rec.interval] ?? rec.interval}
+                {INTERVAL_KEYS[rec.interval] ? t(INTERVAL_KEYS[rec.interval] as any) : rec.interval}
               </span>
             </div>
           </div>
@@ -150,27 +154,27 @@ export function RecurringDetail({ id }: RecurringDetailProps) {
           {rec.isActive && (
             <Button onClick={() => setShowGenerateDialog(true)}>
               <Play className="h-4 w-4 mr-1" />
-              Rechnung generieren
+              {t('generateInvoice')}
             </Button>
           )}
           <Button variant="outline" onClick={() => router.push(`/orders/recurring/new?edit=${id}`)}>
             <Pencil className="h-4 w-4 mr-1" />
-            Bearbeiten
+            {t('edit')}
           </Button>
           {rec.isActive ? (
             <Button variant="outline" onClick={handleDeactivate}>
               <PowerOff className="h-4 w-4 mr-1" />
-              Deaktivieren
+              {t('deactivate')}
             </Button>
           ) : (
             <Button variant="outline" onClick={handleActivate}>
               <Power className="h-4 w-4 mr-1" />
-              Aktivieren
+              {t('activate')}
             </Button>
           )}
           <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
             <Trash2 className="h-4 w-4 mr-1" />
-            Loeschen
+            {t('delete')}
           </Button>
         </div>
       </div>
@@ -178,23 +182,23 @@ export function RecurringDetail({ id }: RecurringDetailProps) {
       {/* Info Card */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Details</CardTitle>
+          <CardTitle className="text-lg">{t('details')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-x-8">
             <div>
-              <DetailRow label="Kunde" value={(rec.address as { company?: string })?.company ?? '-'} />
-              <DetailRow label="Kontakt" value={rec.contact ? `${(rec.contact as { firstName?: string }).firstName ?? ''} ${(rec.contact as { lastName?: string }).lastName ?? ''}`.trim() : '-'} />
-              <DetailRow label="Intervall" value={INTERVAL_LABELS[rec.interval] ?? rec.interval} />
-              <DetailRow label="Startdatum" value={formatDate(rec.startDate)} />
-              <DetailRow label="Enddatum" value={formatDate(rec.endDate)} />
+              <DetailRow label={t('customer')} value={(rec.address as { company?: string })?.company ?? '-'} />
+              <DetailRow label={t('contact')} value={rec.contact ? `${(rec.contact as { firstName?: string }).firstName ?? ''} ${(rec.contact as { lastName?: string }).lastName ?? ''}`.trim() : '-'} />
+              <DetailRow label={t('interval')} value={INTERVAL_KEYS[rec.interval] ? t(INTERVAL_KEYS[rec.interval] as any) : rec.interval} />
+              <DetailRow label={t('startDate')} value={formatDate(rec.startDate)} />
+              <DetailRow label={t('endDate')} value={formatDate(rec.endDate)} />
             </div>
             <div>
-              <DetailRow label="Naechste Faelligkeit" value={formatDate(rec.nextDueDate)} />
-              <DetailRow label="Letzte Generierung" value={formatDate(rec.lastGeneratedAt)} />
-              <DetailRow label="Auto-Generierung" value={rec.autoGenerate ? 'Ja' : 'Nein'} />
-              <DetailRow label="Zahlungsziel" value={rec.paymentTermDays ? `${rec.paymentTermDays} Tage` : '-'} />
-              <DetailRow label="Skonto" value={rec.discountPercent ? `${rec.discountPercent}% / ${rec.discountDays ?? '-'} Tage` : '-'} />
+              <DetailRow label={t('nextDue')} value={formatDate(rec.nextDueDate)} />
+              <DetailRow label={t('lastGenerated')} value={formatDate(rec.lastGeneratedAt)} />
+              <DetailRow label={t('autoGenerate')} value={rec.autoGenerate ? t('yes') : t('no')} />
+              <DetailRow label={t('paymentTerm')} value={rec.paymentTermDays ? `${rec.paymentTermDays} ${t('days')}` : '-'} />
+              <DetailRow label={t('discount')} value={rec.discountPercent ? `${rec.discountPercent}% / ${rec.discountDays ?? '-'} ${t('days')}` : '-'} />
             </div>
           </div>
         </CardContent>
@@ -203,8 +207,8 @@ export function RecurringDetail({ id }: RecurringDetailProps) {
       {/* Tabs */}
       <Tabs defaultValue="positions">
         <TabsList>
-          <TabsTrigger value="positions">Positionen</TabsTrigger>
-          <TabsTrigger value="preview">Vorschau</TabsTrigger>
+          <TabsTrigger value="positions">{t('positions')}</TabsTrigger>
+          <TabsTrigger value="preview">{t('preview')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="positions" className="mt-4">
@@ -213,21 +217,21 @@ export function RecurringDetail({ id }: RecurringDetailProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>#</TableHead>
-                    <TableHead>Typ</TableHead>
-                    <TableHead>Beschreibung</TableHead>
-                    <TableHead className="text-right">Menge</TableHead>
-                    <TableHead>Einheit</TableHead>
-                    <TableHead className="text-right">Einzelpreis</TableHead>
-                    <TableHead className="text-right">MwSt %</TableHead>
-                    <TableHead className="text-right">Gesamt</TableHead>
+                    <TableHead>{t('columnHash')}</TableHead>
+                    <TableHead>{t('columnType')}</TableHead>
+                    <TableHead>{t('columnDescription')}</TableHead>
+                    <TableHead className="text-right">{t('columnQuantity')}</TableHead>
+                    <TableHead>{t('columnUnit')}</TableHead>
+                    <TableHead className="text-right">{t('columnUnitPrice')}</TableHead>
+                    <TableHead className="text-right">{t('columnVatPercent')}</TableHead>
+                    <TableHead className="text-right">{t('columnTotal')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {positions.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center text-muted-foreground">
-                        Keine Positionen
+                        {t('noPositions')}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -239,7 +243,7 @@ export function RecurringDetail({ id }: RecurringDetailProps) {
                       return (
                         <TableRow key={i}>
                           <TableCell>{i + 1}</TableCell>
-                          <TableCell>{pos.type === 'ARTICLE' ? 'Artikel' : pos.type === 'TEXT' ? 'Text' : 'Freitext'}</TableCell>
+                          <TableCell>{pos.type === 'ARTICLE' ? tDoc('posTypeArticle') : pos.type === 'TEXT' ? tDoc('posTypeText') : tDoc('posTypeFreeText')}</TableCell>
                           <TableCell>{pos.description ?? '-'}</TableCell>
                           <TableCell className="text-right">{pos.quantity ?? '-'}</TableCell>
                           <TableCell>{pos.unit ?? '-'}</TableCell>
@@ -259,22 +263,22 @@ export function RecurringDetail({ id }: RecurringDetailProps) {
         <TabsContent value="preview" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Naechste Rechnung - Vorschau</CardTitle>
+              <CardTitle className="text-lg">{t('nextInvoicePreview')}</CardTitle>
             </CardHeader>
             <CardContent>
               {previewData ? (
                 <div className="space-y-4">
-                  <DetailRow label="Rechnungsdatum" value={formatDate(previewData.nextInvoiceDate)} />
+                  <DetailRow label={t('invoiceDate')} value={formatDate(previewData.nextInvoiceDate)} />
                   <div className="border-t pt-4 space-y-1">
-                    <DetailRow label="Netto" value={formatCurrency(previewData.subtotalNet)} />
-                    <DetailRow label="MwSt" value={formatCurrency(previewData.totalVat)} />
+                    <DetailRow label={t('net')} value={formatCurrency(previewData.subtotalNet)} />
+                    <DetailRow label={t('vat')} value={formatCurrency(previewData.totalVat)} />
                     <div className="border-t pt-1">
-                      <DetailRow label="Brutto" value={<span className="font-bold">{formatCurrency(previewData.totalGross)}</span>} />
+                      <DetailRow label={t('gross')} value={<span className="font-bold">{formatCurrency(previewData.totalGross)}</span>} />
                     </div>
                   </div>
                 </div>
               ) : (
-                <p className="text-muted-foreground">Vorschau wird geladen...</p>
+                <p className="text-muted-foreground">{t('previewLoading')}</p>
               )}
             </CardContent>
           </Card>
@@ -293,10 +297,10 @@ export function RecurringDetail({ id }: RecurringDetailProps) {
       <ConfirmDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
-        title="Vorlage loeschen"
-        description={`Moechten Sie die Vorlage "${rec.name}" wirklich loeschen? Dieser Vorgang kann nicht rueckgaengig gemacht werden.`}
-        confirmLabel="Loeschen"
-        cancelLabel="Abbrechen"
+        title={t('deleteTemplate')}
+        description={t('deleteTemplateDescription', { name: rec.name })}
+        confirmLabel={t('delete')}
+        cancelLabel={t('deleteCancel')}
         variant="destructive"
         isLoading={deleteMutation.isPending}
         onConfirm={handleDelete}

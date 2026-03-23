@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Plus, Search } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { useBillingServiceCases } from '@/hooks'
 import { ServiceCaseStatusBadge } from './service-case-status-badge'
 import { ServiceCaseFormSheet } from './service-case-form-sheet'
@@ -34,6 +35,7 @@ interface ServiceCaseListProps {
 
 export function ServiceCaseList({ addressId }: ServiceCaseListProps) {
   const router = useRouter()
+  const t = useTranslations('billingServiceCases')
   const [search, setSearch] = React.useState('')
   const [statusFilter, setStatusFilter] = React.useState<string>('all')
   const [page, setPage] = React.useState(1)
@@ -51,10 +53,10 @@ export function ServiceCaseList({ addressId }: ServiceCaseListProps) {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Kundendienst</h2>
+        <h2 className="text-2xl font-bold">{t('title')}</h2>
         <Button onClick={() => setSheetOpen(true)}>
           <Plus className="h-4 w-4 mr-1" />
-          Neuer Serviceauftrag
+          {t('newServiceCase')}
         </Button>
       </div>
 
@@ -63,7 +65,7 @@ export function ServiceCaseList({ addressId }: ServiceCaseListProps) {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Nummer, Titel suchen..."
+            placeholder={t('searchPlaceholder')}
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1) }}
             className="pl-8"
@@ -71,14 +73,14 @@ export function ServiceCaseList({ addressId }: ServiceCaseListProps) {
         </div>
         <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1) }}>
           <SelectTrigger className="w-48">
-            <SelectValue placeholder="Alle Status" />
+            <SelectValue placeholder={t('allStatuses')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Alle Status</SelectItem>
-            <SelectItem value="OPEN">Offen</SelectItem>
-            <SelectItem value="IN_PROGRESS">In Bearbeitung</SelectItem>
-            <SelectItem value="CLOSED">Abgeschlossen</SelectItem>
-            <SelectItem value="INVOICED">Abgerechnet</SelectItem>
+            <SelectItem value="all">{t('allStatuses')}</SelectItem>
+            <SelectItem value="OPEN">{t('statusOpen')}</SelectItem>
+            <SelectItem value="IN_PROGRESS">{t('statusInProgress')}</SelectItem>
+            <SelectItem value="CLOSED">{t('statusClosed')}</SelectItem>
+            <SelectItem value="INVOICED">{t('statusInvoiced')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -87,25 +89,25 @@ export function ServiceCaseList({ addressId }: ServiceCaseListProps) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Nummer</TableHead>
-            <TableHead>Titel</TableHead>
-            <TableHead>Kunde</TableHead>
-            <TableHead>Zuständig</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Gemeldet am</TableHead>
+            <TableHead>{t('columnNumber')}</TableHead>
+            <TableHead>{t('columnTitle')}</TableHead>
+            <TableHead>{t('columnCustomer')}</TableHead>
+            <TableHead>{t('columnAssignedTo')}</TableHead>
+            <TableHead>{t('columnStatus')}</TableHead>
+            <TableHead>{t('columnReportedAt')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {isLoading ? (
             <TableRow>
               <TableCell colSpan={6} className="text-center text-muted-foreground">
-                Laden...
+                {t('loading')}
               </TableCell>
             </TableRow>
           ) : !data?.items?.length ? (
             <TableRow>
               <TableCell colSpan={6} className="text-center text-muted-foreground">
-                Keine Serviceaufträge gefunden
+                {t('noServiceCasesFound')}
               </TableCell>
             </TableRow>
           ) : (
@@ -139,7 +141,7 @@ export function ServiceCaseList({ addressId }: ServiceCaseListProps) {
       {data && data.total > 25 && (
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">
-            {data.total} Serviceaufträge gesamt
+            {t('totalServiceCases', { count: data.total })}
           </span>
           <div className="flex gap-2">
             <Button
@@ -148,7 +150,7 @@ export function ServiceCaseList({ addressId }: ServiceCaseListProps) {
               disabled={page <= 1}
               onClick={() => setPage(page - 1)}
             >
-              Zurück
+              {t('previous')}
             </Button>
             <Button
               variant="outline"
@@ -156,7 +158,7 @@ export function ServiceCaseList({ addressId }: ServiceCaseListProps) {
               disabled={page * 25 >= data.total}
               onClick={() => setPage(page + 1)}
             >
-              Weiter
+              {t('next')}
             </Button>
           </div>
         </div>

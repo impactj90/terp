@@ -5,6 +5,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useBillingRecurringInvoicePreview, useGenerateRecurringInvoice } from '@/hooks'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 
 function formatCurrency(value: number | null | undefined): string {
   if (value == null) return '-'
@@ -34,6 +35,7 @@ export function RecurringGenerateDialog({
   onOpenChange,
   onSuccess,
 }: RecurringGenerateDialogProps) {
+  const t = useTranslations('billingRecurring')
   const router = useRouter()
   const { data: previewData } = useBillingRecurringInvoicePreview(templateId, open)
   const generateMutation = useGenerateRecurringInvoice()
@@ -41,7 +43,7 @@ export function RecurringGenerateDialog({
   const handleGenerate = async () => {
     try {
       const result = await generateMutation.mutateAsync({ id: templateId })
-      toast.success(`Rechnung ${result?.number ?? ''} wurde erstellt`)
+      toast.success(t('invoiceGenerated', { number: result?.number ?? '' }))
       onOpenChange(false)
       if (onSuccess) onSuccess()
       // Optionally navigate to the generated invoice
@@ -49,22 +51,22 @@ export function RecurringGenerateDialog({
         router.push(`/orders/documents/${result.id}`)
       }
     } catch {
-      toast.error('Fehler beim Generieren der Rechnung')
+      toast.error(t('generateError'))
     }
   }
 
   const description = previewData
-    ? `Rechnung fuer ${templateName} generieren?\n\nNaechstes Rechnungsdatum: ${formatDate(previewData.nextInvoiceDate)}\nNetto: ${formatCurrency(previewData.subtotalNet)}\nMwSt: ${formatCurrency(previewData.totalVat)}\nBrutto: ${formatCurrency(previewData.totalGross)}`
-    : `Rechnung fuer "${templateName}" generieren?`
+    ? t('generateDescription', { name: templateName, date: formatDate(previewData.nextInvoiceDate), net: formatCurrency(previewData.subtotalNet), vat: formatCurrency(previewData.totalVat), gross: formatCurrency(previewData.totalGross) })
+    : t('generateDescriptionSimple', { name: templateName })
 
   return (
     <ConfirmDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Rechnung generieren"
+      title={t('generateTitle')}
       description={description}
-      confirmLabel="Generieren"
-      cancelLabel="Abbrechen"
+      confirmLabel={t('generate')}
+      cancelLabel={t('generateCancel')}
       isLoading={generateMutation.isPending}
       onConfirm={handleGenerate}
     />

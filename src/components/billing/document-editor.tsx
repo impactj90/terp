@@ -39,6 +39,7 @@ import { DocumentForwardDialog } from './document-forward-dialog'
 import { DocumentFinalizeDialog } from './document-print-dialog'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { toast } from 'sonner'
+import { useTranslations } from 'next-intl'
 
 // --- Helpers ---
 
@@ -57,14 +58,14 @@ function formatCurrency(value: number | null | undefined): string {
 
 // --- Type labels ---
 
-const DOCUMENT_TYPE_LABELS: Record<string, string> = {
-  OFFER: 'Angebot',
-  ORDER_CONFIRMATION: 'Auftragsbestätigung',
-  DELIVERY_NOTE: 'Lieferschein',
-  SERVICE_NOTE: 'Leistungsschein',
-  RETURN_DELIVERY: 'Rücklieferschein',
-  INVOICE: 'Rechnung',
-  CREDIT_NOTE: 'Gutschrift',
+const DOC_TYPE_KEYS: Record<string, string> = {
+  OFFER: 'typeOffer',
+  ORDER_CONFIRMATION: 'typeOrderConfirmation',
+  DELIVERY_NOTE: 'typeDeliveryNote',
+  SERVICE_NOTE: 'typeServiceNote',
+  RETURN_DELIVERY: 'typeReturnDelivery',
+  INVOICE: 'typeInvoice',
+  CREDIT_NOTE: 'typeCreditNote',
 }
 
 // --- Doc type helpers to avoid `as unknown as` casts ---
@@ -149,6 +150,8 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
   const downloadPdfMutation = useDownloadBillingDocumentPdf()
   const downloadXmlMutation = useDownloadBillingDocumentXml()
 
+  const t = useTranslations('billingDocuments')
+
   // Load inquiries for Vorgang select (only for DRAFT documents)
   const { data: inquiryData } = useCrmInquiries({
     addressId: doc?.addressId ?? undefined,
@@ -172,25 +175,25 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
     if (!tenantConfig?.eInvoiceEnabled || !doc) return []
     if (doc.type !== 'INVOICE' && doc.type !== 'CREDIT_NOTE') return []
     const missing: string[] = []
-    if (!tenantConfig.companyName) missing.push('Firmenname (Einstellungen)')
-    if (!tenantConfig.companyStreet) missing.push('Firmen-Straße (Einstellungen)')
-    if (!tenantConfig.companyZip) missing.push('Firmen-PLZ (Einstellungen)')
-    if (!tenantConfig.companyCity) missing.push('Firmen-Ort (Einstellungen)')
-    if (!tenantConfig.taxId && !tenantConfig.taxNumber) missing.push('USt-IdNr. oder Steuernummer (Einstellungen)')
+    if (!tenantConfig.companyName) missing.push(t('companyNameSetting'))
+    if (!tenantConfig.companyStreet) missing.push(t('companyStreetSetting'))
+    if (!tenantConfig.companyZip) missing.push(t('companyZipSetting'))
+    if (!tenantConfig.companyCity) missing.push(t('companyCitySetting'))
+    if (!tenantConfig.taxId && !tenantConfig.taxNumber) missing.push(t('taxIdOrNumberSetting'))
     const addr = doc.address as Record<string, unknown> | undefined
-    if (!addr?.company) missing.push('Kundenname (Adresse)')
-    if (!addr?.street) missing.push('Straße (Adresse)')
-    if (!addr?.zip) missing.push('PLZ (Adresse)')
-    if (!addr?.city) missing.push('Ort (Adresse)')
-    if (!addr?.country) missing.push('Land (Adresse)')
+    if (!addr?.company) missing.push(t('customerNameAddress'))
+    if (!addr?.street) missing.push(t('streetAddress'))
+    if (!addr?.zip) missing.push(t('zipAddress'))
+    if (!addr?.city) missing.push(t('cityAddress'))
+    if (!addr?.country) missing.push(t('countryAddress'))
     return missing
   }, [tenantConfig, doc])
 
   if (isLoading) {
-    return <div className="flex items-center justify-center p-8 text-muted-foreground">Laden...</div>
+    return <div className="flex items-center justify-center p-8 text-muted-foreground">{t('loading')}</div>
   }
   if (!doc) {
-    return <div className="flex items-center justify-center p-8 text-muted-foreground">Beleg nicht gefunden</div>
+    return <div className="flex items-center justify-center p-8 text-muted-foreground">{t('notFound')}</div>
   }
 
   const isDraft = doc.status === 'DRAFT'
@@ -214,22 +217,22 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
   const handleCancel = async () => {
     try {
       await cancelMutation.mutateAsync({ id: doc.id })
-      toast.success('Beleg storniert')
+      toast.success(t('documentCancelled'))
       setShowCancelDialog(false)
     } catch {
-      toast.error('Fehler beim Stornieren')
+      toast.error(t('cancelError'))
     }
   }
 
   const handleDuplicate = async () => {
     try {
       const result = await duplicateMutation.mutateAsync({ id: doc.id })
-      toast.success('Beleg dupliziert')
+      toast.success(t('documentDuplicated'))
       if (result?.id) {
         router.push(`/orders/documents/${result.id}`)
       }
     } catch {
-      toast.error('Fehler beim Duplizieren')
+      toast.error(t('duplicateError'))
     }
   }
 
@@ -243,7 +246,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
 
     const hasContent = (doc as Record<string, unknown>).headerText || (doc as Record<string, unknown>).footerText
     if (hasContent) {
-      if (!window.confirm('Kopf- und Schlusstext werden überschrieben. Fortfahren?')) return
+      if (!window.confirm(t('templateOverwriteConfirm'))) return
     }
 
     updateMutation.mutate({
@@ -251,7 +254,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
       headerText: tpl.headerText ?? null,
       footerText: tpl.footerText ?? null,
     })
-    toast.success(`Vorlage "${tpl.name}" angewendet`)
+    toast.success(t('templateApplied', { name: tpl.name }))
   }
 
   return (
@@ -278,29 +281,29 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
           {isDraft && (
             <Button onClick={() => setShowFinalizeDialog(true)}>
               <CheckCircle className="h-4 w-4 mr-1" />
-              Abschließen
+              {t('finalize')}
             </Button>
           )}
           {isPrinted && (
             <Button onClick={() => setShowForwardDialog(true)}>
               <Forward className="h-4 w-4 mr-1" />
-              Fortführen
+              {t('forward')}
             </Button>
           )}
           {doc.status !== 'CANCELLED' && doc.status !== 'FORWARDED' && (
             <Button variant="outline" onClick={() => setShowCancelDialog(true)}>
               <XCircle className="h-4 w-4 mr-1" />
-              Stornieren
+              {t('cancelDocument')}
             </Button>
           )}
           <Button variant="outline" onClick={handleDuplicate} disabled={duplicateMutation.isPending}>
             <Copy className="h-4 w-4 mr-1" />
-            Duplizieren
+            {t('duplicate')}
           </Button>
           {isDraft && templates.length > 0 && (
             <Select onValueChange={handleApplyTemplate}>
               <SelectTrigger className="w-48">
-                <SelectValue placeholder="Vorlage anwenden..." />
+                <SelectValue placeholder={t('applyTemplate')} />
               </SelectTrigger>
               <SelectContent>
                 {templates.map((tpl) => (
@@ -320,12 +323,12 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                     window.open(result.signedUrl, '_blank')
                   }
                 } catch {
-                  toast.error('PDF-Download fehlgeschlagen')
+                  toast.error(t('pdfDownloadFailed'))
                 }
               }}
             >
               <FileDown className="h-4 w-4 mr-1" />
-              {downloadPdfMutation.isPending ? 'Lade PDF...' : 'PDF'}
+              {downloadPdfMutation.isPending ? t('loadingPdf') : t('pdf')}
             </Button>
           )}
           {isImmutable && !!(doc as Record<string, unknown>).eInvoiceXmlUrl && (doc.type === 'INVOICE' || doc.type === 'CREDIT_NOTE') && (
@@ -339,12 +342,12 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                     window.open(result.signedUrl, '_blank')
                   }
                 } catch {
-                  toast.error('XML-Download fehlgeschlagen')
+                  toast.error(t('xmlDownloadFailed'))
                 }
               }}
             >
               <FileCode className="h-4 w-4 mr-1" />
-              {downloadXmlMutation.isPending ? 'Lade XML...' : 'E-Rechnung XML'}
+              {downloadXmlMutation.isPending ? t('loadingXml') : t('eInvoiceXml')}
             </Button>
           )}
         </div>
@@ -355,7 +358,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
         <Alert>
           <Lock className="h-4 w-4" />
           <AlertDescription>
-            Dieser Beleg ist festgeschrieben und kann nicht mehr bearbeitet werden.
+            {t('immutableNotice')}
           </AlertDescription>
         </Alert>
       )}
@@ -381,7 +384,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
               <div className="text-[7pt] text-gray-400 mb-1 border-b border-gray-200 pb-1">
                 {tenantConfig?.companyName
                   ? `${tenantConfig.companyName} · ${tenantConfig.companyAddress?.replace(/\n/g, ' · ') ?? ''}`
-                  : <span className="italic">Briefpapier nicht konfiguriert</span>
+                  : <span className="italic">{t('letterheadNotConfigured')}</span>
                 }
               </div>
 
@@ -409,13 +412,13 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
               {/* Beleg-Info Block */}
               <div className="mb-6">
                 <h1 className="text-lg font-bold mb-2">
-                  {DOCUMENT_TYPE_LABELS[doc.type] ?? doc.type}
+                  {DOC_TYPE_KEYS[doc.type] ? t(DOC_TYPE_KEYS[doc.type] as any) : doc.type}
                 </h1>
                 <div className="text-sm space-y-0.5">
-                  <div>Nr.: {doc.number}</div>
-                  <div>Datum: {formatDate(doc.documentDate)}</div>
-                  {doc.deliveryDate && <div>Liefertermin: {formatDate(doc.deliveryDate)}</div>}
-                  {doc.orderDate && <div>Auftragsdatum: {formatDate(doc.orderDate)}</div>}
+                  <div>{t('numberLabel')}{doc.number}</div>
+                  <div>{t('dateLabel')}{formatDate(doc.documentDate)}</div>
+                  {doc.deliveryDate && <div>{t('deliveryDateLabel')}{formatDate(doc.deliveryDate)}</div>}
+                  {doc.orderDate && <div>{t('orderDateLabel')}{formatDate(doc.orderDate)}</div>}
                 </div>
               </div>
 
@@ -430,7 +433,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                     id: doc.id,
                     headerText: html || null,
                   })}
-                  placeholder="Einleitungstext eingeben..."
+                  placeholder={t('introTextPlaceholder')}
                   editable={isDraft}
                 />
               </div>
@@ -449,15 +452,15 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
               <div className="flex justify-end mb-6" data-testid="totals-area">
                 <div className="w-64 text-sm space-y-1">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Netto</span>
+                    <span className="text-muted-foreground">{t('net')}</span>
                     <span>{formatCurrency(doc.subtotalNet)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">MwSt</span>
+                    <span className="text-muted-foreground">{t('vat')}</span>
                     <span>{formatCurrency(doc.totalVat)}</span>
                   </div>
                   <div className="flex justify-between border-t pt-1 font-semibold">
-                    <span>Brutto</span>
+                    <span>{t('gross')}</span>
                     <span>{formatCurrency(doc.totalGross)}</span>
                   </div>
                 </div>
@@ -474,7 +477,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                     id: doc.id,
                     footerText: html || null,
                   })}
-                  placeholder="Schlusstext / Zahlungsbedingungen..."
+                  placeholder={t('footerTextPlaceholder')}
                   editable={isDraft}
                 />
               </div>
@@ -496,23 +499,23 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                       {tenantConfig.companyAddress?.split('\n').map((line, i) => (
                         <div key={i}>{line}</div>
                       ))}
-                      {tenantConfig.phone && <div>Tel: {tenantConfig.phone}</div>}
+                      {tenantConfig.phone && <div>{t('phoneLabel')}{tenantConfig.phone}</div>}
                       {tenantConfig.email && <div>{tenantConfig.email}</div>}
                     </div>
                     <div>
                       {tenantConfig.bankName && <div>{tenantConfig.bankName}</div>}
-                      {tenantConfig.iban && <div>IBAN: {tenantConfig.iban}</div>}
-                      {tenantConfig.bic && <div>BIC: {tenantConfig.bic}</div>}
+                      {tenantConfig.iban && <div>{t('ibanLabel')}{tenantConfig.iban}</div>}
+                      {tenantConfig.bic && <div>{t('bicLabel')}{tenantConfig.bic}</div>}
                     </div>
                     <div>
-                      {tenantConfig.taxId && <div>USt-IdNr.: {tenantConfig.taxId}</div>}
+                      {tenantConfig.taxId && <div>{t('vatIdLabel')}{tenantConfig.taxId}</div>}
                       {tenantConfig.commercialRegister && <div>{tenantConfig.commercialRegister}</div>}
-                      {tenantConfig.managingDirector && <div>GF: {tenantConfig.managingDirector}</div>}
+                      {tenantConfig.managingDirector && <div>{t('mdLabel')}{tenantConfig.managingDirector}</div>}
                     </div>
                   </div>
                 ) : (
                   <p className="text-[7pt] text-gray-300 italic">
-                    Briefpapier nicht konfiguriert
+                    {t('letterheadNotConfigured')}
                   </p>
                 )}
               </div>
@@ -537,12 +540,12 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                 {/* Belegkette */}
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Belegkette</CardTitle>
+                    <CardTitle className="text-sm">{t('documentChain')}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm">
                     {parentDocument && (
                       <div>
-                        <span className="text-muted-foreground text-xs">Erstellt aus:</span>
+                        <span className="text-muted-foreground text-xs">{t('createdFrom')}</span>
                         <div className="flex items-center gap-1 mt-0.5">
                           <Button
                             variant="link"
@@ -557,7 +560,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                     )}
                     {childDocuments.length > 0 && (
                       <div>
-                        <span className="text-muted-foreground text-xs">Folgebelege:</span>
+                        <span className="text-muted-foreground text-xs">{t('followUpDocuments')}</span>
                         <div className="space-y-1 mt-0.5">
                           {childDocuments.map((child) => (
                             <div key={child.id} className="flex items-center gap-1">
@@ -576,7 +579,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                       </div>
                     )}
                     {!parentDocument && childDocuments.length === 0 && (
-                      <p className="text-muted-foreground text-xs">Keine verknüpften Belege</p>
+                      <p className="text-muted-foreground text-xs">{t('noLinkedDocuments')}</p>
                     )}
                   </CardContent>
                 </Card>
@@ -584,20 +587,20 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                 {/* Metadaten */}
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Metadaten</CardTitle>
+                    <CardTitle className="text-sm">{t('metadata')}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-1 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground text-xs">Erstellt</span>
+                      <span className="text-muted-foreground text-xs">{t('created')}</span>
                       <span className="text-xs">{formatDate(doc.createdAt)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground text-xs">Gedruckt</span>
+                      <span className="text-muted-foreground text-xs">{t('printed')}</span>
                       <span className="text-xs">{formatDate((doc as Record<string, unknown>).printedAt as string | null)}</span>
                     </div>
                     {isDraft && activeInquiries.length > 0 ? (
                       <div className="space-y-0.5">
-                        <Label className="text-xs text-muted-foreground">Vorgang</Label>
+                        <Label className="text-xs text-muted-foreground">{t('inquiry')}</Label>
                         <Select
                           value={inquiry?.id ?? 'none'}
                           onValueChange={(v) => handleSidebarField('inquiryId', v === 'none' ? null : v)}
@@ -606,7 +609,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="none">Kein Vorgang</SelectItem>
+                            <SelectItem value="none">{t('noInquiry')}</SelectItem>
                             {activeInquiries.map((inq) => (
                               <SelectItem key={inq.id} value={inq.id}>
                                 {inq.number} — {inq.title}
@@ -617,13 +620,13 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                       </div>
                     ) : inquiry ? (
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground text-xs">Vorgang</span>
+                        <span className="text-muted-foreground text-xs">{t('inquiry')}</span>
                         <span className="text-xs">{inquiry.number} — {inquiry.title}</span>
                       </div>
                     ) : null}
                     {order && (
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground text-xs">Auftrag</span>
+                        <span className="text-muted-foreground text-xs">{t('order')}</span>
                         <span className="text-xs">{order.code}</span>
                       </div>
                     )}
@@ -633,41 +636,41 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                 {/* Konditionen */}
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Konditionen</CardTitle>
+                    <CardTitle className="text-sm">{t('terms')}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2 text-sm">
-                    <EditableField label="Zahlungsziel (Tage)" value={doc.paymentTermDays} field="paymentTermDays" type="number" editable={isDraft} onSave={handleSidebarField} />
-                    <EditableField label="Skonto (%)" value={doc.discountPercent} field="discountPercent" type="number" editable={isDraft} onSave={handleSidebarField} />
-                    <EditableField label="Skonto Tage" value={doc.discountDays} field="discountDays" type="number" editable={isDraft} onSave={handleSidebarField} />
-                    <EditableField label="Versandkosten (netto)" value={doc.shippingCostNet} field="shippingCostNet" type="number" editable={isDraft} onSave={handleSidebarField} />
-                    <EditableField label="Lieferart" value={doc.deliveryType} field="deliveryType" editable={isDraft} onSave={handleSidebarField} />
-                    <EditableField label="Lieferbedingungen" value={doc.deliveryTerms} field="deliveryTerms" editable={isDraft} onSave={handleSidebarField} />
+                    <EditableField label={t('paymentTermDays')} value={doc.paymentTermDays} field="paymentTermDays" type="number" editable={isDraft} onSave={handleSidebarField} />
+                    <EditableField label={t('discountPercent')} value={doc.discountPercent} field="discountPercent" type="number" editable={isDraft} onSave={handleSidebarField} />
+                    <EditableField label={t('discountDays')} value={doc.discountDays} field="discountDays" type="number" editable={isDraft} onSave={handleSidebarField} />
+                    <EditableField label={t('shippingCostNet')} value={doc.shippingCostNet} field="shippingCostNet" type="number" editable={isDraft} onSave={handleSidebarField} />
+                    <EditableField label={t('deliveryType')} value={doc.deliveryType} field="deliveryType" editable={isDraft} onSave={handleSidebarField} />
+                    <EditableField label={t('deliveryTerms')} value={doc.deliveryTerms} field="deliveryTerms" editable={isDraft} onSave={handleSidebarField} />
                   </CardContent>
                 </Card>
 
                 {/* Bemerkungen */}
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Bemerkungen</CardTitle>
+                    <CardTitle className="text-sm">{t('remarks')}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2 text-sm">
                     {isDraft ? (
                       <>
                         <div className="space-y-0.5">
-                          <Label className="text-xs text-muted-foreground">Bemerkungen</Label>
+                          <Label className="text-xs text-muted-foreground">{t('remarksLabel')}</Label>
                           <Textarea
                             className="text-xs min-h-[60px]"
                             defaultValue={doc.notes ?? ''}
-                            placeholder="Bemerkungen..."
+                            placeholder={t('remarksPlaceholder')}
                             onBlur={(e) => handleSidebarField('notes', e.target.value.trim() || null)}
                           />
                         </div>
                         <div className="space-y-0.5">
-                          <Label className="text-xs text-muted-foreground">Interne Notizen</Label>
+                          <Label className="text-xs text-muted-foreground">{t('internalNotesLabel')}</Label>
                           <Textarea
                             className="text-xs min-h-[60px]"
                             defaultValue={doc.internalNotes ?? ''}
-                            placeholder="Interne Notizen..."
+                            placeholder={t('internalNotesPlaceholder2')}
                             onBlur={(e) => handleSidebarField('internalNotes', e.target.value.trim() || null)}
                           />
                         </div>
@@ -676,18 +679,18 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                       <>
                         {doc.notes ? (
                           <div>
-                            <span className="text-muted-foreground text-xs">Bemerkungen:</span>
+                            <span className="text-muted-foreground text-xs">{t('remarksColon')}</span>
                             <p className="text-xs mt-0.5">{doc.notes}</p>
                           </div>
                         ) : null}
                         {doc.internalNotes ? (
                           <div>
-                            <span className="text-muted-foreground text-xs">Intern:</span>
+                            <span className="text-muted-foreground text-xs">{t('internalLabel')}</span>
                             <p className="text-xs mt-0.5">{doc.internalNotes}</p>
                           </div>
                         ) : null}
                         {!doc.notes && !doc.internalNotes && (
-                          <p className="text-muted-foreground text-xs">Keine Bemerkungen</p>
+                          <p className="text-muted-foreground text-xs">{t('noRemarks')}</p>
                         )}
                       </>
                     )}
@@ -719,10 +722,10 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
       <ConfirmDialog
         open={showCancelDialog}
         onOpenChange={setShowCancelDialog}
-        title="Beleg stornieren"
-        description={`Sind Sie sicher, dass Sie Beleg ${doc.number} stornieren möchten?`}
+        title={t('cancelDialogTitle')}
+        description={t('cancelDialogDescription', { number: doc.number })}
         onConfirm={handleCancel}
-        confirmLabel="Stornieren"
+        confirmLabel={t('cancelDocument')}
         variant="destructive"
       />
     </div>

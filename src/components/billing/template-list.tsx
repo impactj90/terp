@@ -13,18 +13,21 @@ import {
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { TemplateFormSheet } from './template-form-sheet'
 import { toast } from 'sonner'
+import { useTranslations } from 'next-intl'
 
-const DOCUMENT_TYPE_LABELS: Record<string, string> = {
-  OFFER: 'Angebot',
-  ORDER_CONFIRMATION: 'Auftragsbestätigung',
-  DELIVERY_NOTE: 'Lieferschein',
-  SERVICE_NOTE: 'Leistungsschein',
-  RETURN_DELIVERY: 'Rücklieferschein',
-  INVOICE: 'Rechnung',
-  CREDIT_NOTE: 'Gutschrift',
+const DOC_TYPE_KEYS: Record<string, string> = {
+  OFFER: 'typeOffer',
+  ORDER_CONFIRMATION: 'typeOrderConfirmation',
+  DELIVERY_NOTE: 'typeDeliveryNote',
+  SERVICE_NOTE: 'typeServiceNote',
+  RETURN_DELIVERY: 'typeReturnDelivery',
+  INVOICE: 'typeInvoice',
+  CREDIT_NOTE: 'typeCreditNote',
 }
 
 export function BillingTemplateList() {
+  const t = useTranslations('billingTemplates')
+  const tDoc = useTranslations('billingDocuments')
   const { data: templates = [], isLoading } = useBillingDocumentTemplates()
   const deleteMutation = useDeleteBillingDocumentTemplate()
   const setDefaultMutation = useSetDefaultBillingDocumentTemplate()
@@ -37,38 +40,38 @@ export function BillingTemplateList() {
     if (!deletingId) return
     try {
       await deleteMutation.mutateAsync({ id: deletingId })
-      toast.success('Vorlage gelöscht')
+      toast.success(t('templateDeleted'))
       setDeletingId(null)
     } catch {
-      toast.error('Fehler beim Löschen')
+      toast.error(t('deleteError'))
     }
   }
 
   const handleSetDefault = async (id: string) => {
     try {
       await setDefaultMutation.mutateAsync({ id })
-      toast.success('Standard-Vorlage gesetzt')
+      toast.success(t('defaultTemplateSet'))
     } catch {
-      toast.error('Fehler beim Setzen der Standard-Vorlage')
+      toast.error(t('setDefaultError'))
     }
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Dokumentvorlagen</h1>
+        <h1 className="text-2xl font-bold">{t('title')}</h1>
         <Button onClick={() => { setEditingId(null); setShowForm(true) }}>
           <Plus className="h-4 w-4 mr-1" />
-          Neue Vorlage
+          {t('newTemplate')}
         </Button>
       </div>
 
       {isLoading ? (
-        <div className="text-muted-foreground text-center py-8">Laden...</div>
+        <div className="text-muted-foreground text-center py-8">{t('loading')}</div>
       ) : templates.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
-            Keine Vorlagen vorhanden. Erstellen Sie eine neue Vorlage.
+            {t('noTemplates')}
           </CardContent>
         </Card>
       ) : (
@@ -83,12 +86,12 @@ export function BillingTemplateList() {
                       {tpl.isDefault && (
                         <Badge variant="outline" className="text-yellow-600 border-yellow-300">
                           <Star className="h-3 w-3 mr-0.5" />
-                          Standard
+                          {t('default')}
                         </Badge>
                       )}
                     </div>
                     <span className="text-sm text-muted-foreground">
-                      {tpl.documentType ? DOCUMENT_TYPE_LABELS[tpl.documentType] ?? tpl.documentType : 'Alle Typen'}
+                      {tpl.documentType ? (DOC_TYPE_KEYS[tpl.documentType] ? tDoc(DOC_TYPE_KEYS[tpl.documentType] as any) : tpl.documentType) : t('allTypes')}
                     </span>
                   </div>
                 </div>
@@ -99,7 +102,7 @@ export function BillingTemplateList() {
                       size="icon"
                       className="h-8 w-8"
                       onClick={() => handleSetDefault(tpl.id)}
-                      title="Als Standard setzen"
+                      title={t('setAsDefault')}
                     >
                       <Star className="h-4 w-4" />
                     </Button>
@@ -136,10 +139,10 @@ export function BillingTemplateList() {
       <ConfirmDialog
         open={!!deletingId}
         onOpenChange={(open) => { if (!open) setDeletingId(null) }}
-        title="Vorlage löschen"
-        description="Sind Sie sicher, dass Sie diese Vorlage löschen möchten?"
+        title={t('deleteTemplate')}
+        description={t('deleteDescription')}
         onConfirm={handleDelete}
-        confirmLabel="Löschen"
+        confirmLabel={t('deleteConfirm')}
         variant="destructive"
       />
     </div>

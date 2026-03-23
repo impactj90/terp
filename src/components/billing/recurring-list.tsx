@@ -24,12 +24,13 @@ import {
 import { Plus, Search, Play } from 'lucide-react'
 import { useBillingRecurringInvoices, useGenerateDueRecurringInvoices } from '@/hooks'
 import { toast } from 'sonner'
+import { useTranslations } from 'next-intl'
 
-const INTERVAL_LABELS: Record<string, string> = {
-  MONTHLY: 'Monatlich',
-  QUARTERLY: 'Quartal',
-  SEMI_ANNUALLY: 'Halbjaehrlich',
-  ANNUALLY: 'Jaehrlich',
+const INTERVAL_KEYS: Record<string, string> = {
+  MONTHLY: 'intervalMonthly',
+  QUARTERLY: 'intervalQuarterly',
+  SEMI_ANNUALLY: 'intervalSemiAnnually',
+  ANNUALLY: 'intervalAnnually',
 }
 
 function formatDate(date: string | Date | null): string {
@@ -38,6 +39,7 @@ function formatDate(date: string | Date | null): string {
 }
 
 export function RecurringList() {
+  const t = useTranslations('billingRecurring')
   const router = useRouter()
   const [search, setSearch] = React.useState('')
   const [activeFilter, setActiveFilter] = React.useState<string>('all')
@@ -56,10 +58,10 @@ export function RecurringList() {
     try {
       const result = await generateDueMutation.mutateAsync()
       if (result) {
-        toast.success(`${result.generated} Rechnung(en) generiert, ${result.failed} fehlgeschlagen`)
+        toast.success(t('generatedSuccess', { generated: result.generated, failed: result.failed }))
       }
     } catch {
-      toast.error('Fehler beim Generieren der faelligen Rechnungen')
+      toast.error(t('generateDueError'))
     }
   }
 
@@ -67,16 +69,16 @@ export function RecurringList() {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Wiederkehrende Rechnungen</h2>
+        <h2 className="text-2xl font-bold">{t('title')}</h2>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={handleGenerateAllDue} disabled={generateDueMutation.isPending}>
             <Play className="h-4 w-4 mr-1" />
-            Alle faelligen generieren
+            {t('generateAllDue')}
           </Button>
           <Button asChild>
             <Link href="/orders/recurring/new">
               <Plus className="h-4 w-4 mr-1" />
-              Neue Vorlage
+              {t('newTemplate')}
             </Link>
           </Button>
         </div>
@@ -87,7 +89,7 @@ export function RecurringList() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Name, Notizen suchen..."
+            placeholder={t('searchPlaceholder')}
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1) }}
             className="pl-8"
@@ -98,9 +100,9 @@ export function RecurringList() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Alle</SelectItem>
-            <SelectItem value="active">Aktiv</SelectItem>
-            <SelectItem value="inactive">Inaktiv</SelectItem>
+            <SelectItem value="all">{t('all')}</SelectItem>
+            <SelectItem value="active">{t('active')}</SelectItem>
+            <SelectItem value="inactive">{t('inactive')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -109,25 +111,25 @@ export function RecurringList() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Kunde</TableHead>
-            <TableHead>Intervall</TableHead>
-            <TableHead>Naechste Faelligkeit</TableHead>
-            <TableHead>Letzte Generierung</TableHead>
-            <TableHead>Aktiv</TableHead>
+            <TableHead>{t('columnName')}</TableHead>
+            <TableHead>{t('columnCustomer')}</TableHead>
+            <TableHead>{t('columnInterval')}</TableHead>
+            <TableHead>{t('columnNextDue')}</TableHead>
+            <TableHead>{t('columnLastGenerated')}</TableHead>
+            <TableHead>{t('columnActive')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {isLoading ? (
             <TableRow>
               <TableCell colSpan={6} className="text-center text-muted-foreground">
-                Laden...
+                {t('loading')}
               </TableCell>
             </TableRow>
           ) : !data?.items?.length ? (
             <TableRow>
               <TableCell colSpan={6} className="text-center text-muted-foreground">
-                Keine wiederkehrenden Rechnungen vorhanden
+                {t('noRecurringFound')}
               </TableCell>
             </TableRow>
           ) : (
@@ -142,12 +144,12 @@ export function RecurringList() {
                 <TableCell>
                   {item.address?.company ?? '-'}
                 </TableCell>
-                <TableCell>{INTERVAL_LABELS[item.interval] ?? item.interval}</TableCell>
+                <TableCell>{INTERVAL_KEYS[item.interval] ? t(INTERVAL_KEYS[item.interval] as any) : item.interval}</TableCell>
                 <TableCell>{formatDate(item.nextDueDate)}</TableCell>
                 <TableCell>{formatDate(item.lastGeneratedAt)}</TableCell>
                 <TableCell>
                   <Badge variant={item.isActive ? 'default' : 'secondary'}>
-                    {item.isActive ? 'Aktiv' : 'Inaktiv'}
+                    {item.isActive ? t('active') : t('inactive')}
                   </Badge>
                 </TableCell>
               </TableRow>
@@ -160,7 +162,7 @@ export function RecurringList() {
       {data && data.total > 25 && (
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">
-            {data.total} Eintraege gesamt
+            {t('totalEntries', { count: data.total })}
           </span>
           <div className="flex items-center gap-2">
             <Button
@@ -169,16 +171,16 @@ export function RecurringList() {
               disabled={page <= 1}
               onClick={() => setPage(page - 1)}
             >
-              Zurueck
+              {t('previous')}
             </Button>
-            <span className="text-sm">Seite {page}</span>
+            <span className="text-sm">{t('page', { page })}</span>
             <Button
               variant="outline"
               size="sm"
               disabled={page * 25 >= data.total}
               onClick={() => setPage(page + 1)}
             >
-              Weiter
+              {t('next')}
             </Button>
           </div>
         </div>

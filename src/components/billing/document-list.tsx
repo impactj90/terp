@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import {
@@ -42,6 +43,7 @@ interface BillingDocumentListProps {
 }
 
 export function BillingDocumentList({ addressId, inquiryId }: BillingDocumentListProps) {
+  const t = useTranslations('billingDocuments')
   const router = useRouter()
   const [search, setSearch] = React.useState('')
   const [typeFilter, setTypeFilter] = React.useState<string>('all')
@@ -96,10 +98,10 @@ export function BillingDocumentList({ addressId, inquiryId }: BillingDocumentLis
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Belege</h2>
+        <h2 className="text-2xl font-bold">{t('title')}</h2>
         <Button onClick={() => router.push('/orders/documents/new')}>
           <Plus className="h-4 w-4 mr-1" />
-          Neuer Beleg
+          {t('newDocument')}
         </Button>
       </div>
 
@@ -108,7 +110,7 @@ export function BillingDocumentList({ addressId, inquiryId }: BillingDocumentLis
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Belegnummer suchen..."
+            placeholder={t('searchPlaceholder')}
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1) }}
             className="pl-8"
@@ -116,38 +118,38 @@ export function BillingDocumentList({ addressId, inquiryId }: BillingDocumentLis
         </div>
         <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setPage(1) }}>
           <SelectTrigger className="w-48">
-            <SelectValue placeholder="Alle Typen" />
+            <SelectValue placeholder={t('allTypes')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Alle Typen</SelectItem>
-            <SelectItem value="OFFER">Angebot</SelectItem>
-            <SelectItem value="ORDER_CONFIRMATION">Auftragsbestätigung</SelectItem>
-            <SelectItem value="DELIVERY_NOTE">Lieferschein</SelectItem>
-            <SelectItem value="SERVICE_NOTE">Leistungsschein</SelectItem>
-            <SelectItem value="RETURN_DELIVERY">Rücklieferung</SelectItem>
-            <SelectItem value="INVOICE">Rechnung</SelectItem>
-            <SelectItem value="CREDIT_NOTE">Gutschrift</SelectItem>
+            <SelectItem value="all">{t('allTypes')}</SelectItem>
+            <SelectItem value="OFFER">{t('typeOffer')}</SelectItem>
+            <SelectItem value="ORDER_CONFIRMATION">{t('typeOrderConfirmation')}</SelectItem>
+            <SelectItem value="DELIVERY_NOTE">{t('typeDeliveryNote')}</SelectItem>
+            <SelectItem value="SERVICE_NOTE">{t('typeServiceNote')}</SelectItem>
+            <SelectItem value="RETURN_DELIVERY">{t('typeReturnDelivery')}</SelectItem>
+            <SelectItem value="INVOICE">{t('typeInvoice')}</SelectItem>
+            <SelectItem value="CREDIT_NOTE">{t('typeCreditNote')}</SelectItem>
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1) }}>
           <SelectTrigger className="w-40">
-            <SelectValue placeholder="Alle Status" />
+            <SelectValue placeholder={t('allStatuses')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Alle Status</SelectItem>
-            <SelectItem value="DRAFT">Entwurf</SelectItem>
-            <SelectItem value="PRINTED">Gedruckt</SelectItem>
-            <SelectItem value="FORWARDED">Fortgeführt</SelectItem>
-            <SelectItem value="CANCELLED">Storniert</SelectItem>
+            <SelectItem value="all">{t('allStatuses')}</SelectItem>
+            <SelectItem value="DRAFT">{t('statusDraft')}</SelectItem>
+            <SelectItem value="PRINTED">{t('statusFinalized')}</SelectItem>
+            <SelectItem value="FORWARDED">{t('statusForwarded')}</SelectItem>
+            <SelectItem value="CANCELLED">{t('statusCancelled')}</SelectItem>
           </SelectContent>
         </Select>
         {!addressId && (
           <Select value={customerFilter} onValueChange={(v) => { setCustomerFilter(v); setPage(1) }}>
             <SelectTrigger className="w-52">
-              <SelectValue placeholder="Alle Kunden" />
+              <SelectValue placeholder={t('allCustomers')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Alle Kunden</SelectItem>
+              <SelectItem value="all">{t('allCustomers')}</SelectItem>
               {uniqueCustomers.map((addr) => (
                 <SelectItem key={addr.id} value={addr.id}>
                   {addr.company}
@@ -159,10 +161,10 @@ export function BillingDocumentList({ addressId, inquiryId }: BillingDocumentLis
         {!inquiryId && inquiriesWithDocs.length > 0 && (
           <Select value={inquiryFilter} onValueChange={(v) => { setInquiryFilter(v); setPage(1) }}>
             <SelectTrigger className="w-52">
-              <SelectValue placeholder="Alle Vorgänge" />
+              <SelectValue placeholder={t('allInquiries')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Alle Vorgänge</SelectItem>
+              <SelectItem value="all">{t('allInquiries')}</SelectItem>
               {inquiriesWithDocs.map((inq) => (
                 <SelectItem key={inq.id} value={inq.id}>
                   {inq.number} — {inq.title}
@@ -177,25 +179,25 @@ export function BillingDocumentList({ addressId, inquiryId }: BillingDocumentLis
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Nummer</TableHead>
-            <TableHead>Typ</TableHead>
-            <TableHead>Kunde</TableHead>
-            <TableHead>Datum</TableHead>
-            <TableHead className="text-right">Betrag</TableHead>
-            <TableHead>Status</TableHead>
+            <TableHead>{t('columnNumber')}</TableHead>
+            <TableHead>{t('columnType')}</TableHead>
+            <TableHead>{t('columnCustomer')}</TableHead>
+            <TableHead>{t('columnDate')}</TableHead>
+            <TableHead className="text-right">{t('columnAmount')}</TableHead>
+            <TableHead>{t('columnStatus')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {isLoading ? (
             <TableRow>
               <TableCell colSpan={6} className="text-center text-muted-foreground">
-                Laden...
+                {t('loading')}
               </TableCell>
             </TableRow>
           ) : !data?.items?.length ? (
             <TableRow>
               <TableCell colSpan={6} className="text-center text-muted-foreground">
-                Keine Belege gefunden
+                {t('noDocumentsFound')}
               </TableCell>
             </TableRow>
           ) : (
@@ -225,7 +227,7 @@ export function BillingDocumentList({ addressId, inquiryId }: BillingDocumentLis
       {data && data.total > 25 && (
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">
-            {data.total} Belege gesamt
+            {t('totalDocuments', { count: data.total })}
           </span>
           <div className="flex gap-2">
             <Button
@@ -234,7 +236,7 @@ export function BillingDocumentList({ addressId, inquiryId }: BillingDocumentLis
               disabled={page <= 1}
               onClick={() => setPage(page - 1)}
             >
-              Zurück
+              {t('previous')}
             </Button>
             <Button
               variant="outline"
@@ -242,7 +244,7 @@ export function BillingDocumentList({ addressId, inquiryId }: BillingDocumentLis
               disabled={page * 25 >= data.total}
               onClick={() => setPage(page + 1)}
             >
-              Weiter
+              {t('next')}
             </Button>
           </div>
         </div>

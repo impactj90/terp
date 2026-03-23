@@ -20,6 +20,7 @@ import { DocumentForwardDialog } from './document-forward-dialog'
 import { DocumentFinalizeDialog } from './document-print-dialog'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { toast } from 'sonner'
+import { useTranslations } from 'next-intl'
 
 function formatDate(date: string | Date | null): string {
   if (!date) return '-'
@@ -58,16 +59,18 @@ export function BillingDocumentDetail({ id }: BillingDocumentDetailProps) {
   const cancelMutation = useCancelBillingDocument()
   const duplicateMutation = useDuplicateBillingDocument()
 
+  const t = useTranslations('billingDocuments')
+
   const [showFinalizeDialog, setShowFinalizeDialog] = React.useState(false)
   const [showForwardDialog, setShowForwardDialog] = React.useState(false)
   const [showCancelDialog, setShowCancelDialog] = React.useState(false)
 
   if (isLoading) {
-    return <div className="flex items-center justify-center p-8 text-muted-foreground">Laden...</div>
+    return <div className="flex items-center justify-center p-8 text-muted-foreground">{t('loading')}</div>
   }
 
   if (!doc) {
-    return <div className="flex items-center justify-center p-8 text-muted-foreground">Beleg nicht gefunden</div>
+    return <div className="flex items-center justify-center p-8 text-muted-foreground">{t('notFound')}</div>
   }
 
   const isDraft = doc.status === 'DRAFT'
@@ -77,22 +80,22 @@ export function BillingDocumentDetail({ id }: BillingDocumentDetailProps) {
   const handleCancel = async () => {
     try {
       await cancelMutation.mutateAsync({ id: doc.id })
-      toast.success('Beleg storniert')
+      toast.success(t('documentCancelled'))
       setShowCancelDialog(false)
     } catch {
-      toast.error('Fehler beim Stornieren')
+      toast.error(t('cancelError'))
     }
   }
 
   const handleDuplicate = async () => {
     try {
       const result = await duplicateMutation.mutateAsync({ id: doc.id })
-      toast.success('Beleg dupliziert')
+      toast.success(t('documentDuplicated'))
       if (result?.id) {
         router.push(`/orders/documents/${result.id}`)
       }
     } catch {
-      toast.error('Fehler beim Duplizieren')
+      toast.error(t('duplicateError'))
     }
   }
 
@@ -121,24 +124,24 @@ export function BillingDocumentDetail({ id }: BillingDocumentDetailProps) {
           {isDraft && (
             <Button onClick={() => setShowFinalizeDialog(true)}>
               <CheckCircle className="h-4 w-4 mr-1" />
-              Abschließen
+              {t('finalize')}
             </Button>
           )}
           {isPrinted && (
             <Button onClick={() => setShowForwardDialog(true)}>
               <Forward className="h-4 w-4 mr-1" />
-              Fortführen
+              {t('forward')}
             </Button>
           )}
           {doc.status !== 'CANCELLED' && doc.status !== 'FORWARDED' && (
             <Button variant="outline" onClick={() => setShowCancelDialog(true)}>
               <XCircle className="h-4 w-4 mr-1" />
-              Stornieren
+              {t('cancelDocument')}
             </Button>
           )}
           <Button variant="outline" onClick={handleDuplicate} disabled={duplicateMutation.isPending}>
             <Copy className="h-4 w-4 mr-1" />
-            Duplizieren
+            {t('duplicate')}
           </Button>
         </div>
       </div>
@@ -148,7 +151,7 @@ export function BillingDocumentDetail({ id }: BillingDocumentDetailProps) {
         <Alert>
           <Lock className="h-4 w-4" />
           <AlertDescription>
-            Dieser Beleg ist festgeschrieben und kann nicht mehr bearbeitet werden.
+            {t('immutableNotice')}
           </AlertDescription>
         </Alert>
       )}
@@ -156,33 +159,33 @@ export function BillingDocumentDetail({ id }: BillingDocumentDetailProps) {
       {/* Tabs */}
       <Tabs defaultValue="overview">
         <TabsList>
-          <TabsTrigger value="overview">Übersicht</TabsTrigger>
-          <TabsTrigger value="positions">Positionen ({(doc as unknown as { positions: unknown[] }).positions?.length ?? 0})</TabsTrigger>
-          <TabsTrigger value="chain">Kette</TabsTrigger>
+          <TabsTrigger value="overview">{t('overview')}</TabsTrigger>
+          <TabsTrigger value="positions">{t('positions', { count: (doc as unknown as { positions: unknown[] }).positions?.length ?? 0 })}</TabsTrigger>
+          <TabsTrigger value="chain">{t('chain')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Kopfdaten</CardTitle>
+                <CardTitle className="text-lg">{t('headerData')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-1">
-                <DetailRow label="Belegnummer" value={doc.number} />
-                <DetailRow label="Belegdatum" value={formatDate(doc.documentDate)} />
-                <DetailRow label="Auftragsdatum" value={formatDate(doc.orderDate)} />
-                <DetailRow label="Liefertermin" value={formatDate(doc.deliveryDate)} />
-                <DetailRow label="Lieferart" value={doc.deliveryType ?? '-'} />
-                <DetailRow label="Lieferbedingungen" value={doc.deliveryTerms ?? '-'} />
+                <DetailRow label={t('documentNumber')} value={doc.number} />
+                <DetailRow label={t('documentDate')} value={formatDate(doc.documentDate)} />
+                <DetailRow label={t('orderDate')} value={formatDate(doc.orderDate)} />
+                <DetailRow label={t('deliveryDate')} value={formatDate(doc.deliveryDate)} />
+                <DetailRow label={t('deliveryType')} value={doc.deliveryType ?? '-'} />
+                <DetailRow label={t('deliveryTerms')} value={doc.deliveryTerms ?? '-'} />
                 {(doc as unknown as { inquiry?: { id: string; number: string; title: string } }).inquiry && (
                   <DetailRow
-                    label="Verknüpfte Anfrage"
+                    label={t('linkedInquiry')}
                     value={`${(doc as unknown as { inquiry: { number: string; title: string } }).inquiry.number} — ${(doc as unknown as { inquiry: { number: string; title: string } }).inquiry.title}`}
                   />
                 )}
                 {(doc as unknown as { order?: { code: string; name: string } }).order && (
                   <DetailRow
-                    label="Verknüpfter Auftrag"
+                    label={t('linkedOrder')}
                     value={`${(doc as unknown as { order: { code: string; name: string } }).order.code} — ${(doc as unknown as { order: { code: string; name: string } }).order.name}`}
                   />
                 )}
@@ -191,35 +194,35 @@ export function BillingDocumentDetail({ id }: BillingDocumentDetailProps) {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Konditionen</CardTitle>
+                <CardTitle className="text-lg">{t('terms')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-1">
-                <DetailRow label="Zahlungsziel" value={doc.paymentTermDays != null ? `${doc.paymentTermDays} Tage` : '-'} />
-                <DetailRow label="Skonto" value={doc.discountPercent != null ? `${doc.discountPercent}% / ${doc.discountDays} Tage` : '-'} />
-                <DetailRow label="Versandkosten" value={formatCurrency(doc.shippingCostNet)} />
+                <DetailRow label={t('paymentTerm')} value={doc.paymentTermDays != null ? `${doc.paymentTermDays} ${t('days')}` : '-'} />
+                <DetailRow label={t('discount')} value={doc.discountPercent != null ? `${doc.discountPercent}% / ${doc.discountDays} ${t('days')}` : '-'} />
+                <DetailRow label={t('shippingCosts')} value={formatCurrency(doc.shippingCostNet)} />
               </CardContent>
             </Card>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Bemerkungen</CardTitle>
+              <CardTitle className="text-lg">{t('remarks')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {doc.notes && (
                 <div>
-                  <span className="text-sm text-muted-foreground">Bemerkungen:</span>
+                  <span className="text-sm text-muted-foreground">{t('remarksColon')}</span>
                   <p className="text-sm">{doc.notes}</p>
                 </div>
               )}
               {doc.internalNotes && (
                 <div>
-                  <span className="text-sm text-muted-foreground">Interne Notizen:</span>
+                  <span className="text-sm text-muted-foreground">{t('internalNotesColon')}</span>
                   <p className="text-sm">{doc.internalNotes}</p>
                 </div>
               )}
               {!doc.notes && !doc.internalNotes && (
-                <p className="text-sm text-muted-foreground">Keine Bemerkungen</p>
+                <p className="text-sm text-muted-foreground">{t('noRemarks')}</p>
               )}
             </CardContent>
           </Card>
@@ -255,12 +258,12 @@ export function BillingDocumentDetail({ id }: BillingDocumentDetailProps) {
         <TabsContent value="chain" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Belegkette</CardTitle>
+              <CardTitle className="text-lg">{t('documentChain')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {(doc as unknown as { parentDocument?: { id: string; number: string; type: string } }).parentDocument && (
                 <div>
-                  <span className="text-sm text-muted-foreground">Erstellt aus:</span>
+                  <span className="text-sm text-muted-foreground">{t('createdFrom')}</span>
                   <Button
                     variant="link"
                     className="p-0 h-auto"
@@ -273,7 +276,7 @@ export function BillingDocumentDetail({ id }: BillingDocumentDetailProps) {
               )}
               {(doc as unknown as { childDocuments?: Array<{ id: string; number: string; type: string; status: string }> }).childDocuments && (doc as unknown as { childDocuments: unknown[] }).childDocuments.length > 0 && (
                 <div>
-                  <span className="text-sm text-muted-foreground">Folgebelege:</span>
+                  <span className="text-sm text-muted-foreground">{t('followUpDocuments')}</span>
                   <div className="space-y-1 mt-1">
                     {(doc as unknown as { childDocuments: Array<{ id: string; number: string; type: string; status: string }> }).childDocuments.map((child) => (
                       <div key={child.id} className="flex items-center gap-2">
@@ -292,7 +295,7 @@ export function BillingDocumentDetail({ id }: BillingDocumentDetailProps) {
                 </div>
               )}
               {!(doc as unknown as { parentDocument?: unknown }).parentDocument && !(doc as unknown as { childDocuments?: unknown[] }).childDocuments?.length && (
-                <p className="text-sm text-muted-foreground">Keine verknüpften Belege</p>
+                <p className="text-sm text-muted-foreground">{t('noLinkedDocuments')}</p>
               )}
             </CardContent>
           </Card>
@@ -317,10 +320,10 @@ export function BillingDocumentDetail({ id }: BillingDocumentDetailProps) {
       <ConfirmDialog
         open={showCancelDialog}
         onOpenChange={setShowCancelDialog}
-        title="Beleg stornieren"
-        description={`Sind Sie sicher, dass Sie Beleg ${doc.number} stornieren möchten?`}
+        title={t('cancelDialogTitle')}
+        description={t('cancelDialogDescription', { number: doc.number })}
         onConfirm={handleCancel}
-        confirmLabel="Stornieren"
+        confirmLabel={t('cancelDocument')}
         variant="destructive"
       />
     </div>
