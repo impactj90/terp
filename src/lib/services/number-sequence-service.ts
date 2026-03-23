@@ -46,6 +46,8 @@ const DEFAULT_PREFIXES: Record<string, string> = {
   credit_note: "G-",
   // Billing service cases
   service_case: "KD-",
+  // Warehouse articles
+  article: "ART-",
 }
 
 export async function getNextNumber(

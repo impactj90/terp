@@ -271,6 +271,13 @@ export const ALL_PERMISSIONS: Permission[] = [
   p("billing_recurring.view", "billing_recurring", "view", "View recurring invoices"),
   p("billing_recurring.manage", "billing_recurring", "manage", "Manage recurring invoice templates"),
   p("billing_recurring.generate", "billing_recurring", "generate", "Generate invoices from recurring templates"),
+
+  // Warehouse Articles
+  p("wh_articles.view", "wh_articles", "view", "View warehouse articles"),
+  p("wh_articles.create", "wh_articles", "create", "Create warehouse articles"),
+  p("wh_articles.edit", "wh_articles", "edit", "Edit warehouse articles"),
+  p("wh_articles.delete", "wh_articles", "delete", "Delete warehouse articles"),
+  p("wh_article_groups.manage", "wh_article_groups", "manage", "Manage warehouse article groups"),
 ]
 
 // Lookup maps

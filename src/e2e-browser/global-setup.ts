@@ -108,6 +108,18 @@ DELETE FROM crm_contacts WHERE address_id IN (SELECT id FROM crm_addresses WHERE
 DELETE FROM crm_bank_accounts WHERE address_id IN (SELECT id FROM crm_addresses WHERE company LIKE 'E2E%');
 DELETE FROM crm_addresses WHERE company LIKE 'E2E%';
 
+-- Warehouse article records (spec 40)
+DELETE FROM wh_bill_of_materials WHERE parent_article_id IN (
+  SELECT id FROM wh_articles WHERE name LIKE 'E2E%'
+) OR child_article_id IN (
+  SELECT id FROM wh_articles WHERE name LIKE 'E2E%'
+);
+DELETE FROM wh_article_suppliers WHERE article_id IN (
+  SELECT id FROM wh_articles WHERE name LIKE 'E2E%'
+);
+DELETE FROM wh_articles WHERE name LIKE 'E2E%';
+DELETE FROM wh_article_groups WHERE name LIKE 'E2E%';
+
 -- Reset number sequences to safe values (above seeded K-1..K-6, L-1..L-3)
 INSERT INTO number_sequences (id, tenant_id, key, prefix, next_value, created_at, updated_at)
 VALUES
@@ -121,7 +133,8 @@ VALUES
   (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'return_delivery', 'R-', 100, NOW(), NOW()),
   (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'invoice', 'RE-', 100, NOW(), NOW()),
   (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'credit_note', 'G-', 100, NOW(), NOW()),
-  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'service_case', 'KD-', 100, NOW(), NOW())
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'service_case', 'KD-', 100, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'article', 'ART-', 100, NOW(), NOW())
 ON CONFLICT (tenant_id, key) DO UPDATE SET next_value = GREATEST(number_sequences.next_value, 100);
 
 -- Parent records (specs 01-03)

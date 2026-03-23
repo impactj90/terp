@@ -190,6 +190,10 @@ model Tenant {
   billingPriceLists           BillingPriceList[]
   billingRecurringInvoices    BillingRecurringInvoice[]
 
+  // Warehouse
+  whArticleGroups             WhArticleGroup[]
+  whArticles                  WhArticle[]
+
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
   @@index([isActive], map: "idx_tenants_is_active")
@@ -311,6 +315,7 @@ model CrmAddress {
   billingServiceCases      BillingServiceCase[]
   billingRecurringInvoices BillingRecurringInvoice[]
   priceList                BillingPriceList?    @relation(fields: [priceListId], references: [id])
+  articleSuppliers         WhArticleSupplier[]
 
   @@unique([tenantId, number], map: "uq_crm_addresses_tenant_number")
   @@index([tenantId], map: "idx_crm_addresses_tenant_id")
@@ -4137,4 +4142,104 @@ model OrderBooking {
   @@index([tenantId, employeeId, bookingDate], map: "idx_order_bookings_tenant_employee_date")
   @@index([tenantId, orderId, bookingDate], map: "idx_order_bookings_tenant_order_date")
   @@map("order_bookings")
+}
+
+// =============================================================================
+// Warehouse Module
+// =============================================================================
+
+model WhArticleGroup {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  parentId  String?  @map("parent_id") @db.Uuid
+  name      String   @db.VarChar(255)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parent   WhArticleGroup?  @relation("ArticleGroupTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children WhArticleGroup[] @relation("ArticleGroupTree")
+  articles WhArticle[]
+
+  @@index([tenantId, parentId])
+  @@map("wh_article_groups")
+}
+
+model WhArticle {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  number            String   @db.VarChar(50)
+  name              String   @db.VarChar(255)
+  description       String?  @db.Text
+  descriptionAlt    String?  @map("description_alt") @db.Text
+  groupId           String?  @map("group_id") @db.Uuid
+  matchCode         String?  @map("match_code") @db.VarChar(100)
+  unit              String   @default("Stk") @db.VarChar(20)
+  vatRate           Float    @default(19.0) @map("vat_rate")
+  sellPrice         Float?   @map("sell_price")
+  buyPrice          Float?   @map("buy_price")
+  discountGroup     String?  @map("discount_group") @db.VarChar(50)
+  orderType         String?  @map("order_type") @db.VarChar(50)
+  stockTracking     Boolean  @default(false) @map("stock_tracking")
+  currentStock      Float    @default(0) @map("current_stock")
+  minStock          Float?   @map("min_stock")
+  warehouseLocation String?  @map("warehouse_location") @db.VarChar(255)
+  images            Json?    @db.JsonB
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById       String?  @map("created_by_id") @db.Uuid
+
+  tenant    Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  group     WhArticleGroup?    @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  suppliers WhArticleSupplier[]
+  bomParent WhBillOfMaterial[] @relation("BomParent")
+  bomChild  WhBillOfMaterial[] @relation("BomChild")
+
+  @@unique([tenantId, number], map: "uq_wh_articles_tenant_number")
+  @@index([tenantId, groupId])
+  @@index([tenantId, matchCode])
+  @@index([tenantId, name])
+  @@index([tenantId, isActive])
+  @@map("wh_articles")
+}
+
+model WhArticleSupplier {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  articleId             String   @map("article_id") @db.Uuid
+  supplierId            String   @map("supplier_id") @db.Uuid
+  supplierArticleNumber String?  @map("supplier_article_number") @db.VarChar(100)
+  supplierDescription   String?  @map("supplier_description") @db.Text
+  isPrimary             Boolean  @default(false) @map("is_primary")
+  orderUnit             String?  @map("order_unit") @db.VarChar(20)
+  leadTimeDays          Int?     @map("lead_time_days")
+  defaultOrderQty       Float?   @map("default_order_qty")
+  buyPrice              Float?   @map("buy_price")
+  notes                 String?  @db.Text
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  article  WhArticle  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  supplier CrmAddress @relation(fields: [supplierId], references: [id])
+
+  @@unique([articleId, supplierId], map: "uq_wh_article_suppliers_article_supplier")
+  @@index([supplierId])
+  @@map("wh_article_suppliers")
+}
+
+model WhBillOfMaterial {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  parentArticleId String   @map("parent_article_id") @db.Uuid
+  childArticleId  String   @map("child_article_id") @db.Uuid
+  quantity        Float    @default(1)
+  sortOrder       Int      @default(0) @map("sort_order")
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  parentArticle WhArticle @relation("BomParent", fields: [parentArticleId], references: [id], onDelete: Cascade)
+  childArticle  WhArticle @relation("BomChild", fields: [childArticleId], references: [id], onDelete: Cascade)
+
+  @@unique([parentArticleId, childArticleId], map: "uq_wh_bom_parent_child")
+  @@map("wh_bill_of_materials")
 }

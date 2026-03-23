@@ -27,6 +27,7 @@
 --  24. Billing document positions
 --  25. Billing service cases
 --  26. Billing payments (cash, bank, partial, discount)
+--  27. Warehouse article groups, articles, suppliers, BOM
 --
 -- Run via: pnpm db:reset (applies seed.sql after migrations)
 --
@@ -1903,7 +1904,8 @@ INSERT INTO tenant_modules (tenant_id, module, enabled_at)
 VALUES
   ('10000000-0000-0000-0000-000000000001', 'core', NOW()),
   ('10000000-0000-0000-0000-000000000001', 'crm', NOW()),
-  ('10000000-0000-0000-0000-000000000001', 'billing', NOW())
+  ('10000000-0000-0000-0000-000000000001', 'billing', NOW()),
+  ('10000000-0000-0000-0000-000000000001', 'warehouse', NOW())
 ON CONFLICT DO NOTHING;
 
 -- =============================================================
@@ -3376,6 +3378,86 @@ VALUES
   ('b2000000-0000-4000-a000-000000000129', 'b1000000-0000-4000-a000-000000000099', 29, 'FREE',   NULL,     'Erstinspektion und Kalibrierung Messtechnik', 2, 'Tag', 850.00, 1700.00, 19.0, NOW(), NOW()),
   ('b2000000-0000-4000-a000-000000000130', 'b1000000-0000-4000-a000-000000000099', 30, 'TEXT',   NULL,     'Alle Preise verstehen sich netto zzgl. gesetzlicher MwSt. Lieferzeit ca. 8-10 Wochen ab Auftragseingang.', NULL, NULL, NULL, NULL, NULL, NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================
+-- W1. Warehouse: Article groups
+-- =============================================================
+
+INSERT INTO wh_article_groups (id, tenant_id, parent_id, name, sort_order, created_at, updated_at)
+VALUES
+  ('d1000000-0000-4000-a000-000000000001', '10000000-0000-0000-0000-000000000001', NULL, 'Befestigungsmaterial', 1, NOW(), NOW()),
+  ('d1000000-0000-4000-a000-000000000002', '10000000-0000-0000-0000-000000000001', 'd1000000-0000-4000-a000-000000000001', 'Schrauben', 1, NOW(), NOW()),
+  ('d1000000-0000-4000-a000-000000000003', '10000000-0000-0000-0000-000000000001', 'd1000000-0000-4000-a000-000000000001', 'Muttern & Scheiben', 2, NOW(), NOW()),
+  ('d1000000-0000-4000-a000-000000000004', '10000000-0000-0000-0000-000000000001', NULL, 'Elektromaterial', 2, NOW(), NOW()),
+  ('d1000000-0000-4000-a000-000000000005', '10000000-0000-0000-0000-000000000001', NULL, 'Werkzeuge', 3, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================
+-- W2. Warehouse: Articles (10 test articles)
+-- =============================================================
+
+INSERT INTO wh_articles (id, tenant_id, number, name, description, group_id, match_code, unit, vat_rate, sell_price, buy_price, stock_tracking, current_stock, min_stock, warehouse_location, is_active, created_at, updated_at)
+VALUES
+  -- Schrauben (group: Schrauben)
+  ('d2000000-0000-4000-a000-000000000001', '10000000-0000-0000-0000-000000000001', 'ART-1', 'Sechskantschraube M8x40 DIN 933', 'Stahl verzinkt, Festigkeitsklasse 8.8', 'd1000000-0000-4000-a000-000000000002', 'SECHSKANT M8X40', 'Stk', 19.0, 0.35, 0.12, true, 2500, 500, 'Regal A1-01', true, NOW(), NOW()),
+  ('d2000000-0000-4000-a000-000000000002', '10000000-0000-0000-0000-000000000001', 'ART-2', 'Zylinderschraube M6x30 DIN 912', 'Edelstahl A2-70, Innensechskant', 'd1000000-0000-4000-a000-000000000002', 'ZYLINDER M6X30', 'Stk', 19.0, 0.28, 0.09, true, 3200, 800, 'Regal A1-02', true, NOW(), NOW()),
+  ('d2000000-0000-4000-a000-000000000003', '10000000-0000-0000-0000-000000000001', 'ART-3', 'Holzschraube 5x60 Senkkopf', 'Edelstahl, Torx T25', 'd1000000-0000-4000-a000-000000000002', 'HOLZSCHR 5X60', 'Stk', 19.0, 0.18, 0.06, true, 5000, 1000, 'Regal A1-03', true, NOW(), NOW()),
+
+  -- Muttern & Scheiben (group: Muttern & Scheiben)
+  ('d2000000-0000-4000-a000-000000000004', '10000000-0000-0000-0000-000000000001', 'ART-4', 'Sechskantmutter M8 DIN 934', 'Stahl verzinkt, Festigkeitsklasse 8', 'd1000000-0000-4000-a000-000000000003', 'MUTTER M8', 'Stk', 19.0, 0.08, 0.03, true, 4000, 1000, 'Regal A2-01', true, NOW(), NOW()),
+  ('d2000000-0000-4000-a000-000000000005', '10000000-0000-0000-0000-000000000001', 'ART-5', 'Unterlegscheibe M8 DIN 125', 'Stahl verzinkt', 'd1000000-0000-4000-a000-000000000003', 'SCHEIBE M8', 'Stk', 19.0, 0.04, 0.01, true, 8000, 2000, 'Regal A2-02', true, NOW(), NOW()),
+
+  -- Elektromaterial (group: Elektromaterial)
+  ('d2000000-0000-4000-a000-000000000006', '10000000-0000-0000-0000-000000000001', 'ART-6', 'NYM-J 3x1.5mm² Kabel', 'Mantelleitung grau, 100m Ring', 'd1000000-0000-4000-a000-000000000004', 'NYM 3X1.5', 'm', 19.0, 1.20, 0.65, true, 450, 100, 'Regal B1-01', true, NOW(), NOW()),
+  ('d2000000-0000-4000-a000-000000000007', '10000000-0000-0000-0000-000000000001', 'ART-7', 'Leitungsschutzschalter B16A 3-polig', 'ABB S203-B16, DIN-Schiene', 'd1000000-0000-4000-a000-000000000004', 'LSS B16 3P', 'Stk', 19.0, 18.50, 9.80, true, 45, 10, 'Regal B2-01', true, NOW(), NOW()),
+
+  -- Werkzeuge (group: Werkzeuge)
+  ('d2000000-0000-4000-a000-000000000008', '10000000-0000-0000-0000-000000000001', 'ART-8', 'Drehmomentschluessel 20-100 Nm', 'Umschaltknarre 1/2 Zoll', 'd1000000-0000-4000-a000-000000000005', 'DREHMOMENT 100', 'Stk', 19.0, 89.00, 42.00, false, 0, NULL, NULL, true, NOW(), NOW()),
+  ('d2000000-0000-4000-a000-000000000009', '10000000-0000-0000-0000-000000000001', 'ART-9', 'Steckschluessel-Satz 1/4 + 1/2 Zoll', '94-teilig, Chrom-Vanadium', 'd1000000-0000-4000-a000-000000000005', 'STECKSCHL SATZ', 'Set', 19.0, 129.00, 62.00, false, 0, NULL, NULL, true, NOW(), NOW()),
+
+  -- Dienstleistung (no group, service article)
+  ('d2000000-0000-4000-a000-000000000010', '10000000-0000-0000-0000-000000000001', 'ART-10', 'Montage-Stunde Facharbeiter', 'Montageleistung pro Stunde, inkl. Werkzeug', NULL, 'MONTAGE STD', 'Std', 19.0, 65.00, NULL, false, 0, NULL, NULL, true, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================
+-- W3. Warehouse: Article-supplier links
+-- =============================================================
+
+INSERT INTO wh_article_suppliers (id, article_id, supplier_id, supplier_article_number, is_primary, lead_time_days, buy_price, created_at, updated_at)
+VALUES
+  -- Stahl-Union liefert Schrauben und Muttern
+  ('d3000000-0000-4000-a000-000000000001', 'd2000000-0000-4000-a000-000000000001', 'c1000000-0000-4000-a000-000000000011', 'SU-SK-M8X40', true, 5, 0.12, NOW(), NOW()),
+  ('d3000000-0000-4000-a000-000000000002', 'd2000000-0000-4000-a000-000000000004', 'c1000000-0000-4000-a000-000000000011', 'SU-MU-M8', true, 5, 0.03, NOW(), NOW()),
+  ('d3000000-0000-4000-a000-000000000003', 'd2000000-0000-4000-a000-000000000005', 'c1000000-0000-4000-a000-000000000011', 'SU-US-M8', true, 5, 0.01, NOW(), NOW()),
+
+  -- Elektro-Großhandel Braun liefert Elektromaterial
+  ('d3000000-0000-4000-a000-000000000004', 'd2000000-0000-4000-a000-000000000006', 'c1000000-0000-4000-a000-000000000013', 'EB-NYM-315', true, 3, 0.65, NOW(), NOW()),
+  ('d3000000-0000-4000-a000-000000000005', 'd2000000-0000-4000-a000-000000000007', 'c1000000-0000-4000-a000-000000000013', 'EB-ABB-S203B16', true, 7, 9.80, NOW(), NOW()),
+
+  -- Hoffmann Werkzeuge liefert Werkzeuge
+  ('d3000000-0000-4000-a000-000000000006', 'd2000000-0000-4000-a000-000000000008', 'c1000000-0000-4000-a000-000000000021', 'HW-DMS-100', true, 10, 42.00, NOW(), NOW()),
+  ('d3000000-0000-4000-a000-000000000007', 'd2000000-0000-4000-a000-000000000009', 'c1000000-0000-4000-a000-000000000021', 'HW-SSS-94', true, 10, 62.00, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================
+-- W4. Warehouse: Bill of Materials (Schrauben-Set = Schraube + Mutter + Scheibe)
+-- =============================================================
+
+INSERT INTO wh_bill_of_materials (id, parent_article_id, child_article_id, quantity, sort_order, notes, created_at)
+VALUES
+  -- ART-1 (Sechskantschraube M8) assembly = 1x Schraube + 1x Mutter + 2x Scheibe
+  ('d4000000-0000-4000-a000-000000000001', 'd2000000-0000-4000-a000-000000000001', 'd2000000-0000-4000-a000-000000000004', 1, 1, 'Zugehoerige Mutter', NOW()),
+  ('d4000000-0000-4000-a000-000000000002', 'd2000000-0000-4000-a000-000000000001', 'd2000000-0000-4000-a000-000000000005', 2, 2, 'Unterlegscheiben oben und unten', NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================
+-- W5. Warehouse: Number sequence for articles
+-- =============================================================
+
+INSERT INTO number_sequences (id, tenant_id, key, prefix, next_value, created_at, updated_at)
+VALUES
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'article', 'ART-', 11, NOW(), NOW())
+ON CONFLICT (tenant_id, key) DO UPDATE SET next_value = GREATEST(number_sequences.next_value, 11);
 
 -- S4. Storage buckets for billing documents and tenant logos
 INSERT INTO storage.buckets (id, name, public)

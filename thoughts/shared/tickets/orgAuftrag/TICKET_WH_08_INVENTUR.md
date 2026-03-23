@@ -337,6 +337,38 @@ test.describe("UC-WH-08: Inventory", () => {
 
 ---
 
+## Tenant Isolation Requirements (MANDATORY)
+
+All repository and service operations for this module MUST enforce tenant isolation. This is non-negotiable for a multi-tenant SaaS application.
+
+### Repository Layer
+- Every `findMany`, `findFirst`, `findById`, `count` query MUST include `tenantId` in the `where` clause
+- Sub-entity queries (e.g. fetching child records by parent ID) MUST join back to the parent entity's `tenantId` filter: `where: { parentId, parentEntity: { tenantId } }`
+- `update` and `delete` operations on sub-entities (records without their own `tenantId` column) MUST verify tenant ownership via the parent entity before modifying
+- Use `tenantScopedUpdate` helper for entities with a `tenantId` column
+- Never use `.update({ where: { id } })` or `.delete({ where: { id } })` alone for sub-entities — always verify tenant first
+
+### Service Layer
+- Every service function that operates on a sub-entity (supplier links, BOM entries, movements, etc.) MUST accept `tenantId` as a parameter
+- Before listing sub-entities, verify the parent entity belongs to the calling tenant
+- Before updating/deleting sub-entities, verify tenant ownership or return NotFoundError
+- Pass `tenantId` through from the router's `ctx.tenantId!` — never omit it
+
+### Router Layer
+- All procedures MUST use `tenantProcedure` (via `whProcedure`)
+- All service calls MUST pass `ctx.tenantId!` — even for sub-entity operations
+- Never pass only a record `id` without tenant context to update/delete service functions
+
+### Tests (MANDATORY)
+- Every service test file MUST include a `describe("tenant isolation")` block
+- Test that each operation rejects cross-tenant access by asserting `NotFoundError` when using a different `tenantId`
+- Minimum test coverage: one isolation test per service function that takes a record `id` parameter
+
+### Pattern Reference
+See `src/lib/services/wh-article-service.ts` and `src/lib/services/__tests__/wh-article-service.test.ts` (tenant isolation describe block) for the canonical implementation pattern.
+
+---
+
 ## Acceptance Criteria
 
 - [ ] `WhInventorySession` and `WhInventoryCount` models created with migration
@@ -353,4 +385,4 @@ test.describe("UC-WH-08: Inventory", () => {
 - [ ] Cancel preserves session for audit but makes no stock changes
 - [ ] All procedures gated by `requireModule("warehouse")` and `wh_inventory.*` permissions
 - [ ] `commit` requires separate `wh_inventory.commit` permission (elevated action)
-- [ ] Cross-tenant isolation verified
+- [ ] Cross-tenant isolation verified: all operations reject access with wrong tenantId (tests included)

@@ -117,6 +117,7 @@
     "billingConfig": "Briefpapier",
     "warehouseSection": "Lager",
     "warehouseOverview": "Lagerübersicht",
+    "warehouseArticles": "Artikel",
     "crmReports": "Auswertungen"
   },
   "sidebar": {

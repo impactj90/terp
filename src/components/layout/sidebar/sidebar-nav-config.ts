@@ -368,6 +368,13 @@ export const navConfig: NavSection[] = [
         icon: Warehouse,
         module: 'warehouse',
       },
+      {
+        titleKey: 'warehouseArticles',
+        href: '/warehouse/articles',
+        icon: Package,
+        module: 'warehouse',
+        permissions: ['wh_articles.view'],
+      },
     ],
   },
   {
