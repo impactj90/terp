@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dialog'
 import { Plus, Edit, Trash2, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useTranslations } from 'next-intl'
 import {
   useWhArticleBom,
   useAddWhArticleBom,
@@ -34,6 +35,7 @@ interface ArticleBomListProps {
 }
 
 export function ArticleBomList({ articleId }: ArticleBomListProps) {
+  const t = useTranslations('warehouseArticles')
   const { data: bomItems, isLoading } = useWhArticleBom(articleId)
   const addBom = useAddWhArticleBom()
   const updateBom = useUpdateWhArticleBom()
@@ -66,7 +68,7 @@ export function ArticleBomList({ articleId }: ArticleBomListProps) {
     removeBom.mutate(
       { id },
       {
-        onSuccess: () => toast.success('Komponente entfernt'),
+        onSuccess: () => toast.success(t('toastBomRemoved')),
         onError: (err) => toast.error(err.message),
       }
     )
@@ -83,7 +85,7 @@ export function ArticleBomList({ articleId }: ArticleBomListProps) {
       },
       {
         onSuccess: () => {
-          toast.success('Komponente hinzugefuegt')
+          toast.success(t('toastBomAdded'))
           setAddDialogOpen(false)
         },
         onError: (err) => toast.error(err.message),
@@ -101,7 +103,7 @@ export function ArticleBomList({ articleId }: ArticleBomListProps) {
       },
       {
         onSuccess: () => {
-          toast.success('Komponente aktualisiert')
+          toast.success(t('toastBomUpdated'))
           setEditDialogOpen(false)
         },
         onError: (err) => toast.error(err.message),
@@ -112,27 +114,27 @@ export function ArticleBomList({ articleId }: ArticleBomListProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Stueckliste</h3>
+        <h3 className="text-lg font-semibold">{t('bomHeading')}</h3>
         <Button size="sm" onClick={handleAdd}>
           <Plus className="h-4 w-4 mr-2" />
-          Komponente hinzufuegen
+          {t('actionAddComponent')}
         </Button>
       </div>
 
       {isLoading ? (
-        <div className="text-sm text-muted-foreground">Laden...</div>
+        <div className="text-sm text-muted-foreground">{t('loading')}</div>
       ) : !bomItems || bomItems.length === 0 ? (
         <div className="text-center py-4 text-muted-foreground">
-          Keine Komponenten in der Stueckliste
+          {t('noBomComponents')}
         </div>
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Artikelnr.</TableHead>
-              <TableHead>Bezeichnung</TableHead>
-              <TableHead className="w-[100px] text-right">Menge</TableHead>
-              <TableHead>Bemerkung</TableHead>
+              <TableHead>{t('labelArticleNumber')}</TableHead>
+              <TableHead>{t('colName')}</TableHead>
+              <TableHead className="w-[100px] text-right">{t('colQuantity')}</TableHead>
+              <TableHead>{t('colNotes')}</TableHead>
               <TableHead className="w-[100px]" />
             </TableRow>
           </TableHeader>
@@ -182,25 +184,25 @@ export function ArticleBomList({ articleId }: ArticleBomListProps) {
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Komponente hinzufuegen</DialogTitle>
+            <DialogTitle>{t('actionAddComponent')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Artikel *</Label>
+              <Label>{t('labelArticleRequired')}</Label>
               <ArticleSearchPopover
                 value={selectedArticleId}
                 onSelect={(id, name) => {
                   setSelectedArticleId(id)
                   setSelectedArticleName(name)
                 }}
-                placeholder="Artikel suchen..."
+                placeholder={t('articleSearchPlaceholder')}
               />
               {selectedArticleName && (
                 <p className="text-sm text-muted-foreground">{selectedArticleName}</p>
               )}
             </div>
             <div className="space-y-2">
-              <Label>Menge</Label>
+              <Label>{t('labelQuantity')}</Label>
               <Input
                 type="number"
                 step="0.001"
@@ -210,7 +212,7 @@ export function ArticleBomList({ articleId }: ArticleBomListProps) {
               />
             </div>
             <div className="space-y-2">
-              <Label>Bemerkung</Label>
+              <Label>{t('labelNotes')}</Label>
               <Input
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
@@ -219,11 +221,11 @@ export function ArticleBomList({ articleId }: ArticleBomListProps) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddDialogOpen(false)}>
-              Abbrechen
+              {t('cancel')}
             </Button>
             <Button onClick={handleSubmitAdd} disabled={!selectedArticleId || addBom.isPending}>
               {addBom.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Hinzufuegen
+              {t('actionAdd')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -233,11 +235,11 @@ export function ArticleBomList({ articleId }: ArticleBomListProps) {
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Komponente bearbeiten</DialogTitle>
+            <DialogTitle>{t('dialogEditComponent')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Menge</Label>
+              <Label>{t('labelQuantity')}</Label>
               <Input
                 type="number"
                 step="0.001"
@@ -247,7 +249,7 @@ export function ArticleBomList({ articleId }: ArticleBomListProps) {
               />
             </div>
             <div className="space-y-2">
-              <Label>Bemerkung</Label>
+              <Label>{t('labelNotes')}</Label>
               <Input
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
@@ -256,11 +258,11 @@ export function ArticleBomList({ articleId }: ArticleBomListProps) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
-              Abbrechen
+              {t('cancel')}
             </Button>
             <Button onClick={handleSubmitEdit} disabled={updateBom.isPending}>
               {updateBom.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Speichern
+              {t('save')}
             </Button>
           </DialogFooter>
         </DialogContent>

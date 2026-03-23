@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useTranslations } from 'next-intl'
 import {
   useCreateWhArticle,
   useUpdateWhArticle,
@@ -92,6 +93,7 @@ export function ArticleFormSheet({ open, onOpenChange, article }: ArticleFormShe
   const createArticle = useCreateWhArticle()
   const updateArticle = useUpdateWhArticle()
   const { data: groupTree } = useWhArticleGroups(open)
+  const t = useTranslations('warehouseArticles')
   const flatGroups = React.useMemo(
     () => (groupTree ? flattenGroups(groupTree) : []),
     [groupTree]
@@ -148,7 +150,7 @@ export function ArticleFormSheet({ open, onOpenChange, article }: ArticleFormShe
         { id: article.id as string, ...payload },
         {
           onSuccess: () => {
-            toast.success('Artikel aktualisiert')
+            toast.success(t('toastUpdated'))
             onOpenChange(false)
           },
           onError: (err) => toast.error(err.message),
@@ -157,7 +159,7 @@ export function ArticleFormSheet({ open, onOpenChange, article }: ArticleFormShe
     } else {
       createArticle.mutate(payload, {
         onSuccess: () => {
-          toast.success('Artikel erstellt')
+          toast.success(t('toastCreated'))
           onOpenChange(false)
         },
         onError: (err) => toast.error(err.message),
@@ -169,16 +171,16 @@ export function ArticleFormSheet({ open, onOpenChange, article }: ArticleFormShe
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>{isEdit ? 'Artikel bearbeiten' : 'Neuer Artikel'}</SheetTitle>
+          <SheetTitle>{isEdit ? t('sheetTitleEdit') : t('sheetTitleCreate')}</SheetTitle>
           <SheetDescription>
-            {isEdit ? 'Artikeldaten aktualisieren' : 'Neuen Artikel anlegen'}
+            {isEdit ? t('sheetDescriptionEdit') : t('sheetDescriptionCreate')}
           </SheetDescription>
         </SheetHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           {/* Name */}
           <div className="space-y-2">
-            <Label htmlFor="name">Bezeichnung *</Label>
+            <Label htmlFor="name">{t('labelNameRequired')}</Label>
             <Input
               id="name"
               value={form.name}
@@ -189,7 +191,7 @@ export function ArticleFormSheet({ open, onOpenChange, article }: ArticleFormShe
 
           {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="description">Beschreibung</Label>
+            <Label htmlFor="description">{t('labelDescription')}</Label>
             <Textarea
               id="description"
               value={form.description}
@@ -200,16 +202,16 @@ export function ArticleFormSheet({ open, onOpenChange, article }: ArticleFormShe
 
           {/* Group */}
           <div className="space-y-2">
-            <Label>Artikelgruppe</Label>
+            <Label>{t('labelGroup')}</Label>
             <Select
               value={form.groupId || '_none'}
               onValueChange={(v) => setForm({ ...form, groupId: v === '_none' ? '' : v })}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Keine Gruppe" />
+                <SelectValue placeholder={t('noGroup')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="_none">Keine Gruppe</SelectItem>
+                <SelectItem value="_none">{t('noGroup')}</SelectItem>
                 {flatGroups.map((g) => (
                   <SelectItem key={g.id} value={g.id}>
                     {'  '.repeat(g.depth)}{g.name}
@@ -221,7 +223,7 @@ export function ArticleFormSheet({ open, onOpenChange, article }: ArticleFormShe
 
           {/* Unit */}
           <div className="space-y-2">
-            <Label>Einheit</Label>
+            <Label>{t('labelUnit')}</Label>
             <Select
               value={form.unit}
               onValueChange={(v) => setForm({ ...form, unit: v })}
@@ -241,19 +243,19 @@ export function ArticleFormSheet({ open, onOpenChange, article }: ArticleFormShe
 
           {/* Match Code */}
           <div className="space-y-2">
-            <Label htmlFor="matchCode">Matchcode</Label>
+            <Label htmlFor="matchCode">{t('labelMatchcode')}</Label>
             <Input
               id="matchCode"
               value={form.matchCode}
               onChange={(e) => setForm({ ...form, matchCode: e.target.value })}
-              placeholder="Auto-generiert aus Name"
+              placeholder={t('matchcodePlaceholder')}
             />
           </div>
 
           {/* Prices */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="sellPrice">VK-Preis (netto)</Label>
+              <Label htmlFor="sellPrice">{t('labelSellPrice')}</Label>
               <Input
                 id="sellPrice"
                 type="number"
@@ -263,7 +265,7 @@ export function ArticleFormSheet({ open, onOpenChange, article }: ArticleFormShe
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="buyPrice">EK-Preis</Label>
+              <Label htmlFor="buyPrice">{t('labelBuyPrice')}</Label>
               <Input
                 id="buyPrice"
                 type="number"
@@ -276,7 +278,7 @@ export function ArticleFormSheet({ open, onOpenChange, article }: ArticleFormShe
 
           {/* VAT */}
           <div className="space-y-2">
-            <Label htmlFor="vatRate">MwSt-Satz (%)</Label>
+            <Label htmlFor="vatRate">{t('labelVatRatePercent')}</Label>
             <Input
               id="vatRate"
               type="number"
@@ -289,7 +291,7 @@ export function ArticleFormSheet({ open, onOpenChange, article }: ArticleFormShe
           {/* Discount Group / Order Type */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="discountGroup">Rabattgruppe</Label>
+              <Label htmlFor="discountGroup">{t('labelDiscountGroup')}</Label>
               <Input
                 id="discountGroup"
                 value={form.discountGroup}
@@ -297,7 +299,7 @@ export function ArticleFormSheet({ open, onOpenChange, article }: ArticleFormShe
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="orderType">Bestellart</Label>
+              <Label htmlFor="orderType">{t('labelOrderType')}</Label>
               <Input
                 id="orderType"
                 value={form.orderType}
@@ -308,7 +310,7 @@ export function ArticleFormSheet({ open, onOpenChange, article }: ArticleFormShe
 
           {/* Stock Tracking */}
           <div className="flex items-center justify-between">
-            <Label htmlFor="stockTracking">Bestandsfuehrung</Label>
+            <Label htmlFor="stockTracking">{t('labelStockTracking')}</Label>
             <Switch
               id="stockTracking"
               checked={form.stockTracking}
@@ -319,7 +321,7 @@ export function ArticleFormSheet({ open, onOpenChange, article }: ArticleFormShe
           {form.stockTracking && (
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="minStock">Mindestbestand</Label>
+                <Label htmlFor="minStock">{t('labelMinStock')}</Label>
                 <Input
                   id="minStock"
                   type="number"
@@ -329,7 +331,7 @@ export function ArticleFormSheet({ open, onOpenChange, article }: ArticleFormShe
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="warehouseLocation">Lagerort</Label>
+                <Label htmlFor="warehouseLocation">{t('labelWarehouseLocation')}</Label>
                 <Input
                   id="warehouseLocation"
                   value={form.warehouseLocation}
@@ -341,11 +343,11 @@ export function ArticleFormSheet({ open, onOpenChange, article }: ArticleFormShe
 
           <SheetFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Abbrechen
+              {t('cancel')}
             </Button>
             <Button type="submit" disabled={isPending || !form.name.trim()}>
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEdit ? 'Speichern' : 'Erstellen'}
+              {isEdit ? t('save') : t('create')}
             </Button>
           </SheetFooter>
         </form>

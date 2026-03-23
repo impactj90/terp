@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { MoreHorizontal, Eye, Edit, Trash2, RotateCcw } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 interface WhArticleRow {
   id: string
@@ -58,6 +59,8 @@ export function ArticleList({
   onDelete,
   onRestore,
 }: ArticleListProps) {
+  const t = useTranslations('warehouseArticles')
+
   if (isLoading) {
     return (
       <div className="space-y-2">
@@ -71,7 +74,7 @@ export function ArticleList({
   if (articles.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        Keine Artikel gefunden
+        {t('noArticlesFound')}
       </div>
     )
   }
@@ -80,13 +83,13 @@ export function ArticleList({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[120px]">Nummer</TableHead>
-          <TableHead>Bezeichnung</TableHead>
-          <TableHead>Gruppe</TableHead>
-          <TableHead className="w-[80px]">Einheit</TableHead>
-          <TableHead className="w-[120px] text-right">VK-Preis</TableHead>
-          <TableHead className="w-[100px] text-right">Bestand</TableHead>
-          <TableHead className="w-[80px]">Status</TableHead>
+          <TableHead className="w-[120px]">{t('colNumber')}</TableHead>
+          <TableHead>{t('colName')}</TableHead>
+          <TableHead>{t('colGroup')}</TableHead>
+          <TableHead className="w-[80px]">{t('colUnit')}</TableHead>
+          <TableHead className="w-[120px] text-right">{t('colSellPrice')}</TableHead>
+          <TableHead className="w-[100px] text-right">{t('colStock')}</TableHead>
+          <TableHead className="w-[80px]">{t('colStatus')}</TableHead>
           <TableHead className="w-[60px]" />
         </TableRow>
       </TableHeader>
@@ -109,9 +112,9 @@ export function ArticleList({
             </TableCell>
             <TableCell>
               {article.isActive ? (
-                <Badge variant="default">Aktiv</Badge>
+                <Badge variant="default">{t('statusActive')}</Badge>
               ) : (
-                <Badge variant="secondary">Inaktiv</Badge>
+                <Badge variant="secondary">{t('statusInactive')}</Badge>
               )}
             </TableCell>
             <TableCell>
@@ -129,11 +132,11 @@ export function ArticleList({
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => onView(article)}>
                     <Eye className="h-4 w-4 mr-2" />
-                    Anzeigen
+                    {t('actionView')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onEdit(article)}>
                     <Edit className="h-4 w-4 mr-2" />
-                    Bearbeiten
+                    {t('actionEdit')}
                   </DropdownMenuItem>
                   {article.isActive ? (
                     <DropdownMenuItem
@@ -141,13 +144,13 @@ export function ArticleList({
                       className="text-destructive"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
-                      Deaktivieren
+                      {t('actionDeactivate')}
                     </DropdownMenuItem>
                   ) : (
                     onRestore && (
                       <DropdownMenuItem onClick={() => onRestore(article)}>
                         <RotateCcw className="h-4 w-4 mr-2" />
-                        Wiederherstellen
+                        {t('actionRestore')}
                       </DropdownMenuItem>
                     )
                   )}

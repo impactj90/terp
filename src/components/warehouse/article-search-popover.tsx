@@ -4,6 +4,7 @@ import * as React from 'react'
 import { Input } from '@/components/ui/input'
 import { useWhArticleSearch } from '@/hooks'
 import { Search } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 interface ArticleSearchPopoverProps {
   value: string | null
@@ -18,8 +19,10 @@ interface ArticleSearchPopoverProps {
 export function ArticleSearchPopover({
   value,
   onSelect,
-  placeholder = 'Artikel suchen...',
+  placeholder,
 }: ArticleSearchPopoverProps) {
+  const t = useTranslations('warehouseArticles')
+  const resolvedPlaceholder = placeholder ?? t('articleSearchPlaceholder')
   const [query, setQuery] = React.useState('')
   const [showResults, setShowResults] = React.useState(false)
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -48,7 +51,7 @@ export function ArticleSearchPopover({
             setShowResults(true)
           }}
           onFocus={() => query.length >= 1 && setShowResults(true)}
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           className="pl-8"
         />
       </div>
@@ -75,7 +78,7 @@ export function ArticleSearchPopover({
       )}
       {showResults && query.length >= 1 && results && results.length === 0 && (
         <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg px-3 py-2 text-sm text-muted-foreground">
-          Kein Artikel gefunden
+          {t('noArticleFound')}
         </div>
       )}
     </div>

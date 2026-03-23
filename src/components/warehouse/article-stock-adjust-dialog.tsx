@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useTranslations } from 'next-intl'
 import { useAdjustWhArticleStock } from '@/hooks'
 
 interface ArticleStockAdjustDialogProps {
@@ -30,6 +31,7 @@ export function ArticleStockAdjustDialog({
   open,
   onOpenChange,
 }: ArticleStockAdjustDialogProps) {
+  const t = useTranslations('warehouseArticles')
   const adjustStock = useAdjustWhArticleStock()
   const [quantity, setQuantity] = React.useState('')
   const [reason, setReason] = React.useState('')
@@ -50,7 +52,7 @@ export function ArticleStockAdjustDialog({
       { id: articleId, quantity: delta, reason: reason || undefined },
       {
         onSuccess: () => {
-          toast.success('Bestand korrigiert')
+          toast.success(t('toastStockAdjusted'))
           onOpenChange(false)
         },
         onError: (err) => toast.error(err.message),
@@ -62,47 +64,47 @@ export function ArticleStockAdjustDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Bestand korrigieren</DialogTitle>
+          <DialogTitle>{t('actionAdjustStock')}</DialogTitle>
           <DialogDescription>
-            Aktueller Bestand: {currentStock}
+            {t('currentStockDescription', { count: currentStock })}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="quantity">Aenderung (+/-)</Label>
+            <Label htmlFor="quantity">{t('labelStockChange')}</Label>
             <Input
               id="quantity"
               type="number"
               step="0.01"
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
-              placeholder="z.B. +10 oder -5"
+              placeholder={t('stockChangePlaceholder')}
               autoFocus
             />
             {delta !== 0 && (
               <p className="text-sm text-muted-foreground">
-                Neuer Bestand: <span className="font-medium">{newStock}</span>
+                {t('newStockPreview', { count: newStock })}
               </p>
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="reason">Grund</Label>
+            <Label htmlFor="reason">{t('labelReason')}</Label>
             <Textarea
               id="reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               rows={2}
-              placeholder="Inventur, Schwund, etc."
+              placeholder={t('reasonPlaceholder')}
             />
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Abbrechen
+            {t('cancel')}
           </Button>
           <Button onClick={handleSubmit} disabled={delta === 0 || adjustStock.isPending}>
             {adjustStock.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Korrigieren
+            {t('actionAdjustConfirm')}
           </Button>
         </DialogFooter>
       </DialogContent>

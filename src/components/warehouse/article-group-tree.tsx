@@ -1,13 +1,24 @@
 'use client'
 
 import * as React from 'react'
-import { ChevronRight, ChevronDown, FolderOpen, Folder, Plus, Edit, Trash2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
+import {
+  ChevronRight,
+  ChevronDown,
+  FolderOpen,
+  Folder,
+  Plus,
+  Pencil,
+  Trash2,
+  MoreHorizontal,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -17,7 +28,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { MoreHorizontal } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   useWhArticleGroups,
@@ -60,6 +70,7 @@ function TreeNode({
   onDelete: (group: GroupTreeNode['group']) => void
   onAddChild: (parentId: string) => void
 }) {
+  const t = useTranslations('warehouseArticles')
   const [expanded, setExpanded] = React.useState(true)
   const isSelected = selectedGroupId === node.group.id
   const hasChildren = node.children.length > 0
@@ -67,7 +78,7 @@ function TreeNode({
   return (
     <div>
       <div
-        className={`flex items-center gap-1 px-2 py-1 rounded-md cursor-pointer text-sm hover:bg-accent ${
+        className={`group flex items-center gap-1 px-2 py-1.5 rounded-md cursor-pointer text-sm transition-colors hover:bg-accent ${
           isSelected ? 'bg-accent font-medium' : ''
         }`}
       >
@@ -76,12 +87,16 @@ function TreeNode({
             e.stopPropagation()
             setExpanded(!expanded)
           }}
-          className="p-0.5"
+          className="p-0.5 shrink-0"
         >
           {hasChildren ? (
-            expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />
+            expanded ? (
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+            )
           ) : (
-            <span className="w-3" />
+            <span className="w-3.5" />
           )}
         </button>
         <button
@@ -96,34 +111,54 @@ function TreeNode({
           <span className="truncate">{node.group.name}</span>
         </button>
         {canManage && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100">
-                <MoreHorizontal className="h-3 w-3" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onAddChild(node.group.id)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Untergruppe
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onEdit(node.group)}>
-                <Edit className="h-4 w-4 mr-2" />
-                Bearbeiten
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onDelete(node.group)}
-                className="text-destructive"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Entfernen
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={(e) => {
+                e.stopPropagation()
+                onAddChild(node.group.id)
+              }}
+              title={t('groupAddChild')}
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MoreHorizontal className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => onAddChild(node.group.id)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('groupAddChild')}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => onEdit(node.group)}>
+                  <Pencil className="h-4 w-4 mr-2" />
+                  {t('groupRename')}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => onDelete(node.group)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {t('groupRemove')}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         )}
       </div>
       {expanded && hasChildren && (
-        <div className="ml-4">
+        <div className="ml-3 border-l border-border/40 pl-1">
           {node.children.map((child) => (
             <TreeNode
               key={child.group.id}
@@ -134,6 +169,7 @@ function TreeNode({
               onEdit={onEdit}
               onDelete={onDelete}
               onAddChild={onAddChild}
+
             />
           ))}
         </div>
@@ -147,6 +183,7 @@ export function ArticleGroupTree({
   onSelect,
   canManage = false,
 }: ArticleGroupTreeProps) {
+  const t = useTranslations('warehouseArticles')
   const { data: groups, isLoading } = useWhArticleGroups()
   const createGroup = useCreateWhArticleGroup()
   const updateGroup = useUpdateWhArticleGroup()
@@ -184,7 +221,7 @@ export function ArticleGroupTree({
       { id: group.id },
       {
         onSuccess: () => {
-          toast.success('Gruppe entfernt')
+          toast.success(t('toastGroupRemoved'))
           if (selectedGroupId === group.id) {
             onSelect(null)
           }
@@ -204,7 +241,7 @@ export function ArticleGroupTree({
         { name: groupName.trim(), parentId: dialogParentId },
         {
           onSuccess: () => {
-            toast.success('Gruppe erstellt')
+            toast.success(t('toastGroupCreated'))
             setDialogOpen(false)
           },
           onError: (err) => toast.error(err.message),
@@ -215,7 +252,7 @@ export function ArticleGroupTree({
         { id: editGroupId, name: groupName.trim() },
         {
           onSuccess: () => {
-            toast.success('Gruppe aktualisiert')
+            toast.success(t('toastGroupUpdated'))
             setDialogOpen(false)
           },
           onError: (err) => toast.error(err.message),
@@ -225,29 +262,47 @@ export function ArticleGroupTree({
   }
 
   if (isLoading) {
-    return <div className="p-4 text-sm text-muted-foreground">Laden...</div>
+    return <div className="p-4 text-sm text-muted-foreground">{t('loading')}</div>
   }
 
   return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between px-2 py-1">
-        <span className="text-xs font-semibold uppercase text-muted-foreground">Gruppen</span>
+    <div className="space-y-0.5">
+      {/* Header */}
+      <div className="flex items-center justify-between px-2 py-1.5">
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          {t('groupsHeader')}
+        </span>
+      </div>
+
+      {/* "Alle Artikel" with hover action for root group */}
+      <div
+        className={`group flex items-center justify-between px-2 py-1.5 rounded-md text-sm cursor-pointer transition-colors hover:bg-accent ${
+          selectedGroupId === null ? 'bg-accent font-medium' : ''
+        }`}
+      >
+        <button
+          onClick={() => onSelect(null)}
+          className="flex-1 text-left"
+        >
+          {t('allArticles')}
+        </button>
         {canManage && (
-          <Button variant="ghost" size="icon" className="h-5 w-5" onClick={handleAddRoot}>
-            <Plus className="h-3 w-3" />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 shrink-0"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleAddRoot()
+            }}
+            title={t('groupAddRoot')}
+          >
+            <Plus className="h-3.5 w-3.5" />
           </Button>
         )}
       </div>
 
-      <button
-        onClick={() => onSelect(null)}
-        className={`w-full text-left px-2 py-1 rounded-md text-sm hover:bg-accent ${
-          selectedGroupId === null ? 'bg-accent font-medium' : ''
-        }`}
-      >
-        Alle Artikel
-      </button>
-
+      {/* Group tree */}
       {groups?.map((node) => (
         <TreeNode
           key={node.group.id}
@@ -261,16 +316,28 @@ export function ArticleGroupTree({
         />
       ))}
 
+      {/* Persistent add-group link at bottom */}
+      {canManage && (
+        <button
+          onClick={handleAddRoot}
+          className="flex items-center gap-1.5 w-full px-2 py-1.5 mt-1 text-xs text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-accent"
+        >
+          <Plus className="h-3 w-3" />
+          {t('groupNew')}
+        </button>
+      )}
+
+      {/* Create / Edit dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {dialogMode === 'create' ? 'Neue Artikelgruppe' : 'Gruppe bearbeiten'}
+              {dialogMode === 'create' ? t('groupDialogTitleCreate') : t('groupDialogTitleEdit')}
             </DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <Input
-              placeholder="Gruppenname"
+              placeholder={t('groupNamePlaceholder')}
               value={groupName}
               onChange={(e) => setGroupName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
@@ -279,10 +346,10 @@ export function ArticleGroupTree({
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Abbrechen
+              {t('cancel')}
             </Button>
             <Button onClick={handleSubmit} disabled={!groupName.trim()}>
-              {dialogMode === 'create' ? 'Erstellen' : 'Speichern'}
+              {dialogMode === 'create' ? t('create') : t('save')}
             </Button>
           </DialogFooter>
         </DialogContent>

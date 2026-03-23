@@ -23,6 +23,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Plus, Edit, Trash2, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useTranslations } from 'next-intl'
 import {
   useWhArticleSuppliers,
   useAddWhArticleSupplier,
@@ -60,6 +61,7 @@ const INITIAL_FORM: SupplierFormState = {
 }
 
 export function ArticleSupplierList({ articleId }: ArticleSupplierListProps) {
+  const t = useTranslations('warehouseArticles')
   const { data: suppliers, isLoading } = useWhArticleSuppliers(articleId)
   const addSupplier = useAddWhArticleSupplier()
   const updateSupplier = useUpdateWhArticleSupplier()
@@ -98,7 +100,7 @@ export function ArticleSupplierList({ articleId }: ArticleSupplierListProps) {
     removeSupplier.mutate(
       { id },
       {
-        onSuccess: () => toast.success('Lieferant entfernt'),
+        onSuccess: () => toast.success(t('toastSupplierRemoved')),
         onError: (err) => toast.error(err.message),
       }
     )
@@ -122,7 +124,7 @@ export function ArticleSupplierList({ articleId }: ArticleSupplierListProps) {
         },
         {
           onSuccess: () => {
-            toast.success('Lieferant hinzugefuegt')
+            toast.success(t('toastSupplierAdded'))
             setDialogOpen(false)
           },
           onError: (err) => toast.error(err.message),
@@ -143,7 +145,7 @@ export function ArticleSupplierList({ articleId }: ArticleSupplierListProps) {
         },
         {
           onSuccess: () => {
-            toast.success('Lieferant aktualisiert')
+            toast.success(t('toastSupplierUpdated'))
             setDialogOpen(false)
           },
           onError: (err) => toast.error(err.message),
@@ -155,28 +157,28 @@ export function ArticleSupplierList({ articleId }: ArticleSupplierListProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Lieferanten</h3>
+        <h3 className="text-lg font-semibold">{t('suppliersHeading')}</h3>
         <Button size="sm" onClick={handleAdd}>
           <Plus className="h-4 w-4 mr-2" />
-          Lieferant hinzufuegen
+          {t('actionAddSupplier')}
         </Button>
       </div>
 
       {isLoading ? (
-        <div className="text-sm text-muted-foreground">Laden...</div>
+        <div className="text-sm text-muted-foreground">{t('loading')}</div>
       ) : !suppliers || suppliers.length === 0 ? (
         <div className="text-center py-4 text-muted-foreground">
-          Keine Lieferanten zugeordnet
+          {t('noSuppliers')}
         </div>
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Lieferant</TableHead>
-              <TableHead>Artikelnr. Lieferant</TableHead>
-              <TableHead>EK-Preis</TableHead>
-              <TableHead>Lieferzeit</TableHead>
-              <TableHead>Hauptlieferant</TableHead>
+              <TableHead>{t('colSupplier')}</TableHead>
+              <TableHead>{t('colSupplierArticleNumber')}</TableHead>
+              <TableHead>{t('labelBuyPrice')}</TableHead>
+              <TableHead>{t('colLeadTime')}</TableHead>
+              <TableHead>{t('colPrimarySupplier')}</TableHead>
               <TableHead className="w-[100px]" />
             </TableRow>
           </TableHeader>
@@ -195,10 +197,10 @@ export function ArticleSupplierList({ articleId }: ArticleSupplierListProps) {
                       : '—'}
                   </TableCell>
                   <TableCell>
-                    {s.leadTimeDays != null ? `${s.leadTimeDays} Tage` : '—'}
+                    {s.leadTimeDays != null ? t('leadTimeDays', { count: s.leadTimeDays as number }) : '—'}
                   </TableCell>
                   <TableCell>
-                    {(s.isPrimary as boolean) && <Badge variant="default">Haupt</Badge>}
+                    {(s.isPrimary as boolean) && <Badge variant="default">{t('badgePrimary')}</Badge>}
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
@@ -231,19 +233,19 @@ export function ArticleSupplierList({ articleId }: ArticleSupplierListProps) {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {dialogMode === 'add' ? 'Lieferant hinzufuegen' : 'Lieferant bearbeiten'}
+              {dialogMode === 'add' ? t('actionAddSupplier') : t('dialogEditSupplier')}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             {dialogMode === 'add' && (
               <div className="space-y-2">
-                <Label>Lieferant *</Label>
+                <Label>{t('labelSupplierRequired')}</Label>
                 <select
                   className="w-full border rounded-md px-3 py-2 text-sm"
                   value={form.supplierId}
                   onChange={(e) => setForm({ ...form, supplierId: e.target.value })}
                 >
-                  <option value="">Lieferant waehlen...</option>
+                  <option value="">{t('supplierSelectPlaceholder')}</option>
                   {addressData?.items.map((a: Record<string, unknown>) => (
                     <option key={a.id as string} value={a.id as string}>
                       {(a.number as string)} - {(a.company as string)}
@@ -253,7 +255,7 @@ export function ArticleSupplierList({ articleId }: ArticleSupplierListProps) {
               </div>
             )}
             <div className="space-y-2">
-              <Label>Artikelnr. beim Lieferant</Label>
+              <Label>{t('labelSupplierArticleNumber')}</Label>
               <Input
                 value={form.supplierArticleNumber}
                 onChange={(e) => setForm({ ...form, supplierArticleNumber: e.target.value })}
@@ -261,7 +263,7 @@ export function ArticleSupplierList({ articleId }: ArticleSupplierListProps) {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>EK-Preis</Label>
+                <Label>{t('labelBuyPrice')}</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -270,7 +272,7 @@ export function ArticleSupplierList({ articleId }: ArticleSupplierListProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Lieferzeit (Tage)</Label>
+                <Label>{t('labelLeadTimeDays')}</Label>
                 <Input
                   type="number"
                   value={form.leadTimeDays}
@@ -280,14 +282,14 @@ export function ArticleSupplierList({ articleId }: ArticleSupplierListProps) {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Bestelleinheit</Label>
+                <Label>{t('labelOrderUnit')}</Label>
                 <Input
                   value={form.orderUnit}
                   onChange={(e) => setForm({ ...form, orderUnit: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Std.-Bestellmenge</Label>
+                <Label>{t('labelDefaultOrderQty')}</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -297,7 +299,7 @@ export function ArticleSupplierList({ articleId }: ArticleSupplierListProps) {
               </div>
             </div>
             <div className="flex items-center justify-between">
-              <Label>Hauptlieferant</Label>
+              <Label>{t('labelPrimarySupplier')}</Label>
               <Switch
                 checked={form.isPrimary}
                 onCheckedChange={(checked) => setForm({ ...form, isPrimary: checked })}
@@ -306,7 +308,7 @@ export function ArticleSupplierList({ articleId }: ArticleSupplierListProps) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Abbrechen
+              {t('cancel')}
             </Button>
             <Button
               onClick={handleSubmit}
@@ -315,7 +317,7 @@ export function ArticleSupplierList({ articleId }: ArticleSupplierListProps) {
               {(addSupplier.isPending || updateSupplier.isPending) && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              {dialogMode === 'add' ? 'Hinzufuegen' : 'Speichern'}
+              {dialogMode === 'add' ? t('actionAdd') : t('save')}
             </Button>
           </DialogFooter>
         </DialogContent>

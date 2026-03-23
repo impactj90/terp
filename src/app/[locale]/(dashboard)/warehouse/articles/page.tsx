@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { useHasPermission } from '@/hooks'
@@ -22,6 +23,7 @@ import { ArticleFormSheet } from '@/components/warehouse/article-form-sheet'
 import { ArticleGroupTree } from '@/components/warehouse/article-group-tree'
 
 export default function WhArticlesPage() {
+  const t = useTranslations('warehouseArticles')
   const router = useRouter()
   const { allowed: canAccess } = useHasPermission(['wh_articles.view'])
   const { allowed: canManageGroups } = useHasPermission(['wh_article_groups.manage'])
@@ -62,7 +64,7 @@ export default function WhArticlesPage() {
       { id: deleteArticle.id },
       {
         onSuccess: () => {
-          toast.success('Artikel deaktiviert')
+          toast.success(t('toastDeactivated'))
           setDeleteArticle(null)
         },
         onError: (err) => toast.error(err.message),
@@ -74,7 +76,7 @@ export default function WhArticlesPage() {
     restoreMutation.mutate(
       { id: article.id },
       {
-        onSuccess: () => toast.success('Artikel wiederhergestellt'),
+        onSuccess: () => toast.success(t('toastRestored')),
         onError: (err) => toast.error(err.message),
       }
     )
@@ -83,7 +85,7 @@ export default function WhArticlesPage() {
   if (canAccess === false) {
     return (
       <div className="p-6 text-center text-muted-foreground">
-        Keine Berechtigung
+        {t('noPermission')}
       </div>
     )
   }
@@ -94,10 +96,10 @@ export default function WhArticlesPage() {
     <div className="space-y-4 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Artikel</h1>
+        <h1 className="text-2xl font-bold">{t('pageTitle')}</h1>
         <Button onClick={() => setCreateOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
-          Neuer Artikel
+          {t('actionCreate')}
         </Button>
       </div>
 
@@ -127,12 +129,12 @@ export default function WhArticlesPage() {
                 setSearch(val)
                 setPage(1)
               }}
-              placeholder="Suche nach Nummer, Name, Matchcode..."
+              placeholder={t('searchPlaceholder')}
               className="max-w-sm"
             />
             <div className="flex items-center gap-2">
               <Label htmlFor="activeFilter" className="text-sm whitespace-nowrap">
-                Nur aktive
+                {t('filterActiveOnly')}
               </Label>
               <Switch
                 id="activeFilter"
@@ -145,7 +147,7 @@ export default function WhArticlesPage() {
             </div>
             <div className="flex items-center gap-2">
               <Label htmlFor="belowMinFilter" className="text-sm whitespace-nowrap">
-                Unter Mindestbestand
+                {t('filterBelowMinStock')}
               </Label>
               <Switch
                 id="belowMinFilter"
@@ -212,9 +214,9 @@ export default function WhArticlesPage() {
       <ConfirmDialog
         open={!!deleteArticle}
         onOpenChange={() => setDeleteArticle(null)}
-        title="Artikel deaktivieren?"
-        description={`Moechten Sie den Artikel "${deleteArticle?.name}" wirklich deaktivieren?`}
-        confirmLabel="Deaktivieren"
+        title={t('confirmDeactivateTitle')}
+        description={t('confirmDeactivateDescription', { name: deleteArticle?.name ?? '' })}
+        confirmLabel={t('actionDeactivate')}
         onConfirm={handleDelete}
         variant="destructive"
       />
