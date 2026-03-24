@@ -305,6 +305,19 @@ export const whArticlesRouter = createTRPCRouter({
       }
     }),
 
+  stockValueSummary: whProcedure
+    .use(requirePermission(WH_VIEW))
+    .query(async ({ ctx }) => {
+      try {
+        return await whArticleService.getStockValueSummary(
+          ctx.prisma as unknown as PrismaClient,
+          ctx.tenantId!
+        )
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
   // ========== Article Groups ==========
 
   groups: createTRPCRouter({

@@ -128,6 +128,26 @@ export async function create(
   })
 }
 
+export async function findRecent(
+  prisma: PrismaClient,
+  tenantId: string,
+  limit: number = 10
+) {
+  return prisma.whStockMovement.findMany({
+    where: { tenantId },
+    include: {
+      article: {
+        select: { id: true, number: true, name: true, unit: true },
+      },
+      purchaseOrder: {
+        select: { id: true, number: true },
+      },
+    },
+    orderBy: { date: "desc" },
+    take: limit,
+  })
+}
+
 // --- Goods Receipt Helpers ---
 
 export async function findPendingOrders(

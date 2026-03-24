@@ -558,3 +558,12 @@ export async function removeBom(
   }
   return deleted
 }
+
+// --- Stock Value Summary ---
+
+export async function getStockValueSummary(
+  prisma: PrismaClient,
+  tenantId: string
+) {
+  return repo.getStockValueSummary(prisma, tenantId)
+}

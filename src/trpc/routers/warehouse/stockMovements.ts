@@ -150,6 +150,21 @@ const movementsRouter = createTRPCRouter({
       }
     }),
 
+  recent: whProcedure
+    .use(requirePermission(WH_STOCK_VIEW))
+    .input(z.object({ limit: z.number().int().min(1).max(50).default(10) }))
+    .query(async ({ ctx, input }) => {
+      try {
+        return await stockMovementService.listRecent(
+          ctx.prisma as unknown as PrismaClient,
+          ctx.tenantId!,
+          input.limit
+        )
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
   listByArticle: whProcedure
     .use(requirePermission(WH_STOCK_VIEW))
     .input(z.object({ articleId: z.string().uuid() }))

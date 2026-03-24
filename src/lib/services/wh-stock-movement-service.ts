@@ -60,6 +60,14 @@ export async function listByArticle(
   return repo.findByArticle(prisma, tenantId, articleId)
 }
 
+export async function listRecent(
+  prisma: PrismaClient,
+  tenantId: string,
+  limit: number = 10
+) {
+  return repo.findRecent(prisma, tenantId, limit)
+}
+
 // --- Goods Receipt Functions ---
 
 export async function listPendingOrders(

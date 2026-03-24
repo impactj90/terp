@@ -1,5 +1,4 @@
-import type { PrismaClient } from "@/generated/prisma/client"
-import { Prisma } from "@/generated/prisma/client"
+import type { PrismaClient, Prisma } from "@/generated/prisma/client"
 import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 // =============================================================================
@@ -484,6 +483,30 @@ export async function deleteBom(
     where: { id },
   })
   return true
+}
+
+export async function getStockValueSummary(
+  prisma: PrismaClient,
+  tenantId: string
+) {
+  const result = await prisma.$queryRaw<
+    Array<{ total_value: number; tracked_count: number; below_min_count: number }>
+  >`
+    SELECT
+      COALESCE(SUM(current_stock * COALESCE(buy_price, 0)), 0)::float AS total_value,
+      COUNT(*)::int AS tracked_count,
+      COUNT(*) FILTER (WHERE min_stock IS NOT NULL AND current_stock < min_stock)::int AS below_min_count
+    FROM wh_articles
+    WHERE tenant_id = ${tenantId}::uuid
+      AND stock_tracking = true
+      AND is_active = true
+  `
+  const row = result[0] ?? { total_value: 0, tracked_count: 0, below_min_count: 0 }
+  return {
+    totalStockValue: Math.round(row.total_value * 100) / 100,
+    trackedArticleCount: row.tracked_count,
+    belowMinStockCount: row.below_min_count,
+  }
 }
 
 export async function findBomChildren(
