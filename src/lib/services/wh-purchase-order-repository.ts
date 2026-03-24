@@ -195,6 +195,7 @@ export async function createPosition(
     unitPrice?: number | null
     flatCosts?: number | null
     totalPrice?: number | null
+    vatRate?: number
     requestedDelivery?: Date | null
     confirmedDelivery?: Date | null
   }
@@ -211,6 +212,7 @@ export async function createPosition(
       unitPrice: data.unitPrice ?? null,
       flatCosts: data.flatCosts ?? null,
       totalPrice: data.totalPrice ?? null,
+      vatRate: data.vatRate ?? 19.0,
       requestedDelivery: data.requestedDelivery ?? null,
       confirmedDelivery: data.confirmedDelivery ?? null,
     },

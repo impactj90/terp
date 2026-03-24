@@ -120,6 +120,8 @@
     "warehouseArticles": "Artikel",
     "warehousePriceLists": "Preislisten",
     "warehousePurchaseOrders": "Bestellungen",
+    "warehouseGoodsReceipt": "Wareneingang",
+    "warehouseStockMovements": "Lagerbewegungen",
     "crmReports": "Auswertungen"
   },
   "sidebar": {
@@ -5763,7 +5765,9 @@
     "detailOrderMethodNote": "Bestellhinweis",
     "detailNotes": "Bemerkungen",
     "detailSubtotal": "Zwischensumme (netto)",
-    "detailTotal": "Gesamtbetrag",
+    "detailVatRate": "davon {rate}% MwSt",
+    "detailTotalVat": "MwSt gesamt",
+    "detailTotal": "Gesamtbetrag (brutto)",
     "detailCreatedAt": "Erstellt am",
     "detailCreatedBy": "Erstellt von",
 
@@ -5781,6 +5785,7 @@
     "posColUnitPrice": "Einzelpreis",
     "posColFlatCosts": "Nebenkosten",
     "posColTotalPrice": "Gesamtpreis",
+    "posColVatRate": "MwSt %",
     "posColDeliveryDate": "Liefertermin",
 
     "posActionAdd": "Position hinzufügen",
@@ -5836,6 +5841,87 @@
     "purchaseOrderNotFound": "Bestellung nicht gefunden",
     "errorDraftOnly": "Nur Entwürfe können bearbeitet werden",
     "errorNoPositions": "Bestellung hat keine Positionen"
+  },
+  "warehouseGoodsReceipt": {
+    "pageTitle": "Wareneingang",
+    "noPermission": "Keine Berechtigung",
+    "loading": "Laden...",
+
+    "stepSupplier": "Lieferant w\u00e4hlen",
+    "stepOrder": "Bestellung w\u00e4hlen",
+    "stepPositions": "Positionen pr\u00fcfen",
+    "stepConfirm": "Buchung best\u00e4tigen",
+
+    "labelSupplier": "Lieferant",
+    "labelPurchaseOrder": "Bestellung",
+    "supplierPlaceholder": "Lieferant w\u00e4hlen...",
+    "orderPlaceholder": "Bestellung w\u00e4hlen...",
+    "allSuppliers": "Alle Lieferanten",
+
+    "noPendingOrders": "Keine offenen Bestellungen vorhanden",
+    "noPendingOrdersForSupplier": "Keine offenen Bestellungen f\u00fcr diesen Lieferanten",
+
+    "colArticle": "Artikel",
+    "colArticleNumber": "Artikelnr.",
+    "colOrdered": "Bestellt",
+    "colAlreadyReceived": "Bereits geliefert",
+    "colRemaining": "Ausstehend",
+    "colReceiveNow": "Jetzt empfangen",
+    "colUnit": "Einheit",
+
+    "receiveAll": "Alle Positionen vollst\u00e4ndig empfangen",
+    "clearAll": "Alle zur\u00fccksetzen",
+    "actionBook": "Wareneingang buchen",
+    "actionCancel": "Abbrechen",
+    "actionBack": "Zur\u00fcck",
+    "actionNext": "Weiter",
+
+    "confirmTitle": "Wareneingang best\u00e4tigen",
+    "confirmDescription": "Folgende Positionen werden gebucht:",
+    "confirmOrder": "Bestellung",
+    "confirmArticle": "Artikel",
+    "confirmQuantity": "Menge",
+    "confirmBook": "Jetzt buchen",
+
+    "toastBooked": "Wareneingang erfolgreich gebucht",
+    "toastBookedPositions": "{count} Position(en) gebucht",
+    "toastError": "Fehler beim Buchen des Wareneingangs",
+
+    "errorQuantityExceeds": "Menge \u00fcberschreitet ausstehende Menge",
+    "errorNoPositions": "Keine Positionen zum Buchen ausgew\u00e4hlt",
+    "errorInvalidOrder": "Bestellung nicht buchbar"
+  },
+  "warehouseStockMovements": {
+    "pageTitle": "Lagerbewegungen",
+    "noPermission": "Keine Berechtigung",
+    "loading": "Laden...",
+    "noMovementsFound": "Keine Lagerbewegungen gefunden",
+
+    "colDate": "Datum",
+    "colArticle": "Artikel",
+    "colType": "Art",
+    "colQuantity": "Menge",
+    "colPreviousStock": "Bestand vorher",
+    "colNewStock": "Bestand nachher",
+    "colReference": "Referenz",
+    "colReason": "Grund",
+    "colCreatedBy": "Erstellt von",
+
+    "typeGoodsReceipt": "Wareneingang",
+    "typeWithdrawal": "Lagerentnahme",
+    "typeAdjustment": "Korrektur",
+    "typeInventory": "Inventur",
+    "typeReturn": "R\u00fccklieferung",
+
+    "filterArticle": "Artikel filtern",
+    "filterType": "Art filtern",
+    "filterAllTypes": "Alle Arten",
+    "filterDateFrom": "Von",
+    "filterDateTo": "Bis",
+    "searchPlaceholder": "Nach Artikel suchen...",
+
+    "articleTabTitle": "Lagerbewegungen",
+    "articleTabEmpty": "Keine Lagerbewegungen f\u00fcr diesen Artikel"
   },
   "billingDocuments": {
     "typeOffer": "Angebot",

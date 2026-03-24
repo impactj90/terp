@@ -22,7 +22,7 @@ import {
   useUpdateWhPOPosition,
   useDeleteWhPOPosition,
 } from '@/hooks/use-wh-purchase-orders'
-import { ArticleSearchPopover } from './article-search-popover'
+import { ArticleSearchPopover, type ArticleSearchResult } from './article-search-popover'
 
 function formatPrice(price: number | null | undefined): string {
   if (price === null || price === undefined) return '\u2014'
@@ -46,6 +46,7 @@ interface AddPositionForm {
   unit: string
   description: string
   flatCosts: string
+  vatRate: string
 }
 
 const EMPTY_ADD_FORM: AddPositionForm = {
@@ -56,6 +57,7 @@ const EMPTY_ADD_FORM: AddPositionForm = {
   unit: '',
   description: '',
   flatCosts: '',
+  vatRate: '19',
 }
 
 interface EditPositionForm {
@@ -64,6 +66,7 @@ interface EditPositionForm {
   unit: string
   description: string
   flatCosts: string
+  vatRate: string
 }
 
 export function PurchaseOrderPositionTable({
@@ -87,6 +90,7 @@ export function PurchaseOrderPositionTable({
     unit: '',
     description: '',
     flatCosts: '',
+    vatRate: '19',
   })
   const [deleteTarget, setDeleteTarget] = React.useState<{
     id: string
@@ -108,6 +112,9 @@ export function PurchaseOrderPositionTable({
         flatCosts: addForm.flatCosts
           ? parseFloat(addForm.flatCosts)
           : undefined,
+        vatRate: addForm.vatRate
+          ? parseFloat(addForm.vatRate)
+          : undefined,
       },
       {
         onSuccess: () => {
@@ -127,6 +134,7 @@ export function PurchaseOrderPositionTable({
     unit?: string | null
     description?: string | null
     flatCosts?: number | null
+    vatRate?: number | null
   }) {
     setEditingId(position.id)
     setEditForm({
@@ -135,6 +143,7 @@ export function PurchaseOrderPositionTable({
       unit: position.unit || '',
       description: position.description || '',
       flatCosts: position.flatCosts != null ? String(position.flatCosts) : '',
+      vatRate: position.vatRate != null ? String(position.vatRate) : '19',
     })
   }
 
@@ -151,6 +160,9 @@ export function PurchaseOrderPositionTable({
         description: editForm.description || undefined,
         flatCosts: editForm.flatCosts
           ? parseFloat(editForm.flatCosts)
+          : undefined,
+        vatRate: editForm.vatRate
+          ? parseFloat(editForm.vatRate)
           : undefined,
       },
       {
@@ -209,6 +221,7 @@ export function PurchaseOrderPositionTable({
         )}
       </div>
 
+      <div className="[&>div]:overflow-visible">
       <Table>
         <TableHeader>
           <TableRow>
@@ -236,6 +249,9 @@ export function PurchaseOrderPositionTable({
             <TableHead className="w-[100px] text-right">
               {t('posColTotalPrice')}
             </TableHead>
+            <TableHead className="w-[70px] text-right">
+              {t('posColVatRate')}
+            </TableHead>
             {isDraft && <TableHead className="w-[80px]" />}
           </TableRow>
         </TableHeader>
@@ -243,7 +259,7 @@ export function PurchaseOrderPositionTable({
           {(!positions || positions.length === 0) && !isAdding ? (
             <TableRow>
               <TableCell
-                colSpan={isDraft ? (showReceivedCol ? 11 : 10) : (showReceivedCol ? 10 : 9)}
+                colSpan={isDraft ? (showReceivedCol ? 12 : 11) : (showReceivedCol ? 11 : 10)}
                 className="text-center text-muted-foreground py-8"
               >
                 {t('noPositions')}
@@ -269,6 +285,7 @@ export function PurchaseOrderPositionTable({
                   unitPrice?: number | null
                   flatCosts?: number | null
                   totalPrice?: number | null
+                  vatRate?: number | null
                 },
                 idx: number
               ) => {
@@ -387,6 +404,26 @@ export function PurchaseOrderPositionTable({
                     <TableCell className="text-right text-sm font-medium">
                       {formatPrice(pos.totalPrice)}
                     </TableCell>
+                    <TableCell className="text-right">
+                      {isEditing ? (
+                        <Input
+                          type="number"
+                          step="0.1"
+                          value={editForm.vatRate}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              vatRate: e.target.value,
+                            })
+                          }
+                          className="h-8 text-sm text-right w-16"
+                        />
+                      ) : (
+                        <span className="text-sm">
+                          {pos.vatRate != null ? `${pos.vatRate}%` : '\u2014'}
+                        </span>
+                      )}
+                    </TableCell>
                     {isDraft && (
                       <TableCell>
                         {isEditing ? (
@@ -453,8 +490,15 @@ export function PurchaseOrderPositionTable({
               <TableCell colSpan={2}>
                 <ArticleSearchPopover
                   value={addForm.articleId}
-                  onSelect={(id, label) =>
-                    setAddForm({ ...addForm, articleId: id, articleLabel: label })
+                  onSelect={(id, label, article?: ArticleSearchResult) =>
+                    setAddForm({
+                      ...addForm,
+                      articleId: id,
+                      articleLabel: label,
+                      unit: article?.unit || addForm.unit,
+                      unitPrice: article?.buyPrice != null ? String(article.buyPrice) : addForm.unitPrice,
+                      vatRate: article?.vatRate != null ? String(article.vatRate) : addForm.vatRate,
+                    })
                   }
                   placeholder={t('posArticlePlaceholder')}
                 />
@@ -512,7 +556,26 @@ export function PurchaseOrderPositionTable({
                   className="h-8 text-sm text-right w-24"
                 />
               </TableCell>
-              <TableCell />
+              <TableCell className="text-right text-sm font-medium">
+                {(() => {
+                  const qty = parseFloat(addForm.quantity) || 0
+                  const price = parseFloat(addForm.unitPrice) || 0
+                  const flat = parseFloat(addForm.flatCosts) || 0
+                  const total = qty * price + flat
+                  return total > 0 ? formatPrice(total) : '\u2014'
+                })()}
+              </TableCell>
+              <TableCell>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={addForm.vatRate}
+                  onChange={(e) =>
+                    setAddForm({ ...addForm, vatRate: e.target.value })
+                  }
+                  className="h-8 text-sm text-right w-16"
+                />
+              </TableCell>
               <TableCell>
                 <div className="flex gap-1">
                   <Button
@@ -541,6 +604,7 @@ export function PurchaseOrderPositionTable({
           )}
         </TableBody>
       </Table>
+      </div>
 
       <ConfirmDialog
         open={!!deleteTarget}

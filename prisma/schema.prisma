@@ -194,6 +194,7 @@ model Tenant {
   whArticleGroups             WhArticleGroup[]
   whArticles                  WhArticle[]
   whPurchaseOrders            WhPurchaseOrder[]
+  whStockMovements            WhStockMovement[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
@@ -4201,6 +4202,7 @@ model WhArticle {
   bomParent WhBillOfMaterial[] @relation("BomParent")
   bomChild  WhBillOfMaterial[] @relation("BomChild")
   purchaseOrderPositions WhPurchaseOrderPosition[]
+  stockMovements         WhStockMovement[]
 
   @@unique([tenantId, number], map: "uq_wh_articles_tenant_number")
   @@index([tenantId, groupId])
@@ -4257,6 +4259,16 @@ model WhBillOfMaterial {
 // Purchase orders sent to suppliers. Follows workflow:
 // DRAFT -> ORDERED -> PARTIALLY_RECEIVED -> RECEIVED (with CANCELLED)
 
+enum WhStockMovementType {
+  GOODS_RECEIPT
+  WITHDRAWAL
+  ADJUSTMENT
+  INVENTORY
+  RETURN
+
+  @@map("wh_stock_movement_type")
+}
+
 enum WhPurchaseOrderStatus {
   DRAFT
   ORDERED
@@ -4291,6 +4303,7 @@ model WhPurchaseOrder {
   orderMethodNote     String?                  @map("order_method_note")
   notes               String?
   subtotalNet         Float                    @default(0) @map("subtotal_net")
+  totalVat            Float                    @default(0) @map("total_vat")
   totalGross          Float                    @default(0) @map("total_gross")
   printedAt           DateTime?                @map("printed_at") @db.Timestamptz(6)
   createdAt           DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -4301,7 +4314,8 @@ model WhPurchaseOrder {
   supplier  CrmAddress                @relation(fields: [supplierId], references: [id])
   contact   CrmContact?               @relation(fields: [contactId], references: [id], onDelete: SetNull)
   inquiry   CrmInquiry?               @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
-  positions WhPurchaseOrderPosition[]
+  positions       WhPurchaseOrderPosition[]
+  stockMovements  WhStockMovement[]
 
   @@unique([tenantId, number], map: "uq_wh_purchase_orders_tenant_number")
   @@index([tenantId, status])
@@ -4323,6 +4337,7 @@ model WhPurchaseOrderPosition {
   unitPrice             Float?    @map("unit_price")
   flatCosts             Float?    @map("flat_costs")
   totalPrice            Float?    @map("total_price")
+  vatRate               Float     @default(19.0) @map("vat_rate")
   requestedDelivery     DateTime? @map("requested_delivery") @db.Timestamptz(6)
   confirmedDelivery     DateTime? @map("confirmed_delivery") @db.Timestamptz(6)
   createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -4333,4 +4348,44 @@ model WhPurchaseOrderPosition {
 
   @@index([purchaseOrderId, sortOrder])
   @@map("wh_purchase_order_positions")
+}
+
+// -----------------------------------------------------------------------------
+// WhStockMovement
+// -----------------------------------------------------------------------------
+// Migration: 20260324120000
+//
+// Stock movements track all changes to article inventory: goods receipts,
+// withdrawals, adjustments, inventory counts, and returns.
+
+model WhStockMovement {
+  id                       String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId                 String              @map("tenant_id") @db.Uuid
+  articleId                String              @map("article_id") @db.Uuid
+  type                     WhStockMovementType
+  quantity                 Float
+  previousStock            Float               @map("previous_stock")
+  newStock                 Float               @map("new_stock")
+  date                     DateTime            @default(now()) @db.Timestamptz(6)
+
+  purchaseOrderId          String?             @map("purchase_order_id") @db.Uuid
+  purchaseOrderPositionId  String?             @map("purchase_order_position_id") @db.Uuid
+  documentId               String?             @map("document_id") @db.Uuid
+  orderId                  String?             @map("order_id") @db.Uuid
+  inventorySessionId       String?             @map("inventory_session_id") @db.Uuid
+
+  reason                   String?
+  notes                    String?
+  createdById              String?             @map("created_by_id") @db.Uuid
+  createdAt                DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant        Tenant           @relation(fields: [tenantId], references: [id])
+  article       WhArticle        @relation(fields: [articleId], references: [id])
+  purchaseOrder WhPurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, articleId])
+  @@index([tenantId, type])
+  @@index([tenantId, date])
+  @@index([tenantId, purchaseOrderId])
+  @@map("wh_stock_movements")
 }

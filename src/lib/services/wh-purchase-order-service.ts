@@ -50,12 +50,36 @@ async function recalculateTotals(
 ) {
   const positions = await prisma.whPurchaseOrderPosition.findMany({
     where: { purchaseOrderId },
-    select: { totalPrice: true },
+    select: { totalPrice: true, vatRate: true },
   })
-  const subtotalNet = positions.reduce((sum, p) => sum + (p.totalPrice ?? 0), 0)
+
+  let subtotalNet = 0
+  const vatMap = new Map<number, number>()
+
+  for (const pos of positions) {
+    if (pos.totalPrice != null) {
+      subtotalNet += pos.totalPrice
+      if (pos.vatRate != null && pos.vatRate > 0) {
+        const vatAmount = pos.totalPrice * (pos.vatRate / 100)
+        vatMap.set(pos.vatRate, (vatMap.get(pos.vatRate) ?? 0) + vatAmount)
+      }
+    }
+  }
+
+  let totalVat = 0
+  for (const amount of vatMap.values()) {
+    totalVat += amount
+  }
+
+  const totalGross = subtotalNet + totalVat
+
   await prisma.whPurchaseOrder.updateMany({
     where: { id: purchaseOrderId, tenantId },
-    data: { subtotalNet, totalGross: subtotalNet },
+    data: {
+      subtotalNet: Math.round(subtotalNet * 100) / 100,
+      totalVat: Math.round(totalVat * 100) / 100,
+      totalGross: Math.round(totalGross * 100) / 100,
+    },
   })
 }
 
@@ -379,6 +403,7 @@ export async function addPosition(
     unit?: string
     description?: string
     flatCosts?: number
+    vatRate?: number
     requestedDelivery?: string
     confirmedDelivery?: string
   },
@@ -397,7 +422,7 @@ export async function addPosition(
   // 3. Validate article exists
   const article = await prisma.whArticle.findFirst({
     where: { id: input.articleId, tenantId },
-    select: { id: true, number: true, name: true, unit: true, buyPrice: true },
+    select: { id: true, number: true, name: true, unit: true, buyPrice: true, vatRate: true },
   })
   if (!article) {
     throw new WhPurchaseOrderValidationError("Article not found")
@@ -437,6 +462,7 @@ export async function addPosition(
     (input.quantity * (unitPrice ?? 0)) + (input.flatCosts ?? 0)
 
   // 7. Create position
+  const vatRate = input.vatRate ?? article.vatRate
   const position = await repo.createPosition(prisma, input.purchaseOrderId, {
     sortOrder,
     articleId: input.articleId,
@@ -447,6 +473,7 @@ export async function addPosition(
     unitPrice,
     flatCosts: input.flatCosts ?? null,
     totalPrice,
+    vatRate,
     requestedDelivery: input.requestedDelivery
       ? new Date(input.requestedDelivery)
       : null,
@@ -481,6 +508,7 @@ export async function updatePosition(
     unit?: string
     description?: string
     flatCosts?: number
+    vatRate?: number
     requestedDelivery?: string
     confirmedDelivery?: string
   },
@@ -515,6 +543,7 @@ export async function updatePosition(
   if (input.unit !== undefined) data.unit = input.unit
   if (input.description !== undefined) data.description = input.description
   if (input.flatCosts !== undefined) data.flatCosts = input.flatCosts
+  if (input.vatRate !== undefined) data.vatRate = input.vatRate
   if (input.requestedDelivery !== undefined) {
     data.requestedDelivery = input.requestedDelivery
       ? new Date(input.requestedDelivery)

@@ -6,9 +6,19 @@ import { useWhArticleSearch } from '@/hooks'
 import { Search } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
+export interface ArticleSearchResult {
+  id: string
+  number: string
+  name: string
+  unit: string
+  sellPrice: number | null
+  buyPrice: number | null
+  vatRate: number
+}
+
 interface ArticleSearchPopoverProps {
   value: string | null
-  onSelect: (id: string, name: string) => void
+  onSelect: (id: string, name: string, article?: ArticleSearchResult) => void
   placeholder?: string
 }
 
@@ -57,12 +67,12 @@ export function ArticleSearchPopover({
       </div>
       {showResults && results && results.length > 0 && (
         <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-48 overflow-y-auto">
-          {results.map((article: { id: string; number: string; name: string; unit: string; sellPrice: number | null }) => (
+          {results.map((article: ArticleSearchResult) => (
             <button
               key={article.id}
               className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center justify-between"
               onClick={() => {
-                onSelect(article.id, `${article.number} — ${article.name}`)
+                onSelect(article.id, `${article.number} — ${article.name}`, article)
                 setQuery(article.number)
                 setShowResults(false)
               }}

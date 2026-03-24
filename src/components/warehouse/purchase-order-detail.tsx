@@ -272,6 +272,28 @@ export function PurchaseOrderDetail({ id }: PurchaseOrderDetailProps) {
               label={t('detailSubtotal')}
               value={formatPrice(order.subtotalNet)}
             />
+            {(() => {
+              const vatGroups = new Map<number, number>()
+              const positions = (order as Record<string, unknown>).positions as Array<{
+                totalPrice?: number | null
+                vatRate?: number | null
+              }> | undefined
+              for (const pos of positions ?? []) {
+                if (pos.totalPrice != null && pos.vatRate != null && pos.vatRate > 0) {
+                  const amount = pos.totalPrice * (pos.vatRate / 100)
+                  vatGroups.set(pos.vatRate, (vatGroups.get(pos.vatRate) ?? 0) + amount)
+                }
+              }
+              return Array.from(vatGroups.entries())
+                .sort(([a], [b]) => a - b)
+                .map(([rate, amount]) => (
+                  <DetailRow
+                    key={rate}
+                    label={t('detailVatRate', { rate: String(rate) })}
+                    value={formatPrice(Math.round(amount * 100) / 100)}
+                  />
+                ))
+            })()}
             <DetailRow
               label={t('detailTotal')}
               value={

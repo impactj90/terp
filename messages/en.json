@@ -120,6 +120,8 @@
     "warehouseArticles": "Articles",
     "warehousePriceLists": "Price Lists",
     "warehousePurchaseOrders": "Purchase Orders",
+    "warehouseGoodsReceipt": "Goods Receipt",
+    "warehouseStockMovements": "Stock Movements",
     "crmReports": "Reports"
   },
   "sidebar": {
@@ -5763,7 +5765,9 @@
     "detailOrderMethodNote": "Order Note",
     "detailNotes": "Notes",
     "detailSubtotal": "Subtotal (net)",
-    "detailTotal": "Total",
+    "detailVatRate": "incl. {rate}% VAT",
+    "detailTotalVat": "Total VAT",
+    "detailTotal": "Total (gross)",
     "detailCreatedAt": "Created",
     "detailCreatedBy": "Created by",
 
@@ -5781,6 +5785,7 @@
     "posColUnitPrice": "Unit Price",
     "posColFlatCosts": "Flat Costs",
     "posColTotalPrice": "Total Price",
+    "posColVatRate": "VAT %",
     "posColDeliveryDate": "Delivery Date",
 
     "posActionAdd": "Add Position",
@@ -5836,6 +5841,87 @@
     "purchaseOrderNotFound": "Purchase order not found",
     "errorDraftOnly": "Only draft orders can be edited",
     "errorNoPositions": "Purchase order has no positions"
+  },
+  "warehouseGoodsReceipt": {
+    "pageTitle": "Goods Receipt",
+    "noPermission": "No permission",
+    "loading": "Loading...",
+
+    "stepSupplier": "Select Supplier",
+    "stepOrder": "Select Order",
+    "stepPositions": "Review Positions",
+    "stepConfirm": "Confirm Booking",
+
+    "labelSupplier": "Supplier",
+    "labelPurchaseOrder": "Purchase Order",
+    "supplierPlaceholder": "Select supplier...",
+    "orderPlaceholder": "Select order...",
+    "allSuppliers": "All Suppliers",
+
+    "noPendingOrders": "No pending orders available",
+    "noPendingOrdersForSupplier": "No pending orders for this supplier",
+
+    "colArticle": "Article",
+    "colArticleNumber": "Article No.",
+    "colOrdered": "Ordered",
+    "colAlreadyReceived": "Already Received",
+    "colRemaining": "Remaining",
+    "colReceiveNow": "Receive Now",
+    "colUnit": "Unit",
+
+    "receiveAll": "Receive all positions in full",
+    "clearAll": "Clear all",
+    "actionBook": "Book Goods Receipt",
+    "actionCancel": "Cancel",
+    "actionBack": "Back",
+    "actionNext": "Next",
+
+    "confirmTitle": "Confirm Goods Receipt",
+    "confirmDescription": "The following positions will be booked:",
+    "confirmOrder": "Purchase Order",
+    "confirmArticle": "Article",
+    "confirmQuantity": "Quantity",
+    "confirmBook": "Book Now",
+
+    "toastBooked": "Goods receipt booked successfully",
+    "toastBookedPositions": "{count} position(s) booked",
+    "toastError": "Error booking goods receipt",
+
+    "errorQuantityExceeds": "Quantity exceeds remaining quantity",
+    "errorNoPositions": "No positions selected for booking",
+    "errorInvalidOrder": "Order cannot be received"
+  },
+  "warehouseStockMovements": {
+    "pageTitle": "Stock Movements",
+    "noPermission": "No permission",
+    "loading": "Loading...",
+    "noMovementsFound": "No stock movements found",
+
+    "colDate": "Date",
+    "colArticle": "Article",
+    "colType": "Type",
+    "colQuantity": "Quantity",
+    "colPreviousStock": "Previous Stock",
+    "colNewStock": "New Stock",
+    "colReference": "Reference",
+    "colReason": "Reason",
+    "colCreatedBy": "Created by",
+
+    "typeGoodsReceipt": "Goods Receipt",
+    "typeWithdrawal": "Withdrawal",
+    "typeAdjustment": "Adjustment",
+    "typeInventory": "Inventory",
+    "typeReturn": "Return",
+
+    "filterArticle": "Filter by article",
+    "filterType": "Filter by type",
+    "filterAllTypes": "All Types",
+    "filterDateFrom": "From",
+    "filterDateTo": "To",
+    "searchPlaceholder": "Search by article...",
+
+    "articleTabTitle": "Stock Movements",
+    "articleTabEmpty": "No stock movements for this article"
   },
   "billingDocuments": {
     "typeOffer": "Offer",

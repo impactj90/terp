@@ -51,6 +51,7 @@ const positionsRouter = createTRPCRouter({
         unit: z.string().optional(),
         description: z.string().optional(),
         flatCosts: z.number().optional(),
+        vatRate: z.number().min(0).max(100).optional(),
         requestedDelivery: z.string().optional(),
         confirmedDelivery: z.string().optional(),
       })
@@ -83,6 +84,7 @@ const positionsRouter = createTRPCRouter({
         unit: z.string().optional(),
         description: z.string().optional(),
         flatCosts: z.number().optional(),
+        vatRate: z.number().min(0).max(100).optional(),
         requestedDelivery: z.string().optional(),
         confirmedDelivery: z.string().optional(),
       })

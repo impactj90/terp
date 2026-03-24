@@ -222,6 +222,8 @@ export async function search(
       name: true,
       unit: true,
       sellPrice: true,
+      buyPrice: true,
+      vatRate: true,
     },
     orderBy: { number: "asc" },
     take: limit,
