@@ -38,7 +38,7 @@ function p(
 }
 
 /**
- * All 86 permissions, mirroring Go's allPermissions slice.
+ * All 90 permissions, mirroring Go's allPermissions slice.
  * Order matches the Go source file for easy comparison.
  */
 export const ALL_PERMISSIONS: Permission[] = [
@@ -289,6 +289,12 @@ export const ALL_PERMISSIONS: Permission[] = [
   // Warehouse Stock / Goods Receipt
   p("wh_stock.view", "wh_stock", "view", "View stock movements and goods receipts"),
   p("wh_stock.manage", "wh_stock", "manage", "Manage goods receipts and stock bookings"),
+
+  // Warehouse Supplier Invoices
+  p("wh_supplier_invoices.view", "wh_supplier_invoices", "view", "View supplier invoices"),
+  p("wh_supplier_invoices.create", "wh_supplier_invoices", "create", "Create supplier invoices"),
+  p("wh_supplier_invoices.edit", "wh_supplier_invoices", "edit", "Edit supplier invoices"),
+  p("wh_supplier_invoices.pay", "wh_supplier_invoices", "pay", "Record payments on supplier invoices"),
 ]
 
 // Lookup maps

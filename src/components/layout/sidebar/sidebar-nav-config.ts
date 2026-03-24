@@ -414,6 +414,13 @@ export const navConfig: NavSection[] = [
         module: 'warehouse',
         permissions: ['wh_stock.view'],
       },
+      {
+        titleKey: 'warehouseSupplierInvoices',
+        href: '/warehouse/supplier-invoices',
+        icon: Stamp,
+        module: 'warehouse',
+        permissions: ['wh_supplier_invoices.view'],
+      },
     ],
   },
   {

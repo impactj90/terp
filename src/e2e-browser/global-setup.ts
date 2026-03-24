@@ -108,6 +108,14 @@ DELETE FROM crm_contacts WHERE address_id IN (SELECT id FROM crm_addresses WHERE
 DELETE FROM crm_bank_accounts WHERE address_id IN (SELECT id FROM crm_addresses WHERE company LIKE 'E2E%');
 DELETE FROM crm_addresses WHERE company LIKE 'E2E%';
 
+-- Supplier invoice cleanup (spec 45) — must come before PO cleanup
+DELETE FROM wh_supplier_payments WHERE invoice_id IN (
+  SELECT id FROM wh_supplier_invoices WHERE tenant_id = '10000000-0000-0000-0000-000000000001'
+  AND supplier_id IN (SELECT id FROM crm_addresses WHERE company LIKE 'E2E%')
+);
+DELETE FROM wh_supplier_invoices WHERE tenant_id = '10000000-0000-0000-0000-000000000001'
+  AND supplier_id IN (SELECT id FROM crm_addresses WHERE company LIKE 'E2E%');
+
 -- Warehouse withdrawal movements (spec 44) — must come before article cleanup
 DELETE FROM wh_stock_movements WHERE type = 'WITHDRAWAL'
   AND tenant_id = '10000000-0000-0000-0000-000000000001'

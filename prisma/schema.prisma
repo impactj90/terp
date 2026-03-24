@@ -195,6 +195,8 @@ model Tenant {
   whArticles                  WhArticle[]
   whPurchaseOrders            WhPurchaseOrder[]
   whStockMovements            WhStockMovement[]
+  whSupplierInvoices          WhSupplierInvoice[]
+  whSupplierPayments          WhSupplierPayment[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
@@ -319,6 +321,7 @@ model CrmAddress {
   priceList                BillingPriceList?    @relation(fields: [priceListId], references: [id])
   articleSuppliers         WhArticleSupplier[]
   purchaseOrders           WhPurchaseOrder[]
+  supplierInvoices         WhSupplierInvoice[]
 
   @@unique([tenantId, number], map: "uq_crm_addresses_tenant_number")
   @@index([tenantId], map: "idx_crm_addresses_tenant_id")
@@ -4316,6 +4319,7 @@ model WhPurchaseOrder {
   inquiry   CrmInquiry?               @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
   positions       WhPurchaseOrderPosition[]
   stockMovements  WhStockMovement[]
+  supplierInvoices WhSupplierInvoice[]
 
   @@unique([tenantId, number], map: "uq_wh_purchase_orders_tenant_number")
   @@index([tenantId, status])
@@ -4390,4 +4394,88 @@ model WhStockMovement {
   @@index([tenantId, purchaseOrderId])
   @@index([tenantId, machineId])
   @@map("wh_stock_movements")
+}
+
+// -----------------------------------------------------------------------------
+// WhSupplierInvoice
+// -----------------------------------------------------------------------------
+// Migration: wh_supplier_invoices
+//
+// Supplier invoice linked to a purchase order. Tracks payment status,
+// payment terms with two-tier discount (Skonto), and partial payments.
+
+enum WhSupplierInvoiceStatus {
+  OPEN
+  PARTIAL
+  PAID
+  CANCELLED
+
+  @@map("wh_supplier_invoice_status")
+}
+
+model WhSupplierInvoice {
+  id                String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String                    @map("tenant_id") @db.Uuid
+  number            String                    // Supplier's invoice number (entered manually)
+  supplierId        String                    @map("supplier_id") @db.Uuid
+  purchaseOrderId   String?                   @map("purchase_order_id") @db.Uuid
+  status            WhSupplierInvoiceStatus   @default(OPEN)
+  invoiceDate       DateTime                  @map("invoice_date") @db.Timestamptz(6)
+  receivedDate      DateTime                  @default(now()) @map("received_date") @db.Timestamptz(6)
+  totalNet          Float                     @map("total_net")
+  totalVat          Float                     @map("total_vat")
+  totalGross        Float                     @map("total_gross")
+
+  // Payment terms
+  paymentTermDays   Int?                      @map("payment_term_days")
+  dueDate           DateTime?                 @map("due_date") @db.Timestamptz(6)
+  discountPercent   Float?                    @map("discount_percent")
+  discountDays      Int?                      @map("discount_days")
+  discountPercent2  Float?                    @map("discount_percent_2")
+  discountDays2     Int?                      @map("discount_days_2")
+
+  notes             String?
+  createdAt         DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById       String?                   @map("created_by_id") @db.Uuid
+
+  tenant        Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  supplier      CrmAddress       @relation(fields: [supplierId], references: [id])
+  purchaseOrder WhPurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+  payments      WhSupplierPayment[]
+
+  @@index([tenantId, supplierId])
+  @@index([tenantId, status])
+  @@index([tenantId, dueDate])
+  @@map("wh_supplier_invoices")
+}
+
+// -----------------------------------------------------------------------------
+// WhSupplierPayment
+// -----------------------------------------------------------------------------
+// Migration: wh_supplier_invoices
+//
+// Payment record against a supplier invoice. Reuses BillingPaymentType
+// (CASH/BANK) and BillingPaymentStatus (ACTIVE/CANCELLED) enums.
+model WhSupplierPayment {
+  id            String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String               @map("tenant_id") @db.Uuid
+  invoiceId     String               @map("invoice_id") @db.Uuid
+  date          DateTime             @db.Timestamptz(6)
+  amount        Float
+  type          BillingPaymentType
+  isDiscount    Boolean              @default(false) @map("is_discount")
+  notes         String?
+  status        BillingPaymentStatus @default(ACTIVE)
+  cancelledAt   DateTime?            @map("cancelled_at") @db.Timestamptz(6)
+  cancelledById String?              @map("cancelled_by_id") @db.Uuid
+  createdAt     DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdById   String?              @map("created_by_id") @db.Uuid
+
+  tenant  Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice WhSupplierInvoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@index([tenantId])
+  @@map("wh_supplier_payments")
 }
