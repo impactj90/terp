@@ -7,6 +7,7 @@
 import type { PrismaClient } from "@/generated/prisma/client"
 import type { Prisma } from "@/generated/prisma/client"
 import * as repo from "./wh-article-repository"
+import * as stockMovementRepo from "./wh-stock-movement-repository"
 import * as numberSeqService from "./number-sequence-service"
 import * as auditLog from "./audit-logs-service"
 import type { AuditContext } from "./audit-logs-service"
@@ -325,8 +326,18 @@ export async function adjustStock(
     throw new WhArticleValidationError("Stock tracking is not enabled for this article")
   }
 
-  // TODO: When WH_04 (Stock Movements) is implemented, also create a
-  // WhStockMovement record of type ADJUSTMENT here.
+  // Create ADJUSTMENT stock movement record
+  await stockMovementRepo.create(prisma, {
+    tenantId,
+    articleId: id,
+    type: "ADJUSTMENT",
+    quantity,
+    previousStock: existing.currentStock,
+    newStock: existing.currentStock + quantity,
+    reason: reason || null,
+    createdById: audit?.userId ?? null,
+  })
+
   const result = await repo.updateStock(prisma, tenantId, id, quantity)
 
   if (audit) {

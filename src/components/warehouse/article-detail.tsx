@@ -18,6 +18,7 @@ import {
 } from '@/hooks'
 import { ArticleFormSheet } from './article-form-sheet'
 import { ArticleSupplierList } from './article-supplier-list'
+import { ArticleMovementsTab } from './article-movements-tab'
 import { ArticleBomList } from './article-bom-list'
 import { ArticleStockAdjustDialog } from './article-stock-adjust-dialog'
 import { ArticlePriceTab } from './article-price-tab'
@@ -221,11 +222,7 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
         </TabsContent>
 
         <TabsContent value="stock" className="mt-4">
-          <Card>
-            <CardContent className="pt-6 text-center text-muted-foreground">
-              {t('stockMovementsPlaceholder')}
-            </CardContent>
-          </Card>
+          <ArticleMovementsTab articleId={articleId} />
         </TabsContent>
 
         <TabsContent value="prices" className="mt-4">

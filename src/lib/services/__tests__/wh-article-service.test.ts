@@ -80,6 +80,9 @@ function createMockPrisma(overrides: Record<string, unknown> = {}) {
         nextValue: 2,
       }),
     },
+    whStockMovement: {
+      create: vi.fn().mockResolvedValue({}),
+    },
     auditLog: {
       create: vi.fn(),
     },

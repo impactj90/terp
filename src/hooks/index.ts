@@ -870,3 +870,13 @@ export {
   useUpdateWhPOPosition,
   useDeleteWhPOPosition,
 } from './use-wh-purchase-orders'
+
+// Warehouse Stock Movements
+export {
+  useWhPendingOrders,
+  useWhOrderPositions,
+  useWhStockMovements,
+  useWhArticleMovements,
+  useBookGoodsReceipt,
+  useBookSinglePosition,
+} from './use-wh-stock-movements'

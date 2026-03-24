@@ -46,6 +46,8 @@ import {
   FileStack,
   Stamp,
   ShoppingCart,
+  PackageCheck,
+  ArrowRightLeft,
 } from 'lucide-react'
 
 /**
@@ -389,6 +391,20 @@ export const navConfig: NavSection[] = [
         icon: ShoppingCart,
         module: 'warehouse',
         permissions: ['wh_purchase_orders.view'],
+      },
+      {
+        titleKey: 'warehouseGoodsReceipt',
+        href: '/warehouse/goods-receipt',
+        icon: PackageCheck,
+        module: 'warehouse',
+        permissions: ['wh_stock.manage'],
+      },
+      {
+        titleKey: 'warehouseStockMovements',
+        href: '/warehouse/stock-movements',
+        icon: ArrowRightLeft,
+        module: 'warehouse',
+        permissions: ['wh_stock.view'],
       },
     ],
   },

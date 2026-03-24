@@ -8,9 +8,11 @@ import { createTRPCRouter } from "@/trpc/init"
 import { whArticlesRouter } from "./articles"
 import { whArticlePricesRouter } from "./articlePrices"
 import { whPurchaseOrdersRouter } from "./purchaseOrders"
+import { whStockMovementsRouter } from "./stockMovements"
 
 export const warehouseRouter = createTRPCRouter({
   articles: whArticlesRouter,
   articlePrices: whArticlePricesRouter,
   purchaseOrders: whPurchaseOrdersRouter,
+  stockMovements: whStockMovementsRouter,
 })

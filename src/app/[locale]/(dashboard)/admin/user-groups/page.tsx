@@ -76,6 +76,11 @@ const CATEGORY_DEFINITIONS = [
   { id: 'bookingOverview', labelKey: 'categoryBookingOverview', resources: ['booking_overview'] },
   { id: 'absences', labelKey: 'categoryAbsences', resources: ['absences', 'absence_types'] },
   {
+    id: 'orders',
+    labelKey: 'categoryOrders',
+    resources: ['orders', 'activities', 'order_assignments', 'order_bookings'],
+  },
+  {
     id: 'configuration',
     labelKey: 'categoryConfiguration',
     resources: [
@@ -87,7 +92,51 @@ const CATEGORY_DEFINITIONS = [
       'departments',
       'teams',
       'accounts',
+      'time_plans',
+      'locations',
+      'groups',
     ],
+  },
+  {
+    id: 'advancedConfig',
+    labelKey: 'categoryAdvancedConfig',
+    resources: [
+      'schedules',
+      'contact_management',
+      'terminal_bookings',
+      'access_control',
+      'vehicle_data',
+      'travel_allowance',
+      'shift_planning',
+      'macros',
+      'cost_centers',
+      'employment_types',
+      'corrections',
+      'monthly_evaluations',
+      'vacation_config',
+    ],
+  },
+  { id: 'payroll', labelKey: 'categoryPayroll', resources: ['payroll'] },
+  {
+    id: 'crm',
+    labelKey: 'categoryCRM',
+    resources: ['crm_addresses', 'crm_correspondence', 'crm_inquiries', 'crm_tasks'],
+  },
+  {
+    id: 'billing',
+    labelKey: 'categoryBilling',
+    resources: [
+      'billing_documents',
+      'billing_service_cases',
+      'billing_payments',
+      'billing_price_lists',
+      'billing_recurring',
+    ],
+  },
+  {
+    id: 'warehouse',
+    labelKey: 'categoryWarehouse',
+    resources: ['wh_articles', 'wh_article_groups', 'wh_purchase_orders', 'wh_stock'],
   },
   {
     id: 'admin',
