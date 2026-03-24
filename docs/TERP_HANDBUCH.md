@@ -80,7 +80,16 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [16.7 Nachbestellvorschläge](#167-nachbestellvorschläge)
     - [16.8 Status-Workflow](#168-status-workflow)
     - [16.9 Praxisbeispiel: Einkauf von Verbrauchsmaterial bei einem Lieferanten](#169-praxisbeispiel-einkauf-von-verbrauchsmaterial-bei-einem-lieferanten)
-17. [Glossar](#17-glossar)
+17. [Lagerverwaltung — Wareneingang](#17-lagerverwaltung--wareneingang)
+    - [17.1 Wareneingangs-Terminal](#171-wareneingangs-terminal)
+    - [17.2 Bestandsbewegungen](#172-bestandsbewegungen)
+    - [17.3 Praxisbeispiel: Bestellung entgegennehmen](#173-praxisbeispiel-bestellung-entgegennehmen)
+18. [Lagerverwaltung — Lagerentnahmen](#18-lagerverwaltung--lagerentnahmen)
+    - [18.1 Entnahme-Terminal](#181-entnahme-terminal)
+    - [18.2 Entnahme-Verlauf](#182-entnahme-verlauf)
+    - [18.3 Entnahme stornieren](#183-entnahme-stornieren)
+    - [18.4 Praxisbeispiel: Material für einen Auftrag entnehmen](#184-praxisbeispiel-material-für-einen-auftrag-entnehmen)
+19. [Glossar](#19-glossar)
 
 ---
 
@@ -6419,7 +6428,7 @@ Tabelle mit Spalten:
 
 📍 Tab **„Bestand"**
 
-Platzhalter — „Bestandsbewegungen werden mit WH_04 implementiert."
+Zeigt alle Bestandsbewegungen (Wareneingänge, Entnahmen, Korrekturen) für diesen Artikel. Spalten: Datum, Typ, Menge, vorheriger und neuer Bestand, Referenz. Siehe Kapitel 17.2.
 
 #### Tab „Preise"
 
@@ -6967,7 +6976,225 @@ Storniert  Storniert
 
 ---
 
-## 17. Glossar
+## 17. Lagerverwaltung — Wareneingang
+
+### 17.1 Wareneingangs-Terminal
+
+**Was ist es?** Das Wareneingangs-Terminal ist ein geführter 4-Schritte-Assistent, über den eingehende Lieferungen gegen bestehende Bestellungen verbucht werden. Beim Wareneingang wird der Lagerbestand der gelieferten Artikel automatisch erhöht und eine Bestandsbewegung vom Typ „Wareneingang" (GOODS_RECEIPT) erzeugt.
+
+**Wozu dient es?** Durch die Buchung am Terminal wird der Bestand in Echtzeit aktualisiert. Teillieferungen werden unterstützt — eine Bestellung kann schrittweise abgearbeitet werden, wobei der Status automatisch von „Bestellt" über „Teilweise geliefert" zu „Vollständig geliefert" wechselt.
+
+⚠️ Modul: Das Warehouse-Modul muss für den Mandanten aktiviert sein
+
+⚠️ Berechtigung: „Lagerbestand verwalten" (`wh_stock.manage`)
+
+📍 Seitenleiste → **Lager** → **Wareneingang**
+
+#### Schritt 1 — Lieferant wählen
+
+1. 📍 Das Terminal zeigt alle Lieferanten mit offenen Bestellungen
+2. Einen Lieferanten auswählen oder **„Alle Lieferanten"** für die Gesamtansicht
+3. ✅ Das Terminal wechselt zu Schritt 2
+
+#### Schritt 2 — Bestellung wählen
+
+1. 📍 Alle offenen Bestellungen des gewählten Lieferanten werden angezeigt
+2. Jede Zeile zeigt: Bestellnummer, Lieferant, Status (Bestellt / Teilweise geliefert), Positionsanzahl
+3. Eine Bestellung anklicken
+4. ✅ Das Terminal wechselt zu Schritt 3
+
+#### Schritt 3 — Liefermengen eingeben
+
+1. 📍 Alle Positionen der Bestellung werden mit Bestell-, Empfangs- und Restmenge angezeigt
+2. Pro Position die tatsächlich gelieferte Menge eintragen
+3. Optional: **„Alle empfangen"** setzt alle Positionen auf die jeweilige Restmenge
+4. **„Alle zurücksetzen"** setzt alle Mengen auf 0
+5. 📍 **„Weiter"**
+
+#### Schritt 4 — Bestätigen
+
+1. 📍 Zusammenfassung: Bestellnummer und alle Positionen mit Empfangsmengen
+2. ✅ Grüne Mengenangaben zeigen die Zugangsmengen (z. B. +20)
+3. 📍 **„Wareneingang buchen"**
+4. ✅ Toast: „Wareneingang gebucht"
+5. ✅ Artikelbestände werden erhöht
+6. ✅ Bestandsbewegungen vom Typ GOODS_RECEIPT werden erzeugt
+7. ✅ Bestellstatus wird aktualisiert (Teilweise/Vollständig geliefert)
+
+### 17.2 Bestandsbewegungen
+
+**Was ist es?** Die Bestandsbewegungen zeigen eine chronologische Liste aller Veränderungen im Lagerbestand: Wareneingänge, Entnahmen, Korrekturen und Inventuren. Jede Bewegung protokolliert Artikelnummer, Menge, vorherigen und neuen Bestand sowie den Auslöser.
+
+📍 Seitenleiste → **Lager** → **Bestandsbewegungen**
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Datum** | Zeitpunkt der Bewegung |
+| **Artikel** | Artikelnummer und Bezeichnung |
+| **Typ** | GOODS_RECEIPT, WITHDRAWAL, ADJUSTMENT, INVENTORY, RETURN |
+| **Menge** | Positive Menge = Zugang (grün), negative Menge = Abgang (rot) |
+| **Vorheriger Bestand** | Bestand vor der Bewegung |
+| **Neuer Bestand** | Bestand nach der Bewegung |
+| **Referenz** | Verknüpfte Bestellung, Auftrag oder Beleg |
+
+**Filter:** Artikel, Typ, Zeitraum (Von/Bis)
+
+### 17.3 Praxisbeispiel: Bestellung entgegennehmen
+
+**Szenario:** Die Lieferung der Bestellung BES-1 (Kapitel 16.9) trifft ein. Es werden 15 von 20 bestellten Eichenholz-Platten geliefert (Teillieferung).
+
+1. 📍 Seitenleiste → **Lager** → **Wareneingang**
+2. 📍 Lieferant **„Holzhandel Süd GmbH"** anklicken
+3. 📍 Bestellung **BES-1** anklicken
+4. Bei Position „Eichenholz-Platte" die Menge **15** eintragen
+5. 📍 **„Weiter"**
+6. ✅ Zusammenfassung zeigt: Eichenholz-Platte +15
+7. 📍 **„Wareneingang buchen"**
+8. ✅ Toast: „Wareneingang gebucht"
+9. ✅ Bestand der Eichenholz-Platte: 3 → 18
+10. ✅ BES-1 wechselt zu **„Teilweise geliefert"** (5 noch offen)
+11. 📍 Seitenleiste → **Lager** → **Bestandsbewegungen** → Eintrag vom Typ GOODS_RECEIPT mit +15
+
+---
+
+## 18. Lagerverwaltung — Lagerentnahmen
+
+### 18.1 Entnahme-Terminal
+
+**Was ist es?** Das Entnahme-Terminal ist ein geführter 3-Schritte-Assistent, über den Artikel aus dem Lager entnommen werden. Jede Entnahme erzeugt eine Bestandsbewegung vom Typ „Entnahme" (WITHDRAWAL) mit negativer Menge und reduziert den Artikelbestand automatisch.
+
+**Wozu dient es?** Entnahmen dokumentieren den Materialverbrauch und können einem Auftrag, einem Lieferschein oder einer Maschine zugeordnet werden. So entsteht eine lückenlose Nachverfolgung: Welcher Artikel wurde wann, in welcher Menge und für welchen Zweck entnommen.
+
+⚠️ Modul: Das Warehouse-Modul muss für den Mandanten aktiviert sein
+
+⚠️ Berechtigung: „Lagerbestand verwalten" (`wh_stock.manage`)
+
+📍 Seitenleiste → **Lager** → **Lagerentnahmen** → Tab **„Neue Entnahme"**
+
+#### Schritt 1 — Referenz wählen
+
+1. 📍 Referenztyp auswählen (Karten mit Icon):
+
+| Referenztyp | Beschreibung |
+|-------------|-------------|
+| **Auftrag** | Entnahme einem Terp-Auftrag zuordnen |
+| **Lieferschein** | Entnahme einem Lieferschein/Beleg zuordnen |
+| **Maschine/Gerät** | Entnahme einer Maschine oder einem Gerät zuordnen |
+| **Ohne Referenz** | Direkte Entnahme ohne Zuordnung |
+
+2. Bei Auftrag/Lieferschein/Maschine: Referenznummer eingeben
+3. Optional: Bemerkungen hinzufügen
+4. 📍 **„Weiter"**
+
+#### Schritt 2 — Artikel auswählen
+
+1. 📍 Artikel über die Suchleiste suchen (Artikelnummer oder Name)
+2. Artikel werden der Entnahmeliste hinzugefügt
+3. Pro Artikel die Entnahmemenge eingeben
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Artikelnr.** | Artikelnummer (Badge) |
+| **Artikel** | Artikelbezeichnung |
+| **Aktueller Bestand** | Verfügbare Menge im Lager |
+| **Entnahmemenge** | Gewünschte Entnahmemenge |
+| **Einheit** | Mengeneinheit (Stk, kg, m, ...) |
+
+⚠️ Die Entnahmemenge darf den aktuellen Bestand nicht überschreiten. Bei Überschreitung erscheint eine rote Warnung „Nicht genügend Bestand".
+
+⚠️ Fällt der Bestand durch die Entnahme unter den Mindestbestand, erscheint ein gelber Hinweis „Bestand wird unter Mindestbestand fallen".
+
+4. Mehrere Artikel können in einer Entnahme zusammengefasst werden (Sammelentnahme)
+5. 📍 **„Weiter"**
+
+#### Schritt 3 — Entnahme bestätigen
+
+1. 📍 Zusammenfassung: Referenz-Badge, alle Artikel mit Entnahmemengen (rot, z. B. −5)
+2. Gesamtmenge wird angezeigt
+3. Falls Bemerkungen eingegeben wurden, werden diese angezeigt
+4. 📍 **„Jetzt entnehmen"** (roter Button)
+5. ✅ Toast: „Entnahme erfolgreich gebucht" (oder „X Artikel entnommen" bei Sammelentnahme)
+6. ✅ Artikelbestände werden reduziert
+7. ✅ Bestandsbewegungen vom Typ WITHDRAWAL mit negativer Menge werden erzeugt
+8. ✅ Terminal wird zurückgesetzt
+
+### 18.2 Entnahme-Verlauf
+
+**Was ist es?** Der Verlauf zeigt eine chronologische Liste aller Lagerentnahmen und Stornierungen. Jeder Eintrag zeigt Datum, Artikel, Menge, Typ (Entnahme oder Storno) und Referenz.
+
+📍 Seitenleiste → **Lager** → **Lagerentnahmen** → Tab **„Verlauf"**
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Datum** | Zeitpunkt der Entnahme |
+| **Artikel** | Artikelnummer (Badge) und Bezeichnung |
+| **Menge** | Negative Menge = Entnahme (rot), positive Menge = Storno (grün) |
+| **Typ** | „Entnahme" oder „Storno" (Badge mit Icon) |
+| **Referenz** | Icon + ID des verknüpften Auftrags, Lieferscheins oder Maschine |
+| **Aktionen** | „Stornieren"-Button (nur bei Entnahmen, erscheint bei Hover) |
+
+**Filter:** Zeitraum (Von/Bis). Pagination bei mehr als 25 Einträgen.
+
+### 18.3 Entnahme stornieren
+
+**Was ist es?** Eine Stornierung kehrt eine Entnahme um: Der entnommene Bestand wird wiederhergestellt und eine Gegenbuchung (positive Menge) erzeugt. Im Verlauf erscheint die Stornierung als eigener Eintrag vom Typ „Storno".
+
+1. 📍 Tab **„Verlauf"** → bei der zu stornierenden Entnahme auf **„Stornieren"** klicken
+2. ✅ Bestätigungsdialog: „Möchten Sie diese Entnahme wirklich stornieren? Der Bestand wird wiederhergestellt."
+3. 📍 **„Stornieren"** bestätigen
+4. ✅ Toast: „Entnahme storniert"
+5. ✅ Artikelbestand wird um die stornierte Menge erhöht
+6. ✅ Im Verlauf erscheint ein neuer Eintrag mit positiver Menge und Typ „Storno"
+
+### 18.4 Praxisbeispiel: Material für einen Auftrag entnehmen
+
+**Szenario:** Ein Schreiner entnimmt 5 Eichenholz-Platten aus dem Lager für den Kundenauftrag „Einbauschrank Familie Müller". Der aktuelle Bestand beträgt 18 Platten (nach dem Wareneingang aus Kapitel 17.3). Der Mindestbestand ist 10.
+
+1. 📍 Seitenleiste → **Lager** → **Lagerentnahmen**
+2. ✅ Tab „Neue Entnahme" ist aktiv, Schritt-Anzeige zeigt „1 Referenz wählen"
+
+**Schritt 1 — Referenz wählen**
+
+3. 📍 Karte **„Auftrag"** anklicken
+4. ✅ Karte wird mit blauem Rahmen hervorgehoben, Häkchen erscheint
+5. Auftragsnummer eingeben: **AUF-001** (Einbauschrank Müller)
+6. Optional: Bemerkung: „Material für Korpus"
+7. 📍 **„Weiter"**
+
+**Schritt 2 — Artikel auswählen**
+
+8. ✅ Schrittanzeige zeigt „2 Artikel auswählen"
+9. ✅ Unter dem Titel wird die Referenz angezeigt: Auftrag: AUF-001
+10. 📍 Im Suchfeld **„Eiche"** eingeben
+11. ✅ Dropdown zeigt „ART-3 Eichenholz-Platte"
+12. 📍 Artikel anklicken
+13. ✅ Artikel erscheint in der Tabelle mit Bestand 18 und Entnahmemenge 1
+14. Entnahmemenge auf **5** ändern
+15. ✅ Gelber Hinweis: „Bestand wird unter Mindestbestand fallen" (18 − 5 = 13 > 10, daher kein Hinweis in diesem Fall)
+16. 📍 **„Weiter"**
+
+**Schritt 3 — Bestätigen**
+
+17. ✅ Referenz-Badge: Auftrag AUF-001
+18. ✅ Tabelle: Eichenholz-Platte −5 Stk
+19. ✅ Gesamtmenge: 5
+20. ✅ Bemerkung: „Material für Korpus"
+21. 📍 **„Jetzt entnehmen"**
+22. ✅ Toast: „Entnahme erfolgreich gebucht"
+23. ✅ Terminal wird zurückgesetzt
+
+**Ergebnis prüfen**
+
+24. 📍 Tab **„Verlauf"** anklicken
+25. ✅ Eintrag: Eichenholz-Platte, −5, Typ „Entnahme", Referenz: Auftrag AUF-001
+26. 📍 Seitenleiste → **Lager** → **Artikel** → Eichenholz-Platte
+27. ✅ Aktueller Bestand: 13 (vorher 18)
+28. 📍 Seitenleiste → **Lager** → **Bestandsbewegungen**
+29. ✅ Eintrag: WITHDRAWAL, Eichenholz-Platte, −5, Bestand 18 → 13
+
+---
+
+## 19. Glossar
 
 | Begriff | Erklärung | Wo in Terp |
 |---------|-----------|-----------|
@@ -7058,6 +7285,11 @@ Storniert  Storniert
 | **Preisliste (Lager)** | Benannte Sammlung von Artikelpreisen für kunden- oder zeitraumspezifische Preisgestaltung | 📍 Lager → Preislisten |
 | **Stückliste (BOM)** | Komponentenliste eines Artikels (Bill of Materials) mit Artikel, Menge und optionaler Bemerkung | 📍 Lager → Artikel → Detail → Tab Stückliste |
 | **VK-Preis** | Netto-Verkaufspreis eines Artikels im Artikelstamm, dient als Basispreis für Preislisten | 📍 Lager → Artikel → Detail → Karte Preise |
+| **Wareneingang** | Buchung eingehender Lieferungen gegen eine Bestellung mit automatischer Bestandserhöhung | 📍 Lager → Wareneingang |
+| **Lagerentnahme** | Entnahme von Artikeln aus dem Lager mit automatischer Bestandsreduzierung, optional mit Referenz (Auftrag, Lieferschein, Maschine) | 📍 Lager → Lagerentnahmen |
+| **Bestandsbewegung** | Einzelner protokollierter Bestandsvorgang (Wareneingang, Entnahme, Korrektur, Inventur, Rückgabe) mit Menge, vorherigem und neuem Bestand | 📍 Lager → Bestandsbewegungen |
+| **Storno (Entnahme)** | Umkehrung einer Lagerentnahme — stellt den entnommenen Bestand wieder her und erzeugt eine positive Gegenbuchung | 📍 Lager → Lagerentnahmen → Verlauf → Stornieren |
+| **Sammelentnahme** | Entnahme mehrerer Artikel in einem Vorgang, gebündelt unter einer gemeinsamen Referenz | 📍 Lager → Lagerentnahmen → Neue Entnahme |
 
 ---
 
@@ -7139,6 +7371,13 @@ Diese Tabelle listet alle Seiten der Anwendung mit ihrer URL und dem Menüpfad:
 | `/warehouse/articles` | Lager → Artikel | wh_articles.view |
 | `/warehouse/articles/[id]` | Artikelliste → Zeile anklicken | wh_articles.view |
 | `/warehouse/prices` | Lager → Preislisten | billing_price_lists.view, wh_articles.view |
+| `/warehouse/purchase-orders` | Lager → Bestellungen | wh_purchase_orders.view |
+| `/warehouse/purchase-orders/new` | Lager → Bestellungen → Neue Bestellung | wh_purchase_orders.create |
+| `/warehouse/purchase-orders/[id]` | Bestellungsliste → Zeile anklicken | wh_purchase_orders.view |
+| `/warehouse/purchase-orders/suggestions` | Lager → Bestellungen → Nachbestellvorschläge | wh_purchase_orders.view |
+| `/warehouse/goods-receipt` | Lager → Wareneingang | wh_stock.manage |
+| `/warehouse/withdrawals` | Lager → Lagerentnahmen | wh_stock.manage |
+| `/warehouse/stock-movements` | Lager → Bestandsbewegungen | wh_stock.view |
 
 ---
 
