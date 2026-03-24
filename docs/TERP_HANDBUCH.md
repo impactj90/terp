@@ -70,7 +70,17 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [15.4 Preise prozentual anpassen](#154-preise-prozentual-anpassen)
     - [15.5 Preisliste kopieren](#155-preisliste-kopieren)
     - [15.6 Praxisbeispiel: Preislisten für Standardkunden und Großkunden einrichten](#156-praxisbeispiel-preislisten-für-standardkunden-und-großkunden-einrichten)
-16. [Glossar](#16-glossar)
+16. [Lagerverwaltung — Einkauf / Bestellungen](#16-lagerverwaltung--einkauf--bestellungen)
+    - [16.1 Bestellliste](#161-bestellliste)
+    - [16.2 Neue Bestellung anlegen](#162-neue-bestellung-anlegen)
+    - [16.3 Bestelldetailseite](#163-bestelldetailseite)
+    - [16.4 Positionen verwalten](#164-positionen-verwalten)
+    - [16.5 Bestellung senden (Bestellen)](#165-bestellung-senden-bestellen)
+    - [16.6 Bestellung stornieren](#166-bestellung-stornieren)
+    - [16.7 Nachbestellvorschläge](#167-nachbestellvorschläge)
+    - [16.8 Status-Workflow](#168-status-workflow)
+    - [16.9 Praxisbeispiel: Einkauf von Verbrauchsmaterial bei einem Lieferanten](#169-praxisbeispiel-einkauf-von-verbrauchsmaterial-bei-einem-lieferanten)
+17. [Glossar](#17-glossar)
 
 ---
 
@@ -6677,7 +6687,287 @@ Artikeltabelle im mittleren Panel:
 
 ---
 
-## 16. Glossar
+## 16. Lagerverwaltung — Einkauf / Bestellungen
+
+### 16.1 Bestellliste
+
+**Was ist es?** Das Einkaufsmodul (Bestellungen) verwaltet den gesamten Beschaffungsprozess: Vom Erstellen einer Bestellung an einen Lieferanten über das Versenden bis zur Nachverfolgung des Lieferstatus. Bestellungen werden mit automatisch vergebener Nummer angelegt und durchlaufen einen definierten Status-Workflow.
+
+**Wozu dient es?** Bestellungen sorgen für eine lückenlose Dokumentation aller Einkaufsvorgänge. In Kombination mit Nachbestellvorschlägen können Artikel, deren Bestand unter den Mindestbestand fällt, gezielt nachbestellt werden. Jede Bestellung ist einem Lieferanten aus dem CRM zugeordnet.
+
+⚠️ Modul: Das Warehouse-Modul muss für den Mandanten aktiviert sein
+
+⚠️ Berechtigung: „Bestellungen anzeigen" (`wh_purchase_orders.view`) zum Lesen, „Bestellungen erstellen" (`wh_purchase_orders.create`) zum Anlegen, „Bestellungen bearbeiten" (`wh_purchase_orders.edit`) zum Bearbeiten, „Bestellungen bestellen" (`wh_purchase_orders.order`) zum Senden/Abschließen
+
+📍 Seitenleiste → **Lager** → **Bestellungen**
+
+✅ Seite mit Bestelltabelle, Suchfeld, Statusfilter und Aktionsknöpfen
+
+#### Bestelltabelle
+
+Tabelle mit Spalten:
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Nummer** | Auto-generierte Bestellnummer (z. B. BES-1) — monospace |
+| **Lieferant** | Firmenname des Lieferanten |
+| **Bestelldatum** | Datum, an dem die Bestellung versendet wurde, oder „—" |
+| **Liefertermin** | Gewünschter Liefertermin oder „—" |
+| **Status** | Badge: Entwurf (grau), Bestellt (blau), Teilweise geliefert (orange), Vollständig geliefert (grün), Storniert (rot) |
+| **Gesamt** | Bruttosumme in EUR |
+| **Aktionen** | ⋯-Menü: Anzeigen, Bearbeiten, Bestellen, Löschen, Stornieren |
+
+**Filter:**
+- **Suchfeld**: Durchsucht Bestellnummer und Lieferantenname
+- **Statusfilter** (Dropdown): Alle Status / Entwurf / Bestellt / Teilweise geliefert / Vollständig geliefert / Storniert
+
+**Toolbar-Buttons:**
+- **„Nachbestellvorschläge"**: Öffnet die Seite mit Artikeln unter Mindestbestand
+- **„Neue Bestellung"**: Legt eine neue Bestellung an
+
+---
+
+### 16.2 Neue Bestellung anlegen
+
+1. 📍 **„Neue Bestellung"** (oben rechts)
+2. ✅ Formularseite öffnet sich
+3. Felder ausfüllen:
+   - **Lieferant** (Pflicht, Dropdown) — zeigt nur Adressen vom Typ „Lieferant" oder „Beides" aus dem CRM
+   - **Kontaktperson** (optional, Dropdown) — Ansprechpartner beim gewählten Lieferanten (wird erst aktiv nach Lieferantenauswahl)
+   - **Gewünschter Liefertermin** (optional, Datum)
+   - **Bemerkungen** (optional, Freitext)
+4. 📍 **„Erstellen"**
+5. ✅ Bestellung wird im Status „Entwurf" angelegt und die Detailseite öffnet sich
+6. ✅ Bestellnummer wird automatisch vergeben (z. B. BES-1, BES-2, …)
+
+> 💡 **Hinweis:** Die Bestellnummer wird automatisch über eine Nummernfolge vergeben (Schlüssel: `purchase_order`). Sie kann nicht manuell geändert werden.
+
+---
+
+### 16.3 Bestelldetailseite
+
+📍 Zeile in der Bestelltabelle anklicken → Detailseite
+
+Die Detailseite zeigt alle Informationen zur Bestellung in mehreren Bereichen:
+
+#### Kopfdaten
+
+| Feld | Beschreibung |
+|------|-------------|
+| **Nummer** | Auto-generierte Bestellnummer |
+| **Status** | Aktueller Status als Badge |
+| **Lieferant** | Firmenname |
+| **Kontaktperson** | Name des Ansprechpartners oder „—" |
+| **Gewünschter Liefertermin** | Datum oder „—" |
+| **Bestätigter Liefertermin** | Vom Lieferanten bestätigtes Datum oder „—" |
+| **Bestelldatum** | Datum der Bestellung (nach Versand) oder „—" |
+| **Bestellmethode** | Telefon / E-Mail / Fax / Druck (nach Versand) oder „—" |
+| **Bemerkungen** | Freitext |
+
+#### Zusammenfassung
+
+| Feld | Beschreibung |
+|------|-------------|
+| **Netto-Summe** | Summe aller Positionen netto |
+| **Brutto-Summe** | Gesamtsumme brutto |
+| **Positionen** | Anzahl der Bestellpositionen |
+
+#### Aktionsleiste (nur bei passender Berechtigung)
+
+- **„Bearbeiten"** — wechselt in den Bearbeitungsmodus (nur bei Entwurf)
+- **„Bestellen"** — öffnet den Bestelldialog (nur bei Entwurf)
+- **„Stornieren"** — storniert die Bestellung (bei Entwurf oder Bestellt)
+
+---
+
+### 16.4 Positionen verwalten
+
+Unterhalb der Kopfdaten befindet sich die **Positionstabelle**.
+
+#### Positionstabelle
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **#** | Laufende Nummer (sortOrder) |
+| **Artikel** | Artikelbezeichnung + Artikelnummer |
+| **Lief.-Art.-Nr.** | Lieferanten-Artikelnummer (aus der Lieferantenzuordnung) |
+| **Menge** | Bestellmenge |
+| **Einheit** | Mengeneinheit (Stk, kg, m, …) |
+| **Einzelpreis** | Einkaufspreis pro Einheit in EUR |
+| **Fixkosten** | Einmalige Fixkosten (optional) |
+| **Gesamt** | Berechneter Gesamtpreis (Menge × Einzelpreis + Fixkosten) |
+| **Aktionen** | Bearbeiten / Löschen (nur bei Entwurf) |
+
+Bei bestellten Bestellungen (nicht ENTWURF) wird zusätzlich die Spalte **„Geliefert"** mit der empfangenen Menge angezeigt.
+
+#### Position hinzufügen
+
+1. 📍 **„Position hinzufügen"** (unterhalb der Tabelle)
+2. Inline-Zeile erscheint in der Tabelle:
+   - **Artikel** (Pflicht) — Artikelauswahl (Suchfeld mit Autocomplete)
+   - **Menge** (Pflicht) — Stückzahl
+   - **Einzelpreis** — wird automatisch befüllt aus der Lieferantenzuordnung (`WhArticleSupplier.buyPrice`) oder dem Artikel-EK-Preis
+   - **Einheit** — wird automatisch befüllt
+   - **Fixkosten** (optional)
+   - **Lieferanten-Artikelnummer** — wird automatisch befüllt aus der Lieferantenzuordnung
+3. 📍 **„Speichern"** (✓-Button)
+4. ✅ Position erscheint in der Tabelle, Summen werden automatisch neu berechnet
+
+> 💡 **Auto-Befüllung:** Wenn im Artikelstamm eine Lieferantenzuordnung für den Lieferanten der Bestellung existiert, werden Einzelpreis, Einheit und Lieferanten-Artikelnummer automatisch vorausgefüllt. Ohne Zuordnung wird der Standard-EK-Preis des Artikels verwendet.
+
+#### Position bearbeiten / löschen
+
+- 📍 Stift-Symbol → Inline-Bearbeitungsmodus
+- 📍 Papierkorb-Symbol → Position wird sofort entfernt, Summen neu berechnet
+
+⚠️ Positionen können nur bei Bestellungen im Status **Entwurf** hinzugefügt, bearbeitet oder gelöscht werden.
+
+---
+
+### 16.5 Bestellung senden (Bestellen)
+
+1. 📍 Detailseite → **„Bestellen"**
+2. ✅ Dialog öffnet sich: „Bestellung senden"
+3. Felder:
+   - **Bestellmethode** (Pflicht, Dropdown): Telefon / E-Mail / Fax / Druck
+   - **Vermerk** (optional) — z. B. Name des Gesprächspartners, Datum des Telefonats
+4. 📍 **„Bestellen"** (im Dialog)
+5. ✅ Status wechselt zu **Bestellt**, Bestelldatum wird auf „jetzt" gesetzt
+6. ✅ Bestellmethode und Vermerk werden gespeichert
+7. ✅ Positionen sind ab jetzt gesperrt (keine Änderung mehr möglich)
+
+⚠️ Eine Bestellung kann nur aus dem Status **Entwurf** versendet werden.
+
+⚠️ Die Bestellung muss mindestens eine Position enthalten, sonst wird der Versand abgelehnt.
+
+---
+
+### 16.6 Bestellung stornieren
+
+1. 📍 ⋯-Menü in der Bestellliste → **„Stornieren"** oder Detailseite → **„Stornieren"**
+2. ✅ Bestätigungsdialog erscheint
+3. 📍 **„Stornieren"** bestätigen
+4. ✅ Status wechselt zu **Storniert**
+
+⚠️ Stornierung ist möglich aus den Status **Entwurf** und **Bestellt**. Bereits vollständig gelieferte oder bereits stornierte Bestellungen können nicht mehr storniert werden.
+
+---
+
+### 16.7 Nachbestellvorschläge
+
+**Was ist es?** Die Nachbestellvorschläge zeigen alle Artikel, deren aktueller Lagerbestand unter den konfigurierten Mindestbestand gefallen ist. Aus diesen Vorschlägen können mit wenigen Klicks Bestellungen erzeugt werden.
+
+📍 Seitenleiste → **Lager** → **Bestellungen** → Toolbar-Button **„Nachbestellvorschläge"**
+
+Oder direkt: 📍 `/warehouse/purchase-orders/suggestions`
+
+✅ Tabelle mit Artikeln unter Mindestbestand
+
+#### Vorschlagstabelle
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **☐** | Checkbox zur Auswahl |
+| **Artikel** | Artikelname und -nummer |
+| **Akt. Bestand** | Aktueller Lagerbestand |
+| **Mindestbestand** | Konfigurierter Mindestbestand |
+| **Fehlmenge** | Mindestbestand − Aktueller Bestand |
+| **Lieferant** | Primärer Lieferant des Artikels |
+| **Vorgeschl. Menge** | Maximum aus Fehlmenge und Standard-Bestellmenge des Lieferanten |
+| **Einzelpreis** | Einkaufspreis des Lieferanten |
+
+**Filter:**
+- **Lieferantenfilter** (Dropdown): Alle Lieferanten oder ein bestimmter Lieferant
+
+**Aktionen:**
+- **„Alle auswählen"** / **„Auswahl aufheben"** — Alle Artikel markieren / demarkieren
+- **„Bestellung erstellen"** — Erstellt eine neue Bestellung (im Status Entwurf) für den ausgewählten Lieferanten mit allen markierten Artikeln als Positionen
+
+> 💡 **Hinweis:** Wenn Artikel verschiedener Lieferanten ausgewählt werden, werden automatisch separate Bestellungen pro Lieferant erzeugt.
+
+#### Bestellung aus Vorschlägen erstellen
+
+1. 📍 Artikel per Checkbox auswählen
+2. 📍 **„Bestellung erstellen"**
+3. ✅ Toast: „Bestellung erstellt"
+4. ✅ Navigation zur neuen Bestellung
+5. ✅ Positionen mit vorgeschlagenen Mengen und Preisen bereits befüllt
+
+---
+
+### 16.8 Status-Workflow
+
+Bestellungen durchlaufen folgenden Workflow:
+
+```
+Entwurf → Bestellt → Teilweise geliefert → Vollständig geliefert
+   ↓          ↓
+Storniert  Storniert
+```
+
+| Status | Bedeutung | Positionen änderbar? |
+|--------|-----------|---------------------|
+| **Entwurf** | Bestellung wird vorbereitet | ✅ Ja |
+| **Bestellt** | An Lieferant gesendet | ❌ Nein (nur empfangene Menge über Wareneingang) |
+| **Teilweise geliefert** | Lieferung ist unvollständig eingegangen | ❌ Nein |
+| **Vollständig geliefert** | Alle Positionen vollständig geliefert | ❌ Nein |
+| **Storniert** | Bestellung wurde storniert | ❌ Nein |
+
+---
+
+### 16.9 Praxisbeispiel: Einkauf von Verbrauchsmaterial bei einem Lieferanten
+
+**Szenario:** Die Schreinerei aus dem Artikelstamm-Beispiel (Kapitel 14.4) muss Schrauben nachbestellen. Der Bestand der „Eichenholz-Platte" ist unter den Mindestbestand gefallen. Der Lieferant „Holzhandel Süd GmbH" soll die Ware liefern.
+
+**Voraussetzungen:**
+- Warehouse-Modul ist aktiviert
+- Lieferant „Holzhandel Süd GmbH" ist als Adresse mit Typ „Lieferant" im CRM angelegt
+- Artikel „Eichenholz-Platte" hat Bestandsführung aktiviert, Mindestbestand = 10, aktueller Bestand = 3
+- Optional: Lieferantenzuordnung im Artikelstamm hinterlegt (Tab „Lieferanten")
+
+**Schritt 1 — Nachbestellvorschläge prüfen**
+
+1. 📍 Seitenleiste → **Lager** → **Bestellungen**
+2. 📍 Toolbar → **„Nachbestellvorschläge"**
+3. ✅ Tabelle zeigt „Eichenholz-Platte" mit:
+   - Akt. Bestand: 3
+   - Mindestbestand: 10
+   - Fehlmenge: 7
+   - Vorgeschl. Menge: 20 (Standard-Bestellmenge des Lieferanten, falls höher als Fehlmenge)
+
+**Schritt 2 — Bestellung aus Vorschlag erstellen**
+
+1. ☑️ Checkbox bei „Eichenholz-Platte" aktivieren
+2. 📍 **„Bestellung erstellen"**
+3. ✅ Toast: „Bestellung erstellt"
+4. ✅ Neue Bestellung BES-1 im Status Entwurf wird angezeigt
+5. ✅ Position mit Eichenholz-Platte, Menge 20, EK-Preis aus Lieferantenzuordnung
+
+**Schritt 3 — Bestellung prüfen und ergänzen**
+
+1. ✅ Detailseite zeigt Kopfdaten: Lieferant „Holzhandel Süd GmbH", Status „Entwurf"
+2. Optional: 📍 **„Position hinzufügen"** → weiteren Artikel ergänzen
+3. ✅ Summen werden automatisch aktualisiert
+
+**Schritt 4 — Bestellung an Lieferanten senden**
+
+1. 📍 **„Bestellen"**
+2. ✅ Dialog: Bestellmethode wählen → **E-Mail**
+3. Vermerk: „Telefonat mit Fr. Schmidt, Lieferung bis KW 14 zugesagt"
+4. 📍 **„Bestellen"** (Bestätigung)
+5. ✅ Status wechselt zu **Bestellt**
+6. ✅ Bestelldatum = heutiges Datum
+7. ✅ Positionen sind nun gesperrt
+
+**Schritt 5 — Ergebnis prüfen**
+
+1. 📍 Seitenleiste → **Lager** → **Bestellungen**
+2. ✅ BES-1 in der Liste mit Status „Bestellt", Bestelldatum ausgefüllt
+3. ✅ Liefertermin, Bestellmethode und Vermerk in der Detailansicht sichtbar
+
+---
+
+## 17. Glossar
 
 | Begriff | Erklärung | Wo in Terp |
 |---------|-----------|-----------|
@@ -6686,6 +6976,8 @@ Artikeltabelle im mittleren Panel:
 | **Benachrichtigung** | Interne Systemmeldung an einen Benutzer (Genehmigung, Fehler, Erinnerung, System) | 📍 Glocke (🔔) / Benachrichtigungen |
 | **Abwesenheitstyp** | Kategorie einer Abwesenheit mit Regeln (Urlaubsabzug, Genehmigung) | 📍 Verwaltung → Abwesenheitsarten |
 | **Aktivität** | Art der Arbeit innerhalb eines Auftrags (z. B. Montage, Dokumentation) | 📍 Verwaltung → Aufträge → Tab Aktivitäten |
+| **Bestellung (Einkauf)** | Einkaufsauftrag an einen Lieferanten mit Positionen, Preisen und Status-Workflow (Entwurf → Bestellt → Geliefert) | 📍 Lager → Bestellungen |
+| **Bestellposition** | Einzelne Zeile in einer Bestellung: Artikel, Menge, Einzelpreis, Gesamtpreis | 📍 Lager → Bestellungen → Detail → Positionstabelle |
 | **Beleg** | Kaufmännisches Dokument in der Belegkette (Angebot, AB, Lieferschein, Rechnung etc.) | 📍 Aufträge → Belege |
 | **Belegkette** | Lückenlose Abfolge von Belegen: Angebot → AB → Lieferschein → Rechnung | 📍 Aufträge → Belege → Detail → Seitenleiste „Belegkette" |
 | **Belegposition** | Einzelne Zeile in einem Beleg (Artikel, Freitext, Textzeile, Seitenumbruch, Zwischensumme) | 📍 Aufträge → Belege → Detail → Positionstabelle im A4-Editor |
@@ -6721,6 +7013,7 @@ Artikeltabelle im mittleren Panel:
 | **Matchcode** | Kurzschlüssel für Adress-Suche (wird automatisch aus Firmenname generiert) | 📍 CRM → Adressen → Formular |
 | **Nettoarbeitszeit** | Anrechenbare Arbeitszeit: Brutto minus Pausen | 📍 Zeitnachweis → Tageszusammenfassung |
 | **Nachricht (CRM)** | Vereinfachte CRM-Aufgabe ohne Terminierung — dient als interne Mitteilung | 📍 CRM → Aufgaben |
+| **Nachbestellvorschlag** | Automatisch berechneter Hinweis, dass ein Artikel unter den Mindestbestand gefallen ist, mit vorgeschlagener Bestellmenge | 📍 Lager → Bestellungen → Nachbestellvorschläge |
 | **Nummernkreis** | Auto-Zähler für Kunden-/Lieferantennummern mit konfigurierbarem Präfix | 📍 Administration → Einstellungen |
 | **Mengenstaffel** | Mehrere Preiseinträge für denselben Artikel mit unterschiedlichen Ab-Mengen für mengenabhängige Rabatte | 📍 Aufträge → Preislisten → Detail |
 | **Offener Posten** | Unbezahlte oder teilbezahlte Rechnung mit Fälligkeitsdatum und Zahlungsstatus | 📍 Aufträge → Offene Posten |

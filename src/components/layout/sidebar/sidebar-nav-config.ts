@@ -45,6 +45,7 @@ import {
   Tag,
   FileStack,
   Stamp,
+  ShoppingCart,
 } from 'lucide-react'
 
 /**
@@ -381,6 +382,13 @@ export const navConfig: NavSection[] = [
         icon: Tag,
         module: 'warehouse',
         permissions: ['billing_price_lists.view'],
+      },
+      {
+        titleKey: 'warehousePurchaseOrders',
+        href: '/warehouse/purchase-orders',
+        icon: ShoppingCart,
+        module: 'warehouse',
+        permissions: ['wh_purchase_orders.view'],
       },
     ],
   },

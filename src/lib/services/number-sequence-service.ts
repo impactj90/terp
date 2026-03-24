@@ -48,6 +48,8 @@ const DEFAULT_PREFIXES: Record<string, string> = {
   service_case: "KD-",
   // Warehouse articles
   article: "ART-",
+  // Warehouse purchase orders
+  purchase_order: "BE-",
 }
 
 export async function getNextNumber(

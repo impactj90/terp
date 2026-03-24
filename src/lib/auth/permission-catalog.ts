@@ -278,6 +278,13 @@ export const ALL_PERMISSIONS: Permission[] = [
   p("wh_articles.edit", "wh_articles", "edit", "Edit warehouse articles"),
   p("wh_articles.delete", "wh_articles", "delete", "Delete warehouse articles"),
   p("wh_article_groups.manage", "wh_article_groups", "manage", "Manage warehouse article groups"),
+
+  // Warehouse Purchase Orders
+  p("wh_purchase_orders.view", "wh_purchase_orders", "view", "View purchase orders"),
+  p("wh_purchase_orders.create", "wh_purchase_orders", "create", "Create purchase orders"),
+  p("wh_purchase_orders.edit", "wh_purchase_orders", "edit", "Edit purchase orders"),
+  p("wh_purchase_orders.delete", "wh_purchase_orders", "delete", "Delete purchase orders"),
+  p("wh_purchase_orders.order", "wh_purchase_orders", "order", "Send/finalize purchase orders"),
 ]
 
 // Lookup maps
