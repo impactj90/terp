@@ -122,6 +122,7 @@
     "warehousePurchaseOrders": "Bestellungen",
     "warehouseGoodsReceipt": "Wareneingang",
     "warehouseStockMovements": "Lagerbewegungen",
+    "warehouseWithdrawals": "Lagerentnahmen",
     "crmReports": "Auswertungen"
   },
   "sidebar": {
@@ -5747,6 +5748,8 @@
 
     "formTitle": "Neue Bestellung",
     "formTitleEdit": "Bestellung bearbeiten",
+    "formDescription": "Bestellung bei einem Lieferanten anlegen",
+    "notesPlaceholder": "Interne Bemerkungen zur Bestellung...",
     "labelSupplier": "Lieferant *",
     "labelContact": "Ansprechpartner",
     "labelInquiry": "Vorgang",
@@ -5928,6 +5931,96 @@
 
     "articleTabTitle": "Lagerbewegungen",
     "articleTabEmpty": "Keine Lagerbewegungen f\u00fcr diesen Artikel"
+  },
+  "warehouseWithdrawals": {
+    "pageTitle": "Lagerentnahmen",
+    "pageDescription": "Artikel aus dem Lager entnehmen und Entnahmen verwalten",
+    "noPermission": "Keine Berechtigung",
+    "loading": "Laden...",
+
+    "stepReference": "Referenz w\u00e4hlen",
+    "stepArticles": "Artikel ausw\u00e4hlen",
+    "stepConfirm": "Entnahme best\u00e4tigen",
+
+    "labelReferenceType": "Referenztyp",
+    "labelReference": "Referenz",
+    "labelMachineId": "Maschinen-/Ger\u00e4te-ID",
+    "labelNotes": "Bemerkungen",
+
+    "refTypeOrder": "Auftrag",
+    "refTypeDocument": "Lieferschein",
+    "refTypeMachine": "Maschine/Ger\u00e4t",
+    "refTypeNone": "Ohne Referenz",
+
+    "refTypeOrderDesc": "Entnahme einem Terp-Auftrag zuordnen",
+    "refTypeDocumentDesc": "Entnahme einem Lieferschein zuordnen",
+    "refTypeMachineDesc": "Entnahme einer Maschine oder einem Ger\u00e4t zuordnen",
+    "refTypeNoneDesc": "Direkte Entnahme ohne Zuordnung",
+
+    "refPlaceholderOrder": "Auftragsnummer eingeben...",
+    "refPlaceholderDocument": "Belegnummer eingeben...",
+    "refPlaceholderMachine": "Maschinen-ID eingeben...",
+
+    "summaryTitle": "Zusammenfassung",
+    "summaryArticleCount": "{count} Artikel",
+    "summaryTotalQuantity": "Gesamtmenge: {total}",
+
+    "colArticle": "Artikel",
+    "colArticleNumber": "Artikelnr.",
+    "colCurrentStock": "Aktueller Bestand",
+    "colWithdrawQuantity": "Entnahmemenge",
+    "colUnit": "Einheit",
+    "colDate": "Datum",
+    "colQuantity": "Menge",
+    "colReference": "Referenz",
+    "colUser": "Benutzer",
+    "colActions": "Aktionen",
+
+    "searchArticle": "Artikel suchen...",
+    "addArticle": "Artikel hinzuf\u00fcgen",
+    "removeArticle": "Artikel entfernen",
+
+    "actionWithdraw": "Entnahme buchen",
+    "actionCancel": "Abbrechen",
+    "actionBack": "Zur\u00fcck",
+    "actionNext": "Weiter",
+    "actionCancelWithdrawal": "Stornieren",
+
+    "confirmTitle": "Entnahme best\u00e4tigen",
+    "confirmDescription": "Folgende Artikel werden entnommen:",
+    "confirmArticle": "Artikel",
+    "confirmQuantity": "Menge",
+    "confirmReference": "Referenz",
+    "confirmBook": "Jetzt entnehmen",
+
+    "cancelDialogTitle": "Entnahme stornieren",
+    "cancelDialogDescription": "M\u00f6chten Sie diese Entnahme wirklich stornieren? Der Bestand wird wiederhergestellt.",
+    "cancelDialogConfirm": "Stornieren",
+    "cancelDialogCancel": "Abbrechen",
+
+    "toastWithdrawn": "Entnahme erfolgreich gebucht",
+    "toastWithdrawnBatch": "{count} Artikel entnommen",
+    "toastCancelled": "Entnahme storniert",
+    "toastError": "Fehler bei der Entnahme",
+    "toastCancelError": "Fehler beim Stornieren",
+
+    "errorInsufficientStock": "Nicht gen\u00fcgend Bestand ({available} verf\u00fcgbar)",
+    "errorNoArticles": "Keine Artikel zur Entnahme ausgew\u00e4hlt",
+    "errorStockTrackingDisabled": "Bestandsf\u00fchrung f\u00fcr diesen Artikel deaktiviert",
+
+    "historyTitle": "Entnahme-Verlauf",
+    "historyEmpty": "Keine Entnahmen vorhanden",
+    "filterDateFrom": "Von",
+    "filterDateTo": "Bis",
+    "filterReference": "Referenz filtern",
+    "filterAllReferences": "Alle Referenzen",
+
+    "tabTerminal": "Neue Entnahme",
+    "tabHistory": "Verlauf",
+
+    "warningLowStock": "Bestand wird unter Mindestbestand fallen",
+    "withdrawalLabel": "Entnahme",
+    "reversalLabel": "Storno"
   },
   "billingDocuments": {
     "typeOffer": "Angebot",

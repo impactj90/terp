@@ -4373,6 +4373,7 @@ model WhStockMovement {
   documentId               String?             @map("document_id") @db.Uuid
   orderId                  String?             @map("order_id") @db.Uuid
   inventorySessionId       String?             @map("inventory_session_id") @db.Uuid
+  machineId                String?             @map("machine_id")
 
   reason                   String?
   notes                    String?
@@ -4387,5 +4388,6 @@ model WhStockMovement {
   @@index([tenantId, type])
   @@index([tenantId, date])
   @@index([tenantId, purchaseOrderId])
+  @@index([tenantId, machineId])
   @@map("wh_stock_movements")
 }

@@ -224,6 +224,8 @@ export async function search(
       sellPrice: true,
       buyPrice: true,
       vatRate: true,
+      currentStock: true,
+      minStock: true,
     },
     orderBy: { number: "asc" },
     take: limit,

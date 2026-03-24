@@ -122,6 +122,7 @@
     "warehousePurchaseOrders": "Purchase Orders",
     "warehouseGoodsReceipt": "Goods Receipt",
     "warehouseStockMovements": "Stock Movements",
+    "warehouseWithdrawals": "Withdrawals",
     "crmReports": "Reports"
   },
   "sidebar": {
@@ -5747,6 +5748,8 @@
 
     "formTitle": "New Purchase Order",
     "formTitleEdit": "Edit Purchase Order",
+    "formDescription": "Create a purchase order for a supplier",
+    "notesPlaceholder": "Internal notes for this order...",
     "labelSupplier": "Supplier *",
     "labelContact": "Contact Person",
     "labelInquiry": "Inquiry",
@@ -5928,6 +5931,96 @@
 
     "articleTabTitle": "Stock Movements",
     "articleTabEmpty": "No stock movements for this article"
+  },
+  "warehouseWithdrawals": {
+    "pageTitle": "Stock Withdrawals",
+    "pageDescription": "Withdraw articles from stock and manage withdrawals",
+    "noPermission": "No permission",
+    "loading": "Loading...",
+
+    "stepReference": "Select Reference",
+    "stepArticles": "Select Articles",
+    "stepConfirm": "Confirm Withdrawal",
+
+    "labelReferenceType": "Reference Type",
+    "labelReference": "Reference",
+    "labelMachineId": "Machine/Equipment ID",
+    "labelNotes": "Notes",
+
+    "refTypeOrder": "Order",
+    "refTypeDocument": "Delivery Note",
+    "refTypeMachine": "Machine/Equipment",
+    "refTypeNone": "No Reference",
+
+    "refTypeOrderDesc": "Assign withdrawal to a Terp order",
+    "refTypeDocumentDesc": "Assign withdrawal to a delivery note",
+    "refTypeMachineDesc": "Assign withdrawal to a machine or device",
+    "refTypeNoneDesc": "Direct withdrawal without assignment",
+
+    "refPlaceholderOrder": "Enter order number...",
+    "refPlaceholderDocument": "Enter document number...",
+    "refPlaceholderMachine": "Enter machine ID...",
+
+    "summaryTitle": "Summary",
+    "summaryArticleCount": "{count} article(s)",
+    "summaryTotalQuantity": "Total quantity: {total}",
+
+    "colArticle": "Article",
+    "colArticleNumber": "Article No.",
+    "colCurrentStock": "Current Stock",
+    "colWithdrawQuantity": "Withdraw Quantity",
+    "colUnit": "Unit",
+    "colDate": "Date",
+    "colQuantity": "Quantity",
+    "colReference": "Reference",
+    "colUser": "User",
+    "colActions": "Actions",
+
+    "searchArticle": "Search article...",
+    "addArticle": "Add Article",
+    "removeArticle": "Remove Article",
+
+    "actionWithdraw": "Book Withdrawal",
+    "actionCancel": "Cancel",
+    "actionBack": "Back",
+    "actionNext": "Next",
+    "actionCancelWithdrawal": "Cancel Withdrawal",
+
+    "confirmTitle": "Confirm Withdrawal",
+    "confirmDescription": "The following articles will be withdrawn:",
+    "confirmArticle": "Article",
+    "confirmQuantity": "Quantity",
+    "confirmReference": "Reference",
+    "confirmBook": "Withdraw Now",
+
+    "cancelDialogTitle": "Cancel Withdrawal",
+    "cancelDialogDescription": "Are you sure you want to cancel this withdrawal? The stock will be restored.",
+    "cancelDialogConfirm": "Cancel Withdrawal",
+    "cancelDialogCancel": "Keep",
+
+    "toastWithdrawn": "Withdrawal booked successfully",
+    "toastWithdrawnBatch": "{count} article(s) withdrawn",
+    "toastCancelled": "Withdrawal cancelled",
+    "toastError": "Error during withdrawal",
+    "toastCancelError": "Error cancelling withdrawal",
+
+    "errorInsufficientStock": "Insufficient stock ({available} available)",
+    "errorNoArticles": "No articles selected for withdrawal",
+    "errorStockTrackingDisabled": "Stock tracking is disabled for this article",
+
+    "historyTitle": "Withdrawal History",
+    "historyEmpty": "No withdrawals found",
+    "filterDateFrom": "From",
+    "filterDateTo": "To",
+    "filterReference": "Filter by reference",
+    "filterAllReferences": "All References",
+
+    "tabTerminal": "New Withdrawal",
+    "tabHistory": "History",
+
+    "warningLowStock": "Stock will fall below minimum level",
+    "withdrawalLabel": "Withdrawal",
+    "reversalLabel": "Reversal"
   },
   "billingDocuments": {
     "typeOffer": "Offer",

@@ -14,6 +14,8 @@ export interface ArticleSearchResult {
   sellPrice: number | null
   buyPrice: number | null
   vatRate: number
+  currentStock: number
+  minStock: number | null
 }
 
 interface ArticleSearchPopoverProps {

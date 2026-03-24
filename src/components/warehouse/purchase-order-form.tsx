@@ -3,10 +3,10 @@
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { ArrowLeft, Loader2, ShoppingCart, Building2, User, CalendarDays, FileText } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -89,6 +89,12 @@ export function PurchaseOrderForm({ purchaseOrder, onSuccess }: PurchaseOrderFor
   // Load contacts for selected supplier
   const { data: contacts } = useCrmContacts(form.supplierId, !!form.supplierId)
 
+  // Selected supplier display
+  const selectedSupplier = React.useMemo(() => {
+    if (!form.supplierId) return null
+    return suppliers.find((s: { id: string }) => s.id === form.supplierId)
+  }, [form.supplierId, suppliers])
+
   // Populate form on edit
   React.useEffect(() => {
     if (purchaseOrder) {
@@ -148,9 +154,9 @@ export function PurchaseOrderForm({ purchaseOrder, onSuccess }: PurchaseOrderFor
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="p-6 max-w-3xl">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 mb-6">
         <Button
           variant="ghost"
           size="icon"
@@ -158,146 +164,187 @@ export function PurchaseOrderForm({ purchaseOrder, onSuccess }: PurchaseOrderFor
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <h1 className="text-2xl font-bold">
-          {isEdit ? t('formTitleEdit') : t('formTitle')}
-        </h1>
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            {isEdit && purchaseOrder?.number && (
+              <span className="font-mono text-muted-foreground">{purchaseOrder.number}</span>
+            )}
+            {isEdit ? t('formTitleEdit') : t('formTitle')}
+          </h1>
+          {!isEdit && (
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {t('formDescription')}
+            </p>
+          )}
+        </div>
       </div>
 
-      <Card>
-        <CardContent className="pt-6">
-          <form onSubmit={handleSubmit} className="space-y-4 max-w-2xl">
-            {/* Supplier */}
-            <div className="space-y-2">
-              <Label>{t('labelSupplier')}</Label>
-              <Select
-                value={form.supplierId || '_none'}
-                onValueChange={(v) =>
-                  setForm({
-                    ...form,
-                    supplierId: v === '_none' ? '' : v,
-                    contactId: '',
-                  })
-                }
-                disabled={!isDraft}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t('supplierSelectPlaceholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="_none">
-                    {t('supplierSelectPlaceholder')}
-                  </SelectItem>
-                  {suppliers.map(
-                    (s: { id: string; company?: string | null; number?: string | null }) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.number ? `${s.number} — ` : ''}
-                        {s.company || s.id}
-                      </SelectItem>
-                    )
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Contact */}
-            <div className="space-y-2">
-              <Label>{t('labelContact')}</Label>
-              <Select
-                value={form.contactId || '_none'}
-                onValueChange={(v) =>
-                  setForm({ ...form, contactId: v === '_none' ? '' : v })
-                }
-                disabled={!isDraft || !form.supplierId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t('contactSelectPlaceholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="_none">{t('noContact')}</SelectItem>
-                  {(contacts ?? []).map(
-                    (c: {
-                      id: string
-                      firstName?: string | null
-                      lastName?: string | null
-                    }) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {[c.firstName, c.lastName].filter(Boolean).join(' ') ||
-                          c.id}
-                      </SelectItem>
-                    )
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Requested Delivery */}
-            <div className="space-y-2">
-              <Label htmlFor="requestedDelivery">
-                {t('labelRequestedDelivery')}
-              </Label>
-              <Input
-                id="requestedDelivery"
-                type="date"
-                value={form.requestedDelivery}
-                onChange={(e) =>
-                  setForm({ ...form, requestedDelivery: e.target.value })
-                }
-                disabled={!isDraft}
-              />
-            </div>
-
-            {/* Confirmed Delivery (edit only) */}
-            {isEdit && (
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Supplier & Contact */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+              {t('labelSupplier')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Supplier */}
               <div className="space-y-2">
-                <Label htmlFor="confirmedDelivery">
-                  {t('labelConfirmedDelivery')}
+                <Label className="text-sm">{t('labelSupplier')}</Label>
+                <Select
+                  value={form.supplierId || '_none'}
+                  onValueChange={(v) =>
+                    setForm({
+                      ...form,
+                      supplierId: v === '_none' ? '' : v,
+                      contactId: '',
+                    })
+                  }
+                  disabled={!isDraft}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('supplierSelectPlaceholder')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none">
+                      {t('supplierSelectPlaceholder')}
+                    </SelectItem>
+                    {suppliers.map(
+                      (s: { id: string; company?: string | null; number?: string | null }) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.number ? `${s.number} — ` : ''}
+                          {s.company || s.id}
+                        </SelectItem>
+                      )
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Contact */}
+              <div className="space-y-2">
+                <Label className="text-sm">{t('labelContact')}</Label>
+                <Select
+                  value={form.contactId || '_none'}
+                  onValueChange={(v) =>
+                    setForm({ ...form, contactId: v === '_none' ? '' : v })
+                  }
+                  disabled={!isDraft || !form.supplierId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('contactSelectPlaceholder')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none">{t('noContact')}</SelectItem>
+                    {(contacts ?? []).map(
+                      (c: {
+                        id: string
+                        firstName?: string | null
+                        lastName?: string | null
+                      }) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {[c.firstName, c.lastName].filter(Boolean).join(' ') ||
+                            c.id}
+                        </SelectItem>
+                      )
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Delivery Dates */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              {t('labelRequestedDelivery')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="requestedDelivery" className="text-sm">
+                  {t('labelRequestedDelivery')}
                 </Label>
                 <Input
-                  id="confirmedDelivery"
+                  id="requestedDelivery"
                   type="date"
-                  value={form.confirmedDelivery}
+                  value={form.requestedDelivery}
                   onChange={(e) =>
-                    setForm({ ...form, confirmedDelivery: e.target.value })
+                    setForm({ ...form, requestedDelivery: e.target.value })
                   }
                   disabled={!isDraft}
                 />
               </div>
+
+              {isEdit && (
+                <div className="space-y-2">
+                  <Label htmlFor="confirmedDelivery" className="text-sm">
+                    {t('labelConfirmedDelivery')}
+                  </Label>
+                  <Input
+                    id="confirmedDelivery"
+                    type="date"
+                    value={form.confirmedDelivery}
+                    onChange={(e) =>
+                      setForm({ ...form, confirmedDelivery: e.target.value })
+                    }
+                    disabled={!isDraft}
+                  />
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Notes */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              {t('labelNotes')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Textarea
+              id="notes"
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              rows={3}
+              disabled={!isDraft}
+              placeholder={t('notesPlaceholder')}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Actions */}
+        <div className="flex items-center gap-3 pt-2">
+          <Button
+            type="submit"
+            disabled={isPending || !form.supplierId || !isDraft}
+            className="gap-2"
+          >
+            {isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ShoppingCart className="h-4 w-4" />
             )}
-
-            {/* Notes */}
-            <div className="space-y-2">
-              <Label htmlFor="notes">{t('labelNotes')}</Label>
-              <Textarea
-                id="notes"
-                value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                rows={4}
-                disabled={!isDraft}
-              />
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-2 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.push('/warehouse/purchase-orders')}
-              >
-                {t('cancel')}
-              </Button>
-              <Button
-                type="submit"
-                disabled={isPending || !form.supplierId || !isDraft}
-              >
-                {isPending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                {isEdit ? t('save') : t('create')}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+            {isEdit ? t('save') : t('create')}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.push('/warehouse/purchase-orders')}
+          >
+            {t('cancel')}
+          </Button>
+        </div>
+      </form>
     </div>
   )
 }

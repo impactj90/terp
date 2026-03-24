@@ -92,6 +92,7 @@ export async function create(
     documentId?: string | null
     orderId?: string | null
     inventorySessionId?: string | null
+    machineId?: string | null
     reason?: string | null
     notes?: string | null
     createdById?: string | null
@@ -111,6 +112,7 @@ export async function create(
       documentId: data.documentId ?? null,
       orderId: data.orderId ?? null,
       inventorySessionId: data.inventorySessionId ?? null,
+      machineId: data.machineId ?? null,
       reason: data.reason ?? null,
       notes: data.notes ?? null,
       createdById: data.createdById ?? null,

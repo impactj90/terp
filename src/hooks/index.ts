@@ -880,3 +880,13 @@ export {
   useBookGoodsReceipt,
   useBookSinglePosition,
 } from './use-wh-stock-movements'
+
+// Warehouse Withdrawals
+export {
+  useWhWithdrawals,
+  useWhWithdrawalsByOrder,
+  useWhWithdrawalsByDocument,
+  useCreateWhWithdrawal,
+  useCreateBatchWhWithdrawal,
+  useCancelWhWithdrawal,
+} from './use-wh-withdrawals'

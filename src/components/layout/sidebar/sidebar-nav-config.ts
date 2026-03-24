@@ -47,6 +47,7 @@ import {
   Stamp,
   ShoppingCart,
   PackageCheck,
+  PackageMinus,
   ArrowRightLeft,
 } from 'lucide-react'
 
@@ -396,6 +397,13 @@ export const navConfig: NavSection[] = [
         titleKey: 'warehouseGoodsReceipt',
         href: '/warehouse/goods-receipt',
         icon: PackageCheck,
+        module: 'warehouse',
+        permissions: ['wh_stock.manage'],
+      },
+      {
+        titleKey: 'warehouseWithdrawals',
+        href: '/warehouse/withdrawals',
+        icon: PackageMinus,
         module: 'warehouse',
         permissions: ['wh_stock.manage'],
       },
