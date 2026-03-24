@@ -89,7 +89,16 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [18.2 Entnahme-Verlauf](#182-entnahme-verlauf)
     - [18.3 Entnahme stornieren](#183-entnahme-stornieren)
     - [18.4 Praxisbeispiel: Material für einen Auftrag entnehmen](#184-praxisbeispiel-material-für-einen-auftrag-entnehmen)
-19. [Glossar](#19-glossar)
+19. [Lagerverwaltung — Lieferantenrechnungen](#19-lagerverwaltung--lieferantenrechnungen)
+    - [19.1 Rechnungsliste](#191-rechnungsliste)
+    - [19.2 Neue Lieferantenrechnung anlegen](#192-neue-lieferantenrechnung-anlegen)
+    - [19.3 Rechnungsdetailseite](#193-rechnungsdetailseite)
+    - [19.4 Zahlung erfassen](#194-zahlung-erfassen)
+    - [19.5 Zahlung stornieren](#195-zahlung-stornieren)
+    - [19.6 Rechnung stornieren](#196-rechnung-stornieren)
+    - [19.7 Status-Workflow](#197-status-workflow)
+    - [19.8 Praxisbeispiel: Lieferantenrechnung erfassen und bezahlen](#198-praxisbeispiel-lieferantenrechnung-erfassen-und-bezahlen)
+20. [Glossar](#20-glossar)
 
 ---
 
@@ -7194,7 +7203,268 @@ Storniert  Storniert
 
 ---
 
-## 19. Glossar
+## 19. Lagerverwaltung — Lieferantenrechnungen
+
+### 19.1 Rechnungsliste
+
+**Was ist es?** Das Lieferantenrechnungsmodul verwaltet Eingangsrechnungen von Lieferanten: Vom Erfassen der Rechnung über die Zahlungsverfolgung mit Skonto bis zur vollständigen Begleichung. Jede Rechnung kann optional mit einer Bestellung verknüpft werden.
+
+**Wozu dient es?** Lieferantenrechnungen ermöglichen die lückenlose Dokumentation aller Verbindlichkeiten gegenüber Lieferanten. Fälligkeitsdaten, Skonto-Fristen und offene Beträge werden übersichtlich dargestellt. Zusammenfassungskarten zeigen auf einen Blick die offenen, überfälligen und bezahlten Beträge.
+
+⚠️ Modul: Das Warehouse-Modul muss für den Mandanten aktiviert sein
+
+⚠️ Berechtigung: „Lieferantenrechnungen anzeigen" (`wh_supplier_invoices.view`) zum Lesen, „Lieferantenrechnungen erstellen" (`wh_supplier_invoices.create`) zum Anlegen, „Lieferantenrechnungen bearbeiten" (`wh_supplier_invoices.edit`) zum Bearbeiten/Stornieren, „Zahlungen erfassen" (`wh_supplier_invoices.pay`) zum Buchen von Zahlungen
+
+📍 Seitenleiste → **Lager** → **Lieferantenrechnungen**
+
+✅ Seite mit Zusammenfassungskarten, Rechnungstabelle, Suchfeld und Statusfilter
+
+#### Zusammenfassungskarten
+
+Oberhalb der Tabelle werden bis zu drei Karten angezeigt:
+
+| Karte | Beschreibung |
+|-------|-------------|
+| **Offen gesamt** | Summe aller offenen Beträge und Anzahl der Rechnungen |
+| **Überfällig** | Summe überfälliger Beträge (rot hervorgehoben) und Anzahl |
+| **Bezahlt (Monat)** | Im aktuellen Monat bezahlte Summe |
+
+#### Rechnungstabelle
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Nummer** | Rechnungsnummer des Lieferanten (monospace) |
+| **Lieferant** | Firmenname des Lieferanten |
+| **Rechnungsdatum** | Datum der Rechnung |
+| **Fällig am** | Fälligkeitsdatum — rot hervorgehoben wenn überfällig |
+| **Brutto** | Bruttobetrag in EUR |
+| **Offener Betrag** | Noch nicht bezahlter Betrag |
+| **Status** | Badge: Offen (gelb), Teilweise bezahlt (orange), Bezahlt (grün), Storniert (rot) |
+| **Aktionen** | ⋯-Menü: Anzeigen, Bearbeiten (nur Offen), Zahlung erfassen, Stornieren |
+
+**Filter:**
+- **Suchfeld**: Durchsucht Rechnungsnummer und Lieferantenname
+- **Statusfilter** (Dropdown): Alle Status / Offen / Teilweise bezahlt / Bezahlt / Storniert
+
+**Pagination:** Bei mehr als 25 Rechnungen mit Vor-/Zurück-Buttons.
+
+---
+
+### 19.2 Neue Lieferantenrechnung anlegen
+
+1. 📍 **„Neue Rechnung"** (oben rechts)
+2. ✅ Seitenleiste (Sheet) öffnet sich
+
+Felder ausfüllen:
+
+| Feld | Pflicht | Typ | Beschreibung |
+|------|---------|-----|-------------|
+| **Lieferant** | Ja | Dropdown | Nur Adressen vom Typ „Lieferant" aus dem CRM |
+| **Bestellung** | Nein | Dropdown | Verknüpfung mit einer Bestellung des gewählten Lieferanten (erst aktiv nach Lieferantenauswahl) |
+| **Rechnungsnummer** | Ja | Text | Rechnungsnummer des Lieferanten (manuell eingeben) |
+| **Rechnungsdatum** | Ja | Datum | Datum der Lieferantenrechnung |
+| **Eingangsdatum** | Nein | Datum | Datum des Rechnungseingangs (Standard: heute) |
+| **Netto** | Ja | Zahl | Nettobetrag |
+| **MwSt.** | Ja | Zahl | Mehrwertsteuerbetrag |
+| **Brutto** | — | Zahl | Wird automatisch berechnet (Netto + MwSt.), schreibgeschützt |
+| **Zahlungsziel (Tage)** | Nein | Zahl | Anzahl Tage bis Fälligkeit. Wird automatisch aus Lieferanten-Stammdaten übernommen |
+| **Fällig am** | Nein | Datum | Explizites Fälligkeitsdatum. Wird alternativ aus Rechnungsdatum + Zahlungsziel berechnet |
+| **Skonto 1 (%)** | Nein | Zahl | Prozentsatz Skonto Stufe 1. Wird automatisch aus Lieferanten-Stammdaten übernommen |
+| **Skonto 1 (Tage)** | Nein | Zahl | Tage für Skonto Stufe 1 |
+| **Skonto 2 (%)** | Nein | Zahl | Prozentsatz Skonto Stufe 2 |
+| **Skonto 2 (Tage)** | Nein | Zahl | Tage für Skonto Stufe 2 |
+| **Bemerkungen** | Nein | Freitext | Interne Notizen |
+
+3. 📍 **„Erstellen"**
+4. ✅ Rechnung wird im Status „Offen" angelegt und in der Liste angezeigt
+
+> 💡 **Hinweis:** Der Lieferant muss eine Steuernummer oder USt-IdNr. in seinen Stammdaten hinterlegt haben. Ist dies nicht der Fall, erscheint eine Warnung im Formular und die Rechnung kann serverseitig nicht gespeichert werden.
+
+> 💡 **Hinweis:** Zahlungsbedingungen (Zahlungsziel, Skonto) werden bei Auswahl des Lieferanten automatisch aus dessen Stammdaten vorausgefüllt und können bei Bedarf angepasst werden.
+
+---
+
+### 19.3 Rechnungsdetailseite
+
+📍 Zeile in der Rechnungstabelle anklicken → Detailseite
+
+Die Detailseite zeigt alle Informationen zur Rechnung in mehreren Bereichen:
+
+#### Kopfzeile
+
+- Zurück-Button (Pfeil links)
+- Rechnungsnummer als Überschrift
+- Status-Badge
+- Buttons: **„Bearbeiten"** (nur bei Status Offen), **„Zahlung erfassen"** (bei Offen oder Teilweise bezahlt), **„Stornieren"** (rot, solange nicht bereits storniert)
+
+#### Karte „Rechnungsinformationen"
+
+| Feld | Beschreibung |
+|------|-------------|
+| **Rechnungsnummer** | Nummer des Lieferanten (monospace) |
+| **Lieferant** | Firmenname |
+| **Bestellung** | Verknüpfte Bestellnummer (monospace) oder nicht angezeigt |
+| **Rechnungsdatum** | Datum der Rechnung |
+| **Eingangsdatum** | Datum des Eingangs |
+| **Bemerkungen** | Freitext (sofern vorhanden) |
+
+#### Karte „Zusammenfassung"
+
+| Feld | Beschreibung |
+|------|-------------|
+| **Netto** | Nettobetrag |
+| **MwSt.** | Mehrwertsteuerbetrag |
+| **Brutto** | Bruttobetrag (fett) |
+| **Bezahlt** | Summe aller aktiven Zahlungen (grün) |
+| **Offener Betrag** | Restbetrag (fett, rot wenn überfällig) |
+| **Fällig am** | Fälligkeitsdatum — mit „Überfällig"-Badge wenn überschritten |
+
+#### Karte „Zahlungsbedingungen" (nur wenn vorhanden)
+
+| Feld | Beschreibung |
+|------|-------------|
+| **Zahlungsziel** | Anzahl Tage |
+| **Skonto 1** | Prozent / Tage (z. B. „3% / 10 Tage") |
+| **Skonto 2** | Prozent / Tage (z. B. „2% / 20 Tage") |
+
+#### Karte „Zahlungen"
+
+Tabelle aller erfassten Zahlungen:
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Datum** | Zahlungsdatum |
+| **Betrag** | Zahlungsbetrag in EUR |
+| **Art** | „Überweisung" oder „Bar" |
+| **Skonto** | Badge „Skonto" wenn Skonto-Eintrag |
+| **Status** | Badge: „Aktiv" oder „Storniert" |
+| **Bemerkungen** | Freitext oder „—" |
+| **Aktionen** | Stornieren-Button (nur bei aktiven Zahlungen, die kein Skonto-Eintrag sind) |
+
+---
+
+### 19.4 Zahlung erfassen
+
+1. 📍 Detailseite → **„Zahlung erfassen"**
+2. ✅ Dialog öffnet sich
+
+Felder ausfüllen:
+
+| Feld | Pflicht | Typ | Beschreibung |
+|------|---------|-----|-------------|
+| **Zahlungsdatum** | Ja | Datum | Standard: heute |
+| **Betrag** | Ja | Zahl | Wird mit dem offenen Betrag vorausgefüllt |
+| **Zahlungsart** | Ja | Dropdown | Überweisung oder Bar (Standard: Überweisung) |
+| **Skonto** | Nein | Checkbox | Nur sichtbar wenn Skonto-Bedingungen hinterlegt sind. Zeigt Prozent und Tage an. |
+| **Bemerkungen** | Nein | Freitext | |
+
+3. 📍 **„Erstellen"**
+4. ✅ Zahlung wird erfasst
+5. ✅ Rechnungsstatus wird automatisch aktualisiert: Teilzahlung → „Teilweise bezahlt", Vollzahlung → „Bezahlt"
+
+> 💡 **Hinweis:** Bei Aktivierung der Skonto-Checkbox wird der Skonto-Betrag automatisch berechnet und als separater Eintrag verbucht. Es entstehen zwei Zahlungseinträge: die tatsächliche Zahlung und der Skonto-Abzug.
+
+> 💡 **Hinweis:** Der Zahlungsbetrag darf den offenen Betrag nicht überschreiten.
+
+---
+
+### 19.5 Zahlung stornieren
+
+1. 📍 Detailseite → Zahlungstabelle → **Stornieren-Button** (X-Icon) bei der gewünschten Zahlung
+2. ✅ Bestätigungsdialog: „Möchten Sie diese Zahlung wirklich stornieren?"
+3. 📍 **„Stornieren"** bestätigen
+4. ✅ Zahlung wird als „Storniert" markiert
+5. ✅ Falls die Zahlung einen Skonto-Eintrag hatte, wird dieser ebenfalls storniert
+6. ✅ Rechnungsstatus wird automatisch zurückgesetzt (z. B. „Bezahlt" → „Teilweise bezahlt" → „Offen")
+
+---
+
+### 19.6 Rechnung stornieren
+
+1. 📍 Detailseite → **„Stornieren"** (roter Button)
+2. ✅ Bestätigungsdialog erscheint
+3. 📍 **„Stornieren"** bestätigen
+4. ✅ Status wird auf „Storniert" gesetzt
+5. ✅ Rechnung kann nicht mehr bearbeitet oder bezahlt werden
+
+> 💡 **Hinweis:** Alternativ kann eine Rechnung auch aus der Listenseite über das ⋯-Menü storniert werden (nur bei Status „Offen" oder „Teilweise bezahlt").
+
+---
+
+### 19.7 Status-Workflow
+
+```
+Offen → Teilweise bezahlt → Bezahlt
+  ↓           ↓
+Storniert   Storniert
+```
+
+| Status | Bedeutung | Badge-Farbe |
+|--------|-----------|-------------|
+| **Offen** | Rechnung erfasst, keine Zahlungen | Gelb |
+| **Teilweise bezahlt** | Mindestens eine Zahlung, aber noch offener Betrag | Orange |
+| **Bezahlt** | Vollständig beglichen (offener Betrag ≈ 0) | Grün |
+| **Storniert** | Rechnung wurde storniert | Rot |
+
+**Automatische Übergänge:**
+- Offen → Teilweise bezahlt: Erste Zahlung, die nicht den vollen Betrag abdeckt
+- Teilweise bezahlt → Bezahlt: Letzte Zahlung, die den Restbetrag begleicht
+- Bezahlt → Teilweise bezahlt: Stornierung einer Zahlung bei zuvor vollständig bezahlter Rechnung
+- Teilweise bezahlt → Offen: Stornierung aller Zahlungen
+
+---
+
+### 19.8 Praxisbeispiel: Lieferantenrechnung erfassen und bezahlen
+
+**Szenario:** Die Schreinerei hat Eichenholz-Platten beim Lieferanten „Holz Müller GmbH" bestellt (Bestellung BES-1, siehe Kapitel 16.9). Die Ware wurde geliefert (Wareneingang, Kapitel 17.3). Nun trifft die Rechnung RE-2024-0815 über 1.190,00 EUR brutto (1.000,00 EUR netto + 190,00 EUR MwSt.) ein. Der Lieferant gewährt 3% Skonto bei Zahlung innerhalb von 10 Tagen, Zahlungsziel 30 Tage.
+
+**Voraussetzungen:**
+- Holz Müller GmbH ist als Lieferant im CRM angelegt mit Steuernummer oder USt-IdNr.
+- Bestellung BES-1 existiert
+- Benutzer hat die Berechtigungen `wh_supplier_invoices.create` und `wh_supplier_invoices.pay`
+
+**Schritt 1 — Rechnung erfassen**
+
+1. 📍 Seitenleiste → **Lager** → **Lieferantenrechnungen**
+2. ✅ Rechnungsliste mit Zusammenfassungskarten wird angezeigt
+3. 📍 **„Neue Rechnung"**
+4. ✅ Sheet öffnet sich
+5. **Lieferant**: „Holz Müller GmbH" auswählen
+6. ✅ Zahlungsbedingungen werden automatisch aus den Stammdaten übernommen (Zahlungsziel: 30, Skonto 1: 3% / 10 Tage)
+7. **Bestellung**: „BES-1" auswählen
+8. **Rechnungsnummer**: „RE-2024-0815" eingeben
+9. **Rechnungsdatum**: heutiges Datum
+10. **Netto**: 1000,00
+11. **MwSt.**: 190,00
+12. ✅ Brutto wird automatisch auf 1.190,00 berechnet
+13. 📍 **„Erstellen"**
+14. ✅ Rechnung erscheint in der Liste mit Status „Offen"
+
+**Schritt 2 — Zahlung mit Skonto erfassen**
+
+15. 📍 Rechnung „RE-2024-0815" in der Tabelle anklicken
+16. ✅ Detailseite zeigt: Brutto 1.190,00 EUR, Offener Betrag 1.190,00 EUR, Status „Offen"
+17. 📍 **„Zahlung erfassen"**
+18. ✅ Dialog öffnet sich, Betrag ist mit 1.190,00 vorausgefüllt
+19. **Zahlungsart**: Überweisung (bereits ausgewählt)
+20. ✅ Skonto-Checkbox ist sichtbar: „Skonto: 3% / 10 Tage"
+21. 📍 Skonto-Checkbox aktivieren
+22. 📍 **„Erstellen"**
+23. ✅ Toast: „Zahlung erfasst"
+24. ✅ In der Zahlungstabelle erscheinen zwei Einträge: die Überweisung und der Skonto-Abzug
+25. ✅ Status wechselt zu „Bezahlt"
+26. ✅ Offener Betrag zeigt 0,00 EUR
+
+**Ergebnis prüfen**
+
+27. 📍 Zurück zur Rechnungsliste (Pfeil-Button)
+28. ✅ Rechnung „RE-2024-0815" hat Status „Bezahlt" (grüner Badge)
+29. ✅ Offener Betrag zeigt 0,00 EUR
+30. ✅ Zusammenfassungskarte „Bezahlt (Monat)" zeigt den bezahlten Betrag
+
+---
+
+## 20. Glossar
 
 | Begriff | Erklärung | Wo in Terp |
 |---------|-----------|-----------|
@@ -7287,6 +7557,8 @@ Storniert  Storniert
 | **VK-Preis** | Netto-Verkaufspreis eines Artikels im Artikelstamm, dient als Basispreis für Preislisten | 📍 Lager → Artikel → Detail → Karte Preise |
 | **Wareneingang** | Buchung eingehender Lieferungen gegen eine Bestellung mit automatischer Bestandserhöhung | 📍 Lager → Wareneingang |
 | **Lagerentnahme** | Entnahme von Artikeln aus dem Lager mit automatischer Bestandsreduzierung, optional mit Referenz (Auftrag, Lieferschein, Maschine) | 📍 Lager → Lagerentnahmen |
+| **Lieferantenrechnung** | Eingangsrechnung eines Lieferanten mit Beträgen, Zahlungsbedingungen und Skonto. Kann mit einer Bestellung verknüpft werden | 📍 Lager → Lieferantenrechnungen |
+| **Lieferantenzahlung** | Zahlung auf eine Lieferantenrechnung (Überweisung oder Bar), mit optionalem Skonto-Abzug. Statusübergänge erfolgen automatisch | 📍 Lager → Lieferantenrechnungen → Detail → Zahlungstabelle |
 | **Bestandsbewegung** | Einzelner protokollierter Bestandsvorgang (Wareneingang, Entnahme, Korrektur, Inventur, Rückgabe) mit Menge, vorherigem und neuem Bestand | 📍 Lager → Bestandsbewegungen |
 | **Storno (Entnahme)** | Umkehrung einer Lagerentnahme — stellt den entnommenen Bestand wieder her und erzeugt eine positive Gegenbuchung | 📍 Lager → Lagerentnahmen → Verlauf → Stornieren |
 | **Sammelentnahme** | Entnahme mehrerer Artikel in einem Vorgang, gebündelt unter einer gemeinsamen Referenz | 📍 Lager → Lagerentnahmen → Neue Entnahme |
