@@ -84,9 +84,7 @@ test.describe.serial("UC-028 & UC-029: Time Clock", () => {
     if (!alreadyClockedIn) {
       // Not clocked in — clock in first to reveal secondary buttons
       await clockInBtn.click();
-      // Wait for the page to settle after clock-in (may trigger re-render)
-      await page.waitForLoadState("networkidle");
-      await expect(clockOutBtn).toBeEnabled({ timeout: 10_000 });
+      await expect(clockOutBtn).toBeEnabled({ timeout: 15_000 });
     }
 
     // Now verify auxiliary buttons are visible
@@ -387,7 +385,7 @@ test.describe.serial("Demo: Tägliche Zeiterfassung", () => {
       // regardless of wall-clock time, so clocking out may not change state
       // if later bookings exist. Verify the clocked-in state instead.
       await expect(clockOutBtn).toBeEnabled();
-      await expect(main.getByText("Kommen")).toBeVisible({ timeout: 5_000 });
+      await expect(main.getByText("Kommen").first()).toBeVisible({ timeout: 5_000 });
     } else {
       // Clock in
       await clockInBtn.click();
@@ -396,7 +394,7 @@ test.describe.serial("Demo: Tägliche Zeiterfassung", () => {
       await expect(clockOutBtn).toBeEnabled({ timeout: 10_000 });
 
       // Verify booking in today's history
-      await expect(main.getByText("Kommen")).toBeVisible({ timeout: 5_000 });
+      await expect(main.getByText("Kommen").first()).toBeVisible({ timeout: 5_000 });
     }
   });
 
@@ -408,12 +406,11 @@ test.describe.serial("Demo: Tägliche Zeiterfassung", () => {
     await expect(pauseBtn).toBeVisible({ timeout: 10_000 });
 
     await pauseBtn.click();
-    await page.waitForLoadState("networkidle");
 
     // Verify pause state — "Pause beenden" button should appear
     await expect(
       main.getByRole("button", { name: /pause beenden/i }),
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible({ timeout: 15_000 });
   });
 
   test("Pause beenden", async ({ page }) => {
@@ -424,12 +421,11 @@ test.describe.serial("Demo: Tägliche Zeiterfassung", () => {
     await expect(pauseEndBtn).toBeVisible({ timeout: 10_000 });
 
     await pauseEndBtn.click();
-    await page.waitForLoadState("networkidle");
 
     // Back to clocked-in state — Ausstempeln should be enabled
     await expect(
       main.getByRole("button", { name: /ausstempeln/i }),
-    ).toBeEnabled({ timeout: 10_000 });
+    ).toBeEnabled({ timeout: 15_000 });
   });
 
   test("Ausstempeln", async ({ page }) => {
@@ -440,12 +436,11 @@ test.describe.serial("Demo: Tägliche Zeiterfassung", () => {
     await expect(clockOutBtn).toBeEnabled({ timeout: 10_000 });
 
     await clockOutBtn.click();
-    await page.waitForLoadState("networkidle");
 
     // Verify clocked-out state
     await expect(
       main.getByRole("button", { name: /einstempeln/i }),
-    ).toBeEnabled({ timeout: 10_000 });
+    ).toBeEnabled({ timeout: 15_000 });
 
     // Verify Tagesübersicht section visible with stats
     await expect(main.getByText("Tagesübersicht")).toBeVisible();
@@ -461,8 +456,8 @@ test.describe.serial("Demo: Tägliche Zeiterfassung", () => {
 
     // Should show today's bookings (Kommen + Gehen from the demo workflow)
     const main = page.locator("main#main-content");
-    await expect(main.getByText("Kommen")).toBeVisible({ timeout: 10_000 });
-    await expect(main.getByText("Gehen")).toBeVisible({ timeout: 5_000 });
+    await expect(main.getByText("Kommen").first()).toBeVisible({ timeout: 10_000 });
+    await expect(main.getByText("Gehen").first()).toBeVisible({ timeout: 5_000 });
   });
 
   test("Zeitnachweis — Wochenansicht prüfen", async ({ page }) => {

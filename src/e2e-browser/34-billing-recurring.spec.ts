@@ -149,7 +149,7 @@ test.describe.serial(
       ).toBeVisible({ timeout: 10_000 });
 
       // Verify detail info before generation
-      await expect(page.getByText("Naechste Faelligkeit")).toBeVisible();
+      await expect(page.getByText("Nächste Fälligkeit")).toBeVisible();
       await expect(page.getByText(/0?1\.0?4\.2026/).first()).toBeVisible();
 
       // Step 3: Klick auf "Rechnung generieren"

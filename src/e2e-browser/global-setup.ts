@@ -108,6 +108,18 @@ DELETE FROM crm_contacts WHERE address_id IN (SELECT id FROM crm_addresses WHERE
 DELETE FROM crm_bank_accounts WHERE address_id IN (SELECT id FROM crm_addresses WHERE company LIKE 'E2E%');
 DELETE FROM crm_addresses WHERE company LIKE 'E2E%';
 
+-- Warehouse purchase order data (spec 42, 43) — must come before CRM addresses
+DELETE FROM wh_stock_movements WHERE purchase_order_id IN (
+  SELECT id FROM wh_purchase_orders WHERE tenant_id = '10000000-0000-0000-0000-000000000001'
+  AND supplier_id IN (SELECT id FROM crm_addresses WHERE company LIKE 'E2E%')
+);
+DELETE FROM wh_purchase_order_positions WHERE purchase_order_id IN (
+  SELECT id FROM wh_purchase_orders WHERE tenant_id = '10000000-0000-0000-0000-000000000001'
+  AND supplier_id IN (SELECT id FROM crm_addresses WHERE company LIKE 'E2E%')
+);
+DELETE FROM wh_purchase_orders WHERE tenant_id = '10000000-0000-0000-0000-000000000001'
+  AND supplier_id IN (SELECT id FROM crm_addresses WHERE company LIKE 'E2E%');
+
 -- Warehouse price list entries for E2E articles (spec 41)
 DELETE FROM billing_price_list_entries WHERE article_id IN (
   SELECT id FROM wh_articles WHERE name LIKE 'E2E%'

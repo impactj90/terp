@@ -117,7 +117,7 @@ export async function expectTableContains(
   text: string,
 ): Promise<void> {
   await expect(
-    page.locator("table tbody tr").filter({ hasText: text }),
+    page.locator("table tbody tr").filter({ hasText: text }).first(),
   ).toBeVisible();
 }
 

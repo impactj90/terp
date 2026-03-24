@@ -256,17 +256,30 @@ test.describe.serial(
         .locator('input[placeholder="Optional"]')
         .fill("35");
 
-      // 4. Klick auf "Rechnung erstellen"
-      await dialog
-        .getByRole("button", { name: "Rechnung erstellen" })
-        .click();
+      // 4. Klick auf "Rechnung erstellen" — scroll into view and click
+      // Wait for the tRPC mutation response (nested transactions can be slow)
+      const submitBtn = dialog.getByRole("button", { name: "Rechnung erstellen" });
+      await submitBtn.scrollIntoViewIfNeeded();
+      await Promise.all([
+        page.waitForResponse(
+          (r) => r.url().includes("createInvoice") && r.status() === 200,
+          { timeout: 30_000 }
+        ),
+        submitBtn.click(),
+      ]);
+
+      // Wait for dialog to close after mutation completes
+      await dialog.waitFor({ state: "hidden", timeout: 10_000 }).catch(async () => {
+        await page.keyboard.press("Escape");
+        await page.waitForTimeout(500);
+      });
 
       // 5. ✅ RE-Nummer als Beleg erstellt
       // 6. ✅ Status wechselt zu "Abgerechnet"
       // Use exact match to avoid matching the alert description text
       // which also contains "abgerechnet" (lowercase)
       await expect(page.getByText("Abgerechnet", { exact: true })).toBeVisible({
-        timeout: 10_000,
+        timeout: 15_000,
       });
 
       // 7. ✅ Verknüpfte Rechnung (RE-Nummer) wird angezeigt

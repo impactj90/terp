@@ -11,7 +11,7 @@ test.describe.serial("UC-WH-04: Goods Receipt & Stock Movements", () => {
     await navigateTo(page, "/warehouse/goods-receipt");
     const main = page.locator("main#main-content");
     await expect(
-      main.getByRole("heading", { level: 1 }).or(main.getByText(/Wareneingang|Goods Receipt/i).first()),
+      main.getByRole("heading", { name: /Wareneingang/i }),
     ).toBeVisible({ timeout: 10_000 });
   });
 
@@ -95,7 +95,7 @@ test.describe.serial("UC-WH-04: Goods Receipt & Stock Movements", () => {
     await navigateTo(page, "/warehouse/stock-movements");
     const main = page.locator("main#main-content");
     await expect(
-      main.getByRole("heading", { level: 1 }).or(main.getByText(/Lagerbewegungen|Stock Movements/i).first()),
+      main.getByRole("heading", { name: /Lagerbewegungen/i }),
     ).toBeVisible({ timeout: 10_000 });
   });
 

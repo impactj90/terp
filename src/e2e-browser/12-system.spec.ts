@@ -70,13 +70,13 @@ test.describe("UC-069: Audit Logs", () => {
     await expect(main.getByText("Zeitraum", { exact: true })).toBeVisible({ timeout: 10_000 });
 
     // User filter
-    await expect(main.getByText("Benutzer", { exact: true })).toBeVisible();
+    await expect(main.locator("label").filter({ hasText: "Benutzer" })).toBeVisible();
 
     // Entity type filter
-    await expect(main.getByText("Entitaetstyp", { exact: true })).toBeVisible();
+    await expect(main.locator("label").filter({ hasText: "Entitaetstyp" })).toBeVisible();
 
     // Action filter
-    await expect(main.getByText("Aktion", { exact: true })).toBeVisible();
+    await expect(main.locator("label").filter({ hasText: "Aktion" })).toBeVisible();
   });
 
   test("verify log table area loads", async ({ page }) => {

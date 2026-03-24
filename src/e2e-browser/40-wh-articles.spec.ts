@@ -58,23 +58,24 @@ test.describe.serial("UC-WH-01: Article Management", () => {
     await navigateTo(page, "/warehouse/articles");
     await page.locator("main#main-content").waitFor({ state: "visible" });
 
-    // Create root group via the "+" button next to "Gruppen"
-    const groupSection = page.locator("main#main-content");
-    await groupSection
-      .locator("button")
+    // Create root group via the "+" button next to "Alle Artikel"
+    // Target the button by its title attribute to avoid matching "Neuer Artikel"
+    await page
+      .locator('button[title]')
       .filter({ has: page.locator("svg.lucide-plus") })
       .first()
       .click();
 
-    // Fill dialog
+    // Fill dialog — group dialog has a single textbox
     const dialog = page.locator('[role="dialog"]');
     await dialog.waitFor({ state: "visible" });
-    await dialog.locator("input").fill(GROUP_NAME);
+    await dialog.getByRole("textbox").fill(GROUP_NAME);
     await dialog.getByRole("button", { name: /Erstellen/i }).click();
     await dialog.waitFor({ state: "hidden", timeout: 10_000 });
 
     // Verify group appears
-    await expect(groupSection.getByText(GROUP_NAME)).toBeVisible();
+    const main = page.locator("main#main-content");
+    await expect(main.getByText(GROUP_NAME)).toBeVisible();
   });
 
   // ─── Create an article ────────────────────────────────────────
@@ -142,7 +143,7 @@ test.describe.serial("UC-WH-01: Article Management", () => {
 
     // Verify article name and number displayed in header
     await expect(
-      page.locator("main#main-content").getByText(ARTICLE_NAME),
+      page.locator("main#main-content").getByText(ARTICLE_NAME).first(),
     ).toBeVisible();
   });
 
@@ -163,13 +164,13 @@ test.describe.serial("UC-WH-01: Article Management", () => {
 
     // Overview tab should be active by default
     await expect(
-      page.getByRole("tab", { name: "Uebersicht" }),
+      page.getByRole("tab", { name: /Übersicht|Uebersicht|Overview/i }),
     ).toHaveAttribute("data-state", "active");
 
     // Verify article data is displayed
     const main = page.locator("main#main-content");
-    await expect(main.getByText(ARTICLE_NAME)).toBeVisible();
-    await expect(main.getByText("Stk")).toBeVisible();
+    await expect(main.getByText(ARTICLE_NAME).first()).toBeVisible();
+    await expect(main.getByText("Stk").first()).toBeVisible();
   });
 
   // ─── Detail: Suppliers tab ────────────────────────────────────
@@ -204,9 +205,9 @@ test.describe.serial("UC-WH-01: Article Management", () => {
     await page.waitForURL("**/warehouse/articles/**");
     await page.locator("main#main-content").waitFor({ state: "visible" });
 
-    await clickTab(page, "Stueckliste");
+    await clickTab(page, "Stückliste");
     await expect(
-      page.getByText("Keine Komponenten in der Stueckliste"),
+      page.getByText("Keine Komponenten in der Stückliste"),
     ).toBeVisible();
   });
 

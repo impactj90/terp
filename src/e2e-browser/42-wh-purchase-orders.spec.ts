@@ -21,7 +21,7 @@ test.describe.serial("UC-WH-03: Purchase Orders", () => {
     await navigateTo(page, "/warehouse/purchase-orders");
     const main = page.locator("main#main-content");
     await expect(
-      main.getByRole("heading", { level: 1 }),
+      main.getByRole("button", { name: /Neue Bestellung/i }),
     ).toBeVisible({ timeout: 10_000 });
   });
 
@@ -31,21 +31,21 @@ test.describe.serial("UC-WH-03: Purchase Orders", () => {
     await navigateTo(page, "/warehouse/purchase-orders");
     const main = page.locator("main#main-content");
 
-    // Click "New Purchase Order" / "Neue Bestellung" button
+    // Click "New Purchase Order" — navigates to /warehouse/purchase-orders/new
     await main
       .getByRole("button", { name: /Neue Bestellung|New Purchase Order/i })
       .click();
-    await waitForSheet(page);
+    await page.waitForURL(/\/warehouse\/purchase-orders\/new/, { timeout: 10_000 });
 
     // Select supplier
     await selectOption(page, /Lieferant|Supplier/i, new RegExp(SUPPLIER_COMPANY, "i"));
 
     // Submit the form
-    await submitAndWaitForClose(page);
-    await page.waitForTimeout(1000);
+    const submitBtn = page.getByRole("button", { name: /Erstellen|Speichern|Create|Save/i });
+    await submitBtn.click();
+    await page.waitForTimeout(2000);
 
-    // Should navigate to or show the created PO
-    // Verify PO appears in list or detail
+    // Should navigate to PO detail or back to list
     await navigateTo(page, "/warehouse/purchase-orders");
     await page.waitForTimeout(1000);
 
@@ -226,7 +226,7 @@ test.describe.serial("UC-WH-03: Purchase Orders", () => {
 
     // Wait for the page to load
     await expect(
-      main.getByText(/Nachbestellvorschl|Reorder Suggestion/i).first(),
+      main.getByText(/Bestellvorschl|Reorder Suggestion/i).first(),
     ).toBeVisible({ timeout: 10_000 });
 
     // The page should show either a table of articles below min stock or empty state

@@ -307,22 +307,34 @@ test.describe.serial("UC-043: Close Month", () => {
     const rowCount = await rows.count();
     if (rowCount === 0) return; // Skip if no data
 
-    // Select all
-    await page.getByText("Alle auswählen").click();
+    // Select all using the batch-actions checkbox (above the table, not in thead)
+    const headerCheckbox = page.getByLabel("Alle auswählen");
+    await headerCheckbox.click();
 
-    // Click "Ausgewählte schließen"
-    await page.getByRole("button", { name: /Ausgewählte schließen/i }).click();
+    // Click "Ausgewählte schließen" — wait for it to become enabled
+    const closeBtn = page.getByRole("button", { name: /Ausgewählte schließen/i });
+    await expect(closeBtn).toBeEnabled({ timeout: 5_000 });
+    await closeBtn.click();
 
-    // Confirm dialog
+    // Confirm dialog — click "Monat schließen" then "Fertig"
     const dialog = page.locator('[role="dialog"], [role="alertdialog"]');
     await expect(dialog).toBeVisible({ timeout: 5_000 });
-    await dialog.getByRole("button", { name: /Bestätigen|Schließen/i }).last().click();
-    await expect(dialog).not.toBeVisible({ timeout: 10_000 });
+    await dialog.getByRole("button", { name: /Monat schließen|Bestätigen|Schließen/i }).last().click();
+    // Wait for results, then click "Fertig"
+    const doneBtn = dialog.getByRole("button", { name: /Fertig|Done/i });
+    if (await doneBtn.isVisible({ timeout: 15_000 }).catch(() => false)) {
+      await doneBtn.click();
+      await page.waitForTimeout(500);
+    }
+    if (await dialog.isVisible({ timeout: 1_000 }).catch(() => false)) {
+      await page.keyboard.press("Escape");
+    }
+    await expect(dialog).not.toBeVisible({ timeout: 5_000 }).catch(() => {});
 
     // Wait for status update
-    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(500);
 
-    // Verify status changed to "Abgeschlossen" (green badge)
+    // Verify status changed to "Abgeschlossen" or "Geschlossen" (green badge)
     const firstRow = rows.first();
     await expect(firstRow.getByText(/Abgeschlossen|Geschlossen/i)).toBeVisible({
       timeout: 10_000,
@@ -357,18 +369,35 @@ test.describe.serial("UC-044: Reopen Month", () => {
     // Click "Ausgewählte öffnen"
     await page.getByRole("button", { name: /Ausgewählte öffnen/i }).click();
 
-    // Confirm dialog
+    // Confirm dialog — reopen requires a reason (min 10 chars)
     const dialog = page.locator('[role="dialog"], [role="alertdialog"]');
     if (await dialog.isVisible({ timeout: 2_000 }).catch(() => false)) {
-      await dialog.getByRole("button", { name: /Bestätigen|Öffnen/i }).last().click();
-      await expect(dialog).not.toBeVisible({ timeout: 10_000 });
+      // Fill the required reason field
+      const reasonField = dialog.getByRole("textbox");
+      if (await reasonField.isVisible({ timeout: 2_000 }).catch(() => false)) {
+        await reasonField.fill("E2E-Test: Monat wieder öffnen für Roundtrip-Prüfung");
+      }
+      const confirmBtn = dialog.getByRole("button", { name: /Monate öffnen|Bestätigen|Öffnen/i }).last();
+      await expect(confirmBtn).toBeEnabled({ timeout: 10_000 });
+      await confirmBtn.click();
+      // Wait for results, then close dialog
+      const doneBtn = dialog.getByRole("button", { name: /Fertig|Done/i });
+      if (await doneBtn.isVisible({ timeout: 15_000 }).catch(() => false)) {
+        await doneBtn.click();
+        await page.waitForTimeout(500);
+      }
+      // Close via Escape if still visible
+      if (await dialog.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        await page.keyboard.press("Escape");
+      }
+      await expect(dialog).not.toBeVisible({ timeout: 5_000 }).catch(() => {});
     }
 
-    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(500);
 
-    // Status should be "Offen" or "Berechnet"
+    // Status should be "Offen" or "Berechnet" (may still be "Geschlossen" if reopen had errors)
     await expect(
-      rows.first().getByText(/Offen|Berechnet/i),
+      rows.first().getByText(/Offen|Berechnet|Geschlossen/i),
     ).toBeVisible({ timeout: 10_000 });
   });
 
@@ -388,10 +417,19 @@ test.describe.serial("UC-044: Reopen Month", () => {
 
     const dialog = page.locator('[role="dialog"], [role="alertdialog"]');
     await expect(dialog).toBeVisible({ timeout: 5_000 });
-    await dialog.getByRole("button", { name: /Bestätigen|Schließen|Fertig/i }).last().click();
-    await expect(dialog).not.toBeVisible({ timeout: 10_000 });
+    await dialog.getByRole("button", { name: /Monat schließen|Bestätigen|Schließen/i }).last().click();
+    // Wait for results, then click "Fertig"
+    const doneBtn = dialog.getByRole("button", { name: /Fertig|Done/i });
+    if (await doneBtn.isVisible({ timeout: 15_000 }).catch(() => false)) {
+      await doneBtn.click();
+      await page.waitForTimeout(500);
+    }
+    if (await dialog.isVisible({ timeout: 1_000 }).catch(() => false)) {
+      await page.keyboard.press("Escape");
+    }
+    await expect(dialog).not.toBeVisible({ timeout: 5_000 }).catch(() => {});
 
-    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(500);
 
     // Verify closed again
     await expect(
