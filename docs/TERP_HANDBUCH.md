@@ -52,6 +52,7 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [13.6 Beleg fortführen (Belegkette)](#136-beleg-fortführen-belegkette)
     - [13.7 Beleg stornieren](#137-beleg-stornieren)
     - [13.8 Beleg duplizieren](#138-beleg-duplizieren)
+    - [13.8a Dokumentvorlagen (Briefkonfigurator)](#138a-dokumentvorlagen-briefkonfigurator)
     - [13.9 Praxisbeispiel: Angebot bis Rechnung](#139-praxisbeispiel-angebot-bis-rechnung)
     - [13.10 Kundendienst (Serviceaufträge)](#1310-kundendienst-serviceaufträge)
     - [13.11 Offene Posten / Zahlungen](#1311-offene-posten--zahlungen)
@@ -4290,7 +4291,7 @@ Tabelle mit Spalten:
 
 | Spalte | Beschreibung |
 |--------|-------------|
-| **Name** | Vorname + Nachname |
+| **Name** | Anrede + Titel + Vorname + Nachname |
 | **Position** | Funktion im Unternehmen (z. B. Geschäftsführer) |
 | **Abteilung** | Abteilung im Unternehmen (z. B. Einkauf) |
 | **Telefon** | Durchwahl |
@@ -4303,7 +4304,9 @@ Tabelle mit Spalten:
 1. 📍 Tab „Kontakte" → **„Kontakt hinzufügen"** (oben rechts)
 2. ✅ Dialog öffnet sich: „Neuen Kontakt anlegen"
 3. Ausfüllen:
+   - **Anrede** (Dropdown: Herr / Frau / Divers), **Titel** (Dropdown: Dr. / Prof. / Prof. Dr.)
    - **Vorname** (Pflicht), **Nachname** (Pflicht)
+   - **Briefanrede** — wird automatisch generiert (z. B. „Sehr geehrter Herr Dr. Müller"), kann manuell überschrieben werden. Zauberstab-Button regeneriert den Vorschlag.
    - **Position**, **Abteilung**, **Telefon**, **E-Mail**, **Notizen**
    - **Hauptkontakt** (Checkbox)
 4. 📍 „Anlegen"
@@ -4322,6 +4325,27 @@ Tabelle mit Spalten:
 3. 📍 „Bestätigen"
 
 💡 **Hinweis:** Kontakte werden beim Löschen der übergeordneten Adresse automatisch mit gelöscht (Kaskade). Das Deaktivieren einer Adresse löscht die Kontakte jedoch **nicht** — sie bleiben erhalten und sind nach Wiederherstellung wieder sichtbar.
+
+##### Praxisbeispiel: Briefanrede
+
+**Szenario:** Sie legen einen neuen Kontakt für den Kunden „Müller GmbH" an.
+
+1. 📍 Adresse „Müller GmbH" öffnen → Tab **„Kontakte"** → **„Kontakt hinzufügen"**
+2. ✅ Dialog öffnet sich
+3. **Anrede:** „Herr" wählen
+4. **Titel:** „Dr." wählen
+5. **Vorname:** „Thomas", **Nachname:** „Müller"
+6. ✅ **Briefanrede** zeigt automatisch: „Sehr geehrter Herr Dr. Müller"
+7. 📍 „Anlegen"
+8. ✅ Kontakt erscheint in der Tabelle als „Herr Dr. Thomas Müller"
+
+**Manuell überschreiben:**
+1. 📍 ⋯-Menü des Kontakts → **„Bearbeiten"**
+2. **Briefanrede** manuell ändern zu: „Lieber Thomas"
+3. 📍 „Speichern"
+4. ✅ Die manuelle Briefanrede bleibt erhalten — sie wird nicht automatisch überschrieben
+
+💡 **Hinweis:** Die Briefanrede wird in Belegen und Reports als persönliche Anrede verwendet (z. B. in Angebotsschreiben oder Rechnungsbegleitschreiben).
 
 ---
 
@@ -5110,7 +5134,7 @@ Tabelle mit Spalten:
 3. Belegtyp wählen (Angebot, AB, Lieferschein, etc.)
 4. Kundenadresse auswählen (Pflicht)
 5. Optionale Felder:
-   - **Kontaktperson**: Ansprechpartner aus der Adresse
+   - **Kontaktperson**: Ansprechpartner aus der Adresse (Dropdown erscheint automatisch, wenn die gewählte Adresse Kontaktpersonen hat). Wird für die Platzhalter-Auflösung in Dokumentvorlagen verwendet (→ Abschnitt 13.8a).
    - **Lieferadresse**: Abweichende Lieferanschrift
    - **Rechnungsadresse**: Abweichende Rechnungsanschrift
    - **Anfrage**: Verknüpfung zu einer CRM-Anfrage (Dropdown zeigt offene Anfragen des gewählten Kunden). Wird auf der Detailseite als **„Verknüpfte Anfrage"** in den Kopfdaten angezeigt. Bei Fortführung und Duplizierung wird die Anfrage automatisch in den neuen Beleg übernommen.
@@ -5125,7 +5149,8 @@ Tabelle mit Spalten:
    - **Bemerkungen / Interne Notizen**: Freitext
 6. **"Speichern"**
 7. Beleg wird als **Entwurf** angelegt. Belegnummer wird automatisch vergeben.
-8. ✅ Sie werden automatisch auf die **Detailseite** des neuen Belegs weitergeleitet.
+8. Wenn eine **Standard-Dokumentvorlage** (⭐) für diesen Belegtyp existiert, wird deren Kopf-/Schlusstext automatisch übernommen. Platzhalter wie `{{briefanrede}}` werden mit den Daten der gewählten Kontaktperson aufgelöst (→ Abschnitt 13.8a).
+9. ✅ Sie werden automatisch auf die **Detailseite** des neuen Belegs weitergeleitet.
 
 Zahlungsbedingungen werden automatisch aus den Stammdaten der Kundenadresse übernommen, können aber im Beleg überschrieben werden.
 
@@ -5229,6 +5254,71 @@ Die Belegkette ist auf der Detailseite jedes Belegs in der Seitenleiste unter **
 2. Erstellt eine **Entwurf**-Kopie mit neuer Belegnummer
 3. Alle Positionen werden kopiert
 4. Kein `parentDocumentId` -- eigenständiger Beleg
+
+### 13.8a Dokumentvorlagen (Briefkonfigurator)
+
+**Was ist es?** Dokumentvorlagen definieren wiederverwendbare Kopf- und Schlusstexte für Belege. Beim Anwenden einer Vorlage auf einen Beleg werden Platzhalter automatisch durch die Daten der verknüpften Kontaktperson und Adresse ersetzt.
+
+**Wozu dient es?** Statt bei jedem Angebot oder jeder Rechnung die Anrede und den Einleitungstext manuell zu tippen, erstellen Sie einmal eine Vorlage mit Platzhaltern. Beim Anwenden auf einen Beleg wird z.B. `{{briefanrede}}` automatisch durch „Sehr geehrter Herr Dr. Müller" ersetzt.
+
+📍 Seitenleiste → **Aufträge** → **Vorlagen**
+
+#### Vorlagenliste
+
+Tabelle mit Spalten: **Name**, **Dokumenttyp** (Angebot, Rechnung etc. oder „Alle Typen"), **Standard** (⭐).
+
+- Klick auf eine Zeile öffnet das Bearbeitungsformular.
+- ⭐-Icon setzt die Vorlage als Standard für ihren Dokumenttyp.
+
+#### Vorlage erstellen / bearbeiten
+
+1. **"Neue Vorlage"** (oben rechts) oder Klick auf bestehende Vorlage
+2. Formular mit Feldern:
+   - **Name**: Bezeichnung (z.B. „Standard Angebot")
+   - **Dokumenttyp**: Für welchen Belegtyp (oder „Alle Typen")
+   - **Kopftext**: Einleitungstext (Rich-Text-Editor) — wird oberhalb der Positionstabelle angezeigt
+   - **Schlusstext**: Abschlusstext (Rich-Text-Editor) — wird unterhalb des Summenblocks angezeigt
+   - **Als Standard setzen**: Checkbox (nur wenn ein Dokumenttyp gewählt wurde)
+
+#### Platzhalter
+
+Im Kopf- und Schlusstext können folgende Platzhalter verwendet werden. Sie werden beim Anwenden der Vorlage auf einen Beleg automatisch durch die Daten der verknüpften Kontaktperson bzw. Adresse ersetzt.
+
+| Platzhalter (DE) | Platzhalter (EN) | Wird ersetzt durch |
+|-------------------|-------------------|-------------------|
+| `{{briefanrede}}` | `{{letterSalutation}}` | Briefanrede (z.B. „Sehr geehrter Herr Dr. Müller") |
+| `{{anrede}}` | `{{salutation}}` | Anrede (Herr / Frau) |
+| `{{titel}}` | `{{title}}` | Titel (Dr. / Prof.) |
+| `{{vorname}}` | `{{firstName}}` | Vorname der Kontaktperson |
+| `{{nachname}}` | `{{lastName}}` | Nachname der Kontaktperson |
+| `{{firma}}` | `{{company}}` | Firmenname der Adresse |
+
+💡 **Hinweis:** Die Platzhalter funktionieren in beiden Sprachen. Hat der Beleg keine verknüpfte Kontaktperson oder fehlt die Briefanrede, wird `{{briefanrede}}` automatisch durch „Sehr geehrte Damen und Herren," ersetzt (bzw. `{{letterSalutation}}` durch „Dear Sir or Madam,"). Andere Kontakt-Platzhalter (Anrede, Titel, Vor-/Nachname) werden in diesem Fall leer ersetzt.
+
+#### Automatische Anwendung beim Erstellen
+
+Wenn eine Vorlage als **Standard** (⭐) für einen Belegtyp markiert ist, wird sie beim Erstellen eines neuen Belegs dieses Typs **automatisch angewendet**. Platzhalter werden dabei mit den Daten der gewählten Kontaktperson und Adresse aufgelöst.
+
+Voraussetzung: Beim Beleg anlegen muss eine **Kontaktperson** ausgewählt werden (das Dropdown erscheint, sobald die Kundenadresse Kontaktpersonen hat). Ohne Kontaktperson wird `{{briefanrede}}` mit „Sehr geehrte Damen und Herren," ersetzt.
+
+#### Manuelles Anwenden
+
+1. Beleg öffnen (muss im Status **Entwurf** sein)
+2. Dropdown **„Vorlage anwenden"** in der Aktionsleiste (rechts oben)
+3. Vorlage auswählen
+4. Kopf- und Schlusstext werden übernommen, Platzhalter automatisch aufgelöst
+5. Falls bereits Text vorhanden: Bestätigungsdialog vor dem Überschreiben
+
+##### Praxisbeispiel: Vorlage mit Briefanrede
+
+1. 📍 Aufträge → Vorlagen → **„Neue Vorlage"**
+2. Name: `Standard Angebot`, Dokumenttyp: **Angebot**, **„Als Standard für diesen Typ setzen"** ✅
+3. Kopftext eingeben: `{{briefanrede}}, vielen Dank für Ihre Anfrage. Gerne unterbreiten wir Ihnen folgendes Angebot:`
+4. Schlusstext eingeben: `Wir freuen uns auf Ihre Rückmeldung. Mit freundlichen Grüßen`
+5. **„Speichern"**
+6. 📍 Neuen Beleg anlegen: Typ **Angebot**, Kunde: Müller GmbH, **Kontaktperson: Herr Dr. Thomas Müller**
+7. ✅ Beleg wird erstellt — Kopftext zeigt automatisch: „Sehr geehrter Herr Dr. Müller, vielen Dank für Ihre Anfrage. Gerne unterbreiten wir Ihnen folgendes Angebot:"
+8. 💡 Alternativ: Vorlage manuell über Dropdown „Vorlage anwenden" wechseln
 
 ### Status-Workflow
 

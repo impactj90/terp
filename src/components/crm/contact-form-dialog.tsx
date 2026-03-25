@@ -15,9 +15,33 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Wand2 } from 'lucide-react'
 import { useCreateCrmContact, useUpdateCrmContact } from '@/hooks'
+
+function generateLetterSalutation(
+  salutation: string,
+  title: string,
+  lastName: string
+): string {
+  if (!salutation || !lastName) return ""
+  if (salutation === "Herr") {
+    const titlePart = title ? ` ${title}` : ""
+    return `Sehr geehrter Herr${titlePart} ${lastName}`
+  }
+  if (salutation === "Frau") {
+    const titlePart = title ? ` ${title}` : ""
+    return `Sehr geehrte Frau${titlePart} ${lastName}`
+  }
+  return ""
+}
 
 interface ContactFormDialogProps {
   open: boolean
@@ -27,6 +51,9 @@ interface ContactFormDialogProps {
     id: string
     firstName: string
     lastName: string
+    salutation: string | null
+    title: string | null
+    letterSalutation: string | null
     position: string | null
     department: string | null
     phone: string | null
@@ -38,6 +65,9 @@ interface ContactFormDialogProps {
 }
 
 interface FormState {
+  salutation: string
+  title: string
+  letterSalutation: string
   firstName: string
   lastName: string
   position: string
@@ -49,6 +79,9 @@ interface FormState {
 }
 
 const INITIAL_STATE: FormState = {
+  salutation: '',
+  title: '',
+  letterSalutation: '',
   firstName: '',
   lastName: '',
   position: '',
@@ -76,11 +109,17 @@ export function ContactFormDialog({
   const updateMutation = useUpdateCrmContact()
   const isSubmitting = createMutation.isPending || updateMutation.isPending
 
+  const letterSalutationManuallyEdited = React.useRef(false)
+
   React.useEffect(() => {
     if (open) {
       setError(null)
+      letterSalutationManuallyEdited.current = false
       if (contact) {
         setForm({
+          salutation: contact.salutation || '',
+          title: contact.title || '',
+          letterSalutation: contact.letterSalutation || '',
           firstName: contact.firstName,
           lastName: contact.lastName,
           position: contact.position || '',
@@ -96,6 +135,13 @@ export function ContactFormDialog({
     }
   }, [open, contact])
 
+  React.useEffect(() => {
+    if (!letterSalutationManuallyEdited.current) {
+      const auto = generateLetterSalutation(form.salutation, form.title, form.lastName)
+      setForm((p) => ({ ...p, letterSalutation: auto }))
+    }
+  }, [form.salutation, form.title, form.lastName])
+
   const handleSubmit = async () => {
     setError(null)
 
@@ -110,6 +156,9 @@ export function ContactFormDialog({
           id: contact!.id,
           firstName: form.firstName.trim(),
           lastName: form.lastName.trim(),
+          salutation: form.salutation || null,
+          title: form.title || null,
+          letterSalutation: form.letterSalutation.trim() || null,
           position: form.position.trim() || null,
           department: form.department.trim() || null,
           phone: form.phone.trim() || null,
@@ -122,6 +171,9 @@ export function ContactFormDialog({
           addressId,
           firstName: form.firstName.trim(),
           lastName: form.lastName.trim(),
+          salutation: form.salutation || undefined,
+          title: form.title || undefined,
+          letterSalutation: form.letterSalutation.trim() || undefined,
           position: form.position.trim() || undefined,
           department: form.department.trim() || undefined,
           phone: form.phone.trim() || undefined,
@@ -141,13 +193,52 @@ export function ContactFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{isEdit ? t('editContactTitle') : t('createContactTitle')}</DialogTitle>
           <DialogDescription>{''}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Row: Anrede + Titel */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="salutation">{t('labelSalutation')}</Label>
+              <Select
+                value={form.salutation}
+                onValueChange={(value) => setForm((p) => ({ ...p, salutation: value }))}
+                disabled={isSubmitting}
+              >
+                <SelectTrigger id="salutation">
+                  <SelectValue placeholder={t('selectSalutation')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Herr">{t('salutationHerr')}</SelectItem>
+                  <SelectItem value="Frau">{t('salutationFrau')}</SelectItem>
+                  <SelectItem value="Divers">{t('salutationDivers')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="title">{t('labelTitle')}</Label>
+              <Select
+                value={form.title}
+                onValueChange={(value) => setForm((p) => ({ ...p, title: value }))}
+                disabled={isSubmitting}
+              >
+                <SelectTrigger id="title">
+                  <SelectValue placeholder={t('selectTitle')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Dr.">Dr.</SelectItem>
+                  <SelectItem value="Prof.">Prof.</SelectItem>
+                  <SelectItem value="Prof. Dr.">Prof. Dr.</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Row: Vorname + Nachname */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="firstName">{t('labelFirstName')} *</Label>
@@ -166,6 +257,40 @@ export function ContactFormDialog({
                 onChange={(e) => setForm((p) => ({ ...p, lastName: e.target.value }))}
                 disabled={isSubmitting}
               />
+            </div>
+          </div>
+
+          {/* Row: Briefanrede */}
+          <div className="space-y-2">
+            <Label htmlFor="letterSalutation">{t('labelLetterSalutation')}</Label>
+            <div className="flex gap-2">
+              <Input
+                id="letterSalutation"
+                value={form.letterSalutation}
+                onChange={(e) => {
+                  letterSalutationManuallyEdited.current = true
+                  setForm((p) => ({ ...p, letterSalutation: e.target.value }))
+                }}
+                placeholder={t('letterSalutationPlaceholder')}
+                disabled={isSubmitting}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => {
+                  const auto = generateLetterSalutation(form.salutation, form.title, form.lastName)
+                  if (auto) {
+                    setForm((p) => ({ ...p, letterSalutation: auto }))
+                    letterSalutationManuallyEdited.current = false
+                  }
+                }}
+                disabled={isSubmitting}
+                title={t('autoGenerateLetterSalutation')}
+              >
+                <Wand2 className="h-4 w-4" />
+              </Button>
             </div>
           </div>
 

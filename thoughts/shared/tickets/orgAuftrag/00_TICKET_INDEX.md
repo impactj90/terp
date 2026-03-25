@@ -28,7 +28,7 @@
 
 - [x] **CRM_06** — "Unsere Kundennummer" beim Lieferanten *(S)* → `TICKET_CRM_06_UNSERE_KUNDENNUMMER.md`
 - [ ] **CRM_07** — Anhänge bei Korrespondenz *(M)* → `TICKET_CRM_07_KORRESPONDENZ_ANHAENGE.md`
-- [ ] **CRM_08** — Briefanrede bei Kontaktpersonen *(S)* → `TICKET_CRM_08_BRIEFANREDE.md`
+- [~] **CRM_08** — Briefanrede bei Kontaktpersonen *(S)* → `TICKET_CRM_08_BRIEFANREDE.md`
 - [ ] **CRM_09** — Konzern-/Filialen-Zuordnung *(M)* → `TICKET_CRM_09_KONZERNZUORDNUNG.md`
 
 ## HR / Personal

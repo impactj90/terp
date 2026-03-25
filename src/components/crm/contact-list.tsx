@@ -23,6 +23,9 @@ interface CrmContact {
   id: string
   firstName: string
   lastName: string
+  salutation: string | null
+  title: string | null
+  letterSalutation: string | null
   position: string | null
   department: string | null
   phone: string | null
@@ -56,7 +59,7 @@ export function ContactList({ contacts, onAdd, onEdit, onDelete }: ContactListPr
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{t('labelFirstName')} / {t('labelLastName')}</TableHead>
+              <TableHead>{t('labelName')}</TableHead>
               <TableHead>{t('labelPosition')}</TableHead>
               <TableHead>{t('labelDepartment')}</TableHead>
               <TableHead>{t('labelPhone')}</TableHead>
@@ -71,7 +74,7 @@ export function ContactList({ contacts, onAdd, onEdit, onDelete }: ContactListPr
             {contacts.map((contact) => (
               <TableRow key={contact.id}>
                 <TableCell className="font-medium">
-                  {contact.firstName} {contact.lastName}
+                  {[contact.salutation, contact.title, contact.firstName, contact.lastName].filter(Boolean).join(' ')}
                 </TableCell>
                 <TableCell>{contact.position || '—'}</TableCell>
                 <TableCell>{contact.department || '—'}</TableCell>

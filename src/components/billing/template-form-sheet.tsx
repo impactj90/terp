@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Info } from 'lucide-react'
 import { RichTextEditor } from '@/components/ui/rich-text-editor'
 import {
   useCreateBillingDocumentTemplate,
@@ -27,6 +27,7 @@ import {
   useBillingDocumentTemplates,
 } from '@/hooks'
 import { toast } from 'sonner'
+import { useTranslations } from 'next-intl'
 
 const DOCUMENT_TYPES = [
   { value: 'OFFER', label: 'Angebot' },
@@ -45,6 +46,7 @@ interface TemplateFormSheetProps {
 }
 
 export function TemplateFormSheet({ open, onOpenChange, templateId }: TemplateFormSheetProps) {
+  const t = useTranslations('billingTemplates')
   const { data: templates = [] } = useBillingDocumentTemplates()
   const createMutation = useCreateBillingDocumentTemplate()
   const updateMutation = useUpdateBillingDocumentTemplate()
@@ -139,6 +141,22 @@ export function TemplateFormSheet({ open, onOpenChange, templateId }: TemplateFo
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Placeholder hint */}
+          <div className="flex items-start gap-2 rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
+            <Info className="h-4 w-4 mt-0.5 shrink-0" />
+            <div>
+              <p className="font-medium mb-1">{t('placeholderTitle')}</p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+                <code>{`{{${t('phBriefanrede')}}}`}</code><span>{t('phBriefanredeDesc')}</span>
+                <code>{`{{${t('phAnrede')}}}`}</code><span>{t('phAnredeDesc')}</span>
+                <code>{`{{${t('phTitel')}}}`}</code><span>{t('phTitelDesc')}</span>
+                <code>{`{{${t('phVorname')}}}`}</code><span>{t('phVornameDesc')}</span>
+                <code>{`{{${t('phNachname')}}}`}</code><span>{t('phNachnameDesc')}</span>
+                <code>{`{{${t('phFirma')}}}`}</code><span>{t('phFirmaDesc')}</span>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-2">

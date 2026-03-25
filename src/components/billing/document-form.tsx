@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useCreateBillingDocument } from '@/hooks'
-import { useCrmAddresses } from '@/hooks'
+import { useCrmAddresses, useCrmContacts } from '@/hooks'
 import { useCrmInquiries } from '@/hooks'
 import { toast } from 'sonner'
 import { ArrowLeft } from 'lucide-react'
@@ -40,6 +40,7 @@ export function BillingDocumentForm() {
 
   const [type, setType] = React.useState(searchParams.get('type') ?? 'OFFER')
   const [addressId, setAddressId] = React.useState('')
+  const [contactId, setContactId] = React.useState('')
   const [notes, setNotes] = React.useState('')
   const [internalNotes, setInternalNotes] = React.useState('')
   const [paymentTermDays, setPaymentTermDays] = React.useState('')
@@ -53,6 +54,9 @@ export function BillingDocumentForm() {
 
   // Load addresses for selection
   const { data: addressData } = useCrmAddresses({ pageSize: 100 })
+
+  // Load contacts for selected address
+  const { data: contactData } = useCrmContacts(addressId, !!addressId)
 
   // Load inquiries filtered by selected address
   const { data: inquiryData } = useCrmInquiries({
@@ -80,6 +84,7 @@ export function BillingDocumentForm() {
       const result = await createMutation.mutateAsync({
         type: type as "OFFER",
         addressId,
+        contactId: contactId && contactId !== 'none' ? contactId : undefined,
         notes: notes || undefined,
         internalNotes: internalNotes || undefined,
         paymentTermDays: paymentTermDays ? parseInt(paymentTermDays) : undefined,
@@ -137,7 +142,7 @@ export function BillingDocumentForm() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="addressId">{t('customerAddress')}</Label>
-                <Select value={addressId} onValueChange={(v) => { setAddressId(v); setInquiryId(''); }}>
+                <Select value={addressId} onValueChange={(v) => { setAddressId(v); setContactId(''); setInquiryId(''); }}>
                   <SelectTrigger id="addressId">
                     <SelectValue placeholder={t('selectAddress')} />
                   </SelectTrigger>
@@ -151,6 +156,24 @@ export function BillingDocumentForm() {
                 </Select>
               </div>
             </div>
+            {addressId && (contactData ?? []).length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="contactId">{t('contactPerson')}</Label>
+                <Select value={contactId || 'none'} onValueChange={setContactId}>
+                  <SelectTrigger id="contactId">
+                    <SelectValue placeholder={t('selectContact')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{t('noContact')}</SelectItem>
+                    {(contactData ?? []).map((c: { id: string; firstName?: string | null; lastName?: string | null; salutation?: string | null; title?: string | null }) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {[c.salutation, c.title, c.firstName, c.lastName].filter(Boolean).join(' ')}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             {addressId && activeInquiries.length > 0 && (
               <div className="space-y-2">
                 <Label htmlFor="inquiryId">{t('inquiry')}</Label>

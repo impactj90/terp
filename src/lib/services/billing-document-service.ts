@@ -9,6 +9,46 @@ import * as billingTenantConfigRepo from "./billing-tenant-config-repository"
 import * as auditLog from "./audit-logs-service"
 import type { AuditContext } from "./audit-logs-service"
 
+// --- Template Placeholder Resolution ---
+
+/**
+ * Resolve template placeholders (e.g. {{briefanrede}}, {{letterSalutation}})
+ * with contact and address data. Supports both German and English placeholder names.
+ */
+export function resolveTemplatePlaceholders(
+  html: string,
+  address?: { company?: string | null } | null,
+  contact?: {
+    firstName?: string | null
+    lastName?: string | null
+    salutation?: string | null
+    title?: string | null
+    letterSalutation?: string | null
+  } | null,
+): string {
+  const placeholders: Record<string, string> = {
+    // German
+    briefanrede: contact?.letterSalutation || 'Sehr geehrte Damen und Herren,',
+    anrede: contact?.salutation ?? '',
+    titel: contact?.title ?? '',
+    vorname: contact?.firstName ?? '',
+    nachname: contact?.lastName ?? '',
+    firma: address?.company ?? '',
+    // English
+    lettersalutation: contact?.letterSalutation || 'Dear Sir or Madam,',
+    salutation: contact?.salutation ?? '',
+    title: contact?.title ?? '',
+    firstname: contact?.firstName ?? '',
+    lastname: contact?.lastName ?? '',
+    company: address?.company ?? '',
+  }
+
+  return html.replace(/\{\{(\w+)\}\}/gi, (_match, key: string) => {
+    const val = placeholders[key.toLowerCase()]
+    return val !== undefined ? val : _match
+  })
+}
+
 // --- Error Classes ---
 
 export class BillingDocumentNotFoundError extends Error {
@@ -254,8 +294,16 @@ export async function create(
     if (!headerText && !footerText) {
       const defaultTemplate = await templateRepo.findDefault(txPrisma, tenantId, input.type)
       if (defaultTemplate) {
+        // Resolve placeholders with contact + address data
+        const contact = input.contactId
+          ? await txPrisma.crmContact.findFirst({ where: { id: input.contactId, tenantId } })
+          : null
         headerText = defaultTemplate.headerText
+          ? resolveTemplatePlaceholders(defaultTemplate.headerText, address, contact)
+          : null
         footerText = defaultTemplate.footerText
+          ? resolveTemplatePlaceholders(defaultTemplate.footerText, address, contact)
+          : null
       }
     }
 

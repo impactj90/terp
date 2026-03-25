@@ -419,6 +419,104 @@ describe("crm.addresses.contactsCreate", () => {
   })
 })
 
+// --- crm.addresses.contactsCreate — salutation fields tests ---
+
+describe("crm.addresses.contactsCreate — salutation fields", () => {
+  it("creates contact with salutation, title, and auto-generated letterSalutation", async () => {
+    const newContact = {
+      id: CONTACT_ID,
+      tenantId: TENANT_ID,
+      addressId: ADDRESS_ID,
+      firstName: "Max",
+      lastName: "Müller",
+      salutation: "Herr",
+      title: "Dr.",
+      letterSalutation: "Sehr geehrter Herr Dr. Müller",
+      position: null,
+      department: null,
+      phone: null,
+      email: null,
+      notes: null,
+      isPrimary: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    const prisma = {
+      crmAddress: {
+        findFirst: vi.fn().mockResolvedValue(mockAddress),
+      },
+      crmContact: {
+        create: vi.fn().mockResolvedValue(newContact),
+      },
+    }
+
+    const caller = createCaller(createTestContext(prisma))
+    const result = await caller.contactsCreate({
+      addressId: ADDRESS_ID,
+      firstName: "Max",
+      lastName: "Müller",
+      salutation: "Herr",
+      title: "Dr.",
+    })
+
+    // Verify the create call was made with auto-generated letterSalutation
+    expect(prisma.crmContact.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        salutation: "Herr",
+        title: "Dr.",
+        letterSalutation: "Sehr geehrter Herr Dr. Müller",
+      }),
+    })
+    expect(result.letterSalutation).toBe("Sehr geehrter Herr Dr. Müller")
+  })
+
+  it("preserves manually provided letterSalutation", async () => {
+    const newContact = {
+      id: CONTACT_ID,
+      tenantId: TENANT_ID,
+      addressId: ADDRESS_ID,
+      firstName: "Hans",
+      lastName: "Schmidt",
+      salutation: "Herr",
+      title: null,
+      letterSalutation: "Lieber Hans",
+      position: null,
+      department: null,
+      phone: null,
+      email: null,
+      notes: null,
+      isPrimary: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    const prisma = {
+      crmAddress: {
+        findFirst: vi.fn().mockResolvedValue(mockAddress),
+      },
+      crmContact: {
+        create: vi.fn().mockResolvedValue(newContact),
+      },
+    }
+
+    const caller = createCaller(createTestContext(prisma))
+    await caller.contactsCreate({
+      addressId: ADDRESS_ID,
+      firstName: "Hans",
+      lastName: "Schmidt",
+      salutation: "Herr",
+      letterSalutation: "Lieber Hans",
+    })
+
+    expect(prisma.crmContact.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        letterSalutation: "Lieber Hans",
+      }),
+    })
+  })
+})
+
 // --- crm.addresses.bankAccountsCreate tests ---
 
 describe("crm.addresses.bankAccountsCreate", () => {

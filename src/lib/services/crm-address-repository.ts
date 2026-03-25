@@ -168,6 +168,9 @@ export async function createContact(
     addressId: string
     firstName: string
     lastName: string
+    salutation?: string | null
+    title?: string | null
+    letterSalutation?: string | null
     position?: string | null
     department?: string | null
     phone?: string | null

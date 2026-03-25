@@ -76,9 +76,48 @@ interface DocAddress {
   zip?: string | null
   city?: string | null
 }
+interface DocContact {
+  firstName?: string | null
+  lastName?: string | null
+  salutation?: string | null
+  title?: string | null
+  letterSalutation?: string | null
+}
 interface DocRelated { id: string; number: string; type: string; status?: string }
 interface DocInquiry { id: string; number: string; title: string }
 interface DocOrder { id: string; code: string; name: string }
+
+/**
+ * Resolve template placeholders with document context data.
+ * Supports both German and English placeholder names.
+ */
+function resolveTemplatePlaceholders(
+  html: string,
+  address?: DocAddress | null,
+  contact?: DocContact | null,
+): string {
+  const placeholders: Record<string, string> = {
+    // German
+    briefanrede: contact?.letterSalutation || 'Sehr geehrte Damen und Herren,',
+    anrede: contact?.salutation ?? '',
+    titel: contact?.title ?? '',
+    vorname: contact?.firstName ?? '',
+    nachname: contact?.lastName ?? '',
+    firma: address?.company ?? '',
+    // English
+    lettersalutation: contact?.letterSalutation || 'Dear Sir or Madam,',
+    salutation: contact?.salutation ?? '',
+    title: contact?.title ?? '',
+    firstname: contact?.firstName ?? '',
+    lastname: contact?.lastName ?? '',
+    company: address?.company ?? '',
+  }
+
+  return html.replace(/\{\{(\w+)\}\}/gi, (match, key: string) => {
+    const val = placeholders[key.toLowerCase()]
+    return val !== undefined ? val : match
+  })
+}
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function getDocField<T>(doc: any, field: string): T | undefined {
@@ -201,6 +240,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
   const isImmutable = !isDraft
 
   const address = getDocField<DocAddress>(doc, 'address')
+  const contact = getDocField<DocContact>(doc, 'contact')
   const parentDocument = getDocField<DocRelated>(doc, 'parentDocument')
   const childDocuments = getDocField<DocRelated[]>(doc, 'childDocuments') ?? []
   const inquiry = getDocField<DocInquiry>(doc, 'inquiry')
@@ -249,10 +289,18 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
       if (!window.confirm(t('templateOverwriteConfirm'))) return
     }
 
+    // Resolve placeholders like {{briefanrede}} / {{letterSalutation}} with contact/address data
+    const resolvedHeader = tpl.headerText
+      ? resolveTemplatePlaceholders(tpl.headerText, address, contact)
+      : null
+    const resolvedFooter = tpl.footerText
+      ? resolveTemplatePlaceholders(tpl.footerText, address, contact)
+      : null
+
     updateMutation.mutate({
       id: doc.id,
-      headerText: tpl.headerText ?? null,
-      footerText: tpl.footerText ?? null,
+      headerText: resolvedHeader,
+      footerText: resolvedFooter,
     })
     toast.success(t('templateApplied', { name: tpl.name }))
   }
