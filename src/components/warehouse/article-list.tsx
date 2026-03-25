@@ -19,7 +19,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { MoreHorizontal, Eye, Edit, Trash2, RotateCcw } from 'lucide-react'
+import { MoreHorizontal, Eye, Edit, Trash2, RotateCcw, ImageIcon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
 interface WhArticleRow {
@@ -32,6 +32,7 @@ interface WhArticleRow {
   stockTracking: boolean
   isActive: boolean
   group?: { id: string; name: string } | null
+  primaryImageThumbnailUrl?: string | null
 }
 
 interface ArticleListProps {
@@ -83,6 +84,7 @@ export function ArticleList({
     <Table>
       <TableHeader>
         <TableRow>
+          <TableHead className="w-[50px]">{t('colThumbnail')}</TableHead>
           <TableHead className="w-[120px]">{t('colNumber')}</TableHead>
           <TableHead>{t('colName')}</TableHead>
           <TableHead>{t('colGroup')}</TableHead>
@@ -100,6 +102,19 @@ export function ArticleList({
             className={`cursor-pointer ${article.stockTracking && article.currentStock < 0 ? 'bg-destructive/5' : ''}`}
             onClick={() => onView(article)}
           >
+            <TableCell className="w-[50px]">
+              {article.primaryImageThumbnailUrl ? (
+                <img
+                  src={article.primaryImageThumbnailUrl}
+                  alt={article.name}
+                  className="h-8 w-8 rounded object-cover"
+                />
+              ) : (
+                <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
+                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                </div>
+              )}
+            </TableCell>
             <TableCell className="font-mono text-sm">{article.number}</TableCell>
             <TableCell className="font-medium">{article.name}</TableCell>
             <TableCell className="text-muted-foreground">

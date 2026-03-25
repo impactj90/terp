@@ -6397,6 +6397,7 @@ Tabelle mit Spalten:
 
 | Spalte | Beschreibung |
 |--------|-------------|
+| **Bild** | Thumbnail des Hauptbilds oder Platzhalter-Icon |
 | **Nummer** | Auto-generierte Artikelnummer — monospace |
 | **Bezeichnung** | Artikelname (fett) |
 | **Gruppe** | Name der Artikelgruppe oder „—" |
@@ -6477,7 +6478,7 @@ Zum Wiederherstellen:
 
 ✅ Kopfbereich zeigt: Artikelnummer (monospace), Name, Status-Badge (Aktiv/Inaktiv), optional Badges „Bestandsführung" und Gruppenname. Buttons „Bestand korrigieren" (bei Bestandsführung), „Bearbeiten" und „Deaktivieren/Wiederherstellen".
 
-Die Detailseite hat **5 Tabs**:
+Die Detailseite hat **6 Tabs**:
 
 #### Tab „Übersicht"
 
@@ -6568,6 +6569,48 @@ Zeigt alle Preislisteneinträge dieses Artikels in einer Tabelle:
 | **Gültig bis** | Gültigkeitsende der Preisliste |
 
 ✅ Wenn keine Einträge vorhanden: „Keine Preislisteneinträge für diesen Artikel"
+
+#### Tab „Bilder"
+
+📍 Tab **„Bilder"**
+
+Hier werden einem Artikel Bilder zugeordnet. Ein Bild kann als Hauptbild markiert werden — dieses erscheint als Vorschau in der Artikelliste.
+
+✅ Bildergalerie als Kacheln (Thumbnail-Vorschau). Hauptbild ist mit Stern-Badge markiert.
+
+##### Bild hochladen
+
+1. 📍 **„Bild hochladen"**
+2. ✅ Dialog öffnet sich mit Drag & Drop-Bereich
+3. Bilder per Drag & Drop ablegen oder Dateiauswahl (Klick)
+4. ✅ Vorschau der ausgewählten Bilder mit Fortschrittsanzeige
+5. ✅ Erlaubte Formate: JPEG, PNG, WebP — max. 5 MB pro Datei
+6. ✅ Nach dem Upload erscheint das Bild in der Galerie
+7. ✅ Das erste hochgeladene Bild wird automatisch als Hauptbild gesetzt
+
+##### Hauptbild setzen
+
+1. 📍 Über einem Bild: **Stern-Symbol** klicken
+2. ✅ Das Bild wird als Hauptbild markiert, das vorherige Hauptbild verliert den Status
+
+##### Reihenfolge ändern
+
+1. 📍 Bilder per Drag & Drop (am Griff-Symbol oben links) in die gewünschte Reihenfolge ziehen
+2. ✅ Reihenfolge wird automatisch gespeichert
+
+##### Bild löschen
+
+1. 📍 Über einem Bild: **Papierkorb-Symbol** klicken
+2. ✅ Bestätigungsdialog: „Bild löschen? Dies kann nicht rückgängig gemacht werden."
+3. 📍 „Bestätigen"
+4. ✅ Bild wird aus Galerie und Speicher entfernt
+5. ✅ War es das Hauptbild, wird automatisch das nächste Bild zum Hauptbild
+
+##### Bildvorschau (Lightbox)
+
+1. 📍 Auf ein Bild in der Galerie klicken
+2. ✅ Grossansicht des Bildes in einem Dialog
+3. 📍 Schliessen-Button oder Escape-Taste zum Schliessen
 
 ---
 

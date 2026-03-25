@@ -68,7 +68,14 @@ export async function findMany(
   const [items, total] = await Promise.all([
     prisma.whArticle.findMany({
       where,
-      include: { group: { select: { id: true, name: true } } },
+      include: {
+        group: { select: { id: true, name: true } },
+        articleImages: {
+          where: { isPrimary: true },
+          select: { thumbnailPath: true },
+          take: 1,
+        },
+      },
       orderBy: { number: "asc" },
       skip: (params.page - 1) * params.pageSize,
       take: params.belowMinStock ? params.pageSize * 3 : params.pageSize, // overfetch for belowMinStock filtering

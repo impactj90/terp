@@ -278,6 +278,8 @@ export const ALL_PERMISSIONS: Permission[] = [
   p("wh_articles.edit", "wh_articles", "edit", "Edit warehouse articles"),
   p("wh_articles.delete", "wh_articles", "delete", "Delete warehouse articles"),
   p("wh_article_groups.manage", "wh_article_groups", "manage", "Manage warehouse article groups"),
+  p("wh_articles.upload_image", "wh_articles", "upload_image", "Upload article images"),
+  p("wh_articles.delete_image", "wh_articles", "delete_image", "Delete article images"),
 
   // Warehouse Purchase Orders
   p("wh_purchase_orders.view", "wh_purchase_orders", "view", "View purchase orders"),

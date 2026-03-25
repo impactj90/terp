@@ -22,6 +22,7 @@ import { ArticleMovementsTab } from './article-movements-tab'
 import { ArticleBomList } from './article-bom-list'
 import { ArticleStockAdjustDialog } from './article-stock-adjust-dialog'
 import { ArticlePriceTab } from './article-price-tab'
+import { ArticleImagesTab } from './article-images-tab'
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -165,6 +166,7 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
           <TabsTrigger value="bom">{t('tabBom')}</TabsTrigger>
           <TabsTrigger value="stock">{t('tabStock')}</TabsTrigger>
           <TabsTrigger value="prices">{t('tabPrices')}</TabsTrigger>
+          <TabsTrigger value="images">{t('tabImages')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4 mt-4">
@@ -227,6 +229,10 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
 
         <TabsContent value="prices" className="mt-4">
           <ArticlePriceTab articleId={articleId} />
+        </TabsContent>
+
+        <TabsContent value="images" className="mt-4">
+          <ArticleImagesTab articleId={articleId} />
         </TabsContent>
       </Tabs>
 

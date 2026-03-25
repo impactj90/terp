@@ -840,6 +840,15 @@ export {
   useRemoveWhArticleBom,
 } from './use-wh-articles'
 
+// Warehouse Article Images
+export {
+  useWhArticleImages,
+  useUploadWhArticleImage,
+  useSetPrimaryWhArticleImage,
+  useReorderWhArticleImages,
+  useDeleteWhArticleImage,
+} from './use-wh-article-images'
+
 // Warehouse Article Prices
 export {
   useWhPriceLists,

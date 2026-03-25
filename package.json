@@ -48,6 +48,7 @@
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@e-invoice-eu/core": "^2.3.4",
     "@prisma/adapter-pg": "^7.4.2",
@@ -95,6 +96,7 @@
     "recharts": "^3.8.0",
     "remark-gfm": "^4.0.1",
     "server-only": "^0.0.1",
+    "sharp": "^0.34.5",
     "sonner": "^2.0.7",
     "tailwind-merge": "^2.6.0",
     "uuid": "^13.0.0",

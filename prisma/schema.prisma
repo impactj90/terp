@@ -197,6 +197,7 @@ model Tenant {
   whStockMovements            WhStockMovement[]
   whSupplierInvoices          WhSupplierInvoice[]
   whSupplierPayments          WhSupplierPayment[]
+  whArticleImages             WhArticleImage[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
@@ -4211,6 +4212,7 @@ model WhArticle {
   bomChild  WhBillOfMaterial[] @relation("BomChild")
   purchaseOrderPositions WhPurchaseOrderPosition[]
   stockMovements         WhStockMovement[]
+  articleImages          WhArticleImage[]
 
   @@unique([tenantId, number], map: "uq_wh_articles_tenant_number")
   @@index([tenantId, groupId])
@@ -4218,6 +4220,28 @@ model WhArticle {
   @@index([tenantId, name])
   @@index([tenantId, isActive])
   @@map("wh_articles")
+}
+
+model WhArticleImage {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  articleId     String   @map("article_id") @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  filename      String   @db.Text
+  storagePath   String   @map("storage_path") @db.Text
+  thumbnailPath String?  @map("thumbnail_path") @db.Text
+  mimeType      String   @map("mime_type") @db.Text
+  sizeBytes     Int      @map("size_bytes")
+  sortOrder     Int      @default(0) @map("sort_order")
+  isPrimary     Boolean  @default(false) @map("is_primary")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdById   String?  @map("created_by_id") @db.Uuid
+
+  article WhArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  tenant  Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([articleId, sortOrder])
+  @@index([tenantId])
+  @@map("wh_article_images")
 }
 
 model WhArticleSupplier {

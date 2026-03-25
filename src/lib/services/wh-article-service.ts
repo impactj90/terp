@@ -10,6 +10,7 @@ import * as repo from "./wh-article-repository"
 import * as stockMovementRepo from "./wh-stock-movement-repository"
 import * as numberSeqService from "./number-sequence-service"
 import * as auditLog from "./audit-logs-service"
+import * as whArticleImageService from "./wh-article-image-service"
 import type { AuditContext } from "./audit-logs-service"
 
 // --- Audit ---
@@ -81,7 +82,28 @@ export async function list(
     pageSize: number
   }
 ) {
-  return repo.findMany(prisma, tenantId, params)
+  const result = await repo.findMany(prisma, tenantId, params)
+
+  // Add signed thumbnail URLs for primary images
+  const itemsWithThumbnails = await Promise.all(
+    result.items.map(async (article) => {
+      const images = (article as unknown as { articleImages?: { thumbnailPath: string | null }[] }).articleImages
+      const primaryImage = images?.[0]
+      let primaryImageThumbnailUrl: string | null = null
+      if (primaryImage?.thumbnailPath) {
+        try {
+          primaryImageThumbnailUrl = await whArticleImageService.getSignedThumbnailUrl(
+            primaryImage.thumbnailPath
+          )
+        } catch {
+          // Ignore thumbnail URL generation failures
+        }
+      }
+      return { ...article, primaryImageThumbnailUrl }
+    })
+  )
+
+  return { ...result, items: itemsWithThumbnails }
 }
 
 export async function getById(

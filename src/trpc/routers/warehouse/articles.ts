@@ -12,6 +12,7 @@ import { requireModule } from "@/lib/modules"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import * as whArticleService from "@/lib/services/wh-article-service"
 import * as whArticleGroupService from "@/lib/services/wh-article-group-service"
+import * as whArticleImageService from "@/lib/services/wh-article-image-service"
 import type { PrismaClient } from "@/generated/prisma/client"
 
 // --- Permission Constants ---
@@ -20,6 +21,8 @@ const WH_CREATE = permissionIdByKey("wh_articles.create")!
 const WH_EDIT = permissionIdByKey("wh_articles.edit")!
 const WH_DELETE = permissionIdByKey("wh_articles.delete")!
 const WH_GROUPS_MANAGE = permissionIdByKey("wh_article_groups.manage")!
+const WH_UPLOAD_IMAGE = permissionIdByKey("wh_articles.upload_image")!
+const WH_DELETE_IMAGE = permissionIdByKey("wh_articles.delete_image")!
 
 // --- Base procedure with module guard ---
 const whProcedure = tenantProcedure.use(requireModule("warehouse"))
@@ -561,4 +564,119 @@ export const whArticlesRouter = createTRPCRouter({
         handleServiceError(err)
       }
     }),
+
+  // ========== Images ==========
+
+  images: createTRPCRouter({
+    list: whProcedure
+      .use(requirePermission(WH_VIEW))
+      .input(z.object({ articleId: z.string().uuid() }))
+      .query(async ({ ctx, input }) => {
+        try {
+          return await whArticleImageService.listImages(
+            ctx.prisma as unknown as PrismaClient,
+            ctx.tenantId!,
+            input.articleId
+          )
+        } catch (err) {
+          handleServiceError(err)
+        }
+      }),
+
+    getUploadUrl: whProcedure
+      .use(requirePermission(WH_UPLOAD_IMAGE))
+      .input(
+        z.object({
+          articleId: z.string().uuid(),
+          filename: z.string().min(1).max(255),
+          mimeType: z.string().min(1).max(100),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        try {
+          return await whArticleImageService.getUploadUrl(
+            ctx.prisma as unknown as PrismaClient,
+            ctx.tenantId!,
+            input.articleId,
+            input.filename,
+            input.mimeType
+          )
+        } catch (err) {
+          handleServiceError(err)
+        }
+      }),
+
+    confirm: whProcedure
+      .use(requirePermission(WH_UPLOAD_IMAGE))
+      .input(
+        z.object({
+          articleId: z.string().uuid(),
+          storagePath: z.string().min(1),
+          filename: z.string().min(1).max(255),
+          mimeType: z.string().min(1).max(100),
+          sizeBytes: z.number().int().min(1),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        try {
+          return await whArticleImageService.confirmUpload(
+            ctx.prisma as unknown as PrismaClient,
+            ctx.tenantId!,
+            input.articleId,
+            input.storagePath,
+            input.filename,
+            input.mimeType,
+            input.sizeBytes,
+            ctx.user!.id
+          )
+        } catch (err) {
+          handleServiceError(err)
+        }
+      }),
+
+    setPrimary: whProcedure
+      .use(requirePermission(WH_UPLOAD_IMAGE))
+      .input(z.object({ imageId: z.string().uuid() }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          return await whArticleImageService.setPrimary(
+            ctx.prisma as unknown as PrismaClient,
+            ctx.tenantId!,
+            input.imageId
+          )
+        } catch (err) {
+          handleServiceError(err)
+        }
+      }),
+
+    reorder: whProcedure
+      .use(requirePermission(WH_UPLOAD_IMAGE))
+      .input(z.object({ imageIds: z.array(z.string().uuid()).min(1) }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          return await whArticleImageService.reorderImages(
+            ctx.prisma as unknown as PrismaClient,
+            ctx.tenantId!,
+            input.imageIds
+          )
+        } catch (err) {
+          handleServiceError(err)
+        }
+      }),
+
+    delete: whProcedure
+      .use(requirePermission(WH_DELETE_IMAGE))
+      .input(z.object({ imageId: z.string().uuid() }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          return await whArticleImageService.deleteImage(
+            ctx.prisma as unknown as PrismaClient,
+            ctx.tenantId!,
+            input.imageId
+          )
+        } catch (err) {
+          handleServiceError(err)
+        }
+      }),
+  }),
 })
