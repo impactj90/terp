@@ -129,34 +129,41 @@ export async function bookGoodsReceipt(
         )
       }
 
-      // 3b. Validate quantity
+      // 3b. Only ARTICLE positions can receive goods
+      if (position.positionType !== "ARTICLE") {
+        throw new WhStockMovementValidationError(
+          "Only ARTICLE positions can receive goods"
+        )
+      }
+
+      // 3c. Validate quantity
       if (posInput.quantity <= 0) {
         throw new WhStockMovementValidationError("Quantity must be positive")
       }
-      const remaining = position.quantity - position.receivedQuantity
+      const remaining = (position.quantity ?? 0) - position.receivedQuantity
       if (posInput.quantity > remaining) {
         throw new WhStockMovementValidationError(
           `Quantity ${posInput.quantity} exceeds remaining quantity ${remaining}`
         )
       }
 
-      // 3c. Fetch article
+      // 3d. Fetch article
       const article = await tx.whArticle.findFirst({
-        where: { id: position.articleId, tenantId },
+        where: { id: position.articleId!, tenantId },
       })
       if (!article) {
         throw new WhStockMovementValidationError("Article not found")
       }
 
-      // 3d. Calculate stock
+      // 3e. Calculate stock
       const previousStock = article.currentStock
       const newStock = previousStock + posInput.quantity
 
-      // 3e. Create stock movement
+      // 3f. Create stock movement
       const movement = await tx.whStockMovement.create({
         data: {
           tenantId,
-          articleId: position.articleId,
+          articleId: position.articleId!,
           type: "GOODS_RECEIPT",
           quantity: posInput.quantity,
           previousStock,
@@ -176,34 +183,40 @@ export async function bookGoodsReceipt(
       })
       movements.push(movement)
 
-      // 3f. Update article stock
+      // 3g. Update article stock
       await tx.whArticle.update({
-        where: { id: position.articleId },
+        where: { id: position.articleId! },
         data: { currentStock: newStock },
       })
 
-      // 3g. Update position received quantity
+      // 3h. Update position received quantity
       await tx.whPurchaseOrderPosition.update({
         where: { id: posInput.positionId },
         data: { receivedQuantity: { increment: posInput.quantity } },
       })
     }
 
-    // 4. Update PO status
+    // 4. Update PO status (only consider ARTICLE positions for received status)
     const allPositions = await tx.whPurchaseOrderPosition.findMany({
       where: { purchaseOrderId: input.purchaseOrderId },
     })
 
-    const allFullyReceived = allPositions.every(
-      (p) => p.receivedQuantity >= p.quantity
-    )
-    const anyReceived = allPositions.some((p) => p.receivedQuantity > 0)
+    const articlePositions = allPositions.filter(p => p.positionType === "ARTICLE")
 
     let newStatus: "PARTIALLY_RECEIVED" | "RECEIVED" = "PARTIALLY_RECEIVED"
-    if (allFullyReceived) {
+    if (articlePositions.length === 0) {
       newStatus = "RECEIVED"
-    } else if (anyReceived) {
-      newStatus = "PARTIALLY_RECEIVED"
+    } else {
+      const allFullyReceived = articlePositions.every(
+        (p) => p.receivedQuantity >= (p.quantity ?? 0)
+      )
+      const anyReceived = articlePositions.some((p) => p.receivedQuantity > 0)
+
+      if (allFullyReceived) {
+        newStatus = "RECEIVED"
+      } else if (anyReceived) {
+        newStatus = "PARTIALLY_RECEIVED"
+      }
     }
 
     const updatedPO = await tx.whPurchaseOrder.update({

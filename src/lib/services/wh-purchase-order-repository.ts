@@ -187,10 +187,12 @@ export async function createPosition(
   purchaseOrderId: string,
   data: {
     sortOrder: number
-    articleId: string
+    positionType?: string
+    articleId?: string | null
+    freeText?: string | null
     supplierArticleNumber?: string | null
     description?: string | null
-    quantity: number
+    quantity?: number | null
     unit?: string | null
     unitPrice?: number | null
     flatCosts?: number | null
@@ -204,10 +206,12 @@ export async function createPosition(
     data: {
       purchaseOrderId,
       sortOrder: data.sortOrder,
-      articleId: data.articleId,
+      positionType: (data.positionType as "ARTICLE" | "FREETEXT" | "TEXT") ?? "ARTICLE",
+      articleId: data.articleId ?? null,
+      freeText: data.freeText ?? null,
       supplierArticleNumber: data.supplierArticleNumber ?? null,
       description: data.description ?? null,
-      quantity: data.quantity,
+      quantity: data.quantity ?? null,
       unit: data.unit ?? null,
       unitPrice: data.unitPrice ?? null,
       flatCosts: data.flatCosts ?? null,

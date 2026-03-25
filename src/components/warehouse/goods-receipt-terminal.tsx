@@ -105,7 +105,9 @@ export function GoodsReceiptTerminal() {
     setState((s) => {
       const map = new Map<string, number>()
       for (const pos of orderDetail.positions) {
-        const remaining = pos.quantity - pos.receivedQuantity
+        // Only ARTICLE positions can receive goods
+        if (pos.positionType !== "ARTICLE") continue
+        const remaining = (pos.quantity ?? 0) - pos.receivedQuantity
         if (remaining > 0) {
           map.set(pos.id, remaining)
         }
@@ -338,10 +340,18 @@ export function GoodsReceiptTerminal() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {orderDetail.positions.map((pos) => (
+                    {orderDetail.positions
+                      .filter((pos) => pos.positionType === "ARTICLE" && pos.article != null)
+                      .map((pos) => (
                       <GoodsReceiptPositionRow
                         key={pos.id}
-                        position={pos}
+                        position={{
+                          id: pos.id,
+                          articleId: pos.articleId!,
+                          article: pos.article!,
+                          quantity: pos.quantity ?? 0,
+                          receivedQuantity: pos.receivedQuantity,
+                        }}
                         receiveQuantity={state.receiveQuantities.get(pos.id) || 0}
                         onQuantityChange={setQuantity}
                       />

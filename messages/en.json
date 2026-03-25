@@ -5801,6 +5801,12 @@
     "posColVatRate": "VAT %",
     "posColDeliveryDate": "Delivery Date",
 
+    "posColType": "Type",
+    "posTypeArticle": "Article",
+    "posTypeFreetext": "Free text",
+    "posTypeText": "Text line",
+    "posFreetextPlaceholder": "Enter description...",
+
     "posActionAdd": "Add Position",
     "posActionEdit": "Edit",
     "posActionDelete": "Remove",

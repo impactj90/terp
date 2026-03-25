@@ -397,8 +397,10 @@ export async function addPosition(
   tenantId: string,
   input: {
     purchaseOrderId: string
-    articleId: string
-    quantity: number
+    positionType?: "ARTICLE" | "FREETEXT" | "TEXT"
+    articleId?: string
+    freeText?: string
+    quantity?: number
     unitPrice?: number
     unit?: string
     description?: string
@@ -419,78 +421,136 @@ export async function addPosition(
     )
   }
 
-  // 3. Validate article exists
-  const article = await prisma.whArticle.findFirst({
-    where: { id: input.articleId, tenantId },
-    select: { id: true, number: true, name: true, unit: true, buyPrice: true, vatRate: true },
-  })
-  if (!article) {
-    throw new WhPurchaseOrderValidationError("Article not found")
-  }
+  const positionType = input.positionType ?? "ARTICLE"
 
-  // 4. Auto-fill from WhArticleSupplier
-  let supplierArticleNumber: string | null = null
-  let unitPrice = input.unitPrice ?? null
-  let unit = input.unit ?? null
-
-  const supplierLink = await prisma.whArticleSupplier.findFirst({
-    where: { articleId: input.articleId, supplierId: order.supplierId },
-  })
-
-  if (supplierLink) {
-    supplierArticleNumber = supplierLink.supplierArticleNumber ?? null
-    if (unitPrice === null || unitPrice === undefined) {
-      unitPrice = supplierLink.buyPrice ?? article.buyPrice ?? null
-    }
-    if (!unit) {
-      unit = supplierLink.orderUnit ?? article.unit ?? null
-    }
-  } else {
-    if (unitPrice === null || unitPrice === undefined) {
-      unitPrice = article.buyPrice ?? null
-    }
-    if (!unit) {
-      unit = article.unit ?? null
-    }
-  }
-
-  // 5. Calculate sortOrder
+  // 3. Calculate sortOrder
   const sortOrder = await repo.countPositions(prisma, input.purchaseOrderId)
 
-  // 6. Calculate totalPrice
-  const totalPrice =
-    (input.quantity * (unitPrice ?? 0)) + (input.flatCosts ?? 0)
+  // 4. Type-specific validation and data building
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let positionData: Record<string, any>
 
-  // 7. Create position
-  const vatRate = input.vatRate ?? article.vatRate
-  const position = await repo.createPosition(prisma, input.purchaseOrderId, {
-    sortOrder,
-    articleId: input.articleId,
-    supplierArticleNumber,
-    description: input.description ?? null,
-    quantity: input.quantity,
-    unit,
-    unitPrice,
-    flatCosts: input.flatCosts ?? null,
-    totalPrice,
-    vatRate,
-    requestedDelivery: input.requestedDelivery
-      ? new Date(input.requestedDelivery)
-      : null,
-    confirmedDelivery: input.confirmedDelivery
-      ? new Date(input.confirmedDelivery)
-      : null,
-  })
+  if (positionType === "ARTICLE") {
+    // Existing ARTICLE logic: require articleId, validate article, auto-fill from supplier
+    if (!input.articleId) {
+      throw new WhPurchaseOrderValidationError("articleId is required for ARTICLE positions")
+    }
+    const quantity = input.quantity ?? 1
 
-  // 8. Recalculate totals
+    const article = await prisma.whArticle.findFirst({
+      where: { id: input.articleId, tenantId },
+      select: { id: true, number: true, name: true, unit: true, buyPrice: true, vatRate: true },
+    })
+    if (!article) {
+      throw new WhPurchaseOrderValidationError("Article not found")
+    }
+
+    // Auto-fill from WhArticleSupplier
+    let supplierArticleNumber: string | null = null
+    let unitPrice = input.unitPrice ?? null
+    let unit = input.unit ?? null
+
+    const supplierLink = await prisma.whArticleSupplier.findFirst({
+      where: { articleId: input.articleId, supplierId: order.supplierId },
+    })
+
+    if (supplierLink) {
+      supplierArticleNumber = supplierLink.supplierArticleNumber ?? null
+      if (unitPrice === null || unitPrice === undefined) {
+        unitPrice = supplierLink.buyPrice ?? article.buyPrice ?? null
+      }
+      if (!unit) {
+        unit = supplierLink.orderUnit ?? article.unit ?? null
+      }
+    } else {
+      if (unitPrice === null || unitPrice === undefined) {
+        unitPrice = article.buyPrice ?? null
+      }
+      if (!unit) {
+        unit = article.unit ?? null
+      }
+    }
+
+    const totalPrice = (quantity * (unitPrice ?? 0)) + (input.flatCosts ?? 0)
+    const vatRate = input.vatRate ?? article.vatRate
+
+    positionData = {
+      sortOrder,
+      positionType: "ARTICLE",
+      articleId: input.articleId,
+      supplierArticleNumber,
+      description: input.description ?? null,
+      quantity,
+      unit,
+      unitPrice,
+      flatCosts: input.flatCosts ?? null,
+      totalPrice,
+      vatRate,
+      requestedDelivery: input.requestedDelivery ? new Date(input.requestedDelivery) : null,
+      confirmedDelivery: input.confirmedDelivery ? new Date(input.confirmedDelivery) : null,
+    }
+  } else if (positionType === "FREETEXT") {
+    // FREETEXT: require freeText, quantity, unitPrice — no article
+    if (!input.freeText) {
+      throw new WhPurchaseOrderValidationError("freeText is required for FREETEXT positions")
+    }
+    if (input.quantity == null || input.quantity <= 0) {
+      throw new WhPurchaseOrderValidationError("quantity is required for FREETEXT positions")
+    }
+    if (input.unitPrice == null) {
+      throw new WhPurchaseOrderValidationError("unitPrice is required for FREETEXT positions")
+    }
+
+    const totalPrice = (input.quantity * input.unitPrice) + (input.flatCosts ?? 0)
+
+    positionData = {
+      sortOrder,
+      positionType: "FREETEXT",
+      articleId: null,
+      freeText: input.freeText,
+      description: input.description ?? null,
+      quantity: input.quantity,
+      unit: input.unit ?? null,
+      unitPrice: input.unitPrice,
+      flatCosts: input.flatCosts ?? null,
+      totalPrice,
+      vatRate: input.vatRate ?? 19.0,
+      requestedDelivery: input.requestedDelivery ? new Date(input.requestedDelivery) : null,
+      confirmedDelivery: input.confirmedDelivery ? new Date(input.confirmedDelivery) : null,
+    }
+  } else {
+    // TEXT: require freeText only — no price, no quantity
+    if (!input.freeText) {
+      throw new WhPurchaseOrderValidationError("freeText is required for TEXT positions")
+    }
+
+    positionData = {
+      sortOrder,
+      positionType: "TEXT",
+      articleId: null,
+      freeText: input.freeText,
+      description: input.description ?? null,
+      quantity: null,
+      unit: null,
+      unitPrice: null,
+      flatCosts: null,
+      totalPrice: null,
+      vatRate: 19.0,
+    }
+  }
+
+  // 5. Create position
+  const position = await repo.createPosition(prisma, input.purchaseOrderId, positionData as Parameters<typeof repo.createPosition>[2])
+
+  // 6. Recalculate totals
   await recalculateTotals(prisma, tenantId, input.purchaseOrderId)
 
-  // 9. Audit log
+  // 7. Audit log
   if (audit) {
     await auditLog.log(prisma, {
       tenantId, userId: audit.userId, action: "create", entityType: "wh_purchase_order_position",
       entityId: position.id, entityName: null,
-      changes: { purchaseOrderId: input.purchaseOrderId, articleId: input.articleId, quantity: input.quantity },
+      changes: { purchaseOrderId: input.purchaseOrderId, positionType, articleId: input.articleId, quantity: input.quantity },
       ipAddress: audit.ipAddress, userAgent: audit.userAgent,
     }).catch(err => console.error('[AuditLog] Failed:', err))
   }
@@ -503,6 +563,7 @@ export async function updatePosition(
   tenantId: string,
   input: {
     id: string
+    freeText?: string
     quantity?: number
     unitPrice?: number
     unit?: string
@@ -538,6 +599,7 @@ export async function updatePosition(
   // 3. Build update data and recalculate totalPrice
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data: Record<string, any> = {}
+  if (input.freeText !== undefined) data.freeText = input.freeText
   if (input.quantity !== undefined) data.quantity = input.quantity
   if (input.unitPrice !== undefined) data.unitPrice = input.unitPrice
   if (input.unit !== undefined) data.unit = input.unit
@@ -555,11 +617,17 @@ export async function updatePosition(
       : null
   }
 
-  // Recalculate totalPrice
-  const qty = data.quantity ?? position.quantity
-  const price = data.unitPrice ?? position.unitPrice ?? 0
-  const flat = data.flatCosts ?? position.flatCosts ?? 0
-  data.totalPrice = (qty * price) + flat
+  // Type-aware totalPrice recalculation
+  if (position.positionType === "TEXT") {
+    // TEXT positions never have totalPrice
+    data.totalPrice = null
+  } else {
+    // ARTICLE and FREETEXT: recalculate totalPrice
+    const qty = data.quantity ?? position.quantity ?? 0
+    const price = data.unitPrice ?? position.unitPrice ?? 0
+    const flat = data.flatCosts ?? position.flatCosts ?? 0
+    data.totalPrice = (qty * price) + flat
+  }
 
   // 4. Update position
   const updated = await repo.updatePosition(prisma, tenantId, input.id, data)

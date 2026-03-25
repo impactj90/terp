@@ -4292,6 +4292,14 @@ enum WhPurchaseOrderMethod {
   @@map("wh_purchase_order_method")
 }
 
+enum WhPurchaseOrderPositionType {
+  ARTICLE
+  FREETEXT
+  TEXT
+
+  @@map("wh_purchase_order_position_type")
+}
+
 model WhPurchaseOrder {
   id                  String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenantId            String                   @map("tenant_id") @db.Uuid
@@ -4330,26 +4338,28 @@ model WhPurchaseOrder {
 }
 
 model WhPurchaseOrderPosition {
-  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  purchaseOrderId       String    @map("purchase_order_id") @db.Uuid
-  sortOrder             Int       @map("sort_order")
-  articleId             String    @map("article_id") @db.Uuid
-  supplierArticleNumber String?   @map("supplier_article_number") @db.VarChar(100)
+  id                    String                        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  purchaseOrderId       String                        @map("purchase_order_id") @db.Uuid
+  sortOrder             Int                           @map("sort_order")
+  positionType          WhPurchaseOrderPositionType   @default(ARTICLE) @map("position_type")
+  articleId             String?                       @map("article_id") @db.Uuid
+  freeText              String?                       @map("free_text")
+  supplierArticleNumber String?                       @map("supplier_article_number") @db.VarChar(100)
   description           String?
-  quantity              Float
-  receivedQuantity      Float     @default(0) @map("received_quantity")
-  unit                  String?   @db.VarChar(20)
-  unitPrice             Float?    @map("unit_price")
-  flatCosts             Float?    @map("flat_costs")
-  totalPrice            Float?    @map("total_price")
-  vatRate               Float     @default(19.0) @map("vat_rate")
-  requestedDelivery     DateTime? @map("requested_delivery") @db.Timestamptz(6)
-  confirmedDelivery     DateTime? @map("confirmed_delivery") @db.Timestamptz(6)
-  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  quantity              Float?
+  receivedQuantity      Float                         @default(0) @map("received_quantity")
+  unit                  String?                       @db.VarChar(20)
+  unitPrice             Float?                        @map("unit_price")
+  flatCosts             Float?                        @map("flat_costs")
+  totalPrice            Float?                        @map("total_price")
+  vatRate               Float                         @default(19.0) @map("vat_rate")
+  requestedDelivery     DateTime?                     @map("requested_delivery") @db.Timestamptz(6)
+  confirmedDelivery     DateTime?                     @map("confirmed_delivery") @db.Timestamptz(6)
+  createdAt             DateTime                      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime                      @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   purchaseOrder WhPurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
-  article       WhArticle       @relation(fields: [articleId], references: [id])
+  article       WhArticle?      @relation(fields: [articleId], references: [id])
 
   @@index([purchaseOrderId, sortOrder])
   @@map("wh_purchase_order_positions")

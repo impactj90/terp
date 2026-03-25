@@ -97,7 +97,9 @@ const mockPosition = {
   id: POSITION_ID,
   purchaseOrderId: PO_ID,
   sortOrder: 0,
+  positionType: "ARTICLE" as const,
   articleId: ARTICLE_ID,
+  freeText: null,
   supplierArticleNumber: null,
   description: "Test Article",
   quantity: 10,
@@ -106,6 +108,7 @@ const mockPosition = {
   unitPrice: 5.0,
   flatCosts: null,
   totalPrice: 50,
+  vatRate: 19,
   requestedDelivery: null,
   confirmedDelivery: null,
   createdAt: new Date(),
@@ -408,6 +411,140 @@ describe("warehouse.purchaseOrders", () => {
             quantity: 10,
           })
         ).rejects.toThrow("Insufficient permissions")
+      })
+    })
+
+    describe("positions.add FREETEXT", () => {
+      it("creates position without article", async () => {
+        const freetextPosition = {
+          ...mockPosition,
+          positionType: "FREETEXT",
+          articleId: null,
+          freeText: "Special item",
+          quantity: 2,
+          unitPrice: 25,
+          totalPrice: 50,
+          article: null,
+        }
+        const prisma = {
+          whPurchaseOrder: {
+            findFirst: vi.fn().mockResolvedValue({
+              ...mockPO,
+              positions: [],
+            }),
+            updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          },
+          whPurchaseOrderPosition: {
+            count: vi.fn().mockResolvedValue(0),
+            create: vi.fn().mockResolvedValue(freetextPosition),
+            findMany: vi.fn().mockResolvedValue([freetextPosition]),
+          },
+        }
+
+        const caller = createCaller(createTestContext(prisma))
+        const result = await caller.positions.add({
+          purchaseOrderId: PO_ID,
+          positionType: "FREETEXT",
+          freeText: "Special item",
+          quantity: 2,
+          unitPrice: 25,
+        })
+
+        expect(result).toBeDefined()
+        expect(result!.positionType).toBe("FREETEXT")
+        expect(result!.article).toBeNull()
+      })
+    })
+
+    describe("positions.add TEXT", () => {
+      it("creates text-only position", async () => {
+        const textPosition = {
+          ...mockPosition,
+          positionType: "TEXT",
+          articleId: null,
+          freeText: "Note: deliver before 10am",
+          quantity: null,
+          unitPrice: null,
+          totalPrice: null,
+          article: null,
+        }
+        const prisma = {
+          whPurchaseOrder: {
+            findFirst: vi.fn().mockResolvedValue({
+              ...mockPO,
+              positions: [],
+            }),
+            updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          },
+          whPurchaseOrderPosition: {
+            count: vi.fn().mockResolvedValue(0),
+            create: vi.fn().mockResolvedValue(textPosition),
+            findMany: vi.fn().mockResolvedValue([textPosition]),
+          },
+        }
+
+        const caller = createCaller(createTestContext(prisma))
+        const result = await caller.positions.add({
+          purchaseOrderId: PO_ID,
+          positionType: "TEXT",
+          freeText: "Note: deliver before 10am",
+        })
+
+        expect(result).toBeDefined()
+        expect(result!.totalPrice).toBeNull()
+        expect(result!.quantity).toBeNull()
+      })
+    })
+
+    describe("positions.add totals", () => {
+      it("TEXT positions excluded from order totals", async () => {
+        const articlePosition = {
+          ...mockPosition,
+          positionType: "ARTICLE",
+          totalPrice: 50,
+          vatRate: 19,
+        }
+        const textPosition = {
+          ...mockPosition,
+          id: "f2000000-0000-4000-a000-000000000002",
+          positionType: "TEXT",
+          articleId: null,
+          freeText: "Some note",
+          quantity: null,
+          unitPrice: null,
+          totalPrice: null,
+          article: null,
+        }
+        const prisma = {
+          whPurchaseOrder: {
+            findFirst: vi.fn().mockResolvedValue({
+              ...mockPO,
+              positions: [],
+            }),
+            updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          },
+          whPurchaseOrderPosition: {
+            count: vi.fn().mockResolvedValue(1),
+            create: vi.fn().mockResolvedValue(textPosition),
+            findMany: vi.fn().mockResolvedValue([articlePosition, textPosition]),
+          },
+        }
+
+        const caller = createCaller(createTestContext(prisma))
+        await caller.positions.add({
+          purchaseOrderId: PO_ID,
+          positionType: "TEXT",
+          freeText: "Some note",
+        })
+
+        // Verify recalculateTotals only summed the ARTICLE position
+        expect(prisma.whPurchaseOrder.updateMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              subtotalNet: 50, // Only ARTICLE position totalPrice
+            }),
+          })
+        )
       })
     })
 

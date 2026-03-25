@@ -716,6 +716,185 @@ describe("wh-purchase-order-service", () => {
         })
       )
     })
+
+    it("addPosition FREETEXT — creates position without articleId", async () => {
+      const freetextPosition = {
+        ...mockPosition,
+        positionType: "FREETEXT",
+        articleId: null,
+        freeText: "Custom gasket",
+        quantity: 5,
+        unitPrice: 12.5,
+        totalPrice: 62.5,
+        article: null,
+      }
+      const prisma = createMockPrisma({
+        whPurchaseOrderPosition: {
+          findFirst: vi.fn().mockResolvedValue(mockPosition),
+          findMany: vi.fn().mockResolvedValue([freetextPosition]),
+          count: vi.fn().mockResolvedValue(0),
+          create: vi.fn().mockResolvedValue(freetextPosition),
+          update: vi.fn(),
+          delete: vi.fn(),
+        },
+      })
+      await service.addPosition(prisma, TENANT_ID, {
+        purchaseOrderId: PO_ID,
+        positionType: "FREETEXT",
+        freeText: "Custom gasket",
+        quantity: 5,
+        unitPrice: 12.5,
+        vatRate: 19,
+      })
+      expect(prisma.whPurchaseOrderPosition.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            positionType: "FREETEXT",
+            articleId: null,
+            freeText: "Custom gasket",
+            totalPrice: 62.5,
+          }),
+        })
+      )
+      // Article lookup should NOT be called
+      expect(prisma.whArticle.findFirst).not.toHaveBeenCalled()
+    })
+
+    it("addPosition FREETEXT — rejects without freeText", async () => {
+      const prisma = createMockPrisma()
+      await expect(
+        service.addPosition(prisma, TENANT_ID, {
+          purchaseOrderId: PO_ID,
+          positionType: "FREETEXT",
+          quantity: 5,
+          unitPrice: 12.5,
+        })
+      ).rejects.toThrow(service.WhPurchaseOrderValidationError)
+    })
+
+    it("addPosition FREETEXT — rejects without unitPrice", async () => {
+      const prisma = createMockPrisma()
+      await expect(
+        service.addPosition(prisma, TENANT_ID, {
+          purchaseOrderId: PO_ID,
+          positionType: "FREETEXT",
+          freeText: "Something",
+          quantity: 5,
+        })
+      ).rejects.toThrow(service.WhPurchaseOrderValidationError)
+    })
+
+    it("addPosition FREETEXT — rejects without quantity", async () => {
+      const prisma = createMockPrisma()
+      await expect(
+        service.addPosition(prisma, TENANT_ID, {
+          purchaseOrderId: PO_ID,
+          positionType: "FREETEXT",
+          freeText: "Something",
+          unitPrice: 10,
+        })
+      ).rejects.toThrow(service.WhPurchaseOrderValidationError)
+    })
+
+    it("addPosition TEXT — creates position without price/quantity", async () => {
+      const textPosition = {
+        ...mockPosition,
+        positionType: "TEXT",
+        articleId: null,
+        freeText: "Garantiebedingungen: 2 Jahre",
+        quantity: null,
+        unitPrice: null,
+        totalPrice: null,
+        flatCosts: null,
+        article: null,
+      }
+      const prisma = createMockPrisma({
+        whPurchaseOrderPosition: {
+          findFirst: vi.fn().mockResolvedValue(mockPosition),
+          findMany: vi.fn().mockResolvedValue([textPosition]),
+          count: vi.fn().mockResolvedValue(0),
+          create: vi.fn().mockResolvedValue(textPosition),
+          update: vi.fn(),
+          delete: vi.fn(),
+        },
+      })
+      await service.addPosition(prisma, TENANT_ID, {
+        purchaseOrderId: PO_ID,
+        positionType: "TEXT",
+        freeText: "Garantiebedingungen: 2 Jahre",
+      })
+      expect(prisma.whPurchaseOrderPosition.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            positionType: "TEXT",
+            quantity: null,
+            unitPrice: null,
+            totalPrice: null,
+            freeText: "Garantiebedingungen: 2 Jahre",
+          }),
+        })
+      )
+    })
+
+    it("addPosition TEXT — rejects without freeText", async () => {
+      const prisma = createMockPrisma()
+      await expect(
+        service.addPosition(prisma, TENANT_ID, {
+          purchaseOrderId: PO_ID,
+          positionType: "TEXT",
+        })
+      ).rejects.toThrow(service.WhPurchaseOrderValidationError)
+    })
+
+    it("addPosition TEXT — excluded from totals (totalPrice is null)", async () => {
+      const articlePosition = {
+        ...mockPosition,
+        positionType: "ARTICLE",
+        totalPrice: 100,
+        vatRate: 19,
+      }
+      const textPosition = {
+        ...mockPosition,
+        id: "d1000000-0000-4000-a000-000000000099",
+        positionType: "TEXT",
+        totalPrice: null,
+        vatRate: 19,
+      }
+      const prisma = createMockPrisma({
+        whPurchaseOrderPosition: {
+          findFirst: vi.fn().mockResolvedValue(mockPosition),
+          findMany: vi.fn().mockResolvedValue([articlePosition, textPosition]),
+          count: vi.fn().mockResolvedValue(1),
+          create: vi.fn().mockResolvedValue(textPosition),
+          update: vi.fn(),
+          delete: vi.fn(),
+        },
+      })
+      await service.addPosition(prisma, TENANT_ID, {
+        purchaseOrderId: PO_ID,
+        positionType: "TEXT",
+        freeText: "Note text",
+      })
+      // recalculateTotals should only use positions with totalPrice != null
+      expect(prisma.whPurchaseOrder.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            subtotalNet: 100, // Only the ARTICLE position's totalPrice
+          }),
+        })
+      )
+    })
+
+    it("addPosition ARTICLE — still requires articleId", async () => {
+      const prisma = createMockPrisma()
+      await expect(
+        service.addPosition(prisma, TENANT_ID, {
+          purchaseOrderId: PO_ID,
+          positionType: "ARTICLE",
+          quantity: 5,
+        })
+      ).rejects.toThrow(service.WhPurchaseOrderValidationError)
+    })
   })
 
   describe("updatePosition", () => {
@@ -802,6 +981,89 @@ describe("wh-purchase-order-service", () => {
           quantity: 5,
         })
       ).rejects.toThrow(service.WhPurchaseOrderNotFoundError)
+    })
+
+    it("updates freeText on FREETEXT position", async () => {
+      const freetextPositionWithOrder = {
+        ...mockPosition,
+        positionType: "FREETEXT",
+        freeText: "Old text",
+        articleId: null,
+        purchaseOrder: {
+          id: PO_ID,
+          tenantId: TENANT_ID,
+          status: "DRAFT",
+        },
+      }
+      const updatedPosition = { ...freetextPositionWithOrder, freeText: "Updated text" }
+      const prisma = createMockPrisma({
+        whPurchaseOrderPosition: {
+          findFirst: vi
+            .fn()
+            .mockResolvedValueOnce(freetextPositionWithOrder) // verify position
+            .mockResolvedValueOnce(freetextPositionWithOrder), // repo.updatePosition verify
+          findMany: vi.fn().mockResolvedValue([updatedPosition]),
+          count: vi.fn().mockResolvedValue(1),
+          create: vi.fn(),
+          update: vi.fn().mockResolvedValue(updatedPosition),
+          delete: vi.fn(),
+        },
+      })
+      const result = await service.updatePosition(prisma, TENANT_ID, {
+        id: POSITION_ID,
+        freeText: "Updated text",
+      })
+      expect(result).toBeDefined()
+      expect(prisma.whPurchaseOrderPosition.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            freeText: "Updated text",
+          }),
+        })
+      )
+    })
+
+    it("TEXT position keeps totalPrice null on update", async () => {
+      const textPositionWithOrder = {
+        ...mockPosition,
+        positionType: "TEXT",
+        freeText: "Old text",
+        articleId: null,
+        quantity: null,
+        unitPrice: null,
+        totalPrice: null,
+        purchaseOrder: {
+          id: PO_ID,
+          tenantId: TENANT_ID,
+          status: "DRAFT",
+        },
+      }
+      const updatedPosition = { ...textPositionWithOrder, freeText: "New text" }
+      const prisma = createMockPrisma({
+        whPurchaseOrderPosition: {
+          findFirst: vi
+            .fn()
+            .mockResolvedValueOnce(textPositionWithOrder) // verify position
+            .mockResolvedValueOnce(textPositionWithOrder), // repo.updatePosition verify
+          findMany: vi.fn().mockResolvedValue([updatedPosition]),
+          count: vi.fn().mockResolvedValue(1),
+          create: vi.fn(),
+          update: vi.fn().mockResolvedValue(updatedPosition),
+          delete: vi.fn(),
+        },
+      })
+      const result = await service.updatePosition(prisma, TENANT_ID, {
+        id: POSITION_ID,
+        freeText: "New text",
+      })
+      expect(result).toBeDefined()
+      expect(prisma.whPurchaseOrderPosition.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            totalPrice: null,
+          }),
+        })
+      )
     })
   })
 

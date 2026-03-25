@@ -5801,6 +5801,12 @@
     "posColVatRate": "MwSt %",
     "posColDeliveryDate": "Liefertermin",
 
+    "posColType": "Typ",
+    "posTypeArticle": "Artikel",
+    "posTypeFreetext": "Freitext",
+    "posTypeText": "Textzeile",
+    "posFreetextPlaceholder": "Bezeichnung eingeben...",
+
     "posActionAdd": "Position hinzufügen",
     "posActionEdit": "Bearbeiten",
     "posActionDelete": "Entfernen",

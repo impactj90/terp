@@ -45,8 +45,10 @@ const positionsRouter = createTRPCRouter({
     .input(
       z.object({
         purchaseOrderId: z.string().uuid(),
-        articleId: z.string().uuid(),
-        quantity: z.number().positive(),
+        positionType: z.enum(["ARTICLE", "FREETEXT", "TEXT"]).default("ARTICLE"),
+        articleId: z.string().uuid().optional(),
+        freeText: z.string().optional(),
+        quantity: z.number().positive().optional(),
         unitPrice: z.number().optional(),
         unit: z.string().optional(),
         description: z.string().optional(),
@@ -79,6 +81,7 @@ const positionsRouter = createTRPCRouter({
     .input(
       z.object({
         id: z.string().uuid(),
+        freeText: z.string().optional(),
         quantity: z.number().positive().optional(),
         unitPrice: z.number().optional(),
         unit: z.string().optional(),

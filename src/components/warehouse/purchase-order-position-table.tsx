@@ -11,8 +11,10 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Plus, Edit, Trash2, Check, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
@@ -39,8 +41,11 @@ interface PurchaseOrderPositionTableProps {
 }
 
 interface AddPositionForm {
+  positionType: 'ARTICLE' | 'FREETEXT' | 'TEXT'
+  addMode: 'POSITION' | 'TEXT'
   articleId: string
   articleLabel: string
+  freeText: string
   quantity: string
   unitPrice: string
   unit: string
@@ -50,8 +55,11 @@ interface AddPositionForm {
 }
 
 const EMPTY_ADD_FORM: AddPositionForm = {
+  positionType: 'ARTICLE',
+  addMode: 'POSITION',
   articleId: '',
   articleLabel: '',
+  freeText: '',
   quantity: '1',
   unitPrice: '',
   unit: '',
@@ -61,6 +69,7 @@ const EMPTY_ADD_FORM: AddPositionForm = {
 }
 
 interface EditPositionForm {
+  freeText: string
   quantity: string
   unitPrice: string
   unit: string
@@ -85,6 +94,7 @@ export function PurchaseOrderPositionTable({
   const [addForm, setAddForm] = React.useState<AddPositionForm>(EMPTY_ADD_FORM)
   const [editingId, setEditingId] = React.useState<string | null>(null)
   const [editForm, setEditForm] = React.useState<EditPositionForm>({
+    freeText: '',
     quantity: '',
     unitPrice: '',
     unit: '',
@@ -98,21 +108,30 @@ export function PurchaseOrderPositionTable({
   } | null>(null)
 
   function handleAddPosition() {
-    if (!addForm.articleId || !addForm.quantity) return
+    const type = addForm.positionType
+
+    if (type === 'ARTICLE' && !addForm.articleId) return
+    if (type === 'FREETEXT' && (!addForm.freeText || !addForm.unitPrice)) return
+    if (type === 'TEXT' && !addForm.freeText) return
+
     addMutation.mutate(
       {
         purchaseOrderId,
-        articleId: addForm.articleId,
-        quantity: parseFloat(addForm.quantity) || 1,
-        unitPrice: addForm.unitPrice
+        positionType: type,
+        articleId: type === 'ARTICLE' ? addForm.articleId : undefined,
+        freeText: type !== 'ARTICLE' ? addForm.freeText || undefined : undefined,
+        quantity: type !== 'TEXT'
+          ? (parseFloat(addForm.quantity) || 1)
+          : undefined,
+        unitPrice: type !== 'TEXT' && addForm.unitPrice
           ? parseFloat(addForm.unitPrice)
           : undefined,
-        unit: addForm.unit || undefined,
+        unit: type !== 'TEXT' && addForm.unit ? addForm.unit : undefined,
         description: addForm.description || undefined,
-        flatCosts: addForm.flatCosts
+        flatCosts: type !== 'TEXT' && addForm.flatCosts
           ? parseFloat(addForm.flatCosts)
           : undefined,
-        vatRate: addForm.vatRate
+        vatRate: type !== 'TEXT' && addForm.vatRate
           ? parseFloat(addForm.vatRate)
           : undefined,
       },
@@ -129,7 +148,8 @@ export function PurchaseOrderPositionTable({
 
   function startEdit(position: {
     id: string
-    quantity: number
+    freeText?: string | null
+    quantity?: number | null
     unitPrice?: number | null
     unit?: string | null
     description?: string | null
@@ -138,7 +158,8 @@ export function PurchaseOrderPositionTable({
   }) {
     setEditingId(position.id)
     setEditForm({
-      quantity: String(position.quantity),
+      freeText: position.freeText || '',
+      quantity: position.quantity != null ? String(position.quantity) : '',
       unitPrice: position.unitPrice != null ? String(position.unitPrice) : '',
       unit: position.unit || '',
       description: position.description || '',
@@ -152,6 +173,7 @@ export function PurchaseOrderPositionTable({
     updateMutation.mutate(
       {
         id: editingId,
+        freeText: editForm.freeText || undefined,
         quantity: parseFloat(editForm.quantity) || undefined,
         unitPrice: editForm.unitPrice
           ? parseFloat(editForm.unitPrice)
@@ -200,6 +222,13 @@ export function PurchaseOrderPositionTable({
   }
 
   const showReceivedCol = !isDraft
+
+  const isAddDisabled =
+    (addForm.positionType === 'ARTICLE' && !addForm.articleId) ||
+    (addForm.positionType === 'FREETEXT' && (!addForm.freeText || !addForm.unitPrice)) ||
+    (addForm.positionType === 'TEXT' && !addForm.freeText) ||
+    (addForm.addMode === 'POSITION' && !addForm.articleId && !addForm.freeText) ||
+    addMutation.isPending
 
   return (
     <div className="space-y-4">
@@ -271,6 +300,8 @@ export function PurchaseOrderPositionTable({
                 pos: {
                   id: string
                   sortOrder: number
+                  positionType?: string
+                  freeText?: string | null
                   article?: {
                     id: string
                     number: string
@@ -279,7 +310,7 @@ export function PurchaseOrderPositionTable({
                   } | null
                   supplierArticleNumber?: string | null
                   description?: string | null
-                  quantity: number
+                  quantity?: number | null
                   receivedQuantity: number
                   unit?: string | null
                   unitPrice?: number | null
@@ -290,12 +321,20 @@ export function PurchaseOrderPositionTable({
                 idx: number
               ) => {
                 const isEditing = editingId === pos.id
+                const posType = pos.positionType || 'ARTICLE'
+                const isTextType = posType === 'TEXT'
 
                 return (
                   <TableRow key={pos.id}>
                     <TableCell className="text-sm">{idx + 1}</TableCell>
                     <TableCell className="text-sm">
-                      {pos.article && (
+                      {posType === 'TEXT' && (
+                        <span className="italic text-muted-foreground">{pos.freeText}</span>
+                      )}
+                      {posType === 'FREETEXT' && (
+                        <span>{pos.freeText}</span>
+                      )}
+                      {posType === 'ARTICLE' && pos.article && (
                         <span>
                           <span className="font-mono text-xs mr-1">
                             {pos.article.number}
@@ -305,20 +344,34 @@ export function PurchaseOrderPositionTable({
                       )}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {pos.supplierArticleNumber || '\u2014'}
+                      {posType === 'ARTICLE' ? (pos.supplierArticleNumber || '\u2014') : '\u2014'}
                     </TableCell>
                     <TableCell>
                       {isEditing ? (
-                        <Input
-                          value={editForm.description}
-                          onChange={(e) =>
-                            setEditForm({
-                              ...editForm,
-                              description: e.target.value,
-                            })
-                          }
-                          className="h-8 text-sm"
-                        />
+                        posType !== 'ARTICLE' ? (
+                          <Textarea
+                            value={editForm.freeText}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                freeText: e.target.value,
+                              })
+                            }
+                            className="text-sm min-h-[32px]"
+                            rows={1}
+                          />
+                        ) : (
+                          <Input
+                            value={editForm.description}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                description: e.target.value,
+                              })
+                            }
+                            className="h-8 text-sm"
+                          />
+                        )
                       ) : (
                         <span className="text-sm">
                           {pos.description || '\u2014'}
@@ -326,7 +379,7 @@ export function PurchaseOrderPositionTable({
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      {isEditing ? (
+                      {isEditing && !isTextType ? (
                         <Input
                           type="number"
                           step="0.01"
@@ -340,16 +393,16 @@ export function PurchaseOrderPositionTable({
                           className="h-8 text-sm text-right w-20"
                         />
                       ) : (
-                        <span className="text-sm">{pos.quantity}</span>
+                        <span className="text-sm">{pos.quantity != null ? pos.quantity : '\u2014'}</span>
                       )}
                     </TableCell>
                     {showReceivedCol && (
                       <TableCell className="text-right text-sm">
-                        {pos.receivedQuantity}
+                        {isTextType ? '\u2014' : pos.receivedQuantity}
                       </TableCell>
                     )}
                     <TableCell>
-                      {isEditing ? (
+                      {isEditing && !isTextType ? (
                         <Input
                           value={editForm.unit}
                           onChange={(e) =>
@@ -358,11 +411,11 @@ export function PurchaseOrderPositionTable({
                           className="h-8 text-sm w-16"
                         />
                       ) : (
-                        <span className="text-sm">{pos.unit || '\u2014'}</span>
+                        <span className="text-sm">{isTextType ? '\u2014' : (pos.unit || '\u2014')}</span>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      {isEditing ? (
+                      {isEditing && !isTextType ? (
                         <Input
                           type="number"
                           step="0.01"
@@ -377,12 +430,12 @@ export function PurchaseOrderPositionTable({
                         />
                       ) : (
                         <span className="text-sm">
-                          {formatPrice(pos.unitPrice)}
+                          {isTextType ? '\u2014' : formatPrice(pos.unitPrice)}
                         </span>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      {isEditing ? (
+                      {isEditing && !isTextType ? (
                         <Input
                           type="number"
                           step="0.01"
@@ -397,7 +450,7 @@ export function PurchaseOrderPositionTable({
                         />
                       ) : (
                         <span className="text-sm">
-                          {formatPrice(pos.flatCosts)}
+                          {isTextType ? '\u2014' : formatPrice(pos.flatCosts)}
                         </span>
                       )}
                     </TableCell>
@@ -405,7 +458,7 @@ export function PurchaseOrderPositionTable({
                       {formatPrice(pos.totalPrice)}
                     </TableCell>
                     <TableCell className="text-right">
-                      {isEditing ? (
+                      {isEditing && !isTextType ? (
                         <Input
                           type="number"
                           step="0.1"
@@ -420,7 +473,7 @@ export function PurchaseOrderPositionTable({
                         />
                       ) : (
                         <span className="text-sm">
-                          {pos.vatRate != null ? `${pos.vatRate}%` : '\u2014'}
+                          {isTextType ? '\u2014' : (pos.vatRate != null ? `${pos.vatRate}%` : '\u2014')}
                         </span>
                       )}
                     </TableCell>
@@ -465,7 +518,7 @@ export function PurchaseOrderPositionTable({
                                   id: pos.id,
                                   label: pos.article
                                     ? `${pos.article.number} — ${pos.article.name}`
-                                    : pos.id,
+                                    : pos.freeText || pos.id,
                                 })
                               }
                             >
@@ -485,96 +538,148 @@ export function PurchaseOrderPositionTable({
           {isAdding && (
             <TableRow>
               <TableCell className="text-sm text-muted-foreground">
-                +
-              </TableCell>
-              <TableCell colSpan={2}>
-                <ArticleSearchPopover
-                  value={addForm.articleId}
-                  onSelect={(id, label, article?: ArticleSearchResult) =>
+                <Select
+                  value={addForm.addMode}
+                  onValueChange={(val) =>
                     setAddForm({
-                      ...addForm,
-                      articleId: id,
-                      articleLabel: label,
-                      unit: article?.unit || addForm.unit,
-                      unitPrice: article?.buyPrice != null ? String(article.buyPrice) : addForm.unitPrice,
-                      vatRate: article?.vatRate != null ? String(article.vatRate) : addForm.vatRate,
+                      ...EMPTY_ADD_FORM,
+                      addMode: val as 'POSITION' | 'TEXT',
+                      positionType: val === 'TEXT' ? 'TEXT' : 'ARTICLE',
                     })
                   }
-                  placeholder={t('posArticlePlaceholder')}
-                />
+                >
+                  <SelectTrigger className="w-28 h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="POSITION">{t('posTypeArticle')}/{t('posTypeFreetext')}</SelectItem>
+                    <SelectItem value="TEXT">{t('posTypeText')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </TableCell>
+              <TableCell colSpan={2}>
+                {addForm.addMode === 'POSITION' ? (
+                  <ArticleSearchPopover
+                    value={addForm.articleId}
+                    onSelect={(id, label, article?: ArticleSearchResult) =>
+                      setAddForm({
+                        ...addForm,
+                        positionType: 'ARTICLE',
+                        articleId: id,
+                        articleLabel: label,
+                        freeText: '',
+                        unit: article?.unit || addForm.unit,
+                        unitPrice: article?.buyPrice != null ? String(article.buyPrice) : addForm.unitPrice,
+                        vatRate: article?.vatRate != null ? String(article.vatRate) : addForm.vatRate,
+                      })
+                    }
+                    onFreeTextCommit={(text) =>
+                      setAddForm({
+                        ...addForm,
+                        positionType: 'FREETEXT',
+                        freeText: text,
+                        articleId: '',
+                        articleLabel: '',
+                      })
+                    }
+                    placeholder={t('posArticlePlaceholder')}
+                  />
+                ) : (
+                  <Textarea
+                    value={addForm.freeText}
+                    onChange={(e) =>
+                      setAddForm({ ...addForm, freeText: e.target.value })
+                    }
+                    placeholder={t('posFreetextPlaceholder')}
+                    className="text-sm min-h-[32px]"
+                    rows={1}
+                  />
+                )}
               </TableCell>
               <TableCell>
-                <Input
-                  value={addForm.description}
-                  onChange={(e) =>
-                    setAddForm({ ...addForm, description: e.target.value })
-                  }
-                  placeholder={t('posColDescription')}
-                  className="h-8 text-sm"
-                />
+                {addForm.addMode !== 'TEXT' && (
+                  <Input
+                    value={addForm.description}
+                    onChange={(e) =>
+                      setAddForm({ ...addForm, description: e.target.value })
+                    }
+                    placeholder={t('posColDescription')}
+                    className="h-8 text-sm"
+                  />
+                )}
               </TableCell>
               <TableCell>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={addForm.quantity}
-                  onChange={(e) =>
-                    setAddForm({ ...addForm, quantity: e.target.value })
-                  }
-                  className="h-8 text-sm text-right w-20"
-                />
+                {addForm.addMode !== 'TEXT' && (
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={addForm.quantity}
+                    onChange={(e) =>
+                      setAddForm({ ...addForm, quantity: e.target.value })
+                    }
+                    className="h-8 text-sm text-right w-20"
+                  />
+                )}
               </TableCell>
               {showReceivedCol && <TableCell />}
               <TableCell>
-                <Input
-                  value={addForm.unit}
-                  onChange={(e) =>
-                    setAddForm({ ...addForm, unit: e.target.value })
-                  }
-                  className="h-8 text-sm w-16"
-                />
+                {addForm.addMode !== 'TEXT' && (
+                  <Input
+                    value={addForm.unit}
+                    onChange={(e) =>
+                      setAddForm({ ...addForm, unit: e.target.value })
+                    }
+                    className="h-8 text-sm w-16"
+                  />
+                )}
               </TableCell>
               <TableCell>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={addForm.unitPrice}
-                  onChange={(e) =>
-                    setAddForm({ ...addForm, unitPrice: e.target.value })
-                  }
-                  className="h-8 text-sm text-right w-24"
-                />
+                {addForm.addMode !== 'TEXT' && (
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={addForm.unitPrice}
+                    onChange={(e) =>
+                      setAddForm({ ...addForm, unitPrice: e.target.value })
+                    }
+                    className="h-8 text-sm text-right w-24"
+                  />
+                )}
               </TableCell>
               <TableCell>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={addForm.flatCosts}
-                  onChange={(e) =>
-                    setAddForm({ ...addForm, flatCosts: e.target.value })
-                  }
-                  className="h-8 text-sm text-right w-24"
-                />
+                {addForm.addMode !== 'TEXT' && (
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={addForm.flatCosts}
+                    onChange={(e) =>
+                      setAddForm({ ...addForm, flatCosts: e.target.value })
+                    }
+                    className="h-8 text-sm text-right w-24"
+                  />
+                )}
               </TableCell>
               <TableCell className="text-right text-sm font-medium">
-                {(() => {
+                {addForm.addMode !== 'TEXT' ? (() => {
                   const qty = parseFloat(addForm.quantity) || 0
                   const price = parseFloat(addForm.unitPrice) || 0
                   const flat = parseFloat(addForm.flatCosts) || 0
                   const total = qty * price + flat
                   return total > 0 ? formatPrice(total) : '\u2014'
-                })()}
+                })() : '\u2014'}
               </TableCell>
               <TableCell>
-                <Input
-                  type="number"
-                  step="0.1"
-                  value={addForm.vatRate}
-                  onChange={(e) =>
-                    setAddForm({ ...addForm, vatRate: e.target.value })
-                  }
-                  className="h-8 text-sm text-right w-16"
-                />
+                {addForm.addMode !== 'TEXT' && (
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={addForm.vatRate}
+                    onChange={(e) =>
+                      setAddForm({ ...addForm, vatRate: e.target.value })
+                    }
+                    className="h-8 text-sm text-right w-16"
+                  />
+                )}
               </TableCell>
               <TableCell>
                 <div className="flex gap-1">
@@ -583,7 +688,7 @@ export function PurchaseOrderPositionTable({
                     size="icon"
                     className="h-7 w-7"
                     onClick={handleAddPosition}
-                    disabled={!addForm.articleId || addMutation.isPending}
+                    disabled={isAddDisabled}
                   >
                     <Check className="h-4 w-4" />
                   </Button>

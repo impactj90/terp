@@ -6806,38 +6806,66 @@ Die Detailseite zeigt alle Informationen zur Bestellung in mehreren Bereichen:
 
 ### 16.4 Positionen verwalten
 
-Unterhalb der Kopfdaten befindet sich die **Positionstabelle**.
+Unterhalb der Kopfdaten befindet sich die **Positionstabelle**. Es gibt drei Positionstypen:
+
+| Positionstyp | Beschreibung |
+|-------------|-------------|
+| **Artikel** | Standardposition mit Artikelstamm-Referenz |
+| **Freitext** | Position ohne Artikelstamm — für einmalige Sonderbestellungen (mit Preis) |
+| **Textzeile** | Reine Textzeile ohne Preis/Menge — z. B. Lieferhinweise, Garantiebedingungen |
 
 #### Positionstabelle
 
 | Spalte | Beschreibung |
 |--------|-------------|
 | **#** | Laufende Nummer (sortOrder) |
-| **Artikel** | Artikelbezeichnung + Artikelnummer |
-| **Lief.-Art.-Nr.** | Lieferanten-Artikelnummer (aus der Lieferantenzuordnung) |
-| **Menge** | Bestellmenge |
-| **Einheit** | Mengeneinheit (Stk, kg, m, …) |
-| **Einzelpreis** | Einkaufspreis pro Einheit in EUR |
-| **Fixkosten** | Einmalige Fixkosten (optional) |
-| **Gesamt** | Berechneter Gesamtpreis (Menge × Einzelpreis + Fixkosten) |
+| **Artikel** | Artikelbezeichnung + Artikelnummer (bei Artikel-Positionen) oder Freitext-Bezeichnung (bei Freitext/Textzeilen) |
+| **Lief.-Art.-Nr.** | Lieferanten-Artikelnummer (nur bei Artikel-Positionen) |
+| **Beschreibung** | Zusätzliche Beschreibung |
+| **Menge** | Bestellmenge (nicht bei Textzeilen) |
+| **Einheit** | Mengeneinheit (nicht bei Textzeilen) |
+| **Einzelpreis** | Einkaufspreis pro Einheit in EUR (nicht bei Textzeilen) |
+| **Fixkosten** | Einmalige Fixkosten (nicht bei Textzeilen) |
+| **Gesamt** | Berechneter Gesamtpreis (nicht bei Textzeilen — „—") |
+| **MwSt** | Mehrwertsteuersatz in % (nicht bei Textzeilen) |
 | **Aktionen** | Bearbeiten / Löschen (nur bei Entwurf) |
 
 Bei bestellten Bestellungen (nicht ENTWURF) wird zusätzlich die Spalte **„Geliefert"** mit der empfangenen Menge angezeigt.
 
+> 💡 **Textzeilen** werden bei der Summenberechnung ignoriert — sie dienen nur als Hinweistext auf der Bestellung.
+
 #### Position hinzufügen
 
 1. 📍 **„Position hinzufügen"** (unterhalb der Tabelle)
-2. Inline-Zeile erscheint in der Tabelle:
+2. Inline-Zeile erscheint in der Tabelle mit einem **Modus-Selektor** (links):
+   - **Artikel/Freitext** (Standard) — kombiniertes Eingabefeld:
+     - Artikelsuche per Autocomplete: Artikel aus dem Stamm auswählen → **Artikel-Position**
+     - Freitext tippen und bestätigen (Enter oder „Freitext: ..." im Dropdown wählen) → **Freitext-Position**
+   - **Textzeile** — nur ein Textfeld für Hinweistexte (kein Preis, keine Menge)
+
+**Bei Artikel-Position:**
    - **Artikel** (Pflicht) — Artikelauswahl (Suchfeld mit Autocomplete)
    - **Menge** (Pflicht) — Stückzahl
-   - **Einzelpreis** — wird automatisch befüllt aus der Lieferantenzuordnung (`WhArticleSupplier.buyPrice`) oder dem Artikel-EK-Preis
+   - **Einzelpreis** — wird automatisch befüllt aus der Lieferantenzuordnung oder dem Artikel-EK-Preis
    - **Einheit** — wird automatisch befüllt
    - **Fixkosten** (optional)
-   - **Lieferanten-Artikelnummer** — wird automatisch befüllt aus der Lieferantenzuordnung
+
+**Bei Freitext-Position:**
+   - **Bezeichnung** (Pflicht) — Freitext-Bezeichnung
+   - **Menge** (Pflicht) — Stückzahl
+   - **Einzelpreis** (Pflicht) — manuell eingeben
+   - **Einheit** (optional)
+   - **Fixkosten** (optional)
+
+**Bei Textzeile:**
+   - **Text** (Pflicht) — Hinweistext (z. B. Lieferbedingungen, Garantietexte)
+
 3. 📍 **„Speichern"** (✓-Button)
 4. ✅ Position erscheint in der Tabelle, Summen werden automatisch neu berechnet
 
 > 💡 **Auto-Befüllung:** Wenn im Artikelstamm eine Lieferantenzuordnung für den Lieferanten der Bestellung existiert, werden Einzelpreis, Einheit und Lieferanten-Artikelnummer automatisch vorausgefüllt. Ohne Zuordnung wird der Standard-EK-Preis des Artikels verwendet.
+
+> 💡 **Wareneingang:** Beim Wareneingang werden nur Artikel-Positionen angezeigt. Freitext- und Text-Positionen erscheinen nicht im Wareneingangs-Terminal.
 
 #### Position bearbeiten / löschen
 
@@ -7480,7 +7508,7 @@ Storniert   Storniert
 | **Abwesenheitstyp** | Kategorie einer Abwesenheit mit Regeln (Urlaubsabzug, Genehmigung) | 📍 Verwaltung → Abwesenheitsarten |
 | **Aktivität** | Art der Arbeit innerhalb eines Auftrags (z. B. Montage, Dokumentation) | 📍 Verwaltung → Aufträge → Tab Aktivitäten |
 | **Bestellung (Einkauf)** | Einkaufsauftrag an einen Lieferanten mit Positionen, Preisen und Status-Workflow (Entwurf → Bestellt → Geliefert) | 📍 Lager → Bestellungen |
-| **Bestellposition** | Einzelne Zeile in einer Bestellung: Artikel, Menge, Einzelpreis, Gesamtpreis | 📍 Lager → Bestellungen → Detail → Positionstabelle |
+| **Bestellposition** | Einzelne Zeile in einer Bestellung. Drei Typen: Artikel (mit Artikelstamm), Freitext (ohne Artikelstamm, mit Preis) und Textzeile (nur Text, ohne Preis) | 📍 Lager → Bestellungen → Detail → Positionstabelle |
 | **Beleg** | Kaufmännisches Dokument in der Belegkette (Angebot, AB, Lieferschein, Rechnung etc.) | 📍 Aufträge → Belege |
 | **Belegkette** | Lückenlose Abfolge von Belegen: Angebot → AB → Lieferschein → Rechnung | 📍 Aufträge → Belege → Detail → Seitenleiste „Belegkette" |
 | **Belegposition** | Einzelne Zeile in einem Beleg (Artikel, Freitext, Textzeile, Seitenumbruch, Zwischensumme) | 📍 Aufträge → Belege → Detail → Positionstabelle im A4-Editor |

@@ -45,6 +45,7 @@ const mockPO = {
 const mockPosition = {
   id: POSITION_ID,
   purchaseOrderId: PO_ID,
+  positionType: "ARTICLE" as const,
   articleId: ARTICLE_ID,
   quantity: 20,
   receivedQuantity: 0,
@@ -538,6 +539,61 @@ describe("wh-stock-movement-service", () => {
           USER_ID
         )
       ).rejects.toThrow(service.WhStockMovementValidationError)
+    })
+
+    it("rejects FREETEXT position for goods receipt", async () => {
+      const freetextPosition = {
+        ...mockPosition,
+        positionType: "FREETEXT",
+        articleId: null,
+        freeText: "Custom item",
+      }
+      const prisma = createMockPrisma({
+        whPurchaseOrderPosition: {
+          findFirst: vi.fn().mockResolvedValue(freetextPosition),
+          findMany: vi.fn().mockResolvedValue([freetextPosition]),
+          update: vi.fn(),
+        },
+      })
+      await expect(
+        service.bookGoodsReceipt(
+          prisma,
+          TENANT_ID,
+          {
+            purchaseOrderId: PO_ID,
+            positions: [{ positionId: POSITION_ID, quantity: 5 }],
+          },
+          USER_ID
+        )
+      ).rejects.toThrow("Only ARTICLE positions can receive goods")
+    })
+
+    it("rejects TEXT position for goods receipt", async () => {
+      const textPosition = {
+        ...mockPosition,
+        positionType: "TEXT",
+        articleId: null,
+        freeText: "Some note",
+        quantity: null,
+      }
+      const prisma = createMockPrisma({
+        whPurchaseOrderPosition: {
+          findFirst: vi.fn().mockResolvedValue(textPosition),
+          findMany: vi.fn().mockResolvedValue([textPosition]),
+          update: vi.fn(),
+        },
+      })
+      await expect(
+        service.bookGoodsReceipt(
+          prisma,
+          TENANT_ID,
+          {
+            purchaseOrderId: PO_ID,
+            positions: [{ positionId: POSITION_ID, quantity: 5 }],
+          },
+          USER_ID
+        )
+      ).rejects.toThrow("Only ARTICLE positions can receive goods")
     })
   })
 

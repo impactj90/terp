@@ -22,11 +22,11 @@
 ## Einkauf
 
 - [ ] **EK_01** — Bestelldruck PDF *(M)* → `TICKET_EK_01_BESTELLDRUCK_PDF.md`
-- [ ] **EK_02** — Freie Bestellpositionen *(S)* → `TICKET_EK_02_FREIE_BESTELLPOSITIONEN.md`
+- [x] **EK_02** — Freie Bestellpositionen *(S)* → `TICKET_EK_02_FREIE_BESTELLPOSITIONEN.md`
 
 ## CRM
 
-- [ ] **CRM_06** — "Unsere Kundennummer" beim Lieferanten *(S)* → `TICKET_CRM_06_UNSERE_KUNDENNUMMER.md`
+- [x] **CRM_06** — "Unsere Kundennummer" beim Lieferanten *(S)* → `TICKET_CRM_06_UNSERE_KUNDENNUMMER.md`
 - [ ] **CRM_07** — Anhänge bei Korrespondenz *(M)* → `TICKET_CRM_07_KORRESPONDENZ_ANHAENGE.md`
 - [ ] **CRM_08** — Briefanrede bei Kontaktpersonen *(S)* → `TICKET_CRM_08_BRIEFANREDE.md`
 - [ ] **CRM_09** — Konzern-/Filialen-Zuordnung *(M)* → `TICKET_CRM_09_KONZERNZUORDNUNG.md`
