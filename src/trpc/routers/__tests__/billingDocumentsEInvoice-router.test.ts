@@ -25,6 +25,7 @@ vi.mock("@/lib/db", () => ({
 // Mock the e-invoice service
 vi.mock("@/lib/services/billing-document-einvoice-service", () => ({
   getSignedXmlDownloadUrl: vi.fn(),
+  generateAndStoreEInvoice: vi.fn(),
 }))
 
 import * as eInvoiceService from "@/lib/services/billing-document-einvoice-service"
@@ -97,13 +98,22 @@ describe("billing.documents.downloadXml", () => {
     expect(eInvoiceService.getSignedXmlDownloadUrl).toHaveBeenCalled()
   })
 
-  it("returns null for document without XML", async () => {
-    ;(eInvoiceService.getSignedXmlDownloadUrl as ReturnType<typeof vi.fn>).mockResolvedValue(null)
+  it("regenerates when XML missing in storage then returns result", async () => {
+    const mockResult = {
+      signedUrl: "https://storage.example.com/regenerated-url",
+      filename: "RE-2026-001.xml",
+    }
+    // First call returns null (file missing), second call after regeneration returns result
+    ;(eInvoiceService.getSignedXmlDownloadUrl as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(mockResult)
+    ;(eInvoiceService.generateAndStoreEInvoice as ReturnType<typeof vi.fn>).mockResolvedValue({ xmlStoragePath: "test.xml" })
 
     const prisma = {}
     const caller = createDocCaller(createTestContext(prisma))
     const result = await caller.downloadXml({ id: DOC_ID })
-    expect(result).toBeNull()
+    expect(result).toEqual(mockResult)
+    expect(eInvoiceService.generateAndStoreEInvoice).toHaveBeenCalled()
   })
 })
 

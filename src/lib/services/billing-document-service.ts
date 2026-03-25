@@ -565,16 +565,18 @@ export async function finalize(
   })
 
   // Generate PDF on finalization (best-effort, OUTSIDE transaction)
+  let pdfGenerated = false
   try {
     await pdfService.generateAndStorePdf(prisma, tenantId, id)
-  } catch {
+    pdfGenerated = true
+  } catch (err) {
     // PDF generation failure should not block finalization
-    console.error(`PDF generation failed for document ${id}`)
+    console.error(`PDF generation failed for document ${id}`, err)
   }
 
-  // Generate E-Invoice XML on finalization (after PDF)
+  // Generate E-Invoice XML on finalization (after PDF — requires PDF in storage)
   // Use result.type since `existing` was scoped to the transaction closure
-  if (result) {
+  if (result && pdfGenerated) {
     const docType = (result as unknown as { type?: string }).type
     if (docType === "INVOICE" || docType === "CREDIT_NOTE") {
       const config = await billingTenantConfigRepo.findByTenantId(prisma, tenantId)

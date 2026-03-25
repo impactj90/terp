@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   ArrowLeft, CheckCircle, Forward, XCircle, Copy, Lock,
-  ChevronRight, ChevronLeft, FileDown, FileCode,
+  ChevronRight, ChevronLeft, FileDown, FileCode, FilePlus2, Loader2,
 } from 'lucide-react'
 import {
   useBillingDocumentById,
@@ -19,6 +19,7 @@ import {
   useDuplicateBillingDocument,
   useDownloadBillingDocumentPdf,
   useDownloadBillingDocumentXml,
+  useGenerateBillingDocumentEInvoice,
   useBillingTenantConfig,
   useBillingDocumentTemplatesByType,
 } from '@/hooks'
@@ -178,7 +179,7 @@ interface DocumentEditorProps {
 
 export function DocumentEditor({ id }: DocumentEditorProps) {
   const router = useRouter()
-  const { data: doc, isLoading } = useBillingDocumentById(id)
+  const { data: doc, isLoading, refetch: refetchDoc } = useBillingDocumentById(id)
   const { data: tenantConfig } = useBillingTenantConfig()
   const { data: templates = [] } = useBillingDocumentTemplatesByType(
     (doc?.type ?? 'OFFER') as BillingDocumentType
@@ -188,6 +189,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
   const duplicateMutation = useDuplicateBillingDocument()
   const downloadPdfMutation = useDownloadBillingDocumentPdf()
   const downloadXmlMutation = useDownloadBillingDocumentXml()
+  const generateEInvoiceMutation = useGenerateBillingDocumentEInvoice()
 
   const t = useTranslations('billingDocuments')
 
@@ -376,7 +378,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
               }}
             >
               <FileDown className="h-4 w-4 mr-1" />
-              {downloadPdfMutation.isPending ? t('loadingPdf') : t('pdf')}
+              {downloadPdfMutation.isPending ? t('loadingPdf') : t('pdfDownload')}
             </Button>
           )}
           {isImmutable && !!(doc as Record<string, unknown>).eInvoiceXmlUrl && (doc.type === 'INVOICE' || doc.type === 'CREDIT_NOTE') && (
@@ -395,7 +397,29 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
               }}
             >
               <FileCode className="h-4 w-4 mr-1" />
-              {downloadXmlMutation.isPending ? t('loadingXml') : t('eInvoiceXml')}
+              {downloadXmlMutation.isPending ? t('loadingXml') : t('eInvoiceXmlDownload')}
+            </Button>
+          )}
+          {isImmutable && !(doc as Record<string, unknown>).eInvoiceXmlUrl && (doc.type === 'INVOICE' || doc.type === 'CREDIT_NOTE') && tenantConfig?.eInvoiceEnabled && (
+            <Button
+              variant="outline"
+              disabled={generateEInvoiceMutation.isPending}
+              onClick={async () => {
+                try {
+                  await generateEInvoiceMutation.mutateAsync({ id: doc.id })
+                  toast.success(t('eInvoiceGenerated'))
+                  await refetchDoc()
+                } catch {
+                  toast.error(t('eInvoiceGenerationFailed'))
+                }
+              }}
+            >
+              {generateEInvoiceMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <FilePlus2 className="h-4 w-4 mr-1" />
+              )}
+              {generateEInvoiceMutation.isPending ? t('loadingXml') : t('generateEInvoice')}
             </Button>
           )}
         </div>

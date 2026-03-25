@@ -334,16 +334,45 @@ export const billingDocumentsRouter = createTRPCRouter({
       }
     }),
 
+  generateEInvoice: billingProcedure
+    .use(requirePermission(BILLING_FINALIZE))
+    .input(idInput)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await eInvoiceService.generateAndStoreEInvoice(
+          ctx.prisma as unknown as PrismaClient,
+          ctx.tenantId!,
+          input.id
+        )
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
   downloadXml: billingProcedure
     .use(requirePermission(BILLING_VIEW))
     .input(idInput)
     .mutation(async ({ ctx, input }) => {
       try {
-        return await eInvoiceService.getSignedXmlDownloadUrl(
+        let result = await eInvoiceService.getSignedXmlDownloadUrl(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
           input.id
         )
+        // File missing in storage — regenerate and retry
+        if (!result) {
+          await eInvoiceService.generateAndStoreEInvoice(
+            ctx.prisma as unknown as PrismaClient,
+            ctx.tenantId!,
+            input.id
+          )
+          result = await eInvoiceService.getSignedXmlDownloadUrl(
+            ctx.prisma as unknown as PrismaClient,
+            ctx.tenantId!,
+            input.id
+          )
+        }
+        return result
       } catch (err) {
         handleServiceError(err)
       }

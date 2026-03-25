@@ -201,3 +201,15 @@ export function useDeleteWhPOPosition() {
     },
   })
 }
+
+// ==================== PDF Hooks ====================
+
+export function useGenerateWhPurchaseOrderPdf() {
+  const trpc = useTRPC()
+  return useMutation(trpc.warehouse.purchaseOrders.generatePdf.mutationOptions())
+}
+
+export function useDownloadWhPurchaseOrderPdf() {
+  const trpc = useTRPC()
+  return useMutation(trpc.warehouse.purchaseOrders.downloadPdf.mutationOptions())
+}

@@ -6318,14 +6318,28 @@ Die Leitweg-ID wird als BT-10 (Buyer Reference) ins XML geschrieben.
 
 Nach dem Abschliessen einer Rechnung oder Gutschrift mit aktivierter E-Rechnung:
 
-📍 Belegdetail (Status: Abgeschlossen) > **"E-Rechnung XML"** (Button neben PDF)
+📍 Belegdetail (Status: Abgeschlossen) → **"E-Rechnung XML herunterladen"** (Button neben PDF)
 
 Der Button ist nur sichtbar wenn:
 - Belegtyp ist **Rechnung** oder **Gutschrift**
 - Status ist **Abgeschlossen** oder spaeter
 - XML wurde erfolgreich generiert
 
-> Im Normalfall reicht es, die **PDF** zu versenden. Das XML ist darin eingebettet (ZUGFeRD PDF/A-3). Der separate XML-Download ist fuer Sonderfaelle: XRechnung an Behoerden (die nur das nackte XML akzeptieren) oder fuer die manuelle Pruefung.
+> 💡 Im Normalfall reicht es, die **PDF** zu versenden. Das XML ist darin eingebettet (ZUGFeRD PDF/A-3). Der separate XML-Download ist fuer Sonderfaelle: XRechnung an Behoerden (die nur das nackte XML akzeptieren) oder fuer die manuelle Pruefung.
+
+#### E-Rechnung nachtraeglich erstellen
+
+Fuer Rechnungen und Gutschriften, die **vor Aktivierung** der E-Rechnung abgeschlossen wurden oder bei denen die automatische Generierung fehlgeschlagen ist:
+
+📍 Belegdetail (Status: Abgeschlossen) → **"E-Rechnung erstellen"**
+
+1. Der Button erscheint nur wenn E-Rechnung aktiviert ist, der Beleg abgeschlossen ist und noch **kein** XML existiert
+2. 📍 **"E-Rechnung erstellen"** klicken
+3. ✅ Toast: „E-Rechnung erfolgreich erstellt"
+4. ✅ Der Button wird durch **"E-Rechnung XML herunterladen"** ersetzt
+5. ✅ Das PDF im Speicher wird automatisch durch die ZUGFeRD PDF/A-3 Version ersetzt
+
+> 💡 Falls die PDF oder XML im Speicher geloescht wurden, werden sie beim naechsten Download automatisch neu generiert. Das PDF wird dabei erneut als ZUGFeRD PDF/A-3 mit eingebettetem XML erstellt.
 
 #### Praxisbeispiel: E-Rechnung einrichten und erste Rechnung erstellen
 
@@ -6345,11 +6359,12 @@ Der Button ist nur sichtbar wenn:
 3. Position hinzufuegen (z. B. 10 Std. Beratung, 100 EUR/Std.)
 4. **"Abschliessen"** klicken
 5. Kein Warnhinweis (alle Pflichtfelder vorhanden)
-6. PDF und ZUGFeRD-XML werden automatisch generiert
+6. ✅ Toast: „Beleg abgeschlossen — E-Rechnung steht zum Download bereit"
+7. PDF und ZUGFeRD-XML werden automatisch generiert
 
 **Schritt 3 -- PDF versenden**
 
-1. **"PDF"** klicken -- PDF herunterladen
+1. **"PDF herunterladen"** klicken
 2. PDF per E-Mail an den Kunden versenden
 3. Die PDF enthaelt das eingebettete XML -- der Kunde braucht keine separate Datei
 
@@ -6891,6 +6906,7 @@ Die Detailseite zeigt alle Informationen zur Bestellung in mehreren Bereichen:
 - **„Bearbeiten"** — wechselt in den Bearbeitungsmodus (nur bei Entwurf)
 - **„Bestellen"** — öffnet den Bestelldialog (nur bei Entwurf)
 - **„Stornieren"** — storniert die Bestellung (bei Entwurf oder Bestellt)
+- **„PDF erstellen"** — generiert ein Bestell-PDF und öffnet es in einem neuen Tab. Das PDF enthält: Firmenlogo, Absenderzeile, Lieferantenadresse, Bestellnummer, Datum, Liefertermine, „Unsere Kundennr." (wenn hinterlegt), Positionstabelle, Netto-/Brutto-Summen, Bemerkungen und Unterschriftenzeile. Während der Generierung zeigt der Button „Lade PDF..." mit Ladeanimation.
 
 ---
 
@@ -7101,7 +7117,14 @@ Storniert  Storniert
 6. ✅ Bestelldatum = heutiges Datum
 7. ✅ Positionen sind nun gesperrt
 
-**Schritt 5 — Ergebnis prüfen**
+**Schritt 5 — Bestell-PDF erstellen**
+
+1. 📍 **„PDF erstellen"** (in der Aktionsleiste)
+2. ✅ Button zeigt „Lade PDF..." mit Ladeanimation
+3. ✅ PDF öffnet sich in neuem Browser-Tab
+4. ✅ PDF enthält: Firmenlogo, Lieferantenadresse „Holzhandel Süd GmbH", Bestellnummer BES-1, Positionstabelle mit Eichenholz-Platte, Summen, Unterschriftenzeile
+
+**Schritt 6 — Ergebnis prüfen**
 
 1. 📍 Seitenleiste → **Lager** → **Bestellungen**
 2. ✅ BES-1 in der Liste mit Status „Bestellt", Bestelldatum ausgefüllt

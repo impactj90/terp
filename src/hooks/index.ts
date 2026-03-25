@@ -737,6 +737,7 @@ export {
   useDuplicateBillingDocument,
   useDownloadBillingDocumentPdf,
   useDownloadBillingDocumentXml,
+  useGenerateBillingDocumentEInvoice,
   useBillingPositions,
   useAddBillingPosition,
   useUpdateBillingPosition,
@@ -869,6 +870,8 @@ export {
   useAddWhPOPosition,
   useUpdateWhPOPosition,
   useDeleteWhPOPosition,
+  useGenerateWhPurchaseOrderPdf,
+  useDownloadWhPurchaseOrderPdf,
 } from './use-wh-purchase-orders'
 
 // Warehouse Stock Movements

@@ -11,6 +11,7 @@ import { requirePermission } from "@/lib/auth/middleware"
 import { requireModule } from "@/lib/modules"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import * as poService from "@/lib/services/wh-purchase-order-service"
+import * as poPdfService from "@/lib/services/wh-purchase-order-pdf-service"
 import type { PrismaClient } from "@/generated/prisma/client"
 
 // --- Permission Constants ---
@@ -351,6 +352,37 @@ export const whPurchaseOrdersRouter = createTRPCRouter({
           audit
         )
       } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  generatePdf: whProcedure
+    .use(requirePermission(PO_VIEW))
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await poPdfService.generateAndGetDownloadUrl(
+          ctx.prisma as unknown as PrismaClient,
+          ctx.tenantId!,
+          input.id
+        )
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  downloadPdf: whProcedure
+    .use(requirePermission(PO_VIEW))
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await poPdfService.generateAndGetDownloadUrl(
+          ctx.prisma as unknown as PrismaClient,
+          ctx.tenantId!,
+          input.id
+        )
+      } catch (err) {
+        console.error("downloadPdf error:", err)
         handleServiceError(err)
       }
     }),

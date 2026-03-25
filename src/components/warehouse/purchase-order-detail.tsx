@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { ArrowLeft, Edit, Send, XCircle, FileText } from 'lucide-react'
+import { ArrowLeft, Edit, Send, XCircle, FileDown, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -12,6 +12,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   useWhPurchaseOrder,
   useCancelWhPurchaseOrder,
+  useDownloadWhPurchaseOrderPdf,
 } from '@/hooks/use-wh-purchase-orders'
 import { PurchaseOrderStatusBadge } from './purchase-order-status-badge'
 import { PurchaseOrderPositionTable } from './purchase-order-position-table'
@@ -78,6 +79,7 @@ export function PurchaseOrderDetail({ id }: PurchaseOrderDetailProps) {
 
   const { data: order, isLoading } = useWhPurchaseOrder(id)
   const cancelMutation = useCancelWhPurchaseOrder()
+  const downloadPdfMutation = useDownloadWhPurchaseOrderPdf()
 
   const [isEditing, setIsEditing] = React.useState(false)
   const [sendOpen, setSendOpen] = React.useState(false)
@@ -201,9 +203,27 @@ export function PurchaseOrderDetail({ id }: PurchaseOrderDetailProps) {
               {t('actionCancel')}
             </Button>
           )}
-          <Button variant="outline" size="sm" disabled>
-            <FileText className="h-4 w-4 mr-2" />
-            {t('actionGeneratePdf')}
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={downloadPdfMutation.isPending}
+            onClick={async () => {
+              try {
+                const result = await downloadPdfMutation.mutateAsync({ id: order.id })
+                if (result?.signedUrl) {
+                  window.open(result.signedUrl, '_blank')
+                }
+              } catch {
+                toast.error(t('pdfDownloadFailed'))
+              }
+            }}
+          >
+            {downloadPdfMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <FileDown className="h-4 w-4 mr-2" />
+            )}
+            {downloadPdfMutation.isPending ? t('loadingPdf') : t('actionGeneratePdf')}
           </Button>
         </div>
       </div>

@@ -19,6 +19,14 @@ vi.mock("@/lib/db", () => ({
   },
 }))
 
+// Mock the PDF service module
+vi.mock("@/lib/services/wh-purchase-order-pdf-service", () => ({
+  generateAndGetDownloadUrl: vi.fn().mockResolvedValue({
+    signedUrl: "https://example.com/signed-url",
+    filename: "BES-1.pdf",
+  }),
+}))
+
 // --- Constants ---
 const PO_VIEW = permissionIdByKey("wh_purchase_orders.view")!
 const PO_CREATE = permissionIdByKey("wh_purchase_orders.create")!
@@ -570,6 +578,76 @@ describe("warehouse.purchaseOrders", () => {
         // If we get here without throwing, the delete succeeded
         expect(true).toBe(true)
       })
+    })
+  })
+
+  describe("generatePdf", () => {
+    it("returns signed URL for valid PO", async () => {
+      const prisma = {}
+
+      const caller = createCaller(createTestContext(prisma))
+      const result = await caller.generatePdf({ id: PO_ID })
+
+      expect(result).toHaveProperty("signedUrl")
+      expect(result).toHaveProperty("filename")
+      expect(result!.signedUrl).toBe("https://example.com/signed-url")
+      expect(result!.filename).toBe("BES-1.pdf")
+    })
+
+    it("rejects without wh_purchase_orders.view permission", async () => {
+      const prisma = {}
+      const caller = createCaller(createNoPermContext(prisma))
+
+      await expect(
+        caller.generatePdf({ id: PO_ID })
+      ).rejects.toThrow("Insufficient permissions")
+    })
+  })
+
+  describe("downloadPdf", () => {
+    it("returns signed URL for valid PO", async () => {
+      const prisma = {}
+
+      const caller = createCaller(createTestContext(prisma))
+      const result = await caller.downloadPdf({ id: PO_ID })
+
+      expect(result).toHaveProperty("signedUrl")
+      expect(result).toHaveProperty("filename")
+      expect(result!.signedUrl).toBe("https://example.com/signed-url")
+      expect(result!.filename).toBe("BES-1.pdf")
+    })
+
+    it("rejects without wh_purchase_orders.view permission", async () => {
+      const prisma = {}
+      const caller = createCaller(createNoPermContext(prisma))
+
+      await expect(
+        caller.downloadPdf({ id: PO_ID })
+      ).rejects.toThrow("Insufficient permissions")
+    })
+  })
+
+  describe("tenant isolation", () => {
+    it("generatePdf rejects for PO belonging to different tenant", async () => {
+      // The service's getById uses tenantId in the where clause.
+      // When PO not found for tenantId, it throws WhPurchaseOrderNotFoundError -> 404
+      // We import and re-mock the PDF service to simulate a not-found error
+      const { generateAndGetDownloadUrl } = await import(
+        "@/lib/services/wh-purchase-order-pdf-service"
+      )
+      const mockedFn = generateAndGetDownloadUrl as ReturnType<typeof vi.fn>
+      mockedFn.mockRejectedValueOnce(
+        Object.assign(new Error("Purchase order not found"), {
+          name: "WhPurchaseOrderNotFoundError",
+        })
+      )
+
+      const prisma = {}
+      const caller = createCaller(createTestContext(prisma))
+
+      await expect(
+        caller.generatePdf({ id: PO_ID })
+      ).rejects.toThrow()
     })
   })
 })

@@ -58,11 +58,14 @@ export function DocumentFinalizeDialog({
           ? { orderName: orderName.trim(), orderDescription: orderDescription.trim() || undefined }
           : {}),
       })
-      toast.success(
-        isOrderConfirmation && orderName.trim()
-          ? 'Beleg abgeschlossen und Auftrag erstellt'
-          : 'Beleg erfolgreich abgeschlossen'
-      )
+      const isEInvoiceType = documentType === 'INVOICE' || documentType === 'CREDIT_NOTE'
+      if (isOrderConfirmation && orderName.trim()) {
+        toast.success('Beleg abgeschlossen und Auftrag erstellt')
+      } else if (eInvoiceEnabled && isEInvoiceType) {
+        toast.success('Beleg abgeschlossen — E-Rechnung steht zum Download bereit')
+      } else {
+        toast.success('Beleg erfolgreich abgeschlossen')
+      }
       onOpenChange(false)
     } catch {
       toast.error('Fehler beim Abschließen')

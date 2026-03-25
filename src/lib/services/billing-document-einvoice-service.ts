@@ -7,6 +7,7 @@ import { getXmlStoragePath, getStoragePath } from "@/lib/pdf/pdf-storage"
 import * as billingDocService from "./billing-document-service"
 import * as billingDocRepo from "./billing-document-repository"
 import * as billingTenantConfigRepo from "./billing-tenant-config-repository"
+import * as billingPdfService from "./billing-document-pdf-service"
 
 // --- Error Classes ---
 
@@ -232,7 +233,7 @@ function buildInvoiceData(
             "cbc:StreetName": tenantConfig.companyStreet,
             "cbc:CityName": tenantConfig.companyCity,
             "cbc:PostalZone": tenantConfig.companyZip,
-            "cac:Country": { "cbc:IdentificationCode": tenantConfig.companyCountry ?? "DE" },
+            "cac:Country": { "cbc:IdentificationCode": tenantConfig.companyCountry || "DE" },
           },
           "cac:PartyTaxScheme": sellerTaxSchemes.length === 1 ? sellerTaxSchemes[0] : sellerTaxSchemes,
           "cac:PartyLegalEntity": { "cbc:RegistrationName": tenantConfig.companyName },
@@ -254,7 +255,7 @@ function buildInvoiceData(
             "cbc:StreetName": address.street,
             "cbc:CityName": address.city,
             "cbc:PostalZone": address.zip,
-            "cac:Country": { "cbc:IdentificationCode": address.country ?? "DE" },
+            "cac:Country": { "cbc:IdentificationCode": address.country || "DE" },
           },
           ...(buyerTaxScheme ? { "cac:PartyTaxScheme": buyerTaxScheme } : {}),
           "cac:PartyLegalEntity": { "cbc:RegistrationName": address.company },
@@ -387,12 +388,20 @@ export async function generateAndStoreEInvoice(
   } as InvoiceServiceOptions) as string
   const xmlBuffer = Buffer.from(xmlString, "utf-8")
 
-  // 5. Download existing PDF from Supabase Storage
+  // 5. Download existing PDF from Supabase Storage (regenerate if missing)
   const supabase = createAdminClient()
-  const pdfStoragePath = getStoragePath({ type: doc.type, tenantId, id: doc.id })
-  const { data: pdfData, error: downloadError } = await supabase.storage
+  const pdfStoragePath = getStoragePath({ type: doc.type, tenantId, id: doc.id, number: doc.number, company: address.company })
+  let { data: pdfData, error: downloadError } = await supabase.storage
     .from(BUCKET)
     .download(pdfStoragePath)
+
+  if (downloadError || !pdfData) {
+    // PDF missing — regenerate it first
+    await billingPdfService.generateAndStorePdf(prisma, tenantId, documentId)
+    const retry = await supabase.storage.from(BUCKET).download(pdfStoragePath)
+    pdfData = retry.data
+    downloadError = retry.error
+  }
 
   if (downloadError || !pdfData) {
     throw new EInvoiceError(`Failed to download PDF: ${downloadError?.message ?? "unknown error"}`)
@@ -403,7 +412,7 @@ export async function generateAndStoreEInvoice(
   const zugferdPdfBuffer = await embedXmlInPdf(pdfBuffer, invoiceData, `${doc.number}.pdf`)
 
   // 7. Upload XML to Supabase Storage
-  const xmlStoragePath = getXmlStoragePath({ type: doc.type, tenantId, id: doc.id })
+  const xmlStoragePath = getXmlStoragePath({ type: doc.type, tenantId, id: doc.id, number: doc.number, company: address.company })
   const { error: xmlUploadError } = await supabase.storage
     .from(BUCKET)
     .upload(xmlStoragePath, xmlBuffer, {
@@ -451,7 +460,8 @@ export async function getSignedXmlDownloadUrl(
     .createSignedUrl(xmlUrl, SIGNED_URL_EXPIRY_SECONDS)
 
   if (error || !data?.signedUrl) {
-    throw new EInvoiceError(`Failed to create signed URL: ${error?.message ?? "unknown error"}`)
+    // File missing in storage — return null so caller can regenerate
+    return null
   }
 
   // Replace internal server URL with browser-facing URL (Docker URL rewriting)

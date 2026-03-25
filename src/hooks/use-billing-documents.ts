@@ -166,6 +166,11 @@ export function useDownloadBillingDocumentXml() {
   return useMutation(trpc.billing.documents.downloadXml.mutationOptions())
 }
 
+export function useGenerateBillingDocumentEInvoice() {
+  const trpc = useTRPC()
+  return useMutation(trpc.billing.documents.generateEInvoice.mutationOptions())
+}
+
 // ==================== Position Hooks ====================
 
 export function useBillingPositions(documentId: string, enabled = true) {

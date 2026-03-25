@@ -78,6 +78,8 @@ export async function generateAndStorePdf(
     type: doc.type,
     tenantId,
     id: doc.id,
+    number: doc.number,
+    company: address?.company,
   })
 
   const { error: uploadError } = await supabase.storage
@@ -117,7 +119,8 @@ export async function getSignedDownloadUrl(
     .createSignedUrl(storagePath, SIGNED_URL_EXPIRY_SECONDS)
 
   if (error || !data?.signedUrl) {
-    throw new BillingDocumentPdfError(`Failed to create signed URL: ${error?.message ?? "unknown error"}`)
+    // File missing in storage — return null so caller can regenerate
+    return null
   }
 
   // Replace internal server URL with browser-facing URL so signed URLs work in the browser.
@@ -151,7 +154,12 @@ export async function generateAndGetDownloadUrl(
     await generateAndStorePdf(prisma, tenantId, documentId)
   }
 
-  const result = await getSignedDownloadUrl(prisma, tenantId, documentId)
+  // Try to get signed URL; if file is missing in storage, regenerate
+  let result = await getSignedDownloadUrl(prisma, tenantId, documentId)
+  if (!result) {
+    await generateAndStorePdf(prisma, tenantId, documentId)
+    result = await getSignedDownloadUrl(prisma, tenantId, documentId)
+  }
   if (!result) {
     throw new BillingDocumentPdfError("PDF generation succeeded but signed URL creation failed")
   }

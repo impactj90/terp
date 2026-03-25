@@ -21,7 +21,7 @@
 
 ## Einkauf
 
-- [ ] **EK_01** — Bestelldruck PDF *(M)* → `TICKET_EK_01_BESTELLDRUCK_PDF.md`
+- [x] **EK_01** — Bestelldruck PDF *(M)* → `TICKET_EK_01_BESTELLDRUCK_PDF.md`
 - [x] **EK_02** — Freie Bestellpositionen *(S)* → `TICKET_EK_02_FREIE_BESTELLPOSITIONEN.md`
 
 ## CRM
