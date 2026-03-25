@@ -893,3 +893,9 @@ export {
   useCreateBatchWhWithdrawal,
   useCancelWhWithdrawal,
 } from './use-wh-withdrawals'
+
+// Delivery Note Stock Bookings
+export {
+  usePreviewStockBookings,
+  useConfirmStockBookings,
+} from './use-delivery-note-stock'

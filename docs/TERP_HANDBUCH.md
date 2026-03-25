@@ -3705,12 +3705,13 @@ Der Administrator möchte die Tagesberechnung sofort auslösen, weil mehrere Kor
 
 📍 Seitenleiste → **Administration** → **Einstellungen**
 
-✅ Seite mit 5 aufklappbaren Kartenabschnitten:
+✅ Seite mit 6 aufklappbaren Kartenabschnitten:
 
 | Abschnitt | Einstellungen |
 |-----------|--------------|
 | **Berechnung** | Rundung relativ zum Plan (Schalter), Fehlerliste aktiviert (Schalter), Verfolgte Fehlercodes (Tag-Eingabe) |
 | **Aufträge** | Auftragsbuchungen automatisch ausfüllen, Folgebuchungen aktiviert |
+| **Lager** | Lagerbuchung bei Lieferschein: Manuell / Mit Bestaetigung / Automatisch (Dropdown) |
 | **Geburtstag** | Tage vorher/nachher (Zahleneingabe) |
 | **Proxy** | Proxy aktiviert, Host, Port, Benutzername, Passwort |
 | **Server-Überwachung** | Alive-Check aktiviert, Erwartete Abschlusszeit, Schwellenwert, Admins benachrichtigen |
@@ -5089,8 +5090,8 @@ Sie sehen die Belegliste mit allen Dokumenten des aktiven Mandanten.
 |-----|---------|--------|-------------|
 | **OFFER** | Angebot | A- | Erstes Dokument in der Kette. Preisvorschlag an den Kunden. |
 | **ORDER_CONFIRMATION** | Auftragsbestätigung | AB- | Bestätigung des Auftrags nach Angebotsakzeptanz. |
-| **DELIVERY_NOTE** | Lieferschein | LS- | Begleitdokument für eine Warenlieferung. |
-| **SERVICE_NOTE** | Leistungsschein | LN- | Nachweis erbrachter Dienstleistungen. |
+| **DELIVERY_NOTE** | Lieferschein | LS- | Begleitdokument fuer Lieferungen — kann sowohl Waren als auch Dienstleistungen enthalten. Nur Artikelpositionen mit Bestandsfuehrung loesen eine Lagerbuchung aus (je nach Einstellung unter Administration → Einstellungen → Lager). |
+| **SERVICE_NOTE** | Leistungsschein | LN- | Nachweis fuer reine Dienstleistungsauftraege ohne Warenlieferung (z.B. Wartung, Beratung). Keine Lagerbuchung. |
 | **RETURN_DELIVERY** | Rücklieferung | R- | Dokumentation einer Warenrücksendung. |
 | **INVOICE** | Rechnung | RE- | Zahlungsaufforderung an den Kunden. Ende der Kette. |
 | **CREDIT_NOTE** | Gutschrift | G- | Rückerstattung/Gutschrift an den Kunden. |
@@ -5410,9 +5411,13 @@ Der Kunde hat das Angebot angenommen.
 
 1. Detailseite LS-1: Klick auf **"Abschließen"** → Bestätigen
 2. ✅ LS-1 Status: **Abgeschlossen**
-3. Klick auf **"Fortführen"** → Zielbelegtyp: **Rechnung** → **"Fortführen"**
-4. ✅ Neues Dokument **RE-1** wird erstellt (Entwurf, alle Positionen kopiert)
-5. ✅ LS-1 Status wechselt zu **Fortgeführt**
+3. **Lagerbuchung** (je nach Einstellung unter 📍 Administration → Einstellungen → Lager):
+   - **Manuell**: Keine automatische Lagerbuchung. Entnahmen manuell ueber das Entnahme-Terminal (Kapitel 18).
+   - **Mit Bestaetigung**: Ein Dialog zeigt alle Artikelpositionen mit aktuellem und neuem Bestand. Positionen einzeln an-/abwaehlen, dann „Lagerbuchung durchfuehren" oder „Ueberspringen".
+   - **Automatisch**: Lagerentnahmen werden sofort fuer alle Artikelpositionen mit Bestandsfuehrung erstellt. Toast-Meldung: „Lagerbuchung fuer X Artikel durchgefuehrt".
+4. Klick auf **"Fortführen"** → Zielbelegtyp: **Rechnung** → **"Fortführen"**
+5. ✅ Neues Dokument **RE-1** wird erstellt (Entwurf, alle Positionen kopiert)
+6. ✅ LS-1 Status wechselt zu **Fortgeführt**
 
 #### Schritt 7 — Rechnung abschließen
 
@@ -7187,7 +7192,7 @@ Storniert  Storniert
 |--------|-------------|
 | **Datum** | Zeitpunkt der Bewegung |
 | **Artikel** | Artikelnummer und Bezeichnung |
-| **Typ** | GOODS_RECEIPT, WITHDRAWAL, ADJUSTMENT, INVENTORY, RETURN |
+| **Typ** | GOODS_RECEIPT, WITHDRAWAL, ADJUSTMENT, INVENTORY, RETURN, DELIVERY_NOTE |
 | **Menge** | Positive Menge = Zugang (grün), negative Menge = Abgang (rot) |
 | **Vorheriger Bestand** | Bestand vor der Bewegung |
 | **Neuer Bestand** | Bestand nach der Bewegung |
@@ -7276,7 +7281,7 @@ Storniert  Storniert
 
 ### 18.2 Entnahme-Verlauf
 
-**Was ist es?** Der Verlauf zeigt eine chronologische Liste aller Lagerentnahmen und Stornierungen. Jeder Eintrag zeigt Datum, Artikel, Menge, Typ (Entnahme oder Storno) und Referenz.
+**Was ist es?** Der Verlauf zeigt eine chronologische Liste aller Lagerentnahmen, Lieferschein-Buchungen und Stornierungen. Jeder Eintrag zeigt Datum, Artikel, Menge, Typ (Entnahme, Lieferschein oder Storno) und Referenz.
 
 📍 Seitenleiste → **Lager** → **Lagerentnahmen** → Tab **„Verlauf"**
 
@@ -7706,7 +7711,7 @@ Storniert   Storniert
 | **Lagerentnahme** | Entnahme von Artikeln aus dem Lager mit automatischer Bestandsreduzierung, optional mit Referenz (Auftrag, Lieferschein, Maschine) | 📍 Lager → Lagerentnahmen |
 | **Lieferantenrechnung** | Eingangsrechnung eines Lieferanten mit Beträgen, Zahlungsbedingungen und Skonto. Kann mit einer Bestellung verknüpft werden | 📍 Lager → Lieferantenrechnungen |
 | **Lieferantenzahlung** | Zahlung auf eine Lieferantenrechnung (Überweisung oder Bar), mit optionalem Skonto-Abzug. Statusübergänge erfolgen automatisch | 📍 Lager → Lieferantenrechnungen → Detail → Zahlungstabelle |
-| **Bestandsbewegung** | Einzelner protokollierter Bestandsvorgang (Wareneingang, Entnahme, Korrektur, Inventur, Rückgabe) mit Menge, vorherigem und neuem Bestand | 📍 Lager → Bestandsbewegungen |
+| **Bestandsbewegung** | Einzelner protokollierter Bestandsvorgang (Wareneingang, Entnahme, Lieferschein-Buchung, Korrektur, Inventur, Rückgabe) mit Menge, vorherigem und neuem Bestand | 📍 Lager → Bestandsbewegungen |
 | **Storno (Entnahme)** | Umkehrung einer Lagerentnahme — stellt den entnommenen Bestand wieder her und erzeugt eine positive Gegenbuchung | 📍 Lager → Lagerentnahmen → Verlauf → Stornieren |
 | **Sammelentnahme** | Entnahme mehrerer Artikel in einem Vorgang, gebündelt unter einer gemeinsamen Referenz | 📍 Lager → Lagerentnahmen → Neue Entnahme |
 

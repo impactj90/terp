@@ -52,6 +52,7 @@ interface Position {
 
 interface PriceEntry {
   id: string
+  articleId: string | null
   itemKey: string | null
   description: string | null
   unitPrice: number
@@ -243,13 +244,13 @@ export function DocumentPositionTable({
 
   const handleSelectEntry = async (posId: string, entry: PriceEntry) => {
     try {
-      // Update description, unitPrice, and unit in one go
       const desc = entry.description || entry.itemKey || ''
       await updateMutation.mutateAsync({
         id: posId,
         description: desc,
         unitPrice: entry.unitPrice,
         ...(entry.unit ? { unit: entry.unit } : {}),
+        ...(entry.articleId ? { articleId: entry.articleId, articleNumber: entry.itemKey ?? undefined } : {}),
       })
     } catch {
       toast.error('Fehler beim Aktualisieren')

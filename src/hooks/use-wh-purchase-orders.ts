@@ -118,6 +118,10 @@ export function useSendWhPurchaseOrder() {
       queryClient.invalidateQueries({
         queryKey: trpc.warehouse.purchaseOrders.getById.queryKey(),
       })
+      // PO is now ORDERED → appears in goods receipt
+      queryClient.invalidateQueries({
+        queryKey: trpc.warehouse.stockMovements.goodsReceipt.listPendingOrders.queryKey(),
+      })
     },
   })
 }

@@ -102,7 +102,7 @@ export async function create(
     data: {
       tenantId: data.tenantId,
       articleId: data.articleId,
-      type: data.type as "GOODS_RECEIPT" | "WITHDRAWAL" | "ADJUSTMENT" | "INVENTORY" | "RETURN",
+      type: data.type as "GOODS_RECEIPT" | "WITHDRAWAL" | "ADJUSTMENT" | "INVENTORY" | "RETURN" | "DELIVERY_NOTE",
       quantity: data.quantity,
       previousStock: data.previousStock,
       newStock: data.newStock,

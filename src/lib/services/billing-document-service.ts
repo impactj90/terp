@@ -8,6 +8,7 @@ import * as eInvoiceService from "./billing-document-einvoice-service"
 import * as billingTenantConfigRepo from "./billing-tenant-config-repository"
 import * as auditLog from "./audit-logs-service"
 import type { AuditContext } from "./audit-logs-service"
+import * as systemSettingsService from "./system-settings-service"
 
 // --- Template Placeholder Resolution ---
 
@@ -590,6 +591,23 @@ export async function finalize(
     }
   }
 
+  // AUTO stock booking for DELIVERY_NOTE (best-effort, outside transaction)
+  let stockBookingResult: { bookedCount: number } | null = null
+  const docType = (result as unknown as { type?: string }).type
+  if (docType === "DELIVERY_NOTE") {
+    try {
+      const settings = await systemSettingsService.get(prisma, tenantId)
+      const mode = (settings as unknown as { deliveryNoteStockMode?: string }).deliveryNoteStockMode
+      if (mode === "AUTO") {
+        stockBookingResult = await createDeliveryNoteStockBookings(
+          prisma, tenantId, id, null, finalizedById, audit
+        )
+      }
+    } catch (err) {
+      console.error(`Auto stock booking failed for delivery note ${id}`, err)
+    }
+  }
+
   // Never throws — audit failures must not block the actual operation
   if (audit) {
     await auditLog.log(prisma, {
@@ -603,6 +621,10 @@ export async function finalize(
       ipAddress: audit.ipAddress,
       userAgent: audit.userAgent,
     }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  if (stockBookingResult) {
+    ;(result as Record<string, unknown>).stockBookingResult = stockBookingResult
   }
 
   return result
@@ -962,6 +984,8 @@ export async function updatePosition(
   tenantId: string,
   input: {
     id: string
+    articleId?: string
+    articleNumber?: string
     description?: string
     quantity?: number
     unit?: string
@@ -982,6 +1006,7 @@ export async function updatePosition(
 
   const data: Record<string, unknown> = {}
   const fields = [
+    "articleId", "articleNumber",
     "description", "quantity", "unit", "unitPrice", "flatCosts",
     "priceType", "vatRate", "deliveryDate", "confirmedDate",
   ] as const
@@ -1163,4 +1188,212 @@ export async function listPositions(
   if (!doc) throw new BillingDocumentNotFoundError()
 
   return repo.findPositions(prisma, tenantId, documentId)
+}
+
+// --- Delivery Note Stock Booking ---
+
+interface StockBookingPreviewPosition {
+  positionId: string
+  articleId: string
+  articleNumber: string
+  articleName: string
+  unit: string
+  quantity: number
+  currentStock: number
+  projectedStock: number
+  negativeStockWarning: boolean
+  stockTrackingEnabled: boolean
+}
+
+/**
+ * Preview which stock bookings would be created for a delivery note.
+ * Returns all ARTICLE positions with their current stock info.
+ */
+export async function previewDeliveryNoteStockBookings(
+  prisma: PrismaClient,
+  tenantId: string,
+  documentId: string,
+) {
+  const doc = await repo.findById(prisma, tenantId, documentId)
+  if (!doc) throw new BillingDocumentNotFoundError()
+
+  if ((doc as unknown as { type: string }).type !== "DELIVERY_NOTE") {
+    throw new BillingDocumentValidationError(
+      "Stock booking preview is only available for DELIVERY_NOTE documents"
+    )
+  }
+
+  // Filter to ARTICLE positions with articleId and quantity > 0
+  const positions = (doc.positions || []).filter((pos: Record<string, unknown>) =>
+    pos.articleId != null &&
+    typeof pos.quantity === "number" &&
+    pos.quantity > 0
+  )
+
+  // Collect unique articleIds
+  const articleIds = [...new Set(positions.map((pos: Record<string, unknown>) => pos.articleId as string))]
+
+  // Batch-fetch articles
+  const articles = articleIds.length > 0
+    ? await prisma.whArticle.findMany({
+        where: { id: { in: articleIds }, tenantId },
+        select: { id: true, number: true, name: true, unit: true, currentStock: true, stockTracking: true },
+      })
+    : []
+
+  const articleMap = new Map(articles.map(a => [a.id, a]))
+
+  // Build preview
+  const previewPositions: StockBookingPreviewPosition[] = positions.map((pos: Record<string, unknown>) => {
+    const article = articleMap.get(pos.articleId as string)
+    const quantity = pos.quantity as number
+    const currentStock = article?.currentStock ?? 0
+    const stockTrackingEnabled = article?.stockTracking === true
+    const projectedStock = currentStock - quantity
+
+    return {
+      positionId: pos.id as string,
+      articleId: pos.articleId as string,
+      articleNumber: article?.number ?? (pos.articleNumber as string ?? ""),
+      articleName: article?.name ?? (pos.description as string ?? ""),
+      unit: article?.unit ?? (pos.unit as string ?? ""),
+      quantity,
+      currentStock,
+      projectedStock: stockTrackingEnabled ? projectedStock : currentStock,
+      negativeStockWarning: stockTrackingEnabled && projectedStock < 0,
+      stockTrackingEnabled,
+    }
+  })
+
+  return {
+    documentId,
+    documentNumber: (doc as unknown as { number: string }).number,
+    positions: previewPositions,
+  }
+}
+
+/**
+ * Create stock movements for a finalized delivery note.
+ * All bookings run in a single transaction. Allows negative stock (no rejection).
+ */
+export async function createDeliveryNoteStockBookings(
+  prisma: PrismaClient,
+  tenantId: string,
+  documentId: string,
+  positionIds: string[] | null, // null = all eligible positions
+  userId: string,
+  audit?: AuditContext,
+) {
+  const doc = await repo.findById(prisma, tenantId, documentId)
+  if (!doc) throw new BillingDocumentNotFoundError()
+
+  if ((doc as unknown as { type: string }).type !== "DELIVERY_NOTE") {
+    throw new BillingDocumentValidationError(
+      "Stock bookings can only be created for DELIVERY_NOTE documents"
+    )
+  }
+
+  if ((doc as unknown as { status: string }).status !== "PRINTED") {
+    throw new BillingDocumentValidationError(
+      "Stock bookings can only be created for finalized (PRINTED) documents"
+    )
+  }
+
+  // Filter to ARTICLE positions with articleId and quantity > 0
+  let positions = (doc.positions || []).filter((pos: Record<string, unknown>) =>
+    pos.articleId != null &&
+    typeof pos.quantity === "number" &&
+    pos.quantity > 0
+  )
+
+  // If positionIds provided, further filter
+  if (positionIds !== null) {
+    const posIdSet = new Set(positionIds)
+    positions = positions.filter((pos: Record<string, unknown>) => posIdSet.has(pos.id as string))
+  }
+
+  const docNumber = (doc as unknown as { number: string }).number
+
+  // Run all bookings in a single transaction
+  const bookings = await prisma.$transaction(async (tx) => {
+    const results: Array<{
+      articleId: string
+      articleNumber: string
+      quantity: number
+      previousStock: number
+      newStock: number
+    }> = []
+
+    for (const pos of positions) {
+      const articleId = pos.articleId as string
+      const quantity = pos.quantity as number
+
+      // Fetch article
+      const article = await tx.whArticle.findFirst({
+        where: { id: articleId, tenantId },
+      })
+
+      // Skip if article not found or stock tracking disabled
+      if (!article || !article.stockTracking) continue
+
+      const previousStock = article.currentStock
+      const newStock = previousStock - quantity
+
+      // Create stock movement (negative quantity for withdrawal)
+      await (tx as unknown as PrismaClient).whStockMovement.create({
+        data: {
+          tenantId,
+          articleId,
+          type: "DELIVERY_NOTE",
+          quantity: -quantity,
+          previousStock,
+          newStock,
+          documentId,
+          reason: `Lieferschein ${docNumber}`,
+          createdById: userId,
+        },
+      })
+
+      // Update article stock
+      await tx.whArticle.update({
+        where: { id: articleId },
+        data: { currentStock: newStock },
+      })
+
+      results.push({
+        articleId,
+        articleNumber: article.number,
+        quantity,
+        previousStock,
+        newStock,
+      })
+    }
+
+    return results
+  })
+
+  // Audit log (fire-and-forget)
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delivery_note_stock_booking",
+      entityType: "billing_document",
+      entityId: documentId,
+      entityName: docNumber,
+      changes: {
+        bookedCount: bookings.length,
+        bookings: bookings.map(b => ({
+          articleNumber: b.articleNumber,
+          quantity: b.quantity,
+          previousStock: b.previousStock,
+          newStock: b.newStock,
+        })),
+      },
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return { bookedCount: bookings.length, bookings }
 }

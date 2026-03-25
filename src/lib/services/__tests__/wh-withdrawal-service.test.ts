@@ -491,7 +491,7 @@ describe("wh-withdrawal-service", () => {
         expect.objectContaining({
           where: expect.objectContaining({
             tenantId: TENANT_ID,
-            type: "WITHDRAWAL",
+            type: { in: ["WITHDRAWAL", "DELIVERY_NOTE"] },
           }),
         })
       )
@@ -508,7 +508,7 @@ describe("wh-withdrawal-service", () => {
         expect.objectContaining({
           where: expect.objectContaining({
             tenantId: TENANT_ID,
-            type: "WITHDRAWAL",
+            type: { in: ["WITHDRAWAL", "DELIVERY_NOTE"] },
             orderId: ORDER_ID,
           }),
         })
@@ -526,7 +526,7 @@ describe("wh-withdrawal-service", () => {
         expect.objectContaining({
           where: expect.objectContaining({
             tenantId: TENANT_ID,
-            type: "WITHDRAWAL",
+            type: { in: ["WITHDRAWAL", "DELIVERY_NOTE"] },
             machineId: "M-001",
           }),
         })
@@ -545,7 +545,7 @@ describe("wh-withdrawal-service", () => {
         expect.objectContaining({
           where: expect.objectContaining({
             tenantId: TENANT_ID,
-            type: "WITHDRAWAL",
+            type: { in: ["WITHDRAWAL", "DELIVERY_NOTE"] },
             date: {
               gte: new Date("2026-01-01"),
               lte: new Date("2026-12-31"),
@@ -567,7 +567,7 @@ describe("wh-withdrawal-service", () => {
       expect(result).toHaveLength(1)
       expect((prisma.whStockMovement.findMany as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { tenantId: TENANT_ID, type: "WITHDRAWAL", orderId: ORDER_ID },
+          where: { tenantId: TENANT_ID, type: { in: ["WITHDRAWAL", "DELIVERY_NOTE"] }, orderId: ORDER_ID },
         })
       )
     })
@@ -584,7 +584,7 @@ describe("wh-withdrawal-service", () => {
       expect(result).toHaveLength(1)
       expect((prisma.whStockMovement.findMany as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { tenantId: TENANT_ID, type: "WITHDRAWAL", documentId: DOCUMENT_ID },
+          where: { tenantId: TENANT_ID, type: { in: ["WITHDRAWAL", "DELIVERY_NOTE"] }, documentId: DOCUMENT_ID },
         })
       )
     })

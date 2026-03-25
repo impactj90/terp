@@ -126,6 +126,8 @@ const addPositionInput = z.object({
 
 const updatePositionInput = z.object({
   id: z.string().uuid(),
+  articleId: z.string().uuid().optional(),
+  articleNumber: z.string().optional(),
   description: z.string().optional(),
   quantity: z.number().optional(),
   unit: z.string().optional(),
@@ -373,6 +375,43 @@ export const billingDocumentsRouter = createTRPCRouter({
           )
         }
         return result
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  // Stock booking procedures (delivery note)
+  previewStockBookings: billingProcedure
+    .use(requirePermission(BILLING_VIEW))
+    .input(z.object({ id: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      try {
+        return await billingDocService.previewDeliveryNoteStockBookings(
+          ctx.prisma as unknown as PrismaClient,
+          ctx.tenantId!,
+          input.id
+        )
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  confirmStockBookings: billingProcedure
+    .use(requirePermission(BILLING_FINALIZE))
+    .input(z.object({
+      id: z.string().uuid(),
+      positionIds: z.array(z.string().uuid()),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await billingDocService.createDeliveryNoteStockBookings(
+          ctx.prisma as unknown as PrismaClient,
+          ctx.tenantId!,
+          input.id,
+          input.positionIds,
+          ctx.user!.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
+        )
       } catch (err) {
         handleServiceError(err)
       }

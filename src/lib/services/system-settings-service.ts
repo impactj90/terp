@@ -28,6 +28,7 @@ const TRACKED_FIELDS = [
   "serverAliveExpectedCompletionTime",
   "serverAliveThresholdMinutes",
   "serverAliveNotifyAdmins",
+  "deliveryNoteStockMode",
 ]
 
 // --- Error Classes ---
@@ -108,6 +109,7 @@ export async function update(
     serverAliveExpectedCompletionTime?: number | null
     serverAliveThresholdMinutes?: number | null
     serverAliveNotifyAdmins?: boolean
+    deliveryNoteStockMode?: string
   },
   audit?: AuditContext
 ) {
@@ -165,6 +167,14 @@ export async function update(
   }
   if (input.serverAliveNotifyAdmins !== undefined) {
     data.serverAliveNotifyAdmins = input.serverAliveNotifyAdmins
+  }
+  if (input.deliveryNoteStockMode !== undefined) {
+    if (!["MANUAL", "CONFIRM", "AUTO"].includes(input.deliveryNoteStockMode)) {
+      throw new SystemSettingsValidationError(
+        "deliveryNoteStockMode must be MANUAL, CONFIRM, or AUTO"
+      )
+    }
+    data.deliveryNoteStockMode = input.deliveryNoteStockMode
   }
 
   const updated = (await repo.update(prisma, tenantId, existing.id, data))!

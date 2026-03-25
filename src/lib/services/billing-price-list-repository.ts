@@ -292,3 +292,40 @@ export async function lookupEntries(
     orderBy: { minQuantity: "desc" },
   })
 }
+
+/**
+ * Find all valid entries for a price list, with article data resolved via LEFT JOIN.
+ * COALESCE fills in itemKey/description/unit from WhArticle when the entry fields are null.
+ */
+export async function findEntriesWithArticles(
+  prisma: PrismaClient,
+  tenantId: string,
+  priceListId: string,
+) {
+  const now = new Date()
+  return prisma.$queryRaw<Array<{
+    id: string
+    articleId: string | null
+    itemKey: string | null
+    description: string | null
+    unitPrice: number
+    unit: string | null
+    minQuantity: number | null
+  }>>`
+    SELECT
+      e.id,
+      e.article_id AS "articleId",
+      COALESCE(e.item_key, a."number") AS "itemKey",
+      COALESCE(e.description, a.name) AS "description",
+      e.unit_price AS "unitPrice",
+      COALESCE(e.unit, a.unit) AS "unit",
+      e.min_quantity AS "minQuantity"
+    FROM billing_price_list_entries e
+    LEFT JOIN wh_articles a ON a.id = e.article_id AND a.tenant_id = ${tenantId}
+    WHERE e.price_list_id = ${priceListId}::uuid
+      AND (e.valid_from IS NULL OR e.valid_from <= ${now})
+      AND (e.valid_to IS NULL OR e.valid_to >= ${now})
+    ORDER BY COALESCE(e.item_key, a."number") ASC NULLS LAST,
+             COALESCE(e.description, a.name) ASC NULLS LAST
+  `
+}

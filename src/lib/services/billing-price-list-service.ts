@@ -401,6 +401,7 @@ export async function entriesForAddress(
   priceListName: string
   entries: Array<{
     id: string
+    articleId: string | null
     itemKey: string | null
     description: string | null
     unitPrice: number
@@ -431,28 +432,7 @@ export async function entriesForAddress(
   })
   if (!priceList) return null
 
-  const now = new Date()
-  const entries = await prisma.billingPriceListEntry.findMany({
-    where: {
-      priceListId,
-      OR: [
-        { validFrom: null },
-        { validFrom: { lte: now } },
-      ],
-      AND: [
-        { OR: [{ validTo: null }, { validTo: { gte: now } }] },
-      ],
-    },
-    select: {
-      id: true,
-      itemKey: true,
-      description: true,
-      unitPrice: true,
-      unit: true,
-      minQuantity: true,
-    },
-    orderBy: [{ itemKey: "asc" }, { description: "asc" }],
-  })
+  const entries = await repo.findEntriesWithArticles(prisma, tenantId, priceListId)
 
   return {
     priceListId: priceList.id,

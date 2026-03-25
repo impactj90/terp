@@ -104,6 +104,13 @@ export function useFinalizeBillingDocument() {
       queryClient.invalidateQueries({
         queryKey: trpc.billing.documents.getById.queryKey(),
       })
+      // Invalidate warehouse data for AUTO stock booking on delivery notes
+      queryClient.invalidateQueries({
+        queryKey: trpc.warehouse.articles.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.warehouse.stockMovements.movements.list.queryKey(),
+      })
     },
   })
 }

@@ -2679,6 +2679,7 @@ model SystemSetting {
   serverAliveExpectedCompletionTime Int?     @map("server_alive_expected_completion_time")
   serverAliveThresholdMinutes       Int?     @default(30) @map("server_alive_threshold_minutes")
   serverAliveNotifyAdmins           Boolean  @default(true) @map("server_alive_notify_admins")
+  deliveryNoteStockMode             String   @default("MANUAL") @map("delivery_note_stock_mode") @db.VarChar(10)
   createdAt                         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt                         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -4272,6 +4273,7 @@ enum WhStockMovementType {
   ADJUSTMENT
   INVENTORY
   RETURN
+  DELIVERY_NOTE
 
   @@map("wh_stock_movement_type")
 }

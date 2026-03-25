@@ -13,7 +13,7 @@
 
 ## Warehouse / Lager
 
-- [ ] **WH_09** — Automatische Lagerbuchung bei Lieferschein *(M)* → `TICKET_WH_09_LAGERBUCHUNG_BEI_LIEFERSCHEIN.md`
+- [~] **WH_09** — Automatische Lagerbuchung bei Lieferschein *(M)* → `TICKET_WH_09_LAGERBUCHUNG_BEI_LIEFERSCHEIN.md`
 - [ ] **WH_10** — Artikelreservierungen bei Auftragsbestätigung *(L)* → `TICKET_WH_10_ARTIKELRESERVIERUNGEN.md`
 - [ ] **WH_11** — Korrekturassistent für Warenwirtschaft *(M)* → `TICKET_WH_11_KORREKTURASSISTENT_WW.md`
 - [ ] **WH_12** — Mobile QR-Scanner für Lagervorgänge *(L)* → `TICKET_WH_12_MOBILE_QR_SCANNER.md`

@@ -44,6 +44,7 @@ const systemSettingsOutputSchema = z.object({
   serverAliveExpectedCompletionTime: z.number().nullable(),
   serverAliveThresholdMinutes: z.number().nullable(),
   serverAliveNotifyAdmins: z.boolean(),
+  deliveryNoteStockMode: z.string(),
   createdAt: z.date(),
   updatedAt: z.date(),
 })
@@ -85,6 +86,7 @@ const updateSettingsInputSchema = z.object({
     .nullable()
     .optional(),
   serverAliveNotifyAdmins: z.boolean().optional(),
+  deliveryNoteStockMode: z.enum(["MANUAL", "CONFIRM", "AUTO"]).optional(),
 })
 
 const cleanupDateRangeInputSchema = z.object({
@@ -126,6 +128,7 @@ function mapToOutput(s: Record<string, unknown>) {
     serverAliveThresholdMinutes:
       (s.serverAliveThresholdMinutes as number | null) ?? null,
     serverAliveNotifyAdmins: s.serverAliveNotifyAdmins as boolean,
+    deliveryNoteStockMode: (s.deliveryNoteStockMode as string) ?? "MANUAL",
     createdAt: s.createdAt as Date,
     updatedAt: s.updatedAt as Date,
   }

@@ -97,7 +97,7 @@ export function ArticleList({
         {articles.map((article) => (
           <TableRow
             key={article.id}
-            className="cursor-pointer"
+            className={`cursor-pointer ${article.stockTracking && article.currentStock < 0 ? 'bg-destructive/5' : ''}`}
             onClick={() => onView(article)}
           >
             <TableCell className="font-mono text-sm">{article.number}</TableCell>
@@ -107,7 +107,7 @@ export function ArticleList({
             </TableCell>
             <TableCell>{article.unit}</TableCell>
             <TableCell className="text-right">{formatPrice(article.sellPrice)}</TableCell>
-            <TableCell className="text-right">
+            <TableCell className={`text-right ${article.stockTracking && article.currentStock < 0 ? 'text-destructive font-medium' : ''}`}>
               {article.stockTracking ? article.currentStock : '—'}
             </TableCell>
             <TableCell>

@@ -263,9 +263,9 @@ export async function cancelWithdrawal(
       throw new WhWithdrawalNotFoundError("Movement not found")
     }
 
-    // 2. Validate it's a WITHDRAWAL type
-    if (movement.type !== "WITHDRAWAL") {
-      throw new WhWithdrawalValidationError("Can only cancel WITHDRAWAL type movements")
+    // 2. Validate it's a WITHDRAWAL or DELIVERY_NOTE type
+    if (movement.type !== "WITHDRAWAL" && movement.type !== "DELIVERY_NOTE") {
+      throw new WhWithdrawalValidationError("Can only cancel WITHDRAWAL or DELIVERY_NOTE type movements")
     }
 
     // 3. Validate it's an original withdrawal (negative quantity), not already a reversal
@@ -355,7 +355,7 @@ export async function listWithdrawals(
 ) {
   const where: Record<string, unknown> = {
     tenantId,
-    type: "WITHDRAWAL",
+    type: { in: ["WITHDRAWAL", "DELIVERY_NOTE"] },
   }
 
   if (params.orderId) {
@@ -401,7 +401,7 @@ export async function listByOrder(
   orderId: string
 ) {
   return prisma.whStockMovement.findMany({
-    where: { tenantId, type: "WITHDRAWAL", orderId },
+    where: { tenantId, type: { in: ["WITHDRAWAL", "DELIVERY_NOTE"] }, orderId },
     include: {
       article: {
         select: { id: true, number: true, name: true, unit: true },
@@ -417,7 +417,7 @@ export async function listByDocument(
   documentId: string
 ) {
   return prisma.whStockMovement.findMany({
-    where: { tenantId, type: "WITHDRAWAL", documentId },
+    where: { tenantId, type: { in: ["WITHDRAWAL", "DELIVERY_NOTE"] }, documentId },
     include: {
       article: {
         select: { id: true, number: true, name: true, unit: true },

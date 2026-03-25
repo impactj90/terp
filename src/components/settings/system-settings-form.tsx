@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { TimeInput } from '@/components/ui/time-input'
 import { TagInput } from '@/components/ui/tag-input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useSystemSettings, useUpdateSystemSettings } from '@/hooks'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,6 +39,8 @@ interface SettingsFormState {
   serverAliveExpectedCompletionTime: number | null
   serverAliveThresholdMinutes: number | null
   serverAliveNotifyAdmins: boolean
+  // Warehouse
+  deliveryNoteStockMode: string
 }
 
 function mapApiToForm(data: SystemSettings): SettingsFormState {
@@ -54,10 +57,11 @@ function mapApiToForm(data: SystemSettings): SettingsFormState {
     proxyPort: data.proxy_port ?? null,
     proxyUsername: data.proxy_username ?? '',
     proxyPassword: '',
-    serverAliveEnabled: data.server_alive_enabled ?? false,
-    serverAliveExpectedCompletionTime: data.server_alive_expected_completion_time ?? null,
-    serverAliveThresholdMinutes: data.server_alive_threshold_minutes ?? null,
-    serverAliveNotifyAdmins: data.server_alive_notify_admins ?? false,
+    serverAliveEnabled: data.server_alive_enabled ?? data.serverAliveEnabled ?? false,
+    serverAliveExpectedCompletionTime: data.server_alive_expected_completion_time ?? data.serverAliveExpectedCompletionTime ?? null,
+    serverAliveThresholdMinutes: data.server_alive_threshold_minutes ?? data.serverAliveThresholdMinutes ?? null,
+    serverAliveNotifyAdmins: data.server_alive_notify_admins ?? data.serverAliveNotifyAdmins ?? false,
+    deliveryNoteStockMode: data.delivery_note_stock_mode ?? data.deliveryNoteStockMode ?? 'MANUAL',
   }
 }
 
@@ -78,6 +82,7 @@ const INITIAL_STATE: SettingsFormState = {
   serverAliveExpectedCompletionTime: null,
   serverAliveThresholdMinutes: null,
   serverAliveNotifyAdmins: false,
+  deliveryNoteStockMode: 'MANUAL',
 }
 
 export function SystemSettingsForm() {
@@ -94,6 +99,7 @@ export function SystemSettingsForm() {
   const [expandedSections, setExpandedSections] = React.useState<Record<string, boolean>>({
     calculation: true,
     order: true,
+    warehouse: true,
     birthday: true,
     proxy: false,
     serverAlive: false,
@@ -142,6 +148,7 @@ export function SystemSettingsForm() {
         serverAliveExpectedCompletionTime: form.serverAliveExpectedCompletionTime,
         serverAliveThresholdMinutes: form.serverAliveThresholdMinutes,
         serverAliveNotifyAdmins: form.serverAliveNotifyAdmins,
+        deliveryNoteStockMode: form.deliveryNoteStockMode as "MANUAL" | "CONFIRM" | "AUTO",
       })
       // Update initial values ref after successful save
       initialValuesRef.current = { ...form }
@@ -272,6 +279,53 @@ export function SystemSettingsForm() {
                 onCheckedChange={(checked) => setForm((prev) => ({ ...prev, followUpEntriesEnabled: checked }))}
                 disabled={isSubmitting}
               />
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Warehouse Settings */}
+      <Card>
+        <CardHeader className="cursor-pointer" onClick={() => toggleSection('warehouse')}>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base">Lager</CardTitle>
+              <CardDescription>Einstellungen fuer Lagerbuchungen</CardDescription>
+            </div>
+            {expandedSections.warehouse ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+          </div>
+        </CardHeader>
+        {expandedSections.warehouse && (
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="deliveryNoteStockMode">Lagerbuchung bei Lieferschein</Label>
+              <p className="text-xs text-muted-foreground">
+                Bestimmt ob beim Abschliessen eines Lieferscheins automatisch Lagerentnahmen erstellt werden.
+              </p>
+              <Select
+                value={form.deliveryNoteStockMode}
+                onValueChange={(value) => setForm(prev => ({ ...prev, deliveryNoteStockMode: value }))}
+                disabled={isSubmitting}
+              >
+                <SelectTrigger id="deliveryNoteStockMode">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="MANUAL">Manuell (keine automatische Buchung)</SelectItem>
+                  <SelectItem value="CONFIRM">Mit Bestaetigung (Dialog zeigt Positionen)</SelectItem>
+                  <SelectItem value="AUTO">Automatisch (sofortige Buchung)</SelectItem>
+                </SelectContent>
+              </Select>
+              {form.deliveryNoteStockMode === 'CONFIRM' && (
+                <p className="text-xs text-muted-foreground">
+                  Beim Abschliessen eines Lieferscheins wird ein Dialog angezeigt, in dem die zu buchenden Positionen bestaetigt werden koennen.
+                </p>
+              )}
+              {form.deliveryNoteStockMode === 'AUTO' && (
+                <p className="text-xs text-muted-foreground">
+                  Beim Abschliessen eines Lieferscheins werden automatisch Lagerentnahmen fuer alle Artikelpositionen mit Bestandsfuehrung erstellt.
+                </p>
+              )}
             </div>
           </CardContent>
         )}
