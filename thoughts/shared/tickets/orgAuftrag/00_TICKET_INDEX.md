@@ -17,7 +17,7 @@ _Quelle: ZMI orgAuftrag vs. Terp Abgleich + ZMI Time vs. Terp Abgleich_
 - [ ] **WH_10** — Artikelreservierungen bei Auftragsbestätigung _(L)_ → `TICKET_WH_10_ARTIKELRESERVIERUNGEN.md`
 - [ ] **WH_11** — Korrekturassistent für Warenwirtschaft _(M)_ → `TICKET_WH_11_KORREKTURASSISTENT_WW.md`
 - [ ] **WH_12** — Mobile QR-Scanner für Lagervorgänge _(L)_ → `TICKET_WH_12_MOBILE_QR_SCANNER.md`
-- [ ] **WH_13** — Artikelbilder _(M)_ → `TICKET_WH_13_ARTIKELBILDER.md`
+- [x] **WH_13** — Artikelbilder _(M)_ → `TICKET_WH_13_ARTIKELBILDER.md`
 
 ## Einkauf
 
