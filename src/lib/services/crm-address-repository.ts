@@ -94,6 +94,7 @@ export async function create(
     discountPercent?: number | null
     discountDays?: number | null
     discountGroup?: string | null
+    ourCustomerNumber?: string | null
     priceListId?: string | null
     createdById?: string | null
   }

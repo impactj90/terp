@@ -250,6 +250,17 @@ export default function CrmAddressDetailPage() {
               </CardContent>
             </Card>
 
+            {(address.type === 'SUPPLIER' || address.type === 'BOTH') && address.ourCustomerNumber && (
+              <Card>
+                <CardContent className="pt-6">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-4">{t('sectionSupplier')}</h3>
+                  <div className="divide-y">
+                    <DetailRow label={t('labelOurCustomerNumber')} value={address.ourCustomerNumber} />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {address.notes && (
               <Card className="md:col-span-2">
                 <CardContent className="pt-6">

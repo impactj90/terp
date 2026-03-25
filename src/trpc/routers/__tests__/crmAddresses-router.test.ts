@@ -88,6 +88,7 @@ const mockAddress = {
   discountPercent: null,
   discountDays: null,
   discountGroup: null,
+  ourCustomerNumber: null,
   priceListId: null,
   isActive: true,
   createdAt: new Date(),
@@ -161,6 +162,39 @@ describe("crm.addresses.create", () => {
     expect(prisma.numberSequence.upsert).toHaveBeenCalled()
   })
 
+  it("creates supplier address with ourCustomerNumber", async () => {
+    const prisma = {
+      numberSequence: {
+        upsert: vi.fn().mockResolvedValue({
+          prefix: "L-",
+          nextValue: 2,
+        }),
+      },
+      crmAddress: {
+        create: vi.fn().mockResolvedValue({
+          ...mockAddress,
+          type: "SUPPLIER",
+          number: "L-1",
+          ourCustomerNumber: "KD-99887",
+        }),
+      },
+    }
+
+    const caller = createCaller(createTestContext(prisma))
+    const result = await caller.create({
+      company: "Test GmbH",
+      type: "SUPPLIER",
+      ourCustomerNumber: "KD-99887",
+    })
+
+    expect(result.ourCustomerNumber).toBe("KD-99887")
+    expect(prisma.crmAddress.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        ourCustomerNumber: "KD-99887",
+      }),
+    })
+  })
+
   it("rejects without crm_addresses.create permission", async () => {
     const prisma = { crmAddress: {}, numberSequence: {} }
     const caller = createCaller(createTestContext(prisma, [CRM_VIEW]))
@@ -168,6 +202,71 @@ describe("crm.addresses.create", () => {
     await expect(
       caller.create({ company: "Test" })
     ).rejects.toThrow("Insufficient permissions")
+  })
+})
+
+// --- crm.addresses.update tests ---
+
+describe("crm.addresses.update", () => {
+  it("saves ourCustomerNumber", async () => {
+    const updatedAddress = {
+      ...mockAddress,
+      type: "SUPPLIER",
+      ourCustomerNumber: "KD-12345",
+    }
+
+    const prisma = {
+      crmAddress: {
+        findFirst: vi.fn()
+          .mockResolvedValueOnce({ ...mockAddress, type: "SUPPLIER" })
+          .mockResolvedValueOnce(updatedAddress),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+    }
+
+    const caller = createCaller(createTestContext(prisma))
+    const result = await caller.update({
+      id: ADDRESS_ID,
+      ourCustomerNumber: "KD-12345",
+    })
+
+    expect(result.ourCustomerNumber).toBe("KD-12345")
+    expect(prisma.crmAddress.updateMany).toHaveBeenCalledWith({
+      where: { id: ADDRESS_ID, tenantId: TENANT_ID },
+      data: expect.objectContaining({
+        ourCustomerNumber: "KD-12345",
+      }),
+    })
+  })
+
+  it("clears ourCustomerNumber when set to null", async () => {
+    const supplierWithNumber = {
+      ...mockAddress,
+      type: "SUPPLIER",
+      ourCustomerNumber: "KD-12345",
+    }
+    const clearedAddress = {
+      ...mockAddress,
+      type: "SUPPLIER",
+      ourCustomerNumber: null,
+    }
+
+    const prisma = {
+      crmAddress: {
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(supplierWithNumber)
+          .mockResolvedValueOnce(clearedAddress),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+    }
+
+    const caller = createCaller(createTestContext(prisma))
+    const result = await caller.update({
+      id: ADDRESS_ID,
+      ourCustomerNumber: null,
+    })
+
+    expect(result.ourCustomerNumber).toBeNull()
   })
 })
 
@@ -196,6 +295,27 @@ describe("crm.addresses.getById", () => {
 
     expect(result.contacts).toHaveLength(1)
     expect(result.bankAccounts).toHaveLength(1)
+  })
+
+  it("returns ourCustomerNumber for supplier address", async () => {
+    const supplierAddress = {
+      ...mockAddress,
+      type: "SUPPLIER",
+      ourCustomerNumber: "KD-99887",
+      contacts: [],
+      bankAccounts: [],
+    }
+
+    const prisma = {
+      crmAddress: {
+        findFirst: vi.fn().mockResolvedValue(supplierAddress),
+      },
+    }
+
+    const caller = createCaller(createTestContext(prisma))
+    const result = await caller.getById({ id: ADDRESS_ID })
+
+    expect(result.ourCustomerNumber).toBe("KD-99887")
   })
 
   it("throws not found for wrong tenant", async () => {

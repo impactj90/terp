@@ -5172,6 +5172,7 @@
     "sectionCommunication": "Kommunikation",
     "sectionTax": "Steuerinformationen",
     "sectionPayment": "Zahlungsbedingungen",
+    "sectionSupplier": "Lieferantendaten",
     "sectionNotes": "Notizen",
     "labelType": "Typ",
     "labelCompany": "Firma",
@@ -5190,6 +5191,7 @@
     "labelDiscountPercent": "Skonto (%)",
     "labelDiscountDays": "Skontotage",
     "labelDiscountGroup": "Rabattgruppe",
+    "labelOurCustomerNumber": "Unsere Kundennummer",
     "sectionPriceList": "Preisliste",
     "labelPriceList": "Preisliste",
     "labelPriceListPlaceholder": "Preisliste auswählen...",
@@ -5767,6 +5769,7 @@
 
     "detailTitle": "Bestellung {number}",
     "detailSupplier": "Lieferant",
+    "detailOurCustomerNumber": "Unsere Kundennr.",
     "detailContact": "Ansprechpartner",
     "detailOrderDate": "Bestelldatum",
     "detailRequestedDelivery": "Gewünschter Liefertermin",

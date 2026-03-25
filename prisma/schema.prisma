@@ -301,6 +301,7 @@ model CrmAddress {
   discountPercent Float?         @map("discount_percent")
   discountDays    Int?           @map("discount_days")
   discountGroup   String?        @map("discount_group") @db.VarChar(50)
+  ourCustomerNumber String?      @map("our_customer_number") @db.VarChar(50)
   priceListId     String?        @map("price_list_id") @db.Uuid
   isActive        Boolean        @default(true) @map("is_active")
   createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)

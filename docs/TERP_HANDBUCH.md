@@ -4212,6 +4212,8 @@ Tabelle mit Spalten:
    - **Steuernummer**, **USt-IdNr.**, **Leitweg-ID** (optional, fuer E-Rechnung an oeffentliche Auftraggeber)
 7. Abschnitt **Zahlungsbedingungen** ausfüllen:
    - **Zahlungsziel (Tage)**, **Skonto (%)**, **Skontotage**, **Rabattgruppe**
+7a. *(Nur bei Typ „Lieferant" oder „Kunde & Lieferant")* Abschnitt **Lieferantendaten** ausfüllen:
+   - **Unsere Kundennummer** (optional, max. 50 Zeichen) — Die eigene Kundennummer, die wir beim Lieferanten haben
 8. Abschnitt **Notizen** (optionales Freitext-Feld)
 9. 📍 „Anlegen"
 10. ✅ Adresse erscheint in der Tabelle mit automatisch vergebener Nummer
@@ -4257,6 +4259,7 @@ Die Detailseite hat **7 Tabs**:
 | **Kommunikation** | Telefon, Fax, E-Mail, Webseite |
 | **Steuerinformationen** | Steuernummer, USt-IdNr., Leitweg-ID (fuer E-Rechnung an Behoerden), Matchcode |
 | **Zahlungsbedingungen** | Zahlungsziel, Skonto, Skontotage, Rabattgruppe |
+| **Lieferantendaten** | Unsere Kundennummer (nur bei Lieferanten/Kunde & Lieferant, nur wenn gepflegt) |
 | **Notizen** | Freitext (volle Breite, nur wenn vorhanden) |
 
 **Tab „Kontakte":** → Abschnitt 12.2
@@ -6780,7 +6783,10 @@ Die Detailseite zeigt alle Informationen zur Bestellung in mehreren Bereichen:
 | **Bestätigter Liefertermin** | Vom Lieferanten bestätigtes Datum oder „—" |
 | **Bestelldatum** | Datum der Bestellung (nach Versand) oder „—" |
 | **Bestellmethode** | Telefon / E-Mail / Fax / Druck (nach Versand) oder „—" |
+| **Unsere Kundennr.** | Unsere Kundennummer beim Lieferanten (nur wenn beim Lieferanten hinterlegt) |
 | **Bemerkungen** | Freitext |
+
+> 💡 **Hinweis:** Wenn beim Lieferanten eine „Unsere Kundennummer" hinterlegt ist (📍 CRM → Adressen → Lieferant bearbeiten → Lieferantendaten), wird diese in der Bestelldetailansicht unter dem Lieferantennamen angezeigt.
 
 #### Zusammenfassung
 

@@ -77,6 +77,7 @@ export const crmAddressesRouter = createTRPCRouter({
       discountPercent: z.number().min(0).max(100).optional(),
       discountDays: z.number().int().min(0).max(365).optional(),
       discountGroup: z.string().max(100).optional(),
+      ourCustomerNumber: z.string().max(50).optional(),
       priceListId: z.string().uuid().nullable().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -116,6 +117,7 @@ export const crmAddressesRouter = createTRPCRouter({
       discountPercent: z.number().min(0).max(100).nullable().optional(),
       discountDays: z.number().int().min(0).max(365).nullable().optional(),
       discountGroup: z.string().max(100).nullable().optional(),
+      ourCustomerNumber: z.string().max(50).nullable().optional(),
       priceListId: z.string().uuid().nullable().optional(),
     }))
     .mutation(async ({ ctx, input }) => {

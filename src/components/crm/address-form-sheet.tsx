@@ -44,6 +44,7 @@ interface FormState {
   discountPercent: string
   discountDays: string
   discountGroup: string
+  ourCustomerNumber: string
   priceListId: string
   notes: string
 }
@@ -67,6 +68,7 @@ const INITIAL_STATE: FormState = {
   discountPercent: '',
   discountDays: '',
   discountGroup: '',
+  ourCustomerNumber: '',
   priceListId: '',
   notes: '',
 }
@@ -94,6 +96,7 @@ interface AddressFormSheetProps {
     discountPercent: number | null
     discountDays: number | null
     discountGroup: string | null
+    ourCustomerNumber: string | null
     priceListId: string | null
     notes: string | null
   } | null
@@ -135,6 +138,7 @@ export function AddressFormSheet({ open, onOpenChange, address, onSuccess }: Add
           discountPercent: address.discountPercent?.toString() || '',
           discountDays: address.discountDays?.toString() || '',
           discountGroup: address.discountGroup || '',
+          ourCustomerNumber: address.ourCustomerNumber || '',
           priceListId: address.priceListId || '',
           notes: address.notes || '',
         })
@@ -178,6 +182,7 @@ export function AddressFormSheet({ open, onOpenChange, address, onSuccess }: Add
         discountPercent: form.discountPercent ? parseFloat(form.discountPercent) : undefined,
         discountDays: form.discountDays ? parseInt(form.discountDays, 10) : undefined,
         discountGroup: form.discountGroup.trim() || undefined,
+        ourCustomerNumber: form.ourCustomerNumber.trim() || undefined,
         notes: form.notes.trim() || undefined,
       }
 
@@ -427,6 +432,24 @@ export function AddressFormSheet({ open, onOpenChange, address, onSuccess }: Add
                 </div>
               </div>
             </div>
+
+            {/* Supplier Data — only for SUPPLIER or BOTH */}
+            {(form.type === 'SUPPLIER' || form.type === 'BOTH') && (
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-muted-foreground">{t('sectionSupplier')}</h3>
+                <div className="space-y-2">
+                  <Label htmlFor="ourCustomerNumber">{t('labelOurCustomerNumber')}</Label>
+                  <Input
+                    id="ourCustomerNumber"
+                    value={form.ourCustomerNumber}
+                    onChange={(e) => updateField('ourCustomerNumber', e.target.value)}
+                    disabled={isSubmitting}
+                    maxLength={50}
+                    placeholder="z.B. KD-12345"
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Price List */}
             {priceListsData?.items && priceListsData.items.length > 0 && (

@@ -136,6 +136,7 @@ export function PurchaseOrderDetail({ id }: PurchaseOrderDetailProps) {
     id: string
     company?: string | null
     number?: string | null
+    ourCustomerNumber?: string | null
   } | null
   const contact = order.contact as {
     id: string
@@ -222,6 +223,12 @@ export function PurchaseOrderDetail({ id }: PurchaseOrderDetailProps) {
                   : undefined
               }
             />
+            {supplier?.ourCustomerNumber && (
+              <DetailRow
+                label={t('detailOurCustomerNumber')}
+                value={supplier.ourCustomerNumber}
+              />
+            )}
             <DetailRow
               label={t('detailContact')}
               value={
