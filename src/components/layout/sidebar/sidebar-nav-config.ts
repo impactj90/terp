@@ -421,6 +421,13 @@ export const navConfig: NavSection[] = [
         module: 'warehouse',
         permissions: ['wh_supplier_invoices.view'],
       },
+      {
+        titleKey: 'warehouseCorrections',
+        href: '/warehouse/corrections',
+        icon: AlertTriangle,
+        module: 'warehouse',
+        permissions: ['wh_corrections.view'],
+      },
     ],
   },
   {

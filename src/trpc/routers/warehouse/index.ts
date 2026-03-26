@@ -11,6 +11,7 @@ import { whPurchaseOrdersRouter } from "./purchaseOrders"
 import { whStockMovementsRouter } from "./stockMovements"
 import { whWithdrawalsRouter } from "./withdrawals"
 import { whSupplierInvoicesRouter } from "./supplierInvoices"
+import { whCorrectionsRouter } from "./corrections"
 
 export const warehouseRouter = createTRPCRouter({
   articles: whArticlesRouter,
@@ -19,4 +20,5 @@ export const warehouseRouter = createTRPCRouter({
   stockMovements: whStockMovementsRouter,
   withdrawals: whWithdrawalsRouter,
   supplierInvoices: whSupplierInvoicesRouter,
+  corrections: whCorrectionsRouter,
 })

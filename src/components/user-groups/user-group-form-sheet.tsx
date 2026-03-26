@@ -89,7 +89,7 @@ const CATEGORY_DEFINITIONS = [
   {
     id: 'warehouse',
     labelKey: 'categoryWarehouse',
-    resources: ['wh_articles', 'wh_article_groups', 'wh_purchase_orders', 'wh_stock'],
+    resources: ['wh_articles', 'wh_article_groups', 'wh_purchase_orders', 'wh_stock', 'wh_supplier_invoices', 'wh_corrections'],
   },
   {
     id: 'admin',
@@ -208,6 +208,12 @@ export function UserGroupFormSheet({
       settings: t('resourceSettings'),
       notifications: t('resourceNotifications'),
       reports: t('resourceReports'),
+      wh_articles: t('resourceWhArticles'),
+      wh_article_groups: t('resourceWhArticleGroups'),
+      wh_purchase_orders: t('resourceWhPurchaseOrders'),
+      wh_stock: t('resourceWhStock'),
+      wh_supplier_invoices: t('resourceWhSupplierInvoices'),
+      wh_corrections: t('resourceWhCorrections'),
     }),
     [t]
   )
@@ -227,6 +233,13 @@ export function UserGroupFormSheet({
       calculate_day: t('actionCalculateDay'),
       calculate_month: t('actionCalculateMonth'),
       delete_bookings: t('actionDeleteBookings'),
+      view: t('actionView'),
+      edit: t('actionEdit'),
+      order: t('actionOrder'),
+      pay: t('actionPay'),
+      run: t('actionRun'),
+      upload_image: t('actionUploadImage'),
+      delete_image: t('actionDeleteImage'),
     }),
     [t]
   )

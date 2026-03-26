@@ -99,7 +99,15 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [19.6 Rechnung stornieren](#196-rechnung-stornieren)
     - [19.7 Status-Workflow](#197-status-workflow)
     - [19.8 Praxisbeispiel: Lieferantenrechnung erfassen und bezahlen](#198-praxisbeispiel-lieferantenrechnung-erfassen-und-bezahlen)
-20. [Glossar](#20-glossar)
+20. [Lagerverwaltung — Korrekturassistent](#20-lagerverwaltung--korrekturassistent)
+    - [20.1 Dashboard](#201-dashboard)
+    - [20.2 Meldungen](#202-meldungen)
+    - [20.3 Meldung bearbeiten](#203-meldung-bearbeiten)
+    - [20.4 Massenbearbeitung](#204-massenbearbeitung)
+    - [20.5 Prüfläufe](#205-prüfläufe)
+    - [20.6 Automatische Prüfung (Cron)](#206-automatische-prüfung-cron)
+    - [20.7 Praxisbeispiel: Bestandsprüfung vor Inventur](#207-praxisbeispiel-bestandsprüfung-vor-inventur)
+21. [Glossar](#21-glossar)
 
 ---
 
@@ -7659,7 +7667,160 @@ Storniert   Storniert
 
 ---
 
-## 20. Glossar
+## 20. Lagerverwaltung — Korrekturassistent
+
+**Was ist es?** Der Korrekturassistent für die Warenwirtschaft ist ein Diagnose-Werkzeug, das automatisch Unstimmigkeiten im Lagerbestand und bei Bestellungen erkennt — z. B. negative Lagerbestände, doppelte Wareneingänge oder überfällige Bestellungen. Er zeigt eine filterbare Liste aller erkannten Probleme mit Schweregrad-Einstufung.
+
+**Wozu dient es?** Ohne regelmäßige Prüfung können sich Fehler in der Lagerbuchhaltung unbemerkt ansammeln — z. B. durch doppelt gebuchte Wareneingänge, fehlende Bestellzuordnungen oder Bestandsdifferenzen. Der Korrekturassistent erkennt diese Probleme automatisch und meldet sie, bevor sie zu falschen Bestellungen oder Inventurdifferenzen führen.
+
+⚠️ Berechtigung: „WH-Korrekturen anzeigen" (`wh_corrections.view`) zum Lesen, „WH-Korrekturen verwalten" (`wh_corrections.manage`) zum Bearbeiten, „WH-Korrekturen ausführen" (`wh_corrections.run`) zum Starten eines Prüflaufs
+
+📍 Seitenleiste → **Lager** → **Korrekturassistent**
+
+### 20.1 Dashboard
+
+✅ Drei KPI-Karten nebeneinander:
+
+| Karte | Farbe | Inhalt |
+|-------|-------|--------|
+| **Offene Fehler** | Rot (border) | Anzahl offener Meldungen mit Schweregrad ERROR |
+| **Warnungen** | Gelb (border) | Anzahl offener Meldungen mit Schweregrad WARNING |
+| **Hinweise** | Standard | Anzahl offener Meldungen mit Schweregrad INFO |
+
+✅ Darunter eine Zeile mit:
+- Links: **Letzter Prüflauf** — Datum/Uhrzeit und Anzahl gefundener Probleme (oder „Noch kein Prüflauf durchgeführt")
+- Rechts: Button **„Prüfung starten"** (nur sichtbar mit Berechtigung `wh_corrections.run`)
+
+📍 **„Prüfung starten"** klicken → Alle Prüfregeln werden ausgeführt → KPI-Karten und Meldungsliste aktualisieren sich automatisch
+
+⚠️ Während der Prüflauf läuft, dreht sich ein Lade-Symbol im Button. Der Button ist während des Laufs deaktiviert.
+
+### 20.2 Meldungen
+
+✅ Tab **„Meldungen"** (Standardansicht) zeigt eine Tabelle aller erkannten Probleme.
+
+**Filter:** Status (Standard: Offen), Schweregrad (Alle/Fehler/Warnung/Hinweis), Code (alle Prüfregeln)
+
+✅ Tabelle mit Spalten: Checkbox (für Mehrfachauswahl), Schweregrad (farbiges Badge), Code (monospace), Meldung, Datum, Status (Badge: Offen/Erledigt/Ignoriert)
+
+**Prüfregeln und ihre Codes:**
+
+| Code | Schweregrad | Bedeutung |
+|------|-------------|-----------|
+| `NEGATIVE_STOCK` | Fehler | Negativer Lagerbestand bei einem Artikel mit Bestandsführung |
+| `DUPLICATE_RECEIPT` | Warnung | Doppelter Wareneingang (gleicher Artikel + gleiche Menge + gleiche Bestellung innerhalb 1 Stunde) |
+| `OVERDUE_ORDER` | Warnung | Bestellung mit Status „Bestellt" und bestätigtem Liefertermin mehr als 3 Tage überfällig |
+| `UNMATCHED_RECEIPT` | Hinweis | Wareneingang ohne Zuordnung zu einer Bestellung |
+| `STOCK_MISMATCH` | Fehler | Aktueller Bestand weicht von der Summe aller Bestandsbewegungen ab |
+| `LOW_STOCK_NO_ORDER` | Warnung | Artikel unter Mindestbestand, aber keine offene Bestellung (Entwurf oder Bestellt) vorhanden |
+
+⚠️ Eine Meldung wird nur einmal pro Artikel + Code erstellt (Deduplizierung). Ist bereits eine offene Meldung für denselben Artikel und Code vorhanden, wird keine neue angelegt.
+
+### 20.3 Meldung bearbeiten
+
+📍 Zeile in der Meldungstabelle anklicken → **Seitenpanel (Sheet)** öffnet sich rechts
+
+✅ Das Panel zeigt:
+- **Schweregrad** und **Status** als Badges
+- **Code** (monospace)
+- **Meldung** — menschenlesbare Beschreibung des Problems
+- **Erstellt am** — Zeitpunkt der Erkennung
+- **Artikel-Link** — „Zum Artikel" (klickbar, öffnet Artikeldetailseite) — nur wenn ein Artikel betroffen ist
+- **Bestell-Link** — „Zur Bestellung" (klickbar, öffnet Bestelldetailseite) — nur bei überfälligen Bestellungen
+- **Details** — Zusätzliche Informationen als Schlüssel-Wert-Paare (z. B. erwarteter vs. tatsächlicher Bestand)
+
+✅ Wenn die Meldung bereits erledigt oder ignoriert wurde:
+- Infobox mit Status, Datum der Bearbeitung und ggf. Bemerkung
+
+✅ Für offene Meldungen (mit Berechtigung `wh_corrections.manage`):
+- **Bemerkung** — optionales Textfeld
+- Button **„Als erledigt markieren"** — setzt Status auf RESOLVED
+- Button **„Ignorieren"** — setzt Status auf DISMISSED
+
+⚠️ „Als erledigt markieren" bedeutet: Das Problem wurde behoben (z. B. Bestand korrigiert). „Ignorieren" bedeutet: Das Problem ist bekannt und wird bewusst nicht behoben.
+
+### 20.4 Massenbearbeitung
+
+✅ In der Meldungstabelle können mehrere Meldungen per Checkbox ausgewählt werden.
+
+📍 Eine oder mehrere Checkboxen aktivieren → Aktionsleiste erscheint oberhalb der Tabelle
+
+✅ Die Aktionsleiste zeigt:
+- Anzahl ausgewählter Meldungen (z. B. „3 ausgewählt")
+- Button **„Als erledigt markieren"** — markiert alle ausgewählten Meldungen als RESOLVED
+
+⚠️ Die Checkbox im Tabellenkopf wählt alle sichtbaren Meldungen auf der aktuellen Seite aus/ab.
+
+### 20.5 Prüfläufe
+
+✅ Tab **„Prüfläufe"** zeigt eine Tabelle aller bisherigen Prüfläufe.
+
+✅ Tabelle mit Spalten: Gestartet, Abgeschlossen, Auslöser (Badge: „Manuell" oder „Automatisch"), Prüfungen (Anzahl), Probleme (Anzahl, rot hervorgehoben wenn > 0), Dauer
+
+⚠️ Prüfläufe werden bei jedem manuellen Start und bei jedem automatischen Cron-Lauf protokolliert.
+
+### 20.6 Automatische Prüfung (Cron)
+
+Der Korrekturassistent läuft automatisch **täglich um 06:00 Uhr** (UTC) für alle aktiven Mandanten. Es ist keine manuelle Konfiguration erforderlich.
+
+✅ Automatische Prüfläufe erscheinen im Tab „Prüfläufe" mit dem Auslöser-Badge „Automatisch".
+
+💡 **Hinweis:** Bei Bedarf kann die Prüfung jederzeit zusätzlich manuell über den Button „Prüfung starten" ausgelöst werden. Neue Meldungen werden nur für bisher unbekannte Probleme erstellt (keine Duplikate).
+
+### 20.7 Praxisbeispiel: Bestandsprüfung vor Inventur
+
+**Szenario:** Vor der jährlichen Inventur sollen alle Bestandsdifferenzen und offenen Probleme in der Warenwirtschaft erkannt und bereinigt werden.
+
+**Voraussetzung:** Benutzer hat die Berechtigungen `wh_corrections.view`, `wh_corrections.manage` und `wh_corrections.run`.
+
+**Prüflauf starten**
+
+1. 📍 Seitenleiste → **Lager** → **Korrekturassistent**
+2. ✅ Dashboard zeigt die drei KPI-Karten (Fehler, Warnungen, Hinweise)
+3. 📍 **„Prüfung starten"** klicken
+4. ✅ Button zeigt Lade-Symbol, nach kurzer Zeit aktualisieren sich die KPI-Karten
+5. ✅ Unterhalb des Buttons erscheint: „Letzter Lauf: [Datum] — X Probleme gefunden"
+
+**Fehler prüfen und beheben**
+
+6. ✅ Tab „Meldungen" zeigt die erkannten Probleme, standardmäßig gefiltert auf „Offen"
+7. 📍 Filter „Schweregrad" auf **„Fehler"** setzen → nur kritische Probleme anzeigen
+8. ✅ Tabelle zeigt z. B. eine Meldung `NEGATIVE_STOCK` — „Artikel 'Schrauben M8' hat negativen Bestand: -12"
+9. 📍 Zeile anklicken → Seitenpanel öffnet sich
+10. ✅ Panel zeigt: Code `NEGATIVE_STOCK`, Schweregrad Fehler (rot), Meldungstext, Details (currentStock: -12)
+11. 📍 **„Zum Artikel"** klicken → Artikeldetailseite öffnet sich
+12. 📍 Auf der Artikeldetailseite den Bestand korrigieren (z. B. über Bestandskorrektur auf 0 setzen)
+13. 📍 Zurück zum Korrekturassistenten navigieren (📍 Lager → Korrekturassistent)
+14. 📍 Die Meldung erneut öffnen → Bemerkung eingeben: „Bestand auf 0 korrigiert vor Inventur"
+15. 📍 **„Als erledigt markieren"** klicken
+16. ✅ Meldung verschwindet aus der offenen Liste, KPI-Karte „Offene Fehler" aktualisiert sich
+
+**Warnungen prüfen und ggf. ignorieren**
+
+17. 📍 Filter „Schweregrad" auf **„Warnung"** setzen
+18. ✅ Tabelle zeigt z. B. `OVERDUE_ORDER` — „Bestellung BS-2026-0042 ist seit 5 Tagen überfällig"
+19. 📍 Zeile anklicken → **„Zur Bestellung"** klicken → Bestelldetailseite prüfen
+20. 📍 Falls Lieferant telefonisch Verspätung bestätigt hat: zurück zum Korrekturassistenten
+21. 📍 Meldung öffnen → Bemerkung: „Lt. Lieferant Lieferung am 28.03." → **„Ignorieren"**
+22. ✅ Meldung wird als „Ignoriert" markiert
+
+**Massenbearbeitung für Hinweise**
+
+23. 📍 Filter „Schweregrad" auf **„Hinweis"** setzen
+24. ✅ Tabelle zeigt z. B. mehrere `UNMATCHED_RECEIPT`-Meldungen
+25. 📍 Checkbox im Tabellenkopf anklicken → alle Hinweise auswählen
+26. ✅ Aktionsleiste erscheint: „X ausgewählt"
+27. 📍 **„Als erledigt markieren"** klicken
+28. ✅ Alle ausgewählten Hinweise werden als erledigt markiert
+
+**Ergebnis prüfen**
+
+29. ✅ KPI-Karten zeigen: Offene Fehler = 0, Warnungen = 0, Hinweise = 0
+30. ✅ Tab „Prüfläufe" zeigt den Prüflauf mit Datum und Anzahl gefundener/behobener Probleme
+
+---
+
+## 21. Glossar
 
 | Begriff | Erklärung | Wo in Terp |
 |---------|-----------|-----------|
@@ -7757,6 +7918,8 @@ Storniert   Storniert
 | **Bestandsbewegung** | Einzelner protokollierter Bestandsvorgang (Wareneingang, Entnahme, Lieferschein-Buchung, Korrektur, Inventur, Rückgabe) mit Menge, vorherigem und neuem Bestand | 📍 Lager → Bestandsbewegungen |
 | **Storno (Entnahme)** | Umkehrung einer Lagerentnahme — stellt den entnommenen Bestand wieder her und erzeugt eine positive Gegenbuchung | 📍 Lager → Lagerentnahmen → Verlauf → Stornieren |
 | **Sammelentnahme** | Entnahme mehrerer Artikel in einem Vorgang, gebündelt unter einer gemeinsamen Referenz | 📍 Lager → Lagerentnahmen → Neue Entnahme |
+| **Korrekturassistent (Lager)** | Diagnose-Werkzeug, das automatisch Unstimmigkeiten im Lagerbestand erkennt: negative Bestände, doppelte Wareneingänge, überfällige Bestellungen, Bestandsdifferenzen | 📍 Lager → Korrekturassistent |
+| **Prüflauf (Lager)** | Automatischer oder manueller Durchlauf aller Korrekturprüfungen mit Protokollierung der Ergebnisse | 📍 Lager → Korrekturassistent → Prüfläufe |
 
 ---
 
@@ -7845,6 +8008,7 @@ Diese Tabelle listet alle Seiten der Anwendung mit ihrer URL und dem Menüpfad:
 | `/warehouse/goods-receipt` | Lager → Wareneingang | wh_stock.manage |
 | `/warehouse/withdrawals` | Lager → Lagerentnahmen | wh_stock.manage |
 | `/warehouse/stock-movements` | Lager → Bestandsbewegungen | wh_stock.view |
+| `/warehouse/corrections` | Lager → Korrekturassistent | wh_corrections.view |
 
 ---
 

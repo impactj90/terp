@@ -198,6 +198,8 @@ model Tenant {
   whSupplierInvoices          WhSupplierInvoice[]
   whSupplierPayments          WhSupplierPayment[]
   whArticleImages             WhArticleImage[]
+  whCorrectionRuns            WhCorrectionRun[]
+  whCorrectionMessages        WhCorrectionMessage[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
@@ -4518,4 +4520,79 @@ model WhSupplierPayment {
   @@index([invoiceId])
   @@index([tenantId])
   @@map("wh_supplier_payments")
+}
+
+// -----------------------------------------------------------------------------
+// WhCorrectionRun
+// -----------------------------------------------------------------------------
+// Migration: 20260325202500_wh_corrections
+//
+// Tracks each execution of warehouse correction checks.
+
+model WhCorrectionRun {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  startedAt     DateTime  @default(now()) @map("started_at") @db.Timestamptz(6)
+  completedAt   DateTime? @map("completed_at") @db.Timestamptz(6)
+  trigger       String    @db.VarChar(20)
+  checksRun     Int       @default(0) @map("checks_run")
+  issuesFound   Int       @default(0) @map("issues_found")
+  triggeredById String?   @map("triggered_by_id") @db.Uuid
+
+  tenant   Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  messages WhCorrectionMessage[]
+
+  @@index([tenantId])
+  @@index([tenantId, startedAt])
+  @@map("wh_correction_runs")
+}
+
+// -----------------------------------------------------------------------------
+// WhCorrectionMessage
+// -----------------------------------------------------------------------------
+// Migration: 20260325202500_wh_corrections
+//
+// Individual issue detected by the warehouse correction assistant.
+// Has a status lifecycle: OPEN -> RESOLVED / DISMISSED / IGNORED.
+
+enum WhCorrectionSeverity {
+  ERROR
+  WARNING
+  INFO
+
+  @@map("wh_correction_severity")
+}
+
+enum WhCorrectionStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+  IGNORED
+
+  @@map("wh_correction_status")
+}
+
+model WhCorrectionMessage {
+  id            String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String                @map("tenant_id") @db.Uuid
+  runId         String?               @map("run_id") @db.Uuid
+  code          String                @db.VarChar(50)
+  severity      WhCorrectionSeverity
+  status        WhCorrectionStatus    @default(OPEN)
+  message       String                @db.Text
+  articleId     String?               @map("article_id") @db.Uuid
+  documentId    String?               @map("document_id") @db.Uuid
+  details       Json?                 @db.JsonB
+  resolvedAt    DateTime?             @map("resolved_at") @db.Timestamptz(6)
+  resolvedById  String?               @map("resolved_by_id") @db.Uuid
+  resolvedNote  String?               @map("resolved_note") @db.Text
+  createdAt     DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  run    WhCorrectionRun?  @relation(fields: [runId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status])
+  @@index([tenantId, code])
+  @@index([tenantId, articleId])
+  @@map("wh_correction_messages")
 }
