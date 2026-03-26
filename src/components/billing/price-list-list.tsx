@@ -31,6 +31,7 @@ export function PriceListList() {
   const [sheetOpen, setSheetOpen] = React.useState(false)
 
   const { data, isLoading } = useBillingPriceLists({
+    type: 'sales',
     search: search || undefined,
     page,
     pageSize: 25,
@@ -88,7 +89,7 @@ export function PriceListList() {
             </TableRow>
           ) : (
             data.items.map((pl) => {
-              const typed = pl as typeof pl & { _count?: { entries?: number; addresses?: number } }
+              const typed = pl as typeof pl & { _count?: { entries?: number; salesAddresses?: number; purchaseAddresses?: number } }
               return (
                 <TableRow
                   key={pl.id}

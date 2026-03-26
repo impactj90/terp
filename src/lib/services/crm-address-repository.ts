@@ -65,7 +65,8 @@ export async function findById(
     include: {
       contacts: { orderBy: [{ isPrimary: "desc" }, { lastName: "asc" }] },
       bankAccounts: { orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] },
-      priceList: { select: { id: true, name: true } },
+      salesPriceList: { select: { id: true, name: true } },
+      purchasePriceList: { select: { id: true, name: true } },
     },
   })
 }
@@ -95,7 +96,8 @@ export async function create(
     discountDays?: number | null
     discountGroup?: string | null
     ourCustomerNumber?: string | null
-    priceListId?: string | null
+    salesPriceListId?: string | null
+    purchasePriceListId?: string | null
     createdById?: string | null
   }
 ) {

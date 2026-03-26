@@ -243,9 +243,15 @@ export default function CrmAddressDetailPage() {
                   <DetailRow label={t('labelDiscountDays')} value={address.discountDays?.toString()} />
                   <DetailRow label={t('labelDiscountGroup')} value={address.discountGroup} />
                   <DetailRow
-                    label={t('labelPriceList')}
-                    value={(address as unknown as { priceList?: { name: string } | null }).priceList?.name}
+                    label={t('labelSalesPriceList')}
+                    value={(address as unknown as { salesPriceList?: { name: string } | null }).salesPriceList?.name}
                   />
+                  {(address.type === 'SUPPLIER' || address.type === 'BOTH') && (
+                    <DetailRow
+                      label={t('labelPurchasePriceList')}
+                      value={(address as unknown as { purchasePriceList?: { name: string } | null }).purchasePriceList?.name}
+                    />
+                  )}
                 </div>
               </CardContent>
             </Card>

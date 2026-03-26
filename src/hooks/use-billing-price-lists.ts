@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
 interface UseBillingPriceListsOptions {
   enabled?: boolean
+  type?: "sales" | "purchase"
   isActive?: boolean
   search?: string
   page?: number
@@ -16,7 +17,7 @@ export function useBillingPriceLists(options: UseBillingPriceListsOptions = {}) 
   const trpc = useTRPC()
   return useQuery(
     trpc.billing.priceLists.list.queryOptions(
-      { isActive: input.isActive, search: input.search, page: input.page ?? 1, pageSize: input.pageSize ?? 25 },
+      { type: input.type ?? "sales", isActive: input.isActive, search: input.search, page: input.page ?? 1, pageSize: input.pageSize ?? 25 },
       { enabled }
     )
   )

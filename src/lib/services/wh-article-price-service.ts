@@ -59,7 +59,7 @@ export async function listPriceLists(
   tenantId: string,
   params: { isActive?: boolean; search?: string } = {}
 ) {
-  const where: Record<string, unknown> = { tenantId }
+  const where: Record<string, unknown> = { tenantId, type: "purchase" }
   if (params.isActive !== undefined) {
     where.isActive = params.isActive
   }
@@ -87,10 +87,10 @@ export async function createPriceList(
     throw new WhArticlePriceValidationError("Name is required")
   }
 
-  // If setting as default, unset others first
+  // If setting as default, unset other purchase defaults first
   if (input.isDefault) {
     await prisma.billingPriceList.updateMany({
-      where: { tenantId, isDefault: true },
+      where: { tenantId, type: "purchase", isDefault: true },
       data: { isDefault: false },
     })
   }
@@ -99,6 +99,7 @@ export async function createPriceList(
     data: {
       tenantId,
       name: input.name.trim(),
+      type: "purchase",
       isDefault: input.isDefault ?? false,
       isActive: true,
     },
@@ -137,10 +138,10 @@ export async function updatePriceList(
     throw new WhArticlePriceValidationError("Name is required")
   }
 
-  // If setting as default, unset others first
+  // If setting as default, unset other purchase defaults first
   if (input.isDefault === true) {
     await prisma.billingPriceList.updateMany({
-      where: { tenantId, isDefault: true, id: { not: id } },
+      where: { tenantId, type: "purchase", isDefault: true, id: { not: id } },
       data: { isDefault: false },
     })
   }
@@ -211,11 +212,11 @@ export async function listByArticle(
   // Verify article belongs to tenant
   await verifyArticle(prisma, tenantId, articleId)
 
-  // Find all entries for this article, joined with price list (tenant-scoped)
+  // Find all entries for this article in purchase price lists (tenant-scoped)
   const entries = await prisma.billingPriceListEntry.findMany({
     where: {
       articleId,
-      priceList: { tenantId },
+      priceList: { tenantId, type: "purchase" },
     },
     include: {
       priceList: {

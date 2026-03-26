@@ -41,12 +41,14 @@ interface PriceListFormSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   editItem?: Record<string, unknown> | null
+  type?: 'sales' | 'purchase'
 }
 
 export function PriceListFormSheet({
   open,
   onOpenChange,
   editItem,
+  type = 'sales',
 }: PriceListFormSheetProps) {
   const isEdit = !!editItem
   const [form, setForm] = React.useState<FormState>(INITIAL_STATE)
@@ -101,6 +103,7 @@ export function PriceListFormSheet({
       } else {
         await createMutation.mutateAsync({
           name: form.name,
+          type,
           ...(form.description ? { description: form.description } : {}),
           isDefault: form.isDefault,
           ...(form.validFrom ? { validFrom: new Date(form.validFrom) } : {}),

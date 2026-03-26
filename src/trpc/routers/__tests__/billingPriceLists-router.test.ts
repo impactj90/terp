@@ -311,7 +311,7 @@ describe("billing.priceLists.lookupPrice", () => {
   it("returns correct price for customer with assigned list", async () => {
     const prisma = {
       crmAddress: {
-        findFirst: vi.fn().mockResolvedValue({ priceListId: PL_ID }),
+        findFirst: vi.fn().mockResolvedValue({ salesPriceListId: PL_ID, purchasePriceListId: null }),
       },
       billingPriceListEntry: {
         findMany: vi.fn().mockResolvedValue([mockEntry]),
@@ -330,7 +330,7 @@ describe("billing.priceLists.lookupPrice", () => {
     const defaultList = { ...mockPriceList, id: "d0000000-0000-4000-a000-000000000099" }
     const prisma = {
       crmAddress: {
-        findFirst: vi.fn().mockResolvedValue({ priceListId: null }),
+        findFirst: vi.fn().mockResolvedValue({ salesPriceListId: null, purchasePriceListId: null }),
       },
       billingPriceList: {
         findFirst: vi.fn().mockResolvedValue(defaultList),
@@ -351,7 +351,7 @@ describe("billing.priceLists.lookupPrice", () => {
   it("returns null when no match found", async () => {
     const prisma = {
       crmAddress: {
-        findFirst: vi.fn().mockResolvedValue({ priceListId: null }),
+        findFirst: vi.fn().mockResolvedValue({ salesPriceListId: null, purchasePriceListId: null }),
       },
       billingPriceList: {
         findFirst: vi.fn().mockResolvedValue(null),

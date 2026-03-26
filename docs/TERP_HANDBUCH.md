@@ -56,7 +56,7 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [13.9 Praxisbeispiel: Angebot bis Rechnung](#139-praxisbeispiel-angebot-bis-rechnung)
     - [13.10 Kundendienst (Serviceaufträge)](#1310-kundendienst-serviceaufträge)
     - [13.11 Offene Posten / Zahlungen](#1311-offene-posten--zahlungen)
-    - [13.12 Preislisten](#1312-preislisten)
+    - [13.12 Verkaufspreislisten](#1312-verkaufspreislisten)
     - [13.13 Wiederkehrende Rechnungen](#1313-wiederkehrende-rechnungen)
     - [13.14 E-Rechnung (ZUGFeRD / XRechnung)](#1314-e-rechnung-zugferd--xrechnung)
 14. [Lagerverwaltung — Artikelstamm](#14-lagerverwaltung--artikelstamm)
@@ -64,13 +64,13 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [14.2 Artikeldetailseite](#142-artikeldetailseite)
     - [14.3 Bestandskorrektur](#143-bestandskorrektur)
     - [14.4 Praxisbeispiel: Artikelstamm für eine Schreinerei einrichten](#144-praxisbeispiel-artikelstamm-für-eine-schreinerei-einrichten)
-15. [Lagerverwaltung — Preislisten](#15-lagerverwaltung--preislisten)
-    - [15.1 Preislisten verwalten](#151-preislisten-verwalten)
-    - [15.2 Neue Preisliste erstellen](#152-neue-preisliste-erstellen)
+15. [Lagerverwaltung — Einkaufspreislisten](#15-lagerverwaltung--einkaufspreislisten)
+    - [15.1 Einkaufspreislisten verwalten](#151-einkaufspreislisten-verwalten)
+    - [15.2 Neue Einkaufspreisliste erstellen](#152-neue-einkaufspreisliste-erstellen)
     - [15.3 Artikel hinzufügen und Preise bearbeiten](#153-artikel-hinzufügen-und-preise-bearbeiten)
     - [15.4 Preise prozentual anpassen](#154-preise-prozentual-anpassen)
     - [15.5 Preisliste kopieren](#155-preisliste-kopieren)
-    - [15.6 Praxisbeispiel: Preislisten für Standardkunden und Großkunden einrichten](#156-praxisbeispiel-preislisten-für-standardkunden-und-großkunden-einrichten)
+    - [15.6 Praxisbeispiel: Einkaufspreislisten fuer Lieferanten einrichten](#156-praxisbeispiel-einkaufspreislisten-fuer-lieferanten-einrichten)
 16. [Lagerverwaltung — Einkauf / Bestellungen](#16-lagerverwaltung--einkauf--bestellungen)
     - [16.1 Bestellliste](#161-bestellliste)
     - [16.2 Neue Bestellung anlegen](#162-neue-bestellung-anlegen)
@@ -5863,19 +5863,33 @@ Die Zahlungshistorie dokumentiert alle Vorgänge lückenlos:
 
 ---
 
-### 13.12 Preislisten
+### 13.12 Verkaufspreislisten
 
-**Was ist es?** Preislisten definieren Preise für Artikel und Freitextpositionen, die Kunden zugewiesen werden können. Das System unterstützt eine Standardpreisliste, kundenspezifische Preislisten und Mengenstaffeln. Beim Anlegen von Belegpositionen wird der Preis automatisch aus der zugewiesenen Preisliste des Kunden vorgeschlagen.
+**Was ist es?** Verkaufspreislisten definieren Preise für Artikel und Freitextpositionen, die Kunden berechnet werden. Das System unterstützt eine Standard-Verkaufspreisliste, kundenspezifische Preislisten und Mengenstaffeln. Beim Anlegen von Belegpositionen wird der Preis automatisch aus der zugewiesenen Verkaufspreisliste des Kunden vorgeschlagen.
 
-**Wozu dient es?** Einheitliche Preispflege, kundenindividuelle Konditionen und automatische Preisübernahme in Belege -- ohne manuelle Preissuche.
+**Wozu dient es?** Einheitliche Verkaufspreispflege, kundenindividuelle Konditionen und automatische Preisübernahme in Belege -- ohne manuelle Preissuche.
+
+> **Verkauf vs. Einkauf — Zwei getrennte Preislisten-Systeme**
+>
+> TERP unterscheidet zwischen **Verkaufspreislisten** und **Einkaufspreislisten**. Diese sind vollständig voneinander getrennt:
+>
+> | | Verkaufspreislisten | Einkaufspreislisten |
+> |---|---|---|
+> | **Zweck** | Preise, die Sie Ihren **Kunden** berechnen | Preise, die **Lieferanten** Ihnen berechnen |
+> | **Navigation** | 📍 Aufträge → Verkaufspreislisten | 📍 Lager → Einkaufspreislisten |
+> | **Zuordnung** | Im CRM-Adressformular: Feld "Verkaufspreisliste" | Im CRM-Adressformular: Feld "Einkaufspreisliste" (nur bei Lieferanten) |
+> | **Verwendet bei** | Angebote, Aufträge, Rechnungen | Bestellungen an Lieferanten |
+> | **Standard-Liste** | Pro Mandant eine Standard-Verkaufspreisliste | Pro Mandant eine Standard-Einkaufspreisliste |
+>
+> Beide verwenden dasselbe technische System (Staffelpreise, Gültigkeitszeiträume, Massenimport), aber die Daten sind getrennt — eine Verkaufspreisliste erscheint nicht unter Einkaufspreislisten und umgekehrt.
 
 > Modul: **Billing** muss aktiviert sein
 
 > Berechtigung: `billing_price_lists.view` (Anzeige), `billing_price_lists.manage` (Anlegen, Bearbeiten, Löschen)
 
-📍 Aufträge > Preislisten
+📍 Aufträge > Verkaufspreislisten
 
-Sie sehen die Liste aller Preislisten des aktiven Mandanten.
+Sie sehen die Liste aller Verkaufspreislisten des aktiven Mandanten.
 
 #### Preislistenliste
 
@@ -5980,26 +5994,37 @@ Für die schnelle Erfassung vieler Preiseinträge steht ein Massenimport zur Ver
 5. Vorhandene Einträge (gleicher Artikel/Schlüssel) werden aktualisiert, neue werden erstellt
 6. Erfolgsmeldung: "X Einträge importiert, Y aktualisiert"
 
-#### Preisliste einem Kunden zuweisen
+#### Preislisten einer Adresse zuweisen
 
-Die Zuweisung erfolgt in den **Stammdaten der CRM-Adresse**:
+Die Zuweisung erfolgt in den **Stammdaten der CRM-Adresse**. Es gibt zwei separate Felder:
 
-1. 📍 CRM > Adressen → Kunde anklicken
+1. 📍 CRM > Adressen → Adresse anklicken
 2. **"Bearbeiten"** klicken
-3. Feld **"Preisliste"**: Dropdown mit allen aktiven Preislisten des Mandanten
-4. Preisliste auswählen
+3. Im Abschnitt **"Preislisten"**:
+   - Feld **"Verkaufspreisliste"**: Dropdown mit allen aktiven Verkaufspreislisten. Wird für die automatische Preisermittlung bei Verkaufsbelegen verwendet.
+   - Feld **"Einkaufspreisliste"** (nur bei Lieferanten/Beides): Dropdown mit allen aktiven Einkaufspreislisten. Wird für die automatische Preisermittlung bei Bestellungen verwendet.
+4. Gewünschte Preisliste(n) auswählen
 5. **"Speichern"**
-6. Ab sofort werden bei Belegpositionen für diesen Kunden die Preise aus der zugewiesenen Preisliste vorgeschlagen
+6. Ab sofort werden bei Belegpositionen für diesen Kunden/Lieferanten die Preise aus den zugewiesenen Preislisten vorgeschlagen
 
-#### Preisermittlung (Automatische Preisübernahme)
+#### Preisermittlung Verkauf (Automatische Preisübernahme)
 
-Beim Hinzufügen einer Position zu einem Beleg ermittelt das System den Preis in folgender Reihenfolge:
+Beim Hinzufügen einer Position zu einem Verkaufsbeleg ermittelt das System den Preis in folgender Reihenfolge:
 
-1. **Kundenspezifische Preisliste** → Kunde hat eine zugewiesene Preisliste? → Eintrag für den Artikel/Schlüssel vorhanden? → Mengenstaffel berücksichtigen → **Preis übernehmen**
-2. **Standardpreisliste** → Kein Treffer beim Kunden? → In der Standardpreisliste nachschlagen → **Preis übernehmen**
+1. **Kundenspezifische Verkaufspreisliste** → Kunde hat eine zugewiesene Verkaufspreisliste? → Eintrag für den Artikel/Schlüssel vorhanden? → Mengenstaffel berücksichtigen → **Preis übernehmen**
+2. **Standard-Verkaufspreisliste** → Kein Treffer beim Kunden? → In der Standard-Verkaufspreisliste nachschlagen → **Preis übernehmen**
 3. **Kein Treffer** → Der Benutzer gibt den Preis manuell ein
 
-Der vorgeschlagene Preis kann im Beleg jederzeit manuell überschrieben werden.
+#### Preisermittlung Einkauf
+
+Beim Hinzufügen einer Position zu einer Bestellung ermittelt das System den Preis in folgender Reihenfolge:
+
+1. **Lieferantenspezifische Einkaufspreisliste** → Lieferant hat eine zugewiesene Einkaufspreisliste? → Eintrag für den Artikel vorhanden? → Mengenstaffel berücksichtigen → **Preis übernehmen**
+2. **Standard-Einkaufspreisliste** → Kein Treffer beim Lieferanten? → In der Standard-Einkaufspreisliste nachschlagen → **Preis übernehmen**
+3. **Lieferanten-Artikelpreis** → Kein Treffer in Einkaufspreislisten? → Einkaufspreis aus der Lieferanten-Artikel-Zuordnung verwenden → **Preis übernehmen**
+4. **Kein Treffer** → Der Benutzer gibt den Preis manuell ein
+
+Der vorgeschlagene Preis kann im Beleg/in der Bestellung jederzeit manuell überschrieben werden.
 
 #### Preisliste löschen
 
@@ -6041,15 +6066,15 @@ Der vorgeschlagene Preis kann im Beleg jederzeit manuell überschrieben werden.
 8. Klick auf **"Speichern"**
 9. Zweiter Eintrag erscheint in der Tabelle
 
-##### Schritt 3 -- Preisliste dem Kunden zuweisen
+##### Schritt 3 -- Verkaufspreisliste dem Kunden zuweisen
 
 1. 📍 CRM > Adressen
 2. Klick auf **"Mustermann GmbH"** (oder den gewünschten Kunden)
 3. Detailseite öffnet sich
 4. Klick auf **"Bearbeiten"**
-5. Feld **"Preisliste"**: Dropdown öffnen → **"Standardpreisliste"** auswählen
+5. Im Abschnitt **"Preislisten"**: Feld **"Verkaufspreisliste"**: Dropdown öffnen → **"Standardpreisliste"** auswählen
 6. Klick auf **"Speichern"**
-7. "Preisliste: Standardpreisliste" wird auf der Detailseite angezeigt
+7. "Verkaufspreisliste: Standardpreisliste" wird auf der Detailseite angezeigt
 
 ##### Schritt 4 -- Preis wird im Beleg vorausgefüllt
 
@@ -6742,21 +6767,30 @@ Hier werden einem Artikel Bilder zugeordnet. Ein Bild kann als Hauptbild markier
 
 ---
 
-## 15. Lagerverwaltung — Preislisten
+## 15. Lagerverwaltung — Einkaufspreislisten
 
-### 15.1 Preislisten verwalten
+### 15.1 Einkaufspreislisten verwalten
 
-**Was ist es?** Eine Preisliste ordnet Artikeln individuelle Preise zu. Es können beliebig viele Preislisten parallel existieren — für verschiedene Kundengruppen, Regionen oder Zeiträume. Eine Preisliste kann als **Standard** markiert werden und wird dann automatisch verwendet, wenn einem Kunden keine eigene Liste zugeordnet ist.
+**Was ist es?** Eine Einkaufspreisliste ordnet Artikeln individuelle Einkaufspreise zu — also Preise, die Lieferanten für ihre Artikel verlangen. Es können beliebig viele Einkaufspreislisten parallel existieren — für verschiedene Lieferantengruppen, Regionen oder Zeiträume. Eine Einkaufspreisliste kann als **Standard** markiert werden und wird dann automatisch verwendet, wenn einem Lieferanten keine eigene Liste zugeordnet ist.
 
-**Wozu dient es?** Preislisten ermöglichen kundenspezifische Preisgestaltung: Großkunden bekommen Rabatte, bestimmte Regionen andere Preise, Messeaktionen werden zeitlich begrenzt. Bei der Belegerfassung wird der Preis automatisch aus der zugeordneten Preisliste des Kunden gezogen.
+**Wozu dient es?** Einkaufspreislisten ermöglichen lieferantenspezifische Preisgestaltung mit Staffelpreisen und Gültigkeitszeiträumen. Bei der Bestellerfassung wird der Einkaufspreis automatisch aus der zugeordneten Einkaufspreisliste des Lieferanten gezogen.
+
+> **Einkauf vs. Verkauf — Zwei getrennte Preislisten-Systeme**
+>
+> Einkaufspreislisten (hier, unter Lager) und Verkaufspreislisten (unter Aufträge → Verkaufspreislisten) sind **vollständig voneinander getrennt**. Eine hier angelegte Einkaufspreisliste erscheint **nicht** unter Aufträge → Verkaufspreislisten und umgekehrt.
+>
+> - **Einkaufspreislisten** → Preise, die Lieferanten Ihnen berechnen → werden Lieferanten-Adressen zugeordnet
+> - **Verkaufspreislisten** → Preise, die Sie Kunden berechnen → werden Kunden-Adressen zugeordnet
+>
+> Im CRM-Adressformular gibt es dafür zwei getrennte Dropdown-Felder: "Verkaufspreisliste" und "Einkaufspreisliste".
 
 ⚠️ Modul: Das Warehouse-Modul muss für den Mandanten aktiviert sein
 
 ⚠️ Berechtigung: „Preislisten anzeigen" (`billing_price_lists.view`) zum Lesen, „Preislisten verwalten" (`billing_price_lists.manage`) zum Anlegen und Bearbeiten
 
-📍 Seitenleiste → **Lager** → **Preislisten**
+📍 Seitenleiste → **Lager** → **Einkaufspreislisten**
 
-✅ Drei-Panel-Ansicht: Links Preislisten, Mitte Artikeltabelle, Rechts Preisdetails
+✅ Drei-Panel-Ansicht: Links Einkaufspreislisten, Mitte Artikeltabelle, Rechts Preisdetails
 
 #### Drei-Panel-Aufbau
 
@@ -6774,7 +6808,7 @@ Oberhalb der drei Panels erscheinen (nur bei ausgewählter Preisliste und mit Be
 
 ---
 
-### 15.2 Neue Preisliste erstellen
+### 15.2 Neue Einkaufspreisliste erstellen
 
 1. 📍 Im linken Panel: **„Neue Liste"**
 2. ✅ Eingabefeld erscheint unter dem Button
@@ -6865,11 +6899,11 @@ Artikeltabelle im mittleren Panel:
 
 ---
 
-### 15.6 Praxisbeispiel: Preislisten für Standardkunden und Großkunden einrichten
+### 15.6 Praxisbeispiel: Einkaufspreislisten fuer Lieferanten einrichten
 
-**Schritt 1 — Standardpreisliste erstellen**
+**Schritt 1 — Standard-Einkaufspreisliste erstellen**
 
-1. 📍 Seitenleiste → **Lager** → **Preislisten**
+1. 📍 Seitenleiste → **Lager** → **Einkaufspreislisten**
 2. ✅ Drei-Panel-Ansicht, linkes Panel zeigt „Keine Einträge"
 3. 📍 **„Neue Liste"** → Name: „Standardpreise 2026" → Enter
 4. ✅ Preisliste erstellt und ausgewählt
@@ -7911,12 +7945,13 @@ Der Korrekturassistent läuft automatisch **täglich um 06:00 Uhr** (UTC) für a
 | **Nachricht (CRM)** | Vereinfachte CRM-Aufgabe ohne Terminierung — dient als interne Mitteilung | 📍 CRM → Aufgaben |
 | **Nachbestellvorschlag** | Automatisch berechneter Hinweis, dass ein Artikel unter den Mindestbestand gefallen ist, mit vorgeschlagener Bestellmenge | 📍 Lager → Bestellungen → Nachbestellvorschläge |
 | **Nummernkreis** | Auto-Zähler für Kunden-/Lieferantennummern mit konfigurierbarem Präfix | 📍 Administration → Einstellungen |
-| **Mengenstaffel** | Mehrere Preiseinträge für denselben Artikel mit unterschiedlichen Ab-Mengen für mengenabhängige Rabatte | 📍 Aufträge → Preislisten → Detail |
+| **Mengenstaffel** | Mehrere Preiseinträge für denselben Artikel mit unterschiedlichen Ab-Mengen für mengenabhängige Rabatte | 📍 Aufträge → Verkaufspreislisten → Detail |
 | **Offener Posten** | Unbezahlte oder teilbezahlte Rechnung mit Fälligkeitsdatum und Zahlungsstatus | 📍 Aufträge → Offene Posten |
 | **Kontogruppe** | Logische Bündelung mehrerer Konten (z. B. alle Zuschlagskonten) | 📍 Verwaltung → Konten → Tab Gruppen |
 | **Personalnummer** | Eindeutige Kennung je Mitarbeiter im Mandanten | 📍 Verwaltung → Mitarbeiter |
-| **Preiseintrag** | Einzelne Preiszeile in einer Preisliste mit Artikel/Schlüssel, Einzelpreis und optionaler Mengenstaffel | 📍 Aufträge → Preislisten → Detail |
-| **Preisliste** | Liste mit Preisen für Artikel und Freitextpositionen, zuweisbar an Kunden. Standardpreisliste als Fallback. | 📍 Aufträge → Preislisten |
+| **Preiseintrag** | Einzelne Preiszeile in einer Preisliste mit Artikel/Schlüssel, Einzelpreis und optionaler Mengenstaffel | 📍 Aufträge → Verkaufspreislisten → Detail |
+| **Verkaufspreisliste** | Liste mit Verkaufspreisen für Artikel und Freitextpositionen, zuweisbar an Kunden. Standard-Verkaufspreisliste als Fallback. | 📍 Aufträge → Verkaufspreislisten |
+| **Einkaufspreisliste** | Liste mit Einkaufspreisen für Artikel, zuweisbar an Lieferanten. Standard-Einkaufspreisliste als Fallback. | 📍 Lager → Einkaufspreislisten |
 | **Profil** | Eigene Stamm-, Beschäftigungs- und Kontaktdaten des angemeldeten Benutzers | 📍 Benutzermenü → Profil |
 | **PIN** | Persönliche Identifikationsnummer für das Terminal | Wird bei Mitarbeiteranlage automatisch vergeben |
 | **RFID-Karte** | Zutrittskarte mit Funkchip | 📍 Mitarbeiterdetail → Zutrittskarten |
@@ -7951,7 +7986,7 @@ Der Korrekturassistent läuft automatisch **täglich um 06:00 Uhr** (UTC) für a
 | **EK-Preis** | Einkaufspreis eines Artikels — kann im Artikelstamm und pro Lieferant hinterlegt werden | 📍 Lager → Artikel → Detail |
 | **Matchcode (Artikel)** | Kurzname für die Schnellsuche, wird automatisch aus dem Artikelnamen generiert | 📍 Lager → Artikel → Formular |
 | **Mindestbestand** | Lagermenge, bei deren Unterschreitung ein Warnhinweis erscheint (nur bei Bestandsführung) | 📍 Lager → Artikel → Detail → Übersicht → Karte Bestand |
-| **Preisliste (Lager)** | Benannte Sammlung von Artikelpreisen für kunden- oder zeitraumspezifische Preisgestaltung | 📍 Lager → Preislisten |
+| **Einkaufspreisliste (Lager)** | Benannte Sammlung von Einkaufspreisen für lieferanten- oder zeitraumspezifische Preisgestaltung | 📍 Lager → Einkaufspreislisten |
 | **Stückliste (BOM)** | Komponentenliste eines Artikels (Bill of Materials) mit Artikel, Menge und optionaler Bemerkung | 📍 Lager → Artikel → Detail → Tab Stückliste |
 | **VK-Preis** | Netto-Verkaufspreis eines Artikels im Artikelstamm, dient als Basispreis für Preislisten | 📍 Lager → Artikel → Detail → Karte Preise |
 | **Wareneingang** | Buchung eingehender Lieferungen gegen eine Bestellung mit automatischer Bestandserhöhung | 📍 Lager → Wareneingang |
@@ -8036,14 +8071,14 @@ Diese Tabelle listet alle Seiten der Anwendung mit ihrer URL und dem Menüpfad:
 | `/orders/service-cases/[id]` | Kundendienstliste → Zeile anklicken | billing_service_cases.view |
 | `/orders/open-items` | Aufträge → Offene Posten | billing_payments.view |
 | `/orders/open-items/[documentId]` | Offene Posten → Rechnung anklicken | billing_payments.view |
-| `/orders/price-lists` | Aufträge → Preislisten | billing_price_lists.view |
-| `/orders/price-lists/[id]` | Preislistenliste → Zeile anklicken | billing_price_lists.view |
+| `/orders/price-lists` | Aufträge → Verkaufspreislisten | billing_price_lists.view |
+| `/orders/price-lists/[id]` | Verkaufspreislistenliste → Zeile anklicken | billing_price_lists.view |
 | `/orders/recurring` | Auftraege → Wiederkehrende Rechnungen | billing_recurring.view |
 | `/orders/recurring/new` | Auftraege → Wiederkehrende Rechnungen → Neue Vorlage | billing_recurring.manage |
 | `/orders/recurring/[id]` | Wiederkehrende Rechnungen → Zeile anklicken | billing_recurring.view |
 | `/warehouse/articles` | Lager → Artikel | wh_articles.view |
 | `/warehouse/articles/[id]` | Artikelliste → Zeile anklicken | wh_articles.view |
-| `/warehouse/prices` | Lager → Preislisten | billing_price_lists.view, wh_articles.view |
+| `/warehouse/prices` | Lager → Einkaufspreislisten | billing_price_lists.view, wh_articles.view |
 | `/warehouse/purchase-orders` | Lager → Bestellungen | wh_purchase_orders.view |
 | `/warehouse/purchase-orders/new` | Lager → Bestellungen → Neue Bestellung | wh_purchase_orders.create |
 | `/warehouse/purchase-orders/[id]` | Bestellungsliste → Zeile anklicken | wh_purchase_orders.view |

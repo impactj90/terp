@@ -10,7 +10,7 @@ const ADDRESS_TRACKED_FIELDS = [
   "type", "company", "street", "zip", "city", "country", "phone", "fax",
   "email", "website", "taxNumber", "vatId", "leitwegId", "matchCode", "notes",
   "paymentTermDays", "discountPercent", "discountDays", "discountGroup",
-  "ourCustomerNumber", "priceListId", "isActive",
+  "ourCustomerNumber", "salesPriceListId", "purchasePriceListId", "isActive",
 ]
 
 const CONTACT_TRACKED_FIELDS = [
@@ -132,7 +132,8 @@ export async function create(
     discountDays?: number
     discountGroup?: string
     ourCustomerNumber?: string
-    priceListId?: string | null
+    salesPriceListId?: string | null
+    purchasePriceListId?: string | null
   },
   createdById: string,
   audit?: AuditContext
@@ -174,7 +175,8 @@ export async function create(
     discountDays: input.discountDays ?? null,
     discountGroup: input.discountGroup || null,
     ourCustomerNumber: input.ourCustomerNumber || null,
-    priceListId: input.priceListId ?? null,
+    salesPriceListId: input.salesPriceListId ?? null,
+    purchasePriceListId: input.purchasePriceListId ?? null,
     createdById,
   })
 
@@ -214,7 +216,8 @@ export async function update(
     discountDays?: number | null
     discountGroup?: string | null
     ourCustomerNumber?: string | null
-    priceListId?: string | null
+    salesPriceListId?: string | null
+    purchasePriceListId?: string | null
   },
   audit?: AuditContext
 ) {
@@ -238,7 +241,7 @@ export async function update(
     "type", "street", "zip", "city", "country", "phone", "fax",
     "email", "website", "taxNumber", "vatId", "leitwegId", "matchCode", "notes",
     "paymentTermDays", "discountPercent", "discountDays", "discountGroup",
-    "ourCustomerNumber", "priceListId",
+    "ourCustomerNumber", "salesPriceListId", "purchasePriceListId",
   ] as const
 
   for (const field of directFields) {

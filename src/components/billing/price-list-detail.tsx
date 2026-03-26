@@ -80,8 +80,13 @@ export function PriceListDetail({ id }: PriceListDetailProps) {
   }
 
   const typedPl = pl as typeof pl & {
-    addresses?: Array<{ id: string; number: string; company?: string }>
+    salesAddresses?: Array<{ id: string; number: string; company?: string }>
+    purchaseAddresses?: Array<{ id: string; number: string; company?: string }>
   }
+  const allAddresses = [
+    ...(typedPl.salesAddresses ?? []),
+    ...(typedPl.purchaseAddresses ?? []),
+  ]
 
   return (
     <div className="space-y-6">
@@ -165,9 +170,9 @@ export function PriceListDetail({ id }: PriceListDetailProps) {
             <CardTitle className="text-base">{t('assignedCustomers')}</CardTitle>
           </CardHeader>
           <CardContent>
-            {typedPl.addresses && typedPl.addresses.length > 0 ? (
+            {allAddresses.length > 0 ? (
               <ul className="space-y-1">
-                {typedPl.addresses.map((addr) => (
+                {allAddresses.map((addr) => (
                   <li key={addr.id} className="text-sm">
                     <span className="font-mono text-muted-foreground">{addr.number}</span>
                     {' '}

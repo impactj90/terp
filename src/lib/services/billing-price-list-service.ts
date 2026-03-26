@@ -40,6 +40,7 @@ export async function list(
   prisma: PrismaClient,
   tenantId: string,
   params: {
+    type?: "sales" | "purchase"
     isActive?: boolean
     search?: string
     page: number
@@ -65,6 +66,7 @@ export async function create(
   input: {
     name: string
     description?: string
+    type?: "sales" | "purchase"
     isDefault?: boolean
     validFrom?: Date
     validTo?: Date
@@ -72,15 +74,18 @@ export async function create(
   createdById: string,
   audit?: AuditContext
 ) {
-  // If setting as default, unset other defaults first
+  const type = input.type ?? "sales"
+
+  // If setting as default, unset other defaults of the same type first
   if (input.isDefault) {
-    await repo.unsetDefault(prisma, tenantId)
+    await repo.unsetDefault(prisma, tenantId, type)
   }
 
   const created = await repo.create(prisma, {
     tenantId,
     name: input.name,
     description: input.description || null,
+    type,
     isDefault: input.isDefault ?? false,
     validFrom: input.validFrom || null,
     validTo: input.validTo || null,
@@ -129,9 +134,9 @@ export async function update(
 
   if (Object.keys(data).length === 0) return existing
 
-  // If setting as default, unset others first
+  // If setting as default, unset others of same type first
   if (input.isDefault === true && !existing.isDefault) {
-    await repo.unsetDefault(prisma, tenantId)
+    await repo.unsetDefault(prisma, tenantId, existing.type as "sales" | "purchase")
   }
 
   const updated = await repo.update(prisma, tenantId, input.id, data)
@@ -188,7 +193,7 @@ export async function setDefault(
   const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) throw new BillingPriceListNotFoundError()
 
-  await repo.unsetDefault(prisma, tenantId)
+  await repo.unsetDefault(prisma, tenantId, existing.type as "sales" | "purchase")
   const updated = await repo.update(prisma, tenantId, id, { isDefault: true })
 
   if (audit) {
@@ -395,7 +400,8 @@ export async function bulkImport(
 export async function entriesForAddress(
   prisma: PrismaClient,
   tenantId: string,
-  addressId: string
+  addressId: string,
+  type: "sales" | "purchase" = "sales"
 ): Promise<{
   priceListId: string
   priceListName: string
@@ -409,25 +415,27 @@ export async function entriesForAddress(
     minQuantity: number | null
   }>
 } | null> {
-  // 1. Get customer's assigned price list
+  // 1. Get address's assigned price list for the given type
   const address = await prisma.crmAddress.findFirst({
     where: { id: addressId, tenantId },
-    select: { priceListId: true },
+    select: { salesPriceListId: true, purchasePriceListId: true },
   })
   if (!address) return null
 
-  let priceListId = address.priceListId
+  let priceListId = type === "purchase"
+    ? address.purchasePriceListId
+    : address.salesPriceListId
 
-  // 2. Fallback to default price list
+  // 2. Fallback to default price list of same type
   if (!priceListId) {
-    const defaultList = await repo.findDefault(prisma, tenantId)
+    const defaultList = await repo.findDefault(prisma, tenantId, type)
     if (!defaultList) return null
     priceListId = defaultList.id
   }
 
   // 3. Get price list name + all active entries
   const priceList = await prisma.billingPriceList.findFirst({
-    where: { id: priceListId, tenantId, isActive: true },
+    where: { id: priceListId, tenantId, type, isActive: true },
     select: { id: true, name: true },
   })
   if (!priceList) return null
@@ -446,25 +454,31 @@ export async function entriesForAddress(
 export async function lookupPrice(
   prisma: PrismaClient,
   tenantId: string,
-  input: { addressId: string; articleId?: string; itemKey?: string; quantity?: number }
+  input: { addressId: string; articleId?: string; itemKey?: string; quantity?: number; type?: "sales" | "purchase" }
 ): Promise<{ unitPrice: number; source: string; entryId: string } | null> {
-  // 1. Get customer's assigned price list
+  const type = input.type ?? "sales"
+
+  // 1. Get address's assigned price list
   const address = await prisma.crmAddress.findFirst({
     where: { id: input.addressId, tenantId },
-    select: { priceListId: true },
+    select: { salesPriceListId: true, purchasePriceListId: true },
   })
   if (!address) throw new BillingPriceListValidationError("Address not found")
 
-  // 2. If customer has a price list, try to find matching entry
-  if (address.priceListId) {
+  const assignedListId = type === "purchase"
+    ? address.purchasePriceListId
+    : address.salesPriceListId
+
+  // 2. If address has a price list of matching type, try to find matching entry
+  if (assignedListId) {
     const result = await findBestEntry(
-      prisma, address.priceListId, input.articleId, input.itemKey, input.quantity
+      prisma, assignedListId, input.articleId, input.itemKey, input.quantity
     )
-    if (result) return { ...result, source: "customer_list" }
+    if (result) return { ...result, source: type === "purchase" ? "supplier_list" : "customer_list" }
   }
 
-  // 3. Fallback to default price list
-  const defaultList = await repo.findDefault(prisma, tenantId)
+  // 3. Fallback to default price list of same type
+  const defaultList = await repo.findDefault(prisma, tenantId, type)
   if (defaultList) {
     const result = await findBestEntry(
       prisma, defaultList.id, input.articleId, input.itemKey, input.quantity
@@ -472,7 +486,18 @@ export async function lookupPrice(
     if (result) return { ...result, source: "default_list" }
   }
 
-  // 4. No match anywhere
+  // 4. For purchase lookups, fallback to WhArticleSupplier.buyPrice
+  if (type === "purchase" && input.articleId) {
+    const supplierPrice = await prisma.whArticleSupplier.findFirst({
+      where: { articleId: input.articleId, supplierId: input.addressId },
+      select: { buyPrice: true },
+    })
+    if (supplierPrice?.buyPrice != null) {
+      return { unitPrice: supplierPrice.buyPrice, source: "supplier_article", entryId: "" }
+    }
+  }
+
+  // 5. No match anywhere
   return null
 }
 

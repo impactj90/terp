@@ -4,11 +4,12 @@ import type { PrismaClient } from "@/generated/prisma/client"
 
 const DETAIL_INCLUDE = {
   entries: true,
-  addresses: { select: { id: true, number: true, company: true } },
+  salesAddresses: { select: { id: true, number: true, company: true } },
+  purchaseAddresses: { select: { id: true, number: true, company: true } },
 }
 
 const LIST_INCLUDE = {
-  _count: { select: { entries: true, addresses: true } },
+  _count: { select: { entries: true, salesAddresses: true, purchaseAddresses: true } },
 }
 
 // --- Repository Functions ---
@@ -17,6 +18,7 @@ export async function findMany(
   prisma: PrismaClient,
   tenantId: string,
   params: {
+    type?: "sales" | "purchase"
     isActive?: boolean
     search?: string
     page: number
@@ -24,6 +26,8 @@ export async function findMany(
   }
 ) {
   const where: Record<string, unknown> = { tenantId }
+
+  if (params.type) where.type = params.type
 
   if (params.isActive !== undefined) where.isActive = params.isActive
 
@@ -68,6 +72,7 @@ export async function create(
     tenantId: string
     name: string
     description?: string | null
+    type?: string
     isDefault?: boolean
     validFrom?: Date | null
     validTo?: Date | null
@@ -109,19 +114,21 @@ export async function remove(
 
 export async function findDefault(
   prisma: PrismaClient,
-  tenantId: string
+  tenantId: string,
+  type: "sales" | "purchase" = "sales"
 ) {
   return prisma.billingPriceList.findFirst({
-    where: { tenantId, isDefault: true, isActive: true },
+    where: { tenantId, type, isDefault: true, isActive: true },
   })
 }
 
 export async function unsetDefault(
   prisma: PrismaClient,
-  tenantId: string
+  tenantId: string,
+  type: "sales" | "purchase" = "sales"
 ) {
   await prisma.billingPriceList.updateMany({
-    where: { tenantId, isDefault: true },
+    where: { tenantId, type, isDefault: true },
     data: { isDefault: false },
   })
 }
@@ -131,9 +138,15 @@ export async function countAddressesUsing(
   tenantId: string,
   priceListId: string
 ) {
-  return prisma.crmAddress.count({
-    where: { tenantId, priceListId },
-  })
+  const [salesCount, purchaseCount] = await Promise.all([
+    prisma.crmAddress.count({
+      where: { tenantId, salesPriceListId: priceListId },
+    }),
+    prisma.crmAddress.count({
+      where: { tenantId, purchasePriceListId: priceListId },
+    }),
+  ])
+  return salesCount + purchaseCount
 }
 
 // --- Entry Functions ---

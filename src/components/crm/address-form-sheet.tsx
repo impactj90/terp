@@ -45,7 +45,8 @@ interface FormState {
   discountDays: string
   discountGroup: string
   ourCustomerNumber: string
-  priceListId: string
+  salesPriceListId: string
+  purchasePriceListId: string
   notes: string
 }
 
@@ -69,7 +70,8 @@ const INITIAL_STATE: FormState = {
   discountDays: '',
   discountGroup: '',
   ourCustomerNumber: '',
-  priceListId: '',
+  salesPriceListId: '',
+  purchasePriceListId: '',
   notes: '',
 }
 
@@ -97,7 +99,8 @@ interface AddressFormSheetProps {
     discountDays: number | null
     discountGroup: string | null
     ourCustomerNumber: string | null
-    priceListId: string | null
+    salesPriceListId: string | null
+    purchasePriceListId: string | null
     notes: string | null
   } | null
   onSuccess?: () => void
@@ -109,7 +112,8 @@ export function AddressFormSheet({ open, onOpenChange, address, onSuccess }: Add
 
   const [form, setForm] = React.useState<FormState>(INITIAL_STATE)
   const [error, setError] = React.useState<string | null>(null)
-  const { data: priceListsData } = useBillingPriceLists({ enabled: open })
+  const { data: salesPriceListsData } = useBillingPriceLists({ type: 'sales', enabled: open })
+  const { data: purchasePriceListsData } = useBillingPriceLists({ type: 'purchase', enabled: open })
 
   const createMutation = useCreateCrmAddress()
   const updateMutation = useUpdateCrmAddress()
@@ -139,7 +143,8 @@ export function AddressFormSheet({ open, onOpenChange, address, onSuccess }: Add
           discountDays: address.discountDays?.toString() || '',
           discountGroup: address.discountGroup || '',
           ourCustomerNumber: address.ourCustomerNumber || '',
-          priceListId: address.priceListId || '',
+          salesPriceListId: address.salesPriceListId || '',
+          purchasePriceListId: address.purchasePriceListId || '',
           notes: address.notes || '',
         })
       } else {
@@ -190,10 +195,15 @@ export function AddressFormSheet({ open, onOpenChange, address, onSuccess }: Add
         await updateMutation.mutateAsync({
           id: address!.id,
           ...payload,
-          priceListId: form.priceListId || null,
+          salesPriceListId: form.salesPriceListId || null,
+          purchasePriceListId: form.purchasePriceListId || null,
         })
       } else {
-        await createMutation.mutateAsync(payload)
+        await createMutation.mutateAsync({
+          ...payload,
+          salesPriceListId: form.salesPriceListId || null,
+          purchasePriceListId: form.purchasePriceListId || null,
+        })
       }
 
       onOpenChange(false)
@@ -451,32 +461,61 @@ export function AddressFormSheet({ open, onOpenChange, address, onSuccess }: Add
               </div>
             )}
 
-            {/* Price List */}
-            {priceListsData?.items && priceListsData.items.length > 0 && (
+            {/* Price Lists */}
+            {(salesPriceListsData?.items?.length || purchasePriceListsData?.items?.length) ? (
               <div className="space-y-4">
                 <h3 className="text-sm font-medium text-muted-foreground">{t('sectionPriceList')}</h3>
-                <div className="space-y-2">
-                  <Label htmlFor="priceListId">{t('labelPriceList')}</Label>
-                  <Select
-                    value={form.priceListId || '_none'}
-                    onValueChange={(v) => updateField('priceListId', v === '_none' ? '' : v)}
-                    disabled={isSubmitting}
-                  >
-                    <SelectTrigger id="priceListId">
-                      <SelectValue placeholder={t('labelPriceListPlaceholder')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="_none">{t('labelNoPriceList')}</SelectItem>
-                      {priceListsData.items.map((pl) => (
-                        <SelectItem key={pl.id} value={pl.id}>
-                          {pl.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+
+                {/* Sales Price List */}
+                {salesPriceListsData?.items && salesPriceListsData.items.length > 0 && (
+                  <div className="space-y-2">
+                    <Label htmlFor="salesPriceListId">{t('labelSalesPriceList')}</Label>
+                    <Select
+                      value={form.salesPriceListId || '_none'}
+                      onValueChange={(v) => updateField('salesPriceListId', v === '_none' ? '' : v)}
+                      disabled={isSubmitting}
+                    >
+                      <SelectTrigger id="salesPriceListId">
+                        <SelectValue placeholder={t('labelPriceListPlaceholder')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_none">{t('labelNoPriceList')}</SelectItem>
+                        {salesPriceListsData.items.map((pl) => (
+                          <SelectItem key={pl.id} value={pl.id}>
+                            {pl.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Purchase Price List — only for suppliers */}
+                {(form.type === 'SUPPLIER' || form.type === 'BOTH') &&
+                  purchasePriceListsData?.items && purchasePriceListsData.items.length > 0 && (
+                  <div className="space-y-2">
+                    <Label htmlFor="purchasePriceListId">{t('labelPurchasePriceList')}</Label>
+                    <Select
+                      value={form.purchasePriceListId || '_none'}
+                      onValueChange={(v) => updateField('purchasePriceListId', v === '_none' ? '' : v)}
+                      disabled={isSubmitting}
+                    >
+                      <SelectTrigger id="purchasePriceListId">
+                        <SelectValue placeholder={t('labelPriceListPlaceholder')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_none">{t('labelNoPriceList')}</SelectItem>
+                        {purchasePriceListsData.items.map((pl) => (
+                          <SelectItem key={pl.id} value={pl.id}>
+                            {pl.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
-            )}
+            ) : null}
 
             {/* Notes */}
             <div className="space-y-4">

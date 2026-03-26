@@ -22,7 +22,10 @@ const UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0
 const uuid = z.string().regex(UUID_RE, "Invalid UUID")
 const optionalUuid = uuid.optional()
 
+const priceListType = z.enum(["sales", "purchase"]).optional().default("sales")
+
 const listInput = z.object({
+  type: priceListType,
   isActive: z.boolean().optional(),
   search: z.string().max(255).optional(),
   page: z.number().int().min(1).default(1),
@@ -32,6 +35,7 @@ const listInput = z.object({
 const createInput = z.object({
   name: z.string().min(1).max(255),
   description: z.string().max(2000).optional(),
+  type: priceListType,
   isDefault: z.boolean().optional(),
   validFrom: z.coerce.date().optional(),
   validTo: z.coerce.date().optional(),
@@ -99,6 +103,7 @@ const lookupPriceInput = z.object({
   articleId: optionalUuid,
   itemKey: z.string().max(255).optional(),
   quantity: z.number().min(0).max(999999).optional(),
+  type: priceListType,
 })
 
 // --- Router ---
@@ -289,13 +294,14 @@ export const billingPriceListsRouter = createTRPCRouter({
   // --- Entries for Address (autocomplete) ---
   entriesForAddress: billingProcedure
     .use(requirePermission(PL_VIEW))
-    .input(z.object({ addressId: z.string().uuid() }))
+    .input(z.object({ addressId: z.string().uuid(), type: priceListType }))
     .query(async ({ ctx, input }) => {
       try {
         return await priceListService.entriesForAddress(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input.addressId
+          input.addressId,
+          input.type
         )
       } catch (err) {
         handleServiceError(err)

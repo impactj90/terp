@@ -306,7 +306,8 @@ model CrmAddress {
   discountDays    Int?           @map("discount_days")
   discountGroup   String?        @map("discount_group") @db.VarChar(50)
   ourCustomerNumber String?      @map("our_customer_number") @db.VarChar(50)
-  priceListId     String?        @map("price_list_id") @db.Uuid
+  salesPriceListId    String?    @map("sales_price_list_id") @db.Uuid
+  purchasePriceListId String?    @map("purchase_price_list_id") @db.Uuid
   isActive        Boolean        @default(true) @map("is_active")
   createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -323,7 +324,8 @@ model CrmAddress {
   billingDocumentsInvoice  BillingDocument[] @relation("InvoiceAddress")
   billingServiceCases      BillingServiceCase[]
   billingRecurringInvoices BillingRecurringInvoice[]
-  priceList                BillingPriceList?    @relation(fields: [priceListId], references: [id])
+  salesPriceList           BillingPriceList?    @relation("SalesPriceList", fields: [salesPriceListId], references: [id])
+  purchasePriceList        BillingPriceList?    @relation("PurchasePriceList", fields: [purchasePriceListId], references: [id])
   articleSuppliers         WhArticleSupplier[]
   purchaseOrders           WhPurchaseOrder[]
   supplierInvoices         WhSupplierInvoice[]
@@ -945,6 +947,7 @@ model BillingPriceList {
   tenantId    String   @map("tenant_id") @db.Uuid
   name        String
   description String?
+  type        String   @default("sales") @db.VarChar(20)
   isDefault   Boolean  @default(false) @map("is_default")
   validFrom   DateTime? @map("valid_from") @db.Timestamptz(6)
   validTo     DateTime? @map("valid_to") @db.Timestamptz(6)
@@ -953,12 +956,14 @@ model BillingPriceList {
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
   createdById String?  @map("created_by_id") @db.Uuid
 
-  tenant     Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  entries    BillingPriceListEntry[]
-  addresses  CrmAddress[]
+  tenant              Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  entries             BillingPriceListEntry[]
+  salesAddresses      CrmAddress[]           @relation("SalesPriceList")
+  purchaseAddresses   CrmAddress[]           @relation("PurchasePriceList")
 
   @@index([tenantId, isDefault])
   @@index([tenantId, isActive])
+  @@index([tenantId, type])
   @@map("billing_price_lists")
 }
 

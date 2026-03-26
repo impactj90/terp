@@ -87,7 +87,7 @@ describe("billing-price-list-service", () => {
     it("returns customer-specific price when customer has assigned price list", async () => {
       const prisma = createMockPrisma({
         crmAddress: {
-          findFirst: vi.fn().mockResolvedValue({ priceListId: PL_ID }),
+          findFirst: vi.fn().mockResolvedValue({ salesPriceListId: PL_ID, purchasePriceListId: null }),
         },
         billingPriceListEntry: {
           findMany: vi.fn().mockResolvedValue([mockEntry]),
@@ -107,7 +107,7 @@ describe("billing-price-list-service", () => {
     it("falls back to default price list when customer has no assigned list", async () => {
       const prisma = createMockPrisma({
         crmAddress: {
-          findFirst: vi.fn().mockResolvedValue({ priceListId: null }),
+          findFirst: vi.fn().mockResolvedValue({ salesPriceListId: null, purchasePriceListId: null }),
         },
         billingPriceList: {
           findFirst: vi.fn().mockResolvedValue(mockPriceList),
@@ -130,7 +130,7 @@ describe("billing-price-list-service", () => {
     it("falls back to default price list when customer list has no matching entry", async () => {
       const prisma = createMockPrisma({
         crmAddress: {
-          findFirst: vi.fn().mockResolvedValue({ priceListId: PL_ID_2 }),
+          findFirst: vi.fn().mockResolvedValue({ salesPriceListId: PL_ID_2, purchasePriceListId: null }),
         },
         billingPriceList: {
           findFirst: vi.fn().mockResolvedValue(mockPriceList),
@@ -154,7 +154,7 @@ describe("billing-price-list-service", () => {
     it("returns null if no match in customer list or default list", async () => {
       const prisma = createMockPrisma({
         crmAddress: {
-          findFirst: vi.fn().mockResolvedValue({ priceListId: null }),
+          findFirst: vi.fn().mockResolvedValue({ salesPriceListId: null, purchasePriceListId: null }),
         },
         billingPriceList: {
           findFirst: vi.fn().mockResolvedValue(null), // no default list
@@ -175,7 +175,7 @@ describe("billing-price-list-service", () => {
 
       const prisma = createMockPrisma({
         crmAddress: {
-          findFirst: vi.fn().mockResolvedValue({ priceListId: PL_ID }),
+          findFirst: vi.fn().mockResolvedValue({ salesPriceListId: PL_ID, purchasePriceListId: null }),
         },
         billingPriceListEntry: {
           findMany: vi.fn().mockResolvedValue([volumeEntry, baseEntry]),
@@ -198,7 +198,7 @@ describe("billing-price-list-service", () => {
 
       const prisma = createMockPrisma({
         crmAddress: {
-          findFirst: vi.fn().mockResolvedValue({ priceListId: PL_ID }),
+          findFirst: vi.fn().mockResolvedValue({ salesPriceListId: PL_ID, purchasePriceListId: null }),
         },
         billingPriceListEntry: {
           findMany: vi.fn().mockResolvedValue([volumeEntry, baseEntry]),

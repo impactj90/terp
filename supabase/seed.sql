@@ -3463,11 +3463,16 @@ ON CONFLICT (tenant_id, key) DO UPDATE SET next_value = GREATEST(number_sequence
 -- W6. Warehouse: Price Lists (3 lists with article entries)
 -- =============================================================
 
-INSERT INTO billing_price_lists (id, tenant_id, name, description, is_default, is_active, valid_from, valid_to, created_at, updated_at)
+INSERT INTO billing_price_lists (id, tenant_id, name, description, type, is_default, is_active, valid_from, valid_to, created_at, updated_at)
 VALUES
-  ('d5000000-0000-4000-a000-000000000001', '10000000-0000-0000-0000-000000000001', 'Standardpreise 2026', 'Allgemeine Verkaufspreise fuer Laufkundschaft', true, true, '2026-01-01T00:00:00Z', '2026-12-31T23:59:59Z', NOW(), NOW()),
-  ('d5000000-0000-4000-a000-000000000002', '10000000-0000-0000-0000-000000000001', 'Grosskunden -10%', 'Rabattierte Preise fuer Grosskunden mit Rahmenvertrag', false, true, '2026-01-01T00:00:00Z', NULL, NOW(), NOW()),
-  ('d5000000-0000-4000-a000-000000000003', '10000000-0000-0000-0000-000000000001', 'Messepreise Sommer 2026', 'Sonderpreise fuer Fachmesse Juni/Juli 2026', false, true, '2026-06-01T00:00:00Z', '2026-07-31T23:59:59Z', NOW(), NOW())
+  -- Sales price lists (type = 'sales')
+  ('d5000000-0000-4000-a000-000000000001', '10000000-0000-0000-0000-000000000001', 'Standardpreise 2026', 'Allgemeine Verkaufspreise fuer Laufkundschaft', 'sales', true, true, '2026-01-01T00:00:00Z', '2026-12-31T23:59:59Z', NOW(), NOW()),
+  ('d5000000-0000-4000-a000-000000000002', '10000000-0000-0000-0000-000000000001', 'Grosskunden -10%', 'Rabattierte Preise fuer Grosskunden mit Rahmenvertrag', 'sales', false, true, '2026-01-01T00:00:00Z', NULL, NOW(), NOW()),
+  ('d5000000-0000-4000-a000-000000000003', '10000000-0000-0000-0000-000000000001', 'Messepreise Sommer 2026', 'Sonderpreise fuer Fachmesse Juni/Juli 2026', 'sales', false, true, '2026-06-01T00:00:00Z', '2026-07-31T23:59:59Z', NOW(), NOW()),
+  -- Purchase price lists (type = 'purchase')
+  ('d5000000-0000-4000-a000-000000000011', '10000000-0000-0000-0000-000000000001', 'Standard-Einkauf 2026', 'Regulaere Einkaufskonditionen aller Lieferanten', 'purchase', true, true, '2026-01-01T00:00:00Z', '2026-12-31T23:59:59Z', NOW(), NOW()),
+  ('d5000000-0000-4000-a000-000000000012', '10000000-0000-0000-0000-000000000001', 'Stahl-Union Rahmenvertrag', 'Sonderkonditionen Stahl-Union lt. Rahmenvertrag 2026', 'purchase', false, true, '2026-01-01T00:00:00Z', NULL, NOW(), NOW()),
+  ('d5000000-0000-4000-a000-000000000013', '10000000-0000-0000-0000-000000000001', 'Elektro Braun Konditionen', 'Vereinbarte Einkaufskonditionen Elektro-Grosshandel Braun', 'purchase', false, true, '2026-01-01T00:00:00Z', NULL, NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 
 -- Standardpreise: all 10 articles at their regular sell_price
@@ -3521,6 +3526,71 @@ VALUES
   ('d6000000-0000-4000-a000-000000000046', 'd5000000-0000-4000-a000-000000000003', 'd2000000-0000-4000-a000-000000000006', 0.89, NULL, 'm', NOW(), NOW()),
   ('d6000000-0000-4000-a000-000000000047', 'd5000000-0000-4000-a000-000000000003', 'd2000000-0000-4000-a000-000000000007', 14.90, NULL, 'Stk', NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
+
+-- Standard-Einkauf 2026: buy prices from wh_article_suppliers (EK-Preise aller Lieferanten)
+INSERT INTO billing_price_list_entries (id, price_list_id, article_id, unit_price, min_quantity, unit, created_at, updated_at)
+VALUES
+  -- Befestigungsmaterial (von Stahl-Union)
+  ('d6000000-0000-4000-a000-000000000051', 'd5000000-0000-4000-a000-000000000011', 'd2000000-0000-4000-a000-000000000001', 0.12, NULL, 'Stk', NOW(), NOW()),
+  ('d6000000-0000-4000-a000-000000000052', 'd5000000-0000-4000-a000-000000000011', 'd2000000-0000-4000-a000-000000000004', 0.03, NULL, 'Stk', NOW(), NOW()),
+  ('d6000000-0000-4000-a000-000000000053', 'd5000000-0000-4000-a000-000000000011', 'd2000000-0000-4000-a000-000000000005', 0.01, NULL, 'Stk', NOW(), NOW()),
+  -- Elektromaterial (von Elektro Braun)
+  ('d6000000-0000-4000-a000-000000000054', 'd5000000-0000-4000-a000-000000000011', 'd2000000-0000-4000-a000-000000000006', 0.65, NULL, 'm', NOW(), NOW()),
+  ('d6000000-0000-4000-a000-000000000055', 'd5000000-0000-4000-a000-000000000011', 'd2000000-0000-4000-a000-000000000007', 9.80, NULL, 'Stk', NOW(), NOW()),
+  -- Werkzeuge (von Hoffmann)
+  ('d6000000-0000-4000-a000-000000000056', 'd5000000-0000-4000-a000-000000000011', 'd2000000-0000-4000-a000-000000000008', 42.00, NULL, 'Stk', NOW(), NOW()),
+  ('d6000000-0000-4000-a000-000000000057', 'd5000000-0000-4000-a000-000000000011', 'd2000000-0000-4000-a000-000000000009', 62.00, NULL, 'Set', NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- Stahl-Union Rahmenvertrag: Sonderkonditionen mit Mengenstaffel
+INSERT INTO billing_price_list_entries (id, price_list_id, article_id, unit_price, min_quantity, unit, created_at, updated_at)
+VALUES
+  -- Schrauben
+  ('d6000000-0000-4000-a000-000000000061', 'd5000000-0000-4000-a000-000000000012', 'd2000000-0000-4000-a000-000000000001', 0.10, NULL, 'Stk', NOW(), NOW()),
+  ('d6000000-0000-4000-a000-000000000062', 'd5000000-0000-4000-a000-000000000012', 'd2000000-0000-4000-a000-000000000001', 0.08, 1000, 'Stk', NOW(), NOW()),
+  ('d6000000-0000-4000-a000-000000000063', 'd5000000-0000-4000-a000-000000000012', 'd2000000-0000-4000-a000-000000000001', 0.06, 5000, 'Stk', NOW(), NOW()),
+  -- Muttern
+  ('d6000000-0000-4000-a000-000000000064', 'd5000000-0000-4000-a000-000000000012', 'd2000000-0000-4000-a000-000000000004', 0.025, NULL, 'Stk', NOW(), NOW()),
+  ('d6000000-0000-4000-a000-000000000065', 'd5000000-0000-4000-a000-000000000012', 'd2000000-0000-4000-a000-000000000004', 0.02, 1000, 'Stk', NOW(), NOW()),
+  -- Unterlegscheiben
+  ('d6000000-0000-4000-a000-000000000066', 'd5000000-0000-4000-a000-000000000012', 'd2000000-0000-4000-a000-000000000005', 0.008, NULL, 'Stk', NOW(), NOW()),
+  ('d6000000-0000-4000-a000-000000000067', 'd5000000-0000-4000-a000-000000000012', 'd2000000-0000-4000-a000-000000000005', 0.006, 2000, 'Stk', NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- Elektro Braun Konditionen: Einkaufspreise Elektromaterial
+INSERT INTO billing_price_list_entries (id, price_list_id, article_id, unit_price, min_quantity, unit, created_at, updated_at)
+VALUES
+  -- NYM-Kabel
+  ('d6000000-0000-4000-a000-000000000071', 'd5000000-0000-4000-a000-000000000013', 'd2000000-0000-4000-a000-000000000006', 0.60, NULL, 'm', NOW(), NOW()),
+  ('d6000000-0000-4000-a000-000000000072', 'd5000000-0000-4000-a000-000000000013', 'd2000000-0000-4000-a000-000000000006', 0.52, 100, 'm', NOW(), NOW()),
+  ('d6000000-0000-4000-a000-000000000073', 'd5000000-0000-4000-a000-000000000013', 'd2000000-0000-4000-a000-000000000006', 0.45, 500, 'm', NOW(), NOW()),
+  -- Leitungsschutzschalter
+  ('d6000000-0000-4000-a000-000000000074', 'd5000000-0000-4000-a000-000000000013', 'd2000000-0000-4000-a000-000000000007', 9.20, NULL, 'Stk', NOW(), NOW()),
+  ('d6000000-0000-4000-a000-000000000075', 'd5000000-0000-4000-a000-000000000013', 'd2000000-0000-4000-a000-000000000007', 8.50, 20, 'Stk', NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================
+-- W6b. Assign price lists to CRM addresses
+-- =============================================================
+
+-- Assign sales price lists to customers
+UPDATE crm_addresses SET sales_price_list_id = 'd5000000-0000-4000-a000-000000000001'
+  WHERE id = 'c1000000-0000-4000-a000-000000000001'; -- Mueller Maschinenbau → Standardpreise
+UPDATE crm_addresses SET sales_price_list_id = 'd5000000-0000-4000-a000-000000000002'
+  WHERE id = 'c1000000-0000-4000-a000-000000000002'; -- Schmidt & Partner → Grosskunden -10%
+UPDATE crm_addresses SET sales_price_list_id = 'd5000000-0000-4000-a000-000000000001'
+  WHERE id = 'c1000000-0000-4000-a000-000000000003'; -- Weber Elektrotechnik → Standardpreise
+
+-- Assign purchase price lists to suppliers
+UPDATE crm_addresses SET purchase_price_list_id = 'd5000000-0000-4000-a000-000000000012'
+  WHERE id = 'c1000000-0000-4000-a000-000000000011'; -- Stahl-Union → Rahmenvertrag
+UPDATE crm_addresses SET purchase_price_list_id = 'd5000000-0000-4000-a000-000000000013'
+  WHERE id = 'c1000000-0000-4000-a000-000000000013'; -- Elektro Braun → Braun Konditionen
+
+-- Hoffmann Werkzeuge (type=BOTH): both sales and purchase price list
+UPDATE crm_addresses SET sales_price_list_id = 'd5000000-0000-4000-a000-000000000002',
+                         purchase_price_list_id = 'd5000000-0000-4000-a000-000000000011'
+  WHERE id = 'c1000000-0000-4000-a000-000000000021'; -- Hoffmann → Grosskunden VK + Standard EK
 
 -- S4. Storage buckets for billing documents and tenant logos
 INSERT INTO storage.buckets (id, name, public)
