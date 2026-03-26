@@ -294,7 +294,7 @@ describe("billing-price-list-service", () => {
 
       await expect(
         service.remove(prisma, TENANT_ID, PL_ID)
-      ).rejects.toThrow(/Cannot delete price list assigned to 5 customer/)
+      ).rejects.toThrow(/Cannot delete price list assigned to 10 customer/)
     })
 
     it("throws not-found when price list does not exist", async () => {

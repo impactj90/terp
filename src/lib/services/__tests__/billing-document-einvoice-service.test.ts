@@ -67,6 +67,7 @@ function makeAddress(overrides: Partial<CrmAddress> = {}): CrmAddress {
     updatedAt: new Date(),
     ourCustomerNumber: null,
     createdById: null,
+    parentAddressId: null,
     ...overrides,
   }
 }

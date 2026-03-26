@@ -19,7 +19,8 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { MoreHorizontal, Eye, Edit, Trash2, RotateCcw } from 'lucide-react'
+import { MoreHorizontal, Eye, Edit, Trash2, RotateCcw, Building2 } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface CrmAddress {
   id: string
@@ -30,6 +31,8 @@ interface CrmAddress {
   phone: string | null
   email: string | null
   isActive: boolean
+  parentAddressId?: string | null
+  _count?: { childAddresses?: number }
 }
 
 interface AddressDataTableProps {
@@ -129,7 +132,21 @@ export function AddressDataTable({
               />
             </TableCell>
             <TableCell className="font-mono text-sm">{address.number}</TableCell>
-            <TableCell className="font-medium">{address.company}</TableCell>
+            <TableCell className="font-medium">
+              <span className="flex items-center gap-1.5">
+                {address.company}
+                {(address._count?.childAddresses ?? 0) > 0 && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {t('groupIndicatorTooltip', { count: address._count!.childAddresses! })}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </span>
+            </TableCell>
             <TableCell>
               <Badge variant={getTypeBadgeVariant(address.type)}>
                 {address.type === 'CUSTOMER'

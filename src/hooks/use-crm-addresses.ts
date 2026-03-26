@@ -100,6 +100,57 @@ export function useRestoreCrmAddress() {
   })
 }
 
+// ==================== Hierarchy Hooks ====================
+
+export function useCrmAddressHierarchy(id: string, enabled = true) {
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.crm.addresses.getHierarchy.queryOptions(
+      { id },
+      { enabled: enabled && !!id }
+    )
+  )
+}
+
+export function useSetCrmAddressParent() {
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.crm.addresses.setParent.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.crm.addresses.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.crm.addresses.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.crm.addresses.getHierarchy.queryKey(),
+      })
+    },
+  })
+}
+
+export function useCrmGroupList(enabled = true) {
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.crm.addresses.listGroups.queryOptions(
+      undefined,
+      { enabled }
+    )
+  )
+}
+
+export function useCrmGroupStats(parentId: string, dateFrom?: string, dateTo?: string, enabled = true) {
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.crm.addresses.getGroupStats.queryOptions(
+      { parentId, dateFrom, dateTo },
+      { enabled: enabled && !!parentId }
+    )
+  )
+}
+
 // ==================== Contact Hooks ====================
 
 export function useCrmContacts(addressId: string, enabled = true) {

@@ -903,17 +903,15 @@ describe("Phase 5: Taeglicher Betrieb", () => {
       expect(result.unread_count).toBeGreaterThanOrEqual(0)
     })
 
-    it("should mark all notifications as read", async () => {
-      const result = await adminCaller.notifications.markAllRead()
+    it("should mark all notifications as read and verify unread count is 0", async () => {
+      const markResult = await adminCaller.notifications.markAllRead()
 
-      expect(result.success).toBe(true)
-      expect(typeof result.count).toBe("number")
-    })
+      expect(markResult.success).toBe(true)
+      expect(typeof markResult.count).toBe("number")
 
-    it("should verify unread count is 0 after mark all read", async () => {
-      const result = await adminCaller.notifications.unreadCount()
+      const countResult = await adminCaller.notifications.unreadCount()
 
-      expect(result.unread_count).toBe(0)
+      expect(countResult.unread_count).toBe(0)
     })
 
     it("should create a notification and then mark it as read", async () => {

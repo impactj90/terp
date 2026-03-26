@@ -48,6 +48,9 @@ export async function findMany(
       orderBy: { company: "asc" },
       skip: (params.page - 1) * params.pageSize,
       take: params.pageSize,
+      include: {
+        _count: { select: { childAddresses: true } },
+      },
     }),
     prisma.crmAddress.count({ where }),
   ])
@@ -67,6 +70,14 @@ export async function findById(
       bankAccounts: { orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] },
       salesPriceList: { select: { id: true, name: true } },
       purchasePriceList: { select: { id: true, name: true } },
+      parentAddress: {
+        select: { id: true, company: true, number: true, type: true, city: true },
+      },
+      childAddresses: {
+        where: { isActive: true },
+        select: { id: true, company: true, number: true, type: true, city: true },
+        orderBy: { company: "asc" },
+      },
     },
   })
 }
@@ -260,6 +271,73 @@ export async function deleteBankAccount(
     where: { id, tenantId },
   })
   return count > 0
+}
+
+// --- Group listing (for reports) ---
+
+export async function findParentAddresses(
+  prisma: PrismaClient,
+  tenantId: string
+) {
+  return prisma.crmAddress.findMany({
+    where: {
+      tenantId,
+      isActive: true,
+      childAddresses: { some: {} },
+    },
+    select: {
+      id: true,
+      company: true,
+      number: true,
+      type: true,
+      city: true,
+      _count: { select: { childAddresses: true } },
+    },
+    orderBy: { company: "asc" },
+  })
+}
+
+// --- Hierarchy helpers ---
+
+export async function findParentId(
+  prisma: PrismaClient,
+  tenantId: string,
+  id: string
+) {
+  return prisma.crmAddress.findFirst({
+    where: { id, tenantId },
+    select: { parentAddressId: true },
+  })
+}
+
+export async function countChildren(
+  prisma: PrismaClient,
+  tenantId: string,
+  parentAddressId: string
+) {
+  return prisma.crmAddress.count({
+    where: { parentAddressId, tenantId },
+  })
+}
+
+export async function findByIdWithHierarchy(
+  prisma: PrismaClient,
+  tenantId: string,
+  id: string
+) {
+  return prisma.crmAddress.findFirst({
+    where: { id, tenantId },
+    include: {
+      parentAddress: {
+        select: { id: true, company: true, number: true, type: true, city: true },
+      },
+      childAddresses: {
+        where: { isActive: true },
+        select: { id: true, company: true, number: true, type: true, city: true },
+        orderBy: { company: "asc" },
+      },
+    },
+  })
 }
 
 // --- Counting helpers (for hard-delete checks) ---

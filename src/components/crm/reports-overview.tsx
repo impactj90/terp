@@ -20,6 +20,7 @@ import { ReportAddressStats } from './report-address-stats'
 import { ReportCorrespondenceChart } from './report-correspondence-chart'
 import { ReportInquiryPipeline } from './report-inquiry-pipeline'
 import { ReportTaskCompletion } from './report-task-completion'
+import { ReportGroupStats } from './report-group-stats'
 
 export function CrmReportsOverview() {
   const t = useTranslations('crmReports')
@@ -127,6 +128,7 @@ export function CrmReportsOverview() {
           </TabsTrigger>
           <TabsTrigger value="inquiries">{t('inquiryPipeline')}</TabsTrigger>
           <TabsTrigger value="tasks">{t('taskCompletion')}</TabsTrigger>
+          <TabsTrigger value="groups">{t('groupReport')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="addresses">
@@ -143,6 +145,10 @@ export function CrmReportsOverview() {
 
         <TabsContent value="tasks">
           <ReportTaskCompletion />
+        </TabsContent>
+
+        <TabsContent value="groups">
+          <ReportGroupStats />
         </TabsContent>
       </Tabs>
     </div>

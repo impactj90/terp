@@ -4200,6 +4200,8 @@ Tabelle mit Spalten:
 | **Status** | Badge: Aktiv (blau) / Inaktiv (grau) |
 | **Aktionen** | ⋯-Menü: Details, Bearbeiten, Deaktivieren/Wiederherstellen |
 
+💡 **Konzern-Indikator:** Adressen, die als Konzern fungieren (also Filialen/Tochtergesellschaften haben), zeigen ein kleines Gebäude-Icon neben dem Firmennamen. Beim Darüberfahren erscheint ein Tooltip: „Konzern mit X Filialen".
+
 **Filter:**
 - **Suchfeld**: Durchsucht Firma, Nummer, Matchcode und Ort gleichzeitig
 - **Typ-Filter**: Alle Typen / Kunde / Lieferant / Kunde & Lieferant
@@ -4253,6 +4255,60 @@ Adressen werden nicht gelöscht, sondern deaktiviert — sie bleiben im System e
 3. 📍 ⋯-Menü → **„Wiederherstellen"**
 4. ✅ Adresse ist wieder aktiv und erscheint in der Standardansicht
 
+#### Firmenverbund (Konzern-/Filialen-Zuordnung)
+
+**Was ist es?** Der Firmenverbund ermöglicht es, Adressen hierarchisch zu verknüpfen: Eine Adresse kann als „Konzernmutter" (übergeordnetes Unternehmen) fungieren, der andere Adressen als „Filialen" oder „Tochtergesellschaften" zugeordnet werden. Die Hierarchie ist auf maximal zwei Ebenen begrenzt (Konzern → Filiale).
+
+**Wozu dient es?** Durch die Konzernzuordnung können zusammengehörende Unternehmen gruppiert werden — z. B. „Mercedes Stuttgart" als Konzern mit „Mercedes Werk Sindelfingen" als Filiale. Dies ermöglicht aggregierte Umsatzauswertungen über den gesamten Firmenverbund.
+
+##### Filiale einem Konzern zuordnen
+
+1. 📍 Adresse öffnen (die als Filiale zugeordnet werden soll)
+2. ✅ Im Tab „Übersicht" erscheint die Karte **„Firmenverbund"**
+3. 📍 **„Firmenverbund zuordnen"**
+4. ✅ Suchdialog öffnet sich: „Konzern auswählen" — es werden sofort **die ersten 10 Adressen** gleichen Typs als Vorschläge angezeigt
+5. Optional: Firmennamen eingeben um die Liste zu filtern
+6. 📍 Gewünschten Konzern anklicken
+7. ✅ Zuordnung wird gespeichert, „Gehört zu: [Konzernname]" erscheint
+
+💡 **Hinweis:** Es gibt keinen separaten Schritt „Konzern anlegen". Eine Adresse wird automatisch zum Konzern, sobald ihr mindestens eine Filiale zugeordnet wird. Die Zuordnung erfolgt immer **von der Filiale aus**.
+
+💡 **Regeln:**
+- Die Suche zeigt nur Adressen vom **gleichen Typ** an (Kunde sieht nur Kunden, Lieferant nur Lieferanten; „Kunde & Lieferant" ist mit beiden kompatibel)
+- Maximal 2 Ebenen: Eine Filiale kann nicht selbst Filialen haben
+- Eine Adresse kann nicht sich selbst als Konzern zugeordnet werden
+
+##### Konzernzuordnung entfernen
+
+1. 📍 Filial-Adresse öffnen
+2. ✅ Karte „Firmenverbund" zeigt „Gehört zu: [Konzernname]"
+3. 📍 **✕**-Button neben dem Konzernnamen
+4. ✅ Bestätigungsdialog: „Möchten Sie die Konzernzuordnung wirklich entfernen?"
+5. 📍 „Bestätigen"
+6. ✅ Zuordnung entfernt, Adresse ist wieder eigenständig
+
+##### Konzern-Übersicht
+
+1. 📍 Konzern-Adresse öffnen
+2. ✅ Karte „Firmenverbund" zeigt:
+   - „Filialen / Tochtergesellschaften (X)" mit Liste aller zugeordneten Filialen
+   - Jede Filiale ist als Link anklickbar
+
+##### Praxisbeispiel: Mercedes Konzernstruktur
+
+1. 📍 CRM → Adressen → „Neue Adresse"
+2. Firma: „Mercedes-Benz AG", Typ: Kunde → „Anlegen"
+3. 📍 „Neue Adresse" → Firma: „Mercedes Werk Sindelfingen", Typ: Kunde → „Anlegen"
+4. 📍 „Mercedes Werk Sindelfingen" anklicken → Detailseite
+5. ✅ Karte „Firmenverbund" sichtbar
+6. 📍 **„Firmenverbund zuordnen"**
+7. ✅ Vorschlagsliste zeigt verfügbare Kunden-Adressen — „Mercedes-Benz AG" anklicken
+8. ✅ „Gehört zu: Mercedes-Benz AG (K-1)" wird angezeigt
+9. 📍 Zurück → „Mercedes-Benz AG" anklicken
+10. ✅ Karte „Firmenverbund" zeigt: „Filialen / Tochtergesellschaften (1)" mit „Mercedes Werk Sindelfingen"
+11. 📍 CRM → Auswertungen → Reiter **„Konzerne"**
+12. ✅ „Mercedes-Benz AG" erscheint mit 1 Filiale — Zeile anklicken zeigt Umsatzdetails
+
 #### Adressdetails
 
 📍 Zeile in der Tabelle anklicken → Detailseite
@@ -4271,6 +4327,7 @@ Die Detailseite hat **7 Tabs**:
 | **Zahlungsbedingungen** | Zahlungsziel, Skonto, Skontotage, Rabattgruppe |
 | **Lieferantendaten** | Unsere Kundennummer (nur bei Lieferanten/Kunde & Lieferant, nur wenn gepflegt) |
 | **Notizen** | Freitext (volle Breite, nur wenn vorhanden) |
+| **Firmenverbund** | Konzernzugehörigkeit: Anzeige des übergeordneten Konzerns (falls Filiale) oder Liste der Filialen (falls Konzern). Button „Konzernzuordnung ändern" zum Setzen/Entfernen der Zuordnung. |
 
 **Tab „Kontakte":** → Abschnitt 12.2
 
@@ -5047,7 +5104,7 @@ Beim Anlegen einer Aufgabe oder Nachricht erhalten alle zugewiesenen Mitarbeiter
 
 ### 12.11 Auswertungen
 
-**Was ist es?** Auswertungen bieten eine zentrale Berichts- und Analysesicht auf alle CRM-Daten. Das Dashboard zeigt Kennzahlen (KPIs) wie Gesamtzahl der Adressen, offene Anfragen, ausstehende Aufgaben und überfällige Termine auf einen Blick. Detaillierte Berichte liefern Statistiken zu Adressen (Verteilung nach Typ, aktiv/inaktiv), Korrespondenz (Verlauf nach Zeitraum und Typ), Anfragen (Pipeline nach Status, durchschnittliche Bearbeitungsdauer, Top-Kunden) und Aufgaben (Erledigungsquote, Bearbeitungsdauer, Verteilung pro Mitarbeiter).
+**Was ist es?** Auswertungen bieten eine zentrale Berichts- und Analysesicht auf alle CRM-Daten. Das Dashboard zeigt Kennzahlen (KPIs) wie Gesamtzahl der Adressen, offene Anfragen, ausstehende Aufgaben und überfällige Termine auf einen Blick. Detaillierte Berichte liefern Statistiken zu Adressen (Verteilung nach Typ, aktiv/inaktiv), Korrespondenz (Verlauf nach Zeitraum und Typ), Anfragen (Pipeline nach Status, durchschnittliche Bearbeitungsdauer, Top-Kunden), Aufgaben (Erledigungsquote, Bearbeitungsdauer, Verteilung pro Mitarbeiter) und Konzerne (aggregierte Umsatzauswertung über Firmenverbünde).
 
 **Wozu dient es?** Auswertungen ermöglichen einen schnellen Überblick über den aktuellen Stand des CRM: Wie viele Kunden sind aktiv? Wie viele Anfragen stehen offen? Werden Aufgaben rechtzeitig erledigt? Die Berichte helfen bei der Planung und Optimierung von Kundenbeziehungen und internen Arbeitsabläufen.
 
@@ -5118,6 +5175,44 @@ Optionaler Datumsfilter (Von / Bis) schränkt den Auswertungszeitraum ein.
 2. **Tabelle — Aufgaben pro Mitarbeiter:** Aufschlüsselung nach Mitarbeiter (Spalten: Name, Gesamt, Erledigt, Offen).
 
 Optionaler Datumsfilter (Von / Bis) schränkt den Auswertungszeitraum ein.
+
+#### Konzerne
+
+📍 Reiter **„Konzerne"**
+
+✅ Übersicht aller Firmenverbünde mit aggregierten Umsatzdaten. Dieser Reiter zeigt nur Daten, wenn mindestens eine Konzernzuordnung existiert (→ Abschnitt 12.1, „Firmenverbund").
+
+**Filter:**
+- **Von / Bis:** Datumsbereich für die Umsatzberechnung (optional — ohne Filter werden alle Belege berücksichtigt)
+
+**Bestandteile:**
+
+1. **Kennzahl-Karte — Konzerne gesamt:** Anzahl aller Konzerne (Adressen mit mindestens einer Filiale) und Gesamtzahl der Filialen.
+2. **Balkendiagramm — Filialen pro Konzern:** Zeigt die Anzahl der Filialen je Konzern.
+3. **Tabelle — Konzernübersicht:** Aufklappbare Tabelle mit Spalten:
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Konzern** | Firmenname (klickbar → Adressdetailseite) |
+| **Nummer** | Adressnummer |
+| **Filialen** | Anzahl zugeordneter Filialen |
+| **Umsatz (Netto)** | Aggregierter Nettoumsatz über alle Adressen des Verbunds (Rechnungen minus Gutschriften) |
+| **Umsatz (Brutto)** | Aggregierter Bruttoumsatz |
+| **Belege** | Anzahl der Belege (Rechnungen + Gutschriften) |
+
+📍 Konzernzeile anklicken → Zeile klappt auf und zeigt alle zugeordneten Filialen mit Name und Nummer. Die Umsatzdaten werden erst beim Aufklappen geladen.
+
+💡 **Hinweis:** Die Umsatzberechnung basiert auf finalisierten Rechnungen und Gutschriften (nicht storniert). Rechnungen addieren, Gutschriften subtrahieren. Es werden sowohl Belege der Muttergesellschaft als auch aller Filialen berücksichtigt.
+
+##### Praxisbeispiel: Konzern-Umsatzauswertung
+
+1. 📍 CRM → Auswertungen → Reiter **„Konzerne"**
+2. ✅ Tabelle zeigt alle Konzerne mit Filialanzahl
+3. 📍 Zeile „Mercedes-Benz AG" anklicken
+4. ✅ Zeile klappt auf: Umsatz (Netto/Brutto), Beleganzahl werden geladen
+5. ✅ Darunter erscheint „Mercedes Werk Sindelfingen" als Filiale
+6. Optional: Datumsfilter „Von: 01.01.2026" / „Bis: 31.12.2026" setzen
+7. ✅ Umsätze werden auf den gewählten Zeitraum eingeschränkt
 
 ---
 

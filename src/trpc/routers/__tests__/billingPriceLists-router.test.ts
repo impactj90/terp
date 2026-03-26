@@ -227,7 +227,7 @@ describe("billing.priceLists.delete", () => {
     }
     const caller = createCaller(createTestContext(prisma))
     await expect(caller.delete({ id: PL_ID })).rejects.toThrow(
-      /assigned to 3 customer/
+      /assigned to 6 customer/
     )
   })
 })

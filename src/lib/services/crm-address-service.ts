@@ -11,6 +11,7 @@ const ADDRESS_TRACKED_FIELDS = [
   "email", "website", "taxNumber", "vatId", "leitwegId", "matchCode", "notes",
   "paymentTermDays", "discountPercent", "discountDays", "discountGroup",
   "ourCustomerNumber", "salesPriceListId", "purchasePriceListId", "isActive",
+  "parentAddressId",
 ]
 
 const CONTACT_TRACKED_FIELDS = [
@@ -41,6 +42,29 @@ export function generateLetterSalutation(
   }
   // "Divers" or unknown — no auto-generation
   return ""
+}
+
+// --- Hierarchy Helpers ---
+
+async function checkCircularReference(
+  prisma: PrismaClient,
+  tenantId: string,
+  addressId: string,
+  proposedParentId: string
+): Promise<boolean> {
+  const visited = new Set<string>([addressId])
+  let current: string | null = proposedParentId
+
+  while (current !== null) {
+    if (visited.has(current)) return true
+    visited.add(current)
+
+    const record = await repo.findParentId(prisma, tenantId, current)
+    if (!record) break
+    current = record.parentAddressId
+  }
+
+  return false
 }
 
 // --- Error Classes ---
@@ -314,6 +338,208 @@ export async function restoreAddress(
   }
 
   return restored
+}
+
+// --- Hierarchy Service Functions ---
+
+export async function setParentAddress(
+  prisma: PrismaClient,
+  tenantId: string,
+  addressId: string,
+  parentAddressId: string | null,
+  audit?: AuditContext
+) {
+  // 1. Load the address
+  const address = await repo.findById(prisma, tenantId, addressId)
+  if (!address) {
+    throw new CrmAddressNotFoundError()
+  }
+
+  // If clearing the parent, just update and return
+  if (parentAddressId === null) {
+    const updated = await repo.update(prisma, tenantId, addressId, { parentAddressId: null })
+
+    if (audit) {
+      const changes = auditLog.computeChanges(
+        address as unknown as Record<string, unknown>,
+        updated as unknown as Record<string, unknown>,
+        ADDRESS_TRACKED_FIELDS
+      )
+      await auditLog.log(prisma, {
+        tenantId, userId: audit.userId, action: "update", entityType: "crm_address",
+        entityId: addressId, entityName: address.company ?? null, changes,
+        ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+      }).catch(err => console.error('[AuditLog] Failed:', err))
+    }
+
+    return updated
+  }
+
+  // 2. Self-reference check
+  if (parentAddressId === addressId) {
+    throw new CrmAddressValidationError("An address cannot be its own parent")
+  }
+
+  // 3. Load the proposed parent
+  const parent = await repo.findById(prisma, tenantId, parentAddressId)
+  if (!parent) {
+    throw new CrmAddressValidationError("Parent address not found in this tenant")
+  }
+
+  // 4. Same-type check (BOTH is compatible with both CUSTOMER and SUPPLIER)
+  const typesCompatible =
+    address.type === parent.type ||
+    address.type === "BOTH" ||
+    parent.type === "BOTH"
+  if (!typesCompatible) {
+    throw new CrmAddressValidationError(
+      "Parent and child address must be of the same type"
+    )
+  }
+
+  // 5. Max depth check: parent must not itself have a parent (max 2 levels)
+  if (parent.parentAddressId !== null) {
+    throw new CrmAddressValidationError(
+      "Maximum hierarchy depth of 2 levels exceeded. The selected parent is already a subsidiary."
+    )
+  }
+
+  // 6. Max depth check: this address must not have children (if it becomes a child, it can't have children)
+  const childCount = await repo.countChildren(prisma, tenantId, addressId)
+  if (childCount > 0) {
+    throw new CrmAddressValidationError(
+      "This address has subsidiaries and cannot be assigned as a subsidiary itself. Remove its subsidiaries first."
+    )
+  }
+
+  // 7. Circular reference check (defense in depth, covered by depth checks above for max 2 levels)
+  const isCircular = await checkCircularReference(prisma, tenantId, addressId, parentAddressId)
+  if (isCircular) {
+    throw new CrmAddressValidationError("Circular reference detected")
+  }
+
+  // 8. Update parentAddressId
+  const updated = await repo.update(prisma, tenantId, addressId, { parentAddressId })
+
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      address as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      ADDRESS_TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "update", entityType: "crm_address",
+      entityId: addressId, entityName: address.company ?? null, changes,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
+}
+
+export async function getHierarchy(
+  prisma: PrismaClient,
+  tenantId: string,
+  addressId: string
+) {
+  const address = await repo.findByIdWithHierarchy(prisma, tenantId, addressId)
+  if (!address) {
+    throw new CrmAddressNotFoundError()
+  }
+  return address
+}
+
+export async function listGroups(
+  prisma: PrismaClient,
+  tenantId: string
+) {
+  return repo.findParentAddresses(prisma, tenantId)
+}
+
+export async function getGroupStats(
+  prisma: PrismaClient,
+  tenantId: string,
+  parentAddressId: string,
+  dateFrom?: string,
+  dateTo?: string
+) {
+  // Verify parent exists and is in this tenant
+  const parent = await repo.findById(prisma, tenantId, parentAddressId)
+  if (!parent) {
+    throw new CrmAddressNotFoundError()
+  }
+
+  // Get all child address IDs
+  const children = await prisma.crmAddress.findMany({
+    where: { tenantId, parentAddressId, isActive: true },
+    select: { id: true, company: true, number: true },
+  })
+
+  const allAddressIds = [parentAddressId, ...children.map(c => c.id)]
+
+  // Build date filter
+  const dateFilter: Record<string, unknown> = {}
+  if (dateFrom) {
+    dateFilter.gte = new Date(dateFrom)
+  }
+  if (dateTo) {
+    dateFilter.lte = new Date(dateTo)
+  }
+
+  // Aggregate revenue: INVOICE adds, CREDIT_NOTE subtracts
+  const invoiceWhere: Record<string, unknown> = {
+    tenantId,
+    addressId: { in: allAddressIds },
+    type: "INVOICE",
+    status: { not: "CANCELLED" },
+  }
+  if (dateFrom || dateTo) {
+    invoiceWhere.documentDate = dateFilter
+  }
+
+  const creditWhere: Record<string, unknown> = {
+    tenantId,
+    addressId: { in: allAddressIds },
+    type: "CREDIT_NOTE",
+    status: { not: "CANCELLED" },
+  }
+  if (dateFrom || dateTo) {
+    creditWhere.documentDate = dateFilter
+  }
+
+  const [invoiceAgg, creditAgg, documentCount] = await Promise.all([
+    prisma.billingDocument.aggregate({
+      where: invoiceWhere,
+      _sum: { subtotalNet: true, totalGross: true },
+    }),
+    prisma.billingDocument.aggregate({
+      where: creditWhere,
+      _sum: { subtotalNet: true, totalGross: true },
+    }),
+    prisma.billingDocument.count({
+      where: {
+        tenantId,
+        addressId: { in: allAddressIds },
+        type: { in: ["INVOICE", "CREDIT_NOTE"] },
+        status: { not: "CANCELLED" },
+        ...(dateFrom || dateTo ? { documentDate: dateFilter } : {}),
+      },
+    }),
+  ])
+
+  const totalNet = (invoiceAgg._sum.subtotalNet ?? 0) - (creditAgg._sum.subtotalNet ?? 0)
+  const totalGross = (invoiceAgg._sum.totalGross ?? 0) - (creditAgg._sum.totalGross ?? 0)
+
+  return {
+    parentAddress: { id: parent.id, company: parent.company, number: parent.number },
+    childCount: children.length,
+    children: children.map(c => ({ id: c.id, company: c.company, number: c.number })),
+    revenue: {
+      totalNet: Math.round(totalNet * 100) / 100,
+      totalGross: Math.round(totalGross * 100) / 100,
+      documentCount,
+    },
+  }
 }
 
 // --- Contact Service Functions ---

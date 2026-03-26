@@ -27,6 +27,7 @@ const CRM_DELETE = permissionIdByKey("crm_addresses.delete")!
 const TENANT_ID = "a0000000-0000-4000-a000-000000000100"
 const USER_ID = "a0000000-0000-4000-a000-000000000001"
 const ADDRESS_ID = "b0000000-0000-4000-b000-000000000001"
+const PARENT_ADDRESS_ID = "b0000000-0000-4000-b000-000000000002"
 const CONTACT_ID = "c0000000-0000-4000-a000-000000000001"
 const BANK_ACCOUNT_ID = "d0000000-0000-4000-b000-000000000001"
 
@@ -95,8 +96,21 @@ const mockAddress = {
   createdAt: new Date(),
   updatedAt: new Date(),
   createdById: USER_ID,
+  parentAddressId: null,
+  parentAddress: null,
+  childAddresses: [],
   contacts: [],
   bankAccounts: [],
+}
+
+const mockParentAddress = {
+  ...mockAddress,
+  id: PARENT_ADDRESS_ID,
+  company: "Konzern GmbH",
+  number: "K-2",
+  parentAddressId: null,
+  parentAddress: null,
+  childAddresses: [],
 }
 
 // --- crm.addresses.list tests ---
@@ -551,5 +565,208 @@ describe("crm.addresses.bankAccountsCreate", () => {
     })
 
     expect(result.iban).toBe("DE89370400440532013000")
+  })
+})
+
+// --- crm.addresses.setParent tests ---
+
+describe("crm.addresses.setParent", () => {
+  it("sets parent address", async () => {
+    const prisma = {
+      crmAddress: {
+        findFirst: vi.fn()
+          .mockResolvedValueOnce({ ...mockAddress, parentAddressId: null }) // findById for child
+          .mockResolvedValueOnce({ ...mockParentAddress }) // findById for parent
+          .mockResolvedValueOnce({ parentAddressId: null }) // findParentId (circular check)
+          .mockResolvedValueOnce({ ...mockAddress, parentAddressId: PARENT_ADDRESS_ID }), // refetch after update
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        count: vi.fn().mockResolvedValue(0), // countChildren
+      },
+    }
+
+    const caller = createCaller(createTestContext(prisma))
+    const result = await caller.setParent({
+      id: ADDRESS_ID,
+      parentAddressId: PARENT_ADDRESS_ID,
+    })
+
+    expect(result.parentAddressId).toBe(PARENT_ADDRESS_ID)
+  })
+
+  it("removes parent address when null", async () => {
+    const prisma = {
+      crmAddress: {
+        findFirst: vi.fn()
+          .mockResolvedValueOnce({ ...mockAddress, parentAddressId: PARENT_ADDRESS_ID }) // findById
+          .mockResolvedValueOnce({ ...mockAddress, parentAddressId: null }), // refetch after update
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+    }
+
+    const caller = createCaller(createTestContext(prisma))
+    const result = await caller.setParent({
+      id: ADDRESS_ID,
+      parentAddressId: null,
+    })
+
+    expect(result.parentAddressId).toBeNull()
+  })
+
+  it("rejects self-reference", async () => {
+    const prisma = {
+      crmAddress: {
+        findFirst: vi.fn().mockResolvedValue(mockAddress),
+      },
+    }
+
+    const caller = createCaller(createTestContext(prisma))
+    await expect(
+      caller.setParent({ id: ADDRESS_ID, parentAddressId: ADDRESS_ID })
+    ).rejects.toThrow()
+  })
+
+  it("rejects when parent is already a subsidiary", async () => {
+    const prisma = {
+      crmAddress: {
+        findFirst: vi.fn()
+          .mockResolvedValueOnce({ ...mockAddress }) // findById for child
+          .mockResolvedValueOnce({ ...mockParentAddress, parentAddressId: "some-grandparent" }), // parent has a parent
+        count: vi.fn().mockResolvedValue(0),
+      },
+    }
+
+    const caller = createCaller(createTestContext(prisma))
+    await expect(
+      caller.setParent({ id: ADDRESS_ID, parentAddressId: PARENT_ADDRESS_ID })
+    ).rejects.toThrow()
+  })
+
+  it("rejects when address has children (would exceed depth)", async () => {
+    const prisma = {
+      crmAddress: {
+        findFirst: vi.fn()
+          .mockResolvedValueOnce({ ...mockAddress }) // findById for child
+          .mockResolvedValueOnce({ ...mockParentAddress }), // findById for parent
+        count: vi.fn().mockResolvedValue(3), // has 3 children
+      },
+    }
+
+    const caller = createCaller(createTestContext(prisma))
+    await expect(
+      caller.setParent({ id: ADDRESS_ID, parentAddressId: PARENT_ADDRESS_ID })
+    ).rejects.toThrow()
+  })
+
+  it("rejects cross-type assignment (customer to supplier)", async () => {
+    const prisma = {
+      crmAddress: {
+        findFirst: vi.fn()
+          .mockResolvedValueOnce({ ...mockAddress, type: "CUSTOMER" }) // child is customer
+          .mockResolvedValueOnce({ ...mockParentAddress, type: "SUPPLIER" }), // parent is supplier
+        count: vi.fn().mockResolvedValue(0),
+      },
+    }
+
+    const caller = createCaller(createTestContext(prisma))
+    await expect(
+      caller.setParent({ id: ADDRESS_ID, parentAddressId: PARENT_ADDRESS_ID })
+    ).rejects.toThrow()
+  })
+
+  it("rejects without crm_addresses.edit permission", async () => {
+    const prisma = { crmAddress: {} }
+    const caller = createCaller(createTestContext(prisma, [CRM_VIEW]))
+
+    await expect(
+      caller.setParent({ id: ADDRESS_ID, parentAddressId: PARENT_ADDRESS_ID })
+    ).rejects.toThrow("Insufficient permissions")
+  })
+})
+
+// --- crm.addresses.getHierarchy tests ---
+
+describe("crm.addresses.getHierarchy", () => {
+  it("returns address with parent and children", async () => {
+    const addressWithHierarchy = {
+      ...mockAddress,
+      parentAddress: { id: PARENT_ADDRESS_ID, company: "Konzern GmbH", number: "K-2", type: "CUSTOMER", city: "Berlin" },
+      childAddresses: [],
+    }
+
+    const prisma = {
+      crmAddress: {
+        findFirst: vi.fn().mockResolvedValue(addressWithHierarchy),
+      },
+    }
+
+    const caller = createCaller(createTestContext(prisma))
+    const result = await caller.getHierarchy({ id: ADDRESS_ID })
+
+    expect(result.parentAddress?.company).toBe("Konzern GmbH")
+  })
+
+  it("returns empty hierarchy for standalone address", async () => {
+    const prisma = {
+      crmAddress: {
+        findFirst: vi.fn().mockResolvedValue({
+          ...mockAddress,
+          parentAddress: null,
+          childAddresses: [],
+        }),
+      },
+    }
+
+    const caller = createCaller(createTestContext(prisma))
+    const result = await caller.getHierarchy({ id: ADDRESS_ID })
+
+    expect(result.parentAddress).toBeNull()
+    expect(result.childAddresses).toHaveLength(0)
+  })
+
+  it("rejects without crm_addresses.view permission", async () => {
+    const prisma = { crmAddress: {} }
+    const caller = createCaller(createNoPermContext(prisma))
+
+    await expect(
+      caller.getHierarchy({ id: ADDRESS_ID })
+    ).rejects.toThrow("Insufficient permissions")
+  })
+})
+
+// --- crm.addresses.getGroupStats tests ---
+
+describe("crm.addresses.getGroupStats", () => {
+  it("returns aggregated revenue for group", async () => {
+    const prisma = {
+      crmAddress: {
+        findFirst: vi.fn().mockResolvedValue(mockParentAddress), // parent exists
+        findMany: vi.fn().mockResolvedValue([
+          { id: ADDRESS_ID, company: "Filiale 1", number: "K-3" },
+        ]),
+      },
+      billingDocument: {
+        aggregate: vi.fn()
+          .mockResolvedValueOnce({ _sum: { subtotalNet: 10000, totalGross: 11900 } }) // invoices
+          .mockResolvedValueOnce({ _sum: { subtotalNet: 500, totalGross: 595 } }), // credit notes
+        count: vi.fn().mockResolvedValue(15),
+      },
+    }
+
+    const caller = createCaller(createTestContext(prisma))
+    const result = await caller.getGroupStats({ parentId: PARENT_ADDRESS_ID })
+
+    expect(result.revenue.totalNet).toBe(9500)
+    expect(result.revenue.totalGross).toBe(11305)
+    expect(result.revenue.documentCount).toBe(15)
+    expect(result.childCount).toBe(1)
+  })
+
+  it("rejects without crm_addresses.view permission", async () => {
+    const prisma = { crmAddress: {}, billingDocument: {} }
+    const caller = createCaller(createNoPermContext(prisma))
+
+    await expect(
+      caller.getGroupStats({ parentId: PARENT_ADDRESS_ID })
+    ).rejects.toThrow("Insufficient permissions")
   })
 })

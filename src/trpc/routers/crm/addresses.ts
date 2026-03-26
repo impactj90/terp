@@ -168,6 +168,77 @@ export const crmAddressesRouter = createTRPCRouter({
       }
     }),
 
+  // --- Hierarchy Procedures ---
+
+  setParent: crmProcedure
+    .use(requirePermission(CRM_EDIT))
+    .input(z.object({
+      id: z.string().uuid(),
+      parentAddressId: z.string().uuid().nullable(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await crmAddressService.setParentAddress(
+          ctx.prisma as unknown as PrismaClient,
+          ctx.tenantId!,
+          input.id,
+          input.parentAddressId,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
+        )
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  getHierarchy: crmProcedure
+    .use(requirePermission(CRM_VIEW))
+    .input(z.object({ id: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      try {
+        return await crmAddressService.getHierarchy(
+          ctx.prisma as unknown as PrismaClient,
+          ctx.tenantId!,
+          input.id
+        )
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  listGroups: crmProcedure
+    .use(requirePermission(CRM_VIEW))
+    .query(async ({ ctx }) => {
+      try {
+        return await crmAddressService.listGroups(
+          ctx.prisma as unknown as PrismaClient,
+          ctx.tenantId!
+        )
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  getGroupStats: crmProcedure
+    .use(requirePermission(CRM_VIEW))
+    .input(z.object({
+      parentId: z.string().uuid(),
+      dateFrom: z.string().optional(),
+      dateTo: z.string().optional(),
+    }))
+    .query(async ({ ctx, input }) => {
+      try {
+        return await crmAddressService.getGroupStats(
+          ctx.prisma as unknown as PrismaClient,
+          ctx.tenantId!,
+          input.parentId,
+          input.dateFrom,
+          input.dateTo
+        )
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
   // --- Contact Sub-Procedures ---
 
   contactsList: crmProcedure

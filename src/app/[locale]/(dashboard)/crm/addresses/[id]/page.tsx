@@ -29,6 +29,7 @@ import { InquiryList } from '@/components/crm/inquiry-list'
 import { TaskList } from '@/components/crm/task-list'
 import { BillingDocumentList } from '@/components/billing/document-list'
 import { ServiceCaseList } from '@/components/billing/service-case-list'
+import { AddressGroupSection } from '@/components/crm/address-group-section'
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -44,6 +45,7 @@ export default function CrmAddressDetailPage() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
   const { allowed: canAccess } = useHasPermission(['crm_addresses.view'])
+  const { allowed: canEdit } = useHasPermission(['crm_addresses.edit'])
 
   const { data: address, isLoading } = useCrmAddress(params.id, canAccess !== false)
 
@@ -275,6 +277,14 @@ export default function CrmAddressDetailPage() {
                 </CardContent>
               </Card>
             )}
+
+            <AddressGroupSection
+              addressId={address.id}
+              addressType={address.type}
+              parentAddress={(address as unknown as { parentAddress: { id: string; company: string; number: string; type: string; city: string | null } | null }).parentAddress ?? null}
+              childAddresses={(address as unknown as { childAddresses: Array<{ id: string; company: string; number: string; type: string; city: string | null }> }).childAddresses ?? []}
+              canEdit={canEdit !== false}
+            />
           </div>
         </TabsContent>
 

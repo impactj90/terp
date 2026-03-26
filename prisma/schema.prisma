@@ -312,8 +312,11 @@ model CrmAddress {
   createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
   createdById     String?        @map("created_by_id") @db.Uuid
+  parentAddressId String?        @map("parent_address_id") @db.Uuid
 
   tenant          Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parentAddress   CrmAddress?          @relation("AddressHierarchy", fields: [parentAddressId], references: [id], onDelete: SetNull)
+  childAddresses  CrmAddress[]         @relation("AddressHierarchy")
   contacts        CrmContact[]
   bankAccounts    CrmBankAccount[]
   correspondences CrmCorrespondence[]
@@ -335,6 +338,7 @@ model CrmAddress {
   @@index([tenantId, type], map: "idx_crm_addresses_tenant_type")
   @@index([tenantId, matchCode], map: "idx_crm_addresses_tenant_match_code")
   @@index([tenantId, company], map: "idx_crm_addresses_tenant_company")
+  @@index([tenantId, parentAddressId], map: "idx_crm_addresses_parent_address")
   @@map("crm_addresses")
 }
 
