@@ -240,7 +240,7 @@ export function SupplierInvoiceFormSheet({ open, onOpenChange, invoice }: Suppli
             <SheetDescription />
           </SheetHeader>
 
-          <div className="grid gap-4 py-4 px-4">
+          <div className="grid gap-4 py-4">
             {/* Supplier */}
             {!isEdit && (
               <div className="grid gap-2">
@@ -423,7 +423,7 @@ export function SupplierInvoiceFormSheet({ open, onOpenChange, invoice }: Suppli
             </div>
           </div>
 
-          <SheetFooter className="px-4">
+          <SheetFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t('cancel')}
             </Button>

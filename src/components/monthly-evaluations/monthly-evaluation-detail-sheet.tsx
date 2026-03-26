@@ -103,7 +103,7 @@ export function MonthlyEvaluationDetailSheet({
             <Skeleton className="h-4 w-1/2" />
           </div>
         ) : item ? (
-          <ScrollArea className="flex-1 -mx-4 px-4">
+          <ScrollArea className="flex-1 -mx-6 px-6">
             <div className="space-y-6 py-4">
               {/* Header with icon, name, and badges */}
               <div className="flex items-center gap-4">

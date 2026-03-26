@@ -76,7 +76,7 @@ export function ShiftDetailSheet({
             <Skeleton className="h-4 w-1/2" />
           </div>
         ) : shift ? (
-          <ScrollArea className="flex-1 -mx-4 px-4">
+          <ScrollArea className="flex-1 -mx-6 px-6">
             <div className="space-y-6 py-4">
               {/* Header with color swatch, icon and status */}
               <div className="flex items-center gap-4">

@@ -377,7 +377,7 @@ export function UserGroupFormSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <ScrollArea className="flex-1 min-h-0 -mx-4 px-4">
+        <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
           <div className="space-y-6 py-4">
             {isSystem && (
               <Alert>

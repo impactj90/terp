@@ -184,7 +184,7 @@ export function TeamDetailSheet({
               </div>
             </SheetHeader>
 
-            <ScrollArea className="flex-1 -mx-4 px-4">
+            <ScrollArea className="flex-1 -mx-6 px-6">
               <div className="py-4 space-y-1">
                 {/* Organization */}
                 <SectionHeader>{t('sectionOrganization')}</SectionHeader>

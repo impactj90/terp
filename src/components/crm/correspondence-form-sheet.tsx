@@ -23,8 +23,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Loader2 } from 'lucide-react'
-import { useCreateCrmCorrespondence, useUpdateCrmCorrespondence } from '@/hooks'
+import { useCreateCrmCorrespondence, useUpdateCrmCorrespondence, useCrmCorrespondenceAttachments } from '@/hooks'
 import { toast } from 'sonner'
+import { CorrespondenceAttachmentList } from './correspondence-attachment-list'
+import { CorrespondenceAttachmentUpload } from './correspondence-attachment-upload'
 
 interface FormState {
   direction: 'INCOMING' | 'OUTGOING' | 'INTERNAL'
@@ -166,7 +168,7 @@ export function CorrespondenceFormSheet({
           <SheetDescription>{''}</SheetDescription>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto min-h-0 -mx-4 px-4">
+        <div className="flex-1 overflow-y-auto min-h-0 -mx-6 px-6">
           <div className="space-y-6 py-4">
             {/* Basic Data */}
             <div className="space-y-4">
@@ -290,6 +292,20 @@ export function CorrespondenceFormSheet({
               </div>
             </div>
 
+            {/* Attachments -- only in edit mode */}
+            {isEdit && editItem?.id && (
+              <CorrespondenceAttachmentSection
+                correspondenceId={editItem.id as string}
+                disabled={isSubmitting}
+                t={t}
+              />
+            )}
+
+            {/* Hint in create mode */}
+            {!isEdit && (
+              <p className="text-xs text-muted-foreground">{t('attachmentsHintCreate')}</p>
+            )}
+
             {error && (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
@@ -309,5 +325,33 @@ export function CorrespondenceFormSheet({
         </SheetFooter>
       </SheetContent>
     </Sheet>
+  )
+}
+
+/** Wrapper component to use hooks for attachments (hooks can't be called conditionally) */
+function CorrespondenceAttachmentSection({
+  correspondenceId,
+  disabled,
+  t,
+}: {
+  correspondenceId: string
+  disabled: boolean
+  t: ReturnType<typeof useTranslations<'crmCorrespondence'>>
+}) {
+  const { data: attachments } = useCrmCorrespondenceAttachments(correspondenceId)
+  const currentCount = attachments?.length ?? 0
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-sm font-medium text-muted-foreground">
+        {t('attachmentSection')}
+      </h3>
+      <CorrespondenceAttachmentList correspondenceId={correspondenceId} />
+      <CorrespondenceAttachmentUpload
+        correspondenceId={correspondenceId}
+        disabled={disabled}
+        currentCount={currentCount}
+      />
+    </div>
   )
 }

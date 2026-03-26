@@ -151,7 +151,7 @@ export function MemberManagementSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex-1 flex flex-col min-h-0 -mx-4 px-4">
+        <div className="flex-1 flex flex-col min-h-0 -mx-6 px-6">
           {/* Error */}
           {error && (
             <Alert variant="destructive" className="mb-4">
