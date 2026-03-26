@@ -38,7 +38,7 @@ function p(
 }
 
 /**
- * All 93 permissions, mirroring Go's allPermissions slice.
+ * All 95 permissions, mirroring Go's allPermissions slice.
  * Order matches the Go source file for easy comparison.
  */
 export const ALL_PERMISSIONS: Permission[] = [
@@ -307,6 +307,10 @@ export const ALL_PERMISSIONS: Permission[] = [
   // Warehouse Reservations
   p("wh_reservations.view", "wh_reservations", "view", "View stock reservations"),
   p("wh_reservations.manage", "wh_reservations", "manage", "Manage/release stock reservations"),
+
+  // Warehouse QR Scanner
+  p("wh_qr.scan", "wh_qr", "scan", "Use QR scanner for warehouse operations"),
+  p("wh_qr.print", "wh_qr", "print", "Print QR code labels"),
 ]
 
 // Lookup maps

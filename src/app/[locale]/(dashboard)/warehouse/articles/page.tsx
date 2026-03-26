@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Plus } from 'lucide-react'
+import { Plus, QrCode } from 'lucide-react'
 import { toast } from 'sonner'
 import { useHasPermission } from '@/hooks'
 import {
@@ -11,6 +11,10 @@ import {
   useDeleteWhArticle,
   useRestoreWhArticle,
 } from '@/hooks'
+import {
+  useGenerateLabelPdf,
+  useGenerateAllLabelsPdf,
+} from '@/hooks/use-wh-qr'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { SearchInput } from '@/components/ui/search-input'
@@ -35,6 +39,10 @@ export default function WhArticlesPage() {
   const [activeFilter, setActiveFilter] = React.useState(true)
   const [belowMinStock, setBelowMinStock] = React.useState(false)
 
+  // Selection state for QR label printing
+  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set())
+  const [confirmPrintAllOpen, setConfirmPrintAllOpen] = React.useState(false)
+
   // Dialog state
   const [createOpen, setCreateOpen] = React.useState(false)
   const [editArticle, setEditArticle] = React.useState<Record<string, unknown> | null>(null)
@@ -53,6 +61,8 @@ export default function WhArticlesPage() {
 
   const deleteMutation = useDeleteWhArticle()
   const restoreMutation = useRestoreWhArticle()
+  const generateLabelPdf = useGenerateLabelPdf()
+  const generateAllLabelsPdf = useGenerateAllLabelsPdf()
 
   function handleView(article: { id: string }) {
     router.push(`/warehouse/articles/${article.id}`)
@@ -70,6 +80,58 @@ export default function WhArticlesPage() {
         onError: (err) => toast.error(err.message),
       }
     )
+  }
+
+  function handlePrintLabels() {
+    if (selectedIds.size > 0) {
+      // Print selected articles
+      toast.info(t('toastLabelPdfGenerating'))
+      generateLabelPdf.mutate(
+        { articleIds: Array.from(selectedIds) },
+        {
+          onSuccess: (result) => {
+            if (result?.signedUrl) {
+              toast.success(t('toastLabelPdfReady'))
+              triggerPdfDownload(result.signedUrl, result.filename)
+            }
+          },
+          onError: () => toast.error(t('toastLabelPdfError')),
+        }
+      )
+    } else {
+      // No selection -> confirm to print all
+      setConfirmPrintAllOpen(true)
+    }
+  }
+
+  function handlePrintAllConfirmed() {
+    toast.info(t('toastLabelPdfGenerating'))
+    generateAllLabelsPdf.mutate(
+      { articleGroupId: selectedGroupId || undefined },
+      {
+        onSuccess: (result) => {
+          if (result?.signedUrl) {
+            toast.success(t('toastLabelPdfReady'))
+            triggerPdfDownload(result.signedUrl, result.filename)
+          }
+          setConfirmPrintAllOpen(false)
+        },
+        onError: () => {
+          toast.error(t('toastLabelPdfError'))
+          setConfirmPrintAllOpen(false)
+        },
+      }
+    )
+  }
+
+  function triggerPdfDownload(url: string, filename: string) {
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    link.target = '_blank'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   function handleRestore(article: { id: string }) {
@@ -97,10 +159,27 @@ export default function WhArticlesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t('pageTitle')}</h1>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          {t('actionCreate')}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={handlePrintLabels}
+            disabled={generateLabelPdf.isPending || generateAllLabelsPdf.isPending}
+          >
+            <QrCode className="h-4 w-4 mr-2" />
+            {selectedIds.size > 0
+              ? t('actionPrintLabels')
+              : t('actionPrintAllLabels')}
+            {selectedIds.size > 0 && (
+              <span className="ml-1 text-xs text-muted-foreground">
+                ({selectedIds.size})
+              </span>
+            )}
+          </Button>
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t('actionCreate')}
+          </Button>
+        </div>
       </div>
 
       {/* Two-panel layout */}
@@ -180,6 +259,8 @@ export default function WhArticlesPage() {
                 onEdit={(article) => setEditArticle(article as unknown as Record<string, unknown>)}
                 onDelete={(article) => setDeleteArticle({ id: article.id, name: article.name })}
                 onRestore={handleRestore}
+                selectedIds={selectedIds}
+                onSelectionChange={setSelectedIds}
               />
             </CardContent>
           </Card>
@@ -219,6 +300,16 @@ export default function WhArticlesPage() {
         confirmLabel={t('actionDeactivate')}
         onConfirm={handleDelete}
         variant="destructive"
+      />
+
+      {/* Print all labels confirmation */}
+      <ConfirmDialog
+        open={confirmPrintAllOpen}
+        onOpenChange={setConfirmPrintAllOpen}
+        title={t('confirmPrintAllTitle')}
+        description={t('confirmPrintAllDescription')}
+        confirmLabel={t('actionPrintAllLabels')}
+        onConfirm={handlePrintAllConfirmed}
       />
     </div>
   )

@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { MoreHorizontal, Eye, Edit, Trash2, RotateCcw, ImageIcon } from 'lucide-react'
+import { Checkbox } from '@/components/ui/checkbox'
 import { useTranslations } from 'next-intl'
 
 interface WhArticleRow {
@@ -42,6 +43,8 @@ interface ArticleListProps {
   onEdit: (article: WhArticleRow) => void
   onDelete: (article: WhArticleRow) => void
   onRestore?: (article: WhArticleRow) => void
+  selectedIds?: Set<string>
+  onSelectionChange?: (ids: Set<string>) => void
 }
 
 function formatPrice(price: number | null): string {
@@ -59,6 +62,8 @@ export function ArticleList({
   onEdit,
   onDelete,
   onRestore,
+  selectedIds,
+  onSelectionChange,
 }: ArticleListProps) {
   const t = useTranslations('warehouseArticles')
 
@@ -80,10 +85,42 @@ export function ArticleList({
     )
   }
 
+  const allSelected = articles.length > 0 && selectedIds != null && articles.every((a) => selectedIds.has(a.id))
+  const someSelected = selectedIds != null && selectedIds.size > 0 && !allSelected
+
+  function toggleAll(checked: boolean) {
+    if (!onSelectionChange) return
+    if (checked) {
+      onSelectionChange(new Set(articles.map((a) => a.id)))
+    } else {
+      onSelectionChange(new Set())
+    }
+  }
+
+  function toggleOne(id: string, checked: boolean) {
+    if (!onSelectionChange || !selectedIds) return
+    const next = new Set(selectedIds)
+    if (checked) {
+      next.add(id)
+    } else {
+      next.delete(id)
+    }
+    onSelectionChange(next)
+  }
+
   return (
     <Table>
       <TableHeader>
         <TableRow>
+          {onSelectionChange && (
+            <TableHead className="w-[40px]">
+              <Checkbox
+                checked={allSelected ? true : someSelected ? 'indeterminate' : false}
+                onCheckedChange={(checked) => toggleAll(!!checked)}
+                aria-label="Select all"
+              />
+            </TableHead>
+          )}
           <TableHead className="w-[50px]">{t('colThumbnail')}</TableHead>
           <TableHead className="w-[120px]">{t('colNumber')}</TableHead>
           <TableHead>{t('colName')}</TableHead>
@@ -102,6 +139,15 @@ export function ArticleList({
             className={`cursor-pointer ${article.stockTracking && article.currentStock < 0 ? 'bg-destructive/5' : ''}`}
             onClick={() => onView(article)}
           >
+            {onSelectionChange && (
+              <TableCell className="w-[40px]" onClick={(e) => e.stopPropagation()}>
+                <Checkbox
+                  checked={selectedIds?.has(article.id) ?? false}
+                  onCheckedChange={(checked) => toggleOne(article.id, !!checked)}
+                  aria-label={`Select ${article.name}`}
+                />
+              </TableCell>
+            )}
             <TableCell className="w-[50px]">
               {article.primaryImageThumbnailUrl ? (
                 <img

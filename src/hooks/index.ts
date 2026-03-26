@@ -940,3 +940,14 @@ export {
   useReleaseWhReservation,
   useReleaseWhReservationsBulk,
 } from './use-wh-reservations'
+
+// Warehouse QR Scanner
+export {
+  useResolveQrCode,
+  useResolveByNumber,
+  useGenerateLabelPdf,
+  useGenerateAllLabelsPdf,
+  useGenerateSingleQr,
+  useQrRecentMovements,
+  useQrPendingPositions,
+} from './use-wh-qr'

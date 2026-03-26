@@ -8121,6 +8121,97 @@ Der Korrekturassistent läuft automatisch **täglich um 06:00 Uhr** (UTC) für a
 
 ---
 
+## 20b. Lagerverwaltung — Mobile QR-Scanner
+
+**Was ist es?** Der mobile QR-Scanner ersetzt das klassische Barcode-Terminal (z. B. ZMI Timeboy) durch eine browserbasierte Loesung. Lagermitarbeiter scannen QR-Codes auf Artikeletiketten direkt mit der Smartphone-Kamera. Deckt ab: Wareneingang, Lagerentnahme und Storno. Kein App-Store noetig, laeuft im Browser ueber HTTPS.
+
+**Wozu dient es?** Statt Artikelnummern manuell einzutippen, scannen Mitarbeiter den QR-Code auf dem Etikett. Das spart Zeit, reduziert Fehler und ermoeglicht Echtzeit-Buchungen direkt am Lagerplatz — ohne Docking-Station oder spezielle Hardware.
+
+**QR-Code-Format:** `TERP:ART:{Mandant-Kuerzel}:{Artikelnummer}` — z. B. `TERP:ART:a0b1c2:ART-00042`
+
+Der QR-Code wird automatisch aus Mandant-ID und Artikelnummer generiert. Keine separate Datenbank-Speicherung noetig.
+
+Berechtigung: „QR-Scanner nutzen" (`wh_qr.scan`) fuer Scannen, „QR-Etiketten drucken" (`wh_qr.print`) fuer Etikettendruck
+
+### 20b.1 Scanner-Seite
+
+Seitenleiste -> **Lager** -> **QR-Scanner**
+
+Die Scanner-Seite ist mobiloptimiert (Touch-Ziele mindestens 48px, grosse Kamera-Vorschau). Zustaende:
+
+1. **Leerlauf**: Kamera aktiv, wartet auf QR-Code. Alternativ: Manuelle Eingabe der Artikelnummer per Tastatur.
+2. **Artikel erkannt**: Artikelinfo (Nummer, Name, Bestand, Lagerort). Vier Aktionskacheln: Wareneingang, Entnahme, Inventur (deaktiviert, in Vorbereitung), Storno.
+3. **Aktion gewaehlt**: Eingabeformular (Menge, Referenz, etc.)
+4. **Gebucht**: Erfolgsmeldung mit gruenem Haken und Vibration. Automatische Rueckkehr zum Leerlauf.
+
+Bei erfolgreichem Scan: Vibrationsfeedback und akustischer Signalton. Scan-Verlauf wird lokal im Browser gespeichert (letzte 50 Scans).
+
+Falls keine Kamera verfuegbar: Button „Manuelle Eingabe" — Artikelnummer direkt eintippen.
+
+### 20b.2 QR-Etiketten drucken
+
+**Einzelner Artikel:**
+
+Artikeldetailseite -> Button **„QR-Etikett drucken"** generiert ein PDF mit dem QR-Code dieses Artikels.
+
+**Mehrere Artikel:**
+
+Artikelliste -> Artikel auswaehlen -> **„QR-Etiketten drucken"** generiert ein A4-PDF im Avery-Zweckform-Format (L4736: 4x12 = 48 Etiketten pro Seite).
+
+Jedes Etikett enthaelt: QR-Code + Artikelnummer + Bezeichnung + Einheit.
+
+### 20b.3 Praxisbeispiel: Wareneingang per QR-Scanner
+
+**Ausgangslage:** Lieferung fuer Bestellung BS-2026-0050 trifft ein. Artikel „Schrauben M8x20" (ART-00042) hat ein QR-Etikett auf dem Regal.
+
+1. Smartphone-Browser oeffnen -> Terp -> Seitenleiste -> **Lager** -> **QR-Scanner**
+2. Kamera auf das QR-Etikett halten
+3. Vibration + Signalton -> Artikel wird angezeigt: „ART-00042 — Schrauben M8x20, Bestand: 150 Stk, Lagerort: Regal A1"
+4. Kachel **„Wareneingang"** antippen
+5. Offene Bestellung wird angezeigt: „BS-2026-0050 — Lieferant XY, Offen: 200 Stk"
+6. Bestellung antippen -> Menge eingeben: **200**
+7. **„Bestaetigen"** antippen
+8. Gruener Haken + Vibration -> Wareneingang gebucht
+9. Bestand ist jetzt 350 Stk
+10. Scanner kehrt automatisch zum Leerlauf zurueck -> naechsten Artikel scannen
+
+### 20b.4 Praxisbeispiel: Entnahme per QR-Scanner
+
+**Ausgangslage:** Mitarbeiter braucht 10 Stueck „Muttern M8" (ART-00043) fuer einen Auftrag.
+
+1. Seitenleiste -> **Lager** -> **QR-Scanner**
+2. QR-Code auf dem Regal scannen
+3. Artikel wird angezeigt: „ART-00043 — Muttern M8, Bestand: 500 Stk"
+4. Kachel **„Entnahme"** antippen
+5. Menge eingeben: **10**
+6. Referenztyp waehlen: **„Auftrag"**
+7. **„Bestaetigen"** antippen
+8. Gruener Haken -> Entnahme gebucht, Bestand jetzt 490 Stk
+
+### 20b.5 Praxisbeispiel: Storno per QR-Scanner
+
+**Ausgangslage:** Eine Entnahme von 5 Stueck wurde versehentlich fuer den falschen Artikel gebucht.
+
+1. Seitenleiste -> **Lager** -> **QR-Scanner**
+2. QR-Code des betroffenen Artikels scannen
+3. Kachel **„Storno"** antippen
+4. Liste der letzten Buchungen: „Entnahme -5 Stk, 26.03.2026 14:30"
+5. Buchung antippen -> **„Storno bestaetigen"** antippen
+6. Storno erfolgreich -> Bestand wird korrigiert
+
+### 20b.6 Praxisbeispiel: Etiketten drucken
+
+**Etiketten fuer alle Artikel einer Gruppe:**
+
+1. Seitenleiste -> **Lager** -> **Artikel**
+2. Gewuenschte Artikel auswaehlen
+3. **„QR-Etiketten drucken"** klicken
+4. PDF wird generiert und oeffnet sich im Browser
+5. PDF ausdrucken (A4, Avery Zweckform L4736 Etikettenbogen empfohlen)
+6. Etiketten auf den Regalplatz kleben
+
+---
+
 ## 21. Glossar
 
 | Begriff | Erklärung | Wo in Terp |
@@ -8314,6 +8405,7 @@ Diese Tabelle listet alle Seiten der Anwendung mit ihrer URL und dem Menüpfad:
 | `/warehouse/reservations` | Lager → Reservierungen | wh_reservations.view |
 | `/warehouse/stock-movements` | Lager → Bestandsbewegungen | wh_stock.view |
 | `/warehouse/corrections` | Lager → Korrekturassistent | wh_corrections.view |
+| `/warehouse/scanner` | Lager → QR-Scanner | wh_qr.scan |
 
 ---
 

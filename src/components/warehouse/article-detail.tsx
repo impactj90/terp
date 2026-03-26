@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { ArrowLeft, Edit, Trash2, RotateCcw, Package } from 'lucide-react'
+import { ArrowLeft, Edit, Trash2, RotateCcw, Package, QrCode } from 'lucide-react'
 import { toast } from 'sonner'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
@@ -16,6 +16,7 @@ import {
   useDeleteWhArticle,
   useRestoreWhArticle,
 } from '@/hooks'
+import { useGenerateLabelPdf } from '@/hooks/use-wh-qr'
 import { ArticleFormSheet } from './article-form-sheet'
 import { ArticleSupplierList } from './article-supplier-list'
 import { ArticleMovementsTab } from './article-movements-tab'
@@ -54,6 +55,8 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
   const restoreArticle = useRestoreWhArticle()
 
   const t = useTranslations('warehouseArticles')
+
+  const generateLabelPdf = useGenerateLabelPdf()
 
   const [editOpen, setEditOpen] = React.useState(false)
   const [deleteOpen, setDeleteOpen] = React.useState(false)
@@ -99,6 +102,28 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
     )
   }
 
+  function handlePrintLabel() {
+    toast.info(t('toastLabelPdfGenerating'))
+    generateLabelPdf.mutate(
+      { articleIds: [articleId] },
+      {
+        onSuccess: (result) => {
+          if (result?.signedUrl) {
+            toast.success(t('toastLabelPdfReady'))
+            const link = document.createElement('a')
+            link.href = result.signedUrl
+            link.download = result.filename
+            link.target = '_blank'
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+          }
+        },
+        onError: () => toast.error(t('toastLabelPdfError')),
+      }
+    )
+  }
+
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
@@ -128,6 +153,15 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
           </div>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePrintLabel}
+            disabled={generateLabelPdf.isPending}
+          >
+            <QrCode className="h-4 w-4 mr-2" />
+            {t('actionPrintLabel')}
+          </Button>
           {article.stockTracking && (
             <Button
               variant="outline"

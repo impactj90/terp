@@ -50,6 +50,7 @@ import {
   PackageMinus,
   ArrowRightLeft,
   Lock,
+  ScanLine,
 } from 'lucide-react'
 
 /**
@@ -428,6 +429,13 @@ export const navConfig: NavSection[] = [
         icon: Lock,
         module: 'warehouse',
         permissions: ['wh_reservations.view'],
+      },
+      {
+        titleKey: 'warehouseScanner',
+        href: '/warehouse/scanner',
+        icon: ScanLine,
+        module: 'warehouse',
+        permissions: ['wh_qr.scan'],
       },
       {
         titleKey: 'warehouseCorrections',
