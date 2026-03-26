@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { CorrespondenceTypeBadge, CorrespondenceDirectionBadge } from './correspondence-type-badge'
+import { CorrespondenceAttachmentList } from './correspondence-attachment-list'
 
 interface CorrespondenceDetailDialogProps {
   open: boolean
@@ -92,23 +93,15 @@ export function CorrespondenceDetailDialog({
             </div>
           )}
 
-          {Array.isArray(item.attachments) && (item.attachments as unknown[]).length > 0 && (
+          {typeof item.id === 'string' && (
             <div className="text-sm">
               <span className="text-muted-foreground">{t('attachments')}</span>
-              <ul className="mt-1 space-y-1">
-                {(item.attachments as Array<{ name: string; url: string }>).map((att, idx) => (
-                  <li key={idx}>
-                    <a
-                      href={att.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary underline"
-                    >
-                      {att.name}
-                    </a>
-                  </li>
-                ))}
-              </ul>
+              <div className="mt-1">
+                <CorrespondenceAttachmentList
+                  correspondenceId={item.id}
+                  readOnly
+                />
+              </div>
             </div>
           )}
         </div>

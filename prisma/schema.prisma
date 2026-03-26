@@ -180,6 +180,7 @@ model Tenant {
   crmContacts                 CrmContact[]
   crmBankAccounts             CrmBankAccount[]
   crmCorrespondences          CrmCorrespondence[]
+  crmCorrespondenceAttachments CrmCorrespondenceAttachment[]
   crmInquiries                CrmInquiry[]
   crmTasks                    CrmTask[]
   billingDocuments            BillingDocument[]
@@ -504,7 +505,6 @@ model CrmCorrespondence {
   toUser      String?                     @map("to_user")
   subject     String
   content     String?
-  attachments Json?                       @db.JsonB
   createdAt   DateTime                    @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime                    @updatedAt @map("updated_at") @db.Timestamptz(6)
   createdById String?                     @map("created_by_id") @db.Uuid
@@ -513,11 +513,37 @@ model CrmCorrespondence {
   address CrmAddress  @relation(fields: [addressId], references: [id], onDelete: Cascade)
   contact CrmContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
   inquiry CrmInquiry? @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
+  correspondenceAttachments CrmCorrespondenceAttachment[]
 
   @@index([tenantId, addressId])
   @@index([tenantId, date])
   @@index([tenantId, inquiryId])
   @@map("crm_correspondences")
+}
+
+// -----------------------------------------------------------------------------
+// CrmCorrespondenceAttachment
+// -----------------------------------------------------------------------------
+// Migration: 20260403100000
+//
+// File attachment linked to a CRM correspondence entry. Stored in Supabase Storage.
+model CrmCorrespondenceAttachment {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correspondenceId  String   @map("correspondence_id") @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  filename          String   @db.Text
+  storagePath       String   @map("storage_path") @db.Text
+  mimeType          String   @map("mime_type") @db.Text
+  sizeBytes         Int      @map("size_bytes")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdById       String?  @map("created_by_id") @db.Uuid
+
+  correspondence CrmCorrespondence @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
+  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([correspondenceId])
+  @@index([tenantId])
+  @@map("crm_correspondence_attachments")
 }
 
 // -----------------------------------------------------------------------------

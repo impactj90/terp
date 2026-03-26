@@ -684,6 +684,14 @@ export {
   useDeleteCrmCorrespondence,
 } from './use-crm-correspondence'
 
+// CRM Correspondence Attachments
+export {
+  useCrmCorrespondenceAttachments,
+  useUploadCrmCorrespondenceAttachment,
+  useDeleteCrmCorrespondenceAttachment,
+  useCrmCorrespondenceDownloadUrl,
+} from './use-crm-correspondence-attachments'
+
 // CRM Inquiries
 export {
   useCrmInquiries,

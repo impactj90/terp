@@ -232,6 +232,7 @@ export const ALL_PERMISSIONS: Permission[] = [
   p("crm_correspondence.create", "crm_correspondence", "create", "Create CRM correspondence"),
   p("crm_correspondence.edit", "crm_correspondence", "edit", "Edit CRM correspondence"),
   p("crm_correspondence.delete", "crm_correspondence", "delete", "Delete CRM correspondence"),
+  p("crm_correspondence.upload", "crm_correspondence", "upload", "Upload attachments to correspondence"),
 
   // CRM Inquiries
   p("crm_inquiries.view", "crm_inquiries", "view", "View CRM inquiries"),

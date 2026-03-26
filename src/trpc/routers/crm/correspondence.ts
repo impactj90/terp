@@ -5,6 +5,7 @@ import { requirePermission } from "@/lib/auth/middleware"
 import { requireModule } from "@/lib/modules"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import * as crmCorrespondenceService from "@/lib/services/crm-correspondence-service"
+import * as attachmentService from "@/lib/services/crm-correspondence-attachment-service"
 import type { PrismaClient } from "@/generated/prisma/client"
 
 // --- Permission Constants ---
@@ -12,6 +13,7 @@ const CORR_VIEW = permissionIdByKey("crm_correspondence.view")!
 const CORR_CREATE = permissionIdByKey("crm_correspondence.create")!
 const CORR_EDIT = permissionIdByKey("crm_correspondence.edit")!
 const CORR_DELETE = permissionIdByKey("crm_correspondence.delete")!
+const CORR_UPLOAD = permissionIdByKey("crm_correspondence.upload")!
 
 // --- Base procedure with module guard ---
 const crmProcedure = tenantProcedure.use(requireModule("crm"))
@@ -40,12 +42,6 @@ const createInput = z.object({
   toUser: z.string().max(255).optional(),
   subject: z.string().min(1).max(255),
   content: z.string().max(2000).optional(),
-  attachments: z.array(z.object({
-    name: z.string().max(255),
-    url: z.string().url(),
-    size: z.number().min(0).max(52428800),
-    mimeType: z.string().max(255),
-  })).optional(),
 })
 
 const updateInput = z.object({
@@ -59,12 +55,6 @@ const updateInput = z.object({
   toUser: z.string().max(255).nullable().optional(),
   subject: z.string().min(1).max(255).optional(),
   content: z.string().max(2000).nullable().optional(),
-  attachments: z.array(z.object({
-    name: z.string().max(255),
-    url: z.string().url(),
-    size: z.number().min(0).max(52428800),
-    mimeType: z.string().max(255),
-  })).nullable().optional(),
 })
 
 // --- Router ---
@@ -148,4 +138,98 @@ export const crmCorrespondenceRouter = createTRPCRouter({
         handleServiceError(err)
       }
     }),
+
+  attachments: createTRPCRouter({
+    list: crmProcedure
+      .use(requirePermission(CORR_VIEW))
+      .input(z.object({ correspondenceId: z.string().uuid() }))
+      .query(async ({ ctx, input }) => {
+        try {
+          return await attachmentService.listAttachments(
+            ctx.prisma as unknown as PrismaClient,
+            ctx.tenantId!,
+            input.correspondenceId
+          )
+        } catch (err) {
+          handleServiceError(err)
+        }
+      }),
+
+    getUploadUrl: crmProcedure
+      .use(requirePermission(CORR_UPLOAD))
+      .input(z.object({
+        correspondenceId: z.string().uuid(),
+        filename: z.string().min(1).max(255),
+        mimeType: z.string().min(1).max(100),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          return await attachmentService.getUploadUrl(
+            ctx.prisma as unknown as PrismaClient,
+            ctx.tenantId!,
+            input.correspondenceId,
+            input.filename,
+            input.mimeType
+          )
+        } catch (err) {
+          handleServiceError(err)
+        }
+      }),
+
+    confirm: crmProcedure
+      .use(requirePermission(CORR_UPLOAD))
+      .input(z.object({
+        correspondenceId: z.string().uuid(),
+        storagePath: z.string().min(1),
+        filename: z.string().min(1).max(255),
+        mimeType: z.string().min(1).max(100),
+        sizeBytes: z.number().int().min(1),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          return await attachmentService.confirmUpload(
+            ctx.prisma as unknown as PrismaClient,
+            ctx.tenantId!,
+            input.correspondenceId,
+            input.storagePath,
+            input.filename,
+            input.mimeType,
+            input.sizeBytes,
+            ctx.user!.id
+          )
+        } catch (err) {
+          handleServiceError(err)
+        }
+      }),
+
+    delete: crmProcedure
+      .use(requirePermission(CORR_UPLOAD))
+      .input(z.object({ id: z.string().uuid() }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          return await attachmentService.deleteAttachment(
+            ctx.prisma as unknown as PrismaClient,
+            ctx.tenantId!,
+            input.id
+          )
+        } catch (err) {
+          handleServiceError(err)
+        }
+      }),
+
+    getDownloadUrl: crmProcedure
+      .use(requirePermission(CORR_VIEW))
+      .input(z.object({ id: z.string().uuid() }))
+      .query(async ({ ctx, input }) => {
+        try {
+          return await attachmentService.getDownloadUrl(
+            ctx.prisma as unknown as PrismaClient,
+            ctx.tenantId!,
+            input.id
+          )
+        } catch (err) {
+          handleServiceError(err)
+        }
+      }),
+  }),
 })

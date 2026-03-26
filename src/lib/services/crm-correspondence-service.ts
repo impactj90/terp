@@ -1,7 +1,8 @@
-import type { PrismaClient, CrmCorrespondenceDirection, Prisma } from "@/generated/prisma/client"
+import type { PrismaClient, CrmCorrespondenceDirection } from "@/generated/prisma/client"
 import * as repo from "./crm-correspondence-repository"
 import * as auditLog from "./audit-logs-service"
 import type { AuditContext } from "./audit-logs-service"
+import * as attachmentService from "./crm-correspondence-attachment-service"
 
 // --- Tracked Fields for Audit Diffs ---
 
@@ -72,7 +73,6 @@ export async function create(
     toUser?: string
     subject: string
     content?: string
-    attachments?: Prisma.InputJsonValue | null
   },
   createdById: string,
   audit?: AuditContext
@@ -107,7 +107,6 @@ export async function create(
     toUser: input.toUser || null,
     subject: input.subject,
     content: input.content || null,
-    attachments: input.attachments ?? null,
     createdById,
   })
 
@@ -136,7 +135,6 @@ export async function update(
     toUser?: string | null
     subject?: string
     content?: string | null
-    attachments?: Prisma.InputJsonValue | null
   },
   audit?: AuditContext
 ) {
@@ -159,7 +157,7 @@ export async function update(
 
   const fields = [
     "direction", "type", "date", "contactId", "inquiryId",
-    "fromUser", "toUser", "subject", "content", "attachments",
+    "fromUser", "toUser", "subject", "content",
   ] as const
 
   for (const field of fields) {
@@ -194,6 +192,9 @@ export async function remove(
 ) {
   // Fetch name before deleting
   const existing = audit ? await repo.findById(prisma, tenantId, id) : null
+
+  // Clean up Storage files before CASCADE deletes DB records
+  await attachmentService.deleteAllByCorrespondence(prisma, tenantId, id)
 
   const deleted = await repo.remove(prisma, tenantId, id)
   if (!deleted) {

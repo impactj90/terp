@@ -60,6 +60,10 @@ function createMockPrisma(overrides: Record<string, unknown> = {}) {
       updateMany: vi.fn(),
       deleteMany: vi.fn(),
     },
+    crmCorrespondenceAttachment: {
+      findMany: vi.fn().mockResolvedValue([]),
+      count: vi.fn().mockResolvedValue(0),
+    },
     ...overrides,
   } as unknown as PrismaClient
 }

@@ -4426,11 +4426,11 @@ Analog zu Kontaktpersonen: ⋯-Menü → „Bearbeiten" oder „Löschen" mit Be
 
 ### 12.5 Korrespondenz
 
-**Was ist es?** Korrespondenz ist das Kommunikationsprotokoll einer CRM-Adresse. Jeder Telefonanruf, jede E-Mail, jeder Brief, jedes Fax und jeder Besuch wird als Eintrag mit Datum, Richtung (eingehend/ausgehend/intern), Typ und Betreff erfasst. Optional kann ein Kontaktpartner aus der Adresse verknüpft werden.
+**Was ist es?** Korrespondenz ist das Kommunikationsprotokoll einer CRM-Adresse. Jeder Telefonanruf, jede E-Mail, jeder Brief, jedes Fax und jeder Besuch wird als Eintrag mit Datum, Richtung (eingehend/ausgehend/intern), Typ und Betreff erfasst. Optional kann ein Kontaktpartner aus der Adresse verknüpft werden. An jeden Korrespondenzeintrag können bis zu 5 Dateianhänge (PDF, JPEG, PNG, WebP, DOCX, XLSX — je max. 10 MB) angehängt werden, um Verträge, Briefe oder andere Dokumente zu archivieren.
 
-**Wozu dient es?** Die lückenlose Dokumentation aller Kommunikationsvorgänge mit Kunden und Lieferanten ist eine Grundvoraussetzung für professionelles CRM. Alle Mitarbeiter sehen auf einen Blick, wann zuletzt mit einem Kunden kommuniziert wurde, welche Themen besprochen wurden und wer der Ansprechpartner war.
+**Wozu dient es?** Die lückenlose Dokumentation aller Kommunikationsvorgänge mit Kunden und Lieferanten ist eine Grundvoraussetzung für professionelles CRM. Alle Mitarbeiter sehen auf einen Blick, wann zuletzt mit einem Kunden kommuniziert wurde, welche Themen besprochen wurden und wer der Ansprechpartner war. Durch die Möglichkeit, Dateien direkt an Korrespondenzeinträge anzuhängen, können Verträge, Angebots-PDFs und andere Unterlagen zentral archiviert werden.
 
-Berechtigung: „CRM-Korrespondenz anzeigen" (Lesen), „CRM-Korrespondenz erstellen/bearbeiten/löschen" (Schreiben)
+Berechtigung: „CRM-Korrespondenz anzeigen" (Lesen), „CRM-Korrespondenz erstellen/bearbeiten/löschen" (Schreiben), „CRM-Korrespondenz hochladen" (Anhänge verwalten)
 
 Adressdetailseite, Tab **„Korrespondenz"**
 
@@ -4470,6 +4470,8 @@ Tabelle mit Spalten:
 6. „Anlegen"
 7. Eintrag erscheint in der Tabelle, sortiert nach Datum
 
+**Hinweis:** Anhänge können erst nach dem Speichern eines neuen Eintrags hinzugefügt werden. Dazu den Eintrag bearbeiten und im Abschnitt „Anhänge" Dateien hochladen.
+
 ##### Korrespondenzeintrag anzeigen
 
 1. Menü des Eintrags — **„Anzeigen"**
@@ -4480,7 +4482,8 @@ Tabelle mit Spalten:
 1. Menü des Eintrags — **„Bearbeiten"**
 2. Formular öffnet sich mit den aktuellen Werten vorausgefüllt
 3. Gewünschte Felder ändern
-4. „Speichern"
+4. Im Abschnitt **„Anhänge"** können Dateien hochgeladen, heruntergeladen oder gelöscht werden (siehe unten)
+5. „Speichern"
 
 ##### Korrespondenzeintrag löschen
 
@@ -4488,6 +4491,34 @@ Tabelle mit Spalten:
 2. Bestätigungsdialog: „Möchten Sie den Korrespondenzeintrag ‚{Betreff}' wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
 3. „Bestätigen"
 4. Eintrag wird unwiderruflich gelöscht
+
+##### Anhänge verwalten
+
+Im Bearbeitungsformular (Sheet) eines Korrespondenzeintrags befindet sich unter den Inhaltsfeldern der Abschnitt **„Anhänge"**.
+
+**Datei hochladen:**
+1. Korrespondenzeintrag bearbeiten (Sheet öffnen)
+2. Im Abschnitt „Anhänge" — Drag & Drop oder Klick auf die Upload-Zone
+3. Datei(en) auswählen (erlaubt: PDF, JPEG, PNG, WebP, DOCX, XLSX — max. 10 MB pro Datei)
+4. „Datei hochladen" klicken
+5. Upload-Fortschritt wird je Datei angezeigt, nach Abschluss erscheint ein grünes Häkchen
+
+**Datei herunterladen:**
+- Download-Button (Pfeil-nach-unten-Icon) neben dem Dateinamen klicken
+- Datei wird über eine zeitlich begrenzte URL (1 Stunde gültig) heruntergeladen
+
+**Datei löschen:**
+1. Papierkorb-Icon neben dem Dateinamen klicken
+2. Bestätigungsdialog: „Möchten Sie den Anhang ‚{Dateiname}' wirklich löschen?"
+3. „Bestätigen" — Datei wird aus dem Speicher und der Datenbank gelöscht
+
+**Einschränkungen:**
+- Maximal **5 Anhänge** pro Korrespondenzeintrag
+- Maximale Dateigröße: **10 MB** pro Datei
+- Erlaubte Formate: PDF, JPEG, PNG, WebP, DOCX, XLSX
+- In der Detailansicht (Anzeigen-Dialog) werden Anhänge im Nur-Lese-Modus angezeigt (Download möglich, kein Upload/Löschen)
+
+**Hinweis:** Beim Löschen eines Korrespondenzeintrags werden alle zugehörigen Anhänge automatisch mit gelöscht (sowohl aus der Datenbank als auch aus dem Dateispeicher).
 
 **Hinweis:** Korrespondenzeinträge werden hart gelöscht (kein Soft-Delete), da es sich um ein Kommunikationsprotokoll handelt. Beim Löschen einer übergeordneten Adresse werden alle zugehörigen Korrespondenzeinträge automatisch mit gelöscht (Kaskade).
 
@@ -4529,6 +4560,18 @@ Tab „Korrespondenz" — **„Neuer Eintrag"**
 „Anlegen"
 
 Zwei Einträge in der Korrespondenzliste. Der neueste (E-Mail, ausgehend) steht oben.
+
+##### Schritt 3 — Angebots-PDF an E-Mail-Eintrag anhängen
+
+1. Menü des E-Mail-Eintrags „Angebot Bauteil X-500 — 50 Stück" — **„Bearbeiten"**
+2. Sheet öffnet sich — nach unten scrollen zum Abschnitt **„Anhänge"**
+3. Angebots-PDF in die Upload-Zone ziehen (oder klicken und Datei auswählen)
+4. Datei „Angebot-A-2026-042.pdf" erscheint in der Dateiliste mit Status „bereit"
+5. **„Datei hochladen"** klicken
+6. Upload-Fortschritt wird angezeigt, nach Abschluss grünes Häkchen
+7. „Speichern"
+
+Ergebnis: Der E-Mail-Eintrag enthält nun das Angebots-PDF als Anhang. In der Detailansicht (Anzeigen) kann die Datei jederzeit heruntergeladen werden.
 
 ##### Schritt 3 — Suche und Filter testen
 
@@ -7856,7 +7899,7 @@ Der Korrekturassistent läuft automatisch **täglich um 06:00 Uhr** (UTC) für a
 | **Konto** | Sammelstelle für Zeitwerte (Flex, Überstunden, Zuschläge) | 📍 Verwaltung → Konten |
 | **Korrektur** | Manuelle Anpassung an Zeitwerten eines Tages | 📍 Verwaltung → Korrekturassistent |
 | **Kontaktperson (CRM)** | Ansprechpartner bei einer CRM-Adresse (Name, Position, Telefon, E-Mail) | 📍 CRM → Adressen → Detail → Tab Kontakte |
-| **Korrespondenz (CRM)** | Kommunikationsprotokoll einer CRM-Adresse (Telefonate, E-Mails, Briefe, Faxe, Besuche) | 📍 CRM → Adressen → Detail → Tab Korrespondenz |
+| **Korrespondenz (CRM)** | Kommunikationsprotokoll einer CRM-Adresse (Telefonate, E-Mails, Briefe, Faxe, Besuche) mit Dateianhängen (PDF, Bilder, Office-Dokumente) | 📍 CRM → Adressen → Detail → Tab Korrespondenz |
 | **Anfrage (CRM)** | Übergeordnete Klammer für Kundenaktivitäten mit Status-Workflow und optionaler Auftragsverknüpfung | 📍 CRM → Anfragen |
 | **Kostenstelle** | Betriebswirtschaftliche Zuordnung für Mitarbeiter und Aufträge | 📍 Verwaltung → Kostenstellen |
 | **Makro** | Automatisierungsregel (z. B. Flexzeit zurücksetzen) | 📍 Administration → Makros |

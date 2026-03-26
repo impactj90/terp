@@ -27,7 +27,7 @@ _Quelle: ZMI orgAuftrag vs. Terp Abgleich + ZMI Time vs. Terp Abgleich_
 ## CRM
 
 - [x] **CRM_06** — "Unsere Kundennummer" beim Lieferanten _(S)_ → `TICKET_CRM_06_UNSERE_KUNDENNUMMER.md`
-- [ ] **CRM_07** — Anhänge bei Korrespondenz _(M)_ → `TICKET_CRM_07_KORRESPONDENZ_ANHAENGE.md`
+- [~] **CRM_07** — Anhänge bei Korrespondenz _(M)_ → `TICKET_CRM_07_KORRESPONDENZ_ANHAENGE.md`
 - [x] **CRM_08** — Briefanrede bei Kontaktpersonen _(S)_ → `TICKET_CRM_08_BRIEFANREDE.md`
 - [ ] **CRM_09** — Konzern-/Filialen-Zuordnung _(M)_ → `TICKET_CRM_09_KONZERNZUORDNUNG.md`
 

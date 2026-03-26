@@ -1,4 +1,3 @@
-import { Prisma } from "@/generated/prisma/client"
 import type { PrismaClient, CrmCorrespondenceDirection } from "@/generated/prisma/client"
 
 // --- Correspondence Repository ---
@@ -67,6 +66,7 @@ export async function findMany(
       take: params.pageSize,
       include: {
         contact: true,
+        _count: { select: { correspondenceAttachments: true } },
       },
     }),
     prisma.crmCorrespondence.count({ where }),
@@ -85,6 +85,7 @@ export async function findById(
     include: {
       contact: true,
       address: true,
+      correspondenceAttachments: true,
     },
   })
 }
@@ -103,16 +104,10 @@ export async function create(
     toUser?: string | null
     subject: string
     content?: string | null
-    attachments?: Prisma.InputJsonValue | null
     createdById?: string | null
   }
 ) {
-  // Prisma requires Prisma.JsonNull instead of null for nullable JSON fields
-  const createData = {
-    ...data,
-    attachments: data.attachments === null ? Prisma.JsonNull : data.attachments,
-  }
-  return prisma.crmCorrespondence.create({ data: createData })
+  return prisma.crmCorrespondence.create({ data })
 }
 
 export async function update(
