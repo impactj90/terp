@@ -297,7 +297,6 @@ export function CorrespondenceFormSheet({
               <CorrespondenceAttachmentSection
                 correspondenceId={editItem.id as string}
                 disabled={isSubmitting}
-                t={t}
               />
             )}
 
@@ -332,12 +331,11 @@ export function CorrespondenceFormSheet({
 function CorrespondenceAttachmentSection({
   correspondenceId,
   disabled,
-  t,
 }: {
   correspondenceId: string
   disabled: boolean
-  t: ReturnType<typeof useTranslations<'crmCorrespondence'>>
 }) {
+  const t = useTranslations('crmCorrespondence')
   const { data: attachments } = useCrmCorrespondenceAttachments(correspondenceId)
   const currentCount = attachments?.length ?? 0
 
