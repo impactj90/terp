@@ -64,6 +64,7 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [14.2 Artikeldetailseite](#142-artikeldetailseite)
     - [14.3 Bestandskorrektur](#143-bestandskorrektur)
     - [14.4 Praxisbeispiel: Artikelstamm für eine Schreinerei einrichten](#144-praxisbeispiel-artikelstamm-für-eine-schreinerei-einrichten)
+    - [14.5 Artikelreservierungen](#145-artikelreservierungen)
 15. [Lagerverwaltung — Einkaufspreislisten](#15-lagerverwaltung--einkaufspreislisten)
     - [15.1 Einkaufspreislisten verwalten](#151-einkaufspreislisten-verwalten)
     - [15.2 Neue Einkaufspreisliste erstellen](#152-neue-einkaufspreisliste-erstellen)
@@ -5549,6 +5550,7 @@ Der Kunde hat das Angebot angenommen.
 3. Klick auf **"Abschließen"**
 4. ✅ AB-1 Status: **Abgeschlossen**
 5. ✅ Ein Terp-Auftrag mit Code "AB-1" wurde automatisch erstellt — Mitarbeiter können ab sofort Zeit darauf buchen
+6. ✅ Artikelreservierungen werden automatisch für alle Positionen mit Bestandsführung erstellt (siehe Kapitel 14.5)
 3. Klick auf **"Fortführen"** → Zielbelegtyp: **Lieferschein** → **"Fortführen"**
 4. ✅ Neues Dokument **LS-1** wird erstellt (Entwurf, Positionen kopiert)
 5. ✅ AB-1 Status wechselt zu **Fortgeführt**
@@ -5561,9 +5563,10 @@ Der Kunde hat das Angebot angenommen.
    - **Manuell**: Keine automatische Lagerbuchung. Entnahmen manuell ueber das Entnahme-Terminal (Kapitel 18).
    - **Mit Bestaetigung**: Ein Dialog zeigt alle Artikelpositionen mit aktuellem und neuem Bestand. Positionen einzeln an-/abwaehlen, dann „Lagerbuchung durchfuehren" oder „Ueberspringen".
    - **Automatisch**: Lagerentnahmen werden sofort fuer alle Artikelpositionen mit Bestandsfuehrung erstellt. Toast-Meldung: „Lagerbuchung fuer X Artikel durchgefuehrt".
-4. Klick auf **"Fortführen"** → Zielbelegtyp: **Rechnung** → **"Fortführen"**
-5. ✅ Neues Dokument **RE-1** wird erstellt (Entwurf, alle Positionen kopiert)
-6. ✅ LS-1 Status wechselt zu **Fortgeführt**
+4. ✅ Bestehende Artikelreservierungen aus der Vorgänger-AB werden automatisch als „Erfüllt" markiert (siehe Kapitel 14.5)
+5. Klick auf **"Fortführen"** → Zielbelegtyp: **Rechnung** → **"Fortführen"**
+6. ✅ Neues Dokument **RE-1** wird erstellt (Entwurf, alle Positionen kopiert)
+7. ✅ LS-1 Status wechselt zu **Fortgeführt**
 
 #### Schritt 7 — Rechnung abschließen
 
@@ -6649,7 +6652,7 @@ Zum Wiederherstellen:
 
 ✅ Kopfbereich zeigt: Artikelnummer (monospace), Name, Status-Badge (Aktiv/Inaktiv), optional Badges „Bestandsführung" und Gruppenname. Buttons „Bestand korrigieren" (bei Bestandsführung), „Bearbeiten" und „Deaktivieren/Wiederherstellen".
 
-Die Detailseite hat **6 Tabs**:
+Die Detailseite hat **7 Tabs**:
 
 #### Tab „Übersicht"
 
@@ -6659,9 +6662,11 @@ Zeigt alle Artikeldaten in Kartenansicht (2-Spalten-Grid):
 |-------|--------|
 | **Stammdaten** | Artikelnr., Bezeichnung, Beschreibung, Matchcode, Einheit, Artikelgruppe, Rabattgruppe, Bestellart |
 | **Preise** | VK-Preis (netto), EK-Preis, MwSt-Satz |
-| **Bestand** (nur bei Bestandsführung) | Aktueller Bestand, Mindestbestand, Lagerort |
+| **Bestand** (nur bei Bestandsführung) | Physischer Bestand, Reserviert (orange Badge bei > 0), Verfügbar (= Physisch − Reserviert), Mindestbestand, Lagerort |
 
 > ⚠️ Fällt der Bestand unter den Mindestbestand, erscheint ein roter Warnhinweis: „Bestand unter Mindestbestand!"
+
+> ⚠️ Ist der verfügbare Bestand negativ (mehr reserviert als physisch vorhanden), erscheint ein oranger Hinweis.
 
 #### Tab „Lieferanten"
 
@@ -6723,6 +6728,29 @@ Tabelle mit Spalten:
 📍 Tab **„Bestand"**
 
 Zeigt alle Bestandsbewegungen (Wareneingänge, Entnahmen, Korrekturen) für diesen Artikel. Spalten: Datum, Typ, Menge, vorheriger und neuer Bestand, Referenz. Siehe Kapitel 17.2.
+
+#### Tab „Reservierungen"
+
+📍 Tab **„Reservierungen"** (nur bei Bestandsführung relevant)
+
+Zeigt alle Reservierungen für diesen Artikel. Reservierungen entstehen automatisch, wenn eine Auftragsbestätigung abgeschlossen wird (siehe Kapitel 14.5).
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Beleg-Nr.** | Nummer der Auftragsbestätigung |
+| **Kunde** | Kundenname aus dem Beleg |
+| **Menge** | Reservierte Menge |
+| **Datum** | Erstellungsdatum der Reservierung |
+| **Status** | Aktiv (blau), Freigegeben (grau) oder Erfüllt (grün) |
+| **Aktionen** | „Freigeben"-Button bei aktiven Reservierungen |
+
+##### Reservierung manuell freigeben
+
+1. 📍 „Freigeben" bei einer aktiven Reservierung
+2. ✅ Dialog öffnet sich
+3. Optional: **Grund** eingeben (z. B. „Auftrag storniert", „Kunde wartet")
+4. 📍 „Freigeben"
+5. ✅ Status wechselt zu „Freigegeben", verfügbarer Bestand erhöht sich
 
 #### Tab „Preise"
 
@@ -6859,6 +6887,107 @@ Hier werden einem Artikel Bilder zugeordnet. Ein Bild kann als Hauptbild markier
 4. ✅ Vorschau: „Neuer Bestand: 25"
 5. 📍 „Korrigieren"
 6. ✅ Tab „Übersicht" → Karte „Bestand" zeigt: Aktueller Bestand: 25
+
+---
+
+### 14.5 Artikelreservierungen
+
+**Was ist es?** Artikelreservierungen sichern Lagerbestand für bestätigte Kundenaufträge. Sobald eine Auftragsbestätigung (AB) abgeschlossen wird, werden die enthaltenen Artikelpositionen (mit aktiver Bestandsführung) automatisch reserviert. Der Artikelbestand wird dann aufgeschlüsselt in: **Physischer Bestand** (tatsächlich im Lager), **Reserviert** (für Aufträge gebunden) und **Verfügbar** (= Physisch − Reserviert).
+
+**Wozu dient es?** Ohne Reservierungen können mehrere Aufträge denselben Bestand „versprechen" — obwohl die Ware nur für einen Auftrag reicht. Reservierungen verhindern Überverkäufe und zeigen in Echtzeit, wie viel Bestand tatsächlich frei verfügbar ist.
+
+⚠️ Berechtigung: „Reservierungen anzeigen" (`wh_reservations.view`) bzw. „Reservierungen verwalten" (`wh_reservations.manage`)
+
+#### Was bedeutet „Freigeben"?
+
+„Freigeben" hebt eine Reservierung auf — der gebundene Bestand wird wieder als **verfügbar** markiert. Die Ware bleibt physisch im Lager, sie ist nur nicht mehr für einen bestimmten Auftrag vorgemerkt.
+
+**Typische Gründe für eine manuelle Freigabe:**
+- Kunde storniert den Auftrag informell (ohne formale AB-Stornierung)
+- Auftrag verzögert sich und die Ware wird dringend für einen anderen Kunden benötigt
+- Falsche oder doppelte Reservierung
+
+**Automatische Freigabe** erfolgt bei:
+- **Lieferschein-Erstellung** aus der AB → Status wird „Erfüllt" (Ware verlässt das Lager)
+- **AB-Stornierung** → Status wird „Freigegeben" (Auftrag entfällt)
+
+#### Lebenszyklus einer Reservierung
+
+| Ereignis | Reservierungsstatus | Auswirkung |
+|----------|---------------------|------------|
+| AB wird abgeschlossen | **Aktiv** (automatisch erstellt) | Verfügbarer Bestand sinkt |
+| Lieferschein aus AB erstellt | **Erfüllt** | Reservierung aufgelöst — Lagerbuchung übernimmt |
+| AB wird storniert | **Freigegeben** | Verfügbarer Bestand steigt wieder |
+| Manuelle Freigabe | **Freigegeben** | Verfügbarer Bestand steigt wieder |
+
+#### Reservierungen im Artikeldetail
+
+Die Bestandskarte auf der Artikeldetailseite (Tab „Übersicht") zeigt jetzt:
+
+- **Physischer Bestand**: Tatsächliche Menge im Lager
+- **Reserviert**: Summe aller aktiven Reservierungen (orange Badge wenn > 0)
+- **Verfügbar**: Physisch − Reserviert
+- Mindestbestand und Lagerort (wie bisher)
+
+Im Tab **„Reservierungen"** werden alle Reservierungen für diesen Artikel aufgelistet (siehe Tabelle in Kapitel 14.2).
+
+#### Reservierungsübersicht
+
+📍 Seitenleiste → **Lager** → **Reservierungen**
+
+Globale Übersicht aller Reservierungen über alle Artikel hinweg.
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Artikelnr.** | Artikelnummer |
+| **Artikel** | Artikelbezeichnung |
+| **Menge** | Reservierte Menge |
+| **Status** | Aktiv / Freigegeben / Erfüllt |
+| **Datum** | Erstellungsdatum |
+| **Aktionen** | „Freigeben"-Button (bei Berechtigung `wh_reservations.manage`) |
+
+**Filter:** Status-Dropdown (Aktiv, Freigegeben, Erfüllt, Alle). Standard: nur aktive Reservierungen.
+
+**Massenfreigabe:** Alle aktiven Reservierungen eines Belegs können auf einmal freigegeben werden.
+
+#### Praxisbeispiel: Reservierungen im Tagesgeschäft
+
+**Szenario:** Zwei Kunden bestellen denselben Artikel. Der Bestand reicht nur für einen.
+
+**Voraussetzungen:**
+- Artikel „Eichenholz-Platte" mit Bestandsführung, Bestand: 100
+- Zwei Kunden mit je einer Auftragsbestätigung
+
+**Schritt 1 — Erste AB abschließen**
+
+1. 📍 Aufträge → Belege → AB für Kunde A (50 Stück Eichenholz-Platte)
+2. 📍 **„Abschließen"** → Bestätigen
+3. ✅ Reservierung wird automatisch erstellt: 50 Stück
+4. 📍 Lager → Artikel → Eichenholz-Platte → Tab „Übersicht"
+5. ✅ Karte „Bestand": Physisch: 100, Reserviert: 50, Verfügbar: 50
+
+**Schritt 2 — Zweite AB abschließen**
+
+1. 📍 Aufträge → Belege → AB für Kunde B (60 Stück Eichenholz-Platte)
+2. 📍 **„Abschließen"** → Bestätigen
+3. ✅ Reservierung wird erstellt: 60 Stück
+4. ✅ Karte „Bestand": Physisch: 100, Reserviert: 110, Verfügbar: −10
+5. ✅ Oranger Hinweis: Verfügbarer Bestand ist negativ
+
+**Schritt 3 — Lieferschein für Kunde A**
+
+1. 📍 AB von Kunde A → **„Fortführen"** → Lieferschein
+2. ✅ Reservierung von Kunde A wird zu „Erfüllt"
+3. ✅ Karte „Bestand": Physisch: 100 (noch keine Entnahme), Reserviert: 60, Verfügbar: 40
+4. Beim Abschließen des Lieferscheins wird die Lagerbuchung erstellt (siehe Kapitel 17)
+
+**Schritt 4 — Reservierung manuell freigeben**
+
+1. 📍 Lager → Reservierungen
+2. ✅ Reservierung von Kunde B (60 Stück) wird angezeigt
+3. 📍 **„Freigeben"** → Grund: „Kunde hat Auftrag storniert"
+4. ✅ Status wechselt zu „Freigegeben"
+5. ✅ Verfügbarer Bestand steigt
 
 ---
 
@@ -8085,6 +8214,8 @@ Der Korrekturassistent läuft automatisch **täglich um 06:00 Uhr** (UTC) für a
 | **Stückliste (BOM)** | Komponentenliste eines Artikels (Bill of Materials) mit Artikel, Menge und optionaler Bemerkung | 📍 Lager → Artikel → Detail → Tab Stückliste |
 | **VK-Preis** | Netto-Verkaufspreis eines Artikels im Artikelstamm, dient als Basispreis für Preislisten | 📍 Lager → Artikel → Detail → Karte Preise |
 | **Wareneingang** | Buchung eingehender Lieferungen gegen eine Bestellung mit automatischer Bestandserhöhung | 📍 Lager → Wareneingang |
+| **Artikelreservierung** | Automatische Vormerkung von Lagerbestand für eine bestätigte Auftragsbestätigung. Zeigt den Unterschied zwischen physischem und verfügbarem Bestand. Status: Aktiv (Bestand gebunden), Erfüllt (Lieferschein erstellt — Lagerbuchung übernimmt), Freigegeben (manuell aufgehoben oder AB storniert — Bestand wieder verfügbar). „Freigeben" bedeutet: Reservierung aufheben, damit die Ware für andere Aufträge verfügbar wird | 📍 Lager → Reservierungen |
+| **Freigeben (Reservierung)** | Eine aktive Reservierung aufheben, sodass der gebundene Bestand wieder als verfügbar gilt. Geschieht automatisch bei Lieferschein-Erstellung (→ Erfüllt) oder AB-Stornierung (→ Freigegeben), oder manuell über den „Freigeben"-Button mit optionalem Grund | 📍 Lager → Reservierungen |
 | **Lagerentnahme** | Entnahme von Artikeln aus dem Lager mit automatischer Bestandsreduzierung, optional mit Referenz (Auftrag, Lieferschein, Maschine) | 📍 Lager → Lagerentnahmen |
 | **Lieferantenrechnung** | Eingangsrechnung eines Lieferanten mit Beträgen, Zahlungsbedingungen und Skonto. Kann mit einer Bestellung verknüpft werden | 📍 Lager → Lieferantenrechnungen |
 | **Lieferantenzahlung** | Zahlung auf eine Lieferantenrechnung (Überweisung oder Bar), mit optionalem Skonto-Abzug. Statusübergänge erfolgen automatisch | 📍 Lager → Lieferantenrechnungen → Detail → Zahlungstabelle |
@@ -8180,6 +8311,7 @@ Diese Tabelle listet alle Seiten der Anwendung mit ihrer URL und dem Menüpfad:
 | `/warehouse/purchase-orders/suggestions` | Lager → Bestellungen → Nachbestellvorschläge | wh_purchase_orders.view |
 | `/warehouse/goods-receipt` | Lager → Wareneingang | wh_stock.manage |
 | `/warehouse/withdrawals` | Lager → Lagerentnahmen | wh_stock.manage |
+| `/warehouse/reservations` | Lager → Reservierungen | wh_reservations.view |
 | `/warehouse/stock-movements` | Lager → Bestandsbewegungen | wh_stock.view |
 | `/warehouse/corrections` | Lager → Korrekturassistent | wh_corrections.view |
 

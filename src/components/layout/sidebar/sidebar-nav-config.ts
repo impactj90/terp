@@ -49,6 +49,7 @@ import {
   PackageCheck,
   PackageMinus,
   ArrowRightLeft,
+  Lock,
 } from 'lucide-react'
 
 /**
@@ -420,6 +421,13 @@ export const navConfig: NavSection[] = [
         icon: Stamp,
         module: 'warehouse',
         permissions: ['wh_supplier_invoices.view'],
+      },
+      {
+        titleKey: 'warehouseReservations',
+        href: '/warehouse/reservations',
+        icon: Lock,
+        module: 'warehouse',
+        permissions: ['wh_reservations.view'],
       },
       {
         titleKey: 'warehouseCorrections',

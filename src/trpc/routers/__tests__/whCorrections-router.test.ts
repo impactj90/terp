@@ -225,7 +225,7 @@ describe("warehouse.corrections", () => {
       )
       const result = await caller.runs.trigger()
       expect(result!.runId).toBe("c1000000-0000-4000-a000-000000000001")
-      expect(result!.checksRun).toBe(6)
+      expect(result!.checksRun).toBe(7)
     })
   })
 

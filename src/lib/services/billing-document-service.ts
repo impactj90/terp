@@ -9,6 +9,7 @@ import * as billingTenantConfigRepo from "./billing-tenant-config-repository"
 import * as auditLog from "./audit-logs-service"
 import type { AuditContext } from "./audit-logs-service"
 import * as systemSettingsService from "./system-settings-service"
+import * as reservationService from "./wh-reservation-service"
 
 // --- Template Placeholder Resolution ---
 
@@ -608,6 +609,17 @@ export async function finalize(
     }
   }
 
+  // AUTO reservation for ORDER_CONFIRMATION (best-effort, outside transaction)
+  if (docType === "ORDER_CONFIRMATION") {
+    try {
+      await reservationService.createReservationsForDocument(
+        prisma, tenantId, id, finalizedById
+      )
+    } catch (err) {
+      console.error(`Auto reservation failed for order confirmation ${id}`, err)
+    }
+  }
+
   // Never throws — audit failures must not block the actual operation
   if (audit) {
     await auditLog.log(prisma, {
@@ -740,6 +752,17 @@ export async function forward(
     userAgent: audit.userAgent,
   }).catch(err => console.error('[AuditLog] Failed:', err))
 
+  // Release reservations when ORDER_CONFIRMATION is forwarded to DELIVERY_NOTE
+  if (targetType === "DELIVERY_NOTE") {
+    try {
+      await reservationService.releaseReservationsForDeliveryNote(
+        prisma, tenantId, newDoc.id, createdById
+      )
+    } catch (err) {
+      console.error(`Reservation release failed for delivery note ${newDoc.id}`, err)
+    }
+  }
+
   // Return the new document with positions
   return repo.findById(prisma, tenantId, newDoc.id)
 }
@@ -802,6 +825,15 @@ export async function cancel(
       ipAddress: audit.ipAddress,
       userAgent: audit.userAgent,
     }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  // Release reservations when ORDER_CONFIRMATION is cancelled
+  try {
+    await reservationService.releaseReservationsForCancel(
+      prisma, tenantId, id, audit?.userId
+    )
+  } catch (err) {
+    console.error(`Reservation release failed for cancelled document ${id}`, err)
   }
 
   return updated

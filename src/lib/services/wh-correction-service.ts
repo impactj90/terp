@@ -6,6 +6,7 @@
  */
 import type { PrismaClient, WhCorrectionSeverity } from "@/generated/prisma/client"
 import * as repo from "./wh-correction-repository"
+import * as reservationRepo from "./wh-reservation-repository"
 
 // --- Error Classes (naming convention drives handleServiceError mapping) ---
 
@@ -31,7 +32,7 @@ const CHECK_OVERDUE_ORDER = "OVERDUE_ORDER"
 const CHECK_UNMATCHED_RECEIPT = "UNMATCHED_RECEIPT"
 const CHECK_STOCK_MISMATCH = "STOCK_MISMATCH"
 const CHECK_LOW_STOCK_NO_ORDER = "LOW_STOCK_NO_ORDER"
-// const CHECK_ORPHAN_RESERVATION = "ORPHAN_RESERVATION"  // Deferred: WH_10 not implemented
+const CHECK_ORPHAN_RESERVATION = "ORPHAN_RESERVATION"
 
 // --- Types ---
 
@@ -154,6 +155,25 @@ async function checkLowStockNoOrder(
   }))
 }
 
+async function checkOrphanReservations(
+  prisma: PrismaClient,
+  tenantId: string
+): Promise<DetectedIssue[]> {
+  const orphans = await reservationRepo.findOrphanReservations(prisma, tenantId)
+  return orphans.map((row) => ({
+    code: CHECK_ORPHAN_RESERVATION,
+    severity: "WARNING" as WhCorrectionSeverity,
+    message: `Reservierung für Artikel ${row.articleNumber} (Beleg ${row.documentNumber}) ist noch aktiv, obwohl der Beleg storniert/weitergeleitet wurde`,
+    articleId: row.articleId,
+    documentId: row.documentId,
+    details: {
+      reservationId: row.id,
+      quantity: row.quantity,
+      documentStatus: row.documentStatus,
+    },
+  }))
+}
+
 // --- Main Check Runner ---
 
 export async function runCorrectionChecks(
@@ -176,7 +196,7 @@ export async function runCorrectionChecks(
     checkUnmatchedReceipts,
     checkStockMismatch,
     checkLowStockNoOrder,
-    // checkOrphanReservations — deferred, WH_10 not implemented
+    checkOrphanReservations,
   ]
 
   let totalIssues = 0

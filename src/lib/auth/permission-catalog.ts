@@ -303,6 +303,10 @@ export const ALL_PERMISSIONS: Permission[] = [
   p("wh_corrections.view", "wh_corrections", "view", "View warehouse correction assistant"),
   p("wh_corrections.manage", "wh_corrections", "manage", "Manage warehouse correction messages"),
   p("wh_corrections.run", "wh_corrections", "run", "Run warehouse correction checks"),
+
+  // Warehouse Reservations
+  p("wh_reservations.view", "wh_reservations", "view", "View stock reservations"),
+  p("wh_reservations.manage", "wh_reservations", "manage", "Manage/release stock reservations"),
 ]
 
 // Lookup maps

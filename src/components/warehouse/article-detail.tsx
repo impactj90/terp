@@ -23,6 +23,8 @@ import { ArticleBomList } from './article-bom-list'
 import { ArticleStockAdjustDialog } from './article-stock-adjust-dialog'
 import { ArticlePriceTab } from './article-price-tab'
 import { ArticleImagesTab } from './article-images-tab'
+import { ArticleStockInfoCard } from './article-stock-info-card'
+import { ArticleReservationsTab } from './article-reservations-tab'
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -165,6 +167,7 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
           <TabsTrigger value="suppliers">{t('tabSuppliers')}</TabsTrigger>
           <TabsTrigger value="bom">{t('tabBom')}</TabsTrigger>
           <TabsTrigger value="stock">{t('tabStock')}</TabsTrigger>
+          <TabsTrigger value="reservations">{t('tabReservations')}</TabsTrigger>
           <TabsTrigger value="prices">{t('tabPrices')}</TabsTrigger>
           <TabsTrigger value="images">{t('tabImages')}</TabsTrigger>
         </TabsList>
@@ -198,19 +201,7 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
 
             {/* Stock Info */}
             {article.stockTracking && (
-              <Card>
-                <CardContent className="pt-6">
-                  <h3 className="text-sm font-semibold mb-3">{t('sectionStock')}</h3>
-                  <DetailRow label={t('labelCurrentStock')} value={article.currentStock} />
-                  <DetailRow label={t('labelMinStock')} value={article.minStock ?? '\u2014'} />
-                  <DetailRow label={t('labelWarehouseLocation')} value={article.warehouseLocation} />
-                  {article.minStock != null && article.currentStock < article.minStock && (
-                    <div className="mt-2 p-2 bg-destructive/10 text-destructive text-sm rounded-md">
-                      {t('alertBelowMinStock')}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <ArticleStockInfoCard articleId={articleId} article={article} />
             )}
           </div>
         </TabsContent>
@@ -225,6 +216,10 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
 
         <TabsContent value="stock" className="mt-4">
           <ArticleMovementsTab articleId={articleId} />
+        </TabsContent>
+
+        <TabsContent value="reservations" className="mt-4">
+          <ArticleReservationsTab articleId={articleId} />
         </TabsContent>
 
         <TabsContent value="prices" className="mt-4">

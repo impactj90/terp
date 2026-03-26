@@ -932,3 +932,11 @@ export {
   useResolveBulkWhCorrection,
   useTriggerWhCorrectionRun,
 } from './use-wh-corrections'
+
+// Warehouse Reservations
+export {
+  useWhReservations,
+  useWhArticleAvailableStock,
+  useReleaseWhReservation,
+  useReleaseWhReservationsBulk,
+} from './use-wh-reservations'
