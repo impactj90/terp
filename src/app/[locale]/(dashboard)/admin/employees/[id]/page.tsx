@@ -21,6 +21,7 @@ import {
   TariffAssignmentDeleteDialog,
   EffectiveTariffPreview,
 } from '@/components/employees/tariff-assignments'
+import { PersonnelFileTab } from '@/components/hr/personnel-file-tab'
 import type { components } from '@/types/legacy-api-types'
 
 type TariffAssignment = components['schemas']['EmployeeTariffAssignment']
@@ -124,6 +125,7 @@ export default function EmployeeDetailPage() {
         <TabsList>
           <TabsTrigger value="overview">{ta('tabOverview')}</TabsTrigger>
           <TabsTrigger value="tariff-assignments">{ta('tabLabel')}</TabsTrigger>
+          <TabsTrigger value="personnel-file">{t('tabPersonnelFile')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
@@ -198,6 +200,10 @@ export default function EmployeeDetailPage() {
             onDelete={(a) => setDeleteAssignment(a)}
           />
           <EffectiveTariffPreview employeeId={employeeId} />
+        </TabsContent>
+
+        <TabsContent value="personnel-file" className="mt-6">
+          <PersonnelFileTab employeeId={employeeId} />
         </TabsContent>
       </Tabs>
 

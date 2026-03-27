@@ -12,6 +12,7 @@ import {
   PendingActions,
   RecentActivity,
 } from '@/components/dashboard'
+import { PersonnelFileDashboardWidget } from '@/components/hr/personnel-file-dashboard-widget'
 import { Skeleton } from '@/components/ui/skeleton'
 import { UserX } from 'lucide-react'
 
@@ -70,6 +71,11 @@ export default function DashboardPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <PendingActions employeeId={employeeId} />
         <RecentActivity employeeId={employeeId} />
+      </div>
+
+      {/* HR Personnel File Widget */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <PersonnelFileDashboardWidget />
       </div>
     </div>
   )
