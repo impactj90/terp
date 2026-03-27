@@ -3598,3 +3598,31 @@ VALUES
   ('documents', 'documents', false),
   ('tenant-logos', 'tenant-logos', true)
 ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================
+-- HR Personnel File: Default Categories
+-- =============================================================
+INSERT INTO hr_personnel_file_categories (tenant_id, name, code, description, color, sort_order, visible_to_roles) VALUES
+('10000000-0000-0000-0000-000000000001', 'Verträge', 'CONTRACTS', 'Arbeitsverträge, Ergänzungen, Kündigungen', '#3B82F6', 1, ARRAY['admin', 'hr']),
+('10000000-0000-0000-0000-000000000001', 'Zertifikate & Qualifikationen', 'CERTS', 'Schweißerscheine, Staplerschein, Ersthelfer', '#10B981', 2, ARRAY['admin', 'hr', 'supervisor']),
+('10000000-0000-0000-0000-000000000001', 'Unterweisungen', 'SAFETY', 'Sicherheitsunterweisungen, Brandschutz', '#F59E0B', 3, ARRAY['admin', 'hr', 'supervisor']),
+('10000000-0000-0000-0000-000000000001', 'Abmahnungen', 'WARNINGS', 'Abmahnungen, Verwarnungen', '#EF4444', 4, ARRAY['admin', 'hr']),
+('10000000-0000-0000-0000-000000000001', 'Weiterbildung', 'TRAINING', 'Schulungen, Seminare', '#8B5CF6', 5, ARRAY['admin', 'hr', 'supervisor']),
+('10000000-0000-0000-0000-000000000001', 'Arbeitsmedizin', 'MEDICAL', 'G-Untersuchungen, Eignungsnachweise', '#06B6D4', 6, ARRAY['admin', 'hr']),
+('10000000-0000-0000-0000-000000000001', 'Sonstiges', 'OTHER', 'Alle übrigen Dokumente', '#6B7280', 7, ARRAY['admin', 'hr', 'supervisor'])
+ON CONFLICT (tenant_id, code) DO NOTHING;
+
+-- =============================================================
+-- DSGVO Retention: Default Rules for Dev Tenant
+-- =============================================================
+INSERT INTO dsgvo_retention_rules (tenant_id, data_type, retention_months, action, is_active, description) VALUES
+('10000000-0000-0000-0000-000000000001', 'BOOKINGS',            36,  'DELETE',    false, 'Stempelbuchungen (Kommen/Gehen)'),
+('10000000-0000-0000-0000-000000000001', 'DAILY_VALUES',        36,  'DELETE',    false, 'Tageswerte (berechnete Zeiten)'),
+('10000000-0000-0000-0000-000000000001', 'ABSENCES',            36,  'ANONYMIZE', false, 'Abwesenheiten (Urlaub, Krank etc.)'),
+('10000000-0000-0000-0000-000000000001', 'MONTHLY_VALUES',      60,  'DELETE',    false, 'Monatswerte (Konten, Flexzeit)'),
+('10000000-0000-0000-0000-000000000001', 'AUDIT_LOGS',          24,  'DELETE',    false, 'Audit-Protokoll'),
+('10000000-0000-0000-0000-000000000001', 'TERMINAL_BOOKINGS',   12,  'DELETE',    false, 'Terminal-Rohdaten'),
+('10000000-0000-0000-0000-000000000001', 'PERSONNEL_FILE',      120, 'DELETE',    false, 'Personalakten-Eintraege'),
+('10000000-0000-0000-0000-000000000001', 'CORRECTION_MESSAGES', 12,  'DELETE',    false, 'Korrekturassistent-Meldungen'),
+('10000000-0000-0000-0000-000000000001', 'STOCK_MOVEMENTS',     120, 'ANONYMIZE', false, 'Lagerbewegungen')
+ON CONFLICT (tenant_id, data_type) DO NOTHING;

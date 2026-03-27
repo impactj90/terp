@@ -203,6 +203,15 @@ model Tenant {
   whCorrectionMessages        WhCorrectionMessage[]
   whStockReservations         WhStockReservation[]
 
+  // HR Personnel File
+  hrPersonnelFileCategories   HrPersonnelFileCategory[]
+  hrPersonnelFileEntries      HrPersonnelFileEntry[]
+  hrPersonnelFileAttachments  HrPersonnelFileAttachment[]
+
+  // DSGVO
+  dsgvoRetentionRules         DsgvoRetentionRule[]
+  dsgvoDeleteLogs             DsgvoDeleteLog[]
+
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
   @@index([isActive], map: "idx_tenants_is_active")
@@ -1506,6 +1515,7 @@ model Employee {
   orderBookings       OrderBooking[]
   crmTaskAssignees        CrmTaskAssignee[]
   assignedServiceCases    BillingServiceCase[]
+  hrPersonnelFileEntries  HrPersonnelFileEntry[]
 
   // Indexes
   @@unique([tenantId, personnelNumber], map: "employees_tenant_id_personnel_number_key")
@@ -4655,4 +4665,137 @@ model WhStockReservation {
   @@index([tenantId, articleId, status])
   @@index([tenantId, documentId])
   @@map("wh_stock_reservations")
+}
+
+// -----------------------------------------------------------------------------
+// HrPersonnelFileCategory
+// -----------------------------------------------------------------------------
+// Migration: 20260408100000
+model HrPersonnelFileCategory {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  name        String   @db.VarChar(100)
+  code        String   @db.VarChar(50)
+  description String?  @db.Text
+  color       String?  @db.VarChar(7)
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  visibleToRoles String[] @default(["admin"]) @map("visible_to_roles")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant  Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  entries HrPersonnelFileEntry[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@map("hr_personnel_file_categories")
+}
+
+// -----------------------------------------------------------------------------
+// HrPersonnelFileEntry
+// -----------------------------------------------------------------------------
+// Migration: 20260408100000
+model HrPersonnelFileEntry {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  employeeId     String    @map("employee_id") @db.Uuid
+  categoryId     String    @map("category_id") @db.Uuid
+  title          String    @db.VarChar(255)
+  description    String?   @db.Text
+  entryDate      DateTime  @map("entry_date") @db.Date
+  expiresAt      DateTime? @map("expires_at") @db.Date
+  reminderDate   DateTime? @map("reminder_date") @db.Date
+  reminderNote   String?   @map("reminder_note") @db.Text
+  isConfidential Boolean   @default(false) @map("is_confidential")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById    String?   @map("created_by_id") @db.Uuid
+
+  tenant      Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee    Employee                   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  category    HrPersonnelFileCategory    @relation(fields: [categoryId], references: [id])
+  attachments HrPersonnelFileAttachment[]
+
+  @@index([tenantId, employeeId])
+  @@index([tenantId, categoryId])
+  @@index([tenantId, reminderDate])
+  @@index([tenantId, expiresAt])
+  @@map("hr_personnel_file_entries")
+}
+
+// -----------------------------------------------------------------------------
+// HrPersonnelFileAttachment
+// -----------------------------------------------------------------------------
+// Migration: 20260408100000
+model HrPersonnelFileAttachment {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  entryId     String   @map("entry_id") @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  filename    String   @db.VarChar(255)
+  storagePath String   @map("storage_path") @db.Text
+  mimeType    String   @map("mime_type") @db.VarChar(100)
+  sizeBytes   Int      @map("size_bytes")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdById String?  @map("created_by_id") @db.Uuid
+
+  entry  HrPersonnelFileEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  tenant Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([entryId])
+  @@index([tenantId])
+  @@map("hr_personnel_file_attachments")
+}
+
+// -----------------------------------------------------------------------------
+// DsgvoRetentionRule
+// -----------------------------------------------------------------------------
+// Migration: 20260409100000
+//
+// Configurable data retention rules per tenant and data type.
+// Used by DSGVO cron job and manual execution.
+
+model DsgvoRetentionRule {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  dataType        String   @map("data_type") @db.VarChar(50)
+  retentionMonths Int      @map("retention_months") @db.Integer
+  action          String   @default("DELETE") @db.VarChar(20)
+  isActive        Boolean  @default(true) @map("is_active")
+  description     String?  @db.Text
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, dataType])
+  @@index([tenantId])
+  @@map("dsgvo_retention_rules")
+}
+
+// -----------------------------------------------------------------------------
+// DsgvoDeleteLog
+// -----------------------------------------------------------------------------
+// Migration: 20260409100000
+//
+// Immutable audit log of all DSGVO retention executions.
+
+model DsgvoDeleteLog {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  dataType     String   @map("data_type") @db.VarChar(50)
+  action       String   @db.VarChar(20)
+  recordCount  Int      @map("record_count") @db.Integer
+  cutoffDate   DateTime @map("cutoff_date") @db.Date
+  executedAt   DateTime @default(now()) @map("executed_at") @db.Timestamptz(6)
+  executedBy   String?  @map("executed_by") @db.Uuid
+  durationMs   Int?     @map("duration_ms") @db.Integer
+  error        String?  @db.Text
+  details      Json?    @db.JsonB
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, executedAt])
+  @@map("dsgvo_delete_logs")
 }

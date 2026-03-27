@@ -68,6 +68,7 @@ import { monthlyEvalTemplatesRouter } from "./monthlyEvalTemplates"
 import { correctionsRouter } from "./corrections"
 import { correctionAssistantRouter } from "./correctionAssistant"
 import { employeeDayPlansRouter } from "./employeeDayPlans"
+import { dsgvoRouter } from "./dsgvo"
 import { dailyValuesRouter } from "./dailyValues"
 import { dailyAccountValuesRouter } from "./dailyAccountValues"
 import { monthlyValuesRouter } from "./monthlyValues"
@@ -81,6 +82,7 @@ import { tenantModulesRouter } from "./tenantModules"
 import { crmRouter } from "./crm"
 import { billingRouter } from "./billing"
 import { warehouseRouter } from "./warehouse"
+import { hrRouter } from "./hr"
 
 export const appRouter = createTRPCRouter({
   health: healthRouter,
@@ -146,6 +148,7 @@ export const appRouter = createTRPCRouter({
   corrections: correctionsRouter,
   correctionAssistant: correctionAssistantRouter,
   employeeDayPlans: employeeDayPlansRouter,
+  dsgvo: dsgvoRouter,
   dailyValues: dailyValuesRouter,
   dailyAccountValues: dailyAccountValuesRouter,
   monthlyValues: monthlyValuesRouter,
@@ -159,6 +162,7 @@ export const appRouter = createTRPCRouter({
   crm: crmRouter,
   billing: billingRouter,
   warehouse: warehouseRouter,
+  hr: hrRouter,
 })
 
 /** Type-only export for client-side inference. */

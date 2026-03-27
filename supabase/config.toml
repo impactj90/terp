@@ -69,6 +69,11 @@ public = false
 file_size_limit = "10MiB"
 allowed_mime_types = ["application/pdf", "image/jpeg", "image/png", "image/webp", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]
 
+[storage.buckets.hr-personnel-files]
+public = false
+file_size_limit = "20MiB"
+allowed_mime_types = ["application/pdf", "image/jpeg", "image/png", "image/webp", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]
+
 [auth]
 enabled = true
 

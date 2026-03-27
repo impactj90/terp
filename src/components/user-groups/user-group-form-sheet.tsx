@@ -92,6 +92,11 @@ const CATEGORY_DEFINITIONS = [
     resources: ['wh_articles', 'wh_article_groups', 'wh_purchase_orders', 'wh_stock', 'wh_supplier_invoices', 'wh_corrections'],
   },
   {
+    id: 'hr',
+    labelKey: 'categoryHR',
+    resources: ['hr_personnel_file', 'hr_personnel_file_categories'],
+  },
+  {
     id: 'admin',
     labelKey: 'categoryAdmin',
     resources: ['users', 'tenants', 'settings', 'notifications'],
@@ -214,6 +219,8 @@ export function UserGroupFormSheet({
       wh_stock: t('resourceWhStock'),
       wh_supplier_invoices: t('resourceWhSupplierInvoices'),
       wh_corrections: t('resourceWhCorrections'),
+      hr_personnel_file: t('resourceHrPersonnelFile'),
+      hr_personnel_file_categories: t('resourceHrPersonnelFileCategories'),
     }),
     [t]
   )
@@ -240,6 +247,7 @@ export function UserGroupFormSheet({
       run: t('actionRun'),
       upload_image: t('actionUploadImage'),
       delete_image: t('actionDeleteImage'),
+      view_confidential: t('actionViewConfidential'),
     }),
     [t]
   )

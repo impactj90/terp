@@ -51,6 +51,8 @@ import {
   ArrowRightLeft,
   Lock,
   ScanLine,
+  FolderOpen,
+  ShieldAlert,
 } from 'lucide-react'
 
 /**
@@ -279,6 +281,23 @@ export const navConfig: NavSection[] = [
         href: '/admin/employee-messages',
         icon: Mail,
         permissions: ['notifications.manage'],
+      },
+    ],
+  },
+  {
+    titleKey: 'hrSection',
+    items: [
+      {
+        titleKey: 'hrPersonnelFile',
+        href: '/hr/personnel-file',
+        icon: FolderOpen,
+        permissions: ['hr_personnel_file.view'],
+      },
+      {
+        titleKey: 'hrPersonnelFileCategories',
+        href: '/hr/personnel-file/categories',
+        icon: Tag,
+        permissions: ['hr_personnel_file_categories.manage'],
       },
     ],
   },
@@ -533,6 +552,12 @@ export const navConfig: NavSection[] = [
         icon: Stamp,
         module: 'billing',
         permissions: ['billing_documents.edit'],
+      },
+      {
+        titleKey: 'dsgvoRetention',
+        href: '/admin/dsgvo',
+        icon: ShieldAlert,
+        permissions: ['dsgvo.view'],
       },
     ],
   },

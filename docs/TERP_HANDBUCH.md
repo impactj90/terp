@@ -108,7 +108,15 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [20.5 Prüfläufe](#205-prüfläufe)
     - [20.6 Automatische Prüfung (Cron)](#206-automatische-prüfung-cron)
     - [20.7 Praxisbeispiel: Bestandsprüfung vor Inventur](#207-praxisbeispiel-bestandsprüfung-vor-inventur)
-21. [Glossar](#21-glossar)
+21. [DSGVO-Datenlöschung](#21-dsgvo-datenlöschung)
+    - [21.1 Aufbewahrungsregeln konfigurieren](#211-aufbewahrungsregeln-konfigurieren)
+    - [21.2 Vorschau und manuelle Ausführung](#212-vorschau-und-manuelle-ausführung)
+    - [21.3 Löschprotokoll](#213-löschprotokoll)
+    - [21.4 Automatische Ausführung (Cron)](#214-automatische-ausführung-cron)
+    - [21.5 Gesetzliche Aufbewahrungsfristen](#215-gesetzliche-aufbewahrungsfristen)
+    - [21.6 Anonymisierung vs. Löschung](#216-anonymisierung-vs-löschung)
+    - [21.7 Praxisbeispiel: Aufbewahrungsfrist konfigurieren und Vorschau starten](#217-praxisbeispiel-aufbewahrungsfrist-konfigurieren-und-vorschau-starten)
+22. [Glossar](#22-glossar)
 
 ---
 
@@ -8212,7 +8220,266 @@ Jedes Etikett enthaelt: QR-Code + Artikelnummer + Bezeichnung + Einheit.
 
 ---
 
-## 21. Glossar
+## 20c. HR — Personalakte
+
+Die Personalakte ermoeglicht die digitale Verwaltung von Mitarbeiterdokumenten, Zertifikaten, Unterweisungen und weiteren personalrelevanten Eintraegen. Jeder Eintrag gehoert zu einer Kategorie und kann Dateianhänge enthalten.
+
+Die Personalakte ist ueber zwei Wege erreichbar:
+
+- **Mitarbeiterdetail**: Tab "Personalakte" im Mitarbeiterprofil (Verwaltung -> Mitarbeiter -> Mitarbeiter oeffnen)
+- **HR-Bereich in der Seitenleiste**: Eigener Navigationsbereich "Personal" mit Uebersicht und Kategorienverwaltung
+
+### 20c.1 Aktenkategorien
+
+Jeder Eintrag gehoert zu genau einer Kategorie. Terp liefert 7 Standardkategorien:
+
+| Code | Name | Farbe | Typische Inhalte |
+|------|------|-------|-----------------|
+| CONTRACTS | Vertraege | Blau | Arbeitsvertraege, Ergaenzungen, Kuendigungen |
+| CERTS | Zertifikate & Qualifikationen | Gruen | Schweisserscheine, Staplerschein, Ersthelfer |
+| SAFETY | Unterweisungen | Gelb | Sicherheitsunterweisungen, Brandschutz |
+| WARNINGS | Abmahnungen | Rot | Abmahnungen, Verwarnungen |
+| TRAINING | Weiterbildung | Lila | Schulungen, Seminare |
+| MEDICAL | Arbeitsmedizin | Cyan | G-Untersuchungen, Eignungsnachweise |
+| OTHER | Sonstiges | Grau | Alle uebrigen Dokumente |
+
+Jede Kategorie hat eine **Rollensteuerung** ("Sichtbar fuer"): Nur Benutzer deren Rolle in der Kategorie hinterlegt ist, sehen die zugehoerigen Eintraege. Zum Beispiel: Abmahnungen nur fuer "admin" und "hr", Unterweisungen auch fuer "supervisor".
+
+### 20c.2 Eintraege
+
+Ein Personalakte-Eintrag hat folgende Felder:
+
+- **Kategorie** (Pflicht): Eine der konfigurierten Aktenkategorien
+- **Titel** (Pflicht): Kurzbeschreibung (z.B. "Staplerschein", "Erstunterweisung Brandschutz")
+- **Datum** (Pflicht): Datum des Vorfalls oder Dokuments
+- **Beschreibung** (optional): Ausfuehrlichere Notizen
+- **Ablaufdatum** (optional): Wann ein Zertifikat/Nachweis ablaeuft. Eintraege mit Ablaufdatum werden farblich markiert:
+  - **Gelb**: Laeuft innerhalb der naechsten 30 Tage ab
+  - **Rot**: Bereits abgelaufen
+- **Wiedervorlage** (optional): Datum + Notiz fuer eine Erinnerung (z.B. "Schulung erneuern")
+- **Vertraulich** (Checkbox): Nur fuer Benutzer mit der Berechtigung "Vertrauliche ansehen" sichtbar
+
+### 20c.3 Dateianhänge
+
+Zu jedem Eintrag koennen bis zu **10 Dateien** hochgeladen werden.
+
+- **Maximale Dateigroesse**: 20 MB pro Datei
+- **Unterstuetzte Formate**: PDF, JPEG, PNG, WebP, DOCX, XLSX
+- **Upload**: Eintrag oeffnen (bearbeiten) -> Button "Datei hochladen" -> Datei(en) auswaehlen
+- **Download**: Eintrag oeffnen -> Download-Icon neben dem Anhang klicken -> Datei oeffnet sich im neuen Tab
+- **Loeschen**: Eintrag oeffnen -> Papierkorb-Icon neben dem Anhang klicken
+
+**Hinweis**: Anhänge koennen erst nach dem Erstellen des Eintrags hochgeladen werden. Zuerst den Eintrag anlegen, dann bearbeiten und Dateien hinzufuegen.
+
+### 20c.4 HR-Uebersichtsseite
+
+Ueber die Seitenleiste **Personal -> Personalakte** erreichen Sie die Uebersichtsseite mit zwei Tabs:
+
+- **Faellige Wiedervorlagen**: Zeigt alle Eintraege deren Wiedervorlagedatum erreicht oder ueberschritten ist
+- **Ablaufende Eintraege**: Zeigt alle Eintraege die innerhalb der naechsten 30 Tage ablaufen
+
+### 20c.5 Dashboard-Widget
+
+Auf dem Dashboard erscheint ein Widget "Personalakte" das auf einen Blick zeigt:
+
+- Anzahl faelliger Wiedervorlagen
+- Anzahl ablaufender Eintraege (naechste 30 Tage)
+
+### 20c.6 Berechtigungen
+
+Die Personalakte hat 6 Berechtigungen, die in der Benutzergruppen-Verwaltung unter der Sektion **"Personal"** zu finden sind:
+
+| Berechtigung | Beschreibung |
+|-------------|-------------|
+| Ansehen | Personalakte-Eintraege und Anhänge sehen |
+| Erstellen | Neue Eintraege anlegen und Dateien hochladen |
+| Bearbeiten | Bestehende Eintraege aendern |
+| Loeschen | Eintraege und Anhänge entfernen |
+| Vertrauliche ansehen | Auch als "vertraulich" markierte Eintraege sehen |
+| Kategorien verwalten | Aktenkategorien anlegen, bearbeiten und loeschen |
+
+Die Standardgruppen ADMIN und PERSONAL haben alle 6 Berechtigungen. VORGESETZTER hat Ansehen, Erstellen und Bearbeiten.
+
+### Praxisbeispiel: Neuen Personalakte-Eintrag anlegen
+
+1. Seitenleiste -> **Verwaltung** -> **Mitarbeiter** -> Mitarbeiter oeffnen
+2. Tab **"Personalakte"** klicken
+3. Button **"Neuer Eintrag"** klicken
+4. Kategorie waehlen (z.B. "Zertifikate & Qualifikationen")
+5. Titel eingeben (z.B. "Staplerschein")
+6. Datum des Dokuments eingeben
+7. Optional: Ablaufdatum setzen (z.B. "31.12.2027")
+8. Optional: Wiedervorlage setzen (z.B. "01.11.2027" mit Notiz "Schulung erneuern")
+9. **"Erstellen"** klicken
+10. Eintrag erscheint in der Personalakte-Liste
+11. Eintrag ueber das 3-Punkte-Menu **"Bearbeiten"** oeffnen
+12. Im Bereich "Anhänge" -> **"Datei hochladen"** klicken -> Scan des Staplerscheins (PDF) auswaehlen
+13. Datei erscheint in der Anhangliste mit Download- und Loeschen-Button
+14. **"Speichern"** klicken
+
+### Praxisbeispiel: Ablaufende Zertifikate pruefen
+
+1. Seitenleiste -> **Personal** -> **Personalakte**
+2. Tab **"Ablaufende Eintraege"** zeigt alle Zertifikate die in den naechsten 30 Tagen ablaufen
+3. In der Mitarbeiter-Personalakte werden ablaufende Eintraege gelb (bald) oder rot (abgelaufen) markiert
+4. Auf dem Dashboard zeigt das Widget "Personalakte" die Gesamtzahl
+
+### Praxisbeispiel: Vertraulichen Eintrag anlegen (z.B. Abmahnung)
+
+1. Mitarbeiter oeffnen -> Tab "Personalakte" -> "Neuer Eintrag"
+2. Kategorie **"Abmahnungen"** waehlen
+3. Titel eingeben (z.B. "Erste Abmahnung — unentschuldigtes Fehlen")
+4. Checkbox **"Vertraulich"** aktivieren
+5. **"Erstellen"** klicken
+6. Eintrag wird mit einem Schloss-Icon markiert
+7. Benutzer ohne die Berechtigung "Vertrauliche ansehen" sehen diesen Eintrag **nicht**
+
+### Praxisbeispiel: Aktenkategorien verwalten
+
+1. Seitenleiste -> **Personal** -> **Aktenkategorien**
+2. **"Neue Kategorie"** klicken
+3. Name eingeben (z.B. "Fuehrerscheine"), Code eingeben (z.B. "LICENSES")
+4. Farbe waehlen und Sichtbarkeit fuer Rollen festlegen
+5. **"Erstellen"** klicken
+6. Beim naechsten Personalakte-Eintrag steht die neue Kategorie zur Auswahl
+
+### Praxisbeispiel: Benutzergruppe mit HR-Berechtigungen einrichten
+
+1. Seitenleiste -> **Administration** -> **Benutzergruppen**
+2. Gruppe bearbeiten oder neue Gruppe erstellen
+3. Im Bereich "Berechtigungen" die Sektion **"Personal"** aufklappen
+4. Gewuenschte Berechtigungen aktivieren (z.B. Ansehen + Erstellen fuer Teamleiter)
+5. **"Speichern"** klicken
+
+---
+
+## 21. DSGVO-Datenlöschung
+
+Die DSGVO (Datenschutz-Grundverordnung) verpflichtet Unternehmen, personenbezogene Daten nach Ablauf des Verarbeitungszwecks zu löschen oder zu anonymisieren. Terp bietet ein konfigurierbares System zur automatischen und manuellen Datenlöschung.
+
+📍 Seitenleiste → **Administration** → **DSGVO-Datenlöschung**
+⚠️ Berechtigung `dsgvo.view` erforderlich (Ansehen), `dsgvo.manage` (Konfigurieren), `dsgvo.execute` (Ausführen)
+
+Die Seite zeigt drei Bereiche:
+1. **Hinweiskarte** — DSGVO-Informationen und gesetzliche Aufbewahrungsfristen
+2. **Aufbewahrungsregeln** — Konfigurationstabelle pro Datentyp
+3. **Löschprotokoll** — Chronologische Liste aller durchgeführten Löschungen
+
+### 21.1 Aufbewahrungsregeln konfigurieren
+
+Die Aufbewahrungsregeln-Tabelle zeigt 9 Datentypen mit folgenden Spalten:
+
+| Datentyp | Beschreibung | Standard-Frist | Aktion |
+|----------|-------------|----------------|--------|
+| Buchungen | Stempelbuchungen (Kommen/Gehen) | 36 Monate | Löschen |
+| Tageswerte | Berechnete tägliche Arbeitszeiten | 36 Monate | Löschen |
+| Abwesenheiten | Urlaub, Krankheit etc. | 36 Monate | Anonymisieren |
+| Monatswerte | Konten, Flexzeit | 60 Monate | Löschen |
+| Audit-Protokoll | System-Änderungsprotokoll | 24 Monate | Löschen |
+| Terminal-Rohdaten | Rohdaten vom Terminal | 12 Monate | Löschen |
+| Personalakten | Personalakten-Einträge | 120 Monate | Löschen |
+| Korrekturmeldungen | Korrekturassistent-Meldungen | 12 Monate | Löschen |
+| Lagerbewegungen | Warenein- und -ausgänge | 120 Monate | Anonymisieren |
+
+Jede Regel kann einzeln bearbeitet werden:
+- **Aufbewahrung (Monate)** — Mindestens 6 Monate, Warnung bei Unterschreitung gesetzlicher Fristen
+- **Aktion** — Löschen oder Anonymisieren (nur für Abwesenheiten und Lagerbewegungen verfügbar)
+- **Aktiv** — Schalter zum Aktivieren/Deaktivieren der automatischen Ausführung
+- **Betroffene Datensätze** — Live-Anzeige, wie viele Datensätze betroffen wären
+
+### 21.2 Vorschau und manuelle Ausführung
+
+Über den Button **„Vorschau Datenlöschung"** kann vor der tatsächlichen Löschung geprüft werden, welche Datensätze betroffen sind.
+
+Die manuelle Ausführung erfordert eine 3-Schritt-Bestätigung:
+1. **Zusammenfassung** — Tabelle mit Datentyp, Aktion und Anzahl betroffener Datensätze
+2. **Bestätigung** — Checkbox „Ich verstehe, dass diese Aktion nicht rückgängig gemacht werden kann"
+3. **Sicherheitseingabe** — Eingabe des Worts „LÖSCHEN" zur endgültigen Bestätigung
+
+### 21.3 Löschprotokoll
+
+Das Löschprotokoll zeigt alle bisherigen Löschvorgänge mit:
+- Datum und Uhrzeit der Ausführung
+- Datentyp und Aktion (Löschen/Anonymisieren)
+- Anzahl bearbeiteter Datensätze
+- Stichtag (Daten bis einschließlich diesem Datum betroffen)
+- Dauer der Ausführung
+- Ausführender Benutzer oder „Automatisch (Cron)"
+
+### 21.4 Automatische Ausführung (Cron)
+
+Die automatische Löschung ist **standardmäßig deaktiviert**. Um sie zu aktivieren, muss der Cron-Job in der Vercel-Konfiguration (`vercel.json`) manuell eingetragen werden:
+
+```json
+{ "path": "/api/cron/dsgvo-retention", "schedule": "0 3 1 * *" }
+```
+
+Nach Aktivierung läuft die Löschung monatlich am 1. des Monats um 03:00 UTC. Nur aktive Regeln werden ausgeführt. Der Cron-Job verarbeitet alle Mandanten sequentiell und erstellt für jeden Löschvorgang einen Protokolleintrag.
+
+### 21.5 Gesetzliche Aufbewahrungsfristen
+
+⚠️ Einige Datentypen unterliegen gesetzlichen Mindest-Aufbewahrungsfristen:
+
+| Datentyp | Gesetzliche Frist | Rechtsgrundlage |
+|----------|------------------|-----------------|
+| Personalakten | 10 Jahre | Deutsches Arbeitsrecht |
+| Lagerbewegungen | 10 Jahre | HGB §257 |
+| Monatswerte | 5 Jahre | Steuerrecht |
+
+Das System zeigt eine Warnung an, wenn eine konfigurierte Frist unter dem gesetzlichen Minimum liegt. Die Konfiguration wird nicht blockiert, aber der Hinweis wird deutlich angezeigt.
+
+### 21.6 Anonymisierung vs. Löschung
+
+**Löschung (DELETE):** Datensätze werden vollständig aus der Datenbank entfernt. Bei Personalakten werden auch die zugehörigen Dateien aus dem Speicher gelöscht.
+
+**Anonymisierung (ANONYMIZE):** Personenbezogene Felder werden entfernt, sachbezogene Daten bleiben erhalten:
+- **Abwesenheiten:** Notizen, Genehmiger, Ersteller und Ablehnungsgrund werden entfernt. Datum, Abwesenheitstyp, Dauer und Status bleiben für Statistiken erhalten.
+- **Lagerbewegungen:** Ersteller, Notizen und Grund werden entfernt. Artikel, Menge, Bestand und Belegreferenzen bleiben für die Buchhaltung erhalten.
+
+### 21.7 Praxisbeispiel: Aufbewahrungsfrist konfigurieren und Vorschau starten
+
+**Szenario:** Die Aufbewahrungsfrist für Buchungen soll von 36 auf 24 Monate gesenkt werden, anschließend soll geprüft werden, wie viele Datensätze betroffen sind.
+
+**Voraussetzung:** Benutzer hat die Berechtigungen `dsgvo.view`, `dsgvo.manage` und `dsgvo.execute`.
+
+**Aufbewahrungsfrist ändern**
+
+1. 📍 Seitenleiste → **Administration** → **DSGVO-Datenlöschung**
+2. ✅ Seite zeigt Hinweiskarte mit DSGVO-Informationen und Tabelle der Aufbewahrungsregeln
+3. 📍 In der Zeile **„Buchungen"** auf das Bearbeiten-Symbol (Stift) klicken
+4. ✅ Zeile wechselt in den Bearbeitungsmodus: Eingabefeld für Monate, Aktion-Dropdown, Aktiv-Schalter
+5. 📍 Monatszahl von **36** auf **24** ändern
+6. 📍 Aktiv-Schalter **einschalten**
+7. 📍 Häkchen-Button klicken zum **Speichern**
+8. ✅ Zeile wechselt zurück in den Lesemodus, Spalte „Betroffene Datensätze" aktualisiert sich
+
+**Vorschau starten**
+
+9. 📍 **„Vorschau Datenlöschung"** klicken (roter Button oben rechts)
+10. ✅ Dialog öffnet sich mit Tabelle: Datentyp, Aktion, Anzahl betroffener Datensätze
+11. ✅ Zeile „Buchungen" zeigt die Anzahl der Buchungen älter als 24 Monate
+12. ✅ Nur aktive Regeln werden angezeigt
+
+**Manuelle Ausführung (3-Schritt-Bestätigung)**
+
+13. 📍 **„Jetzt ausführen"** klicken
+14. ✅ Schritt 2: Warnhinweis erscheint — „Diese Aktion kann nicht rückgängig gemacht werden"
+15. 📍 Checkbox **„Ich verstehe, dass diese Aktion nicht rückgängig gemacht werden kann"** aktivieren
+16. 📍 **„Sicherheitseingabe"** klicken
+17. ✅ Schritt 3: Eingabefeld erscheint
+18. 📍 **LÖSCHEN** eingeben
+19. 📍 **„Jetzt ausführen"** klicken
+20. ✅ Löschung wird ausgeführt, Ergebnis-Dialog zeigt Anzahl gelöschter Datensätze pro Typ
+21. 📍 **OK** klicken
+
+**Protokoll prüfen**
+
+22. ✅ Abschnitt „Löschprotokoll" zeigt neuen Eintrag mit Datum, Datentyp „Buchungen", Aktion „Löschen", Anzahl und Dauer
+23. ✅ Spalte „Ausgeführt von" zeigt den aktuellen Benutzer
+
+---
+
+## 22. Glossar
 
 | Begriff | Erklärung | Wo in Terp |
 |---------|-----------|-----------|
@@ -8406,6 +8673,7 @@ Diese Tabelle listet alle Seiten der Anwendung mit ihrer URL und dem Menüpfad:
 | `/warehouse/stock-movements` | Lager → Bestandsbewegungen | wh_stock.view |
 | `/warehouse/corrections` | Lager → Korrekturassistent | wh_corrections.view |
 | `/warehouse/scanner` | Lager → QR-Scanner | wh_qr.scan |
+| `/admin/dsgvo` | Administration → DSGVO-Datenlöschung | dsgvo.view |
 
 ---
 

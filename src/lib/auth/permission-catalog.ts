@@ -38,7 +38,7 @@ function p(
 }
 
 /**
- * All 95 permissions, mirroring Go's allPermissions slice.
+ * All 101 permissions, mirroring Go's allPermissions slice.
  * Order matches the Go source file for easy comparison.
  */
 export const ALL_PERMISSIONS: Permission[] = [
@@ -311,6 +311,19 @@ export const ALL_PERMISSIONS: Permission[] = [
   // Warehouse QR Scanner
   p("wh_qr.scan", "wh_qr", "scan", "Use QR scanner for warehouse operations"),
   p("wh_qr.print", "wh_qr", "print", "Print QR code labels"),
+
+  // HR Personnel File
+  p("hr_personnel_file.view", "hr_personnel_file", "view", "View personnel file entries"),
+  p("hr_personnel_file.create", "hr_personnel_file", "create", "Create personnel file entries"),
+  p("hr_personnel_file.edit", "hr_personnel_file", "edit", "Edit personnel file entries"),
+  p("hr_personnel_file.delete", "hr_personnel_file", "delete", "Delete personnel file entries"),
+  p("hr_personnel_file.view_confidential", "hr_personnel_file", "view_confidential", "View confidential entries"),
+  p("hr_personnel_file_categories.manage", "hr_personnel_file_categories", "manage", "Manage personnel file categories"),
+
+  // DSGVO Data Retention
+  p("dsgvo.view", "dsgvo", "view", "View DSGVO retention rules and logs"),
+  p("dsgvo.manage", "dsgvo", "manage", "Manage DSGVO retention rules"),
+  p("dsgvo.execute", "dsgvo", "execute", "Execute DSGVO data deletion"),
 ]
 
 // Lookup maps

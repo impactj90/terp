@@ -951,3 +951,30 @@ export {
   useQrRecentMovements,
   useQrPendingPositions,
 } from './use-wh-qr'
+
+// HR Personnel File
+export {
+  useHrPersonnelFileCategories,
+  useCreateHrPersonnelFileCategory,
+  useUpdateHrPersonnelFileCategory,
+  useDeleteHrPersonnelFileCategory,
+  useHrPersonnelFileEntries,
+  useHrPersonnelFileEntry,
+  useCreateHrPersonnelFileEntry,
+  useUpdateHrPersonnelFileEntry,
+  useDeleteHrPersonnelFileEntry,
+  useHrPersonnelFileReminders,
+  useHrPersonnelFileExpiring,
+  useUploadHrPersonnelFileAttachment,
+  useDeleteHrPersonnelFileAttachment,
+  useHrPersonnelFileDownloadUrl,
+} from './use-hr-personnel-file'
+
+// DSGVO Retention
+export {
+  useDsgvoRules,
+  useUpdateDsgvoRule,
+  useDsgvoPreview,
+  useExecuteDsgvoRetention,
+  useDsgvoLogs,
+} from './use-dsgvo'

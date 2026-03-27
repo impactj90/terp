@@ -24,7 +24,7 @@ describe("permissions.list", () => {
     )
     const result = await caller.permissions.list()
     expect(result.permissions).toHaveLength(ALL_PERMISSIONS.length)
-    expect(result.permissions).toHaveLength(110)
+    expect(result.permissions).toHaveLength(121)
   })
 
   it("each permission has id, key, resource, action, description", async () => {
