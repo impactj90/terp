@@ -108,6 +108,21 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [20.5 Prüfläufe](#205-prüfläufe)
     - [20.6 Automatische Prüfung (Cron)](#206-automatische-prüfung-cron)
     - [20.7 Praxisbeispiel: Bestandsprüfung vor Inventur](#207-praxisbeispiel-bestandsprüfung-vor-inventur)
+20b. [Lagerverwaltung — Mobile QR-Scanner](#20b-lagerverwaltung--mobile-qr-scanner)
+    - [20b.1 Scanner-Seite](#20b1-scanner-seite)
+    - [20b.2 QR-Etiketten drucken](#20b2-qr-etiketten-drucken)
+    - [20b.3 Praxisbeispiel: Wareneingang per QR-Scanner](#20b3-praxisbeispiel-wareneingang-per-qr-scanner)
+    - [20b.4 Praxisbeispiel: Entnahme per QR-Scanner](#20b4-praxisbeispiel-entnahme-per-qr-scanner)
+    - [20b.5 Praxisbeispiel: Storno per QR-Scanner](#20b5-praxisbeispiel-storno-per-qr-scanner)
+    - [20b.6 Praxisbeispiel: Etiketten drucken](#20b6-praxisbeispiel-etiketten-drucken)
+20c. [HR — Personalakte](#20c-hr--personalakte)
+    - [20c.1 Aktenkategorien](#20c1-aktenkategorien)
+    - [20c.2 Eintraege](#20c2-eintraege)
+    - [20c.3 Dateianhänge](#20c3-dateianhänge)
+    - [20c.4 HR-Uebersichtsseite](#20c4-hr-uebersichtsseite)
+    - [20c.5 Dashboard-Widget](#20c5-dashboard-widget)
+    - [20c.6 Berechtigungen](#20c6-berechtigungen)
+    - [Praxisbeispiel: Neuen Personalakte-Eintrag anlegen](#praxisbeispiel-neuen-personalakte-eintrag-anlegen)
 21. [DSGVO-Datenlöschung](#21-dsgvo-datenlöschung)
     - [21.1 Aufbewahrungsregeln konfigurieren](#211-aufbewahrungsregeln-konfigurieren)
     - [21.2 Vorschau und manuelle Ausführung](#212-vorschau-und-manuelle-ausführung)
@@ -6567,7 +6582,7 @@ Fuer Rechnungen und Gutschriften, die **vor Aktivierung** der E-Rechnung abgesch
 
 ⚠️ Modul: Das Warehouse-Modul muss für den Mandanten aktiviert sein
 
-⚠️ Berechtigung: „Lagerartikel anzeigen" (`wh_articles.view`) zum Lesen, „Lagerartikel erstellen" (`wh_articles.create`) zum Anlegen, „Lagerartikel bearbeiten" (`wh_articles.edit`) zum Bearbeiten
+⚠️ Berechtigung: „Lagerartikel anzeigen" (`wh_articles.view`) zum Lesen, „Lagerartikel erstellen" (`wh_articles.create`) zum Anlegen, „Lagerartikel bearbeiten" (`wh_articles.edit`) zum Bearbeiten, „Artikelbilder hochladen" (`wh_articles.upload_image`) und „Artikelbilder löschen" (`wh_articles.delete_image`) für die Bilderverwaltung
 
 📍 Seitenleiste → **Lager** → **Artikel**
 
@@ -8562,6 +8577,8 @@ Das System zeigt eine Warnung an, wenn eine konfigurierte Frist unter dem gesetz
 | **Zugangszone** | Physischer Bereich mit gesteuertem Zutritt | 📍 Administration → Zutrittskontrolle → Tab Zonen |
 | **Zuschlag** | Bonus für Arbeit in bestimmten Zeitfenstern (z. B. Nachtarbeit) | Konfiguriert im Tagesplan, Detailansicht → Zuschläge |
 | **Artikel** | Material, Ware oder Dienstleistung im Artikelstamm mit Nummer, Bezeichnung, Einheit und optional Preisen und Bestandsführung | 📍 Lager → Artikel |
+| **Artikelbild** | Bild (JPEG, PNG, WebP, max. 5 MB) eines Artikels mit automatischem Thumbnail. Das als Hauptbild markierte Bild erscheint in der Artikelliste. Sortierung per Drag & Drop | 📍 Lager → Artikel → Detail → Tab Bilder |
+| **Personalakte** | Digitale Verwaltung von Mitarbeiterdokumenten (Zertifikate, Unterweisungen, Verträge) mit Kategorie, Gültigkeitsdatum und Dateianhängen. Ablaufende Einträge werden farblich hervorgehoben | 📍 Personal → Personalakte / Verwaltung → Mitarbeiter → Tab Personalakte |
 | **Artikelgruppe** | Hierarchische Kategorie zur Organisation von Artikeln (z. B. „Holz → Massivholz → Eiche") | 📍 Lager → Artikel → Gruppenbaum links |
 | **Bestandsführung** | Schalter pro Artikel, der Lagerfunktionen aktiviert: aktueller Bestand, Mindestbestand, Lagerort und Bestandskorrektur | 📍 Lager → Artikel → Formular → Bestandsführung |
 | **Bestandskorrektur** | Manuelle Anpassung des Lagerbestands um einen Deltawert (z. B. +10 oder −5) mit optionaler Begründung | 📍 Lager → Artikel → Detail → „Bestand korrigieren" |
@@ -8673,6 +8690,8 @@ Diese Tabelle listet alle Seiten der Anwendung mit ihrer URL und dem Menüpfad:
 | `/warehouse/stock-movements` | Lager → Bestandsbewegungen | wh_stock.view |
 | `/warehouse/corrections` | Lager → Korrekturassistent | wh_corrections.view |
 | `/warehouse/scanner` | Lager → QR-Scanner | wh_qr.scan |
+| `/hr/personnel-file` | Personal → Personalakte | hr_personnel_file.view |
+| `/hr/personnel-file/categories` | Personal → Personalakte → Kategorien | hr_personnel_file_categories.manage |
 | `/admin/dsgvo` | Administration → DSGVO-Datenlöschung | dsgvo.view |
 
 ---
