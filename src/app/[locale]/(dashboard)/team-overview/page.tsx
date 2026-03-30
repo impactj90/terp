@@ -99,31 +99,29 @@ export default function TeamOverviewPage() {
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mt-1">
             {t('subtitle')}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="min-w-[240px]">
-            <DateRangePicker value={range} onChange={(next) => next && setRange(next)} />
-          </div>
+        <div className="flex items-center gap-2">
+          <DateRangePicker value={range} onChange={(next) => next && setRange(next)} />
           {selectedTeamId && (
-            <Button variant="outline" size="sm" onClick={handleRefresh} className="gap-2">
-              <RefreshCw className="h-4 w-4" />
-              {t('refresh')}
-            </Button>
-          )}
-          {selectedTeamId && (
-            <TeamExportButtons
-              members={members}
-              rangeDailyValues={rangeDailyValues}
-              rangeFrom={rangeFromDate}
-              rangeTo={rangeToDate}
-              isLoading={rangeDailyValuesLoading || teamLoading}
-            />
+            <>
+              <Button variant="outline" size="icon" onClick={handleRefresh} className="h-9 w-9 shrink-0">
+                <RefreshCw className="h-4 w-4" />
+                <span className="sr-only">{t('refresh')}</span>
+              </Button>
+              <TeamExportButtons
+                members={members}
+                rangeDailyValues={rangeDailyValues}
+                rangeFrom={rangeFromDate}
+                rangeTo={rangeToDate}
+                isLoading={rangeDailyValuesLoading || teamLoading}
+              />
+            </>
           )}
           <TeamQuickActions teamId={selectedTeamId} />
         </div>
@@ -189,8 +187,8 @@ export default function TeamOverviewPage() {
               />
 
               {/* Two-column layout */}
-              <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-                {/* Left: Attendance list */}
+              <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+                {/* Left: Attendance list + pattern */}
                 <div className="space-y-6">
                   <TeamAttendanceList
                     members={members}
@@ -240,19 +238,24 @@ function TeamOverviewSkeleton() {
           <Skeleton className="h-4 w-72" />
         </div>
         <div className="flex gap-2">
-          <Skeleton className="h-9 w-28" />
-          <Skeleton className="h-9 w-32" />
+          <Skeleton className="h-9 w-[240px]" />
+          <Skeleton className="h-9 w-9" />
         </div>
       </div>
       <Skeleton className="h-10 w-[280px]" />
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <Skeleton key={i} className="h-32" />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-[120px] rounded-xl" />
         ))}
       </div>
-      <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <Skeleton className="h-96" />
-        <Skeleton className="h-96" />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-[60px] rounded-lg" />
+        ))}
+      </div>
+      <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+        <Skeleton className="h-96 rounded-xl" />
+        <Skeleton className="h-96 rounded-xl" />
       </div>
     </div>
   )

@@ -2,15 +2,23 @@
 
 import { useMemo } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
-import { TrendingUp } from 'lucide-react'
+import { BarChart3 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { formatDate, formatDisplayDate, parseISODate } from '@/lib/time-utils'
+import { cn } from '@/lib/utils'
 import type { TeamDailyValuesResult } from '@/hooks/use-team-daily-values'
 
 interface AttendancePoint {
   date: Date
   count: number
+  isWeekend: boolean
 }
 
 interface TeamAttendancePatternProps {
@@ -72,10 +80,14 @@ export function TeamAttendancePattern({
       }
     }
 
-    const points: AttendancePoint[] = dateRange.map((date) => ({
-      date,
-      count: counts.get(formatDate(date)) ?? 0,
-    }))
+    const points: AttendancePoint[] = dateRange.map((date) => {
+      const day = date.getDay()
+      return {
+        date,
+        count: counts.get(formatDate(date)) ?? 0,
+        isWeekend: day === 0 || day === 6,
+      }
+    })
 
     const maxCount = Math.max(1, ...points.map((point) => point.count))
 
@@ -84,15 +96,17 @@ export function TeamAttendancePattern({
 
   if (rangeLoading) {
     return (
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            {t('attendancePattern')}
-          </CardTitle>
-          <TrendingUp className="h-4 w-4 text-muted-foreground" />
+      <Card className="overflow-hidden rounded-xl">
+        <CardHeader className="pb-3 pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">
+              {t('attendancePattern')}
+            </CardTitle>
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+          </div>
         </CardHeader>
-        <CardContent>
-          <Skeleton className="h-36 w-full" />
+        <CardContent className="p-5">
+          <Skeleton className="h-36 w-full rounded-lg" />
         </CardContent>
       </Card>
     )
@@ -102,51 +116,112 @@ export function TeamAttendancePattern({
   const labelFormat = points.length <= 7 ? 'weekday' : 'short'
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <div>
-          <CardTitle className="text-sm font-medium">
-            {t('attendancePattern')}
-          </CardTitle>
-          <p className="text-xs text-muted-foreground">
-            {t('rangeLabel', { from: rangeFrom, to: rangeTo })}
-          </p>
+    <Card className="overflow-hidden rounded-xl">
+      <CardHeader className="pb-3 pb-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-base">
+              {t('attendancePattern')}
+            </CardTitle>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {t('rangeLabel', { from: rangeFrom, to: rangeTo })}
+            </p>
+          </div>
+          <BarChart3 className="h-4 w-4 text-muted-foreground" />
         </div>
-        <TrendingUp className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-5">
         {!hasData ? (
           <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
             {tCommon('noDataAvailable')}
           </div>
         ) : (
-          <div className="flex items-end gap-2 h-32">
-            {points.map((point) => {
-              const height = point.count > 0 ? (point.count / maxCount) * 100 : 0
-              const label = formatDisplayDate(point.date, labelFormat, locale)
-              return (
-                <div key={formatDate(point.date)} className="flex flex-col items-center flex-1">
+          <TooltipProvider delayDuration={0}>
+            <div className="relative">
+              {/* Y-axis gridlines */}
+              <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+                {[0, 1, 2].map((i) => (
                   <div
-                    className="relative w-full flex-1 flex items-end"
-                    title={t('attendancePatternValue', {
-                      count: point.count,
-                      total: membersCount,
-                      date: label,
-                    })}
-                  >
-                    <div className="absolute inset-0 rounded-sm bg-muted/40" />
-                    <div
-                      className="relative w-full rounded-sm bg-emerald-500"
-                      style={{ height: `${height}%`, minHeight: point.count > 0 ? '4px' : '0' }}
-                    />
-                  </div>
-                  <span className="mt-1 text-[10px] text-muted-foreground">
-                    {label}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
+                    key={i}
+                    className="w-full border-t border-dashed border-muted-foreground/10"
+                  />
+                ))}
+              </div>
+
+              {/* Bars */}
+              <div className="relative flex items-end gap-1.5 h-36">
+                {points.map((point) => {
+                  const height =
+                    point.count > 0 ? (point.count / maxCount) * 100 : 0
+                  const label = formatDisplayDate(
+                    point.date,
+                    labelFormat,
+                    locale
+                  )
+                  const pct =
+                    membersCount > 0
+                      ? Math.round((point.count / membersCount) * 100)
+                      : 0
+
+                  return (
+                    <Tooltip key={formatDate(point.date)}>
+                      <TooltipTrigger asChild>
+                        <div className="flex flex-col items-center flex-1 h-full">
+                          <div className="relative w-full flex-1 flex items-end">
+                            {/* Background track */}
+                            <div
+                              className={cn(
+                                'absolute inset-0 rounded-t-sm',
+                                point.isWeekend
+                                  ? 'bg-muted/60'
+                                  : 'bg-muted/30'
+                              )}
+                            />
+                            {/* Fill bar */}
+                            <div
+                              className={cn(
+                                'relative w-full rounded-t-sm transition-all duration-500 ease-out',
+                                point.isWeekend
+                                  ? 'bg-emerald-400/50 dark:bg-emerald-500/40'
+                                  : 'bg-emerald-500 dark:bg-emerald-400'
+                              )}
+                              style={{
+                                height: `${height}%`,
+                                minHeight: point.count > 0 ? '4px' : '0',
+                              }}
+                            />
+                          </div>
+                          <span
+                            className={cn(
+                              'mt-1.5 text-[10px] leading-none',
+                              point.isWeekend
+                                ? 'text-muted-foreground/50'
+                                : 'text-muted-foreground'
+                            )}
+                          >
+                            {label}
+                          </span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="text-xs">
+                        <p className="font-medium">
+                          {formatDisplayDate(point.date, 'short', locale)}
+                        </p>
+                        <p className="text-muted-foreground">
+                          {t('attendancePatternValue', {
+                            count: point.count,
+                            total: membersCount,
+                            date: label,
+                          })}
+                          {' '}({pct}%)
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )
+                })}
+              </div>
+            </div>
+          </TooltipProvider>
         )}
       </CardContent>
     </Card>
