@@ -151,7 +151,13 @@
     "viewAllNotifications": "Alle Benachrichtigungen anzeigen",
     "selectOrganization": "Organisation auswählen",
     "organizations": "Organisationen",
-    "help": "Hilfe"
+    "help": "Hilfe",
+    "commandMenu": "Befehlsmenü",
+    "commandSearchPlaceholder": "Seite oder Aktion suchen...",
+    "commandNoResults": "Keine Ergebnisse gefunden.",
+    "commandNavigate": "Navigieren",
+    "commandSelect": "Öffnen",
+    "commandClose": "Schließen"
   },
   "notifications": {
     "title": "Benachrichtigungen",
