@@ -1,6 +1,8 @@
 // Time display components
 export { TimeDisplay, BookingTimeTriple } from './time-display'
 export { DailySummary } from './daily-summary'
+export { ProgressSummary } from './progress-summary'
+export { TimelineBar } from './timeline-bar'
 export { ErrorBadge } from './error-badge'
 
 // Booking components
@@ -18,3 +20,6 @@ export { BookingCreateDialog } from './booking-create-dialog'
 
 // Export components
 export { ExportButtons } from './export-buttons'
+
+// Utilities
+export { groupBookingsIntoPairs } from './utils'
