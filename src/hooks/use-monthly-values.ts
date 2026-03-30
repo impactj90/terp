@@ -131,6 +131,7 @@ export function useMonthlyValues(options: UseMonthlyValuesOptions = {}) {
       { employeeId: employeeId!, year: year!, month: month! },
       { enabled: enabled && !!employeeId && !!year && !!month }
     ),
+    refetchOnMount: 'always',
     select: (data) => ({
       data: [
         transformToLegacyMonthSummary(
@@ -156,6 +157,7 @@ export function useYearOverview(options: UseYearOverviewOptions = {}) {
       { employeeId: employeeId!, year: year! },
       { enabled: enabled && !!employeeId && !!year }
     ),
+    refetchOnMount: 'always',
     select: (data) => ({
       data: data.map((ms) =>
         transformToLegacyMonthSummary(ms as unknown as Record<string, unknown>)

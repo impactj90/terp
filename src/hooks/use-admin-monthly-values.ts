@@ -37,6 +37,7 @@ export function useAdminMonthlyValues(
       },
       { enabled: enabled && !!year && !!month }
     ),
+    refetchOnMount: 'always',
   })
 }
 
