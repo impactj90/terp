@@ -139,7 +139,9 @@
     "navigationMenu": "Navigationsmenü",
     "closeMenu": "Menü schließen",
     "appName": "Terp Zeiterfassung",
-    "help": "Hilfe"
+    "help": "Hilfe",
+    "favorites": "Favoriten",
+    "pin": "Fixieren"
   },
   "header": {
     "search": "Suchen...",

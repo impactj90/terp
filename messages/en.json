@@ -139,7 +139,9 @@
     "navigationMenu": "Navigation menu",
     "closeMenu": "Close menu",
     "appName": "Terp Time Tracking",
-    "help": "Help"
+    "help": "Help",
+    "favorites": "Favorites",
+    "pin": "Pin"
   },
   "header": {
     "search": "Search...",

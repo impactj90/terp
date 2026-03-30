@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { Link, usePathname } from '@/i18n/navigation'
+import { Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -14,52 +15,91 @@ import type { NavItem } from './sidebar-nav-config'
 
 interface SidebarNavItemProps {
   item: NavItem
+  /** When true, renders in expanded mode regardless of sidebar state */
+  forceExpanded?: boolean
 }
 
 /**
  * Individual navigation item component.
- * Handles collapsed state (icon-only with tooltip) and active route highlighting.
+ * Handles collapsed state (icon-only with tooltip), active route highlighting,
+ * left accent bar, and favorite toggle on hover.
  */
-export function SidebarNavItem({ item }: SidebarNavItemProps) {
+export function SidebarNavItem({ item, forceExpanded }: SidebarNavItemProps) {
   const pathname = usePathname()
-  const { isCollapsed } = useSidebar()
+  const { isCompact, isFavorite, addFavorite, removeFavorite } = useSidebar()
   const t = useTranslations('nav')
 
+  const compact = forceExpanded ? false : isCompact
   const title = t(item.titleKey as Parameters<typeof t>[0])
   const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+  const starred = isFavorite(item.href)
   const Icon = item.icon
+
+  const handleStarClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (starred) {
+      removeFavorite(item.href)
+    } else {
+      addFavorite(item.href)
+    }
+  }
 
   const content = (
     <Link
       href={item.href}
       prefetch={false}
       className={cn(
-        'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-        'hover:bg-accent hover:text-accent-foreground',
+        'group/item relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
         isActive
-          ? 'bg-accent text-accent-foreground'
-          : 'text-muted-foreground',
-        isCollapsed && 'justify-center px-2'
+          ? 'bg-primary/10 text-primary'
+          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+        compact && 'justify-center px-2'
       )}
       aria-current={isActive ? 'page' : undefined}
-      aria-label={isCollapsed ? title : undefined}
+      aria-label={compact ? title : undefined}
     >
-      <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-      {!isCollapsed && (
+      {/* Active indicator bar */}
+      {isActive && !compact && (
+        <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-primary" />
+      )}
+
+      <Icon className={cn('h-5 w-5 shrink-0', isActive && 'text-primary')} aria-hidden="true" />
+
+      {!compact && (
         <>
-          <span className="truncate">{title}</span>
+          <span className="flex-1 truncate">{title}</span>
+
+          {/* Favorite star — visible on hover or when starred */}
+          <button
+            type="button"
+            onClick={handleStarClick}
+            className={cn(
+              'shrink-0 rounded p-0.5 transition-all',
+              starred
+                ? 'text-amber-500 opacity-100'
+                : 'opacity-0 text-muted-foreground hover:text-amber-500 group-hover/item:opacity-100'
+            )}
+            aria-label={starred ? 'Remove from favorites' : 'Add to favorites'}
+          >
+            <Star
+              className={cn('h-3.5 w-3.5', starred && 'fill-amber-500')}
+            />
+          </button>
+
           {item.badge !== undefined && item.badge > 0 && (
             <Badge
               variant="secondary"
-              className="ml-auto h-5 min-w-5 justify-center rounded-full text-xs"
+              className="ml-0 h-5 min-w-5 justify-center rounded-full text-xs"
             >
               {item.badge > 99 ? '99+' : item.badge}
             </Badge>
           )}
         </>
       )}
-      {isCollapsed && item.badge !== undefined && item.badge > 0 && (
+
+      {compact && item.badge !== undefined && item.badge > 0 && (
         <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-destructive-foreground">
           {item.badge > 9 ? '9+' : item.badge}
         </span>
@@ -67,8 +107,8 @@ export function SidebarNavItem({ item }: SidebarNavItemProps) {
     </Link>
   )
 
-  // When collapsed, wrap in tooltip
-  if (isCollapsed) {
+  // When compact, wrap in tooltip
+  if (compact) {
     return (
       <Tooltip delayDuration={0}>
         <TooltipTrigger asChild>

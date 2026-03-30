@@ -1,8 +1,9 @@
 'use client'
 
+import { useCallback, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
-import { BookOpen, ChevronLeft, ChevronRight } from 'lucide-react'
+import { BookOpen, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -18,20 +19,63 @@ interface SidebarProps {
   className?: string
 }
 
+const HOVER_EXPAND_DELAY = 200
+
 /**
  * Desktop sidebar component.
- * Fixed position with collapsible functionality.
+ * Fixed position with collapsible functionality and hover-expand overlay.
  */
 export function Sidebar({ className }: SidebarProps) {
-  const { isCollapsed, toggle } = useSidebar()
+  const {
+    isCollapsed,
+    isHoverExpanded,
+    setHoverExpanded,
+    isCompact,
+    toggle,
+    expand,
+  } = useSidebar()
   const t = useTranslations('sidebar')
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleMouseEnter = useCallback(() => {
+    if (!isCollapsed) return
+    hoverTimer.current = setTimeout(() => {
+      setHoverExpanded(true)
+    }, HOVER_EXPAND_DELAY)
+  }, [isCollapsed, setHoverExpanded])
+
+  const handleMouseLeave = useCallback(() => {
+    if (hoverTimer.current) {
+      clearTimeout(hoverTimer.current)
+      hoverTimer.current = null
+    }
+    setHoverExpanded(false)
+  }, [setHoverExpanded])
+
+  // In hover-expanded overlay mode, clicking the toggle pins the sidebar open
+  const handleToggle = useCallback(() => {
+    if (isHoverExpanded) {
+      expand()
+    } else {
+      toggle()
+    }
+  }, [isHoverExpanded, expand, toggle])
 
   return (
     <TooltipProvider>
       <aside
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         className={cn(
-          'fixed inset-y-0 left-0 z-30 flex flex-col border-r bg-background transition-all duration-300',
-          isCollapsed ? 'w-[var(--sidebar-collapsed-width)]' : 'w-[var(--sidebar-width)]',
+          'fixed inset-y-0 left-0 flex flex-col border-r bg-background transition-all duration-200 ease-out',
+          // Width: compact (icon-only) vs expanded
+          isCompact
+            ? 'w-[var(--sidebar-collapsed-width)]'
+            : 'w-[var(--sidebar-width)]',
+          // Z-index and shadow: overlay mode gets elevated
+          isHoverExpanded
+            ? 'z-50 shadow-2xl ring-1 ring-border/50'
+            : 'z-30',
           className
         )}
         aria-label="Main sidebar"
@@ -40,21 +84,20 @@ export function Sidebar({ className }: SidebarProps) {
         <div
           className={cn(
             'flex h-[var(--header-height)] items-center border-b px-4',
-            isCollapsed && 'justify-center px-2'
+            isCompact && 'justify-center px-2'
           )}
         >
           <Link
             href="/dashboard"
             className={cn(
               'flex items-center gap-2 font-semibold',
-              isCollapsed && 'justify-center'
+              isCompact && 'justify-center'
             )}
           >
-            {/* Logo placeholder - replace with actual logo */}
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <span className="text-lg font-bold">T</span>
             </div>
-            {!isCollapsed && (
+            {!isCompact && (
               <span className="text-xl tracking-tight">Terp</span>
             )}
           </Link>
@@ -74,14 +117,14 @@ export function Sidebar({ className }: SidebarProps) {
                 className={cn(
                   'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors',
                   'hover:bg-accent hover:text-accent-foreground',
-                  isCollapsed && 'justify-center px-2'
+                  isCompact && 'justify-center px-2'
                 )}
               >
                 <BookOpen className="h-5 w-5 shrink-0" aria-hidden="true" />
-                {!isCollapsed && <span>{t('help')}</span>}
+                {!isCompact && <span>{t('help')}</span>}
               </a>
             </TooltipTrigger>
-            {isCollapsed && (
+            {isCompact && (
               <TooltipContent side="right">{t('help')}</TooltipContent>
             )}
           </Tooltip>
@@ -94,25 +137,25 @@ export function Sidebar({ className }: SidebarProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={toggle}
+                onClick={handleToggle}
                 className={cn(
                   'w-full justify-start gap-2',
-                  isCollapsed && 'justify-center px-2'
+                  isCompact && 'justify-center px-2'
                 )}
-                aria-label={isCollapsed ? t('expand') : t('collapse')}
-                aria-expanded={!isCollapsed}
+                aria-label={isCompact ? t('expand') : t('collapse')}
+                aria-expanded={!isCompact}
               >
-                {isCollapsed ? (
-                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                {isCompact ? (
+                  <PanelLeft className="h-4 w-4" aria-hidden="true" />
                 ) : (
                   <>
-                    <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-                    <span>{t('collapse')}</span>
+                    <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
+                    <span>{isHoverExpanded ? t('pin') : t('collapse')}</span>
                   </>
                 )}
               </Button>
             </TooltipTrigger>
-            {isCollapsed && (
+            {isCompact && (
               <TooltipContent side="right">{t('expand')}</TooltipContent>
             )}
           </Tooltip>

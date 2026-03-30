@@ -69,7 +69,7 @@ export function MobileSidebarSheet({
           className="flex min-h-0 flex-1 overflow-hidden"
           onClick={() => onOpenChange(false)}
         >
-          <SidebarNav />
+          <SidebarNav forceExpanded />
         </div>
 
         {/* Footer with app info */}
