@@ -7,7 +7,11 @@
 import { z } from "zod"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { handleServiceError } from "@/trpc/errors"
+import { TRPCError } from "@trpc/server"
 import { requirePermission } from "@/lib/auth/middleware"
+import { hasPermission, isUserAdmin } from "@/lib/auth/permissions"
+import { createMiddleware } from "@/trpc/init"
+import type { ContextUser } from "@/trpc/init"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import * as hrService from "@/lib/services/hr-personnel-file-service"
 import * as attachmentService from "@/lib/services/hr-personnel-file-attachment-service"
@@ -19,6 +23,29 @@ const PF_CREATE = permissionIdByKey("hr_personnel_file.create")!
 const PF_EDIT = permissionIdByKey("hr_personnel_file.edit")!
 const PF_DELETE = permissionIdByKey("hr_personnel_file.delete")!
 const PF_CAT_MANAGE = permissionIdByKey("hr_personnel_file_categories.manage")!
+
+/**
+ * Allow access if:
+ * - admin or has PF_VIEW (full access to any employee)
+ * - authenticated user accessing own employee data (self-service)
+ */
+function requireOwnOrPfView(employeeIdGetter: (input: unknown) => string) {
+  return createMiddleware(async (opts) => {
+    const { ctx, next } = opts
+    const user = (ctx as { user: ContextUser }).user
+    if (!user) throw new TRPCError({ code: "UNAUTHORIZED" })
+    if (isUserAdmin(user)) return next({ ctx })
+    if (hasPermission(user, PF_VIEW)) return next({ ctx })
+
+    const resolvedInput = opts.input ?? await (opts as unknown as { getRawInput: () => Promise<unknown> }).getRawInput()
+    const targetEmployeeId = employeeIdGetter(resolvedInput)
+    if (user.employeeId && user.employeeId === targetEmployeeId) {
+      return next({ ctx })
+    }
+
+    throw new TRPCError({ code: "FORBIDDEN", message: "Insufficient permissions" })
+  })
+}
 
 // --- Input Schemas ---
 const createCategorySchema = z.object({
@@ -100,7 +127,6 @@ const confirmSchema = z.object({
 export const hrPersonnelFileRouter = createTRPCRouter({
   categories: createTRPCRouter({
     list: tenantProcedure
-      .use(requirePermission(PF_VIEW))
       .query(async ({ ctx }) => {
         try {
           return await hrService.listCategories(
@@ -161,7 +187,7 @@ export const hrPersonnelFileRouter = createTRPCRouter({
 
   entries: createTRPCRouter({
     list: tenantProcedure
-      .use(requirePermission(PF_VIEW))
+      .use(requireOwnOrPfView((input) => (input as { employeeId: string }).employeeId))
       .input(listEntriesSchema)
       .query(async ({ ctx, input }) => {
         try {

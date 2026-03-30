@@ -38,7 +38,7 @@ export default function TeamOverviewPage() {
   const rangeTo = range?.to ?? rangeFrom
   const rangeFromDate = formatDate(rangeFrom)
   const rangeToDate = formatDate(rangeTo)
-  const attendanceDate = formatDate(rangeTo)
+  const attendanceDate = formatDate(new Date())
 
   // Fetch active teams for selector (scoped to user's teams)
   const { data: teamsData, isLoading: teamsLoading } = useMyTeams({
@@ -74,7 +74,6 @@ export default function TeamOverviewPage() {
     employeeIds,
     date: attendanceDate,
     enabled: members.length > 0,
-    refetchInterval: selectedTeamId ? 30 * 1000 : false,
   })
   const {
     data: rangeDailyValues,

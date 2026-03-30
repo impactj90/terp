@@ -33,6 +33,55 @@ import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
 import * as bookingsService from "@/lib/services/bookings-service"
 
+// --- PubSub Helper ---
+
+/**
+ * Notify team members of an employee about a booking change so their
+ * team overview auto-refreshes (dayView cache invalidation via SSE).
+ */
+async function notifyTeamOfBookingChange(
+  prisma: import("@/generated/prisma/client").PrismaClient,
+  tenantId: string,
+  employeeId: string,
+) {
+  try {
+    const { getHub } = await import("@/lib/pubsub/singleton")
+    const { userTopic } = await import("@/lib/pubsub/topics")
+    const hub = await getHub()
+
+    // Find all users who should see this update:
+    // 1. Team members (same team as the employee)
+    // 2. Admins (is_admin user group) — they can view any team
+    const recipients = await prisma.$queryRaw<{ user_id: string }[]>`
+      SELECT DISTINCT u.id AS user_id FROM (
+        -- Team members (including the employee themselves)
+        SELECT u2.id
+        FROM team_members tm1
+        JOIN team_members tm2 ON tm2.team_id = tm1.team_id
+        JOIN users u2 ON u2.employee_id = tm2.employee_id
+        JOIN user_tenants ut ON ut.user_id = u2.id AND ut.tenant_id = ${tenantId}::uuid
+        WHERE tm1.employee_id = ${employeeId}::uuid
+        UNION
+        -- Admin users for this tenant
+        SELECT u2.id
+        FROM users u2
+        JOIN user_tenants ut ON ut.user_id = u2.id AND ut.tenant_id = ${tenantId}::uuid
+        JOIN user_groups ug ON ug.id = u2.user_group_id AND ug.is_admin = true
+      ) u
+    `
+
+    for (const r of recipients) {
+      await hub.publish(
+        userTopic(r.user_id),
+        { event: "notification", type: "booking_change" },
+        true,
+      )
+    }
+  } catch {
+    // best effort
+  }
+}
+
 // --- Permission Constants ---
 // Matching Go route registration at apps/api/internal/handler/routes.go:401-465
 
@@ -344,6 +393,8 @@ export const bookingsRouter = createTRPCRouter({
           { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
 
+        await notifyTeamOfBookingChange(ctx.prisma, tenantId, input.employeeId)
+
         return mapToOutput(booking as unknown as Record<string, unknown>)
       } catch (err) {
         handleServiceError(err)
@@ -378,6 +429,9 @@ export const bookingsRouter = createTRPCRouter({
           { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
 
+        const empId = (updated as unknown as Record<string, unknown>).employeeId as string | undefined
+        if (empId) notifyTeamOfBookingChange(ctx.prisma, tenantId, empId)
+
         return mapToOutput(updated as unknown as Record<string, unknown>)
       } catch (err) {
         handleServiceError(err)
@@ -403,6 +457,12 @@ export const bookingsRouter = createTRPCRouter({
         const tenantId = ctx.tenantId!
         const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
 
+        // Fetch employeeId before deletion for team notification
+        const bookingToDelete = await ctx.prisma.booking.findUnique({
+          where: { id: input.id },
+          select: { employeeId: true },
+        })
+
         await bookingsService.deleteBooking(
           ctx.prisma,
           tenantId,
@@ -410,6 +470,10 @@ export const bookingsRouter = createTRPCRouter({
           dataScope,
           { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
+
+        if (bookingToDelete?.employeeId) {
+          notifyTeamOfBookingChange(ctx.prisma, tenantId, bookingToDelete.employeeId)
+        }
 
         return { success: true }
       } catch (err) {

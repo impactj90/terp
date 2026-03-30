@@ -53,14 +53,21 @@ export function TeamStatsCards({
       const dailyValue = dv.dailyValue
       const hasErrors = dailyValue?.hasError ?? false
 
-      // Check if present (has bookings)
+      // Check if currently present (last work booking direction is 'in')
       const bookings = dv.bookings ?? []
       const workBookings = bookings.filter(
         (b: { bookingType?: { direction?: string } }) =>
           b.bookingType?.direction === 'in' || b.bookingType?.direction === 'out'
       )
       if (workBookings.length > 0) {
-        presentCount++
+        const sorted = [...workBookings].sort(
+          (a: { editedTime?: number }, b: { editedTime?: number }) =>
+            (a.editedTime ?? 0) - (b.editedTime ?? 0)
+        )
+        const last = sorted[sorted.length - 1] as { bookingType?: { direction?: string } }
+        if (last?.bookingType?.direction === 'in') {
+          presentCount++
+        }
       }
 
       if (hasErrors) {

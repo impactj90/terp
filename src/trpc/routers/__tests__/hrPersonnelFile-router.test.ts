@@ -103,17 +103,9 @@ function createViewOnlyContext(prisma: Record<string, unknown>) {
 
 describe("hr.personnelFile", () => {
   describe("categories", () => {
-    it("list - requires hr_personnel_file.view permission", async () => {
+    it("list - accessible to any authenticated tenant user (read-only)", async () => {
       const prisma = {}
       const caller = createCaller(createNoPermContext(prisma))
-      await expect(caller.personnelFile.categories.list()).rejects.toThrow(
-        "Insufficient permissions"
-      )
-    })
-
-    it("list - returns categories on success", async () => {
-      const prisma = {}
-      const caller = createCaller(createTestContext(prisma))
       const result = await caller.personnelFile.categories.list()
       expect(result).toBeDefined()
       expect(Array.isArray(result)).toBe(true)

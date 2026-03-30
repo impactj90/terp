@@ -114,10 +114,9 @@ export const bookingTypesRouter = createTRPCRouter({
    * Supports optional filters: isActive, direction.
    * Orders by isSystem DESC, code ASC (system types first).
    *
-   * Requires: booking_types.manage permission
+   * Requires: authenticated tenant user (read-only)
    */
   list: tenantProcedure
-    .use(requirePermission(BOOKING_TYPES_MANAGE))
     .input(
       z
         .object({

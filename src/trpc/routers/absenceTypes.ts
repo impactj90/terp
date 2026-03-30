@@ -154,10 +154,9 @@ export const absenceTypesRouter = createTRPCRouter({
    * Supports optional filters: isActive, category, includeSystem.
    * Orders by sortOrder ASC, code ASC.
    *
-   * Requires: absence_types.manage permission
+   * Requires: authenticated tenant user (read-only)
    */
   list: tenantProcedure
-    .use(requirePermission(ABSENCE_TYPES_MANAGE))
     .input(
       z
         .object({

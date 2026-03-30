@@ -161,6 +161,26 @@ export function requireEmployeePermission(
       if (hasPermission(user, allPermission)) {
         return next({ ctx })
       }
+
+      // Team-based read access: if user has ownPermission and shares a team
+      // with the target employee, allow read access (e.g. team overview).
+      if (user.employeeId && hasPermission(user, ownPermission)) {
+        const prisma = (ctx as { prisma: import("@/generated/prisma/client").PrismaClient }).prisma
+        const sharedTeam = await prisma.teamMember.findFirst({
+          where: {
+            employeeId: targetEmployeeId,
+            team: {
+              members: {
+                some: { employeeId: user.employeeId },
+              },
+            },
+          },
+          select: { teamId: true },
+        })
+        if (sharedTeam) {
+          return next({ ctx })
+        }
+      }
     }
 
     throw new TRPCError({

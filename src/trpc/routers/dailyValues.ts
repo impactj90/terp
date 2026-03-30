@@ -207,10 +207,14 @@ export const dailyValuesRouter = createTRPCRouter({
    * Used by: admin approvals page.
    * Replaces: GET /daily-values
    *
-   * Requires: time_tracking.view_all permission
+   * Requires: time_tracking.view_all, or time_tracking.view_own with employeeId filter (team-scoped)
    */
   listAll: tenantProcedure
-    .use(requirePermission(TIME_TRACKING_VIEW_ALL))
+    .use(requireEmployeePermission(
+      (input) => (input as { employeeId?: string })?.employeeId ?? '',
+      TIME_TRACKING_VIEW_OWN,
+      TIME_TRACKING_VIEW_ALL,
+    ))
     .use(applyDataScope())
     .input(listAllInputSchema)
     .output(

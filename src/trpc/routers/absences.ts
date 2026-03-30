@@ -22,7 +22,9 @@
  */
 import { z } from "zod"
 import { Decimal } from "@prisma/client/runtime/client"
-import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
+import { TRPCError } from "@trpc/server"
+import { createTRPCRouter, tenantProcedure, createMiddleware } from "@/trpc/init"
+import type { ContextUser } from "@/trpc/init"
 import { handleServiceError } from "@/trpc/errors"
 import {
   requirePermission,
@@ -30,8 +32,10 @@ import {
   applyDataScope,
   type DataScope,
 } from "@/lib/auth/middleware"
+import { hasPermission, isUserAdmin } from "@/lib/auth/permissions"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import * as absencesService from "@/lib/services/absences-service"
+import type { PrismaClient } from "@/generated/prisma/client"
 
 // --- Permission Constants ---
 // Matching Go route registration at apps/api/internal/handler/routes.go:513-562
@@ -39,6 +43,42 @@ import * as absencesService from "@/lib/services/absences-service"
 const ABSENCE_REQUEST = permissionIdByKey("absences.request")!
 const ABSENCE_APPROVE = permissionIdByKey("absences.approve")!
 const ABSENCE_MANAGE = permissionIdByKey("absences.manage")!
+
+// --- Custom Middleware ---
+
+/**
+ * Allows access if:
+ * - User is admin (bypass)
+ * - User has `allPermission` (manage/approve — any absence)
+ * - User has `ownPermission` (request) AND the absence belongs to their employee
+ *
+ * Resolves the absence's employeeId by looking up the absence by input.id.
+ */
+function requireOwnAbsenceOrPermission(ownPermission: string, allPermission: string) {
+  return createMiddleware(async (opts) => {
+    const { ctx, next } = opts
+    const user = (ctx as { user: ContextUser }).user
+    if (!user) throw new TRPCError({ code: "UNAUTHORIZED" })
+    if (isUserAdmin(user)) return next({ ctx })
+    if (hasPermission(user, allPermission)) return next({ ctx })
+
+    // Check own-absence access
+    if (user.employeeId && hasPermission(user, ownPermission)) {
+      const resolvedInput = opts.input ?? await (opts as unknown as { getRawInput: () => Promise<unknown> }).getRawInput()
+      const absenceId = (resolvedInput as { id: string }).id
+      const prisma = (ctx as { prisma: PrismaClient }).prisma
+      const absence = await prisma.absenceDay.findUnique({
+        where: { id: absenceId },
+        select: { employeeId: true },
+      })
+      if (absence && absence.employeeId === user.employeeId) {
+        return next({ ctx })
+      }
+    }
+
+    throw new TRPCError({ code: "FORBIDDEN", message: "Insufficient permissions" })
+  })
+}
 
 // --- Output Schemas ---
 
@@ -393,10 +433,10 @@ export const absencesRouter = createTRPCRouter({
    * Used by: absence edit form sheet.
    * Replaces: PATCH /absences/{id}
    *
-   * Requires: absences.manage permission
+   * Requires: absences.request (own pending) or absences.manage (any)
    */
   update: tenantProcedure
-    .use(requirePermission(ABSENCE_MANAGE))
+    .use(requireOwnAbsenceOrPermission(ABSENCE_REQUEST, ABSENCE_MANAGE))
     .use(applyDataScope())
     .input(updateInputSchema)
     .output(absenceDayOutputSchema)
@@ -537,10 +577,10 @@ export const absencesRouter = createTRPCRouter({
    * Used by: absence cancel dialog.
    * Replaces: POST /absences/{id}/cancel
    *
-   * Requires: absences.approve permission
+   * Requires: absences.request (own pending) or absences.approve (any)
    */
   cancel: tenantProcedure
-    .use(requirePermission(ABSENCE_APPROVE))
+    .use(requireOwnAbsenceOrPermission(ABSENCE_REQUEST, ABSENCE_APPROVE))
     .use(applyDataScope())
     .input(cancelInputSchema)
     .output(absenceDayOutputSchema)

@@ -13,6 +13,31 @@ import * as repo from "./absences-repository";
 import * as auditLog from "./audit-logs-service";
 import type { AuditContext } from "./audit-logs-service";
 
+// --- PubSub Helper ---
+
+async function publishUnreadCountUpdate(
+  prisma: PrismaClient,
+  tenantId: string,
+  userId: string,
+  type?: string,
+) {
+  try {
+    const { getHub } = await import("@/lib/pubsub/singleton");
+    const { userTopic } = await import("@/lib/pubsub/topics");
+    const hub = await getHub();
+    const unreadCount = await prisma.notification.count({
+      where: { tenantId, userId, readAt: null },
+    });
+    await hub.publish(
+      userTopic(userId),
+      { event: "notification", type: type ?? "general", unread_count: unreadCount },
+      true,
+    );
+  } catch {
+    // best effort — never block the main flow
+  }
+}
+
 const TRACKED_FIELDS = [
   "duration",
   "halfDayPeriod",
@@ -527,6 +552,44 @@ export async function createRange(
     );
   }
 
+  // 9. Notify approvers about the new absence request (best effort)
+  if (createdAbsences.length > 0 && !autoApprove) {
+    try {
+      const employee = await prisma.employee.findUnique({
+        where: { id: employeeId },
+        select: { firstName: true, lastName: true },
+      });
+      const empName = employee
+        ? `${employee.firstName} ${employee.lastName}`
+        : "Mitarbeiter";
+      const typeName = absenceType.name;
+      const dateRange =
+        fromDateStr === toDateStr
+          ? fromDateStr
+          : `${fromDateStr} – ${toDateStr}`;
+
+      const approverIds = await repo.findApproverUserIds(
+        prisma,
+        tenantId,
+        audit?.userId,
+      );
+
+      for (const approverId of approverIds) {
+        await repo.createNotification(prisma, {
+          tenantId,
+          userId: approverId,
+          type: "approvals",
+          title: "Neuer Abwesenheitsantrag",
+          message: `${empName}: ${typeName} (${dateRange})`,
+          link: "/absences/admin",
+        });
+        await publishUnreadCountUpdate(prisma, tenantId, approverId, "absence_request");
+      }
+    } catch {
+      console.error("Failed to send absence request notifications");
+    }
+  }
+
   return { createdAbsences, skippedDates };
 }
 
@@ -759,6 +822,7 @@ export async function approve(
         message: `${typeName} on ${dateLabel} was approved.`,
         link,
       });
+      await publishUnreadCountUpdate(prisma, tenantId, employeeUserId, "absence_approved");
     }
   } catch {
     console.error("Failed to send approval notification for absence", id);
@@ -845,6 +909,7 @@ export async function reject(
         message: `${typeName} on ${dateLabel} was rejected.${reasonSuffix}`,
         link,
       });
+      await publishUnreadCountUpdate(prisma, tenantId, employeeUserId, "absence_rejected");
     }
   } catch {
     console.error("Failed to send rejection notification for absence", id);

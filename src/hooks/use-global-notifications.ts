@@ -27,6 +27,16 @@ export function useGlobalNotifications(enabled: boolean = true) {
             { unread_count: event.unread_count },
           )
         } else if (event.type === 'notification') {
+          const subtype = (event as Record<string, unknown>).subtype as string | undefined
+
+          // Silent data-only events (no notification badge/sound)
+          if (subtype === 'booking_change') {
+            queryClient.invalidateQueries({ queryKey: trpc.employees.dayView.queryKey() })
+            queryClient.invalidateQueries({ queryKey: trpc.dailyValues.listAll.queryKey() })
+            return
+          }
+
+          // Real notifications: update badge + sound
           if (typeof event.unread_count === 'number') {
             queryClient.setQueryData(
               trpc.notifications.unreadCount.queryKey(),
@@ -36,6 +46,14 @@ export function useGlobalNotifications(enabled: boolean = true) {
             queryClient.invalidateQueries({ queryKey: trpc.notifications.unreadCount.queryKey() })
           }
           queryClient.invalidateQueries({ queryKey: trpc.notifications.list.queryKey() })
+
+          // Invalidate domain-specific queries based on notification subtype
+          if (subtype?.startsWith('absence_')) {
+            queryClient.invalidateQueries({ queryKey: trpc.absences.list.queryKey() })
+            queryClient.invalidateQueries({ queryKey: trpc.absences.forEmployee.queryKey() })
+            queryClient.invalidateQueries({ queryKey: trpc.vacation.getBalance.queryKey() })
+          }
+
           playNotificationSound()
         }
       },

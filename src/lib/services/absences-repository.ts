@@ -3,6 +3,7 @@
  *
  * Pure Prisma data-access functions for the AbsenceDay model.
  */
+import { Prisma } from "@/generated/prisma/client"
 import type { PrismaClient } from "@/generated/prisma/client"
 import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
@@ -440,4 +441,27 @@ export async function createNotification(
   }
 ) {
   return prisma.notification.create({ data })
+}
+
+/**
+ * Find user IDs that have the absences.approve permission (or are admins)
+ * for a given tenant. Used to notify approvers when an absence is requested.
+ */
+export async function findApproverUserIds(
+  prisma: PrismaClient,
+  tenantId: string,
+  excludeUserId?: string
+): Promise<string[]> {
+  const rows = await prisma.$queryRaw<{ user_id: string }[]>`
+    SELECT DISTINCT u.id AS user_id
+    FROM users u
+    JOIN user_tenants ut ON ut.user_id = u.id AND ut.tenant_id = ${tenantId}::uuid
+    JOIN user_groups ug ON ug.id = u.user_group_id
+    WHERE (
+      ug.is_admin = true
+      OR ug.permissions @> '["absences.approve"]'::jsonb
+    )
+    ${excludeUserId ? Prisma.sql`AND u.id != ${excludeUserId}::uuid` : Prisma.empty}
+  `
+  return rows.map(r => r.user_id)
 }

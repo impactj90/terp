@@ -28,6 +28,10 @@
 --  25. Billing service cases
 --  26. Billing payments (cash, bank, partial, discount)
 --  27. Warehouse article groups, articles, suppliers, BOM
+--  28. Warehouse purchase orders + positions
+--  29. Warehouse stock movements
+--  30. Warehouse supplier invoices + payments
+--  31. HR personnel file entries + attachments
 --
 -- Run via: pnpm db:reset (applies seed.sql after migrations)
 --
@@ -3626,3 +3630,293 @@ INSERT INTO dsgvo_retention_rules (tenant_id, data_type, retention_months, actio
 ('10000000-0000-0000-0000-000000000001', 'CORRECTION_MESSAGES', 12,  'DELETE',    false, 'Korrekturassistent-Meldungen'),
 ('10000000-0000-0000-0000-000000000001', 'STOCK_MOVEMENTS',     120, 'ANONYMIZE', false, 'Lagerbewegungen')
 ON CONFLICT (tenant_id, data_type) DO NOTHING;
+
+-- =============================================================
+-- 28. Warehouse: Purchase orders + positions
+-- =============================================================
+
+-- PO-001: Ordered from Stahl-Union (Befestigungsmaterial), partially received
+INSERT INTO wh_purchase_orders (id, tenant_id, number, supplier_id, status, order_date, requested_delivery, confirmed_delivery, order_method, notes, subtotal_net, total_vat, total_gross, created_at, updated_at, created_by_id)
+VALUES
+  ('d7000000-0000-4000-a000-000000000001', '10000000-0000-0000-0000-000000000001', 'PO-001', 'c1000000-0000-4000-a000-000000000011', 'PARTIALLY_RECEIVED', '2026-01-10 09:00:00+01', '2026-01-24 09:00:00+01', '2026-01-23 09:00:00+01', 'EMAIL', 'Nachbestellung Q1 Befestigungsmaterial', 785.00, 149.15, 934.15, NOW(), NOW(), '00000000-0000-0000-0000-000000000001')
+ON CONFLICT (id) DO NOTHING;
+
+-- PO-002: Draft order from Elektro Braun (Elektromaterial)
+INSERT INTO wh_purchase_orders (id, tenant_id, number, supplier_id, status, order_date, requested_delivery, order_method, notes, subtotal_net, total_vat, total_gross, created_at, updated_at, created_by_id)
+VALUES
+  ('d7000000-0000-4000-a000-000000000002', '10000000-0000-0000-0000-000000000001', 'PO-002', 'c1000000-0000-4000-a000-000000000013', 'DRAFT', NULL, '2026-02-15 09:00:00+01', NULL, 'Kabelnachschub fuer Baustelle Mitte', 1240.00, 235.60, 1475.60, NOW(), NOW(), '00000000-0000-0000-0000-000000000001')
+ON CONFLICT (id) DO NOTHING;
+
+-- PO-003: Fully received from Hoffmann Werkzeuge
+INSERT INTO wh_purchase_orders (id, tenant_id, number, supplier_id, status, order_date, requested_delivery, confirmed_delivery, order_method, notes, subtotal_net, total_vat, total_gross, created_at, updated_at, created_by_id)
+VALUES
+  ('d7000000-0000-4000-a000-000000000003', '10000000-0000-0000-0000-000000000001', 'PO-003', 'c1000000-0000-4000-a000-000000000021', 'RECEIVED', '2026-01-05 08:00:00+01', '2026-01-12 09:00:00+01', '2026-01-11 09:00:00+01', 'EMAIL', 'Werkzeug-Erstausstattung Lager', 462.50, 87.88, 550.38, NOW(), NOW(), '00000000-0000-0000-0000-000000000001')
+ON CONFLICT (id) DO NOTHING;
+
+-- PO-001 positions: Schrauben + Muttern (partially received)
+INSERT INTO wh_purchase_order_positions (id, purchase_order_id, sort_order, position_type, article_id, description, quantity, received_quantity, unit, unit_price, total_price, vat_rate, created_at, updated_at)
+VALUES
+  ('d7100000-0000-4000-a000-000000000001', 'd7000000-0000-4000-a000-000000000001', 1, 'ARTICLE', 'd2000000-0000-4000-a000-000000000001', 'Sechskantschraube M8x40 DIN 933', 500, 300, 'Stk', 0.85, 425.00, 19.0, NOW(), NOW()),
+  ('d7100000-0000-4000-a000-000000000002', 'd7000000-0000-4000-a000-000000000001', 2, 'ARTICLE', 'd2000000-0000-4000-a000-000000000004', 'Sechskantmutter M8 DIN 934', 500, 500, 'Stk', 0.32, 160.00, 19.0, NOW(), NOW()),
+  ('d7100000-0000-4000-a000-000000000003', 'd7000000-0000-4000-a000-000000000001', 3, 'ARTICLE', 'd2000000-0000-4000-a000-000000000005', 'Unterlegscheibe M8 DIN 125', 1000, 1000, 'Stk', 0.12, 120.00, 19.0, NOW(), NOW()),
+  ('d7100000-0000-4000-a000-000000000004', 'd7000000-0000-4000-a000-000000000001', 4, 'FREETEXT', NULL, 'Lieferung frei Haus ab 500 EUR', NULL, 0, NULL, NULL, NULL, 19.0, NOW(), NOW()),
+  ('d7100000-0000-4000-a000-000000000005', 'd7000000-0000-4000-a000-000000000001', 5, 'ARTICLE', 'd2000000-0000-4000-a000-000000000002', 'Zylinderschraube M6x30 DIN 912', 200, 0, 'Stk', 0.40, 80.00, 19.0, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- PO-002 positions: Kabel + Sicherungsautomaten (draft, nothing received)
+INSERT INTO wh_purchase_order_positions (id, purchase_order_id, sort_order, position_type, article_id, description, quantity, received_quantity, unit, unit_price, total_price, vat_rate, created_at, updated_at)
+VALUES
+  ('d7100000-0000-4000-a000-000000000011', 'd7000000-0000-4000-a000-000000000002', 1, 'ARTICLE', 'd2000000-0000-4000-a000-000000000006', 'NYM-J 3x1.5mm² 100m Ring', 5, 0, 'Ring', 148.00, 740.00, 19.0, NOW(), NOW()),
+  ('d7100000-0000-4000-a000-000000000012', 'd7000000-0000-4000-a000-000000000002', 2, 'ARTICLE', 'd2000000-0000-4000-a000-000000000007', 'Leitungsschutzschalter B16A', 20, 0, 'Stk', 25.00, 500.00, 19.0, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- PO-003 positions: Werkzeuge (fully received)
+INSERT INTO wh_purchase_order_positions (id, purchase_order_id, sort_order, position_type, article_id, description, quantity, received_quantity, unit, unit_price, total_price, vat_rate, created_at, updated_at)
+VALUES
+  ('d7100000-0000-4000-a000-000000000021', 'd7000000-0000-4000-a000-000000000003', 1, 'ARTICLE', 'd2000000-0000-4000-a000-000000000008', 'Drehmomentschluessel 20-200Nm', 2, 2, 'Stk', 156.25, 312.50, 19.0, NOW(), NOW()),
+  ('d7100000-0000-4000-a000-000000000022', 'd7000000-0000-4000-a000-000000000003', 2, 'ARTICLE', 'd2000000-0000-4000-a000-000000000009', 'Steckschluessel-Satz 1/2" 10-32mm', 2, 2, 'Stk', 75.00, 150.00, 19.0, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- Number sequence for PO
+INSERT INTO number_sequences (id, tenant_id, key, prefix, next_value, created_at, updated_at)
+VALUES (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'purchase_order', 'PO-', 4, NOW(), NOW())
+ON CONFLICT (tenant_id, key) DO UPDATE SET next_value = GREATEST(number_sequences.next_value, 4);
+
+-- =============================================================
+-- 29. Warehouse: Stock movements (goods receipts + adjustments)
+-- =============================================================
+
+-- Goods receipt for PO-001 partial delivery (Muttern + Scheiben full, Schrauben 300/500)
+INSERT INTO wh_stock_movements (id, tenant_id, article_id, type, quantity, previous_stock, new_stock, date, purchase_order_id, purchase_order_position_id, notes, created_by_id, created_at)
+VALUES
+  ('d8000000-0000-4000-a000-000000000001', '10000000-0000-0000-0000-000000000001', 'd2000000-0000-4000-a000-000000000001', 'GOODS_RECEIPT', 300, 200, 500, '2026-01-23 14:00:00+01', 'd7000000-0000-4000-a000-000000000001', 'd7100000-0000-4000-a000-000000000001', 'Teillieferung 1/2 PO-001', '00000000-0000-0000-0000-000000000001', '2026-01-23 14:00:00+01'),
+  ('d8000000-0000-4000-a000-000000000002', '10000000-0000-0000-0000-000000000001', 'd2000000-0000-4000-a000-000000000004', 'GOODS_RECEIPT', 500, 300, 800, '2026-01-23 14:05:00+01', 'd7000000-0000-4000-a000-000000000001', 'd7100000-0000-4000-a000-000000000002', 'Volllieferung PO-001', '00000000-0000-0000-0000-000000000001', '2026-01-23 14:05:00+01'),
+  ('d8000000-0000-4000-a000-000000000003', '10000000-0000-0000-0000-000000000001', 'd2000000-0000-4000-a000-000000000005', 'GOODS_RECEIPT', 1000, 500, 1500, '2026-01-23 14:10:00+01', 'd7000000-0000-4000-a000-000000000001', 'd7100000-0000-4000-a000-000000000003', 'Volllieferung PO-001', '00000000-0000-0000-0000-000000000001', '2026-01-23 14:10:00+01')
+ON CONFLICT (id) DO NOTHING;
+
+-- Goods receipt for PO-003 (Werkzeuge, fully received)
+INSERT INTO wh_stock_movements (id, tenant_id, article_id, type, quantity, previous_stock, new_stock, date, purchase_order_id, purchase_order_position_id, notes, created_by_id, created_at)
+VALUES
+  ('d8000000-0000-4000-a000-000000000004', '10000000-0000-0000-0000-000000000001', 'd2000000-0000-4000-a000-000000000008', 'GOODS_RECEIPT', 2, 3, 5, '2026-01-11 10:00:00+01', 'd7000000-0000-4000-a000-000000000003', 'd7100000-0000-4000-a000-000000000021', 'Wareneingang PO-003', '00000000-0000-0000-0000-000000000001', '2026-01-11 10:00:00+01'),
+  ('d8000000-0000-4000-a000-000000000005', '10000000-0000-0000-0000-000000000001', 'd2000000-0000-4000-a000-000000000009', 'GOODS_RECEIPT', 2, 5, 7, '2026-01-11 10:05:00+01', 'd7000000-0000-4000-a000-000000000003', 'd7100000-0000-4000-a000-000000000022', 'Wareneingang PO-003', '00000000-0000-0000-0000-000000000001', '2026-01-11 10:05:00+01')
+ON CONFLICT (id) DO NOTHING;
+
+-- Manual withdrawals (Entnahmen fuer Baustelle)
+INSERT INTO wh_stock_movements (id, tenant_id, article_id, type, quantity, previous_stock, new_stock, date, notes, created_by_id, created_at)
+VALUES
+  ('d8000000-0000-4000-a000-000000000006', '10000000-0000-0000-0000-000000000001', 'd2000000-0000-4000-a000-000000000001', 'WITHDRAWAL', -50, 500, 450, '2026-01-27 07:30:00+01', 'Entnahme Baustelle Rosenheimer Str.', '00000000-0000-0000-0000-000000000001', '2026-01-27 07:30:00+01'),
+  ('d8000000-0000-4000-a000-000000000007', '10000000-0000-0000-0000-000000000001', 'd2000000-0000-4000-a000-000000000004', 'WITHDRAWAL', -50, 800, 750, '2026-01-27 07:32:00+01', 'Entnahme Baustelle Rosenheimer Str.', '00000000-0000-0000-0000-000000000001', '2026-01-27 07:32:00+01'),
+  ('d8000000-0000-4000-a000-000000000008', '10000000-0000-0000-0000-000000000001', 'd2000000-0000-4000-a000-000000000005', 'WITHDRAWAL', -100, 1500, 1400, '2026-01-27 07:34:00+01', 'Entnahme Baustelle Rosenheimer Str.', '00000000-0000-0000-0000-000000000001', '2026-01-27 07:34:00+01'),
+  ('d8000000-0000-4000-a000-000000000009', '10000000-0000-0000-0000-000000000001', 'd2000000-0000-4000-a000-000000000006', 'WITHDRAWAL', -2, 10, 8, '2026-02-03 08:15:00+01', 'Kabelverlegung Buero EG', '00000000-0000-0000-0000-000000000001', '2026-02-03 08:15:00+01')
+ON CONFLICT (id) DO NOTHING;
+
+-- Inventory correction (Inventurdifferenz Scheiben)
+INSERT INTO wh_stock_movements (id, tenant_id, article_id, type, quantity, previous_stock, new_stock, date, reason, notes, created_by_id, created_at)
+VALUES
+  ('d8000000-0000-4000-a000-000000000010', '10000000-0000-0000-0000-000000000001', 'd2000000-0000-4000-a000-000000000005', 'INVENTORY', -15, 1400, 1385, '2026-02-10 16:00:00+01', 'Inventurdifferenz', 'Jaehrliche Bestandsaufnahme Feb 2026', '00000000-0000-0000-0000-000000000001', '2026-02-10 16:00:00+01')
+ON CONFLICT (id) DO NOTHING;
+
+-- Return (Rueckgabe defekte Schrauben an Stahl-Union)
+INSERT INTO wh_stock_movements (id, tenant_id, article_id, type, quantity, previous_stock, new_stock, date, purchase_order_id, reason, notes, created_by_id, created_at)
+VALUES
+  ('d8000000-0000-4000-a000-000000000011', '10000000-0000-0000-0000-000000000001', 'd2000000-0000-4000-a000-000000000001', 'RETURN', -20, 450, 430, '2026-02-05 11:00:00+01', 'd7000000-0000-4000-a000-000000000001', 'Reklamation', 'Reklamation: 20 Schrauben mit Gewindefehler', '00000000-0000-0000-0000-000000000001', '2026-02-05 11:00:00+01')
+ON CONFLICT (id) DO NOTHING;
+
+-- Update article current_stock to match final movement values
+UPDATE wh_articles SET current_stock = 430  WHERE id = 'd2000000-0000-4000-a000-000000000001';
+UPDATE wh_articles SET current_stock = 750  WHERE id = 'd2000000-0000-4000-a000-000000000004';
+UPDATE wh_articles SET current_stock = 1385 WHERE id = 'd2000000-0000-4000-a000-000000000005';
+UPDATE wh_articles SET current_stock = 5    WHERE id = 'd2000000-0000-4000-a000-000000000008';
+UPDATE wh_articles SET current_stock = 7    WHERE id = 'd2000000-0000-4000-a000-000000000009';
+UPDATE wh_articles SET current_stock = 8    WHERE id = 'd2000000-0000-4000-a000-000000000006';
+
+-- =============================================================
+-- 30. Warehouse: Supplier invoices + payments
+-- =============================================================
+
+-- Invoice from Stahl-Union for PO-001 partial delivery
+INSERT INTO wh_supplier_invoices (id, tenant_id, number, supplier_id, purchase_order_id, status, invoice_date, received_date, total_net, total_vat, total_gross, payment_term_days, due_date, discount_percent, discount_days, notes, created_at, updated_at, created_by_id)
+VALUES
+  ('d9000000-0000-4000-a000-000000000001', '10000000-0000-0000-0000-000000000001', 'RE-2026-00412', 'c1000000-0000-4000-a000-000000000011', 'd7000000-0000-4000-a000-000000000001', 'PAID', '2026-01-24 00:00:00+01', '2026-01-27 09:00:00+01', 705.00, 133.95, 838.95, 30, '2026-02-23 00:00:00+01', 2.0, 10, 'Teillieferung Befestigungsmaterial', NOW(), NOW(), '00000000-0000-0000-0000-000000000001')
+ON CONFLICT (id) DO NOTHING;
+
+-- Invoice from Hoffmann Werkzeuge for PO-003
+INSERT INTO wh_supplier_invoices (id, tenant_id, number, supplier_id, purchase_order_id, status, invoice_date, received_date, total_net, total_vat, total_gross, payment_term_days, due_date, discount_percent, discount_days, discount_percent_2, discount_days_2, notes, created_at, updated_at, created_by_id)
+VALUES
+  ('d9000000-0000-4000-a000-000000000002', '10000000-0000-0000-0000-000000000001', 'HW-R-2026-0087', 'c1000000-0000-4000-a000-000000000021', 'd7000000-0000-4000-a000-000000000003', 'PAID', '2026-01-12 00:00:00+01', '2026-01-14 09:00:00+01', 462.50, 87.88, 550.38, 45, '2026-02-25 00:00:00+01', 3.0, 10, 2.0, 20, 'Werkzeuglieferung komplett', NOW(), NOW(), '00000000-0000-0000-0000-000000000001')
+ON CONFLICT (id) DO NOTHING;
+
+-- Open invoice from Elektro Braun (old delivery, not from a PO)
+INSERT INTO wh_supplier_invoices (id, tenant_id, number, supplier_id, purchase_order_id, status, invoice_date, received_date, total_net, total_vat, total_gross, payment_term_days, due_date, notes, created_at, updated_at, created_by_id)
+VALUES
+  ('d9000000-0000-4000-a000-000000000003', '10000000-0000-0000-0000-000000000001', 'EB-2026-1034', 'c1000000-0000-4000-a000-000000000013', NULL, 'OPEN', '2026-02-18 00:00:00+01', '2026-02-20 09:00:00+01', 296.00, 56.24, 352.24, 30, '2026-03-20 00:00:00+01', 'Kabelreste Nachlieferung Dez 2025', NOW(), NOW(), '00000000-0000-0000-0000-000000000001')
+ON CONFLICT (id) DO NOTHING;
+
+-- Payments: Stahl-Union invoice paid with Skonto
+INSERT INTO wh_supplier_payments (id, tenant_id, invoice_id, date, amount, type, is_discount, notes, status, created_at, created_by_id)
+VALUES
+  ('da000000-0000-4000-a000-000000000001', '10000000-0000-0000-0000-000000000001', 'd9000000-0000-4000-a000-000000000001', '2026-02-03 00:00:00+01', 822.17, 'BANK', false, 'Ueberweisung Stahl-Union RE-2026-00412 abzgl. 2% Skonto', 'ACTIVE', '2026-02-03 10:00:00+01', '00000000-0000-0000-0000-000000000001'),
+  ('da000000-0000-4000-a000-000000000002', '10000000-0000-0000-0000-000000000001', 'd9000000-0000-4000-a000-000000000001', '2026-02-03 00:00:00+01', 16.78, 'BANK', true, 'Skonto 2% auf 838.95', 'ACTIVE', '2026-02-03 10:00:00+01', '00000000-0000-0000-0000-000000000001')
+ON CONFLICT (id) DO NOTHING;
+
+-- Payments: Hoffmann invoice paid with tier-1 Skonto (3%)
+INSERT INTO wh_supplier_payments (id, tenant_id, invoice_id, date, amount, type, is_discount, notes, status, created_at, created_by_id)
+VALUES
+  ('da000000-0000-4000-a000-000000000003', '10000000-0000-0000-0000-000000000001', 'd9000000-0000-4000-a000-000000000002', '2026-01-21 00:00:00+01', 533.87, 'BANK', false, 'Ueberweisung Hoffmann HW-R-2026-0087 abzgl. 3% Skonto', 'ACTIVE', '2026-01-21 10:00:00+01', '00000000-0000-0000-0000-000000000001'),
+  ('da000000-0000-4000-a000-000000000004', '10000000-0000-0000-0000-000000000001', 'd9000000-0000-4000-a000-000000000002', '2026-01-21 00:00:00+01', 16.51, 'BANK', true, 'Skonto 3% auf 550.38', 'ACTIVE', '2026-01-21 10:00:00+01', '00000000-0000-0000-0000-000000000001')
+ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================
+-- 31. HR Personnel File: Entries + Attachments
+-- =============================================================
+
+-- Look up category IDs (auto-generated, so we use a DO block)
+DO $$
+DECLARE
+  t_id     uuid := '10000000-0000-0000-0000-000000000001';
+  cat_contracts uuid;
+  cat_certs     uuid;
+  cat_safety    uuid;
+  cat_warnings  uuid;
+  cat_training  uuid;
+  cat_medical   uuid;
+
+  -- Employee IDs
+  emp_admin   uuid := '00000000-0000-0000-0000-000000000011'; -- Admin User
+  emp_user    uuid := '00000000-0000-0000-0000-000000000012'; -- Regular User
+  emp_maria   uuid := '00000000-0000-0000-0000-000000000013'; -- Maria Schmidt
+  emp_thomas  uuid := '00000000-0000-0000-0000-000000000014'; -- Thomas Mueller
+  emp_anna    uuid := '00000000-0000-0000-0000-000000000015'; -- Anna Weber
+  emp_sabine  uuid := '00000000-0000-0000-0000-000000000016'; -- Sabine Fischer
+  emp_markus  uuid := '00000000-0000-0000-0000-000000000017'; -- Markus Braun
+  emp_julia   uuid := '00000000-0000-0000-0000-000000000018'; -- Julia Hoffmann
+  emp_klaus   uuid := '00000000-0000-0000-0000-00000000001b'; -- Klaus Weber
+  emp_andrea  uuid := '00000000-0000-0000-0000-00000000001c'; -- Andrea Mueller
+
+  -- Entry IDs (deterministic for idempotency)
+  e1  uuid := 'e1000000-0000-4000-a000-000000000001';
+  e2  uuid := 'e1000000-0000-4000-a000-000000000002';
+  e3  uuid := 'e1000000-0000-4000-a000-000000000003';
+  e4  uuid := 'e1000000-0000-4000-a000-000000000004';
+  e5  uuid := 'e1000000-0000-4000-a000-000000000005';
+  e6  uuid := 'e1000000-0000-4000-a000-000000000006';
+  e7  uuid := 'e1000000-0000-4000-a000-000000000007';
+  e8  uuid := 'e1000000-0000-4000-a000-000000000008';
+  e9  uuid := 'e1000000-0000-4000-a000-000000000009';
+  e10 uuid := 'e1000000-0000-4000-a000-000000000010';
+  e11 uuid := 'e1000000-0000-4000-a000-000000000011';
+  e12 uuid := 'e1000000-0000-4000-a000-000000000012';
+  e13 uuid := 'e1000000-0000-4000-a000-000000000013';
+  e14 uuid := 'e1000000-0000-4000-a000-000000000014';
+  e15 uuid := 'e1000000-0000-4000-a000-000000000015';
+  e16 uuid := 'e1000000-0000-4000-a000-000000000016';
+  e17 uuid := 'e1000000-0000-4000-a000-000000000017';
+  e18 uuid := 'e1000000-0000-4000-a000-000000000018';
+
+  -- Attachment IDs
+  a1  uuid := 'e2000000-0000-4000-a000-000000000001';
+  a2  uuid := 'e2000000-0000-4000-a000-000000000002';
+  a3  uuid := 'e2000000-0000-4000-a000-000000000003';
+  a4  uuid := 'e2000000-0000-4000-a000-000000000004';
+  a5  uuid := 'e2000000-0000-4000-a000-000000000005';
+  a6  uuid := 'e2000000-0000-4000-a000-000000000006';
+  a7  uuid := 'e2000000-0000-4000-a000-000000000007';
+  a8  uuid := 'e2000000-0000-4000-a000-000000000008';
+  a9  uuid := 'e2000000-0000-4000-a000-000000000009';
+  a10 uuid := 'e2000000-0000-4000-a000-000000000010';
+  a11 uuid := 'e2000000-0000-4000-a000-000000000011';
+  a12 uuid := 'e2000000-0000-4000-a000-000000000012';
+  a13 uuid := 'e2000000-0000-4000-a000-000000000013';
+  a14 uuid := 'e2000000-0000-4000-a000-000000000014';
+  a15 uuid := 'e2000000-0000-4000-a000-000000000015';
+  a16 uuid := 'e2000000-0000-4000-a000-000000000016';
+
+BEGIN
+  SELECT id INTO cat_contracts FROM hr_personnel_file_categories WHERE tenant_id = t_id AND code = 'CONTRACTS';
+  SELECT id INTO cat_certs     FROM hr_personnel_file_categories WHERE tenant_id = t_id AND code = 'CERTS';
+  SELECT id INTO cat_safety    FROM hr_personnel_file_categories WHERE tenant_id = t_id AND code = 'SAFETY';
+  SELECT id INTO cat_warnings  FROM hr_personnel_file_categories WHERE tenant_id = t_id AND code = 'WARNINGS';
+  SELECT id INTO cat_training  FROM hr_personnel_file_categories WHERE tenant_id = t_id AND code = 'TRAINING';
+  SELECT id INTO cat_medical   FROM hr_personnel_file_categories WHERE tenant_id = t_id AND code = 'MEDICAL';
+
+  -- =========================================================
+  -- Personnel file entries
+  -- =========================================================
+
+  -- Contracts (Vertraege)
+  INSERT INTO hr_personnel_file_entries (id, tenant_id, employee_id, category_id, title, description, entry_date, is_confidential, created_by_id, created_at, updated_at)
+  VALUES
+    (e1,  t_id, emp_admin,  cat_contracts, 'Arbeitsvertrag unbefristet', 'Urspruenglicher Arbeitsvertrag seit Eintritt', '2020-01-01', true, '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e2,  t_id, emp_user,   cat_contracts, 'Arbeitsvertrag unbefristet', 'Arbeitsvertrag ab Eintritt', '2021-03-15', true, '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e3,  t_id, emp_maria,  cat_contracts, 'Arbeitsvertrag Teilzeit', 'Teilzeitvertrag 20h/Woche', '2022-06-01', true, '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e4,  t_id, emp_thomas, cat_contracts, 'Arbeitsvertrag Probezeit', 'Befristeter Vertrag, Probezeit 6 Monate', '2024-01-15', true, '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e5,  t_id, emp_thomas, cat_contracts, 'Vertrag Entfristung', 'Uebernahme in unbefristetes Verhaeltnis nach Probezeit', '2024-07-15', true, '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e6,  t_id, emp_klaus,  cat_contracts, 'Arbeitsvertrag unbefristet', 'Arbeitsvertrag Produktion', '2023-04-01', true, '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e7,  t_id, emp_andrea, cat_contracts, 'Arbeitsvertrag unbefristet', 'Arbeitsvertrag Produktion', '2022-09-01', true, '00000000-0000-0000-0000-000000000001', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Certificates & Qualifications (Zertifikate)
+  INSERT INTO hr_personnel_file_entries (id, tenant_id, employee_id, category_id, title, description, entry_date, expires_at, reminder_date, reminder_note, is_confidential, created_by_id, created_at, updated_at)
+  VALUES
+    (e8,  t_id, emp_anna,   cat_certs, 'Staplerschein', 'Gabelstaplerführerschein nach DGUV G 308-001', '2018-05-20', '2028-05-20', '2028-02-20', 'Staplerschein Anna Weber verlaengern', false, '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e9,  t_id, emp_markus, cat_certs, 'Schweisserschein EN ISO 9606-1', 'WIG-Schweissen Stahl, Pruefung bestanden', '2025-03-10', '2027-03-10', '2027-01-10', 'Schweisserpruefung Markus erneuern', false, '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e10, t_id, emp_klaus,  cat_certs, 'Ersthelfer-Ausbildung', 'Betrieblicher Ersthelfer gemaess DGUV Vorschrift 1', '2025-11-15', '2027-11-15', '2027-09-15', 'Ersthelfer-Auffrischung Klaus', false, '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e11, t_id, emp_andrea, cat_certs, 'Kranfuehrerschein', 'Befaehigungsnachweis Brueckenkran bis 10t', '2023-01-20', '2028-01-20', '2027-10-20', 'Kranschein Andrea pruefen', false, '00000000-0000-0000-0000-000000000001', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Safety trainings (Unterweisungen)
+  INSERT INTO hr_personnel_file_entries (id, tenant_id, employee_id, category_id, title, description, entry_date, expires_at, reminder_date, is_confidential, created_by_id, created_at, updated_at)
+  VALUES
+    (e12, t_id, emp_klaus,  cat_safety, 'Sicherheitsunterweisung 2026', 'Jaehrliche Unterweisung Arbeitssicherheit Produktion', '2026-01-15', '2027-01-15', '2026-12-15', false, '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e13, t_id, emp_andrea, cat_safety, 'Sicherheitsunterweisung 2026', 'Jaehrliche Unterweisung Arbeitssicherheit Produktion', '2026-01-15', '2027-01-15', '2026-12-15', false, '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e14, t_id, emp_markus, cat_safety, 'Brandschutzunterweisung 2025', 'Brandschutzhelfer-Schulung gemaess ASR A2.2', '2025-10-08', '2026-10-08', '2026-08-08', false, '00000000-0000-0000-0000-000000000001', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Training (Weiterbildung)
+  INSERT INTO hr_personnel_file_entries (id, tenant_id, employee_id, category_id, title, description, entry_date, is_confidential, created_by_id, created_at, updated_at)
+  VALUES
+    (e15, t_id, emp_sabine, cat_training, 'Excel Advanced Kurs', 'Zweitaegiger Excel-Kurs fuer Fortgeschrittene, IHK Muenchen', '2025-09-22', false, '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e16, t_id, emp_julia,  cat_training, 'Projektmanagement-Zertifikat', 'IPMA Level D Zertifizierung', '2025-06-15', false, '00000000-0000-0000-0000-000000000001', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Medical (Arbeitsmedizin)
+  INSERT INTO hr_personnel_file_entries (id, tenant_id, employee_id, category_id, title, description, entry_date, expires_at, reminder_date, reminder_note, is_confidential, created_by_id, created_at, updated_at)
+  VALUES
+    (e17, t_id, emp_klaus,  cat_medical, 'G25 Untersuchung', 'Eignungsuntersuchung Fahr-, Steuer- und Ueberwachungstaetigkeiten', '2025-06-10', '2028-06-10', '2028-03-10', 'G25 Klaus Weber faellig', true, '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e18, t_id, emp_andrea, cat_medical, 'G20 Untersuchung', 'Vorsorge Laerm gemaess ArbMedVV', '2025-09-05', '2028-09-05', '2028-06-05', 'G20 Andrea Mueller faellig', true, '00000000-0000-0000-0000-000000000001', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- =========================================================
+  -- Personnel file attachments (simulated file references)
+  -- =========================================================
+
+  INSERT INTO hr_personnel_file_attachments (id, entry_id, tenant_id, filename, storage_path, mime_type, size_bytes, created_by_id, created_at)
+  VALUES
+    -- Contracts
+    (a1,  e1,  t_id, 'Arbeitsvertrag_AdminUser_2020.pdf',      'hr/personnel/' || emp_admin  || '/contracts/Arbeitsvertrag_AdminUser_2020.pdf',      'application/pdf', 245760,  '00000000-0000-0000-0000-000000000001', NOW()),
+    (a2,  e2,  t_id, 'Arbeitsvertrag_RegularUser_2021.pdf',    'hr/personnel/' || emp_user   || '/contracts/Arbeitsvertrag_RegularUser_2021.pdf',    'application/pdf', 198400,  '00000000-0000-0000-0000-000000000001', NOW()),
+    (a3,  e3,  t_id, 'Teilzeitvertrag_Schmidt_2022.pdf',       'hr/personnel/' || emp_maria  || '/contracts/Teilzeitvertrag_Schmidt_2022.pdf',       'application/pdf', 215040,  '00000000-0000-0000-0000-000000000001', NOW()),
+    (a4,  e4,  t_id, 'Arbeitsvertrag_Mueller_Probezeit.pdf',   'hr/personnel/' || emp_thomas || '/contracts/Arbeitsvertrag_Mueller_Probezeit.pdf',   'application/pdf', 230400,  '00000000-0000-0000-0000-000000000001', NOW()),
+    (a5,  e5,  t_id, 'Entfristung_Mueller_2024.pdf',           'hr/personnel/' || emp_thomas || '/contracts/Entfristung_Mueller_2024.pdf',           'application/pdf', 102400,  '00000000-0000-0000-0000-000000000001', NOW()),
+    (a6,  e6,  t_id, 'Arbeitsvertrag_KlausWeber_2023.pdf',     'hr/personnel/' || emp_klaus  || '/contracts/Arbeitsvertrag_KlausWeber_2023.pdf',     'application/pdf', 241664,  '00000000-0000-0000-0000-000000000001', NOW()),
+    (a7,  e7,  t_id, 'Arbeitsvertrag_AndreaMueller_2022.pdf',  'hr/personnel/' || emp_andrea || '/contracts/Arbeitsvertrag_AndreaMueller_2022.pdf',  'application/pdf', 235520,  '00000000-0000-0000-0000-000000000001', NOW()),
+
+    -- Certificates
+    (a8,  e8,  t_id, 'Staplerschein_Weber_2018.pdf',           'hr/personnel/' || emp_anna   || '/certs/Staplerschein_Weber_2018.pdf',               'application/pdf', 524288,  '00000000-0000-0000-0000-000000000001', NOW()),
+    (a9,  e9,  t_id, 'Schweisserschein_Braun_2025.pdf',        'hr/personnel/' || emp_markus || '/certs/Schweisserschein_Braun_2025.pdf',            'application/pdf', 614400,  '00000000-0000-0000-0000-000000000001', NOW()),
+    (a10, e10, t_id, 'Ersthelfer_KlausWeber_2025.pdf',         'hr/personnel/' || emp_klaus  || '/certs/Ersthelfer_KlausWeber_2025.pdf',             'application/pdf', 389120,  '00000000-0000-0000-0000-000000000001', NOW()),
+    (a11, e11, t_id, 'Kranschein_AndreaMueller_2023.pdf',      'hr/personnel/' || emp_andrea || '/certs/Kranschein_AndreaMueller_2023.pdf',          'application/pdf', 450560,  '00000000-0000-0000-0000-000000000001', NOW()),
+
+    -- Safety
+    (a12, e12, t_id, 'Unterweisung_KlausWeber_2026.pdf',       'hr/personnel/' || emp_klaus  || '/safety/Unterweisung_KlausWeber_2026.pdf',         'application/pdf', 156672,  '00000000-0000-0000-0000-000000000001', NOW()),
+    (a13, e13, t_id, 'Unterweisung_AndreaMueller_2026.pdf',    'hr/personnel/' || emp_andrea || '/safety/Unterweisung_AndreaMueller_2026.pdf',      'application/pdf', 156672,  '00000000-0000-0000-0000-000000000001', NOW()),
+
+    -- Training
+    (a14, e15, t_id, 'Excel_Zertifikat_Fischer_2025.pdf',      'hr/personnel/' || emp_sabine || '/training/Excel_Zertifikat_Fischer_2025.pdf',      'application/pdf', 184320,  '00000000-0000-0000-0000-000000000001', NOW()),
+    (a15, e16, t_id, 'IPMA_LevelD_Hoffmann_2025.pdf',          'hr/personnel/' || emp_julia  || '/training/IPMA_LevelD_Hoffmann_2025.pdf',          'application/pdf', 409600,  '00000000-0000-0000-0000-000000000001', NOW()),
+
+    -- Medical
+    (a16, e17, t_id, 'G25_KlausWeber_2025.pdf',                'hr/personnel/' || emp_klaus  || '/medical/G25_KlausWeber_2025.pdf',                 'application/pdf', 98304,   '00000000-0000-0000-0000-000000000001', NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+END $$;

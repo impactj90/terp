@@ -119,10 +119,9 @@ export const holidaysRouter = createTRPCRouter({
    * Supports filters: year, from/to date range, departmentId.
    * Orders by holidayDate ASC.
    *
-   * Requires: holidays.manage permission
+   * Requires: authenticated tenant user (read-only)
    */
   list: tenantProcedure
-    .use(requirePermission(HOLIDAYS_MANAGE))
     .input(
       z
         .object({
