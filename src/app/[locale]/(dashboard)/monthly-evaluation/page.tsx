@@ -23,9 +23,9 @@ import { CloseMonthSheet } from '@/components/monthly-evaluation/close-month-she
 import { ReopenMonthSheet } from '@/components/monthly-evaluation/reopen-month-sheet'
 import { MonthlyExportButtons } from '@/components/monthly-evaluation/monthly-export-buttons'
 
-const statusStyles = {
-  open: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-  closed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+const statusVariants = {
+  open: 'blue' as const,
+  closed: 'green' as const,
 }
 
 export default function MonthlyEvaluationPage() {
@@ -144,7 +144,7 @@ export default function MonthlyEvaluationPage() {
         <div className="flex items-center gap-2">
           {/* Status badge */}
           {monthlyValue && (
-            <Badge className={monthlyValue.is_closed ? statusStyles.closed : statusStyles.open}>
+            <Badge variant={monthlyValue.is_closed ? statusVariants.closed : statusVariants.open}>
               {monthlyValue.is_closed ? t('statusClosed') : t('statusOpen')}
             </Badge>
           )}

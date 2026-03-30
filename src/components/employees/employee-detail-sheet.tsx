@@ -16,6 +16,7 @@ import {
   SheetTitle,
   SheetDescription,
 } from '@/components/ui/sheet'
+import { Badge } from '@/components/ui/badge'
 import { StatusBadge } from './status-badge'
 import { useEmployee } from '@/hooks'
 
@@ -224,15 +225,9 @@ export function EmployeeDetailSheet({
                               {card.cardType}
                             </p>
                           </div>
-                          <span
-                            className={`text-xs px-2 py-0.5 rounded-full ${
-                              card.isActive
-                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-                            }`}
-                          >
+                          <Badge variant={card.isActive ? 'green' : 'gray'}>
                             {card.isActive ? t('statusActive') : t('statusInactive')}
-                          </span>
+                          </Badge>
                         </div>
                       ))}
                     </div>
@@ -256,9 +251,9 @@ export function EmployeeDetailSheet({
                             </p>
                           </div>
                           {contact.isPrimary && (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                            <Badge variant="blue">
                               {t('primary')}
-                            </span>
+                            </Badge>
                           )}
                         </div>
                       ))}

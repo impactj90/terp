@@ -11,12 +11,12 @@ import { useWhArticleMovements } from '@/hooks/use-wh-stock-movements'
 
 type MovementType = 'GOODS_RECEIPT' | 'WITHDRAWAL' | 'ADJUSTMENT' | 'INVENTORY' | 'RETURN'
 
-const typeStyles: Record<MovementType, string> = {
-  GOODS_RECEIPT: 'bg-green-100 text-green-800 hover:bg-green-100',
-  WITHDRAWAL: 'bg-red-100 text-red-800 hover:bg-red-100',
-  ADJUSTMENT: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100',
-  INVENTORY: 'bg-blue-100 text-blue-800 hover:bg-blue-100',
-  RETURN: 'bg-purple-100 text-purple-800 hover:bg-purple-100',
+const typeVariants: Record<MovementType, 'green' | 'red' | 'yellow' | 'blue' | 'purple'> = {
+  GOODS_RECEIPT: 'green',
+  WITHDRAWAL: 'red',
+  ADJUSTMENT: 'yellow',
+  INVENTORY: 'blue',
+  RETURN: 'purple',
 }
 
 const typeKeys: Record<MovementType, string> = {
@@ -100,7 +100,7 @@ export function ArticleMovementsTab({ articleId }: ArticleMovementsTabProps) {
                 <TableRow key={movement.id}>
                   <TableCell className="text-sm">{formatDate(movement.date)}</TableCell>
                   <TableCell>
-                    <Badge className={typeStyles[movType]} variant="secondary">
+                    <Badge variant={typeVariants[movType]}>
                       {t(typeKeys[movType] as Parameters<typeof t>[0])}
                     </Badge>
                   </TableCell>

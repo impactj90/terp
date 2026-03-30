@@ -40,7 +40,7 @@ type AttendanceStatus =
 
 interface StatusConfig {
   labelKey: string
-  badgeClass: string
+  badgeVariant: string
   dotClass: string
 }
 
@@ -48,32 +48,32 @@ const statusConfigMap: Record<AttendanceStatus, StatusConfig> = {
   holiday: {
     labelKey: 'statusHoliday',
     dotClass: 'bg-gray-400',
-    badgeClass: '',
+    badgeVariant: '',
   },
   weekend: {
     labelKey: 'statusWeekend',
     dotClass: 'bg-gray-400',
-    badgeClass: '',
+    badgeVariant: '',
   },
   'on-leave': {
     labelKey: 'statusOnLeave',
     dotClass: 'bg-amber-400',
-    badgeClass: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+    badgeVariant: 'amber',
   },
   'clocked-in': {
     labelKey: 'statusClockedIn',
     dotClass: 'bg-emerald-500',
-    badgeClass: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+    badgeVariant: 'green',
   },
   'clocked-out': {
     labelKey: 'statusClockedOut',
     dotClass: 'bg-gray-400',
-    badgeClass: 'bg-gray-50 text-gray-600 dark:bg-gray-900/30 dark:text-gray-400 border-gray-200 dark:border-gray-700',
+    badgeVariant: 'gray',
   },
   'not-yet-in': {
     labelKey: 'statusNotYetIn',
     dotClass: 'bg-gray-300 dark:bg-gray-600',
-    badgeClass: '',
+    badgeVariant: '',
   },
 }
 
@@ -229,8 +229,8 @@ export function TeamMemberStatusRow({ member, dayView, isLoading }: TeamMemberSt
         </div>
 
         {/* Status badge */}
-        {config.badgeClass ? (
-          <Badge variant="outline" className={cn('text-[11px] font-medium', config.badgeClass)}>
+        {config.badgeVariant ? (
+          <Badge variant={config.badgeVariant as 'amber' | 'green' | 'gray'} className="text-[11px] font-medium">
             {t(config.labelKey as Parameters<typeof t>[0])}
           </Badge>
         ) : (

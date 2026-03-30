@@ -22,19 +22,19 @@ interface AuditLogDataTableProps {
   onRowClick: (item: AuditLogEntry) => void
 }
 
-const actionBadgeConfig: Record<string, { variant: 'default' | 'destructive' | 'outline'; className: string }> = {
-  create:   { variant: 'default',     className: 'bg-green-600 hover:bg-green-700' },
-  update:   { variant: 'outline',     className: 'border-blue-500 text-blue-700' },
-  delete:   { variant: 'destructive', className: '' },
-  approve:  { variant: 'default',     className: 'bg-green-600 hover:bg-green-700' },
-  reject:   { variant: 'destructive', className: '' },
-  cancel:   { variant: 'destructive', className: '' },
-  close:    { variant: 'outline',     className: 'border-purple-500 text-purple-700' },
-  reopen:   { variant: 'outline',     className: 'border-orange-500 text-orange-700' },
-  finalize: { variant: 'outline',     className: 'border-indigo-500 text-indigo-700' },
-  forward:  { variant: 'outline',     className: 'border-cyan-500 text-cyan-700' },
-  export:   { variant: 'outline',     className: 'border-cyan-500 text-cyan-700' },
-  import:   { variant: 'outline',     className: 'border-teal-500 text-teal-700' },
+const actionBadgeConfig: Record<string, { variant: string }> = {
+  create:   { variant: 'green' },
+  update:   { variant: 'blue' },
+  delete:   { variant: 'red' },
+  approve:  { variant: 'green' },
+  reject:   { variant: 'red' },
+  cancel:   { variant: 'red' },
+  close:    { variant: 'purple' },
+  reopen:   { variant: 'orange' },
+  finalize: { variant: 'indigo' },
+  forward:  { variant: 'cyan' },
+  export:   { variant: 'cyan' },
+  import:   { variant: 'teal' },
 }
 
 export function AuditLogDataTable({ items, isLoading, onRowClick }: AuditLogDataTableProps) {
@@ -100,7 +100,7 @@ export function AuditLogDataTable({ items, isLoading, onRowClick }: AuditLogData
                 </div>
               </TableCell>
               <TableCell>
-                <Badge variant={badgeConfig.variant} className={badgeConfig.className}>
+                <Badge variant={badgeConfig.variant as 'green' | 'blue' | 'red' | 'purple' | 'orange' | 'indigo' | 'cyan' | 'teal'}>
                   {t(`actions.${item.action}` as Parameters<typeof t>[0])}
                 </Badge>
               </TableCell>

@@ -199,7 +199,7 @@ export function PersonnelFileTab({ employeeId }: PersonnelFileTabProps) {
                         {t('expired')}
                       </Badge>
                     ) : isExpiringSoon(entry.expiresAt) ? (
-                      <Badge variant="outline" className="text-xs border-yellow-500 text-yellow-600">
+                      <Badge variant="yellow" className="text-xs">
                         <AlertTriangle className="mr-1 h-3 w-3" />
                         {t('expiringSoon')}
                       </Badge>

@@ -108,7 +108,7 @@ export function DailyBreakdownTable({
             </Badge>
           )}
           {totals.warningCount > 0 && (
-            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+            <Badge variant="yellow">
               {totals.warningCount === 1 ? t('dayWithWarnings', { count: totals.warningCount }) : t('daysWithWarnings', { count: totals.warningCount })}
             </Badge>
           )}
@@ -194,7 +194,7 @@ export function DailyBreakdownTable({
                         {dailyValue.error_codes.length === 1 ? t('error', { count: 1 }) : t('errors', { count: dailyValue.error_codes.length })}
                       </Badge>
                     ) : hasWarnings && dailyValue?.warnings ? (
-                      <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                      <Badge variant="yellow" className="text-xs">
                         {dailyValue.warnings.length === 1 ? t('warning', { count: 1 }) : t('warnings', { count: dailyValue.warnings.length })}
                       </Badge>
                     ) : dailyValue ? (

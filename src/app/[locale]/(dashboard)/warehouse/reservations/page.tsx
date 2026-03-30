@@ -35,10 +35,10 @@ import {
 
 function StatusBadge({ status }: { status: string }) {
   const t = useTranslations('warehouseReservations')
-  const variants: Record<string, string> = {
-    ACTIVE: 'bg-blue-100 text-blue-700 border-blue-200',
-    RELEASED: 'bg-gray-100 text-gray-600 border-gray-200',
-    FULFILLED: 'bg-green-100 text-green-700 border-green-200',
+  const variantMap: Record<string, 'blue' | 'gray' | 'green'> = {
+    ACTIVE: 'blue',
+    RELEASED: 'gray',
+    FULFILLED: 'green',
   }
   const labels: Record<string, string> = {
     ACTIVE: t('statusActive'),
@@ -46,7 +46,7 @@ function StatusBadge({ status }: { status: string }) {
     FULFILLED: t('statusFulfilled'),
   }
   return (
-    <Badge variant="outline" className={variants[status] ?? ''}>
+    <Badge variant={variantMap[status] ?? 'gray'}>
       {labels[status] ?? status}
     </Badge>
   )

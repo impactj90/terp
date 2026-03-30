@@ -334,12 +334,7 @@ function CarryoverPreviewCard({ employees }: { employees: Employee[] }) {
                           <TableCell>
                             {rule.ruleType && (
                               <Badge
-                                variant="secondary"
-                                className={
-                                  rule.ruleType === 'year_end'
-                                    ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-                                    : 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400'
-                                }
+                                variant={rule.ruleType === 'year_end' ? 'orange' : 'cyan'}
                               >
                                 {rule.ruleType === 'year_end' ? t('cappingRule.ruleTypeYearEnd') : t('cappingRule.ruleTypeMidYear')}
                               </Badge>
@@ -355,7 +350,7 @@ function CarryoverPreviewCard({ employees }: { employees: Employee[] }) {
                           </TableCell>
                           <TableCell>
                             {rule.exceptionActive ? (
-                              <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
+                              <Badge variant="yellow">
                                 {t('preview.exceptionActive')}
                               </Badge>
                             ) : (

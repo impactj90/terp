@@ -11,13 +11,26 @@ const badgeVariants = cva(
       variant: {
         default: "bg-primary text-primary-foreground [a&]:hover:bg-primary/90",
         secondary:
-          "bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90",
+          "bg-secondary text-secondary-foreground ring-1 ring-inset ring-secondary-foreground/8 [a&]:hover:bg-secondary/90",
         destructive:
           "bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:
           "border-border text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
         ghost: "[a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
         link: "text-primary underline-offset-4 [a&]:hover:underline",
+        // Tinted color variants — visible in light mode, proper dark mode support
+        blue: "bg-blue-100 text-blue-700 ring-1 ring-inset ring-blue-700/10 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-blue-400/20",
+        green: "bg-emerald-100 text-emerald-700 ring-1 ring-inset ring-emerald-700/10 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-400/20",
+        red: "bg-red-100 text-red-700 ring-1 ring-inset ring-red-700/10 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-400/20",
+        amber: "bg-amber-100 text-amber-700 ring-1 ring-inset ring-amber-700/10 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-400/20",
+        yellow: "bg-yellow-100 text-yellow-800 ring-1 ring-inset ring-yellow-700/10 dark:bg-yellow-500/15 dark:text-yellow-300 dark:ring-yellow-400/20",
+        purple: "bg-purple-100 text-purple-700 ring-1 ring-inset ring-purple-700/10 dark:bg-purple-500/15 dark:text-purple-300 dark:ring-purple-400/20",
+        gray: "bg-gray-200/70 text-gray-700 ring-1 ring-inset ring-gray-600/10 dark:bg-gray-500/15 dark:text-gray-300 dark:ring-gray-400/20",
+        indigo: "bg-indigo-100 text-indigo-700 ring-1 ring-inset ring-indigo-700/10 dark:bg-indigo-500/15 dark:text-indigo-300 dark:ring-indigo-400/20",
+        teal: "bg-teal-100 text-teal-700 ring-1 ring-inset ring-teal-700/10 dark:bg-teal-500/15 dark:text-teal-300 dark:ring-teal-400/20",
+        orange: "bg-orange-100 text-orange-700 ring-1 ring-inset ring-orange-700/10 dark:bg-orange-500/15 dark:text-orange-300 dark:ring-orange-400/20",
+        pink: "bg-pink-100 text-pink-700 ring-1 ring-inset ring-pink-700/10 dark:bg-pink-500/15 dark:text-pink-300 dark:ring-pink-400/20",
+        cyan: "bg-cyan-100 text-cyan-700 ring-1 ring-inset ring-cyan-700/10 dark:bg-cyan-500/15 dark:text-cyan-300 dark:ring-cyan-400/20",
       },
     },
     defaultVariants: {

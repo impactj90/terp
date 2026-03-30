@@ -5,29 +5,31 @@ import { useTranslations } from 'next-intl'
 
 type OrderStatus = 'planned' | 'active' | 'completed' | 'cancelled'
 
+type BadgeVariant = 'gray' | 'green' | 'blue' | 'red' | 'secondary'
+
 interface OrderStatusBadgeProps {
   status: string | undefined | null
 }
 
 const statusConfig: Record<
   OrderStatus,
-  { labelKey: 'statusPlanned' | 'statusActive' | 'statusCompleted' | 'statusCancelled'; className: string }
+  { labelKey: 'statusPlanned' | 'statusActive' | 'statusCompleted' | 'statusCancelled'; variant: BadgeVariant }
 > = {
   planned: {
     labelKey: 'statusPlanned' as const,
-    className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
+    variant: 'gray',
   },
   active: {
     labelKey: 'statusActive' as const,
-    className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+    variant: 'green',
   },
   completed: {
     labelKey: 'statusCompleted' as const,
-    className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    variant: 'blue',
   },
   cancelled: {
     labelKey: 'statusCancelled' as const,
-    className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+    variant: 'red',
   },
 }
 
@@ -44,7 +46,7 @@ export function OrderStatusBadge({ status }: OrderStatusBadgeProps) {
   const config = statusConfig[status as OrderStatus]
 
   return (
-    <Badge variant="secondary" className={config.className}>
+    <Badge variant={config.variant}>
       {t(config.labelKey)}
     </Badge>
   )

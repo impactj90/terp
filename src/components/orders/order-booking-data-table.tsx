@@ -75,11 +75,11 @@ export function OrderBookingDataTable({
   const getSourceBadge = (source: string | undefined) => {
     switch (source) {
       case 'manual':
-        return <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">{t('sourceManual')}</Badge>
+        return <Badge variant="green">{t('sourceManual')}</Badge>
       case 'auto':
-        return <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">{t('sourceAuto')}</Badge>
+        return <Badge variant="blue">{t('sourceAuto')}</Badge>
       case 'import':
-        return <Badge variant="secondary" className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">{t('sourceImport')}</Badge>
+        return <Badge variant="orange">{t('sourceImport')}</Badge>
       default:
         return <Badge variant="secondary">{source || '-'}</Badge>
     }

@@ -4,11 +4,13 @@ import { useTranslations } from 'next-intl'
 import { Badge } from '@/components/ui/badge'
 import { CircleDot, Loader, CheckCircle, XCircle } from 'lucide-react'
 
-const STATUS_CONFIG: Record<string, { icon: typeof CircleDot; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
-  OPEN: { icon: CircleDot, variant: 'default' },
-  IN_PROGRESS: { icon: Loader, variant: 'secondary' },
-  CLOSED: { icon: CheckCircle, variant: 'outline' },
-  CANCELLED: { icon: XCircle, variant: 'destructive' },
+type BadgeVariant = 'blue' | 'amber' | 'green' | 'red'
+
+const STATUS_CONFIG: Record<string, { icon: typeof CircleDot; variant: BadgeVariant }> = {
+  OPEN: { icon: CircleDot, variant: 'blue' },
+  IN_PROGRESS: { icon: Loader, variant: 'amber' },
+  CLOSED: { icon: CheckCircle, variant: 'green' },
+  CANCELLED: { icon: XCircle, variant: 'red' },
 }
 
 interface InquiryStatusBadgeProps {
@@ -30,7 +32,7 @@ export function InquiryStatusBadge({ status }: InquiryStatusBadgeProps) {
   const label = statusLabels[status] ?? status
 
   return (
-    <Badge variant={config?.variant ?? 'secondary'} className="gap-1">
+    <Badge variant={config?.variant ?? 'gray'} className="gap-1">
       <Icon className="h-3 w-3" />
       {label}
     </Badge>

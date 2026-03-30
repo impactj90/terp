@@ -174,7 +174,7 @@ export function GoodsReceiptTerminal() {
                 state.step === num
                   ? 'bg-primary text-primary-foreground'
                   : state.step > num
-                    ? 'bg-green-100 text-green-800'
+                    ? 'bg-emerald-100 text-emerald-700 ring-1 ring-inset ring-emerald-700/10'
                     : 'bg-muted text-muted-foreground'
               }`}
             >
@@ -274,12 +274,7 @@ export function GoodsReceiptTerminal() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge
-                        variant="secondary"
-                        className={
-                          po.status === 'PARTIALLY_RECEIVED'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-blue-100 text-blue-800'
-                        }
+                        variant={po.status === 'PARTIALLY_RECEIVED' ? 'yellow' : 'blue'}
                       >
                         {po.status === 'PARTIALLY_RECEIVED' ? 'Teillieferung' : 'Bestellt'}
                       </Badge>

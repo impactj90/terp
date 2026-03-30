@@ -79,17 +79,17 @@ const INITIAL_FORM: FormState = {
   isActive: true,
 }
 
-const TYPE_BADGE_CONFIG: Record<SpecialCalcType, { className: string; labelKey: string }> = {
+const TYPE_BADGE_CONFIG: Record<SpecialCalcType, { variant: 'blue' | 'green' | 'purple'; labelKey: string }> = {
   age: {
-    className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    variant: 'blue',
     labelKey: 'specialCalc.typeAge',
   },
   tenure: {
-    className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+    variant: 'green',
     labelKey: 'specialCalc.typeTenure',
   },
   disability: {
-    className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+    variant: 'purple',
     labelKey: 'specialCalc.typeDisability',
   },
 }
@@ -243,7 +243,7 @@ export function SpecialCalculationsTab() {
                   return (
                     <TableRow key={item.id}>
                       <TableCell>
-                        <Badge variant="secondary" className={typeConfig.className}>
+                        <Badge variant={typeConfig.variant}>
                           {t(typeConfig.labelKey as Parameters<typeof t>[0])}
                         </Badge>
                       </TableCell>

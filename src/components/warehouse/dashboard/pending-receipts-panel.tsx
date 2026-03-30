@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { AlertCircle, RefreshCw, PackageCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { useWhPendingOrders } from '@/hooks/use-wh-stock-movements'
@@ -82,14 +83,9 @@ export function PendingReceiptsPanel({ className }: { className?: string }) {
                     {po.supplier?.company || '—'}
                   </td>
                   <td className="px-3 py-2 pr-6 text-right">
-                    <span className={cn(
-                      'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-                      po.status === 'ORDERED'
-                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                        : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                    )}>
+                    <Badge variant={po.status === 'ORDERED' ? 'blue' : 'amber'}>
                       {po.status === 'ORDERED' ? t('statusOrdered') : t('statusPartiallyReceived')}
-                    </span>
+                    </Badge>
                   </td>
                 </tr>
               ))}

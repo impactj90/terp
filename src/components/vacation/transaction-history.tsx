@@ -26,18 +26,18 @@ interface TransactionHistoryProps {
   className?: string
 }
 
-const statusStyles: Record<string, string> = {
-  approved: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-  rejected: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-  cancelled: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+const statusVariants: Record<string, 'green' | 'yellow' | 'red' | 'gray'> = {
+  approved: 'green',
+  pending: 'yellow',
+  rejected: 'red',
+  cancelled: 'gray',
 }
 
 function StatusBadge({ status }: { status: string }) {
   return (
     <Badge
-      variant="secondary"
-      className={cn('capitalize', statusStyles[status] ?? '')}
+      variant={statusVariants[status] ?? 'gray'}
+      className="capitalize"
     >
       {status}
     </Badge>

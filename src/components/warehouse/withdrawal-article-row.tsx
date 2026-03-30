@@ -77,7 +77,7 @@ export function WithdrawalArticleRow({
       <TableCell className="text-sm text-muted-foreground">{article.unit}</TableCell>
       <TableCell>
         {isBelowMin && !isOverStock && (
-          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 gap-1">
+          <Badge variant="yellow" className="gap-1">
             <AlertTriangle className="h-3 w-3" />
             {t('warningLowStock')}
           </Badge>

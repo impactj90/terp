@@ -7,15 +7,17 @@ import type { components } from '@/types/legacy-api-types'
 type Macro = components['schemas']['schema1']
 type ActionType = Macro['action_type']
 
+type BadgeVariant = 'gray' | 'green' | 'amber' | 'cyan'
+
 interface MacroActionBadgeProps {
   action: ActionType
 }
 
-const actionStyleConfig: Record<ActionType, string> = {
-  log_message: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
-  recalculate_target_hours: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  reset_flextime: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  carry_forward_balance: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
+const actionVariants: Record<ActionType, BadgeVariant> = {
+  log_message: 'gray',
+  recalculate_target_hours: 'green',
+  reset_flextime: 'amber',
+  carry_forward_balance: 'cyan',
 }
 
 const actionLabelMap: Record<ActionType, 'actionLogMessage' | 'actionRecalculateTargetHours' | 'actionResetFlextime' | 'actionCarryForwardBalance'> = {
@@ -28,7 +30,7 @@ const actionLabelMap: Record<ActionType, 'actionLogMessage' | 'actionRecalculate
 export function MacroActionBadge({ action }: MacroActionBadgeProps) {
   const t = useTranslations('adminMacros')
   return (
-    <Badge variant="secondary" className={actionStyleConfig[action]}>
+    <Badge variant={actionVariants[action]}>
       {t(actionLabelMap[action])}
     </Badge>
   )

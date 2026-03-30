@@ -44,21 +44,21 @@ type ImportBatch = any
 
 type StatusFilter = 'all' | 'pending' | 'processing' | 'completed' | 'failed'
 
-const BATCH_STATUS_CONFIG: Record<string, { className: string; labelKey: string }> = {
+const BATCH_STATUS_CONFIG: Record<string, { variant: 'yellow' | 'blue' | 'green' | 'red'; labelKey: string }> = {
   pending: {
-    className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+    variant: 'yellow',
     labelKey: 'batches.statusPending',
   },
   processing: {
-    className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    variant: 'blue',
     labelKey: 'batches.statusProcessing',
   },
   completed: {
-    className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+    variant: 'green',
     labelKey: 'batches.statusCompleted',
   },
   failed: {
-    className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+    variant: 'red',
     labelKey: 'batches.statusFailed',
   },
 }
@@ -159,7 +159,7 @@ export function ImportBatchesTab() {
                       <TableCell>{batch.source ?? '-'}</TableCell>
                       <TableCell>{batch.terminalId ?? '-'}</TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className={statusConfig!.className}>
+                        <Badge variant={statusConfig!.variant}>
                           {t(statusConfig!.labelKey as Parameters<typeof t>[0])}
                         </Badge>
                       </TableCell>

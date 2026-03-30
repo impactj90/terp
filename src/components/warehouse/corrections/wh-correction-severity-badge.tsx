@@ -3,10 +3,12 @@
 import { useTranslations } from 'next-intl'
 import { Badge } from '@/components/ui/badge'
 
-const severityVariant: Record<string, 'destructive' | 'secondary' | 'outline'> = {
-  ERROR: 'destructive',
-  WARNING: 'secondary',
-  INFO: 'outline',
+type BadgeVariant = 'red' | 'amber' | 'blue'
+
+const severityVariant: Record<string, BadgeVariant> = {
+  ERROR: 'red',
+  WARNING: 'amber',
+  INFO: 'blue',
 }
 
 const severityKeys: Record<string, string> = {
@@ -17,7 +19,7 @@ const severityKeys: Record<string, string> = {
 
 export function WhCorrectionSeverityBadge({ severity }: { severity: string }) {
   const t = useTranslations('warehouseCorrections')
-  const variant = severityVariant[severity] ?? 'outline'
+  const variant = severityVariant[severity] ?? 'blue'
   const key = severityKeys[severity] ?? 'severityInfo'
   return <Badge variant={variant}>{t(key as Parameters<typeof t>[0])}</Badge>
 }

@@ -3,12 +3,14 @@
 import { Badge } from '@/components/ui/badge'
 import { useTranslations } from 'next-intl'
 
-const STATUS_STYLES: Record<string, string> = {
-  UNPAID: 'bg-gray-100 text-gray-800',
-  PARTIAL: 'bg-yellow-100 text-yellow-800',
-  PAID: 'bg-green-100 text-green-800',
-  OVERPAID: 'bg-blue-100 text-blue-800',
-  OVERDUE: 'bg-red-100 text-red-800',
+type BadgeVariant = 'gray' | 'yellow' | 'green' | 'blue' | 'red'
+
+const STATUS_VARIANTS: Record<string, BadgeVariant> = {
+  UNPAID: 'gray',
+  PARTIAL: 'yellow',
+  PAID: 'green',
+  OVERPAID: 'blue',
+  OVERDUE: 'red',
 }
 
 const STATUS_KEYS: Record<string, string> = {
@@ -27,11 +29,11 @@ interface PaymentStatusBadgeProps {
 export function PaymentStatusBadge({ status, isOverdue: overdue }: PaymentStatusBadgeProps) {
   const t = useTranslations('billingOpenItems')
   const effectiveStatus = overdue && status !== 'PAID' && status !== 'OVERPAID' ? 'OVERDUE' : status
-  const style = STATUS_STYLES[effectiveStatus] ?? 'bg-gray-100 text-gray-800'
+  const variant = STATUS_VARIANTS[effectiveStatus] ?? 'gray'
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const label = STATUS_KEYS[effectiveStatus] ? t(STATUS_KEYS[effectiveStatus] as any) : effectiveStatus
   return (
-    <Badge variant="outline" className={style}>
+    <Badge variant={variant}>
       {label}
     </Badge>
   )

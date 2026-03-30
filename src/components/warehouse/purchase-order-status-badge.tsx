@@ -10,12 +10,14 @@ type PurchaseOrderStatus =
   | 'RECEIVED'
   | 'CANCELLED'
 
-const statusStyles: Record<PurchaseOrderStatus, string> = {
-  DRAFT: 'bg-gray-100 text-gray-800 hover:bg-gray-100',
-  ORDERED: 'bg-blue-100 text-blue-800 hover:bg-blue-100',
-  PARTIALLY_RECEIVED: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100',
-  RECEIVED: 'bg-green-100 text-green-800 hover:bg-green-100',
-  CANCELLED: 'bg-red-100 text-red-800 hover:bg-red-100',
+type BadgeVariant = 'gray' | 'blue' | 'yellow' | 'green' | 'red'
+
+const statusVariants: Record<PurchaseOrderStatus, BadgeVariant> = {
+  DRAFT: 'gray',
+  ORDERED: 'blue',
+  PARTIALLY_RECEIVED: 'yellow',
+  RECEIVED: 'green',
+  CANCELLED: 'red',
 }
 
 const statusKeys: Record<PurchaseOrderStatus, string> = {
@@ -33,7 +35,7 @@ interface PurchaseOrderStatusBadgeProps {
 export function PurchaseOrderStatusBadge({ status }: PurchaseOrderStatusBadgeProps) {
   const t = useTranslations('warehousePurchaseOrders')
   return (
-    <Badge className={statusStyles[status]} variant="secondary">
+    <Badge variant={statusVariants[status]}>
       {t(statusKeys[status] as Parameters<typeof t>[0])}
     </Badge>
   )

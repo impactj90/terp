@@ -4,11 +4,13 @@ import { useTranslations } from 'next-intl'
 import { Badge } from '@/components/ui/badge'
 import { CircleDot, Loader, CheckCircle, XCircle, ClipboardCheck, MessageSquare } from 'lucide-react'
 
-const STATUS_CONFIG: Record<string, { icon: typeof CircleDot; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
-  OPEN: { icon: CircleDot, variant: 'default' },
-  IN_PROGRESS: { icon: Loader, variant: 'secondary' },
-  COMPLETED: { icon: CheckCircle, variant: 'outline' },
-  CANCELLED: { icon: XCircle, variant: 'destructive' },
+type BadgeVariant = 'blue' | 'amber' | 'green' | 'red'
+
+const STATUS_CONFIG: Record<string, { icon: typeof CircleDot; variant: BadgeVariant }> = {
+  OPEN: { icon: CircleDot, variant: 'blue' },
+  IN_PROGRESS: { icon: Loader, variant: 'amber' },
+  COMPLETED: { icon: CheckCircle, variant: 'green' },
+  CANCELLED: { icon: XCircle, variant: 'red' },
 }
 
 const TYPE_CONFIG: Record<string, { icon: typeof ClipboardCheck; label: string }> = {
@@ -35,7 +37,7 @@ export function TaskStatusBadge({ status }: TaskStatusBadgeProps) {
   const label = statusLabels[status] ?? status
 
   return (
-    <Badge variant={config?.variant ?? 'secondary'} className="gap-1">
+    <Badge variant={config?.variant ?? 'gray'} className="gap-1">
       <Icon className="h-3 w-3" />
       {label}
     </Badge>
@@ -59,7 +61,7 @@ export function TaskTypeBadge({ type }: TaskTypeBadgeProps) {
   const label = typeLabels[type] ?? type
 
   return (
-    <Badge variant="outline" className="gap-1">
+    <Badge variant="gray" className="gap-1">
       <Icon className="h-3 w-3" />
       {label}
     </Badge>

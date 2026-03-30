@@ -122,7 +122,7 @@ export function UpcomingVacation({
                       : t('countDays', { count: group.totalDays })}
                   </span>
                   {group.hasPending && (
-                    <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                    <Badge variant="yellow">
                       {t('pending')}
                     </Badge>
                   )}

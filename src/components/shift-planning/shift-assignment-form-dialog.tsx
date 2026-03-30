@@ -3,6 +3,7 @@
 import * as React from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { Loader2, Info } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -202,19 +203,13 @@ export function ShiftAssignmentFormDialog({
           {existingPlan && (
             <div className="flex items-center gap-2">
               <Label>{t('cellSource')}</Label>
-              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                isTariffEntry
-                  ? 'bg-blue-100 text-blue-700'
-                  : isHolidayEntry
-                    ? 'bg-orange-100 text-orange-700'
-                    : 'bg-green-100 text-green-700'
-              }`}>
+              <Badge variant={isTariffEntry ? 'blue' : isHolidayEntry ? 'orange' : 'green'}>
                 {existingPlan.source === 'tariff'
                   ? t('sourceTariff')
                   : existingPlan.source === 'holiday'
                     ? t('sourceHoliday')
                     : t('sourceManual')}
-              </span>
+              </Badge>
             </div>
           )}
 

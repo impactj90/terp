@@ -5,11 +5,13 @@ import { useTranslations } from 'next-intl'
 
 type SupplierInvoiceStatus = 'OPEN' | 'PARTIAL' | 'PAID' | 'CANCELLED'
 
-const statusStyles: Record<SupplierInvoiceStatus, string> = {
-  OPEN: 'bg-blue-100 text-blue-800 hover:bg-blue-100',
-  PARTIAL: 'bg-amber-100 text-amber-800 hover:bg-amber-100',
-  PAID: 'bg-green-100 text-green-800 hover:bg-green-100',
-  CANCELLED: 'bg-gray-100 text-gray-800 hover:bg-gray-100',
+type BadgeVariant = 'blue' | 'amber' | 'green' | 'gray'
+
+const statusVariants: Record<SupplierInvoiceStatus, BadgeVariant> = {
+  OPEN: 'blue',
+  PARTIAL: 'amber',
+  PAID: 'green',
+  CANCELLED: 'gray',
 }
 
 const statusKeys: Record<SupplierInvoiceStatus, string> = {
@@ -26,7 +28,7 @@ interface SupplierInvoiceStatusBadgeProps {
 export function SupplierInvoiceStatusBadge({ status }: SupplierInvoiceStatusBadgeProps) {
   const t = useTranslations('warehouseSupplierInvoices')
   return (
-    <Badge className={statusStyles[status]} variant="secondary">
+    <Badge variant={statusVariants[status]}>
       {t(statusKeys[status] as Parameters<typeof t>[0])}
     </Badge>
   )

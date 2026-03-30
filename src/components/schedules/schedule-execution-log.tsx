@@ -178,15 +178,15 @@ function TaskExecutionDetails({ tasks }: { tasks: ScheduleTaskExecution[] }) {
 
   const getStatusBadge = (status?: string) => {
     if (!status) return null
-    const styles: Record<string, string> = {
-      pending: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
-      running: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-      completed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-      failed: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-      skipped: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
+    const variants: Record<string, 'gray' | 'blue' | 'green' | 'red'> = {
+      pending: 'gray',
+      running: 'blue',
+      completed: 'green',
+      failed: 'red',
+      skipped: 'gray',
     }
     return (
-      <Badge variant="secondary" className={styles[status]}>
+      <Badge variant={variants[status] ?? 'gray'}>
         {status}
       </Badge>
     )
