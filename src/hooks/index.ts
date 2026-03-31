@@ -1,3 +1,6 @@
+// Media query / responsive hooks
+export { useMediaQuery, useIsMobile } from './use-media-query'
+
 // Auth hooks (User type re-exported from auth-provider for backward compatibility)
 export { type User } from './use-auth'
 export {

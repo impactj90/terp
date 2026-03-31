@@ -166,7 +166,7 @@ export default function EmployeesPage() {
       </div>
 
       {/* Filters bar */}
-      <div className="flex flex-wrap items-center gap-4">
+      <div className="space-y-3">
         <SearchInput
           value={search}
           onChange={setSearch}
@@ -175,88 +175,91 @@ export default function EmployeesPage() {
           disabled={isFetching}
         />
 
-        <Select
-          value={activeFilter === undefined ? 'all' : activeFilter ? 'active' : 'inactive'}
-          onValueChange={(value) => {
-            if (value === 'all') {
-              setActiveFilter(undefined)
-            } else {
-              setActiveFilter(value === 'active')
-            }
-          }}
-        >
-          <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('allStatus')}</SelectItem>
-            <SelectItem value="active">{t('active')}</SelectItem>
-            <SelectItem value="inactive">{t('inactive')}</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={departmentFilter ?? 'all'}
-          onValueChange={(value) => setDepartmentFilter(value === 'all' ? undefined : value)}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder={t('columnDepartment')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('allDepartments')}</SelectItem>
-            {departments.map((dept) => (
-              <SelectItem key={dept.id} value={dept.id}>
-                {dept.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={locationFilter ?? 'all'}
-          onValueChange={(value) => setLocationFilter(value === 'all' ? undefined : value)}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder={t('columnLocation')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('allLocations')}</SelectItem>
-            {locationsList.map((loc) => (
-              <SelectItem key={loc.id} value={loc.id}>
-                {loc.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {hasFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setSearch('')
-              setActiveFilter(undefined)
-              setDepartmentFilter(undefined)
-              setLocationFilter(undefined)
+        <div className="filter-scroll-area flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:gap-4 sm:overflow-visible sm:pb-0">
+          <Select
+            value={activeFilter === undefined ? 'all' : activeFilter ? 'active' : 'inactive'}
+            onValueChange={(value) => {
+              if (value === 'all') {
+                setActiveFilter(undefined)
+              } else {
+                setActiveFilter(value === 'active')
+              }
             }}
           >
-            <X className="mr-2 h-4 w-4" />
-            {t('clearFilters')}
-          </Button>
-        )}
+            <SelectTrigger className="w-[140px] shrink-0">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('allStatus')}</SelectItem>
+              <SelectItem value="active">{t('active')}</SelectItem>
+              <SelectItem value="inactive">{t('inactive')}</SelectItem>
+            </SelectContent>
+          </Select>
 
-        {/* Bulk actions */}
-        {selectedIds.size > 0 && (
-          <BulkActions
-            selectedCount={selectedIds.size}
-            selectedIds={selectedIds}
-            onClear={() => setSelectedIds(new Set())}
-            filters={{
-              search: search || undefined,
-              isActive: activeFilter,
-            }}
-          />
-        )}
+          <Select
+            value={departmentFilter ?? 'all'}
+            onValueChange={(value) => setDepartmentFilter(value === 'all' ? undefined : value)}
+          >
+            <SelectTrigger className="w-[180px] shrink-0">
+              <SelectValue placeholder={t('columnDepartment')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('allDepartments')}</SelectItem>
+              {departments.map((dept) => (
+                <SelectItem key={dept.id} value={dept.id}>
+                  {dept.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={locationFilter ?? 'all'}
+            onValueChange={(value) => setLocationFilter(value === 'all' ? undefined : value)}
+          >
+            <SelectTrigger className="w-[180px] shrink-0">
+              <SelectValue placeholder={t('columnLocation')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('allLocations')}</SelectItem>
+              {locationsList.map((loc) => (
+                <SelectItem key={loc.id} value={loc.id}>
+                  {loc.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {hasFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="shrink-0"
+              onClick={() => {
+                setSearch('')
+                setActiveFilter(undefined)
+                setDepartmentFilter(undefined)
+                setLocationFilter(undefined)
+              }}
+            >
+              <X className="mr-2 h-4 w-4" />
+              {t('clearFilters')}
+            </Button>
+          )}
+
+          {/* Bulk actions */}
+          {selectedIds.size > 0 && (
+            <BulkActions
+              selectedCount={selectedIds.size}
+              selectedIds={selectedIds}
+              onClear={() => setSelectedIds(new Set())}
+              filters={{
+                search: search || undefined,
+                isActive: activeFilter,
+              }}
+            />
+          )}
+        </div>
       </div>
 
       {/* Data table */}

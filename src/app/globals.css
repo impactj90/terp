@@ -285,6 +285,73 @@
 }
 
 /* Hilfe / Handbook prose styles */
+/* ==========================================================================
+   RESPONSIVE TABLE UTILITIES
+   ========================================================================== */
+
+/* Compact table rows on mobile */
+.responsive-table {
+  @media (max-width: 767px) {
+    & th {
+      height: 2.25rem; /* h-9 */
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+      font-size: 0.75rem;
+      line-height: 1rem;
+    }
+    & td {
+      padding: 0.375rem 0.5rem;
+      font-size: 0.75rem;
+      line-height: 1rem;
+    }
+  }
+}
+
+/* Scroll fade indicator — sits inside ResponsiveTable wrapper */
+.responsive-table-fade {
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 2rem;
+  background: linear-gradient(to left, var(--color-card), transparent);
+  z-index: 20;
+  transition: opacity 150ms;
+}
+
+/* Sticky column edge shadow */
+@media (max-width: 1023px) {
+  .sticky-col-end {
+    box-shadow: 4px 0 6px -4px rgb(0 0 0 / 0.08);
+  }
+  .dark .sticky-col-end {
+    box-shadow: 4px 0 6px -4px rgb(0 0 0 / 0.25);
+  }
+}
+
+/* Mobile text truncation for table cells */
+@media (max-width: 767px) {
+  .truncate-mobile {
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Filter scroll area — hide scrollbar */
+.filter-scroll-area {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.filter-scroll-area::-webkit-scrollbar {
+  display: none;
+}
+
+/* ==========================================================================
+   HILFE / HANDBOOK PROSE STYLES
+   ========================================================================== */
 .hilfe-content h1 {
   @apply mt-10 mb-4 text-3xl font-bold tracking-tight text-foreground;
 }
