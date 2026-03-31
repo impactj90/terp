@@ -135,7 +135,7 @@ export function MonthView({
             netMinutes={monthlyValue.net_minutes}
             balanceMinutes={monthlyValue.balance_minutes}
           />
-          <div className="flex items-center gap-5 text-xs text-muted-foreground px-1">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted-foreground px-1">
             <span>{t('workingDays', { count: monthlyValue.working_days ?? 0 })}</span>
             <span>{t('workedDays', { count: monthlyValue.worked_days ?? 0 })}</span>
             <span>{t('absenceDays', { count: monthlyValue.absence_days ?? 0 })}</span>
@@ -147,9 +147,91 @@ export function MonthView({
         <Skeleton className="h-[88px] w-full rounded-xl" />
       ) : null}
 
-      {/* Calendar grid */}
-      <div className="overflow-x-auto">
-        <div className="min-w-[700px]">
+      {/* Mobile: compact day list */}
+      <div className="space-y-1 sm:hidden">
+        {dates.map((date) => {
+          const dateString = formatDate(date)
+          const dailyValue = dailyValuesByDate.get(dateString)
+          const today = isToday(date)
+          const weekend = isWeekend(date)
+          const target = dailyValue?.target_minutes ?? 0
+          const net = dailyValue?.net_minutes ?? 0
+          const progress = target > 0 ? Math.min((net / target) * 100, 100) : 0
+          const hasData = dailyValue && (dailyValue.gross_minutes || dailyValue.net_minutes)
+
+          return (
+            <button
+              key={dateString}
+              onClick={() => onDayClick?.(date)}
+              className={cn(
+                'w-full flex items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors',
+                'active:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring',
+                today && 'bg-primary/5',
+                weekend && !target && 'opacity-50',
+              )}
+            >
+              {/* Day number */}
+              <div className={cn(
+                'flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium shrink-0',
+                today && 'bg-primary text-primary-foreground',
+                !today && 'text-foreground',
+              )}>
+                {date.getDate()}
+              </div>
+
+              {/* Day info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-medium">
+                    {date.toLocaleDateString(locale, { weekday: 'short' })}
+                  </span>
+                  {dailyValue?.is_holiday && (
+                    <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">H</Badge>
+                  )}
+                  {dailyValue?.is_absence && (
+                    <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">A</Badge>
+                  )}
+                  <ErrorBadge errors={dailyValue?.errors as never} />
+                </div>
+                {hasData && (
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-muted-foreground">
+                      <TimeDisplay value={net} format="duration" className="text-xs" />
+                      {target > 0 && (
+                        <span className="text-muted-foreground/60"> / <TimeDisplay value={target} format="duration" className="text-xs" /></span>
+                      )}
+                    </span>
+                    {target > 0 && (
+                      <div className="flex-1 max-w-16 h-1 rounded-full bg-muted/40 overflow-hidden">
+                        <div
+                          className={cn(
+                            'h-full rounded-full transition-all',
+                            progress >= 100 ? 'bg-emerald-500/60' : 'bg-primary/50',
+                          )}
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Balance */}
+              {hasData && (
+                <TimeDisplay
+                  value={dailyValue?.balance_minutes}
+                  format="balance"
+                  className="text-sm font-medium shrink-0"
+                />
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Desktop: Calendar grid */}
+      <div className="hidden sm:block">
+        <div>
           {/* Weekday header */}
           <div className="grid grid-cols-7 gap-1 mb-2">
             {weekDays.map((day, index) => (

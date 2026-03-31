@@ -126,12 +126,12 @@ export function BookingCreateDialog({
               onValueChange={setSelectedTypeId}
               disabled={bookingTypesQuery.isLoading}
             >
-              <SelectTrigger id="bookingType">
+              <SelectTrigger id="bookingType" className="min-h-[44px]">
                 <SelectValue placeholder={t('selectBookingType')} />
               </SelectTrigger>
               <SelectContent>
                 {bookingTypes.map((type) => (
-                  <SelectItem key={type.id} value={type.id}>
+                  <SelectItem key={type.id} value={type.id} className="min-h-[44px]">
                     {type.name}
                   </SelectItem>
                 ))}
@@ -143,10 +143,10 @@ export function BookingCreateDialog({
             <Label htmlFor="bookingTime">{t('timeLabel')}</Label>
             <Input
               id="bookingTime"
+              type="time"
               value={time}
               onChange={(e) => setTime(e.target.value)}
-              placeholder="HH:MM"
-              className="font-mono"
+              className="font-mono min-h-[44px] text-base"
             />
           </div>
 
@@ -157,6 +157,7 @@ export function BookingCreateDialog({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder={t('optionalNotes')}
+              className="min-h-[44px]"
             />
           </div>
 
@@ -165,12 +166,14 @@ export function BookingCreateDialog({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
+              className="min-h-[44px]"
             >
               {tc('cancel')}
             </Button>
             <Button
               type="submit"
               disabled={createBooking.isPending || !employeeId}
+              className="min-h-[44px]"
             >
               {createBooking.isPending ? tc('saving') : tc('create')}
             </Button>

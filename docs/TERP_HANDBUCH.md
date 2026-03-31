@@ -2248,7 +2248,7 @@ Das Gleitzeitkonto sammelt die täglichen Plus- und Minusstunden über den Monat
 
 ✅ Sie sehen:
 
-**Oben:** Team-Dropdown, Datumsbereiche-Auswahl (Standard: aktuelle Woche), Aktualisieren-Button, Schnellaktionen (Abwesenheit beantragen, Teams verwalten, Zeitnachweis anzeigen)
+**Oben:** Team-Dropdown, Datumsbereiche-Auswahl (Standard: aktuelle Woche), Schnellaktionen (Abwesenheit beantragen, Teams verwalten, Zeitnachweis anzeigen)
 
 ⚠️ Nicht-Admin-Benutzer sehen nur Teams, in denen sie **Mitglied** oder **Teamleiter** sind. Bei nur einem Team wird dieses automatisch ausgewählt.
 
@@ -2303,7 +2303,7 @@ Der Teamleiter Schmidt prüft am Montagmorgen sein Montageteam:
 5. 📍 „Kommende Abwesenheiten" → Krause hat diese Woche Urlaub (Mo–Fr), Müller hat nächsten Freitag frei
 6. 📍 Datumsbereiche auf `letzte 2 Wochen` ändern → Anwesenheitsmuster zeigt: Montag und Freitag sind die Tage mit der geringsten Besetzung
 
-💡 **Hinweis:** Die Anwesenheitsdaten aktualisieren sich automatisch alle 30 Sekunden. Klicken Sie auf „Aktualisieren" (↻), um eine sofortige Aktualisierung auszulösen. Der Export-Button generiert einen CSV-Bericht für den gewählten Zeitraum — nützlich für die wöchentliche Teamauswertung.
+💡 **Hinweis:** Die Anwesenheitsdaten aktualisieren sich in Echtzeit automatisch. Der Export-Button generiert einen CSV-Bericht für den gewählten Zeitraum — nützlich für die wöchentliche Teamauswertung.
 
 ### 5.7 Jahresübersicht
 

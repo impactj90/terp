@@ -133,17 +133,17 @@ export function DayView({
   return (
     <div className="space-y-5">
       {/* Day header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <CalendarDays className="h-5 w-5 text-muted-foreground" />
-          <div>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          <CalendarDays className="h-5 w-5 text-muted-foreground shrink-0" />
+          <div className="min-w-0">
             <h2 className={cn(
-              'text-lg font-semibold',
+              'text-base sm:text-lg font-semibold truncate',
               today && 'text-primary'
             )}>
               {formatDisplayDate(date, 'long')}
             </h2>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {today && (
                 <Badge variant="default" className="text-xs">{t('today')}</Badge>
               )}
@@ -162,7 +162,7 @@ export function DayView({
         </div>
 
         {dayPlan && (
-          <div className="text-sm text-muted-foreground text-right">
+          <div className="text-sm text-muted-foreground sm:text-right pl-8 sm:pl-0 shrink-0">
             <div>{dayPlan.name}</div>
             {dailyValue?.targetTime !== undefined && dailyValue?.targetTime !== null && (
               <div className="text-xs">

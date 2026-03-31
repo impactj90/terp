@@ -49,7 +49,7 @@ function AppLayoutContent({ children }: AppLayoutContentProps) {
           <main
             id="main-content"
             className={cn(
-              'flex-1 p-4 lg:p-6',
+              'flex-1 min-w-0 overflow-x-hidden p-4 lg:p-6',
               // Add bottom padding on mobile for bottom nav + safe area
               'pb-[calc(var(--bottom-nav-height)+var(--safe-area-bottom)+1rem)] lg:pb-6'
             )}

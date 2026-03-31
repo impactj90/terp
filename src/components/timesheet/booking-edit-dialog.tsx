@@ -119,7 +119,7 @@ export function BookingEditDialog({
             <Input
               value={minutesToTimeString(booking.original_time)}
               disabled
-              className="font-mono"
+              className="font-mono min-h-[44px] text-base"
             />
             <p className="text-xs text-muted-foreground">
               {t('originalTimeHelp')}
@@ -130,10 +130,10 @@ export function BookingEditDialog({
             <Label htmlFor="editedTime">{t('editedTime')}</Label>
             <Input
               id="editedTime"
+              type="time"
               value={editedTime}
               onChange={(e) => setEditedTime(e.target.value)}
-              placeholder="HH:MM"
-              className="font-mono"
+              className="font-mono min-h-[44px] text-base"
             />
             <p className="text-xs text-muted-foreground">
               {t('editedTimeHelp')}
@@ -146,7 +146,7 @@ export function BookingEditDialog({
               <Input
                 value={minutesToTimeString(booking.calculated_time)}
                 disabled
-                className="font-mono"
+                className="font-mono min-h-[44px] text-base"
               />
               <p className="text-xs text-muted-foreground">
                 {t('calculatedTimeHelp')}
@@ -161,6 +161,7 @@ export function BookingEditDialog({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder={t('optionalNotes')}
+              className="min-h-[44px]"
             />
           </div>
 
@@ -169,10 +170,11 @@ export function BookingEditDialog({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
+              className="min-h-[44px]"
             >
               {tc('cancel')}
             </Button>
-            <Button type="submit" disabled={updateBooking.isPending}>
+            <Button type="submit" disabled={updateBooking.isPending} className="min-h-[44px]">
               {updateBooking.isPending ? tc('saving') : tc('saveChanges')}
             </Button>
           </SheetFooter>

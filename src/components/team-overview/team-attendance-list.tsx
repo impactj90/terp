@@ -173,18 +173,18 @@ export function TeamAttendanceList({
 
   return (
     <Card className="overflow-hidden rounded-xl">
-      <CardHeader className="pb-3 pb-4">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base">{title}</CardTitle>
+      <CardHeader className="pb-4">
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          <CardTitle className="text-sm sm:text-base truncate">{title}</CardTitle>
           {/* Mini status summary */}
           {totalGrouped > 0 && (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               {groupOrder.map((group) => {
                 const count = grouped[group].length
                 if (count === 0) return null
                 const cfg = groupConfig[group]
                 return (
-                  <div key={group} className="flex items-center gap-1.5">
+                  <div key={group} className="flex items-center gap-1">
                     <span
                       className={cn('h-2 w-2 rounded-full', cfg.dotClass)}
                     />

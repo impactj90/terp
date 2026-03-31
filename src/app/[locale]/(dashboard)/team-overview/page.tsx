@@ -2,12 +2,9 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
-import { RefreshCw } from 'lucide-react'
-import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/providers/auth-provider'
 import { useMyTeams, useMyTeam, useTeamDailyValues } from '@/hooks'
 import { useTeamDayViews } from '@/hooks/use-team-day-views'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
@@ -27,7 +24,6 @@ import { Users } from 'lucide-react'
 export default function TeamOverviewPage() {
   const t = useTranslations('teamOverview')
   const { isLoading: authLoading } = useAuth()
-  const queryClient = useQueryClient()
   const [selectedTeamId, setSelectedTeamId] = useState<string | undefined>(undefined)
   const defaultRange = useMemo(() => {
     const { start, end } = getWeekRange(new Date())
@@ -69,7 +65,6 @@ export default function TeamOverviewPage() {
   const {
     data: dayViewsData,
     isLoading: dayViewsLoading,
-    refetchAll,
   } = useTeamDayViews({
     employeeIds,
     date: attendanceDate,
@@ -85,35 +80,25 @@ export default function TeamOverviewPage() {
     enabled: members.length > 0,
   })
 
-  const handleRefresh = () => {
-    refetchAll()
-    if (selectedTeamId) {
-      queryClient.invalidateQueries({ queryKey: ['/teams/{id}'] })
-    }
-  }
-
   if (authLoading) {
     return <TeamOverviewSkeleton />
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Page header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="space-y-3 sm:space-y-0 sm:flex sm:items-start sm:justify-between sm:gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             {t('subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <DateRangePicker value={range} onChange={(next) => next && setRange(next)} />
+          <DateRangePicker value={range} onChange={(next) => next && setRange(next)} className="flex-1 sm:flex-initial sm:w-auto" />
+          <TeamQuickActions teamId={selectedTeamId} />
           {selectedTeamId && (
-            <>
-              <Button variant="outline" size="icon" onClick={handleRefresh} className="h-9 w-9 shrink-0">
-                <RefreshCw className="h-4 w-4" />
-                <span className="sr-only">{t('refresh')}</span>
-              </Button>
+            <div className="hidden sm:block">
               <TeamExportButtons
                 members={members}
                 rangeDailyValues={rangeDailyValues}
@@ -121,9 +106,8 @@ export default function TeamOverviewPage() {
                 rangeTo={rangeToDate}
                 isLoading={rangeDailyValuesLoading || teamLoading}
               />
-            </>
+            </div>
           )}
-          <TeamQuickActions teamId={selectedTeamId} />
         </div>
       </div>
 
@@ -186,8 +170,8 @@ export default function TeamOverviewPage() {
                 rangeTo={rangeToDate}
               />
 
-              {/* Two-column layout */}
-              <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+              {/* Two-column layout — stacks on mobile */}
+              <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1fr_380px]">
                 {/* Left: Attendance list + pattern */}
                 <div className="space-y-6">
                   <TeamAttendanceList
@@ -232,17 +216,17 @@ export default function TeamOverviewPage() {
 function TeamOverviewSkeleton() {
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-2">
           <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-4 w-72" />
+          <Skeleton className="h-4 w-56 sm:w-72" />
         </div>
         <div className="flex gap-2">
-          <Skeleton className="h-9 w-[240px]" />
-          <Skeleton className="h-9 w-9" />
+          <Skeleton className="h-9 flex-1 sm:w-[240px] sm:flex-initial" />
+          <Skeleton className="h-9 w-9 shrink-0" />
         </div>
       </div>
-      <Skeleton className="h-10 w-[280px]" />
+      <Skeleton className="h-10 w-full sm:w-[280px]" />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <Skeleton key={i} className="h-[120px] rounded-xl" />

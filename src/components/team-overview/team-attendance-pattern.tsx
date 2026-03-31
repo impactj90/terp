@@ -149,7 +149,7 @@ export function TeamAttendancePattern({
               </div>
 
               {/* Bars */}
-              <div className="relative flex items-end gap-1.5 h-36">
+              <div className="relative flex items-end gap-px sm:gap-1.5 h-28 sm:h-36">
                 {points.map((point) => {
                   const height =
                     point.count > 0 ? (point.count / maxCount) * 100 : 0
@@ -193,7 +193,7 @@ export function TeamAttendancePattern({
                           </div>
                           <span
                             className={cn(
-                              'mt-1.5 text-[10px] leading-none',
+                              'mt-1.5 text-[10px] leading-none hidden sm:block',
                               point.isWeekend
                                 ? 'text-muted-foreground/50'
                                 : 'text-muted-foreground'
