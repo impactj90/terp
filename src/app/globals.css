@@ -320,6 +320,18 @@
   transition: opacity 150ms;
 }
 
+/* Dialog: override animation vars for mobile bottom-sheet */
+@media (max-width: 639px) {
+  [data-slot="dialog-content"] {
+    --tw-enter-translate-x: 0 !important;
+    --tw-enter-translate-y: 100%;
+    --tw-exit-translate-x: 0 !important;
+    --tw-exit-translate-y: 100%;
+    --tw-enter-scale: 1 !important;
+    --tw-exit-scale: 1 !important;
+  }
+}
+
 /* Sticky column edge shadow */
 @media (max-width: 1023px) {
   .sticky-col-end {

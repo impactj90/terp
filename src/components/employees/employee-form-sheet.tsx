@@ -274,7 +274,7 @@ export function EmployeeFormSheet({
             <div className="space-y-4">
               <h3 className="text-sm font-medium text-muted-foreground">{t('sectionPersonal')}</h3>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="firstName">{t('fieldFirstName')}</Label>
                   <Input
@@ -326,7 +326,7 @@ export function EmployeeFormSheet({
             <div className="space-y-4">
               <h3 className="text-sm font-medium text-muted-foreground">{t('sectionEmployment')}</h3>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="personnelNumber">{t('fieldPersonnelNumber')}</Label>
                   <Input
@@ -356,7 +356,7 @@ export function EmployeeFormSheet({
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                 <div className="space-y-2">
                   <Label>{t('fieldEntryDate')}</Label>
                   <Popover>
@@ -537,7 +537,7 @@ export function EmployeeFormSheet({
             <div className="space-y-4">
               <h3 className="text-sm font-medium text-muted-foreground">{t('sectionContract')}</h3>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="weeklyHours">{t('fieldWeeklyHours')}</Label>
                   <Input
