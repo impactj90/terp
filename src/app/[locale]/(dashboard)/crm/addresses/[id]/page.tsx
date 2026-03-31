@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { ArrowLeft, Edit, Trash2 } from 'lucide-react'
+import { ArrowLeft, Edit, Trash2, Phone, Mail, MapPin } from 'lucide-react'
 import { toast } from 'sonner'
 import { useHasPermission } from '@/hooks'
 import {
@@ -137,20 +137,21 @@ export default function CrmAddressDetailPage() {
         : t('typeBoth')
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => router.push('/crm/addresses')}
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div className="flex items-center gap-4 flex-1">
-          <div>
-            <h1 className="text-2xl font-bold">{address.company}</h1>
-            <div className="flex items-center gap-2 mt-1">
+      <div className="space-y-3">
+        <div className="flex items-start gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push('/crm/addresses')}
+            className="shrink-0 mt-1"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold truncate">{address.company}</h1>
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
               <span className="text-sm text-muted-foreground font-mono">{address.number}</span>
               <Badge variant={address.type === 'CUSTOMER' ? 'default' : address.type === 'SUPPLIER' ? 'secondary' : 'outline'}>
                 {typeLabel}
@@ -160,32 +161,68 @@ export default function CrmAddressDetailPage() {
               </Badge>
             </div>
           </div>
-          <div className="ml-auto flex items-center gap-2">
-            {!address.isActive && (
-              <Button variant="outline" size="sm" onClick={handleRestore}>
-                {t('restore')}
-              </Button>
+        </div>
+
+        {/* Quick actions — click-to-call, mail, maps */}
+        {(address.phone || address.email || address.city) && (
+          <div className="flex flex-col gap-2 sm:hidden">
+            {address.phone && (
+              <a href={`tel:${address.phone}`}>
+                <Button variant="outline" size="sm" className="w-full min-h-[44px] px-2">
+                  <Phone className="mr-1.5 h-4 w-4 shrink-0" />
+                  <span className="truncate">{t('labelPhone')}</span>
+                </Button>
+              </a>
             )}
-            <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-              <Edit className="mr-2 h-4 w-4" />
-              {t('edit')}
-            </Button>
-            {address.isActive && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-destructive"
-                onClick={() => setDeleteOpen(true)}
+            {address.email && (
+              <a href={`mailto:${address.email}`}>
+                <Button variant="outline" size="sm" className="w-full min-h-[44px] px-2">
+                  <Mail className="mr-1.5 h-4 w-4 shrink-0" />
+                  <span className="truncate">{t('labelEmail')}</span>
+                </Button>
+              </a>
+            )}
+            {address.street && address.city && (
+              <a
+                href={`https://maps.google.com/?q=${encodeURIComponent([address.street, address.zip, address.city].filter(Boolean).join(', '))}`}
+                target="_blank"
+                rel="noopener noreferrer"
               >
-                <Trash2 className="mr-2 h-4 w-4" />
-                {t('deactivate')}
-              </Button>
+                <Button variant="outline" size="sm" className="w-full min-h-[44px] px-2">
+                  <MapPin className="mr-1.5 h-4 w-4 shrink-0" />
+                  <span className="truncate">{t('labelCity')}</span>
+                </Button>
+              </a>
             )}
           </div>
+        )}
+
+        {/* Desktop action buttons */}
+        <div className="hidden sm:flex items-center gap-2">
+          {!address.isActive && (
+            <Button variant="outline" size="sm" onClick={handleRestore}>
+              {t('restore')}
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+            <Edit className="mr-2 h-4 w-4" />
+            {t('edit')}
+          </Button>
+          {address.isActive && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-destructive"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {t('deactivate')}
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs — TabsList already has overflow-x-auto built-in */}
       <Tabs defaultValue="overview">
         <TabsList>
           <TabsTrigger value="overview">{t('tabOverview')}</TabsTrigger>
@@ -217,10 +254,10 @@ export default function CrmAddressDetailPage() {
               <CardContent className="pt-6">
                 <h3 className="text-sm font-medium text-muted-foreground mb-4">{t('sectionCommunication')}</h3>
                 <div className="divide-y">
-                  <DetailRow label={t('labelPhone')} value={address.phone} />
+                  <DetailRow label={t('labelPhone')} value={address.phone ? <a href={`tel:${address.phone}`} className="text-primary underline">{address.phone}</a> : null} />
                   <DetailRow label={t('labelFax')} value={address.fax} />
-                  <DetailRow label={t('labelEmail')} value={address.email} />
-                  <DetailRow label={t('labelWebsite')} value={address.website} />
+                  <DetailRow label={t('labelEmail')} value={address.email ? <a href={`mailto:${address.email}`} className="text-primary underline">{address.email}</a> : null} />
+                  <DetailRow label={t('labelWebsite')} value={address.website ? <a href={address.website.startsWith('http') ? address.website : `https://${address.website}`} target="_blank" rel="noopener noreferrer" className="text-primary underline">{address.website}</a> : null} />
                 </div>
               </CardContent>
             </Card>

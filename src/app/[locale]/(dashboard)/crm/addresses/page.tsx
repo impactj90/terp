@@ -112,21 +112,21 @@ export default function CrmAddressesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Page header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="text-muted-foreground">{t('subtitle')}</p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
+        <Button onClick={() => setCreateOpen(true)} className="w-full sm:w-auto min-h-[44px] sm:min-h-0">
           <Plus className="mr-2 h-4 w-4" />
           {t('newAddress')}
         </Button>
       </div>
 
       {/* Filters bar */}
-      <div className="flex flex-wrap items-center gap-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
         <SearchInput
           value={search}
           onChange={setSearch}
@@ -134,45 +134,46 @@ export default function CrmAddressesPage() {
           className="w-full sm:w-80"
         />
 
-        <Select
-          value={typeFilter ?? 'all'}
-          onValueChange={(v) => setTypeFilter(v === 'all' ? undefined : (v as AddressType))}
-        >
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder={t('allTypes')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('allTypes')}</SelectItem>
-            <SelectItem value="CUSTOMER">{t('typeCustomer')}</SelectItem>
-            <SelectItem value="SUPPLIER">{t('typeSupplier')}</SelectItem>
-            <SelectItem value="BOTH">{t('typeBoth')}</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          <Select
+            value={typeFilter ?? 'all'}
+            onValueChange={(v) => setTypeFilter(v === 'all' ? undefined : (v as AddressType))}
+          >
+            <SelectTrigger className="flex-1 sm:w-[160px]">
+              <SelectValue placeholder={t('allTypes')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('allTypes')}</SelectItem>
+              <SelectItem value="CUSTOMER">{t('typeCustomer')}</SelectItem>
+              <SelectItem value="SUPPLIER">{t('typeSupplier')}</SelectItem>
+              <SelectItem value="BOTH">{t('typeBoth')}</SelectItem>
+            </SelectContent>
+          </Select>
 
-        <Select
-          value={activeFilter === undefined ? 'all' : activeFilter ? 'active' : 'inactive'}
-          onValueChange={(v) => {
-            if (v === 'all') setActiveFilter(undefined)
-            else if (v === 'active') setActiveFilter(true)
-            else setActiveFilter(false)
-          }}
-        >
-          <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder={t('allStatus')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('allStatus')}</SelectItem>
-            <SelectItem value="active">{t('active')}</SelectItem>
-            <SelectItem value="inactive">{t('inactive')}</SelectItem>
-          </SelectContent>
-        </Select>
+          <Select
+            value={activeFilter === undefined ? 'all' : activeFilter ? 'active' : 'inactive'}
+            onValueChange={(v) => {
+              if (v === 'all') setActiveFilter(undefined)
+              else if (v === 'active') setActiveFilter(true)
+              else setActiveFilter(false)
+            }}
+          >
+            <SelectTrigger className="flex-1 sm:w-[140px]">
+              <SelectValue placeholder={t('allStatus')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('allStatus')}</SelectItem>
+              <SelectItem value="active">{t('active')}</SelectItem>
+              <SelectItem value="inactive">{t('inactive')}</SelectItem>
+            </SelectContent>
+          </Select>
 
-        {hasFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters}>
-            <X className="mr-2 h-4 w-4" />
-            {t('clearFilters')}
-          </Button>
-        )}
+          {hasFilters && (
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="shrink-0">
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Data table in card */}
