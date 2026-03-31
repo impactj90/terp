@@ -4,7 +4,9 @@ import { Suspense, useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { useAuth } from '@/providers/auth-provider'
 import { createClient } from '@/lib/supabase/client'
 import { isDev } from '@/lib/config'
@@ -19,6 +21,7 @@ function LoginPageContent() {
   const [error, setError] = useState<string | null>(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
 
   const returnUrl = searchParams.get('returnUrl') ?? '/dashboard'
 
@@ -86,7 +89,7 @@ function LoginPageContent() {
   const isPageLoading = isLoading || isAuthLoading
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Logo and title */}
       <div className="text-center">
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
@@ -105,11 +108,12 @@ function LoginPageContent() {
             <label htmlFor="email" className="text-sm font-medium">
               {t('email')}
             </label>
-            <input
+            <Input
               id="email"
               type="email"
               placeholder={t('emailPlaceholder')}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              autoComplete="email"
+              enterKeyHint="next"
               disabled={isPageLoading}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -128,26 +132,51 @@ function LoginPageContent() {
                 {t('forgotPassword')}
               </Link>
             </div>
-            <input
-              id="password"
-              type="password"
-              placeholder={t('passwordPlaceholder')}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              disabled={isPageLoading}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder={t('passwordPlaceholder')}
+                autoComplete="current-password"
+                enterKeyHint="go"
+                className="pr-11"
+                disabled={isPageLoading}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <button
+                type="button"
+                className="absolute right-0 top-0 flex h-full w-11 items-center justify-center rounded-r-md text-muted-foreground transition-colors hover:text-foreground"
+                onClick={() => setShowPassword(!showPassword)}
+                tabIndex={-1}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? (
+                  <EyeOff className="size-4" />
+                ) : (
+                  <Eye className="size-4" />
+                )}
+              </button>
+            </div>
           </div>
-          <Button type="submit" className="w-full" disabled={isPageLoading}>
+
+          {/* Error message */}
+          {error && (
+            <p className="rounded-md bg-destructive/10 px-3 py-2 text-center text-sm text-destructive">
+              {error}
+            </p>
+          )}
+
+          <Button
+            type="submit"
+            className="w-full min-h-12"
+            disabled={isPageLoading}
+          >
+            {isPageLoading && <Loader2 className="size-4 animate-spin" />}
             {isPageLoading ? t('signingIn') : t('signIn')}
           </Button>
         </form>
-
-        {/* Error message */}
-        {error && (
-          <p className="mt-4 text-center text-sm text-destructive">{error}</p>
-        )}
 
         {/* Dev login buttons - only shown in development */}
         {isDev && (
@@ -158,7 +187,7 @@ function LoginPageContent() {
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                className="flex-1"
+                className="flex-1 min-h-12"
                 onClick={() => handleDevLogin('user')}
                 disabled={isPageLoading}
               >
@@ -166,7 +195,7 @@ function LoginPageContent() {
               </Button>
               <Button
                 variant="outline"
-                className="flex-1"
+                className="flex-1 min-h-12"
                 onClick={() => handleDevLogin('admin')}
                 disabled={isPageLoading}
               >
@@ -192,7 +221,7 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center">
+        <div className="flex min-h-[100dvh] items-center justify-center">
           <div className="text-muted-foreground" />
         </div>
       }
