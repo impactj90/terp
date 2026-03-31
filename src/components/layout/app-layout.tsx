@@ -50,8 +50,8 @@ function AppLayoutContent({ children }: AppLayoutContentProps) {
             id="main-content"
             className={cn(
               'flex-1 p-4 lg:p-6',
-              // Add bottom padding on mobile for bottom nav
-              'pb-[calc(var(--bottom-nav-height)+1rem)] lg:pb-6'
+              // Add bottom padding on mobile for bottom nav + safe area
+              'pb-[calc(var(--bottom-nav-height)+var(--safe-area-bottom)+1rem)] lg:pb-6'
             )}
             tabIndex={-1}
           >

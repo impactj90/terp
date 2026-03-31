@@ -24,7 +24,8 @@ export function MobileNav({ className, onMoreClick }: MobileNavProps) {
   return (
     <nav
       className={cn(
-        'fixed inset-x-0 bottom-0 z-40 flex h-[var(--bottom-nav-height)] items-center justify-around border-t bg-background lg:hidden',
+        'fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t bg-background lg:hidden',
+        'h-[calc(var(--bottom-nav-height)+var(--safe-area-bottom))] pb-[var(--safe-area-bottom)]',
         className
       )}
       aria-label="Mobile navigation"

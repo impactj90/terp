@@ -29,7 +29,7 @@ export function Header({ className, onMobileMenuClick }: HeaderProps) {
   return (
     <header
       className={cn(
-        'sticky top-0 z-40 flex h-[var(--header-height)] items-center gap-3 border-b bg-background/95 backdrop-blur-sm px-4 lg:px-6',
+        'sticky top-0 z-40 flex h-[calc(var(--header-height)+var(--safe-area-top))] pt-[var(--safe-area-top)] items-center gap-3 border-b bg-background/95 backdrop-blur-sm px-4 lg:px-6',
         className
       )}
     >
@@ -37,7 +37,7 @@ export function Header({ className, onMobileMenuClick }: HeaderProps) {
       <Button
         variant="ghost"
         size="icon"
-        className="lg:hidden shrink-0"
+        className="lg:hidden shrink-0 min-h-11 min-w-11 lg:min-h-0 lg:min-w-0"
         onClick={onMobileMenuClick}
         aria-label={t('openMenu')}
       >

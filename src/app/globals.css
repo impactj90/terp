@@ -240,6 +240,16 @@
 }
 
 /* ==========================================================================
+   SAFE AREA INSETS
+   ========================================================================== */
+:root {
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+}
+
+/* ==========================================================================
    BASE STYLES
    ========================================================================== */
 @layer base {
@@ -247,9 +257,30 @@
     @apply border-border;
   }
 
+  html {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-feature-settings: 'rlig' 1, 'calt' 1;
+    overscroll-behavior-y: none;
+  }
+
+  /* Mobile touch target minimum */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Mobile-first input font size — prevents iOS zoom on focus */
+  @media (max-width: 1023px) {
+    input,
+    textarea,
+    select {
+      font-size: 16px !important;
+    }
   }
 }
 
