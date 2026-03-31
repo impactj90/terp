@@ -104,10 +104,10 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
-        <p className="text-muted-foreground">{t('subtitle')}</p>
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t('title')}</h1>
+        <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
       </div>
 
       <Tabs value={tab} onValueChange={(value) => setTab(value as TabValue)}>
@@ -125,9 +125,9 @@ export default function NotificationsPage() {
                   {t('historySubtitle')}
                 </CardDescription>
               </div>
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
                 <Select value={filters.type} onValueChange={handleFilterTypeChange}>
-                  <SelectTrigger className="w-[200px]">
+                  <SelectTrigger className="w-full sm:w-[200px]">
                     <SelectValue placeholder={t('filterAllTypes')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -138,15 +138,18 @@ export default function NotificationsPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Button
-                  variant={filters.unreadOnly ? 'default' : 'outline'}
-                  onClick={() => handleUnreadFilterToggle(!filters.unreadOnly)}
-                >
-                  {t('filterUnread')}
-                </Button>
-                <Button variant="outline" onClick={handleMarkAllRead} disabled={unreadCount === 0}>
-                  {t('markAllRead')}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant={filters.unreadOnly ? 'default' : 'outline'}
+                    onClick={() => handleUnreadFilterToggle(!filters.unreadOnly)}
+                    className="flex-1 sm:flex-initial"
+                  >
+                    {t('filterUnread')}
+                  </Button>
+                  <Button variant="outline" onClick={handleMarkAllRead} disabled={unreadCount === 0} className="flex-1 sm:flex-initial">
+                    {t('markAllRead')}
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">

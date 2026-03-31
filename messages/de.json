@@ -187,8 +187,11 @@
     "categoryRemindersDescription": "Offene Genehmigungen und Monatsabschluss-Erinnerungen.",
     "categorySystemDescription": "Kontoupdates und Sicherheitsmeldungen.",
     "typeLabel": {
+      "approval": "Genehmigung",
       "approvals": "Genehmigungen",
+      "error": "Fehler",
       "errors": "Fehler",
+      "reminder": "Erinnerung",
       "reminders": "Erinnerungen",
       "system": "System"
     }

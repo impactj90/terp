@@ -187,8 +187,11 @@
     "categoryRemindersDescription": "Pending approvals and month closing reminders.",
     "categorySystemDescription": "Account updates and security notices.",
     "typeLabel": {
+      "approval": "Approval",
       "approvals": "Approvals",
+      "error": "Error",
       "errors": "Errors",
+      "reminder": "Reminder",
       "reminders": "Reminders",
       "system": "System"
     }
