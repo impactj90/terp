@@ -38,15 +38,15 @@ export function TodayScheduleCard({
 
   if (error) {
     return (
-      <div className={cn('rounded-lg border bg-card p-6', className)}>
+      <div className={cn('rounded-lg border bg-card p-4 sm:p-6', className)}>
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-muted-foreground">
+          <span className="text-xs font-medium text-muted-foreground sm:text-sm">
             {t('todaysSchedule')}
           </span>
-          <AlertCircle className="h-4 w-4 text-destructive" aria-hidden="true" />
+          <AlertCircle className="h-3.5 w-3.5 text-destructive sm:h-4 sm:w-4" aria-hidden="true" />
         </div>
-        <div className="mt-2">
-          <p className="text-sm text-destructive">{tc('failedToLoad')}</p>
+        <div className="mt-1.5 sm:mt-2">
+          <p className="text-xs text-destructive sm:text-sm">{tc('failedToLoad')}</p>
         </div>
         <Button
           variant="ghost"
@@ -102,28 +102,28 @@ export function TodayScheduleCard({
   }
 
   return (
-    <div className={cn('rounded-lg border bg-card p-6', className)}>
+    <div className={cn('rounded-lg border bg-card p-4 sm:p-6', className)}>
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-muted-foreground">
+        <span className="text-xs font-medium text-muted-foreground sm:text-sm">
           {t('todaysSchedule')}
         </span>
-        <Clock className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+        <Clock className="h-3.5 w-3.5 text-muted-foreground sm:h-4 sm:w-4" aria-hidden="true" />
       </div>
 
       {/* Status and target */}
-      <div className="mt-2 flex items-center justify-between">
+      <div className="mt-1.5 flex items-center justify-between sm:mt-2">
         {getStatusBadge()}
-        <span className="text-sm text-muted-foreground">
+        <span className="text-[11px] text-muted-foreground sm:text-sm">
           {formatMinutes(targetMinutes)} {t('target')}
         </span>
       </div>
 
       {/* Bookings timeline */}
       {sortedBookings.length > 0 ? (
-        <div className="mt-3 space-y-1.5">
+        <div className="mt-2 space-y-1 sm:mt-3 sm:space-y-1.5">
           {firstIn && (
-            <div className="flex items-center gap-2 text-sm">
-              <Sun className="h-3.5 w-3.5 text-amber-500" />
+            <div className="flex items-center gap-1.5 text-xs sm:gap-2 sm:text-sm">
+              <Sun className="h-3 w-3 text-amber-500 sm:h-3.5 sm:w-3.5" />
               <span className="text-muted-foreground">{t('inLabel')}</span>
               <span className="font-medium">
                 {formatTime(firstIn.editedTime)}
@@ -131,8 +131,8 @@ export function TodayScheduleCard({
             </div>
           )}
           {lastOut && !isClockedIn && (
-            <div className="flex items-center gap-2 text-sm">
-              <Moon className="h-3.5 w-3.5 text-blue-500" />
+            <div className="flex items-center gap-1.5 text-xs sm:gap-2 sm:text-sm">
+              <Moon className="h-3 w-3 text-blue-500 sm:h-3.5 sm:w-3.5" />
               <span className="text-muted-foreground">{t('outLabel')}</span>
               <span className="font-medium">
                 {formatTime(lastOut.editedTime)}
@@ -140,20 +140,20 @@ export function TodayScheduleCard({
             </div>
           )}
           {breakMinutes > 0 && (
-            <div className="flex items-center gap-2 text-sm">
-              <Coffee className="h-3.5 w-3.5 text-orange-500" />
+            <div className="flex items-center gap-1.5 text-xs sm:gap-2 sm:text-sm">
+              <Coffee className="h-3 w-3 text-orange-500 sm:h-3.5 sm:w-3.5" />
               <span className="text-muted-foreground">{t('breakLabel')}</span>
               <span className="font-medium">{formatMinutes(breakMinutes)}</span>
             </div>
           )}
           {netMinutes > 0 && (
-            <div className="mt-2 text-sm text-muted-foreground">
+            <div className="mt-1.5 text-xs text-muted-foreground sm:mt-2 sm:text-sm">
               {t('worked')} <span className="font-medium text-foreground">{formatMinutes(netMinutes)}</span>
             </div>
           )}
         </div>
       ) : (
-        <p className="mt-3 text-sm text-muted-foreground">
+        <p className="mt-2 text-xs text-muted-foreground sm:mt-3 sm:text-sm">
           {isHoliday
             ? t('noWorkScheduled')
             : t('noBookingsYet')}
@@ -162,7 +162,7 @@ export function TodayScheduleCard({
 
       {/* Errors indicator */}
       {dailyValue?.hasError && (
-        <div className="mt-2 flex items-center gap-1 text-xs text-amber-600 dark:text-amber-500">
+        <div className="mt-1.5 flex items-center gap-1 text-[11px] text-amber-600 sm:mt-2 sm:text-xs dark:text-amber-500">
           <AlertCircle className="h-3 w-3" />
           <span>{t('needsAttention')}</span>
         </div>
@@ -176,18 +176,18 @@ export function TodayScheduleCard({
  */
 export function TodayScheduleCardSkeleton({ className }: { className?: string }) {
   return (
-    <div className={cn('rounded-lg border bg-card p-6', className)}>
+    <div className={cn('rounded-lg border bg-card p-4 sm:p-6', className)}>
       <div className="flex items-center justify-between">
-        <Skeleton className="h-4 w-28" />
-        <Skeleton className="h-4 w-4" />
+        <Skeleton className="h-3.5 w-20 sm:h-4 sm:w-28" />
+        <Skeleton className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
       </div>
-      <div className="mt-2 flex items-center justify-between">
-        <Skeleton className="h-5 w-20" />
-        <Skeleton className="h-4 w-16" />
+      <div className="mt-1.5 flex items-center justify-between sm:mt-2">
+        <Skeleton className="h-5 w-16 sm:w-20" />
+        <Skeleton className="h-3.5 w-12 sm:h-4 sm:w-16" />
       </div>
-      <div className="mt-3 space-y-1.5">
-        <Skeleton className="h-4 w-24" />
-        <Skeleton className="h-4 w-20" />
+      <div className="mt-2 space-y-1 sm:mt-3 sm:space-y-1.5">
+        <Skeleton className="h-3.5 w-20 sm:h-4 sm:w-24" />
+        <Skeleton className="h-3.5 w-16 sm:h-4 sm:w-20" />
       </div>
     </div>
   )

@@ -88,14 +88,14 @@ export function QuickActions({ employeeId }: QuickActionsProps) {
   const canClockOut = employeeId && clockOutType
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
       {/* Clock In/Out button */}
       {employeeId ? (
         isClockedIn ? (
           <Button
             onClick={handleClockOut}
             disabled={createBooking.isPending || !canClockOut || isLoadingTypes}
-            className="gap-2"
+            className="h-11 gap-2 sm:h-9 sm:w-auto"
           >
             {createBooking.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -108,7 +108,7 @@ export function QuickActions({ employeeId }: QuickActionsProps) {
           <Button
             onClick={handleClockIn}
             disabled={createBooking.isPending || !canClockIn || isLoadingTypes}
-            className="gap-2"
+            className="h-11 gap-2 sm:h-9 sm:w-auto"
           >
             {createBooking.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -119,14 +119,14 @@ export function QuickActions({ employeeId }: QuickActionsProps) {
           </Button>
         )
       ) : (
-        <Button disabled className="gap-2">
+        <Button disabled className="h-11 gap-2 sm:h-9 sm:w-auto">
           <Clock className="h-4 w-4" />
           {t('clockIn')}
         </Button>
       )}
 
       {/* Request Time Off */}
-      <Button variant="outline" asChild className="gap-2">
+      <Button variant="outline" asChild className="h-11 gap-2 sm:h-9 sm:w-auto">
         <Link href="/absences/new">
           <CalendarPlus className="h-4 w-4" />
           {t('requestTimeOff')}
@@ -134,7 +134,7 @@ export function QuickActions({ employeeId }: QuickActionsProps) {
       </Button>
 
       {/* View Timesheet */}
-      <Button variant="outline" asChild className="gap-2">
+      <Button variant="outline" asChild className="h-11 gap-2 sm:h-9 sm:w-auto">
         <Link href="/timesheet">
           <FileText className="h-4 w-4" />
           {t('viewTimesheet')}

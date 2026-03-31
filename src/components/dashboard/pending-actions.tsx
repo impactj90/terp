@@ -92,10 +92,10 @@ export function PendingActions({ employeeId, className }: PendingActionsProps) {
   if (error) {
     return (
       <div className={cn('rounded-lg border', className)}>
-        <div className="border-b px-6 py-4">
-          <h2 className="text-lg font-semibold">{t('pendingActions')}</h2>
+        <div className="border-b px-4 py-3 sm:px-6 sm:py-4">
+          <h2 className="text-base font-semibold sm:text-lg">{t('pendingActions')}</h2>
         </div>
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <div className="flex items-center gap-2 text-destructive">
             <AlertCircle className="h-4 w-4" />
             <p className="text-sm">{t('failedToLoadPending')}</p>
@@ -116,17 +116,17 @@ export function PendingActions({ employeeId, className }: PendingActionsProps) {
 
   return (
     <div className={cn('rounded-lg border', className)}>
-      <div className="border-b px-6 py-4">
-        <h2 className="text-lg font-semibold">{t('pendingActions')}</h2>
+      <div className="border-b px-4 py-3 sm:px-6 sm:py-4">
+        <h2 className="text-base font-semibold sm:text-lg">{t('pendingActions')}</h2>
       </div>
 
       {pendingItems.length === 0 ? (
-        <div className="p-6">
-          <div className="flex flex-col items-center justify-center py-4 text-center">
-            <div className="rounded-full bg-green-100 p-3 dark:bg-green-900/30">
-              <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-500" />
+        <div className="p-4 sm:p-6">
+          <div className="flex flex-col items-center justify-center py-3 text-center sm:py-4">
+            <div className="rounded-full bg-green-100 p-2.5 sm:p-3 dark:bg-green-900/30">
+              <CheckCircle className="h-5 w-5 text-green-600 sm:h-6 sm:w-6 dark:text-green-500" />
             </div>
-            <p className="mt-3 text-sm font-medium">{t('allCaughtUp')}</p>
+            <p className="mt-2.5 text-sm font-medium sm:mt-3">{t('allCaughtUp')}</p>
             <p className="mt-1 text-xs text-muted-foreground">
               {t('noPendingItems')}
             </p>
@@ -137,7 +137,7 @@ export function PendingActions({ employeeId, className }: PendingActionsProps) {
           {pendingItems.map((item) => (
             <div
               key={item.id}
-              className="flex items-start gap-3 px-6 py-3 hover:bg-muted/50 transition-colors"
+              className="flex items-start gap-2.5 px-4 py-2.5 transition-colors hover:bg-muted/50 sm:gap-3 sm:px-6 sm:py-3"
             >
               {item.type === 'error' ? (
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
@@ -152,7 +152,7 @@ export function PendingActions({ employeeId, className }: PendingActionsProps) {
               </div>
               <Link
                 href={`/timesheet?date=${item.date}`}
-                className="text-muted-foreground hover:text-foreground transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors touch-target flex items-center justify-center"
               >
                 <ChevronRight className="h-4 w-4" />
               </Link>
@@ -162,7 +162,7 @@ export function PendingActions({ employeeId, className }: PendingActionsProps) {
       )}
 
       {pendingItems.length > 0 && (
-        <div className="border-t px-6 py-3">
+        <div className="border-t px-4 py-2.5 sm:px-6 sm:py-3">
           <Link
             href="/corrections"
             className="text-sm text-primary hover:underline"
@@ -181,16 +181,16 @@ export function PendingActions({ employeeId, className }: PendingActionsProps) {
 export function PendingActionsSkeleton({ className }: { className?: string }) {
   return (
     <div className={cn('rounded-lg border', className)}>
-      <div className="border-b px-6 py-4">
-        <Skeleton className="h-6 w-32" />
+      <div className="border-b px-4 py-3 sm:px-6 sm:py-4">
+        <Skeleton className="h-5 w-28 sm:h-6 sm:w-32" />
       </div>
       <div className="divide-y">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="flex items-start gap-3 px-6 py-3">
+          <div key={i} className="flex items-start gap-2.5 px-4 py-2.5 sm:gap-3 sm:px-6 sm:py-3">
             <Skeleton className="mt-0.5 h-4 w-4 shrink-0" />
             <div className="flex-1">
-              <Skeleton className="h-4 w-48" />
-              <Skeleton className="mt-1 h-3 w-20" />
+              <Skeleton className="h-4 w-36 sm:w-48" />
+              <Skeleton className="mt-1 h-3 w-16 sm:w-20" />
             </div>
           </div>
         ))}

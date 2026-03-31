@@ -3,7 +3,6 @@
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { FolderOpen, Bell, CalendarClock } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -23,45 +22,43 @@ export function PersonnelFileDashboardWidget() {
   const expiringCount = expiring?.length ?? 0
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{t('title')}</CardTitle>
-        <FolderOpen className="h-4 w-4 text-muted-foreground" />
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="space-y-2">
-            <Skeleton className="h-5 w-32" />
-            <Skeleton className="h-5 w-40" />
+    <div className="rounded-lg border bg-card p-4 sm:p-6">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-muted-foreground sm:text-sm">{t('title')}</span>
+        <FolderOpen className="h-3.5 w-3.5 text-muted-foreground sm:h-4 sm:w-4" />
+      </div>
+      {isLoading ? (
+        <div className="mt-2 space-y-1.5 sm:space-y-2">
+          <Skeleton className="h-4 w-28 sm:h-5 sm:w-32" />
+          <Skeleton className="h-4 w-32 sm:h-5 sm:w-40" />
+        </div>
+      ) : (
+        <div className="mt-2 space-y-1.5 sm:space-y-2">
+          <div className="flex items-center gap-1.5 text-xs sm:gap-2 sm:text-sm">
+            <Bell className="h-3 w-3 text-muted-foreground sm:h-4 sm:w-4" />
+            <span>
+              {reminderCount > 0
+                ? t('remindersCount', { count: reminderCount })
+                : t('noReminders')}
+            </span>
           </div>
-        ) : (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm">
-              <Bell className="h-4 w-4 text-muted-foreground" />
-              <span>
-                {reminderCount > 0
-                  ? t('remindersCount', { count: reminderCount })
-                  : t('noReminders')}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <CalendarClock className="h-4 w-4 text-muted-foreground" />
-              <span>
-                {expiringCount > 0
-                  ? t('expiringCount', { count: expiringCount })
-                  : t('noExpiring')}
-              </span>
-            </div>
+          <div className="flex items-center gap-1.5 text-xs sm:gap-2 sm:text-sm">
+            <CalendarClock className="h-3 w-3 text-muted-foreground sm:h-4 sm:w-4" />
+            <span>
+              {expiringCount > 0
+                ? t('expiringCount', { count: expiringCount })
+                : t('noExpiring')}
+            </span>
           </div>
-        )}
-        <Button
-          variant="link"
-          className="px-0 mt-2 h-auto text-xs"
-          onClick={() => router.push('/hr/personnel-file')}
-        >
-          {t('viewAll')}
-        </Button>
-      </CardContent>
-    </Card>
+        </div>
+      )}
+      <Button
+        variant="link"
+        className="mt-1.5 h-auto px-0 text-[11px] sm:mt-2 sm:text-xs"
+        onClick={() => router.push('/hr/personnel-file')}
+      >
+        {t('viewAll')}
+      </Button>
+    </div>
   )
 }

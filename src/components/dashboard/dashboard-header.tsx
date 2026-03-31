@@ -31,19 +31,37 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
     greeting = t('greeting.evening')
   }
 
-  const today = new Date().toLocaleDateString(locale, {
+  // Full date for desktop, compact for mobile
+  const todayFull = new Date().toLocaleDateString(locale, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   })
+  const todayShort = new Date().toLocaleDateString(locale, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })
+
+  // Extract first name for mobile compact display
+  const firstName = user?.displayName?.split(' ')[0]
 
   return (
     <div>
-      <h1 className="text-2xl font-bold tracking-tight">
-        {greeting}{user?.displayName ? `, ${user.displayName}` : ''}
+      {/* Mobile: smaller, first name only */}
+      <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
+        <span className="sm:hidden">
+          {greeting}{firstName ? `, ${firstName}` : ''}
+        </span>
+        <span className="hidden sm:inline">
+          {greeting}{user?.displayName ? `, ${user.displayName}` : ''}
+        </span>
       </h1>
-      <p className="text-muted-foreground">{today}</p>
+      <p className="text-sm text-muted-foreground sm:text-base">
+        <span className="sm:hidden">{todayShort}</span>
+        <span className="hidden sm:inline">{todayFull}</span>
+      </p>
     </div>
   )
 }

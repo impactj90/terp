@@ -44,15 +44,15 @@ export function FlextimeBalanceCard({
 
   if (error) {
     return (
-      <div className={cn('rounded-lg border bg-card p-6', className)}>
+      <div className={cn('rounded-lg border bg-card p-4 sm:p-6', className)}>
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-muted-foreground">
+          <span className="text-xs font-medium text-muted-foreground sm:text-sm">
             {t('flextimeBalance')}
           </span>
-          <AlertCircle className="h-4 w-4 text-destructive" aria-hidden="true" />
+          <AlertCircle className="h-3.5 w-3.5 text-destructive sm:h-4 sm:w-4" aria-hidden="true" />
         </div>
-        <div className="mt-2">
-          <p className="text-sm text-destructive">{tc('failedToLoad')}</p>
+        <div className="mt-1.5 sm:mt-2">
+          <p className="text-xs text-destructive sm:text-sm">{tc('failedToLoad')}</p>
         </div>
         <Button
           variant="ghost"
@@ -72,17 +72,17 @@ export function FlextimeBalanceCard({
 
   if (!monthlyValue) {
     return (
-      <div className={cn('rounded-lg border bg-card p-6', className)}>
+      <div className={cn('rounded-lg border bg-card p-4 sm:p-6', className)}>
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-muted-foreground">
+          <span className="text-xs font-medium text-muted-foreground sm:text-sm">
             {t('flextimeBalance')}
           </span>
-          <TrendingUp className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          <TrendingUp className="h-3.5 w-3.5 text-muted-foreground sm:h-4 sm:w-4" aria-hidden="true" />
         </div>
-        <div className="mt-2">
-          <span className="text-2xl font-bold">--</span>
+        <div className="mt-1.5 sm:mt-2">
+          <span className="text-xl font-bold sm:text-2xl">--</span>
         </div>
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="mt-1 text-[11px] text-muted-foreground sm:text-xs">
           {t('noDataForMonth')}
         </p>
       </div>
@@ -98,17 +98,17 @@ export function FlextimeBalanceCard({
   const netMinutes = monthlyValue.net_minutes ?? 0
 
   return (
-    <div className={cn('rounded-lg border bg-card p-6', className)}>
+    <div className={cn('rounded-lg border bg-card p-4 sm:p-6', className)}>
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-muted-foreground">
+        <span className="text-xs font-medium text-muted-foreground sm:text-sm">
           {t('flextimeBalance')}
         </span>
-        <TrendingUp className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+        <TrendingUp className="h-3.5 w-3.5 text-muted-foreground sm:h-4 sm:w-4" aria-hidden="true" />
       </div>
-      <div className="mt-2">
+      <div className="mt-1.5 sm:mt-2">
         <span
           className={cn(
-            'text-2xl font-bold',
+            'text-xl font-bold sm:text-2xl',
             isPositive
               ? 'text-green-600 dark:text-green-500'
               : 'text-red-600 dark:text-red-500'
@@ -117,13 +117,13 @@ export function FlextimeBalanceCard({
           {formatBalance(balanceMinutes)}
         </span>
       </div>
-      <p className="mt-1 text-xs text-muted-foreground">
+      <p className="mt-1 text-[11px] text-muted-foreground sm:text-xs">
         {t('ofTarget', { net: formatMinutes(netMinutes), target: formatMinutes(targetMinutes) })}
       </p>
 
       {/* Balance indicator bar */}
-      <div className="mt-3">
-        <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
+      <div className="mt-2 sm:mt-3">
+        <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted sm:h-2">
           {/* Center marker */}
           <div className="absolute left-1/2 top-0 h-full w-px bg-border" />
           {/* Balance indicator */}
@@ -141,7 +141,7 @@ export function FlextimeBalanceCard({
             />
           )}
         </div>
-        <div className="mt-1 flex justify-between text-xs text-muted-foreground">
+        <div className="mt-1 flex justify-between text-[11px] text-muted-foreground sm:text-xs">
           <span>{t('under')}</span>
           <span>{t('over')}</span>
         </div>
@@ -155,20 +155,20 @@ export function FlextimeBalanceCard({
  */
 export function FlextimeBalanceCardSkeleton({ className }: { className?: string }) {
   return (
-    <div className={cn('rounded-lg border bg-card p-6', className)}>
+    <div className={cn('rounded-lg border bg-card p-4 sm:p-6', className)}>
       <div className="flex items-center justify-between">
-        <Skeleton className="h-4 w-28" />
-        <Skeleton className="h-4 w-4" />
+        <Skeleton className="h-3.5 w-20 sm:h-4 sm:w-28" />
+        <Skeleton className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
       </div>
-      <div className="mt-2">
-        <Skeleton className="h-8 w-20" />
+      <div className="mt-1.5 sm:mt-2">
+        <Skeleton className="h-6 w-14 sm:h-8 sm:w-20" />
       </div>
-      <Skeleton className="mt-2 h-3 w-32" />
-      <div className="mt-3">
-        <Skeleton className="h-2 w-full rounded-full" />
+      <Skeleton className="mt-1.5 h-3 w-24 sm:mt-2 sm:w-32" />
+      <div className="mt-2 sm:mt-3">
+        <Skeleton className="h-1.5 w-full rounded-full sm:h-2" />
         <div className="mt-1 flex justify-between">
-          <Skeleton className="h-3 w-10" />
-          <Skeleton className="h-3 w-10" />
+          <Skeleton className="h-3 w-8 sm:w-10" />
+          <Skeleton className="h-3 w-8 sm:w-10" />
         </div>
       </div>
     </div>
