@@ -48,12 +48,12 @@ export default function VacationPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Page header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-2 sm:gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-sm text-muted-foreground">
             {t('subtitle')}
           </p>
         </div>
@@ -66,6 +66,7 @@ export default function VacationPage() {
           size="icon"
           onClick={() => setSelectedYear((y) => y - 1)}
           aria-label={tc('previousYear')}
+          className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -80,6 +81,7 @@ export default function VacationPage() {
           onClick={() => setSelectedYear((y) => y + 1)}
           disabled={selectedYear >= currentYear + 1}
           aria-label={tc('nextYear')}
+          className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
@@ -88,6 +90,7 @@ export default function VacationPage() {
             variant="ghost"
             size="sm"
             onClick={() => setSelectedYear(currentYear)}
+            className="min-h-[44px] sm:min-h-0"
           >
             {tc('currentYear')}
           </Button>

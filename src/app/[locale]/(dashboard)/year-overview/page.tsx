@@ -16,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { YearSelector } from '@/components/vacation'
 import { useYearOverview, useEmployeeVacationBalance, useEmployees } from '@/hooks'
 import {
   YearOverviewTable,
@@ -85,7 +84,11 @@ export default function YearOverviewPage() {
   }, [monthlyValuesList])
 
   const handleMonthClick = (month: number) => {
-    router.push(`/monthly-evaluation?year=${selectedYear}&month=${month}`)
+    const params = new URLSearchParams({ year: String(selectedYear), month: String(month) })
+    if (effectiveEmployeeId) {
+      params.set('employee', effectiveEmployeeId)
+    }
+    router.push(`/monthly-evaluation?${params.toString()}`)
   }
 
   if (authLoading) {
@@ -126,31 +129,33 @@ export default function YearOverviewPage() {
     : user?.displayName
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Page header with export button */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-2 sm:gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-sm text-muted-foreground">
             {t('subtitle')}
           </p>
         </div>
-        <YearExportButtons
-          year={selectedYear}
-          employeeName={employeeName}
-          monthlyValues={monthlyValuesList}
-        />
+        <div className="hidden sm:block">
+          <YearExportButtons
+            year={selectedYear}
+            employeeName={employeeName}
+            monthlyValues={monthlyValuesList}
+          />
+        </div>
       </div>
 
       {/* Controls row */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-4">
         {/* Employee selector (admin only) */}
         {canViewAll && (
           <Select
             value={selectedEmployeeId ?? ''}
             onValueChange={setSelectedEmployeeId}
           >
-            <SelectTrigger className="w-[250px]">
+            <SelectTrigger className="w-full sm:w-[250px]">
               <SelectValue placeholder={tc('selectEmployee')} />
             </SelectTrigger>
             <SelectContent>
@@ -163,39 +168,37 @@ export default function YearOverviewPage() {
           </Select>
         )}
 
-        {/* Year selector */}
+        {/* Year navigation — same style as monthly-evaluation */}
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setSelectedYear((y) => y - 1)}
-            aria-label={tc('previousYear')}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <YearSelector
-            value={selectedYear}
-            onChange={setSelectedYear}
-            className="w-32"
-          />
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setSelectedYear((y) => y + 1)}
-            disabled={selectedYear >= currentYear + 1}
-            aria-label={tc('nextYear')}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
           {selectedYear !== currentYear && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSelectedYear(currentYear)}
-            >
+            <Button variant="outline" size="sm" onClick={() => setSelectedYear(currentYear)} className="min-h-[44px] sm:min-h-0">
               {tc('currentYear')}
             </Button>
           )}
+          <div className="flex flex-1 items-center rounded-md border">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => setSelectedYear((y) => y - 1)}
+              aria-label={tc('previousYear')}
+              className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="flex-1 px-2 sm:px-3 text-sm font-medium min-w-0 text-center">
+              {selectedYear}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => setSelectedYear((y) => y + 1)}
+              disabled={selectedYear >= currentYear + 1}
+              aria-label={tc('nextYear')}
+              className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
