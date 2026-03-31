@@ -31,7 +31,12 @@ export function SidebarNavItem({ item, forceExpanded }: SidebarNavItemProps) {
 
   const compact = forceExpanded ? false : isCompact
   const title = t(item.titleKey as Parameters<typeof t>[0])
-  const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+  // Only use startsWith for items with 2+ path segments (e.g. /warehouse/purchase-orders)
+  // so that section overview items (e.g. /warehouse) are only active on exact match
+  const segments = item.href.split('/').filter(Boolean)
+  const isActive =
+    pathname === item.href ||
+    (segments.length > 1 && pathname.startsWith(`${item.href}/`))
   const starred = isFavorite(item.href)
   const Icon = item.icon
 
