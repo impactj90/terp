@@ -1,7 +1,6 @@
 import type { PrismaClient } from "@/generated/prisma/client"
 import { renderToBuffer } from "@react-pdf/renderer"
-import { createAdminClient } from "@/lib/supabase/admin"
-import { clientEnv, serverEnv } from "@/lib/config"
+import * as storage from "@/lib/supabase/storage"
 import * as poService from "./wh-purchase-order-service"
 import * as billingTenantConfigRepo from "./billing-tenant-config-repository"
 import React from "react"
@@ -98,7 +97,6 @@ export async function generateAndGetDownloadUrl(
   const buffer = await renderToBuffer(pdfElement as any)
 
   // 7. Upload to Supabase Storage (private bucket)
-  const supabase = createAdminClient()
   const companyPart = supplier?.company ? `_${supplier.company}` : ""
   const raw = `${order.number}${companyPart}`
   const sanitized = raw
@@ -107,15 +105,13 @@ export async function generateAndGetDownloadUrl(
     .replace(/[^a-zA-Z0-9._-]+/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "")
   const storagePath = `bestellung/${sanitized}.pdf`
 
-  const { error: uploadError } = await supabase.storage
-    .from(BUCKET)
-    .upload(storagePath, Buffer.from(buffer), {
+  try {
+    await storage.upload(BUCKET, storagePath, Buffer.from(buffer), {
       contentType: "application/pdf",
       upsert: true,
     })
-
-  if (uploadError) {
-    throw new WhPurchaseOrderPdfError(`PDF upload failed: ${uploadError.message}`)
+  } catch (err) {
+    throw new WhPurchaseOrderPdfError(`PDF upload failed: ${err instanceof Error ? err.message : "unknown"}`)
   }
 
   // 8. Set printedAt on the purchase order
@@ -125,25 +121,12 @@ export async function generateAndGetDownloadUrl(
   })
 
   // 9. Create signed URL for download
-  const { data, error } = await supabase.storage
-    .from(BUCKET)
-    .createSignedUrl(storagePath, SIGNED_URL_EXPIRY_SECONDS)
-
-  if (error || !data?.signedUrl) {
-    throw new WhPurchaseOrderPdfError(
-      `Failed to create signed URL: ${error?.message ?? "unknown error"}`
-    )
+  const signedUrl = await storage.createSignedReadUrl(BUCKET, storagePath, SIGNED_URL_EXPIRY_SECONDS)
+  if (!signedUrl) {
+    throw new WhPurchaseOrderPdfError("Failed to create signed URL")
   }
 
-  // 10. Fix internal/public URL mismatch (Docker internal vs browser-facing)
-  let signedUrl = data.signedUrl
-  const internalUrl = serverEnv.supabaseUrl
-  const publicUrl = clientEnv.supabaseUrl
-  if (internalUrl && publicUrl && internalUrl !== publicUrl) {
-    signedUrl = signedUrl.replace(internalUrl, publicUrl)
-  }
-
-  // 11. Build filename
+  // 10. Build filename
   const filename = `${order.number.replace(/[/\\]/g, "_")}.pdf`
 
   return { signedUrl, filename }

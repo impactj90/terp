@@ -3,8 +3,7 @@ import * as billingDocService from "./billing-document-service"
 import * as billingTenantConfigRepo from "./billing-tenant-config-repository"
 import * as repo from "./billing-document-repository"
 import { renderToBuffer } from "@react-pdf/renderer"
-import { createAdminClient } from "@/lib/supabase/admin"
-import { clientEnv, serverEnv } from "@/lib/config"
+import * as storage from "@/lib/supabase/storage"
 import { BillingDocumentPdf } from "@/lib/pdf/billing-document-pdf"
 import { getStoragePath } from "@/lib/pdf/pdf-storage"
 import React from "react"
@@ -73,7 +72,6 @@ export async function generateAndStorePdf(
   const buffer = await renderToBuffer(pdfElement as any)
 
   // 2. Upload to Supabase Storage (private bucket)
-  const supabase = createAdminClient()
   const storagePath = getStoragePath({
     type: doc.type,
     tenantId,
@@ -82,15 +80,13 @@ export async function generateAndStorePdf(
     company: address?.company,
   })
 
-  const { error: uploadError } = await supabase.storage
-    .from(BUCKET)
-    .upload(storagePath, Buffer.from(buffer), {
+  try {
+    await storage.upload(BUCKET, storagePath, Buffer.from(buffer), {
       contentType: "application/pdf",
       upsert: true,
     })
-
-  if (uploadError) {
-    throw new BillingDocumentPdfError(`PDF upload failed: ${uploadError.message}`)
+  } catch (err) {
+    throw new BillingDocumentPdfError(`PDF upload failed: ${err instanceof Error ? err.message : "unknown"}`)
   }
 
   // 3. Persist storage path on document (not a public URL — bucket is private)
@@ -113,26 +109,9 @@ export async function getSignedDownloadUrl(
 
   if (!storagePath) return null
 
-  const supabase = createAdminClient()
-  const { data, error } = await supabase.storage
-    .from(BUCKET)
-    .createSignedUrl(storagePath, SIGNED_URL_EXPIRY_SECONDS)
+  const signedUrl = await storage.createSignedReadUrl(BUCKET, storagePath, SIGNED_URL_EXPIRY_SECONDS)
+  if (!signedUrl) return null
 
-  if (error || !data?.signedUrl) {
-    // File missing in storage — return null so caller can regenerate
-    return null
-  }
-
-  // Replace internal server URL with browser-facing URL so signed URLs work in the browser.
-  // In Docker, SUPABASE_URL is host.docker.internal but the browser needs localhost.
-  let signedUrl = data.signedUrl
-  const internalUrl = serverEnv.supabaseUrl
-  const publicUrl = clientEnv.supabaseUrl
-  if (internalUrl && publicUrl && internalUrl !== publicUrl) {
-    signedUrl = signedUrl.replace(internalUrl, publicUrl)
-  }
-
-  // Filename for download: e.g. "RE-2026-001.pdf"
   const filename = `${doc.number.replace(/[/\\]/g, "_")}.pdf`
 
   return { signedUrl, filename }

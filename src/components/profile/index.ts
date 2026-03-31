@@ -1,4 +1,5 @@
 export { ProfileHeader } from './profile-header'
+export { AvatarUploadDialog } from './avatar-upload-dialog'
 export { PersonalInfoCard } from './personal-info-card'
 export { EmploymentDetailsCard } from './employment-details-card'
 export { EmergencyContactsCard } from './emergency-contacts-card'

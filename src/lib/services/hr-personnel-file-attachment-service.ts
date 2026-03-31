@@ -8,8 +8,7 @@
  * Follows the same 3-step upload pattern as crm-correspondence-attachment-service.ts.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
-import { createAdminClient } from "@/lib/supabase/admin"
-import { clientEnv, serverEnv } from "@/lib/config"
+import * as storage from "@/lib/supabase/storage"
 import { randomUUID } from "crypto"
 
 const BUCKET = "hr-personnel-files"
@@ -60,18 +59,6 @@ function mimeToExtension(mimeType: string): string {
     default:
       return "bin"
   }
-}
-
-/**
- * Fix signed URL for Docker internal/public URL mismatch.
- */
-function fixSignedUrl(signedUrl: string): string {
-  const internalUrl = serverEnv.supabaseUrl
-  const publicUrl = clientEnv.supabaseUrl
-  if (internalUrl && publicUrl && internalUrl !== publicUrl) {
-    return signedUrl.replace(internalUrl, publicUrl)
-  }
-  return signedUrl
 }
 
 // =============================================================================
@@ -147,18 +134,11 @@ export async function listAttachments(
   entryId: string
 ) {
   const attachments = await findByEntry(prisma, tenantId, entryId)
-  const supabase = createAdminClient()
 
   const result = await Promise.all(
     attachments.map(async (attachment) => {
-      const { data: urlData } = await supabase.storage
-        .from(BUCKET)
-        .createSignedUrl(attachment.storagePath, SIGNED_URL_EXPIRY_SECONDS)
-
-      return {
-        ...attachment,
-        downloadUrl: urlData?.signedUrl ? fixSignedUrl(urlData.signedUrl) : null,
-      }
+      const downloadUrl = await storage.createSignedReadUrl(BUCKET, attachment.storagePath, SIGNED_URL_EXPIRY_SECONDS)
+      return { ...attachment, downloadUrl }
     })
   )
 
@@ -205,20 +185,12 @@ export async function getUploadUrl(
   const fileId = randomUUID()
   const storagePath = `${tenantId}/${entry.employeeId}/${entryId}/${fileId}.${ext}`
 
-  // Create signed upload URL
-  const supabase = createAdminClient()
-  const { data, error } = await supabase.storage
-    .from(BUCKET)
-    .createSignedUploadUrl(storagePath)
-
-  if (error || !data) {
-    throw new Error(`Failed to create signed upload URL: ${error?.message ?? "Unknown error"}`)
-  }
+  const result = await storage.createSignedUploadUrl(BUCKET, storagePath)
 
   return {
-    signedUrl: fixSignedUrl(data.signedUrl),
+    signedUrl: result.signedUrl,
     storagePath,
-    token: data.token,
+    token: result.token,
   }
 }
 
@@ -294,8 +266,7 @@ export async function deleteAttachment(
   }
 
   // Delete from storage
-  const supabase = createAdminClient()
-  await supabase.storage.from(BUCKET).remove([attachment.storagePath])
+  await storage.remove(BUCKET, [attachment.storagePath])
 
   // Delete DB record
   await removeAttachment(prisma, tenantId, attachmentId)
@@ -316,13 +287,10 @@ export async function getDownloadUrl(
     throw new HrPersonnelFileAttachmentNotFoundError()
   }
 
-  const supabase = createAdminClient()
-  const { data } = await supabase.storage
-    .from(BUCKET)
-    .createSignedUrl(attachment.storagePath, SIGNED_URL_EXPIRY_SECONDS)
+  const downloadUrl = await storage.createSignedReadUrl(BUCKET, attachment.storagePath, SIGNED_URL_EXPIRY_SECONDS)
 
   return {
-    downloadUrl: data?.signedUrl ? fixSignedUrl(data.signedUrl) : null,
+    downloadUrl,
     filename: attachment.filename,
     mimeType: attachment.mimeType,
   }
@@ -340,10 +308,8 @@ export async function deleteAllByEntry(
   const attachments = await findByEntry(prisma, tenantId, entryId)
   if (attachments.length === 0) return
 
-  // Delete all files from storage
-  const supabase = createAdminClient()
   const paths = attachments.map((a) => a.storagePath)
-  await supabase.storage.from(BUCKET).remove(paths)
+  await storage.remove(BUCKET, paths)
 
   // DB records will be cleaned up by CASCADE when entry is deleted
 }

@@ -1,8 +1,7 @@
 import type { PrismaClient, BillingTenantConfig, BillingDocument, BillingDocumentPosition, CrmAddress } from "@/generated/prisma/client"
 import { InvoiceService } from "@e-invoice-eu/core"
 import type { Invoice, InvoiceServiceOptions } from "@e-invoice-eu/core"
-import { createAdminClient } from "@/lib/supabase/admin"
-import { clientEnv, serverEnv } from "@/lib/config"
+import * as storage from "@/lib/supabase/storage"
 import { getXmlStoragePath, getStoragePath } from "@/lib/pdf/pdf-storage"
 import * as billingDocService from "./billing-document-service"
 import * as billingDocRepo from "./billing-document-repository"
@@ -389,22 +388,17 @@ export async function generateAndStoreEInvoice(
   const xmlBuffer = Buffer.from(xmlString, "utf-8")
 
   // 5. Download existing PDF from Supabase Storage (regenerate if missing)
-  const supabase = createAdminClient()
   const pdfStoragePath = getStoragePath({ type: doc.type, tenantId, id: doc.id, number: doc.number, company: address.company })
-  let { data: pdfData, error: downloadError } = await supabase.storage
-    .from(BUCKET)
-    .download(pdfStoragePath)
+  let pdfData = await storage.download(BUCKET, pdfStoragePath)
 
-  if (downloadError || !pdfData) {
+  if (!pdfData) {
     // PDF missing — regenerate it first
     await billingPdfService.generateAndStorePdf(prisma, tenantId, documentId)
-    const retry = await supabase.storage.from(BUCKET).download(pdfStoragePath)
-    pdfData = retry.data
-    downloadError = retry.error
+    pdfData = await storage.download(BUCKET, pdfStoragePath)
   }
 
-  if (downloadError || !pdfData) {
-    throw new EInvoiceError(`Failed to download PDF: ${downloadError?.message ?? "unknown error"}`)
+  if (!pdfData) {
+    throw new EInvoiceError("Failed to download PDF")
   }
   const pdfBuffer = Buffer.from(await pdfData.arrayBuffer())
 
@@ -413,25 +407,17 @@ export async function generateAndStoreEInvoice(
 
   // 7. Upload XML to Supabase Storage
   const xmlStoragePath = getXmlStoragePath({ type: doc.type, tenantId, id: doc.id, number: doc.number, company: address.company })
-  const { error: xmlUploadError } = await supabase.storage
-    .from(BUCKET)
-    .upload(xmlStoragePath, xmlBuffer, {
-      contentType: "text/xml",
-      upsert: true,
-    })
-  if (xmlUploadError) {
-    throw new EInvoiceError(`XML upload failed: ${xmlUploadError.message}`)
+  try {
+    await storage.upload(BUCKET, xmlStoragePath, xmlBuffer, { contentType: "text/xml", upsert: true })
+  } catch (err) {
+    throw new EInvoiceError(`XML upload failed: ${err instanceof Error ? err.message : "unknown"}`)
   }
 
   // 8. Upload replaced PDF/A-3 (overwrites original PDF)
-  const { error: pdfUploadError } = await supabase.storage
-    .from(BUCKET)
-    .upload(pdfStoragePath, zugferdPdfBuffer, {
-      contentType: "application/pdf",
-      upsert: true,
-    })
-  if (pdfUploadError) {
-    throw new EInvoiceError(`PDF/A-3 upload failed: ${pdfUploadError.message}`)
+  try {
+    await storage.upload(BUCKET, pdfStoragePath, zugferdPdfBuffer, { contentType: "application/pdf", upsert: true })
+  } catch (err) {
+    throw new EInvoiceError(`PDF/A-3 upload failed: ${err instanceof Error ? err.message : "unknown"}`)
   }
 
   // 9. Update eInvoiceXmlUrl on document
@@ -454,23 +440,8 @@ export async function getSignedXmlDownloadUrl(
 
   if (!xmlUrl) return null
 
-  const supabase = createAdminClient()
-  const { data, error } = await supabase.storage
-    .from(BUCKET)
-    .createSignedUrl(xmlUrl, SIGNED_URL_EXPIRY_SECONDS)
-
-  if (error || !data?.signedUrl) {
-    // File missing in storage — return null so caller can regenerate
-    return null
-  }
-
-  // Replace internal server URL with browser-facing URL (Docker URL rewriting)
-  let signedUrl = data.signedUrl
-  const internalUrl = serverEnv.supabaseUrl
-  const publicUrl = clientEnv.supabaseUrl
-  if (internalUrl && publicUrl && internalUrl !== publicUrl) {
-    signedUrl = signedUrl.replace(internalUrl, publicUrl)
-  }
+  const signedUrl = await storage.createSignedReadUrl(BUCKET, xmlUrl, SIGNED_URL_EXPIRY_SECONDS)
+  if (!signedUrl) return null
 
   const filename = `${doc.number.replace(/[/\\]/g, "_")}.xml`
 

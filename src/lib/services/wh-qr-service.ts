@@ -8,8 +8,7 @@
 import type { PrismaClient } from "@/generated/prisma/client"
 import QRCode from "qrcode"
 import { renderToBuffer } from "@react-pdf/renderer"
-import { createAdminClient } from "@/lib/supabase/admin"
-import { clientEnv, serverEnv } from "@/lib/config"
+import * as storage from "@/lib/supabase/storage"
 import React from "react"
 import { QrLabelPdf, type LabelFormat } from "@/lib/pdf/qr-label-pdf"
 
@@ -194,38 +193,22 @@ export async function generateLabelPdf(
   const buffer = await renderToBuffer(pdfElement as any)
 
   // 4. Upload to Supabase Storage
-  const supabase = createAdminClient()
   const timestamp = Date.now()
   const storagePath = `qr-labels/etiketten_${timestamp}.pdf`
 
-  const { error: uploadError } = await supabase.storage
-    .from(BUCKET)
-    .upload(storagePath, Buffer.from(buffer), {
+  try {
+    await storage.upload(BUCKET, storagePath, Buffer.from(buffer), {
       contentType: "application/pdf",
       upsert: true,
     })
-
-  if (uploadError) {
-    throw new WhQrValidationError(`PDF upload failed: ${uploadError.message}`)
+  } catch (err) {
+    throw new WhQrValidationError(`PDF upload failed: ${err instanceof Error ? err.message : "unknown"}`)
   }
 
   // 5. Create signed URL
-  const { data, error } = await supabase.storage
-    .from(BUCKET)
-    .createSignedUrl(storagePath, SIGNED_URL_EXPIRY_SECONDS)
-
-  if (error || !data?.signedUrl) {
-    throw new WhQrValidationError(
-      `Failed to create signed URL: ${error?.message ?? "unknown error"}`
-    )
-  }
-
-  // 6. Fix internal/public URL mismatch (Docker environments)
-  let signedUrl = data.signedUrl
-  const internalUrl = serverEnv.supabaseUrl
-  const publicUrl = clientEnv.supabaseUrl
-  if (internalUrl && publicUrl && internalUrl !== publicUrl) {
-    signedUrl = signedUrl.replace(internalUrl, publicUrl)
+  const signedUrl = await storage.createSignedReadUrl(BUCKET, storagePath, SIGNED_URL_EXPIRY_SECONDS)
+  if (!signedUrl) {
+    throw new WhQrValidationError("Failed to create signed URL")
   }
 
   const filename = `QR-Etiketten_${articles.length}_Artikel.pdf`

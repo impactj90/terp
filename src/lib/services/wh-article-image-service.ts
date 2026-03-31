@@ -6,8 +6,7 @@
  * metadata in the wh_article_images table.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
-import { createAdminClient } from "@/lib/supabase/admin"
-import { clientEnv, serverEnv } from "@/lib/config"
+import * as storage from "@/lib/supabase/storage"
 import { randomUUID } from "crypto"
 
 const BUCKET = "wh-article-images"
@@ -45,19 +44,6 @@ function mimeToExtension(mimeType: string): string {
     default:
       return "bin"
   }
-}
-
-/**
- * Fix signed URL for Docker internal/public URL mismatch.
- * Same pattern used in billing-document-pdf-service.ts.
- */
-function fixSignedUrl(signedUrl: string): string {
-  const internalUrl = serverEnv.supabaseUrl
-  const publicUrl = clientEnv.supabaseUrl
-  if (internalUrl && publicUrl && internalUrl !== publicUrl) {
-    return signedUrl.replace(internalUrl, publicUrl)
-  }
-  return signedUrl
 }
 
 // =============================================================================
@@ -149,31 +135,15 @@ export async function listImages(
   articleId: string
 ) {
   const images = await findByArticle(prisma, tenantId, articleId)
-  const supabase = createAdminClient()
 
   const result = await Promise.all(
     images.map(async (image) => {
-      // Generate signed URL for original
-      const { data: urlData } = await supabase.storage
-        .from(BUCKET)
-        .createSignedUrl(image.storagePath, SIGNED_URL_EXPIRY_SECONDS)
+      const url = await storage.createSignedReadUrl(BUCKET, image.storagePath, SIGNED_URL_EXPIRY_SECONDS)
+      const thumbnailUrl = image.thumbnailPath
+        ? await storage.createSignedReadUrl(BUCKET, image.thumbnailPath, SIGNED_URL_EXPIRY_SECONDS)
+        : null
 
-      // Generate signed URL for thumbnail
-      let thumbnailUrl: string | null = null
-      if (image.thumbnailPath) {
-        const { data: thumbData } = await supabase.storage
-          .from(BUCKET)
-          .createSignedUrl(image.thumbnailPath, SIGNED_URL_EXPIRY_SECONDS)
-        thumbnailUrl = thumbData?.signedUrl
-          ? fixSignedUrl(thumbData.signedUrl)
-          : null
-      }
-
-      return {
-        ...image,
-        url: urlData?.signedUrl ? fixSignedUrl(urlData.signedUrl) : null,
-        thumbnailUrl,
-      }
+      return { ...image, url, thumbnailUrl }
     })
   )
 
@@ -211,20 +181,12 @@ export async function getUploadUrl(
   const imageId = randomUUID()
   const storagePath = `${tenantId}/${articleId}/${imageId}.${ext}`
 
-  // Create signed upload URL
-  const supabase = createAdminClient()
-  const { data, error } = await supabase.storage
-    .from(BUCKET)
-    .createSignedUploadUrl(storagePath)
-
-  if (error || !data) {
-    throw new Error(`Failed to create signed upload URL: ${error?.message ?? "Unknown error"}`)
-  }
+  const result = await storage.createSignedUploadUrl(BUCKET, storagePath)
 
   return {
-    signedUrl: fixSignedUrl(data.signedUrl),
+    signedUrl: result.signedUrl,
     storagePath,
-    token: data.token,
+    token: result.token,
   }
 }
 
@@ -267,14 +229,9 @@ export async function confirmUpload(
   // Generate thumbnail
   let thumbnailPath: string | null = null
   try {
-    const supabase = createAdminClient()
+    const fileData = await storage.download(BUCKET, storagePath)
 
-    // Download original
-    const { data: fileData, error: downloadError } = await supabase.storage
-      .from(BUCKET)
-      .download(storagePath)
-
-    if (!downloadError && fileData) {
+    if (fileData) {
       const sharp = (await import("sharp")).default
       const buffer = Buffer.from(await fileData.arrayBuffer())
       const thumbBuffer = await sharp(buffer)
@@ -282,17 +239,14 @@ export async function confirmUpload(
         .webp({ quality: 80 })
         .toBuffer()
 
-      // Upload thumbnail
       thumbnailPath = storagePath.replace(/\.[^.]+$/, "_thumb.webp")
-      const { error: uploadError } = await supabase.storage
-        .from(BUCKET)
-        .upload(thumbnailPath, thumbBuffer, {
+      try {
+        await storage.upload(BUCKET, thumbnailPath, thumbBuffer, {
           contentType: "image/webp",
           upsert: true,
         })
-
-      if (uploadError) {
-        console.error("Thumbnail upload failed:", uploadError.message)
+      } catch {
+        console.error("Thumbnail upload failed")
         thumbnailPath = null
       }
     }
@@ -407,12 +361,11 @@ export async function deleteImage(
   }
 
   // Delete from storage
-  const supabase = createAdminClient()
   const pathsToRemove = [image.storagePath]
   if (image.thumbnailPath) {
     pathsToRemove.push(image.thumbnailPath)
   }
-  await supabase.storage.from(BUCKET).remove(pathsToRemove)
+  await storage.remove(BUCKET, pathsToRemove)
 
   // Delete DB record
   await removeImage(prisma, tenantId, imageId)
@@ -439,9 +392,5 @@ export async function deleteImage(
 export async function getSignedThumbnailUrl(
   thumbnailPath: string
 ): Promise<string | null> {
-  const supabase = createAdminClient()
-  const { data } = await supabase.storage
-    .from(BUCKET)
-    .createSignedUrl(thumbnailPath, SIGNED_URL_EXPIRY_SECONDS)
-  return data?.signedUrl ? fixSignedUrl(data.signedUrl) : null
+  return storage.createSignedReadUrl(BUCKET, thumbnailPath, SIGNED_URL_EXPIRY_SECONDS)
 }

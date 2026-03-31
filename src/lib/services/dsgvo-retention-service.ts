@@ -7,7 +7,7 @@
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./dsgvo-retention-repository"
 import { subMonths } from "date-fns"
-import { createAdminClient } from "@/lib/supabase/admin"
+import * as storage from "@/lib/supabase/storage"
 
 // --- Constants ---
 
@@ -527,21 +527,7 @@ async function deletePersonnelFileWithStorage(
  */
 async function deleteStorageFiles(storagePaths: string[]): Promise<void> {
   try {
-    const supabase = createAdminClient()
-    // Supabase storage.remove accepts up to 1000 files at once
-    const batchSize = 1000
-    for (let i = 0; i < storagePaths.length; i += batchSize) {
-      const batch = storagePaths.slice(i, i + batchSize)
-      const { error } = await supabase.storage
-        .from("hr-personnel-files")
-        .remove(batch)
-      if (error) {
-        console.error(
-          "[dsgvo-retention] Storage cleanup error:",
-          error.message
-        )
-      }
-    }
+    await storage.removeBatched("hr-personnel-files", storagePaths)
   } catch (err) {
     console.error(
       "[dsgvo-retention] Storage cleanup failed:",

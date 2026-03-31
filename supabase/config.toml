@@ -59,6 +59,11 @@ public = true
 file_size_limit = "2MiB"
 allowed_mime_types = ["image/png", "image/jpeg", "image/svg+xml", "image/webp"]
 
+[storage.buckets.avatars]
+public = true
+file_size_limit = "2MiB"
+allowed_mime_types = ["image/jpeg", "image/png", "image/webp"]
+
 [storage.buckets.wh-article-images]
 public = false
 file_size_limit = "5MiB"

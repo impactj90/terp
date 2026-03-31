@@ -6,6 +6,8 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import { createAdminClient } from "@/lib/supabase/admin"
+import * as storage from "@/lib/supabase/storage"
+import { randomUUID } from "crypto"
 import * as repo from "./users-repository"
 import * as auditLog from "./audit-logs-service"
 import type { AuditContext } from "./audit-logs-service"
@@ -345,4 +347,76 @@ export async function changePassword(
     ipAddress: audit.ipAddress,
     userAgent: audit.userAgent,
   }).catch(err => console.error('[AuditLog] Failed:', err))
+}
+
+// =============================================================================
+// Avatar Upload
+// =============================================================================
+
+const AVATAR_BUCKET = "avatars"
+const AVATAR_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"]
+const AVATAR_MAX_BYTES = 2 * 1024 * 1024 // 2 MB
+
+function avatarExt(mimeType: string) {
+  return mimeType === "image/png" ? "png" : mimeType === "image/webp" ? "webp" : "jpg"
+}
+
+export async function avatarGetUploadUrl(userId: string, mimeType: string) {
+  if (!AVATAR_MIME_TYPES.includes(mimeType)) {
+    throw new UserValidationError(
+      `Invalid file type: ${mimeType}. Allowed: ${AVATAR_MIME_TYPES.join(", ")}`
+    )
+  }
+  const path = `${userId}/${randomUUID()}.${avatarExt(mimeType)}`
+  return storage.createSignedUploadUrl(AVATAR_BUCKET, path)
+}
+
+export async function avatarConfirmUpload(
+  prisma: PrismaClient,
+  userId: string,
+  storagePath: string,
+  mimeType: string,
+  sizeBytes: number
+) {
+  if (sizeBytes > AVATAR_MAX_BYTES) {
+    throw new UserValidationError("File too large. Maximum: 2 MB")
+  }
+  if (!AVATAR_MIME_TYPES.includes(mimeType)) {
+    throw new UserValidationError(`Invalid file type: ${mimeType}`)
+  }
+
+  // Verify the file was actually uploaded
+  const blob = await storage.download(AVATAR_BUCKET, storagePath)
+  if (!blob) {
+    throw new UserValidationError("Upload not found. Please upload the file first.")
+  }
+
+  // Clean up old avatar
+  const existing = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { avatarUrl: true },
+  })
+  if (existing?.avatarUrl?.includes(`/storage/v1/object/public/${AVATAR_BUCKET}/`)) {
+    const oldPath = existing.avatarUrl.split(`/storage/v1/object/public/${AVATAR_BUCKET}/`)[1]
+    if (oldPath) await storage.remove(AVATAR_BUCKET, [oldPath])
+  }
+
+  // Save public URL
+  const publicUrl = storage.getPublicUrl(AVATAR_BUCKET, storagePath)
+  await prisma.user.update({ where: { id: userId }, data: { avatarUrl: publicUrl } })
+
+  return { avatarUrl: publicUrl }
+}
+
+export async function avatarDelete(prisma: PrismaClient, userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { avatarUrl: true },
+  })
+  if (user?.avatarUrl?.includes(`/storage/v1/object/public/${AVATAR_BUCKET}/`)) {
+    const path = user.avatarUrl.split(`/storage/v1/object/public/${AVATAR_BUCKET}/`)[1]
+    if (path) await storage.remove(AVATAR_BUCKET, [path])
+  }
+  await prisma.user.update({ where: { id: userId }, data: { avatarUrl: null } })
+  return { success: true }
 }

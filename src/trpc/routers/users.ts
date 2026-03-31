@@ -355,6 +355,63 @@ export const usersRouter = createTRPCRouter({
     }),
 
   /**
+   * users.avatarGetUploadUrl -- Get a signed URL to upload an avatar image.
+   * Self-only: users can only upload their own avatar.
+   */
+  avatarGetUploadUrl: tenantProcedure
+    .input(z.object({ mimeType: z.string() }))
+    .output(z.object({
+      signedUrl: z.string(),
+      path: z.string(),
+      token: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await userService.avatarGetUploadUrl(ctx.user!.id, input.mimeType)
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  /**
+   * users.avatarConfirmUpload -- Confirm avatar upload and save public URL.
+   * Self-only: users can only update their own avatar.
+   */
+  avatarConfirmUpload: tenantProcedure
+    .input(z.object({
+      storagePath: z.string(),
+      mimeType: z.string(),
+      sizeBytes: z.number(),
+    }))
+    .output(z.object({ avatarUrl: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await userService.avatarConfirmUpload(
+          ctx.prisma,
+          ctx.user!.id,
+          input.storagePath,
+          input.mimeType,
+          input.sizeBytes
+        )
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  /**
+   * users.avatarDelete -- Remove the current user's avatar.
+   */
+  avatarDelete: tenantProcedure
+    .output(z.object({ success: z.boolean() }))
+    .mutation(async ({ ctx }) => {
+      try {
+        return await userService.avatarDelete(ctx.prisma, ctx.user!.id)
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  /**
    * users.changePassword -- Changes a user's password.
    *
    * Self or users.manage permission required.
