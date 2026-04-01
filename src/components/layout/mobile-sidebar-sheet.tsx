@@ -64,10 +64,13 @@ export function MobileSidebarSheet({
           <TenantSelector className="w-full" />
         </div>
 
-        {/* Navigation */}
+        {/* Navigation — close sheet only when a link is clicked, not on section toggles */}
         <div
           className="flex min-h-0 flex-1 overflow-hidden"
-          onClick={() => onOpenChange(false)}
+          onClick={(e) => {
+            const target = (e.target as HTMLElement).closest('a')
+            if (target) onOpenChange(false)
+          }}
         >
           <SidebarNav forceExpanded />
         </div>

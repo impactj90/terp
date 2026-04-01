@@ -62,12 +62,12 @@ export function StockMovementList() {
   return (
     <div className="space-y-4">
       {/* Page heading */}
-      <h1 className="text-2xl font-bold">{t('pageTitle')}</h1>
+      <h1 className="text-xl sm:text-2xl font-bold">{t('pageTitle')}</h1>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 items-center">
         <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setPage(1) }}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue placeholder={t('filterAllTypes')} />
           </SelectTrigger>
           <SelectContent>
@@ -94,64 +94,98 @@ export function StockMovementList() {
         </div>
       ) : (
         <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[160px]">{t('colDate')}</TableHead>
-                <TableHead>{t('colArticle')}</TableHead>
-                <TableHead className="w-[140px]">{t('colType')}</TableHead>
-                <TableHead className="w-[100px] text-right">{t('colQuantity')}</TableHead>
-                <TableHead className="w-[120px] text-right">{t('colPreviousStock')}</TableHead>
-                <TableHead className="w-[120px] text-right">{t('colNewStock')}</TableHead>
-                <TableHead className="w-[120px]">{t('colReference')}</TableHead>
-                <TableHead>{t('colReason')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.items.map((movement) => {
-                const movType = movement.type as MovementType
-                return (
-                  <TableRow key={movement.id}>
-                    <TableCell className="text-sm">{formatDate(movement.date)}</TableCell>
-                    <TableCell>
-                      <div>
-                        <span className="font-mono text-xs text-muted-foreground">
-                          {movement.article?.number}
-                        </span>
-                        <span className="ml-2">{movement.article?.name}</span>
+          {/* Mobile: card list */}
+          <div className="divide-y sm:hidden">
+            {data.items.map((movement) => {
+              const movType = movement.type as MovementType
+              return (
+                <div key={movement.id} className="p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{movement.article?.name}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs font-mono text-muted-foreground">{movement.article?.number}</span>
+                        <Badge variant={typeVariants[movType]} className="text-[10px] px-1.5 py-0">
+                          {t(typeKeys[movType] as Parameters<typeof t>[0])}
+                        </Badge>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={typeVariants[movType]}>
-                        {t(typeKeys[movType] as Parameters<typeof t>[0])}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className={`text-right font-mono ${movement.quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatQuantity(movement.quantity)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      {movement.previousStock}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      {movement.newStock}
-                    </TableCell>
-                    <TableCell>
-                      {movement.purchaseOrder ? (
-                        <span className="text-sm font-mono">
-                          {movement.purchaseOrder.number}
-                        </span>
-                      ) : (
-                        '\u2014'
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {movement.reason || '\u2014'}
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
+                    </div>
+                    <div className="text-right shrink-0 ml-3">
+                      <p className={`text-sm font-mono font-medium ${movement.quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {formatQuantity(movement.quantity)}
+                      </p>
+                      <p className="text-xs text-muted-foreground font-mono">
+                        {movement.previousStock} &rarr; {movement.newStock}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">{formatDate(movement.date)}</p>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Desktop: table */}
+          <div className="hidden sm:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[160px]">{t('colDate')}</TableHead>
+                  <TableHead>{t('colArticle')}</TableHead>
+                  <TableHead className="w-[140px]">{t('colType')}</TableHead>
+                  <TableHead className="w-[100px] text-right">{t('colQuantity')}</TableHead>
+                  <TableHead className="w-[120px] text-right">{t('colPreviousStock')}</TableHead>
+                  <TableHead className="w-[120px] text-right">{t('colNewStock')}</TableHead>
+                  <TableHead className="w-[120px]">{t('colReference')}</TableHead>
+                  <TableHead>{t('colReason')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.items.map((movement) => {
+                  const movType = movement.type as MovementType
+                  return (
+                    <TableRow key={movement.id}>
+                      <TableCell className="text-sm">{formatDate(movement.date)}</TableCell>
+                      <TableCell>
+                        <div>
+                          <span className="font-mono text-xs text-muted-foreground">
+                            {movement.article?.number}
+                          </span>
+                          <span className="ml-2">{movement.article?.name}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={typeVariants[movType]}>
+                          {t(typeKeys[movType] as Parameters<typeof t>[0])}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className={`text-right font-mono ${movement.quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {formatQuantity(movement.quantity)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {movement.previousStock}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {movement.newStock}
+                      </TableCell>
+                      <TableCell>
+                        {movement.purchaseOrder ? (
+                          <span className="text-sm font-mono">
+                            {movement.purchaseOrder.number}
+                          </span>
+                        ) : (
+                          '\u2014'
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {movement.reason || '\u2014'}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </div>
 
           {/* Pagination */}
           {data.total > 25 && (
@@ -164,7 +198,7 @@ export function StockMovementList() {
               >
                 &laquo;
               </Button>
-              <span className="text-sm leading-8">
+              <span className="text-xs sm:text-sm leading-8">
                 {page} / {Math.ceil(data.total / 25)}
               </span>
               <Button

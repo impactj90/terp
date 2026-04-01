@@ -18,8 +18,8 @@ export default function WhPricesPage() {
   }
 
   return (
-    <div className="space-y-4 p-6">
-      <h1 className="text-2xl font-semibold">{t('title')}</h1>
+    <div className="space-y-4 p-4 sm:p-6">
+      <h1 className="text-xl sm:text-2xl font-semibold">{t('title')}</h1>
       <PriceManagement />
     </div>
   )

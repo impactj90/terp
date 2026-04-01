@@ -122,8 +122,8 @@ export function CorrespondenceList({ addressId, tenantId: _tenantId }: Correspon
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={t('searchPlaceholder')}
@@ -135,42 +135,44 @@ export function CorrespondenceList({ addressId, tenantId: _tenantId }: Correspon
             className="pl-9"
           />
         </div>
-        <Select
-          value={direction}
-          onValueChange={(v) => {
-            setDirection(v)
-            setPage(1)
-          }}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('directionAll')}</SelectItem>
-            <SelectItem value="INCOMING">{t('directionIncoming')}</SelectItem>
-            <SelectItem value="OUTGOING">{t('directionOutgoing')}</SelectItem>
-            <SelectItem value="INTERNAL">{t('directionInternal')}</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select
-          value={typeFilter}
-          onValueChange={(v) => {
-            setTypeFilter(v)
-            setPage(1)
-          }}
-        >
-          <SelectTrigger className="w-[160px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('typeAll')}</SelectItem>
-            <SelectItem value="phone">{t('typePhone')}</SelectItem>
-            <SelectItem value="email">{t('typeEmail')}</SelectItem>
-            <SelectItem value="letter">{t('typeLetter')}</SelectItem>
-            <SelectItem value="fax">{t('typeFax')}</SelectItem>
-            <SelectItem value="visit">{t('typeVisit')}</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select
+            value={direction}
+            onValueChange={(v) => {
+              setDirection(v)
+              setPage(1)
+            }}
+          >
+            <SelectTrigger className="flex-1 sm:w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('directionAll')}</SelectItem>
+              <SelectItem value="INCOMING">{t('directionIncoming')}</SelectItem>
+              <SelectItem value="OUTGOING">{t('directionOutgoing')}</SelectItem>
+              <SelectItem value="INTERNAL">{t('directionInternal')}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={typeFilter}
+            onValueChange={(v) => {
+              setTypeFilter(v)
+              setPage(1)
+            }}
+          >
+            <SelectTrigger className="flex-1 sm:w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('typeAll')}</SelectItem>
+              <SelectItem value="phone">{t('typePhone')}</SelectItem>
+              <SelectItem value="email">{t('typeEmail')}</SelectItem>
+              <SelectItem value="letter">{t('typeLetter')}</SelectItem>
+              <SelectItem value="fax">{t('typeFax')}</SelectItem>
+              <SelectItem value="visit">{t('typeVisit')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Table */}
@@ -180,69 +182,123 @@ export function CorrespondenceList({ addressId, tenantId: _tenantId }: Correspon
         <p className="text-sm text-muted-foreground py-4">{t('noEntries')}</p>
       ) : (
         <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('date')}</TableHead>
-                <TableHead>{t('direction')}</TableHead>
-                <TableHead>{t('type')}</TableHead>
-                <TableHead>{t('subject')}</TableHead>
-                <TableHead>{t('contact')}</TableHead>
-                <TableHead className="w-16">
-                  <span className="sr-only">{t('actions')}</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="whitespace-nowrap">
-                    {formatDate(item.date)}
-                  </TableCell>
-                  <TableCell>
+          {/* Mobile: card list */}
+          <div className="divide-y sm:hidden">
+            {items.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-start gap-3 p-3 active:bg-muted/50 cursor-pointer"
+                onClick={() => setDetailItem(item as unknown as Record<string, unknown>)}
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{item.subject}</p>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <span className="text-xs text-muted-foreground">{formatDate(item.date)}</span>
                     <CorrespondenceDirectionBadge direction={item.direction} />
-                  </TableCell>
-                  <TableCell>
                     <CorrespondenceTypeBadge type={item.type} />
-                  </TableCell>
-                  <TableCell className="font-medium max-w-[300px] truncate">
-                    {item.subject}
-                  </TableCell>
-                  <TableCell>
-                    {item.contact
-                      ? `${item.contact.firstName} ${item.contact.lastName}`
-                      : '—'}
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setDetailItem(item as unknown as Record<string, unknown>)}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          {t('view')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEdit(item as unknown as Record<string, unknown>)}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          {t('edit')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setDeleteItem({ id: item.id, subject: item.subject })}
-                          className="text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          {t('delete')}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+                  </div>
+                  {item.contact && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {item.contact.firstName} {item.contact.lastName}
+                    </p>
+                  )}
+                </div>
+                <div onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setDetailItem(item as unknown as Record<string, unknown>)}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        {t('view')}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleEdit(item as unknown as Record<string, unknown>)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        {t('edit')}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setDeleteItem({ id: item.id, subject: item.subject })}
+                        className="text-destructive"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        {t('delete')}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: table */}
+          <div className="hidden sm:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('date')}</TableHead>
+                  <TableHead>{t('direction')}</TableHead>
+                  <TableHead>{t('type')}</TableHead>
+                  <TableHead>{t('subject')}</TableHead>
+                  <TableHead>{t('contact')}</TableHead>
+                  <TableHead className="w-16">
+                    <span className="sr-only">{t('actions')}</span>
+                  </TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {items.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="whitespace-nowrap">
+                      {formatDate(item.date)}
+                    </TableCell>
+                    <TableCell>
+                      <CorrespondenceDirectionBadge direction={item.direction} />
+                    </TableCell>
+                    <TableCell>
+                      <CorrespondenceTypeBadge type={item.type} />
+                    </TableCell>
+                    <TableCell className="font-medium max-w-[300px] truncate">
+                      {item.subject}
+                    </TableCell>
+                    <TableCell>
+                      {item.contact
+                        ? `${item.contact.firstName} ${item.contact.lastName}`
+                        : '—'}
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setDetailItem(item as unknown as Record<string, unknown>)}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            {t('view')}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEdit(item as unknown as Record<string, unknown>)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            {t('edit')}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setDeleteItem({ id: item.id, subject: item.subject })}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            {t('delete')}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
 
           {/* Pagination */}
           {totalPages > 1 && (

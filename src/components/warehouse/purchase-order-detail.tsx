@@ -147,19 +147,20 @@ export function PurchaseOrderDetail({ id }: PurchaseOrderDetailProps) {
   } | null
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="space-y-3">
+        <div className="flex items-start gap-3 sm:gap-4">
           <Button
             variant="ghost"
             size="icon"
+            className="shrink-0 mt-0.5"
             onClick={() => router.push('/warehouse/purchase-orders')}
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-3">
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-2xl font-bold">
               {t('detailTitle', { number: order.number })}
             </h1>
             <div className="mt-1">
@@ -176,7 +177,7 @@ export function PurchaseOrderDetail({ id }: PurchaseOrderDetailProps) {
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 sm:justify-end">
           {isDraft && (
             <>
               <Button
@@ -184,12 +185,12 @@ export function PurchaseOrderDetail({ id }: PurchaseOrderDetailProps) {
                 size="sm"
                 onClick={() => setIsEditing(true)}
               >
-                <Edit className="h-4 w-4 mr-2" />
-                {t('actionEdit')}
+                <Edit className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">{t('actionEdit')}</span>
               </Button>
               <Button size="sm" onClick={() => setSendOpen(true)}>
-                <Send className="h-4 w-4 mr-2" />
-                {t('actionSendOrder')}
+                <Send className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">{t('actionSendOrder')}</span>
               </Button>
             </>
           )}
@@ -199,8 +200,8 @@ export function PurchaseOrderDetail({ id }: PurchaseOrderDetailProps) {
               size="sm"
               onClick={() => setCancelOpen(true)}
             >
-              <XCircle className="h-4 w-4 mr-2" />
-              {t('actionCancel')}
+              <XCircle className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">{t('actionCancel')}</span>
             </Button>
           )}
           <Button
@@ -219,11 +220,13 @@ export function PurchaseOrderDetail({ id }: PurchaseOrderDetailProps) {
             }}
           >
             {downloadPdfMutation.isPending ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" />
             ) : (
-              <FileDown className="h-4 w-4 mr-2" />
+              <FileDown className="h-4 w-4 sm:mr-2" />
             )}
-            {downloadPdfMutation.isPending ? t('loadingPdf') : t('actionGeneratePdf')}
+            <span className="hidden sm:inline">
+              {downloadPdfMutation.isPending ? t('loadingPdf') : t('actionGeneratePdf')}
+            </span>
           </Button>
         </div>
       </div>

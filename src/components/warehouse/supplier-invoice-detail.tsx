@@ -105,40 +105,46 @@ export function SupplierInvoiceDetail({ id }: SupplierInvoiceDetailProps) {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.push('/warehouse/supplier-invoices')}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold">
-            {t('detailTitle')}: {invoice.number}
-          </h1>
+      <div className="space-y-3">
+        <div className="flex items-start gap-3 sm:gap-4">
+          <Button variant="ghost" size="icon" className="shrink-0 mt-0.5" onClick={() => router.push('/warehouse/supplier-invoices')}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg sm:text-2xl font-bold truncate">
+              {t('detailTitle')}: {invoice.number}
+            </h1>
+            <div className="mt-1">
+              <SupplierInvoiceStatusBadge status={invoice.status as 'OPEN' | 'PARTIAL' | 'PAID' | 'CANCELLED'} />
+            </div>
+          </div>
         </div>
-        <SupplierInvoiceStatusBadge status={invoice.status as 'OPEN' | 'PARTIAL' | 'PAID' | 'CANCELLED'} />
-        {canEdit && (
-          <Button variant="outline" onClick={() => setShowEditSheet(true)}>
-            <Edit className="h-4 w-4 mr-2" />
-            {t('actionEdit')}
-          </Button>
-        )}
-        {canPay && (
-          <Button onClick={() => setShowPaymentDialog(true)}>
-            <CreditCard className="h-4 w-4 mr-2" />
-            {t('actionRecordPayment')}
-          </Button>
-        )}
-        {canCancelInvoice && (
-          <Button variant="destructive" onClick={() => setShowCancelDialog(true)}>
-            <XCircle className="h-4 w-4 mr-2" />
-            {t('actionCancel')}
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2 sm:justify-end">
+          {canEdit && (
+            <Button variant="outline" size="sm" onClick={() => setShowEditSheet(true)}>
+              <Edit className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">{t('actionEdit')}</span>
+            </Button>
+          )}
+          {canPay && (
+            <Button size="sm" onClick={() => setShowPaymentDialog(true)}>
+              <CreditCard className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">{t('actionRecordPayment')}</span>
+            </Button>
+          )}
+          {canCancelInvoice && (
+            <Button variant="destructive" size="sm" onClick={() => setShowCancelDialog(true)}>
+              <XCircle className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">{t('actionCancel')}</span>
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Info Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         {/* Invoice Info */}
         <Card>
           <CardHeader>

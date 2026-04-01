@@ -82,41 +82,41 @@ export function SupplierInvoiceList() {
     <div className="space-y-4">
       {/* Summary Cards */}
       {summaryData && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className="pb-1 sm:pb-2 p-3 sm:p-6">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                 {t('summaryTotalOpen')}
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{formatPrice(summaryData.totalOpen)}</p>
+            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+              <p className="text-lg sm:text-2xl font-bold">{formatPrice(summaryData.totalOpen)}</p>
               <p className="text-xs text-muted-foreground">
                 {summaryData.invoiceCount} {t('summaryInvoiceCount')}
               </p>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-destructive">
+            <CardHeader className="pb-1 sm:pb-2 p-3 sm:p-6">
+              <CardTitle className="text-xs sm:text-sm font-medium text-destructive">
                 {t('summaryTotalOverdue')}
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-destructive">{formatPrice(summaryData.totalOverdue)}</p>
+            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+              <p className="text-lg sm:text-2xl font-bold text-destructive">{formatPrice(summaryData.totalOverdue)}</p>
               <p className="text-xs text-muted-foreground">
                 {summaryData.overdueCount} {t('filterOverdue')}
               </p>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className="pb-1 sm:pb-2 p-3 sm:p-6">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                 {t('summaryPaidThisMonth')}
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{formatPrice(summaryData.totalPaidThisMonth)}</p>
+            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+              <p className="text-lg sm:text-2xl font-bold">{formatPrice(summaryData.totalPaidThisMonth)}</p>
             </CardContent>
           </Card>
         </div>
@@ -128,10 +128,10 @@ export function SupplierInvoiceList() {
           placeholder={t('searchPlaceholder')}
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-          className="w-64"
+          className="w-full sm:w-64"
         />
         <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1) }}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder={t('filterAllStatuses')} />
           </SelectTrigger>
           <SelectContent>
@@ -142,8 +142,8 @@ export function SupplierInvoiceList() {
             <SelectItem value="CANCELLED">{t('statusCancelled')}</SelectItem>
           </SelectContent>
         </Select>
-        <div className="flex-1" />
-        <Button onClick={() => setShowCreateSheet(true)}>
+        <div className="hidden sm:block flex-1" />
+        <Button size="sm" className="w-full sm:w-auto sm:size-default" onClick={() => setShowCreateSheet(true)}>
           <Plus className="h-4 w-4 mr-2" />
           {t('actionCreate')}
         </Button>
@@ -162,109 +162,143 @@ export function SupplierInvoiceList() {
         </div>
       ) : (
         <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[120px]">{t('colNumber')}</TableHead>
-                <TableHead>{t('colSupplier')}</TableHead>
-                <TableHead className="w-[120px]">{t('colInvoiceDate')}</TableHead>
-                <TableHead className="w-[120px]">{t('colDueDate')}</TableHead>
-                <TableHead className="w-[120px] text-right">{t('colTotalGross')}</TableHead>
-                <TableHead className="w-[120px] text-right">{t('colOpenAmount')}</TableHead>
-                <TableHead className="w-[150px]">{t('colStatus')}</TableHead>
-                <TableHead className="w-[60px]" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.items.map((invoice) => (
-                <TableRow
-                  key={invoice.id}
-                  className="cursor-pointer"
-                  onClick={() => router.push(`/warehouse/supplier-invoices/${invoice.id}`)}
-                >
-                  <TableCell className="font-mono text-sm">{invoice.number}</TableCell>
-                  <TableCell className="font-medium">
-                    {(invoice.supplier as { company: string })?.company ?? '\u2014'}
-                  </TableCell>
-                  <TableCell>{formatDate(invoice.invoiceDate)}</TableCell>
-                  <TableCell className={invoice.isOverdue ? 'text-destructive font-medium' : ''}>
-                    {formatDate(invoice.dueDate)}
-                  </TableCell>
-                  <TableCell className="text-right">{formatPrice(invoice.totalGross)}</TableCell>
-                  <TableCell className={`text-right ${invoice.openAmount > 0 ? 'font-medium' : ''}`}>
-                    {formatPrice(invoice.openAmount)}
-                  </TableCell>
-                  <TableCell>
-                    <SupplierInvoiceStatusBadge status={invoice.status as InvoiceStatus} />
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            router.push(`/warehouse/supplier-invoices/${invoice.id}`)
-                          }}
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          {t('actionView')}
-                        </DropdownMenuItem>
-                        {invoice.status === 'OPEN' && (
+          {/* Mobile: card list */}
+          <div className="divide-y sm:hidden">
+            {data.items.map((invoice) => (
+              <div
+                key={invoice.id}
+                className="p-3 active:bg-muted/50 cursor-pointer"
+                onClick={() => router.push(`/warehouse/supplier-invoices/${invoice.id}`)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-mono font-medium">{invoice.number}</span>
+                      <SupplierInvoiceStatusBadge status={invoice.status as InvoiceStatus} />
+                    </div>
+                    <p className="text-sm text-muted-foreground truncate mt-0.5">
+                      {(invoice.supplier as { company: string })?.company ?? '\u2014'}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0 ml-3">
+                    <p className="text-sm font-medium">{formatPrice(invoice.totalGross)}</p>
+                    {invoice.openAmount > 0 && (
+                      <p className={`text-xs ${invoice.isOverdue ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+                        {formatPrice(invoice.openAmount)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: table */}
+          <div className="hidden sm:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[120px]">{t('colNumber')}</TableHead>
+                  <TableHead>{t('colSupplier')}</TableHead>
+                  <TableHead className="w-[120px]">{t('colInvoiceDate')}</TableHead>
+                  <TableHead className="w-[120px]">{t('colDueDate')}</TableHead>
+                  <TableHead className="w-[120px] text-right">{t('colTotalGross')}</TableHead>
+                  <TableHead className="w-[120px] text-right">{t('colOpenAmount')}</TableHead>
+                  <TableHead className="w-[150px]">{t('colStatus')}</TableHead>
+                  <TableHead className="w-[60px]" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.items.map((invoice) => (
+                  <TableRow
+                    key={invoice.id}
+                    className="cursor-pointer"
+                    onClick={() => router.push(`/warehouse/supplier-invoices/${invoice.id}`)}
+                  >
+                    <TableCell className="font-mono text-sm">{invoice.number}</TableCell>
+                    <TableCell className="font-medium">
+                      {(invoice.supplier as { company: string })?.company ?? '\u2014'}
+                    </TableCell>
+                    <TableCell>{formatDate(invoice.invoiceDate)}</TableCell>
+                    <TableCell className={invoice.isOverdue ? 'text-destructive font-medium' : ''}>
+                      {formatDate(invoice.dueDate)}
+                    </TableCell>
+                    <TableCell className="text-right">{formatPrice(invoice.totalGross)}</TableCell>
+                    <TableCell className={`text-right ${invoice.openAmount > 0 ? 'font-medium' : ''}`}>
+                      {formatPrice(invoice.openAmount)}
+                    </TableCell>
+                    <TableCell>
+                      <SupplierInvoiceStatusBadge status={invoice.status as InvoiceStatus} />
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
                           <DropdownMenuItem
                             onClick={(e) => {
                               e.stopPropagation()
                               router.push(`/warehouse/supplier-invoices/${invoice.id}`)
                             }}
                           >
-                            <Edit className="h-4 w-4 mr-2" />
-                            {t('actionEdit')}
+                            <Eye className="h-4 w-4 mr-2" />
+                            {t('actionView')}
                           </DropdownMenuItem>
-                        )}
-                        {(invoice.status === 'OPEN' || invoice.status === 'PARTIAL') && (
-                          <>
+                          {invoice.status === 'OPEN' && (
                             <DropdownMenuItem
                               onClick={(e) => {
                                 e.stopPropagation()
                                 router.push(`/warehouse/supplier-invoices/${invoice.id}`)
                               }}
                             >
-                              <CreditCard className="h-4 w-4 mr-2" />
-                              {t('actionRecordPayment')}
+                              <Edit className="h-4 w-4 mr-2" />
+                              {t('actionEdit')}
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setCancelTarget({ id: invoice.id, number: invoice.number })
-                              }}
-                            >
-                              <XCircle className="h-4 w-4 mr-2" />
-                              {t('actionCancel')}
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                          )}
+                          {(invoice.status === 'OPEN' || invoice.status === 'PARTIAL') && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  router.push(`/warehouse/supplier-invoices/${invoice.id}`)
+                                }}
+                              >
+                                <CreditCard className="h-4 w-4 mr-2" />
+                                {t('actionRecordPayment')}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setCancelTarget({ id: invoice.id, number: invoice.number })
+                                }}
+                              >
+                                <XCircle className="h-4 w-4 mr-2" />
+                                {t('actionCancel')}
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
 
           {/* Pagination */}
           {data.total > 25 && (
             <div className="flex items-center justify-between px-2">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 {data.total} {t('summaryInvoiceCount')}
               </p>
               <div className="flex gap-2">

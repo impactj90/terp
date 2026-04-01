@@ -204,9 +204,9 @@ export function WithdrawalTerminal() {
   const totalQuantity = state.items.reduce((sum, item) => sum + item.quantity, 0)
 
   return (
-    <div className="space-y-6">
-      {/* Step indicator */}
-      <div className="flex items-center gap-1">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Step indicator — scrollable on mobile */}
+      <div className="flex items-center gap-1 overflow-x-auto pb-1">
         {STEPS.map(({ num, key }, idx) => {
           const isActive = state.step === num
           const isCompleted = state.step > num
@@ -214,7 +214,7 @@ export function WithdrawalTerminal() {
             <React.Fragment key={num}>
               {idx > 0 && (
                 <div className={cn(
-                  'h-px w-8 mx-1 transition-colors',
+                  'h-px w-6 sm:w-8 mx-0.5 sm:mx-1 shrink-0 transition-colors',
                   isCompleted ? 'bg-primary' : 'bg-border'
                 )} />
               )}
@@ -225,14 +225,14 @@ export function WithdrawalTerminal() {
                 }}
                 disabled={!isCompleted}
                 className={cn(
-                  'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all',
+                  'flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap shrink-0',
                   isActive && 'bg-primary text-primary-foreground shadow-sm',
                   isCompleted && 'bg-muted text-foreground hover:bg-accent cursor-pointer',
                   !isActive && !isCompleted && 'bg-muted text-muted-foreground cursor-default',
                 )}
               >
                 {isCompleted ? (
-                  <Check className="h-4 w-4" />
+                  <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 ) : (
                   <span className={cn(
                     'flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold',
@@ -326,7 +326,7 @@ export function WithdrawalTerminal() {
                       }
                     }}
                     placeholder={getReferencePlaceholder()}
-                    className="mt-1.5 max-w-md font-mono"
+                    className="mt-1.5 w-full sm:max-w-md font-mono text-base sm:text-sm"
                     autoFocus
                   />
                 </div>
@@ -350,7 +350,7 @@ export function WithdrawalTerminal() {
             <Button
               disabled={!canProceedFromStep1()}
               onClick={() => setStep(2)}
-              className="gap-2"
+              className="gap-2 min-h-[44px] sm:min-h-0 w-full sm:w-auto"
             >
               {t('actionNext')}
               <ArrowRight className="h-4 w-4" />
@@ -378,7 +378,7 @@ export function WithdrawalTerminal() {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Article Search */}
-            <div className="max-w-md">
+            <div className="w-full sm:max-w-md">
               <Label className="text-sm font-medium">{t('searchArticle')}</Label>
               <div className="mt-1.5">
                 <ArticleSearchPopover
@@ -391,32 +391,71 @@ export function WithdrawalTerminal() {
 
             {/* Article Table */}
             {state.items.length > 0 ? (
-              <div className="rounded-lg border overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead>{t('colArticleNumber')}</TableHead>
-                      <TableHead>{t('colArticle')}</TableHead>
-                      <TableHead className="text-right">{t('colCurrentStock')}</TableHead>
-                      <TableHead>{t('colWithdrawQuantity')}</TableHead>
-                      <TableHead>{t('colUnit')}</TableHead>
-                      <TableHead></TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {state.items.map((item) => (
-                      <WithdrawalArticleRow
-                        key={item.articleId}
-                        article={item.article}
-                        quantity={item.quantity}
-                        onChange={updateQuantity}
-                        onRemove={removeArticle}
-                      />
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <>
+                {/* Mobile: card-based article list */}
+                <div className="divide-y rounded-lg border sm:hidden">
+                  {state.items.map((item) => (
+                    <div key={item.articleId} className="p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{item.article.name}</p>
+                          <p className="text-xs font-mono text-muted-foreground">{item.article.number}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {t('colCurrentStock')}: {item.article.currentStock} {item.article.unit}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            min={1}
+                            max={item.article.currentStock}
+                            value={item.quantity}
+                            onChange={(e) => updateQuantity(item.articleId, parseInt(e.target.value) || 1)}
+                            className="w-20 h-10 rounded-md border bg-background px-3 text-right text-base font-mono"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-10 w-10 text-destructive shrink-0"
+                            onClick={() => removeArticle(item.articleId)}
+                          >
+                            &times;
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop: table */}
+                <div className="hidden sm:block rounded-lg border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead>{t('colArticleNumber')}</TableHead>
+                        <TableHead>{t('colArticle')}</TableHead>
+                        <TableHead className="text-right">{t('colCurrentStock')}</TableHead>
+                        <TableHead>{t('colWithdrawQuantity')}</TableHead>
+                        <TableHead>{t('colUnit')}</TableHead>
+                        <TableHead></TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {state.items.map((item) => (
+                        <WithdrawalArticleRow
+                          key={item.articleId}
+                          article={item.article}
+                          quantity={item.quantity}
+                          onChange={updateQuantity}
+                          onRemove={removeArticle}
+                        />
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             ) : (
               <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12 text-center">
                 <PackageOpen className="h-10 w-10 text-muted-foreground/40 mb-3" />
@@ -518,14 +557,14 @@ export function WithdrawalTerminal() {
             )}
 
             {/* Actions */}
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 pt-2">
               <Button variant="ghost" onClick={() => setStep(2)}>
                 {t('actionBack')}
               </Button>
               <Button
                 onClick={handleWithdraw}
                 disabled={batchMutation.isPending}
-                className="gap-2"
+                className="gap-2 min-h-[48px] sm:min-h-0 text-base sm:text-sm"
                 variant="destructive"
               >
                 {batchMutation.isPending ? (

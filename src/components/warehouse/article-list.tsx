@@ -109,84 +109,44 @@ export function ArticleList({
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          {onSelectionChange && (
-            <TableHead className="w-[40px]">
-              <Checkbox
-                checked={allSelected ? true : someSelected ? 'indeterminate' : false}
-                onCheckedChange={(checked) => toggleAll(!!checked)}
-                aria-label="Select all"
-              />
-            </TableHead>
-          )}
-          <TableHead className="w-[50px]">{t('colThumbnail')}</TableHead>
-          <TableHead className="w-[120px]">{t('colNumber')}</TableHead>
-          <TableHead>{t('colName')}</TableHead>
-          <TableHead>{t('colGroup')}</TableHead>
-          <TableHead className="w-[80px]">{t('colUnit')}</TableHead>
-          <TableHead className="w-[120px] text-right">{t('colSellPrice')}</TableHead>
-          <TableHead className="w-[100px] text-right">{t('colStock')}</TableHead>
-          <TableHead className="w-[80px]">{t('colStatus')}</TableHead>
-          <TableHead className="w-[60px]" />
-        </TableRow>
-      </TableHeader>
-      <TableBody>
+    <>
+      {/* Mobile: card list */}
+      <div className="divide-y sm:hidden">
         {articles.map((article) => (
-          <TableRow
+          <div
             key={article.id}
-            className={`cursor-pointer ${article.stockTracking && article.currentStock < 0 ? 'bg-destructive/5' : ''}`}
+            className={`flex items-center gap-3 p-3 active:bg-muted/50 cursor-pointer ${article.stockTracking && article.currentStock < 0 ? 'bg-destructive/5' : ''}`}
             onClick={() => onView(article)}
           >
-            {onSelectionChange && (
-              <TableCell className="w-[40px]" onClick={(e) => e.stopPropagation()}>
-                <Checkbox
-                  checked={selectedIds?.has(article.id) ?? false}
-                  onCheckedChange={(checked) => toggleOne(article.id, !!checked)}
-                  aria-label={`Select ${article.name}`}
-                />
-              </TableCell>
+            {article.primaryImageThumbnailUrl ? (
+              <img
+                src={article.primaryImageThumbnailUrl}
+                alt={article.name}
+                className="h-10 w-10 rounded object-cover shrink-0"
+              />
+            ) : (
+              <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0">
+                <ImageIcon className="h-4 w-4 text-muted-foreground" />
+              </div>
             )}
-            <TableCell className="w-[50px]">
-              {article.primaryImageThumbnailUrl ? (
-                <img
-                  src={article.primaryImageThumbnailUrl}
-                  alt={article.name}
-                  className="h-8 w-8 rounded object-cover"
-                />
-              ) : (
-                <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
-                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                </div>
-              )}
-            </TableCell>
-            <TableCell className="font-mono text-sm">{article.number}</TableCell>
-            <TableCell className="font-medium">{article.name}</TableCell>
-            <TableCell className="text-muted-foreground">
-              {article.group?.name || '—'}
-            </TableCell>
-            <TableCell>{article.unit}</TableCell>
-            <TableCell className="text-right">{formatPrice(article.sellPrice)}</TableCell>
-            <TableCell className={`text-right ${article.stockTracking && article.currentStock < 0 ? 'text-destructive font-medium' : ''}`}>
-              {article.stockTracking ? article.currentStock : '—'}
-            </TableCell>
-            <TableCell>
-              {article.isActive ? (
-                <Badge variant="default">{t('statusActive')}</Badge>
-              ) : (
-                <Badge variant="secondary">{t('statusInactive')}</Badge>
-              )}
-            </TableCell>
-            <TableCell>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{article.name}</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-xs text-muted-foreground font-mono">{article.number}</span>
+                {article.stockTracking && (
+                  <span className={`text-xs font-medium ${article.currentStock < 0 ? 'text-destructive' : ''}`}>
+                    {article.currentStock} {article.unit}
+                  </span>
+                )}
+                {!article.isActive && (
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{t('statusInactive')}</Badge>
+                )}
+              </div>
+            </div>
+            <div onClick={(e) => e.stopPropagation()}>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -200,10 +160,7 @@ export function ArticleList({
                     {t('actionEdit')}
                   </DropdownMenuItem>
                   {article.isActive ? (
-                    <DropdownMenuItem
-                      onClick={() => onDelete(article)}
-                      className="text-destructive"
-                    >
+                    <DropdownMenuItem onClick={() => onDelete(article)} className="text-destructive">
                       <Trash2 className="h-4 w-4 mr-2" />
                       {t('actionDeactivate')}
                     </DropdownMenuItem>
@@ -217,10 +174,127 @@ export function ArticleList({
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
-            </TableCell>
-          </TableRow>
+            </div>
+          </div>
         ))}
-      </TableBody>
-    </Table>
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden sm:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {onSelectionChange && (
+                <TableHead className="w-[40px]">
+                  <Checkbox
+                    checked={allSelected ? true : someSelected ? 'indeterminate' : false}
+                    onCheckedChange={(checked) => toggleAll(!!checked)}
+                    aria-label="Select all"
+                  />
+                </TableHead>
+              )}
+              <TableHead className="w-[50px]">{t('colThumbnail')}</TableHead>
+              <TableHead className="w-[120px]">{t('colNumber')}</TableHead>
+              <TableHead>{t('colName')}</TableHead>
+              <TableHead>{t('colGroup')}</TableHead>
+              <TableHead className="w-[80px]">{t('colUnit')}</TableHead>
+              <TableHead className="w-[120px] text-right">{t('colSellPrice')}</TableHead>
+              <TableHead className="w-[100px] text-right">{t('colStock')}</TableHead>
+              <TableHead className="w-[80px]">{t('colStatus')}</TableHead>
+              <TableHead className="w-[60px]" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {articles.map((article) => (
+              <TableRow
+                key={article.id}
+                className={`cursor-pointer ${article.stockTracking && article.currentStock < 0 ? 'bg-destructive/5' : ''}`}
+                onClick={() => onView(article)}
+              >
+                {onSelectionChange && (
+                  <TableCell className="w-[40px]" onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={selectedIds?.has(article.id) ?? false}
+                      onCheckedChange={(checked) => toggleOne(article.id, !!checked)}
+                      aria-label={`Select ${article.name}`}
+                    />
+                  </TableCell>
+                )}
+                <TableCell className="w-[50px]">
+                  {article.primaryImageThumbnailUrl ? (
+                    <img
+                      src={article.primaryImageThumbnailUrl}
+                      alt={article.name}
+                      className="h-8 w-8 rounded object-cover"
+                    />
+                  ) : (
+                    <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
+                      <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell className="font-mono text-sm">{article.number}</TableCell>
+                <TableCell className="font-medium">{article.name}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {article.group?.name || '—'}
+                </TableCell>
+                <TableCell>{article.unit}</TableCell>
+                <TableCell className="text-right">{formatPrice(article.sellPrice)}</TableCell>
+                <TableCell className={`text-right ${article.stockTracking && article.currentStock < 0 ? 'text-destructive font-medium' : ''}`}>
+                  {article.stockTracking ? article.currentStock : '—'}
+                </TableCell>
+                <TableCell>
+                  {article.isActive ? (
+                    <Badge variant="default">{t('statusActive')}</Badge>
+                  ) : (
+                    <Badge variant="secondary">{t('statusInactive')}</Badge>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => onView(article)}>
+                        <Eye className="h-4 w-4 mr-2" />
+                        {t('actionView')}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onEdit(article)}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        {t('actionEdit')}
+                      </DropdownMenuItem>
+                      {article.isActive ? (
+                        <DropdownMenuItem
+                          onClick={() => onDelete(article)}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          {t('actionDeactivate')}
+                        </DropdownMenuItem>
+                      ) : (
+                        onRestore && (
+                          <DropdownMenuItem onClick={() => onRestore(article)}>
+                            <RotateCcw className="h-4 w-4 mr-2" />
+                            {t('actionRestore')}
+                          </DropdownMenuItem>
+                        )
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </>
   )
 }

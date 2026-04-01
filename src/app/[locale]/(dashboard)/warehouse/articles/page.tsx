@@ -155,37 +155,42 @@ export default function WhArticlesPage() {
   const totalPages = data ? Math.ceil(data.total / 25) : 0
 
   return (
-    <div className="space-y-4 p-6">
+    <div className="space-y-4 p-4 sm:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{t('pageTitle')}</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl sm:text-2xl font-bold">{t('pageTitle')}</h1>
         <div className="flex gap-2">
           <Button
             variant="outline"
+            size="sm"
             onClick={handlePrintLabels}
             disabled={generateLabelPdf.isPending || generateAllLabelsPdf.isPending}
+            className="sm:size-default"
           >
             <QrCode className="h-4 w-4 mr-2" />
-            {selectedIds.size > 0
-              ? t('actionPrintLabels')
-              : t('actionPrintAllLabels')}
+            <span className="hidden sm:inline">
+              {selectedIds.size > 0
+                ? t('actionPrintLabels')
+                : t('actionPrintAllLabels')}
+            </span>
+            <span className="sm:hidden">QR</span>
             {selectedIds.size > 0 && (
               <span className="ml-1 text-xs text-muted-foreground">
                 ({selectedIds.size})
               </span>
             )}
           </Button>
-          <Button onClick={() => setCreateOpen(true)}>
+          <Button size="sm" onClick={() => setCreateOpen(true)} className="sm:size-default">
             <Plus className="h-4 w-4 mr-2" />
             {t('actionCreate')}
           </Button>
         </div>
       </div>
 
-      {/* Two-panel layout */}
+      {/* Two-panel layout — sidebar hidden on mobile */}
       <div className="flex gap-6">
-        {/* Left panel: Group tree */}
-        <Card className="w-64 shrink-0">
+        {/* Left panel: Group tree — hidden on mobile */}
+        <Card className="hidden md:block w-64 shrink-0">
           <CardContent className="p-3">
             <ArticleGroupTree
               selectedGroupId={selectedGroupId}
@@ -199,9 +204,9 @@ export default function WhArticlesPage() {
         </Card>
 
         {/* Right panel: Article table */}
-        <div className="flex-1 space-y-4">
+        <div className="flex-1 min-w-0 space-y-4">
           {/* Toolbar */}
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3">
             <SearchInput
               value={search}
               onChange={(val) => {
@@ -209,7 +214,7 @@ export default function WhArticlesPage() {
                 setPage(1)
               }}
               placeholder={t('searchPlaceholder')}
-              className="max-w-sm"
+              className="w-full sm:max-w-sm"
             />
             <div className="flex items-center gap-2">
               <Label htmlFor="activeFilter" className="text-sm whitespace-nowrap">

@@ -128,7 +128,64 @@ export function WithdrawalHistory() {
         </div>
       ) : (
         <>
-          <div className="rounded-lg border overflow-hidden">
+          {/* Mobile: card list */}
+          <div className="divide-y rounded-lg border sm:hidden">
+            {data.items.map((movement) => {
+              const isReversal = movement.quantity > 0
+              return (
+                <div key={movement.id} className="p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{movement.article?.name}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs font-mono text-muted-foreground">{movement.article?.number}</span>
+                        <span
+                          className={cn(
+                            'inline-flex items-center gap-1 rounded-full border px-1.5 py-0 text-[10px] font-medium whitespace-nowrap [&>svg]:size-2.5',
+                            isReversal
+                              ? 'text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
+                              : 'text-red-700 border-red-300 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800'
+                          )}
+                        >
+                          {isReversal ? (
+                            <><Undo2 /> {t('reversalLabel')}</>
+                          ) : (
+                            <><PackageMinus /> {t('withdrawalLabel')}</>
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0 ml-3">
+                      <span className={cn(
+                        'text-sm font-mono font-semibold',
+                        movement.quantity > 0
+                          ? 'text-green-600 dark:text-green-400'
+                          : 'text-red-600 dark:text-red-400'
+                      )}>
+                        {formatQuantity(movement.quantity)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-xs text-muted-foreground">{formatDate(movement.date)}</span>
+                    {!isReversal && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs text-red-600"
+                        onClick={() => setCancelMovementId(movement.id)}
+                      >
+                        {t('actionCancelWithdrawal')}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Desktop: table */}
+          <div className="hidden sm:block rounded-lg border overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">

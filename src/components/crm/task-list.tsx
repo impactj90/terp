@@ -191,8 +191,8 @@ export function TaskList({ addressId, inquiryId }: TaskListProps) {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={t('searchPlaceholder')}
@@ -204,52 +204,55 @@ export function TaskList({ addressId, inquiryId }: TaskListProps) {
             className="pl-9"
           />
         </div>
-        <Select
-          value={statusFilter}
-          onValueChange={(v) => {
-            setStatusFilter(v)
-            setPage(1)
-          }}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('allStatus')}</SelectItem>
-            <SelectItem value="OPEN">{t('statusOpen')}</SelectItem>
-            <SelectItem value="IN_PROGRESS">{t('statusInProgress')}</SelectItem>
-            <SelectItem value="COMPLETED">{t('statusCompleted')}</SelectItem>
-            <SelectItem value="CANCELLED">{t('statusCancelled')}</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select
-          value={typeFilter}
-          onValueChange={(v) => {
-            setTypeFilter(v)
-            setPage(1)
-          }}
-        >
-          <SelectTrigger className="w-[160px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('allTypes')}</SelectItem>
-            <SelectItem value="TASK">{t('typeTask')}</SelectItem>
-            <SelectItem value="MESSAGE">{t('typeMessage')}</SelectItem>
-          </SelectContent>
-        </Select>
-        {!addressId && !inquiryId && (
-          <Button
-            variant={myTasksMode ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => {
-              setMyTasksMode(!myTasksMode)
+        <div className="flex items-center gap-2">
+          <Select
+            value={statusFilter}
+            onValueChange={(v) => {
+              setStatusFilter(v)
               setPage(1)
             }}
           >
-            {myTasksMode ? t('allTasks') : t('myTasks')}
-          </Button>
-        )}
+            <SelectTrigger className="flex-1 sm:w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('allStatus')}</SelectItem>
+              <SelectItem value="OPEN">{t('statusOpen')}</SelectItem>
+              <SelectItem value="IN_PROGRESS">{t('statusInProgress')}</SelectItem>
+              <SelectItem value="COMPLETED">{t('statusCompleted')}</SelectItem>
+              <SelectItem value="CANCELLED">{t('statusCancelled')}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={typeFilter}
+            onValueChange={(v) => {
+              setTypeFilter(v)
+              setPage(1)
+            }}
+          >
+            <SelectTrigger className="flex-1 sm:w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('allTypes')}</SelectItem>
+              <SelectItem value="TASK">{t('typeTask')}</SelectItem>
+              <SelectItem value="MESSAGE">{t('typeMessage')}</SelectItem>
+            </SelectContent>
+          </Select>
+          {!addressId && !inquiryId && (
+            <Button
+              variant={myTasksMode ? 'default' : 'outline'}
+              size="sm"
+              className="shrink-0"
+              onClick={() => {
+                setMyTasksMode(!myTasksMode)
+                setPage(1)
+              }}
+            >
+              {myTasksMode ? t('allTasks') : t('myTasks')}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Table */}
@@ -259,106 +262,174 @@ export function TaskList({ addressId, inquiryId }: TaskListProps) {
         <p className="text-sm text-muted-foreground py-4">{t('noEntries')}</p>
       ) : (
         <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10">{t('type')}</TableHead>
-                <TableHead>{t('subject')}</TableHead>
-                <TableHead>{t('assignees')}</TableHead>
-                <TableHead>{t('dueDate')}</TableHead>
-                <TableHead>{t('status')}</TableHead>
-                <TableHead className="w-16">
-                  <span className="sr-only">{t('actions')}</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((item) => (
-                <TableRow
-                  key={item.id}
-                  className="cursor-pointer"
-                  onClick={() => setDetailItem(item)}
-                >
-                  <TableCell>
-                    {item.type === 'TASK' ? (
-                      <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </TableCell>
-                  <TableCell className="font-medium max-w-[300px] truncate">
-                    {item.subject}
-                  </TableCell>
-                  <TableCell className="max-w-[200px] truncate">
-                    {getAssigneeNames(item) || '\u2014'}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {item.type === 'TASK' ? formatDate(item.dueAt) : '\u2014'}
-                  </TableCell>
-                  <TableCell>
+          {/* Mobile: card list */}
+          <div className="divide-y sm:hidden">
+            {items.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-start gap-3 p-3 active:bg-muted/50 cursor-pointer"
+                onClick={() => setDetailItem(item)}
+              >
+                <div className="mt-0.5 shrink-0">
+                  {item.type === 'TASK' ? (
+                    <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{item.subject}</p>
+                  <div className="flex items-center gap-2 mt-1">
                     <TaskStatusBadge status={item.status} />
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setDetailItem(item)
-                          }}
-                        >
-                          <Eye className="mr-2 h-4 w-4" />
-                          {t('view')}
-                        </DropdownMenuItem>
-                        {item.status !== 'COMPLETED' && item.status !== 'CANCELLED' && (
-                          <>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleEdit(item)
-                              }}
-                            >
-                              <Edit className="mr-2 h-4 w-4" />
-                              {t('edit')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleComplete(item.id)
-                              }}
-                            >
-                              <CheckCircle className="mr-2 h-4 w-4" />
-                              {t('complete')}
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setDeleteItem({ id: item.id, subject: item.subject })
-                          }}
-                          className="text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          {t('delete')}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+                    {item.type === 'TASK' && item.dueAt && (
+                      <span className="text-xs text-muted-foreground">{formatDate(item.dueAt)}</span>
+                    )}
+                  </div>
+                  {getAssigneeNames(item) && (
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">{getAssigneeNames(item)}</p>
+                  )}
+                </div>
+                <div onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setDetailItem(item)}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        {t('view')}
+                      </DropdownMenuItem>
+                      {item.status !== 'COMPLETED' && item.status !== 'CANCELLED' && (
+                        <>
+                          <DropdownMenuItem onClick={() => handleEdit(item)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            {t('edit')}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleComplete(item.id)}>
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                            {t('complete')}
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                      <DropdownMenuItem
+                        onClick={() => setDeleteItem({ id: item.id, subject: item.subject })}
+                        className="text-destructive"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        {t('delete')}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: table */}
+          <div className="hidden sm:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-10">{t('type')}</TableHead>
+                  <TableHead>{t('subject')}</TableHead>
+                  <TableHead>{t('assignees')}</TableHead>
+                  <TableHead>{t('dueDate')}</TableHead>
+                  <TableHead>{t('status')}</TableHead>
+                  <TableHead className="w-16">
+                    <span className="sr-only">{t('actions')}</span>
+                  </TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {items.map((item) => (
+                  <TableRow
+                    key={item.id}
+                    className="cursor-pointer"
+                    onClick={() => setDetailItem(item)}
+                  >
+                    <TableCell>
+                      {item.type === 'TASK' ? (
+                        <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </TableCell>
+                    <TableCell className="font-medium max-w-[300px] truncate">
+                      {item.subject}
+                    </TableCell>
+                    <TableCell className="max-w-[200px] truncate">
+                      {getAssigneeNames(item) || '\u2014'}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {item.type === 'TASK' ? formatDate(item.dueAt) : '\u2014'}
+                    </TableCell>
+                    <TableCell>
+                      <TaskStatusBadge status={item.status} />
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setDetailItem(item)
+                            }}
+                          >
+                            <Eye className="mr-2 h-4 w-4" />
+                            {t('view')}
+                          </DropdownMenuItem>
+                          {item.status !== 'COMPLETED' && item.status !== 'CANCELLED' && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleEdit(item)
+                                }}
+                              >
+                                <Edit className="mr-2 h-4 w-4" />
+                                {t('edit')}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleComplete(item.id)
+                                }}
+                              >
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                {t('complete')}
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setDeleteItem({ id: item.id, subject: item.subject })
+                            }}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            {t('delete')}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
 
           {/* Pagination */}
           {totalPages > 1 && (

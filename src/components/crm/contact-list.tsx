@@ -17,7 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { MoreHorizontal, Edit, Trash2, Plus } from 'lucide-react'
+import { MoreHorizontal, Edit, Trash2, Plus, Phone, Mail } from 'lucide-react'
 
 interface CrmContact {
   id: string
@@ -56,39 +56,44 @@ export function ContactList({ contacts, onAdd, onEdit, onDelete }: ContactListPr
       {contacts.length === 0 ? (
         <p className="text-sm text-muted-foreground py-4">{t('emptyTitle')}</p>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t('labelName')}</TableHead>
-              <TableHead>{t('labelPosition')}</TableHead>
-              <TableHead>{t('labelDepartment')}</TableHead>
-              <TableHead>{t('labelPhone')}</TableHead>
-              <TableHead>{t('labelEmail')}</TableHead>
-              <TableHead className="w-24">{t('labelIsPrimary')}</TableHead>
-              <TableHead className="w-16">
-                <span className="sr-only">{t('columnActions')}</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        <>
+          {/* Mobile: card list */}
+          <div className="divide-y sm:hidden">
             {contacts.map((contact) => (
-              <TableRow key={contact.id}>
-                <TableCell className="font-medium">
-                  {[contact.salutation, contact.title, contact.firstName, contact.lastName].filter(Boolean).join(' ')}
-                </TableCell>
-                <TableCell>{contact.position || '—'}</TableCell>
-                <TableCell>{contact.department || '—'}</TableCell>
-                <TableCell>{contact.phone || '—'}</TableCell>
-                <TableCell>{contact.email || '—'}</TableCell>
-                <TableCell>
-                  {contact.isPrimary && (
-                    <Badge variant="default">{t('labelIsPrimary')}</Badge>
+              <div key={contact.id} className="flex items-start gap-3 p-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium truncate">
+                      {[contact.salutation, contact.title, contact.firstName, contact.lastName].filter(Boolean).join(' ')}
+                    </span>
+                    {contact.isPrimary && (
+                      <Badge variant="default" className="shrink-0">{t('labelIsPrimary')}</Badge>
+                    )}
+                  </div>
+                  {(contact.position || contact.department) && (
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                      {[contact.position, contact.department].filter(Boolean).join(' · ')}
+                    </p>
                   )}
-                </TableCell>
-                <TableCell>
+                  <div className="flex items-center gap-3 mt-1.5">
+                    {contact.phone && (
+                      <a href={`tel:${contact.phone}`} className="flex items-center gap-1 text-xs text-primary">
+                        <Phone className="h-3 w-3" />
+                        <span className="truncate">{contact.phone}</span>
+                      </a>
+                    )}
+                    {contact.email && (
+                      <a href={`mailto:${contact.email}`} className="flex items-center gap-1 text-xs text-primary truncate">
+                        <Mail className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{contact.email}</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
+                <div onClick={(e) => e.stopPropagation()}>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -97,20 +102,76 @@ export function ContactList({ contacts, onAdd, onEdit, onDelete }: ContactListPr
                         <Edit className="mr-2 h-4 w-4" />
                         {t('edit')}
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => onDelete(contact)}
-                        className="text-destructive"
-                      >
+                      <DropdownMenuItem onClick={() => onDelete(contact)} className="text-destructive">
                         <Trash2 className="mr-2 h-4 w-4" />
                         {t('delete')}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                </TableCell>
-              </TableRow>
+                </div>
+              </div>
             ))}
-          </TableBody>
-        </Table>
+          </div>
+
+          {/* Desktop: table */}
+          <div className="hidden sm:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('labelName')}</TableHead>
+                  <TableHead>{t('labelPosition')}</TableHead>
+                  <TableHead>{t('labelDepartment')}</TableHead>
+                  <TableHead>{t('labelPhone')}</TableHead>
+                  <TableHead>{t('labelEmail')}</TableHead>
+                  <TableHead className="w-24">{t('labelIsPrimary')}</TableHead>
+                  <TableHead className="w-16">
+                    <span className="sr-only">{t('columnActions')}</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {contacts.map((contact) => (
+                  <TableRow key={contact.id}>
+                    <TableCell className="font-medium">
+                      {[contact.salutation, contact.title, contact.firstName, contact.lastName].filter(Boolean).join(' ')}
+                    </TableCell>
+                    <TableCell>{contact.position || '—'}</TableCell>
+                    <TableCell>{contact.department || '—'}</TableCell>
+                    <TableCell>{contact.phone || '—'}</TableCell>
+                    <TableCell>{contact.email || '—'}</TableCell>
+                    <TableCell>
+                      {contact.isPrimary && (
+                        <Badge variant="default">{t('labelIsPrimary')}</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => onEdit(contact)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            {t('edit')}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => onDelete(contact)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            {t('delete')}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </>
       )}
     </div>
   )

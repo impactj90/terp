@@ -125,19 +125,19 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.push('/warehouse/articles')}>
+      <div className="space-y-3">
+        <div className="flex items-start gap-3 sm:gap-4">
+          <Button variant="ghost" size="icon" className="shrink-0 mt-0.5" onClick={() => router.push('/warehouse/articles')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-2xl font-bold flex flex-wrap items-center gap-1 sm:gap-2">
               <span className="font-mono">{article.number}</span>
-              <span>{article.name}</span>
+              <span className="truncate">{article.name}</span>
             </h1>
-            <div className="flex gap-2 mt-1">
+            <div className="flex flex-wrap gap-1.5 mt-1">
               {article.isActive ? (
                 <Badge variant="default">{t('statusActive')}</Badge>
               ) : (
@@ -152,15 +152,15 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 sm:justify-end">
           <Button
             variant="outline"
             size="sm"
             onClick={handlePrintLabel}
             disabled={generateLabelPdf.isPending}
           >
-            <QrCode className="h-4 w-4 mr-2" />
-            {t('actionPrintLabel')}
+            <QrCode className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">{t('actionPrintLabel')}</span>
           </Button>
           {article.stockTracking && (
             <Button
@@ -168,13 +168,13 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
               size="sm"
               onClick={() => setStockAdjustOpen(true)}
             >
-              <Package className="h-4 w-4 mr-2" />
-              {t('actionAdjustStock')}
+              <Package className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">{t('actionAdjustStock')}</span>
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-            <Edit className="h-4 w-4 mr-2" />
-            {t('actionEdit')}
+            <Edit className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">{t('actionEdit')}</span>
           </Button>
           {article.isActive ? (
             <Button
@@ -182,13 +182,13 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
               size="sm"
               onClick={() => setDeleteOpen(true)}
             >
-              <Trash2 className="h-4 w-4 mr-2" />
-              {t('actionDeactivate')}
+              <Trash2 className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">{t('actionDeactivate')}</span>
             </Button>
           ) : (
             <Button variant="outline" size="sm" onClick={handleRestore}>
-              <RotateCcw className="h-4 w-4 mr-2" />
-              {t('actionRestore')}
+              <RotateCcw className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">{t('actionRestore')}</span>
             </Button>
           )}
         </div>
@@ -196,7 +196,7 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
 
       {/* Tabs */}
       <Tabs defaultValue="overview">
-        <TabsList>
+        <TabsList className="max-w-full overflow-x-auto">
           <TabsTrigger value="overview">{t('tabOverview')}</TabsTrigger>
           <TabsTrigger value="suppliers">{t('tabSuppliers')}</TabsTrigger>
           <TabsTrigger value="bom">{t('tabBom')}</TabsTrigger>

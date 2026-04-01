@@ -156,7 +156,7 @@ export function ReorderSuggestionsList() {
             setSelected(new Set())
           }}
         >
-          <SelectTrigger className="w-[220px]">
+          <SelectTrigger className="w-full sm:w-[220px]">
             <SelectValue placeholder={t('suggestionsFilterSupplier')} />
           </SelectTrigger>
           <SelectContent>
@@ -173,12 +173,14 @@ export function ReorderSuggestionsList() {
           </SelectContent>
         </Select>
 
-        <Button variant="outline" size="sm" onClick={selectAll}>
-          {t('suggestionsSelectAll')}
-        </Button>
-        <Button variant="outline" size="sm" onClick={deselectAll}>
-          {t('suggestionsDeselectAll')}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={selectAll}>
+            {t('suggestionsSelectAll')}
+          </Button>
+          <Button variant="outline" size="sm" onClick={deselectAll}>
+            {t('suggestionsDeselectAll')}
+          </Button>
+        </div>
 
         {selected.size > 0 && (
           <span className="text-sm text-muted-foreground">
@@ -186,8 +188,10 @@ export function ReorderSuggestionsList() {
           </span>
         )}
 
-        <div className="flex-1" />
+        <div className="hidden sm:block flex-1" />
         <Button
+          size="sm"
+          className="w-full sm:w-auto sm:size-default"
           onClick={handleCreatePO}
           disabled={selected.size === 0 || createFromSuggestions.isPending}
         >
@@ -212,65 +216,105 @@ export function ReorderSuggestionsList() {
           {t('suggestionsNoResults')}
         </div>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[40px]" />
-              <TableHead>{t('suggestionsColArticle')}</TableHead>
-              <TableHead className="w-[100px] text-right">
-                {t('suggestionsColCurrentStock')}
-              </TableHead>
-              <TableHead className="w-[100px] text-right">
-                {t('suggestionsColMinStock')}
-              </TableHead>
-              <TableHead className="w-[100px] text-right">
-                {t('suggestionsColDeficit')}
-              </TableHead>
-              <TableHead>{t('suggestionsColSupplier')}</TableHead>
-              <TableHead className="w-[100px] text-right">
-                {t('suggestionsColSuggestedQty')}
-              </TableHead>
-              <TableHead className="w-[100px] text-right">
-                {t('suggestionsColUnitPrice')}
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        <>
+          {/* Mobile: card list */}
+          <div className="divide-y sm:hidden">
             {items.map((item) => (
-              <TableRow key={item.articleId}>
-                <TableCell>
-                  <Checkbox
-                    checked={selected.has(item.articleId)}
-                    onCheckedChange={() => toggleSelect(item.articleId)}
-                    disabled={!item.supplierId}
-                  />
-                </TableCell>
-                <TableCell>
-                  <span className="font-mono text-xs mr-2">
-                    {item.articleNumber}
-                  </span>
-                  {item.articleName}
-                </TableCell>
-                <TableCell className="text-right">
-                  {item.currentStock}
-                </TableCell>
-                <TableCell className="text-right">{item.minStock}</TableCell>
-                <TableCell className="text-right font-medium text-destructive">
-                  {item.deficit}
-                </TableCell>
-                <TableCell>
-                  {item.supplierName || '\u2014'}
-                </TableCell>
-                <TableCell className="text-right font-medium">
-                  {item.suggestedQty}
-                </TableCell>
-                <TableCell className="text-right">
-                  {formatPrice(item.unitPrice)}
-                </TableCell>
-              </TableRow>
+              <div
+                key={item.articleId}
+                className="flex items-start gap-3 p-3"
+                onClick={() => item.supplierId && toggleSelect(item.articleId)}
+              >
+                <Checkbox
+                  checked={selected.has(item.articleId)}
+                  onCheckedChange={() => toggleSelect(item.articleId)}
+                  disabled={!item.supplierId}
+                  className="mt-0.5"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{item.articleName}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs font-mono text-muted-foreground">{item.articleNumber}</span>
+                    {item.supplierName && (
+                      <span className="text-xs text-muted-foreground truncate">{item.supplierName}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 mt-1 text-xs">
+                    <span>{t('suggestionsColCurrentStock')}: <span className="font-mono">{item.currentStock}</span></span>
+                    <span className="text-destructive font-medium">{t('suggestionsColDeficit')}: {item.deficit}</span>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-sm font-medium font-mono">{item.suggestedQty}</p>
+                  <p className="text-xs text-muted-foreground">{formatPrice(item.unitPrice)}</p>
+                </div>
+              </div>
             ))}
-          </TableBody>
-        </Table>
+          </div>
+
+          {/* Desktop: table */}
+          <div className="hidden sm:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[40px]" />
+                  <TableHead>{t('suggestionsColArticle')}</TableHead>
+                  <TableHead className="w-[100px] text-right">
+                    {t('suggestionsColCurrentStock')}
+                  </TableHead>
+                  <TableHead className="w-[100px] text-right">
+                    {t('suggestionsColMinStock')}
+                  </TableHead>
+                  <TableHead className="w-[100px] text-right">
+                    {t('suggestionsColDeficit')}
+                  </TableHead>
+                  <TableHead>{t('suggestionsColSupplier')}</TableHead>
+                  <TableHead className="w-[100px] text-right">
+                    {t('suggestionsColSuggestedQty')}
+                  </TableHead>
+                  <TableHead className="w-[100px] text-right">
+                    {t('suggestionsColUnitPrice')}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.map((item) => (
+                  <TableRow key={item.articleId}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selected.has(item.articleId)}
+                        onCheckedChange={() => toggleSelect(item.articleId)}
+                        disabled={!item.supplierId}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-mono text-xs mr-2">
+                        {item.articleNumber}
+                      </span>
+                      {item.articleName}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {item.currentStock}
+                    </TableCell>
+                    <TableCell className="text-right">{item.minStock}</TableCell>
+                    <TableCell className="text-right font-medium text-destructive">
+                      {item.deficit}
+                    </TableCell>
+                    <TableCell>
+                      {item.supplierName || '\u2014'}
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      {item.suggestedQty}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {formatPrice(item.unitPrice)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </>
       )}
     </div>
   )

@@ -197,6 +197,30 @@ export default function CrmAddressDetailPage() {
           </div>
         )}
 
+        {/* Mobile action buttons */}
+        <div className="flex items-center gap-2 sm:hidden">
+          {!address.isActive && (
+            <Button variant="outline" size="sm" className="min-h-[44px] flex-1" onClick={handleRestore}>
+              {t('restore')}
+            </Button>
+          )}
+          <Button variant="outline" size="sm" className="min-h-[44px] flex-1" onClick={() => setEditOpen(true)}>
+            <Edit className="mr-2 h-4 w-4" />
+            {t('edit')}
+          </Button>
+          {address.isActive && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="min-h-[44px] flex-1 text-destructive"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {t('deactivate')}
+            </Button>
+          )}
+        </div>
+
         {/* Desktop action buttons */}
         <div className="hidden sm:flex items-center gap-2">
           {!address.isActive && (

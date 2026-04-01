@@ -154,18 +154,19 @@ export function PurchaseOrderForm({ purchaseOrder, onSuccess }: PurchaseOrderFor
   }
 
   return (
-    <div className="p-6 max-w-3xl">
+    <div className="p-4 sm:p-6 max-w-3xl">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
         <Button
           variant="ghost"
           size="icon"
+          className="shrink-0"
           onClick={() => router.push('/warehouse/purchase-orders')}
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+        <div className="min-w-0">
+          <h1 className="text-lg sm:text-2xl font-bold flex flex-wrap items-center gap-2">
             {isEdit && purchaseOrder?.number && (
               <span className="font-mono text-muted-foreground">{purchaseOrder.number}</span>
             )}

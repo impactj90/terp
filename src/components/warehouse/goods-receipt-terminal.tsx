@@ -161,16 +161,16 @@ export function GoodsReceiptTerminal() {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">{t('pageTitle')}</h1>
+    <div className="space-y-4 sm:space-y-6">
+      <h1 className="text-xl sm:text-2xl font-bold">{t('pageTitle')}</h1>
 
-      {/* Step indicator */}
-      <div className="flex items-center gap-2">
+      {/* Step indicator — scrollable on mobile */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
         {STEPS.map(({ num, key }, idx) => (
           <React.Fragment key={num}>
-            {idx > 0 && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+            {idx > 0 && <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
             <div
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm whitespace-nowrap shrink-0 ${
                 state.step === num
                   ? 'bg-primary text-primary-foreground'
                   : state.step > num
@@ -179,7 +179,7 @@ export function GoodsReceiptTerminal() {
               }`}
             >
               {state.step > num ? (
-                <Check className="h-4 w-4" />
+                <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               ) : (
                 <span className="font-mono">{num}</span>
               )}
@@ -322,37 +322,82 @@ export function GoodsReceiptTerminal() {
                     {t('clearAll')}
                   </Button>
                 </div>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('colArticleNumber')}</TableHead>
-                      <TableHead>{t('colArticle')}</TableHead>
-                      <TableHead className="text-right">{t('colOrdered')}</TableHead>
-                      <TableHead className="text-right">{t('colAlreadyReceived')}</TableHead>
-                      <TableHead className="text-right">{t('colRemaining')}</TableHead>
-                      <TableHead>{t('colReceiveNow')}</TableHead>
-                      <TableHead>{t('colUnit')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {orderDetail.positions
-                      .filter((pos) => pos.positionType === "ARTICLE" && pos.article != null)
-                      .map((pos) => (
-                      <GoodsReceiptPositionRow
-                        key={pos.id}
-                        position={{
-                          id: pos.id,
-                          articleId: pos.articleId!,
-                          article: pos.article!,
-                          quantity: pos.quantity ?? 0,
-                          receivedQuantity: pos.receivedQuantity,
-                        }}
-                        receiveQuantity={state.receiveQuantities.get(pos.id) || 0}
-                        onQuantityChange={setQuantity}
-                      />
-                    ))}
-                  </TableBody>
-                </Table>
+
+                {/* Mobile: card-based positions */}
+                <div className="divide-y sm:hidden">
+                  {orderDetail.positions
+                    .filter((pos) => pos.positionType === "ARTICLE" && pos.article != null)
+                    .map((pos) => {
+                      const remaining = (pos.quantity ?? 0) - pos.receivedQuantity
+                      const receiveQty = state.receiveQuantities.get(pos.id) || 0
+                      return (
+                        <div key={pos.id} className={`py-3 ${receiveQty > 0 ? 'bg-green-50 dark:bg-green-950/20 -mx-3 px-3' : ''}`}>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate">{pos.article!.name}</p>
+                              <p className="text-xs font-mono text-muted-foreground">{pos.article!.number}</p>
+                              <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
+                                <span>{t('colOrdered')}: {pos.quantity ?? 0}</span>
+                                <span>{t('colAlreadyReceived')}: {pos.receivedQuantity}</span>
+                                <span className="font-medium text-foreground">{t('colRemaining')}: {remaining}</span>
+                              </div>
+                            </div>
+                            {remaining > 0 && (
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                min={0}
+                                max={remaining}
+                                step={1}
+                                value={receiveQty || ''}
+                                onChange={(e) => {
+                                  const val = parseFloat(e.target.value) || 0
+                                  setQuantity(pos.id, Math.min(val, remaining))
+                                }}
+                                className="w-20 h-10 rounded-md border bg-background px-3 text-right text-base font-mono shrink-0"
+                                placeholder="0"
+                              />
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                </div>
+
+                {/* Desktop: table */}
+                <div className="hidden sm:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t('colArticleNumber')}</TableHead>
+                        <TableHead>{t('colArticle')}</TableHead>
+                        <TableHead className="text-right">{t('colOrdered')}</TableHead>
+                        <TableHead className="text-right">{t('colAlreadyReceived')}</TableHead>
+                        <TableHead className="text-right">{t('colRemaining')}</TableHead>
+                        <TableHead>{t('colReceiveNow')}</TableHead>
+                        <TableHead>{t('colUnit')}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {orderDetail.positions
+                        .filter((pos) => pos.positionType === "ARTICLE" && pos.article != null)
+                        .map((pos) => (
+                        <GoodsReceiptPositionRow
+                          key={pos.id}
+                          position={{
+                            id: pos.id,
+                            articleId: pos.articleId!,
+                            article: pos.article!,
+                            quantity: pos.quantity ?? 0,
+                            receivedQuantity: pos.receivedQuantity,
+                          }}
+                          receiveQuantity={state.receiveQuantities.get(pos.id) || 0}
+                          onQuantityChange={setQuantity}
+                        />
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </>
             )}
             <div className="mt-4 flex gap-2">
@@ -360,6 +405,7 @@ export function GoodsReceiptTerminal() {
                 {t('actionBack')}
               </Button>
               <Button
+                className="min-h-[44px] sm:min-h-0"
                 disabled={positionsToBook.length === 0}
                 onClick={() => setStep(4)}
               >
@@ -410,11 +456,12 @@ export function GoodsReceiptTerminal() {
               </TableBody>
             </Table>
 
-            <div className="mt-6 flex gap-2">
+            <div className="mt-6 flex flex-col-reverse sm:flex-row gap-2">
               <Button variant="ghost" onClick={() => setStep(3)}>
                 {t('actionBack')}
               </Button>
               <Button
+                className="min-h-[48px] sm:min-h-0 text-base sm:text-sm"
                 onClick={handleBook}
                 disabled={bookMutation.isPending}
               >

@@ -123,18 +123,18 @@ export default function WhReservationsPage() {
   const documentIds = [...new Set(items.filter(i => i.status === 'ACTIVE').map(i => i.documentId))]
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">{t('pageTitle')}</h1>
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t('pageTitle')}</h1>
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-3">
         <Select
           value={statusFilter}
           onValueChange={(v) => { setStatusFilter(v as typeof statusFilter); setPage(1) }}
         >
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue placeholder={t('filterStatus')} />
           </SelectTrigger>
           <SelectContent>
@@ -169,60 +169,96 @@ export default function WhReservationsPage() {
         <div className="p-4 text-muted-foreground text-sm">{t('emptyState')}</div>
       ) : (
         <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('colArticleNumber')}</TableHead>
-                <TableHead>{t('colArticleName')}</TableHead>
-                <TableHead className="text-right">{t('colQuantity')}</TableHead>
-                <TableHead>{t('colStatus')}</TableHead>
-                <TableHead>{t('colCreatedAt')}</TableHead>
-                {canManage && <TableHead>{t('colActions')}</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>{item.article?.number ?? '\u2014'}</TableCell>
-                  <TableCell>{item.article?.name ?? '\u2014'}</TableCell>
-                  <TableCell className="text-right">{item.quantity}</TableCell>
-                  <TableCell>
-                    <StatusBadge status={item.status} />
-                  </TableCell>
-                  <TableCell>
-                    {new Date(item.createdAt).toLocaleDateString('de-DE')}
-                  </TableCell>
-                  {canManage && (
-                    <TableCell>
-                      {item.status === 'ACTIVE' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleRelease(item.id)}
-                          disabled={releaseMut.isPending}
-                        >
-                          {t('actionRelease')}
-                        </Button>
-                      )}
-                    </TableCell>
-                  )}
+          {/* Mobile: card list */}
+          <div className="divide-y sm:hidden">
+            {items.map((item) => (
+              <div key={item.id} className="py-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{item.article?.name ?? '\u2014'}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-xs font-mono text-muted-foreground">{item.article?.number ?? '\u2014'}</span>
+                      <StatusBadge status={item.status} />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {new Date(item.createdAt).toLocaleDateString('de-DE')}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0 ml-3">
+                    <span className="text-sm font-mono font-medium">{item.quantity}</span>
+                    {canManage && item.status === 'ACTIVE' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRelease(item.id)}
+                        disabled={releaseMut.isPending}
+                      >
+                        {t('actionRelease')}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: table */}
+          <div className="hidden sm:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('colArticleNumber')}</TableHead>
+                  <TableHead>{t('colArticleName')}</TableHead>
+                  <TableHead className="text-right">{t('colQuantity')}</TableHead>
+                  <TableHead>{t('colStatus')}</TableHead>
+                  <TableHead>{t('colCreatedAt')}</TableHead>
+                  {canManage && <TableHead>{t('colActions')}</TableHead>}
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {items.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>{item.article?.number ?? '\u2014'}</TableCell>
+                    <TableCell>{item.article?.name ?? '\u2014'}</TableCell>
+                    <TableCell className="text-right">{item.quantity}</TableCell>
+                    <TableCell>
+                      <StatusBadge status={item.status} />
+                    </TableCell>
+                    <TableCell>
+                      {new Date(item.createdAt).toLocaleDateString('de-DE')}
+                    </TableCell>
+                    {canManage && (
+                      <TableCell>
+                        {item.status === 'ACTIVE' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRelease(item.id)}
+                            disabled={releaseMut.isPending}
+                          >
+                            {t('actionRelease')}
+                          </Button>
+                        )}
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-end gap-2">
+            <div className="flex items-center justify-center sm:justify-end gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 disabled={page === 1}
                 onClick={() => setPage((p) => p - 1)}
               >
-                Previous
+                &laquo;
               </Button>
-              <span className="text-sm text-muted-foreground">
+              <span className="text-xs sm:text-sm text-muted-foreground">
                 {page} / {totalPages}
               </span>
               <Button
@@ -231,7 +267,7 @@ export default function WhReservationsPage() {
                 disabled={page >= totalPages}
                 onClick={() => setPage((p) => p + 1)}
               >
-                Next
+                &raquo;
               </Button>
             </div>
           )}

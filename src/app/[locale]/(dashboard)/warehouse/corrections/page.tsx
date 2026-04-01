@@ -32,13 +32,13 @@ export default function WhCorrectionsPage() {
   if (authLoading || permLoading) return null
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
       {/* KPI Dashboard + Trigger */}
       <WhCorrectionDashboard />
 
       {/* Tabs: Messages / Run History */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'messages' | 'runs')}>
-        <TabsList>
+        <TabsList className="max-w-full overflow-x-auto">
           <TabsTrigger value="messages">{t('tabMessages')}</TabsTrigger>
           <TabsTrigger value="runs">{t('tabRuns')}</TabsTrigger>
         </TabsList>
