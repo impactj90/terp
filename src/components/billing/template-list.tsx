@@ -59,8 +59,8 @@ export function BillingTemplateList() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{t('title')}</h1>
-        <Button onClick={() => { setEditingId(null); setShowForm(true) }}>
+        <h1 className="text-lg sm:text-2xl font-bold">{t('title')}</h1>
+        <Button size="sm" onClick={() => { setEditingId(null); setShowForm(true) }}>
           <Plus className="h-4 w-4 mr-1" />
           {t('newTemplate')}
         </Button>
@@ -78,24 +78,22 @@ export function BillingTemplateList() {
         <div className="space-y-2">
           {templates.map((tpl) => (
             <Card key={tpl.id}>
-              <CardContent className="flex items-center justify-between py-4">
-                <div className="flex items-center gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{tpl.name}</span>
-                      {tpl.isDefault && (
-                        <Badge variant="outline" className="text-yellow-600 border-yellow-300">
-                          <Star className="h-3 w-3 mr-0.5" />
-                          {t('default')}
-                        </Badge>
-                      )}
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                      {tpl.documentType ? (DOC_TYPE_KEYS[tpl.documentType] ? tDoc(DOC_TYPE_KEYS[tpl.documentType] as any) : tpl.documentType) : t('allTypes')}
-                    </span>
+              <CardContent className="flex items-start justify-between gap-2 py-3 sm:py-4 sm:items-center">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm sm:text-base font-medium truncate">{tpl.name}</span>
+                    {tpl.isDefault && (
+                      <Badge variant="outline" className="text-yellow-600 border-yellow-300 shrink-0">
+                        <Star className="h-3 w-3 mr-0.5" />
+                        {t('default')}
+                      </Badge>
+                    )}
                   </div>
+                  <span className="text-xs sm:text-sm text-muted-foreground">
+                    {tpl.documentType ? (DOC_TYPE_KEYS[tpl.documentType] ? tDoc(DOC_TYPE_KEYS[tpl.documentType] as any) : tpl.documentType) : t('allTypes')}
+                  </span>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 shrink-0">
                   {tpl.documentType && !tpl.isDefault && (
                     <Button
                       variant="ghost"

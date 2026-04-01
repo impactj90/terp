@@ -68,14 +68,15 @@ export function RecurringList() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">{t('title')}</h2>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-lg sm:text-2xl font-bold">{t('title')}</h2>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleGenerateAllDue} disabled={generateDueMutation.isPending}>
+          <Button size="sm" variant="outline" onClick={handleGenerateAllDue} disabled={generateDueMutation.isPending}>
             <Play className="h-4 w-4 mr-1" />
-            {t('generateAllDue')}
+            <span className="hidden sm:inline">{t('generateAllDue')}</span>
+            <span className="sm:hidden">{t('generateAllDue')}</span>
           </Button>
-          <Button asChild>
+          <Button size="sm" asChild>
             <Link href="/orders/recurring/new">
               <Plus className="h-4 w-4 mr-1" />
               {t('newTemplate')}
@@ -85,8 +86,8 @@ export function RecurringList() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
+        <div className="relative flex-1">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={t('searchPlaceholder')}
@@ -96,7 +97,7 @@ export function RecurringList() {
           />
         </div>
         <Select value={activeFilter} onValueChange={(v) => { setActiveFilter(v); setPage(1) }}>
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="w-full sm:w-[150px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -107,82 +108,118 @@ export function RecurringList() {
         </Select>
       </div>
 
-      {/* Table */}
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>{t('columnName')}</TableHead>
-            <TableHead>{t('columnCustomer')}</TableHead>
-            <TableHead>{t('columnInterval')}</TableHead>
-            <TableHead>{t('columnNextDue')}</TableHead>
-            <TableHead>{t('columnLastGenerated')}</TableHead>
-            <TableHead>{t('columnActive')}</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {isLoading ? (
-            <TableRow>
-              <TableCell colSpan={6} className="text-center text-muted-foreground">
-                {t('loading')}
-              </TableCell>
-            </TableRow>
-          ) : !data?.items?.length ? (
-            <TableRow>
-              <TableCell colSpan={6} className="text-center text-muted-foreground">
-                {t('noRecurringFound')}
-              </TableCell>
-            </TableRow>
-          ) : (
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (data.items as any[]).map((item) => (
-              <TableRow
-                key={item.id}
-                className="cursor-pointer hover:bg-muted/50"
-                onClick={() => router.push(`/orders/recurring/${item.id}`)}
-              >
-                <TableCell className="font-medium">{item.name}</TableCell>
-                <TableCell>
+      {/* Mobile: card list */}
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground py-4 sm:hidden">{t('loading')}</p>
+      ) : !data?.items?.length ? (
+        <p className="text-sm text-muted-foreground py-4 sm:hidden">{t('noRecurringFound')}</p>
+      ) : (
+        <div className="divide-y sm:hidden">
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          {(data.items as any[]).map((item) => (
+            <div
+              key={item.id}
+              className="flex items-start justify-between gap-3 p-3 active:bg-muted/50 cursor-pointer"
+              onClick={() => router.push(`/orders/recurring/${item.id}`)}
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{item.name}</p>
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">
                   {item.address?.company ?? '-'}
-                </TableCell>
-                <TableCell>{INTERVAL_KEYS[item.interval] ? t(INTERVAL_KEYS[item.interval] as any) : item.interval}</TableCell>
-                <TableCell>{formatDate(item.nextDueDate)}</TableCell>
-                <TableCell>{formatDate(item.lastGeneratedAt)}</TableCell>
-                <TableCell>
+                </p>
+                <div className="flex items-center gap-2 mt-1">
                   <Badge variant={item.isActive ? 'default' : 'secondary'}>
                     {item.isActive ? t('active') : t('inactive')}
                   </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {INTERVAL_KEYS[item.interval] ? t(INTERVAL_KEYS[item.interval] as any) : item.interval}
+                  </span>
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <span className="text-xs text-muted-foreground">{t('columnNextDue')}</span>
+                <p className="text-sm font-medium">{formatDate(item.nextDueDate)}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Desktop: table */}
+      <div className="hidden sm:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t('columnName')}</TableHead>
+              <TableHead>{t('columnCustomer')}</TableHead>
+              <TableHead>{t('columnInterval')}</TableHead>
+              <TableHead>{t('columnNextDue')}</TableHead>
+              <TableHead>{t('columnLastGenerated')}</TableHead>
+              <TableHead>{t('columnActive')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  {t('loading')}
                 </TableCell>
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            ) : !data?.items?.length ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  {t('noRecurringFound')}
+                </TableCell>
+              </TableRow>
+            ) : (
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (data.items as any[]).map((item) => (
+                <TableRow
+                  key={item.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => router.push(`/orders/recurring/${item.id}`)}
+                >
+                  <TableCell className="font-medium max-w-[250px] truncate">{item.name}</TableCell>
+                  <TableCell>
+                    {item.address?.company ?? '-'}
+                  </TableCell>
+                  <TableCell>{INTERVAL_KEYS[item.interval] ? t(INTERVAL_KEYS[item.interval] as any) : item.interval}</TableCell>
+                  <TableCell>{formatDate(item.nextDueDate)}</TableCell>
+                  <TableCell>{formatDate(item.lastGeneratedAt)}</TableCell>
+                  <TableCell>
+                    <Badge variant={item.isActive ? 'default' : 'secondary'}>
+                      {item.isActive ? t('active') : t('inactive')}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       {/* Pagination */}
       {data && data.total > 25 && (
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page <= 1}
+            onClick={() => setPage(page - 1)}
+          >
+            &lt;
+          </Button>
           <span className="text-sm text-muted-foreground">
-            {t('totalEntries', { count: data.total })}
+            {page} / {Math.ceil(data.total / 25)}
           </span>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page <= 1}
-              onClick={() => setPage(page - 1)}
-            >
-              {t('previous')}
-            </Button>
-            <span className="text-sm">{t('page', { page })}</span>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page * 25 >= data.total}
-              onClick={() => setPage(page + 1)}
-            >
-              {t('next')}
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page * 25 >= data.total}
+            onClick={() => setPage(page + 1)}
+          >
+            &gt;
+          </Button>
         </div>
       )}
     </div>
