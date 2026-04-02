@@ -86,6 +86,7 @@ export function QrScanner({
 
     let mounted = true
     let scanner: { stop: () => Promise<void>; applyVideoConstraints?: (constraints: Record<string, unknown>) => Promise<void> } | null = null
+    let scannerStarted = false
 
     const initScanner = async () => {
       try {
@@ -116,6 +117,7 @@ export function QrScanner({
         )
 
         if (mounted) {
+          scannerStarted = true
           setScannerReady(true)
           setCameraError(null)
 
@@ -144,10 +146,14 @@ export function QrScanner({
     return () => {
       mounted = false
       setScannerReady(false)
-      if (scanner) {
-        scanner.stop().catch(() => {
-          // Ignore stop errors during cleanup
-        })
+      if (scanner && scannerStarted) {
+        try {
+          scanner.stop().catch(() => {
+            // Ignore stop errors during cleanup
+          })
+        } catch {
+          // Ignore synchronous stop errors (scanner not running)
+        }
       }
       html5QrCodeRef.current = null
     }
