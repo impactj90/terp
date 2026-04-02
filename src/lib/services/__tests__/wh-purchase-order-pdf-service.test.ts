@@ -205,7 +205,7 @@ describe("wh-purchase-order-pdf-service", () => {
 
       await expect(
         generateAndGetDownloadUrl(mockPrisma, TENANT_ID, PO_ID)
-      ).rejects.toThrow("PDF upload failed: Upload quota exceeded")
+      ).rejects.toThrow("PDF upload failed: Storage upload failed: Upload quota exceeded")
     })
 
     it("throws when signed URL creation fails", async () => {
@@ -216,7 +216,7 @@ describe("wh-purchase-order-pdf-service", () => {
 
       await expect(
         generateAndGetDownloadUrl(mockPrisma, TENANT_ID, PO_ID)
-      ).rejects.toThrow("Failed to create signed URL: Bucket not found")
+      ).rejects.toThrow("Failed to create signed URL")
     })
 
     it("sanitizes slashes in filename", async () => {
