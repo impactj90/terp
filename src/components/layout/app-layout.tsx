@@ -10,6 +10,7 @@ import { Breadcrumbs } from './breadcrumbs'
 import { SkipLink } from './skip-link'
 import { useGlobalNotifications } from '@/hooks/use-global-notifications'
 import { useAuth } from '@/providers/auth-provider'
+import { AiAssistantFab } from '@/components/ai-assistant'
 
 interface AppLayoutContentProps {
   children: React.ReactNode
@@ -72,6 +73,9 @@ function AppLayoutContent({ children }: AppLayoutContentProps) {
         open={mobileMenuOpen}
         onOpenChange={setMobileMenuOpen}
       />
+
+      {/* AI Assistant */}
+      {isAuthenticated && <AiAssistantFab />}
     </>
   )
 }

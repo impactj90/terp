@@ -981,3 +981,6 @@ export {
   useExecuteDsgvoRetention,
   useDsgvoLogs,
 } from './use-dsgvo'
+
+// AI Assistant
+export { useAiAssistantStream } from './use-ai-assistant'

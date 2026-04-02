@@ -6,6 +6,7 @@
  */
 import { createTRPCRouter, createCallerFactory } from "../init"
 import { healthRouter } from "./health"
+import { aiAssistantRouter } from "./aiAssistant"
 import { authRouter } from "./auth"
 import { permissionsRouter } from "./permissions"
 import { tenantsRouter } from "./tenants"
@@ -86,6 +87,7 @@ import { hrRouter } from "./hr"
 
 export const appRouter = createTRPCRouter({
   health: healthRouter,
+  aiAssistant: aiAssistantRouter,
   auth: authRouter,
   permissions: permissionsRouter,
   tenants: tenantsRouter,

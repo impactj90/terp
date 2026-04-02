@@ -10,6 +10,8 @@ export const serverEnv = {
   // Internal Supabase URL for server-side requests (e.g., inside Docker).
   // Falls back to NEXT_PUBLIC_SUPABASE_URL when not set.
   supabaseUrl: process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
+  // AI Assistant (Anthropic)
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? '',
 } as const
 
 // Client-side accessible
@@ -34,6 +36,7 @@ export function validateEnv() {
     'SUPABASE_SERVICE_ROLE_KEY',
     'CRON_SECRET',
     'INTERNAL_API_KEY',
+    'ANTHROPIC_API_KEY',
   ]
   const missing = required.filter((key) => !process.env[key])
 
