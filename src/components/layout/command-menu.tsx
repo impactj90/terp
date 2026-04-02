@@ -78,9 +78,12 @@ export function CommandMenu() {
         <DialogContent
           className={cn(
             'overflow-hidden p-0',
-            'top-[20%] translate-y-0',
+            // Mobile: top-aligned, override bottom-sheet default
+            'top-[10%] bottom-auto max-h-[70vh] rounded-xl border',
+            // Desktop: slightly higher
+            'sm:top-[20%] sm:translate-y-0',
             'max-w-[540px]',
-            'rounded-xl border shadow-2xl',
+            'shadow-2xl',
             // Remove the default close button styles
             '[&>button:last-child]:hidden'
           )}
