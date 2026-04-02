@@ -219,6 +219,7 @@ export function PriceListSelector({ selectedId, onSelect, onDeselect, canManage 
                           onClick={(e) => e.stopPropagation()}
                         >
                           <MoreHorizontal className="h-3.5 w-3.5" />
+                          <span className="sr-only">Aktionen</span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48">

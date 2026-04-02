@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Plus, Edit, Trash2, Check, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
@@ -84,6 +85,7 @@ export function PurchaseOrderPositionTable({
   isDraft,
 }: PurchaseOrderPositionTableProps) {
   const t = useTranslations('warehousePurchaseOrders')
+  const tc = useTranslations('common')
 
   const { data: positions, isLoading } = useWhPOPositions(purchaseOrderId)
   const addMutation = useAddWhPOPosition()
@@ -481,49 +483,69 @@ export function PurchaseOrderPositionTable({
                       <TableCell>
                         {isEditing ? (
                           <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={handleSaveEdit}
-                              disabled={updateMutation.isPending}
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => setEditingId(null)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={handleSaveEdit}
+                                  disabled={updateMutation.isPending}
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>{tc('confirm')}</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => setEditingId(null)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>{tc('cancel')}</TooltipContent>
+                            </Tooltip>
                           </div>
                         ) : (
                           <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => startEdit(pos)}
-                            >
-                              <Edit className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-destructive"
-                              onClick={() =>
-                                setDeleteTarget({
-                                  id: pos.id,
-                                  label: pos.article
-                                    ? `${pos.article.number} — ${pos.article.name}`
-                                    : pos.freeText || pos.id,
-                                })
-                              }
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => startEdit(pos)}
+                                >
+                                  <Edit className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>{tc('edit')}</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-destructive"
+                                  onClick={() =>
+                                    setDeleteTarget({
+                                      id: pos.id,
+                                      label: pos.article
+                                        ? `${pos.article.number} — ${pos.article.name}`
+                                        : pos.freeText || pos.id,
+                                    })
+                                  }
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>{tc('delete')}</TooltipContent>
+                            </Tooltip>
                           </div>
                         )}
                       </TableCell>
@@ -683,26 +705,36 @@ export function PurchaseOrderPositionTable({
               </TableCell>
               <TableCell>
                 <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={handleAddPosition}
-                    disabled={isAddDisabled}
-                  >
-                    <Check className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => {
-                      setIsAdding(false)
-                      setAddForm(EMPTY_ADD_FORM)
-                    }}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={handleAddPosition}
+                        disabled={isAddDisabled}
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{tc('confirm')}</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => {
+                          setIsAdding(false)
+                          setAddForm(EMPTY_ADD_FORM)
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{tc('cancel')}</TooltipContent>
+                  </Tooltip>
                 </div>
               </TableCell>
             </TableRow>

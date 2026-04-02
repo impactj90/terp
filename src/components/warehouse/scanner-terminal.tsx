@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -88,6 +89,7 @@ function addHistoryEntry(entry: ScanHistoryEntry) {
 
 export function ScannerTerminal() {
   const t = useTranslations('warehouseScanner')
+  const tc = useTranslations('common')
   const [state, setState] = React.useState<ScannerState>('IDLE')
   const [article, setArticle] = React.useState<ResolvedArticle | null>(null)
   const [history, setHistory] = React.useState<ScanHistoryEntry[]>([])
@@ -272,9 +274,14 @@ export function ScannerTerminal() {
       {/* Header */}
       <div className="flex items-center gap-3">
         {state !== 'IDLE' && (
-          <Button variant="ghost" size="icon" onClick={resetToIdle} className="h-10 w-10">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={resetToIdle} className="h-10 w-10">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{tc('goBack')}</TooltipContent>
+          </Tooltip>
         )}
         <div className="flex items-center gap-2">
           <ScanLine className="h-6 w-6" />

@@ -8,6 +8,7 @@ import { useAuth } from '@/providers/auth-provider'
 import { useHasPermission, useAccount, useAccountValueSummary } from '@/hooks'
 import { formatMinutes } from '@/lib/time-utils'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -34,6 +35,7 @@ export default function AccountPostingsPage() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
   const t = useTranslations('adminAccounts')
+  const tc = useTranslations('common')
   const { isLoading: authLoading } = useAuth()
   const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['accounts.manage'])
 
@@ -198,13 +200,23 @@ export default function AccountPostingsPage() {
       <div className="flex flex-wrap items-center gap-4">
         {/* Month navigation */}
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => goMonth(-1)}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => goMonth(-1)}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{tc('previousMonth')}</TooltipContent>
+          </Tooltip>
           <span className="text-sm font-medium min-w-[160px] text-center">{monthLabel}</span>
-          <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => goMonth(1)}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => goMonth(1)}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{tc('nextMonth')}</TooltipContent>
+          </Tooltip>
         </div>
 
         {/* Department filter */}

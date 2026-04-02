@@ -6,6 +6,7 @@ import remarkGfm from 'remark-gfm'
 import { Search, ChevronLeft, ChevronRight, ArrowUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 
 interface TocItem {
@@ -144,15 +145,20 @@ export function HilfePage({ content }: HilfePageProps) {
         {/* Header */}
         <div className="flex h-14 items-center justify-between border-b px-4">
           <span className="text-sm font-semibold text-foreground">Inhaltsverzeichnis</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={() => setTocOpen(false)}
-            aria-label="Inhaltsverzeichnis schließen"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setTocOpen(false)}
+                aria-label="Inhaltsverzeichnis schließen"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Inhaltsverzeichnis schließen</TooltipContent>
+          </Tooltip>
         </div>
 
         {/* Search */}
@@ -203,15 +209,20 @@ export function HilfePage({ content }: HilfePageProps) {
         <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
           {/* ToC toggle (desktop) */}
           {!tocOpen && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="hidden lg:inline-flex h-8 w-8"
-              onClick={() => setTocOpen(true)}
-              aria-label="Inhaltsverzeichnis öffnen"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="hidden lg:inline-flex h-8 w-8"
+                  onClick={() => setTocOpen(true)}
+                  aria-label="Inhaltsverzeichnis öffnen"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Inhaltsverzeichnis öffnen</TooltipContent>
+            </Tooltip>
           )}
 
           <span className="text-lg font-semibold">Terp Handbuch</span>
@@ -248,15 +259,20 @@ export function HilfePage({ content }: HilfePageProps) {
 
       {/* Scroll to top */}
       {showScrollTop && (
-        <Button
-          variant="outline"
-          size="icon"
-          className="fixed bottom-6 right-6 z-40 h-10 w-10 rounded-full shadow-lg"
-          onClick={scrollToTop}
-          aria-label="Nach oben scrollen"
-        >
-          <ArrowUp className="h-5 w-5" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              className="fixed bottom-6 right-6 z-40 h-10 w-10 rounded-full shadow-lg"
+              onClick={scrollToTop}
+              aria-label="Nach oben scrollen"
+            >
+              <ArrowUp className="h-5 w-5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Nach oben scrollen</TooltipContent>
+        </Tooltip>
       )}
     </div>
   )

@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   Sheet,
   SheetContent,
@@ -52,11 +53,16 @@ export function MobileSidebarSheet({
               <span className="text-xl tracking-tight">Terp</span>
             </Link>
           </SheetTitle>
-          <SheetClose asChild>
-            <Button variant="ghost" size="icon" aria-label={t('closeMenu')}>
-              <X className="h-5 w-5" aria-hidden="true" />
-            </Button>
-          </SheetClose>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <SheetClose asChild>
+                <Button variant="ghost" size="icon" aria-label={t('closeMenu')}>
+                  <X className="h-5 w-5" aria-hidden="true" />
+                </Button>
+              </SheetClose>
+            </TooltipTrigger>
+            <TooltipContent>{t('closeMenu')}</TooltipContent>
+          </Tooltip>
         </SheetHeader>
 
         {/* Tenant selector for mobile */}

@@ -45,7 +45,24 @@
     "submitting": "Submitting...",
     "switchLanguage": "Switch language",
     "switchTheme": "Switch theme",
-    "skipToContent": "Skip to main content"
+    "skipToContent": "Skip to main content",
+    "goBack": "Go back",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "previousPeriod": "Previous period",
+    "nextPeriod": "Next period",
+    "previousWeek": "Previous week",
+    "nextWeek": "Next week",
+    "download": "Download",
+    "upload": "Upload",
+    "remove": "Remove",
+    "add": "Add",
+    "openMenu": "Open menu",
+    "toggleSidebar": "Toggle sidebar",
+    "bold": "Bold",
+    "italic": "Italic",
+    "clearField": "Clear field",
+    "togglePanel": "Toggle panel"
   },
   "metadata": {
     "title": "Terp",
@@ -5362,8 +5379,8 @@
     "attachmentSection": "Attachments",
     "uploadAttachment": "Upload file",
     "uploadDropzoneText": "Drag files here or click to select",
-    "uploadDropzoneHint": "PDF, JPEG, PNG, WebP, DOCX, XLSX \u2014 max. 10 MB",
-    "uploadProgress": "Uploading\u2026",
+    "uploadDropzoneHint": "PDF, JPEG, PNG, WebP, DOCX, XLSX — max. 10 MB",
+    "uploadProgress": "Uploading…",
     "maxAttachments": "Maximum {max} attachments allowed",
     "attachmentCount": "{count} of {max} attachments",
     "deleteAttachment": "Delete attachment",
@@ -5859,7 +5876,6 @@
     "noPermission": "No permission",
     "noPurchaseOrdersFound": "No purchase orders found",
     "loading": "Loading...",
-
     "colNumber": "Number",
     "colSupplier": "Supplier",
     "colOrderDate": "Order Date",
@@ -5867,18 +5883,15 @@
     "colStatus": "Status",
     "colTotal": "Total",
     "colPositions": "Positions",
-
     "statusDraft": "Draft",
     "statusOrdered": "Ordered",
     "statusPartiallyReceived": "Partially Received",
     "statusReceived": "Received",
     "statusCancelled": "Cancelled",
-
     "filterAllStatuses": "All Statuses",
     "filterAllSuppliers": "All Suppliers",
     "filterDateFrom": "From",
     "filterDateTo": "To",
-
     "actionView": "View",
     "actionEdit": "Edit",
     "actionDelete": "Delete",
@@ -5888,12 +5901,10 @@
     "pdfDownloadFailed": "PDF download failed",
     "loadingPdf": "Loading PDF...",
     "actionCreateFromSuggestions": "Create from Suggestions",
-
     "save": "Save",
     "cancel": "Cancel",
     "create": "Create",
     "back": "Back",
-
     "formTitle": "New Purchase Order",
     "formTitleEdit": "Edit Purchase Order",
     "formDescription": "Create a purchase order for a supplier",
@@ -5911,7 +5922,6 @@
     "contactSelectPlaceholder": "Select contact...",
     "inquirySelectPlaceholder": "Select inquiry...",
     "noContact": "No contact",
-
     "detailTitle": "Purchase Order {number}",
     "detailSupplier": "Supplier",
     "detailOurCustomerNumber": "Our Customer No.",
@@ -5928,11 +5938,9 @@
     "detailTotal": "Total (gross)",
     "detailCreatedAt": "Created",
     "detailCreatedBy": "Created by",
-
     "sectionPositions": "Positions",
     "sectionSummary": "Summary",
     "sectionDetails": "Details",
-
     "posColPosition": "Pos.",
     "posColArticle": "Article",
     "posColSupplierArticleNumber": "Supplier Article No.",
@@ -5945,19 +5953,16 @@
     "posColTotalPrice": "Total Price",
     "posColVatRate": "VAT %",
     "posColDeliveryDate": "Delivery Date",
-
     "posColType": "Type",
     "posTypeArticle": "Article",
     "posTypeFreetext": "Free text",
     "posTypeText": "Text line",
     "posFreetextPlaceholder": "Enter description...",
-
     "posActionAdd": "Add Position",
     "posActionEdit": "Edit",
     "posActionDelete": "Remove",
     "noPositions": "No positions",
     "posArticlePlaceholder": "Search article...",
-
     "sendDialogTitle": "Send Order",
     "sendDialogDescription": "Select the order method and confirm the order.",
     "sendDialogMethod": "Order Method *",
@@ -5967,15 +5972,12 @@
     "methodEmail": "Email",
     "methodFax": "Fax",
     "methodPrint": "Print",
-
     "cancelDialogTitle": "Cancel order?",
     "cancelDialogDescription": "Do you really want to cancel purchase order \"{number}\"?",
     "cancelDialogConfirm": "Cancel Order",
-
     "deleteDialogTitle": "Delete order?",
     "deleteDialogDescription": "Do you really want to delete purchase order \"{number}\"? All positions will be removed.",
     "deleteDialogConfirm": "Delete",
-
     "toastCreated": "Purchase order created",
     "toastUpdated": "Purchase order updated",
     "toastDeleted": "Purchase order deleted",
@@ -5984,7 +5986,6 @@
     "toastPositionAdded": "Position added",
     "toastPositionUpdated": "Position updated",
     "toastPositionDeleted": "Position removed",
-
     "suggestionsTitle": "Reorder Suggestions",
     "suggestionsDescription": "Articles below minimum stock",
     "suggestionsColArticle": "Article",
@@ -6001,7 +6002,6 @@
     "suggestionsDeselectAll": "Deselect all",
     "suggestionsSelected": "{count} articles selected",
     "suggestionsCreatedPO": "Purchase order created from suggestions",
-
     "purchaseOrderNotFound": "Purchase order not found",
     "errorDraftOnly": "Only draft orders can be edited",
     "errorNoPositions": "Purchase order has no positions"
@@ -6010,21 +6010,17 @@
     "pageTitle": "Goods Receipt",
     "noPermission": "No permission",
     "loading": "Loading...",
-
     "stepSupplier": "Select Supplier",
     "stepOrder": "Select Order",
     "stepPositions": "Review Positions",
     "stepConfirm": "Confirm Booking",
-
     "labelSupplier": "Supplier",
     "labelPurchaseOrder": "Purchase Order",
     "supplierPlaceholder": "Select supplier...",
     "orderPlaceholder": "Select order...",
     "allSuppliers": "All Suppliers",
-
     "noPendingOrders": "No pending orders available",
     "noPendingOrdersForSupplier": "No pending orders for this supplier",
-
     "colArticle": "Article",
     "colArticleNumber": "Article No.",
     "colOrdered": "Ordered",
@@ -6032,25 +6028,21 @@
     "colRemaining": "Remaining",
     "colReceiveNow": "Receive Now",
     "colUnit": "Unit",
-
     "receiveAll": "Receive all positions in full",
     "clearAll": "Clear all",
     "actionBook": "Book Goods Receipt",
     "actionCancel": "Cancel",
     "actionBack": "Back",
     "actionNext": "Next",
-
     "confirmTitle": "Confirm Goods Receipt",
     "confirmDescription": "The following positions will be booked:",
     "confirmOrder": "Purchase Order",
     "confirmArticle": "Article",
     "confirmQuantity": "Quantity",
     "confirmBook": "Book Now",
-
     "toastBooked": "Goods receipt booked successfully",
     "toastBookedPositions": "{count} position(s) booked",
     "toastError": "Error booking goods receipt",
-
     "errorQuantityExceeds": "Quantity exceeds remaining quantity",
     "errorNoPositions": "No positions selected for booking",
     "errorInvalidOrder": "Order cannot be received"
@@ -6060,7 +6052,6 @@
     "noPermission": "No permission",
     "loading": "Loading...",
     "noMovementsFound": "No stock movements found",
-
     "colDate": "Date",
     "colArticle": "Article",
     "colType": "Type",
@@ -6070,20 +6061,17 @@
     "colReference": "Reference",
     "colReason": "Reason",
     "colCreatedBy": "Created by",
-
     "typeGoodsReceipt": "Goods Receipt",
     "typeWithdrawal": "Withdrawal",
     "typeAdjustment": "Adjustment",
     "typeInventory": "Inventory",
     "typeReturn": "Return",
-
     "filterArticle": "Filter by article",
     "filterType": "Filter by type",
     "filterAllTypes": "All Types",
     "filterDateFrom": "From",
     "filterDateTo": "To",
     "searchPlaceholder": "Search by article...",
-
     "articleTabTitle": "Stock Movements",
     "articleTabEmpty": "No stock movements for this article"
   },
@@ -6092,34 +6080,27 @@
     "pageDescription": "Withdraw articles from stock and manage withdrawals",
     "noPermission": "No permission",
     "loading": "Loading...",
-
     "stepReference": "Select Reference",
     "stepArticles": "Select Articles",
     "stepConfirm": "Confirm Withdrawal",
-
     "labelReferenceType": "Reference Type",
     "labelReference": "Reference",
     "labelMachineId": "Machine/Equipment ID",
     "labelNotes": "Notes",
-
     "refTypeOrder": "Order",
     "refTypeDocument": "Delivery Note",
     "refTypeMachine": "Machine/Equipment",
     "refTypeNone": "No Reference",
-
     "refTypeOrderDesc": "Assign withdrawal to a Terp order",
     "refTypeDocumentDesc": "Assign withdrawal to a delivery note",
     "refTypeMachineDesc": "Assign withdrawal to a machine or device",
     "refTypeNoneDesc": "Direct withdrawal without assignment",
-
     "refPlaceholderOrder": "Enter order number...",
     "refPlaceholderDocument": "Enter document number...",
     "refPlaceholderMachine": "Enter machine ID...",
-
     "summaryTitle": "Summary",
     "summaryArticleCount": "{count} article(s)",
     "summaryTotalQuantity": "Total quantity: {total}",
-
     "colArticle": "Article",
     "colArticleNumber": "Article No.",
     "colCurrentStock": "Current Stock",
@@ -6130,49 +6111,40 @@
     "colReference": "Reference",
     "colUser": "User",
     "colActions": "Actions",
-
     "searchArticle": "Search article...",
     "addArticle": "Add Article",
     "removeArticle": "Remove Article",
-
     "actionWithdraw": "Book Withdrawal",
     "actionCancel": "Cancel",
     "actionBack": "Back",
     "actionNext": "Next",
     "actionCancelWithdrawal": "Cancel Withdrawal",
-
     "confirmTitle": "Confirm Withdrawal",
     "confirmDescription": "The following articles will be withdrawn:",
     "confirmArticle": "Article",
     "confirmQuantity": "Quantity",
     "confirmReference": "Reference",
     "confirmBook": "Withdraw Now",
-
     "cancelDialogTitle": "Cancel Withdrawal",
     "cancelDialogDescription": "Are you sure you want to cancel this withdrawal? The stock will be restored.",
     "cancelDialogConfirm": "Cancel Withdrawal",
     "cancelDialogCancel": "Keep",
-
     "toastWithdrawn": "Withdrawal booked successfully",
     "toastWithdrawnBatch": "{count} article(s) withdrawn",
     "toastCancelled": "Withdrawal cancelled",
     "toastError": "Error during withdrawal",
     "toastCancelError": "Error cancelling withdrawal",
-
     "errorInsufficientStock": "Insufficient stock ({available} available)",
     "errorNoArticles": "No articles selected for withdrawal",
     "errorStockTrackingDisabled": "Stock tracking is disabled for this article",
-
     "historyTitle": "Withdrawal History",
     "historyEmpty": "No withdrawals found",
     "filterDateFrom": "From",
     "filterDateTo": "To",
     "filterReference": "Filter by reference",
     "filterAllReferences": "All References",
-
     "tabTerminal": "New Withdrawal",
     "tabHistory": "History",
-
     "warningLowStock": "Stock will fall below minimum level",
     "withdrawalLabel": "Withdrawal",
     "reversalLabel": "Reversal"
@@ -6184,7 +6156,6 @@
     "noPermission": "No permission",
     "noInvoicesFound": "No supplier invoices found",
     "loading": "Loading...",
-
     "colNumber": "Invoice No.",
     "colSupplier": "Supplier",
     "colInvoiceDate": "Invoice Date",
@@ -6193,28 +6164,23 @@
     "colTotalGross": "Gross Total",
     "colOpenAmount": "Open Amount",
     "colStatus": "Status",
-
     "statusOpen": "Open",
     "statusPartial": "Partially Paid",
     "statusPaid": "Paid",
     "statusCancelled": "Cancelled",
-
     "filterAllStatuses": "All Statuses",
     "filterAllSuppliers": "All Suppliers",
     "filterDateFrom": "From",
     "filterDateTo": "To",
     "filterOverdue": "Overdue",
-
     "actionView": "View",
     "actionEdit": "Edit",
     "actionCancel": "Cancel",
     "actionRecordPayment": "Record Payment",
-
     "save": "Save",
     "cancel": "Cancel",
     "create": "Create",
     "back": "Back",
-
     "formTitle": "Record Supplier Invoice",
     "formEditTitle": "Edit Supplier Invoice",
     "fieldNumber": "Invoice Number",
@@ -6233,12 +6199,10 @@
     "fieldDiscountDays2": "Discount Period 2 (Days)",
     "fieldNotes": "Notes",
     "fieldNoPurchaseOrder": "No Purchase Order",
-
     "validationSupplierRequired": "Supplier is required",
     "validationNumberRequired": "Invoice number is required",
     "validationAmountsRequired": "Amounts are required",
     "validationSupplierNoTax": "Supplier has neither tax number nor VAT ID on file",
-
     "detailTitle": "Supplier Invoice",
     "detailInvoiceInfo": "Invoice Information",
     "detailPaymentTerms": "Payment Terms",
@@ -6247,7 +6211,6 @@
     "detailPaidAmount": "Paid Amount",
     "detailOpenAmount": "Open Amount",
     "detailOverdue": "Overdue",
-
     "paymentFormTitle": "Record Payment",
     "paymentFieldDate": "Payment Date",
     "paymentFieldAmount": "Amount",
@@ -6257,21 +6220,17 @@
     "paymentFieldDiscount": "Discount",
     "paymentFieldNotes": "Notes",
     "paymentDiscountApplied": "Discount {tier} ({percent}%)",
-
     "paymentStatusActive": "Active",
     "paymentStatusCancelled": "Cancelled",
     "paymentActionCancel": "Cancel Payment",
-
     "cancelConfirmTitle": "Cancel Invoice",
     "cancelConfirmMessage": "Are you sure you want to cancel this supplier invoice?",
     "cancelPaymentConfirmTitle": "Cancel Payment",
     "cancelPaymentConfirmMessage": "Are you sure you want to cancel this payment?",
-
     "summaryTotalOpen": "Open Invoices",
     "summaryTotalOverdue": "Overdue",
     "summaryPaidThisMonth": "Paid (This Month)",
     "summaryInvoiceCount": "Invoice Count",
-
     "toastCreated": "Supplier invoice recorded",
     "toastUpdated": "Supplier invoice updated",
     "toastCancelled": "Supplier invoice cancelled",

@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { useAuth } from '@/providers/auth-provider'
 import { useHasPermission } from '@/hooks'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -333,16 +334,26 @@ export default function TimesheetPage() {
             {t('today')}
           </Button>
           <div className="flex flex-1 items-center rounded-md border">
-            <Button variant="ghost" size="icon-sm" onClick={navigatePrevious} className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0">
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon-sm" onClick={navigatePrevious} className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0">
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{tc('previousPeriod')}</TooltipContent>
+            </Tooltip>
             <span className="flex-1 px-2 sm:px-3 text-sm font-medium min-w-0 text-center truncate">
               <span className="sm:hidden">{periodLabelShort}</span>
               <span className="hidden sm:inline">{periodLabel}</span>
             </span>
-            <Button variant="ghost" size="icon-sm" onClick={navigateNext} className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0">
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon-sm" onClick={navigateNext} className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0">
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{tc('nextPeriod')}</TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </div>

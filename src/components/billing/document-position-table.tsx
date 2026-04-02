@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Plus, Trash2, GripVertical } from 'lucide-react'
 import {
   useAddBillingPosition,
@@ -33,6 +34,7 @@ import {
 import { useTRPC } from '@/trpc'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { useTranslations } from 'next-intl'
 
 interface Position {
   id: string
@@ -182,6 +184,7 @@ export function DocumentPositionTable({
   readonly = false,
   addressId,
 }: DocumentPositionTableProps) {
+  const tc = useTranslations('common')
   const addMutation = useAddBillingPosition()
   const updateMutation = useUpdateBillingPosition()
   const deleteMutation = useDeleteBillingPosition()
@@ -395,14 +398,19 @@ export function DocumentPositionTable({
               </TableCell>
               {!readonly && (
                 <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => handleDelete(pos.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleDelete(pos.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{tc('delete')}</TooltipContent>
+                  </Tooltip>
                 </TableCell>
               )}
             </TableRow>

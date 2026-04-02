@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Trash2, Mail, Phone, Smartphone, UserCheck } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import type { components } from '@/types/legacy-api-types'
 
 type EmployeeContact = NonNullable<components['schemas']['Employee']['contacts']>[number]
@@ -98,16 +99,21 @@ export function ContactListItem({
             </Button>
           </>
         ) : (
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={handleDeleteClick}
-            disabled={isDeleting}
-            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-          >
-            <Trash2 className="h-4 w-4" />
-            <span className="sr-only">{t('deleteContact')}</span>
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={handleDeleteClick}
+                disabled={isDeleting}
+                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span className="sr-only">{t('deleteContact')}</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{tc('delete')}</TooltipContent>
+          </Tooltip>
         )}
       </div>
     </div>

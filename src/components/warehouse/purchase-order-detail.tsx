@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import { ArrowLeft, Edit, Send, XCircle, FileDown, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -75,6 +76,7 @@ interface PurchaseOrderDetailProps {
 
 export function PurchaseOrderDetail({ id }: PurchaseOrderDetailProps) {
   const t = useTranslations('warehousePurchaseOrders')
+  const tc = useTranslations('common')
   const router = useRouter()
 
   const { data: order, isLoading } = useWhPurchaseOrder(id)
@@ -151,14 +153,19 @@ export function PurchaseOrderDetail({ id }: PurchaseOrderDetailProps) {
       {/* Header */}
       <div className="space-y-3">
         <div className="flex items-start gap-3 sm:gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="shrink-0 mt-0.5"
-            onClick={() => router.push('/warehouse/purchase-orders')}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="shrink-0 mt-0.5"
+                onClick={() => router.push('/warehouse/purchase-orders')}
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{tc('goBack')}</TooltipContent>
+          </Tooltip>
           <div className="min-w-0">
             <h1 className="text-lg sm:text-2xl font-bold">
               {t('detailTitle', { number: order.number })}

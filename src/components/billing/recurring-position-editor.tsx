@@ -18,7 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Plus, Trash2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 export interface PositionTemplate {
   type: "ARTICLE" | "FREE" | "TEXT"
@@ -54,6 +56,8 @@ function formatCurrency(value: number | null): string {
 }
 
 export function RecurringPositionEditor({ positions, onChange }: RecurringPositionEditorProps) {
+  const tc = useTranslations('common')
+
   const addPosition = () => {
     onChange([...positions, { type: 'FREE', description: '', quantity: 1, unit: 'Stk', unitPrice: 0, vatRate: 19 }])
   }
@@ -166,14 +170,19 @@ export function RecurringPositionEditor({ positions, onChange }: RecurringPositi
                   {formatCurrency(calcTotal(pos))}
                 </TableCell>
                 <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => removePosition(i)}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => removePosition(i)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{tc('remove')}</TooltipContent>
+                  </Tooltip>
                 </TableCell>
               </TableRow>
             ))

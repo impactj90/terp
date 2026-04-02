@@ -19,6 +19,7 @@ import { DocumentPositionTable } from './document-position-table'
 import { DocumentForwardDialog } from './document-forward-dialog'
 import { DocumentFinalizeDialog } from './document-print-dialog'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 
@@ -60,6 +61,7 @@ export function BillingDocumentDetail({ id }: BillingDocumentDetailProps) {
   const duplicateMutation = useDuplicateBillingDocument()
 
   const t = useTranslations('billingDocuments')
+  const tc = useTranslations('common')
 
   const [showFinalizeDialog, setShowFinalizeDialog] = React.useState(false)
   const [showForwardDialog, setShowForwardDialog] = React.useState(false)
@@ -104,9 +106,14 @@ export function BillingDocumentDetail({ id }: BillingDocumentDetailProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.push('/orders/documents')}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={() => router.push('/orders/documents')}>
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{tc('goBack')}</TooltipContent>
+          </Tooltip>
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-2xl font-bold">{doc.number}</h2>

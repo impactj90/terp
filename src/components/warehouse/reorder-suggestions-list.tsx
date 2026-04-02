@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ArrowLeft, Loader2, ShoppingCart } from 'lucide-react'
@@ -52,6 +53,7 @@ interface Suggestion {
 
 export function ReorderSuggestionsList() {
   const t = useTranslations('warehousePurchaseOrders')
+  const tc = useTranslations('common')
   const router = useRouter()
 
   const [supplierFilter, setSupplierFilter] = React.useState<string>('ALL')
@@ -132,13 +134,18 @@ export function ReorderSuggestionsList() {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => router.push('/warehouse/purchase-orders')}
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.push('/warehouse/purchase-orders')}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{tc('goBack')}</TooltipContent>
+        </Tooltip>
         <div>
           <h1 className="text-2xl font-bold">{t('suggestionsTitle')}</h1>
           <p className="text-sm text-muted-foreground">

@@ -24,6 +24,7 @@ import {
 } from '@/hooks'
 import { RecurringGenerateDialog } from './recurring-generate-dialog'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 
@@ -67,6 +68,7 @@ interface RecurringDetailProps {
 
 export function RecurringDetail({ id }: RecurringDetailProps) {
   const t = useTranslations('billingRecurring')
+  const tc = useTranslations('common')
   const tDoc = useTranslations('billingDocuments')
   const router = useRouter()
   const { data: rec, isLoading, refetch } = useBillingRecurringInvoice(id)
@@ -135,9 +137,14 @@ export function RecurringDetail({ id }: RecurringDetailProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.push('/orders/recurring')}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={() => router.push('/orders/recurring')}>
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{tc('goBack')}</TooltipContent>
+          </Tooltip>
           <div>
             <h2 className="text-2xl font-bold">{rec.name}</h2>
             <div className="flex items-center gap-2 mt-1">

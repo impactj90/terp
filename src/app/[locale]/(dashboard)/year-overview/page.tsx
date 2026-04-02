@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
 import { useHasPermission } from '@/hooks'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -176,28 +177,38 @@ export default function YearOverviewPage() {
             </Button>
           )}
           <div className="flex flex-1 items-center rounded-md border">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => setSelectedYear((y) => y - 1)}
-              aria-label={tc('previousYear')}
-              className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => setSelectedYear((y) => y - 1)}
+                  aria-label={tc('previousYear')}
+                  className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{tc('previousYear')}</TooltipContent>
+            </Tooltip>
             <span className="flex-1 px-2 sm:px-3 text-sm font-medium min-w-0 text-center">
               {selectedYear}
             </span>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => setSelectedYear((y) => y + 1)}
-              disabled={selectedYear >= currentYear + 1}
-              aria-label={tc('nextYear')}
-              className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => setSelectedYear((y) => y + 1)}
+                  disabled={selectedYear >= currentYear + 1}
+                  aria-label={tc('nextYear')}
+                  className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{tc('nextYear')}</TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </div>

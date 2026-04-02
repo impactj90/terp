@@ -119,6 +119,7 @@ export function DepartmentTreeNode({
               className="opacity-0 group-hover:opacity-100 transition-opacity"
             >
               <MoreHorizontal className="h-4 w-4" />
+              <span className="sr-only">Aktionen</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">

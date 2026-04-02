@@ -13,6 +13,7 @@ import {
   MoreHorizontal,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Input } from '@/components/ui/input'
 import {
   DropdownMenu,
@@ -71,6 +72,7 @@ function TreeNode({
   onAddChild: (parentId: string) => void
 }) {
   const t = useTranslations('warehouseArticles')
+  const tc = useTranslations('common')
   const [expanded, setExpanded] = React.useState(true)
   const isSelected = selectedGroupId === node.group.id
   const hasChildren = node.children.length > 0
@@ -112,18 +114,22 @@ function TreeNode({
         </button>
         {canManage && (
           <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={(e) => {
-                e.stopPropagation()
-                onAddChild(node.group.id)
-              }}
-              title={t('groupAddChild')}
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onAddChild(node.group.id)
+                  }}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{tc('add')}</TooltipContent>
+            </Tooltip>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -133,6 +139,7 @@ function TreeNode({
                   onClick={(e) => e.stopPropagation()}
                 >
                   <MoreHorizontal className="h-3.5 w-3.5" />
+                  <span className="sr-only">Aktionen</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
@@ -184,6 +191,7 @@ export function ArticleGroupTree({
   canManage = false,
 }: ArticleGroupTreeProps) {
   const t = useTranslations('warehouseArticles')
+  const tc = useTranslations('common')
   const { data: groups, isLoading } = useWhArticleGroups()
   const createGroup = useCreateWhArticleGroup()
   const updateGroup = useUpdateWhArticleGroup()
@@ -287,18 +295,22 @@ export function ArticleGroupTree({
           {t('allArticles')}
         </button>
         {canManage && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 shrink-0"
-            onClick={(e) => {
-              e.stopPropagation()
-              handleAddRoot()
-            }}
-            title={t('groupAddRoot')}
-          >
-            <Plus className="h-3.5 w-3.5" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleAddRoot()
+                }}
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{tc('add')}</TooltipContent>
+          </Tooltip>
         )}
       </div>
 

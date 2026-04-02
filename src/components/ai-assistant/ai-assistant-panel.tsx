@@ -5,6 +5,7 @@ import { useAiAssistantStream } from '@/hooks/use-ai-assistant'
 import { ChatMessage } from './chat-message'
 import { TypingIndicator } from './typing-indicator'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { X, MessageSquarePlus, Send, Bot } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -202,23 +203,32 @@ export function AiAssistantPanel({ open, onClose }: AiAssistantPanelProps) {
       <div className="flex items-center gap-2 border-b px-3 py-2.5">
         <Bot className="h-5 w-5 text-primary" />
         <span className="text-sm font-semibold flex-1">Terp Assistent</span>
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          onClick={handleNewChat}
-          aria-label="Neuer Chat"
-          title="Neuer Chat"
-        >
-          <MessageSquarePlus className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          onClick={onClose}
-          aria-label="Schließen"
-        >
-          <X className="h-4 w-4" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={handleNewChat}
+              aria-label="Neuer Chat"
+            >
+              <MessageSquarePlus className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Neuer Chat</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={onClose}
+              aria-label="Schließen"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Schließen</TooltipContent>
+        </Tooltip>
       </div>
 
       {/* Disclaimer */}

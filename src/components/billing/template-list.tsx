@@ -11,6 +11,7 @@ import {
   useSetDefaultBillingDocumentTemplate,
 } from '@/hooks'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { TemplateFormSheet } from './template-form-sheet'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
@@ -27,6 +28,7 @@ const DOC_TYPE_KEYS: Record<string, string> = {
 
 export function BillingTemplateList() {
   const t = useTranslations('billingTemplates')
+  const tc = useTranslations('common')
   const tDoc = useTranslations('billingDocuments')
   const { data: templates = [], isLoading } = useBillingDocumentTemplates()
   const deleteMutation = useDeleteBillingDocumentTemplate()
@@ -95,32 +97,46 @@ export function BillingTemplateList() {
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   {tpl.documentType && !tpl.isDefault && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleSetDefault(tpl.id)}
-                      title={t('setAsDefault')}
-                    >
-                      <Star className="h-4 w-4" />
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleSetDefault(tpl.id)}
+                        >
+                          <Star className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{t('setAsDefault')}</TooltipContent>
+                    </Tooltip>
                   )}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => { setEditingId(tpl.id); setShowForm(true) }}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive"
-                    onClick={() => setDeletingId(tpl.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => { setEditingId(tpl.id); setShowForm(true) }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{tc('edit')}</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive"
+                        onClick={() => setDeletingId(tpl.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{tc('delete')}</TooltipContent>
+                  </Tooltip>
                 </div>
               </CardContent>
             </Card>

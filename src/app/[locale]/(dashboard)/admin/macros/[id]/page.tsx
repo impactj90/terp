@@ -13,6 +13,7 @@ import {
   useMacroExecutions,
 } from '@/hooks'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -29,6 +30,7 @@ export default function MacroDetailPage() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
   const t = useTranslations('adminMacros')
+  const tc = useTranslations('common')
   const { isLoading: authLoading } = useAuth()
   const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['macros.manage'])
 
@@ -86,13 +88,18 @@ export default function MacroDetailPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => router.push('/admin/macros')}
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.push('/admin/macros')}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{tc('goBack')}</TooltipContent>
+        </Tooltip>
         <div className="flex-1">
           <h1 className="text-2xl font-bold">{macro.name}</h1>
           <div className="flex items-center gap-2 mt-1">

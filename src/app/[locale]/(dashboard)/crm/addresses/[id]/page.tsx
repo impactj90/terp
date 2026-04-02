@@ -16,6 +16,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -42,6 +43,7 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
 
 export default function CrmAddressDetailPage() {
   const t = useTranslations('crmAddresses')
+  const tc = useTranslations('common')
   const params = useParams<{ id: string }>()
   const router = useRouter()
   const { allowed: canAccess } = useHasPermission(['crm_addresses.view'])
@@ -141,14 +143,19 @@ export default function CrmAddressDetailPage() {
       {/* Header */}
       <div className="space-y-3">
         <div className="flex items-start gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.push('/crm/addresses')}
-            className="shrink-0 mt-1"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => router.push('/crm/addresses')}
+                className="shrink-0 mt-1"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{tc('goBack')}</TooltipContent>
+          </Tooltip>
           <div className="flex-1 min-w-0">
             <h1 className="text-xl sm:text-2xl font-bold truncate">{address.company}</h1>
             <div className="flex items-center gap-2 mt-1 flex-wrap">

@@ -22,6 +22,7 @@ import {
   useCrmAddresses,
 } from '@/hooks'
 import { RecurringPositionEditor, type PositionTemplate } from './recurring-position-editor'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
 import { ArrowLeft } from 'lucide-react'
 import { useTranslations } from 'next-intl'
@@ -39,6 +40,7 @@ interface RecurringFormProps {
 
 export function RecurringForm({ editId }: RecurringFormProps) {
   const t = useTranslations('billingRecurring')
+  const tc = useTranslations('common')
   const tDoc = useTranslations('billingDocuments')
   const router = useRouter()
   const createMutation = useCreateBillingRecurringInvoice()
@@ -153,9 +155,14 @@ export function RecurringForm({ editId }: RecurringFormProps) {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={() => router.back()}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{tc('goBack')}</TooltipContent>
+        </Tooltip>
         <h2 className="text-2xl font-bold">
           {editId ? t('editTemplate') : t('newRecurringInvoice')}
         </h2>

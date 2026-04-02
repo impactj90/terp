@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useEmployeeVacationBalance } from '@/hooks'
 import {
   YearSelector,
@@ -61,30 +62,40 @@ export default function VacationPage() {
 
       {/* Year selector */}
       <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => setSelectedYear((y) => y - 1)}
-          aria-label={tc('previousYear')}
-          className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setSelectedYear((y) => y - 1)}
+              aria-label={tc('previousYear')}
+              className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{tc('previousYear')}</TooltipContent>
+        </Tooltip>
         <YearSelector
           value={selectedYear}
           onChange={setSelectedYear}
           className="w-32"
         />
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => setSelectedYear((y) => y + 1)}
-          disabled={selectedYear >= currentYear + 1}
-          aria-label={tc('nextYear')}
-          className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setSelectedYear((y) => y + 1)}
+              disabled={selectedYear >= currentYear + 1}
+              aria-label={tc('nextYear')}
+              className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{tc('nextYear')}</TooltipContent>
+        </Tooltip>
         {selectedYear !== currentYear && (
           <Button
             variant="ghost"

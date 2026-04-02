@@ -13,6 +13,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -275,22 +276,26 @@ export function ContactFormDialog({
                 disabled={isSubmitting}
                 className="flex-1"
               />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={() => {
-                  const auto = generateLetterSalutation(form.salutation, form.title, form.lastName)
-                  if (auto) {
-                    setForm((p) => ({ ...p, letterSalutation: auto }))
-                    letterSalutationManuallyEdited.current = false
-                  }
-                }}
-                disabled={isSubmitting}
-                title={t('autoGenerateLetterSalutation')}
-              >
-                <Wand2 className="h-4 w-4" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      const auto = generateLetterSalutation(form.salutation, form.title, form.lastName)
+                      if (auto) {
+                        setForm((p) => ({ ...p, letterSalutation: auto }))
+                        letterSalutationManuallyEdited.current = false
+                      }
+                    }}
+                    disabled={isSubmitting}
+                  >
+                    <Wand2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t('autoGenerateLetterSalutation')}</TooltipContent>
+              </Tooltip>
             </div>
           </div>
 

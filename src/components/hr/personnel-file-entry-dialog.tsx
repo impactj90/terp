@@ -31,6 +31,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useTRPC } from '@/trpc'
 import { useQueryClient } from '@tanstack/react-query'
 import {
@@ -59,6 +60,7 @@ export function PersonnelFileEntryDialog({
   onSuccess,
 }: PersonnelFileEntryDialogProps) {
   const t = useTranslations('hrPersonnelFile')
+  const tc = useTranslations('common')
   const isEdit = !!entry
 
   // Form state
@@ -450,24 +452,34 @@ export function PersonnelFileEntryDialog({
                             {(att.sizeBytes / 1024).toFixed(0)} KB
                           </p>
                         </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 shrink-0"
-                          onClick={() => handleDownloadAttachment(att.id)}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 shrink-0 text-destructive"
-                          onClick={() => handleDeleteAttachment(att.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 shrink-0"
+                              onClick={() => handleDownloadAttachment(att.id)}
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{tc('download')}</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 shrink-0 text-destructive"
+                              onClick={() => handleDeleteAttachment(att.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{tc('delete')}</TooltipContent>
+                        </Tooltip>
                       </div>
                     ))}
                   </div>

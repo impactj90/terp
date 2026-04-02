@@ -8,6 +8,7 @@ import { Building2, X, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   Dialog,
   DialogContent,
@@ -43,6 +44,7 @@ export function AddressGroupSection({
   canEdit,
 }: AddressGroupSectionProps) {
   const t = useTranslations('crmAddresses')
+  const tc = useTranslations('common')
   const params = useParams<{ locale: string }>()
   const [searchOpen, setSearchOpen] = React.useState(false)
   const [removeConfirmOpen, setRemoveConfirmOpen] = React.useState(false)
@@ -127,14 +129,19 @@ export function AddressGroupSection({
                 {parentAddress.company} ({parentAddress.number})
               </Link>
               {canEdit && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => setRemoveConfirmOpen(true)}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => setRemoveConfirmOpen(true)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{tc('remove')}</TooltipContent>
+                </Tooltip>
               )}
             </div>
           </div>

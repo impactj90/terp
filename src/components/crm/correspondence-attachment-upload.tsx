@@ -4,6 +4,7 @@ import * as React from 'react'
 import { useTranslations } from 'next-intl'
 import { Upload, X, CheckCircle, AlertCircle, Loader2, FileText, FileSpreadsheet, Image, File } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
 import { useUploadCrmCorrespondenceAttachment } from '@/hooks'
 
@@ -54,6 +55,7 @@ export function CorrespondenceAttachmentUpload({
   currentCount,
 }: CorrespondenceAttachmentUploadProps) {
   const t = useTranslations('crmCorrespondence')
+  const tc = useTranslations('common')
   const { getUploadUrl, confirmUpload } = useUploadCrmCorrespondenceAttachment()
   const [files, setFiles] = React.useState<FileEntry[]>([])
   const [isUploading, setIsUploading] = React.useState(false)
@@ -285,17 +287,22 @@ export function CorrespondenceAttachmentUpload({
                   <AlertCircle className="h-5 w-5 text-destructive" />
                 )}
                 {entry.status === 'pending' && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      removeFile(index)
-                    }}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          removeFile(index)
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{tc('remove')}</TooltipContent>
+                  </Tooltip>
                 )}
               </div>
             </div>

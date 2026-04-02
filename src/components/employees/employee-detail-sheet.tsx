@@ -17,6 +17,7 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { StatusBadge } from './status-badge'
 import { useEmployee } from '@/hooks'
 
@@ -272,9 +273,14 @@ export function EmployeeDetailSheet({
                 <Edit className="mr-2 h-4 w-4" />
                 {t('edit')}
               </Button>
-              <Button variant="ghost" size="icon" onClick={handleDelete}>
-                <UserX className="h-4 w-4 text-destructive" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" onClick={handleDelete}>
+                    <UserX className="h-4 w-4 text-destructive" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{tc('delete')}</TooltipContent>
+              </Tooltip>
             </SheetFooter>
           </>
         ) : (

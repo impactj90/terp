@@ -3,6 +3,7 @@
 import * as React from 'react'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Flashlight, FlashlightOff, Keyboard, Camera } from 'lucide-react'
@@ -216,25 +217,33 @@ export function QrScanner({
             {scannerReady && (
               <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-3">
                 {torchSupported && (
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="h-12 w-12 rounded-full bg-black/60 text-white hover:bg-black/80"
-                    onClick={toggleTorch}
-                    title={torchOn ? t('torchOff') : t('torchOn')}
-                  >
-                    {torchOn ? <FlashlightOff className="h-5 w-5" /> : <Flashlight className="h-5 w-5" />}
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        className="h-12 w-12 rounded-full bg-black/60 text-white hover:bg-black/80"
+                        onClick={toggleTorch}
+                      >
+                        {torchOn ? <FlashlightOff className="h-5 w-5" /> : <Flashlight className="h-5 w-5" />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{torchOn ? t('torchOff') : t('torchOn')}</TooltipContent>
+                  </Tooltip>
                 )}
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="h-12 w-12 rounded-full bg-black/60 text-white hover:bg-black/80"
-                  onClick={() => setShowManualInput(true)}
-                  title={t('manualInput')}
-                >
-                  <Keyboard className="h-5 w-5" />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="h-12 w-12 rounded-full bg-black/60 text-white hover:bg-black/80"
+                      onClick={() => setShowManualInput(true)}
+                    >
+                      <Keyboard className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('manualInput')}</TooltipContent>
+                </Tooltip>
               </div>
             )}
           </div>

@@ -10,6 +10,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ArrowLeft, Edit, XCircle, CreditCard } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { SupplierInvoiceStatusBadge } from './supplier-invoice-status-badge'
@@ -45,6 +46,7 @@ interface SupplierInvoiceDetailProps {
 
 export function SupplierInvoiceDetail({ id }: SupplierInvoiceDetailProps) {
   const t = useTranslations('warehouseSupplierInvoices')
+  const tc = useTranslations('common')
   const router = useRouter()
 
   const { data: invoice, isLoading } = useWhSupplierInvoice(id)
@@ -109,9 +111,14 @@ export function SupplierInvoiceDetail({ id }: SupplierInvoiceDetailProps) {
       {/* Header */}
       <div className="space-y-3">
         <div className="flex items-start gap-3 sm:gap-4">
-          <Button variant="ghost" size="icon" className="shrink-0 mt-0.5" onClick={() => router.push('/warehouse/supplier-invoices')}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="shrink-0 mt-0.5" onClick={() => router.push('/warehouse/supplier-invoices')}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{tc('goBack')}</TooltipContent>
+          </Tooltip>
           <div className="flex-1 min-w-0">
             <h1 className="text-lg sm:text-2xl font-bold truncate">
               {t('detailTitle')}: {invoice.number}
@@ -311,14 +318,19 @@ export function SupplierInvoiceDetail({ id }: SupplierInvoiceDetailProps) {
                     </TableCell>
                     <TableCell>
                       {payment.status === 'ACTIVE' && !payment.isDiscount && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive"
-                          onClick={() => setCancelPaymentId(payment.id)}
-                        >
-                          <XCircle className="h-4 w-4" />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive"
+                              onClick={() => setCancelPaymentId(payment.id)}
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{tc('cancel')}</TooltipContent>
+                        </Tooltip>
                       )}
                     </TableCell>
                   </TableRow>

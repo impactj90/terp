@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useCreateBillingDocument } from '@/hooks'
 import { useCrmAddresses, useCrmContacts } from '@/hooks'
 import { useCrmInquiries } from '@/hooks'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
 import { ArrowLeft } from 'lucide-react'
 import { useTranslations } from 'next-intl'
@@ -37,6 +38,7 @@ export function BillingDocumentForm() {
   const searchParams = useSearchParams()
   const createMutation = useCreateBillingDocument()
   const t = useTranslations('billingDocuments')
+  const tc = useTranslations('common')
 
   const [type, setType] = React.useState(searchParams.get('type') ?? 'OFFER')
   const [addressId, setAddressId] = React.useState('')
@@ -111,9 +113,14 @@ export function BillingDocumentForm() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={() => router.back()}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{tc('goBack')}</TooltipContent>
+        </Tooltip>
         <h2 className="text-2xl font-bold">{t('newDocumentTitle')}</h2>
       </div>
 

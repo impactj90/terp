@@ -39,6 +39,7 @@ import { DocumentPositionTable } from './document-position-table'
 import { DocumentForwardDialog } from './document-forward-dialog'
 import { DocumentFinalizeDialog } from './document-print-dialog'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 
@@ -192,6 +193,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
   const generateEInvoiceMutation = useGenerateBillingDocumentEInvoice()
 
   const t = useTranslations('billingDocuments')
+  const tc = useTranslations('common')
 
   // Load inquiries for Vorgang select (only for DRAFT documents)
   const { data: inquiryData } = useCrmInquiries({
@@ -312,9 +314,14 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
       {/* Toolbar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.push('/orders/documents')}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={() => router.push('/orders/documents')}>
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{tc('goBack')}</TooltipContent>
+          </Tooltip>
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-2xl font-bold">{doc.number}</h2>
@@ -598,14 +605,19 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
         {/* Sidebar (collapsible) */}
         <div className={`shrink-0 transition-all duration-200 ${sidebarOpen ? 'w-80' : 'w-8'}`}>
           <div className="sticky top-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="mb-2"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-            >
-              {sidebarOpen ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="mb-2"
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                >
+                  {sidebarOpen ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{tc('togglePanel')}</TooltipContent>
+            </Tooltip>
 
             {sidebarOpen && (
               <div className="space-y-6">

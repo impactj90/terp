@@ -10,6 +10,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   useWhArticle,
@@ -55,6 +56,7 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
   const restoreArticle = useRestoreWhArticle()
 
   const t = useTranslations('warehouseArticles')
+  const tc = useTranslations('common')
 
   const generateLabelPdf = useGenerateLabelPdf()
 
@@ -129,9 +131,14 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
       {/* Header */}
       <div className="space-y-3">
         <div className="flex items-start gap-3 sm:gap-4">
-          <Button variant="ghost" size="icon" className="shrink-0 mt-0.5" onClick={() => router.push('/warehouse/articles')}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="shrink-0 mt-0.5" onClick={() => router.push('/warehouse/articles')}>
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{tc('goBack')}</TooltipContent>
+          </Tooltip>
           <div className="min-w-0">
             <h1 className="text-lg sm:text-2xl font-bold flex flex-wrap items-center gap-1 sm:gap-2">
               <span className="font-mono">{article.number}</span>

@@ -18,6 +18,7 @@ import {
 import { PriceListEntryFormDialog } from './price-list-entry-form-dialog'
 import { PriceListBulkImportDialog } from './price-list-bulk-import-dialog'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 
@@ -37,6 +38,7 @@ interface PriceListEntriesTableProps {
 
 export function PriceListEntriesTable({ priceListId, readonly }: PriceListEntriesTableProps) {
   const t = useTranslations('billingPriceListEntries')
+  const tc = useTranslations('common')
   const { data: entries, isLoading } = useBillingPriceListEntries(priceListId)
   const deleteMutation = useDeleteBillingPriceListEntry()
 
@@ -125,28 +127,38 @@ export function PriceListEntriesTable({ priceListId, readonly }: PriceListEntrie
                 {!readonly && (
                   <TableCell>
                     <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => {
-                          setEditingEntry(entry as unknown as Record<string, unknown>)
-                          setShowEntryDialog(true)
-                        }}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive"
-                        onClick={() => setDeletingEntry({
-                          id: entry.id,
-                          description: entry.description || entry.itemKey || t('entry'),
-                        })}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => {
+                              setEditingEntry(entry as unknown as Record<string, unknown>)
+                              setShowEntryDialog(true)
+                            }}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>{tc('edit')}</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive"
+                            onClick={() => setDeletingEntry({
+                              id: entry.id,
+                              description: entry.description || entry.itemKey || t('entry'),
+                            })}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>{tc('delete')}</TooltipContent>
+                      </Tooltip>
                     </div>
                   </TableCell>
                 )}

@@ -4,6 +4,7 @@ import * as React from 'react'
 import { useTranslations } from 'next-intl'
 import { FileText, FileSpreadsheet, Image, File, Download, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
@@ -99,27 +100,35 @@ export function CorrespondenceAttachmentList({
             </div>
 
             <div className="flex items-center gap-1 flex-shrink-0">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => handleDownload(attachment.downloadUrl, attachment.filename)}
-                disabled={!attachment.downloadUrl}
-                title={t('downloadAttachment')}
-              >
-                <Download className="h-4 w-4" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => handleDownload(attachment.downloadUrl, attachment.filename)}
+                    disabled={!attachment.downloadUrl}
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t('downloadAttachment')}</TooltipContent>
+              </Tooltip>
 
               {!readOnly && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive hover:text-destructive"
-                  title={t('deleteAttachment')}
-                  onClick={() => setDeleteTarget({ id: attachment.id, filename: attachment.filename })}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => setDeleteTarget({ id: attachment.id, filename: attachment.filename })}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('deleteAttachment')}</TooltipContent>
+                </Tooltip>
               )}
             </div>
           </div>

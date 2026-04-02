@@ -76,6 +76,7 @@ export function BankAccountList({ bankAccounts, onAdd, onEdit, onDelete }: BankA
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
                         <MoreHorizontal className="h-4 w-4" />
+                        <span className="sr-only">Aktionen</span>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -126,6 +127,7 @@ export function BankAccountList({ bankAccounts, onAdd, onEdit, onDelete }: BankA
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8">
                             <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Aktionen</span>
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">

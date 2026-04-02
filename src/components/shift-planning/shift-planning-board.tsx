@@ -11,6 +11,7 @@ import {
 } from '@dnd-kit/core'
 import { useDroppable } from '@dnd-kit/core'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Card, CardContent } from '@/components/ui/card'
 import { SearchInput } from '@/components/ui/search-input'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -97,6 +98,7 @@ function getTodayRange(viewMode: ViewMode): { start: Date; end: Date } {
 
 export function ShiftPlanningBoard({ enabled }: ShiftPlanningBoardProps) {
   const t = useTranslations('shiftPlanning')
+  const tc = useTranslations('common')
   const locale = useLocale()
 
   // View mode and date range
@@ -301,15 +303,19 @@ export function ShiftPlanningBoard({ enabled }: ShiftPlanningBoardProps) {
         <div className="flex flex-wrap items-center gap-2">
           {/* Date navigation */}
           <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handlePrev}
-              title={t('previousPeriod')}
-              className="h-9 w-9"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handlePrev}
+                  className="h-9 w-9"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{tc('previousPeriod')}</TooltipContent>
+            </Tooltip>
 
             <div className="flex items-center gap-2 px-2 min-w-[160px] justify-center">
               <span className="text-sm font-medium whitespace-nowrap">
@@ -320,15 +326,19 @@ export function ShiftPlanningBoard({ enabled }: ShiftPlanningBoardProps) {
               )}
             </div>
 
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleNext}
-              title={t('nextPeriod')}
-              className="h-9 w-9"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleNext}
+                  className="h-9 w-9"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{tc('nextPeriod')}</TooltipContent>
+            </Tooltip>
 
             <Button
               variant="outline"

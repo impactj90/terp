@@ -13,6 +13,7 @@ import {
   Search,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -330,42 +331,58 @@ export function AccountMappingDialog({
 
             {/* Transfer Buttons */}
             <div className="flex flex-col items-center justify-center gap-1 py-4">
-              <Button
-                variant="outline"
-                size="icon-sm"
-                onClick={handleAddAll}
-                disabled={availableAccounts.length === 0}
-                title={tm('addAll')}
-              >
-                <ChevronsRight className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon-sm"
-                onClick={handleAddSelected}
-                disabled={selectedAvailable.size === 0}
-                title={tm('addSelected')}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon-sm"
-                onClick={handleRemoveSelected}
-                disabled={selectedAssigned.size === 0}
-                title={tm('removeSelected')}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon-sm"
-                onClick={handleRemoveAll}
-                disabled={assignedIds.length === 0}
-                title={tm('removeAll')}
-              >
-                <ChevronsLeft className="h-4 w-4" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon-sm"
+                    onClick={handleAddAll}
+                    disabled={availableAccounts.length === 0}
+                  >
+                    <ChevronsRight className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{tm('addAll')}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon-sm"
+                    onClick={handleAddSelected}
+                    disabled={selectedAvailable.size === 0}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{tm('addSelected')}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon-sm"
+                    onClick={handleRemoveSelected}
+                    disabled={selectedAssigned.size === 0}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{tm('removeSelected')}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon-sm"
+                    onClick={handleRemoveAll}
+                    disabled={assignedIds.length === 0}
+                  >
+                    <ChevronsLeft className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{tm('removeAll')}</TooltipContent>
+              </Tooltip>
             </div>
 
             {/* Assigned Accounts Panel */}
@@ -422,24 +439,32 @@ export function AccountMappingDialog({
                   <span />
                 )}
                 <div className="flex gap-1">
-                  <Button
-                    variant="outline"
-                    size="icon-sm"
-                    onClick={handleMoveUp}
-                    disabled={selectedAssigned.size === 0}
-                    title={tm('moveUp')}
-                  >
-                    <ChevronUp className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon-sm"
-                    onClick={handleMoveDown}
-                    disabled={selectedAssigned.size === 0}
-                    title={tm('moveDown')}
-                  >
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={handleMoveUp}
+                        disabled={selectedAssigned.size === 0}
+                      >
+                        <ChevronUp className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{tm('moveUp')}</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={handleMoveDown}
+                        disabled={selectedAssigned.size === 0}
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{tm('moveDown')}</TooltipContent>
+                  </Tooltip>
                 </div>
               </div>
             </div>

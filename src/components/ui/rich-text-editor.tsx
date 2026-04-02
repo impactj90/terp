@@ -5,7 +5,9 @@ import { BubbleMenu } from '@tiptap/react/menus'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import { Bold, Italic } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
 interface RichTextEditorProps {
@@ -23,6 +25,7 @@ export function RichTextEditor({
   editable = true,
   className,
 }: RichTextEditorProps) {
+  const tc = useTranslations('common')
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -71,24 +74,34 @@ export function RichTextEditor({
           editor={editor}
           className="flex items-center gap-0.5 rounded-md border bg-background p-0.5 shadow-md"
         >
-          <Button
-            type="button"
-            variant={editor.isActive('bold') ? 'default' : 'ghost'}
-            size="icon"
-            className="h-7 w-7"
-            onClick={() => editor.chain().focus().toggleBold().run()}
-          >
-            <Bold className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            type="button"
-            variant={editor.isActive('italic') ? 'default' : 'ghost'}
-            size="icon"
-            className="h-7 w-7"
-            onClick={() => editor.chain().focus().toggleItalic().run()}
-          >
-            <Italic className="h-3.5 w-3.5" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant={editor.isActive('bold') ? 'default' : 'ghost'}
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => editor.chain().focus().toggleBold().run()}
+              >
+                <Bold className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{tc('bold')}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant={editor.isActive('italic') ? 'default' : 'ghost'}
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => editor.chain().focus().toggleItalic().run()}
+              >
+                <Italic className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{tc('italic')}</TooltipContent>
+          </Tooltip>
         </BubbleMenu>
       )}
       <EditorContent editor={editor} />

@@ -4,6 +4,7 @@ import * as React from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   Select,
   SelectContent,
@@ -32,6 +33,7 @@ export function PayrollExportToolbar({
   onGenerate,
 }: PayrollExportToolbarProps) {
   const t = useTranslations('payrollExports')
+  const tc = useTranslations('common')
   const locale = useLocale()
 
   const monthLabel = React.useMemo(() => {
@@ -61,15 +63,25 @@ export function PayrollExportToolbar({
     <div className="grid gap-4 md:grid-cols-4 md:items-end">
       {/* Month/Year navigator */}
       <div className="flex items-center rounded-md border">
-        <Button variant="ghost" size="icon" onClick={navigatePrevious} className="h-9 w-9">
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={navigatePrevious} className="h-9 w-9">
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{tc('previousMonth')}</TooltipContent>
+        </Tooltip>
         <span className="flex-1 px-3 text-sm font-medium text-center capitalize">
           {monthLabel}
         </span>
-        <Button variant="ghost" size="icon" onClick={navigateNext} className="h-9 w-9">
-          <ChevronRight className="h-4 w-4" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={navigateNext} className="h-9 w-9">
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{tc('nextMonth')}</TooltipContent>
+        </Tooltip>
       </div>
 
       {/* Status filter */}

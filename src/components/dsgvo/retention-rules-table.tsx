@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Check, Pencil, AlertTriangle, Loader2 } from 'lucide-react'
 
 const LEGAL_MINIMUM_MONTHS: Record<string, number> = {
@@ -47,6 +48,7 @@ interface EditingState {
 
 export function RetentionRulesTable() {
   const t = useTranslations('dsgvo')
+  const tc = useTranslations('common')
   const { data: rules, isLoading: rulesLoading } = useDsgvoRules()
   const { data: preview, isLoading: previewLoading } = useDsgvoPreview()
   const updateRule = useUpdateDsgvoRule()
@@ -218,34 +220,49 @@ export function RetentionRulesTable() {
                 <TableCell>
                   {isEditing ? (
                     <div className="flex gap-1">
-                      <Button
-                        size="sm"
-                        onClick={saveEdit}
-                        disabled={updateRule.isPending}
-                      >
-                        {updateRule.isPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Check className="h-4 w-4" />
-                        )}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={cancelEdit}
-                        disabled={updateRule.isPending}
-                      >
-                        &times;
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            onClick={saveEdit}
+                            disabled={updateRule.isPending}
+                          >
+                            {updateRule.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Check className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>{tc('save')}</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={cancelEdit}
+                            disabled={updateRule.isPending}
+                          >
+                            &times;
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>{tc('cancel')}</TooltipContent>
+                      </Tooltip>
                     </div>
                   ) : (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => startEdit(rule)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => startEdit(rule)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{tc('edit')}</TooltipContent>
+                    </Tooltip>
                   )}
                 </TableCell>
               </TableRow>

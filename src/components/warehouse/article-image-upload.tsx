@@ -12,6 +12,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useUploadWhArticleImage } from '@/hooks'
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
@@ -38,6 +39,7 @@ export function ArticleImageUpload({
   onOpenChange,
 }: ArticleImageUploadProps) {
   const t = useTranslations('warehouseArticles')
+  const tc = useTranslations('common')
   const { getUploadUrl, confirmUpload } = useUploadWhArticleImage()
   const [files, setFiles] = React.useState<FileEntry[]>([])
   const [isUploading, setIsUploading] = React.useState(false)
@@ -297,17 +299,22 @@ export function ArticleImageUpload({
                     <AlertCircle className="h-5 w-5 text-destructive" />
                   )}
                   {entry.status === 'pending' && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        removeFile(index)
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            removeFile(index)
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{tc('remove')}</TooltipContent>
+                    </Tooltip>
                   )}
                 </div>
               </div>
