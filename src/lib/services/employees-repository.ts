@@ -151,6 +151,18 @@ export async function findByPin(
   return prisma.employee.findFirst({ where })
 }
 
+// --- Auto-Personnel-Number ---
+
+export async function getNextPersonnelNumber(
+  prisma: PrismaClient,
+  tenantId: string
+): Promise<string> {
+  const result = await prisma.$queryRaw<[{ max_nr: string }]>(
+    Prisma.sql`SELECT COALESCE(MAX(personnel_number::integer), 0) + 1 as max_nr FROM employees WHERE tenant_id = ${tenantId}::uuid AND personnel_number ~ '^[0-9]+$' AND deleted_at IS NULL`
+  )
+  return String(result[0]?.max_nr ?? "1")
+}
+
 // --- Auto-PIN ---
 
 export async function getNextPin(

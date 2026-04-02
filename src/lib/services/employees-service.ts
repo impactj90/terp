@@ -169,10 +169,9 @@ export async function create(
   prisma: PrismaClient,
   tenantId: string,
   input: {
-    personnelNumber: string;
+    personnelNumber?: string;
     firstName: string;
     lastName: string;
-    pin?: string;
     email?: string;
     phone?: string;
     entryDate: Date;
@@ -216,10 +215,10 @@ export async function create(
   },
   audit: AuditContext,
 ) {
-  // Trim and validate required fields
-  const personnelNumber = input.personnelNumber.trim();
+  // Auto-generate personnel number if not provided
+  let personnelNumber = input.personnelNumber?.trim() || "";
   if (personnelNumber.length === 0) {
-    throw new EmployeeValidationError("Personnel number is required");
+    personnelNumber = await repo.getNextPersonnelNumber(prisma, tenantId);
   }
 
   const firstName = input.firstName.trim();
@@ -246,11 +245,8 @@ export async function create(
     throw new EmployeeValidationError("Exit date cannot be before entry date");
   }
 
-  // Auto-assign PIN if not provided
-  let pin = input.pin?.trim() || "";
-  if (pin.length === 0) {
-    pin = await repo.getNextPin(prisma, tenantId);
-  }
+  // Always auto-assign PIN
+  const pin = await repo.getNextPin(prisma, tenantId);
 
   // Rely on DB unique constraints for personnel number / PIN uniqueness.
   // P2002 catch below maps constraint violations to domain errors.

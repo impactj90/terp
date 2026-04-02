@@ -177,10 +177,9 @@ const listEmployeesInputSchema = z
   .optional()
 
 const createEmployeeInputSchema = z.object({
-  personnelNumber: z.string().min(1, "Personnel number is required").max(50),
+  personnelNumber: z.string().max(50).optional(),
   firstName: z.string().min(1, "First name is required").max(255),
   lastName: z.string().min(1, "Last name is required").max(255),
-  pin: z.string().max(20).optional(),
   email: z.string().email().optional(),
   phone: z.string().max(50).optional(),
   entryDate: z.coerce.date(),
