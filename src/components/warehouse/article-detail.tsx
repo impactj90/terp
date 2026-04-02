@@ -125,7 +125,7 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6 overflow-hidden">
       {/* Header */}
       <div className="space-y-3">
         <div className="flex items-start gap-3 sm:gap-4">
@@ -196,7 +196,7 @@ export function ArticleDetail({ articleId }: ArticleDetailProps) {
 
       {/* Tabs */}
       <Tabs defaultValue="overview">
-        <TabsList className="max-w-full overflow-x-auto">
+        <TabsList className="w-full max-w-full overflow-x-auto justify-start">
           <TabsTrigger value="overview">{t('tabOverview')}</TabsTrigger>
           <TabsTrigger value="suppliers">{t('tabSuppliers')}</TabsTrigger>
           <TabsTrigger value="bom">{t('tabBom')}</TabsTrigger>

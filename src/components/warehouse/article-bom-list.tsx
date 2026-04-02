@@ -128,6 +128,7 @@ export function ArticleBomList({ articleId }: ArticleBomListProps) {
           {t('noBomComponents')}
         </div>
       ) : (
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -178,6 +179,7 @@ export function ArticleBomList({ articleId }: ArticleBomListProps) {
             })}
           </TableBody>
         </Table>
+        </div>
       )}
 
       {/* Add Component Dialog */}

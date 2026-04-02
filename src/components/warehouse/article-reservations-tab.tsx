@@ -85,6 +85,7 @@ export function ArticleReservationsTab({ articleId }: { articleId: string }) {
 
   return (
     <>
+      <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
@@ -124,6 +125,7 @@ export function ArticleReservationsTab({ articleId }: { articleId: string }) {
           ))}
         </TableBody>
       </Table>
+      </div>
 
       <Dialog open={releaseDialogOpen} onOpenChange={setReleaseDialogOpen}>
         <DialogContent>

@@ -171,6 +171,7 @@ export function ArticleSupplierList({ articleId }: ArticleSupplierListProps) {
           {t('noSuppliers')}
         </div>
       ) : (
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -227,6 +228,7 @@ export function ArticleSupplierList({ articleId }: ArticleSupplierListProps) {
             })}
           </TableBody>
         </Table>
+        </div>
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

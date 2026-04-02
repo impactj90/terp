@@ -59,6 +59,7 @@ export function ArticlePriceTab({ articleId }: ArticlePriceTabProps) {
   return (
     <Card>
       <CardContent className="p-0">
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -103,6 +104,7 @@ export function ArticlePriceTab({ articleId }: ArticlePriceTabProps) {
             ))}
           </TableBody>
         </Table>
+        </div>
       </CardContent>
     </Card>
   )

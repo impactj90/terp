@@ -35,7 +35,7 @@ function AppLayoutContent({ children }: AppLayoutContentProps) {
         {/* Main content wrapper */}
         <div
           className={cn(
-            'flex flex-1 flex-col transition-[margin] duration-300',
+            'flex flex-1 flex-col min-w-0 transition-[margin] duration-300',
             // Add left margin on desktop to account for sidebar
             isCollapsed
               ? 'lg:ml-[var(--sidebar-collapsed-width)]'

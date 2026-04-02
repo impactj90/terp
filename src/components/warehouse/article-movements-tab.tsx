@@ -80,7 +80,7 @@ export function ArticleMovementsTab({ articleId }: ArticleMovementsTabProps) {
       <CardHeader>
         <CardTitle>{t('articleTabTitle')}</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="overflow-x-auto p-0 sm:p-6">
         <Table>
           <TableHeader>
             <TableRow>
