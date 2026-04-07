@@ -142,7 +142,8 @@ describe("dsgvo router", () => {
           retentionMonths: 24,
           action: "DELETE",
           isActive: true,
-        }
+        },
+        expect.anything()
       )
     })
 
@@ -236,7 +237,8 @@ describe("dsgvo router", () => {
       expect(dsgvoService.executeRetention).toHaveBeenCalledWith(
         expect.anything(),
         TENANT_ID,
-        expect.objectContaining({ dryRun: true })
+        expect.objectContaining({ dryRun: true }),
+        expect.anything()
       )
     })
 
@@ -247,7 +249,8 @@ describe("dsgvo router", () => {
       expect(dsgvoService.executeRetention).toHaveBeenCalledWith(
         expect.anything(),
         TENANT_ID,
-        expect.objectContaining({ executedBy: USER_ID })
+        expect.objectContaining({ executedBy: USER_ID }),
+        expect.anything()
       )
     })
   })
@@ -290,6 +293,7 @@ describe("dsgvo router", () => {
       expect(dsgvoService.executeRetention).toHaveBeenCalledWith(
         expect.anything(),
         TENANT_ID,
+        expect.anything(),
         expect.anything()
       )
     })

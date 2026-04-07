@@ -344,7 +344,8 @@ export const billingDocumentsRouter = createTRPCRouter({
         return await eInvoiceService.generateAndStoreEInvoice(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)

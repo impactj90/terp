@@ -62,7 +62,8 @@ export const dsgvoRouter = createTRPCRouter({
           return await dsgvoService.updateRule(
             ctx.prisma,
             ctx.tenantId!,
-            input
+            input,
+            { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
           )
         } catch (err) {
           handleServiceError(err)
@@ -117,7 +118,7 @@ export const dsgvoRouter = createTRPCRouter({
           dataType: input.dataType,
           dryRun: input.dryRun,
           executedBy: ctx.user?.id,
-        })
+        }, { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent })
       } catch (err) {
         handleServiceError(err)
       }

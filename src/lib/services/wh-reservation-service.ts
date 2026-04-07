@@ -10,6 +10,8 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./wh-reservation-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
 
 // --- Error Classes ---
 
@@ -245,7 +247,8 @@ export async function release(
   tenantId: string,
   id: string,
   userId: string,
-  reason?: string
+  reason?: string,
+  audit?: AuditContext
 ) {
   // 1. Fetch reservation with tenant guard
   const existing = await repo.findById(prisma, tenantId, id)
@@ -259,12 +262,28 @@ export async function release(
   }
 
   // 3. Update
-  return repo.update(prisma, tenantId, id, {
+  const updated = await repo.update(prisma, tenantId, id, {
     status: "RELEASED",
     releasedAt: new Date(),
     releasedById: userId,
     releaseReason: reason || "MANUAL",
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "release",
+      entityType: "wh_reservation",
+      entityId: id,
+      entityName: existing.articleId ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 /**
@@ -275,7 +294,8 @@ export async function releaseBulk(
   tenantId: string,
   documentId: string,
   userId: string,
-  reason?: string
+  reason?: string,
+  audit?: AuditContext
 ) {
   // Verify document belongs to tenant
   const doc = await prisma.billingDocument.findFirst({
@@ -292,6 +312,21 @@ export async function releaseBulk(
     releasedById: userId,
     releaseReason: reason || "MANUAL",
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "release_bulk",
+      entityType: "wh_reservation",
+      entityId: documentId,
+      entityName: null,
+      changes: null,
+      metadata: { releasedCount: result.count, documentId },
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 
   return { releasedCount: result.count }
 }

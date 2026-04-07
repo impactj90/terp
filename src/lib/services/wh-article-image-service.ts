@@ -8,6 +8,8 @@
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as storage from "@/lib/supabase/storage"
 import { randomUUID } from "crypto"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
 
 const BUCKET = "wh-article-images"
 const SIGNED_URL_EXPIRY_SECONDS = 3600 // 1 hour
@@ -201,7 +203,8 @@ export async function confirmUpload(
   filename: string,
   mimeType: string,
   sizeBytes: number,
-  createdById: string | null
+  createdById: string | null,
+  audit?: AuditContext
 ) {
   // Validate size
   if (sizeBytes > MAX_SIZE_BYTES) {
@@ -275,6 +278,20 @@ export async function confirmUpload(
     createdById,
   })
 
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "upload",
+      entityType: "wh_article_image",
+      entityId: image.id,
+      entityName: filename,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return image
 }
 
@@ -284,7 +301,8 @@ export async function confirmUpload(
 export async function setPrimary(
   prisma: PrismaClient,
   tenantId: string,
-  imageId: string
+  imageId: string,
+  audit?: AuditContext
 ) {
   const image = await findById(prisma, tenantId, imageId)
   if (!image) {
@@ -302,6 +320,20 @@ export async function setPrimary(
       data: { isPrimary: true },
     }),
   ])
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "wh_article_image",
+      entityId: imageId,
+      entityName: image.filename ?? null,
+      changes: { isPrimary: { old: false, new: true } },
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 
   return { success: true }
 }
@@ -353,7 +385,8 @@ export async function reorderImages(
 export async function deleteImage(
   prisma: PrismaClient,
   tenantId: string,
-  imageId: string
+  imageId: string,
+  audit?: AuditContext
 ) {
   const image = await findById(prisma, tenantId, imageId)
   if (!image) {
@@ -380,6 +413,20 @@ export async function deleteImage(
         data: { isPrimary: true },
       })
     }
+  }
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "wh_article_image",
+      entityId: imageId,
+      entityName: image.filename ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
   }
 
   return { success: true }

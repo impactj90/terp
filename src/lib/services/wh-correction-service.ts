@@ -7,6 +7,8 @@
 import type { PrismaClient, WhCorrectionSeverity } from "@/generated/prisma/client"
 import * as repo from "./wh-correction-repository"
 import * as reservationRepo from "./wh-reservation-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
 
 // --- Error Classes (naming convention drives handleServiceError mapping) ---
 
@@ -180,7 +182,8 @@ export async function runCorrectionChecks(
   prisma: PrismaClient,
   tenantId: string,
   triggeredById?: string | null,
-  trigger: string = "MANUAL"
+  trigger: string = "MANUAL",
+  audit?: AuditContext
 ) {
   // 1. Create run record
   const run = await repo.createRun(prisma, {
@@ -241,6 +244,21 @@ export async function runCorrectionChecks(
     // 2. Complete run
     await repo.completeRun(prisma, run.id, checks.length, totalIssues)
 
+    if (audit) {
+      await auditLog.log(prisma, {
+        tenantId,
+        userId: audit.userId,
+        action: "run_checks",
+        entityType: "wh_correction_run",
+        entityId: run.id,
+        entityName: trigger,
+        changes: null,
+        metadata: { checksRun: checks.length, issuesFound: totalIssues },
+        ipAddress: audit.ipAddress,
+        userAgent: audit.userAgent,
+      }).catch(err => console.error('[AuditLog] Failed:', err))
+    }
+
     return {
       runId: run.id,
       checksRun: checks.length,
@@ -296,7 +314,8 @@ export async function resolveMessage(
   tenantId: string,
   id: string,
   resolvedById: string,
-  note?: string
+  note?: string,
+  audit?: AuditContext
 ) {
   // Verify exists
   const existing = await repo.findMessageById(prisma, tenantId, id)
@@ -307,12 +326,28 @@ export async function resolveMessage(
     throw new WhCorrectionValidationError("Message is not in OPEN status")
   }
 
-  return repo.updateMessageStatus(prisma, tenantId, id, {
+  const updated = await repo.updateMessageStatus(prisma, tenantId, id, {
     status: "RESOLVED",
     resolvedById,
     resolvedNote: note ?? null,
     resolvedAt: new Date(),
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "resolve",
+      entityType: "wh_correction_message",
+      entityId: id,
+      entityName: existing.code ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function dismissMessage(
@@ -320,7 +355,8 @@ export async function dismissMessage(
   tenantId: string,
   id: string,
   resolvedById: string,
-  note?: string
+  note?: string,
+  audit?: AuditContext
 ) {
   const existing = await repo.findMessageById(prisma, tenantId, id)
   if (!existing) {
@@ -330,12 +366,28 @@ export async function dismissMessage(
     throw new WhCorrectionValidationError("Message is not in OPEN status")
   }
 
-  return repo.updateMessageStatus(prisma, tenantId, id, {
+  const updated = await repo.updateMessageStatus(prisma, tenantId, id, {
     status: "DISMISSED",
     resolvedById,
     resolvedNote: note ?? null,
     resolvedAt: new Date(),
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "dismiss",
+      entityType: "wh_correction_message",
+      entityId: id,
+      entityName: existing.code ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function resolveBulk(
@@ -343,18 +395,35 @@ export async function resolveBulk(
   tenantId: string,
   ids: string[],
   resolvedById: string,
-  note?: string
+  note?: string,
+  audit?: AuditContext
 ) {
   if (ids.length === 0) {
     throw new WhCorrectionValidationError("No message IDs provided")
   }
 
-  return repo.updateManyMessagesStatus(prisma, tenantId, ids, {
+  const result = await repo.updateManyMessagesStatus(prisma, tenantId, ids, {
     status: "RESOLVED",
     resolvedById,
     resolvedNote: note ?? null,
     resolvedAt: new Date(),
   })
+
+  if (audit) {
+    await auditLog.logBulk(prisma, ids.map(id => ({
+      tenantId,
+      userId: audit.userId,
+      action: "resolve_bulk",
+      entityType: "wh_correction_message",
+      entityId: id,
+      entityName: null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }))).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return result
 }
 
 export async function getSummary(

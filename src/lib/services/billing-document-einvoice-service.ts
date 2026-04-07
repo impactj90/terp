@@ -7,6 +7,8 @@ import * as billingDocService from "./billing-document-service"
 import * as billingDocRepo from "./billing-document-repository"
 import * as billingTenantConfigRepo from "./billing-tenant-config-repository"
 import * as billingPdfService from "./billing-document-pdf-service"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
 
 // --- Error Classes ---
 
@@ -356,7 +358,8 @@ export async function embedXmlInPdf(
 export async function generateAndStoreEInvoice(
   prisma: PrismaClient,
   tenantId: string,
-  documentId: string
+  documentId: string,
+  audit?: AuditContext
 ): Promise<{ xmlStoragePath: string }> {
   // 1. Load document, address, tenantConfig
   const doc = await billingDocService.getById(prisma, tenantId, documentId)
@@ -424,6 +427,20 @@ export async function generateAndStoreEInvoice(
   await billingDocRepo.update(prisma, tenantId, documentId, {
     eInvoiceXmlUrl: xmlStoragePath,
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "generate_einvoice",
+      entityType: "billing_document",
+      entityId: documentId,
+      entityName: doc.number ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 
   return { xmlStoragePath }
 }

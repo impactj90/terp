@@ -10,6 +10,8 @@
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as storage from "@/lib/supabase/storage"
 import { randomUUID } from "crypto"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
 
 const BUCKET = "hr-personnel-files"
 const SIGNED_URL_EXPIRY_SECONDS = 3600 // 1 hour
@@ -205,7 +207,8 @@ export async function confirmUpload(
   filename: string,
   mimeType: string,
   sizeBytes: number,
-  createdById: string | null
+  createdById: string | null,
+  audit?: AuditContext
 ) {
   // Validate size
   if (sizeBytes > MAX_SIZE_BYTES) {
@@ -249,6 +252,20 @@ export async function confirmUpload(
     createdById,
   })
 
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "upload",
+      entityType: "hr_personnel_file_attachment",
+      entityId: attachment.id,
+      entityName: filename,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return attachment
 }
 
@@ -258,7 +275,8 @@ export async function confirmUpload(
 export async function deleteAttachment(
   prisma: PrismaClient,
   tenantId: string,
-  attachmentId: string
+  attachmentId: string,
+  audit?: AuditContext
 ) {
   const attachment = await findById(prisma, tenantId, attachmentId)
   if (!attachment) {
@@ -270,6 +288,20 @@ export async function deleteAttachment(
 
   // Delete DB record
   await removeAttachment(prisma, tenantId, attachmentId)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "hr_personnel_file_attachment",
+      entityId: attachmentId,
+      entityName: attachment.filename ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 
   return { success: true }
 }

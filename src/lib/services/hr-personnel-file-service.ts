@@ -6,6 +6,13 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./hr-personnel-file-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit ---
+
+const CATEGORY_TRACKED_FIELDS = ["name", "code", "isActive", "description", "color", "sortOrder", "visibleToRoles"]
+const ENTRY_TRACKED_FIELDS = ["title", "categoryId", "description", "entryDate", "expiresAt", "reminderDate", "reminderNote", "isConfidential"]
 
 // --- Error Classes ---
 
@@ -104,7 +111,8 @@ export async function createCategory(
     color?: string
     sortOrder?: number
     visibleToRoles?: string[]
-  }
+  },
+  audit?: AuditContext
 ) {
   // Check for duplicate code
   const existing = await repo.findCategoryByCode(prisma, tenantId, input.code)
@@ -112,7 +120,7 @@ export async function createCategory(
     throw new HrPersonnelFileConflictError(`Category code "${input.code}" already exists`)
   }
 
-  return repo.createCategory(prisma, {
+  const created = await repo.createCategory(prisma, {
     tenantId,
     name: input.name,
     code: input.code,
@@ -121,6 +129,22 @@ export async function createCategory(
     sortOrder: input.sortOrder ?? 0,
     visibleToRoles: input.visibleToRoles ?? ["admin", "hr"],
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "hr_personnel_file_category",
+      entityId: created.id,
+      entityName: created.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return created
 }
 
 export async function updateCategory(
@@ -135,7 +159,8 @@ export async function updateCategory(
     sortOrder?: number
     isActive?: boolean
     visibleToRoles?: string[]
-  }
+  },
+  audit?: AuditContext
 ) {
   const existing = await repo.findCategoryById(prisma, tenantId, input.id)
   if (!existing) {
@@ -151,13 +176,35 @@ export async function updateCategory(
   }
 
   const { id, ...data } = input
-  return repo.updateCategory(prisma, tenantId, id, data)
+  const updated = await repo.updateCategory(prisma, tenantId, id, data)
+
+  if (audit && updated) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      CATEGORY_TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "hr_personnel_file_category",
+      entityId: input.id,
+      entityName: updated.name ?? null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function deleteCategory(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   const existing = await repo.findCategoryById(prisma, tenantId, id)
   if (!existing) {
@@ -173,6 +220,20 @@ export async function deleteCategory(
   }
 
   await repo.deleteCategory(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "hr_personnel_file_category",
+      entityId: id,
+      entityName: existing.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }
 
 // =============================================================================
@@ -269,7 +330,8 @@ export async function createEntry(
     reminderNote?: string
     isConfidential?: boolean
   },
-  createdById: string
+  createdById: string,
+  audit?: AuditContext
 ) {
   // Validate employee belongs to tenant
   const employee = await prisma.employee.findFirst({
@@ -286,7 +348,7 @@ export async function createEntry(
     throw new HrPersonnelFileValidationError("Category not found or does not belong to this tenant")
   }
 
-  return repo.createEntry(prisma, {
+  const created = await repo.createEntry(prisma, {
     tenantId,
     employeeId: input.employeeId,
     categoryId: input.categoryId,
@@ -299,6 +361,22 @@ export async function createEntry(
     isConfidential: input.isConfidential ?? false,
     createdById,
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "hr_personnel_file_entry",
+      entityId: created.id,
+      entityName: created.title ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return created
 }
 
 export async function updateEntry(
@@ -314,7 +392,8 @@ export async function updateEntry(
     reminderDate?: Date | null
     reminderNote?: string | null
     isConfidential?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   const existing = await repo.findEntryById(prisma, tenantId, input.id)
   if (!existing) {
@@ -330,13 +409,35 @@ export async function updateEntry(
   }
 
   const { id, ...data } = input
-  return repo.updateEntry(prisma, tenantId, id, data)
+  const updated = await repo.updateEntry(prisma, tenantId, id, data)
+
+  if (audit && updated) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      ENTRY_TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "hr_personnel_file_entry",
+      entityId: input.id,
+      entityName: updated.title ?? null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function deleteEntry(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   const entry = await repo.findEntryById(prisma, tenantId, id)
   if (!entry) {
@@ -352,6 +453,20 @@ export async function deleteEntry(
 
   // Delete entry (CASCADE will clean up attachment DB records)
   await repo.deleteEntry(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "hr_personnel_file_entry",
+      entityId: id,
+      entityName: entry.title ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }
 
 // =============================================================================

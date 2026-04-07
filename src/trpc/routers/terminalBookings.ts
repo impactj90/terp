@@ -19,6 +19,7 @@ import { requirePermission, applyDataScope, type DataScope } from "@/lib/auth/mi
 import { buildRelatedEmployeeDataScopeWhere, mergeDataScopeWhere } from "@/lib/auth/data-scope"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
+import * as auditLog from "@/lib/services/audit-logs-service"
 
 // --- Permission Constants ---
 
@@ -317,6 +318,19 @@ export const terminalBookingsRouter = createTRPCRouter({
               completedAt: new Date(),
             },
           })
+
+          await auditLog.log(ctx.prisma, {
+            tenantId,
+            userId: ctx.user!.id,
+            action: "import",
+            entityType: "terminal_import_batch",
+            entityId: updatedBatch.id,
+            entityName: batchReference,
+            changes: null,
+            metadata: { recordCount: rawBookingData.length, terminalId, batchReference },
+            ipAddress: ctx.ipAddress,
+            userAgent: ctx.userAgent,
+          }).catch(err => console.error('[AuditLog] Failed:', err))
 
           return {
             batch: updatedBatch,

@@ -292,7 +292,8 @@ export const correctionAssistantRouter = createTRPCRouter({
         const updated = await correctionAssistantService.updateMessage(
           ctx.prisma,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
 
         return mapMessage(updated)

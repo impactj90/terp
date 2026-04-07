@@ -8,6 +8,12 @@ import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./dsgvo-retention-repository"
 import { subMonths } from "date-fns"
 import * as storage from "@/lib/supabase/storage"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit ---
+
+const TRACKED_FIELDS = ["retentionMonths", "action", "isActive", "description"]
 
 // --- Constants ---
 
@@ -145,7 +151,8 @@ export async function updateRule(
     action: string
     isActive: boolean
     description?: string | null
-  }
+  },
+  audit?: AuditContext
 ) {
   // Validate dataType
   if (!VALID_DATA_TYPES.includes(input.dataType as DataType)) {
@@ -175,7 +182,29 @@ export async function updateRule(
     )
   }
 
+  const existing = await repo.findRuleByDataType(prisma, tenantId, input.dataType)
   const rule = await repo.upsertRule(prisma, tenantId, input)
+
+  if (audit && rule) {
+    const changes = existing
+      ? auditLog.computeChanges(
+          existing as unknown as Record<string, unknown>,
+          rule as unknown as Record<string, unknown>,
+          TRACKED_FIELDS
+        )
+      : null
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "dsgvo_retention_rule",
+      entityId: rule.id,
+      entityName: input.dataType,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 
   // Check legal minimum warning
   const legalMin =
@@ -246,7 +275,8 @@ export async function executeRetention(
     dataType?: string
     dryRun?: boolean
     executedBy?: string | null
-  } = {}
+  } = {},
+  audit?: AuditContext
 ) {
   const { dryRun = false, executedBy = null } = options
   const rules = await repo.findActiveRules(
@@ -354,6 +384,28 @@ export async function executeRetention(
         error: errorMessage,
       })
     }
+  }
+
+  if (audit && !options.dryRun) {
+    const totalRecords = results.reduce((sum, r) => sum + r.recordCount, 0)
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "dsgvo_execute",
+      entityType: "dsgvo_retention",
+      entityId: tenantId,
+      entityName: options.dataType ?? "all",
+      changes: null,
+      metadata: {
+        totalRecords,
+        dataTypes: results.map(r => r.dataType),
+        resultSummary: Object.fromEntries(
+          results.map(r => [r.dataType, { action: r.action, recordCount: r.recordCount }])
+        ),
+      },
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
   }
 
   return results

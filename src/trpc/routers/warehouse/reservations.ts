@@ -68,7 +68,8 @@ export const whReservationsRouter = createTRPCRouter({
           ctx.tenantId!,
           input.id,
           ctx.user!.id,
-          input.reason
+          input.reason,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -88,7 +89,8 @@ export const whReservationsRouter = createTRPCRouter({
           ctx.tenantId!,
           input.documentId,
           ctx.user!.id,
-          input.reason
+          input.reason,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)

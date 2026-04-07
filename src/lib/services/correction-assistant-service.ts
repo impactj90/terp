@@ -6,6 +6,12 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./correction-assistant-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit ---
+
+const TRACKED_FIELDS = ["customText", "severity", "isActive"]
 
 // --- Error Classes ---
 
@@ -192,7 +198,8 @@ export async function updateMessage(
     customText?: string | null
     severity?: string
     isActive?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify exists with tenant scope
   const existing = await repo.findMessageById(prisma, tenantId, input.id)
@@ -220,7 +227,28 @@ export async function updateMessage(
     data.isActive = input.isActive
   }
 
-  return (await repo.updateMessage(prisma, tenantId, input.id, data))!
+  const updated = (await repo.updateMessage(prisma, tenantId, input.id, data))!
+
+  if (audit && updated) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "correction_message",
+      entityId: input.id,
+      entityName: existing.code ?? null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 interface CorrectionAssistantError {

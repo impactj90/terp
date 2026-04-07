@@ -6,6 +6,8 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./terminal-booking-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
 
 // --- Error Classes ---
 
@@ -66,7 +68,8 @@ export async function importBookings(
       rawTimestamp: string
       rawBookingCode: string
     }>
-  }
+  },
+  audit?: AuditContext
 ) {
   // Validate input
   const batchReference = input.batchReference.trim()
@@ -170,6 +173,21 @@ export async function importBookings(
       recordsImported: rawBookingData.length,
       completedAt: new Date(),
     })
+
+    if (audit) {
+      await auditLog.log(prisma, {
+        tenantId,
+        userId: audit.userId,
+        action: "import",
+        entityType: "terminal_import_batch",
+        entityId: updatedBatch.id,
+        entityName: batchReference,
+        changes: null,
+        metadata: { recordCount: rawBookingData.length, terminalId, batchReference },
+        ipAddress: audit.ipAddress,
+        userAgent: audit.userAgent,
+      }).catch(err => console.error('[AuditLog] Failed:', err))
+    }
 
     return {
       batch: updatedBatch,

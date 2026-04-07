@@ -352,7 +352,8 @@ export const whArticlesRouter = createTRPCRouter({
           return await whArticleGroupService.create(
             ctx.prisma as unknown as PrismaClient,
             ctx.tenantId!,
-            input
+            input,
+            { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
           )
         } catch (err) {
           handleServiceError(err)
@@ -374,7 +375,8 @@ export const whArticlesRouter = createTRPCRouter({
           return await whArticleGroupService.update(
             ctx.prisma as unknown as PrismaClient,
             ctx.tenantId!,
-            input
+            input,
+            { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
           )
         } catch (err) {
           handleServiceError(err)
@@ -389,7 +391,8 @@ export const whArticlesRouter = createTRPCRouter({
           return await whArticleGroupService.remove(
             ctx.prisma as unknown as PrismaClient,
             ctx.tenantId!,
-            input.id
+            input.id,
+            { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
           )
         } catch (err) {
           handleServiceError(err)
@@ -627,7 +630,8 @@ export const whArticlesRouter = createTRPCRouter({
             input.filename,
             input.mimeType,
             input.sizeBytes,
-            ctx.user!.id
+            ctx.user!.id,
+            { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
           )
         } catch (err) {
           handleServiceError(err)
@@ -642,7 +646,8 @@ export const whArticlesRouter = createTRPCRouter({
           return await whArticleImageService.setPrimary(
             ctx.prisma as unknown as PrismaClient,
             ctx.tenantId!,
-            input.imageId
+            input.imageId,
+            { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
           )
         } catch (err) {
           handleServiceError(err)
@@ -672,7 +677,8 @@ export const whArticlesRouter = createTRPCRouter({
           return await whArticleImageService.deleteImage(
             ctx.prisma as unknown as PrismaClient,
             ctx.tenantId!,
-            input.imageId
+            input.imageId,
+            { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
           )
         } catch (err) {
           handleServiceError(err)

@@ -76,7 +76,8 @@ const messagesRouter = createTRPCRouter({
           ctx.tenantId!,
           input.id,
           ctx.user!.id,
-          input.note
+          input.note,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -96,7 +97,8 @@ const messagesRouter = createTRPCRouter({
           ctx.tenantId!,
           input.id,
           ctx.user!.id,
-          input.note
+          input.note,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -116,7 +118,8 @@ const messagesRouter = createTRPCRouter({
           ctx.tenantId!,
           input.ids,
           ctx.user!.id,
-          input.note
+          input.note,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -151,7 +154,8 @@ const runsRouter = createTRPCRouter({
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
           ctx.user!.id,
-          "MANUAL"
+          "MANUAL",
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)

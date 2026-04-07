@@ -146,7 +146,8 @@ export const hrPersonnelFileRouter = createTRPCRouter({
           return await hrService.createCategory(
             ctx.prisma as unknown as PrismaClient,
             ctx.tenantId!,
-            input
+            input,
+            { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
           )
         } catch (err) {
           handleServiceError(err)
@@ -161,7 +162,8 @@ export const hrPersonnelFileRouter = createTRPCRouter({
           return await hrService.updateCategory(
             ctx.prisma as unknown as PrismaClient,
             ctx.tenantId!,
-            input
+            input,
+            { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
           )
         } catch (err) {
           handleServiceError(err)
@@ -176,7 +178,8 @@ export const hrPersonnelFileRouter = createTRPCRouter({
           await hrService.deleteCategory(
             ctx.prisma as unknown as PrismaClient,
             ctx.tenantId!,
-            input.id
+            input.id,
+            { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
           )
           return { success: true }
         } catch (err) {
@@ -229,7 +232,8 @@ export const hrPersonnelFileRouter = createTRPCRouter({
             ctx.prisma as unknown as PrismaClient,
             ctx.tenantId!,
             input,
-            ctx.user!.id
+            ctx.user!.id,
+            { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
           )
         } catch (err) {
           handleServiceError(err)
@@ -244,7 +248,8 @@ export const hrPersonnelFileRouter = createTRPCRouter({
           return await hrService.updateEntry(
             ctx.prisma as unknown as PrismaClient,
             ctx.tenantId!,
-            input
+            input,
+            { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
           )
         } catch (err) {
           handleServiceError(err)
@@ -259,7 +264,8 @@ export const hrPersonnelFileRouter = createTRPCRouter({
           await hrService.deleteEntry(
             ctx.prisma as unknown as PrismaClient,
             ctx.tenantId!,
-            input.id
+            input.id,
+            { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
           )
           return { success: true }
         } catch (err) {
@@ -329,7 +335,8 @@ export const hrPersonnelFileRouter = createTRPCRouter({
             input.filename,
             input.mimeType,
             input.sizeBytes,
-            ctx.user!.id
+            ctx.user!.id,
+            { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
           )
         } catch (err) {
           handleServiceError(err)
@@ -344,7 +351,8 @@ export const hrPersonnelFileRouter = createTRPCRouter({
           return await attachmentService.deleteAttachment(
             ctx.prisma as unknown as PrismaClient,
             ctx.tenantId!,
-            input.id
+            input.id,
+            { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
           )
         } catch (err) {
           handleServiceError(err)

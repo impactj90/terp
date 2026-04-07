@@ -6,6 +6,12 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./wh-article-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit ---
+
+const TRACKED_FIELDS = ["name", "parentId", "sortOrder"]
 
 // --- Error Classes ---
 
@@ -62,7 +68,8 @@ export async function create(
     name: string
     parentId?: string
     sortOrder?: number
-  }
+  },
+  audit?: AuditContext
 ) {
   const name = input.name.trim()
   if (name.length === 0) {
@@ -77,12 +84,28 @@ export async function create(
     }
   }
 
-  return repo.createGroup(prisma, {
+  const created = await repo.createGroup(prisma, {
     tenantId,
     name,
     parentId: input.parentId || null,
     sortOrder: input.sortOrder ?? 0,
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "wh_article_group",
+      entityId: created.id,
+      entityName: created.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return created
 }
 
 export async function update(
@@ -93,7 +116,8 @@ export async function update(
     name?: string
     parentId?: string | null
     sortOrder?: number
-  }
+  },
+  audit?: AuditContext
 ) {
   const existing = await repo.findGroupById(prisma, tenantId, input.id)
   if (!existing) {
@@ -117,13 +141,35 @@ export async function update(
   if (input.parentId !== undefined) data.parentId = input.parentId
   if (input.sortOrder !== undefined) data.sortOrder = input.sortOrder
 
-  return repo.updateGroup(prisma, tenantId, input.id, data)
+  const updated = await repo.updateGroup(prisma, tenantId, input.id, data)
+
+  if (audit && updated) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "wh_article_group",
+      entityId: input.id,
+      entityName: updated.name ?? null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   const existing = await repo.findGroupById(prisma, tenantId, id)
   if (!existing) {
@@ -146,5 +192,21 @@ export async function remove(
     )
   }
 
-  return repo.deleteGroup(prisma, tenantId, id)
+  const result = await repo.deleteGroup(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "wh_article_group",
+      entityId: id,
+      entityName: existing.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return result
 }
