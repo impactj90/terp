@@ -569,7 +569,7 @@ export async function finalize(
   // Generate PDF on finalization (best-effort, OUTSIDE transaction)
   let pdfGenerated = false
   try {
-    await pdfService.generateAndStorePdf(prisma, tenantId, id)
+    await pdfService.generateAndStorePdf(prisma, tenantId, id, audit?.userId)
     pdfGenerated = true
   } catch (err) {
     // PDF generation failure should not block finalization

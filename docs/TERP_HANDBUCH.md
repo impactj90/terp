@@ -8494,6 +8494,128 @@ Das System zeigt eine Warnung an, wenn eine konfigurierte Frist unter dem gesetz
 
 ---
 
+## 21b. E-Mail-Versand
+
+**Was ist es?** Terp kann Dokumente (Rechnungen, Angebote, Gutschriften, Auftragsbestätigungen, Lieferscheine, Bestellungen) direkt per E-Mail an Kunden oder Lieferanten versenden. Jeder Mandant konfiguriert seinen eigenen SMTP-Server und verwaltet E-Mail-Vorlagen pro Dokumenttyp.
+
+**Wozu dient es?** Statt Dokumente manuell herunterzuladen und per E-Mail-Client zu versenden, können Benutzer direkt aus dem Dokumenten-Dialog versenden. Das System füllt Empfänger, Betreff und Nachricht automatisch aus der Vorlage und hängt das PDF an.
+
+**Wer kann es nutzen?** Benutzer mit der Berechtigung `documents.send` (standardmäßig ADMIN, PERSONAL, BUCHHALTUNG, VORGESETZTER). SMTP- und Vorlagenverwaltung erfordert `email_smtp.manage` bzw. `email_templates.manage`.
+
+### 21b.1 SMTP-Server konfigurieren
+
+📍 Linke Navigation → **Verwaltung** → **E-Mail-Einstellungen** → Tab **SMTP-Server**
+
+| Feld | Beschreibung | Beispiel |
+|------|-------------|---------|
+| **Host** | SMTP-Servername | smtp.gmail.com |
+| **Port** | SMTP-Port | 587 (STARTTLS), 465 (SSL) |
+| **Verschlüsselung** | STARTTLS / SSL / Keine | STARTTLS |
+| **Benutzername** | SMTP-Login | info@firma.de |
+| **Passwort** | SMTP-Passwort (wird verschlüsselt gespeichert) | ●●●●●● |
+| **Absender-E-Mail** | Von-Adresse auf allen E-Mails | info@firma.de |
+| **Absender-Name** | Anzeigename | Muster GmbH |
+| **Antwort-an** | Reply-To-Adresse (optional) | antwort@firma.de |
+
+**Verbindung testen:** Nach dem Speichern → Button **„Verbindung testen"** klicken. Bei Erfolg erscheint ein grüner Haken mit Zeitstempel. Bei Fehler wird die Fehlermeldung angezeigt.
+
+### 21b.2 E-Mail-Vorlagen verwalten
+
+📍 Linke Navigation → **Verwaltung** → **E-Mail-Einstellungen** → Tab **Vorlagen**
+
+Jeder Dokumenttyp kann eine eigene E-Mail-Vorlage haben. Vorlagen enthalten Platzhalter, die beim Versand automatisch durch die Dokumentdaten ersetzt werden.
+
+**Verfügbare Platzhalter:**
+
+| Platzhalter | Wird ersetzt durch | Beispiel |
+|------------|-------------------|---------|
+| `{Kundenname}` | Firmenname des Empfängers | Muster GmbH |
+| `{Anrede}` | Anrede des Ansprechpartners | Herr Müller |
+| `{Dokumentennummer}` | Belegnummer | RE-2026-001 |
+| `{Betrag}` | Bruttobetrag | 6.241,31 € |
+| `{Fälligkeitsdatum}` | Zahlungsziel | 15.05.2026 |
+| `{Firmenname}` | Eigener Firmenname | TERP Software GmbH |
+| `{Projektname}` | Verknüpfter Auftrag | Projekt Alpha |
+
+**Standard-Vorlagen erstellen:**
+Wenn noch keine Vorlagen existieren, zeigt die Liste einen Button **„Standard-Vorlagen für alle Dokumenttypen erstellen"**. Damit werden 8 vorkonfigurierte Vorlagen angelegt (Rechnung, Angebot, Auftragsbestätigung, Gutschrift, Lieferschein, Serviceschein, Rücklieferschein, Bestellung).
+
+**Vorlage bearbeiten:**
+1. In der Vorlagenliste auf das Stift-Symbol klicken
+2. Name, Dokumenttyp, Betreff und Nachrichtentext anpassen
+3. Platzhalter per Klick auf die Badges einfügen
+4. Optional: „Als Standard-Vorlage setzen" aktivieren (pro Dokumenttyp nur eine Standard-Vorlage möglich)
+5. Speichern
+
+### 21b.3 Dokument per E-Mail versenden
+
+📍 Beliebiges finalisiertes Dokument öffnen (Rechnung, Angebot, etc.) → Button **„E-Mail senden"**
+
+Der Button erscheint erst, wenn das Dokument finalisiert ist (Status: Gedruckt, Weitergeleitet). Bei Entwürfen wird kein Sende-Button angezeigt.
+
+**Versand-Dialog:**
+
+| Feld | Beschreibung | Vorbefüllt |
+|------|-------------|-----------|
+| **An** | Empfänger-E-Mail | ✅ Aus CRM-Kontakt/Adresse |
+| **CC** | Kopie-Empfänger (kommagetrennt) | Nein |
+| **Betreff** | E-Mail-Betreff | ✅ Aus Vorlage mit aufgelösten Platzhaltern |
+| **Nachricht** | E-Mail-Text | ✅ Aus Vorlage mit aufgelösten Platzhaltern |
+| **Anhänge** | Dokument-PDF (immer), Standard-Anhänge (optional) | ✅ PDF automatisch angehängt |
+
+Nach dem Klick auf **„Senden"** wird die E-Mail über den konfigurierten SMTP-Server versendet. Bei Erfolg erscheint eine Erfolgsmeldung, bei Fehler bleibt der Dialog geöffnet.
+
+**SMTP nicht konfiguriert:** Ist kein SMTP-Server eingerichtet, zeigt der Dialog einen Hinweis mit Link zu den Einstellungen.
+
+### 21b.4 Versandprotokoll
+
+Unterhalb jedes finalisierten Dokuments befindet sich ein aufklappbares **Versandprotokoll**. Es zeigt alle bisherigen Versandversuche mit Status (Gesendet / Ausstehend / Wird wiederholt / Fehlgeschlagen), Empfänger und Zeitstempel.
+
+### 21b.5 Automatische Wiederholungen
+
+Fehlgeschlagene E-Mails werden automatisch bis zu 3 Mal wiederholt mit steigendem Abstand (1 Min, 5 Min, 15 Min). Nach 3 fehlgeschlagenen Versuchen wird der Status auf „Fehlgeschlagen" gesetzt. Die Wiederholung läuft alle 5 Minuten im Hintergrund.
+
+### 21b.6 Bestellungen per E-Mail versenden
+
+📍 Lagerverwaltung → Bestellungen → Bestellung öffnen → Button **„E-Mail"**
+
+Bestellungen (Purchase Orders) können genau wie Fakturierungs-Dokumente per E-Mail versendet werden. Die Empfänger-E-Mail wird aus dem CRM-Kontakt des Lieferanten vorbefüllt.
+
+### Praxisbeispiel: SMTP konfigurieren und erste E-Mail versenden
+
+**Szenario:** Sie möchten Ihren SMTP-Server einrichten und eine Rechnung per E-Mail versenden.
+
+1. 📍 Linke Navigation → **Verwaltung** → **E-Mail-Einstellungen**
+2. Tab **SMTP-Server** → Felder ausfüllen:
+   - Host: `smtp.gmail.com`
+   - Port: `587`
+   - Verschlüsselung: `STARTTLS`
+   - Benutzername: `info@meinefirma.de`
+   - Passwort: App-Passwort eingeben
+   - Absender-E-Mail: `info@meinefirma.de`
+   - Absender-Name: `Meine Firma GmbH`
+3. **„Speichern"** → **„Verbindung testen"** → ✅ Grüner Haken erscheint
+4. Tab **Vorlagen** → **„Standard-Vorlagen für alle Dokumenttypen erstellen"**
+5. ✅ 8 Vorlagen werden angelegt. Die Rechnungs-Vorlage öffnen und ggf. Text anpassen
+6. 📍 Belege & Fakturierung → eine finalisierte Rechnung öffnen
+7. Button **„E-Mail senden"** → Dialog öffnet sich mit vorbefüllten Feldern
+8. Empfänger prüfen → **„Senden"** → ✅ Erfolgsmeldung
+9. Versandprotokoll zeigt den neuen Eintrag mit Status „Gesendet"
+
+### Praxisbeispiel: E-Mail-Vorlage anpassen
+
+**Szenario:** Sie möchten den Standard-Text für Angebote ändern.
+
+1. 📍 Linke Navigation → **Verwaltung** → **E-Mail-Einstellungen** → Tab **Vorlagen**
+2. Filter auf **Angebot** setzen
+3. Stift-Symbol klicken → Vorlage öffnet sich im Seitenbereich
+4. Betreff ändern: `Ihr persönliches Angebot {Dokumentennummer}`
+5. Nachrichtentext anpassen, Platzhalter `{Kundenname}` und `{Betrag}` per Badge-Klick einfügen
+6. **„Speichern"** → ✅ Vorlage aktualisiert
+7. Beim nächsten Angebots-Versand wird automatisch die neue Vorlage verwendet
+
+---
+
 ## 22. Glossar
 
 | Begriff | Erklärung | Wo in Terp |

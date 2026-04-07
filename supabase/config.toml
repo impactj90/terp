@@ -43,7 +43,8 @@ port = 54323
 api_url = "http://127.0.0.1"
 
 [inbucket]
-enabled = false
+enabled = true
+smtp_port = 54325
 
 [storage]
 enabled = true

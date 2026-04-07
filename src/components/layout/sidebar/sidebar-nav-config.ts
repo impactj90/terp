@@ -559,6 +559,12 @@ export const navConfig: NavSection[] = [
         icon: ShieldAlert,
         permissions: ['dsgvo.view'],
       },
+      {
+        titleKey: 'emailSettings',
+        href: '/admin/email-settings',
+        icon: Mail,
+        permissions: ['email_smtp.view'],
+      },
     ],
   },
 ]

@@ -84,6 +84,7 @@ const CATEGORY_DEFINITIONS = [
       'billing_payments',
       'billing_price_lists',
       'billing_recurring',
+      'documents',
     ],
   },
   {
@@ -99,7 +100,7 @@ const CATEGORY_DEFINITIONS = [
   {
     id: 'admin',
     labelKey: 'categoryAdmin',
-    resources: ['users', 'tenants', 'settings', 'notifications'],
+    resources: ['users', 'tenants', 'settings', 'notifications', 'email_templates', 'email_smtp'],
   },
   { id: 'reports', labelKey: 'categoryReports', resources: ['reports'] },
 ] as const
@@ -212,6 +213,9 @@ export function UserGroupFormSheet({
       tenants: t('resourceTenants'),
       settings: t('resourceSettings'),
       notifications: t('resourceNotifications'),
+      documents: t('resourceDocuments'),
+      email_templates: t('resourceEmailTemplates'),
+      email_smtp: t('resourceEmailSmtp'),
       reports: t('resourceReports'),
       wh_articles: t('resourceWhArticles'),
       wh_article_groups: t('resourceWhArticleGroups'),

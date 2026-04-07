@@ -324,6 +324,13 @@ export const ALL_PERMISSIONS: Permission[] = [
   p("dsgvo.view", "dsgvo", "view", "View DSGVO retention rules and logs"),
   p("dsgvo.manage", "dsgvo", "manage", "Manage DSGVO retention rules"),
   p("dsgvo.execute", "dsgvo", "execute", "Execute DSGVO data deletion"),
+
+  // Email
+  p("documents.send", "documents", "send", "Send documents via email"),
+  p("email_templates.view", "email_templates", "view", "View email templates"),
+  p("email_templates.manage", "email_templates", "manage", "Manage email templates"),
+  p("email_smtp.view", "email_smtp", "view", "View SMTP configuration"),
+  p("email_smtp.manage", "email_smtp", "manage", "Manage SMTP configuration"),
 ]
 
 // Lookup maps

@@ -61,6 +61,7 @@ model User {
   reportsCreated             Report[]
   scheduleExecutionsTriggers ScheduleExecution[]
   enabledModules             TenantModule[] @relation("moduleEnabledBy")
+  emailSendLogs              EmailSendLog[]
 
   // Indexes
   @@unique([tenantId, email], map: "idx_users_tenant_email")
@@ -211,6 +212,12 @@ model Tenant {
   // DSGVO
   dsgvoRetentionRules         DsgvoRetentionRule[]
   dsgvoDeleteLogs             DsgvoDeleteLog[]
+
+  // Email
+  tenantSmtpConfig            TenantSmtpConfig?
+  emailTemplates              EmailTemplate[]
+  emailDefaultAttachments     EmailDefaultAttachment[]
+  emailSendLogs               EmailSendLog[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
@@ -4798,4 +4805,116 @@ model DsgvoDeleteLog {
   @@index([tenantId])
   @@index([tenantId, executedAt])
   @@map("dsgvo_delete_logs")
+}
+
+// -----------------------------------------------------------------------------
+// TenantSmtpConfig
+// -----------------------------------------------------------------------------
+// Migration: 20260411100000
+//
+// Per-tenant SMTP server configuration. One row per tenant.
+model TenantSmtpConfig {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String    @unique @map("tenant_id") @db.Uuid
+  host         String    @db.VarChar(255)
+  port         Int       @default(587)
+  username     String    @db.VarChar(255)
+  password     String    @db.VarChar(500)
+  encryption   String    @default("STARTTLS") @db.VarChar(10)
+  fromEmail    String    @map("from_email") @db.VarChar(255)
+  fromName     String?   @map("from_name") @db.VarChar(255)
+  replyToEmail String?   @map("reply_to_email") @db.VarChar(255)
+  isVerified   Boolean   @default(false) @map("is_verified")
+  verifiedAt   DateTime? @map("verified_at") @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_smtp_configs")
+}
+
+// -----------------------------------------------------------------------------
+// EmailTemplate
+// -----------------------------------------------------------------------------
+// Migration: 20260411100000
+//
+// Per-tenant, per-document-type email templates with placeholder support.
+// Partial unique index ensures only one default template per tenant+type.
+model EmailTemplate {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  documentType String   @map("document_type") @db.VarChar(30)
+  name         String   @db.VarChar(255)
+  subject      String   @db.VarChar(500)
+  bodyHtml     String   @map("body_html") @db.Text
+  isDefault    Boolean  @default(false) @map("is_default")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  emailSendLogs EmailSendLog[]
+
+  @@index([tenantId, documentType])
+  @@map("email_templates")
+}
+
+// -----------------------------------------------------------------------------
+// EmailDefaultAttachment
+// -----------------------------------------------------------------------------
+// Migration: 20260411100000
+//
+// Configurable default attachments (e.g., AGB/terms PDF) per document type.
+// document_type NULL means attachment applies to all document types.
+model EmailDefaultAttachment {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  documentType  String?  @map("document_type") @db.VarChar(30)
+  fileName      String   @map("file_name") @db.VarChar(255)
+  filePath      String   @map("file_path") @db.Text
+  storageBucket String   @default("documents") @map("storage_bucket") @db.VarChar(100)
+  isActive      Boolean  @default(true) @map("is_active")
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("email_default_attachments")
+}
+
+// -----------------------------------------------------------------------------
+// EmailSendLog
+// -----------------------------------------------------------------------------
+// Migration: 20260411100000
+//
+// Full audit trail for all sent emails. document_id is polymorphic
+// (billing_documents or wh_purchase_orders), disambiguated by document_type.
+model EmailSendLog {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  documentId   String?   @map("document_id") @db.Uuid
+  documentType String?   @map("document_type") @db.VarChar(30)
+  toEmail      String    @map("to_email") @db.VarChar(255)
+  ccEmails     String[]  @map("cc_emails") @db.Text
+  subject      String    @db.VarChar(500)
+  bodyHtml     String    @map("body_html") @db.Text
+  templateId   String?   @map("template_id") @db.Uuid
+  status       String    @default("pending") @db.VarChar(20)
+  errorMessage String?   @map("error_message") @db.Text
+  sentAt       DateTime? @map("sent_at") @db.Timestamptz(6)
+  retryCount   Int       @default(0) @map("retry_count")
+  nextRetryAt  DateTime? @map("next_retry_at") @db.Timestamptz(6)
+  sentBy       String?   @map("sent_by") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  template EmailTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  sender   User?          @relation(fields: [sentBy], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([tenantId, documentId])
+  @@map("email_send_log")
 }

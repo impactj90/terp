@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
-  ArrowLeft, CheckCircle, Forward, XCircle, Copy, Lock,
+  ArrowLeft, CheckCircle, Forward, XCircle, Copy, Lock, Mail,
   ChevronRight, ChevronLeft, FileDown, FileCode, FilePlus2, Loader2,
 } from 'lucide-react'
 import {
@@ -25,6 +25,8 @@ import {
 } from '@/hooks'
 import { useCrmInquiries } from '@/hooks'
 import { RichTextEditor } from '@/components/ui/rich-text-editor'
+import { EmailComposeDialog } from '@/components/email/email-compose-dialog'
+import { EmailSendLog } from '@/components/email/email-send-log'
 import {
   Select,
   SelectContent,
@@ -194,6 +196,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
 
   const t = useTranslations('billingDocuments')
   const tc = useTranslations('common')
+  const tCompose = useTranslations('emailCompose')
 
   // Load inquiries for Vorgang select (only for DRAFT documents)
   const { data: inquiryData } = useCrmInquiries({
@@ -211,6 +214,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
   const [showFinalizeDialog, setShowFinalizeDialog] = React.useState(false)
   const [showForwardDialog, setShowForwardDialog] = React.useState(false)
   const [showCancelDialog, setShowCancelDialog] = React.useState(false)
+  const [showEmailDialog, setShowEmailDialog] = React.useState(false)
   const [sidebarOpen, setSidebarOpen] = React.useState(true)
 
   // E-Invoice validation (client-side check for finalize dialog warning)
@@ -386,6 +390,12 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
             >
               <FileDown className="h-4 w-4 mr-1" />
               {downloadPdfMutation.isPending ? t('loadingPdf') : t('pdfDownload')}
+            </Button>
+          )}
+          {isImmutable && (
+            <Button variant="outline" onClick={() => setShowEmailDialog(true)}>
+              <Mail className="h-4 w-4 mr-1" />
+              {tCompose('sendEmail')}
             </Button>
           )}
           {isImmutable && !!(doc as Record<string, unknown>).eInvoiceXmlUrl && (doc.type === 'INVOICE' || doc.type === 'CREDIT_NOTE') && (
@@ -812,6 +822,14 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
         confirmLabel={t('cancelDocument')}
         variant="destructive"
       />
+      <EmailComposeDialog
+        documentId={doc.id}
+        documentType={doc.type}
+        documentNumber={doc.number}
+        open={showEmailDialog}
+        onOpenChange={setShowEmailDialog}
+      />
+      {isImmutable && <EmailSendLog documentId={doc.id} />}
     </div>
   )
 }

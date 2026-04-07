@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { ArrowLeft, Edit, Send, XCircle, FileDown, Loader2 } from 'lucide-react'
+import { ArrowLeft, Edit, Send, XCircle, FileDown, Loader2, Mail } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -19,6 +19,8 @@ import { PurchaseOrderStatusBadge } from './purchase-order-status-badge'
 import { PurchaseOrderPositionTable } from './purchase-order-position-table'
 import { PurchaseOrderSendDialog } from './purchase-order-send-dialog'
 import { PurchaseOrderForm } from './purchase-order-form'
+import { EmailComposeDialog } from '@/components/email/email-compose-dialog'
+import { EmailSendLog } from '@/components/email/email-send-log'
 
 function DetailRow({
   label,
@@ -86,6 +88,7 @@ export function PurchaseOrderDetail({ id }: PurchaseOrderDetailProps) {
   const [isEditing, setIsEditing] = React.useState(false)
   const [sendOpen, setSendOpen] = React.useState(false)
   const [cancelOpen, setCancelOpen] = React.useState(false)
+  const [emailOpen, setEmailOpen] = React.useState(false)
 
   if (isLoading) {
     return (
@@ -198,6 +201,10 @@ export function PurchaseOrderDetail({ id }: PurchaseOrderDetailProps) {
               <Button size="sm" onClick={() => setSendOpen(true)}>
                 <Send className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">{t('actionSendOrder')}</span>
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setEmailOpen(true)}>
+                <Mail className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">E-Mail</span>
               </Button>
             </>
           )}
@@ -383,6 +390,17 @@ export function PurchaseOrderDetail({ id }: PurchaseOrderDetailProps) {
         isLoading={cancelMutation.isPending}
         onConfirm={handleCancel}
       />
+
+      {/* Email Compose Dialog */}
+      <EmailComposeDialog
+        documentId={order.id}
+        documentType="PURCHASE_ORDER"
+        documentNumber={order.number}
+        open={emailOpen}
+        onOpenChange={setEmailOpen}
+      />
+
+      <EmailSendLog documentId={order.id} />
     </div>
   )
 }

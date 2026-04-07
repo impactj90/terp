@@ -6,6 +6,7 @@ import { renderToBuffer } from "@react-pdf/renderer"
 import * as storage from "@/lib/supabase/storage"
 import { BillingDocumentPdf } from "@/lib/pdf/billing-document-pdf"
 import { getStoragePath } from "@/lib/pdf/pdf-storage"
+import * as auditLog from "./audit-logs-service"
 import React from "react"
 
 // --- Error Classes ---
@@ -28,7 +29,8 @@ const SIGNED_URL_EXPIRY_SECONDS = 60
 export async function generateAndStorePdf(
   prisma: PrismaClient,
   tenantId: string,
-  documentId: string
+  documentId: string,
+  userId?: string
 ): Promise<string> {
   const doc = await billingDocService.getById(prisma, tenantId, documentId)
 
@@ -91,6 +93,19 @@ export async function generateAndStorePdf(
 
   // 3. Persist storage path on document (not a public URL — bucket is private)
   await repo.update(prisma, tenantId, documentId, { pdfUrl: storagePath })
+
+  // 4. Audit log
+  if (userId) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId,
+      action: "pdf_generated",
+      entityType: "billing_document",
+      entityId: documentId,
+      entityName: doc.number,
+      metadata: { storagePath },
+    })
+  }
 
   return storagePath
 }
