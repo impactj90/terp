@@ -17,6 +17,8 @@ interface SidebarNavItemProps {
   item: NavItem
   /** When true, renders in expanded mode regardless of sidebar state */
   forceExpanded?: boolean
+  /** Sibling hrefs in the same section — used to resolve ambiguous prefix matches */
+  siblingHrefs?: string[]
 }
 
 /**
@@ -24,7 +26,7 @@ interface SidebarNavItemProps {
  * Handles collapsed state (icon-only with tooltip), active route highlighting,
  * left accent bar, and favorite toggle on hover.
  */
-export function SidebarNavItem({ item, forceExpanded }: SidebarNavItemProps) {
+export function SidebarNavItem({ item, forceExpanded, siblingHrefs = [] }: SidebarNavItemProps) {
   const pathname = usePathname()
   const { isCompact, isFavorite, addFavorite, removeFavorite } = useSidebar()
   const t = useTranslations('nav')
@@ -32,11 +34,14 @@ export function SidebarNavItem({ item, forceExpanded }: SidebarNavItemProps) {
   const compact = forceExpanded ? false : isCompact
   const title = t(item.titleKey as Parameters<typeof t>[0])
   // Only use startsWith for items with 2+ path segments (e.g. /warehouse/purchase-orders)
-  // so that section overview items (e.g. /warehouse) are only active on exact match
+  // so that section overview items (e.g. /warehouse) are only active on exact match.
+  // Exclude prefix matches when a more specific sibling route also matches.
   const segments = item.href.split('/').filter(Boolean)
-  const isActive =
-    pathname === item.href ||
-    (segments.length > 1 && pathname.startsWith(`${item.href}/`))
+  const prefixMatch = segments.length > 1 && pathname.startsWith(`${item.href}/`)
+  const hasSiblingMatch = prefixMatch && siblingHrefs.some(
+    (sibling) => sibling !== item.href && sibling.startsWith(`${item.href}/`) && pathname.startsWith(sibling)
+  )
+  const isActive = pathname === item.href || (prefixMatch && !hasSiblingMatch)
   const starred = isFavorite(item.href)
   const Icon = item.icon
 

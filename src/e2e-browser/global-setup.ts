@@ -49,6 +49,37 @@ DELETE FROM shifts WHERE code LIKE 'E2E%';
 DELETE FROM employees WHERE personnel_number LIKE 'E2E%';
 DELETE FROM calculation_rules WHERE code LIKE 'E2E%';
 
+-- Inbound invoice records (spec 50) — must come before CRM addresses cleanup
+DELETE FROM inbound_invoice_approvals WHERE tenant_id = '10000000-0000-0000-0000-000000000001'
+  AND invoice_id IN (SELECT id FROM inbound_invoices WHERE number LIKE 'E2E%' OR number LIKE 'ER-%');
+DELETE FROM inbound_invoice_approval_policies WHERE tenant_id = '10000000-0000-0000-0000-000000000001';
+DELETE FROM inbound_invoice_line_items WHERE invoice_id IN (
+  SELECT id FROM inbound_invoices WHERE tenant_id = '10000000-0000-0000-0000-000000000001'
+  AND (number LIKE 'E2E%' OR number LIKE 'ER-%')
+);
+DELETE FROM inbound_email_log WHERE tenant_id = '10000000-0000-0000-0000-000000000001';
+DELETE FROM inbound_invoices WHERE tenant_id = '10000000-0000-0000-0000-000000000001'
+  AND (number LIKE 'E2E%' OR number LIKE 'ER-%');
+DELETE FROM tenant_imap_configs WHERE tenant_id = '10000000-0000-0000-0000-000000000001';
+
+-- Enable inbound_invoices module for seed tenant
+INSERT INTO tenant_modules (tenant_id, module, enabled_at)
+VALUES ('10000000-0000-0000-0000-000000000001', 'inbound_invoices', NOW())
+ON CONFLICT DO NOTHING;
+
+-- Seed approval policy: Regular User (00..02) approves all inbound invoices
+-- Admin (00..01) submits → User approves (submitter ≠ approver)
+INSERT INTO inbound_invoice_approval_policies (
+  id, tenant_id, amount_min, amount_max, step_order,
+  approver_user_id, is_active, created_at, updated_at
+) VALUES (
+  'e2e00000-0000-4000-a000-000000000501',
+  '10000000-0000-0000-0000-000000000001',
+  0, NULL, 1,
+  '00000000-0000-0000-0000-000000000002',
+  true, NOW(), NOW()
+) ON CONFLICT (id) DO NOTHING;
+
 -- Template records (cache-invalidation.spec.ts)
 DELETE FROM billing_document_templates
 WHERE name LIKE 'E2E%'
@@ -169,7 +200,8 @@ VALUES
   (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'invoice', 'RE-', 100, NOW(), NOW()),
   (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'credit_note', 'G-', 100, NOW(), NOW()),
   (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'service_case', 'KD-', 100, NOW(), NOW()),
-  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'article', 'ART-', 100, NOW(), NOW())
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'article', 'ART-', 100, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'inbound_invoice', 'ER-', 100, NOW(), NOW())
 ON CONFLICT (tenant_id, key) DO UPDATE SET next_value = GREATEST(number_sequences.next_value, 100);
 
 -- Parent records (specs 01-03)

@@ -85,6 +85,7 @@ import { billingRouter } from "./billing"
 import { warehouseRouter } from "./warehouse"
 import { hrRouter } from "./hr"
 import { emailRouter } from "./email"
+import { invoicesRouter } from "./invoices"
 
 export const appRouter = createTRPCRouter({
   health: healthRouter,
@@ -167,6 +168,7 @@ export const appRouter = createTRPCRouter({
   warehouse: warehouseRouter,
   hr: hrRouter,
   email: emailRouter,
+  invoices: invoicesRouter,
 })
 
 /** Type-only export for client-side inference. */

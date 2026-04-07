@@ -35,3 +35,16 @@ services:
       - ..:/app
       - /app/node_modules
       - /app/.next
+
+  greenmail:
+    image: greenmail/standalone:latest
+    container_name: terp-greenmail
+    ports:
+      - "3025:3025"   # SMTP
+      - "3143:3143"   # IMAP
+      - "3993:3993"   # IMAPS
+    environment:
+      GREENMAIL_OPTS: >-
+        -Dgreenmail.setup.test.all
+        -Dgreenmail.users=test:test@test.local
+        -Dgreenmail.hostname=0.0.0.0

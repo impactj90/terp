@@ -27,6 +27,14 @@
     {
       "path": "/api/cron/email-retry",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/email-imap-poll",
+      "schedule": "*/3 * * * *"
+    },
+    {
+      "path": "/api/cron/inbound-invoice-escalations",
+      "schedule": "0 * * * *"
     }
   ]
 }

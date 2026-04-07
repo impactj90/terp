@@ -172,7 +172,7 @@ export function SidebarNav({ sections = navConfig, forceExpanded }: SidebarNavPr
                 <ul className="space-y-0.5" role="list">
                   {section.items.map((item) => (
                     <li key={item.href}>
-                      <SidebarNavItem item={item} forceExpanded={forceExpanded} />
+                      <SidebarNavItem item={item} forceExpanded={forceExpanded} siblingHrefs={section.items.map(i => i.href)} />
                     </li>
                   ))}
                 </ul>
@@ -188,7 +188,7 @@ export function SidebarNav({ sections = navConfig, forceExpanded }: SidebarNavPr
                     <ul className="space-y-0.5 pt-0.5" role="list">
                       {section.items.map((item) => (
                         <li key={item.href}>
-                          <SidebarNavItem item={item} forceExpanded={forceExpanded} />
+                          <SidebarNavItem item={item} forceExpanded={forceExpanded} siblingHrefs={section.items.map(i => i.href)} />
                         </li>
                       ))}
                     </ul>

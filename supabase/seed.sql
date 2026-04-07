@@ -3920,3 +3920,164 @@ BEGIN
   ON CONFLICT (id) DO NOTHING;
 
 END $$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 32. Inbound Invoices (Eingangsrechnungen) — Seed Data
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- Enable inbound_invoices module
+INSERT INTO tenant_modules (tenant_id, module, enabled_at)
+VALUES ('10000000-0000-0000-0000-000000000001', 'inbound_invoices', NOW())
+ON CONFLICT DO NOTHING;
+
+-- Number sequence for inbound invoices
+INSERT INTO number_sequences (tenant_id, key, prefix, next_value)
+VALUES ('10000000-0000-0000-0000-000000000001', 'inbound_invoice', 'ER-', 7)
+ON CONFLICT (tenant_id, key) DO UPDATE SET next_value = GREATEST(number_sequences.next_value, 7);
+
+-- IMAP config (GreenMail for local dev — adjust for staging)
+INSERT INTO tenant_imap_configs (id, tenant_id, host, port, username, password, encryption, mailbox, is_verified, is_active)
+VALUES (
+  'd1000000-0000-4000-a000-000000000001',
+  '10000000-0000-0000-0000-000000000001',
+  '127.0.0.1', 3143, 'test', 'test', 'NONE', 'INBOX', true, true
+) ON CONFLICT (tenant_id) DO NOTHING;
+
+-- Approval policy: Dev User approves invoices > 500 EUR
+INSERT INTO inbound_invoice_approval_policies (id, tenant_id, amount_min, amount_max, step_order, approver_user_id, is_active)
+VALUES
+  ('d2000000-0000-4000-a000-000000000001', '10000000-0000-0000-0000-000000000001', 500, NULL, 1, '00000000-0000-0000-0000-000000000002', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Inbound invoices in various statuses
+INSERT INTO inbound_invoices (
+  id, tenant_id, number, source, supplier_id, supplier_status,
+  invoice_number, invoice_date, due_date,
+  total_net, total_vat, total_gross, currency, payment_term_days,
+  seller_name, seller_vat_id,
+  status, created_by, submitted_by, submitted_at,
+  datev_exported_at, datev_exported_by,
+  created_at, updated_at
+) VALUES
+  -- ER-1: DRAFT — Stahl-Union, manual upload
+  ('d3000000-0000-4000-a000-000000000001', '10000000-0000-0000-0000-000000000001',
+   'ER-1', 'manual', 'c1000000-0000-4000-a000-000000000011', 'matched',
+   'SU-2026-0442', '2026-03-15', '2026-04-14',
+   1250.00, 237.50, 1487.50, 'EUR', 30,
+   'Stahl-Union Lieferwerk GmbH', 'DE811234567',
+   'DRAFT', '00000000-0000-0000-0000-000000000001', NULL, NULL, NULL, NULL,
+   NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days'),
+
+  -- ER-2: PENDING_APPROVAL — Kunststoff Meier, ZUGFeRD
+  ('d3000000-0000-4000-a000-000000000002', '10000000-0000-0000-0000-000000000001',
+   'ER-2', 'zugferd', 'c1000000-0000-4000-a000-000000000012', 'matched',
+   'KM-R-2026-089', '2026-03-20', '2026-04-19',
+   850.00, 161.50, 1011.50, 'EUR', 30,
+   'Kunststoff Meier OHG', 'DE912345678',
+   'PENDING_APPROVAL', '00000000-0000-0000-0000-000000000001',
+   '00000000-0000-0000-0000-000000000001', NOW() - INTERVAL '1 day', NULL, NULL,
+   NOW() - INTERVAL '2 days', NOW() - INTERVAL '1 day'),
+
+  -- ER-3: APPROVED — Elektro-Braun, ready for DATEV export
+  ('d3000000-0000-4000-a000-000000000003', '10000000-0000-0000-0000-000000000001',
+   'ER-3', 'zugferd', 'c1000000-0000-4000-a000-000000000013', 'matched',
+   'EB-2026-1133', '2026-03-10', '2026-04-09',
+   420.00, 79.80, 499.80, 'EUR', 30,
+   'Elektro-Großhandel Braun KG', 'DE813456789',
+   'APPROVED', '00000000-0000-0000-0000-000000000001',
+   '00000000-0000-0000-0000-000000000001', NOW() - INTERVAL '5 days', NULL, NULL,
+   NOW() - INTERVAL '7 days', NOW() - INTERVAL '3 days'),
+
+  -- ER-4: EXPORTED — Stahl-Union, already sent to DATEV
+  ('d3000000-0000-4000-a000-000000000004', '10000000-0000-0000-0000-000000000001',
+   'ER-4', 'imap', 'c1000000-0000-4000-a000-000000000011', 'matched',
+   'SU-2026-0398', '2026-02-28', '2026-03-30',
+   2100.00, 399.00, 2499.00, 'EUR', 30,
+   'Stahl-Union Lieferwerk GmbH', 'DE811234567',
+   'EXPORTED', '00000000-0000-0000-0000-000000000001',
+   '00000000-0000-0000-0000-000000000001', NOW() - INTERVAL '14 days',
+   NOW() - INTERVAL '7 days', '00000000-0000-0000-0000-000000000001',
+   NOW() - INTERVAL '14 days', NOW() - INTERVAL '7 days'),
+
+  -- ER-5: REJECTED — Kunststoff Meier
+  ('d3000000-0000-4000-a000-000000000005', '10000000-0000-0000-0000-000000000001',
+   'ER-5', 'manual', 'c1000000-0000-4000-a000-000000000012', 'matched',
+   'KM-R-2026-077', '2026-03-05', '2026-04-04',
+   375.00, 71.25, 446.25, 'EUR', 30,
+   'Kunststoff Meier OHG', 'DE912345678',
+   'REJECTED', '00000000-0000-0000-0000-000000000001',
+   '00000000-0000-0000-0000-000000000001', NOW() - INTERVAL '10 days', NULL, NULL,
+   NOW() - INTERVAL '12 days', NOW() - INTERVAL '8 days'),
+
+  -- ER-6: DRAFT — unknown supplier, needs assignment
+  ('d3000000-0000-4000-a000-000000000006', '10000000-0000-0000-0000-000000000001',
+   'ER-6', 'imap', NULL, 'unknown',
+   'INV-2026-XY', '2026-04-01', '2026-05-01',
+   180.00, 34.20, 214.20, 'EUR', 30,
+   'Neue Lieferfirma GmbH', NULL,
+   'DRAFT', '00000000-0000-0000-0000-000000000001', NULL, NULL, NULL, NULL,
+   NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day')
+ON CONFLICT (id) DO NOTHING;
+
+-- Line items for ER-2 (ZUGFeRD)
+INSERT INTO inbound_invoice_line_items (id, invoice_id, position, description, quantity, unit, unit_price_net, total_net, vat_rate, vat_amount, sort_order)
+VALUES
+  ('d4000000-0000-4000-a000-000000000001', 'd3000000-0000-4000-a000-000000000002', 1, 'PE-Granulat 500kg', 500, 'kg', 1.20, 600.00, 19, 114.00, 1),
+  ('d4000000-0000-4000-a000-000000000002', 'd3000000-0000-4000-a000-000000000002', 2, 'PP-Folie 200m Rolle', 4, 'Stk', 62.50, 250.00, 19, 47.50, 2)
+ON CONFLICT (id) DO NOTHING;
+
+-- Line items for ER-3
+INSERT INTO inbound_invoice_line_items (id, invoice_id, position, description, quantity, unit, unit_price_net, total_net, vat_rate, vat_amount, sort_order)
+VALUES
+  ('d4000000-0000-4000-a000-000000000003', 'd3000000-0000-4000-a000-000000000003', 1, 'Kabelkanal 2m (10 Stk)', 10, 'Stk', 12.00, 120.00, 19, 22.80, 1),
+  ('d4000000-0000-4000-a000-000000000004', 'd3000000-0000-4000-a000-000000000003', 2, 'Sicherungsautomat B16', 20, 'Stk', 8.50, 170.00, 19, 32.30, 2),
+  ('d4000000-0000-4000-a000-000000000005', 'd3000000-0000-4000-a000-000000000003', 3, 'Leitungsschutzschalter 3-polig', 5, 'Stk', 26.00, 130.00, 19, 24.70, 3)
+ON CONFLICT (id) DO NOTHING;
+
+-- Approval step for ER-2 (pending — Dev User must approve)
+INSERT INTO inbound_invoice_approvals (id, invoice_id, tenant_id, step_order, approval_version, approver_user_id, status, due_at)
+VALUES (
+  'd5000000-0000-4000-a000-000000000001',
+  'd3000000-0000-4000-a000-000000000002',
+  '10000000-0000-0000-0000-000000000001',
+  1, 1, '00000000-0000-0000-0000-000000000002', 'PENDING',
+  NOW() + INTERVAL '23 hours'
+) ON CONFLICT (id) DO NOTHING;
+
+-- Approval step for ER-3 (approved by Dev User)
+INSERT INTO inbound_invoice_approvals (id, invoice_id, tenant_id, step_order, approval_version, approver_user_id, status, decided_by, decided_at)
+VALUES (
+  'd5000000-0000-4000-a000-000000000002',
+  'd3000000-0000-4000-a000-000000000003',
+  '10000000-0000-0000-0000-000000000001',
+  1, 1, '00000000-0000-0000-0000-000000000002', 'APPROVED',
+  '00000000-0000-0000-0000-000000000002', NOW() - INTERVAL '3 days'
+) ON CONFLICT (id) DO NOTHING;
+
+-- Approval step for ER-5 (rejected by Dev User)
+INSERT INTO inbound_invoice_approvals (id, invoice_id, tenant_id, step_order, approval_version, approver_user_id, status, decided_by, decided_at, rejection_reason)
+VALUES (
+  'd5000000-0000-4000-a000-000000000003',
+  'd3000000-0000-4000-a000-000000000005',
+  '10000000-0000-0000-0000-000000000001',
+  1, 1, '00000000-0000-0000-0000-000000000002', 'REJECTED',
+  '00000000-0000-0000-0000-000000000002', NOW() - INTERVAL '8 days',
+  'Rechnungsbetrag weicht von Bestellung ab — bitte prüfen'
+) ON CONFLICT (id) DO NOTHING;
+
+-- Email log entries
+INSERT INTO inbound_email_log (id, tenant_id, message_id, from_email, subject, status, attachment_count, invoice_id, processed_at)
+VALUES
+  ('d6000000-0000-4000-a000-000000000001', '10000000-0000-0000-0000-000000000001',
+   '<inv-442@stahl-union.de>', 'einkauf@stahl-union.de', 'Rechnung SU-2026-0398',
+   'processed', 1, 'd3000000-0000-4000-a000-000000000004', NOW() - INTERVAL '14 days'),
+  ('d6000000-0000-4000-a000-000000000002', '10000000-0000-0000-0000-000000000001',
+   '<newsletter@spam.com>', 'newsletter@spam.com', 'Weekly Deals!',
+   'skipped_no_pdf', 0, NULL, NOW() - INTERVAL '10 days'),
+  ('d6000000-0000-4000-a000-000000000003', '10000000-0000-0000-0000-000000000001',
+   '<inv-xy@neue-firma.de>', 'rechnung@neue-firma.de', 'Rechnung INV-2026-XY',
+   'processed', 1, 'd3000000-0000-4000-a000-000000000006', NOW() - INTERVAL '1 day'),
+  ('d6000000-0000-4000-a000-000000000004', '10000000-0000-0000-0000-000000000001',
+   '<broken@example.com>', 'admin@example.com', 'Corrupted attachment',
+   'failed', 1, NULL, NOW() - INTERVAL '5 days')
+ON CONFLICT (id) DO NOTHING;

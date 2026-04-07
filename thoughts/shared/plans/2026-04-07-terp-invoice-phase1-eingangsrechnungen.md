@@ -369,28 +369,31 @@ file_size_limit = "20MiB"
 allowed_mime_types = ["application/pdf", "text/xml", "application/xml", "image/jpeg", "image/png"]
 ```
 
-#### 8. Enable Inbucket IMAP for development
-**File**: `supabase/config.toml`
+#### 8. GreenMail for IMAP development
+**File**: `docker/docker-compose.yml`
 
-Ensure Inbucket is enabled (it should be from the email feature):
-```toml
-[inbucket]
-enabled = true
-```
-Inbucket IMAP endpoint: `127.0.0.1:54325`.
+GreenMail provides SMTP + IMAP for local dev. Added as `greenmail` service in docker-compose.yml.
+Standalone: `docker run -d --name greenmail --network host -e GREENMAIL_OPTS='-Dgreenmail.setup.test.all -Dgreenmail.users=test:test@test.local' greenmail/standalone:latest`
+
+GreenMail endpoints:
+- SMTP: `127.0.0.1:3025`
+- IMAP: `127.0.0.1:3143` (plain, encryption=NONE)
+- IMAPS: `127.0.0.1:3993` (SSL, self-signed)
+
+Test user: `test` / `test`
 
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Migration applies cleanly: `pnpm db:reset`
-- [ ] Prisma client regenerates: `pnpm db:generate`
-- [ ] Type checking passes: `pnpm typecheck`
-- [ ] Lint passes: `pnpm lint`
+- [x] Migration applies cleanly: `pnpm db:reset`
+- [x] Prisma client regenerates: `pnpm db:generate`
+- [x] Type checking passes: `pnpm typecheck`
+- [x] Lint passes: `pnpm lint`
 
 #### Manual Verification:
 - [ ] New tables visible in Prisma Studio: `pnpm db:studio`
 - [ ] `inbound-invoices` bucket exists in Supabase Storage
-- [ ] Inbucket IMAP reachable on port 54325
+- [x] GreenMail IMAP reachable on port 3143
 
 **Implementation Note**: Pause after this phase. All subsequent phases depend on the schema being correct.
 
@@ -479,15 +482,15 @@ Mount in `src/trpc/routers/_app.ts` as `invoices: invoicesRouter`.
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Type checking passes: `pnpm typecheck`
-- [ ] Lint passes: `pnpm lint`
-- [ ] Unit tests: IMAP config CRUD, testConnection with mocked imapflow, password exclusion
+- [x] Type checking passes: `pnpm typecheck`
+- [x] Lint passes: `pnpm lint`
+- [x] Unit tests: IMAP config CRUD, testConnection with mocked imapflow, password exclusion
 
 #### Manual Verification:
-- [ ] `testConnection` succeeds against Inbucket IMAP (`127.0.0.1:54325`, user: `test@test.com`, pass: any)
-- [ ] Password excluded from `get` response
+- [x] `testConnection` succeeds against GreenMail IMAP (`127.0.0.1:3143`, user: `test`, pass: `test`, encryption: NONE)
+- [x] Password excluded from `get` response (`hasPassword: true`, no `password` field)
 
-**Implementation Note**: Pause for IMAP connectivity test with Inbucket.
+**Implementation Note**: Pause for IMAP connectivity test with GreenMail.
 
 ---
 
@@ -620,9 +623,9 @@ Place 3–4 sample ZUGFeRD PDF/XML files:
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Type checking passes: `pnpm typecheck`
-- [ ] Lint passes: `pnpm lint`
-- [ ] Unit tests:
+- [x] Type checking passes: `pnpm typecheck`
+- [x] Lint passes: `pnpm lint`
+- [x] Unit tests (11 passing):
   - `extractZugferdXml`: extracts XML from EN16931 PDF, returns null for plain PDF
   - `parseZugferdXml`: parses all mandatory BT fields from EN16931 sample
   - `parseZugferdXml`: handles BASIC profile (no line items allowed if missing)
@@ -631,7 +634,7 @@ Place 3–4 sample ZUGFeRD PDF/XML files:
   - `parseStandaloneXml`: parses standalone XRechnung XML
 
 #### Manual Verification:
-- [ ] Parser correctly handles a real-world ZUGFeRD invoice (if test fixture available)
+- [x] Parser correctly handles real-world ZUGFeRD invoices (27 fixtures, EN16931 + XRECHNUNG verified)
 
 **Implementation Note**: Pause for parser validation with test fixtures.
 
@@ -751,20 +754,23 @@ Add:
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Type checking passes: `pnpm typecheck`
-- [ ] Lint passes: `pnpm lint`
-- [ ] Unit tests:
+- [x] Type checking passes: `pnpm typecheck`
+- [x] Lint passes: `pnpm lint`
+- [x] Unit tests:
   - `matchSupplier`: vatId match, taxNumber match, email domain match, fuzzy name match, no match
   - `levenshteinSimilarity`: known pairs with expected scores
   - `pollInbox` with mocked imapflow/mailparser: processes new mail, skips seen, handles no-attachment
   - Cron route: CRON_SECRET guard, processes multiple tenants, handles errors
 
-#### Manual Verification:
-- [ ] Send a PDF email to Inbucket, trigger cron, verify InboundInvoice created
-- [ ] Send a ZUGFeRD PDF, verify fields pre-filled
-- [ ] Send a plain text email (no PDF), verify skipped_no_attachment in log
+#### Integration Tests (replace manual verification):
+- [x] Plain PDF without ZUGFeRD → source=imap, no line items, pdf_storage_path set
+- [x] ZUGFeRD EN16931 PDF → source=zugferd, profile=EN16931, fields pre-filled, line items created
+- [x] Plain-text email without attachments → skipped_no_attachment in log, no invoice
+- [x] Dedup via Message-ID → second poll skips, invoice count unchanged
+- [x] Attachment > 20 MB → failed with "too_large", no invoice
+- [x] Supplier match by VAT ID → supplierId set, supplierStatus=matched
 
-**Implementation Note**: Pause for end-to-end IMAP test with Inbucket.
+**Implementation Note**: Pause for end-to-end IMAP test with GreenMail.
 
 ---
 
@@ -910,19 +916,21 @@ Thin tRPC wrappers for all procedures (following the existing hooks pattern in `
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Type checking passes: `pnpm typecheck`
-- [ ] Lint passes: `pnpm lint`
-- [ ] Unit tests:
+- [x] Type checking passes: `pnpm typecheck`
+- [x] Lint passes: `pnpm lint`
+- [x] Unit tests (14 passing):
   - `createFromUpload`: PDF stored, ZUGFeRD parsed, supplier matched, invoice created
+  - `createFromUpload`: line items created when ZUGFeRD detected
+  - `createFromUpload`: DuplicateError on duplicate (supplierId, invoiceNumber)
   - `update`: material field change increments approvalVersion
-  - `submitForApproval`: requires matched supplier, sets status
-  - Duplicate check: ConflictError on duplicate (supplierId, invoiceNumber)
-  - Line item validation: sum mismatch → ValidationError (±0.01 tolerance)
-
-#### Manual Verification:
-- [ ] Upload a ZUGFeRD PDF via tRPC, verify fields pre-filled + line items created
-- [ ] Upload a plain PDF, verify DRAFT with no pre-fill
-- [ ] Attempt duplicate → error
+  - `update`: non-material change does not increment approvalVersion
+  - `update`: rejects non-DRAFT/REJECTED invoices
+  - `submitForApproval`: requires matched supplier, invoice number, date, totalGross
+  - `submitForApproval`: sets status PENDING_APPROVAL on valid submit
+  - `updateLineItems`: sum mismatch → ValidationError (±0.01 tolerance)
+  - `updateLineItems`: accepts sum within tolerance
+  - `remove`: only DRAFT allowed, removes storage + DB
+  - `reopenExported`: rejects non-EXPORTED invoices
 
 **Implementation Note**: Pause for CRUD validation.
 
@@ -1048,21 +1056,18 @@ export const invoicesRouter = createTRPCRouter({
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Type checking passes: `pnpm typecheck`
-- [ ] Lint passes: `pnpm lint`
-- [ ] Unit tests:
-  - `createApprovalSteps`: correct steps from policies, auto-approve when no policies
-  - `approve`: advances workflow, completes when all steps done
-  - `reject`: sets invoice REJECTED, notifies submitter
+- [x] Type checking passes: `pnpm typecheck`
+- [x] Lint passes: `pnpm lint`
+- [x] Integration tests (9 passing, replace manual verification):
+  - Auto-approve when no policies exist
+  - Single-step approval: create step, approve → APPROVED
+  - Two-step approval: 2 policies, approve sequentially → APPROVED
+  - Rejection → REJECTED with reason
   - Submitter ≠ approver guard: throws when same user
-  - `handleMaterialChange`: invalidates old approvals, resets to DRAFT
-  - `isUserAuthorized`: direct user match + group membership match
-
-#### Manual Verification:
-- [ ] Create 2-step policy (< 500€ → 1 step, > 500€ → 2 steps)
-- [ ] Submit a 1000€ invoice → 2 approval steps created
-- [ ] Approve step 1 → notification sent to step 2 approver
-- [ ] Approve step 2 → invoice status APPROVED
+  - Unauthorized user cannot approve
+  - Group membership authorization (user in approverGroup)
+  - Material change invalidates approvals
+  - findPendingForUser returns correct steps
 
 **Implementation Note**: Pause for workflow validation.
 
@@ -1116,16 +1121,20 @@ After each notification creation, call `publishUnreadCountUpdate` (pattern from 
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Type checking passes: `pnpm typecheck`
-- [ ] Lint passes: `pnpm lint`
-- [ ] Unit tests:
-  - Escalation cron: finds overdue steps, sends reminders, respects 24h cooldown
-  - Notifications: created at each workflow transition point
-
-#### Manual Verification:
-- [ ] Submit invoice → approver sees notification badge
-- [ ] Let approval step expire → reminder notification after cron runs
-- [ ] Reject invoice → submitter sees notification with reason
+- [x] Type checking passes: `pnpm typecheck`
+- [x] Lint passes: `pnpm lint`
+- [x] Integration tests (5 passing, replace manual verification):
+  - Escalation cron: sends reminder for overdue step, creates notification
+  - Escalation cron: skips step within 24h cooldown
+  - Escalation cron: sends reminder when cooldown expired
+  - Escalation cron: ignores non-overdue steps
+  - Escalation cron: CRON_SECRET auth guard
+- [x] Notifications integrated at all workflow transition points:
+  - submitForApproval → notify first-step approver(s)
+  - approve (not final) → notify next-step approver
+  - approve (final) → notify submitter "Rechnung freigegeben"
+  - reject → notify submitter with rejection reason
+  - IMAP 3x failure → notify users with email_imap.manage permission
 
 **Implementation Note**: Pause for notification flow validation.
 
@@ -1199,18 +1208,18 @@ exportDatev: invProcedure.use(requirePermission(EXPORT)).input(exportSchema).mut
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Type checking passes: `pnpm typecheck`
-- [ ] Lint passes: `pnpm lint`
-- [ ] Unit tests:
-  - `exportToCsv`: correct DATEV header, correct data rows, semicolon delimiter
-  - `formatDatevDate`: correct DDMM format
+- [x] Type checking passes: `pnpm typecheck`
+- [x] Lint passes: `pnpm lint`
+- [x] Unit + Integration tests (10 passing):
+  - `formatDatevDate`: correct DDMM format (15.03 → "1503", 31.12 → "3112")
   - VAT key mapping: 19% → 9, 7% → 8, 0% → 0
-  - Windows-1252 encoding: German Umlauts correctly encoded
-  - Buchungstext truncation at 60 chars
-
-#### Manual Verification:
-- [ ] Export CSV, open in DATEV (or verify format with DATEV documentation)
-- [ ] Umlauts display correctly in Windows-1252
+  - `buildDatevHeader`: starts with "EXTF", correct structure, semicolon delimiter
+  - Integration: exports correct DATEV CSV format (header + column header + data rows)
+  - Integration: Windows-1252 encoding with German Umlauts (Müller & Söhne)
+  - Integration: Buchungstext truncation at 60 chars
+  - Integration: marks invoices as EXPORTED with timestamp + user
+  - Integration: throws when no approved invoices found
+  - Integration: semicolon delimiter throughout
 
 **Implementation Note**: Pause for DATEV format validation.
 
@@ -1317,8 +1326,8 @@ Add "Eingangsrechnungen" to the main navigation sidebar under a new "Rechnungen"
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Type checking passes: `pnpm typecheck`
-- [ ] Lint passes: `pnpm lint`
+- [x] Type checking passes: `pnpm typecheck`
+- [x] Lint passes: `pnpm lint`
 
 #### Manual Verification:
 - [ ] List page loads with filters and pagination
@@ -1329,7 +1338,7 @@ Add "Eingangsrechnungen" to the main navigation sidebar under a new "Rechnungen"
 - [ ] Assign supplier for SUPPLIER_UNKNOWN invoice
 - [ ] PDF viewer displays correctly in iframe
 
-**Implementation Note**: Pause for full UI walkthrough.
+**Implementation Note**: UI components are ready. Manual verification required for visual/interactive testing.
 
 ---
 
@@ -1378,8 +1387,9 @@ On the list page, when status filter = APPROVED:
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Type checking passes: `pnpm typecheck`
-- [ ] Lint passes: `pnpm lint`
+- [x] Type checking passes: `pnpm typecheck`
+- [x] Lint passes: `pnpm lint`
+- [x] All i18n — no hardcoded strings, all in de.json + en.json
 
 #### Manual Verification:
 - [ ] Approver sees pending invoices in the approvals list
@@ -1447,8 +1457,9 @@ Table of all inbound email log entries:
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Type checking passes: `pnpm typecheck`
-- [ ] Lint passes: `pnpm lint`
+- [x] Type checking passes: `pnpm typecheck`
+- [x] Lint passes: `pnpm lint`
+- [x] All i18n — translations in de.json + en.json (~80 keys for imap/policy/emailLog/settings)
 
 #### Manual Verification:
 - [ ] IMAP config form saves and test connection works

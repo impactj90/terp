@@ -6,5 +6,5 @@
  * client-side bundles.
  */
 
-export const AVAILABLE_MODULES = ["core", "crm", "billing", "warehouse"] as const
+export const AVAILABLE_MODULES = ["core", "crm", "billing", "warehouse", "inbound_invoices"] as const
 export type ModuleId = (typeof AVAILABLE_MODULES)[number]
