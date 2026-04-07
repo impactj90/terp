@@ -63,6 +63,14 @@ model User {
   enabledModules             TenantModule[] @relation("moduleEnabledBy")
   emailSendLogs              EmailSendLog[]
 
+  // Inbound Invoices
+  inboundInvoicesSubmitted   InboundInvoice[] @relation("InboundInvoiceSubmitter")
+  inboundInvoicesDatev       InboundInvoice[] @relation("InboundInvoiceDatevExporter")
+  inboundInvoicesCreated     InboundInvoice[] @relation("InboundInvoiceCreator")
+  approvalPoliciesUser       InboundInvoiceApprovalPolicy[] @relation("ApprovalPolicyUser")
+  approvalStepsApprover      InboundInvoiceApproval[] @relation("ApprovalStepApprover")
+  approvalStepsDecider       InboundInvoiceApproval[] @relation("ApprovalStepDecider")
+
   // Indexes
   @@unique([tenantId, email], map: "idx_users_tenant_email")
   @@index([email], map: "idx_users_email")
@@ -203,6 +211,7 @@ model Tenant {
   whCorrectionRuns            WhCorrectionRun[]
   whCorrectionMessages        WhCorrectionMessage[]
   whStockReservations         WhStockReservation[]
+  whStocktakes                WhStocktake[]
 
   // HR Personnel File
   hrPersonnelFileCategories   HrPersonnelFileCategory[]
@@ -218,6 +227,13 @@ model Tenant {
   emailTemplates              EmailTemplate[]
   emailDefaultAttachments     EmailDefaultAttachment[]
   emailSendLogs               EmailSendLog[]
+
+  // Inbound Invoices
+  tenantImapConfig                TenantImapConfig?
+  inboundEmailLogs                InboundEmailLog[]
+  inboundInvoices                 InboundInvoice[]
+  inboundInvoiceApprovalPolicies  InboundInvoiceApprovalPolicy[]
+  inboundInvoiceApprovals         InboundInvoiceApproval[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
@@ -349,6 +365,7 @@ model CrmAddress {
   articleSuppliers         WhArticleSupplier[]
   purchaseOrders           WhPurchaseOrder[]
   supplierInvoices         WhSupplierInvoice[]
+  inboundInvoices          InboundInvoice[]
 
   @@unique([tenantId, number], map: "uq_crm_addresses_tenant_number")
   @@index([tenantId], map: "idx_crm_addresses_tenant_id")
@@ -1088,6 +1105,10 @@ model UserGroup {
   // Relations
   tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   users  User[]
+
+  // Inbound Invoices
+  approvalPolicies InboundInvoiceApprovalPolicy[] @relation("ApprovalPolicyGroup")
+  approvalSteps    InboundInvoiceApproval[]       @relation("ApprovalStepGroup")
 
   // Indexes
   @@index([tenantId], map: "idx_user_groups_tenant")
@@ -4483,6 +4504,7 @@ model WhStockMovement {
   tenant        Tenant           @relation(fields: [tenantId], references: [id])
   article       WhArticle        @relation(fields: [articleId], references: [id])
   purchaseOrder WhPurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+  stocktake     WhStocktake?     @relation(fields: [inventorySessionId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, articleId])
   @@index([tenantId, type])
@@ -4672,6 +4694,82 @@ model WhStockReservation {
   @@index([tenantId, articleId, status])
   @@index([tenantId, documentId])
   @@map("wh_stock_reservations")
+}
+
+// -----------------------------------------------------------------------------
+// WhStocktake (Inventur)
+// -----------------------------------------------------------------------------
+// Migration: 20260414100000
+//
+// Stocktake session. Freezes expected quantities at creation time.
+// Workflow: DRAFT -> IN_PROGRESS -> COMPLETED | CANCELLED
+
+enum WhStocktakeStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+
+  @@map("wh_stocktake_status")
+}
+
+model WhStocktake {
+  id             String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String             @map("tenant_id") @db.Uuid
+  number         String             @db.VarChar(50)
+  name           String             @db.VarChar(255)
+  description    String?            @db.Text
+  status         WhStocktakeStatus  @default(DRAFT)
+  referenceDate  DateTime           @default(now()) @map("reference_date") @db.Timestamptz(6)
+  scope          String?            @db.VarChar(50)
+  scopeFilter    Json?              @map("scope_filter") @db.JsonB
+  notes          String?            @db.Text
+  printedAt      DateTime?          @map("printed_at") @db.Timestamptz(6)
+  completedAt    DateTime?          @map("completed_at") @db.Timestamptz(6)
+  cancelledAt    DateTime?          @map("cancelled_at") @db.Timestamptz(6)
+  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById    String?            @map("created_by_id") @db.Uuid
+  completedById  String?            @map("completed_by_id") @db.Uuid
+
+  tenant         Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  positions      WhStocktakePosition[]
+  stockMovements WhStockMovement[]
+
+  @@unique([tenantId, number], map: "uq_wh_stocktakes_tenant_number")
+  @@index([tenantId, status])
+  @@index([tenantId, referenceDate(sort: Desc)])
+  @@map("wh_stocktakes")
+}
+
+model WhStocktakePosition {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  stocktakeId      String    @map("stocktake_id") @db.Uuid
+  articleId        String    @map("article_id") @db.Uuid
+  articleNumber    String    @map("article_number") @db.VarChar(50)
+  articleName      String    @map("article_name") @db.VarChar(255)
+  unit             String    @db.VarChar(20)
+  warehouseLocation String?  @map("warehouse_location") @db.VarChar(255)
+  expectedQuantity Float     @map("expected_quantity")
+  countedQuantity  Float?    @map("counted_quantity")
+  difference       Float?
+  valueDifference  Float?    @map("value_difference")
+  buyPrice         Float?    @map("buy_price")
+  note             String?   @db.Text
+  reviewed         Boolean   @default(false)
+  skipped          Boolean   @default(false)
+  skipReason       String?   @map("skip_reason") @db.Text
+  countedById      String?   @map("counted_by_id") @db.Uuid
+  countedAt        DateTime? @map("counted_at") @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  stocktake WhStocktake @relation(fields: [stocktakeId], references: [id], onDelete: Cascade)
+
+  @@unique([stocktakeId, articleId], map: "uq_wh_stocktake_positions_article")
+  @@index([stocktakeId])
+  @@index([articleId])
+  @@map("wh_stocktake_positions")
 }
 
 // -----------------------------------------------------------------------------
@@ -4917,4 +5015,223 @@ model EmailSendLog {
   @@index([tenantId])
   @@index([tenantId, documentId])
   @@map("email_send_log")
+}
+
+// -----------------------------------------------------------------------------
+// TenantImapConfig
+// -----------------------------------------------------------------------------
+// Migration: 20260413100000
+//
+// Per-tenant IMAP server configuration for inbound invoice email receiving.
+// Stores IMAP credentials, polling state, and connection health.
+model TenantImapConfig {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId             String    @unique @map("tenant_id") @db.Uuid
+  host                 String    @db.VarChar(255)
+  port                 Int       @default(993)
+  username             String    @db.VarChar(255)
+  password             String    @db.VarChar(500)
+  encryption           String    @default("SSL") @db.VarChar(10)
+  mailbox              String    @default("INBOX") @db.VarChar(255)
+  isVerified           Boolean   @default(false) @map("is_verified")
+  verifiedAt           DateTime? @map("verified_at") @db.Timestamptz(6)
+  uidValidity          BigInt?   @map("uid_validity")
+  uidNext              Int?      @map("uid_next")
+  lastPollAt           DateTime? @map("last_poll_at") @db.Timestamptz(6)
+  lastPollError        String?   @map("last_poll_error") @db.Text
+  lastPollErrorAt      DateTime? @map("last_poll_error_at") @db.Timestamptz(6)
+  consecutiveFailures  Int       @default(0) @map("consecutive_failures")
+  isActive             Boolean   @default(true) @map("is_active")
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_imap_configs")
+}
+
+// -----------------------------------------------------------------------------
+// InboundEmailLog
+// -----------------------------------------------------------------------------
+// Migration: 20260413100000
+//
+// Log of all processed inbound emails from IMAP polling.
+model InboundEmailLog {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  messageId       String?   @map("message_id") @db.VarChar(500)
+  fromEmail       String?   @map("from_email") @db.VarChar(255)
+  subject         String?   @db.VarChar(500)
+  receivedAt      DateTime  @default(now()) @map("received_at") @db.Timestamptz(6)
+  uid             Int?
+  status          String    @default("pending") @db.VarChar(30)
+  errorMessage    String?   @map("error_message") @db.Text
+  attachmentCount Int       @default(0) @map("attachment_count")
+  invoiceId       String?   @map("invoice_id") @db.Uuid
+  processedAt     DateTime? @map("processed_at") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  inboundInvoices InboundInvoice[]
+
+  @@index([tenantId, createdAt(sort: Desc)], map: "idx_inbound_email_log_tenant")
+  @@map("inbound_email_log")
+}
+
+// -----------------------------------------------------------------------------
+// InboundInvoice
+// -----------------------------------------------------------------------------
+// Migration: 20260413100000
+//
+// Main inbound invoice table. Tracks invoice data, supplier matching,
+// ZUGFeRD parsing results, approval workflow, and DATEV export state.
+model InboundInvoice {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId            String    @map("tenant_id") @db.Uuid
+  number              String    @db.VarChar(50)
+  source              String    @default("manual") @db.VarChar(20)
+  sourceEmailLogId    String?   @map("source_email_log_id") @db.Uuid
+  sourceMessageId     String?   @map("source_message_id") @db.VarChar(500)
+  supplierId          String?   @map("supplier_id") @db.Uuid
+  supplierStatus      String    @default("matched") @map("supplier_status") @db.VarChar(20)
+  invoiceNumber       String?   @map("invoice_number") @db.VarChar(100)
+  invoiceDate         DateTime? @map("invoice_date") @db.Date
+  dueDate             DateTime? @map("due_date") @db.Date
+  totalNet            Decimal?  @map("total_net") @db.Decimal(12, 2)
+  totalVat            Decimal?  @map("total_vat") @db.Decimal(12, 2)
+  totalGross          Decimal?  @map("total_gross") @db.Decimal(12, 2)
+  currency            String    @default("EUR") @db.VarChar(3)
+  paymentTermDays     Int?      @map("payment_term_days")
+  sellerName          String?   @map("seller_name") @db.VarChar(255)
+  sellerVatId         String?   @map("seller_vat_id") @db.VarChar(50)
+  sellerTaxNumber     String?   @map("seller_tax_number") @db.VarChar(50)
+  sellerStreet        String?   @map("seller_street") @db.VarChar(255)
+  sellerZip           String?   @map("seller_zip") @db.VarChar(20)
+  sellerCity          String?   @map("seller_city") @db.VarChar(100)
+  sellerCountry       String?   @map("seller_country") @db.VarChar(5)
+  sellerIban          String?   @map("seller_iban") @db.VarChar(34)
+  sellerBic           String?   @map("seller_bic") @db.VarChar(11)
+  buyerName           String?   @map("buyer_name") @db.VarChar(255)
+  buyerVatId          String?   @map("buyer_vat_id") @db.VarChar(50)
+  buyerReference      String?   @map("buyer_reference") @db.VarChar(100)
+  zugferdProfile      String?   @map("zugferd_profile") @db.VarChar(30)
+  zugferdRawXml       String?   @map("zugferd_raw_xml") @db.Text
+  pdfStoragePath      String?   @map("pdf_storage_path") @db.Text
+  pdfOriginalFilename String?   @map("pdf_original_filename") @db.VarChar(255)
+  status              String    @default("DRAFT") @db.VarChar(30)
+  approvalVersion     Int       @default(1) @map("approval_version")
+  submittedBy         String?   @map("submitted_by") @db.Uuid
+  submittedAt         DateTime? @map("submitted_at") @db.Timestamptz(6)
+  datevExportedAt     DateTime? @map("datev_exported_at") @db.Timestamptz(6)
+  datevExportedBy     String?   @map("datev_exported_by") @db.Uuid
+  notes               String?   @db.Text
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy           String?   @map("created_by") @db.Uuid
+
+  tenant           Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  supplier         CrmAddress?               @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  sourceEmailLog   InboundEmailLog?          @relation(fields: [sourceEmailLogId], references: [id], onDelete: SetNull)
+  submitter        User?                     @relation("InboundInvoiceSubmitter", fields: [submittedBy], references: [id], onDelete: SetNull)
+  datevExporter    User?                     @relation("InboundInvoiceDatevExporter", fields: [datevExportedBy], references: [id], onDelete: SetNull)
+  createdByUser    User?                     @relation("InboundInvoiceCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  lineItems        InboundInvoiceLineItem[]
+  approvals        InboundInvoiceApproval[]
+
+  @@index([tenantId, status], map: "idx_inbound_invoices_tenant_status")
+  @@index([tenantId, supplierId], map: "idx_inbound_invoices_tenant_supplier")
+  @@index([tenantId, invoiceDate(sort: Desc)], map: "idx_inbound_invoices_tenant_date")
+  @@map("inbound_invoices")
+}
+
+// -----------------------------------------------------------------------------
+// InboundInvoiceLineItem
+// -----------------------------------------------------------------------------
+// Migration: 20260413100000
+//
+// Line items per inbound invoice. Populated from ZUGFeRD XML or manual entry.
+model InboundInvoiceLineItem {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoiceId     String   @map("invoice_id") @db.Uuid
+  position      Int      @default(0)
+  articleNumber String?  @map("article_number") @db.VarChar(100)
+  description   String?  @db.Text
+  quantity      Decimal? @db.Decimal(12, 4)
+  unit          String?  @db.VarChar(20)
+  unitPriceNet  Decimal? @map("unit_price_net") @db.Decimal(12, 4)
+  totalNet      Decimal? @map("total_net") @db.Decimal(12, 2)
+  vatRate       Decimal? @map("vat_rate") @db.Decimal(5, 2)
+  vatAmount     Decimal? @map("vat_amount") @db.Decimal(12, 2)
+  totalGross    Decimal? @map("total_gross") @db.Decimal(12, 2)
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  invoice InboundInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId], map: "idx_inbound_invoice_line_items_invoice")
+  @@map("inbound_invoice_line_items")
+}
+
+// -----------------------------------------------------------------------------
+// InboundInvoiceApprovalPolicy
+// -----------------------------------------------------------------------------
+// Migration: 20260413100000
+//
+// Configurable approval threshold rules. Determines how many approval steps
+// are required based on invoice gross amount.
+model InboundInvoiceApprovalPolicy {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  amountMin       Decimal   @default(0) @map("amount_min") @db.Decimal(12, 2)
+  amountMax       Decimal?  @map("amount_max") @db.Decimal(12, 2)
+  stepOrder       Int       @default(1) @map("step_order")
+  approverGroupId String?   @map("approver_group_id") @db.Uuid
+  approverUserId  String?   @map("approver_user_id") @db.Uuid
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant        Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  approverGroup UserGroup? @relation("ApprovalPolicyGroup", fields: [approverGroupId], references: [id], onDelete: SetNull)
+  approverUser  User?      @relation("ApprovalPolicyUser", fields: [approverUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, isActive, amountMin, amountMax], map: "idx_approval_policies_tenant")
+  @@map("inbound_invoice_approval_policies")
+}
+
+// -----------------------------------------------------------------------------
+// InboundInvoiceApproval
+// -----------------------------------------------------------------------------
+// Migration: 20260413100000
+//
+// Individual approval step records. Tracks each approval decision in the
+// multi-step sequential workflow.
+model InboundInvoiceApproval {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoiceId       String    @map("invoice_id") @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  stepOrder       Int       @map("step_order")
+  approvalVersion Int       @map("approval_version")
+  approverGroupId String?   @map("approver_group_id") @db.Uuid
+  approverUserId  String?   @map("approver_user_id") @db.Uuid
+  status          String    @default("PENDING") @db.VarChar(20)
+  decidedBy       String?   @map("decided_by") @db.Uuid
+  decidedAt       DateTime? @map("decided_at") @db.Timestamptz(6)
+  rejectionReason String?   @map("rejection_reason") @db.Text
+  dueAt           DateTime? @map("due_at") @db.Timestamptz(6)
+  lastReminderAt  DateTime? @map("last_reminder_at") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  invoice       InboundInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  approverGroup UserGroup?     @relation("ApprovalStepGroup", fields: [approverGroupId], references: [id], onDelete: SetNull)
+  approverUser  User?          @relation("ApprovalStepApprover", fields: [approverUserId], references: [id], onDelete: SetNull)
+  decider       User?          @relation("ApprovalStepDecider", fields: [decidedBy], references: [id], onDelete: SetNull)
+
+  @@index([invoiceId, approvalVersion, stepOrder], map: "idx_approvals_invoice")
+  @@index([tenantId, status, dueAt], map: "idx_approvals_pending")
+  @@index([approverUserId, status], map: "idx_approvals_approver")
+  @@map("inbound_invoice_approvals")
 }

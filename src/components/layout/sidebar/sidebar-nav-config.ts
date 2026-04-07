@@ -53,6 +53,8 @@ import {
   ScanLine,
   FolderOpen,
   ShieldAlert,
+  FileInput,
+  FileCheck,
 } from 'lucide-react'
 
 /**
@@ -384,6 +386,33 @@ export const navConfig: NavSection[] = [
     ],
   },
   {
+    titleKey: 'invoicesSection',
+    module: 'inbound_invoices',
+    items: [
+      {
+        titleKey: 'inboundInvoices',
+        href: '/invoices/inbound',
+        icon: FileInput,
+        module: 'inbound_invoices',
+        permissions: ['inbound_invoices.view'],
+      },
+      {
+        titleKey: 'inboundApprovals',
+        href: '/invoices/inbound/approvals',
+        icon: FileCheck,
+        module: 'inbound_invoices',
+        permissions: ['inbound_invoices.approve'],
+      },
+      {
+        titleKey: 'inboundSettings',
+        href: '/invoices/inbound/settings',
+        icon: Settings2,
+        module: 'inbound_invoices',
+        permissions: ['inbound_invoices.manage'],
+      },
+    ],
+  },
+  {
     titleKey: 'warehouseSection',
     module: 'warehouse',
     items: [
@@ -448,6 +477,13 @@ export const navConfig: NavSection[] = [
         icon: Lock,
         module: 'warehouse',
         permissions: ['wh_reservations.view'],
+      },
+      {
+        titleKey: 'warehouseStocktake',
+        href: '/warehouse/stocktake',
+        icon: ClipboardList,
+        module: 'warehouse',
+        permissions: ['wh_stocktake.view'],
       },
       {
         titleKey: 'warehouseScanner',

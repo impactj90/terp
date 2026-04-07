@@ -115,6 +115,7 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [20b.4 Praxisbeispiel: Entnahme per QR-Scanner](#20b4-praxisbeispiel-entnahme-per-qr-scanner)
     - [20b.5 Praxisbeispiel: Storno per QR-Scanner](#20b5-praxisbeispiel-storno-per-qr-scanner)
     - [20b.6 Praxisbeispiel: Etiketten drucken](#20b6-praxisbeispiel-etiketten-drucken)
+    - [20b.7 Praxisbeispiel: Inventurzaehlung per QR-Scanner](#20b7-praxisbeispiel-inventurzaehlung-per-qr-scanner)
 20c. [HR — Personalakte](#20c-hr--personalakte)
     - [20c.1 Aktenkategorien](#20c1-aktenkategorien)
     - [20c.2 Eintraege](#20c2-eintraege)
@@ -123,6 +124,18 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [20c.5 Dashboard-Widget](#20c5-dashboard-widget)
     - [20c.6 Berechtigungen](#20c6-berechtigungen)
     - [Praxisbeispiel: Neuen Personalakte-Eintrag anlegen](#praxisbeispiel-neuen-personalakte-eintrag-anlegen)
+20d. [Lagerverwaltung — Inventur](#20d-lagerverwaltung--inventur)
+    - [20d.1 Inventurliste](#20d1-inventurliste)
+    - [20d.2 Neue Inventur anlegen](#20d2-neue-inventur-anlegen)
+    - [20d.3 Inventur-Detailseite](#20d3-inventur-detailseite)
+    - [20d.4 Zaehlung erfassen](#20d4-zaehlung-erfassen)
+    - [20d.5 Position ueberspringen](#20d5-position-ueberspringen)
+    - [20d.6 Inventur abschliessen](#20d6-inventur-abschliessen)
+    - [20d.7 Inventur abbrechen / loeschen](#20d7-inventur-abbrechen--loeschen)
+    - [20d.8 Inventurprotokoll (PDF)](#20d8-inventurprotokoll-pdf)
+    - [20d.9 Status-Workflow](#20d9-status-workflow)
+    - [20d.10 Berechtigungen](#20d10-berechtigungen)
+    - [20d.11 Praxisbeispiel: Jahresinventur durchfuehren](#20d11-praxisbeispiel-jahresinventur-durchfuehren)
 21. [DSGVO-Datenlöschung](#21-dsgvo-datenlöschung)
     - [21.1 Aufbewahrungsregeln konfigurieren](#211-aufbewahrungsregeln-konfigurieren)
     - [21.2 Vorschau und manuelle Ausführung](#212-vorschau-und-manuelle-ausführung)
@@ -131,7 +144,23 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [21.5 Gesetzliche Aufbewahrungsfristen](#215-gesetzliche-aufbewahrungsfristen)
     - [21.6 Anonymisierung vs. Löschung](#216-anonymisierung-vs-löschung)
     - [21.7 Praxisbeispiel: Aufbewahrungsfrist konfigurieren und Vorschau starten](#217-praxisbeispiel-aufbewahrungsfrist-konfigurieren-und-vorschau-starten)
-22. [Glossar](#22-glossar)
+22. [Eingangsrechnungen](#22-eingangsrechnungen)
+    - [22.1 Übersicht](#221-übersicht)
+    - [22.2 Rechnungsliste](#222-rechnungsliste)
+    - [22.3 Rechnung hochladen](#223-rechnung-hochladen)
+    - [22.4 Detailseite](#224-detailseite)
+    - [22.5 Positionen (Line Items)](#225-positionen-line-items)
+    - [22.6 Lieferant zuweisen](#226-lieferant-zuweisen)
+    - [22.7 Zur Freigabe einreichen](#227-zur-freigabe-einreichen)
+    - [22.8 Freigabe-Workflow](#228-freigabe-workflow)
+    - [22.9 DATEV-Export](#229-datev-export)
+    - [22.10 Automatischer E-Mail-Empfang (IMAP)](#2210-automatischer-e-mail-empfang-imap)
+    - [22.11 Freigaberegeln konfigurieren](#2211-freigaberegeln-konfigurieren)
+    - [22.12 E-Mail-Eingangslog](#2212-e-mail-eingangslog)
+    - [22.13 Status-Workflow](#2213-status-workflow)
+    - [22.14 Berechtigungen](#2214-berechtigungen)
+    - [22.15 Praxisbeispiele](#2215-praxisbeispiele)
+23. [Glossar](#23-glossar)
 
 ---
 
@@ -8163,7 +8192,7 @@ Seitenleiste -> **Lager** -> **QR-Scanner**
 Die Scanner-Seite ist mobiloptimiert (Touch-Ziele mindestens 48px, grosse Kamera-Vorschau). Zustaende:
 
 1. **Leerlauf**: Kamera aktiv, wartet auf QR-Code. Alternativ: Manuelle Eingabe der Artikelnummer per Tastatur.
-2. **Artikel erkannt**: Artikelinfo (Nummer, Name, Bestand, Lagerort). Vier Aktionskacheln: Wareneingang, Entnahme, Inventur (deaktiviert, in Vorbereitung), Storno.
+2. **Artikel erkannt**: Artikelinfo (Nummer, Name, Bestand, Lagerort). Vier Aktionskacheln: Wareneingang, Entnahme, Inventur, Storno.
 3. **Aktion gewaehlt**: Eingabeformular (Menge, Referenz, etc.)
 4. **Gebucht**: Erfolgsmeldung mit gruenem Haken und Vibration. Automatische Rueckkehr zum Leerlauf.
 
@@ -8232,6 +8261,26 @@ Jedes Etikett enthaelt: QR-Code + Artikelnummer + Bezeichnung + Einheit.
 4. PDF wird generiert und oeffnet sich im Browser
 5. PDF ausdrucken (A4, Avery Zweckform L4736 Etikettenbogen empfohlen)
 6. Etiketten auf den Regalplatz kleben
+
+### 20b.7 Praxisbeispiel: Inventurzaehlung per QR-Scanner
+
+**Ausgangslage:** Eine Inventur mit Status „Zaehlung laeuft" ist angelegt (siehe Kapitel 20d). Der Lagerist soll Artikel per QR-Scanner zaehlen, ohne den Sollbestand zu sehen.
+
+⚠️ Berechtigung: `wh_qr.scan` und `wh_stocktake.count`
+
+1. Smartphone-Browser oeffnen -> Terp -> Seitenleiste -> **Lager** -> **QR-Scanner**
+2. QR-Code auf dem Regal scannen
+3. Vibration + Signalton -> Artikel wird angezeigt: Artikelnummer, Name, Bestand, Lagerort
+4. Kachel **„Inventur"** antippen
+5. ✅ Liste der laufenden Inventuren wird angezeigt (nur Inventuren mit Status „Zaehlung laeuft")
+6. Gewuenschte Inventur antippen
+7. ✅ Eingabefeld **„Istbestand"** erscheint — der Sollbestand ist bewusst nicht sichtbar (unvoreingenommene Zaehlung)
+8. Gezaehlte Menge eingeben, optional eine Notiz hinzufuegen
+9. **„Bestaetigen"** antippen
+10. ✅ Gruener Haken + Vibration -> Zaehlung gespeichert
+11. Scanner kehrt zum Leerlauf zurueck -> naechsten Artikel scannen
+
+💡 **Hinweis:** Die Zaehlung ueberschreibt einen eventuell bereits vorhandenen Wert fuer diesen Artikel in dieser Inventur.
 
 ---
 
@@ -8365,6 +8414,307 @@ Die Standardgruppen ADMIN und PERSONAL haben alle 6 Berechtigungen. VORGESETZTER
 3. Im Bereich "Berechtigungen" die Sektion **"Personal"** aufklappen
 4. Gewuenschte Berechtigungen aktivieren (z.B. Ansehen + Erstellen fuer Teamleiter)
 5. **"Speichern"** klicken
+
+---
+
+## 20d. Lagerverwaltung — Inventur
+
+**Was ist es?** Das Inventurmodul ermoeglicht die koerperliche Bestandsaufnahme eines Lagers. Es deckt den vollstaendigen Prozess ab: Inventur anlegen, Ist-Mengen per QR-Scanner oder am Desktop erfassen, Differenzen pruefen und Bestand beim Abschluss automatisch anpassen.
+
+**Wozu dient es?** Die Stichtagsinventur ist gesetzlich vorgeschrieben (§240 HGB). Terp unterstuetzt den Ablauf digital: Sollbestaende werden beim Anlegen eingefroren, Lageristen zaehlen blind (ohne Sollbestand), der Lagerleiter prueft die Differenzen und schliesst die Inventur ab. Erst beim Abschluss werden die Bestandsbuchungen erzeugt.
+
+⚠️ Berechtigungen: Siehe Abschnitt 20d.10
+
+📍 Seitenleiste → **Lager** → **Inventur**
+
+### 20d.1 Inventurliste
+
+📍 Seitenleiste → **Lager** → **Inventur**
+
+✅ Seitenueberschrift: **„Inventur"**
+
+✅ Button **„Neue Inventur"** (oben rechts, nur mit Berechtigung `wh_stocktake.create`)
+
+✅ Filter-Leiste:
+- Suchfeld (Platzhalter: „Bezeichnung") — Freitext-Suche ueber Namen
+- Status-Dropdown mit Optionen: Alle, Entwurf, Zaehlung laeuft, Abgeschlossen, Abgebrochen
+
+✅ Tabelle mit Spalten:
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Inventur-Nr.** | Automatische Nummer im Format INV-JJJJ-NNN (Monospace) |
+| **Bezeichnung** | Vom Benutzer vergebener Name |
+| **Status** | Badge: Entwurf (grau) / Zaehlung laeuft (blau) / Abgeschlossen (outline) / Abgebrochen (rot) |
+| **Stichtag** | Datum der Inventuranlage |
+| **Positionen** | Anzahl der enthaltenen Artikel |
+| **Erstellt am** | Datum der Anlage |
+
+📍 Zeile anklicken → Detailseite oeffnet sich
+
+✅ Paginierung: 25 Eintraege pro Seite mit Zurueck/Vor-Buttons
+
+✅ Leerzustand: „Noch keine Inventuren vorhanden"
+
+### 20d.2 Neue Inventur anlegen
+
+📍 Inventurliste → **„Neue Inventur"** klicken → Seitenpanel (Sheet) oeffnet sich rechts
+
+✅ Titel: **„Neue Inventur"**
+
+✅ Formularfelder:
+
+| Feld | Typ | Pflicht | Beschreibung |
+|------|-----|---------|-------------|
+| **Bezeichnung** | Textfeld | Ja | Name der Inventur (z. B. „Jahresinventur 2026") |
+| **Beschreibung** | Textbereich | Nein | Optionale naehere Beschreibung |
+| **Umfang** | Auswahlliste | Nein (Standard: Alle Lagerartikel) | „Alle Lagerartikel", „Artikelgruppe" oder „Lagerort" |
+| **Anmerkungen** | Textbereich | Nein | Optionale Anmerkungen |
+
+📍 **„Neue Inventur"** klicken → Inventur wird angelegt
+
+✅ Toast-Meldung: „Inventur erstellt"
+
+**Was beim Anlegen passiert:**
+1. Eine fortlaufende Inventur-Nummer (INV-JJJJ-NNN) wird automatisch vergeben
+2. Alle Lagerartikel mit aktiver Bestandsfuehrung werden als Positionen uebernommen
+3. Fuer jede Position wird der aktuelle Lagerbestand als **Sollbestand eingefroren** — dieser Wert aendert sich waehrend der Inventur nicht mehr
+4. Je nach Umfang werden nur Artikel der gewaehlten Artikelgruppe oder des gewaehlten Lagerorts einbezogen
+5. Die Inventur erhaelt den Status **Entwurf**
+
+⚠️ Gibt es keine passenden Artikel (z. B. kein Artikel mit Bestandsfuehrung), wird eine Fehlermeldung angezeigt.
+
+### 20d.3 Inventur-Detailseite
+
+📍 Inventurliste → Zeile anklicken
+
+✅ Kopfzeile: Zurueck-Pfeil + **„{Inventur-Nr.} — {Bezeichnung}"** + Status-Badge + Stichtag
+
+✅ Vier Kennzahlenkarten:
+
+| Karte | Inhalt |
+|-------|--------|
+| **Positionen** | Gesamtzahl der Artikel in der Inventur |
+| **Gezaehlt** | Anzahl bereits gezaehlter Positionen |
+| **Uebersprungen** | Anzahl bewusst ausgelassener Positionen |
+| **Geprueft** | Anzahl als geprueft markierter Positionen |
+
+✅ Positions-Toolbar:
+- Suchfeld (Platzhalter: „Art.-Nr.") — Suche nach Artikelnummer
+- Toggle **„Nur offene"** — zeigt nur noch nicht gezaehlte Positionen (nur bei Status „Zaehlung laeuft")
+- Toggle **„Nur Differenzen"** — zeigt nur Positionen mit Abweichung (bei „Zaehlung laeuft" und „Abgeschlossen")
+
+✅ Positionstabelle:
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Art.-Nr.** | Artikelnummer (Monospace) |
+| **Artikel** | Artikelbezeichnung |
+| **Lagerort** | Zugeordneter Lagerort |
+| **Einheit** | Mengeneinheit (Stk, kg, m, etc.) |
+| **Sollbestand** | Eingefrorener Bestand zum Zeitpunkt der Inventuranlage |
+| **Istbestand** | Gezaehlte Menge (oder „—" wenn noch nicht gezaehlt) |
+| **Differenz** | Istbestand minus Sollbestand (gruen bei Mehrbestand, rot bei Minderbestand) |
+| **Wertdifferenz** | Differenz × Einkaufspreis in EUR |
+| **Status** | Badge: „Offen" / „Gezaehlt" / „Uebersprungen" |
+| **Geprueft** | Checkbox (nur bei abgeschlossener Inventur, erfordert `wh_stocktake.complete`) |
+| **Aktionen** | Ueberspringen-Button (nur bei laufender Zaehlung, erfordert `wh_stocktake.count`) |
+
+✅ Paginierung: 50 Positionen pro Seite
+
+✅ Aktions-Buttons (kontextabhaengig):
+
+| Button | Wann sichtbar | Berechtigung |
+|--------|--------------|-------------|
+| **„Zaehlung starten"** | Status = Entwurf | `wh_stocktake.create` |
+| **„Inventur abschliessen"** | Status = Zaehlung laeuft | `wh_stocktake.complete` |
+| **„Inventur abbrechen"** | Status = Entwurf oder Zaehlung laeuft | `wh_stocktake.complete` |
+| **„Inventur loeschen"** | Status = Entwurf | `wh_stocktake.delete` |
+| **„Protokoll erstellen"** | Status = Abgeschlossen | Alle (nur sichtbar) |
+
+### 20d.4 Zaehlung erfassen
+
+Es gibt zwei Wege, Zaehlungen zu erfassen:
+
+**Weg 1: Am Desktop (Detailseite)**
+
+📍 Inventur-Detailseite (Status muss „Zaehlung laeuft" sein) → Position in der Tabelle anklicken
+
+✅ Dialog **„Gezaehlte Menge eingeben"** oeffnet sich
+
+✅ Felder:
+- **Istbestand ({Einheit})** — grosses Zahlen-Eingabefeld (zentriert)
+- **Notiz** — optionales Textfeld
+
+📍 Menge eingeben → **Bestaetigungs-Button** klicken
+
+✅ Die Position wird aktualisiert: Istbestand, Differenz und Wertdifferenz erscheinen in der Tabelle
+
+💡 Wird ein bereits gezaehlter Artikel erneut angeklickt, kann der Wert ueberschrieben werden.
+
+**Weg 2: Per QR-Scanner (mobil)**
+
+Siehe Abschnitt 20b.7. Der QR-Scanner bietet denselben Erfassungsvorgang auf dem Smartphone — ohne Sollbestand-Anzeige.
+
+⚠️ **Unvoreingenommene Zaehlung:** Der Sollbestand ist waehrend der Erfassung bewusst nicht sichtbar. Der Zaehler soll die physische Menge zaehlen, nicht den Sollwert abtippen.
+
+### 20d.5 Position ueberspringen
+
+📍 Inventur-Detailseite (Status „Zaehlung laeuft") → Ueberspringen-Button in der Aktionsspalte klicken
+
+✅ Dialog **„Ueberspringen"** oeffnet sich
+
+✅ Pflichtfeld: **„Grund fuer Auslassung"** — z. B. „Artikel nicht auffindbar" oder „Lagerort nicht zugaenglich"
+
+📍 Grund eingeben → **„Ueberspringen"** klicken
+
+✅ Die Position wird als „Uebersprungen" markiert (Badge in der Statusspalte)
+
+⚠️ Uebersprungene Positionen erzeugen beim Abschluss keine Bestandsbewegung.
+
+### 20d.6 Inventur abschliessen
+
+📍 Inventur-Detailseite (Status „Zaehlung laeuft") → **„Inventur abschliessen"**
+
+✅ Bestaetigungsdialog: **„Inventur wirklich abschliessen? Die Bestaende werden unwiderruflich angepasst."**
+
+📍 Bestaetigen
+
+⚠️ **Voraussetzung:** Alle Positionen muessen entweder gezaehlt oder als uebersprungen markiert sein. Solange offene Positionen existieren, kann die Inventur nicht abgeschlossen werden.
+
+**Was beim Abschluss passiert:**
+1. Fuer jede gezaehlte Position mit Bestandsabweichung wird eine Bestandsbewegung vom Typ **INVENTUR** erzeugt
+2. Der Artikelbestand wird auf die gezaehlte Menge angepasst
+3. Positionen ohne Differenz und uebersprungene Positionen erzeugen keine Buchung
+4. Die Inventur wechselt in den Status **Abgeschlossen** und ist ab diesem Zeitpunkt unveraenderlich
+5. Der Button **„Protokoll erstellen"** wird sichtbar
+
+⚠️ Dieser Vorgang ist endgueltig und kann nicht rueckgaengig gemacht werden.
+
+### 20d.7 Inventur abbrechen / loeschen
+
+**Abbrechen:**
+
+📍 Inventur-Detailseite (Status „Entwurf" oder „Zaehlung laeuft") → **„Inventur abbrechen"**
+
+✅ Bestaetigungsdialog: **„Inventur wirklich abbrechen? Gezaehlte Daten bleiben erhalten, aber es werden keine Bestandsaenderungen durchgefuehrt."**
+
+📍 Bestaetigen → Status wechselt zu **Abgebrochen**
+
+✅ Bereits erfasste Zaehlungen bleiben einsehbar, es werden aber keine Bestandsbuchungen erzeugt.
+
+⚠️ Eine abgeschlossene Inventur kann nicht abgebrochen werden.
+
+**Loeschen:**
+
+📍 Inventur-Detailseite (Status „Entwurf") → **„Inventur loeschen"**
+
+✅ Bestaetigungsdialog: **„Inventur wirklich loeschen?"**
+
+📍 Bestaetigen → Inventur und alle Positionen werden geloescht, Weiterleitung zur Inventurliste
+
+⚠️ Nur Inventuren im Status „Entwurf" koennen geloescht werden.
+
+### 20d.8 Inventurprotokoll (PDF)
+
+📍 Inventur-Detailseite (Status „Abgeschlossen") → **„Protokoll erstellen"**
+
+✅ Ein PDF wird generiert und in einem neuen Tab geoeffnet.
+
+**Inhalt des Protokolls (A4, deutsch, formell):**
+
+1. **Titel:** „Inventurprotokoll"
+2. **Kopfbereich:** Inventur-Nr., Bezeichnung, Stichtag, Abschlussdatum
+3. **Zusammenfassung:** Positionen (gesamt), Gezaehlt, Uebersprungen, Mit Differenz, Gesamte Wertdifferenz (EUR)
+4. **Positionstabelle:** Art.-Nr., Bezeichnung, Einheit, Lagerort, Soll, Ist, Differenz, Wertdifferenz, Bemerkung
+   - Uebersprungene Positionen zeigen „---" bei Ist-Bestand und den Auslassungsgrund als Bemerkung
+   - Positionen mit Differenz sind farblich hinterlegt
+5. **Anmerkungen** (falls bei der Inventuranlage hinterlegt)
+6. **Unterschriftenfelder:** „Erstellt von / Datum" und „Geprueft von / Datum"
+7. **Fusszeile:** Mandanten-Stammdaten (Firma, Adresse, Telefon, E-Mail, Bankverbindung, Steuer-Nr., Handelsregister, Geschaeftsfuehrer)
+
+### 20d.9 Status-Workflow
+
+| Von | Nach | Aktion | Berechtigung |
+|-----|------|--------|-------------|
+| Entwurf | Zaehlung laeuft | „Zaehlung starten" | `wh_stocktake.create` |
+| Zaehlung laeuft | Abgeschlossen | „Inventur abschliessen" | `wh_stocktake.complete` |
+| Entwurf | Abgebrochen | „Inventur abbrechen" | `wh_stocktake.complete` |
+| Zaehlung laeuft | Abgebrochen | „Inventur abbrechen" | `wh_stocktake.complete` |
+| Entwurf | (geloescht) | „Inventur loeschen" | `wh_stocktake.delete` |
+
+⚠️ Abgeschlossene Inventuren sind unveraenderlich — kein Abbrechen, kein Loeschen.
+
+### 20d.10 Berechtigungen
+
+| Berechtigung | Beschreibung | Typische Rolle |
+|-------------|-------------|---------------|
+| `wh_stocktake.view` | Inventuren ansehen | Lagerist, Lagerleiter |
+| `wh_stocktake.create` | Inventur anlegen und Zaehlung starten | Lagerleiter |
+| `wh_stocktake.count` | Gezaehlte Mengen erfassen (Desktop und QR-Scanner) | Lagerist, Lagerleiter |
+| `wh_stocktake.complete` | Inventur abschliessen, abbrechen, Positionen als geprueft markieren | Lagerleiter |
+| `wh_stocktake.delete` | Inventur im Entwurf loeschen | Lagerleiter |
+
+📍 Seitenleiste → **Administration** → **Benutzergruppen** → Gruppe bearbeiten → Sektion **„Lager"** → Inventur-Berechtigungen aktivieren
+
+### 20d.11 Praxisbeispiel: Jahresinventur durchfuehren
+
+**Szenario:** Zum Bilanzstichtag soll eine Stichtagsinventur fuer das gesamte Lager durchgefuehrt werden. Der Lagerleiter legt die Inventur an, die Lageristen zaehlen per QR-Scanner, der Lagerleiter prueft die Ergebnisse und schliesst die Inventur ab.
+
+**Voraussetzung:** Lagerleiter hat Berechtigungen `wh_stocktake.view`, `wh_stocktake.create`, `wh_stocktake.complete`, `wh_stocktake.delete`. Lageristen haben `wh_stocktake.view`, `wh_stocktake.count` und `wh_qr.scan`.
+
+**Inventur anlegen (Lagerleiter)**
+
+1. 📍 Seitenleiste → **Lager** → **Inventur**
+2. ✅ Inventurliste wird angezeigt
+3. 📍 **„Neue Inventur"** klicken
+4. ✅ Seitenpanel oeffnet sich
+5. Bezeichnung eingeben: **„Jahresinventur 2026"**
+6. Umfang belassen auf: **„Alle Lagerartikel"**
+7. 📍 **„Neue Inventur"** klicken
+8. ✅ Toast: „Inventur erstellt"
+9. ✅ Neue Inventur erscheint in der Liste mit Status „Entwurf" und Nummer z. B. „INV-2026-001"
+10. 📍 Zeile anklicken → Detailseite oeffnet sich
+11. ✅ Kennzahlenkarten zeigen: Positionen = Anzahl aller Lagerartikel, Gezaehlt = 0, Uebersprungen = 0, Geprueft = 0
+12. 📍 **„Zaehlung starten"** klicken
+13. ✅ Status wechselt zu „Zaehlung laeuft"
+
+**Zaehlung per QR-Scanner (Lagerist)**
+
+14. Smartphone-Browser oeffnen → Terp → Seitenleiste → **Lager** → **QR-Scanner**
+15. QR-Code auf dem ersten Artikel scannen
+16. ✅ Artikel wird angezeigt (Nummer, Name, Bestand, Lagerort)
+17. 📍 Kachel **„Inventur"** antippen
+18. ✅ Inventur „Jahresinventur 2026" wird in der Liste angezeigt
+19. 📍 Inventur antippen
+20. ✅ Eingabefeld „Istbestand" erscheint — kein Sollbestand sichtbar
+21. Gezaehlte Menge eingeben: **487**
+22. 📍 **„Bestaetigen"** antippen
+23. ✅ Gruener Haken + Vibration → Zaehlung gespeichert
+24. Naechsten Artikel scannen und Schritte 16–23 wiederholen
+
+**Differenzen pruefen (Lagerleiter)**
+
+25. 📍 Seitenleiste → **Lager** → **Inventur** → Inventur „Jahresinventur 2026" anklicken
+26. ✅ Kennzahlenkarten zeigen aktualisierten Stand (z. B. Gezaehlt = 42)
+27. 📍 Toggle **„Nur Differenzen"** aktivieren
+28. ✅ Tabelle zeigt nur Positionen mit Abweichung zwischen Soll und Ist
+29. 📍 Position anklicken → gezaehlte Menge korrigieren oder Notiz hinterlegen (z. B. „Beschaedigt entsorgt")
+30. ✅ Korrigierte Werte erscheinen sofort in der Tabelle
+31. Falls ein Artikel nicht gezaehlt werden konnte: 📍 Ueberspringen-Button → Grund eingeben: „Lagerort nicht zugaenglich"
+
+**Inventur abschliessen**
+
+32. ✅ Alle Positionen sind gezaehlt oder uebersprungen (keine offenen Positionen mehr)
+33. 📍 **„Inventur abschliessen"** klicken
+34. ✅ Bestaetigungsdialog: „Inventur wirklich abschliessen? Die Bestaende werden unwiderruflich angepasst."
+35. 📍 Bestaetigen
+36. ✅ Status wechselt zu „Abgeschlossen"
+37. ✅ Fuer jeden Artikel mit Differenz wurde eine Bestandsbewegung vom Typ INVENTUR erzeugt
+38. ✅ Die Artikelbestaende im Lager sind entsprechend angepasst
+39. 📍 **„Protokoll erstellen"** klicken
+40. ✅ PDF oeffnet sich in neuem Tab — Inventurprotokoll mit allen Positionen, Differenzen und Unterschriftenfeldern
+41. PDF ausdrucken, unterschreiben lassen und ablegen
 
 ---
 
@@ -8616,7 +8966,460 @@ Bestellungen (Purchase Orders) können genau wie Fakturierungs-Dokumente per E-M
 
 ---
 
-## 22. Glossar
+## 22. Eingangsrechnungen
+
+### 22.1 Übersicht
+
+**Was ist es?** Das Eingangsrechnungs-Modul verwaltet den kompletten Lebenszyklus eingehender Lieferantenrechnungen: Vom automatischen E-Mail-Empfang über die ZUGFeRD/XRechnung-Erkennung, manuelle Erfassung, mehrstufige Freigabe bis zum DATEV-Export.
+
+**Wozu dient es?** Es ersetzt die Excel-basierte Erfassung von Eingangsrechnungen. Rechnungen werden automatisch aus dem E-Mail-Postfach abgeholt, Daten aus ZUGFeRD-XML extrahiert und Lieferanten automatisch zugeordnet. Ein konfigurierbarer Freigabe-Workflow mit Betragsgrenzen stellt das Vier-Augen-Prinzip sicher. Freigegebene Rechnungen werden als DATEV-Buchungsstapel (CSV) exportiert.
+
+**Wer kann es nutzen?** Benutzer mit den Berechtigungen `inbound_invoices.view/upload/edit/approve/export/manage`. Die IMAP-Konfiguration erfordert `email_imap.view/manage`.
+
+⚠️ Modul: Das Modul `inbound_invoices` muss für den Mandanten aktiviert sein
+
+📍 Seitenleiste → **Rechnungen** → **Eingangsrechnungen**
+
+---
+
+### 22.2 Rechnungsliste
+
+📍 Seitenleiste → **Rechnungen** → **Eingangsrechnungen**
+
+⚠️ Berechtigung: `inbound_invoices.view`
+
+✅ Seite mit Rechnungstabelle, Suchfeld, Statusfilter, Hochladen-Button
+
+#### Tabelle
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Nr.** | Auto-generierte interne Nummer (z. B. ER-1) |
+| **Lieferant** | Firmenname des zugeordneten Lieferanten oder Verkäufername aus ZUGFeRD |
+| **Rechnungsnr.** | Externe Rechnungsnummer des Lieferanten |
+| **Datum** | Rechnungsdatum |
+| **Betrag** | Bruttobetrag in EUR |
+| **Status** | Badge: Entwurf (grau), Freigabe ausstehend (orange), Freigegeben (grün), Abgelehnt (rot), Exportiert (blau), Storniert (outline) |
+| **Quelle** | `manual` (Hochgeladen), `imap` (per E-Mail), `zugferd` (mit ZUGFeRD-Daten) |
+| **Aktionen** | ⋯-Menü: Löschen (nur Entwurf), Stornieren |
+
+**Filter:**
+- **Suchfeld**: Durchsucht Rechnungsnummer, Lieferantenname, interne Nummer
+- **Statusfilter** (Dropdown): Alle Status / Entwurf / Freigabe ausstehend / Freigegeben / Abgelehnt / Exportiert / Storniert
+
+**Toolbar-Buttons:**
+- **„Hochladen"**: Öffnet den Upload-Dialog für neue Rechnungs-PDFs
+
+**Pagination:** 25 Einträge pro Seite mit Vor/Zurück-Navigation
+
+**Mobile-Ansicht:** Unterhalb der `sm`-Breakpoints werden die Rechnungen als Karten dargestellt (Nr., Status, Lieferant, Betrag).
+
+---
+
+### 22.3 Rechnung hochladen
+
+1. 📍 **„Hochladen"** (oben rechts in der Rechnungsliste)
+2. ✅ Upload-Dialog öffnet sich
+3. PDF per **Drag & Drop** auf die Zone ziehen oder **„PDF auswählen"** klicken
+4. ✅ Datei wird hochgeladen (max. 20 MB, nur PDF)
+5. ✅ System prüft automatisch auf eingebettete ZUGFeRD/XRechnung-XML-Daten
+6. ✅ Falls ZUGFeRD vorhanden: Rechnungsnummer, Datum, Beträge, Lieferantendaten und Positionen werden automatisch befüllt
+7. ✅ System versucht den Lieferanten automatisch zuzuordnen (Reihenfolge: USt-ID → Steuernummer → E-Mail-Domain → Fuzzy-Name-Matching)
+8. ✅ Rechnung wird im Status **„Entwurf"** erstellt
+9. ✅ Weiterleitung zur Detailseite
+
+> 💡 **Hinweis:** Die interne Rechnungsnummer (ER-1, ER-2, …) wird automatisch vergeben. Die externe Rechnungsnummer des Lieferanten wird im Feld „Rechnungsnummer" gespeichert.
+
+> 💡 **ZUGFeRD-Erkennung:** Unterstützt werden die Profile MINIMUM, BASIC, EN16931, EXTENDED und XRECHNUNG. Das erkannte Profil wird auf der Detailseite als Badge angezeigt.
+
+---
+
+### 22.4 Detailseite
+
+📍 Zeile in der Rechnungsliste anklicken → Detailseite
+
+Die Detailseite zeigt ein **Side-by-Side-Layout**:
+- **Linke Seite**: PDF-Viewer (iframe)
+- **Rechte Seite**: Einklappbares Formular-Sidebar (Pfeil-Button zum Ein-/Ausklappen)
+
+#### Kopfzeile
+
+| Element | Beschreibung |
+|---------|-------------|
+| **Zurück-Pfeil** | Navigiert zurück zur Liste |
+| **Interne Nummer** | z. B. ER-3 |
+| **Untertitel** | Externe Rechnungsnr. · Lieferantenname |
+| **Status-Badge** | Aktueller Status |
+| **„Speichern"** | Erscheint nur bei ungespeicherten Änderungen (Entwurf/Abgelehnt) |
+| **„Zur Freigabe"** | Reicht die Rechnung zur Genehmigung ein |
+| **„Freigeben" / „Ablehnen"** | Nur sichtbar wenn der aktuelle Benutzer ein offener Genehmiger ist |
+| **„DATEV Export"** | Nur bei Status „Freigegeben" — exportiert als CSV und setzt Status auf „Exportiert" |
+
+#### Sidebar-Karten
+
+**1. Rechnungsdaten:**
+
+| Feld | Beschreibung | Bearbeitbar |
+|------|-------------|-------------|
+| Rechnungsnummer | Externe Nr. des Lieferanten | Entwurf / Abgelehnt |
+| Rechnungsdatum | Datum der Rechnung | Entwurf / Abgelehnt |
+| Fällig am | Fälligkeitsdatum | Entwurf / Abgelehnt |
+| Netto / MwSt / Brutto | Beträge | Entwurf / Abgelehnt |
+| Zahlungsziel (Tage) | Zahlungsfrist in Tagen | Entwurf / Abgelehnt |
+
+**2. Lieferant:**
+- Bei zugeordnetem Lieferant: Firmenname und CRM-Nummer
+- Bei unbekanntem Lieferant: ZUGFeRD-Verkäuferdaten + Button **„Lieferant zuweisen"**
+
+**3. Freigabeverlauf** (nur nach Einreichung):
+- Vertikale Timeline aller Genehmigungsschritte
+- Pro Schritt: Schrittnummer, zugewiesener Genehmiger, Status-Badge, Entscheidungszeitpunkt
+- Abgelehnte Schritte zeigen den Ablehnungsgrund in Rot
+- Ungültig gewordene Schritte (nach Rechnungsänderung) werden ausgegraut mit Hinweis „Ungültig (Rechnung geändert)"
+
+**4. ZUGFeRD** (nur wenn erkannt):
+- Profil-Badge (z. B. EN16931, XRECHNUNG)
+- Quellenangabe (manual/imap/zugferd)
+
+**5. Notizen:**
+- Freitext-Feld für interne Anmerkungen
+
+---
+
+### 22.5 Positionen (Line Items)
+
+Unterhalb des Side-by-Side-Bereichs wird die Positionstabelle angezeigt:
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **#** | Position (1, 2, 3, …) |
+| **Art.-Nr.** | Artikelnummer (optional) |
+| **Beschreibung** | Positionstext |
+| **Menge** | Anzahl |
+| **Einh.** | Einheit (Stk, kg, m, …) |
+| **Einzelpreis** | Netto-Einzelpreis |
+| **Netto** | Automatisch: Menge × Einzelpreis |
+| **MwSt %** | Steuersatz |
+| **MwSt** | Automatisch: Netto × MwSt% / 100 |
+| **Brutto** | Automatisch: Netto + MwSt |
+
+**Bearbeitung** (nur im Status Entwurf/Abgelehnt):
+- **„Position hinzufügen"**: Fügt eine neue leere Zeile hinzu
+- **Papierkorb-Symbol**: Löscht die Zeile
+- **Summenzeile**: Zeigt automatisch die Gesamtsummen (Netto, MwSt, Brutto)
+- **Validierungswarnung**: Wenn die Summe der Positionen (Netto) vom Rechnungskopf abweicht (Toleranz ±0,01 €), erscheint eine rote Warnung
+
+> 💡 **Bei ZUGFeRD-Rechnungen** werden die Positionen automatisch aus der XML-Datei extrahiert und befüllt.
+
+---
+
+### 22.6 Lieferant zuweisen
+
+Wenn das System keinen Lieferanten automatisch zuordnen konnte (Status „unbekannt"):
+
+1. 📍 Auf der Detailseite → Karte „Lieferant" → **„Lieferant zuweisen"**
+2. ✅ Dialog öffnet sich mit Suchfeld (vorausgefüllt mit dem ZUGFeRD-Verkäufernamen)
+3. ✅ ZUGFeRD-USt-ID wird als Hinweis angezeigt
+4. Lieferant in der Trefferliste auswählen → **„Zuweisen"**
+5. ✅ Lieferant wird verknüpft, Status wechselt auf „matched"
+
+> 💡 **Automatische Zuordnung:** Das System versucht bei Upload/IMAP-Import den Lieferanten in dieser Reihenfolge zu erkennen: (1) USt-ID-Abgleich, (2) Steuernummer, (3) E-Mail-Domain des Absenders, (4) Fuzzy-Name-Matching (Ähnlichkeit > 85%). Nur wenn keiner dieser Wege greift, bleibt der Lieferant als „unbekannt" markiert.
+
+---
+
+### 22.7 Zur Freigabe einreichen
+
+1. 📍 Detailseite einer Rechnung im Status „Entwurf" oder „Abgelehnt"
+2. Sicherstellen, dass alle Pflichtfelder ausgefüllt sind:
+   - ✅ Rechnungsnummer
+   - ✅ Rechnungsdatum
+   - ✅ Bruttobetrag
+   - ✅ Lieferant zugeordnet
+3. 📍 **„Zur Freigabe"** klicken
+4. ✅ Ungespeicherte Änderungen werden automatisch zuerst gespeichert
+5. ✅ System prüft die konfigurierten Freigaberegeln:
+   - **Keine Regeln vorhanden** → Rechnung wird sofort freigegeben (Status: „Freigegeben")
+   - **Regeln vorhanden** → Freigabeschritte werden erstellt, Status wechselt auf „Freigabe ausstehend", Genehmiger werden benachrichtigt
+
+> ⚠️ **Wichtig:** Wenn nach der Einreichung wesentliche Felder geändert werden (Netto, MwSt, Brutto, Lieferant, Fälligkeitsdatum), werden bestehende Genehmigungen automatisch ungültig und die Rechnung wird zurück auf „Entwurf" gesetzt.
+
+---
+
+### 22.8 Freigabe-Workflow
+
+#### Ausstehende Freigaben
+
+📍 Seitenleiste → **Rechnungen** → **Freigaben**
+
+⚠️ Berechtigung: `inbound_invoices.approve`
+
+Die Seite zeigt alle Rechnungen, die auf die Freigabe des aktuellen Benutzers warten:
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Rechnungsnr.** | Externe Rechnungsnummer |
+| **Lieferant** | Firmenname |
+| **Betrag** | Bruttobetrag |
+| **Datum** | Rechnungsdatum |
+| **Schritt** | Aktuelle Genehmigungsstufe (z. B. „Schritt 1") |
+| **Fällig** | Fälligkeitsdatum der Genehmigung, mit „Überfällig"-Badge in Rot wenn überschritten |
+
+Zeile anklicken → öffnet die Rechnungs-Detailseite.
+
+#### Rechnung freigeben
+
+1. 📍 Detailseite einer Rechnung mit offenem Genehmigungsschritt
+2. ✅ Buttons **„Freigeben"** und **„Ablehnen"** sind sichtbar (nur wenn der aktuelle Benutzer der zugewiesene Genehmiger ist)
+3. 📍 **„Freigeben"** klicken → Bestätigungsdialog → **„Freigeben"**
+4. ✅ Genehmigungsschritt wird als freigegeben markiert
+5. ✅ Falls alle Schritte freigegeben: Status wechselt auf „Freigegeben", Einreicher wird benachrichtigt
+6. ✅ Falls weitere Schritte offen: Nächster Genehmiger wird benachrichtigt
+
+#### Rechnung ablehnen
+
+1. 📍 **„Ablehnen"** klicken
+2. ✅ Dialog öffnet sich mit Pflicht-Textfeld für den Ablehnungsgrund
+3. Grund eingeben → **„Ablehnen"**
+4. ✅ Status wechselt auf „Abgelehnt"
+5. ✅ Einreicher wird benachrichtigt (mit Ablehnungsgrund)
+
+> ⚠️ **Vier-Augen-Prinzip:** Der Einreicher einer Rechnung kann diese nicht selbst freigeben. Versucht der Einreicher zu genehmigen, wird dies vom System unterbunden.
+
+> 💡 **Erinnerungen:** Wenn ein Genehmigungsschritt länger als 24 Stunden offen ist, sendet das System automatisch eine Erinnerungsbenachrichtigung (stündlicher Hintergrund-Job, mit 24h-Cooldown zwischen Erinnerungen).
+
+---
+
+### 22.9 DATEV-Export
+
+📍 Detailseite einer freigegebenen Rechnung → **„DATEV Export"**
+
+⚠️ Berechtigung: `inbound_invoices.export`
+
+1. 📍 **„DATEV Export"** klicken
+2. ✅ CSV-Datei wird generiert und als Download bereitgestellt
+3. ✅ Dateiname: `DATEV_Buchungsstapel_YYYYMMDD.csv`
+4. ✅ Rechnungsstatus wechselt auf „Exportiert"
+
+**CSV-Format (DATEV Buchungsstapel):**
+- Zeichensatz: Windows-1252 (mit korrekten Umlauten)
+- Trennzeichen: Semikolon (;)
+- Zeilenende: CRLF
+- Zeile 1: DATEV-Header (`"EXTF";700;21;"Buchungsstapel";...`)
+- Zeile 2: Spaltenüberschriften
+- Zeile 3+: Buchungszeilen
+
+| DATEV-Feld | Inhalt |
+|-----------|--------|
+| Umsatz | Bruttobetrag (Komma als Dezimaltrennzeichen) |
+| Soll/Haben | S (immer Soll für Eingangsrechnungen) |
+| WKZ | EUR |
+| BU-Schlüssel | 9 (19% MwSt), 8 (7% MwSt), 0 (steuerfrei) |
+| Belegdatum | TTMM (4-stellig, ohne Jahr) |
+| Belegfeld 1 | Rechnungsnummer (max. 12 Zeichen) |
+| Buchungstext | „Lieferant Rechnungsnr." (max. 60 Zeichen) |
+
+> 💡 **Exportierte Rechnungen** können über die Funktion „Zurücksetzen" (Berechtigung: `inbound_invoices.manage`) wieder auf „Entwurf" zurückgesetzt werden, falls ein erneuter Export nötig ist.
+
+---
+
+### 22.10 Automatischer E-Mail-Empfang (IMAP)
+
+Das System kann ein IMAP-Postfach automatisch überwachen und eingehende Rechnungs-PDFs verarbeiten.
+
+#### IMAP konfigurieren
+
+📍 Seitenleiste → **Rechnungen** → **Einstellungen** → Tab **IMAP-Konfiguration**
+
+⚠️ Berechtigung: `email_imap.manage`
+
+| Feld | Beschreibung | Beispiel |
+|------|-------------|---------|
+| **Host** | IMAP-Servername | imap.gmail.com |
+| **Port** | IMAP-Port | 993 (SSL), 143 (STARTTLS) |
+| **Verschlüsselung** | SSL / STARTTLS / Keine | SSL |
+| **Benutzername** | IMAP-Login | rechnungen@firma.de |
+| **Passwort** | IMAP-Passwort | ●●●●●● |
+| **Postfach** | IMAP-Ordner | INBOX |
+
+**Verbindung testen:** Nach dem Speichern → Button **„Verbindung testen"** klicken. Bei Erfolg erscheint ein grüner „Verifiziert"-Badge mit der Anzahl der Nachrichten im Postfach.
+
+**Status-Anzeige** (nur lesbar):
+- Letzter Abruf: Zeitstempel des letzten erfolgreichen Polls
+- Aufeinanderfolgende Fehler: Anzahl der Fehler (Warnung ab 3)
+- Letzter Fehler: Fehlermeldung (falls vorhanden)
+
+#### Wie funktioniert der automatische Abruf?
+
+1. Ein Hintergrund-Job prüft alle **3 Minuten** alle aktiven IMAP-Konfigurationen
+2. Neue E-Mails werden abgerufen und auf PDF-Anhänge geprüft
+3. Für jede E-Mail mit PDF-Anhang:
+   - PDF wird im Speicher abgelegt
+   - ZUGFeRD/XRechnung wird geprüft und ausgelesen
+   - Lieferant wird automatisch zugeordnet
+   - Rechnung wird als „Entwurf" erstellt
+4. E-Mails ohne PDF-Anhang werden übersprungen (im Log als „Kein PDF" markiert)
+5. Duplikate werden anhand der Message-ID erkannt und übersprungen
+6. Anhänge über 20 MB werden abgelehnt
+
+> ⚠️ **Bei 3 aufeinanderfolgenden IMAP-Fehlern** werden alle Benutzer mit der Berechtigung `email_imap.manage` per Benachrichtigung informiert.
+
+---
+
+### 22.11 Freigaberegeln konfigurieren
+
+📍 Seitenleiste → **Rechnungen** → **Einstellungen** → Tab **Freigaberegeln**
+
+⚠️ Berechtigung: `inbound_invoices.manage`
+
+Freigaberegeln legen fest, welche Genehmigungen für welche Rechnungsbeträge erforderlich sind.
+
+#### Regeltabelle
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Betragsbereich** | z. B. „0 € – 500 €" oder „500 € – ∞" |
+| **Schritt** | Reihenfolge der Genehmigung (1, 2, 3, …) |
+| **Genehmiger** | Benutzergruppe oder einzelner Benutzer |
+| **Aktiv** | Grüner/grauer Badge |
+| **Aktionen** | Bearbeiten, Löschen |
+
+#### Neue Regel anlegen
+
+1. 📍 **„Neue Regel"** klicken
+2. Felder ausfüllen:
+   - **Mindestbetrag** (Pflicht): Ab welchem Bruttobetrag greift die Regel
+   - **Höchstbetrag** (optional): Bis zu welchem Betrag — leer = unbegrenzt
+   - **Schritt** (Pflicht): Reihenfolge bei mehrstufiger Genehmigung (1 = erste Stufe)
+   - **Genehmigertyp**: Benutzergruppe oder einzelner Benutzer
+   - **Benutzergruppe** / **Benutzer**: Wer genehmigen soll
+   - **Aktiv**: Schalter (Standard: An)
+3. 📍 **„Speichern"**
+
+**Praxisbeispiel — Zweistufige Freigabe:**
+1. Regel 1: 0 € – 500 €, Schritt 1, Benutzergruppe „Buchhaltung" → Eingangsrechnungen bis 500 € brauchen eine Freigabe
+2. Regel 2: 500 € – ∞, Schritt 1, Benutzergruppe „Buchhaltung" → Erste Stufe für große Beträge
+3. Regel 3: 500 € – ∞, Schritt 2, Benutzer „Geschäftsführer" → Zweite Stufe für große Beträge
+
+> 💡 **Keine Regeln konfiguriert?** Dann werden Rechnungen beim Einreichen sofort freigegeben (Auto-Approve).
+
+---
+
+### 22.12 E-Mail-Eingangslog
+
+📍 Seitenleiste → **Rechnungen** → **Einstellungen** → Tab **E-Mail-Log**
+
+⚠️ Berechtigung: `inbound_invoices.manage`
+
+Das E-Mail-Log zeigt alle vom IMAP-Poller verarbeiteten E-Mails. Nützlich zur Fehleranalyse wenn Rechnungen nicht ankommen.
+
+| Spalte | Beschreibung |
+|--------|-------------|
+| **Empfangen** | Zeitstempel |
+| **Von** | Absender-E-Mail |
+| **Betreff** | E-Mail-Betreff |
+| **Status** | Badge: Verarbeitet (grün), Fehlgeschlagen (rot), Kein PDF (orange), Kein Anhang (orange), Duplikat (orange), Ausstehend (grau) |
+| **Anhänge** | Anzahl der Anhänge |
+| **Rechnung** | Link zur erstellten Rechnung (wenn vorhanden) |
+
+**Filter:**
+- **Statusfilter**: Alle / Verarbeitet / Fehlgeschlagen / Kein PDF / Kein Anhang / Duplikat / Ausstehend
+- **Suchfeld**: Durchsucht Absender und Betreff
+
+---
+
+### 22.13 Status-Workflow
+
+```
+            ┌───────────────┐
+            │    ENTWURF    │
+            └───────┬───────┘
+                    │ „Zur Freigabe"
+                    ▼
+       ┌────────────────────────┐
+       │  FREIGABE AUSSTEHEND  │
+       └─────┬────────────┬────┘
+             │ Freigeben   │ Ablehnen
+             ▼             ▼
+    ┌────────────┐   ┌───────────┐
+    │ FREIGEGEBEN│   │ ABGELEHNT │──→ Bearbeiten → ENTWURF
+    └─────┬──────┘   └───────────┘
+          │ DATEV Export
+          ▼
+    ┌────────────┐
+    │ EXPORTIERT │──→ Zurücksetzen → ENTWURF
+    └────────────┘
+
+    Jeder Status kann → STORNIERT
+```
+
+| Status | Bedeutung | Nächste Aktion |
+|--------|-----------|---------------|
+| **Entwurf** | Rechnung erfasst, noch nicht eingereicht | Bearbeiten, Zur Freigabe, Löschen, Stornieren |
+| **Freigabe ausstehend** | Wartet auf Genehmigung | Freigeben, Ablehnen (durch Genehmiger) |
+| **Freigegeben** | Alle Genehmigungsstufen bestanden | DATEV Export, Stornieren |
+| **Abgelehnt** | Genehmigung verweigert (mit Grund) | Bearbeiten → erneut einreichen |
+| **Exportiert** | An DATEV exportiert | Zurücksetzen (→ Entwurf) |
+| **Storniert** | Endgültig storniert | Keine weitere Aktion möglich |
+
+---
+
+### 22.14 Berechtigungen
+
+| Berechtigung | Beschreibung | Standard-Gruppen |
+|-------------|-------------|-----------------|
+| `inbound_invoices.view` | Eingangsrechnungen anzeigen | ADMIN, BUCHHALTUNG, VORGESETZTER, PERSONAL |
+| `inbound_invoices.upload` | Rechnungen hochladen | ADMIN, BUCHHALTUNG, PERSONAL |
+| `inbound_invoices.edit` | Rechnungen bearbeiten, einreichen | ADMIN, BUCHHALTUNG, PERSONAL |
+| `inbound_invoices.approve` | Rechnungen freigeben/ablehnen | ADMIN, BUCHHALTUNG, VORGESETZTER, PERSONAL |
+| `inbound_invoices.export` | DATEV-Export durchführen | ADMIN, BUCHHALTUNG |
+| `inbound_invoices.manage` | Rechnungen stornieren, löschen, Einstellungen verwalten | ADMIN |
+| `email_imap.view` | IMAP-Konfiguration anzeigen | ADMIN, BUCHHALTUNG |
+| `email_imap.manage` | IMAP-Konfiguration bearbeiten | ADMIN |
+
+📍 Administration → Benutzergruppen → Gruppe bearbeiten → Kategorie **„Eingangsrechnungen"**
+
+---
+
+### 22.15 Praxisbeispiele
+
+#### Beispiel 1: ZUGFeRD-Rechnung per E-Mail empfangen
+
+**Ausgangslage:** Ein Lieferant sendet eine ZUGFeRD-Rechnung per E-Mail an das konfigurierte IMAP-Postfach.
+
+1. ✅ IMAP-Poller erkennt die E-Mail mit PDF-Anhang (alle 3 Minuten)
+2. ✅ ZUGFeRD-XML wird aus dem PDF extrahiert → Rechnungsnummer, Datum, Beträge, Positionen werden befüllt
+3. ✅ Lieferant wird anhand der USt-ID automatisch zugeordnet
+4. ✅ Rechnung erscheint in der Liste als „Entwurf" mit Quelle „zugferd"
+5. 📍 Benutzer öffnet die Rechnung → prüft die vorausgefüllten Daten im Side-by-Side-View
+6. 📍 **„Zur Freigabe"** klicken
+7. ✅ Genehmiger wird benachrichtigt
+8. 📍 Genehmiger öffnet die Rechnung → **„Freigeben"**
+9. ✅ Status: „Freigegeben"
+10. 📍 Buchhaltung klickt **„DATEV Export"** → CSV wird heruntergeladen
+11. ✅ Status: „Exportiert"
+
+#### Beispiel 2: Manuelle Erfassung ohne ZUGFeRD
+
+1. 📍 Seitenleiste → Rechnungen → Eingangsrechnungen → **„Hochladen"**
+2. Ein normales PDF (ohne ZUGFeRD) hochladen
+3. ✅ Rechnung wird als „Entwurf" erstellt, Quelle „manual", keine vorausgefüllten Felder
+4. 📍 Detailseite öffnet sich mit PDF links und leerem Formular rechts
+5. Rechnungsdaten aus dem PDF manuell abtippen (Nummer, Datum, Beträge)
+6. Lieferant zuweisen über **„Lieferant zuweisen"** Dialog
+7. Optional: Positionen manuell erfassen über **„Position hinzufügen"**
+8. **„Speichern"** → **„Zur Freigabe"**
+
+#### Beispiel 3: Abgelehnte Rechnung korrigieren
+
+1. Genehmiger lehnt eine Rechnung ab mit Grund: „Betrag weicht von Bestellung ab"
+2. ✅ Einreicher erhält Benachrichtigung mit Ablehnungsgrund
+3. 📍 Einreicher öffnet die abgelehnte Rechnung → Ablehnungsgrund wird im Freigabeverlauf angezeigt
+4. Betrag korrigieren → **„Speichern"** → **„Zur Freigabe"**
+5. ✅ Neuer Genehmigungsdurchlauf startet (alte Genehmigungen werden automatisch ungültig)
+
+---
+
+## 23. Glossar
 
 | Begriff | Erklärung | Wo in Terp |
 |---------|-----------|-----------|
@@ -8626,6 +9429,12 @@ Bestellungen (Purchase Orders) können genau wie Fakturierungs-Dokumente per E-M
 | **Abwesenheitstyp** | Kategorie einer Abwesenheit mit Regeln (Urlaubsabzug, Genehmigung) | 📍 Verwaltung → Abwesenheitsarten |
 | **Aktivität** | Art der Arbeit innerhalb eines Auftrags (z. B. Montage, Dokumentation) | 📍 Verwaltung → Aufträge → Tab Aktivitäten |
 | **Bestellung (Einkauf)** | Einkaufsauftrag an einen Lieferanten mit Positionen, Preisen und Status-Workflow (Entwurf → Bestellt → Geliefert) | 📍 Lager → Bestellungen |
+| **DATEV-Export** | Export freigegebener Eingangsrechnungen als DATEV-Buchungsstapel-CSV (Windows-1252, Semikolon-getrennt) | 📍 Rechnungen → Eingangsrechnungen → Detail → „DATEV Export" |
+| **Eingangsrechnung** | Eingehende Lieferantenrechnung mit Status-Workflow (Entwurf → Freigabe → Export). Kann per IMAP, ZUGFeRD-Upload oder manuell erfasst werden | 📍 Rechnungen → Eingangsrechnungen |
+| **Freigaberegel** | Konfigurierbare Schwellenwert-Regel: Ab welchem Betrag welcher Genehmiger in welchem Schritt freigeben muss | 📍 Rechnungen → Einstellungen → Freigaberegeln |
+| **Freigabeschritt** | Einzelne Genehmigungsstufe einer Eingangsrechnung. Wird aus Freigaberegeln erstellt, kann freigegeben oder abgelehnt werden | 📍 Rechnungen → Eingangsrechnungen → Detail → Freigabeverlauf |
+| **IMAP-Poller** | Automatischer Hintergrund-Job der alle 3 Minuten ein IMAP-Postfach auf neue Rechnungs-PDFs prüft | 📍 Rechnungen → Einstellungen → IMAP-Konfiguration |
+| **ZUGFeRD** | Deutscher E-Rechnungsstandard: Strukturierte XML-Daten in ein PDF eingebettet. Terp erkennt die Profile MINIMUM, BASIC, EN16931, EXTENDED und XRECHNUNG | 📍 Rechnungen → Eingangsrechnungen → Detail → ZUGFeRD-Badge |
 | **Bestellposition** | Einzelne Zeile in einer Bestellung. Drei Typen: Artikel (mit Artikelstamm), Freitext (ohne Artikelstamm, mit Preis) und Textzeile (nur Text, ohne Preis) | 📍 Lager → Bestellungen → Detail → Positionstabelle |
 | **Beleg** | Kaufmännisches Dokument in der Belegkette (Angebot, AB, Lieferschein, Rechnung etc.) | 📍 Aufträge → Belege |
 | **Belegkette** | Lückenlose Abfolge von Belegen: Angebot → AB → Lieferschein → Rechnung | 📍 Aufträge → Belege → Detail → Seitenleiste „Belegkette" |
@@ -8815,6 +9624,10 @@ Diese Tabelle listet alle Seiten der Anwendung mit ihrer URL und dem Menüpfad:
 | `/hr/personnel-file` | Personal → Personalakte | hr_personnel_file.view |
 | `/hr/personnel-file/categories` | Personal → Personalakte → Kategorien | hr_personnel_file_categories.manage |
 | `/admin/dsgvo` | Administration → DSGVO-Datenlöschung | dsgvo.view |
+| `/invoices/inbound` | Rechnungen → Eingangsrechnungen | inbound_invoices.view |
+| `/invoices/inbound/[id]` | Rechnungsliste → Zeile anklicken | inbound_invoices.view |
+| `/invoices/inbound/approvals` | Rechnungen → Freigaben | inbound_invoices.approve |
+| `/invoices/inbound/settings` | Rechnungen → Einstellungen (IMAP, Regeln, Log) | inbound_invoices.manage |
 
 ---
 

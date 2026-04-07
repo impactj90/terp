@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -27,6 +27,7 @@ import {
 import { useCreateWhWithdrawal } from '@/hooks/use-wh-withdrawals'
 import { useBookSinglePosition } from '@/hooks/use-wh-stock-movements'
 import { useCancelWhWithdrawal } from '@/hooks/use-wh-withdrawals'
+import { useRecordStocktakeCount } from '@/hooks/use-wh-stocktake'
 import { useTRPC } from '@/trpc'
 import { useQuery } from '@tanstack/react-query'
 
@@ -90,6 +91,7 @@ function addHistoryEntry(entry: ScanHistoryEntry) {
 export function ScannerTerminal() {
   const t = useTranslations('warehouseScanner')
   const tc = useTranslations('common')
+  const locale = useLocale()
   const [state, setState] = React.useState<ScannerState>('IDLE')
   const [article, setArticle] = React.useState<ResolvedArticle | null>(null)
   const [history, setHistory] = React.useState<ScanHistoryEntry[]>([])
@@ -106,6 +108,11 @@ export function ScannerTerminal() {
 
   // Storno state
   const [selectedMovementId, setSelectedMovementId] = React.useState<string | null>(null)
+
+  // Inventory state
+  const [selectedStocktakeId, setSelectedStocktakeId] = React.useState<string | null>(null)
+  const [invQuantity, setInvQuantity] = React.useState<string>('')
+  const [invNote, setInvNote] = React.useState('')
 
   // Load history from localStorage
   React.useEffect(() => {
@@ -134,6 +141,15 @@ export function ScannerTerminal() {
     )
   )
 
+  // Inventory queries/mutations
+  const { data: activeStocktakes } = useQuery(
+    trpc.warehouse.stocktake.list.queryOptions(
+      { status: 'IN_PROGRESS', page: 1, pageSize: 50 },
+      { enabled: !!article && state === 'INVENTORY' }
+    )
+  )
+  const recordCount = useRecordStocktakeCount()
+
   // --- Handlers ---
 
   const resetToIdle = React.useCallback(() => {
@@ -145,6 +161,9 @@ export function ScannerTerminal() {
     setWdRefType('NONE')
     setWdNotes('')
     setSelectedMovementId(null)
+    setSelectedStocktakeId(null)
+    setInvQuantity('')
+    setInvNote('')
     setScannerEnabled(true)
   }, [])
 
@@ -260,6 +279,34 @@ export function ScannerTerminal() {
     }
   }, [selectedMovementId, cancelWithdrawal, article, t, resetToIdle])
 
+  const handleRecordInventoryCount = React.useCallback(async () => {
+    if (!selectedStocktakeId || !article || !invQuantity) return
+    try {
+      await recordCount.mutateAsync({
+        stocktakeId: selectedStocktakeId,
+        articleId: article.id,
+        countedQuantity: parseFloat(invQuantity),
+        note: invNote || undefined,
+      })
+      setState('BOOKED')
+      toast.success(t('inventoryCounted'))
+      const updated = addHistoryEntry({
+        timestamp: new Date().toISOString(),
+        articleNumber: article.number,
+        articleName: article.name,
+        action: 'inventory',
+        quantity: parseFloat(invQuantity),
+        success: true,
+      })
+      setHistory(updated)
+      navigator.vibrate?.(200)
+      setTimeout(resetToIdle, 3000)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Fehler'
+      toast.error(message)
+    }
+  }, [selectedStocktakeId, article, invQuantity, invNote, recordCount, t, resetToIdle])
+
   const handleScanError = React.useCallback(
     (error: string) => {
       toast.error(error)
@@ -355,11 +402,13 @@ export function ScannerTerminal() {
               </CardContent>
             </Card>
 
-            <Card className="cursor-not-allowed opacity-50">
+            <Card
+              className="cursor-pointer transition-colors hover:bg-blue-50 dark:hover:bg-blue-950/20"
+              onClick={() => setState('INVENTORY')}
+            >
               <CardContent className="flex flex-col items-center gap-2 p-4">
                 <ClipboardList className="h-8 w-8 text-blue-600" />
                 <span className="text-sm font-medium">{t('actionInventory')}</span>
-                <span className="text-xs text-muted-foreground">{t('inventoryNotAvailable')}</span>
               </CardContent>
             </Card>
 
@@ -507,7 +556,7 @@ export function ScannerTerminal() {
 
             {/* Notes */}
             <Input
-              placeholder="Notiz (optional)"
+              placeholder={t('noteOptional')}
               value={wdNotes}
               onChange={(e) => setWdNotes(e.target.value)}
             />
@@ -560,7 +609,7 @@ export function ScannerTerminal() {
                           </p>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {new Date(mv.createdAt).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          {new Date(mv.createdAt).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
                     </Card>
@@ -583,6 +632,72 @@ export function ScannerTerminal() {
             <Button variant="ghost" className="w-full" onClick={() => setState('SCANNED')}>
               {t('back')}
             </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* State: INVENTORY -- Select stocktake + enter counted quantity */}
+      {state === 'INVENTORY' && article && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">{t('actionInventory')}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {article.number} - {article.name}
+            </p>
+
+            {/* Stocktake selection */}
+            {!selectedStocktakeId && (
+              <div>
+                <label className="mb-2 block text-sm font-medium">{t('selectStocktake')}</label>
+                {!activeStocktakes?.items?.length ? (
+                  <p className="text-sm text-muted-foreground">{t('noActiveStocktakes')}</p>
+                ) : (
+                  <div className="space-y-2">
+                    {activeStocktakes.items.map((st) => (
+                      <Card key={st.id} className="cursor-pointer p-3 hover:bg-muted/50"
+                        onClick={() => setSelectedStocktakeId(st.id)}>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">{st.number}</p>
+                            <p className="text-sm text-muted-foreground">{st.name}</p>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Count entry (no Sollbestand shown — blind count) */}
+            {selectedStocktakeId && (
+              <>
+                <div>
+                  <label className="mb-2 block text-sm font-medium">{t('countedQuantity')}</label>
+                  <Input
+                    type="number" inputMode="decimal"
+                    value={invQuantity}
+                    onChange={(e) => setInvQuantity(e.target.value)}
+                    className="h-14 text-2xl text-center"
+                    min={0} step="any" autoFocus
+                  />
+                </div>
+                <Input placeholder={t('noteOptional')} value={invNote}
+                  onChange={(e) => setInvNote(e.target.value)} />
+                <Button className="h-14 w-full text-lg"
+                  onClick={handleRecordInventoryCount}
+                  disabled={!invQuantity || recordCount.isPending}>
+                  {recordCount.isPending ? '...' : t('confirm')}
+                </Button>
+              </>
+            )}
+
+            <Button variant="ghost" className="w-full" onClick={() => {
+              setSelectedStocktakeId(null)
+              setState('SCANNED')
+            }}>{t('back')}</Button>
           </CardContent>
         </Card>
       )}

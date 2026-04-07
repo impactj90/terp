@@ -312,6 +312,13 @@ export const ALL_PERMISSIONS: Permission[] = [
   p("wh_qr.scan", "wh_qr", "scan", "Use QR scanner for warehouse operations"),
   p("wh_qr.print", "wh_qr", "print", "Print QR code labels"),
 
+  // Warehouse Stocktake
+  p("wh_stocktake.view", "wh_stocktake", "view", "View stocktake sessions"),
+  p("wh_stocktake.create", "wh_stocktake", "create", "Create stocktake sessions"),
+  p("wh_stocktake.count", "wh_stocktake", "count", "Record counted quantities in stocktake"),
+  p("wh_stocktake.complete", "wh_stocktake", "complete", "Complete/finalize stocktake and adjust stock"),
+  p("wh_stocktake.delete", "wh_stocktake", "delete", "Delete draft stocktakes"),
+
   // HR Personnel File
   p("hr_personnel_file.view", "hr_personnel_file", "view", "View personnel file entries"),
   p("hr_personnel_file.create", "hr_personnel_file", "create", "Create personnel file entries"),
@@ -331,6 +338,18 @@ export const ALL_PERMISSIONS: Permission[] = [
   p("email_templates.manage", "email_templates", "manage", "Manage email templates"),
   p("email_smtp.view", "email_smtp", "view", "View SMTP configuration"),
   p("email_smtp.manage", "email_smtp", "manage", "Manage SMTP configuration"),
+
+  // Inbound Invoices
+  p("inbound_invoices.view", "inbound_invoices", "view", "View inbound invoices"),
+  p("inbound_invoices.upload", "inbound_invoices", "upload", "Upload inbound invoices"),
+  p("inbound_invoices.edit", "inbound_invoices", "edit", "Edit inbound invoices"),
+  p("inbound_invoices.approve", "inbound_invoices", "approve", "Approve inbound invoices"),
+  p("inbound_invoices.export", "inbound_invoices", "export", "Export inbound invoices"),
+  p("inbound_invoices.manage", "inbound_invoices", "manage", "Manage inbound invoices"),
+
+  // Email IMAP
+  p("email_imap.view", "email_imap", "view", "View IMAP configuration"),
+  p("email_imap.manage", "email_imap", "manage", "Manage IMAP configuration"),
 ]
 
 // Lookup maps

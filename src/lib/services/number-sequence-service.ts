@@ -50,6 +50,10 @@ const DEFAULT_PREFIXES: Record<string, string> = {
   article: "ART-",
   // Warehouse purchase orders
   purchase_order: "BE-",
+  // Inbound invoices
+  inbound_invoice: "ER-",
+  // Warehouse stocktakes
+  stocktake: "INV-",
 }
 
 export async function getNextNumber(
