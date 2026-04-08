@@ -160,9 +160,115 @@
   --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.4);
 }
 
-/* System preference fallback when no .dark class is present */
+/* ==========================================================================
+   MODERN THEME – Warm teal & stone palette
+   ========================================================================== */
+
+/* Modern theme – Light */
+.theme-modern {
+  /* Primary – Teal/Jade */
+  --color-primary: hsl(164 65% 40%);
+  --color-primary-foreground: hsl(0 0% 100%);
+  --color-primary-hover: hsl(164 65% 35%);
+  --color-primary-active: hsl(164 65% 30%);
+
+  /* Secondary – Warm stone */
+  --color-secondary: hsl(40 20% 95%);
+  --color-secondary-foreground: hsl(30 8% 15%);
+  --color-secondary-hover: hsl(40 18% 91%);
+
+  /* Semantic */
+  --color-success: hsl(152 55% 42%);
+  --color-success-foreground: hsl(0 0% 100%);
+  --color-warning: hsl(36 90% 50%);
+  --color-warning-foreground: hsl(0 0% 0%);
+  --color-error: hsl(4 70% 58%);
+  --color-error-foreground: hsl(0 0% 100%);
+  --color-info: hsl(198 75% 48%);
+  --color-info-foreground: hsl(0 0% 100%);
+
+  /* Neutral – Warm stone scale */
+  --color-background: hsl(40 25% 98.5%);
+  --color-foreground: hsl(24 10% 12%);
+  --color-card: hsl(0 0% 100%);
+  --color-card-foreground: hsl(24 10% 12%);
+  --color-popover: hsl(0 0% 100%);
+  --color-popover-foreground: hsl(24 10% 12%);
+  --color-muted: hsl(40 15% 95%);
+  --color-muted-foreground: hsl(24 6% 48%);
+  --color-accent: hsl(40 15% 95%);
+  --color-accent-foreground: hsl(24 10% 12%);
+  --color-destructive: hsl(4 70% 58%);
+  --color-destructive-foreground: hsl(0 0% 100%);
+
+  /* Borders – Warm */
+  --color-border: hsl(35 15% 88%);
+  --color-input: hsl(35 15% 88%);
+  --color-ring: hsl(164 65% 40%);
+
+  /* Shadows – Softer, warmer */
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.04);
+  --shadow-md: 0 4px 8px -2px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.04);
+  --shadow-lg: 0 12px 20px -4px rgb(0 0 0 / 0.08), 0 4px 8px -4px rgb(0 0 0 / 0.04);
+  --shadow-xl: 0 24px 32px -8px rgb(0 0 0 / 0.1), 0 8px 12px -6px rgb(0 0 0 / 0.06);
+}
+
+/* Modern theme – Dark */
+.theme-modern.dark {
+  /* Primary – Brighter teal */
+  --color-primary: hsl(164 65% 48%);
+  --color-primary-foreground: hsl(24 10% 8%);
+  --color-primary-hover: hsl(164 65% 53%);
+  --color-primary-active: hsl(164 65% 44%);
+
+  /* Secondary */
+  --color-secondary: hsl(24 6% 15%);
+  --color-secondary-foreground: hsl(40 15% 93%);
+  --color-secondary-hover: hsl(24 6% 20%);
+
+  /* Semantic */
+  --color-success: hsl(152 55% 42%);
+  --color-success-foreground: hsl(0 0% 100%);
+  --color-warning: hsl(36 90% 50%);
+  --color-warning-foreground: hsl(0 0% 0%);
+  --color-error: hsl(4 60% 52%);
+  --color-error-foreground: hsl(0 0% 100%);
+  --color-info: hsl(198 75% 48%);
+  --color-info-foreground: hsl(0 0% 100%);
+
+  /* Neutral – Warm dark */
+  --color-background: hsl(24 8% 8%);
+  --color-foreground: hsl(40 12% 93%);
+  --color-card: hsl(24 6% 12%);
+  --color-card-foreground: hsl(40 12% 93%);
+  --color-popover: hsl(24 6% 12%);
+  --color-popover-foreground: hsl(40 12% 93%);
+  --color-muted: hsl(24 5% 15%);
+  --color-muted-foreground: hsl(24 5% 58%);
+  --color-accent: hsl(24 5% 15%);
+  --color-accent-foreground: hsl(40 12% 93%);
+  --color-destructive: hsl(4 60% 52%);
+  --color-destructive-foreground: hsl(0 0% 100%);
+
+  /* Borders */
+  --color-border: hsl(24 5% 20%);
+  --color-input: hsl(24 5% 20%);
+  --color-ring: hsl(164 65% 48%);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.35);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.45), 0 2px 4px -2px rgb(0 0 0 / 0.35);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.45);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.55), 0 8px 10px -6px rgb(0 0 0 / 0.45);
+}
+
+/* ==========================================================================
+   SYSTEM PREFERENCE FALLBACK (before JS hydrates)
+   ========================================================================== */
+
+/* Default theme – system dark fallback */
 @media (prefers-color-scheme: dark) {
-  :root:not(.light) {
+  :root:not(.light):not(.theme-modern) {
     /* Primary */
     --color-primary: hsl(217 91% 65%);
     --color-primary-foreground: hsl(222 47% 11%);
@@ -208,6 +314,51 @@
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.4);
     --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.4);
+  }
+}
+
+/* Modern theme – system dark fallback */
+@media (prefers-color-scheme: dark) {
+  :root.theme-modern:not(.light) {
+    --color-primary: hsl(164 65% 48%);
+    --color-primary-foreground: hsl(24 10% 8%);
+    --color-primary-hover: hsl(164 65% 53%);
+    --color-primary-active: hsl(164 65% 44%);
+
+    --color-secondary: hsl(24 6% 15%);
+    --color-secondary-foreground: hsl(40 15% 93%);
+    --color-secondary-hover: hsl(24 6% 20%);
+
+    --color-success: hsl(152 55% 42%);
+    --color-success-foreground: hsl(0 0% 100%);
+    --color-warning: hsl(36 90% 50%);
+    --color-warning-foreground: hsl(0 0% 0%);
+    --color-error: hsl(4 60% 52%);
+    --color-error-foreground: hsl(0 0% 100%);
+    --color-info: hsl(198 75% 48%);
+    --color-info-foreground: hsl(0 0% 100%);
+
+    --color-background: hsl(24 8% 8%);
+    --color-foreground: hsl(40 12% 93%);
+    --color-card: hsl(24 6% 12%);
+    --color-card-foreground: hsl(40 12% 93%);
+    --color-popover: hsl(24 6% 12%);
+    --color-popover-foreground: hsl(40 12% 93%);
+    --color-muted: hsl(24 5% 15%);
+    --color-muted-foreground: hsl(24 5% 58%);
+    --color-accent: hsl(24 5% 15%);
+    --color-accent-foreground: hsl(40 12% 93%);
+    --color-destructive: hsl(4 60% 52%);
+    --color-destructive-foreground: hsl(0 0% 100%);
+
+    --color-border: hsl(24 5% 20%);
+    --color-input: hsl(24 5% 20%);
+    --color-ring: hsl(164 65% 48%);
+
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.35);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.45), 0 2px 4px -2px rgb(0 0 0 / 0.35);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.45);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.55), 0 8px 10px -6px rgb(0 0 0 / 0.45);
   }
 }
 

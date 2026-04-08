@@ -2,12 +2,21 @@
 
 import * as React from 'react'
 
-type Theme = 'light' | 'dark' | 'system'
+type Appearance = 'light' | 'dark' | 'system'
+type ColorTheme = 'default' | 'modern'
 
 interface ThemeContextValue {
-  theme: Theme
+  appearance: Appearance
+  resolvedAppearance: 'light' | 'dark'
+  setAppearance: (appearance: Appearance) => void
+  colorTheme: ColorTheme
+  setColorTheme: (colorTheme: ColorTheme) => void
+  /** @deprecated Use `appearance` instead */
+  theme: Appearance
+  /** @deprecated Use `resolvedAppearance` instead */
   resolvedTheme: 'light' | 'dark'
-  setTheme: (theme: Theme) => void
+  /** @deprecated Use `setAppearance` instead */
+  setTheme: (theme: Appearance) => void
 }
 
 const ThemeContext = React.createContext<ThemeContextValue | undefined>(undefined)
@@ -17,64 +26,110 @@ function getSystemTheme(): 'light' | 'dark' {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
+const COLOR_THEME_CLASSES: Record<ColorTheme, string | null> = {
+  default: null,
+  modern: 'theme-modern',
+}
+
 interface ThemeProviderProps {
   children: React.ReactNode
-  defaultTheme?: Theme
+  defaultTheme?: Appearance
+  defaultColorTheme?: ColorTheme
   storageKey?: string
+  colorThemeStorageKey?: string
 }
 
 export function ThemeProvider({
   children,
   defaultTheme = 'system',
+  defaultColorTheme = 'default',
   storageKey = 'terp-theme',
+  colorThemeStorageKey = 'terp-color-theme',
 }: ThemeProviderProps) {
-  const [theme, setThemeState] = React.useState<Theme>(defaultTheme)
-  const [resolvedTheme, setResolvedTheme] = React.useState<'light' | 'dark'>('light')
+  const [appearance, setAppearanceState] = React.useState<Appearance>(defaultTheme)
+  const [resolvedAppearance, setResolvedAppearance] = React.useState<'light' | 'dark'>('light')
+  const [colorTheme, setColorThemeState] = React.useState<ColorTheme>(defaultColorTheme)
 
-  // Initialize theme from localStorage on mount
+  // Initialize from localStorage on mount
   React.useEffect(() => {
-    const stored = localStorage.getItem(storageKey) as Theme | null
-    if (stored && ['light', 'dark', 'system'].includes(stored)) {
-      setThemeState(stored)
+    const storedAppearance = localStorage.getItem(storageKey) as Appearance | null
+    if (storedAppearance && ['light', 'dark', 'system'].includes(storedAppearance)) {
+      setAppearanceState(storedAppearance)
     }
-  }, [storageKey])
 
-  // Update resolved theme and DOM class
+    const storedColorTheme = localStorage.getItem(colorThemeStorageKey) as ColorTheme | null
+    if (storedColorTheme && ['default', 'modern'].includes(storedColorTheme)) {
+      setColorThemeState(storedColorTheme)
+    }
+  }, [storageKey, colorThemeStorageKey])
+
+  // Update resolved appearance and DOM classes
   React.useEffect(() => {
     const root = document.documentElement
-    const resolved = theme === 'system' ? getSystemTheme() : theme
-    setResolvedTheme(resolved)
+    const resolved = appearance === 'system' ? getSystemTheme() : appearance
+    setResolvedAppearance(resolved)
 
     root.classList.remove('light', 'dark')
     root.classList.add(resolved)
-  }, [theme])
+  }, [appearance])
+
+  // Update color theme DOM class
+  React.useEffect(() => {
+    const root = document.documentElement
+    // Remove all color theme classes
+    Object.values(COLOR_THEME_CLASSES).forEach((cls) => {
+      if (cls) root.classList.remove(cls)
+    })
+    // Add active color theme class
+    const cls = COLOR_THEME_CLASSES[colorTheme]
+    if (cls) root.classList.add(cls)
+  }, [colorTheme])
 
   // Listen for system theme changes
   React.useEffect(() => {
-    if (theme !== 'system') return
+    if (appearance !== 'system') return
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
     const handleChange = () => {
-      setResolvedTheme(getSystemTheme())
+      const resolved = getSystemTheme()
+      setResolvedAppearance(resolved)
       document.documentElement.classList.remove('light', 'dark')
-      document.documentElement.classList.add(getSystemTheme())
+      document.documentElement.classList.add(resolved)
     }
 
     mediaQuery.addEventListener('change', handleChange)
     return () => mediaQuery.removeEventListener('change', handleChange)
-  }, [theme])
+  }, [appearance])
 
-  const setTheme = React.useCallback(
-    (newTheme: Theme) => {
-      localStorage.setItem(storageKey, newTheme)
-      setThemeState(newTheme)
+  const setAppearance = React.useCallback(
+    (newAppearance: Appearance) => {
+      localStorage.setItem(storageKey, newAppearance)
+      setAppearanceState(newAppearance)
     },
     [storageKey]
   )
 
+  const setColorTheme = React.useCallback(
+    (newColorTheme: ColorTheme) => {
+      localStorage.setItem(colorThemeStorageKey, newColorTheme)
+      setColorThemeState(newColorTheme)
+    },
+    [colorThemeStorageKey]
+  )
+
   const value = React.useMemo(
-    () => ({ theme, resolvedTheme, setTheme }),
-    [theme, resolvedTheme, setTheme]
+    () => ({
+      appearance,
+      resolvedAppearance,
+      setAppearance,
+      colorTheme,
+      setColorTheme,
+      // Backwards compat aliases
+      theme: appearance,
+      resolvedTheme: resolvedAppearance,
+      setTheme: setAppearance,
+    }),
+    [appearance, resolvedAppearance, setAppearance, colorTheme, setColorTheme]
   )
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
