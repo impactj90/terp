@@ -359,7 +359,7 @@ export async function reviewPosition(
         action: "review",
         entityType: "wh_stocktake",
         entityId: position.stocktake.id,
-        entityName: null,
+        entityName: position.stocktake.number,
         changes: { positionId, reviewed },
         ipAddress: audit.ipAddress,
         userAgent: audit.userAgent,
@@ -398,7 +398,7 @@ export async function skipPositionFn(
         action: "skip",
         entityType: "wh_stocktake",
         entityId: position.stocktake.id,
-        entityName: null,
+        entityName: position.stocktake.number,
         changes: { positionId, skipReason },
         ipAddress: audit.ipAddress,
         userAgent: audit.userAgent,
@@ -490,7 +490,7 @@ export async function complete(
       completedById: userId,
     })
 
-    return { movements: movements.length }
+    return { movements: movements.length, number: stocktake.number }
   })
 
   // 5. Audit log
@@ -502,7 +502,7 @@ export async function complete(
         action: "complete",
         entityType: "wh_stocktake",
         entityId: id,
-        entityName: null,
+        entityName: result.number,
         changes: { adjustments: result.movements },
         ipAddress: audit.ipAddress,
         userAgent: audit.userAgent,
@@ -586,7 +586,7 @@ export async function remove(
         entityType: "wh_stocktake",
         entityId: id,
         entityName: stocktake.number,
-        changes: null,
+        changes: { status: stocktake.status },
         ipAddress: audit.ipAddress,
         userAgent: audit.userAgent,
       })

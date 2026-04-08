@@ -190,7 +190,7 @@ export async function findPositionById(
     where: { id: positionId },
     include: {
       stocktake: {
-        select: { id: true, tenantId: true, status: true },
+        select: { id: true, tenantId: true, status: true, number: true },
       },
     },
   })
