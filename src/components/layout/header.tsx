@@ -1,30 +1,27 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { CircleHelp, Menu } from 'lucide-react'
+import { CircleHelp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { UserMenu } from './user-menu'
+import { SidebarTrigger } from '@/components/ui/sidebar'
+import { Separator } from '@/components/ui/separator'
 import { Notifications } from './notifications'
 import { TenantSelector } from './tenant-selector'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { LocaleSwitcher } from './locale-switcher'
 import { CommandMenu } from './command-menu'
-import { Separator } from '@/components/ui/separator'
 
 interface HeaderProps {
   className?: string
-  /** Callback when mobile menu button is clicked */
-  onMobileMenuClick?: () => void
 }
 
 /**
  * Fixed header component.
- * Contains mobile menu trigger, command palette search, tenant selector,
- * notifications, and user menu.
+ * User menu has moved to the sidebar footer.
  */
-export function Header({ className, onMobileMenuClick }: HeaderProps) {
+export function Header({ className }: HeaderProps) {
   const t = useTranslations('header')
 
   return (
@@ -34,21 +31,8 @@ export function Header({ className, onMobileMenuClick }: HeaderProps) {
         className
       )}
     >
-      {/* Mobile menu button */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden shrink-0 min-h-11 min-w-11 lg:min-h-0 lg:min-w-0"
-            onClick={onMobileMenuClick}
-            aria-label={t('openMenu')}
-          >
-            <Menu className="h-5 w-5" aria-hidden="true" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>{t('openMenu')}</TooltipContent>
-      </Tooltip>
+      {/* Sidebar toggle (mobile: opens sheet, desktop: toggles collapsed) */}
+      <SidebarTrigger className="shrink-0 min-h-9 min-w-9" />
 
       {/* Command menu search (trigger + dialog) */}
       <div className="flex-1 flex items-center min-w-0">
@@ -90,14 +74,7 @@ export function Header({ className, onMobileMenuClick }: HeaderProps) {
           </Tooltip>
 
           <ThemeToggle />
-        </div>
-
-        <Separator orientation="vertical" className="mx-1.5 h-5" />
-
-        {/* Notifications + User */}
-        <div className="flex items-center gap-0.5">
           <Notifications />
-          <UserMenu />
         </div>
       </div>
     </header>

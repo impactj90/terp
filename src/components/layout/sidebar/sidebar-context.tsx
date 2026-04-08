@@ -10,7 +10,6 @@ import {
   useRef,
 } from 'react'
 
-const STORAGE_COLLAPSED = 'sidebar-collapsed'
 const STORAGE_SECTIONS = 'sidebar-sections'
 const STORAGE_FAVORITES = 'sidebar-favorites'
 
@@ -18,25 +17,10 @@ const STORAGE_FAVORITES = 'sidebar-favorites'
 const DEFAULT_SECTIONS: Record<string, boolean> = { main: true }
 
 /**
- * Sidebar context value interface
+ * Sidebar extras context — manages favorites and section accordion state.
+ * Core open/collapsed state is handled by shadcn's SidebarProvider.
  */
-export interface SidebarContextValue {
-  /** Whether the sidebar is permanently collapsed */
-  isCollapsed: boolean
-  /** Toggle sidebar collapsed state */
-  toggle: () => void
-  /** Collapse the sidebar */
-  collapse: () => void
-  /** Expand the sidebar */
-  expand: () => void
-
-  /** Whether collapsed sidebar is temporarily expanded on hover */
-  isHoverExpanded: boolean
-  /** Set hover-expand state */
-  setHoverExpanded: (value: boolean) => void
-  /** Computed: should components render in compact/icon-only mode? */
-  isCompact: boolean
-
+export interface SidebarExtrasContextValue {
   /** Section accordion state */
   isSectionExpanded: (key: string) => boolean
   toggleSection: (key: string) => void
@@ -48,24 +32,17 @@ export interface SidebarContextValue {
   isFavorite: (href: string) => boolean
 }
 
-const SidebarContext = createContext<SidebarContextValue | null>(null)
+const SidebarExtrasContext = createContext<SidebarExtrasContextValue | null>(null)
 
-interface SidebarProviderProps {
+interface SidebarExtrasProviderProps {
   children: React.ReactNode
-  /** Initial collapsed state (default: false) */
-  defaultCollapsed?: boolean
 }
 
 /**
- * Provider component for sidebar state management.
- * Persists collapsed preference, section states, and favorites to localStorage.
+ * Provider for sidebar extras (favorites + section accordion state).
+ * Persists to localStorage.
  */
-export function SidebarProvider({
-  children,
-  defaultCollapsed = false,
-}: SidebarProviderProps) {
-  const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed)
-  const [isHoverExpanded, setHoverExpanded] = useState(false)
+export function SidebarExtrasProvider({ children }: SidebarExtrasProviderProps) {
   const [expandedSections, setExpandedSections] =
     useState<Record<string, boolean>>(DEFAULT_SECTIONS)
   const [favorites, setFavorites] = useState<string[]>([])
@@ -74,11 +51,6 @@ export function SidebarProvider({
   // Load persisted state from localStorage on mount
   useEffect(() => {
     if (typeof window === 'undefined') return
-
-    const storedCollapsed = localStorage.getItem(STORAGE_COLLAPSED)
-    if (storedCollapsed !== null) {
-      setIsCollapsed(storedCollapsed === 'true')
-    }
 
     const storedSections = localStorage.getItem(STORAGE_SECTIONS)
     if (storedSections) {
@@ -101,13 +73,6 @@ export function SidebarProvider({
     isInitialized.current = true
   }, [])
 
-  // Persist collapsed state
-  useEffect(() => {
-    if (isInitialized.current && typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_COLLAPSED, String(isCollapsed))
-    }
-  }, [isCollapsed])
-
   // Persist section state
   useEffect(() => {
     if (isInitialized.current && typeof window !== 'undefined') {
@@ -121,23 +86,6 @@ export function SidebarProvider({
       localStorage.setItem(STORAGE_FAVORITES, JSON.stringify(favorites))
     }
   }, [favorites])
-
-  const isCompact = isCollapsed && !isHoverExpanded
-
-  const toggle = useCallback(() => {
-    setIsCollapsed((prev) => !prev)
-    setHoverExpanded(false)
-  }, [])
-
-  const collapse = useCallback(() => {
-    setIsCollapsed(true)
-    setHoverExpanded(false)
-  }, [])
-
-  const expand = useCallback(() => {
-    setIsCollapsed(false)
-    setHoverExpanded(false)
-  }, [])
 
   const isSectionExpanded = useCallback(
     (key: string) => expandedSections[key] ?? false,
@@ -166,15 +114,8 @@ export function SidebarProvider({
     [favoritesSet]
   )
 
-  const value = useMemo<SidebarContextValue>(
+  const value = useMemo<SidebarExtrasContextValue>(
     () => ({
-      isCollapsed,
-      toggle,
-      collapse,
-      expand,
-      isHoverExpanded,
-      setHoverExpanded,
-      isCompact,
       isSectionExpanded,
       toggleSection,
       favorites,
@@ -183,12 +124,6 @@ export function SidebarProvider({
       isFavorite,
     }),
     [
-      isCollapsed,
-      toggle,
-      collapse,
-      expand,
-      isHoverExpanded,
-      isCompact,
       isSectionExpanded,
       toggleSection,
       favorites,
@@ -199,18 +134,20 @@ export function SidebarProvider({
   )
 
   return (
-    <SidebarContext.Provider value={value}>{children}</SidebarContext.Provider>
+    <SidebarExtrasContext.Provider value={value}>
+      {children}
+    </SidebarExtrasContext.Provider>
   )
 }
 
 /**
- * Hook to access sidebar context.
+ * Hook to access sidebar extras (favorites + section state).
  */
-export function useSidebar(): SidebarContextValue {
-  const context = useContext(SidebarContext)
+export function useSidebarExtras(): SidebarExtrasContextValue {
+  const context = useContext(SidebarExtrasContext)
 
   if (!context) {
-    throw new Error('useSidebar must be used within a SidebarProvider')
+    throw new Error('useSidebarExtras must be used within a SidebarExtrasProvider')
   }
 
   return context

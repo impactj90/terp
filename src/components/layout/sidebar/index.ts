@@ -1,5 +1,5 @@
-export { Sidebar } from './sidebar'
-export { SidebarProvider, useSidebar, type SidebarContextValue } from './sidebar-context'
+export { AppSidebar } from './sidebar'
+export { SidebarExtrasProvider, useSidebarExtras, type SidebarExtrasContextValue } from './sidebar-context'
 export { SidebarNav } from './sidebar-nav'
 export { SidebarNavItem } from './sidebar-nav-item'
 export {

@@ -1,109 +1,62 @@
 'use client'
 
-import { useState } from 'react'
 import { cn } from '@/lib/utils'
-import { SidebarProvider, Sidebar, useSidebar } from './sidebar'
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
+import { AppSidebar, SidebarExtrasProvider } from './sidebar'
 import { Header } from './header'
 import { MobileNav } from './mobile-nav'
-import { MobileSidebarSheet } from './mobile-sidebar-sheet'
 import { Breadcrumbs } from './breadcrumbs'
 import { SkipLink } from './skip-link'
 import { useGlobalNotifications } from '@/hooks/use-global-notifications'
 import { useAuth } from '@/providers/auth-provider'
 import { AiAssistantFab } from '@/components/ai-assistant'
 
-interface AppLayoutContentProps {
+interface AppLayoutProps {
   children: React.ReactNode
 }
 
 /**
- * Internal layout component that uses sidebar context.
+ * Main application layout wrapper.
+ * Uses shadcn SidebarProvider for sidebar state + SidebarExtrasProvider for favorites/sections.
  */
-function AppLayoutContent({ children }: AppLayoutContentProps) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const { isCollapsed } = useSidebar()
+export function AppLayout({ children }: AppLayoutProps) {
   const { isAuthenticated } = useAuth()
   useGlobalNotifications(isAuthenticated)
 
   return (
-    <>
-      <SkipLink />
+    <SidebarProvider>
+      <SidebarExtrasProvider>
+        <SkipLink />
 
-      <div className="flex min-h-screen">
-        {/* Desktop sidebar */}
-        <Sidebar className="hidden lg:flex" />
+        {/* Sidebar (desktop: collapsible sidebar, mobile: sheet overlay) */}
+        <AppSidebar />
 
-        {/* Main content wrapper */}
-        <div
-          className={cn(
-            'flex flex-1 flex-col min-w-0 transition-[margin] duration-300',
-            // Add left margin on desktop to account for sidebar
-            isCollapsed
-              ? 'lg:ml-[var(--sidebar-collapsed-width)]'
-              : 'lg:ml-[var(--sidebar-width)]'
-          )}
-        >
+        {/* Main content area */}
+        <SidebarInset className="min-w-0 overflow-hidden">
           {/* Header */}
-          <Header onMobileMenuClick={() => setMobileMenuOpen(true)} />
+          <Header />
 
-          {/* Main content area */}
-          <main
+          {/* Page content */}
+          <div
             id="main-content"
             className={cn(
-              'flex-1 min-w-0 overflow-x-hidden p-4 lg:p-6',
-              // Add bottom padding on mobile for bottom nav + safe area
+              'flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-4 lg:p-6',
+              // Bottom padding for mobile nav + safe area
               'pb-[calc(var(--bottom-nav-height)+var(--safe-area-bottom)+1rem)] lg:pb-6'
             )}
             tabIndex={-1}
           >
             <Breadcrumbs />
             {children}
-          </main>
-        </div>
-      </div>
+          </div>
+        </SidebarInset>
 
-      {/* Mobile bottom navigation */}
-      <MobileNav
-        className="lg:hidden"
-        onMoreClick={() => setMobileMenuOpen(true)}
-      />
+        {/* Mobile bottom navigation */}
+        <MobileNav className="lg:hidden" />
 
-      {/* Mobile sidebar sheet */}
-      <MobileSidebarSheet
-        open={mobileMenuOpen}
-        onOpenChange={setMobileMenuOpen}
-      />
-
-      {/* AI Assistant */}
-      {isAuthenticated && <AiAssistantFab />}
-    </>
-  )
-}
-
-interface AppLayoutProps {
-  children: React.ReactNode
-  /** Initial sidebar collapsed state */
-  defaultSidebarCollapsed?: boolean
-}
-
-/**
- * Main application layout wrapper.
- * Combines sidebar, header, mobile navigation, and main content area.
- *
- * @example
- * ```tsx
- * <AppLayout>
- *   <DashboardPage />
- * </AppLayout>
- * ```
- */
-export function AppLayout({
-  children,
-  defaultSidebarCollapsed = false,
-}: AppLayoutProps) {
-  return (
-    <SidebarProvider defaultCollapsed={defaultSidebarCollapsed}>
-      <AppLayoutContent>{children}</AppLayoutContent>
+        {/* AI Assistant */}
+        {isAuthenticated && <AiAssistantFab />}
+      </SidebarExtrasProvider>
     </SidebarProvider>
   )
 }

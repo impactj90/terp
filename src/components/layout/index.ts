@@ -3,16 +3,16 @@ export { AppLayout } from './app-layout'
 
 // Sidebar
 export {
-  Sidebar,
-  SidebarProvider,
-  useSidebar,
+  AppSidebar,
+  SidebarExtrasProvider,
+  useSidebarExtras,
   SidebarNav,
   SidebarNavItem,
   navConfig,
   mobileNavItems,
   type NavItem,
   type NavSection,
-  type SidebarContextValue,
+  type SidebarExtrasContextValue,
 } from './sidebar'
 
 // Header
@@ -24,7 +24,6 @@ export { TenantSelector } from './tenant-selector'
 // Navigation
 export { Breadcrumbs } from './breadcrumbs'
 export { MobileNav } from './mobile-nav'
-export { MobileSidebarSheet } from './mobile-sidebar-sheet'
 
 // Accessibility
 export { SkipLink } from './skip-link'

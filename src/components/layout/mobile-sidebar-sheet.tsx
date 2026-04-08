@@ -78,7 +78,7 @@ export function MobileSidebarSheet({
             if (target) onOpenChange(false)
           }}
         >
-          <SidebarNav forceExpanded />
+          <SidebarNav />
         </div>
 
         {/* Footer with app info */}

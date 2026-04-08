@@ -1,166 +1,166 @@
 'use client'
 
-import { useCallback, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
-import { BookOpen, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeft } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import { BookOpen, ChevronsUpDown, User, Settings, LogOut } from 'lucide-react'
+import { useAuth } from '@/providers/auth-provider'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-  TooltipProvider,
-} from '@/components/ui/tooltip'
-import { useSidebar } from './sidebar-context'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  Sidebar as ShadcnSidebar,
+  SidebarHeader,
+  SidebarFooter,
+  SidebarRail,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  useSidebar,
+} from '@/components/ui/sidebar'
 import { SidebarNav } from './sidebar-nav'
 
-interface SidebarProps {
-  className?: string
+function getInitials(name: string | undefined | null) {
+  if (!name) return '??'
+  const parts = name.split(' ')
+  if (parts.length >= 2 && parts[0] && parts[1]) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+  }
+  return name.slice(0, 2).toUpperCase()
 }
 
-const HOVER_EXPAND_DELAY = 200
-
 /**
- * Desktop sidebar component.
- * Fixed position with collapsible functionality and hover-expand overlay.
+ * Main application sidebar using shadcn sidebar primitives.
  */
-export function Sidebar({ className }: SidebarProps) {
-  const {
-    isCollapsed,
-    isHoverExpanded,
-    setHoverExpanded,
-    isCompact,
-    toggle,
-    expand,
-  } = useSidebar()
+export function AppSidebar() {
   const t = useTranslations('sidebar')
-  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const tUser = useTranslations('userMenu')
+  const { user, isAuthenticated, logout } = useAuth()
+  const { isMobile } = useSidebar()
 
-  const handleMouseEnter = useCallback(() => {
-    if (!isCollapsed) return
-    hoverTimer.current = setTimeout(() => {
-      setHoverExpanded(true)
-    }, HOVER_EXPAND_DELAY)
-  }, [isCollapsed, setHoverExpanded])
-
-  const handleMouseLeave = useCallback(() => {
-    if (hoverTimer.current) {
-      clearTimeout(hoverTimer.current)
-      hoverTimer.current = null
-    }
-    setHoverExpanded(false)
-  }, [setHoverExpanded])
-
-  // In hover-expanded overlay mode, clicking the toggle pins the sidebar open
-  const handleToggle = useCallback(() => {
-    if (isHoverExpanded) {
-      expand()
-    } else {
-      toggle()
-    }
-  }, [isHoverExpanded, expand, toggle])
+  const handleLogout = async () => {
+    await logout()
+    window.location.href = '/login'
+  }
 
   return (
-    <TooltipProvider>
-      <aside
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        className={cn(
-          'fixed inset-y-0 left-0 flex flex-col border-r bg-background transition-all duration-200 ease-out',
-          // Width: compact (icon-only) vs expanded
-          isCompact
-            ? 'w-[var(--sidebar-collapsed-width)]'
-            : 'w-[var(--sidebar-width)]',
-          // Z-index and shadow: overlay mode gets elevated
-          isHoverExpanded
-            ? 'z-50 shadow-2xl ring-1 ring-border/50'
-            : 'z-30',
-          className
-        )}
-        aria-label="Main sidebar"
-      >
-        {/* Header with logo/branding */}
-        <div
-          className={cn(
-            'flex h-[var(--header-height)] items-center border-b px-4',
-            isCompact && 'justify-center px-2'
-          )}
-        >
-          <Link
-            href="/dashboard"
-            className={cn(
-              'flex items-center gap-2 font-semibold',
-              isCompact && 'justify-center'
-            )}
-          >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <span className="text-lg font-bold">T</span>
-            </div>
-            {!isCompact && (
-              <span className="text-xl tracking-tight">Terp</span>
-            )}
-          </Link>
-        </div>
+    <ShadcnSidebar collapsible="icon" variant="inset">
+      {/* Header with logo */}
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton size="lg" asChild tooltip="Terp">
+              <Link href="/dashboard">
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                  <span className="text-lg font-bold">T</span>
+                </div>
+                <div className="flex flex-col gap-0.5 leading-none">
+                  <span className="font-semibold">Terp</span>
+                </div>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
 
-        {/* Navigation */}
-        <SidebarNav />
+      {/* Navigation */}
+      <SidebarNav />
 
-        {/* Help link */}
-        <div className="border-t px-3 py-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <a
-                href="/hilfe"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors',
-                  'hover:bg-accent hover:text-accent-foreground',
-                  isCompact && 'justify-center px-2'
-                )}
-              >
-                <BookOpen className="h-5 w-5 shrink-0" aria-hidden="true" />
-                {!isCompact && <span>{t('help')}</span>}
+      {/* Footer with help + user profile */}
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild tooltip={t('help')}>
+              <a href="/hilfe" target="_blank" rel="noopener noreferrer">
+                <BookOpen />
+                <span>{t('help')}</span>
               </a>
-            </TooltipTrigger>
-            {isCompact && (
-              <TooltipContent side="right">{t('help')}</TooltipContent>
-            )}
-          </Tooltip>
-        </div>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
 
-        {/* Collapse toggle button */}
-        <div className="border-t p-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleToggle}
-                className={cn(
-                  'w-full justify-start gap-2',
-                  isCompact && 'justify-center px-2'
-                )}
-                aria-label={isCompact ? t('expand') : t('collapse')}
-                aria-expanded={!isCompact}
-              >
-                {isCompact ? (
-                  <PanelLeft className="h-4 w-4" aria-hidden="true" />
-                ) : (
-                  <>
-                    <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
-                    <span>{isHoverExpanded ? t('pin') : t('collapse')}</span>
-                  </>
-                )}
-              </Button>
-            </TooltipTrigger>
-            {isCompact && (
-              <TooltipContent side="right">{t('expand')}</TooltipContent>
-            )}
-          </Tooltip>
-        </div>
-      </aside>
-    </TooltipProvider>
+          {/* User profile dropdown */}
+          {isAuthenticated && user && (
+            <SidebarMenuItem>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton
+                    size="lg"
+                    tooltip={user.displayName}
+                    className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                  >
+                    <Avatar className="h-8 w-8 rounded-lg">
+                      <AvatarImage
+                        src={user.avatarUrl ?? undefined}
+                        alt={user.displayName}
+                      />
+                      <AvatarFallback className="rounded-lg">
+                        {getInitials(user.displayName)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="grid flex-1 text-left text-sm leading-tight">
+                      <span className="truncate font-semibold">{user.displayName}</span>
+                      <span className="truncate text-xs">{user.email}</span>
+                    </div>
+                    <ChevronsUpDown className="ml-auto size-4" />
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+                  side={isMobile ? 'bottom' : 'right'}
+                  align="end"
+                  sideOffset={4}
+                >
+                  <DropdownMenuLabel className="p-0 font-normal">
+                    <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                      <Avatar className="h-8 w-8 rounded-lg">
+                        <AvatarImage
+                          src={user.avatarUrl ?? undefined}
+                          alt={user.displayName}
+                        />
+                        <AvatarFallback className="rounded-lg">
+                          {getInitials(user.displayName)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="grid flex-1 text-left text-sm leading-tight">
+                        <span className="truncate font-semibold">{user.displayName}</span>
+                        <span className="truncate text-xs text-muted-foreground">{user.email}</span>
+                      </div>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile" className="flex items-center">
+                      <User className="mr-2 h-4 w-4" />
+                      <span>{tUser('profile')}</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/settings" className="flex items-center">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>{tUser('settings')}</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleLogout}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>{tUser('signOut')}</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </SidebarMenuItem>
+          )}
+        </SidebarMenu>
+      </SidebarFooter>
+
+      <SidebarRail />
+    </ShadcnSidebar>
   )
 }

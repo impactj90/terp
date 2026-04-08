@@ -2,22 +2,31 @@
 
 import { useMemo } from 'react'
 import { useTranslations } from 'next-intl'
+import { Link, usePathname } from '@/i18n/navigation'
 import { ChevronRight, Star } from 'lucide-react'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Separator } from '@/components/ui/separator'
+import {
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
+  SidebarMenuAction,
+  SidebarSeparator,
+} from '@/components/ui/sidebar'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import { usePermissionChecker } from '@/hooks/use-has-permission'
 import { useModules } from '@/hooks/use-modules'
-import { cn } from '@/lib/utils'
-import { useSidebar } from './sidebar-context'
-import { SidebarNavItem } from './sidebar-nav-item'
+import { useSidebarExtras } from './sidebar-context'
 import { navConfig, type NavSection, type NavItem } from './sidebar-nav-config'
-
-interface SidebarNavProps {
-  /** Optional custom sections to render instead of default navConfig */
-  sections?: NavSection[]
-  /** When true, renders expanded mode regardless of sidebar collapse state */
-  forceExpanded?: boolean
-}
 
 /**
  * Filters a nav item based on user permissions and enabled modules.
@@ -65,23 +74,23 @@ function buildItemMap(sections: NavSection[]): Map<string, NavItem> {
 }
 
 /**
- * Sidebar navigation component.
- * Renders collapsible navigation sections with permission/module filtering,
- * a favorites section, and smooth accordion animations.
+ * Sidebar navigation content using shadcn sub-item pattern.
+ * Each section becomes a collapsible parent with its items as indented sub-items.
  */
-export function SidebarNav({ sections = navConfig, forceExpanded }: SidebarNavProps) {
+export function SidebarNav() {
   const {
-    isCompact,
     isSectionExpanded,
     toggleSection,
     favorites,
-  } = useSidebar()
+    isFavorite,
+    addFavorite,
+    removeFavorite,
+  } = useSidebarExtras()
   const t = useTranslations('nav')
   const tSidebar = useTranslations('sidebar')
+  const pathname = usePathname()
   const { check, isLoading } = usePermissionChecker()
   const { data: modulesData, isLoading: modulesLoading } = useModules()
-
-  const compact = forceExpanded ? false : isCompact
 
   const enabledModules = useMemo(() => {
     if (!modulesData?.modules) return new Set<string>(['core'])
@@ -90,10 +99,10 @@ export function SidebarNav({ sections = navConfig, forceExpanded }: SidebarNavPr
 
   const visibleSections = useMemo(() => {
     if (isLoading || modulesLoading) return []
-    return sections
+    return navConfig
       .map((section) => filterNavSection(section, check, enabledModules))
       .filter((section): section is NavSection => section !== null)
-  }, [sections, check, isLoading, modulesLoading, enabledModules])
+  }, [check, isLoading, modulesLoading, enabledModules])
 
   // Resolve favorite hrefs to actual NavItem objects
   const itemMap = useMemo(() => buildItemMap(visibleSections), [visibleSections])
@@ -102,103 +111,130 @@ export function SidebarNav({ sections = navConfig, forceExpanded }: SidebarNavPr
     [favorites, itemMap]
   )
 
+  // Check if any item in a section is active (for highlighting the parent)
+  const isSectionActive = (section: NavSection) =>
+    section.items.some((item) => {
+      const segments = item.href.split('/').filter(Boolean)
+      const prefixMatch = segments.length > 1 && pathname.startsWith(`${item.href}/`)
+      return pathname === item.href || prefixMatch
+    })
+
+  const handleStarClick = (e: React.MouseEvent, href: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (isFavorite(href)) {
+      removeFavorite(href)
+    } else {
+      addFavorite(href)
+    }
+  }
+
+  const isItemActive = (item: NavItem, siblingHrefs: string[]) => {
+    const segments = item.href.split('/').filter(Boolean)
+    const prefixMatch = segments.length > 1 && pathname.startsWith(`${item.href}/`)
+    const hasSiblingMatch = prefixMatch && siblingHrefs.some(
+      (sibling) => sibling !== item.href && sibling.startsWith(`${item.href}/`) && pathname.startsWith(sibling)
+    )
+    return pathname === item.href || (prefixMatch && !hasSiblingMatch)
+  }
+
   return (
-    <ScrollArea className="flex-1 min-h-0">
-      <nav className="flex flex-col gap-0.5 px-3 py-2" aria-label="Main navigation">
+    <SidebarContent>
+      {/* Favorites section */}
+      {favoriteItems.length > 0 && (
+        <SidebarGroup>
+          <SidebarGroupLabel>
+            <Star className="h-3 w-3 text-amber-500 fill-amber-500 mr-1.5" />
+            {tSidebar('favorites')}
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {favoriteItems.map((item) => {
+                const title = t(item.titleKey as Parameters<typeof t>[0])
+                const active = isItemActive(item, [])
+                const Icon = item.icon
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton asChild isActive={active} tooltip={title}>
+                      <Link href={item.href} prefetch={false}>
+                        <Icon />
+                        <span>{title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      )}
 
-        {/* Favorites section */}
-        {favoriteItems.length > 0 && (
-          <div role="group" aria-label={tSidebar('favorites')}>
-            {!compact && (
-              <div className="flex items-center gap-2 px-3 py-1.5">
-                <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  {tSidebar('favorites')}
-                </span>
-              </div>
-            )}
-            <ul className="space-y-0.5" role="list">
-              {favoriteItems.map((item) => (
-                <li key={item.href}>
-                  <SidebarNavItem item={item} forceExpanded={forceExpanded} />
-                </li>
-              ))}
-            </ul>
-            <Separator className="my-2" />
-          </div>
-        )}
+      {favoriteItems.length > 0 && <SidebarSeparator />}
 
-        {/* Regular sections with accordions */}
-        {visibleSections.map((section, index) => {
-          const expanded = isSectionExpanded(section.titleKey)
+      {/* Sections as collapsible menu items with sub-items */}
+      <SidebarGroup>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            {visibleSections.map((section) => {
+              const sectionTitle = t(section.titleKey as Parameters<typeof t>[0])
+              const sectionActive = isSectionActive(section)
+              const SectionIcon = section.items[0]?.icon
+              const siblingHrefs = section.items.map(i => i.href)
 
-          return (
-            <div key={section.titleKey} role="group" aria-labelledby={`nav-section-${index}`}>
-              {/* Section separator */}
-              {index > 0 && !compact && <Separator className="my-1.5" />}
-              {index > 0 && compact && <Separator className="my-1.5" />}
-
-              {/* Section header — clickable accordion toggle */}
-              {!compact && (
-                <button
-                  id={`nav-section-${index}`}
-                  type="button"
-                  onClick={() => toggleSection(section.titleKey)}
-                  className={cn(
-                    'flex w-full items-center gap-2 rounded-md px-3 py-1.5',
-                    'text-xs font-semibold uppercase tracking-wider text-muted-foreground',
-                    'transition-colors hover:bg-accent/50 hover:text-foreground'
-                  )}
-                  aria-expanded={expanded}
+              return (
+                <Collapsible
+                  key={section.titleKey}
+                  open={isSectionExpanded(section.titleKey)}
+                  onOpenChange={() => toggleSection(section.titleKey)}
+                  className="group/collapsible"
                 >
-                  <ChevronRight
-                    className={cn(
-                      'h-3 w-3 shrink-0 transition-transform duration-200',
-                      expanded && 'rotate-90'
-                    )}
-                  />
-                  <span className="flex-1 text-left">
-                    {t(section.titleKey as Parameters<typeof t>[0])}
-                  </span>
-                  <span className="text-[10px] font-normal tabular-nums opacity-60">
-                    {section.items.length}
-                  </span>
-                </button>
-              )}
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton tooltip={sectionTitle} isActive={sectionActive}>
+                        {SectionIcon && <SectionIcon />}
+                        <span>{sectionTitle}</span>
+                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <SidebarMenuSub>
+                        {section.items.map((item) => {
+                          const title = t(item.titleKey as Parameters<typeof t>[0])
+                          const active = isItemActive(item, siblingHrefs)
+                          const starred = isFavorite(item.href)
 
-              {/* Section items — animated accordion */}
-              {compact ? (
-                // Collapsed mode: always show all items (icon-only)
-                <ul className="space-y-0.5" role="list">
-                  {section.items.map((item) => (
-                    <li key={item.href}>
-                      <SidebarNavItem item={item} forceExpanded={forceExpanded} siblingHrefs={section.items.map(i => i.href)} />
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                // Expanded mode: animated accordion
-                <div
-                  className={cn(
-                    'grid transition-[grid-template-rows] duration-200 ease-out',
-                    expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-                  )}
-                >
-                  <div className="overflow-hidden">
-                    <ul className="space-y-0.5 pt-0.5" role="list">
-                      {section.items.map((item) => (
-                        <li key={item.href}>
-                          <SidebarNavItem item={item} forceExpanded={forceExpanded} siblingHrefs={section.items.map(i => i.href)} />
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </nav>
-    </ScrollArea>
+                          return (
+                            <SidebarMenuSubItem key={item.href} className="group/sub-item">
+                              <SidebarMenuSubButton asChild isActive={active}>
+                                <Link href={item.href} prefetch={false}>
+                                  <span>{title}</span>
+                                </Link>
+                              </SidebarMenuSubButton>
+                              {/* Favorite star on hover */}
+                              <button
+                                type="button"
+                                onClick={(e) => handleStarClick(e, item.href)}
+                                className={`absolute right-1 top-1 rounded p-0.5 transition-opacity ${
+                                  starred
+                                    ? 'text-amber-500 opacity-100'
+                                    : 'opacity-0 text-muted-foreground hover:text-amber-500 group-hover/sub-item:opacity-100'
+                                }`}
+                                aria-label={starred ? 'Remove from favorites' : 'Add to favorites'}
+                              >
+                                <Star className={`h-3 w-3 ${starred ? 'fill-amber-500' : ''}`} />
+                              </button>
+                            </SidebarMenuSubItem>
+                          )
+                        })}
+                      </SidebarMenuSub>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
+                </Collapsible>
+              )
+            })}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    </SidebarContent>
   )
 }

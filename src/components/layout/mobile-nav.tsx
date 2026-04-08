@@ -4,22 +4,22 @@ import { useTranslations } from 'next-intl'
 import { Link, usePathname } from '@/i18n/navigation'
 import { MoreHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useSidebar } from '@/components/ui/sidebar'
 import { mobileNavItems } from './sidebar'
 
 interface MobileNavProps {
   className?: string
-  /** Callback when "More" button is clicked */
-  onMoreClick?: () => void
 }
 
 /**
  * Fixed bottom tab bar for mobile devices.
  * Shows 4 primary navigation items plus "More" for full menu access.
  */
-export function MobileNav({ className, onMoreClick }: MobileNavProps) {
+export function MobileNav({ className }: MobileNavProps) {
   const pathname = usePathname()
   const t = useTranslations('nav')
   const tCommon = useTranslations('common')
+  const { setOpenMobile } = useSidebar()
 
   return (
     <nav
@@ -53,10 +53,10 @@ export function MobileNav({ className, onMoreClick }: MobileNavProps) {
         )
       })}
 
-      {/* More button to open full navigation sheet */}
+      {/* More button to open sidebar sheet */}
       <button
         type="button"
-        onClick={onMoreClick}
+        onClick={() => setOpenMobile(true)}
         className={cn(
           'flex flex-1 flex-col items-center justify-center gap-1 py-2 text-xs font-medium text-muted-foreground transition-colors',
           'hover:text-primary'
