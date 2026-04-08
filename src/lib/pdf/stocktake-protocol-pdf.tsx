@@ -169,11 +169,11 @@ export function StocktakeProtocolPdf({
           </View>
           <View style={styles.summaryItem}>
             <Text style={styles.summaryValue}>{summary.countedPositions}</Text>
-            <Text style={styles.summaryLabel}>Gezaehlt</Text>
+            <Text style={styles.summaryLabel}>Gezählt</Text>
           </View>
           <View style={styles.summaryItem}>
             <Text style={styles.summaryValue}>{summary.skippedPositions}</Text>
-            <Text style={styles.summaryLabel}>Uebersprungen</Text>
+            <Text style={styles.summaryLabel}>Übersprungen</Text>
           </View>
           <View style={styles.summaryItem}>
             <Text style={styles.summaryValue}>
@@ -236,7 +236,7 @@ export function StocktakeProtocolPdf({
               </Text>
               <Text style={styles.colNote}>
                 {pos.skipped
-                  ? pos.skipReason ?? "uebersprungen"
+                  ? pos.skipReason ?? "übersprungen"
                   : pos.note ?? ""}
               </Text>
             </View>
@@ -263,7 +263,7 @@ export function StocktakeProtocolPdf({
           </View>
           <View style={styles.signatureItem}>
             <View style={styles.signatureLine} />
-            <Text style={styles.signatureLabel}>Geprueft von / Datum</Text>
+            <Text style={styles.signatureLabel}>Geprüft von / Datum</Text>
           </View>
         </View>
 
