@@ -12,14 +12,16 @@ import { TenantSelector } from './tenant-selector'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { LocaleSwitcher } from './locale-switcher'
 import { CommandMenu } from './command-menu'
+import { Breadcrumbs } from './breadcrumbs'
 
 interface HeaderProps {
   className?: string
 }
 
 /**
- * Fixed header component.
- * User menu has moved to the sidebar footer.
+ * Header component matching shadcn sidebar-07 pattern.
+ * Left: SidebarTrigger | Separator | Breadcrumbs
+ * Right: Search + compact actions
  */
 export function Header({ className }: HeaderProps) {
   const t = useTranslations('header')
@@ -27,39 +29,36 @@ export function Header({ className }: HeaderProps) {
   return (
     <header
       className={cn(
-        'sticky top-0 z-40 flex h-[calc(var(--header-height)+var(--safe-area-top))] pt-[var(--safe-area-top)] items-center gap-3 border-b bg-background/95 backdrop-blur-sm px-4 lg:px-6',
+        'sticky top-0 z-40 flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12',
         className
       )}
     >
-      {/* Sidebar toggle (mobile: opens sheet, desktop: toggles collapsed) */}
-      <SidebarTrigger className="shrink-0 min-h-9 min-w-9" />
-
-      {/* Command menu search (trigger + dialog) */}
-      <div className="flex-1 flex items-center min-w-0">
-        <CommandMenu />
+      {/* Left side: trigger + breadcrumbs */}
+      <div className="flex items-center gap-2">
+        <SidebarTrigger className="-ml-1" />
+        <Separator orientation="vertical" className="mr-2 h-4" />
+        <Breadcrumbs showHomeIcon={false} />
       </div>
 
-      {/* Right side actions */}
-      <div className="flex items-center gap-1">
-        {/* Tenant selector - hidden on mobile */}
+      {/* Spacer */}
+      <div className="flex-1" />
+
+      {/* Right side: search + actions */}
+      <div className="flex items-center gap-2">
+        <div className="hidden md:flex">
+          <CommandMenu />
+        </div>
+
         <div className="hidden md:flex items-center">
           <TenantSelector />
         </div>
 
-        <Separator orientation="vertical" className="hidden md:block mx-1.5 h-5" />
-
-        {/* Compact action group */}
         <div className="flex items-center gap-0.5">
           <LocaleSwitcher />
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                asChild
-              >
+              <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
                 <a
                   href="/hilfe"
                   target="_blank"

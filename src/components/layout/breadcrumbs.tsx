@@ -148,7 +148,7 @@ export function Breadcrumbs({
   }
 
   return (
-    <Breadcrumb className="mb-4">
+    <Breadcrumb>
       <BreadcrumbList>
         {/* Home link */}
         <BreadcrumbItem>

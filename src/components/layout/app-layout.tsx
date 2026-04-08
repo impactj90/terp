@@ -5,7 +5,6 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
 import { AppSidebar, SidebarExtrasProvider } from './sidebar'
 import { Header } from './header'
 import { MobileNav } from './mobile-nav'
-import { Breadcrumbs } from './breadcrumbs'
 import { SkipLink } from './skip-link'
 import { useGlobalNotifications } from '@/hooks/use-global-notifications'
 import { useAuth } from '@/providers/auth-provider'
@@ -32,7 +31,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         <AppSidebar />
 
         {/* Main content area */}
-        <SidebarInset className="min-w-0 overflow-hidden">
+        <SidebarInset className="min-w-0">
           {/* Header */}
           <Header />
 
@@ -46,7 +45,6 @@ export function AppLayout({ children }: AppLayoutProps) {
             )}
             tabIndex={-1}
           >
-            <Breadcrumbs />
             {children}
           </div>
         </SidebarInset>
