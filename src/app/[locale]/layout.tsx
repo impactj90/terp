@@ -23,6 +23,10 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0f172a' },
+  ],
 }
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -30,6 +34,15 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t('title'),
     description: t('description'),
+    applicationName: 'Terp',
+    appleWebApp: {
+      capable: true,
+      title: 'Terp',
+      statusBarStyle: 'default',
+    },
+    formatDetection: {
+      telephone: false,
+    },
   }
 }
 
@@ -49,7 +62,7 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} className={inter.variable} suppressHydrationWarning>
-      <body className="min-h-screen bg-background font-sans antialiased">
+      <body className="min-h-dvh bg-background font-sans antialiased">
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider defaultTheme="light" defaultColorTheme="modern">
             <TRPCReactProvider>

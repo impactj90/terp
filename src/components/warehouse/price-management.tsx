@@ -70,7 +70,7 @@ export function PriceManagement() {
       )}
 
       {/* Three-panel layout */}
-      <div className="flex gap-4 h-[calc(100vh-12rem)]">
+      <div className="flex gap-4 h-[calc(100dvh-12rem)]">
         {/* Left: Price list selector */}
         <div className="w-64 shrink-0">
           <PriceListSelector

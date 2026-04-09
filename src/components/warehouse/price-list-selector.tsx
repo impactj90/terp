@@ -168,7 +168,7 @@ export function PriceListSelector({ selectedId, onSelect, onDeselect, canManage 
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <ScrollArea className="h-[calc(100vh-16rem)]">
+          <ScrollArea className="h-[calc(100dvh-16rem)]">
             <div className="space-y-0.5 px-3 pb-3">
               {items.length === 0 && (
                 <div className="text-center py-8">

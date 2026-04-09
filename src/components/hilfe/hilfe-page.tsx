@@ -133,7 +133,7 @@ export function HilfePage({ content }: HilfePageProps) {
   }, [])
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
+    <div className="flex min-h-dvh bg-background text-foreground">
       {/* Sidebar / Table of Contents */}
       <aside
         className={cn(

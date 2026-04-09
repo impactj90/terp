@@ -21,7 +21,7 @@ export default function HomePage() {
   }, [isAuthenticated, isLoading, router])
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
+    <div className="flex min-h-dvh items-center justify-center">
       <div className="text-muted-foreground">{t('loading')}</div>
     </div>
   )

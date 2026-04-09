@@ -457,7 +457,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
         {/* A4 Document Canvas */}
         <div className="flex-1 min-w-0 overflow-x-auto">
           <div
-            className="bg-muted/30 p-8 min-h-screen"
+            className="bg-muted/30 p-8 min-h-dvh"
             data-testid="document-canvas"
           >
             <div
