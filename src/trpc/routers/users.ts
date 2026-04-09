@@ -78,13 +78,14 @@ const userWithRelationsOutputSchema = userOutputSchema.extend({
 
 // --- Input Schemas ---
 
+// Phase 0: password removed — never used, misleading. New users are
+// created via Supabase Auth and receive an invite link (see users-service.ts).
 const createUserInputSchema = z.object({
   email: z.string().email(),
   displayName: z.string().min(1).max(255),
   username: z.string().max(50).optional(),
   userGroupId: z.string().optional(),
   employeeId: z.string().optional(),
-  password: z.string().min(8).max(128).optional(),
   ssoId: z.string().max(255).optional(),
   isActive: z.boolean().optional().default(true),
   isLocked: z.boolean().optional().default(false),
@@ -101,6 +102,16 @@ const createUserInputSchema = z.object({
     .array(z.string())
     .optional()
     .default([]),
+})
+
+// Phase 0: create returns { user, welcomeEmail } so the admin UI can show
+// either a "sent" toast or a fallback dialog with the recovery link.
+const createUserOutputSchema = z.object({
+  user: userOutputSchema,
+  welcomeEmail: z.object({
+    sent: z.boolean(),
+    fallbackLink: z.string().nullable(),
+  }),
 })
 
 const updateUserInputSchema = z.object({
@@ -274,16 +285,16 @@ export const usersRouter = createTRPCRouter({
   create: tenantProcedure
     .use(requirePermission(USERS_MANAGE))
     .input(createUserInputSchema)
-    .output(userOutputSchema)
+    .output(createUserOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
-        const user = await userService.create(
+        const { user, welcomeEmail } = await userService.create(
           ctx.prisma,
           ctx.tenantId!,
           input,
           { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
-        return mapUserToOutput(user)
+        return { user: mapUserToOutput(user), welcomeEmail }
       } catch (err) {
         handleServiceError(err)
       }

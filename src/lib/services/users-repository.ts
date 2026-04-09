@@ -3,8 +3,15 @@
  *
  * Pure Prisma data-access functions for the User model.
  */
-import type { PrismaClient } from "@/generated/prisma/client"
+import type { PrismaClient, Prisma } from "@/generated/prisma/client"
 import { TenantScopedNotFoundError } from "@/lib/services/prisma-helpers"
+
+/**
+ * Tx: either the top-level PrismaClient or a Prisma.TransactionClient handle
+ * obtained from prisma.$transaction(async (tx) => ...). The Prisma API is
+ * identical for single-model writes, so most repository helpers accept both.
+ */
+type Tx = PrismaClient | Prisma.TransactionClient
 
 export interface UserListParams {
   search?: string
@@ -68,7 +75,7 @@ export async function findByIdWithRelations(
 }
 
 export async function findUserGroupById(
-  prisma: PrismaClient,
+  prisma: Tx,
   tenantId: string,
   id: string
 ) {
@@ -81,8 +88,11 @@ export async function findUserGroupById(
 }
 
 export async function create(
-  prisma: PrismaClient,
+  prisma: Tx,
   data: {
+    // Pre-allocated id: Phase 0 creates the Supabase Auth user first and
+    // uses the returned id to keep auth.users.id === public.users.id.
+    id?: string
     email: string
     displayName: string
     role: string
@@ -103,7 +113,7 @@ export async function create(
 }
 
 export async function upsertUserTenant(
-  prisma: PrismaClient,
+  prisma: Tx,
   userId: string,
   tenantId: string
 ) {

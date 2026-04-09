@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { useTranslations } from 'next-intl'
-import { ChevronDown, ChevronUp, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -43,14 +43,23 @@ interface UserFormSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   user?: User | null
-  onSuccess?: () => void
+  /**
+   * Called after a successful create or update.
+   * On create: `welcomeEmail` carries the send outcome — if `sent` is
+   * true the parent shows a success toast; if false with a fallbackLink
+   * the parent opens a fallback dialog for manual sharing.
+   * On update: `welcomeEmail` is undefined.
+   */
+  onSuccess?: (welcomeEmail?: {
+    sent: boolean
+    fallbackLink: string | null
+  }) => void
 }
 
 interface FormState {
   email: string
   username: string
   displayName: string
-  password: string
   userGroupId: string
   employeeId: string
   isActive: boolean
@@ -65,7 +74,6 @@ const INITIAL_STATE: FormState = {
   email: '',
   username: '',
   displayName: '',
-  password: '',
   userGroupId: '',
   employeeId: '',
   isActive: true,
@@ -84,8 +92,6 @@ function validateForm(form: FormState, isEdit: boolean): string[] {
   if (form.displayName.trim().length > 0 && form.displayName.trim().length < 2)
     errorKeys.push('validationDisplayNameMinLength')
   if (form.displayName.trim().length > 255) errorKeys.push('validationDisplayNameMaxLength')
-  if (!isEdit && !form.password.trim()) errorKeys.push('validationPasswordRequired')
-  if (form.password && form.password.length < 8) errorKeys.push('validationPasswordMinLength')
   return errorKeys
 }
 
@@ -96,7 +102,6 @@ export function UserFormSheet({ open, onOpenChange, user, onSuccess }: UserFormS
 
   const [form, setForm] = React.useState<FormState>(INITIAL_STATE)
   const [error, setError] = React.useState<string | null>(null)
-  const [showPassword, setShowPassword] = React.useState(false)
   const [showDataScope, setShowDataScope] = React.useState(false)
 
   const createMutation = useCreateUser()
@@ -131,7 +136,6 @@ export function UserFormSheet({ open, onOpenChange, user, onSuccess }: UserFormS
         email: user.email ?? '',
         username: user.username ?? '',
         displayName: user.displayName ?? '',
-        password: '',
         userGroupId: user.userGroupId ?? '',
         employeeId: user.employeeId ?? '',
         isActive: user.isActive ?? true,
@@ -148,7 +152,6 @@ export function UserFormSheet({ open, onOpenChange, user, onSuccess }: UserFormS
     }
 
     setError(null)
-    setShowPassword(false)
   }, [open, user])
 
   const handleSubmit = async () => {
@@ -182,11 +185,11 @@ export function UserFormSheet({ open, onOpenChange, user, onSuccess }: UserFormS
           dataScopeEmployeeIds:
             form.dataScopeType === 'employee' ? form.dataScopeEmployeeIds : undefined,
         })
+        onSuccess?.()
       } else {
-        await createMutation.mutateAsync({
+        const result = await createMutation.mutateAsync({
           email: form.email.trim(),
           displayName: form.displayName.trim(),
-          password: form.password,
           username: form.username.trim() || undefined,
           userGroupId: form.userGroupId || undefined,
           employeeId: form.employeeId || undefined,
@@ -204,9 +207,11 @@ export function UserFormSheet({ open, onOpenChange, user, onSuccess }: UserFormS
           dataScopeEmployeeIds:
             form.dataScopeType === 'employee' ? form.dataScopeEmployeeIds : undefined,
         })
+        // Phase 0: pass the welcome-email outcome up to the parent.
+        // If sent=true the parent shows a toast; if sent=false + link
+        // the parent opens the fallback dialog.
+        onSuccess?.(result?.welcomeEmail)
       }
-
-      onSuccess?.()
     } catch (err) {
       const apiError = err as { detail?: string; message?: string }
       setError(
@@ -288,36 +293,6 @@ export function UserFormSheet({ open, onOpenChange, user, onSuccess }: UserFormS
                 />
               </div>
 
-              {!isEdit && (
-                <div className="space-y-2">
-                  <Label htmlFor="password">{t('fieldPassword')} *</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? 'text' : 'password'}
-                      value={form.password}
-                      onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
-                      disabled={isSubmitting}
-                      placeholder={t('placeholderPassword')}
-                      className="pr-10"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                      onClick={() => setShowPassword(!showPassword)}
-                      tabIndex={-1}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Section: Assignment */}

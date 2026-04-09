@@ -4,12 +4,16 @@
  * Business logic for audit log retrieval.
  * Audit log creation is internal only (called by other services).
  */
-import type { PrismaClient } from "@/generated/prisma/client"
+import type { PrismaClient, Prisma } from "@/generated/prisma/client"
 import * as repo from "./audit-logs-repository"
 import type { AuditLogListParams, AuditLogCreateInput } from "./audit-logs-repository"
 
 // Re-export for convenience
 export type { AuditLogCreateInput }
+
+// Tx accepts PrismaClient OR a TransactionClient so services can log from
+// inside prisma.$transaction callbacks.
+type Tx = PrismaClient | Prisma.TransactionClient
 
 /**
  * Audit context passed from tRPC routers to services.
@@ -166,7 +170,7 @@ function deepEqual(a: unknown, b: unknown): boolean {
  *   await auditLog.log({ ... }).catch(err => console.error('[AuditLog] Failed:', err))
  */
 export async function log(
-  prisma: PrismaClient,
+  prisma: Tx,
   data: AuditLogCreateInput
 ): Promise<void> {
   try {
@@ -188,7 +192,7 @@ export async function log(
  * instead of N sequential creates.
  */
 export async function logBulk(
-  prisma: PrismaClient,
+  prisma: Tx,
   data: AuditLogCreateInput[]
 ): Promise<void> {
   if (data.length === 0) return

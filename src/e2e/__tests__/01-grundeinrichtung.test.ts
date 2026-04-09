@@ -196,12 +196,12 @@ describe("Phase 1: Grundeinrichtung", () => {
         userGroupId: state.userGroupId!,
       })
 
-      expect(result.id).toBeDefined()
-      expect(result.email).toBe("e2e-test-user@example.com")
-      expect(result.displayName).toBe("E2E Test User")
-      expect(result.isActive).toBe(true)
-      state.userId = result.id
-      created.userIds.push(result.id)
+      expect(result.user.id).toBeDefined()
+      expect(result.user.email).toBe("e2e-test-user@example.com")
+      expect(result.user.displayName).toBe("E2E Test User")
+      expect(result.user.isActive).toBe(true)
+      state.userId = result.user.id
+      created.userIds.push(result.user.id)
     })
 
     it("should have tenant_id set (not NULL)", async () => {
@@ -221,8 +221,8 @@ describe("Phase 1: Grundeinrichtung", () => {
         userGroupId: state.adminGroupId!,
       })
 
-      expect(result.role).toBe("admin")
-      created.userIds.push(result.id)
+      expect(result.user.role).toBe("admin")
+      created.userIds.push(result.user.id)
     })
 
     it("should reject duplicate emails", async () => {

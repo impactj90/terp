@@ -5,6 +5,10 @@
  */
 import type { PrismaClient, Prisma } from "@/generated/prisma/client"
 
+// Tx accepts either the root PrismaClient or a TransactionClient; write
+// helpers stay usable from inside prisma.$transaction callbacks.
+type Tx = PrismaClient | Prisma.TransactionClient
+
 export interface AuditLogListParams {
   page?: number
   pageSize?: number
@@ -92,7 +96,7 @@ export interface AuditLogCreateInput {
 }
 
 export async function create(
-  prisma: PrismaClient,
+  prisma: Tx,
   data: AuditLogCreateInput
 ) {
   return prisma.auditLog.create({
@@ -112,7 +116,7 @@ export async function create(
 }
 
 export async function createBulk(
-  prisma: PrismaClient,
+  prisma: Tx,
   data: AuditLogCreateInput[]
 ) {
   return prisma.auditLog.createMany({

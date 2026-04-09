@@ -23,6 +23,10 @@ export const clientEnv = {
   env: (process.env.NEXT_PUBLIC_ENV ?? 'development') as 'development' | 'production',
   supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
   supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
+  // Base URL the recovery/welcome email links point back to. Matches
+  // supabase/config.toml [auth] site_url for the same port. Set
+  // NEXT_PUBLIC_APP_URL in .env.local / deployment env for non-defaults.
+  appUrl: process.env.NEXT_PUBLIC_APP_URL ?? 'http://127.0.0.1:3001',
 } as const
 
 export const isDev = clientEnv.env === 'development'

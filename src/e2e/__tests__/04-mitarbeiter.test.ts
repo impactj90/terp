@@ -627,10 +627,11 @@ describe("Phase 4: Mitarbeiter", () => {
       }
 
       // Create a test user first
-      const newUser = await caller.users.create({
+      const created = await caller.users.create({
         email: "e2e-link-test@test.local",
         displayName: "E2E Link Test",
       })
+      const newUser = created.user
 
       state.linkTestUserId = newUser.id
 
