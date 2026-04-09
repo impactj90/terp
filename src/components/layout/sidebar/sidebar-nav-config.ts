@@ -575,6 +575,12 @@ export const navConfig: NavSection[] = [
         permissions: ['export_template.view'],
       },
       {
+        titleKey: 'exportTemplateSchedules',
+        href: '/admin/export-templates/schedules',
+        icon: FileStack,
+        permissions: ['export_template.schedule'],
+      },
+      {
         titleKey: 'payrollWages',
         href: '/admin/payroll-wages',
         icon: Tag,

@@ -368,6 +368,12 @@ export const ALL_PERMISSIONS: Permission[] = [
   p("export_template.edit", "export_template", "edit", "Edit export templates"),
   p("export_template.delete", "export_template", "delete", "Delete export templates"),
   p("export_template.execute", "export_template", "execute", "Execute export templates (generate exports)"),
+
+  // Export Templates (Phase 4 - Polish & advanced features)
+  p("export_template.restore_version", "export_template", "restore_version", "Restore a previous version of an export template"),
+  p("export_template.snapshot", "export_template", "snapshot", "Manage export template snapshot tests"),
+  p("export_template.share", "export_template", "share", "Share export templates across tenants"),
+  p("export_template.schedule", "export_template", "schedule", "Manage scheduled export template runs"),
 ]
 
 // Lookup maps

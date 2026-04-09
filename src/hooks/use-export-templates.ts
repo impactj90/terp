@@ -76,3 +76,36 @@ export function useTestExportTemplate() {
   const trpc = useTRPC()
   return useMutation(trpc.exportTemplates.testExport.mutationOptions())
 }
+
+export function useRestoreExportTemplateVersion(templateId: string) {
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.exportTemplates.restoreVersion.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.exportTemplates.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.exportTemplates.getById.queryKey({ id: templateId }),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.exportTemplates.listVersions.queryKey({
+          id: templateId,
+        }),
+      })
+    },
+  })
+}
+
+export function useExportTemplateShareTargets(enabled = true) {
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.exportTemplates.listShareTargets.queryOptions(undefined, { enabled }),
+  )
+}
+
+export function useCopyExportTemplateToTenant() {
+  const trpc = useTRPC()
+  return useMutation(trpc.exportTemplates.copyToTenant.mutationOptions())
+}

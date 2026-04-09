@@ -1894,30 +1894,69 @@ Inhalt:
 ### Overview
 Komfort-Features nach Phase 3, priorisiert auf Basis von Kunden-Feedback.
 
-**Geschätzter Aufwand: 5–8 Implementierungstage (nach Priorisierung)**
+**Status:** Implementiert 2026-04-09 (Migration `20260419100000_create_phase4_template_tables.sql`)
 
 ---
 
-### 4.1 Template-Versionsverwaltung
-- Diff-Anzeige zwischen Versionen
-- Rollback auf vorherige Version
-- Audit-Trail aller Änderungen
+### 4.1 Template-Versionsverwaltung ✅
+- Versionsarchiv via existierender `export_template_versions`-Tabelle (Phase 2)
+- `restoreVersion`-Service archiviert die aktuelle Body-Version, lädt die alte und bumped den Versionscounter
+- Editor-Panel "Versionen anzeigen" mit "Wiederherstellen"-Button pro Version
+- Audit-Log-Eintrag mit `action="restore_version"` + `metadata.restoredFromVersion`
+- Permission: `export_template.restore_version`
 
-### 4.2 Template-Test-Suite
-- Erwartete Outputs als Snapshots pro Template
-- Bei Änderung automatische Snapshot-Prüfung
-- Hilft ungewollte Änderungen zu erkennen
+### 4.2 Template-Test-Suite ✅
+- Tabelle `export_template_snapshots` (template_id, name, period, expected_hash, expected_body, last_verified_*)
+- `record`: rendert Template, speichert SHA-256 + Body
+- `verify`: rendert erneut, vergleicht Hash, persistiert `last_verified_status` ("match"|"mismatch"|"error")
+- Mismatch liefert Line-Diff für UI-Anzeige
+- Re-Recording überschreibt vorhandene Snapshots (Upsert nach `(template_id, name)`)
+- Permission: `export_template.snapshot`
 
-### 4.3 Template-Sharing zwischen Mandanten
-- Templates aus einem Mandant in anderen kopieren
-- Für Implementierungspartner mit mehreren Mandanten
+### 4.3 Template-Sharing zwischen Mandanten ✅
+- `copyToTenant`-Service deep-copy aller Template-Felder in Ziel-Mandant
+- Router prüft Ziel-Tenant-Mitgliedschaft via `ctx.user.userTenants`
+- `listShareTargets` liefert die anderen Tenants des aktuellen Users
+- Editor-Panel "In anderen Mandant kopieren" mit Tenant-Dropdown + Name-Override
+- Permission: `export_template.share`
 
-### 4.4 Export-Scheduler
-- Templates automatisch nach Monatsabschluss ausführen
-- Datei per E-Mail an Steuerberater
+### 4.4 Export-Scheduler ✅
+- Tabelle `export_template_schedules` (template_id, frequency, day_of_week/month, hour, recipient_emails, last_run_*, next_run_at)
+- **Default deaktiviert** (`is_active=false`): Admin muss Schedule explizit aktivieren
+- `computeNextRunAt`: deterministische Berechnung für daily/weekly/monthly (UTC)
+- `runDueSchedules` (cron): rendert fällige Templates, verschickt Datei per Mail, schreibt `last_run_status`
+- Cron-Route `/api/cron/export-template-schedules` (`*/15 * * * *` in `vercel.json`)
+- E-Mail-Versand via injizierbarem `SendMailFn` — `defaultSendMail` lädt Tenant-SMTP-Config + nodemailer
+- Verwaltungs-UI unter `/admin/export-templates/schedules` (CRUD + Toggle)
+- Permission: `export_template.schedule`
 
-### 4.5 Multi-File-Export
-- Templates die mehrere Dateien erzeugen (z.B. LODAS + Stammdaten)
+### 4.5 Multi-File-Export ✅
+- Konvention: `{% file "name.ext" %}...{% endfile %}` Blöcke im Template-Body
+- `parseMultiFileBody` extrahiert die Blöcke per Regex (Filename-Sanitisierung gegen Path-Traversal)
+- Engine rendert jeden Block separat mit dem vorhandenen sandboxed Liquid-Engine
+- Ergebnisse werden in einen minimalen Store-Only-ZIP gepackt (`zip-store-writer.ts`, ~140 LoC, keine externe Dep)
+- Templates ohne `{% file %}`-Block bleiben single-file (volle Backward-Compatibility)
+- Validierung strippt `{% file %}`-Blöcke, bevor Liquid-Parser läuft
+
+### Success Criteria Phase 4
+
+#### Automated Verification
+- [x] Migration `20260419100000_create_phase4_template_tables.sql` läuft fehlerfrei
+- [x] Prisma: `pnpm db:generate` regeneriert Client mit `ExportTemplateSnapshot` + `ExportTemplateSchedule`
+- [x] Unit-Tests: `zip-store-writer.test.ts` (8), `export-template-schedule-service.test.ts` (11), `export-engine-multifile.test.ts` (11) — 30/30 grün
+- [x] Integration-Tests: `export-template-phase4.integration.test.ts` (14) — 4.1/4.2/4.3/4.4/4.5 alle grün
+- [x] E2E Browser: `64-export-template-phase4.spec.ts` (10) — Versionspanel + Schedules-CRUD-Workflow
+- [x] Bestehende `export-template-service.integration.test.ts` (8) + `62-export-templates.spec.ts` weiterhin grün
+- [x] TypeScript: keine neuen Fehler in den Phase-4-Dateien
+- [x] Lint: keine Probleme in den Phase-4-Dateien
+- [x] Build: `pnpm build` erstellt `/admin/export-templates/schedules` + `/api/cron/export-template-schedules`
+
+#### Manual Verification
+- [ ] Versionspanel im Editor zeigt v1/v2/v3, Restore liefert v1-Body als neue Version
+- [ ] Schedules-Seite legt deaktivierten Zeitplan an, Toggle funktioniert
+- [ ] Cron-Route mit `Authorization: Bearer ${CRON_SECRET}` rendert + verschickt Mail
+- [ ] Multi-File-Template erzeugt herunterladbares `.zip` mit den deklarierten Dateien
+- [ ] Snapshot-Mismatch wird nach Body-Änderung sauber als "mismatch" in `last_verified_status` markiert
 
 ---
 

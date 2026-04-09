@@ -103,6 +103,8 @@ import { healthInsuranceProvidersRouter } from "./healthInsuranceProviders"
 import { activityCodesKldbRouter } from "./activityCodesKldb"
 import { payrollWagesRouter } from "./payrollWages"
 import { exportTemplatesRouter } from "./exportTemplates"
+import { exportTemplateSnapshotsRouter } from "./exportTemplateSnapshots"
+import { exportTemplateSchedulesRouter } from "./exportTemplateSchedules"
 import { systemExportTemplatesRouter } from "./systemExportTemplates"
 import { payrollBulkImportRouter } from "./payrollBulkImport"
 import { employeeSalaryHistoryRouter } from "./employeeSalaryHistory"
@@ -207,6 +209,8 @@ export const appRouter = createTRPCRouter({
   activityCodesKldb: activityCodesKldbRouter,
   payrollWages: payrollWagesRouter,
   exportTemplates: exportTemplatesRouter,
+  exportTemplateSnapshots: exportTemplateSnapshotsRouter,
+  exportTemplateSchedules: exportTemplateSchedulesRouter,
   systemExportTemplates: systemExportTemplatesRouter,
   payrollBulkImport: payrollBulkImportRouter,
   employeeSalaryHistory: employeeSalaryHistoryRouter,

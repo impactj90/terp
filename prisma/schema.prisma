@@ -257,6 +257,10 @@ model Tenant {
   // Payroll salary history (Phase 3)
   employeeSalaryHistory EmployeeSalaryHistory[]
 
+  // Template polish (Phase 4)
+  exportTemplateSnapshots ExportTemplateSnapshot[]
+  exportTemplateSchedules ExportTemplateSchedule[]
+
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
   @@index([isActive], map: "idx_tenants_is_active")
@@ -3391,6 +3395,8 @@ model ExportTemplate {
   tenant            Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   versions          ExportTemplateVersion[]
   exportInterfaces  ExportInterface[]        @relation("DefaultTemplateForInterface")
+  snapshots         ExportTemplateSnapshot[]
+  schedules         ExportTemplateSchedule[]
 
   @@unique([tenantId, name])
   @@index([tenantId], map: "idx_export_templates_tenant")
@@ -3410,6 +3416,79 @@ model ExportTemplateVersion {
   @@unique([templateId, version])
   @@index([templateId], map: "idx_export_template_versions_template")
   @@map("export_template_versions")
+}
+
+// -----------------------------------------------------------------------------
+// ExportTemplateSnapshot (Phase 4.2 — template test suite)
+// -----------------------------------------------------------------------------
+// Golden-file test: captures the encoded bytes of a template render at
+// snapshot time and records a SHA-256 hash. Subsequent verification
+// runs re-render with the same period and compare the hash — any
+// unintended template change is surfaced via `last_verified_status`.
+model ExportTemplateSnapshot {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId            String    @map("tenant_id") @db.Uuid
+  templateId          String    @map("template_id") @db.Uuid
+  name                String    @db.VarChar(200)
+  description         String?   @db.Text
+  periodYear          Int       @map("period_year")
+  periodMonth         Int       @map("period_month")
+  expectedHash        String    @map("expected_hash") @db.VarChar(64)
+  expectedBody        String    @map("expected_body") @db.Text
+  expectedByteSize    Int       @default(0) @map("expected_byte_size")
+  lastVerifiedAt      DateTime? @map("last_verified_at") @db.Timestamptz(6)
+  lastVerifiedStatus  String?   @map("last_verified_status") @db.VarChar(16)
+  lastVerifiedMessage String?   @map("last_verified_message") @db.Text
+  lastVerifiedHash    String?   @map("last_verified_hash") @db.VarChar(64)
+  createdBy           String?   @map("created_by") @db.Uuid
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  template ExportTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, name])
+  @@index([tenantId], map: "idx_export_template_snapshots_tenant")
+  @@index([templateId], map: "idx_export_template_snapshots_template")
+  @@map("export_template_snapshots")
+}
+
+// -----------------------------------------------------------------------------
+// ExportTemplateSchedule (Phase 4.4 — export scheduler)
+// -----------------------------------------------------------------------------
+// Cron-driven automatic exports. The `export-template-schedules` cron
+// route fires every 15 minutes; each run picks schedules where
+// `next_run_at <= now`, renders the template, emails the result to the
+// recipient list, and computes the next `next_run_at`.
+model ExportTemplateSchedule {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  templateId        String    @map("template_id") @db.Uuid
+  exportInterfaceId String?   @map("export_interface_id") @db.Uuid
+  name              String    @db.VarChar(200)
+  isActive          Boolean   @default(false) @map("is_active")
+  frequency         String    @db.VarChar(10)  // daily | weekly | monthly
+  dayOfWeek         Int?      @map("day_of_week")
+  dayOfMonth        Int?      @map("day_of_month")
+  hourOfDay         Int       @default(6) @map("hour_of_day")
+  dayPeriod         String    @default("previous_month") @map("day_period") @db.VarChar(20)
+  recipientEmails   String    @default("") @map("recipient_emails") @db.Text
+  lastRunAt         DateTime? @map("last_run_at") @db.Timestamptz(6)
+  lastRunStatus     String?   @map("last_run_status") @db.VarChar(16)
+  lastRunMessage    String?   @map("last_run_message") @db.Text
+  nextRunAt         DateTime? @map("next_run_at") @db.Timestamptz(6)
+  createdBy         String?   @map("created_by") @db.Uuid
+  updatedBy         String?   @map("updated_by") @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  template ExportTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@index([tenantId], map: "idx_export_template_schedules_tenant")
+  @@index([nextRunAt, isActive], map: "idx_export_template_schedules_due")
+  @@map("export_template_schedules")
 }
 
 // -----------------------------------------------------------------------------

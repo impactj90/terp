@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Loader2, Play, Save, X } from 'lucide-react'
+import { History, Loader2, Play, RotateCcw, Save, Share2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,6 +17,10 @@ import {
   useCreateExportTemplate,
   useUpdateExportTemplate,
   usePreviewExportTemplate,
+  useExportTemplateVersions,
+  useRestoreExportTemplateVersion,
+  useExportTemplateShareTargets,
+  useCopyExportTemplateToTenant,
 } from '@/hooks/use-export-templates'
 
 export interface ExportTemplateInitial {
@@ -102,6 +106,15 @@ export function ExportTemplateEditor({ initial, onClose, onSaved }: Props) {
   const createMutation = useCreateExportTemplate()
   const updateMutation = useUpdateExportTemplate()
   const previewMutation = usePreviewExportTemplate()
+  // Phase 4 — version history, restore, share
+  const [showVersions, setShowVersions] = React.useState(false)
+  const [showShare, setShowShare] = React.useState(false)
+  const [shareTargetId, setShareTargetId] = React.useState('')
+  const [shareName, setShareName] = React.useState('')
+  const versionsQuery = useExportTemplateVersions(initial?.id ?? '', !!initial?.id && showVersions)
+  const restoreMutation = useRestoreExportTemplateVersion(initial?.id ?? '')
+  const shareTargetsQuery = useExportTemplateShareTargets(showShare)
+  const copyMutation = useCopyExportTemplateToTenant()
 
   const isEditing = Boolean(initial?.id)
   const saving = createMutation.isPending || updateMutation.isPending
@@ -359,6 +372,150 @@ export function ExportTemplateEditor({ initial, onClose, onSaved }: Props) {
           >
             {previewText}
           </pre>
+        </div>
+      )}
+
+      {isEditing && (
+        <div className="space-y-3 border-t pt-4">
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowVersions((v) => !v)}
+              data-testid="export-template-versions-toggle"
+            >
+              <History className="mr-2 h-4 w-4" />
+              {showVersions ? 'Versionen ausblenden' : 'Versionen anzeigen'}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowShare((v) => !v)}
+              data-testid="export-template-share-toggle"
+            >
+              <Share2 className="mr-2 h-4 w-4" />
+              In anderen Mandant kopieren
+            </Button>
+          </div>
+
+          {showVersions && (
+            <div
+              className="rounded-md border p-3"
+              data-testid="export-template-versions-panel"
+            >
+              <div className="mb-2 text-sm font-medium">Versionsarchiv</div>
+              {versionsQuery.isLoading ? (
+                <div className="text-xs text-muted-foreground">Lade...</div>
+              ) : (versionsQuery.data ?? []).length === 0 ? (
+                <div className="text-xs text-muted-foreground">
+                  Noch keine archivierten Versionen vorhanden.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {(versionsQuery.data ?? []).map((v) => (
+                    <div
+                      key={v.id}
+                      className="flex items-center justify-between rounded border p-2 text-xs"
+                      data-testid={`export-template-version-${v.version}`}
+                    >
+                      <div>
+                        <span className="font-mono">v{v.version}</span> ·{' '}
+                        {new Date(v.changedAt as unknown as string).toLocaleString()}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={async () => {
+                          if (!initial?.id) return
+                          await restoreMutation.mutateAsync({
+                            id: initial.id,
+                            version: v.version,
+                          })
+                          onSaved()
+                        }}
+                        data-testid={`export-template-restore-${v.version}`}
+                      >
+                        <RotateCcw className="mr-1 h-3 w-3" />
+                        Wiederherstellen
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {showShare && (
+            <div
+              className="space-y-2 rounded-md border p-3"
+              data-testid="export-template-share-panel"
+            >
+              <div className="text-sm font-medium">In anderen Mandant kopieren</div>
+              {shareTargetsQuery.isLoading ? (
+                <div className="text-xs text-muted-foreground">Lade...</div>
+              ) : (shareTargetsQuery.data ?? []).length === 0 ? (
+                <div className="text-xs text-muted-foreground">
+                  Sie sind in keinem weiteren Mandanten Mitglied.
+                </div>
+              ) : (
+                <>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <div>
+                      <Label htmlFor="share-target">Ziel-Mandant</Label>
+                      <Select
+                        value={shareTargetId}
+                        onValueChange={setShareTargetId}
+                      >
+                        <SelectTrigger id="share-target" data-testid="share-target">
+                          <SelectValue placeholder="Mandant wählen" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(shareTargetsQuery.data ?? []).map((t) => (
+                            <SelectItem key={t.id} value={t.id}>
+                              {t.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="share-name">Name im Zielmandanten</Label>
+                      <Input
+                        id="share-name"
+                        value={shareName}
+                        onChange={(e) => setShareName(e.target.value)}
+                        placeholder={`${name} (Kopie)`}
+                        data-testid="share-name"
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={async () => {
+                      if (!initial?.id || !shareTargetId) return
+                      try {
+                        await copyMutation.mutateAsync({
+                          id: initial.id,
+                          targetTenantId: shareTargetId,
+                          name: shareName.trim() || undefined,
+                        })
+                        setError(null)
+                        setShowShare(false)
+                        setShareTargetId('')
+                        setShareName('')
+                      } catch (err) {
+                        setError((err as Error).message)
+                      }
+                    }}
+                    disabled={copyMutation.isPending || !shareTargetId}
+                    data-testid="share-submit"
+                  >
+                    Kopieren
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

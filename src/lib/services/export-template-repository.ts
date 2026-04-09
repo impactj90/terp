@@ -70,3 +70,13 @@ export async function listVersions(prisma: PrismaClient, templateId: string) {
     orderBy: { version: "desc" },
   })
 }
+
+export async function findVersion(
+  prisma: PrismaClient,
+  templateId: string,
+  version: number,
+) {
+  return prisma.exportTemplateVersion.findUnique({
+    where: { templateId_version: { templateId, version } },
+  })
+}

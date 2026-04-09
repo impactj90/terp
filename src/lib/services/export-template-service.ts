@@ -74,10 +74,17 @@ function validateTemplateBody(body: string): void {
   if (!body || body.trim().length === 0) {
     throw new ExportTemplateValidationError("Template body is required")
   }
+  // Phase 4.5 multi-file support: `{% file "name" %}...{% endfile %}` is
+  // a Terp convention parsed by `export-engine-service.parseMultiFileBody`.
+  // Liquid does not know these tags, so strip them out before parsing.
+  const stripped = body
+    .replace(/\{%\s*file\s+"[^"]+"\s*%\}/g, "")
+    .replace(/\{%\s*endfile\s*%\}/g, "")
+
   // Parse-only validation — does not render, so no context required.
   const engine = createSandboxedEngine()
   try {
-    engine.parse(body)
+    engine.parse(stripped)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     throw new ExportTemplateValidationError(`Invalid Liquid syntax: ${msg}`)
@@ -276,6 +283,144 @@ export async function update(
   }
 
   return updated
+}
+
+/**
+ * Restore a prior version's templateBody. The current body is archived
+ * (via the normal update flow), the version counter bumps, and a fresh
+ * row is added to `export_template_versions` describing the restore.
+ */
+export async function restoreVersion(
+  prisma: PrismaClient,
+  tenantId: string,
+  templateId: string,
+  version: number,
+  audit?: AuditContext,
+) {
+  const existing = await repo.findById(prisma, tenantId, templateId)
+  if (!existing) throw new ExportTemplateNotFoundError()
+
+  if (version === existing.version) {
+    throw new ExportTemplateValidationError(
+      "Cannot restore the currently active version",
+    )
+  }
+
+  const target = await repo.findVersion(prisma, templateId, version)
+  if (!target) {
+    throw new ExportTemplateNotFoundError()
+  }
+
+  // Archive current body before swapping.
+  await repo.archiveVersion(
+    prisma,
+    existing.id,
+    existing.version,
+    existing.templateBody,
+    audit?.userId ?? null,
+  )
+
+  const updated = await repo.update(prisma, tenantId, templateId, {
+    templateBody: target.templateBody,
+    version: existing.version + 1,
+    updatedBy: audit?.userId ?? null,
+  })
+  if (!updated) throw new ExportTemplateNotFoundError()
+
+  if (audit) {
+    await auditLog
+      .log(prisma, {
+        tenantId,
+        userId: audit.userId,
+        action: "restore_version",
+        entityType: "export_template",
+        entityId: updated.id,
+        entityName: updated.name,
+        metadata: { restoredFromVersion: version, newVersion: updated.version },
+        ipAddress: audit.ipAddress,
+        userAgent: audit.userAgent,
+      })
+      .catch((err) => console.error("[AuditLog] Failed:", err))
+  }
+
+  return updated
+}
+
+/**
+ * Deep-copies a template from one tenant into another. Requires the
+ * caller to verify membership in both tenants at the router layer.
+ * The copy starts at version 1 with empty history; audit log records
+ * provenance (source template + source tenant).
+ */
+export async function copyToTenant(
+  prisma: PrismaClient,
+  sourceTenantId: string,
+  sourceTemplateId: string,
+  targetTenantId: string,
+  opts: { name?: string } = {},
+  audit?: AuditContext,
+) {
+  const source = await repo.findById(prisma, sourceTenantId, sourceTemplateId)
+  if (!source) throw new ExportTemplateNotFoundError()
+
+  const name = (opts.name ?? `${source.name} (Kopie)`).trim()
+  if (!name) {
+    throw new ExportTemplateValidationError("Name is required")
+  }
+
+  try {
+    const created = await repo.create(prisma, {
+      tenantId: targetTenantId,
+      name,
+      description: source.description,
+      targetSystem: source.targetSystem,
+      templateBody: source.templateBody,
+      outputFilename: source.outputFilename,
+      encoding: source.encoding,
+      lineEnding: source.lineEnding,
+      fieldSeparator: source.fieldSeparator,
+      decimalSeparator: source.decimalSeparator,
+      dateFormat: source.dateFormat,
+      version: 1,
+      isActive: source.isActive,
+      createdBy: audit?.userId ?? null,
+      updatedBy: audit?.userId ?? null,
+    })
+
+    if (audit) {
+      await auditLog
+        .log(prisma, {
+          tenantId: targetTenantId,
+          userId: audit.userId,
+          action: "share_copy",
+          entityType: "export_template",
+          entityId: created.id,
+          entityName: created.name,
+          metadata: {
+            sourceTenantId,
+            sourceTemplateId,
+            sourceName: source.name,
+          },
+          ipAddress: audit.ipAddress,
+          userAgent: audit.userAgent,
+        })
+        .catch((err) => console.error("[AuditLog] Failed:", err))
+    }
+
+    return created
+  } catch (err) {
+    if (
+      err &&
+      typeof err === "object" &&
+      "code" in err &&
+      (err as { code: string }).code === "P2002"
+    ) {
+      throw new ExportTemplateConflictError(
+        `A template named "${name}" already exists in the target tenant`,
+      )
+    }
+    throw err
+  }
 }
 
 export async function remove(

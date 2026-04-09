@@ -23,6 +23,7 @@ import {
   buildExportContext,
   type ExportContext,
 } from "./export-context-builder"
+import { buildZip, type ZipEntry } from "./zip-store-writer"
 
 // ──────────────────────────────────────────────────────────────────
 // Errors
@@ -178,6 +179,63 @@ export function sha256Hex(buf: Buffer): string {
 }
 
 // ──────────────────────────────────────────────────────────────────
+// Multi-file support (Phase 4.5)
+// ──────────────────────────────────────────────────────────────────
+//
+// Templates can declare multiple output files via blocks of the form:
+//
+//   {% file "buchungen.txt" %}...liquid...{% endfile %}
+//   {% file "stammdaten.txt" %}...liquid...{% endfile %}
+//
+// We intentionally do NOT register these as custom Liquid tags — the
+// Liquid body inside each block still needs the full feature set of
+// the standard engine. Instead we pre-process the raw template body
+// with a regex, extract each `{% file %}...{% endfile %}` section,
+// render each inner body as its own Liquid template, and ZIP the
+// results. Templates without any `{% file %}` block behave exactly as
+// before: single rendered file. This preserves full backwards
+// compatibility with all Phase 2/3 templates.
+//
+
+const FILE_BLOCK_RE =
+  /\{%\s*file\s+"([^"]+)"\s*%\}([\s\S]*?)\{%\s*endfile\s*%\}/g
+
+export interface ParsedMultiFile {
+  isMultiFile: boolean
+  files: Array<{ filename: string; body: string }>
+}
+
+/**
+ * Parses a template body and returns either an empty file list (when
+ * no `{% file %}` blocks are present) or the list of file blocks.
+ * Filenames are sanitised to prevent path traversal.
+ */
+export function parseMultiFileBody(body: string): ParsedMultiFile {
+  const files: Array<{ filename: string; body: string }> = []
+  let match: RegExpExecArray | null
+  // The regex is stateful because of the `g` flag — reset before use.
+  FILE_BLOCK_RE.lastIndex = 0
+  while ((match = FILE_BLOCK_RE.exec(body)) !== null) {
+    const rawName = match[1]!
+    const innerBody = match[2]!
+    const safeName = sanitizeFilename(rawName)
+    files.push({ filename: safeName, body: innerBody })
+  }
+  if (files.length === 0) {
+    return { isMultiFile: false, files: [] }
+  }
+  return { isMultiFile: true, files }
+}
+
+function sanitizeFilename(name: string): string {
+  return name
+    .replace(/[\\/]/g, "_")
+    .replace(/\.\./g, "_")
+    .replace(/[\r\n]+/g, "")
+    .trim()
+}
+
+// ──────────────────────────────────────────────────────────────────
 // High-level entry points
 // ──────────────────────────────────────────────────────────────────
 
@@ -223,20 +281,56 @@ export async function generateExport(
     },
   })
 
-  const rendered = await renderTemplate(
-    tpl.templateBody,
-    context,
-    opts.timeoutMs ?? DEFAULT_RENDER_TIMEOUT_MS,
-  )
+  const parsed = parseMultiFileBody(tpl.templateBody)
+  const timeoutMs = opts.timeoutMs ?? DEFAULT_RENDER_TIMEOUT_MS
 
-  const file = encodeOutput(rendered, tpl.encoding, tpl.lineEnding)
-  if (file.byteLength > MAX_OUTPUT_BYTES) {
-    throw new ExportTemplateSizeValidationError(
-      `Encoded output exceeds ${MAX_OUTPUT_BYTES} bytes`,
+  let file: Buffer
+  let filename: string
+
+  if (parsed.isMultiFile) {
+    // Render each file body individually, encode, ZIP together.
+    const zipEntries: ZipEntry[] = []
+    for (const f of parsed.files) {
+      const renderedPart = await renderTemplate(f.body, context, timeoutMs)
+      const encodedPart = encodeOutput(
+        renderedPart,
+        tpl.encoding,
+        tpl.lineEnding,
+      )
+      if (encodedPart.byteLength > MAX_OUTPUT_BYTES) {
+        throw new ExportTemplateSizeValidationError(
+          `Encoded output for "${f.filename}" exceeds ${MAX_OUTPUT_BYTES} bytes`,
+        )
+      }
+      // Render the filename too — templates may use `{{ period.year }}`.
+      const renderedName = await renderFilename(f.filename, context)
+      zipEntries.push({
+        filename: renderedName || f.filename,
+        content: encodedPart,
+      })
+    }
+    file = buildZip(zipEntries)
+    if (file.byteLength > MAX_OUTPUT_BYTES) {
+      throw new ExportTemplateSizeValidationError(
+        `Zipped output exceeds ${MAX_OUTPUT_BYTES} bytes`,
+      )
+    }
+    const baseName = await renderFilename(
+      tpl.outputFilename.replace(/\.(txt|csv|dat)$/i, ""),
+      context,
     )
+    filename = `${baseName || tpl.name}.zip`
+  } else {
+    const rendered = await renderTemplate(tpl.templateBody, context, timeoutMs)
+    file = encodeOutput(rendered, tpl.encoding, tpl.lineEnding)
+    if (file.byteLength > MAX_OUTPUT_BYTES) {
+      throw new ExportTemplateSizeValidationError(
+        `Encoded output exceeds ${MAX_OUTPUT_BYTES} bytes`,
+      )
+    }
+    filename = await renderFilename(tpl.outputFilename, context)
   }
 
-  const filename = await renderFilename(tpl.outputFilename, context)
   const fileHash = sha256Hex(file)
 
   await auditLog
@@ -258,6 +352,8 @@ export async function generateExport(
         byteSize: file.byteLength,
         encoding: tpl.encoding,
         targetSystem: tpl.targetSystem,
+        multiFile: parsed.isMultiFile,
+        fileCount: parsed.isMultiFile ? parsed.files.length : 1,
       },
       ipAddress: audit.ipAddress,
       userAgent: audit.userAgent,
@@ -266,7 +362,9 @@ export async function generateExport(
 
   return {
     file,
-    filename: filename || `${tpl.name}_${input.year}${String(input.month).padStart(2, "0")}.txt`,
+    filename:
+      filename ||
+      `${tpl.name}_${input.year}${String(input.month).padStart(2, "0")}.${parsed.isMultiFile ? "zip" : "txt"}`,
     fileHash,
     employeeCount: context.employees.length,
     byteSize: file.byteLength,

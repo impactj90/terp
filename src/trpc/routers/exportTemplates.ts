@@ -16,6 +16,8 @@ const CREATE = permissionIdByKey("export_template.create")!
 const EDIT = permissionIdByKey("export_template.edit")!
 const DELETE = permissionIdByKey("export_template.delete")!
 const EXECUTE = permissionIdByKey("export_template.execute")!
+const RESTORE = permissionIdByKey("export_template.restore_version")!
+const SHARE = permissionIdByKey("export_template.share")!
 
 const targetSystemEnum = z.enum([
   "datev_lodas",
@@ -133,6 +135,94 @@ export const exportTemplatesRouter = createTRPCRouter({
       } catch (err) {
         handleServiceError(err)
       }
+    }),
+
+  restoreVersion: tenantProcedure
+    .use(requirePermission(RESTORE))
+    .input(z.object({ id: z.string(), version: z.number().int().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await service.restoreVersion(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id,
+          input.version,
+          {
+            userId: ctx.user!.id,
+            ipAddress: ctx.ipAddress,
+            userAgent: ctx.userAgent,
+          },
+        )
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  /**
+   * Copies a template into another tenant that the calling user is
+   * already a member of. The middleware verifies the user actually has
+   * `share` permission in the source tenant; the target-tenant
+   * membership check happens in the procedure body.
+   */
+  copyToTenant: tenantProcedure
+    .use(requirePermission(SHARE))
+    .input(
+      z.object({
+        id: z.string(),
+        targetTenantId: z.string().uuid(),
+        name: z.string().min(1).max(200).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        if (input.targetTenantId === ctx.tenantId) {
+          throw new Error(
+            "Target tenant must be different from the source tenant",
+          )
+        }
+        // Verify membership in target tenant via userTenants loaded in ctx.
+        const memberships = ctx.user?.userTenants ?? []
+        const hasAccess = memberships.some(
+          (m: { tenantId: string }) => m.tenantId === input.targetTenantId,
+        )
+        if (!hasAccess) {
+          throw new Error("No access to target tenant")
+        }
+        return await service.copyToTenant(
+          ctx.prisma,
+          ctx.tenantId!,
+          input.id,
+          input.targetTenantId,
+          { name: input.name },
+          {
+            userId: ctx.user!.id,
+            ipAddress: ctx.ipAddress,
+            userAgent: ctx.userAgent,
+          },
+        )
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  /**
+   * Returns the list of tenants the current user belongs to, excluding
+   * the active tenant. Used by the share dialog.
+   */
+  listShareTargets: tenantProcedure
+    .use(requirePermission(SHARE))
+    .query(async ({ ctx }) => {
+      const memberships = ctx.user?.userTenants ?? []
+      const otherIds = memberships
+        .map((m: { tenantId: string }) => m.tenantId)
+        .filter((id: string) => id !== ctx.tenantId)
+      if (otherIds.length === 0) return []
+      const tenants = await ctx.prisma.tenant.findMany({
+        where: { id: { in: otherIds } },
+        select: { id: true, name: true, slug: true },
+        orderBy: { name: "asc" },
+      })
+      return tenants
     }),
 
   /**
