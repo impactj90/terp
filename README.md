@@ -51,9 +51,35 @@ After `pnpm db:reset`, two test users are available:
 | Admin | `admin@dev.local` | `dev-password-admin` |
 | User | `user@dev.local` | `dev-password-user` |
 
+### Secrets Management (env files)
+
+The three env files — `.env.local`, `.env.staging`, `.env.production` — contain DB URLs, Supabase service-role keys, and other secrets. They are **not** committed as plaintext (see `.gitignore`); instead, encrypted `.env.*.vault` counterparts are checked in using [ansible-vault](https://docs.ansible.com/ansible/latest/vault_guide/index.html).
+
+**Prerequisite**: `ansible-vault` on your PATH (`pipx install ansible-core`), and the shared vault password (stored in the team password manager — ask the maintainer).
+
+```bash
+# First-time checkout: decrypt all three vault files into plaintext.
+# Prompts once for the vault password.
+scripts/decrypt-env.sh
+
+# After editing a plaintext env file, re-encrypt it before committing.
+scripts/encrypt-env.sh                 # re-encrypts every plaintext that exists
+scripts/encrypt-env.sh .env.staging    # or target a specific file
+```
+
+**Workflow when adding a new secret:**
+
+1. Add the variable name (with a placeholder) to `.env.example` so it's documented.
+2. Edit the relevant plaintext `.env.*` file(s) — local, staging, prod as applicable.
+3. Run `scripts/encrypt-env.sh` to regenerate the matching `.env.*.vault` files.
+4. Commit the updated `.vault` files (plaintext stays ignored by git).
+5. For staging/prod, also set the variable in the Vercel dashboard so deployments pick it up.
+
+**Skip the password prompt on trusted machines:** put the vault password in `~/.vault_pass` (chmod 600) and export `ANSIBLE_VAULT_PASSWORD_FILE=~/.vault_pass` — both scripts will read it non-interactively.
+
 ### Staging Setup (one-time)
 
-Requires `.env.staging` in project root (with `DATABASE_URL`, Supabase keys, etc.) and `psql` installed locally.
+Requires `.env.staging` in project root (run `scripts/decrypt-env.sh` first if you only have `.env.staging.vault`) and `psql` installed locally.
 
 ```bash
 # Link to staging Supabase project
