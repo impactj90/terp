@@ -112,6 +112,8 @@ pnpm seed:staging       # re-seed if needed
 | `NEXT_PUBLIC_ENV` | `development` (local/staging) or `production` |
 | `NEXT_PUBLIC_APP_NAME` | Application display name |
 | `NEXT_PUBLIC_APP_URL` | Base URL the app is served from. Used as the `redirectTo` target for Supabase recovery / welcome-email links. Must match `supabase/config.toml [auth] site_url` in local dev. Default: `http://127.0.0.1:3001`. |
+| `PLATFORM_JWT_SECRET` | **Required.** Secret used to sign platform-admin session JWTs (HS256). Generate with `openssl rand -base64 48`. See [Platform Admin System](#platform-admin-system) below. Must be rotated independently from Supabase secrets. |
+| `PLATFORM_COOKIE_DOMAIN` | Optional. Subdomain the platform-admin UI is served from (e.g. `admin.terp.de`) in prod. When set, the middleware rewrites `/` → `/platform` on that host and scopes the `platform-session` cookie to it. Leave empty in dev — platform is then served at `/platform/*` on the same host as the tenant app with a host-only cookie. |
 
 **Note:** When using the Supabase connection pooler (`pooler.supabase.com:6543`), the Prisma pg adapter is configured to accept Supabase's certificate chain (`ssl: { rejectUnauthorized: false }` in production). No special `DATABASE_URL` params are needed beyond `?sslmode=require&pgbouncer=true`.
 
@@ -241,3 +243,95 @@ Internal sales-enablement tooling for spinning up fully populated demo tenants o
 **Adding a new template**: create `src/lib/demo/templates/<key>.ts` exporting a `DemoTemplate` (key, label, description, `apply(tx, tenantId)` function). Register it in `src/lib/demo/registry.ts`. The UI template dropdown is automatically populated from the registry.
 
 **Rollback plan**: if the feature needs to be disabled temporarily, (a) remove the cron entry from `vercel.json`, (b) hide the demo panel in `/admin/tenants/page.tsx`, (c) set all demos to `is_demo=false, demo_expires_at=null` via one-off SQL. Data is preserved.
+
+### Platform Admin System
+
+A **separate security/identity domain above the tenant world** — its own `PlatformUser` table with argon2 credentials, its own tRPC context, its own API route, its own admin UI under `admin.terp.de` (with a same-host `/platform/*` fallback for dev), mandatory TOTP 2FA, and a tenant-side consent flow (`SupportSession`) that lets operators impersonate into a tenant only with explicit, time-boxed approval from a tenant admin. Every platform-initiated tenant write produces a double audit entry (tenant `AuditLog` + new `PlatformAuditLog`).
+
+**Why this instead of a platform-admin flag on regular users?** The goals are (1) a blast radius that's strictly contained to the platform domain (a compromised tenant user can never escalate to operator), (2) no silent cross-tenant reads (every impersonation requires tenant-side consent first), (3) a complete audit trail on both sides, and (4) independent authentication (separate JWT secret, separate cookie, separate MFA enrollment) so rotating platform credentials doesn't disrupt tenant sessions. A flag-table approach couldn't deliver any of these.
+
+**Plan & status**:
+
+- **Plan**: `thoughts/shared/plans/2026-04-09-platform-admin-system.md` — the authoritative spec. Read this file before touching anything in `src/lib/platform/` or `src/trpc/platform/`.
+- **Research**: `thoughts/shared/research/2026-04-09-platform-admin-system.md` — the initial codebase analysis that led to the plan.
+- **Obsoleted**: the earlier `thoughts/shared/tickets/misc/platform-admin-tenant-access.md` (a simple `platform_admins` flag-table) is superseded and should be renamed `_OBSOLETE.md` in Phase 8.
+- **Current phase**: **Phase 2 complete** (data model + auth primitives). Phases 3–8 pending — see the plan for the full breakdown:
+  - Phase 1 ✅ Data model + bootstrap (tables, argon2, CLI)
+  - Phase 2 ✅ Auth core (JWT, TOTP, rate limit, login service)
+  - Phase 3 ⏳ Platform tRPC layer (separate context, separate root router, `/api/trpc-platform`)
+  - Phase 4 ⏳ Routing & middleware (subdomain OR `/platform/*` fallback)
+  - Phase 5 ⏳ Platform UI (login, dashboard, support-sessions, audit logs)
+  - Phase 6 ⏳ Consent flow (tenant-side `SupportSession` creation, settings page, yellow banner)
+  - Phase 7 ⏳ Impersonation (extend `createTRPCContext` + `AsyncLocalStorage` for the audit double-write)
+  - Phase 8 ⏳ Cleanup cron, docs, E2E spec
+
+**Data model** (all four tables created by `supabase/migrations/20260421000000_create_platform_admin_tables.sql`):
+
+| Table | Purpose |
+|-------|---------|
+| `platform_users` | Operator accounts — email, argon2id password hash, encrypted TOTP secret, argon2-hashed recovery codes, `is_active`. **No `auth.users` counterpart** — these users log in through the platform auth flow, NOT Supabase. |
+| `support_sessions` | Consent records. Status: `pending` → `active` → `expired \| revoked`. Created by a tenant admin, activated by an operator, enforced by Phase 7's context branch. `expires_at` is ≤ 4 h from creation, enforced server-side. |
+| `platform_audit_logs` | Every platform-side action. Separate from tenant `audit_logs` because `AuditLog.tenantId` is `NOT NULL` and 131 callers depend on that. Populated via `src/lib/platform/audit-service.ts`. |
+| `platform_login_attempts` | DB-counter table for rate limiting. 5 fails/email/15min → email lockout, 20 fails/IP/15min → IP lockout. The same table absorbs `bad_password`, `bad_totp`, AND `bad_recovery_code` failures — a brute-force loop on recovery codes trips the same lockout as a brute-force loop on passwords. |
+
+**Auth flow** (three steps, once Phase 3 wires the tRPC layer):
+
+1. **`passwordStep`** — operator enters email + password. On success, if MFA isn't enrolled yet returns `mfa_enrollment_required` with a 5 min enrollment token + a freshly generated (not-yet-persisted) base32 secret + an `otpauth://` URI for the QR code. Otherwise returns `mfa_required` with a 5 min challenge token.
+2. **`mfaEnrollStep`** — operator scans the QR code, types their first 6-digit code. If it validates against the secret carried in the enrollment token, the service persists the encrypted secret + 10 argon2-hashed recovery codes, issues a session JWT, and returns the plaintext recovery codes (shown ONCE — never retrievable again).
+3. **`mfaVerifyStep`** — operator types either a current TOTP code or one of their recovery codes. On success, issues the session JWT. Recovery codes are single-use: on match the matching hash is spliced out of the stored array and persisted.
+
+**Session JWT details**: HS256 via `jose`, signed with `PLATFORM_JWT_SECRET`. Two lifetime cutoffs enforced on every `verify()`:
+- **Absolute maximum**: 4 h from `sessionStartedAt`. Token is hard-rejected after that regardless of activity.
+- **Sliding idle**: 30 min from `lastActivity`. Every response refreshes `lastActivity` to "now" via `refresh()`, so an active operator keeps the session alive indefinitely (within the 4 h cap). An operator who walks away for 30 min is auto-logged-out on the next request.
+
+**Key files** (what exists today):
+
+- Data layer: `prisma/schema.prisma` (models `PlatformUser`, `SupportSession`, `PlatformAuditLog`, `PlatformLoginAttempt`), `supabase/migrations/20260421000000_create_platform_admin_tables.sql`
+- Auth primitives: `src/lib/platform/password.ts`, `src/lib/platform/jwt.ts`, `src/lib/platform/totp.ts`, `src/lib/platform/rate-limit.ts`
+- Login orchestration: `src/lib/platform/login-service.ts` (exports `passwordStep`, `mfaEnrollStep`, `mfaVerifyStep`, `InvalidCredentialsError`, `InvalidMfaTokenError`, `RateLimitedError`, `AccountDisabledError`)
+- Audit: `src/lib/platform/audit-service.ts` (`log`, `list`, `getById`, `PlatformAuditLogNotFoundError`)
+- Bootstrap CLI: `scripts/bootstrap-platform-user.ts`
+- Tests: `src/lib/platform/__tests__/` — 55 unit tests covering password / JWT / TOTP / rate limit / login service (including the 5×bad-recovery-code rate-limit guard)
+
+**Key files** (planned, future phases):
+
+- Phase 3: `src/trpc/platform/init.ts`, `src/trpc/platform/_app.ts`, `src/trpc/platform/routers/{auth,platformUsers,tenants,supportSessions,auditLogs}.ts`, `src/app/api/trpc-platform/[trpc]/route.ts`
+- Phase 4: `src/middleware.ts` (absorbs `src/proxy.ts`), `src/app/platform/**/*.tsx`, `src/lib/platform/cookie.ts`
+- Phase 5: `src/trpc/platform/client.tsx`, `src/hooks/use-platform-idle-timeout.ts`, `src/components/platform/sidebar.tsx`
+- Phase 6: `src/app/[locale]/(dashboard)/admin/settings/support-access/page.tsx`, `src/components/auth/support-session-banner.tsx`, permission `platform.support_access.grant` in `src/lib/auth/permission-catalog.ts`
+- Phase 7: `src/lib/platform/impersonation-context.ts` (AsyncLocalStorage), migration for the `Platform System` sentinel user (`00000000-0000-0000-0000-00000000beef`), extension of `src/trpc/init.ts:103` with the impersonation branch
+- Phase 8: `src/app/api/cron/platform-cleanup/route.ts`, `src/e2e-browser/99-platform-support-consent.spec.ts`
+
+**Bootstrapping the first operator**:
+
+Since there's no platform UI yet to create operators (chicken-and-egg), use the CLI:
+
+```bash
+# Local dev — writes to the Supabase dev DB (localhost:54322)
+pnpm tsx scripts/bootstrap-platform-user.ts tolga@terp.de "Tolga"
+
+# Reset MFA for an operator who lost their TOTP device
+pnpm tsx scripts/bootstrap-platform-user.ts --reset-mfa tolga@terp.de
+```
+
+The script prompts twice for a password (noecho via raw-mode stdin), enforces the 12-character minimum, and prints the target `DATABASE_URL` (password-redacted) so you can confirm you're not accidentally hitting prod. After the row is created, the operator can log in once Phases 3–5 ship.
+
+**Running the bootstrap against staging or prod** (once you're actually ready to deploy, NOT for day-to-day local work):
+
+```bash
+# Option A — shell-substitute the remote DATABASE_URL from an encrypted env file
+scripts/decrypt-env.sh        # gets .env.staging onto disk
+DATABASE_URL="$(grep '^DATABASE_URL' .env.staging | cut -d= -f2-)" \
+  pnpm tsx scripts/bootstrap-platform-user.ts admin@terp.de "Platform Admin"
+
+# Option B — let Node load the env file for you
+pnpm tsx --env-file=.env.staging scripts/bootstrap-platform-user.ts admin@terp.de "Platform Admin"
+```
+
+Do this **only from a trusted machine** — the script opens a direct DB connection with full write permissions; never run it from CI or a shared box. After first login from the Platform UI (Phase 5), additional operators are created through the UI, so this script is only needed for the initial bootstrap and for MFA recovery.
+
+**Rate limit tuning**: all constants live in `src/lib/platform/rate-limit.ts` (`WINDOW_MS=15min`, `MAX_PER_EMAIL=5`, `MAX_PER_IP=20`). Intentionally aggressive because the platform surface has very few legitimate actors — if this turns out to be too tight in practice, relax `MAX_PER_EMAIL` first (the IP threshold also protects against attackers spraying a large dictionary across many accounts).
+
+**Rotating `PLATFORM_JWT_SECRET`**: the secret is only used by `src/lib/platform/jwt.ts` — no other code path reads it. To rotate, set the new value in Vercel, redeploy, and every existing platform session is immediately invalidated (existing JWTs fail the HMAC check and trip the `invalid` branch in `verify()`). Operators just log in again. Zero tenant-side impact — the tenant app uses Supabase Auth, which has a separate JWT secret.
+
+**Relationship to field encryption**: the platform code deliberately reuses `src/lib/services/field-encryption.ts` (`encryptField`/`decryptField`) for storing the TOTP secret at rest. No separate crypto module. This means `FIELD_ENCRYPTION_KEY_V1` rotation affects platform operators' stored TOTP secrets the same way it affects tenant-side encrypted fields — decrypt-re-encrypt is handled by the same key-versioning mechanism.

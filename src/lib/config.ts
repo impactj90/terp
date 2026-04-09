@@ -15,6 +15,15 @@ export const serverEnv = {
   // Field-level encryption
   fieldEncryptionKeyV1: process.env.FIELD_ENCRYPTION_KEY_V1 ?? '',
   fieldEncryptionKeyCurrentVersion: process.env.FIELD_ENCRYPTION_KEY_CURRENT_VERSION ?? '1',
+  // Platform admin auth (separate domain — see plan 2026-04-09-platform-admin-system.md)
+  platformJwtSecret: process.env.PLATFORM_JWT_SECRET ?? '',
+  /**
+   * Optional. If set, middleware treats this host as the platform subdomain
+   * (prod: e.g. "admin.terp.de") and scopes the platform-session cookie to
+   * that domain. Leave empty in dev — the platform is then served at
+   * /platform/* on the same host as the tenant app with a host-only cookie.
+   */
+  platformCookieDomain: process.env.PLATFORM_COOKIE_DOMAIN ?? '',
 } as const
 
 // Client-side accessible
@@ -45,6 +54,7 @@ export function validateEnv() {
     'INTERNAL_API_KEY',
     'ANTHROPIC_API_KEY',
     'FIELD_ENCRYPTION_KEY_V1',
+    'PLATFORM_JWT_SECRET',
   ]
   const missing = required.filter((key) => !process.env[key])
 

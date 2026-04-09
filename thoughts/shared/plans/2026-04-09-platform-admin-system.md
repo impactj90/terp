@@ -838,19 +838,20 @@ export class RateLimitedError extends Error {
 
 #### Automated verification
 
-- [ ] `pnpm typecheck` passes
-- [ ] `pnpm vitest run src/lib/platform/__tests__/jwt.test.ts` — sign/verify round-trip, expired, idle, tampered
-- [ ] `pnpm vitest run src/lib/platform/__tests__/totp.test.ts` — verify current, reject stale, recovery-code consume, 10×11-char format, encryption round-trip
-- [ ] `pnpm vitest run src/lib/platform/__tests__/rate-limit.test.ts` — 5 email fails locked, 20 IP fails locked, success doesn't count
-- [ ] `pnpm vitest run src/lib/platform/__tests__/login-service.test.ts`:
-  - Wrong password → `InvalidCredentialsError`, attempt recorded with `bad_password`
-  - First-time user → `mfa_enrollment_required`
-  - Valid TOTP → JWT with `mfaVerified: true`
-  - Invalid TOTP → `InvalidMfaTokenError`, attempt recorded with `bad_totp`
-  - **Invalid recovery code → `InvalidMfaTokenError`, attempt recorded with `bad_recovery_code`**
-  - **5 × bad recovery code → 6th attempt rate-limited even with correct password/TOTP**
-  - Recovery code success consumes and persists reduced list
-  - Rate-limited → `RateLimitedError` before DB user lookup
+- [x] `pnpm typecheck` passes (no new errors from Phase 2 files)
+- [x] `pnpm vitest run src/lib/platform/__tests__/jwt.test.ts` — sign/verify round-trip, expired, idle, tampered (10 tests)
+- [x] `pnpm vitest run src/lib/platform/__tests__/totp.test.ts` — verify current, reject stale, recovery-code consume, 10×11-char format, encryption round-trip (13 tests)
+- [x] `pnpm vitest run src/lib/platform/__tests__/rate-limit.test.ts` — 5 email fails locked, 20 IP fails locked, success doesn't count (9 tests)
+- [x] `pnpm vitest run src/lib/platform/__tests__/login-service.test.ts` (18 tests):
+  - [x] Wrong password → `InvalidCredentialsError`, attempt recorded with `bad_password`
+  - [x] First-time user → `mfa_enrollment_required`
+  - [x] Valid TOTP → JWT with `mfaVerified: true`
+  - [x] Invalid TOTP → `InvalidMfaTokenError`, attempt recorded with `bad_totp`
+  - [x] **Invalid recovery code → `InvalidMfaTokenError`, attempt recorded with `bad_recovery_code`**
+  - [x] **5 × bad recovery code → 6th attempt rate-limited even with correct password/TOTP**
+  - [x] Recovery code success consumes and persists reduced list
+  - [x] Rate-limited → `RateLimitedError` before DB user lookup
+- [x] `pnpm lint` passes on all Phase 2 files
 
 #### Manual verification
 
