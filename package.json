@@ -50,6 +50,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@e-invoice-eu/core": "^2.3.4",
+    "@faker-js/faker": "^10.4.0",
     "@prisma/adapter-pg": "^7.4.2",
     "@prisma/client": "^7.4.2",
     "@radix-ui/react-alert-dialog": "^1.1.15",
